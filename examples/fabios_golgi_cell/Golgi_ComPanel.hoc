@@ -1,0 +1,170 @@
+/*******Cerebellar Golgi Cell Model **********
+
+Developers:    Sergio Solinas & Egidio D'Angelo
+Code contributors:  Thierry Neius, Shyam Diwakar, Lia Forti
+Data Analysis: Sergio Solinas
+
+Work Progress: April 2004 - May 2007
+
+Developed At:  Università Degli Studi Di Pavia
+	       Dipartimento Di Scienze Fisiologiche
+	       Pavia - Italia
+	       
+Model Published in: 
+             Sergio M. Solinas, Lia Forti, Elisabetta Cesana, 
+             Jonathan Mapelli, Erik De Schutter and Egidio D`Angelo (2008)
+             Computational reconstruction of pacemaking and intrinsic 
+             electroresponsiveness in cerebellar golgi cells
+             Frontiers in Cellular Neuroscience 2:2
+
+
+********************************************/
+
+objref AmpaSchemeMenu,mfpanel
+objref Golgi_params
+
+xpanel("Comand Panel",0)
+xmenu()
+xbutton("Golgi Cell","Golgi_Panel()")
+xbutton("Channels","Golgi_Channels()")
+xbutton("Synapses","Postsyn_conf()") 
+xbutton("Intrisic noise","Gnoise()") 
+xbutton("Firing statistics","FR_show()") // FR_show is in utils.hoc
+xmenu()
+
+xpanel(1090,25,0)
+
+proc Golgi_Panel(){
+    lkg_erev = Golgi[0].soma.el_Golgi_lkg
+    lkg_gbar = Golgi[0].soma.glbar_Golgi_lkg
+    na_gbar = Golgi[0].soma.gnabar_Golgi_Na
+    
+    Golgi_params = new VBox()
+	Golgi_params.intercept(1)   
+	xpanel("1")  
+	xlabel("Conductances")
+	xvalue("gNabar","Golgi[0].soma.gnabar_Golgi_Na", 1,"", 0, 0 )
+	xvalue("gNapbar","Golgi[0].soma.gbar_Golgi_NaP", 1,"", 0, 0 )
+	xvalue("gNaresurgent","Golgi[0].soma.gnabar_Golgi_NaR", 1,"", 0, 0 )
+	xvalue("gKVbar","Golgi[0].soma.gkbar_Golgi_KV", 1,"", 0, 0 )
+	xvalue("gKAbar","Golgi[0].soma.gkbar_Golgi_KA", 1,"", 0, 0 )
+	xvalue("gKCabar","Golgi[0].soma.gkbar_Golgi_BK", 1,"", 0, 0 )
+	xvalue("gCaHVAbar","Golgi[0].soma.gcabar_Golgi_Ca_HVA", 1,"", 0, 0 )
+	xvalue("gCaLVAbar","Golgi[0].soma.gca2bar_Golgi_Ca_LVA", 1,"", 0, 0 )
+	xvalue("gKSlowbar","Golgi[0].soma.gkbar_Golgi_KM", 1,"", 0, 0 )
+	xvalue("gSK2bar","Golgi[0].soma.gkbar_Golgi_SK2", 1,"", 0, 0 )
+	xvalue("ghcn1bar","Golgi[0].soma.gbar_Golgi_hcn1", 1,"", 0, 0 )
+	xvalue("ghcn2bar","Golgi[0].soma.gbar_Golgi_hcn2", 1,"", 0, 0 )
+	xvalue("Lkg Erev (mV)","lkg_erev", 1,"UpDatelkg()", 0, 0 )
+	xvalue("Lkg gbar (S/cm2)","lkg_gbar", 1,"UpDatelkg()", 0, 0 )
+
+	
+	xlabel("Passive properties: ")
+	strdef stroutput
+	sprint(stroutput,"K: Erev %3.0f (mV)",Golgi[0].soma.ek)
+	xlabel(stroutput)
+	sprint(stroutput,"Na: Erev %3.0f (mV)",Golgi[0].soma.ena)
+	xlabel(stroutput)
+	sprint(stroutput,"Ca: Erev %3.0f (mV)",Golgi[0].soma.eca)
+	sprint(stroutput,"Cai %5.0f (nM) Cao %3.0f (mM)",Golgi[0].soma.cai*1e6,Golgi[0].soma.cao)
+	xlabel(stroutput)
+	sprint(stroutput,"Rm %4.0f (MOhm)",1e-6/(Golgi[0].soma.glbar_Golgi_lkg*cell_surf_cm))
+	xlabel(stroutput)
+	sprint(stroutput,"Cm %5.1f (pF)",Golgi[0].soma.cm*cell_surf_cm*1e6)
+	xlabel(stroutput)
+	
+	xpanel()
+	xpanel("2")
+	xlabel("Calcium HVA parameters")
+	xvalue("Shell thickness","Golgi[0].soma.d_Golgi_CALC", 1,"", 0, 0 )
+	xvalue("Initial concentration","Golgi[0].soma.cai0_Golgi_CALC", 1,"", 0, 0 )
+	xvalue("Removal rate","Golgi[0].soma.beta_Golgi_CALC", 1,"", 0, 0 ) 
+	xlabel("Calcium LVA parameters")
+	xvalue("Shell thickness","Golgi[0].soma.d_Golgi_CALC_ca2", 1,"", 0, 0 )
+	xvalue("Initial concentration","Golgi[0].soma.ca2i0_Golgi_CALC_ca2", 1,"", 0, 0 )
+	xvalue("Removal rate","Golgi[0].soma.beta_Golgi_CALC_ca2", 1,"", 0, 0 ) 
+	xpanel()
+	Golgi_params.intercept(0)
+	Golgi_params.map("Golgi Cell Parameters", 1352, 22, 309, 742)
+    }
+
+proc Golgi_Channels() {
+    xopen("Channel_dynamics.hoc")
+}
+
+proc Postsyn_conf() {
+    xpanel("Synaptic paramters")
+    xstatebutton("Activate synapses",&synstate ,"set_syn_start(synstate)")
+    xlabel ("Excitatory synapses: 26 per dendrite")
+    exc_gmax = Golgi[0].exc[0].gmax
+    xvalue ("Max cond. (pS)","exc_gmax", 1,"set_exc_gmax(exc_gmax)", 0, 0 )
+    xvalue ("Stim. freq. (Hz)","Exc_freq",1,"Set_Exc_freq(Exc_freq)", 0, 0 )
+    xlabel ("Inhibitory synapses: 13 per dendrite")
+    inh_gmax = Golgi[0].inh[0].gmax
+    xvalue ("Max cond. (pS)","inh_gmax", 1,"set_inh_gmax(inh_gmax)", 0, 0 )
+    xvalue ("Stim. freq. (Hz)","Inh_freq",1,"Set_Inh_freq(Inh_freq)", 0, 0 )
+    xpanel()
+}
+
+proc set_syn_start(){local syn_start
+    syn_start = (!$1)*1e9
+    for i=0,77 {
+	Exc[i].start = syn_start
+    }
+    for i=0,26 {
+	Inh[i].start = syn_start
+    }    
+}
+
+proc set_exc_gmax(){
+    for i=0,77 {Golgi[0].exc[i].gmax = $1}   
+}
+
+proc set_inh_gmax(){
+    for i=0,26 {Golgi[0].inh[i].gmax = $1}   
+}
+
+proc Set_Exc_freq() {
+    for i=0,77 {
+	Exc[i].fast_invl = 1000/$1
+    }
+}
+
+proc Set_Inh_freq(){
+    for i=0,26 {
+	Inh[i].fast_invl = 1000/$1
+    }
+}
+
+proc Gnoise() {
+    xpanel("Intirsic noise")
+    xstatebutton("Activate",&gnoisestate ,"set_gnoise_start(gnoisestate,gnoise)")
+    xvalue("Amplitude (nA)","gauss_noise_amp", 1,"r.normal(0,gauss_noise_amp)", 0, 0 )    
+    xpanel()
+}
+
+proc set_gnoise_start() {
+    $o2.del = (!$1)*1e9
+    $o2.dur = 100000
+    $o2.amp = ($1)*1e9
+    cvode.active(!$1)
+}
+
+strdef dirn
+
+strdef KinMenu
+KinMenu="kinetics.hoc"
+objref Golgi_params
+
+    
+proc UpDatelkg() {
+    Golgi[0].soma.el_Golgi_lkg     = lkg_erev
+    for i=0,2 Golgi[0].dend[i].el_Golgi_lkg = lkg_erev
+    Golgi[0].axon.el_Golgi_lkg     = lkg_erev
+    
+    Golgi[0].soma.glbar_Golgi_lkg     = lkg_gbar
+    for i=0,2 Golgi[0].dend[i].glbar_Golgi_lkg = lkg_gbar
+    Golgi[0].axon.glbar_Golgi_lkg     = lkg_gbar
+        
+}
+

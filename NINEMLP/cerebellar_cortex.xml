@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nineml>
+    <!-- The base network from which to build the main network -->
+    <network id="CerebellarNetwork">
+        <!-- This is a prototype idea to allow easy scaling of network without having to update each 
+            attributes by hand -->
+        <scalars>
+            <scalar name="patch_size" value="1.0" />
+        </scalars>
+        <extensions>
+            <extension id="Brep" cmd="brep" resource="brep_filename_goes_here.xml" output="build/brep" />
+        </extensions>
+        <!-- Populations -->
+        <population id="Granule" cell="Granule">
+            <layout type="External" engine="Brep" id="Granule"> Brep args could go here
+            </layout>
+        </population>
+        <population id="Purkinje" cell="Purkinje">
+            <layout type="External" engine="Brep" id="Purkinje"> Brep args could go here
+            </layout>
+        </population>
+        <population id="MossyFiber" cell="MossyFiber">
+            <layout type="External" engine="Brep" id="MossyFiber"> Brep args could go here
+            </layout>
+        </population>
+        <population id="Golgi" cell="Golgi">
+            <layout type="Grid2D" x_offset="0 um" y_offset="0 um" z_offset="0 um" x_extent="1 um"
+                y_extent="1 um" x_number="20" y_number="20">
+                <scale param="x_offset" scalar="patch_size"/>
+                <scale param="y_offset" scalar="patch_size"/>
+                <scale param="z_offset" scalar="patch_size"/>                                
+            </layout>
+        </population>
+        <population id="Stellate" cell="Stellate">
+            <layout type="Grid3D" x_offset="0 um" y_offset="0 um" z_offset="0 um" x_extent="1 um"
+                y_extent="1 um" x_number="50" y_number="50" />
+        </population>
+        <population id="Basket" cell="Basket">
+            <layout type="Grid3D" x_offset="0 um" y_offset="0 um" z_offset="0 um" x_extent="1 um"
+                y_extent="1 um" z_extent="1 um" x_number="50" y_number="50" z_number="50" />
+        </population>
+        <!-- Projections -->
+        <projection id="Granule_Purkinje">
+            <source id="Granule" />
+            <destination id="Purkinje" synapse="Exp2Syn" />
+            <pattern type="External" engine="Brep" id="Granule-Purkinje" />
+        </projection>
+        <projection id="MossyFiber_Granule">
+            <source id="MossyFiber" />
+            <destination id="Granule" synapse="??" />
+            <pattern type="DistanceBased" geometry="Circle" radius="85 um" number="21" />
+            <comment> The mossy fiber branches before the cerebellum and in the granular layer and
+                gives off the rosettes/glomeruli (estimates say that one mossy fiber gives off about
+                150 rosettes, which may cross folia. The rosettes are at a distance of about 100um
+                of each other. Each rosette talks to about 20+ granule cells, and about one Go Axon.
+                Distribution of Glomeruli: Preferably homogeneous. Euclidean distance between
+                rosettes about 85um (can be used as the radius of a sphere). Each Glomerulus
+                contacts about 21 gr cells. One Glomerulus is contacted by a Golgi cell axon. We do
+                not have that yet.
+            </comment>
+        </projection>
+        <projection id="Granule_Golgi">
+            <source id="Granule" />
+            <destination id="Golgi" synapse="??" />
+            <pattern type="External" engine="Brep" id="" />
+            <comment> Golgi cells read off the parallel fibers. Golgi cell dendrites are confined to
+                zebrin stripes. Each Golgi is estimated to read from up to 4000 granule cells (cat).
+                The dendritic tree size is 200 x 600 x 180μm in cats. A simple way to get this
+                connectivity is to have an ellipsoid with the dendritic tree size. With the number
+                of synapses as above.
+            </comment>
+        </projection>
+        <projection id="Golgi_Granule">
+            <source id="Golgi" />
+            <destination id="Granule" synapse="??" />
+            <pattern type="DistanceBased" geometry="Ellipse" x="200 um" y="600 um" number="10" />
+            <comment> There are about 400 Golgi cells per granule cell in the mouse. The axon does
+                not seem to be confined as the dendrite, but it is rather flat and oriented in the
+                same direction. Every granule cell receives from about 10 Golgi cells. I am not sure
+                about this number. Better way to estimate it is to measure the axonal length and
+                multiply by the density of synapses per um of axon. Currently we position the Golgi
+                cells with a uniform distribution. We calculate the number of Golgi cells by 1.
+                estimating the number of granule cells via density 2. multiplying that number by 400
+            </comment>
+        </projection>
+        <projection id="Granule_Basket">
+            <source id="Granule" />
+            <destination id="Basket" />
+            <pattern type="DistanceBased" geometry="Ellipse" x="50 um" y="174 um" number="50" />
+            <comment> In humans there are about 50:1 inhibitory interneurons to PC. Safe bet in the
+                rat is half that number. These neurons are most likely confined to travel
+                para-saggitally, perpendicular to the PFs. The best numbers for the connectivity
+                between PFs and Gr are the ones that Shyam has, we have to ask him. The arbors would
+                be best represented by very elongated ellipsoids of about 174+/- 60 um along the
+                parasaggital, with a short axis of maybe 50 um. The number of postsynaptic sites
+                (reading from PFs) we ask Shyam. The distribution of inhibitory interneuron's somata
+                is likely to be homogeneous. There is a morphological gradient from stellate to
+                basket cells, as they go closer to the PN layer. Basket cells are in the deeper
+                layers, and connect to purkinje somas. In the hoc, we first put stellates in the top
+                one third and baskets in the bottom two thirds of the molecular layer. I don't like
+                it. My preference is to first distribute the I.I. regardless of their category.
+            </comment>
+        </projection>
+        <projection id="Granule_Stellate">
+            <source id="Granule" />
+            <destination id="Stellate" />
+            <pattern type="DistanceBased" geometry="Ellipsoid" x="50 um" y="174 um" number="50" />
+            <comment> In humans there are about 50:1 inhibitory interneurons to PC. Safe bet in the
+                rat is half that number. These neurons are most likely confined to travel
+                para-saggitally, perpendicular to the PFs. The best numbers for the connectivity
+                between PFs and Gr are the ones that Shyam has, we have to ask him. The arbors would
+                be best represented by very elongated ellipsoids of about 174+/- 60 um along the
+                parasaggital, with a short axis of maybe 50 um. The number of postsynaptic sites
+                (reading from PFs) we ask Shyam. The distribution of inhibitory interneuron's somata
+                is likely to be homogeneous. There is a morphological gradient from stellate to
+                basket cells, as they go closer to the PN layer. Stellate cells are in the deeper
+                layers, and connect to purkinje somas. In the hoc, we first put stellates in the top
+                one third and baskets in the bottom two thirds of the molecular layer. I don't like
+                it. My preference is to first distribute the I.I. regardless of their category.
+            </comment>
+        </projection>
+        <projection id="Basket_Purkinje">
+            <source id="Basket" />
+            <destination id="Purkinje" />
+            <pattern type="DistanceBased" geometry="Ellipse" x="50 um" y="345 um" number="50" />
+            <comment> The PN should be divided between soma and dendrites. The I.I. close to
+                dendrites connect dendrites, and the ones close to the soma, to the soma. The axon
+                reach on average was 345 μm (sd um 149). Looong. May connect to many PNs in the
+                parasaggital (up to 7 has been observed). Hence, the axon can also be approximated
+                by an elongated ellipsoid, even longer than the dendrites. Number of sites from I.I.
+                to PN we have to ask Shyam. PF to PNs We estimate the number of PNs as 1:800 to
+                granule cells. Their distribution is very regular in the parasaggital. The distance
+                between PN arbors is on the 30um. The number of postsynaptic sites is about 1e5 in
+                the mouse. The size of the arbor in the mouse is roughly 180x180x30. We position the
+                purkinjes presuming no arbors overlap in volume. To find whether a PF contacts a PN
+                we look if the PF's yz coordinates fall within the yz of the PN arbor.
+            </comment>
+        </projection>
+        <projection id="Stellate_Purkinje">
+            <source id="Stellate" />
+            <destination id="Purkinje" />
+            <pattern type="DistanceBased" geometry="Ellipse" x="50 um" y="345 um" number="50" />
+            <comment> The PN should be divided between soma and dendrites. The I.I. close to
+                dendrites connect dendrites, and the ones close to the soma, to the soma. The axon
+                reach on average was 345 μm (sd um 149). Looong. May connect to many PNs in the
+                parasaggital (up to 7 has been observed). Hence, the axon can also be approximated
+                by an elongated ellipsoid, even longer than the dendrites. Number of sites from I.I.
+                to PN we have to ask Shyam. PF to PNs We estimate the number of PNs as 1:800 to
+                granule cells. Their distribution is very regular in the parasaggital. The distance
+                between PN arbors is on the 30um. The number of postsynaptic sites is about 1e5 in
+                the mouse. The size of the arbor in the mouse is roughly 180x180x30. We position the
+                purkinjes presuming no arbors overlap in volume. To find whether a PF contacts a PN
+                we look if the PF's yz coordinates fall within the yz of the PN arbor.
+            </comment>
+        </projection>
+    </network>
+</nineml>
+<!-- Example showing off unimplmented population features. <population id="Purkinje" cell="Purkinje" 
+    layout="brep:Purkinje"> <paramDist param="ek" component="Kv1" distribution="uniform"> <arg name="lower" 
+    value="0.1"/> <arg name="upper" value="0.2"/> </paramDist> <initialValue arg="v" value="-65 mV"/> </population> -->

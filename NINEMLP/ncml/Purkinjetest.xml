@@ -1,0 +1,894 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model xmlns:ncml="www.oist.jp" namespace="ncml">
+    <!--<include href="SimpleIonChannel.xml"/> -->
+    <cell id="Purkinje">
+        <notes>A model of a Purkinje cell</notes>
+        <morphology id="Compartmental">
+            <!-- Segments -->
+            <!-- Soma segment -->
+            <segment id="soma">
+                <proximal x="0" y="0" z="0" diameter="17.5" />
+                <distal x="0" y="0" z="15" diameter="17.5" />
+            </segment>
+            <!-- Trunk segment -->
+            <segment id="trunk">
+                <parent segment="soma" />
+                <distal x="0" y="0" z="77.5" diameter="8" />
+            </segment>
+            <!-- Fork segments -->
+            <segment id="fork_0">
+                <parent segment="trunk" />
+                <distal x="0" y="-62.5" z="140" diameter="2" />
+            </segment>
+            <segment id="fork_1">
+                <parent segment="trunk" />
+                <distal x="0" y="62.5" z="140" diameter="2" />
+            </segment>
+            <!-- Leaf 0 segments -->
+            <segment id="leaf_0_0">
+                <parent segment="fork_0" />
+                <distal x="0" y="-93.75" z="171.25" diameter="0.5" />
+            </segment>
+            <segment id="leaf_0_1">
+                <parent segment="leaf_0_0" />
+                <distal x="0" y="-93.75" z="202.5" diameter="0.5" />
+            </segment>
+            <segment id="leaf_0_2">
+                <parent segment="leaf_0_1" />
+                <distal x="0" y="-93.75" z="233.75" diameter="0.5" />
+            </segment>
+            <segment id="leaf_0_3">
+                <parent segment="leaf_0_2" />
+                <distal x="0" y="-93.75" z="265" diameter="0.5" />
+            </segment>
+            <!-- Leaf 1 segments -->
+            <segment id="leaf_1_0">
+                <parent segment="fork_0" />
+                <distal x="0" y="-31.25" z="171.25" diameter="0.5" />
+            </segment>
+            <segment id="leaf_1_1">
+                <parent segment="leaf_1_0" />
+                <distal x="0" y="-31.25" z="202.5" diameter="0.5" />
+            </segment>
+            <segment id="leaf_1_2">
+                <parent segment="leaf_1_1" />
+                <distal x="0" y="-31.25" z="233.75" diameter="0.5" />
+            </segment>
+            <segment id="leaf_1_3">
+                <parent segment="leaf_1_2" />
+                <distal x="0" y="-31.25" z="265" diameter="0.5" />
+            </segment>
+            <!-- Leaf 2 segments -->
+            <segment id="leaf_2_0">
+                <parent segment="fork_1" />
+                <distal x="0" y="31.25" z="171.25" diameter="0.5" />
+            </segment>
+            <segment id="leaf_2_1">
+                <parent segment="leaf_2_0" />
+                <distal x="0" y="31.25" z="202.5" diameter="0.5" />
+            </segment>
+            <segment id="leaf_2_2">
+                <parent segment="leaf_2_1" />
+                <distal x="0" y="31.25" z="233.75" diameter="0.5" />
+            </segment>
+            <segment id="leaf_2_3">
+                <parent segment="leaf_2_2" />
+                <distal x="0" y="31.25" z="265" diameter="0.5" />
+            </segment>
+            <!-- Leaf 3 segments -->
+            <segment id="leaf_3_0">
+                <parent segment="fork_1" />
+                <distal x="0" y="93.75" z="171.25" diameter="0.5" />
+            </segment>
+            <segment id="leaf_3_1">
+                <parent segment="leaf_3_0" />
+                <distal x="0" y="93.75" z="202.5" diameter="0.5" />
+            </segment>
+            <segment id="leaf_3_2">
+                <parent segment="leaf_3_1" />
+                <distal x="0" y="93.75" z="233.75" diameter="0.5" />
+            </segment>
+            <segment id="leaf_3_3">
+                <parent segment="leaf_3_2" />
+                <distal x="0" y="93.75" z="265" diameter="0.5" />
+            </segment>
+            <!-- Segment groups -->
+            <segmentGroup id="soma_group">
+                <member segment="soma" />
+            </segmentGroup>
+            <segmentGroup id="trunk_group">
+                <member segment="trunk" />
+            </segmentGroup>
+            <segmentGroup id="fork_group">
+                <member segment="fork_0" />
+                <member segment="fork_1" />
+            </segmentGroup>
+            <segmentGroup id="leaves_group">
+                <member segment="leaf_0_0" />
+                <member segment="leaf_0_1" />
+                <member segment="leaf_0_2" />
+                <member segment="leaf_0_3" />
+                <member segment="leaf_1_0" />
+                <member segment="leaf_1_1" />
+                <member segment="leaf_1_2" />
+                <member segment="leaf_1_3" />
+                <member segment="leaf_2_0" />
+                <member segment="leaf_2_1" />
+                <member segment="leaf_2_2" />
+                <member segment="leaf_2_3" />
+                <member segment="leaf_3_0" />
+                <member segment="leaf_3_1" />
+                <member segment="leaf_3_2" />
+                <member segment="leaf_3_3" />
+            </segmentGroup>
+        </morphology>
+        <biophysicalProperties id="AckermannKnopfel">
+            <membraneProperties>
+                <!-- type="PostSynaptic_Conductance for synapse with Granule 
+                    cell" -->
+                <conductanceSynapse id="Exp2Syn" segmentGroup="leaves_group" >
+                    <const name="tau1" value="0.5"
+                        units="ms" />
+                    <const name="tau2" value="1.2"
+                        units="ms" />
+                    <const name="e" value="0.0" units="mV" />
+                </conductanceSynapse>
+                <component type="ionic-current" name="Kv1">
+                    <component type="gate">
+                        <!-- Rate Functions -->
+                        <defun name="Kv1_amf">
+                            <arg name="v" />
+                            <body>
+                                let ( (cma 0.12889) (cka -33.90877) (cva
+                                45)) (cma * (exp (neg ((v + cva)
+                                <divide />
+                                cka))) )
+                            </body>
+                        </defun>
+                        <defun name="Kv1_bmf">
+                            <arg name="v" />
+                            <body>
+                                (let ((cmb 0.12889) (ckb 12.42101) (cvb
+                                45)) (cmb * (exp (neg ((v + cvb)
+                                <divide />
+                                ckb)))))
+                            </body>
+                        </defun>
+                        <hh-ionic-gate name="Kv1">
+                            <!-- ion name: exported variables will be of 
+                                the form {ion}_{id} -->
+                            (initial-m (Kv1_amf (Vrest)
+                            <divide />
+                            (Kv1_amf (Vrest) + Kv1_bmf (Vrest))))
+                            (m-power 4) (h-power 0) (m-alpha (temp_adj *
+                            Kv1_amf (v) )) (m-beta (temp_adj * Kv1_bmf
+                            (v) ))
+                        </hh-ionic-gate>
+                    </component>
+                    <component type="pore">
+                        <const name="gbar_Kv1" value="1e3 * 0.011" />
+                        <output name="gbar_Kv1" />
+                    </component>
+                    <component type="permeating-ion" name="k">
+                        <const name="e_Kv1" value="-85" />
+                        <output name="e_Kv1" />
+                    </component>
+                </component>
+                <component type="ionic-current" name="Kv3">
+                    <component type="gate">
+                        <!-- Rate Functions -->
+                        <defun name="Kv3_amf">
+                            <arg name="v" />
+                            <body>
+                                (let ((ca 0.22) (cva 16) (cka -26.5))
+                                (ca * exp((neg (v + cva))
+                                <divide />
+                                cka) ))
+                            </body>
+                        </defun>
+                        <defun name="Kv3_bmf">
+                            <arg name="v" />
+                            <body>
+                                (let ((ca 0.22) (cvb 16) (ckb 26.5)) (ca
+                                * exp((neg (v + cvb))
+                                <divide />
+                                ckb) ))
+                            </body>
+                        </defun>
+                        <hh-ionic-gate name="Kv3">
+                            <!-- ion name: exported variables will be of 
+                                the form {ion}_{id} -->
+                            (initial-m (Kv3_amf (Vrest)
+                            <divide />
+                            (Kv3_amf (Vrest) + Kv3_bmf (Vrest))))
+                            (m-power 4) (h-power 0) (m-alpha (temp_adj *
+                            Kv3_amf (v) )) (m-beta (temp_adj * Kv3_bmf
+                            (v) ))
+                        </hh-ionic-gate>
+                    </component>
+                    <component type="pore">
+                        <const name="gbar_Kv3" value="1e3 * 0.005" />
+                        <output name="gbar_Kv3" />
+                    </component>
+                    <component type="permeating-ion" name="k">
+                        <const name="e_Kv3" value="-85" />
+                        <output name="e_Kv3" />
+                    </component>
+                    <component type="binary-gate">
+                        <const name="switch_Kv3" value="0" />
+                        <const name="e0" value="1.60217646e-19" />
+                        <const name="gunit" value="16" />
+                        <const name="nc">
+                            1e12 * gbar_Kv3 <divide/> gunit
+                        </const>
+                        <const name="zn" value="1.9196" />
+                        <defun name="gate_flip_Kv3">
+                            <arg name="v" />
+                            <arg name="m" />
+                            <body>
+                                (let ((a (Kv3_amf (v))) (ab (a + Kv3_bmf
+                                (v))) (tau (1
+                                <divide />
+                                ab)) (inf (a
+                                <divide />
+                                ab))) ((inf - m)
+                                <divide />
+                                tau)))
+                            </body>
+                        </defun>
+                        (i_gate_Kv3 = (if (switch_Kv3
+                        <gt />
+                        0) then (nc * 1e6 * e0 * 4 * zn *
+                        gate_flip_Kv3(v Kv3_m)) else 0))
+                        <output name="i_gate_Kv3" />
+                    </component>
+                </component>
+                <component type="ionic-current" name="Kv4">
+                    <component type="gate">
+                        <!-- Rate Functions -->
+                        <defun name="Kv4_amf">
+                            <arg name="v" />
+                            <body>
+                                (let ((can 0.15743) (ckan -32.19976)
+                                (cvan 57)) (can * exp (neg ((v + cvan)
+                                <divide />
+                                ckan))))
+                            </body>
+                        </defun>
+                        <defun name="Kv4_bmf">
+                            <arg name="v" />
+                            <body>
+                                (let ((cbn 0.15743) (ckbn 37.51346)
+                                (cvbn 57)) (cbn * exp (neg ((v + cvbn)
+                                <divide />
+                                ckbn))))
+                            </body>
+                        </defun>
+                        <defun name="Kv4_ahf">
+                            <arg name="v" />
+                            <body>
+                                (let ((cah 0.01342) (ckah -7.86476)
+                                (cvah 60)) (cah
+                                <divide />
+                                (1.0 + (exp (neg ((v + cvah)
+                                <divide />
+                                ckah))))))
+                            </body>
+                        </defun>
+                        <defun name="Kv4_bhf">
+                            <arg name="v" />
+                            <body>
+                                (let ((cbh 0.04477) (ckbh 11.3615) (cvbh
+                                54)) (cbh
+                                <divide />
+                                (1.0 + (exp (neg ((v + cvbh)
+                                <divide />
+                                ckbh))))))
+                            </body>
+                        </defun>
+                        <hh-ionic-gate name="Kv4">
+                            <!-- ion name: exported variables will be of 
+                                the form {ion}_{id} -->
+                            (initial-m (Kv4_amf (Vrest)
+                            <divide />
+                            (Kv4_amf (Vrest) + Kv4_bmf (Vrest))) )
+                            (initial-h (Kv4_ahf (Vrest)
+                            <divide />
+                            (Kv4_ahf (Vrest) + Kv4_bhf (Vrest))) )
+                            (m-power 4) (h-power 1) (m-alpha (temp_adj *
+                            Kv4_amf (v))) (m-beta (temp_adj * Kv4_bmf
+                            (v))) (h-alpha (temp_adj * Kv4_ahf (v)))
+                            (h-beta (temp_adj * Kv4_bhf (v)))
+                        </hh-ionic-gate>
+                    </component>
+                    <component type="pore">
+                        <const name="gbar_Kv4" value="1e3 * 0.0039" />
+                        <output name="gbar_Kv4" />
+                       
+                    </component>
+                    <component type="permeating-ion" name="k">
+                        <const name="e_Kv4" value="-85" />
+                        <output name="e_Kv4" />
+                    </component>
+                </component>
+                <component type="ionic-current" name="Ih">
+                    <component type="gate">
+                        <!-- Rate Functions -->
+                        <defun name="Ih_inf">
+                            <arg name="v" />
+                            <body>
+                                (let ((cvn 90.1) (ckn -9.9)) (1.0
+                                <divide />
+                                (1.0 + exp (neg ((v + cvn)
+                                <divide />
+                                ckn) ))))
+                            </body>
+                        </defun>
+                        <defun name="Ih_tau">
+                            <arg name="v" />
+                            <body>
+                                (let ((cct 190) (cat 720) (cvt 81.5)
+                                (ckt 11.9)) (cct + (cat * exp (neg (pow
+                                (((v + cvt)
+                                <divide />
+                                ckt) 2))))))
+                            </body>
+                        </defun>
+                        <hh-ionic-gate name="Ih">
+                            <!-- ion name: exported variables will be of 
+                                the form {ion}_{id} -->
+                            (initial-m (Ih_inf (Vrest))) (m-power 1)
+                            (h-power 0) (m-inf (Ih_inf (v))) (m-tau
+                            (Ih_tau (v)
+                            <divide />
+                            temp_adj)) )
+                        </hh-ionic-gate>
+                    </component>
+                    <component type="pore">
+                        <const name="gbar_Ih" value="1e3 * 0.0002" />
+                        <output name="gbar_Ih" />
+                    </component>
+                    <component type="permeating-ion" name="non-specific">
+                        <const name="e_Ih" value="-30" />
+                        <output name="e_Ih" />
+                    </component>
+                </component>
+                <component type="ionic-current" name="Leak">
+                    <component type="pore">
+                        <const name="gbar_Leak" value="1e3 * 9e-5" />
+                        <output name="gbar_Leak" />
+                    </component>
+                    <component type="permeating-ion" name="non-specific">
+                        <const name="e_Leak" value="-61" />
+                        <output name="e_Leak" />
+                    </component>
+                </component>
+                <component type="ionic-current" name="CaP">
+                    <component type="gate">
+                        <!-- Rate Functions -->
+                        <defun name="CaP_inf">
+                            <arg name="v" />
+                            <body>
+                                (let ((cv 19) (ck 5.5)) (1.0
+                                <divide />
+                                (1.0 + exp (neg ((v + cv)
+                                <divide />
+                                ck)))))
+                            </body>
+                        </defun>
+                        <defun name="CaP_tau">
+                            <arg name="v" />
+                            <body>
+                                (if (v
+                                <gt />
+                                -50) then (1e3 * (0.000191 + (0.00376 *
+                                pow ((exp (neg ((v + 41.9)
+                                <divide />
+                                27.8))) 2)))) else (1e3 * (0.00026367 +
+                                (0.1278 * exp (0.10327 * v)))))
+                            </body>
+                        </defun>
+                        <hh-ionic-gate name="CaP">
+                            <!-- ion name: exported variables will be of 
+                                the form {ion}_{id} -->
+                            (initial-m (CaP_inf (Vrest))) (m-power 1)
+                            (h-power 0) (m-inf (CaP_inf (v))) (m-tau
+                            (CaP_tau (v)
+                            <divide />
+                            temp_adj))
+                        </hh-ionic-gate>
+                    </component>
+                    <component type="permeability">
+                        <const name="pcabar_CaP" value="1e3 * 0.01667" />
+                        <const name="cao" value="2.4" />
+                        (pca_CaP = (pcabar_CaP * ghk (v celsius cai
+                        cao)))
+                        <output name="pca_CaP" />
+                        )
+                    </component>
+                    <component type="permeating-ion" name="ca" />
+                </component>
+                <component type="ionic-current" name="CaBK">
+                    <component type="gate">
+                        <!-- Rate Functions -->
+                        <defun name="CaBK_zinf">
+                            <arg name="cai" />
+                            <body>
+                                (let ((zhalf 0.001)) (1
+                                <divide />
+                                (1 + (zhalf
+                                <divide />
+                                cai)))))
+                            </body>
+                        </defun>
+                        <const name="CaBK_ztau" value="1.0" />
+                        <defun name="CaBK_minf">
+                            <arg name="v" />
+                            <body>
+                                (let ((cvm 28.9) (ckm 6.2)) (1.0
+                                <divide />
+                                (1.0 + exp (neg ((v + 5.0 + cvm)
+                                <divide />
+                                ckm))))))
+                            </body>
+                        </defun>
+                        <defun name="CaBK_mtau">
+                            <arg name="v" />
+                            <body>
+                                (let ((ctm 0.000505) (cvtm1 86.4) (cktm1
+                                -10.1) (cvtm2 -33.3) (cktm2 10)) (ctm +
+                                (1.0
+                                <divide />
+                                (exp (neg ((v + 5.0 + cvtm1)
+                                <divide />
+                                cktm1)) + exp (neg ((v + 5.0 + cvtm2)
+                                <divide />
+                                cktm2)))))))
+                            </body>
+                        </defun>
+                        <defun name="CaBK_hinf">
+                            <arg name="v" />
+                            <body>
+                                (let ((ch 0.085) (cvh 32) (ckh -5.8))
+                                (ch + ((1.0 - ch)
+                                <divide />
+                                (1.0 + (exp (neg ((v + 5.0 + cvh)
+                                <divide />
+                                ckh))))))))
+                            </body>
+                        </defun>
+                        <defun name="CaBK_htau">
+                            <arg name="v" />
+                            <body>
+                                (let ((cth 0.0019) (cvth1 48.5) (ckth1
+                                -5.2) (cvth2 -54.2) (ckth2 12.9)) (cth +
+                                (1.0
+                                <divide />
+                                (exp (neg ((v + cvth1)
+                                <divide />
+                                ckth1)) + exp (neg ((v + cvth2)
+                                <divide />
+                                ckth2))))))
+                            </body>
+                        </defun>
+                        <const name="CaBK_alpha">
+                            (CaBK_zinf (cai) <divide/> CaBK_ztau)
+                        </const>
+                        <const name="CaBK_beta">
+                            ((1 - CaBK_zinf (cai)) <divide/> CaBK_ztau)
+                        </const>
+                        <reaction name="CaBK_z">
+                            <transitions>
+                                (
+                                <trans />
+                                C O CaBK_beta CaBK_alpha)
+                            </transitions>
+                            <conserve statement="1 = (O + C)" />
+                            (initial (CaBK_zinf (1e-4))) (open O) (power
+                            2)
+                        </reaction>
+                        <output name="CaBK_z" />
+                        <hh-ionic-gate name="CaBK">
+                            <!-- ion name: exported variables will be of 
+                                the form {ion}_{id} -->
+                            (initial-m (CaBK_minf (Vrest)
+                            <divide />
+                            temp_adj)) (initial-h (CaBK_hinf (Vrest)
+                            <divide />
+                            temp_adj)) (m-power 3) (h-power 1) (m-inf
+                            (CaBK_minf (v)
+                            <divide />
+                            temp_adj) ) (m-tau (CaBK_mtau (v)
+                            <divide />
+                            temp_adj) ) (h-inf (CaBK_hinf (v)
+                            <divide />
+                            temp_adj) ) (h-tau (CaBK_htau (v)
+                            <divide />
+                            temp_adj) )
+                        </hh-ionic-gate>
+                    </component>
+                    <component type="pore">
+                        <const name="gbar_CaBK" value="1e3 * 0.014" />
+                        <output name="gbar_CaBK" />
+                    </component>
+                    <component type="permeating-ion" name="k">
+                        <const name="e_CaBK" value="-85" />
+                        <output name="e_CaBK" />
+                    </component>
+                </component>
+                <functor name="Nafun" type="ionic-current">
+                    <input name="Na_gbar" />
+                    <input name="Na_Con" />
+                    <input name="Na_Coff" />
+                    <input name="Na_Oon" />
+                    <input name="Na_Ooff" />
+                    <input name="Na_alfac" />
+                    <input name="Na_btfac" />
+                    <input name="Na_alpha" />
+                    <input name="Na_beta" />
+                    <input name="Na_gamma" />
+                    <input name="Na_delta" />
+                    <input name="Na_epsilon" />
+                    <input name="Na_zeta" />
+                    <input name="Na_x1" />
+                    <input name="Na_x2" />
+                    <input name="Na_x3" />
+                    <input name="Na_x4" />
+                    <input name="Na_x5" />
+                    <input name="Na_x6" />
+                    <component type="gate">
+                        <!-- rate functions -->
+                        <defun name="f01">
+                            <arg name="v" />
+                            <body>
+                                4.0 * Na_alpha * exp (v
+                                <divide />
+                                Na_x1) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="f02">
+                            <arg name="v" />
+                            <body>
+                                3.0 * Na_alpha * exp (v
+                                <divide />
+                                Na_x1) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="f03">
+                            <arg name="v" />
+                            <body>
+                                2.0 * Na_alpha * exp (v
+                                <divide />
+                                Na_x1) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="f04">
+                            <arg name="v" />
+                            <body>
+                                Na_alpha * exp (v
+                                <divide />
+                                Na_x1) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="f0O">
+                            <arg name="v" />
+                            <body>
+                                Na_gamma * exp (v
+                                <divide />
+                                Na_x3) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="fip">
+                            <arg name="v" />
+                            <body>
+                                Na_epsilon * exp (v
+                                <divide />
+                                Na_x5) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="f11">
+                            <arg name="v" />
+                            <body>
+                                4.0 * Na_alpha * Na_alfac * exp (v
+                                <divide />
+                                Na_x1) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="f12">
+                            <arg name="v" />
+                            <body>
+                                3.0 * Na_alpha * Na_alfac * exp (v
+                                <divide />
+                                Na_x1) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="f13">
+                            <arg name="v" />
+                            <body>
+                                2.0 * Na_alpha * Na_alfac * exp (v
+                                <divide />
+                                Na_x1) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="f14">
+                            <arg name="v" />
+                            <body>
+                                Na_alpha * Na_alfac * exp (v
+                                <divide />
+                                Na_x1) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="f1n">
+                            <arg name="v" />
+                            <body>
+                                Na_gamma * exp (v
+                                <divide />
+                                Na_x3) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="fi1">
+                            <arg name="v" />
+                            <body>Na_Con * temp_adj</body>
+                        </defun>
+                        <defun name="fi2">
+                            <arg name="v" />
+                            <body>Na_Con * Na_alfac * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="fi3">
+                            <arg name="v" />
+                            <body>Na_Con * Na_alfac * Na_alfac *
+                                temp_adj
+                            </body>
+                        </defun>
+                        <defun name="fi4">
+                            <arg name="v" />
+                            <body>Na_Con * Na_alfac * Na_alfac *
+                                Na_alfac * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="fi5">
+                            <arg name="v" />
+                            <body>Na_Con * Na_alfac * Na_alfac *
+                                Na_alfac * Na_alfac * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="fin">
+                            <arg name="v" />
+                            <body>Na_Oon * temp_adj</body>
+                        </defun>
+                        <defun name="b01">
+                            <arg name="v" />
+                            <body>
+                                Na_beta * exp (v
+                                <divide />
+                                Na_x2) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="b02">
+                            <arg name="v" />
+                            <body>
+                                2.0 * Na_beta * exp (v
+                                <divide />
+                                Na_x2) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="b03">
+                            <arg name="v" />
+                            <body>
+                                3.0 * Na_beta * exp (v
+                                <divide />
+                                Na_x2) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="b04">
+                            <arg name="v" />
+                            <body>
+                                4.0 * Na_beta * exp (v
+                                <divide />
+                                Na_x2) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="b0O">
+                            <arg name="v" />
+                            <body>
+                                Na_delta * exp (v
+                                <divide />
+                                Na_x4) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="bip">
+                            <arg name="v" />
+                            <body>
+                                Na_zeta * exp (v
+                                <divide />
+                                Na_x6) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="b11">
+                            <arg name="v" />
+                            <body>
+                                Na_beta * Na_btfac * exp (v
+                                <divide />
+                                Na_x2) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="b12">
+                            <arg name="v" />
+                            <body>
+                                2.0 * Na_beta * Na_btfac * exp (v
+                                <divide />
+                                Na_x2) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="b13">
+                            <arg name="v" />
+                            <body>
+                                3.0 * Na_beta * Na_btfac * exp (v
+                                <divide />
+                                Na_x2) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="b14">
+                            <arg name="v" />
+                            <body>
+                                4.0 * Na_beta * Na_btfac * exp (v
+                                <divide />
+                                Na_x2) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="b1n">
+                            <arg name="v" />
+                            <body>
+                                Na_delta * exp (v
+                                <divide />
+                                Na_x4) * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="bi1">
+                            <arg name="v" />
+                            <body>Na_Coff * temp_adj</body>
+                        </defun>
+                        <defun name="bi2">
+                            <arg name="v" />
+                            <body>Na_Coff * Na_btfac * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="bi3">
+                            <arg name="v" />
+                            <body>Na_Coff * Na_btfac * Na_btfac *
+                                temp_adj
+                            </body>
+                        </defun>
+                        <defun name="bi4">
+                            <arg name="v" />
+                            <body>Na_Coff * Na_btfac * Na_btfac *
+                                Na_btfac * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="bi5">
+                            <arg name="v" />
+                            <body>Na_Coff * Na_btfac * Na_btfac *
+                                Na_btfac * Na_btfac * temp_adj
+                            </body>
+                        </defun>
+                        <defun name="bin">
+                            <arg name="v" />
+                            <body>Na_Ooff * temp_adj</body>
+                        </defun>
+                        <reaction name="Na_z">
+                            <transitions>
+                                (
+                                <trans />
+                                C1 C2 f01 b01) (
+                                <trans />
+                                C2 C3 f02 b02) (
+                                <trans />
+                                C3 C4 f03 b03) (
+                                <trans />
+                                C4 C5 f04 b04) (
+                                <trans />
+                                C5 O f0O b0O) (
+                                <trans />
+                                O B fip bip) (
+                                <trans />
+                                O I6 fin bin) (
+                                <trans />
+                                I1 I2 f11 b11) (
+                                <trans />
+                                I2 I3 f12 b12) (
+                                <trans />
+                                I3 I4 f13 b13) (
+                                <trans />
+                                I4 I5 f14 b14) (
+                                <trans />
+                                I5 I6 f1n b1n) (
+                                <trans />
+                                C1 I1 fi1 bi1) (
+                                <trans />
+                                C2 I2 fi2 bi2) (
+                                <trans />
+                                C3 I3 fi3 bi3) (
+                                <trans />
+                                C4 I4 fi4 bi4) (
+                                <trans />
+                                C5 I5 fi5 bi5)
+                            </transitions>
+                            <conserve
+                                statement="1 = (C1 + C2 + C3 + C4 + C5 + O + B + I1 + I2 + I3 + I4 + I5 + I6)" />
+                            (open O) (power 1))
+                        </reaction>
+                        <output name="Na_z" />
+                    </component>
+                    <component type="pore">
+                        <const name="gbar" value="Na_gbar" />
+                        <output name="gbar" />
+                    </component>
+                    <component type="permeating-ion" name="na">
+                        <const name="e" value="-88" />
+                        <output name="e" />
+                    </component>
+                </functor>
+                <component name="Na" functor="Nafun">
+                    <const name="Na_gbar" value="1e3 * 0.014" />
+                    <const name="Na_Con" value="0.005" />
+                    <const name="Na_Coff" value="0.5" />
+                    <const name="Na_Oon" value="2.3" />
+                    <const name="Na_Ooff" value="0.005" />
+                    <const name="Na_alfac">
+                        pow ((Na_Oon <divide/> Na_Con) (1.0 <divide/> 4.0))
+                    </const>
+                    <const name="Na_btfac">
+                        pow ((Na_Ooff <divide/> Na_Coff) (1.0 <divide/> 4.0))
+                    </const>
+                    <const name="Na_alpha" value="150" />
+                    <const name="Na_beta" value="3" />
+                    <const name="Na_gamma" value="150" />
+                    <const name="Na_delta" value="40" />
+                    <const name="Na_epsilon" value="1e-12" />
+                    <const name="Na_zeta" value="0.03" />
+                    <const name="Na_x1" value="20" />
+                    <const name="Na_x2" value="-20" />
+                    <const name="Na_x3" value="1000000000000.0" />
+                    <const name="Na_x4" value="1000000000000.0" />
+                    <const name="Na_x5" value="1000000000000.0" />
+                    <const name="Na_x6" value="-25" />
+                </component>
+                <component name="Narsg" functor="Nafun">
+                    <const name="Na_gbar" value="1e3 * 0.016" />
+                    <const name="Na_Con" value="0.005" />
+                    <const name="Na_Coff" value="0.5" />
+                    <const name="Na_Oon" value="0.75" />
+                    <const name="Na_Ooff" value="0.005" />
+                    <const name="Na_alfac">
+                        pow ((Na_Oon <divide/> Na_Con) (1.0 <divide/> 4.0))
+                    </const>
+                    <const name="Na_btfac">
+                        pow ((Na_Ooff <divide/> Na_Coff) (1.0 <divide/> 4.0))
+                    </const>
+                    <const name="Na_alpha" value="150" />
+                    <const name="Na_beta" value="3" />
+                    <const name="Na_gamma" value="150" />
+                    <const name="Na_delta" value="40" />
+                    <const name="Na_epsilon" value="1.75" />
+                    <const name="Na_zeta" value="0.03" />
+                    <const name="Na_x1" value="20" />
+                    <const name="Na_x2" value="-20" />
+                    <const name="Na_x3" value="1000000000000.0" />
+                    <const name="Na_x4" value="-1000000000000.0" />
+                    <const name="Na_x5" value="1000000000000.0" />
+                    <const name="Na_x6" value="-25" />
+                </component>
+                <specificCapacitance segmentGroup="soma_group"
+                    value="1.0" units="uF_per_cm2" />
+                <specificCapacitance segmentGroup="leaves_group"
+                    value="2.0" units="uF_per_cm2" />
+                <reversalPotential species="k" value="-77"
+                    units="mV" />
+            </membraneProperties>
+            <intracellularProperties>
+                <resistivity value="100" units="ohm_cm" />  <!-- Used for specific axial resistance -->
+            </intracellularProperties>
+        </biophysicalProperties>
+    </cell>
+</model>

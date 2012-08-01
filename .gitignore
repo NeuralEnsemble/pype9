@@ -1,0 +1,9 @@
+/Documentation
+/doc/doxygen
+/tombo/work
+*.pyc
+.svn
+.externalToolBuilders
+.project
+.pydevproject
+/output

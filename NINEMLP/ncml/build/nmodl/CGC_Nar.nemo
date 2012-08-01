@@ -1,0 +1,92 @@
+
+
+;; Reference: Theta-Frequency Bursting and Resonance in Cerebellar Granule Cells:Experimental
+;; Evidence and Modeling of a Slow K+-Dependent Mechanism
+;; Egidio D'Angelo,Thierry Nieus,Arianna Maffei,Simona Armano,Paola Rossi,Vanni Taglietti,
+;; Andrea Fontana and Giovanni Naldi
+
+(nemo-model CGC_Nar
+
+  (
+   (input v
+    (cai from ion-pools)
+    (ica from ion-currents))
+
+   (const Vrest = -68)
+	     
+   (const fix_celsius = 30)
+
+   (component (type ionic-current) (name Nar )
+	      
+	      (component (type gate)
+
+			 ;; rate constants
+			 (const Q10 = (pow (3 ((fix_celsius - 20) / 10))))
+
+			 (const Aalpha_s     = -0.00493)
+			 (const V0alpha_s    = -4.48754)
+			 (const Kalpha_s     = -6.81881)
+			 (const Shiftalpha_s = 0.00008)
+
+			 (const Abeta_s     = 0.01558)
+			 (const V0beta_s    = 43.97494)
+			 (const Kbeta_s     =  0.10818)
+			 (const Shiftbeta_s = 0.04752)
+
+			 (const Aalpha_f  = 0.31836)
+			 (const V0alpha_f = -80)
+			 (const Kalpha_f  = -62.52621)
+
+			 (const Abeta_f  = 0.01014)
+			 (const V0beta_f = -83.3332)
+			 (const Kbeta_f  = 16.05379)
+
+			 ;; rate functions
+			 (defun alpha_s (v) 
+			   (Q10 * (Shiftalpha_s + (Aalpha_s * ((v + V0alpha_s) )) ) / (exp ((v + V0alpha_s) / Kalpha_s) - 1)))
+
+			 (defun beta_s (v) 
+			   (Q10 * (Shiftbeta_s + Abeta_s * ((v + V0beta_s) / (exp((v + V0beta_s) / Kbeta_s) - 1)))))
+
+			 (defun alpha_f (v) 
+			   (Q10 * Aalpha_f * exp( ( v - V0alpha_f ) / Kalpha_f)))
+
+			 (defun beta_f (v) 
+			   (Q10 * Abeta_f * exp( ( v - V0beta_f ) / Kbeta_f )  ))
+
+			 (hh-ionic-gate 
+			  (Nar  ;; ion name: exported variables will be of the form {ion}_{id}
+			   (initial-m  ((alpha_s (v)) / (alpha_s (v) + beta_s (v)) ))
+			   (initial-h  ((alpha_f (v)) / (alpha_f (v) + beta_f (v)) ))
+			   (m-power    1)
+			   (h-power    1)
+			   (m-alpha    (alpha_s (v)))
+			   (m-beta     (beta_s (v)))
+			   (h-alpha    (alpha_f (v)))
+			   (h-beta     (beta_f (v)))
+			   ))
+			 )
+
+	      (component (type pore)
+			 (const  gbar  = 0.0005)
+			 (output gbar ))
+
+	      (component (type permeating-ion) (name na)
+			 (const e = 87.39)
+			 (output e ))
+	      
+	      ) ;; end Nar current
+
+
+   (component (type voltage-clamp) (name Nar)
+
+	      (const vchold   = -71)
+	      (const vcbase   = -60)
+	      (const vcinc    = 10)
+	      (const vcsteps  = 9)
+	      (const vchdur   = 30)
+	      (const vcbdur   = 100)
+           
+	      (output vchold vcbase vcinc vcsteps vchdur vcbdur))
+
+))

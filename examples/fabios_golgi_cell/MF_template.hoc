@@ -1,0 +1,70 @@
+//DEFINITION OF CELL TEMPLATE
+
+begintemplate fibre
+
+public Presynapse
+public x,y,z
+public StimTrigger
+
+objref StimTrigger
+
+public nclist
+objectvar nclist  
+
+//counting spikes
+public spiketimes,spikecount
+objref spiketimes,spikecount
+
+public syn 
+objectvar syn 
+
+public voltagem
+objref voltagem
+
+create Presynapse	//create compartment
+
+proc init() {
+
+x=$1
+y=$2
+z=$3
+
+spiketimes=new Vector()
+lastspikecount=0
+
+voltagem=new Vector()
+
+
+Presynapse {
+
+ //initialise and clear the 3D information
+ pt3dclear()
+ pt3dadd(x,y,z,10)	//set position of cell
+ pt3dadd(x,y,z+10,10)
+ diam=1.0
+ L=1
+ nclist=new List()
+ StimTrigger=new NetStim(0.5) //Adding spike generator
+
+nseg=1
+diam=10.0
+L=5
+Ra=123
+insert hh	//Hodgkin-Huxley channels
+gnabar=0.25
+gl_hh=.0001666
+el_hh=-60 
+syn=new ExpSyn(0) //Adding synapse
+
+
+//counting spikes
+spikecount=new APCount(0.5)
+spikecount.thresh=-20
+spikecount.record(spiketimes)
+
+//Saving Vm
+voltagem.record(&v(0.5))
+}
+}
+
+endtemplate fibre

@@ -1,0 +1,69 @@
+/*******Cerebellar Golgi Cell Model **********
+
+Developers:    Sergio Solinas & Egidio D'Angelo
+Code contributors:  Thierry Neius, Shyam Diwakar, Lia Forti
+Data Analysis: Sergio Solinas
+
+Work Progress: April 2004 - May 2007
+
+Developed At:  Università Degli Studi Di Pavia
+	       Dipartimento Di Scienze Fisiologiche
+	       Pavia - Italia
+	       
+Model Published in: 
+             Sergio M. Solinas, Lia Forti, Elisabetta Cesana, 
+             Jonathan Mapelli, Erik De Schutter and Egidio D`Angelo (2008)
+             Computational reconstruction of pacemaking and intrinsic 
+             electroresponsiveness in cerebellar golgi cells
+             Frontiers in Cellular Neuroscience 2:2
+
+
+********************************************/
+
+objref dta, dta2
+
+dta = new Vector () 
+dta2 = new Vector ()
+
+proc FR() {
+  
+  print "spike times (ms): "
+  $o1.printf()
+  dta.deriv($o1,1,1)
+  print "In terspike intervals (ms): "
+  dta.printf()
+  dta2.resize(dta.size())
+  dta2.fill(1000)
+  dta2.div(dta)
+  print "Inst. Firing rates (sp/s): "
+  dta2.printf()
+  print "  first ISI\t  Last ISI\tAdaptation\tMean rate\tCV-ISI\n"
+  printf("\t%-5.2g\t\t%-5.2g\t\t%-5.2g\t\t%-5.2g\t%-5.2g\n", dta2.x[0], dta2.x[dta2.size()-1],dta2.x[dta2.size()-1]/dta2.x[0], 1000/dta.mean(), dta.stdev()/dta.mean())
+}
+
+proc PrintRates() {
+    print "Control\tIh\tKM\tSK-bSK2\tHVA\tKA"
+    $o1.getcol(9).printf
+    $o1.getcol(1).div($o1.getcol(1).get(0)/100).sub(100).printf
+}
+
+func Cell_area() { local surf
+    surf = 0
+    forall { surf = surf + area(0.5)*nseg}
+    return surf
+}
+
+proc Cell_Pass() { local cnm
+    cnm = 0
+    forall { cnm = cnm + area(0.5)*nseg*glbar_Golgi_lkg*1e-8}
+    print "Resistance\t",1/cnm*1e-6," MOhm"
+    cnm = 0
+    forall { cnm = cnm + area(0.5)*nseg*cm*1e-8}
+    print "Capacitance\t",cnm*1e6," pF"
+}
+
+proc FR_show() {
+	FR(Golgi[0].SpikeTrain)
+    }
+    
+

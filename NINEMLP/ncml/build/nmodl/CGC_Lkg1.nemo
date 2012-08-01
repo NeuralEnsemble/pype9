@@ -1,0 +1,30 @@
+
+;; Reference: Theta-Frequency Bursting and Resonance in Cerebellar Granule Cells:Experimental
+;; Evidence and Modeling of a Slow K+-Dependent Mechanism
+;; Egidio D'Angelo,Thierry Nieus,Arianna Maffei,Simona Armano,Paola Rossi,Vanni Taglietti,
+;; Andrea Fontana and Giovanni Naldi
+
+(nemo-model CGC_Lkg1
+
+  (
+   (input v
+    (cai from ion-pools)
+    (ica from ion-currents))
+
+   (const Vrest = -68)
+	     
+   (const fix_celsius = 30)
+	      
+   
+   (component (type ionic-current) (name Lkg1)
+	      
+	      (component (type pore)
+			 (const  gbar  = (5.68e-5))
+			 (output gbar))
+	      
+	      (component (type permeating-ion) (name non-specific)
+			 (const e = -58)
+			 (output e ))
+	      
+	      ) ;; end leak current
+))

@@ -1,0 +1,77 @@
+
+;; Reference: Theta-Frequency Bursting and Resonance in Cerebellar Granule Cells:Experimental
+;; Evidence and Modeling of a Slow K+-Dependent Mechanism
+;; Egidio D'Angelo,Thierry Nieus,Arianna Maffei,Simona Armano,Paola Rossi,Vanni Taglietti,
+;; Andrea Fontana and Giovanni Naldi
+
+(nemo-model CGC_KM
+
+  (
+   (input v
+    (cai from ion-pools)
+    (ica from ion-currents))
+
+   (const Vrest = -68)
+	     
+   (const fix_celsius = 30)
+
+
+   (component (type ionic-current) (name KM )
+	      
+	      (component (type gate)
+
+			 ;; rate constants
+			 (const Aalpha_n = 0.0033)
+
+			 (const Kalpha_n  = 40)
+			 (const V0alpha_n = -30)
+			 (const Abeta_n   = 0.0033)
+
+			 (const Kbeta_n  = -20)
+			 (const V0beta_n = -30)
+			 (const V0_ninf  = -30)
+			 (const   B_ninf = 6)
+			 
+			 (const Q10 = (pow (3 ((fix_celsius - 22) / 10))))
+			 
+			 ;; rate equations
+			 (defun alpha_n (v)
+			   (Q10 * Aalpha_n * exp((v - V0alpha_n) / Kalpha_n) ))
+
+			 (defun beta_n (v)
+			   (Q10 * Abeta_n * exp((v - V0beta_n) / Kbeta_n) ))
+
+			 (hh-ionic-gate 
+			  (KM  ;; ion name: exported variables will be of the form {ion}_{id}
+			   (initial-m  ((alpha_n (v)) / (alpha_n (v) + beta_n (v)) ))
+			   (m-power    1)
+			   (h-power    0)
+			   (m-tau      (1 / (alpha_n(v) + beta_n (v)) ))
+			   (m-inf      (1 / (1 + exp((neg (v - V0_ninf)) / B_ninf))))
+			   ))
+			 )
+	      
+	      (component (type pore)
+			 (const  gbar  = 0.00035)
+			 (output gbar ))
+	      
+	      (component (type permeating-ion) (name k)
+			 (const e = -84.69)
+			 (output e ))
+	      
+	      ) ;; end KM current
+
+
+	      (component (type voltage-clamp) (name KM)
+           
+			 (const vchold   = -71)
+			 (const vcbase   = -69)
+			 (const vcinc    = 10)
+			 (const vcsteps  = 8)
+			 (const vchdur   = 30)
+			 (const vcbdur   = 100)
+           
+			 (output vchold vcbase vcinc vcsteps vchdur vcbdur)
+			 )
+
+))

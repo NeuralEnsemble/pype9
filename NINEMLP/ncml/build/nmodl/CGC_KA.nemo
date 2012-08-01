@@ -1,0 +1,104 @@
+
+(nemo-model CGC_KA
+
+  (
+   (input v
+    (cai from ion-pools)
+    (ica from ion-currents))
+
+   (const Vrest = -68)
+	     
+   (const fix_celsius = 30)
+
+   (defun sigm (x y) (1 / (exp (x / y) + 1)))
+
+   (component (type ionic-current) (name KA )
+	      
+	      (component (type gate)
+
+			 ;; rate constants
+
+			 (const Q10 = (pow (3 ((fix_celsius - 20) / 10))))
+
+			 (const Aalpha_a  = 4.88826)
+			 (const Kalpha_a  = -23.32708)
+			 (const V0alpha_a = -9.17203)
+			 (const Abeta_a   = 0.99285)
+			 (const Kbeta_a   = 19.47175)
+			 (const V0beta_a  = -18.27914)
+
+			 (const Aalpha_b  = 0.11042)
+			 (const Kalpha_b  = 12.8433)
+			 (const V0alpha_b = -111.33209)
+			 (const Abeta_b   = 0.10353)
+			 (const Kbeta_b   = -8.90123)
+			 (const V0beta_b  = -49.9537)
+
+			 (const V0_ainf = -46.7)
+			 (const  K_ainf = -19.8)
+
+			 (const V0_binf   = -78.8)
+			 (const K_binf    = 8.4)
+
+			 
+			 ;; rate functions
+
+			 (defun alpha_a (v)
+			   (Q10 * Aalpha_a * sigm((v - V0alpha_a) Kalpha_a)))
+
+			 (defun beta_a (v)
+			   (Q10 * (Abeta_a / exp((v - V0beta_a) / Kbeta_a))))
+
+			 (defun alpha_b (v)
+			   (Q10 * Aalpha_b * sigm((v - V0alpha_b) Kalpha_b)))
+
+			 (defun beta_b (v)
+			   (Q10 * Abeta_b * sigm((v - V0beta_b) Kbeta_b)))
+
+
+
+			 (a_inf = (1 / (1 + exp ((v - V0_ainf) / K_ainf)))) 
+			 (tau_a = (1 / (alpha_a (v) + beta_a (v)) ))
+			 (b_inf = (1 / (1 + exp ((v - V0_binf) / K_binf))))
+			 (tau_b = (1 / (alpha_b (v) + beta_b (v)) ))
+
+			 (hh-ionic-gate 
+			  (KA  ;; ion name: exported variables will be of the form {ion}_{id}
+			   (initial-m  ((alpha_a (v)) / (alpha_a (v) + beta_a (v)) ))
+			   (initial-h  ((alpha_b (v)) / (alpha_b (v) + beta_b (v)) ))
+			   (m-power    3)
+			   (h-power    1)
+			   (m-inf      a_inf)
+			   (m-tau      tau_a)
+			   (h-inf      b_inf)
+			   (h-tau      tau_b)
+			   ))
+
+			 )
+
+	      	      
+	      (component (type pore)
+			 (const  gbar  = 0.004)
+			 (output gbar ))
+
+	      
+	      (component (type permeating-ion) (name k)
+			 (const e = -84.69)
+			 (output e ))
+	      
+	      ) ;; end KA current
+	      
+
+	      (component (type voltage-clamp) (name KA)
+           
+			 (const vchold   = -71)
+			 (const vcbase   = -69)
+			 (const vcinc    = 10)
+			 (const vcsteps  = 8)
+			 (const vchdur   = 30)
+			 (const vcbdur   = 100)
+           
+			 (output vchold vcbase vcinc vcsteps vchdur vcbdur)
+			 )
+
+))

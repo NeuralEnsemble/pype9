@@ -1,0 +1,495 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<neuroml xmlns="http://www.neuroml.org/schema/neuroml2"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xi="http://www.w3.org/2001/XInclude"
+    xsi:schemaLocation="http://www.neuroml.org/schema/neuroml2 ../Schemas/NeuroML2/NeuroML_v2alpha.xsd"
+    id="NML2_FullCell"
+>
+    <!--<include href="SimpleIonChannel.xml"/> Contains ionChannel NaConductance -->
+    <cell id="Golgi">
+        <notes>A model of a Golgi cell</notes>
+        <morphology id="GolgiMorph">
+            <!-- Segments -->
+            <segment id="soma">
+                <proximal x="0" y="0" z="0" diameter="27" />
+                <distal x="0" y="0" z="27" diameter="27" />
+            </segment>
+            <segment id="dend_0_0">
+                <parent segment="soma" fractionAlong="0.5" />
+                <distal x="11.3" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_0_1">
+                <parent segment="dend_0_0" />
+                <distal x="22.6" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_0_2">
+                <parent segment="dend_0_1" " />
+                <distal x="33.9" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_0_3">
+                <parent segment="dend_0_2" />
+                <distal x="45.2" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_0_4">
+                <parent segment="dend_0_3" />
+                <distal x="56.5" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_0_5">
+                <parent segment="dend_0_4" />
+                <distal x="67.8" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_0_6">
+                <parent segment="dend_0_5" />
+                <distal x="79.1" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_0_7">
+                <parent segment="dend_0_6" />
+                <distal x="90.4" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_0_8">
+                <parent segment="dend_07" />
+                <distal x="101.7" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_0_9">
+                <parent segment="dend_08" />
+                <distal x="113.0" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_1_0">
+                <parent segment="soma" fractionAlong="0.5" />
+                <distal x="-11.3" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_1_1">
+                <parent segment="dend_1_0" />
+                <distal x="-22.6" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_1_2">
+                <parent segment="dend_1_1" />
+                <distal x="-33.9" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_1_3">
+                <parent segment="dend_1_2" />
+                <distal x="-45.2" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_1_4">
+                <parent segment="dend_1_3" />
+                <distal x="-56.5" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_1_5">
+                <parent segment="dend_1_4" />
+                <distal x="-67.8" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_1_6">
+                <parent segment="dend_1_5" />
+                <distal x="-79.1" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_1_7">
+                <parent segment="dend_1_6" />
+                <distal x="-90.4" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_1_8">
+                <parent segment="dend_1_7" />
+                <distal x="-101.7" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_1_9">
+                <parent segment="dend_1_8" />
+                <distal x="-113.0" y="0" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_2_0">
+                <parent segment="soma" fractionAlong="0.5" />
+                <distal x="0" y="11.3" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_2_1">
+                <parent segment="dend_2_0" />
+                <distal x="0" y="22.6" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_2_2">
+                <parent segment="dend_2_1" />
+                <distal x="0" y="33.9" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_2_3">
+                <parent segment="dend_2_2" />
+                <distal x="0" y="45.2" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_2_4">
+                <parent segment="dend_2_3" />
+                <distal x="0" y="56.5" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_2_5">
+                <parent segment="dend_2_4" />
+                <distal x="0" y="67.8" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_2_6">
+                <parent segment="dend_2_5" />
+                <distal x="0" y="79.1" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_2_7">
+                <parent segment="dend_2_6" />
+                <distal x="0" y="90.4" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_2_8">
+                <parent segment="dend_2_7" />
+                <distal x="0" y="101.7" z="13.5" diameter="3" />
+            </segment>
+            <segment id="dend_2_9">
+                <parent segment="dend_2_8" />
+                <distal x="0" y="113.0" z="13.5" diameter="3" />
+            </segment>
+            <segmentGroup id="soma_group">
+                <member segment="soma" />
+            </segmentGroup>
+            <segmentGroup id="dendrite_group">
+                <member segment="dend_0_0" />
+                <member segment="dend_0_1" />
+                <member segment="dend_0_2" />
+                <member segment="dend_0_3" />
+                <member segment="dend_0_4" />
+                <member segment="dend_0_5" />
+                <member segment="dend_0_6" />
+                <member segment="dend_0_7" />
+                <member segment="dend_0_8" />
+                <member segment="dend_0_9" />
+                <member segment="dend_1_0" />
+                <member segment="dend_1_1" />
+                <member segment="dend_1_2" />
+                <member segment="dend_1_3" />
+                <member segment="dend_1_4" />
+                <member segment="dend_1_5" />
+                <member segment="dend_1_6" />
+                <member segment="dend_1_7" />
+                <member segment="dend_1_8" />
+                <member segment="dend_1_9" />
+                <member segment="dend_2_0" />
+                <member segment="dend_2_1" />
+                <member segment="dend_2_2" />
+                <member segment="dend_2_3" />
+                <member segment="dend_2_4" />
+                <member segment="dend_2_5" />
+                <member segment="dend_2_6" />
+                <member segment="dend_2_7" />
+                <member segment="dend_2_8" />
+                <member segment="dend_2_9" />
+            </segmentGroup>
+        </morphology>
+        <biophysicalProperties id="GolgiBiophys">
+            <!-- FIXME: celsius = 23 Not sure where to put this -->
+            <membraneProperties>
+                <ionicCurrent id="Golgi_lkg" segmentGroup="dendrite_group">
+                </ionicCurrent>
+                <ionicCurrent id="Golgi_Na" segmentGroup="soma_group">
+                    <defun name="alp_m">
+                        <arg name="v"/>
+                        <body>
+                              temp_adj * Aalpha_m*linoid(v-V0alpha_m,Kalpha_m)
+                        </body>
+                    </defun>
+                    <defun name="bet_m">
+                        <arg name="v"/>
+                        <body>
+                              temp_adj * Abeta_m*exp((v-V0beta_m)/Kbeta_m)
+                        </body>
+                    </defun>
+                    <defun name="alp_h">
+                        <arg name="v"/>
+                        <body>
+                              temp_adj * Aalpha_h*exp((v-V0alpha_h)/Kalpha_h) 
+                        </body>
+                    </defun>
+                    <defun name="bet_h">
+                        <arg name="v"/>
+                        <body>
+                              temp_adj * Abeta_h/(1+exp((v-V0beta_h)/Kbeta_h))
+                        </body>
+                    </defun>
+                    <defun name="linoid">
+                        <arg name="x"/>
+                        <arg name="y"/>
+                        <body>
+                          if (fabs(x/y) < 1e-6) {
+                                linoid = y*(1 - x/y/2)
+                          } else {
+                                linoid = x/(1 - exp(x/y))
+                          }
+                        </body>
+                    </defun>
+                </ionicCurrent>
+                <ionicCurrent id="Golgi_NaR" segmentGroup="soma_group">
+                    <defun name="alp_s">
+                        <arg name="v" />
+                        <body>
+                            temp_adj*(Shiftalpha_s+Aalpha_s * ((v+V0alpha_s)/ 1 (mV) )/(exp((v+V0alpha_s)/Kalpha_s)-1))
+                        </body>
+                    </defun>
+                    <defun name="bet_s">
+                        <arg name="v" />
+                        <body>
+                            x1=(v+V0beta_s)/Kbeta_s
+                            if (x1>200) {x1=200}
+                            bet_s =temp_adj*(Shiftbeta_s+Abeta_s*((v+V0beta_s)/1 (mV) )/(exp(x1)-1))
+                        </body>
+                    </defun>
+                    <defun name="alp_f">
+                        <arg name="v" />
+                        <body>
+                            temp_adj * Aalpha_f * exp( ( v - V0alpha_f ) / Kalpha_f)
+                        </body>
+                    </defun>
+                    <defun name="bet_f">
+                        <arg name="v" />
+                        <body>
+                            temp_adj * Abeta_f * exp( ( v - V0beta_f ) / Kbeta_f )
+                        </body>
+                    </defun>
+                </ionicCurrent>
+                <ionicCurrent id="Golgi_NaP" segmentGroup="soma_group">
+                    <defun name="alp_m">
+                        <arg name="v"/>
+                        <body>
+                            temp_adj *  * Aalpha_m*linoid(v-V0alpha_m, Kalpha_m)         
+                        </body>
+                    </defun>
+                     <defun name="bet_m">
+                        <arg name="v"/>
+                        <body>
+                            temp_adj *  * Abeta_m*linoid(v-V0beta_m, Kbeta_m)       
+                        </body>
+                    </defun>
+                    <defun name="linoid">
+                        <arg name="x"/>
+                        <arg name="y"/>
+                        <body>
+                            if (fabs(x/y) < 1e-6) {
+                              linoid = y*(1 - x/y/2)
+                            }else{
+                              linoid = x/(exp(x/y) - 1)
+                            }        
+                        </body>
+                    </defun>
+                </ionicCurrent>
+                <ionicCurrent id="Golgi_CaHVA" segmentGroup="soma_group" >                
+                    <defun name="alp_s">
+                        <arg name="v"/>
+                        <body>
+                            temp_adj * Aalpha_s*exp((v-V0alpha_s)/Kalpha_s) 
+                        </body>
+                    </defun>
+                    <defun name="bet_s">
+                        <arg name="v"/>
+                        <body>
+                            temp_adj * Abeta_s*exp((v-V0beta_s)/Kbeta_s) 
+                        </body>
+                    </defun>
+                    <defun name="alp_u">
+                        <arg name="v"/>
+                        <body>
+                            temp_adj * Aalpha_u*exp((v-V0alpha_u)/Kalpha_u) 
+                        </body>
+                    </defun>
+                    <defun name="bet_u">
+                        <arg name="v"/>
+                        <body>
+                            temp_adj * Abeta_u*exp((v-V0beta_u)/Kbeta_u) 
+                        </body>
+                    </defun>
+                </ionicCurrent>
+                <ionicCurrent id="Golgi_Ca_LVA" segmentGroup="soma_group" >
+
+                </ionicCurrent>
+                <ionicCurrent id="Golgi_KV" segmentGroup="soma_group" >
+                    <defun name="alp_n">
+                        <arg name="v"/>
+                        <body>
+                              tcorr*Aalpha_n*linoid(v-V0alpha_n, Kalpha_n)
+                        </body>
+                    </defun>
+                    <defun name="bet_n">
+                        <arg name="v"/>
+                        <body>
+                            tcorr*Abeta_n*exp((v-V0beta_n)/Kbeta_n) 
+                        </body>
+                    </defun>
+                    <defun name="linoid">
+                        <arg name="x"/>
+                        <arg name="y"/>
+                        <body>
+                            if (fabs(x/y) < 1e-6) {
+                              linoid = y*(1 - x/y/2)
+                            }else{
+                              linoid = x/(exp(x/y) - 1)
+                            }        
+                        </body>
+                    </defun>
+                </ionicCurrent>
+                <ionicCurrent id="Golgi_KM" segmentGroup="soma_group">
+                    <defun name="alp_n">
+                        <arg name="v"/>
+                        <body>
+                            Aalpha_n*exp((v-V0alpha_n)/Kalpha_n) 
+                        </body>
+                    </defun>
+                    <defun name="bet_n">
+                        <arg name="v"/>
+                        <body>
+                            Abeta_n*exp((v-V0beta_n)/Kbeta_n)
+                        </body>
+                    </defun>
+                </ionicCurrent>
+                <ionicCurrent id="Golgi_KA" segmentGroup="soma_group">
+                    <defun name="alp_a">
+                        <arg name="v"/>
+                        <body>
+                              alp_a = tcorr*Aalpha_a*sigm(v-V0alpha_a,Kalpha_a)
+                        </body>
+                    </defun>
+                    <defun name="bet_a">
+                        <arg name="v"/>
+                        <body>
+                            tcorr*Abeta_a/(exp((v-V0beta_a)/Kbeta_a))
+                        </body>
+                    </defun>
+                    <defun name="alp_b">
+                        <arg name="v"/>
+                        <body>
+                            tcorr*Aalpha_b*sigm(v-V0alpha_b,Kalpha_b)
+                        </body>
+                    </defun>
+                    <defun name="bet_b">
+                        <arg name="v"/>
+                        <body>
+                            tcorr*Abeta_b*sigm(v-V0beta_b,Kbeta_b)
+                        </body>
+                    </defun>
+                    <defun name="linoid">
+                        <arg name="x"/>
+                        <arg name="y"/>
+                        <body>
+                            if (fabs(x/y) < 1e-6) {
+                              linoid = y*(1 - x/y/2)
+                            }else{
+                              linoid = x/(exp(x/y) - 1)
+                            }        
+                        </body>
+                    </defun>
+                    <defun name="sigm">
+                        <arg name="x"/>
+                        <arg name="y"/>
+                        <body>
+                            1/(exp(x/y) + 1)        
+                        </body>
+                    </defun>                    
+                </ionicCurrent>
+                <ionicCurrent id="Golgi_BK" segmentGroup="soma_group">
+                    <defun name="alp_c">
+                        <arg name="v"/>
+                        <body>
+                            tcorr*Aalpha_c/(1+(Balpha_c*exp(v/Kalpha_c)/cai)) 
+                        </body>
+                    </defun>
+                    <defun name="bet_c">
+                        <arg name="v"/>
+                        <body>
+                             tcorr*Abeta_c/(1+cai/(Bbeta_c*exp(v/Kbeta_c))) 
+                        </body>
+                    </defun>
+                </ionicCurrent>
+                <ionicCurrent id="Golgi_SK2" segmentGroup="soma_group">
+                  <!-- no functions instead of temperature -->
+                </ionicCurrent>
+                <ionicCurrent id="Golgi_hcn1" segmentGroup="soma_group">
+                    <defun name="r">
+                        <arg name="potential"/>
+                        <body>
+                            rA * potential + rB
+                        </body>
+                    </defun>
+                    <defun name="tau">
+                        <arg name="potential"/>
+                        <body>
+                            exp(((t1 * potential) - t2)*t3)
+                        </body>
+                    </defun>
+                    <defun name="o_inf">
+                        <arg name="potential"/>
+                        <arg name="Ehalf"/>
+                        <arg name="c"/>                        
+                        <body>
+                            1 / (1 + exp((potential - Ehalf) * c))
+                        </body>
+                    </defun>
+                    <defun name="q10">
+                        <arg name="celcius"/>
+                        <body>
+                            exp(1.0986 * ((celsius - 33) / 10))
+                        </body>
+                    </defun>
+                </ionicCurrent>
+                <ionicCurrent id="Golgi_hcn2" segmentGroup="soma_group">
+                    <defun name="r">
+                        <arg name="potential"/>
+                        <arg name="r1"/>
+                        <arg name="r2"/>
+                        <body>
+                            if (potential >= -64.70)  {
+                              r = 0
+                            } else{ 
+                              if (potential <= -108.70)  {
+                                r = 1
+                              } else{ 
+                                r =  (r1 * potential) + r2
+                              }
+                            } 
+                        </body>
+                    </defun>
+                    <defun name="tau_fast">
+                        <arg name="potential"/>
+                        <arg name="t1"/>
+                        <arg name="t2"/>
+                        <arg name="t3"/>    
+                        <body>
+                            exp(t3 * ((t1 * potential) - t2))
+                        </body>
+                    </defun>
+                    <defun name="tau_slow">
+                        <arg name="potential"/>
+                        <arg name="t1"/>
+                        <arg name="t2"/>
+                        <arg name="t3"/>    
+                        <body>
+                            exp(t3 * ((t1 * potential) - t2))
+                        </body>
+                    </defun>
+                    <defun name="o_inf">
+                        <arg name="potential"/>
+                        <arg name="Ehalf"/>
+                        <arg name="c"/>
+                        <body>
+                            1 / (1 + exp((potential - Ehalf) * c))
+                        </body>
+                    </defun>
+                    <defun name="q10">
+                        <arg name="v"/>
+                        <body>
+                            exp(1.0986 * ((celsius - 33) / 10))
+                        </body>
+                    </defun>
+                </ionicCurrent>
+                <ionicCurrent id="Golgi_CALC" segmentGroup="soma_group">
+                
+                </ionicCurrent>
+                <ionicCurrent id="Golgi_CALC_ca2" segmentGroup="soma_group">
+                
+                </ionicCurrent>
+                <kinetics id="Na_conc" segmentGroup="soma_group" /> <!-- FIXME: Don't know what the tag for this should be. -->
+                <kinetics id="K_conc" segmentGroup="soma_group" /> <!-- FIXME: Don't know what the tag for this should be. -->
+                <passiveCurrent condDensity="3.0" units="S_per_m2" />
+                <specificCapacitance value="1.0"
+                    units="uF_per_cm2" />
+                <reversalPotential species="ca" value="129.33"
+                    units="mV" />
+                <!-- FIXME: Not inserted need to check <reversalPotential 
+                    species="cl" value="-65 mV"/> -->
+            </membraneProperties>
+            <intracellularProperties>
+                <resistivity value="100" units="ohm_cm" />  <!-- Used for specific axial resistance -->
+            </intracellularProperties>
+        </biophysicalProperties>
+    </cell>
+</neuroml>
