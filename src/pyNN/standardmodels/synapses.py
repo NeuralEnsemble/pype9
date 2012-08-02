@@ -31,14 +31,14 @@ class TsodyksMarkramMechanism(ShortTermPlasticityMechanism):
     neuron model, not here.
     """
     default_parameters = {
-        'U': 0.5, # use parameter
+        'U': 0.5,   # use parameter
         'tau_rec': 100.0, # depression time constant (ms)
-        'tau_facil': 0.0, # facilitation time constant (ms)
-        'u0': 0.0, # }
-        'x0': 1.0, # } initial values
+        'tau_facil': 0.0,   # facilitation time constant (ms)
+        'u0': 0.0,  # }
+        'x0': 1.0,  # } initial values
         'y0': 0.0   # }
     }
-
+    
     def __init__(self, U=0.5, tau_rec=100.0, tau_facil=0.0, u0=0.0, x0=1.0, y0=0.0):
         """
         Create a new specification for a short-term plasticity mechanism.
@@ -49,7 +49,7 @@ class TsodyksMarkramMechanism(ShortTermPlasticityMechanism):
         `u0`, `x0`, `y0` -- initial conditions.
         """
         raise NotImplementedError
-
+    
 
 class AdditiveWeightDependence(STDPWeightDependence):
     """
@@ -64,7 +64,7 @@ class AdditiveWeightDependence(STDPWeightDependence):
         'A_plus':  0.01,
         'A_minus': 0.01
     }
-
+    
     def __init__(self, w_min=0.0, w_max=1.0, A_plus=0.01, A_minus=0.01): # units?
         """
         Create a new specification for the weight-dependence of an STDP rule.
@@ -94,7 +94,7 @@ class MultiplicativeWeightDependence(STDPWeightDependence):
         'A_plus' : 0.01,
         'A_minus': 0.01,
     }
-
+    
     def __init__(self, w_min=0.0, w_max=1.0, A_plus=0.01, A_minus=0.01):
         """
         Create a new specification for the weight-dependence of an STDP rule.
@@ -110,7 +110,7 @@ class MultiplicativeWeightDependence(STDPWeightDependence):
                      infinitessimal amount.
         """
         raise NotImplementedError
-
+    
 
 class AdditivePotentiationMultiplicativeDepression(STDPWeightDependence):
     """
@@ -125,7 +125,7 @@ class AdditivePotentiationMultiplicativeDepression(STDPWeightDependence):
         'A_minus': 0.01,
     }
 
-    def __init__(self, w_min=0.0, w_max=1.0, A_plus=0.01, A_minus=0.01):
+    def __init__(self, w_min=0.0,  w_max=1.0, A_plus=0.01, A_minus=0.01):
         """
         Create a new specification for the weight-dependence of an STDP rule.
         
@@ -141,13 +141,13 @@ class AdditivePotentiationMultiplicativeDepression(STDPWeightDependence):
         """
         raise NotImplementedError
 
-
+    
 class GutigWeightDependence(STDPWeightDependence):
     """
     The amplitude of the weight change depends on (w_max-w)^mu_plus for
     potentiation and (w-w_min)^mu_minus for depression.
     """
-
+    
     default_parameters = {
         'w_min'   : 0.0,
         'w_max'   : 1.0,
@@ -157,7 +157,7 @@ class GutigWeightDependence(STDPWeightDependence):
         'mu_minus': 0.5
     }
 
-    def __init__(self, w_min=0.0, w_max=1.0, A_plus=0.01, A_minus=0.01, mu_plus=0.5, mu_minus=0.5):
+    def __init__(self, w_min=0.0,  w_max=1.0, A_plus=0.01, A_minus=0.01,mu_plus=0.5,mu_minus=0.5):
         """
         Create a new specification for the weight-dependence of an STDP rule.
         
@@ -185,12 +185,12 @@ class SpikePairRule(STDPTimingDependence):
     The amplitude of the weight change depends only on the relative timing of
     spike pairs, not triplets, etc.
     """
-
+    
     default_parameters = {
         'tau_plus':  20.0,
         'tau_minus': 20.0,
     }
-
+    
     def __init__(self, tau_plus=20.0, tau_minus=20.0):
         """
         Create a new specification for the timing-dependence of an STDP rule.

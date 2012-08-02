@@ -67,6 +67,6 @@ def build_parameter_set(parameters, dimensionless=False):
 def map_random_distribution_parameters(name, parameters):
     parameter_map = random_distribution_parameter_map
     P = {}
-    for name, val in zip(parameter_map[name], parameters):
+    for name,val in zip(parameter_map[name], parameters):
         P[name] = val
     return P

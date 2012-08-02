@@ -17,7 +17,7 @@ def get_defaults(model_name):
               'thread', 'vp', 'receptor_types', 'events']
     default_params = {}
     default_initial_values = {}
-    for name, value in defaults.items():
+    for name,value in defaults.items():
         if name in variables:
             default_initial_values[name] = value
         elif name not in ignore:
@@ -36,7 +36,7 @@ def native_cell_type(model_name):
     """
     assert isinstance(model_name, str)
     return type(model_name, (NativeCellType,), {'nest_model' : model_name})
-
+    
 
 class NativeCellType(BaseCellType):
 
@@ -46,7 +46,7 @@ class NativeCellType(BaseCellType):
         cls.injectable = ("V_m" in cls.default_initial_values)
         cls.recordable = get_recordables(cls.nest_model) + ['spikes']
         cls.standard_receptor_type = (cls.synapse_types == ('excitatory', 'inhibitory'))
-        cls.nest_name = {"on_grid": cls.nest_model, "off_grid": cls.nest_model}
+        cls.nest_name  = {"on_grid": cls.nest_model, "off_grid": cls.nest_model}
         cls.conductance_based = ("g" in (s[0] for s in cls.recordable))
         return super(NativeCellType, cls).__new__(cls)
 

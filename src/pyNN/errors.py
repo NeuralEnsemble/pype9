@@ -25,7 +25,7 @@ class NonExistentParameterError(Exception):
     """
     Model parameter does not exist.
     """
-
+    
     def __init__(self, parameter_name, model_name, valid_parameter_names=['unknown']):
         Exception.__init__(self)
         self.parameter_name = parameter_name
@@ -72,10 +72,10 @@ class NotLocalError(Exception):
 
 class RecordingError(Exception): # subclass AttributeError?
     """Attempt to record a variable that does not exist for this cell type."""
-
+    
     def __init__(self, variable, cell_type):
         self.variable = variable
         self.cell_type = cell_type
-
+        
     def __str__(self):
         return "Cannot record %s from cell type %s" % (self.variable, self.cell_type.__class__.__name__)

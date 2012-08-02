@@ -13,9 +13,10 @@ DEFAULT_TAU_MINUS = 20.0
 def get_defaults(model_name):
     defaults = nest.GetDefaults(model_name)
     ignore = ['delay', 'max_delay', 'min_delay', 'num_connections',
-              'num_connectors', 'receptor_type', 'synapsemodel', 'weight']
+              'num_connectors', 'receptor_type', 'synapsemodel', 'weight',
+              'property_object']
     default_params = {}
-    for name, value in defaults.items():
+    for name,value in defaults.items():
         if name not in ignore:
             default_params[name] = value
     default_params['tau_minus'] = DEFAULT_TAU_MINUS

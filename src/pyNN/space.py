@@ -40,10 +40,10 @@ def distance(src, tgt, mask=None, scale_factor=1.0, offset=0.0,
     `scale_factor` allows for different units in the pre- and post- position
     (the post-synaptic position is multipied by this quantity).
     """
-    d = src.position - scale_factor * (tgt.position + offset)
-
+    d = src.position - scale_factor*(tgt.position + offset)
+    
     if not periodic_boundaries == None:
-        d = numpy.minimum(abs(d), periodic_boundaries - abs(d))
+        d = numpy.minimum(abs(d), periodic_boundaries-abs(d))
     if mask is not None:
         d = d[mask]
     return numpy.sqrt(numpy.dot(d, d))
@@ -55,10 +55,10 @@ class Space(object):
     is Cartesian, may be 1-, 2- or 3-dimensional, and may have periodic
     boundaries in any of the dimensions.
     """
-
-    AXES = {'x' : [0], 'y': [1], 'z': [2],
-            'xy': [0, 1], 'yz': [1, 2], 'xz': [0, 2], 'xyz': range(3), None: range(3)}
-
+    
+    AXES = {'x' : [0],    'y': [1],    'z': [2],
+            'xy': [0,1], 'yz': [1,2], 'xz': [0,2], 'xyz': range(3), None: range(3)}
+    
     def __init__(self, axes=None, scale_factor=1.0, offset=0.0,
                  periodic_boundaries=None):
         """
@@ -79,7 +79,7 @@ class Space(object):
         self.axes = numpy.array(Space.AXES[axes])
         self.scale_factor = scale_factor
         self.offset = offset
-
+        
     def distances(self, A, B, expand=False):
         """
         Calculate the distance matrix between two sets of coordinates, given
@@ -90,16 +90,16 @@ class Space(object):
             A = A.reshape(3, 1)
         if len(B.shape) == 1:
             B = B.reshape(3, 1)
-        B = self.scale_factor * (B + self.offset)
+        B = self.scale_factor*(B + self.offset)
         d = numpy.zeros((len(self.axes), A.shape[1], B.shape[1]), dtype=A.dtype)
-        for i, axis in enumerate(self.axes):
-            diff2 = A[axis, :, None] - B[axis, :]
+        for i,axis in enumerate(self.axes):
+            diff2 = A[axis,:,None] - B[axis, :]
             if self.periodic_boundaries is not None:
                 boundaries = self.periodic_boundaries[axis]
                 if boundaries is not None:
-                    range = boundaries[1] - boundaries[0]
-                    ad2 = abs(diff2)
-                    diff2 = numpy.minimum(ad2, range - ad2)
+                    range = boundaries[1]-boundaries[0]
+                    ad2   = abs(diff2)
+                    diff2 = numpy.minimum(ad2, range-ad2)
             diff2 **= 2
             d[i] = diff2
         if not expand:
@@ -115,15 +115,15 @@ class Space(object):
         def distance_map(i, j):
             d = self.distances(f(i), g(j))
             if d.shape[0] == 1:
-                d = d[0, :] # arguably this transformation should go in distances()
+                d = d[0,:] # arguably this transformation should go in distances()
             elif d.shape[1] == 1:
-                d = d[:, 0]
+                d = d[:,0]
             return d
         return distance_map
 
 
 class BaseStructure(object):
-
+    
     def __eq__(self, other):
         return reduce(and_, (getattr(self, attr) == getattr(other, attr)
                              for attr in self.parameter_names))
@@ -154,18 +154,18 @@ class Line(BaseStructure):
     Represents a structure with neurons distributed evenly on a straight line.
     """
     parameter_names = ("dx", "x0", "y", "z")
-
+    
     def __init__(self, dx=1.0, x0=0.0, y=0.0, z=0.0):
         self.dx = dx
         self.x0 = x0
         self.y = y
         self.z = z
-
+    
     def generate_positions(self, n):
-        x = self.dx * numpy.arange(n, dtype=float) + self.x0
+        x = self.dx*numpy.arange(n, dtype=float) + self.x0
         y = numpy.zeros(n) + self.y
         z = numpy.zeros(n) + self.z
-        return numpy.array((x, y, z))
+        return numpy.array((x,y,z))
 
 
 class Grid2D(BaseStructure):
@@ -173,7 +173,7 @@ class Grid2D(BaseStructure):
     Represents a structure with neurons distributed on a 2D grid.
     """
     parameter_names = ("aspect_ratio", "dx", "dy", "x0", "y0", "fill_order")
-
+    
     def __init__(self, aspect_ratio=1.0, dx=1.0, dy=1.0, x0=0.0, y0=0.0, z=0, fill_order="sequential"):
         """
         aspect_ratio - ratio of the number of grid points per side (not the ratio
@@ -183,21 +183,21 @@ class Grid2D(BaseStructure):
         assert fill_order in ('sequential', 'random')
         self.fill_order = fill_order
         self.dx = dx; self.dy = dy; self.x0 = x0; self.y0 = y0; self.z = z
-
+    
     def calculate_size(self, n):
-        nx = math.sqrt(n * self.aspect_ratio)
-        if n % nx != 0:
-            raise Exception("Invalid size")
-        ny = n / nx
+        nx = math.sqrt(n*self.aspect_ratio)
+        if n%nx != 0:
+            raise Exception("Invalid size: n=%g, nx=%d" % (n, nx))
+        ny = n/nx
         return nx, ny
-
+    
     def generate_positions(self, n):
         nx, ny = self.calculate_size(n)
-        x, y, z = numpy.indices((nx, ny, 1), dtype=float)
-        x = self.x0 + self.dx * x.flatten()
-        y = self.y0 + self.dy * y.flatten()
+        x,y,z = numpy.indices((nx,ny,1), dtype=float)
+        x = self.x0 + self.dx*x.flatten()
+        y = self.y0 + self.dy*y.flatten()
         z = self.z + z.flatten()
-        positions = numpy.array((x, y, z)) # use column_stack, if we decide to switch from (3,n) to (n,3)
+        positions = numpy.array((x,y,z)) # use column_stack, if we decide to switch from (3,n) to (n,3)
         if self.fill_order == 'sequential':
             return positions
         else: # random
@@ -209,7 +209,7 @@ class Grid3D(BaseStructure):
     Represents a structure with neurons distributed on a 3D grid.
     """
     parameter_names = ("aspect_ratios", "dx", "dy", "dz", "x0", "y0", "z0", "fill_order")
-
+    
     def __init__(self, aspect_ratioXY=1.0, aspect_ratioXZ=1.0, dx=1.0, dy=1.0, dz=1.0, x0=0.0, y0=0.0, z0=0,
                  fill_order="sequential"):
         """
@@ -222,23 +222,23 @@ class Grid3D(BaseStructure):
         self.fill_order = fill_order
         self.dx = dx; self.dy = dy; self.dz = dz
         self.x0 = x0; self.y0 = y0; self.z0 = z0
-
+    
     def calculate_size(self, n):
-        a, b = self.aspect_ratios
-        nx = int(round(math.pow(n * a * b, 1 / 3.0)))
-        ny = int(round(nx / a))
-        nz = int(round(nx / b))
-        assert nx * ny * nz == n, str((nx, ny, nz, nx * ny * nz, n, a, b))
+        a,b = self.aspect_ratios
+        nx = int(round(math.pow(n*a*b, 1/3.0)))
+        ny = int(round(nx/a))
+        nz = int(round(nx/b))
+        assert nx*ny*nz == n, str((nx, ny, nz, nx*ny*nz, n, a, b))
         return nx, ny, nz
-
+    
     def generate_positions(self, n):
         nx, ny, nz = self.calculate_size(n)
-        x, y, z = numpy.indices((nx, ny, nz), dtype=float)
-        x = self.x0 + self.dx * x.flatten()
-        y = self.y0 + self.dy * y.flatten()
-        z = self.z0 + self.dz * z.flatten()
+        x,y,z = numpy.indices((nx,ny,nz), dtype=float)
+        x = self.x0 + self.dx*x.flatten()
+        y = self.y0 + self.dy*y.flatten()
+        z = self.z0 + self.dz*z.flatten()
         if self.fill_order == 'sequential':
-            return numpy.array((x, y, z))
+            return numpy.array((x,y,z))
         else:
             raise NotImplementedError
 
@@ -250,7 +250,7 @@ class Cuboid(Shape):
     """
     Represents a cuboidal volume within which neurons may be distributed.
     """
-
+    
     def __init__(self, width, height, depth):
         """
         height: extent in y direction
@@ -260,31 +260,31 @@ class Cuboid(Shape):
         self.height = height
         self.width = width
         self.depth = depth
-
+        
     def sample(self, n, rng):
-        return 0.5 * rng.uniform(-1, 1, size=(n, 3)) * (self.width, self.height, self.depth)
+        return 0.5*rng.uniform(-1, 1, size=(n,3)) * (self.width, self.height, self.depth)
 
 
 class Sphere(Shape):
     """
     Represents a spherical volume within which neurons may be distributed.
     """
-
+    
     def __init__(self, radius):
         Shape.__init__(self)
         self.radius = radius
-
+        
     def sample(self, n, rng):
         # this implementation is wasteful, as it throws away a lot of numbers,
         # but simple. More efficient implementations welcome.
-        positions = numpy.empty((n, 3))
+        positions = numpy.empty((n,3))
         i = 0
         while i < n:
-            candidate = rng.uniform(-1, 1, size=(1, 3))
-            if (candidate ** 2).sum() < 1:
+            candidate = rng.uniform(-1, 1, size=(1,3))
+            if (candidate**2).sum() < 1:
                 positions[i] = candidate
                 i += 1
-        return self.radius * positions
+        return self.radius*positions
 
 
 class RandomStructure(BaseStructure):
@@ -293,8 +293,8 @@ class RandomStructure(BaseStructure):
     volume.
     """
     parameter_names = ('boundary', 'origin', 'rng')
-
-    def __init__(self, boundary, origin=(0.0, 0.0, 0.0), rng=None):
+    
+    def __init__(self, boundary, origin=(0.0,0.0,0.0), rng=None):
         """
         `boundary` - a subclass of Shape
         `origin` - the coordinates (x,y,z) of the centre of the volume.
@@ -304,7 +304,7 @@ class RandomStructure(BaseStructure):
         self.boundary = boundary
         self.origin = origin
         self.rng = rng or NumpyRNG()
-
+        
     def generate_positions(self, n):
         return (numpy.array(self.origin) + self.boundary.sample(n, self.rng)).T
 

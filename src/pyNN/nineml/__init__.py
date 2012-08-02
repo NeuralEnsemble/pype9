@@ -4,7 +4,7 @@
 :copyright: Copyright 2006-2011 by the PyNN team, see AUTHORS.
 :license: CeCILL, see LICENSE for details.
 """
-import user_layer as nineml
+import nineml.user_layer as nineml
 from pyNN import common, standardmodels, random, recording
 from cells import *
 from connectors import FixedProbabilityConnector, DistanceDependentProbabilityConnector
@@ -16,19 +16,19 @@ def list_standard_models():
     """Return a list of all the StandardCellType classes available for this simulator."""
     return [obj for obj in globals().values() if isinstance(obj, type) and issubclass(obj, standardmodels.StandardCellType)]
 
-
+   
 
 def get_grid_parameters(population):
     P = {"fillOrder": "sequential"}
     dim_names = ["x", "y", "z"][:population.ndim]
-    for n, label in zip(population.dim, dim_names):
+    for n,label in zip(population.dim, dim_names):
         #P["n%s" % label] = n
         P["%s0" % label] = 0.0
         P["d%s" % label] = 1
     if population.ndim > 1:
-        P["aspectRatioXY"] = population.dim[0] / population.dim[1]
+        P["aspectRatioXY"] = population.dim[0]/population.dim[1]
         if population.ndim > 2:
-            P["aspectRatioXZ"] = population.dim[0] / population.dim[2]
+            P["aspectRatioXZ"] = population.dim[0]/population.dim[2]
     return P
 
 
@@ -79,8 +79,6 @@ class DummySimulator(object):
         num_processes = 1
     state = State()
 simulator = DummySimulator()
-common.simulator = simulator
-recording.simulator = simulator
 
 
 def setup(timestep=0.1, min_delay=0.1, max_delay=10.0, **extra_params):
@@ -103,40 +101,41 @@ def setup(timestep=0.1, min_delay=0.1, max_delay=10.0, **extra_params):
     label = extra_params["label"]
     net = Network(label)
     return 0
-
+    
 def end(compatible_output=True):
     """Write the XML file. Do any necessary cleaning up before exiting."""
     global net
     net.to_nineml().write(output_filename)
+    
 
-get_min_delay = common.get_min_delay
-num_processes = common.num_processes
+get_current_time, get_time_step, get_min_delay, get_max_delay, \
+            num_processes, rank = common.build_state_queries(simulator)
 
 def run(tstop):
     pass
 
 class ID(int, common.IDMixin):
     __doc__ = common.IDMixin.__doc__
-
+    
     def __init__(self, n):
         """Create an ID object with numerical value `n`."""
         int.__init__(n)
         common.IDMixin.__init__(self)
-
+    
     def get_native_parameters(self):
         """Return a dictionary of parameters for the NEURON cell model."""
         return self._cell
-
+    
     def set_native_parameters(self, parameters):
         """Set parameters of the NEURON cell model from a dictionary."""
         self._cell.update(parameters)
 
 
 class Recorder(recording.Recorder):
-
+    
     def _record(self, *args, **kwargs):
         pass
-
+    
     def _local_count(self, filter):
         return 0
 
@@ -166,7 +165,7 @@ class BasePopulation(common.BasePopulation):
     def _record(self, variable, record_from, rng, to_file):
         pass
 
-    def meanSpikeCount(self, gather=True):
+    def mean_spike_count(self, gather=True):
         return 0
 
     def printSpikes(self, file, gather=True, compatible_output=True):
@@ -182,19 +181,19 @@ class BasePopulation(common.BasePopulation):
 
     def initialize(self, variable, value):
         pass
-
+    
     def get_synaptic_response_components(self, synaptic_mechanism_name):
         return [self.celltype.synapse_type_to_nineml(synaptic_mechanism_name, self.label)]
-
+        
 
 class Population(BasePopulation, common.Population):
     recorder_class = Recorder
-
+    
     def __init__(self, size, cellclass, cellparams=None, structure=None, label=None):
         global net
-        common.Population.__init__(self, size, cellclass, cellparams, structure, label)
+        common.Population.__init__(self, size, cellclass, cellparams, structure, label) 
         net.populations.append(self)
-
+    
     def _create_cells(self, cellclass, cellparams, size):
         celltype = cellclass(cellparams)
         self.all_cells = numpy.array([ID(i) for i in range(size)], dtype=ID)
@@ -223,12 +222,12 @@ class Population(BasePopulation, common.Population):
 
 
 class PopulationView(BasePopulation, common.PopulationView):
-
+    
     def __init__(self, parent, selector, label=None):
         global net
         common.PopulationView.__init__(self, parent, selector, label)
         net.populations.append(self)
-
+    
     def to_nineml(self):
         selection = nineml.Selection(self.label,
                         nineml.All(
@@ -240,12 +239,12 @@ class PopulationView(BasePopulation, common.PopulationView):
 
 
 class Assembly(common.Assembly):
-
+    
     def __init__(self, label=None, *populations):
         global net
         common.Assembly.__init__(self, label, *populations)
         net.assemblies.append(self)
-
+    
     def get_synaptic_response_components(self, synaptic_mechanism_name):
         components = set([])
         for p in self.populations:
@@ -260,7 +259,7 @@ class Assembly(common.Assembly):
 
 
 class Projection(common.Projection):
-
+    
     def __init__(self, presynaptic_population, postsynaptic_population,
                  method,
                  source=None, target=None, synapse_dynamics=None,
@@ -273,18 +272,18 @@ class Projection(common.Projection):
             if self.pre.label and self.post.label:
                 self.label = "%s---%s" % (self.pre.label, self.post.label)
         net.projections.append(self)
-
+    
     def __len__(self):
         return 0
-
+    
     def size(self):
         return len(self)
-
+    
     def saveConnections(self, filename, gather=True, compatible_output=True):
         f = open(filename, 'w')
         f.write("At present, the 9ML backend is not able to save connections.")
         f.close()
-
+    
     def to_nineml(self):
         connection_rule = self._method.to_nineml(self.label)
         connection_type = nineml.ConnectionType(
@@ -305,12 +304,12 @@ class Projection(common.Projection):
         return projection
 
 
-
-
+   
+    
 class CurrentSource(object):
     """Base class for a source of current to be injected into a neuron."""
     counter = 0
-
+    
     def __init__(self):
         global net
         net.current_sources.append(self)
@@ -326,7 +325,7 @@ class CurrentSource(object):
 class DCSource(CurrentSource):
     """Source producing a single pulse of current of constant amplitude."""
     definition_file = "current_pulse.xml"
-
+    
     def __init__(self, amplitude=1.0, start=0.0, stop=None):
         """Construct the current source.
         
@@ -339,14 +338,14 @@ class DCSource(CurrentSource):
         self.amplitude = amplitude
         self.start = start
         self.stop = stop or 1e12
-
+        
     @property
     def parameters(self):
         return {"amplitude": self.amplitude,
                 "onset": self.start,
-                "duration": self.start + self.stop}
-
-
+                "duration": self.start+self.stop}
+        
+    
     def inject_into(self, cell_list):
         """Inject this current source into some cells."""
         self.cell_list = cell_list

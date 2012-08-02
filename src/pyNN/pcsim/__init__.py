@@ -1,19 +1,19 @@
 # encoding: utf-8
 """
-pypcsim implementation of the PyNN API. 
+pypcsim implementation of the PyNN API.
 
     Dejan Pecevski   dejan@igi.tugraz.at
     Thomas Natschlaeger   thomas.natschlaeger@scch.at
     Andrew Davison   davison@unic.cnrs-gif.fr
-        
+
     December 2006-
 
 :copyright: Copyright 2006-2011 by the PyNN team, see AUTHORS.
 :license: CeCILL, see LICENSE for details.
 
-$Id: __init__.py 957 2011-05-03 13:44:15Z apdavison $
+$Id: __init__.py 1187 2012-06-14 11:58:16Z apdavison $
 """
-__version__ = "$Revision: 957 $"
+__version__ = "$Revision: 1187 $"
 
 import sys
 
@@ -21,8 +21,6 @@ import pyNN.random
 from pyNN.random import *
 from pyNN import common, recording, errors, space, core, __doc__
 from pyNN.pcsim import simulator
-common.simulator = simulator
-recording.simulator = simulator
 import os.path
 import types
 import sys
@@ -57,11 +55,11 @@ class NativeRNG(pyNN.random.NativeRNG):
     def __init__(self, seed=None, type='MersenneTwister19937'):
         pyNN.random.AbstractRNG.__init__(self, seed)
         self.rndEngine = getattr(pypcsim, type)()
-        if not self.seed:
+        if self.seed is None:
             self.seed = int(datetime.today().microsecond)
         self.rndEngine.seed(self.seed)
 
-    def next(self, n=1, distribution='Uniform', parameters={'a':0, 'b':1}, mask_local=None):
+    def next(self, n=1, distribution='Uniform', parameters={'a':0,'b':1}, mask_local=None):
         """Return n random numbers from the distribution.
         If n is 1, return a float, if n > 1, return a numpy array,
         if n <= 0, raise an Exception."""
@@ -115,14 +113,14 @@ class WDManager(object):
             weight = pyNN.random.RandomDistribution(w.name, w.parameters, w.rng)
             if weight.name == "uniform":
                 (w_min, w_max) = weight.parameters
-                weight.parameters = (w_factor * w_min, w_factor * w_max)
-            elif weight.name == "normal":
+                weight.parameters = (w_factor*w_min, w_factor*w_max)
+            elif weight.name ==  "normal":
                 (w_mean, w_std) = weight.parameters
-                weight.parameters = (w_factor * w_mean, w_factor * w_std)
+                weight.parameters = (w_factor*w_mean, w_factor*w_std)
             else:
                 print "WARNING: no conversion of the weights for this particular distribution"
         else:
-            weight = w * w_factor
+            weight = w*w_factor
         return weight
 
     def reverse_convertWeight(self, w, conductance):
@@ -130,7 +128,7 @@ class WDManager(object):
             w_factor = 1e6 # Convert from S to µS
         else:
             w_factor = 1e9 # Convert from A to nA
-        return w * w_factor
+        return w*w_factor
 
     def convertDelay(self, d):
 
@@ -138,12 +136,12 @@ class WDManager(object):
             delay = pyNN.random.RandomDistribution(d.name, d.parameters, d.rng)
             if delay.name == "uniform":
                 (d_min, d_max) = delay.parameters
-                delay.parameters = (d_min / 1000., d_max / 1000.)
-            elif delay.name == "normal":
+                delay.parameters = (d_min/1000., d_max/1000.)
+            elif delay.name ==  "normal":
                 (d_mean, d_std) = delay.parameters
-                delay.parameters = (d_mean / 1000., w_std)
+                delay.parameters = (d_mean/1000., w_std)
         else:
-            delay = d / 1000.
+            delay = d/1000.
         return delay
 
 
@@ -173,14 +171,14 @@ def setup(timestep=0.1, min_delay=0.1, max_delay=10.0, **extra_params):
     if extra_params.has_key('threads'):
         simulator.net = pypcsim.DistributedMultiThreadNetwork(
                             extra_params['threads'],
-                            pypcsim.SimParameter(pypcsim.Time.ms(timestep),
+                            pypcsim.SimParameter( pypcsim.Time.ms(timestep),
                                                   pypcsim.Time.ms(min_delay),
                                                   pypcsim.Time.ms(max_delay),
                                                   simulator.state.constructRNGSeed,
                                                   simulator.state.simulationRNGSeed))
     else:
         simulator.net = pypcsim.DistributedSingleThreadNetwork(
-                            pypcsim.SimParameter(pypcsim.Time.ms(timestep),
+                            pypcsim.SimParameter( pypcsim.Time.ms(timestep),
                                                   pypcsim.Time.ms(min_delay),
                                                   pypcsim.Time.ms(max_delay),
                                                   simulator.state.constructRNGSeed,
@@ -202,19 +200,15 @@ def end(compatible_output=True):
 def run(simtime):
     """Run the simulation for simtime ms."""
     simulator.state.t += simtime
-    simulator.net.advance(int(simtime / simulator.state.dt))
+    simulator.net.advance(int(simtime / simulator.state.dt ))
     return simulator.state.t
 
-reset = common.reset
+reset = common.build_reset(simulator)
 
 initialize = common.initialize
 
-get_current_time = common.get_current_time
-get_time_step = common.get_time_step
-get_min_delay = common.get_min_delay
-get_max_delay = common.get_max_delay
-num_processes = common.num_processes
-rank = common.rank
+get_current_time, get_time_step, get_min_delay, get_max_delay, \
+            num_processes, rank = common.build_state_queries(simulator)
 
 
 # ==============================================================================
@@ -222,30 +216,47 @@ rank = common.rank
 #   neurons.
 # ==============================================================================
 
+class Assembly(common.Assembly):
+    _simulator = simulator
+
+
+class PopulationView(common.PopulationView):
+    _simulator = simulator
+    assembly_class = Assembly
+
+    def _get_view(self, selector, label=None):
+        return PopulationView(self, selector, label)
+
+
 class Population(common.Population):
     """
     An array of neurons all of the same type. `Population' is used as a generic
     term intended to include layers, columns, nuclei, etc., of cells.
     """
+    _simulator = simulator
     recorder_class = Recorder
+    assembly_class = Assembly
 
     def __init__(self, size, cellclass, cellparams=None, structure=None,
                  label=None, parent=None):
         __doc__ = common.Population.__doc__
         common.Population.__init__(self, size, cellclass, cellparams, structure, label)
 
+    def _get_view(self, selector, label=None):
+        return PopulationView(self, selector, label)
+
     def _create_cells(self, cellclass, cellparams, n):
         """
         Create cells in PCSIM.
-        
+
         `cellclass`  -- a PyNN standard cell or a native PCSIM cell class.
         `cellparams` -- a dictionary of cell parameters.
         `n`          -- the number of cells to create
         `parent`     -- the parent Population, or None if the cells don't belong to
                         a Population.
-        
+
         This function is used by both `create()` and `Population.__init__()`
-        
+
         Return:
             - a 1D array of all cell IDs
             - a 1D boolean array indicating which IDs are present on the local MPI
@@ -253,7 +264,6 @@ class Population(common.Population):
             - the ID of the first cell created
             - the ID of the last cell created
         """
-        global net
         assert n > 0, 'n must be a positive integer'
 
 #        if isinstance(cellclass, str):
@@ -276,7 +286,7 @@ class Population(common.Population):
         self.last_id = self.all_cells[-1]
         # mask_local is used to extract those elements from arrays that apply to the cells on the current node
         self._mask_local = numpy.array([simulator.is_local(id) for id in self.all_cells])
-        for i, id in enumerate(self.all_cells):
+        for i,id in enumerate(self.all_cells):
             self.all_cells[i] = simulator.ID(self.all_cells[i])
             self.all_cells[i].parent = self
 
@@ -306,10 +316,10 @@ class Population(common.Population):
     ##       raise errors.InvalidDimensionsError, "Population has %d dimensions. Address was %s" % (self.actual_ndim, str(addr))
     ##    orig_addr = addr;
     ##    while len(addr) < 3:
-    ##        addr += (0,)                  
+    ##        addr += (0,)
     ##    index = 0
     ##    for i, s in zip(addr, self.steps):
-    ##        index += i*s 
+    ##        index += i*s
     ##    pcsim_index = self.pcsim_population.getIndex(addr[0], addr[1], addr[2])
     ##    assert index == pcsim_index, " index = %s, pcsim_index = %s" % (index, pcsim_index)
     ##    id = ID(pcsim_index)
@@ -329,7 +339,7 @@ class Population(common.Population):
         """
         ids = self.pcsim_population.idVector()
         for i in ids:
-            id = ID(i - ids[0])
+            id = ID(i-ids[0])
             id.parent = self
             yield id
 
@@ -375,11 +385,11 @@ class Population(common.Population):
     ##    rand_distr, which should be a RandomDistribution object.
     ##    """
     ##    """
-    ##        Will be implemented in the future more efficiently for 
+    ##        Will be implemented in the future more efficiently for
     ##        NativeRNGs.
-    ##    """         
+    ##    """
     ##    rarr = numpy.array(rand_distr.next(n=self.size))
-    ##    rarr = rarr.reshape(self.dim[0:self.actual_ndim])         
+    ##    rarr = rarr.reshape(self.dim[0:self.actual_ndim])
     ##    self.tset(parametername, rarr)
 
     def _call(self, methodname, arguments):
@@ -388,15 +398,15 @@ class Population(common.Population):
         e.g. p.call("set_background","0.1") if the cell class has a method
         set_background().
         """
-        """ This works nicely for PCSIM for simulator specific cells, 
+        """ This works nicely for PCSIM for simulator specific cells,
             because cells (SimObject classes) are directly wrapped in python """
         for i in xrange(0, len(self)):
             obj = simulator.net.object(self.pcsim_population[i])
-            if obj: apply(obj, methodname, (), arguments)
+            if obj: apply( obj, methodname, (), arguments)
 
     def _tcall(self, methodname, objarr):
         """
-        `Topographic' call. Calls the method methodname() for every cell in the 
+        `Topographic' call. Calls the method methodname() for every cell in the
         population. The argument to the method depends on the coordinates of the
         cell. objarr is an array with the same dimensions as the Population.
         e.g. p.tcall("memb_init", vinitArray) calls
@@ -405,10 +415,8 @@ class Population(common.Population):
         """ PCSIM: iteration at the python level and apply"""
         for i in xrange(0, len(self)):
             obj = simulator.net.object(self.pcsim_population[i])
-            if obj: apply(obj, methodname, (), arguments)
+            if obj: apply( obj, methodname, (), arguments)
 
-PopulationView = common.PopulationView
-Assembly = common.Assembly
 
 class Projection(common.Projection, WDManager):
     """
@@ -416,45 +424,46 @@ class Projection(common.Projection, WDManager):
     plasticity mechanisms) between two populations, together with methods to set
     parameters of those connections, including of plasticity mechanisms.
     """
-
+    _simulator = simulator
     nProj = 0
+    synapse_target_ids = { 'excitatory': 1, 'inhibitory': 2 }
 
     def __init__(self, presynaptic_population, postsynaptic_population,
                  method, source=None,
                  target=None, synapse_dynamics=None, label=None, rng=None):
         """
         presynaptic_population and postsynaptic_population - Population objects.
-        
+
         source - string specifying which attribute of the presynaptic cell
                  signals action potentials
-                 
+
         target - string specifying which synapse on the postsynaptic cell to
                  connect to
-                 
+
         If source and/or target are not given, default values are used.
-        
+
         method - a Connector object, encapsulating the algorithm to use for
                  connecting the neurons.
-        
+
         synapse_dynamics - a `SynapseDynamics` object specifying which
         synaptic plasticity mechanisms to use.
-        
+
         rng - specify an RNG object to be used by the Connector..
         """
         """
            PCSIM implementation specific comments:
                - source parameter does not have any meaning in context of PyPCSIM interface. Action potential
-               signals are predefined by the neuron model and each cell has only one source, 
-               so there is no need to name a source since is implicitly known. 
+               signals are predefined by the neuron model and each cell has only one source,
+               so there is no need to name a source since is implicitly known.
                - rng parameter is also not currently not applicable. For connection making only internal
                random number generators can be used.
                - The semantics of the target parameter is slightly changed:
                    If it is a string then it represents a pcsim synapse class.
                    If it is an integer then it represents which target(synapse) on the postsynaptic cell
                    to connect to.
-                   It can be also a pcsim SimObjectFactory object which will be used for creation 
+                   It can be also a pcsim SimObjectFactory object which will be used for creation
                    of the synapse objects associated to the created connections.
-                   
+
         """
 
         common.Projection.__init__(self, presynaptic_population, postsynaptic_population,
@@ -556,14 +565,14 @@ class Projection(common.Projection, WDManager):
                 plasticity_parameters.update(self.synapse_dynamics.slow.all_parameters)
                 dendritic_delay = self.synapse_dynamics.slow.dendritic_delay_fraction * d
                 transmission_delay = d - dendritic_delay
-                plasticity_parameters.update({'back_delay': 2 * 0.001 * dendritic_delay, 'Winit': w * weight_scale_factor})
+                plasticity_parameters.update({'back_delay': 2*0.001*dendritic_delay, 'Winit': w*weight_scale_factor})
                 # hack to work around the limitations of the translation method
                 if self.is_conductance:
                     for name in self.synapse_dynamics.slow.weight_dependence.scales_with_weight:
                         plasticity_parameters[name] *= 1e3 # a scale factor of 1e-9 is always applied in the translation stage
             else:
                 possible_models = possible_models.difference(stdp_synapse_models)
-                plasticity_parameters.update({'W': w * weight_scale_factor})
+                plasticity_parameters.update({'W': w*weight_scale_factor})
 
 
             if len(possible_models) == 0:
@@ -592,7 +601,7 @@ class Projection(common.Projection, WDManager):
                 else:
                     self.syn_factory = target
 
-        ##self.pcsim_projection = pypcsim.ConnectionsProjection(self.pre.pcsim_population, self.post.pcsim_population, 
+        ##self.pcsim_projection = pypcsim.ConnectionsProjection(self.pre.pcsim_population, self.post.pcsim_population,
         ##                                                      self.syn_factory, decider, wiring_method, collectIDs = True,
         ##                                                      collectPairs=True)
         ##
@@ -613,23 +622,160 @@ class Projection(common.Projection, WDManager):
 
         ##self.synapse_type = self.syn_factory #target or 'excitatory'
         self.synapse_type = target or 'excitatory'
-        self.connection_manager = simulator.ConnectionManager(self.syn_factory, parent=self)
-        self.connections = self.connection_manager
+        self.connections = []
         method.connect(self)
         Projection.nProj += 1
 
     # The commented-out code in this class has been left there as it may be
     # useful when we start (re-)optimizing the implementation
 
-    ##def __len__(self):
-    ##    """Return the total number of connections."""
-    ##    return self.pcsim_projection.size()
+    def __len__(self):
+        """Return the total number of connections."""
+        ###return self.pcsim_projection.size()
+        return len(self.connections)
 
     #def __getitem__(self, n):
     #    return self.pcsim_projection[n]
+    def __getitem__(self, i):
+        """Return the `i`th connection on the local MPI node."""
+        #if self.parent:
+        #    if self.parent.is_conductance:
+        #        A = 1e6 # S --> uS
+        #    else:
+        #        A = 1e9 # A --> nA
+        #    return Connection(self.parent.pcsim_projection.object(i), A)
+        #else:
+        return self.connections[i]
 
+    def _divergent_connect(self, source, targets, weights, delays):
+        """
+        Connect a neuron to one or more other neurons with a static connection.
+
+        `source`  -- the ID of the pre-synaptic cell.
+        `targets` -- a list/1D array of post-synaptic cell IDs, or a single ID.
+        `weight`  -- a list/1D array of connection weights, or a single weight.
+                     Must have the same length as `targets`.
+        `delays`  -- a list/1D array of connection delays, or a single delay.
+                     Must have the same length as `targets`.
+        """
+        if not isinstance(source, (int, long)) or source < 0:
+            errmsg = "Invalid source ID: %s" % source
+            raise errors.ConnectionError(errmsg)
+        if not core.is_listlike(targets):
+            targets = [targets]
+        if isinstance(weights, float):
+            weights = [weights]
+        if isinstance(delays, float):
+            delays = [delays]
+        assert len(targets) > 0
+        for target in targets:
+            if not isinstance(target, common.IDMixin):
+                raise errors.ConnectionError("Invalid target ID: %s" % target)
+        assert len(targets) == len(weights) == len(delays), "%s %s %s" % (len(targets),len(weights),len(delays))
+        if common.is_conductance(targets[0]):
+            weight_scale_factor = 1e-6 # Convert from µS to S
+        else:
+            weight_scale_factor = 1e-9 # Convert from nA to A
+
+        synapse_type = self.syn_factory or "excitatory"
+        if isinstance(synapse_type, basestring):
+            syn_target_id = Projection.synapse_target_ids[synapse_type]
+            syn_factory = pypcsim.SimpleScalingSpikingSynapse(
+                              syn_target_id, weights[0], delays[0])
+        elif isinstance(synapse_type, pypcsim.SimObject):
+            syn_factory = synapse_type
+        else:
+            raise errors.ConnectionError("synapse_type must be a string or a PCSIM synapse factory. Actual type is %s" % type(synapse_type))
+        for target, weight, delay in zip(targets, weights, delays):
+            syn_factory.W = weight*weight_scale_factor
+            syn_factory.delay = delay*0.001 # ms --> s
+            try:
+                c = simulator.net.connect(source, target, syn_factory)
+            except RuntimeError, e:
+                raise errors.ConnectionError(e)
+            if target.local:
+                self.connections.append(simulator.Connection(source, target, simulator.net.object(c), 1.0/weight_scale_factor))
+
+    def _convergent_connect(self, sources, target, weights, delays):
+        """
+        Connect a neuron to one or more other neurons with a static connection.
+
+        `sources`  -- a list/1D array of pre-synaptic cell IDs, or a single ID.
+        `target` -- the ID of the post-synaptic cell.
+        `weight`  -- a list/1D array of connection weights, or a single weight.
+                     Must have the same length as `targets`.
+        `delays`  -- a list/1D array of connection delays, or a single delay.
+                     Must have the same length as `targets`.
+        """
+        if not isinstance(target, (int, long)) or target < 0:
+            errmsg = "Invalid target ID: %s" % target
+            raise errors.ConnectionError(errmsg)
+        if not core.is_listlike(sources):
+            sources = [sources]
+        if isinstance(weights, float):
+            weights = [weights]
+        if isinstance(delays, float):
+            delays = [delays]
+        assert len(sources) > 0
+        for source in sources:
+            if not isinstance(source, common.IDMixin):
+                raise errors.ConnectionError("Invalid source ID: %s" % source)
+        assert len(sources) == len(weights) == len(delays), "%s %s %s" % (len(sources),len(weights),len(delays))
+        if common.is_conductance(target):
+            weight_scale_factor = 1e-6 # Convert from µS to S
+        else:
+            weight_scale_factor = 1e-9 # Convert from nA to A
+
+        synapse_type = self.syn_factory or "excitatory"
+        if isinstance(synapse_type, basestring):
+            syn_target_id = Projection.synapse_target_ids[synapse_type]
+            syn_factory = pypcsim.SimpleScalingSpikingSynapse(
+                              syn_target_id, weights[0], delays[0])
+        elif isinstance(synapse_type, pypcsim.SimObject):
+            syn_factory = synapse_type
+        else:
+            raise errors.ConnectionError("synapse_type must be a string or a PCSIM synapse factory. Actual type is %s" % type(synapse_type))
+        for source, weight, delay in zip(sources, weights, delays):
+            syn_factory.W = weight*weight_scale_factor
+            syn_factory.delay = delay*0.001 # ms --> s
+            try:
+                c = simulator.net.connect(source, target, syn_factory)
+            except RuntimeError, e:
+                raise errors.ConnectionError(e)
+            if target.local:
+                self.connections.append(simulator.Connection(source, target, simulator.net.object(c), 1.0/weight_scale_factor))
 
     # --- Methods for setting connection parameters ----------------------------
+
+    def set(self, name, value):
+        """
+        Set connection attributes for all connections on the local MPI node.
+
+        `name`  -- attribute name
+        `value` -- the attribute numeric value, or a list/1D array of such
+                   values of the same length as the number of local connections,
+                   or a 2D array with the same dimensions as the connectivity
+                   matrix (as returned by `get(format='array')`)
+        """
+        if numpy.isscalar(value):
+            for c in self:
+                setattr(c, name, value)
+        elif isinstance(value, numpy.ndarray) and len(value.shape) == 2:
+            for c in self.connections:
+                addr = (self.pre.id_to_index(c.source), self.post.id_to_index(c.target))
+                try:
+                    val = value[addr]
+                except IndexError, e:
+                    raise IndexError("%s. addr=%s" % (e, addr))
+                if numpy.isnan(val):
+                    raise Exception("Array contains no value for synapse from %d to %d" % (c.source, c.target))
+                else:
+                    setattr(c, name, val)
+        elif core.is_listlike(value):
+            for c,val in zip(self.connections, value):
+                setattr(c, name, val)
+        else:
+            raise TypeError("Argument should be a numeric type (int, float...), a list, or a numpy array.")
 
     ##def setWeights(self, w):
     ##    """
@@ -658,7 +804,7 @@ class Projection(common.Projection, WDManager):
     ##    weights = rand_distr.next(len(self))
     ##    for i in range(len(self)):
     ##        simulator.net.object(self.pcsim_projection[i]).W = weights[i]
-    ## 
+    ##
     ##def setDelays(self, d):
     ##    """
     ##    d can be a single number, in which case all delays are set to this
@@ -683,7 +829,34 @@ class Projection(common.Projection, WDManager):
     ##    delays = rand_distr.next(len(self))
     ##    for i in range(len(self)):
     ##        simulator.net.object(self.pcsim_projection[i]).delay = delays[i]
-    ##
+
+    def get(self, parameter_name, format, gather=True):
+        """
+        Get the values of a given attribute (weight, delay, etc) for all
+        connections on the local MPI node.
+
+        `parameter_name` -- name of the attribute whose values are wanted.
+        `format` -- "list" or "array". Array format implicitly assumes that all
+                    connections belong to a single Projection.
+
+        Return a list or a 2D Numpy array. The array element X_ij contains the
+        attribute value for the connection from the ith neuron in the pre-
+        synaptic Population to the jth neuron in the post-synaptic Population,
+        if such a connection exists. If there are no such connections, X_ij will
+        be NaN.
+        """
+        if format == 'list':
+            values = [getattr(c, parameter_name) for c in self]
+        elif format == 'array':
+            values = numpy.nan * numpy.ones((self.pre.size, self.post.size))
+            for c in self:
+                addr = (self.pre.id_to_index(c.source), self.post.id_to_index(c.target))
+                values[addr] = getattr(c, parameter_name)
+        else:
+            raise Exception("format must be 'list' or 'array'")
+        return values
+
+
     ##def getWeights(self, format='list', gather=True):
     ##    """
     ##    Possible formats are: a list of length equal to the number of connections
@@ -753,4 +926,3 @@ record_v = common.build_record('v', simulator)
 record_gsyn = common.build_record('gsyn', simulator)
 
 # ==============================================================================
-

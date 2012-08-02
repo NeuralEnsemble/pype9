@@ -4,7 +4,7 @@ Standard cells for pcsim
 :copyright: Copyright 2006-2011 by the PyNN team, see AUTHORS.
 :license: CeCILL, see LICENSE for details.
 
-$Id: cells.py 957 2011-05-03 13:44:15Z apdavison $
+$Id: cells.py 1040 2011-12-20 11:22:03Z pierre $
 """
 
 from pyNN import common, errors
@@ -16,78 +16,77 @@ import logging
 logger = logging.getLogger("PyNN")
 
 class IF_curr_alpha(cells.IF_curr_alpha):
-    """Leaky integrate and fire model with fixed threshold and alpha-function-
-    shaped post-synaptic current."""
-
+    
+    __doc__ = cells.IF_curr_alpha.__doc__   
+    
     translations = build_translations(
-        ('tau_m', 'taum', 1e-3),
-        ('cm', 'Cm', 1e-9),
-        ('v_rest', 'Vresting', 1e-3),
-        ('v_thresh', 'Vthresh', 1e-3),
-        ('v_reset', 'Vreset', 1e-3),
-        ('tau_refrac', 'Trefract', 1e-3),
-        ('i_offset', 'Iinject', 1e-9),
-        ('tau_syn_E', 'TauSynExc', 1e-3),
-        ('tau_syn_I', 'TauSynInh', 1e-3),
+        ('tau_m',      'taum',      1e-3),
+        ('cm',         'Cm',        1e-9), 
+        ('v_rest',     'Vresting',  1e-3), 
+        ('v_thresh',   'Vthresh',   1e-3), 
+        ('v_reset',    'Vreset',    1e-3), 
+        ('tau_refrac', 'Trefract',  1e-3), 
+        ('i_offset',   'Iinject',   1e-9),         
+        ('tau_syn_E',  'TauSynExc', 1e-3),
+        ('tau_syn_I',  'TauSynInh', 1e-3),
     )
-    pcsim_name = "LIFCurrAlphaNeuron"
+    pcsim_name = "LIFCurrAlphaNeuron"    
     simObjFactory = None
     setterMethods = {}
-
+        
     def __init__(self, parameters):
-        cells.IF_curr_alpha.__init__(self, parameters)
+        cells.IF_curr_alpha.__init__(self, parameters)              
         self.parameters['Inoise'] = 0.0
         self.simObjFactory = pypcsim.LIFCurrAlphaNeuron(**self.parameters)
 
 
 class IF_curr_exp(cells.IF_curr_exp):
-    """Leaky integrate and fire model with fixed threshold and
-       decaying-exponential post-synaptic current. (Separate synaptic currents for
-       excitatory and inhibitory synapses."""
-
+    
+    __doc__ = cells.IF_curr_exp.__doc__    
+    
     translations = build_translations(
-        ('tau_m', 'taum', 1e-3),
-        ('cm', 'Cm', 1e-9),
-        ('v_rest', 'Vresting', 1e-3),
-        ('v_thresh', 'Vthresh', 1e-3),
-        ('v_reset', 'Vreset', 1e-3),
-        ('tau_refrac', 'Trefract', 1e-3),
-        ('i_offset', 'Iinject', 1e-9),
-        ('tau_syn_E', 'TauSynExc', 1e-3),
-        ('tau_syn_I', 'TauSynInh', 1e-3),
+        ('tau_m',      'taum',      1e-3),
+        ('cm',         'Cm',        1e-9), 
+        ('v_rest',     'Vresting',  1e-3), 
+        ('v_thresh',   'Vthresh',   1e-3), 
+        ('v_reset',    'Vreset',    1e-3), 
+        ('tau_refrac', 'Trefract',  1e-3), 
+        ('i_offset',   'Iinject',   1e-9),         
+        ('tau_syn_E',  'TauSynExc', 1e-3),
+        ('tau_syn_I',  'TauSynInh', 1e-3), 
     )
-    pcsim_name = "LIFCurrExpNeuron"
+    pcsim_name = "LIFCurrExpNeuron"    
     simObjFactory = None
     setterMethods = {}
-
+    
     def __init__(self, parameters):
-        cells.IF_curr_exp.__init__(self, parameters)
+        cells.IF_curr_exp.__init__(self, parameters)                
         self.parameters['Inoise'] = 0.0
         self.simObjFactory = pypcsim.LIFCurrExpNeuron(**self.parameters)
 
 
 class IF_cond_alpha(cells.IF_cond_alpha):
-    """Leaky integrate and fire model with fixed threshold and alpha-function-
-    shaped post-synaptic conductance."""
-
+    
+    __doc__ = cells.IF_cond_alpha.__doc__    
+    
     translations = build_translations(
-        ('tau_m', 'taum', 1e-3),
-        ('cm', 'Cm', 1e-9),
-        ('v_rest', 'Vresting', 1e-3),
-        ('v_thresh', 'Vthresh', 1e-3),
-        ('v_reset', 'Vreset', 1e-3),
-        ('tau_refrac', 'Trefract', 1e-3),
-        ('i_offset', 'Iinject', 1e-9),
-        ('tau_syn_E', 'TauSynExc', 1e-3),
-        ('tau_syn_I', 'TauSynInh', 1e-3),
-        ('e_rev_E', 'ErevExc', 1e-3),
-        ('e_rev_I', 'ErevInh', 1e-3),
+        ('tau_m',      'taum',      1e-3),
+        ('cm',         'Cm',        1e-9), 
+        ('v_rest',     'Vresting',  1e-3), 
+        ('v_thresh',   'Vthresh',   1e-3), 
+        ('v_reset',    'Vreset',    1e-3), 
+        ('tau_refrac', 'Trefract',  1e-3), 
+        ('i_offset',   'Iinject',   1e-9),         
+        ('tau_syn_E',  'TauSynExc', 1e-3),
+        ('tau_syn_I',  'TauSynInh', 1e-3),
+        ('e_rev_E',    'ErevExc',   1e-3),
+        ('e_rev_I',    'ErevInh',   1e-3),
     )
-    pcsim_name = "LIFCondAlphaNeuron"
+    pcsim_name = "LIFCondAlphaNeuron"    
     simObjFactory = None
     setterMethods = {}
     recordable = ['spikes', 'v']
-
+        
     def __init__(self, parameters):
         cells.IF_cond_alpha.__init__(self, parameters)
         self.parameters['Inoise'] = 0.0
@@ -95,27 +94,27 @@ class IF_cond_alpha(cells.IF_cond_alpha):
 
 
 class IF_cond_exp(cells.IF_cond_exp):
-    """Leaky integrate and fire model with fixed threshold and 
-    exponentially-decaying post-synaptic conductance."""
-
+    
+    __doc__ = cells.IF_cond_exp.__doc__    
+    
     translations = build_translations(
-        ('tau_m', 'taum', 1e-3),
-        ('cm', 'Cm', 1e-9),
-        ('v_rest', 'Vresting', 1e-3),
-        ('v_thresh', 'Vthresh', 1e-3),
-        ('v_reset', 'Vreset', 1e-3),
-        ('tau_refrac', 'Trefract', 1e-3),
-        ('i_offset', 'Iinject', 1e-9),
-        ('tau_syn_E', 'TauSynExc', 1e-3),
-        ('tau_syn_I', 'TauSynInh', 1e-3),
-        ('e_rev_E', 'ErevExc', 1e-3),
-        ('e_rev_I', 'ErevInh', 1e-3),
+        ('tau_m',      'taum',      1e-3),
+        ('cm',         'Cm',        1e-9), 
+        ('v_rest',     'Vresting',  1e-3), 
+        ('v_thresh',   'Vthresh',   1e-3), 
+        ('v_reset',    'Vreset',    1e-3), 
+        ('tau_refrac', 'Trefract',  1e-3), 
+        ('i_offset',   'Iinject',   1e-9),         
+        ('tau_syn_E',  'TauSynExc', 1e-3),
+        ('tau_syn_I',  'TauSynInh', 1e-3),
+        ('e_rev_E',    'ErevExc',   1e-3),
+        ('e_rev_I',    'ErevInh',   1e-3),
     )
-    pcsim_name = "LIFCondExpNeuron"
+    pcsim_name = "LIFCondExpNeuron"    
     simObjFactory = None
     setterMethods = {}
     recordable = ['spikes', 'v']
-
+        
     def __init__(self, parameters):
         cells.IF_cond_exp.__init__(self, parameters)
         self.parameters['Inoise'] = 0.0
@@ -124,22 +123,23 @@ class IF_cond_exp(cells.IF_cond_exp):
 
 """ Implemented not tested """
 class SpikeSourcePoisson(cells.SpikeSourcePoisson):
-    """Spike source, generating spikes according to a Poisson process."""
+    
+    __doc__ = cells.SpikeSourcePoisson.__doc__     
 
     translations = build_translations(
-        ('start', 'Tstart', 1e-3),
-        ('rate', 'rate'),
+        ('start',    'Tstart',   1e-3), 
+        ('rate',     'rate'), 
         ('duration', 'duration', 1e-3)
     )
-    pcsim_name = 'PoissonInputNeuron'
+    pcsim_name = 'PoissonInputNeuron'    
     simObjFactory = None
     setterMethods = {}
-
+   
     def __init__(self, parameters):
-        cells.SpikeSourcePoisson.__init__(self, parameters)
+        cells.SpikeSourcePoisson.__init__(self, parameters)      
         self.simObjFactory = pypcsim.PoissonInputNeuron(**self.parameters)
 
-
+    
 def sanitize_spike_times(spike_times):
     """
     PCSIM has a bug that the SpikingInputNeuron sometimes stops emitting spikes
@@ -151,19 +151,21 @@ def sanitize_spike_times(spike_times):
         spike_times = numpy.array(spike_times, float)
     except ValueError, e:
         raise errors.InvalidParameterValueError("Spike times must be floats. %s")
-
-    bins = (spike_times / time_step).astype('int')
+    
+    bins = (spike_times/time_step).astype('int')
     mask = numpy.concatenate((numpy.array([True]), bins[1:] != bins[:-1]))
     if mask.sum() < len(bins):
         logger.warn("Spikes have been thrown away because they were too close together.")
-        logger.debug(spike_times[(1 - mask).astype('bool')])
+        logger.debug(spike_times[(1-mask).astype('bool')])
     if len(spike_times) > 0:
         return spike_times[mask]
     else:
         return spike_times
 
 class SpikeSourceArray(cells.SpikeSourceArray):
-    """Spike source generating spikes at the times given in the spike_times array."""
+
+    __doc__ = cells.SpikeSourceArray.__doc__    
+
     translations = build_translations(
         ('spike_times', 'spikeTimes'), # 1e-3), 
     )
@@ -171,12 +173,12 @@ class SpikeSourceArray(cells.SpikeSourceArray):
     simObjFactory = None
     setterMethods = {'spikeTimes':'setSpikes'}
     getterMethods = {'spikeTimes':'getSpikeTimes' }
-
+    
     def __init__(self, parameters):
         cells.SpikeSourceArray.__init__(self, parameters)
         self.pcsim_object_handle = pypcsim.SpikingInputNeuron(**self.parameters)
-        self.simObjFactory = pypcsim.SpikingInputNeuron(**self.parameters)
-
+        self.simObjFactory  = pypcsim.SpikingInputNeuron(**self.parameters)
+    
     @classmethod
     def translate(cls, parameters):
         """Translate standardized model parameters to simulator-specific parameters."""
@@ -185,19 +187,19 @@ class SpikeSourceArray(cells.SpikeSourceArray):
         # for why we used 'super' here, see http://blogs.gnome.org/jamesh/2005/06/23/overriding-class-methods-in-python/
         # convert from ms to s - should really be done in common.py, but that doesn't handle lists, only arrays
         if isinstance(translated_parameters['spikeTimes'], list):
-            translated_parameters['spikeTimes'] = [t * 0.001 for t in translated_parameters['spikeTimes']]
+            translated_parameters['spikeTimes'] = [t*0.001 for t in translated_parameters['spikeTimes']]
         elif isinstance(translated_parameters['spikeTimes'], numpy.ndarray):
             translated_parameters['spikeTimes'] *= 0.001
         return translated_parameters
-
+    
     @classmethod
     def reverse_translate(cls, native_parameters):
         """Translate simulator-specific model parameters to standardized parameters."""
         standard_parameters = super(SpikeSourceArray, cls).reverse_translate(native_parameters)
         if isinstance(standard_parameters['spike_times'], list):
-            standard_parameters['spike_times'] = [t * 1000.0 for t in standard_parameters['spike_times']]
+            standard_parameters['spike_times'] = [t*1000.0 for t in standard_parameters['spike_times']]
         elif isinstance(standard_parameters['spike_times'], numpy.ndarray):
-            standard_parameters['spike_times'] *= 1000.0
+            standard_parameters['spike_times'] *= 1000.0 
         return standard_parameters
 
 class EIF_cond_alpha_isfa_ista(ModelNotAvailable):
@@ -277,9 +279,9 @@ class HH_cond_exp(ModelNotAvailable):
 #        cells.HH_cond_exp.__init__(self, parameters)
 #        self.parameters['Inoise'] = 0.0
 #        self.simObjFactory = pypcsim.LIFCondAlphaNeuron(**self.parameters)
-
-
-
+        
+        
+        
 class SpikeSourceInhGamma(ModelNotAvailable):
     pass
 

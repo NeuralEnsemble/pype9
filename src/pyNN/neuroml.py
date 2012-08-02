@@ -5,7 +5,7 @@ PyNN-->NeuroML
 :copyright: Copyright 2006-2011 by the PyNN team, see AUTHORS.
 :license: CeCILL, see LICENSE for details.
 
-$Id: neuroml.py 957 2011-05-03 13:44:15Z apdavison $
+$Id: neuroml.py 1038 2011-12-16 14:06:47Z apdavison $
 """
 
 from pyNN import common, connectors, cells, standardmodels
@@ -18,14 +18,14 @@ import xml.dom.minidom
 
 neuroml_url = 'http://morphml.org'
 namespace = {'xsi': "http://www.w3.org/2001/XMLSchema-instance",
-             'mml':  neuroml_url + "/morphml/schema",
-             'net':  neuroml_url + "/networkml/schema",
-             'meta': neuroml_url + "/metadata/schema",
-             'bio':  neuroml_url + "/biophysics/schema",
-             'cml':  neuroml_url + "/channelml/schema", }
-
-neuroml_ver = "1.7.3"
-neuroml_xsd = "http://www.neuroml.org/NeuroMLValidator/NeuroMLFiles/Schemata/v" + neuroml_ver + "/Level3/NeuroML_Level3_v" + neuroml_ver + ".xsd"
+             'mml':  neuroml_url+"/morphml/schema",
+             'net':  neuroml_url+"/networkml/schema",
+             'meta': neuroml_url+"/metadata/schema",
+             'bio':  neuroml_url+"/biophysics/schema",  
+             'cml':  neuroml_url+"/channelml/schema",}
+             
+neuroml_ver="1.7.3"
+neuroml_xsd="http://www.neuroml.org/NeuroMLValidator/NeuroMLFiles/Schemata/v"+neuroml_ver+"/Level3/NeuroML_Level3_v"+neuroml_ver+".xsd"
 
 strict = False
 
@@ -41,7 +41,7 @@ class ID(int, common.IDMixin):
     where p is a Population object. The question is, how big a memory/performance
     hit is it to replace integers with ID objects?
     """
-
+    
     def __init__(self, n):
         common.IDMixin.__init__(self)
 
@@ -71,70 +71,70 @@ def build_parameter_node(name, value):
         return param_node
 
 class IF_base(object):
-    """Base class for integrate-and-fire neuron models."""
-
+    """Base class for integrate-and-fire neuron models."""        
+    
     def define_morphology(self):
         segments_node = build_node('mml:segments')
         soma_node = build_node('mml:segment', id=0, name="Soma", cable=0)
         # L = 100  diam = 1000/PI: gives area = 10Â³ cmÂ²
-        soma_node.appendChild(build_node('mml:proximal', x=0, y=0, z=0, diameter=1000 / math.pi))
-        soma_node.appendChild(build_node('mml:distal', x=0, y=0, z=100, diameter=1000 / math.pi))
+        soma_node.appendChild(build_node('mml:proximal', x=0, y=0, z=0, diameter=1000/math.pi))
+        soma_node.appendChild(build_node('mml:distal', x=0, y=0, z=100, diameter=1000/math.pi))
         segments_node.appendChild(soma_node)
-
-        cables_node = build_node('mml:cables')
+        
+        cables_node   = build_node('mml:cables')
         soma_node = build_node('mml:cable', id=0, name="Soma")
-        soma_node.appendChild(build_node('meta:group', 'all'))
+        soma_node.appendChild(build_node('meta:group','all'))
         cables_node.appendChild(soma_node)
         return segments_node, cables_node
-
+        
     def define_biophysics(self):
         # L = 100  diam = 1000/PI  // 
-        biophys_node = build_node(':biophysics', units="Physiological Units")
-        ifnode = build_node('bio:mechanism', name="IandF_" + self.label, type='Channel Mechanism')
-        passive_node = build_node('bio:mechanism', name="pas_" + self.label, type='Channel Mechanism', passive_conductance="true")
-        # g_max = 10ï¿½?ï¿½Â³cm/tau_m  // cm(nF)/tau_m(ms) = G(ÂµS) = 10ï¿½?ï¿½ï¿½?ï¿½G(S). Divide by area (10Â³) to get factor of 10ï¿½?ï¿½Â³
-        gmax = str(1e-3 * self.parameters['cm'] / self.parameters['tau_m'])
+        biophys_node  = build_node(':biophysics', units="Physiological Units")
+        ifnode        = build_node('bio:mechanism', name="IandF_"+self.label, type='Channel Mechanism')
+        passive_node  = build_node('bio:mechanism', name="pas_"+self.label, type='Channel Mechanism', passive_conductance="true")
+        # g_max = 10â?»Â³cm/tau_m  // cm(nF)/tau_m(ms) = G(ÂµS) = 10â?»â?¶G(S). Divide by area (10Â³) to get factor of 10â?»Â³
+        gmax = str(1e-3*self.parameters['cm']/self.parameters['tau_m'])
         passive_node.appendChild(build_parameter_node('gmax', gmax))
-        cm_node = build_node('bio:specificCapacitance')
+        cm_node       = build_node('bio:specificCapacitance')
         cm_node.appendChild(build_parameter_node('', str(self.parameters['cm'])))  # units?
-        Ra_node = build_node('bio:specificAxialResistance')
+        Ra_node       = build_node('bio:specificAxialResistance')
         Ra_node.appendChild(build_parameter_node('', "0.1")) # value doesn't matter for a single compartment
         # These are not needed here
         #esyn_node     = build_node('bio:mechanism', name="ExcitatorySynapse", type="Channel Mechanism")
         #isyn_node     = build_node('bio:mechanism', name="InhibitorySynapse", type="Channel Mechanism")
-
+        
         for node in ifnode, passive_node, cm_node, Ra_node: # the order is important here
             biophys_node.appendChild(node)
         return biophys_node
-
+        
     def define_connectivity(self):
-        conn_node = build_node(':connectivity')
-        esyn_node = build_node('net:potential_syn_loc', synapse_type="ExcSyn_" + self.label, synapse_direction="preAndOrPost")
+        conn_node  = build_node(':connectivity')
+        esyn_node  = build_node('net:potential_syn_loc', synapse_type="ExcSyn_"+self.label, synapse_direction="preAndOrPost")
         esyn_node.appendChild(build_node('net:group'))
-        isyn_node = build_node('net:potential_syn_loc', synapse_type="InhSyn_" + self.label, synapse_direction="preAndOrPost")
+        isyn_node  = build_node('net:potential_syn_loc', synapse_type="InhSyn_"+self.label, synapse_direction="preAndOrPost")
         isyn_node.appendChild(build_node('net:group'))
-
-
-        for node in esyn_node, isyn_node:
+        
+      
+        for node in esyn_node, isyn_node: 
             conn_node.appendChild(node)
         return conn_node
-
+        
     def define_channel_types(self):
-
-        passive_node = build_node('cml:channel_type', name="pas_" + self.label, density="yes")
-        passive_node.appendChild(build_node('meta:notes', "Simple example of a leak/passive conductance"))
-        gmax = str(1e-3 * self.parameters['cm'] / self.parameters['tau_m'])
-
-        cvr_node = build_node('cml:current_voltage_relation',
+        
+        passive_node = build_node('cml:channel_type', name="pas_"+self.label, density="yes")
+        passive_node.appendChild( build_node('meta:notes', "Simple example of a leak/passive conductance") )
+        gmax = str(1e-3*self.parameters['cm']/self.parameters['tau_m'])
+        
+        cvr_node = build_node('cml:current_voltage_relation', 
                               cond_law="ohmic",
                               ion="non_specific",
                               default_gmax=gmax,
                               default_erev=self.parameters['v_rest'])
-
+                              
         passive_node.appendChild(cvr_node)
-
-        ifnode = build_node('cml:channel_type', name="IandF_" + self.label)
-        ifnode.appendChild(build_node('meta:notes', "Spike and reset mechanism"))
+        
+        ifnode = build_node('cml:channel_type', name="IandF_"+self.label)
+        ifnode.appendChild( build_node('meta:notes', "Spike and reset mechanism") )
         cvr_node = build_node('cml:current_voltage_relation')
         ifmech_node = build_node('cml:integrate_and_fire',
                                  threshold=self.parameters['v_thresh'],
@@ -143,30 +143,30 @@ class IF_base(object):
                                  g_refrac=0.1) # this value just needs to be 'large enough'
         cvr_node.appendChild(ifmech_node)
         ifnode.appendChild(cvr_node)
-
+        
         return [passive_node, ifnode]
-
+            
     def define_synapse_types(self, synapse_type):
-        esyn_node = build_node('cml:synapse_type', name="ExcSyn_" + self.label)
-        rise_time_exc = "0"
-        rise_time_inh = "0"
-
+        esyn_node = build_node('cml:synapse_type', name="ExcSyn_"+self.label)
+        rise_time_exc="0"
+        rise_time_inh="0"
+        
         if (synapse_type == 'alpha_syn'):
-            rise_time_exc = self.parameters['tau_syn_E']
-            rise_time_inh = self.parameters['tau_syn_I']
-
-        esyn_node.appendChild(build_node('cml:doub_exp_syn',
+            rise_time_exc=self.parameters['tau_syn_E']
+            rise_time_inh=self.parameters['tau_syn_I']
+            
+        esyn_node.appendChild( build_node('cml:doub_exp_syn',
                                           max_conductance="1.0e-5",
                                           rise_time=rise_time_exc,
                                           decay_time=self.parameters['tau_syn_E'],
-                                          reversal_potential=self.parameters['e_rev_E']))
-
-        isyn_node = build_node('cml:synapse_type', name="InhSynSyn_" + self.label)
-        isyn_node.appendChild(build_node('cml:doub_exp_syn',
+                                          reversal_potential=self.parameters['e_rev_E'] ) )
+                                          
+        isyn_node = build_node('cml:synapse_type', name="InhSynSyn_"+self.label)
+        isyn_node.appendChild( build_node('cml:doub_exp_syn',
                                           max_conductance="1.0e-5",
                                           rise_time=rise_time_inh,
                                           decay_time=self.parameters['tau_syn_I'],
-                                          reversal_potential=self.parameters['e_rev_I']))
+                                          reversal_potential=self.parameters['e_rev_I'] ) )
         return [esyn_node, isyn_node]
 
     def build_nodes(self):
@@ -175,27 +175,27 @@ class IF_base(object):
         segments_node, cables_node = self.define_morphology()
         biophys_node = self.define_biophysics()
         conn_node = self.define_connectivity()
-
+        
         for node in doc_node, segments_node, cables_node, biophys_node, conn_node:
             cell_node.appendChild(node)
-
+        
         channel_nodes = self.define_channel_types()
         synapse_nodes = self.define_synapse_types(self.synapse_type)
-
+        
         return cell_node, channel_nodes, synapse_nodes
 
 
 class NotImplementedModel(object):
-
+    
     def __init__(self):
         if strict:
             raise Exception('Cell type %s is not available in NeuroML' % self.__class__.__name__)
-
+    
     def build_nodes(self):
         cell_node = build_node(':not_implemented_cell', name=self.label)
         doc_node = build_node('meta:notes', "PyNN %s cell type not implemented" % self.__class__.__name__)
         return cell_node, [], []
-
+        
 
 # ==============================================================================
 #   Standard cells
@@ -205,11 +205,11 @@ class IF_curr_exp(cells.IF_curr_exp, NotImplementedModel):
     """Leaky integrate and fire model with fixed threshold and
     decaying-exponential post-synaptic current. (Separate synaptic currents for
     excitatory and inhibitory synapses"""
-
+    
     n = 0
     translations = standardmodels.build_translations(*[(name, name)
                                                for name in cells.IF_curr_exp.default_parameters])
-
+    
     def __init__(self, parameters):
         NotImplementedModel.__init__(self)
         cells.IF_curr_exp.__init__(self, parameters)
@@ -220,11 +220,11 @@ class IF_curr_exp(cells.IF_curr_exp, NotImplementedModel):
 class IF_curr_alpha(cells.IF_curr_alpha, NotImplementedModel):
     """Leaky integrate and fire model with fixed threshold and alpha-function-
     shaped post-synaptic current."""
-
+    
     n = 0
     translations = standardmodels.build_translations(*[(name, name)
                                                for name in cells.IF_curr_alpha.default_parameters])
-
+    
     def __init__(self, parameters):
         NotImplementedModel.__init__(self)
         cells.IF_curr_exp.__init__(self, parameters)
@@ -235,25 +235,25 @@ class IF_curr_alpha(cells.IF_curr_alpha, NotImplementedModel):
 class IF_cond_exp(cells.IF_cond_exp, IF_base):
     """Leaky integrate and fire model with fixed threshold and 
     decaying-exponential post-synaptic conductance."""
-
+    
     n = 0
     translations = standardmodels.build_translations(*[(name, name)
                                                for name in cells.IF_cond_exp.default_parameters])
-
+    
     def __init__(self, parameters):
         cells.IF_cond_exp.__init__(self, parameters)
         self.label = '%s%d' % (self.__class__.__name__, self.__class__.n)
         self.synapse_type = "doub_exp_syn"
         self.__class__.n += 1
-
+        
 class IF_cond_alpha(cells.IF_cond_alpha, IF_base):
     """Leaky integrate and fire model with fixed threshold and alpha-function-
     shaped post-synaptic conductance."""
-
+    
     n = 0
     translations = standardmodels.build_translations(*[(name, name)
                                                for name in cells.IF_cond_alpha.default_parameters])
-
+    
     def __init__(self, parameters):
         cells.IF_cond_alpha.__init__(self, parameters)
         self.label = '%s%d' % (self.__class__.__name__, self.__class__.n)
@@ -266,13 +266,13 @@ class SpikeSourcePoisson(cells.SpikeSourcePoisson, NotImplementedModel):
     n = 0
     translations = standardmodels.build_translations(*[(name, name)
                                                for name in cells.SpikeSourcePoisson.default_parameters])
-
+    
     def __init__(self, parameters):
         NotImplementedModel.__init__(self)
         cells.SpikeSourcePoisson.__init__(self, parameters)
         self.label = '%s%d' % (self.__class__.__name__, self.__class__.n)
         self.__class__.n += 1
-
+        
 
 class SpikeSourceArray(cells.SpikeSourceArray, NotImplementedModel):
     """Spike source generating spikes at the times given in the spike_times array."""
@@ -286,14 +286,14 @@ class SpikeSourceArray(cells.SpikeSourceArray, NotImplementedModel):
         cells.SpikeSourceARRAY.__init__(self, parameters)
         self.label = '%s%d' % (self.__class__.__name__, self.__class__.n)
         self.__class__.n += 1
-
+        
 
 
 # ==============================================================================
 #   Functions for simulation set-up and control
 # ==============================================================================
 
-def setup(timestep=0.1, min_delay=0.1, max_delay=0.1, debug=False, **extra_params):
+def setup(timestep=0.1, min_delay=0.1, max_delay=0.1, debug=False,**extra_params):
     """
     Should be called at the very beginning of a script.
     extra_params contains any keyword arguments that are required by a given
@@ -307,21 +307,21 @@ def setup(timestep=0.1, min_delay=0.1, max_delay=0.1, debug=False, **extra_param
         strict = extra_params['strict']
     dt = timestep
     xmldoc = xml.dom.minidom.Document()
-    neuromlNode = xmldoc.createElementNS(neuroml_url + '/neuroml/schema', 'neuroml')
-    neuromlNode.setAttributeNS(namespace['xsi'], 'xsi:schemaLocation', "http://morphml.org/neuroml/schema " + neuroml_xsd)
-    neuromlNode.setAttribute('lengthUnits', "micron")
+    neuromlNode = xmldoc.createElementNS(neuroml_url+'/neuroml/schema','neuroml')
+    neuromlNode.setAttributeNS(namespace['xsi'],'xsi:schemaLocation',"http://morphml.org/neuroml/schema "+neuroml_xsd)
+    neuromlNode.setAttribute('lengthUnits',"micron")
     xmldoc.appendChild(neuromlNode)
-
+    
     populations_node = build_node('net:populations')
     projections_node = build_node('net:projections', units="Physiological Units")
     inputs_node = build_node('net:inputs', units="Physiological Units")
     cells_node = build_node(':cells')
     channels_node = build_node(':channels', units="Physiological Units")
-
+    
     for node in cells_node, channels_node, populations_node, projections_node, inputs_node:
         neuromlNode.appendChild(node)
     return 0
-
+        
 def end(compatible_output=True):
     """Do any necessary cleaning up before exiting."""
     global xmldoc, xmlfile, populations_node, projections_node, inputs_node, cells_node, channels_node, neuromlNode
@@ -391,15 +391,15 @@ def record_v(source, filename):
 #   High-level API for creating, connecting and recording from populations of
 #   neurons.
 # ==============================================================================
-
+    
 class Population(common.Population):
     """
     An array of neurons all of the same type. `Population' is used as a generic
     term intended to include layers, columns, nuclei, etc., of cells.
     """
-
+    
     n = 0
-
+    
     def __init__(self, size, cellclass, cellparams=None, structure=None,
                  label=None):
         """
@@ -421,7 +421,7 @@ class Population(common.Population):
         self.label = self.label or 'Population%d' % Population.n
         self.celltype = cellclass(cellparams)
         Population.n += 1
-
+        
         population_node = build_node('net:population', name=self.label)
         self.celltype.label = '%s_%s' % (self.celltype.__class__.__name__, self.label)
         celltype_node = build_node('net:cell_type', self.celltype.label)
@@ -429,12 +429,12 @@ class Population(common.Population):
         for i in range(self.size):
             x, y, z = self.positions[:, i]
             instance_node = build_node('net:instance', id=i)
-            instance_node.appendChild(build_node('net:location', x=x, y=y, z=z))
+            instance_node.appendChild( build_node('net:location', x=x, y=y, z=z) )
             instances_node.appendChild(instance_node)
-
+            
         for node in celltype_node, instances_node:
             population_node.appendChild(node)
-
+        
         populations_node.appendChild(population_node)
 
         cell_node, channel_list, synapse_list = self.celltype.build_nodes()
@@ -446,8 +446,8 @@ class Population(common.Population):
             channels_node.appendChild(synapse_node)
 
         self.first_id = 0
-        self.last_id = self.size - 1
-        self.all_cells = numpy.array([ID(id) for id in range(self.first_id, self.last_id + 1)], dtype=ID)
+        self.last_id = self.size-1
+        self.all_cells = numpy.array([ID(id) for id in range(self.first_id, self.last_id+1)], dtype=ID)
         self._mask_local = numpy.ones_like(self.all_cells).astype(bool)
         self.local_cells = self.all_cells[self._mask_local]
 
@@ -456,70 +456,70 @@ class Population(common.Population):
         Private method called by record() and record_v().
         """
         pass
-
-    def meanSpikeCount(self):
+    
+    def mean_spike_count(self):
         return -1
-
+    
     def printSpikes(self, file, gather=True, compatible_output=True):
         pass
-
+    
     def print_v(self, file, gather=True, compatible_output=True):
         pass
 
 class AllToAllConnector(connectors.AllToAllConnector):
-
+    
     def connect(self, projection):
         connectivity_node = build_node('net:connectivity_pattern')
-        connectivity_node.appendChild(build_node('net:all_to_all',
-                                                  allow_self_connections=int(self.allow_self_connections)))
+        connectivity_node.appendChild( build_node('net:all_to_all',
+                                                  allow_self_connections=int(self.allow_self_connections)) )
         return connectivity_node
 
 class OneToOneConnector(connectors.OneToOneConnector):
-
+    
     def connect(self, projection):
         connectivity_node = build_node('net:connectivity_pattern')
-        connectivity_node.appendChild(build_node('net:one_to_one'))
+        connectivity_node.appendChild( build_node('net:one_to_one') )
         return connectivity_node
 
 class FixedProbabilityConnector(connectors.FixedProbabilityConnector):
-
+    
     def connect(self, projection):
         connectivity_node = build_node('net:connectivity_pattern')
-        connectivity_node.appendChild(build_node('net:fixed_probability',
+        connectivity_node.appendChild( build_node('net:fixed_probability',
                                                   probability=self.p_connect,
-                                                  allow_self_conections=int(self.allow_self_connections)))
+                                                  allow_self_conections=int(self.allow_self_connections)) )
         return connectivity_node
 
 
 class FixedNumberPreConnector(connectors.FixedNumberPreConnector):
-
+    
     def connect(self, projection):
         if hasattr(self, "n"):
             connectivity_node = build_node('net:connectivity_pattern')
-            connectivity_node.appendChild(build_node('net:per_cell_connection',
+            connectivity_node.appendChild( build_node('net:per_cell_connection',
                                                       num_per_source=self.n,
                                                       direction="PreToPost",
-                                                      allow_self_connections=int(self.allow_self_connections)))
+                                                      allow_self_connections = int(self.allow_self_connections)) )
             return connectivity_node
         else:
             raise Exception('Connection with variable connection number not implemented.')
-
+    
 class FixedNumberPostConnector(connectors.FixedNumberPostConnector):
-
+    
     def connect(self, projection):
         if hasattr(self, "n"):
             connectivity_node = build_node('net:connectivity_pattern')
-            connectivity_node.appendChild(build_node('net:per_cell_connection',
+            connectivity_node.appendChild( build_node('net:per_cell_connection',
                                                       num_per_source=self.n,
                                                       direction="PostToPre",
-                                                      allow_self_connections=int(self.allow_self_connections)))
+                                                      allow_self_connections = int(self.allow_self_connections)) )
             return connectivity_node
         else:
             raise Exception('Connection with variable connection number not implemented.')
 
-
+        
 class FromListConnector(connectors.FromListConnector):
-
+    
     def connect(self, projection):
         connections_node = build_node('net:connections')
         for i in xrange(len(self.conn_list)):
@@ -527,28 +527,28 @@ class FromListConnector(connectors.FromListConnector):
             src = self.pre[tuple(src)]
             tgt = self.post[tuple(tgt)]
             connection_node = build_node('net:connection', id=i)
-            connection_node.appendChild(build_node('net:pre', cell_id=src))
-            connection_node.appendChild(build_node('net:post', cell_id=tgt))
-            connection_node.appendChild(build_node('net:properties', internal_delay=delay, weight=weight))
+            connection_node.appendChild( build_node('net:pre', cell_id=src) )
+            connection_node.appendChild( build_node('net:post', cell_id=tgt) )
+            connection_node.appendChild( build_node('net:properties', internal_delay=delay, weight=weight) )
             connections_node.appendChild(connection_node)
         return connections_node
 
 
 class FromFileConnector(connectors.FromFileConnector):
-
+    
     def connect(self, projection):
         # now open the file...
-        f = open(self.filename, 'r', 10000)
+        f = open(self.filename,'r',10000)
         lines = f.readlines()
         f.close()
-
+        
         # We read the file and gather all the data in a list of tuples (one per line)
         input_tuples = []
         for line in lines:
             single_line = line.rstrip()
             src, tgt, w, d = single_line.split("\t", 4)
-            src = "[%s" % src.split("[", 1)[1]
-            tgt = "[%s" % tgt.split("[", 1)[1]
+            src = "[%s" % src.split("[",1)[1]
+            tgt = "[%s" % tgt.split("[",1)[1]
             input_tuples.append((eval(src), eval(tgt), float(w), float(d)))
         f.close()
         self.conn_list = input_tuples
@@ -561,9 +561,9 @@ class Projection(common.Projection):
     plasticity mechanisms) between two populations, together with methods to set
     parameters of those connections, including of plasticity mechanisms.
     """
-
+    
     n = 0
-
+    
     def __init__(self, presynaptic_population, postsynaptic_population,
                  method,
                  source=None, target=None, synapse_dynamics=None,
@@ -593,24 +593,24 @@ class Projection(common.Projection):
             self.synapse_type = target
         else:
             self.synapse_type = "ExcitatorySynapse"
-
+        
         projection_node = build_node('net:projection', name=self.label)
-        projection_node.appendChild(build_node('net:source', self.pre.label))
-        projection_node.appendChild(build_node('net:target', self.post.label))
-
+        projection_node.appendChild( build_node('net:source', self.pre.label) )
+        projection_node.appendChild( build_node('net:target', self.post.label) )
+        
         synapse_node = build_node('net:synapse_props')
-        synapse_node.appendChild(build_node('net:synapse_type', self.synapse_type))
-        synapse_node.appendChild(build_node('net:default_values', internal_delay=5, weight=1, threshold= -20))
+        synapse_node.appendChild( build_node('net:synapse_type', self.synapse_type) )
+        synapse_node.appendChild( build_node('net:default_values', internal_delay=5, weight=1, threshold=-20) )
         projection_node.appendChild(synapse_node)
-
-        projection_node.appendChild(connection_method.connect(self))
-
+        
+        projection_node.appendChild( connection_method.connect(self) )
+        
         projections_node.appendChild(projection_node)
         Projection.n += 1
 
     def saveConnections(self, filename, gather=True, compatible_output=True):
         pass
-
+    
     def __len__(self):
         return 0 # needs implementing properly
 

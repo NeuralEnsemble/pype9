@@ -28,13 +28,13 @@ class CurrentSource(object):
         for cell in cell_list:
             if cell.local and not cell.celltype.injectable:
                 raise TypeError("Can't inject current into a spike source.")
-            c = simulator.net.connect(self.input_node, cell, pypcsim.StaticAnalogSynapse(delay=0.001 * delay))
+            c = simulator.net.connect(self.input_node, cell, pypcsim.StaticAnalogSynapse(delay=0.001*delay))
             self.connections.append(c)
-
-
+    
+        
 class StepCurrentSource(CurrentSource):
     """A step-wise time-varying current source."""
-
+    
     def __init__(self, times, amplitudes):
         """Construct the current source.
         
@@ -52,7 +52,7 @@ class StepCurrentSource(CurrentSource):
         self.times = times
         self.amplitudes = amplitudes
         n = len(times)
-        durations = numpy.empty((n + 1,))
+        durations = numpy.empty((n+1,))
         levels = numpy.empty_like(durations)
         durations[0] = times[0]
         levels[0] = 0.0
@@ -68,10 +68,10 @@ class StepCurrentSource(CurrentSource):
         self.input_node = simulator.net.create(pypcsim.AnalogLevelBasedInputNeuron(levels, durations))
         self.connections = []
         print "created stepcurrentsource"
-
+        
 class DCSource(StepCurrentSource):
     """Source producing a single pulse of current of constant amplitude."""
-
+    
     def __init__(self, amplitude=1.0, start=0.0, stop=None):
         """Construct the current source.
         
@@ -83,4 +83,4 @@ class DCSource(StepCurrentSource):
         times = [0.0, start, (stop or 1e99)]
         amplitudes = [0.0, amplitude, 0.0]
         StepCurrentSource.__init__(self, times, amplitudes)
-
+        

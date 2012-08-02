@@ -16,18 +16,18 @@ class BaseModelType(object):
     default_initial_values = {}
 
     def __init__(self, parameters):
-        self.parameters = self.__class__.checkParameters(parameters, with_defaults=True)
+        self.parameters = self.__class__.check_parameters(parameters, with_defaults=True)
 
     @classmethod
     def has_parameter(cls, name):
         return name in cls.default_parameters
-
+    
     @classmethod
     def get_parameter_names(cls):
         return cls.default_parameters.keys()
-
+    
     @classmethod
-    def checkParameters(cls, supplied_parameters, with_defaults=False):
+    def check_parameters(cls, supplied_parameters, with_defaults=False):
         """
         Returns a parameter dictionary, checking that each
         supplied_parameter is in the default_parameters and
@@ -50,12 +50,12 @@ class BaseModelType(object):
                               (k, cls.__name__, type(default_parameters[k]),
                                type(supplied_parameters[k]), supplied_parameters[k])
                     # same type
-                    if type(supplied_parameters[k]) == type(default_parameters[k]):
+                    if type(supplied_parameters[k]) == type(default_parameters[k]): 
                         parameters[k] = supplied_parameters[k]
                     # float and something that can be converted to a float
-                    elif isinstance(default_parameters[k], float):
+                    elif isinstance(default_parameters[k], float): 
                         try:
-                            parameters[k] = float(supplied_parameters[k])
+                            parameters[k] = float(supplied_parameters[k]) 
                         except (ValueError, TypeError):
                             raise errors.InvalidParameterValueError(err_msg)
                     # list and something that can be transformed to a list
@@ -94,6 +94,8 @@ class BaseCellType(BaseModelType):
     conductance_based = True # override for cells with current-based synapses
     injectable = True # override for spike sources
 
+class BaseCurrentSource(BaseModelType):
+    """Base class for current source model classes."""
 
 class BaseSynapseDynamics(object):
     pass

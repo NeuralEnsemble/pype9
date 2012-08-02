@@ -7,7 +7,6 @@ simulators.
 """
 
 from multiprocessing import Process, Queue
-from pyNN import common, recording
 
 def run_simulation(network_model, sim, parameters, input_queue, output_queue):
     """
@@ -16,8 +15,6 @@ def run_simulation(network_model, sim, parameters, input_queue, output_queue):
     command 'STOP'.
     """
     print "Running simulation with %s" % sim.__name__
-    common.simulator = sim.simulator
-    recording.simulator = sim.simulator
     network = network_model(sim, parameters)
     print "Network constructed with %s." % sim.__name__
     for obj_name, attr, args, kwargs in iter(input_queue.get, 'STOP'):
@@ -34,7 +31,7 @@ class MultiSim(object):
     Interface that runs a network model on different simulators, with each
     simulation in a separate process.
     """
-
+    
     def __init__(self, sim_list, network_model, parameters):
         """
         Build the model defined in the class `network_model`, with parameters
@@ -54,10 +51,10 @@ class MultiSim(object):
             self.processes[sim.__name__] = p
             self.task_queues[sim.__name__] = task_queue
             self.result_queues[sim.__name__] = result_queue
-
+            
     def __iter__(self):
         return self.processes.itervalues()
-
+    
     def __getattr__(self, name):
         """
         Assumes `name` is a method of the `network_model` model.
@@ -71,7 +68,7 @@ class MultiSim(object):
                 retvals[sim_name] = self.result_queues[sim_name].get()
             return retvals
         return iterate_over_nets
-
+            
     def run(self, simtime, steps=1): #, *callbacks):
         """
         Run the model for a time `simtime` in all simulators.
@@ -79,13 +76,13 @@ class MultiSim(object):
         The run may be broken into a number of steps (each of equal duration).
         #Any functions in `callbacks` will be called after each step.
         """
-        dt = float(simtime) / steps
+        dt = float(simtime)/steps
         for i in range(steps):
             for sim_name in self.processes:
                 self.task_queues[sim_name].put(('sim', 'run', [dt], {}))
             for sim_name in self.processes:
                 t = self.result_queues[sim_name].get()
-
+                
     def end(self):
         for sim_name in self.processes:
             self.task_queues[sim_name].put('STOP')
