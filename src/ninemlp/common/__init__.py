@@ -393,7 +393,7 @@ if __name__ == "__main__":
     import pprint
 
     ## Generated when this module is called directly for testing purposes.
-    parsed_network = read_networkML("/home/tclose/cerebellar/NINEMLP/test.xml")
+    parsed_network = read_networkML("/home/tclose/cerebellar/xml/cerebellum/test.xml")
     print 'Network: ' + parsed_network.network_id
     pprint.pprint(parsed_network.populations)
     pprint.pprint(parsed_network.projections)

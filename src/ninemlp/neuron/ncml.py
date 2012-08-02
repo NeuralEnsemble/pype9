@@ -225,6 +225,6 @@ def load_cell_type(name, path_to_xml_file, build_mode=BUILD_MODE):
 if __name__ == "__main__":
     import pprint
     Purkinje = load_cell_type("Purkinje",
-                               "/home/tclose/cerebellar/NINEMLP/cells/Purkinje.xml")
+                               "/home/tclose/cerebellar/xml/cerebellum/cells/Purkinje.xml")
     purkinje = Purkinje({})
     pprint.pprint(purkinje)

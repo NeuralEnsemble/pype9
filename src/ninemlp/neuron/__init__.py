@@ -152,7 +152,7 @@ class Network(ninemlp.common.Network):
 
 if __name__ == "__main__":
 
-    net = Network('/home/tclose/Projects/Cerebellar/NINEMLP/test.xml')
+    net = Network('/home/tclose/Projects/Cerebellar/xml/cerebellum/test.xml')
 
     print 'done'
 

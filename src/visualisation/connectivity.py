@@ -23,8 +23,8 @@ from copy import copy
 PROJ_TUPLE_LENGTH = 5
 
 PROJECT_PATH = os.path.normpath(os.path.join(os.path.realpath(__file__), '..', '..', '..'))
-EXPORT_POPULATIONS_PATH = os.path.join(PROJECT_PATH, 'NINEMLP', 'brep', 'build', 'populations')
-EXPORT_PROJECTIONS_PATH = os.path.join(PROJECT_PATH, 'NINEMLP', 'brep', 'build', 'projections_pynn')
+EXPORT_POPULATIONS_PATH = os.path.join(PROJECT_PATH, 'xml/cerebellum', 'brep', 'build', 'populations')
+EXPORT_PROJECTIONS_PATH = os.path.join(PROJECT_PATH, 'xml/cerebellum', 'brep', 'build', 'projections_pynn')
 
 parser = argparse.ArgumentParser(description='A script to ')
 parser.add_argument('--include', type=str, nargs='+', default=['MossyFibers', 'ParallelFibers', 'Golgis', 'AscendingFibers'],
