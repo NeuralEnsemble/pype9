@@ -21,6 +21,10 @@ import ninemlp.common.ncml
 from ninemlp.utilities.nmodl import build as build_nnodl
 from ninemlp import BUILD_MODE
 from backports import any
+from pyNN.common.control import build_state_queries
+import pyNN.neuron.simulator
+
+build_state_queries(pyNN.neuron.simulator)
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 

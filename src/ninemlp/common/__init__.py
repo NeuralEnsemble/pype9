@@ -18,7 +18,6 @@ import xml.sax
 import os.path
 from ninemlp import BUILD_MODE
 import geometry
-from pyNN.common import get_min_delay
 import pyNN.connectors
 
 ## The location relative to the NINEML-Network file to look for the folder containing the cell descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
@@ -298,7 +297,7 @@ class Network(object):
             elif hasattr(delay, 'pattern'):
                 if delay.pattern == 'DistanceBased':
                     GeometricExpression = getattr(geometry, delay.args.pop('geometry'))
-                    delay_expr = GeometricExpression(min_value=get_min_delay(),
+                    delay_expr = GeometricExpression(min_value=self._ncml_module.get_min_delay(),
                                                      **self._convert_all_units(delay.args))
                 else:
                     raise Exception("Invalid delay pattern ('%s') for DistanceBased connectivity"
