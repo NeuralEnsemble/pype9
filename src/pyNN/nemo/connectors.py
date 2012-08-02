@@ -20,7 +20,4 @@ from pyNN.connectors import AllToAllConnector, \
                             FixedNumberPreConnector, \
                             FixedNumberPostConnector, \
                             SmallWorldConnector, \
-                            CSAConnector, \
-                            WeightGenerator, \
-                            DelayGenerator, \
-                            ProbaGenerator
+                            CSAConnector

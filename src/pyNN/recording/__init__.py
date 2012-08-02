@@ -8,7 +8,7 @@ internal use.
 :copyright: Copyright 2006-2011 by the PyNN team, see AUTHORS.
 :license: CeCILL, see LICENSE for details.
 
-$Id: __init__.py 957 2011-05-03 13:44:15Z apdavison $
+$Id: __init__.py 1000 2011-10-30 14:45:23Z apdavison $
 """
 
 import tempfile
@@ -28,7 +28,7 @@ numpy1_1_formats = {'spikes': "%g\t%d",
                     'v': "%g\t%g\t%d",
                     'gsyn': "%g\t%g\t%g\t%d"}
 numpy1_0_formats = {'spikes': "%g", # only later versions of numpy support different
-                    'v': "%g", # formats for different columns
+                    'v': "%g",      # formats for different columns
                     'gsyn': "%g"}
 
 if MPI:
@@ -60,8 +60,8 @@ def gather(data):
         return gdata
     else:
         num_columns = data.shape[1]
-        return gdata.reshape((gdata.size / num_columns, num_columns))
-
+        return gdata.reshape((gdata.size/num_columns, num_columns))
+  
 def gather_dict(D):
     # Note that if the same key exists on multiple nodes, the value from the
     # node with the highest rank will appear in the final dict.
@@ -80,13 +80,13 @@ def mpi_sum(x):
 
 class Recorder(object):
     """Encapsulates data and functions related to recording model variables."""
-
+    
 
     formats = {'spikes': 'id t',
                'v': 'id t v',
                'gsyn': 'id t ge gi',
                'generic': 'id t variable'}
-
+    
     def __init__(self, variable, population=None, file=None):
         """
         Create a recorder.
@@ -105,7 +105,7 @@ class Recorder(object):
         if population:
             assert population.can_record(variable)
         self.recorded = set([])
-
+        
     def record(self, ids):
         """Add the cells in `ids` to the set of recorded cells."""
         logger.debug('Recorder.record(<%d cells>)' % len(ids))
@@ -114,37 +114,37 @@ class Recorder(object):
         self.recorded = self.recorded.union(ids)
         logger.debug('Recorder.recorded contains %d ids' % len(self.recorded))
         self._record(new_ids)
-
+    
     def reset(self):
         """Reset the list of things to be recorded."""
         self._reset()
         self.recorded = set([])
-
+    
     def filter_recorded(self, filter):
         if filter is not None:
             return set(filter).intersection(self.recorded)
         else:
             return self.recorded
-
+    
     def get(self, gather=False, compatible_output=True, filter=None):
         """Return the recorded data as a Numpy array."""
         data_array = self._get(gather, compatible_output, filter)
         if self.population is not None:
             try:
-                data_array[:, 0] = self.population.id_to_index(data_array[:, 0]) # id is always first column            
+                data_array[:,0] = self.population.id_to_index(data_array[:, 0]) # id is always first column            
             except Exception:
                 pass
         self._data_size = data_array.shape[0]
         return data_array
-
+    
     def write(self, file=None, gather=False, compatible_output=True, filter=None):
         """Write recorded data to file."""
         file = file or self.file
         if isinstance(file, basestring):
             filename = file
             #rename_existing(filename)
-            if gather == False and simulator.state.num_processes > 1:
-                filename += '.%d' % simulator.state.mpi_rank
+            if gather==False and self._simulator.state.num_processes > 1:
+                filename += '.%d' % self._simulator.state.mpi_rank
         else:
             filename = file.name
         logger.debug("Recorder is writing '%s' to file '%s' with gather=%s and compatible_output=%s" % (self.variable,
@@ -154,7 +154,7 @@ class Recorder(object):
         data = self.get(gather, compatible_output, filter)
         metadata = self.metadata
         logger.debug("data has size %s" % str(data.size))
-        if simulator.state.mpi_rank == 0 or gather == False:
+        if self._simulator.state.mpi_rank == 0 or gather == False:
             if compatible_output:
                 data = self._make_compatible(data)
             # Open the output file, if necessary and write the data
@@ -163,7 +163,7 @@ class Recorder(object):
                 file = files.StandardTextFile(filename, mode='w')
             file.write(data, metadata)
             file.close()
-
+    
     @property
     def metadata(self):
         metadata = {}
@@ -177,12 +177,12 @@ class Recorder(object):
                 'last_id': self.population.last_id,
                 'label': self.population.label,
             })
-        metadata['dt'] = simulator.state.dt # note that this has to run on all nodes (at least for NEST)
+        metadata['dt'] = self._simulator.state.dt # note that this has to run on all nodes (at least for NEST)
         if not hasattr(self, '_data_size'):
             self.get()
         metadata['n'] = self._data_size
         return metadata
-
+    
     def _make_compatible(self, data_source):
         """
         Rewrite simulation data in a standard format:
@@ -191,7 +191,7 @@ class Recorder(object):
         assert isinstance(data_source, numpy.ndarray)
         logger.debug("Converting data from memory into compatible format")
         N = len(data_source)
-
+        
         logger.debug("Number of data elements = %d" % N)
         if N > 0:
             # Shuffle columns if necessary
@@ -199,7 +199,7 @@ class Recorder(object):
                                             self.formats["generic"]).split()
             time_column = input_format.index('t')
             id_column = input_format.index('id')
-
+            
             if self.variable == 'gsyn':
                 ge_column = input_format.index('ge')
                 gi_column = input_format.index('gi')
@@ -212,13 +212,13 @@ class Recorder(object):
             else:
                 variable_column = input_format.index('variable')
                 column_map = [variable_column, id_column]
-
+            
             data_array = data_source[:, column_map]
         else:
             logger.warning("%s is empty or does not exist" % data_source)
             data_array = numpy.array([])
         return data_array
-
+    
     def count(self, gather=True, filter=None):
         """
         Return the number of data points for each cell, as a dict. This is mainly
@@ -228,7 +228,7 @@ class Recorder(object):
             N = self._local_count(filter)
         else:
             raise Exception("Only implemented for spikes.")
-        if gather and simulator.state.num_processes > 1:
+        if gather and self._simulator.state.num_processes > 1:
             N = gather_dict(N)
         return N
-
+    

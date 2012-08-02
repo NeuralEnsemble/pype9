@@ -11,14 +11,12 @@ __version__ = "$Rev: 191 $"
 
 from pyNN.random import *
 from pyNN.neuron import simulator
-from pyNN import common, recording as base_recording, space, __doc__
-common.simulator = simulator
-base_recording.simulator = simulator
+from pyNN import common, core, space, __doc__
 
 from pyNN.neuron.standardmodels.cells import *
 from pyNN.neuron.connectors import *
 from pyNN.neuron.standardmodels.synapses import *
-from pyNN.neuron.electrodes import *
+from pyNN.neuron.standardmodels.electrodes import *
 from pyNN.neuron.recording import Recorder
 from pyNN import standardmodels
 import numpy
@@ -49,6 +47,12 @@ def setup(timestep=0.1, min_delay=0.1, max_delay=10.0, **extra_params):
     NEURON specific extra_params:
 
     use_cvode - use the NEURON cvode solver. Defaults to False.
+      Optional cvode Parameters:
+      -> rtol - specify relative error tolerance
+      -> atol - specify absolute error tolerance
+
+    native_rng_baseseed - added to MPI.rank to form seed for SpikeSourcePoisson, etc.
+    default_maxstep - TODO
 
     returns: MPI rank
 
@@ -66,8 +70,14 @@ def setup(timestep=0.1, min_delay=0.1, max_delay=10.0, **extra_params):
             simulator.state.cvode.rtol(float(extra_params['rtol']))
         if extra_params.has_key('atol'):
             simulator.state.cvode.atol(float(extra_params['atol']))
+
+    if extra_params.has_key('native_rng_baseseed'):
+        simulator.state.native_rng_baseseed=int(extra_params['native_rng_baseseed'])
+    else: 
+        simulator.state.native_rng_baseseed=0
+        
     if extra_params.has_key('default_maxstep'):
-        simulator.state.default_maxstep = float(extra_params['default_maxstep'])
+        simulator.state.default_maxstep=float(extra_params['default_maxstep'])
     return rank()
 
 def end(compatible_output=True):
@@ -76,13 +86,13 @@ def end(compatible_output=True):
         recorder.write(gather=True, compatible_output=compatible_output)
     simulator.recorder_list = []
     #simulator.finalize()
-
+        
 def run(simtime):
     """Run the simulation for simtime ms."""
     simulator.run(simtime)
     return get_current_time()
-
-reset = common.reset
+    
+reset = common.build_reset(simulator)
 
 initialize = common.initialize
 
@@ -90,12 +100,8 @@ initialize = common.initialize
 #   Functions returning information about the simulation state
 # ==============================================================================
 
-get_current_time = common.get_current_time
-get_time_step = common.get_time_step
-get_min_delay = common.get_min_delay
-get_max_delay = common.get_max_delay
-num_processes = common.num_processes
-rank = common.rank
+get_current_time, get_time_step, get_min_delay, get_max_delay, \
+            num_processes, rank = common.build_state_queries(simulator)
 
 
 # ==============================================================================
@@ -103,18 +109,35 @@ rank = common.rank
 #   neurons.
 # ==============================================================================
 
+class Assembly(common.Assembly):
+    _simulator = simulator
+
+
+class PopulationView(common.PopulationView):
+    _simulator = simulator
+    assembly_class = Assembly
+    
+    def _get_view(self, selector, label=None):
+        return PopulationView(self, selector, label)
+    
+
 class Population(common.Population):
     """
     An array of neurons all of the same type. `Population' is used as a generic
     term intended to include layers, columns, nuclei, etc., of cells.
     """
+    _simulator = simulator
     recorder_class = Recorder
-
+    assembly_class = Assembly
+    
     def __init__(self, size, cellclass, cellparams=None, structure=None,
-                 label=None):
+                 initial_values={}, label=None):
         __doc__ = common.Population.__doc__
-        common.Population.__init__(self, size, cellclass, cellparams, structure, label)
+        common.Population.__init__(self, size, cellclass, cellparams, structure, initial_values, label)
         simulator.initializer.register(self)
+
+    def _get_view(self, selector, label=None):
+        return PopulationView(self, selector, label)
 
     def _create_cells(self, cellclass, cellparams, n):
         """
@@ -133,10 +156,10 @@ class Population(common.Population):
         cell_parameters = celltype.parameters
         self.first_id = simulator.state.gid_counter
         self.last_id = simulator.state.gid_counter + n - 1
-        self.all_cells = numpy.array([id for id in range(self.first_id, self.last_id + 1)], simulator.ID)
+        self.all_cells = numpy.array([id for id in range(self.first_id, self.last_id+1)], simulator.ID)
         # mask_local is used to extract those elements from arrays that apply to the cells on the current node
-        self._mask_local = self.all_cells % simulator.state.num_processes == simulator.state.mpi_rank # round-robin distribution of cells between nodes
-        for i, (id, is_local) in enumerate(zip(self.all_cells, self._mask_local)):
+        self._mask_local = self.all_cells%simulator.state.num_processes==simulator.state.mpi_rank # round-robin distribution of cells between nodes
+        for i,(id,is_local) in enumerate(zip(self.all_cells, self._mask_local)):
             self.all_cells[i] = simulator.ID(id)
             self.all_cells[i].parent = self
             if is_local:
@@ -152,12 +175,9 @@ class Population(common.Population):
         assert isinstance(rand_distr.rng, NativeRNG)
         rng = simulator.h.Random(rand_distr.rng.seed or 0)
         native_rand_distr = getattr(rng, rand_distr.name)
-        rarr = [native_rand_distr(*rand_distr.parameters)] + [rng.repick() for i in range(self.all_cells.size - 1)]
+        rarr = [native_rand_distr(*rand_distr.parameters)] + [rng.repick() for i in range(self.all_cells.size-1)]
         self.tset(parametername, rarr)
 
-
-PopulationView = common.PopulationView
-Assembly = common.Assembly
 
 class Projection(common.Projection):
     """
@@ -165,9 +185,9 @@ class Projection(common.Projection):
     plasticity mechanisms) between two populations, together with methods to set
     parameters of those connections, including of plasticity mechanisms.
     """
-
+    _simulator = simulator
     nProj = 0
-
+    
     def __init__(self, presynaptic_population, postsynaptic_population, method,
                  source=None, target=None,
                  synapse_dynamics=None, label=None, rng=None):
@@ -193,8 +213,8 @@ class Projection(common.Projection):
         common.Projection.__init__(self, presynaptic_population, postsynaptic_population, method,
                                    source, target, synapse_dynamics, label, rng)
         self.synapse_type = target or 'excitatory'
-
-
+        
+        
         ## Deal with short-term synaptic plasticity
         if self.synapse_dynamics and self.synapse_dynamics.fast:
             # need to check it is actually the Ts-M model, even though that is the only one at present!
@@ -204,19 +224,16 @@ class Projection(common.Projection):
             u0 = self.synapse_dynamics.fast.parameters['u0']
             for cell in self.post:
                 cell._cell.set_Tsodyks_Markram_synapses(self.synapse_type, U, tau_rec, tau_facil, u0)
-            synapse_model = 'Tsodyks-Markram'
+            self.synapse_model = 'Tsodyks-Markram'
         else:
-            synapse_model = None
-
-        self.connection_manager = simulator.ConnectionManager(self.synapse_type,
-                                                              synapse_model=synapse_model,
-                                                              parent=self)
-        self.connections = self.connection_manager
+            self.synapse_model = None
+        self.connections = []
+        
         ## Create connections
         method.connect(self)
-
-        logger.info("--- Projection[%s].__init__() ---" % self.label)
-
+            
+        logger.info("--- Projection[%s].__init__() ---" %self.label)
+               
         ## Deal with long-term synaptic plasticity
         if self.synapse_dynamics and self.synapse_dynamics.slow:
             ddf = self.synapse_dynamics.slow.dendritic_delay_fraction
@@ -232,50 +249,199 @@ class Projection(common.Projection):
             long_term_plasticity_mechanism = self.synapse_dynamics.slow.possible_models
             for c in self.connections:
                 c.useSTDP(long_term_plasticity_mechanism, stdp_parameters, ddf)
-
+        
         # Check none of the delays are out of bounds. This should be redundant,
         # as this should already have been done in the Connector object, so
         # we could probably remove it.
         delays = [c.nc.delay for c in self.connections]
         if delays:
             assert min(delays) >= get_min_delay()
+        
+        Projection.nProj += 1           
+    
+    def __getitem__(self, i):
+        """Return the `i`th connection on the local MPI node."""
+        if isinstance(i, int):
+            if i < len(self):
+                return self.connections[i]
+            else:
+                raise IndexError("%d > %d" % (i, len(self)-1))
+        elif isinstance(i, slice):
+            if i.stop < len(self):
+                return [self.connections[j] for j in range(*i.indices(i.stop))]
+            else:
+                raise IndexError("%d > %d" % (i.stop, len(self)-1))
+    
+    def __len__(self):
+        """Return the number of connections on the local MPI node."""
+        return len(self.connections)
+    
+    def _resolve_synapse_type(self):
+        if self.synapse_type is None:
+            self.synapse_type = weight>=0 and 'excitatory' or 'inhibitory'
+        if self.synapse_model == 'Tsodyks-Markram' and 'TM' not in self.synapse_type:
+            self.synapse_type += '_TM' 
+    
+    def _divergent_connect(self, source, targets, weights, delays):
+        """
+        Connect a neuron to one or more other neurons with a static connection.
+        
+        `source`  -- the ID of the pre-synaptic cell.
+        `targets` -- a list/1D array of post-synaptic cell IDs, or a single ID.
+        `weight`  -- a list/1D array of connection weights, or a single weight.
+                     Must have the same length as `targets`.
+        `delays`  -- a list/1D array of connection delays, or a single delay.
+                     Must have the same length as `targets`.
+        """
+        if not isinstance(source, int) or source > simulator.state.gid_counter or source < 0:
+            errmsg = "Invalid source ID: %s (gid_counter=%d)" % (source, simulator.state.gid_counter)
+            raise errors.ConnectionError(errmsg)
+        if not core.is_listlike(targets):
+            targets = [targets]
+        if isinstance(weights, float):
+            weights = [weights]
+        if isinstance(delays, float):
+            delays = [delays]
+        assert len(targets) > 0
+        for target in targets:
+            if not isinstance(target, common.IDMixin):
+                raise errors.ConnectionError("Invalid target ID: %s" % target)
+              
+        assert len(targets) == len(weights) == len(delays), "%s %s %s" % (len(targets), len(weights), len(delays))
+        self._resolve_synapse_type()
+        for target, weight, delay in zip(targets, weights, delays):
+            if target.local:
+                if "." in self.synapse_type: 
+                    section, synapse_type = self.synapse_type.split(".") 
+                    synapse_object = getattr(getattr(target._cell, section), synapse_type) 
+                else: 
+                    synapse_object = getattr(target._cell, self.synapse_type) 
+                nc = simulator.state.parallel_context.gid_connect(int(source), synapse_object)
+                nc.weight[0] = weight
+                
+                # if we have a mechanism (e.g. from 9ML) that includes multiple
+                # synaptic channels, need to set nc.weight[1] here
+                if nc.wcnt() > 1 and hasattr(target._cell, "type"):
+                    nc.weight[1] = target._cell.type.synapse_types.index(self.synapse_type)
+                nc.delay  = delay
+                # nc.threshold is supposed to be set by ParallelContext.threshold, called in _build_cell(), above, but this hasn't been tested
+                self.connections.append(simulator.Connection(source, target, nc))
 
-        Projection.nProj += 1
+    def _convergent_connect(self, sources, target, weights, delays):
+        """
+        Connect a neuron to one or more other neurons with a static connection.
+        
+        `sources`  -- a list/1D array of pre-synaptic cell IDs, or a single ID.
+        `target` -- the ID of the post-synaptic cell.
+        `weight`  -- a list/1D array of connection weights, or a single weight.
+                     Must have the same length as `targets`.
+        `delays`  -- a list/1D array of connection delays, or a single delay.
+                     Must have the same length as `targets`.
+        """
+        if not isinstance(target, int) or target > simulator.state.gid_counter or target < 0:
+            errmsg = "Invalid target ID: %s (gid_counter=%d)" % (target, simulator.state.gid_counter)
+            raise errors.ConnectionError(errmsg)
+        if not core.is_listlike(sources):
+            sources = [sources]
+        if isinstance(weights, float):
+            weights = [weights]
+        if isinstance(delays, float):
+            delays = [delays]
+        assert len(sources) > 0
+        for source in sources:
+            if not isinstance(source, common.IDMixin):
+                raise errors.ConnectionError("Invalid source ID: %s" % source)
+              
+        assert len(sources) == len(weights) == len(delays), "%s %s %s" % (len(sources),len(weights),len(delays))
+                
+        if target.local:
+            for source, weight, delay in zip(sources, weights, delays):
+                if self.synapse_type is None:
+                    self.synapse_type = weight >= 0 and 'excitatory' or 'inhibitory'
+                if self.synapse_model == 'Tsodyks-Markram' and 'TM' not in self.synapse_type:
+                    self.synapse_type += '_TM'
+                synapse_object = getattr(target._cell, self.synapse_type)  
+                nc = simulator.state.parallel_context.gid_connect(int(source), synapse_object)
+                nc.weight[0] = weight
+                nc.delay  = delay
+                # nc.threshold is supposed to be set by ParallelContext.threshold, called in _build_cell(), above, but this hasn't been tested
+                self.connections.append(simulator.Connection(source, target, nc))
 
+    
     # --- Methods for setting connection parameters ----------------------------
-
-    def randomizeWeights(self, rand_distr):
+    
+    def set(self, name, value):
         """
-        Set weights to random values taken from rand_distr.
+        Set connection attributes for all connections on the local MPI node.
+        
+        `name`  -- attribute name
+        `value` -- the attribute numeric value, or a list/1D array of such
+                   values of the same length as the number of local connections,
+                   or a 2D array with the same dimensions as the connectivity
+                   matrix (as returned by `get(format='array')`).
         """
-        # If we have a native rng, we do the loops in hoc. Otherwise, we do the loops in
-        # Python
-        if isinstance(rand_distr.rng, NativeRNG):
-            rarr = simulator.nativeRNG_pick(len(self),
-                                            rand_distr.rng,
-                                            rand_distr.name,
-                                            rand_distr.parameters)
+        if numpy.isscalar(value):
+            for c in self:
+                setattr(c, name, value)
+        elif isinstance(value, numpy.ndarray) and len(value.shape) == 2:
+            for c in self.connections:
+                addr = (self.pre.id_to_index(c.source), self.post.id_to_index(c.target))
+                try:
+                    val = value[addr]
+                except IndexError, e:
+                    raise IndexError("%s. addr=%s" % (e, addr))
+                if numpy.isnan(val):
+                    raise Exception("Array contains no value for synapse from %d to %d" % (c.source, c.target))
+                else:
+                    setattr(c, name, val)
+        elif core.is_listlike(value):
+            for c,val in zip(self.connections, value):
+                setattr(c, name, val)
+        elif isinstance(value, RandomDistribution):
+            if isinstance(value.rng, NativeRNG):
+                rarr = simulator.nativeRNG_pick(len(self),
+                                                value.rng,
+                                                value.name,
+                                                value.parameters)
+            else:       
+                rarr = value.next(len(self))
+            for c,val in zip(self.connections, rarr):
+                setattr(c, name, val)   
         else:
-            rarr = rand_distr.next(len(self))
-        logger.info("--- Projection[%s].__randomizeWeights__() ---" % self.label)
-        self.setWeights(rarr)
+            raise TypeError("Argument should be a numeric type (int, float...), a list, or a numpy array.")
 
-    def randomizeDelays(self, rand_distr):
+    def get(self, parameter_name, format, gather=True):
         """
-        Set delays to random values taken from rand_distr.
+        Get the values of a given attribute (weight, delay, etc) for all
+        connections on the local MPI node.
+        
+        `parameter_name` -- name of the attribute whose values are wanted.
+        `format` -- "list" or "array". Array format implicitly assumes that all
+                    connections belong to a single Projection.
+        
+        Return a list or a 2D Numpy array. The array element X_ij contains the
+        attribute value for the connection from the ith neuron in the pre-
+        synaptic Population to the jth neuron in the post-synaptic Population,
+        if a single such connection exists. If there are no such connections,
+        X_ij will be NaN. If there are multiple such connections, the summed
+        value will be given, which makes some sense for weights, but is
+        pretty meaningless for delays. 
         """
-        # If we have a native rng, we do the loops in hoc. Otherwise, we do the loops in
-        # Python
-        if isinstance(rand_distr.rng, NativeRNG):
-            rarr = simulator.nativeRNG_pick(len(self),
-                                            rand_distr.rng,
-                                            rand_distr.name,
-                                            rand_distr.parameters)
+        if format == 'list':
+            values = [getattr(c, parameter_name) for c in self.connections]
+        elif format == 'array':
+            values = numpy.nan * numpy.ones((self.pre.size, self.post.size))
+            for c in self.connections:
+                value = getattr(c, parameter_name)
+                addr = (self.pre.id_to_index(c.source), self.post.id_to_index(c.target))
+                if numpy.isnan(values[addr]):
+                    values[addr] = value
+                else:
+                    values[addr] += value
         else:
-            rarr = rand_distr.next(len(self))
-        logger.info("--- Projection[%s].__randomizeDelays__() ---" % self.label)
-        self.setDelays(rarr)
-
+            raise Exception("format must be 'list' or 'array'")
+        return values
+    
 
 Space = space.Space
 

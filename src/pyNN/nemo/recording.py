@@ -15,64 +15,71 @@ logger = logging.getLogger("PyNN")
 
 class Recorder(recording.Recorder):
     """Encapsulates data and functions related to recording model variables."""
-
+    _simulator = simulator
+  
     def __init__(self, variable, population=None, file=None):
         __doc__ = recording.Recorder.__doc__
         recording.Recorder.__init__(self, variable, population, file)
-        simulator.recorder_list.append(self)
-        self.data = {}
-        self.times = []
+        self._simulator.recorder_list.append(self)
+        if self.variable is "spikes":
+            self.data  = numpy.empty([0, 2])
+        elif self.variable is "v":
+            self.data  = numpy.empty([0, 3])
+        elif self.variable is "gsyn":
+            self.data  = numpy.empty([0, 4])
+        else:
+            raise Exception("Nemo can record only v and spikes for now !")    
+
+    def write(self, file=None, gather=False, compatible_output=True, filter=None):
+        recording.Recorder.write(self, file, gather, compatible_output, filter)
+        #self._simulator.recorder_list.remove(self)
 
     def record(self, ids):
         """Add the cells in `ids` to the set of recorded cells."""
         self.recorded = self.recorded.union(ids)
-        for id in self.recorded:
-            self.data[id] = []
-
+        
     def _reset(self):
         raise NotImplementedError("Recording reset is not currently supported for pyNN.nemo")
 
     def _add_spike(self, fired, time):
-         idx = list(self.recorded)
-         if len(fired > 0):
-             left = numpy.searchsorted(fired, idx, 'left')
-             right = numpy.searchsorted(fired, idx, 'right')
-             for id, l, r in zip(idx, left, right):
-                if l != r:
-                    self.data[id] += [time]
+        ids       = self.recorded.intersection(fired)
+        self.data = numpy.vstack((self.data, numpy.array([list(ids), [time]*len(ids)]).T)) 
         ## To file or memory ? ###
 
     def _add_vm(self, time):
-        for id in list(self.recorded):
-            self.data[id] += [simulator.state.sim.get_membrane_potential(int(id))]
-        self.times += [time]
+        data      =  self._simulator.state.sim.get_membrane_potential(list(self.recorded))   
+        self.data = numpy.vstack((self.data, numpy.array([list(self.recorded), [time]*len(self.recorded), data]).T))
+
+    def _add_gsyn(self, time):
+        ge      =  self._simulator.state.sim.get_neuron_state(list(self.recorded), 1)
+        gi      =  self._simulator.state.sim.get_neuron_state(list(self.recorded), 2) 
+        self.data = numpy.vstack((self.data, numpy.array([list(self.recorded), [time]*len(self.recorded), ge, gi]).T))
 
     def _get(self, gather=False, compatible_output=True, filter=None):
         """Return the recorded data as a Numpy array."""
         filtered_ids = self.filter_recorded(filter)
-        if self.variable == 'spikes':
-            data = numpy.empty((0, 2))
-            for id in filtered_ids:
-                times = numpy.array(self.data[id])
-                new_data = numpy.array([numpy.ones(times.shape) * id, times]).T
-                data = numpy.concatenate((data, new_data))
-        elif self.variable == 'v':
-            data = numpy.empty((0, 3))
-            N = len(self.times)
-            for id in filtered_ids:
-                vm = self.data[id]
-                new_data = numpy.array([numpy.ones(N) * id, self.times, vm]).T
-                data = numpy.concatenate((data, new_data))
-        return data
+        if len(self.data) > 0:
+            mask = reduce(numpy.add, (self.data[:,0]==id for id in filtered_ids))                            
+            data = self.data[mask]
+            return data
+        else:
+            return self.data
 
     def _local_count(self, filter=None):
         N = {}
         filtered_ids = self.filter_recorded(filter)
-        cells = list(filtered_ids)
-        filtered_ids = numpy.array(cells)
+        cells        = list(filtered_ids)
+        filtered_ids = numpy.array(cells)   
         for id in filtered_ids:
-            N[id] = len(self.data[id])
+            N[id] = 0
+        spikes = self._get(gather=False, compatible_output=False, filter=filter)
+        ids   = numpy.sort(spikes[:,0].astype(int))
+        idx   = numpy.unique(ids)
+        left  = numpy.searchsorted(ids, idx, 'left')
+        right = numpy.searchsorted(ids, idx, 'right')
+        for id, l, r in zip(idx, left, right):
+            N[id] = r-l
         return N
-
+        
 
 simulator.Recorder = Recorder

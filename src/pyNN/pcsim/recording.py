@@ -12,19 +12,20 @@ from pyNN.pcsim import simulator
 
 class Recorder(recording.Recorder):
     """Encapsulates data and functions related to recording model variables."""
-
+    _simulator = simulator
+    
     fieldnames = {'v': 'Vm',
                   'gsyn': 'psr'}
-
+    
     def __init__(self, variable, population=None, file=None):
         __doc__ = recording.Recorder.__doc__
         recording.Recorder.__init__(self, variable, population, file)
         self.recorders = {}
-
+    
     def _record(self, new_ids):
         """Called by record()"""
         net = simulator.net
-        if self.variable == 'spikes':
+        if self.variable == 'spikes':        
             for id in new_ids:
                 #if self.population:
                 #    pcsim_id = self.population.pcsim_population[int(id)]
@@ -32,7 +33,7 @@ class Recorder(recording.Recorder):
                 pcsim_id = int(id)
                 src_id = pypcsim.SimObject.ID(pcsim_id)
                 rec = net.create(pypcsim.SpikeTimeRecorder(),
-                                 pypcsim.SimEngine.ID(src_id.node, src_id.eng))
+                                 pypcsim.SimEngine.ID(src_id.node, src_id.eng))            
                 net.connect(pcsim_id, rec, pypcsim.Time.sec(0))
                 assert id not in self.recorders
                 self.recorders[id] = rec
@@ -59,30 +60,30 @@ class Recorder(recording.Recorder):
         # Does nest really need it?
         net = simulator.net
         if self.variable == 'spikes':
-            data = numpy.empty((0, 2))
+            data = numpy.empty((0,2))
             for id in self.filter_recorded(filter):
                 rec = self.recorders[id]
                 if isinstance(net.object(id), pypcsim.SpikingInputNeuron):
-                    spikes = 1000.0 * numpy.array(net.object(id).getSpikeTimes()) # is this special case really necessary?
-                    spikes = spikes[spikes <= simulator.state.t]
+                    spikes = 1000.0*numpy.array(net.object(id).getSpikeTimes()) # is this special case really necessary?
+                    spikes = spikes[spikes<=simulator.state.t]
                 else:
-                    spikes = 1000.0 * numpy.array(net.object(rec).getSpikeTimes())
+                    spikes = 1000.0*numpy.array(net.object(rec).getSpikeTimes())
                 spikes = spikes.flatten()
-                spikes = spikes[spikes <= simulator.state.t + 1e-9]
-                if len(spikes) > 0:
-                    new_data = numpy.array([numpy.ones(spikes.shape, dtype=int) * id, spikes]).T
-                    data = numpy.concatenate((data, new_data))
+                spikes = spikes[spikes<=simulator.state.t+1e-9]
+                if len(spikes) > 0:    
+                    new_data = numpy.array([numpy.ones(spikes.shape, dtype=int)*id, spikes]).T
+                    data = numpy.concatenate((data, new_data))           
         elif self.variable == 'v':
-            data = numpy.empty((0, 3))
+            data = numpy.empty((0,3))
             for id in self.filter_recorded(filter):
                 rec = self.recorders[id]
-                v = 1000.0 * numpy.array(net.object(rec).getRecordedValues())
+                v = 1000.0*numpy.array(net.object(rec).getRecordedValues())
                 v = v.flatten()
-                final_v = 1000.0 * net.object(id).getVm()
+                final_v = 1000.0*net.object(id).getVm()
                 v = numpy.append(v, final_v)
                 dt = simulator.state.dt
-                t = dt * numpy.arange(v.size)
-                new_data = numpy.array([numpy.ones(v.shape, dtype=int) * id, t, v]).T
+                t = dt*numpy.arange(v.size)
+                new_data = numpy.array([numpy.ones(v.shape, dtype=int)*id, t, v]).T
                 data = numpy.concatenate((data, new_data))
         elif self.variable == 'gsyn':
             raise NotImplementedError
@@ -106,5 +107,5 @@ class Recorder(recording.Recorder):
         if gather and simulator.state.num_processes > 1:
             N = recording.gather_dict(N)
         return N
-
+    
 simulator.Recorder = Recorder

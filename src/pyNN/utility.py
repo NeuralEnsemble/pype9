@@ -30,8 +30,8 @@ import logging
 import time
 import os
 
-red = 0010; green = 0020; yellow = 0030; blue = 0040
-magenta = 0050; cyan = 0060; bright = 0100
+red     = 0010; green  = 0020; yellow = 0030; blue = 0040
+magenta = 0050; cyan   = 0060; bright = 0100
 try:
     import ll.ansistyle
     def colour(col, text):
@@ -48,7 +48,7 @@ def notify(msg="Simulation finished.", subject="Simulation finished.",
         print "SMTP host and/or e-mail address not specified.\nUnable to send notification message."
     else:
         import smtplib, datetime
-        msg = ("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n") % (address, address, subject) + msg
+        msg = ("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n") % (address,address,subject) + msg
         msg += "\nTimestamp: %s" % datetime.datetime.now().strftime("%H:%M:%S, %F")
         server = smtplib.SMTP(smtphost)
         server.sendmail(address, address, msg)
@@ -66,7 +66,7 @@ def get_script_args(n_args, usage=''):
     calling_frame = sys._getframe(1)
     if '__file__' in calling_frame.f_locals:
         script = calling_frame.f_locals['__file__']
-        try:
+        try:    
             script_index = sys.argv.index(script)
         except ValueError:
             try:
@@ -75,12 +75,12 @@ def get_script_args(n_args, usage=''):
                 script_index = 0
     else:
         script_index = 0
-    args = sys.argv[script_index + 1:script_index + 1 + n_args]
+    args = sys.argv[script_index+1:script_index+1+n_args]
     if len(args) != n_args:
         usage = usage or "Script requires %d arguments, you supplied %d" % (n_args, len(args))
         raise Exception(usage)
     return args
-
+    
 def init_logging(logfile, debug=False, num_processes=1, rank=0, level=None):
     # allow logfile == None
     # which implies output to stderr
@@ -102,9 +102,9 @@ def init_logging(logfile, debug=False, num_processes=1, rank=0, level=None):
     # allow user to override exact log_level
     if level:
         log_level = level
-
+        
     logging.basicConfig(level=log_level,
-                        format=mpi_prefix + '%(asctime)s %(levelname)s %(message)s',
+                        format=mpi_prefix+'%(asctime)s %(levelname)s %(message)s',
                         filename=logfile,
                         filemode='w')
 
@@ -139,8 +139,8 @@ def load_population(filename, sim):
     # set the spiketimes
     spikes = s['spike_times']
     for neuron in range(s['size']):
-        spike_times = spikes[spikes[:, 0] == neuron][:, 1]
-        neuron_in_new_population = neuron + population.first_id
+        spike_times = spikes[spikes[:,0] == neuron][:,1]
+        neuron_in_new_population = neuron+population.first_id
         index = population.id_to_index(neuron_in_new_population)
         population[index].set_parameters(**{'spike_times':spike_times})
     # set the variables
@@ -152,15 +152,15 @@ def load_population(filename, sim):
 
 class Timer(object):
     """For timing script execution."""
-
+    
     def __init__(self):
         self.start()
-
+    
     def start(self):
         """Start timing."""
         self._start_time = time.time()
         self._last_check = self._start_time
-
+    
     def elapsedTime(self, format=None):
         """Return the elapsed time in seconds but keep the clock running."""
         current_time = time.time()
@@ -169,20 +169,20 @@ class Timer(object):
             elapsed_time = Timer.time_in_words(elapsed_time)
         self._last_check = current_time
         return elapsed_time
-
+    
     def reset(self):
         """Reset the time to zero, and start the clock."""
         self.start()
-
+    
     def diff(self, format=None): # I think delta() would be a better name for this method.
         """Return the time since the last time elapsedTime() or diff() was called."""
         current_time = time.time()
         time_since_last_check = current_time - self._last_check
         self._last_check = current_time
-        if format == 'long':
+        if format=='long':
             time_since_last_check = Timer.time_in_words(elapsed_time)
         return time_since_last_check
-
+    
     @staticmethod
     def time_in_words(s):
         """Formats a time in seconds as a string containing the time in days,
@@ -201,33 +201,33 @@ class Timer(object):
         h, T['minute'] = divmod(min, 60)
         T['day'], T['hour'] = divmod(h, 24)
         def add_units(val, units):
-            return "%d %s" % (int(val), units) + (val > 1 and 's' or '')
+            return "%d %s" % (int(val), units) + (val>1 and 's' or '')
         return ', '.join([add_units(T[part], part)
                           for part in ('year', 'day', 'hour', 'minute', 'second')
-                          if T[part] > 0])
+                          if T[part]>0])
 
 
 class ProgressBar:
     """
     Create a progress bar in the shell.
     """
-
+    
     def __init__(self, min_value=0, max_value=100, width=77, **kwargs):
         self.char = kwargs.get('char', '#')
         self.mode = kwargs.get('mode', 'dynamic') # fixed or dynamic
         if not self.mode in ['fixed', 'dynamic']:
             self.mode = 'fixed'
-
+ 
         self.bar = ''
         self.min = min_value
         self.max = max_value
         self.span = max_value - min_value
         self.width = width
         self.amount = 0       # When amount == max, we are 100% done 
-        self.update_amount(0)
-
-
-    def increment_amount(self, add_amount=1):
+        self.update_amount(0) 
+ 
+ 
+    def increment_amount(self, add_amount = 1):
         """
         Increment self.amount by 'add_ammount' or default to incrementing
         by 1, and then rebuild the bar string. 
@@ -237,9 +237,9 @@ class ProgressBar:
         if new_amount > self.max: new_amount = self.max
         self.amount = new_amount
         self.build_bar()
-
-
-    def update_amount(self, new_amount=None):
+ 
+ 
+    def update_amount(self, new_amount = None):
         """
         Update self.amount with 'new_amount', and then rebuild the bar 
         string.
@@ -249,8 +249,8 @@ class ProgressBar:
         if new_amount > self.max: new_amount = self.max
         self.amount = new_amount
         self.build_bar()
-
-
+ 
+ 
     def build_bar(self):
         """
         Figure new percent complete, and rebuild the bar string base on 
@@ -261,11 +261,11 @@ class ProgressBar:
             percent_done = int(round((diff / float(self.span)) * 100.0))
         except Exception:
             percent_done = 100
-
+ 
         # figure the proper number of 'character' make up the bar 
         all_full = self.width - 2
         num_hashes = int(round((percent_done * all_full) / 100))
-
+ 
         if self.mode == 'dynamic':
             # build a progress bar with self.char (to create a dynamic bar
             # where the percent string moves along with the bar progress.
@@ -273,12 +273,12 @@ class ProgressBar:
         else:
             # build a progress bar with self.char and spaces (to create a 
             # fixe bar (the percent string doesn't move)
-            self.bar = self.char * num_hashes + ' ' * (all_full - num_hashes)
-
+            self.bar = self.char * num_hashes + ' ' * (all_full-num_hashes)
+ 
         percent_str = str(percent_done) + "%"
         self.bar = '[ ' + self.bar + ' ] ' + percent_str
-
-
+ 
+ 
     def __str__(self):
         return str(self.bar)
 
@@ -287,16 +287,16 @@ def assert_arrays_equal(a, b):
     import numpy
     assert isinstance(a, numpy.ndarray), "a is a %s" % type(a)
     assert isinstance(b, numpy.ndarray), "b is a %s" % type(b)
-    assert a.shape == b.shape, "%s != %s" % (a, b)
-    assert (a.flatten() == b.flatten()).all(), "%s != %s" % (a, b)
+    assert a.shape == b.shape, "%s != %s" % (a,b)
+    assert (a.flatten()==b.flatten()).all(), "%s != %s" % (a,b)
 
 def assert_arrays_almost_equal(a, b, threshold):
     import numpy
     assert isinstance(a, numpy.ndarray), "a is a %s" % type(a)
     assert isinstance(b, numpy.ndarray), "b is a %s" % type(b)
-    assert a.shape == b.shape, "%s != %s" % (a, b)
+    assert a.shape == b.shape, "%s != %s" % (a,b)
     assert (abs(a - b) < threshold).all(), "max(|a - b|) = %s" % (abs(a - b)).max()
 
 def sort_by_column(a, col):
     # see stackoverflow.com/questions/2828059/
-    return a[a[:, col].argsort(), :]
+    return a[a[:,col].argsort(),:]

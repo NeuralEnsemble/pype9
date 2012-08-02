@@ -36,22 +36,22 @@ class IF_curr_alpha(StandardCellType):
     Leaky integrate and fire model with fixed threshold and alpha-function-
     shaped post-synaptic current.
     """
-
+    
     default_parameters = {
-        'v_rest'     :-65.0, # Resting membrane potential in mV. 
-        'cm'         :   1.0, # Capacity of the membrane in nF
-        'tau_m'      :  20.0, # Membrane time constant in ms.
-        'tau_refrac' :   0.1, # Duration of refractory period in ms. 
-        'tau_syn_E'  :   0.5, # Rise time of the excitatory synaptic alpha function in ms.
-        'tau_syn_I'  :   0.5, # Rise time of the inhibitory synaptic alpha function in ms.
-        'i_offset'   :   0.0, # Offset current in nA
-        'v_reset'    :-65.0, # Reset potential after a spike in mV.
-        'v_thresh'   :-50.0, # Spike threshold in mV.
+        'v_rest'     : -65.0,   # Resting membrane potential in mV. 
+        'cm'         :   1.0,   # Capacity of the membrane in nF
+        'tau_m'      :  20.0,   # Membrane time constant in ms.
+        'tau_refrac' :   0.1,   # Duration of refractory period in ms. 
+        'tau_syn_E'  :   0.5,   # Rise time of the excitatory synaptic alpha function in ms.
+        'tau_syn_I'  :   0.5,   # Rise time of the inhibitory synaptic alpha function in ms.
+        'i_offset'   :   0.0,   # Offset current in nA
+        'v_reset'    : -65.0,   # Reset potential after a spike in mV.
+        'v_thresh'   : -50.0,   # Spike threshold in mV.
     }
     recordable = ['spikes', 'v']
     conductance_based = False
     default_initial_values = {
-        'v':-65.0, #'v_rest',
+        'v': -65.0, #'v_rest',
     }
 
 class IF_curr_exp(StandardCellType):
@@ -60,22 +60,22 @@ class IF_curr_exp(StandardCellType):
     decaying-exponential post-synaptic current. (Separate synaptic currents for
     excitatory and inhibitory synapses.
     """
-
+    
     default_parameters = {
-        'v_rest'     :-65.0, # Resting membrane potential in mV. 
-        'cm'         : 1.0, # Capacity of the membrane in nF
-        'tau_m'      : 20.0, # Membrane time constant in ms.
-        'tau_refrac' : 0.1, # Duration of refractory period in ms. 
-        'tau_syn_E'  : 5.0, # Decay time of excitatory synaptic current in ms.
-        'tau_syn_I'  : 5.0, # Decay time of inhibitory synaptic current in ms.
-        'i_offset'   : 0.0, # Offset current in nA
-        'v_reset'    :-65.0, # Reset potential after a spike in mV.
-        'v_thresh'   :-50.0, # Spike threshold in mV.
+        'v_rest'     : -65.0,   # Resting membrane potential in mV. 
+        'cm'         : 1.0,     # Capacity of the membrane in nF
+        'tau_m'      : 20.0,    # Membrane time constant in ms.
+        'tau_refrac' : 0.1,     # Duration of refractory period in ms. 
+        'tau_syn_E'  : 5.0,     # Decay time of excitatory synaptic current in ms.
+        'tau_syn_I'  : 5.0,     # Decay time of inhibitory synaptic current in ms.
+        'i_offset'   : 0.0,     # Offset current in nA
+        'v_reset'    : -65.0,   # Reset potential after a spike in mV.
+        'v_thresh'   : -50.0,   # Spike threshold in mV.
     }
     recordable = ['spikes', 'v']
     conductance_based = False
     default_initial_values = {
-        'v':-65.0, #'v_rest',
+        'v': -65.0, #'v_rest',
     }
 
 class IF_cond_alpha(StandardCellType):
@@ -83,47 +83,47 @@ class IF_cond_alpha(StandardCellType):
     Leaky integrate and fire model with fixed threshold and alpha-function-
     shaped post-synaptic conductance.
     """
-
+    
     default_parameters = {
-        'v_rest'     :-65.0, # Resting membrane potential in mV. 
-        'cm'         : 1.0, # Capacity of the membrane in nF
-        'tau_m'      : 20.0, # Membrane time constant in ms.
-        'tau_refrac' : 0.1, # Duration of refractory period in ms.
-        'tau_syn_E'  : 0.3, # Rise time of the excitatory synaptic alpha function in ms.
-        'tau_syn_I'  : 0.5, # Rise time of the inhibitory synaptic alpha function in ms.
-        'e_rev_E'    : 0.0, # Reversal potential for excitatory input in mV
-        'e_rev_I'    :-70.0, # Reversal potential for inhibitory input in mV
-        'v_thresh'   :-50.0, # Spike threshold in mV.
-        'v_reset'    :-65.0, # Reset potential after a spike in mV.
-        'i_offset'   : 0.0, # Offset current in nA
+        'v_rest'     : -65.0,   # Resting membrane potential in mV. 
+        'cm'         : 1.0,     # Capacity of the membrane in nF
+        'tau_m'      : 20.0,    # Membrane time constant in ms.
+        'tau_refrac' : 0.1,     # Duration of refractory period in ms.
+        'tau_syn_E'  : 0.3,     # Rise time of the excitatory synaptic alpha function in ms.
+        'tau_syn_I'  : 0.5,     # Rise time of the inhibitory synaptic alpha function in ms.
+        'e_rev_E'    : 0.0,     # Reversal potential for excitatory input in mV
+        'e_rev_I'    : -70.0,   # Reversal potential for inhibitory input in mV
+        'v_thresh'   : -50.0,   # Spike threshold in mV.
+        'v_reset'    : -65.0,   # Reset potential after a spike in mV.
+        'i_offset'   : 0.0,     # Offset current in nA
     }
     recordable = ['spikes', 'v', 'gsyn']
     default_initial_values = {
-        'v':-65.0, #'v_rest',
+        'v': -65.0, #'v_rest',
     }
-
+    
 class IF_cond_exp(StandardCellType):
     """
     Leaky integrate and fire model with fixed threshold and 
     exponentially-decaying post-synaptic conductance.
     """
-
+    
     default_parameters = {
-        'v_rest'     :-65.0, # Resting membrane potential in mV. 
-        'cm'         : 1.0, # Capacity of the membrane in nF
-        'tau_m'      : 20.0, # Membrane time constant in ms.
-        'tau_refrac' : 0.1, # Duration of refractory period in ms.
-        'tau_syn_E'  : 5.0, # Decay time of the excitatory synaptic conductance in ms.
-        'tau_syn_I'  : 5.0, # Decay time of the inhibitory synaptic conductance in ms.
-        'e_rev_E'    : 0.0, # Reversal potential for excitatory input in mV
-        'e_rev_I'    :-70.0, # Reversal potential for inhibitory input in mV
-        'v_thresh'   :-50.0, # Spike threshold in mV.
-        'v_reset'    :-65.0, # Reset potential after a spike in mV.
-        'i_offset'   : 0.0, # Offset current in nA
+        'v_rest'     : -65.0,   # Resting membrane potential in mV. 
+        'cm'         : 1.0,     # Capacity of the membrane in nF
+        'tau_m'      : 20.0,    # Membrane time constant in ms.
+        'tau_refrac' : 0.1,     # Duration of refractory period in ms.
+        'tau_syn_E'  : 5.0,     # Decay time of the excitatory synaptic conductance in ms.
+        'tau_syn_I'  : 5.0,     # Decay time of the inhibitory synaptic conductance in ms.
+        'e_rev_E'    : 0.0,     # Reversal potential for excitatory input in mV
+        'e_rev_I'    : -70.0,   # Reversal potential for inhibitory input in mV
+        'v_thresh'   : -50.0,   # Spike threshold in mV.
+        'v_reset'    : -65.0,   # Reset potential after a spike in mV.
+        'i_offset'   : 0.0,     # Offset current in nA
     }
     recordable = ['spikes', 'v', 'gsyn']
     default_initial_values = {
-        'v':-65.0, #'v_rest',
+        'v': -65.0, #'v_rest',
     }
 
 class IF_cond_exp_gsfa_grr(StandardCellType):
@@ -138,31 +138,31 @@ class IF_cond_exp_gsfa_grr(StandardCellType):
 
     See also: EIF_cond_alpha_isfa_ista
     """
-
+    
     default_parameters = {
-        'v_rest'     :-65.0, # Resting membrane potential in mV. 
-        'cm'         : 1.0, # Capacity of the membrane in nF
-        'tau_m'      : 20.0, # Membrane time constant in ms.
-        'tau_refrac' : 0.1, # Duration of refractory period in ms.
-        'tau_syn_E'  : 5.0, # Decay time of the excitatory synaptic conductance in ms.
-        'tau_syn_I'  : 5.0, # Decay time of the inhibitory synaptic conductance in ms.
-        'e_rev_E'    : 0.0, # Reversal potential for excitatory input in mV
-        'e_rev_I'    :-70.0, # Reversal potential for inhibitory input in mV
-        'v_thresh'   :-50.0, # Spike threshold in mV.
-        'v_reset'    :-65.0, # Reset potential after a spike in mV.
-        'i_offset'   : 0.0, # Offset current in nA
-        'tau_sfa'    : 100.0, # Time constant of spike-frequency adaptation in ms
-        'e_rev_sfa'  :-75.0, # spike-frequency adaptation conductance reversal potential in mV
-        'q_sfa'      : 15.0, # Quantal spike-frequency adaptation conductance increase in nS
-        'tau_rr'     : 2.0, # Time constant of the relative refractory mechanism in ms
-        'e_rev_rr'   :-75.0, # relative refractory mechanism conductance reversal potential in mV
+        'v_rest'     : -65.0,   # Resting membrane potential in mV. 
+        'cm'         : 1.0,     # Capacity of the membrane in nF
+        'tau_m'      : 20.0,    # Membrane time constant in ms.
+        'tau_refrac' : 0.1,     # Duration of refractory period in ms.
+        'tau_syn_E'  : 5.0,     # Decay time of the excitatory synaptic conductance in ms.
+        'tau_syn_I'  : 5.0,     # Decay time of the inhibitory synaptic conductance in ms.
+        'e_rev_E'    : 0.0,     # Reversal potential for excitatory input in mV
+        'e_rev_I'    : -70.0,   # Reversal potential for inhibitory input in mV
+        'v_thresh'   : -50.0,   # Spike threshold in mV.
+        'v_reset'    : -65.0,   # Reset potential after a spike in mV.
+        'i_offset'   : 0.0,     # Offset current in nA
+        'tau_sfa'    : 100.0,   # Time constant of spike-frequency adaptation in ms
+        'e_rev_sfa'  : -75.0,   # spike-frequency adaptation conductance reversal potential in mV
+        'q_sfa'      : 15.0,    # Quantal spike-frequency adaptation conductance increase in nS
+        'tau_rr'     : 2.0,     # Time constant of the relative refractory mechanism in ms
+        'e_rev_rr'   : -75.0,   # relative refractory mechanism conductance reversal potential in mV
         'q_rr'       : 3000.0   # Quantal relative refractory conductance increase in nS   
     }
     recordable = ['spikes', 'v', 'gsyn']
     default_initial_values = {
-        'v':-65.0, #'v_rest',
+        'v': -65.0, #'v_rest',
     }
-
+    
 class IF_facets_hardware1(StandardCellType):
     """
     Leaky integrate and fire model with conductance-based synapses and fixed 
@@ -173,19 +173,19 @@ class IF_facets_hardware1(StandardCellType):
     For further details regarding the hardware model see the FACETS-internal Wiki:
     https://facets.kip.uni-heidelberg.de/private/wiki/index.php/WP7_NNM
     """
-
+    
     default_parameters = {
-        'g_leak'    :   40.0, # nS
-        'tau_syn_E' :   30.0, # ms
-        'tau_syn_I' :   30.0, # ms
-        'v_reset'   :-80.0, # mV
-        'e_rev_I'   :-80.0, # mV,
-        'v_rest'    :-65.0, # mV
-        'v_thresh'  :-55.0      # mV
+        'g_leak'    :   40.0,     # nS
+        'tau_syn_E' :   30.0,     # ms
+        'tau_syn_I' :   30.0,     # ms
+        'v_reset'   :  -80.0,     # mV
+        'e_rev_I'   :  -80.0,     # mV,
+        'v_rest'    :  -65.0,     # mV
+        'v_thresh'  :  -55.0      # mV
     }
     recordable = ['spikes', 'v', 'gsyn']
     default_initial_values = {
-        'v':-65.0, #'v_rest',
+        'v': -65.0, #'v_rest',
     }
 
 class HH_cond_exp(StandardCellType):
@@ -193,25 +193,25 @@ class HH_cond_exp(StandardCellType):
     Reference: 
     Traub & Miles, Neuronal Networks of the Hippocampus, Cambridge, 1991.
     """
-
+    
     default_parameters = {
         'gbar_Na'   : 20.0, # uS
-        'gbar_K'    : 6.0, # uS
+        'gbar_K'    : 6.0,  # uS
         'g_leak'    : 0.01, # uS
-        'cm'        : 0.2, # nF
-        'v_offset'  :-63.0, # mV
+        'cm'        : 0.2,  # nF
+        'v_offset'  : -63.0, # mV
         'e_rev_Na'  : 50.0,
-        'e_rev_K'   :-90.0,
-        'e_rev_leak':-65.0,
+        'e_rev_K'   : -90.0,
+        'e_rev_leak': -65.0,
         'e_rev_E'   : 0.0,
-        'e_rev_I'   :-80.0,
+        'e_rev_I'   : -80.0,
         'tau_syn_E' : 0.2, # ms
         'tau_syn_I' : 2.0,
         'i_offset'  : 0.0, # nA
     }
     recordable = ['spikes', 'v', 'gsyn']
     default_initial_values = {
-        'v':-65.0, #'v_rest',
+        'v': -65.0, #'v_rest',
     }
 
 class EIF_cond_alpha_isfa_ista(StandardCellType):
@@ -224,28 +224,28 @@ class EIF_cond_alpha_isfa_ista(StandardCellType):
 
     See also: IF_cond_exp_gsfa_grr, EIF_cond_exp_isfa_ista
     """
-
+    
     default_parameters = {
-        'cm'        : 0.281, # Capacitance of the membrane in nF
-        'tau_refrac': 0.1, # Duration of refractory period in ms.
-        'v_spike'   :-40.0, # Spike detection threshold in mV.
-        'v_reset'   :-70.6, # Reset value for V_m after a spike. In mV.
-        'v_rest'    :-70.6, # Resting membrane potential (Leak reversal potential) in mV.
+        'cm'        : 0.281,  # Capacitance of the membrane in nF
+        'tau_refrac': 0.1,    # Duration of refractory period in ms.
+        'v_spike'   : -40.0,    # Spike detection threshold in mV.
+        'v_reset'   : -70.6,  # Reset value for V_m after a spike. In mV.
+        'v_rest'    : -70.6,  # Resting membrane potential (Leak reversal potential) in mV.
         'tau_m'     : 9.3667, # Membrane time constant in ms
-        'i_offset'  : 0.0, # Offset current in nA
-        'a'         : 4.0, # Subthreshold adaptation conductance in nS.
+        'i_offset'  : 0.0,    # Offset current in nA
+        'a'         : 4.0,    # Subthreshold adaptation conductance in nS.
         'b'         : 0.0805, # Spike-triggered adaptation in nA
-        'delta_T'   : 2.0, # Slope factor in mV
-        'tau_w'     : 144.0, # Adaptation time constant in ms
-        'v_thresh'  :-50.4, # Spike initiation threshold in mV
-        'e_rev_E'   : 0.0, # Excitatory reversal potential in mV.
-        'tau_syn_E' : 5.0, # Rise time of excitatory synaptic conductance in ms (alpha function).
-        'e_rev_I'   :-80.0, # Inhibitory reversal potential in mV.
-        'tau_syn_I' : 5.0, # Rise time of the inhibitory synaptic conductance in ms (alpha function).
+        'delta_T'   : 2.0,    # Slope factor in mV
+        'tau_w'     : 144.0,  # Adaptation time constant in ms
+        'v_thresh'  : -50.4,  # Spike initiation threshold in mV
+        'e_rev_E'   : 0.0,    # Excitatory reversal potential in mV.
+        'tau_syn_E' : 5.0,    # Rise time of excitatory synaptic conductance in ms (alpha function).
+        'e_rev_I'   : -80.0,  # Inhibitory reversal potential in mV.
+        'tau_syn_I' : 5.0,    # Rise time of the inhibitory synaptic conductance in ms (alpha function).
     }
     recordable = ['spikes', 'v', 'w', 'gsyn']
     default_initial_values = {
-        'v':-65.0, #'v_rest',
+        'v': -65.0, #'v_rest',
         'w': 0.0,
     }
 
@@ -259,38 +259,63 @@ class EIF_cond_exp_isfa_ista(StandardCellType):
 
     See also: IF_cond_exp_gsfa_grr, EIF_cond_alpha_isfa_ista
     """
-
+    
     default_parameters = {
-        'cm'        : 0.281, # Capacitance of the membrane in nF
-        'tau_refrac': 0.1, # Duration of refractory period in ms.
-        'v_spike'   :-40.0, # Spike detection threshold in mV.
-        'v_reset'   :-70.6, # Reset value for V_m after a spike. In mV.
-        'v_rest'    :-70.6, # Resting membrane potential (Leak reversal potential) in mV.
+        'cm'        : 0.281,  # Capacitance of the membrane in nF
+        'tau_refrac': 0.1,    # Duration of refractory period in ms.
+        'v_spike'   : -40.0,    # Spike detection threshold in mV.
+        'v_reset'   : -70.6,  # Reset value for V_m after a spike. In mV.
+        'v_rest'    : -70.6,  # Resting membrane potential (Leak reversal potential) in mV.
         'tau_m'     : 9.3667, # Membrane time constant in ms
-        'i_offset'  : 0.0, # Offset current in nA
-        'a'         : 4.0, # Subthreshold adaptation conductance in nS.
+        'i_offset'  : 0.0,    # Offset current in nA
+        'a'         : 4.0,    # Subthreshold adaptation conductance in nS.
         'b'         : 0.0805, # Spike-triggered adaptation in nA
-        'delta_T'   : 2.0, # Slope factor in mV
-        'tau_w'     : 144.0, # Adaptation time constant in ms
-        'v_thresh'  :-50.4, # Spike initiation threshold in mV
-        'e_rev_E'   : 0.0, # Excitatory reversal potential in mV.
-        'tau_syn_E' : 5.0, # Decay time constant of excitatory synaptic conductance in ms.
-        'e_rev_I'   :-80.0, # Inhibitory reversal potential in mV.
-        'tau_syn_I' : 5.0, # Decay time constant of the inhibitory synaptic conductance in ms.
+        'delta_T'   : 2.0,    # Slope factor in mV
+        'tau_w'     : 144.0,  # Adaptation time constant in ms
+        'v_thresh'  : -50.4,  # Spike initiation threshold in mV
+        'e_rev_E'   : 0.0,    # Excitatory reversal potential in mV.
+        'tau_syn_E' : 5.0,    # Decay time constant of excitatory synaptic conductance in ms.
+        'e_rev_I'   : -80.0,  # Inhibitory reversal potential in mV.
+        'tau_syn_I' : 5.0,    # Decay time constant of the inhibitory synaptic conductance in ms.
     }
     recordable = ['spikes', 'v', 'w', 'gsyn']
     default_initial_values = {
-        'v':-65.0, #'v_rest',
+        'v': -65.0, #'v_rest',
         'w': 0.0,
     }
+
+
+class Izikevich(StandardCellType):
+    """
+    Izikevich spiking model with a quadratic non-linearity according to:
+
+    E. Izikevich (2003), IEEE transactions on neural networks, 14(6) 
+
+    Synapses are modeled as dirac, as in the original model
+    """
+
+    default_parameters = {
+        'a'        : 0.02,     
+        'b'        : 0.2,     
+        'v_reset'  : -65.0,   
+        'd'        :   2.,
+        'tau_refrac' : 0.1       
+    }
+    recordable        = ['spikes', 'v', 'u']
+    conductance_based = False
+
+    default_initial_values = {
+        'v': -65.0, 
+        'u': 0.0
+    }  
 
 
 class SpikeSourcePoisson(StandardCellType):
     """Spike source, generating spikes according to a Poisson process."""
 
     default_parameters = {
-        'rate'     : 1.0, # Mean spike frequency (Hz)
-        'start'    : 0.0, # Start time (ms)
+        'rate'     : 1.0,     # Mean spike frequency (Hz)
+        'start'    : 0.0,     # Start time (ms)
         'duration' : 1e10      # Duration of spike sequence (ms)
     }
     recordable = ['spikes']
@@ -310,25 +335,25 @@ class SpikeSourceInhGamma(StandardCellType):
     default_parameters = {
         'a'        : numpy.array([1.0]), # time histogram of parameter a of a gamma distribution (dimensionless)
         'b'        : numpy.array([1.0]), # time histogram of parameter b of a gamma distribution (seconds)
-        'tbins'    : numpy.array([0.0]), # time bins of the time histogram of a,b in units of ms
-        'start'    : 0.0, # Start time (ms)
+        'tbins'    : numpy.array([0.0]),   # time bins of the time histogram of a,b in units of ms
+        'start'    : 0.0,                # Start time (ms)
         'duration' : 1e10                 # Duration of spike sequence (ms)
     }
     recordable = ['spikes']
     injectable = False
-    synapse_types = ()
+    synapse_types = ()      
 
 
 class SpikeSourceArray(StandardCellType):
     """Spike source generating spikes at the times given in the spike_times array."""
-
+    
     default_parameters = { 'spike_times' : [] } # list or numpy array containing spike times in milliseconds.
     recordable = ['spikes']
     injectable = False
-    synapse_types = ()
-
+    synapse_types = ()    
+           
     def __init__(self, parameters):
         if parameters and 'spike_times' in parameters:
             parameters['spike_times'] = numpy.array(parameters['spike_times'], 'float')
         StandardCellType.__init__(self, parameters)
-
+        

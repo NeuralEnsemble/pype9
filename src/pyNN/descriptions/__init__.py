@@ -49,13 +49,13 @@ def render(engine, template, context):
             engine = TEMPLATE_ENGINES[engine]
         assert issubclass(engine, TemplateEngine), str(engine)
         return engine.render(template, context)
-
-
+    
+    
 class TemplateEngine(object):
     """
     Base class.
     """
-
+    
     @classmethod
     def get_template(cls, template):
         """
@@ -63,7 +63,7 @@ class TemplateEngine(object):
         file (relative to pyNN/descriptions/templates/<engine_name>)
         """
         raise NotImplementedError()
-
+        
     @classmethod
     def render(cls, template, context):
         """
@@ -82,7 +82,7 @@ class StringTemplateEngine(TemplateEngine):
     Interface to the built-in string.Template template engine.
     """
     template_dir = os.path.join(os.path.dirname(__file__), 'templates', 'string')
-
+    
     @classmethod
     def get_template(cls, template):
         """
@@ -95,7 +95,7 @@ class StringTemplateEngine(TemplateEngine):
             template = f.read()
             f.close()
         return string.Template(template)
-
+        
     @classmethod
     def render(cls, template, context):
         """
@@ -108,7 +108,7 @@ class StringTemplateEngine(TemplateEngine):
         """
         template = cls.get_template(template)
         return template.safe_substitute(context)
-
+    
 TEMPLATE_ENGINES['string'] = StringTemplateEngine
 
 
@@ -120,7 +120,7 @@ try:
         Interface to the Jinja2 template engine. 
         """
         env = jinja2.Environment(loader=jinja2.PackageLoader('pyNN.descriptions', 'templates/jinja2'))
-
+        
         @classmethod
         def get_template(cls, template):
             """
@@ -133,7 +133,7 @@ try:
             except Exception: # interpret template as a string
                 template = cls.env.from_string(template)
             return template
-
+        
         @classmethod
         def render(cls, template, context):
             """
@@ -146,7 +146,7 @@ try:
             """
             template = cls.get_template(template)
             return template.render(context)
-
+        
     TEMPLATE_ENGINES['jinja2'] = Jinja2TemplateEngine
 except ImportError:
     pass
@@ -160,7 +160,7 @@ try:
         Interface to the Cheetah template engine.
         """
         template_dir = os.path.join(os.path.dirname(__file__), 'templates', 'cheetah')
-
+        
         @classmethod
         def get_template(cls, template):
             """
@@ -172,7 +172,7 @@ try:
                 return Cheetah.Template.Template.compile(file=template_path)
             else:
                 return Cheetah.Template.Template.compile(source=template)
-
+    
         @classmethod
         def render(cls, template, context):
             """
