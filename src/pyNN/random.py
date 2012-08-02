@@ -101,7 +101,7 @@ class WrappedRNG(AbstractRNG):
                 pass
             elif mask_local is not None: # strip out the random numbers that
                                          # should be used on other processors.
-                assert mask_local.size == n
+                assert mask_local.size == n or mask_local.shape == n
                 rarr = rarr[mask_local]
             else:
                 raise Exception("For a parallel-safe RNG, mask_local must be either an array or False, not %s" % mask_local)

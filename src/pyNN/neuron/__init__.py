@@ -311,22 +311,43 @@ class Projection(common.Projection):
         self._resolve_synapse_type()
         for target, weight, delay in zip(targets, weights, delays):
             if target.local:
-                if "." in self.synapse_type: 
-                    section, synapse_type = self.synapse_type.split(".") 
-                    synapse_object = getattr(getattr(target._cell, section), synapse_type) 
-                else: 
-                    synapse_object = getattr(target._cell, self.synapse_type) 
-                nc = simulator.state.parallel_context.gid_connect(int(source), synapse_object)
-                nc.weight[0] = weight
-                
-                # if we have a mechanism (e.g. from 9ML) that includes multiple
-                # synaptic channels, need to set nc.weight[1] here
-                if nc.wcnt() > 1 and hasattr(target._cell, "type"):
-                    nc.weight[1] = target._cell.type.synapse_types.index(self.synapse_type)
-                nc.delay  = delay
-                # nc.threshold is supposed to be set by ParallelContext.threshold, called in _build_cell(), above, but this hasn't been tested
-                self.connections.append(simulator.Connection(source, target, nc))
-
+                if "." in self.synapse_type:  #(TGC) HERE IS WHERE THE SECTION IS SPECIFIED!!
+                    section_name, synapse_type = self.synapse_type.split(".")
+                    try:
+                        section = getattr(target._cell, section_name)
+                    except AttributeError:
+                        raise Exception("%s doesn't have a section named '%s'" % (type(target._cell), section_name))
+                    try:
+                        synapse_object = getattr(section, synapse_type)
+                    except AttributeError:
+                        raise Exception("Section '%s' of cell '%s' doesn't synapse named '%s'" % (type(target._cell), section_name, synapse_type))
+                else:
+                    synapse_type = self.synapse_type
+                    synapse_object = getattr(target._cell, self.synapse_type)
+                if synapse_type != "Gap": # FIXME (TGC): Hack, should have a better way of specifying gap junction                    
+                    nc = simulator.state.parallel_context.gid_connect(int(source), synapse_object)
+                    nc.weight[0] = weight
+                    
+                    # if we have a mechanism (e.g. from 9ML) that includes multiple
+                    # synaptic channels, need to set nc.weight[1] here
+                    if nc.wcnt() > 1 and hasattr(target._cell, "type"):
+                        nc.weight[1] = target._cell.type.synapse_types.index(self.synapse_type)
+                    nc.delay  = delay
+                    # nc.threshold is supposed to be set by ParallelContext.threshold, called in _build_cell(), above, but this hasn't been tested
+                    self.connections.append(simulator.Connection(source, target, nc))
+                else:
+                    # (TGC) Generated a "source variable" GID (NB: that this is completely separate 
+                    # from the cell gid). 
+                    #
+                    # Warning! This implementation assumes that there is only one projection with 
+                    # gap junctions, maybe a safe offset for each could be calculated when the 
+                    # projections are read from the XML and passed to the projection constructor
+                    synapse_object.g = weight
+                    source_var_gid = int(source) * len(self.parent.post) + int(target)
+                    if source.local:
+                        simulator.state.parallel_context.source_var(source._cell.source_section(0.5)._ref_v, source_var_gid)
+                    simulator.state.parallel_context.target_var(synapse_object._ref_vgap, source_var_gid)
+                    
     def _convergent_connect(self, sources, target, weights, delays):
         """
         Connect a neuron to one or more other neurons with a static connection.

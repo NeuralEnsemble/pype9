@@ -49,13 +49,14 @@ class SingleCompartmentNeuron(nrn.Section):
     }
 
     def __init__(self, syn_type, syn_shape, c_m, i_offset,
-                 tau_e, tau_i, e_e, e_i):
-        
+                 tau_e, tau_i, e_e, e_i, Ra=35.4, length=100, diameter=(1000 / pi)):
+
         # initialise Section object with 'pas' mechanism
         nrn.Section.__init__(self)
         self.seg = self(0.5)
-        self.L = 100
-        self.seg.diam = 1000/pi # gives area = 1e-3 cm2
+        self.L = length
+        self.seg.diam = diameter
+        self.Ra = Ra
         
         self.source_section = self
         self.syn_type = syn_type
@@ -395,23 +396,25 @@ class SingleCompartmentTraub(SingleCompartmentNeuron):
     def __init__(self, syn_type, syn_shape, c_m=1.0, e_leak=-65,
                  i_offset=0, tau_e=5, tau_i=5, e_e=0, e_i=-70,
                  gbar_Na=20e-3, gbar_K=6e-3, g_leak=0.01e-3, ena=50,
-                 ek=-90, v_offset=-63):
+                 ek= -90, v_offset= -63, Ra=35.4, length=100, diameter=(1000 / pi), 
+                 threshold=10.0):
         """
         Conductances are in millisiemens (S/cm2, since A = 1e-3)
         """
         SingleCompartmentNeuron.__init__(self, syn_type, syn_shape, c_m, i_offset,
-                                         tau_e, tau_i, e_e, e_i)
+                                         tau_e, tau_i, e_e, e_i, Ra, length, diameter)
         self.source = self.seg._ref_v
         self.insert('k_ion')
         self.insert('na_ion')
         self.insert('hh_traub')
         self.parameter_names = ['c_m', 'e_leak', 'i_offset', 'tau_e',
                                 'tau_i', 'gbar_Na', 'gbar_K', 'g_leak', 'ena',
-                                'ek', 'v_offset']
+                                'ek', 'v_offset', 'Ra']
         if syn_type == 'conductance':
             self.parameter_names.extend(['e_e', 'e_i'])
         self.set_parameters(locals())
         self.v_init = e_leak # default value
+        self.threshold = threshold       
 
     # not sure ena and ek are handled correctly
     
@@ -422,7 +425,7 @@ class SingleCompartmentTraub(SingleCompartmentNeuron):
     g_leak   = _new_property('seg.hh_traub', 'gl')
     
     def get_threshold(self):
-        return 10.0
+        return self.threshold
     
     def record(self, active):
         if active:

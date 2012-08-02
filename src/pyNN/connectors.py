@@ -105,6 +105,11 @@ class ConnectionAttributeGenerator(object):
             d      = distance_matrix.as_array(sub_mask)
             values = self.source(d)
             return values
+        elif hasattr(self.source, 'get_values'):
+            assert distance_matrix is not None
+            d = distance_matrix.as_array(sub_mask, expand=True)
+            values = self.source.get_values(d)
+            return values        
         elif numpy.isscalar(self.source):
             if sub_mask is None:
                 values = numpy.ones((self.local_mask.sum(),))*self.source
@@ -448,13 +453,15 @@ class DistanceDependentProbabilityConnector(Connector):
                      to the global minimum delay.
         """
         Connector.__init__(self, weights, delays, space, safe, verbose)
-        assert isinstance(d_expression, str) or callable(d_expression)
-        try:
-            if isinstance(d_expression, str) and not expand_distances(d_expression):                       
-                d = 0; assert 0 <= eval(d_expression), eval(d_expression)
-                d = 1e12; assert 0 <= eval(d_expression), eval(d_expression)
-        except ZeroDivisionError, err:
-            raise ZeroDivisionError("Error in the distance expression %s. %s" % (d_expression, err))
+        if isinstance(d_expression, str) or callable(d_expression):
+            try:
+                if isinstance(d_expression, str) and not expand_distances(d_expression):                       
+                    d = 0; assert 0 <= eval(d_expression), eval(d_expression)
+                    d = 1e12; assert 0 <= eval(d_expression), eval(d_expression)
+            except ZeroDivisionError, err:
+                raise ZeroDivisionError("Error in the distance expression %s. %s" % (d_expression, err))
+        elif not hasattr(d_expression, 'get_values'):
+            raise Exception("Distance expression needs to be either an appropriate string or a class that implements the 'get_values(numpy.array)' method ('%s')" % d_expression)        
         self.d_expression = d_expression
         assert isinstance(allow_self_connections, bool)
         self.allow_self_connections = allow_self_connections
