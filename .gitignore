@@ -4,6 +4,6 @@
 *.pyc
 .svn
 .externalToolBuilders
-.project
-.pydevproject
+.settings
+.texlipse
 /output
