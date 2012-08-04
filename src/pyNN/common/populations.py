@@ -15,6 +15,7 @@ import tempfile
 from pyNN import random, recording, errors, standardmodels, core, space, descriptions
 from pyNN.recording import files
 from itertools import chain
+import collections
 
 deprecated = core.deprecated
 logger = logging.getLogger("PyNN")
@@ -747,6 +748,9 @@ class Population(BasePopulation):
             })
         if self.structure:
             context["structure"] = self.structure.describe(template=None)
+        else:
+            EmptyStructure = collections.namedtuple("EmptyStructure", "parameters")
+            context["structure"] = EmptyStructure({}) 
         return descriptions.render(engine, template, context)
 
 

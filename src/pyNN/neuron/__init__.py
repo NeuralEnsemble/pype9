@@ -343,7 +343,7 @@ class Projection(common.Projection):
                     # gap junctions, maybe a safe offset for each could be calculated when the 
                     # projections are read from the XML and passed to the projection constructor
                     synapse_object.g = weight
-                    source_var_gid = int(source) * len(self.parent.post) + int(target)
+                    source_var_gid = int(source) * len(self.post) + int(target)
                     if source.local:
                         simulator.state.parallel_context.source_var(source._cell.source_section(0.5)._ref_v, source_var_gid)
                     simulator.state.parallel_context.target_var(synapse_object._ref_vgap, source_var_gid)

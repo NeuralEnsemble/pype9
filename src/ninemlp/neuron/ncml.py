@@ -24,7 +24,7 @@ from backports import any
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator
 
-build_state_queries(pyNN.neuron.simulator)
+get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(pyNN.neuron.simulator)
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 

@@ -25,7 +25,7 @@ descriptions.DEFAULT_TEMPLATE_ENGINE = 'jinja2'
 import string
 import os.path
 
-DEFAULT_TEMPLATE_ENGINE = None # can be set by user
+DEFAULT_TEMPLATE_ENGINE = 'jinja2' # can be set by user
 TEMPLATE_ENGINES = {}
 
 
