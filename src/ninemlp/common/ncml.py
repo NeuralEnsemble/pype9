@@ -96,7 +96,7 @@ class MorphMLHandler(XMLHandler):
                                        float(attrs['diameter']))
         elif self._opening(tag_name, attrs, 'parent', parents=['segment']):
             self.parent = self.Parent(attrs['segment'],
-                                                   attrs.get('fractionAlong', 1.0))
+                                                   float(attrs.get('fractionAlong', '1.0')))
         elif self._opening(tag_name, attrs, 'segmentGroup', parents=['morphology']):
             self.morphology.groups.append(self.SegmentGroup(attrs['id'], []))
         elif self._opening(tag_name, attrs, 'member', parents=['segmentGroup']):

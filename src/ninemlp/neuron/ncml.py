@@ -65,7 +65,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         for seg in self.morphml_model.segments:
             if seg.parent:
                 self.segments[seg.id].connect(self.segments[seg.parent.id],
-                                                                        seg.parent.fractionAlong, 0)
+                                                                 seg.parent.fractionAlong, 0)
         self.groups = {}
         for group in self.morphml_model.groups:
             self.groups[group.id] = []
