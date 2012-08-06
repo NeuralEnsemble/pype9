@@ -162,6 +162,9 @@ class NCMLHandler(XMLHandler):
         elif self._opening(tag_name, attrs, 'membraneProperties',
                                                                 parents=['biophysicalProperties']):
             pass
+        elif self._opening(tag_name, attrs, 'synapses',
+                                                                parents=['biophysicalProperties']):
+            pass        
         elif self._opening(tag_name, attrs, 'intracellularProperties',
                                                                 parents=['biophysicalProperties']):
             pass
@@ -181,12 +184,12 @@ class NCMLHandler(XMLHandler):
             self.ncml.passive_currents.append(self.PassiveCurrent(attrs.get('segmentGroup', None),
                                                               ValueWithUnits(attrs['condDensity'],
                                                                              attrs.get('units', None))))
-        elif self._opening(tag_name, attrs, 'conductanceSynapse', parents=['membraneProperties']):
+        elif self._opening(tag_name, attrs, 'conductanceSynapse', parents=['synapses']):
             self.ncml.synapses.append(self.Synapse(attrs['id'],
                                               attrs['type'],
                                               attrs.get('segmentGroup', None),
                                                   []))
-        elif self._opening(tag_name, attrs, 'gapJunction', parents=['membraneProperties']):
+        elif self._opening(tag_name, attrs, 'gapJunction', parents=['synapses']):
             self.ncml.synapses.append(self.GapJunction(attrs['id'],
                                                   attrs['type'],
                                                   attrs.get('segmentGroup', None),
