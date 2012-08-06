@@ -30,6 +30,7 @@ parser.add_argument('--min_delay', type=float, default=0.0005, help='The minimum
 parser.add_argument('--timestep', type=float, default=0.00005, help='The timestep used for the simulation')
 parser.add_argument('--stim_seed', default=None, help='The seed passed to the stimulated spikes')
 parser.add_argument('--num_processes', type=int, default=96, help='The the number of processes to use for the simulation')
+parser.add_argument('--legacy_hoc', action='store_true', help="If this flag is passed, then the old legacy code is run instead")
 args = parser.parse_args()
 
 np = args.num_processes
@@ -63,6 +64,8 @@ while not created_directory:
 
 # Copy snapshot of code directory and network description to working directory
 DIRS_TO_COPY = ['src', 'xml']
+if args.legacy_hoc:
+    DIRS_TO_COPY.append('external_refs/fabios_network')
 for directory in DIRS_TO_COPY:
     shutil.copytree(os.path.join(code_dir,directory), os.path.join(work_dir,directory), symlinks=True)
 
@@ -81,10 +84,27 @@ os.environ['NINEMLP_BUILD_MODE'] = 'compile_only'
 os.environ['NINEMLP_MPI'] = '1'
 
 print "Compiling required objects"
-try:
-    execfile(os.path.join(work_dir,'src', 'test', SCRIPT_NAME + '.py'))
-except SystemExit:
-    pass
+
+if not args.legacy_hoc:
+    try:
+        execfile(os.path.join(work_dir,'src', 'test', SCRIPT_NAME + '.py'))
+    except SystemExit:
+        pass
+    run_dir = os.path.join(work_dir, 'src')
+    cmd_line = "time mpirun python test/{script_name}.py --output {work_dir}/output_activity --time {time} \
+    --start_input {start_input} --mf_rate {mf_rate} --min_delay {min_delay} --simulator {simulator} \
+    --timestep {timestep} --stim_seed {stim_seed}".format(mf_rate=args.mf_rate, 
+                                                          start_input=args.start_input, 
+                                                          time=args.time, 
+                                                          min_delay=args.min_delay, 
+                                                          simulator=args.simulator, 
+                                                          timestep=args.timestep, 
+                                                          stim_seed=stim_seed, np=np)
+else:
+    run_dir = os.path.join(work_dir, 'external_refs/fabios_network')
+    os.chdir(run_dir)
+    subprocess.call('nrnivmodl', shell=True)
+    cmd_line = "time mpirun nrniv network.hoc"
 
 #Create jobscript
 jobscript_path = os.path.join(work_dir, SCRIPT_NAME + '.job.sh')
@@ -130,13 +150,14 @@ export NINEMLP_MPI=1
 
 echo "==============Starting mpirun===============" 
 
-cd {work_dir}/src
-time mpirun python test/{script_name}.py --output {work_dir}/output_activity --time {time} --start_input {start_input} --mf_rate {mf_rate} --min_delay {min_delay} --simulator {simulator} --timestep {timestep} --stim_seed {stim_seed}
+cd {run_dir}
+{cmd_line}
 
 echo "==============Mpirun has ended===============" 
 
 """.format(script_name=SCRIPT_NAME, work_dir=work_dir, path=PATH, pythonpath=PYTHONPATH, 
-  ld_library_path=LD_LIBRARY_PATH, ninemlp_src_path=NINEMLP_SRC_PATH, mf_rate=args.mf_rate, start_input=args.start_input, time=args.time, min_delay=args.min_delay, simulator=args.simulator, timestep=args.timestep, stim_seed=stim_seed, np=np))
+  ld_library_path=LD_LIBRARY_PATH, ninemlp_src_path=NINEMLP_SRC_PATH, np=np, run_dir=run_dir, 
+  cmd_line=cmd_line))
 f.close()
 
 # Submit job
