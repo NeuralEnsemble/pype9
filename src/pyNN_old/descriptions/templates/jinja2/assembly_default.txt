@@ -1,4 +1,0 @@
-Neuronal assembly called "{{label}}", consisting of the following populations:
-    {% for p in populations %}
-        * {{p.label}}
-    {% endfor %}
