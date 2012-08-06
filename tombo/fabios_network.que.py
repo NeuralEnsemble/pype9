@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 ####################################################################################################
-# 
 # This script prepares the environment for the Sun Grid Engine batch script to run in by making a
 # snapshot of the code base at the start of the run and queing the related batch script 
 # 'fabios_network.job.sh'.
@@ -11,6 +10,7 @@
 # 
 ####################################################################################################
 
+import sys
 import os.path
 import time
 import shutil
@@ -22,14 +22,21 @@ SCRIPT_NAME = 'fabios_network'
 # Automatically generate paths
 time_str = time.strftime('%Y-%m-%d(%A)_%H-%M-%S', time.localtime()) # Unique time for distinguishing runs
 work_dir = os.path.join(os.environ['HOME'], 'Work', SCRIPT_NAME + "." + time_str + ".1") # Working directory path
-code_dir = os.normpath(os.path.join(os.path.basename(os.path.abspath(__file__), '..'))) # Root directory of the project code
+code_dir = os.path.abspath(os.path.join(os.path.basename(__file__), '..')) # Root directory of the project code
 
 #Ensure that working directory is unique
-count = 2
-while os.path.exists(work_dir):
-    work_dir[-1] = str(count)
-    count += 1   
-os.makedirs(workd_dir) 
+created_directory=False
+count = 1
+while not created_directory:
+    try:
+        os.makedirs(work_dir) 
+        created_directory=True
+    except IOError as e:
+        count += 1
+        if count > 1000:
+            print "Something has gone wrong, can't create directory '%s', maybe check permissions" % work_dir
+            raise e
+        work_dir[-1] = str(count)
 
 # Copy snapshot of code directory and network description to working directory
 DIRS_TO_COPY = ['src', 'xml']
@@ -37,18 +44,20 @@ for directory in DIRS_TO_COPY:
     shutil.copytree(os.path.join(code_dir,directory), os.path.join(work_dir,directory), symlinks=True)
 
 # Set path variables
-PATH ='/apps/DeschutterU/NEURON-7.2/x86_64/bin:/opt/mpi/gnu/openmpi-1.4.3/bin:/apps/python/272/bin:'
+PATH ='/apps/python/272/bin:/apps/DeschutterU/NEURON-7.2/x86_64/bin:/opt/mpi/gnu/openmpi-1.4.3/bin'
 PYTHONPATH = os.path.join(work_dir, 'src')
 LD_LIBRARY_PATH = '/opt/mpi/gnu/openmpi-1.4.3/lib'
 NINEMLP_SRC_PATH = os.path.join(work_dir, 'src')
 
 #Compile network
-os.environ['PATH'] = PATH + os.environ['PATH']
-os.environ['PYTHONPATH'] = PYTHONPATH
-os.environ['LD_LIBRARY_PATH'] = LD_LIBRARY_PATH
+os.environ['PATH'] = PATH + os.pathsep + os.environ['PATH']
+sys.path.append(PYTHONPATH)
+os.environ['LD_LIBRARY_PATH '] = LD_LIBRARY_PATH 
 os.environ['NINEMLP_SRC_PATH'] = NINEMLP_SRC_PATH
 os.environ['NINEMLP_BUILD_MODE'] = 'compile_only'
-os.environ['NINEMLP_MPI'] = 1
+os.environ['NINEMLP_MPI'] = '1'
+
+print "Compiling required objects"
 execfile(os.path.join(work_dir,'src', 'test', SCRIPT_NAME + '.py'))
 
 #Create jobscript
