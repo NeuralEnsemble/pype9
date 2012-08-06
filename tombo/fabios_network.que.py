@@ -87,7 +87,7 @@ except SystemExit:
     pass
 
 #Create jobscript
-jobscript_path = os.path.join(work_dir, 'jobscript.sh')
+jobscript_path = os.path.join(work_dir, SCRIPT_NAME + '.job.sh')
 f = open(jobscript_path, 'w')
 f.write("""#!/usr/bin/env sh
 
