@@ -320,7 +320,11 @@ class Network(object):
                 if proj_id not in os.listdir(self.proj_dir):
                     raise Exception("Connection id '%s' was not found in search path (%s)." %
                                                                         (proj_id, self.proj_dir))
-                connection_matrix = numpy.loadtxt(os.path.join(self.proj_dir, connection.args['id']))
+                # The load step can take a while and isn't necessary when compiling so can be skipped.
+                if self.build_mode != 'compile_only':
+                    connection_matrix = numpy.loadtxt(os.path.join(self.proj_dir, connection.args['id']))
+                else:
+                    connection_matrix = numpy.ones((1,4))
                 if weight:
                     connection_matrix[:, 2] = self._convert_units(weight)
                 if delay:
