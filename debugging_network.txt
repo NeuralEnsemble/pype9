@@ -1,0 +1,3 @@
+- Check that golgi cells are spontaneously active
+- Freq v curr plot for both Granule and Golgis
+- 
