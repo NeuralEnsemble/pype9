@@ -100,6 +100,7 @@ class Network(ninemlp.common.Network):
         self._ncml_module = ncml
         self._Population_class = Population
         self._Projection_class = Projection
+        self.get_min_delay = get_min_delay
         #Call the base function initialisation function.
         ninemlp.common.Network.__init__(self, filename, build_mode=build_mode)
 

@@ -749,8 +749,8 @@ class Population(BasePopulation):
         if self.structure:
             context["structure"] = self.structure.describe(template=None)
         else:
-            EmptyStructure = collections.namedtuple("EmptyStructure", "parameters")
-            context["structure"] = EmptyStructure({}) 
+            NoStructure = collections.namedtuple("NoStructure", "name parameters")
+            context["structure"] = NoStructure('None', {}) 
         return descriptions.render(engine, template, context)
 
 

@@ -21,7 +21,6 @@ import ninemlp.common.ncml
 from ninemlp.utilities.nmodl import build as build_nnodl
 from ninemlp import BUILD_MODE
 from backports import any
-from . import get_min_delay #@UnusedImport
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 
