@@ -194,7 +194,7 @@ def read_networkML(filename):
 class Network(object):
 
     def __init__(self, filename, build_mode=BUILD_MODE):
-        assert  hasattr(self, "_sim_module") and \
+        assert  hasattr(self, "_pyNN_module") and \
                 hasattr(self, "_ncml_module") and \
                 hasattr(self, "_Population_class") and \
                 hasattr(self, "_Projection_class") and \
