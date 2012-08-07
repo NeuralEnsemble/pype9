@@ -23,13 +23,14 @@ import argparse
 parser = argparse.ArgumentParser(description='A script to ')
 parser.add_argument('--simulator', type=str, default='neuron',
                                            help="simulator for NINEML+ (either 'neuron' or 'nest')")
-parser.add_argument('--mf_rate', type=float, default=1, help='Mean firing rate of the Mossy Fibres')
-parser.add_argument('--time', type=float, default=2000.0, help='The run time of the simulation (ms)')
-parser.add_argument('--start_input', type=float, default=1000, help='The start time of the mossy fiber stimulation')
-parser.add_argument('--min_delay', type=float, default=0.0005, help='The minimum synaptic delay in the network')
-parser.add_argument('--timestep', type=float, default=0.00005, help='The timestep used for the simulation')
+parser.add_argument('--mf_rate', type=float, default=1, help='Mean firing rate of the Mossy Fibres (default: %(default)s)')
+parser.add_argument('--time', type=float, default=2000.0, help='The run time of the simulation (ms)  (default: %(default)s)')
+parser.add_argument('--start_input', type=float, default=1000, help='The start time of the mossy fiber stimulation (default: %(default)s)')
+parser.add_argument('--min_delay', type=float, default=0.0005, help='The minimum synaptic delay in the network (default: %(default)s)')
+parser.add_argument('--timestep', type=float, default=0.00005, help='The timestep used for the simulation (default: %(default)s)')
 parser.add_argument('--stim_seed', default=None, help='The seed passed to the stimulated spikes')
-parser.add_argument('--num_processes', type=int, default=96, help='The the number of processes to use for the simulation')
+parser.add_argument('--num_processes', type=int, default=96, help='The the number of processes to use for the simulation (default: %(default)s)')
+parser.add_argument('--legacy_hoc', action='store_true', help="If this flag is passed, then the old legacy code is run instead")
 args = parser.parse_args()
 
 np = args.num_processes
@@ -63,6 +64,8 @@ while not created_directory:
 
 # Copy snapshot of code directory and network description to working directory
 DIRS_TO_COPY = ['src', 'xml']
+if args.legacy_hoc:
+    DIRS_TO_COPY.append('external_refs/fabios_network')
 for directory in DIRS_TO_COPY:
     shutil.copytree(os.path.join(code_dir,directory), os.path.join(output_dir,directory), symlinks=True)
 
@@ -81,10 +84,27 @@ os.environ['NINEMLP_BUILD_MODE'] = 'compile_only'
 os.environ['NINEMLP_MPI'] = '1'
 
 print "Compiling required objects"
-try:
-    execfile(os.path.join(output_dir,'src', 'test', SCRIPT_NAME + '.py'))
-except SystemExit:
-    pass
+
+if not args.legacy_hoc:
+    try:
+        execfile(os.path.join(output_dir,'src', 'test', SCRIPT_NAME + '.py'))
+    except SystemExit:
+        pass
+    run_dir = os.path.join(output_dir, 'src')
+    cmd_line = "time mpirun python test/{script_name}.py --output {output_dir}/output_activity --time {time} \
+    --start_input {start_input} --mf_rate {mf_rate} --min_delay {min_delay} --simulator {simulator} \
+    --timestep {timestep} --stim_seed {stim_seed}".format(mf_rate=args.mf_rate, 
+                                                          start_input=args.start_input, 
+                                                          time=args.time, 
+                                                          min_delay=args.min_delay, 
+                                                          simulator=args.simulator, 
+                                                          timestep=args.timestep, 
+                                                          stim_seed=stim_seed, np=np)
+else:
+    run_dir = os.path.join(output_dir, 'external_refs/fabios_network')
+    os.chdir(run_dir)
+    subprocess.call('nrnivmodl', shell=True)
+    cmd_line = "time mpirun nrniv network.hoc"
 
 #Create jobscript
 jobscript_path = os.path.join(output_dir, SCRIPT_NAME + '.job.sh')
@@ -130,13 +150,13 @@ export NINEMLP_MPI=1
 
 echo "==============Starting mpirun===============" 
 
-cd {output_dir}/src
-time mpirun python test/{script_name}.py --output {output_dir}/output_activity --time {time} --start_input {start_input} --mf_rate {mf_rate} --min_delay {min_delay} --simulator {simulator} --timestep {timestep} --stim_seed {stim_seed}
+cd {run_dir}
+{cmd_line}
 
 echo "==============Mpirun has ended===============" 
-
 """.format(script_name=SCRIPT_NAME, output_dir=output_dir, path=PATH, pythonpath=PYTHONPATH, 
-  ld_library_path=LD_LIBRARY_PATH, ninemlp_src_path=NINEMLP_SRC_PATH, mf_rate=args.mf_rate, start_input=args.start_input, time=args.time, min_delay=args.min_delay, simulator=args.simulator, timestep=args.timestep, stim_seed=stim_seed, np=np))
+  ld_library_path=LD_LIBRARY_PATH, ninemlp_src_path=NINEMLP_SRC_PATH, np=np, run_dir=run_dir, 
+  cmd_line=cmd_line))
 f.close()
 
 # Submit job

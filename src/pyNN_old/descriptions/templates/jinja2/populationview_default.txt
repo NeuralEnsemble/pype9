@@ -1,5 +1,0 @@
-PopulationView "{{label}}"
-    parent : "{{parent}}"
-    size   : {{size}}
-    mask   : {{mask}}
-    
