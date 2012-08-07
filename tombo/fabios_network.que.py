@@ -44,7 +44,7 @@ SCRIPT_NAME = 'fabios_network'
 
 # Automatically generate paths
 time_str = time.strftime('%Y-%m-%d-%A_%H-%M-%S', time.localtime()) # Unique time for distinguishing runs
-work_dir = os.path.join(os.environ['HOME'], 'Work', SCRIPT_NAME + "." + time_str + ".1") # Working directory path
+output_dir = os.path.join(os.environ['HOME'], 'Output', SCRIPT_NAME + "." + time_str + ".1") # Working directory path
 code_dir = os.path.abspath(os.path.join(os.path.basename(__file__), '..')) # Root directory of the project code
 
 #Ensure that working directory is unique
@@ -52,25 +52,25 @@ created_directory=False
 count = 1
 while not created_directory:
     try:
-        os.makedirs(work_dir) 
+        os.makedirs(output_dir) 
         created_directory=True
     except IOError as e:
         count += 1
         if count > 1000:
-            print "Something has gone wrong, can't create directory '%s', maybe check permissions" % work_dir
+            print "Something has gone wrong, can't create directory '%s', maybe check permissions" % output_dir
             raise e
-        work_dir[-1] = str(count)
+        output_dir[-1] = str(count)
 
 # Copy snapshot of code directory and network description to working directory
 DIRS_TO_COPY = ['src', 'xml']
 for directory in DIRS_TO_COPY:
-    shutil.copytree(os.path.join(code_dir,directory), os.path.join(work_dir,directory), symlinks=True)
+    shutil.copytree(os.path.join(code_dir,directory), os.path.join(output_dir,directory), symlinks=True)
 
 # Set path variables
 PATH ='/apps/python/272/bin:/apps/DeschutterU/NEURON-7.2/x86_64/bin:/opt/mpi/gnu/openmpi-1.4.3/bin'
-PYTHONPATH = os.path.join(work_dir, 'src')
+PYTHONPATH = os.path.join(output_dir, 'src')
 LD_LIBRARY_PATH = '/opt/mpi/gnu/openmpi-1.4.3/lib'
-NINEMLP_SRC_PATH = os.path.join(work_dir, 'src')
+NINEMLP_SRC_PATH = os.path.join(output_dir, 'src')
 
 #Compile network
 os.environ['PATH'] = PATH + os.pathsep + os.environ['PATH']
@@ -82,12 +82,12 @@ os.environ['NINEMLP_MPI'] = '1'
 
 print "Compiling required objects"
 try:
-    execfile(os.path.join(work_dir,'src', 'test', SCRIPT_NAME + '.py'))
+    execfile(os.path.join(output_dir,'src', 'test', SCRIPT_NAME + '.py'))
 except SystemExit:
     pass
 
 #Create jobscript
-jobscript_path = os.path.join(work_dir, SCRIPT_NAME + '.job.sh')
+jobscript_path = os.path.join(output_dir, SCRIPT_NAME + '.job.sh')
 f = open(jobscript_path, 'w')
 f.write("""#!/usr/bin/env sh
 
@@ -98,8 +98,8 @@ f.write("""#!/usr/bin/env sh
 #$ -j y
 
 # Standard output and standard error files
-#$ -o {work_dir}/output
-#$ -e {work_dir}/output
+#$ -o {output_dir}/output
+#$ -e {output_dir}/output
 
 # Name of the queue
 #$ -q longP
@@ -130,12 +130,12 @@ export NINEMLP_MPI=1
 
 echo "==============Starting mpirun===============" 
 
-cd {work_dir}/src
-time mpirun python test/{script_name}.py --output {work_dir}/output_activity --time {time} --start_input {start_input} --mf_rate {mf_rate} --min_delay {min_delay} --simulator {simulator} --timestep {timestep} --stim_seed {stim_seed}
+cd {output_dir}/src
+time mpirun python test/{script_name}.py --output {output_dir}/output_activity --time {time} --start_input {start_input} --mf_rate {mf_rate} --min_delay {min_delay} --simulator {simulator} --timestep {timestep} --stim_seed {stim_seed}
 
 echo "==============Mpirun has ended===============" 
 
-""".format(script_name=SCRIPT_NAME, work_dir=work_dir, path=PATH, pythonpath=PYTHONPATH, 
+""".format(script_name=SCRIPT_NAME, output_dir=output_dir, path=PATH, pythonpath=PYTHONPATH, 
   ld_library_path=LD_LIBRARY_PATH, ninemlp_src_path=NINEMLP_SRC_PATH, mf_rate=args.mf_rate, start_input=args.start_input, time=args.time, min_delay=args.min_delay, simulator=args.simulator, timestep=args.timestep, stim_seed=stim_seed, np=np))
 f.close()
 
@@ -143,5 +143,5 @@ f.close()
 print "Submitting job %s" % jobscript_path
 subprocess.call('qsub %s' % jobscript_path, shell=True)
 print "The output of this job can be viewed by:"
-print "less " + os.path.join(work_dir, 'output')
+print "less " + os.path.join(output_dir, 'output')
             
