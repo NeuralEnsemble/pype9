@@ -26,6 +26,10 @@ import ninemlp.common.geometry
 import ncml
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, get_max_delay, rank, num_processes, record, record_v
 import pyNN.neuron as sim
+from pyNN.common.control import build_state_queries
+import pyNN.neuron.simulator
+
+get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(pyNN.neuron.simulator)
 
 class Population(pyNN.neuron.Population):
 
@@ -79,7 +83,6 @@ class Population(pyNN.neuron.Population):
 
 
 class Projection(pyNN.neuron.Projection):
-
 
     def __init__(self, pre, dest, label, connector, source=None, target=None, build_mode=BUILD_MODE):
         self.label = label

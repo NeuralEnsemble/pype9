@@ -21,10 +21,7 @@ import ninemlp.common.ncml
 from ninemlp.utilities.nmodl import build as build_nnodl
 from ninemlp import BUILD_MODE
 from backports import any
-from pyNN.common.control import build_state_queries
-import pyNN.neuron.simulator
-
-get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(pyNN.neuron.simulator)
+from . import get_min_delay #@UnusedImport
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 

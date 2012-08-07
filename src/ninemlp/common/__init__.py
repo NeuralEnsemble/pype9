@@ -19,6 +19,7 @@ import os.path
 from ninemlp import BUILD_MODE
 import geometry
 import pyNN.connectors
+import warnings
 
 ## The location relative to the NINEML-Network file to look for the folder containing the cell descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
 RELATIVE_NCML_DIR = "./ncml"
@@ -197,9 +198,10 @@ class Network(object):
                 hasattr(self, "_ncml_module") and \
                 hasattr(self, "_Population_class") and \
                 hasattr(self, "_Projection_class")
+        self.get_min_delay = self._ncml_module.get_min_delay
         self.load_network(filename, build_mode=build_mode)
 
-    def load_network(self, filename, build_mode=BUILD_MODE):
+    def load_network(self, filename, build_mode=BUILD_MODE, verbose=False):
         parsed_network = read_networkML(filename)
         dirname = os.path.dirname(filename)
         self.cells_dir = os.path.join(dirname, RELATIVE_NCML_DIR)
@@ -215,7 +217,8 @@ class Network(object):
                                                                 pop.cell_type,
                                                                 pop.layout,
                                                                 pop.cell_params.constants,
-                                                                pop.cell_params.distributions)
+                                                                pop.cell_params.distributions,
+                                                                verbose)
         for proj in parsed_network.projections:
             self._projections[proj.id] = self._create_projection(proj.id,
                                                                  self._populations[proj.pre.pop_id],
@@ -224,9 +227,10 @@ class Network(object):
                                                                  proj.pre,
                                                                  proj.post,
                                                                  proj.weight,
-                                                                 proj.delay)
+                                                                 proj.delay,
+                                                                 verbose)
 
-    def _create_population(self, label, size, cell_type_name, layout, cell_params, cell_param_dists):
+    def _create_population(self, label, size, cell_type_name, layout, cell_params, cell_param_dists, verbose):
         if cell_type_name + ".xml" in os.listdir(self.cells_dir):
             cell_type = self._ncml_module.load_cell_type(cell_type_name,
                                             os.path.join(self.cells_dir, cell_type_name + ".xml"),
@@ -267,7 +271,7 @@ class Network(object):
         #TODO: Set parameter distributions here
         return pop
 
-    def _create_projection(self, label, pre, dest, connection, source, target, weight, delay):
+    def _create_projection(self, label, pre, dest, connection, source, target, weight, delay, verbose):
         if pre == dest:
             allow_self_connections = False
         else:
@@ -297,7 +301,7 @@ class Network(object):
             elif hasattr(delay, 'pattern'):
                 if delay.pattern == 'DistanceBased':
                     GeometricExpression = getattr(geometry, delay.args.pop('geometry'))
-                    delay_expr = GeometricExpression(min_value=self._ncml_module.get_min_delay(),
+                    delay_expr = GeometricExpression(min_value=self.get_min_delay(),
                                                      **self._convert_all_units(delay.args))
                 else:
                     raise Exception("Invalid delay pattern ('%s') for DistanceBased connectivity"
@@ -321,6 +325,15 @@ class Network(object):
                     connection_matrix[:, 2] = self._convert_units(weight)
                 if delay:
                     connection_matrix[:, 3] = self._convert_units(delay)
+                delays = connection_matrix[:,3] # Get view onto delays in connection matrix for readability
+                below_min_indices = numpy.where(delays < self.get_min_delay())
+                if len(below_min_indices):
+                    if verbose:
+                        warnings.warn("%d out of %d connections are below the minimum delay in \
+                                        projection '%s'. They will be bounded to the minimum delay \
+                                        (%d)" % (len(below_min_indices), len(delays), label), 
+                                                                               self.get_min_delay())
+                    delays[below_min_indices] = self.get_min_delay() # Bound loaded delays by specified minimum delay
                 connector = self._pyNN_module.connectors.FromListConnector(connection_matrix)
             else:
                 raise Exception ("Unrecognised external engine '%s'" % engine)

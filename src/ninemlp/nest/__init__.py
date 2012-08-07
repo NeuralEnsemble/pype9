@@ -21,6 +21,10 @@ import ninemlp.common.brep
 import ncml
 from ninemlp import BUILD_MODE
 from pyNN.nest import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, get_max_delay, rank, num_processes
+from pyNN.common.control import build_state_queries
+import pyNN.nest.simulator
+
+get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(pyNN.nest.simulator)
 
 RELATIVE_BREP_BUILD_DIR = './build'
 
