@@ -16,7 +16,6 @@ import os.path
 import argparse
 import numpy
 import matplotlib.pyplot as plt
-import NeuroTools.signals as sig #@UnresolvedImport
 
 PROJECT_PATH = os.path.normpath(os.path.join(os.path.realpath(__file__), '..', '..', '..'))
 ACTIVITY_PATH = os.path.join(PROJECT_PATH, 'activity')
