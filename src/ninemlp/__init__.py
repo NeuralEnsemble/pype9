@@ -4,7 +4,6 @@
   networks specified in NINEML+. It is possible that some changes will need to be made in the 
   pyNN package itself (although as of 13/6/2012 this hasn't been necessary).
   
-
   @file ncml.py
   @author Tom Close
 
@@ -17,6 +16,8 @@
 #######################################################################################
 
 import os
+
+__version__ = "0.0.1"
 
 BUILD_MODE_OPTIONS = ['lazy', 'force', 'compile_only']
 
