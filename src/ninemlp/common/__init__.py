@@ -13,7 +13,7 @@
 #
 #######################################################################################
 import numpy
-from backports import collections, all, any
+import collections
 import xml.sax
 import os.path
 from ninemlp import BUILD_MODE

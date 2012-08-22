@@ -17,7 +17,7 @@
 #######################################################################################
 
 import xml.sax
-from backports import collections
+import collections
 from ninemlp.common import XMLHandler
 
 class BaseNCMLCell(object):

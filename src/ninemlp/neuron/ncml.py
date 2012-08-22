@@ -20,7 +20,6 @@ import pyNN.models
 import ninemlp.common.ncml
 from ninemlp.utilities.nmodl import build as build_nnodl
 from ninemlp import BUILD_MODE
-from backports import any
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 
