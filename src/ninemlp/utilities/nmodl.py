@@ -47,21 +47,23 @@ def build (model_dir, build_mode=BUILD_MODE, verbose=True):
             cmd_name = 'nrnivmodl.exe'
         else:
             cmd_name = 'nrnivmodl'
-        # Variable to hold the command path
-        cmd_path = None
         # Check the system path for the 'nrnivmodl' command
-        sys_path = os.environ['PATH'].split(os.pathsep)
-        for dr in sys_path:
+        cmd_path = None
+        for dr in os.environ['PATH'].split(os.pathsep):
             path = os.path.join(dr, cmd_name)
             if os.path.exists(path):
                 cmd_path = path
                 break
         if not cmd_path:
             raise Exception("Could not find nrnivmodl on the system path '%s'" % os.environ['PATH'])
+        print "Building mechanisms in '%s' directory." % model_dir
         if verbose:
-            print "Building mechanisms in '%s' directory." % model_dir
-        # Run nrnivmodl command on directory
-        if subprocess.call(cmd_path):
+            # Run nrnivmodl command on directory
+            build_error = subprocess.call(cmd_path)
+        else:
+            with open(os.devnull, "w") as fnull:
+                build_error = subprocess.call(cmd_path, stdout = fnull, stderr = fnull)
+        if build_error:
             raise Exception("Could not compile NMODL files in directory '%s' - " % model_dir)
     elif verbose:
         print "Found existing mechanisms in '%s' directory, compile skipped (set 'build_mode' argument to 'force' enforce recompilation them)." % model_dir
