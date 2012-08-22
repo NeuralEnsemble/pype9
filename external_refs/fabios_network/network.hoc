@@ -3,6 +3,8 @@
 //Model Parameters//
 ////////////////////
 
+GJ=1
+
 ////////////////////
 //MF->GrC synapses//
 ////////////////////
@@ -365,8 +367,8 @@ for j=i+1, $4-1 {
 
 GoC[i].soma gpre[index.getval(i,j)]=new Gap(0.5)
 GoC[j].soma gpost[index.getval(i,j)]=new Gap(0.5)
-setpointer gpre[index.getval(i,j)].vnb, GoC[j].soma.v(0.5)
-setpointer gpost[index.getval(i,j)].vnb, GoC[i].soma.v(0.5)
+setpointer gpre[index.getval(i,j)].vgap, GoC[j].soma.v(0.5)
+setpointer gpost[index.getval(i,j)].vgap, GoC[i].soma.v(0.5)
 
 gprob=prob.uniform(min,max) 
 
