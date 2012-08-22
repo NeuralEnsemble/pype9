@@ -28,7 +28,7 @@ parser.add_argument('--time_stop', type=float, default=None, help='The stop of t
 parser.add_argument('--v_incr', type=float, default=0.1, help='The minimum increment required before the next step in the voltage trace is plotted')
 args = parser.parse_args()
 
-
+# Get the type of variable recorded via the file's extension
 variable = args.filename.split('.')[-1]
 
 if variable == 'spikes':
@@ -87,4 +87,4 @@ elif variable == 'v':
         plt.plot(times_to_plot, voltages_to_plot)
     plt.show()
 else:
-    raise Exception ("Unrecognised variable '%s'" % variable)
+    raise Exception ("Unrecognised variable '%s' (from the file extension)" % variable)
