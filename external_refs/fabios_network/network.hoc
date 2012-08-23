@@ -460,5 +460,3 @@ for i=0,NumberCellsb-1 {
   recncs2.append(tobj2)
 }
 objref tobj2 
-
-stimulus()
