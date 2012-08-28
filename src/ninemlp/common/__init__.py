@@ -229,6 +229,8 @@ class Network(object):
                                                                  proj.weight,
                                                                  proj.delay,
                                                                  verbose)
+        if build_mode == 'compile_only':
+            raise SystemExit('Finished compiling network, now exiting')
 
     def _create_population(self, label, size, cell_type_name, layout, cell_params, cell_param_dists, verbose):
         if cell_type_name + ".xml" in os.listdir(self.cells_dir):
