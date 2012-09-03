@@ -69,6 +69,7 @@ class MorphMLHandler(XMLHandler):
         XMLHandler.__init__(self)
         self.cell_type_id = cell_type_id
         self.morph_id = morph_id
+        self.found_cell_id = False
 
     def startElement(self, tag_name, attrs):
         """
@@ -76,7 +77,7 @@ class MorphMLHandler(XMLHandler):
         segment and segment-group tuples in the handler object.
         """
         if self._opening(tag_name, attrs, 'cell', required_attrs=[('id', self.cell_type_id)]):
-            self.cell_type_id = attrs['id']
+            self.found_cell_id = True
         elif self._opening(tag_name, attrs, 'morphology', parents=['cell'], required_attrs=[('id', self.morph_id)]):
             self.morphology = self.Morphology(attrs['id'], self.cell_type_id, [], [])
         elif self._opening(tag_name, attrs, 'segment', parents=['morphology']):
@@ -153,10 +154,11 @@ class NCMLHandler(XMLHandler):
         XMLHandler.__init__(self)
         self.cell_type_id = cell_type_id
         self.ncml_id = ncml_id
+        self.found_cell_id = False
 
     def startElement(self, tag_name, attrs):
         if self._opening(tag_name, attrs, 'cell', required_attrs=[('id', self.cell_type_id)]):
-            self.cell_type_id = attrs['id']
+            self.found_cell_id = True
         elif self._opening(tag_name, attrs, 'biophysicalProperties', parents=['cell'], required_attrs=[('id', self.ncml_id)]):
             self.ncml = self.NCMLDescription(attrs['id'], self.cell_type_id, [], [], [], [], [], [], [], {})
         elif self._opening(tag_name, attrs, 'membraneProperties',
@@ -218,6 +220,10 @@ def read_MorphML(name, filename):
     handler = MorphMLHandler(name)
     parser.setContentHandler(handler)
     parser.parse(filename)
+    if not handler.found_cell_id:
+        raise Exception("Target cell id, '%s', was not found in given XML file '%s'" % (name, filename)) 
+    if not hasattr(handler,'morphology'):
+        raise Exception("'morphology' tag was not found in given XML file '%s'" % filename)        
     return handler.morphology
 
 
@@ -226,6 +232,10 @@ def read_NCML(name, filename):
     handler = NCMLHandler(name)
     parser.setContentHandler(handler)
     parser.parse(filename)
+    if not handler.found_cell_id:
+        raise Exception("Target cell id, '%s', was not found in given XML file '%s'" % (name, filename)) 
+    if not hasattr(handler,'ncml'):
+        raise Exception("'biophysicalProperties' tag was not found in given XML file '%s'" % filename)    
     return handler.ncml
 
 
