@@ -57,6 +57,8 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                 h.pt3dadd(seg.proximal.x, seg.proximal.y, seg.proximal.z, seg.proximal.diam,
                                                                                             sec=sec)
             h.pt3dadd(seg.distal.x, seg.distal.y, seg.distal.z, seg.distal.diam, sec=sec)
+            sec.diam = seg.distal.diam # FIXME: This should be handled by the pt3dadd I thought.
+            
         for seg in self.morphml_model.segments:
             if seg.parent:
                 self.segments[seg.id].connect(self.segments[seg.parent.id],
