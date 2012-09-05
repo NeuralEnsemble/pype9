@@ -20,7 +20,7 @@ import pyNN.models
 import ninemlp.common.ncml
 from ninemlp.utilities.nmodl import build as build_nnodl
 from ninemlp import BUILD_MODE
-import subprocess
+from copy import copy
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 
@@ -209,14 +209,36 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
         dct['__init__'] = __init__
         cell_type = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
         cell_type.model = cell_type
+        cls._validate_recordable(cell_type) #FIXME: This is a bit of a hack
         return cell_type
+    
+    @staticmethod
+    def _validate_recordable(cell_type):
+        """
+        This is a bit of a hack method, because I can't work out how to extract from the NMODL
+        files only the variables that are actually recordable, so I test them here and remove
+        the ones that don't work
+        
+        @param cell_type: The NCML cell class that needs its recordable variable validated
+        """
+        test_cell = cell_type()
+        test_seg = test_cell.source_section(0.5)
+        recordable = copy(cell_type.recordable)
+        for var in recordable:
+            # Check to see if the variable is part of the common recordables or is an attribute
+            # of the test segment. Also remove all reversal potentials (assumed to be all attributes
+            # starting with 'e') as they are unlikely to change.
+            if (var not in ninemlp.common.ncml.BaseNCMLMetaClass.COMMON_RECORDABLE and \
+                                            not hasattr(test_seg, var)) or var.startswith('e'):
+                cell_type.recordable.remove(var)
+        
     
     @classmethod
     def _construct_recordable(cls):
         """
         Constructs the dictionary of recordable parameters from the NCML model
         """
-        recordable = ninemlp.common.ncml.BaseNCMLMetaClass.COMMON_RECORDABLE
+        recordable = copy(ninemlp.common.ncml.BaseNCMLMetaClass.COMMON_RECORDABLE)
         mech_path = cls.dct['mech_path']
         variables = []
         mech_states = {}
@@ -265,6 +287,10 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
                         mech_states[mech_name].append(state)
                     else:
                         mech_states[mech_name] = [state]
+        # These didn't really work as I had hoped because there are a lot of mechanisms added to the 
+        # NMODL files that really shouldn't be, and they are not even accessible through pyNEURON
+        # anyway. So these are just included in the class out of interest more than anything 
+        # practical now.
         cls.dct['state_variables'] = variables
         cls.dct['mechanism_states'] = mech_states
         return recordable

@@ -80,15 +80,29 @@ class Population(pyNN.neuron.Population):
         else:
             return pyNN.neuron.Population.can_record(self, variable)
 
-    def record(self, variable, filename):
+    def record(self, variable, filename, section='soma', position=0.5):
         """
         Record spikes to a file. source can be an individual cell, a Population,
         PopulationView or Assembly.
         """
-        self._record(variable, to_file=filename)
+        if variable == 'spikes':
+            variable_str = variable
+        else:
+            variable_str = '{section}({position}).{variable}'.format(section=section, 
+                                                              position=position, variable=variable)
+        self._record(variable_str, to_file=filename)
         # recorder_list is used by end()
-        if self.recorders[variable] not in pyNN.neuron.simulator.recorder_list:
-            pyNN.neuron.simulator.recorder_list.append(self.recorders[variable])  # this is a bit hackish - better to add to Population.__del__?
+        if self.recorders[variable_str] not in pyNN.neuron.simulator.recorder_list:
+            pyNN.neuron.simulator.recorder_list.append(self.recorders[variable_str])  # this is a bit hackish - better to add to Population.__del__?
+
+    def record_all(self, file_prefix):
+        """
+        Records all available variables
+        
+        @param file_prefix: The file path prefix that the output files will be written to. Each file will be appended the post fix .<var-name>.
+        """
+        for var in self.celltype.recordable:
+            self.record(var, file_prefix + '.' + var)
 
 class Projection(pyNN.neuron.Projection):
 

@@ -271,7 +271,7 @@ class BaseNCMLMetaClass(type):
     Called by nineml_celltype_from_model
     """
     
-    COMMON_RECORDABLE = ['v', 'spikes', 'gsyn']
+    COMMON_RECORDABLE = ['v', 'spikes']
     
     def __new__(cls, name, bases, dct):
         # Retrieved parsed model (it is placed in dct to conform with
