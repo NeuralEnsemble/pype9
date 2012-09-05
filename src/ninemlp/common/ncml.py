@@ -276,21 +276,23 @@ class BaseNCMLMetaClass(type):
     def __new__(cls, name, bases, dct):
         # Retrieved parsed model (it is placed in dct to conform with
         # with the standard structure for the "__new__" function of metaclasses).
+        cls.name = name
+        cls.dct = dct
         ncml_model = dct['ncml_model']
-        dct["default_parameters"] = cls._construct_default_parameters(ncml_model)
-        dct["default_initial_values"] = cls._construct_initial_values(ncml_model)
-        dct["synapse_types"] = cls._construct_synapse_types(ncml_model)
+        dct["default_parameters"] = cls._construct_default_parameters()
+        dct["default_initial_values"] = cls._construct_initial_values()
+        dct["synapse_types"] = cls._construct_synapse_types()
         dct["standard_receptor_type"] = False
         dct["injectable"] = True
         dct["conductance_based"] = True
         dct["model_name"] = ncml_model.cell_type_id
-        dct["recordable"] = cls._construct_recordable(ncml_model)
-        dct["weight_variables"] = cls._construct_weight_variables(ncml_model)
-        dct["parameter_names"] = cls._construct_parameter_names(ncml_model)
+        dct["recordable"] = cls._construct_recordable()
+        dct["weight_variables"] = cls._construct_weight_variables()
+        dct["parameter_names"] = cls._construct_parameter_names()
         return super(BaseNCMLMetaClass, cls).__new__(cls, name, bases, dct)
 
-    @staticmethod
-    def _construct_default_parameters(ncml_model): #@UnusedVariable
+    @classmethod
+    def _construct_default_parameters(cls): #@UnusedVariable
         """
         Reads the default parameters in the NCML components and appends them to the parameters
         of the model class
@@ -320,10 +322,8 @@ class BaseNCMLMetaClass(type):
 #            default_params[_as_prefix(e_v.group_id) + e_v.species] = e_v.value
         return default_params
 
-
-
-    @staticmethod
-    def _construct_initial_values(ncml_model): #@UnusedVariable
+    @classmethod
+    def _construct_initial_values(cls): #@UnusedVariable
         """
         Constructs the default initial values dictionary of the cell class from the NCML model
         """
@@ -334,30 +334,31 @@ class BaseNCMLMetaClass(type):
         # this
         return initial_values
 
-    @staticmethod
-    def _construct_parameter_names(ncml_model):
+    @classmethod
+    def _construct_parameter_names(cls):
         """
         Constructs the parameter names list of the cell class from the NCML model
         """
         parameter_names = [] #TODO: implement this function
         return parameter_names
 
-    @staticmethod
-    def _construct_synapse_types(ncml_model):
+    @classmethod
+    def _construct_synapse_types(cls):
         """
         Constructs the dictionary of recordable parameters from the NCML model
         """
+        ncml_model = cls.dct['ncml_model']
         return [syn.id for syn in ncml_model.synapses]
 
-    @staticmethod
-    def _construct_recordable(ncml_model): #@UnusedVariable
+    @classmethod
+    def _construct_recordable(cls): #@UnusedVariable
         """
         Constructs the dictionary of recordable parameters from the NCML model
         """
         return BaseNCMLMetaClass.COMMON_RECORDABLE
 
-    @staticmethod
-    def _construct_weight_variables(ncml_model): #@UnusedVariable
+    @classmethod
+    def _construct_weight_variables(cls): #@UnusedVariable
         """
         Constructs the dictionary of weight variables from the NCML model
         """

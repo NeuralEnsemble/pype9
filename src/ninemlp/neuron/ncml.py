@@ -20,6 +20,7 @@ import pyNN.models
 import ninemlp.common.ncml
 from ninemlp.utilities.nmodl import build as build_nnodl
 from ninemlp import BUILD_MODE
+import subprocess
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 
@@ -210,12 +211,62 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
         cell_type.model = cell_type
         return cell_type
     
-    @staticmethod
-    def _construct_recordable(ncml_model):
+    @classmethod
+    def _construct_recordable(cls):
         """
         Constructs the dictionary of recordable parameters from the NCML model
         """
         recordable = ninemlp.common.ncml.BaseNCMLMetaClass.COMMON_RECORDABLE
+        mech_path = cls.dct['mech_path']
+        variables = []
+        mech_states = {}
+        for filename in os.listdir(mech_path):
+            split_filename = filename.split('.')
+            mech_id = '.'.join(split_filename[0:-1])
+            cell_name = mech_id.split('_')[0]
+            mech_name = '_'.join(mech_id.split('_')[1:])
+            ext = split_filename[-1]
+            if cell_name == cls.name and ext == 'mod':
+                mod_file_path = os.path.join(mech_path, filename)
+                try:
+                    mod_file = open(mod_file_path)
+                except:
+                    raise Exception('Could not open mod file %s for inspection' % mod_file_path)
+                in_assigned_block = False
+                in_state_block = False                
+                assigned = []
+                states = []
+                for line in mod_file:
+                    if 'STATE' in line:
+                        in_state_block = True
+                    elif 'ASSIGNED' in line:
+                        in_assigned_block = True
+                    elif in_assigned_block:
+                        if '}' in line:
+                            in_assigned_block = False
+                        else:
+                            var = line.strip()
+                            if var:
+                                assigned.append(var)
+                    elif in_state_block:
+                        if '}' in line:
+                            in_state_block = False
+                        else:
+                            state = line.strip()
+                            if state:
+                                states.append(state)
+                for var in assigned:
+                    if var not in recordable:
+                        recordable.append(var)
+                        variables.append(var)
+                for state in states:
+                    recordable.append(mech_name + "::" + state)
+                    if mech_states.has_key(mech_name):
+                        mech_states[mech_name].append(state)
+                    else:
+                        mech_states[mech_name] = [state]
+        cls.dct['state_variables'] = variables
+        cls.dct['mechanism_states'] = mech_states
         return recordable
 
 
@@ -231,10 +282,6 @@ def load_cell_type(name, path_to_xml_file, build_mode=BUILD_MODE):
     dct['mech_path'] = mech_path
     return NCMLMetaClass(str(name), (pyNN.models.BaseCellType, NCMLCell), dct)
 
-def extract_recordables(mech_path):
-    for mod_file in os.listdir(mech_path):
-        if mod_file.split('.')[-1] == 'mod':
-            pass
 
 if __name__ == "__main__":
     import pprint
