@@ -209,6 +209,14 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
         cell_type = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
         cell_type.model = cell_type
         return cell_type
+    
+    @staticmethod
+    def _construct_recordable(ncml_model):
+        """
+        Constructs the dictionary of recordable parameters from the NCML model
+        """
+        recordable = ninemlp.common.ncml.BaseNCMLMetaClass.COMMON_RECORDABLE
+        return recordable
 
 
 def load_cell_type(name, path_to_xml_file, build_mode=BUILD_MODE):
@@ -220,8 +228,13 @@ def load_cell_type(name, path_to_xml_file, build_mode=BUILD_MODE):
         build_nnodl(mech_path, build_mode=build_mode)
         load_mechanisms(mech_path)
         loaded_mech_paths.append(mech_path)
+    dct['mech_path'] = mech_path
     return NCMLMetaClass(str(name), (pyNN.models.BaseCellType, NCMLCell), dct)
 
+def extract_recordables(mech_path):
+    for mod_file in os.listdir(mech_path):
+        if mod_file.split('.')[-1] == 'mod':
+            pass
 
 if __name__ == "__main__":
     import pprint

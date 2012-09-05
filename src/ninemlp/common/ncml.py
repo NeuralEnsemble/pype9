@@ -270,6 +270,9 @@ class BaseNCMLMetaClass(type):
     Metaclass for building NineMLCellType subclasses
     Called by nineml_celltype_from_model
     """
+    
+    COMMON_RECORDABLE = ['v', 'spikes', 'gsyn']
+    
     def __new__(cls, name, bases, dct):
         # Retrieved parsed model (it is placed in dct to conform with
         # with the standard structure for the "__new__" function of metaclasses).
@@ -351,10 +354,7 @@ class BaseNCMLMetaClass(type):
         """
         Constructs the dictionary of recordable parameters from the NCML model
         """
-        #FIXME: Should be read from the NCML file, the only problem being that the 
-        #       current pyNN.neuron.Recording._native_record does not support the passing of 
-        #       mechanism in the variable parameter.
-        return ['v', 'spikes', 'gsyn']
+        return BaseNCMLMetaClass.COMMON_RECORDABLE
 
     @staticmethod
     def _construct_weight_variables(ncml_model): #@UnusedVariable
