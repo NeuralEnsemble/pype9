@@ -70,9 +70,9 @@ class Population(pyNN.neuron.Population):
                 if parts.has_key('position'): # Check to see if the position is between 0-1
                     pos = float(parts['position'])
                     if pos < 0.0 or pos > 1.0:
-                        return False
+                        raise Exception("Position parameter in recording string, %f, is out of range (0.0-1.0)" % pos)
                 if parts['section']: # Check to see if section exists
-                    if parts['section'] not in [seg.id for seg in self.celltype.ncml_model.segments]:
+                    if parts['section'] not in [seg.id for seg in self.celltype.morphml_model.segments]:
                         return False
                 return True
             else:
@@ -80,7 +80,15 @@ class Population(pyNN.neuron.Population):
         else:
             return pyNN.neuron.Population.can_record(self, variable)
 
-
+    def record(self, variable, filename):
+        """
+        Record spikes to a file. source can be an individual cell, a Population,
+        PopulationView or Assembly.
+        """
+        self._record(variable, to_file=filename)
+        # recorder_list is used by end()
+        if self.recorders[variable] not in pyNN.neuron.simulator.recorder_list:
+            pyNN.neuron.simulator.recorder_list.append(self.recorders[variable])  # this is a bit hackish - better to add to Population.__del__?
 
 class Projection(pyNN.neuron.Projection):
 
