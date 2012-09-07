@@ -74,7 +74,7 @@ class XMLHandler(xml.sax.handler.ContentHandler):
 
 class NetworkMLHandler(XMLHandler):
 
-    Network = collections.namedtuple('Network', 'id populations projections')
+    Network = collections.namedtuple('Network', 'id params populations projections')
     Population = collections.namedtuple('Population', 'id cell_type size layout cell_params')
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay')
     Layout = collections.namedtuple('Layout', 'type args')
@@ -91,7 +91,11 @@ class NetworkMLHandler(XMLHandler):
 
     def startElement(self, tag_name, attrs):
         if self._opening(tag_name, attrs, 'network'):
-            self.network = self.Network(attrs['id'], [], [])
+            self.network = self.Network(attrs['id'], {}, [], [])
+        elif self._opening(tag_name, attrs, 'networkParams', parents=['network']):
+            pass
+        elif self._opening(tag_name, attrs, 'temperature', parents=['networkParams']):
+            self.network.params['temperature'] = float(attrs['value'])
         elif self._opening(tag_name, attrs, 'population', parents=['network']):
             self.pop_id = attrs['id']
             self.pop_cell = attrs['cell']
@@ -103,8 +107,7 @@ class NetworkMLHandler(XMLHandler):
                 raise Exception("The layout is specified twice in population '%s'" % self.pop_id)
             args = dict(attrs)
             layout_type = args.pop('type')
-            self.pop_layout = self.Layout(layout_type,
-                                          args)
+            self.pop_layout = self.Layout(layout_type, args)
         elif self._opening(tag_name, attrs, 'constant', parents=['population', 'cellParameters']):
             self.pop_cell_params.constants[attrs['name']] = attrs['value']
         elif self._opening(tag_name, attrs, 'distribution', parents=['population', 'cellParameters']):
@@ -193,6 +196,8 @@ def read_networkML(filename):
 
 class Network(object):
 
+    TEMPERATURE_DEFAULT = 23.0
+
     def __init__(self, filename, build_mode=BUILD_MODE):
         assert  hasattr(self, "_pyNN_module") and \
                 hasattr(self, "_ncml_module") and \
@@ -202,16 +207,16 @@ class Network(object):
         self.load_network(filename, build_mode=build_mode)
 
     def load_network(self, filename, build_mode=BUILD_MODE, verbose=False):
-        parsed_network = read_networkML(filename)
+        self.networkML = read_networkML(filename)
         dirname = os.path.dirname(filename)
         self.cells_dir = os.path.join(dirname, RELATIVE_NCML_DIR)
         self.pop_dir = os.path.join(dirname, RELATIVE_BREP_DIR, 'build', 'populations')
         self.proj_dir = os.path.join(dirname, RELATIVE_BREP_DIR, 'build', 'projections')
         self.build_mode = build_mode
-        self.label = parsed_network.id
+        self.label = self.networkML.id
         self._populations = {}
         self._projections = {}
-        for pop in parsed_network.populations:
+        for pop in self.networkML.populations:
             self._populations[pop.id] = self._create_population(pop.id,
                                                                 pop.size,
                                                                 pop.cell_type,
@@ -219,7 +224,7 @@ class Network(object):
                                                                 pop.cell_params.constants,
                                                                 pop.cell_params.distributions,
                                                                 verbose)
-        for proj in parsed_network.projections:
+        for proj in self.networkML.projections:
             self._projections[proj.id] = self._create_projection(proj.id,
                                                                  self._populations[proj.pre.pop_id],
                                                                  self._populations[proj.post.pop_id],
@@ -327,18 +332,18 @@ class Network(object):
                 if self.build_mode != 'compile_only':
                     connection_matrix = numpy.loadtxt(os.path.join(self.proj_dir, connection.args['id']))
                 else:
-                    connection_matrix = numpy.ones((1,4))
+                    connection_matrix = numpy.ones((1, 4))
                 if weight:
                     connection_matrix[:, 2] = self._convert_units(weight)
                 if delay:
                     connection_matrix[:, 3] = self._convert_units(delay)
-                delays = connection_matrix[:,3] # Get view onto delays in connection matrix for readability
+                delays = connection_matrix[:, 3] # Get view onto delays in connection matrix for readability
                 below_min_indices = numpy.where(delays < self.get_min_delay())
                 if len(below_min_indices):
                     if verbose:
                         warnings.warn("%d out of %d connections are below the minimum delay in \
                                         projection '%s'. They will be bounded to the minimum delay \
-                                        (%d)" % (len(below_min_indices), len(delays), label), 
+                                        (%d)" % (len(below_min_indices), len(delays), label),
                                                                                self.get_min_delay())
                     delays[below_min_indices] = self.get_min_delay() # Bound loaded delays by specified minimum delay
                 connector = self._pyNN_module.connectors.FromListConnector(connection_matrix)

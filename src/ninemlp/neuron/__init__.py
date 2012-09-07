@@ -28,6 +28,7 @@ from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time,
 import pyNN.neuron as sim
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator
+import neuron
 
 get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(pyNN.neuron.simulator)
 
@@ -125,6 +126,10 @@ class Network(ninemlp.common.Network):
         self.get_min_delay = get_min_delay
         #Call the base function initialisation function.
         ninemlp.common.Network.__init__(self, filename, build_mode=build_mode)
+        if self.networkML.params.has_key('temperature'):
+            neuron.h.celsius = self.networkML.params['temperature']
+        else:
+            neuron.h.celsius = ninemlp.common.Network.TEMPERATURE_DEFAULT
 
     def _convert_units(self, value_str, units=None):
         if ' ' in value_str:
