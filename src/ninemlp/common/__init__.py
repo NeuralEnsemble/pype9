@@ -71,10 +71,9 @@ class XMLHandler(xml.sax.handler.ContentHandler):
             return False
 
 
-
 class NetworkMLHandler(XMLHandler):
 
-    Network = collections.namedtuple('Network', 'id params populations projections')
+    Network = collections.namedtuple('Network', 'id sim_params populations projections')
     Population = collections.namedtuple('Population', 'id cell_type size layout cell_params')
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay')
     Layout = collections.namedtuple('Layout', 'type args')
@@ -92,10 +91,10 @@ class NetworkMLHandler(XMLHandler):
     def startElement(self, tag_name, attrs):
         if self._opening(tag_name, attrs, 'network'):
             self.network = self.Network(attrs['id'], {}, [], [])
-        elif self._opening(tag_name, attrs, 'networkParams', parents=['network']):
+        elif self._opening(tag_name, attrs, 'defaultSimulationParams', parents=['network']):
             pass
         elif self._opening(tag_name, attrs, 'temperature', parents=['networkParams']):
-            self.network.params['temperature'] = float(attrs['value'])
+            self.network.sim_params['temperature'] = float(attrs['value'])
         elif self._opening(tag_name, attrs, 'population', parents=['network']):
             self.pop_id = attrs['id']
             self.pop_cell = attrs['cell']
@@ -195,8 +194,6 @@ def read_networkML(filename):
 
 
 class Network(object):
-
-    TEMPERATURE_DEFAULT = 23.0
 
     def __init__(self, filename, build_mode=BUILD_MODE):
         assert  hasattr(self, "_pyNN_module") and \
@@ -411,6 +408,11 @@ class Network(object):
 
     def all_projections(self):
         return self._projections.values()
+
+    def setup_simulation(self, temperature=None):
+        """
+        Sets up the simulation using the default parameters loaded from the network description
+        """
 
 if __name__ == "__main__":
 

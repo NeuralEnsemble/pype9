@@ -126,8 +126,8 @@ class Network(ninemlp.common.Network):
         self.get_min_delay = get_min_delay
         #Call the base function initialisation function.
         ninemlp.common.Network.__init__(self, filename, build_mode=build_mode)
-        if self.networkML.params.has_key('temperature'):
-            neuron.h.celsius = self.networkML.params['temperature']
+        if self.networkML.sim_params.has_key('temperature'):
+            neuron.h.celsius = self.networkML.sim_params['temperature']
         else:
             neuron.h.celsius = ninemlp.common.Network.TEMPERATURE_DEFAULT
 
