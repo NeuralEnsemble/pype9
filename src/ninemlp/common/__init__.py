@@ -92,10 +92,16 @@ class NetworkMLHandler(XMLHandler):
     def startElement(self, tag_name, attrs):
         if self._opening(tag_name, attrs, 'network'):
             self.network = self.Network(attrs['id'], {}, [], [])
-        elif self._opening(tag_name, attrs, 'defaultSimulationParams', parents=['network']):
+        elif self._opening(tag_name, attrs, 'simulationParams', parents=['network']):
             pass
-        elif self._opening(tag_name, attrs, 'temperature', parents=['networkParams']):
+        elif self._opening(tag_name, attrs, 'temperature', parents=['simulationParams']):
             self.network.sim_params['temperature'] = float(attrs['value'])
+        elif self._opening(tag_name, attrs, 'timeStep', parents=['simulationParams']):
+            self.network.sim_params['timestep'] = float(attrs['value'])
+        elif self._opening(tag_name, attrs, 'minDelay', parents=['simulationParams']):
+            self.network.sim_params['min_delay'] = float(attrs['value'])
+        elif self._opening(tag_name, attrs, 'maxDelay', parents=['simulationParams']):
+            self.network.sim_params['max_delay'] = float(attrs['value'])                                    
         elif self._opening(tag_name, attrs, 'population', parents=['network']):
             self.pop_id = attrs['id']
             self.pop_cell = attrs['cell']
@@ -196,16 +202,20 @@ def read_networkML(filename):
 
 class Network(object):
 
-    def __init__(self, filename, build_mode=_BUILD_MODE):
+    def __init__(self, filename, build_mode=_BUILD_MODE, timestep=None, 
+                                                min_delay=None, max_delay=None, temperature=None):
         assert  hasattr(self, "_pyNN_module") and \
                 hasattr(self, "_ncml_module") and \
                 hasattr(self, "_Population_class") and \
                 hasattr(self, "_Projection_class") and \
                 hasattr(self, "get_min_delay")
-        self.load_network(filename, build_mode=build_mode)
+        self.load_network(filename, build_mode=build_mode, timestep=timestep, 
+                                  min_delay=min_delay, max_delay=max_delay, temperature=temperature)
 
-    def load_network(self, filename, build_mode=_BUILD_MODE, verbose=False):
+    def load_network(self, filename, build_mode=_BUILD_MODE, verbose=False, timestep=None, 
+                                                min_delay=None, max_delay=None, temperature=None):
         self.networkML = read_networkML(filename)
+        self._set_default_simulation_params(timestep, min_delay, max_delay, temperature)
         dirname = os.path.dirname(filename)
         self.cells_dir = os.path.join(dirname, RELATIVE_NCML_DIR)
         self.pop_dir = os.path.join(dirname, RELATIVE_BREP_DIR, 'build', 'populations')
@@ -441,7 +451,7 @@ class Population(object):
         @param start_time: Start time of the stimulation
         @param end_time: The end time of the stimulation.
         """
-        if self.get_cell_type().__name__.split('.') != 'SpikeSourceArray':
+        if self.get_cell_type().__name__ != 'SpikeSourceArray':
             raise Exception("'set_poisson_spikes' method can only be used for 'SpikeSourceArray' populations.")
         mean_interval = 1000 / rate # Convert from Hz to ms
         stim_range = end_time - start_time

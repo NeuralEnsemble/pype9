@@ -124,10 +124,10 @@ class Network(ninemlp.common.Network):
         self._ncml_module = ncml
         self._Population_class = Population
         self._Projection_class = Projection
-        self._set_default_simulation_params(timestep, min_delay, max_delay, temperature)
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         #Call the base function initialisation function.
-        ninemlp.common.Network.__init__(self, filename, build_mode=build_mode)
+        ninemlp.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep, 
+                                  min_delay=min_delay, max_delay=max_delay, temperature=temperature)
 
     def _convert_units(self, value_str, units=None):
         if ' ' in value_str:
@@ -186,7 +186,7 @@ class Network(ninemlp.common.Network):
                 max_delay = self.networkML.sim_params['max_delay']
             else:
                 raise Exception("'max_delay' parameter was not specified either in Network initialisation or NetworkML specification")
-        setup(timestep, min_delay, max_delay, temperature)
+        setup(timestep, min_delay, max_delay)
         if not temperature:
             if self.networkML.sim_params.has_key('temperature'):
                 temperature = self.networkML.sim_params['temperature']
@@ -211,7 +211,7 @@ class Network(ninemlp.common.Network):
         @param filename: The prefix for every population files before the popluation name. The suffix '.spikes' will be appended to the filenames as well.
         """
         for pop in self.all_populations():
-            pop.record(file_prefix + '.' + pop.label + '.spikes') #@UndefinedVariable
+            pop.record('spikes', file_prefix + '.' + pop.label + '.spikes') #@UndefinedVariable
 
 if __name__ == "__main__":
 
