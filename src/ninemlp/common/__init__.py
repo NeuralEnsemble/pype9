@@ -16,10 +16,11 @@ import numpy
 import collections
 import xml.sax
 import os.path
-from ninemlp import BUILD_MODE
+from ninemlp import _BUILD_MODE
 import geometry
 import pyNN.connectors
 import warnings
+import math
 
 ## The location relative to the NINEML-Network file to look for the folder containing the cell descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
 RELATIVE_NCML_DIR = "./ncml"
@@ -195,7 +196,7 @@ def read_networkML(filename):
 
 class Network(object):
 
-    def __init__(self, filename, build_mode=BUILD_MODE):
+    def __init__(self, filename, build_mode=_BUILD_MODE):
         assert  hasattr(self, "_pyNN_module") and \
                 hasattr(self, "_ncml_module") and \
                 hasattr(self, "_Population_class") and \
@@ -203,7 +204,7 @@ class Network(object):
                 hasattr(self, "get_min_delay")
         self.load_network(filename, build_mode=build_mode)
 
-    def load_network(self, filename, build_mode=BUILD_MODE, verbose=False):
+    def load_network(self, filename, build_mode=_BUILD_MODE, verbose=False):
         self.networkML = read_networkML(filename)
         dirname = os.path.dirname(filename)
         self.cells_dir = os.path.join(dirname, RELATIVE_NCML_DIR)
@@ -409,10 +410,58 @@ class Network(object):
     def all_projections(self):
         return self._projections.values()
 
-    def setup_simulation(self, temperature=None):
+    def describe(self):
         """
-        Sets up the simulation using the default parameters loaded from the network description
+        Describes all populations and projections within the network
         """
+        print "Populations:"
+        for pop in self.all_populations():
+            print pop.describe()
+        
+        print "Projections:"
+        for proj in self.all_projections():
+            print proj.describe()
+            
+    def save_connections(self, output_dir):
+        """
+        Saves generated connections to output directory
+        
+        @param output_dir:
+        """
+        for proj in self.all_projections():
+            proj.saveConnections(os.path.join(output_dir, proj.label))
+
+class Population(object):
+    
+    def set_poisson_spikes(self, rate, start_time, end_time):
+        """
+        Sets up a train of poisson spike times for a SpikeSourceArray population
+        
+        @param rate: Rate of the poisson spike train
+        @param start_time: Start time of the stimulation
+        @param end_time: The end time of the stimulation.
+        """
+        if self.get_cell_type().__name__.split('.') != 'SpikeSourceArray':
+            raise Exception("'set_poisson_spikes' method can only be used for 'SpikeSourceArray' populations.")
+        mean_interval = 1000 / rate # Convert from Hz to ms
+        stim_range = end_time - start_time
+        if stim_range >= 0.0:
+            estimated_num_spikes = stim_range / mean_interval
+            estimated_num_spikes = int(estimated_num_spikes + math.exp(-estimated_num_spikes / 10.0) * 10.0) # Add extra spikes to make sure spike train doesn't stop short
+            spike_intervals = numpy.random.exponential(mean_interval, size=(self.size, estimated_num_spikes))
+            spike_times = numpy.cumsum(spike_intervals, axis=1) + start_time
+            # FIXME: Should ensure that spike times don't exceed 'end_time' and make it at least until then.
+            self.tset('spike_times', spike_times)
+        else:
+            print "Warning, stimulation start time (%f) is after stimulation end time (%f)" % \
+                                                                            (start_time, end_time)
+
+    def get_cell_type(self):
+        """
+        Returns the cell type of the population
+        """
+        return type(self.celltype)
+        
 
 if __name__ == "__main__":
 

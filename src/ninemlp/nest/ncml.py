@@ -17,7 +17,7 @@ import os.path
 import nest
 import pyNN.nest
 from ninemlp.common.ncml import BaseNCMLCell, BaseNCMLMetaClass
-from ninemlp import BUILD_MODE
+from ninemlp import _BUILD_MODE
 
 installed_modules = []
 
@@ -39,7 +39,7 @@ class NCMLCell(BaseNCMLCell, pyNN.nest.NativeCellType):
         # Initialisation of member states goes here        
         pass
 
-def load_cell_type(cell_typename, nineml_dir, build_mode=BUILD_MODE):
+def load_cell_type(cell_typename, nineml_dir, build_mode=_BUILD_MODE):
     load_module(os.path.join(nineml_dir, RELATIVE_NMODL_DIR, cell_typename))
     cell_type = type(cell_typename, (pyNN.nest.NativeCellType, NCMLCell,),
                                                         {'nest_model' : cell_typename})

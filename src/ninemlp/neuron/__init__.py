@@ -15,9 +15,9 @@
 
 import os
 import numpy
-from ninemlp import SRC_PATH, BUILD_MODE
+from ninemlp import SRC_PATH, _BUILD_MODE
 from ninemlp.utilities.nmodl import build as build_nmodl
-build_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=BUILD_MODE)
+build_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=_BUILD_MODE)
 import pyNN.neuron.standardmodels.cells
 import pyNN.neuron.connectors
 import pyNN.neuron.recording
@@ -32,9 +32,9 @@ import neuron
 
 get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(pyNN.neuron.simulator)
 
-class Population(pyNN.neuron.Population):
+class Population(ninemlp.common.Population, pyNN.neuron.Population):
 
-    def __init__(self, label, size, cell_type, params={}, build_mode=BUILD_MODE):
+    def __init__(self, label, size, cell_type, params={}, build_mode=_BUILD_MODE):
         """
         Initialises the population after reading the population parameters from file
         @param label: the label assigned to the population (its NINEML id)
@@ -107,7 +107,7 @@ class Population(pyNN.neuron.Population):
 
 class Projection(pyNN.neuron.Projection):
 
-    def __init__(self, pre, dest, label, connector, source=None, target=None, build_mode=BUILD_MODE):
+    def __init__(self, pre, dest, label, connector, source=None, target=None, build_mode=_BUILD_MODE):
         self.label = label
         if build_mode == 'compile_only':
             print "Warning! '--compile' option was set to 'compile_only', meaning the projection '%s' was not constructed." % label
@@ -118,18 +118,16 @@ class Projection(pyNN.neuron.Projection):
 
 class Network(ninemlp.common.Network):
 
-    def __init__(self, filename, build_mode=BUILD_MODE):
+    def __init__(self, filename, build_mode=_BUILD_MODE, timestep=None, min_delay=None, 
+                                                                 max_delay=None, temperature=None):
         self._pyNN_module = pyNN.neuron
         self._ncml_module = ncml
         self._Population_class = Population
         self._Projection_class = Projection
-        self.get_min_delay = get_min_delay
+        self._set_default_simulation_params(timestep, min_delay, max_delay, temperature)
+        self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         #Call the base function initialisation function.
         ninemlp.common.Network.__init__(self, filename, build_mode=build_mode)
-        if self.networkML.sim_params.has_key('temperature'):
-            neuron.h.celsius = self.networkML.sim_params['temperature']
-        else:
-            neuron.h.celsius = ninemlp.common.Network.TEMPERATURE_DEFAULT
 
     def _convert_units(self, value_str, units=None):
         if ' ' in value_str:
@@ -171,6 +169,32 @@ class Network(ninemlp.common.Network):
             raise Exception("Unrecognised units '%s'" % units)
 
 
+    def _set_default_simulation_params(self, timestep=None, min_delay=None, max_delay=None, temperature=None):      
+
+        if not timestep:
+            if self.networkML.sim_params.has_key('timestep'):
+                timestep = self.networkML.sim_params['timestep']
+            else:
+                raise Exception("'timestep' parameter was not specified either in Network initialisation or NetworkML specification")
+        if not min_delay:
+            if self.networkML.sim_params.has_key('min_delay'):
+                min_delay = self.networkML.sim_params['min_delay']
+            else:
+                raise Exception("'min_delay' parameter was not specified either in Network initialisation or NetworkML specification")
+        if not max_delay:
+            if self.networkML.sim_params.has_key('max_delay'):
+                max_delay = self.networkML.sim_params['max_delay']
+            else:
+                raise Exception("'max_delay' parameter was not specified either in Network initialisation or NetworkML specification")
+        setup(timestep, min_delay, max_delay, temperature)
+        if not temperature:
+            if self.networkML.sim_params.has_key('temperature'):
+                temperature = self.networkML.sim_params['temperature']
+            else:
+                raise Exception("'temperature' parameter was not specified either in Network initialisation or NetworkML specification")
+        neuron.h.celsius = temperature
+        
+
     def _get_target_str(self, synapse, segment=None):
         # FIXME: This should probably not be hard-coded like this as it this is
         # a id specified by the "user". Maybe should be included in the NINEML
@@ -180,6 +204,14 @@ class Network(ninemlp.common.Network):
             segment = "soma"
         return segment + "." + synapse
 
+    def record_all_spikes(self, file_prefix):
+        """
+        Record all spikes generated in the network
+        
+        @param filename: The prefix for every population files before the popluation name. The suffix '.spikes' will be appended to the filenames as well.
+        """
+        for pop in self.all_populations():
+            pop.record(file_prefix + '.' + pop.label + '.spikes') #@UndefinedVariable
 
 if __name__ == "__main__":
 

@@ -30,10 +30,22 @@ if SRC_PATH_ENV_NAME in os.environ: # NINEMLP_SRC_PATH has been set as an enviro
 else: # Otherwise determine from path to this module
     SRC_PATH = os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
 
+def set_build_mode(build_mode):
+    """
+    Sets the build mode for the whole system (including pyNN components) 
+    """
+    if build_mode != 'lazy' and build_mode != 'compile_only' and build_mode != 'force':
+        raise Exception("Unrecognised build mode '%s' (valid options are 'lazy', 'compile_only' or 'force')" % build_mode)
+    _BUILD_MODE = build_mode
+    
+def get_build_mode():
+    return _BUILD_MODE
+
 if BUILD_MODE_NAME in os.environ:
-    BUILD_MODE = os.environ[BUILD_MODE_NAME]
+    _BUILD_MODE = set_build_mode(os.environ[BUILD_MODE_NAME])
 else:
-    BUILD_MODE = 'lazy'
+    _BUILD_MODE = 'lazy'
 
 if MPI_NAME in os.environ:
     import mpi4py #@UnresolvedImport
+

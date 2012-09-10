@@ -19,7 +19,7 @@ import pyNN.nest.standardmodels.cells
 import pyNN.nest.connectors
 import ninemlp.common.brep
 import ncml
-from ninemlp import BUILD_MODE
+from ninemlp import _BUILD_MODE
 from pyNN.nest import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, get_max_delay, rank, num_processes
 from pyNN.common.control import build_state_queries
 import pyNN.nest.simulator
@@ -30,7 +30,7 @@ RELATIVE_BREP_BUILD_DIR = './build'
 
 class Population(pyNN.nest.Population):
 
-    def __init__(self, label, size, cell_type, params={}, build_mode=BUILD_MODE):
+    def __init__(self, label, size, cell_type, params={}, build_mode=_BUILD_MODE):
         """
         Initialises the population after reading the population parameters from file
         """
@@ -48,7 +48,7 @@ class Population(pyNN.nest.Population):
 
 class Projection(pyNN.nest.Projection):
 
-    def __init__(self, pre, dest, label, connector, source=None, target=None, build_mode=BUILD_MODE):
+    def __init__(self, pre, dest, label, connector, source=None, target=None, build_mode=_BUILD_MODE):
         self.label = label
         if build_mode == 'compile_only':
             print "Warning! '--compile' option was set to 'compile_only', meaning the projection '%s' was not constructed." % label
@@ -59,7 +59,7 @@ class Projection(pyNN.nest.Projection):
 
 class Network(ninemlp.common.Network):
 
-    def __init__(self, filename, cell_search_path, build_mode=BUILD_MODE):
+    def __init__(self, filename, cell_search_path, build_mode=_BUILD_MODE):
         self._pyNN_module = pyNN.nest
         self._ncml_module = ncml
         self._Population_class = Population
