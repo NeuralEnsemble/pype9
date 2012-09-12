@@ -16,7 +16,7 @@ import numpy
 import collections
 import xml.sax
 import os.path
-from ninemlp import _BUILD_MODE
+from ninemlp import DEFAULT_BUILD_MODE
 import geometry
 import pyNN.connectors
 import warnings
@@ -202,7 +202,7 @@ def read_networkML(filename):
 
 class Network(object):
 
-    def __init__(self, filename, build_mode=_BUILD_MODE, timestep=None, 
+    def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, 
                                                 min_delay=None, max_delay=None, temperature=None):
         assert  hasattr(self, "_pyNN_module") and \
                 hasattr(self, "_ncml_module") and \
@@ -212,7 +212,7 @@ class Network(object):
         self.load_network(filename, build_mode=build_mode, timestep=timestep, 
                                   min_delay=min_delay, max_delay=max_delay, temperature=temperature)
 
-    def load_network(self, filename, build_mode=_BUILD_MODE, verbose=False, timestep=None, 
+    def load_network(self, filename, build_mode=DEFAULT_BUILD_MODE, verbose=False, timestep=None, 
                                                 min_delay=None, max_delay=None, temperature=None):
         self.networkML = read_networkML(filename)
         self._set_default_simulation_params(timestep, min_delay, max_delay, temperature)

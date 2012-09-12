@@ -19,7 +19,7 @@ from neuron import h, nrn, load_mechanisms
 import pyNN.models
 import ninemlp.common.ncml
 from ninemlp.utilities.nmodl import build as build_nmodl
-from ninemlp import _BUILD_MODE
+from ninemlp import DEFAULT_BUILD_MODE
 from copy import copy
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
@@ -296,7 +296,7 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
         return recordable
 
 
-def load_cell_type(name, path_to_xml_file, build_mode=_BUILD_MODE):
+def load_cell_type(name, path_to_xml_file, build_mode=DEFAULT_BUILD_MODE):
     dct = {}
     dct['ncml_model'] = ninemlp.common.ncml.read_NCML(name, path_to_xml_file)
     dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(name, path_to_xml_file)

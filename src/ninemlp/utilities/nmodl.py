@@ -16,7 +16,7 @@ import os.path
 import shutil
 import platform
 import subprocess
-from ninemlp import _BUILD_MODE
+from ninemlp import DEFAULT_BUILD_MODE
 
 BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
 
@@ -26,7 +26,7 @@ else:
     # I apologise for this hack (this is the path on my machine, to save me having to set the environment variable in eclipse)
     os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin' 
 
-def build (model_dir, build_mode=_BUILD_MODE, verbose=True):
+def build (model_dir, build_mode=DEFAULT_BUILD_MODE, verbose=True):
     """
     Builds all NMODL files in a directory
     @param model_dir: The path of the directory to build

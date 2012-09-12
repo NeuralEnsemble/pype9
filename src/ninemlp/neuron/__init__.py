@@ -15,9 +15,9 @@
 
 import os
 import numpy
-from ninemlp import SRC_PATH, _BUILD_MODE
+from ninemlp import SRC_PATH, DEFAULT_BUILD_MODE
 from ninemlp.utilities.nmodl import build as build_nmodl
-build_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=_BUILD_MODE)
+build_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=DEFAULT_BUILD_MODE)
 import pyNN.neuron.standardmodels.cells
 import pyNN.neuron.connectors
 import pyNN.neuron.recording
@@ -34,7 +34,7 @@ get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, ra
 
 class Population(ninemlp.common.Population, pyNN.neuron.Population):
 
-    def __init__(self, label, size, cell_type, params={}, build_mode=_BUILD_MODE):
+    def __init__(self, label, size, cell_type, params={}, build_mode=DEFAULT_BUILD_MODE):
         """
         Initialises the population after reading the population parameters from file
         @param label: the label assigned to the population (its NINEML id)
@@ -107,7 +107,7 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
 
 class Projection(pyNN.neuron.Projection):
 
-    def __init__(self, pre, dest, label, connector, source=None, target=None, build_mode=_BUILD_MODE):
+    def __init__(self, pre, dest, label, connector, source=None, target=None, build_mode=DEFAULT_BUILD_MODE):
         self.label = label
         if build_mode == 'compile_only':
             print "Warning! '--compile' option was set to 'compile_only', meaning the projection '%s' was not constructed." % label
@@ -118,7 +118,7 @@ class Projection(pyNN.neuron.Projection):
 
 class Network(ninemlp.common.Network):
 
-    def __init__(self, filename, build_mode=_BUILD_MODE, timestep=None, min_delay=None, 
+    def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None, 
                                                                  max_delay=None, temperature=None):
         self._pyNN_module = pyNN.neuron
         self._ncml_module = ncml
