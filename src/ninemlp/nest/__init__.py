@@ -20,7 +20,7 @@ import pyNN.nest.connectors
 import ninemlp.common.brep
 import ncml
 from ninemlp import _BUILD_MODE
-from pyNN.nest import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, get_max_delay, rank, num_processes
+from pyNN.nest import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, get_max_delay, rank, num_processes, StepCurrentSource, ACSource, DCSource, NoisyCurrentSource
 from pyNN.common.control import build_state_queries
 import pyNN.nest.simulator
 

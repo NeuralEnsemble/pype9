@@ -24,7 +24,7 @@ import pyNN.neuron.recording
 import ninemlp.common
 import ninemlp.common.geometry
 import ncml
-from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, get_max_delay, rank, num_processes, record, record_v, record_gsyn
+from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, get_max_delay, rank, num_processes, record, record_v, record_gsyn, StepCurrentSource, ACSource, DCSource, NoisyCurrentSource
 import pyNN.neuron as sim
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator
