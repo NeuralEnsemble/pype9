@@ -18,7 +18,7 @@ import os.path
 from neuron import h, nrn, load_mechanisms
 import pyNN.models
 import ninemlp.common.ncml
-from ninemlp.utilities.nmodl import build as build_nnodl
+from ninemlp.utilities.nmodl import build as build_nmodl
 from ninemlp import _BUILD_MODE
 from copy import copy
 
@@ -302,7 +302,7 @@ def load_cell_type(name, path_to_xml_file, build_mode=_BUILD_MODE):
     dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(name, path_to_xml_file)
     mech_path = str(os.path.join(os.path.dirname(path_to_xml_file), RELATIVE_NMODL_DIR))
     if mech_path not in loaded_mech_paths:
-        build_nnodl(mech_path, build_mode=build_mode)
+        build_nmodl(mech_path, build_mode=build_mode)
         load_mechanisms(mech_path)
         loaded_mech_paths.append(mech_path)
     dct['mech_path'] = mech_path
