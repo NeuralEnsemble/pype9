@@ -46,7 +46,8 @@ def build (model_dir, build_mode=DEFAULT_BUILD_MODE, verbose=True):
                 found_lib = True
             else:
                 shutil.rmtree(path, ignore_errors=True)
-
+    print "build_mode: " + build_mode
+    print "found_lib: " + str(found_lib)
     if not found_lib:
         if build_mode == 'require':
             raise Exception("The required NMODL binaries were not found in directory '%s' (change the build mode from 'require' any of 'lazy', 'compile_only', or 'force' in order to compile them)." % model_dir)
@@ -76,9 +77,3 @@ def build (model_dir, build_mode=DEFAULT_BUILD_MODE, verbose=True):
     elif verbose:
         print "Found existing mechanisms in '%s' directory, compile skipped (set 'build_mode' argument to 'force' enforce recompilation them)." % model_dir
     os.chdir(orig_dir)
-
-
-
-
-
-
