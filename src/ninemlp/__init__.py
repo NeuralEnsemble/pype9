@@ -19,7 +19,7 @@ import os
 
 __version__ = "0.0.1"
 
-BUILD_MODE_OPTIONS = ['lazy', 'force', 'compile_only']
+BUILD_MODE_OPTIONS = ['lazy', 'force', 'compile_only', 'require']
 
 SRC_PATH_ENV_NAME = 'NINEMLP_SRC_PATH'
 BUILD_MODE_NAME = 'NINEMLP_BUILD_MODE'
@@ -37,6 +37,7 @@ def set_build_mode(build_mode):
     if build_mode != 'lazy' and build_mode != 'compile_only' and build_mode != 'force':
         raise Exception("Unrecognised build mode '%s' (valid options are 'lazy', 'compile_only' or 'force')" % build_mode)
     _BUILD_MODE = build_mode
+    print "in setter: " + _BUILD_MODE
     
 def get_build_mode():
     return _BUILD_MODE
@@ -46,7 +47,7 @@ if BUILD_MODE_NAME in os.environ:
 else:
     _BUILD_MODE = 'lazy'
     
-print _BUILD_MODE
+print "in package: " + _BUILD_MODE
 
 if MPI_NAME in os.environ:
     import mpi4py #@UnresolvedImport
