@@ -45,6 +45,8 @@ if BUILD_MODE_NAME in os.environ:
     _BUILD_MODE = set_build_mode(os.environ[BUILD_MODE_NAME])
 else:
     _BUILD_MODE = 'lazy'
+    
+print _BUILD_MODE
 
 if MPI_NAME in os.environ:
     import mpi4py #@UnresolvedImport
