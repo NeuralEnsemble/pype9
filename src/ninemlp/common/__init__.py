@@ -196,7 +196,7 @@ def read_networkML(filename):
     parser = xml.sax.make_parser()
     handler = NetworkMLHandler()
     parser.setContentHandler(handler)
-    parser.parse('file://' + os.path.normpath(filename))
+    parser.parse(os.path.normpath(filename))
     return handler.network
 
 
