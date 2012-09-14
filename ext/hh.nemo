@@ -1,0 +1,83 @@
+;;
+;; This model is used to calculate the channel conductance assuming
+;; some initial state. The calculation is based on sodium ion flow,
+;; potassium ion flow and leakage ion flow. (Hodgkin, A. L. and Huxley,
+;; A. F. (1952) "A Quantitative Description of Membrane Current and its
+;; Application to Conduction and Excitation in Nerve" Journal of
+;; Physiology 117: 500-544)
+;;
+
+nemo-model
+ 
+ hodgkin-huxley
+    
+      input v
+ 
+      const Vrest = -65
+      const V_t = -35
+ 
+      component (type membrane-capacitance)
+		 const C = 1.0
+		 output C
+
+      component (type ionic-current) (name Na)
+
+         component (type gate)
+	    ;; rate functions
+	    fun amf (v)   (0.1  *  ((v + 40) / (1.0 - (exp ((neg (v + 40)) / 10)))))
+	    fun bmf (v)   (4.0  *  (exp ((neg (v + 65)) / 18)))
+	    fun ahf (v)   (0.07 *  (exp ((neg (v + 65)) / 20)))
+	    fun bhf (v)   (1.0  /  (1.0 + (exp ((neg (v + 35)) / 10))))
+	    hh-ionic-gate 
+	     Na  ;; ion name: exported variables will be of the form {ion}_{id}
+	      initial-m (amf (Vrest) / (amf (Vrest) + bmf (Vrest))) 
+	      initial-h (ahf (Vrest) / (ahf (Vrest) + bhf (Vrest))) 
+	      m-power   3
+	      h-power   1
+	      m-alpha   (amf (v))
+	      h-alpha   (ahf (v))
+	      m-beta    (bmf (v))
+	      h-beta    (bhf (v))
+
+         component (type permeating-ion) (name na)
+		    const e_Na = 50
+		    output e_Na
+
+         component (type pore)
+		    const  gbar_Na  = 120
+		    output gbar_Na
+
+      component (type ionic-current) (name K)
+
+         component (type gate)
+		    
+	    ;; rate functions
+	    fun anf (v)   (0.01  * ((v + 55) / (1 - (exp ((neg (v + 55)) / 10)))))
+	    fun bnf (v)   (0.125 * (exp ((neg (v + 65)) / 80)))
+	    
+	    hh-ionic-gate 
+	     K  ;; ion name
+	      initial-m (anf (Vrest) / (anf (Vrest) + bnf (Vrest)))
+	      m-power 4
+	      h-power 0 ;; h-power is 0, therefore h further declarations are omitted
+	      m-alpha (anf (v))
+	      m-beta  (bnf (v))
+
+
+         component (type pore)
+	    const   gbar_K   = 36
+	    output  gbar_K
+
+         component (type permeating-ion) (name k)
+		    const e_K = -77
+		    output e_K
+
+      component (type ionic-current) (name Leak)
+		  
+                component (type pore)
+			  const  gbar_Leak  = 0.3
+			  output gbar_Leak
+		  
+	        component (type permeating-ion) (name non-specific)
+			 const e_Leak = -54.4
+			 output e_Leak

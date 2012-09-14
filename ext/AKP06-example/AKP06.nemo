@@ -1,0 +1,502 @@
+
+;; Akemann W, Knopfel T. Interaction of Kv3 potassium channels and
+;; resurgent sodium current influences the rate of spontaneous firing of
+;; Purkinje neurons. J Neurosci. 2006 Apr 26;26(17):4602-12.
+
+(nemo-model AKP06
+
+  ((input v 
+	  (cai from ion-pools)
+	  (ica from ion-currents))
+	     
+   (const Vrest   = -68)
+   (const celsius = 24)
+   
+   (const temp_adj = (pow (3 ((celsius - 22) / 10))))
+
+
+   (defun ghk (v celsius ci co)
+     (let ((F 96485.0) (R 8.3145))
+       (let ((zeta ((2e-3 * F * v) / (R * (273.19 + celsius)))))
+	 (if ((abs (1.0 - exp (neg (zeta)))) < 1e-6)
+	     then (1e-6 * (2 * F) * (ci - (co * exp (neg (zeta)))) * (1.0 + (zeta / 2)))
+	     else ((1e-6 * (2 * zeta * F) * (ci - (co * exp (neg (zeta))))) / (1.0 - exp (neg (zeta))))))))
+
+   (component (type membrane-capacitance)
+	   (const C_m = 1)
+	   (output C_m))
+
+   (component (type decaying-pool) (name ca)
+ 	      (const  F = 96485.0)
+ 	      (const  ca0 = 1e-4)
+ 	      (const  ca_depth   = 0.1)
+ 	      (const  ca_beta    = 1.0)
+	      
+	      (d (ca) =  ((neg (ica) / (2 * ca0 * F * ca_depth)) -
+ 			  ((if (ca < 1e-4) then 1e-4 else ca) * ca_beta))
+	      	      	 (initial ca0))
+	      
+	      (cac = (if (ca < 1e-4) then 1e-4 else ca))
+
+  	      (output cac)
+  	      )
+
+   (component (type ionic-current) (name Kv1)
+	      
+	      (component (type gate)
+			 
+			 ;; rate functions
+			 (defun Kv1_amf (v) 
+			   (let ((cma 0.12889)
+				 (cka -33.90877)
+				 (cva 45))
+			     (cma * (exp (neg ((v + cva) / cka))))))
+			 
+			 (defun Kv1_bmf (v)
+			   (let ((cmb   0.12889)
+				 (ckb   12.42101)
+				 (cvb   45))
+			     (cmb * (exp (neg ((v + cvb) / ckb))))))
+			 
+			 (hh-ionic-gate 
+			  (Kv1  ;; ion name: exported variables will be of the form {ion}_{id}
+			   (initial-m (Kv1_amf (Vrest) / (Kv1_amf (Vrest) + Kv1_bmf (Vrest))))
+			   (m-power   4)
+			   (h-power   0)
+			   (m-alpha   (temp_adj * Kv1_amf (v) ))
+			   (m-beta    (temp_adj * Kv1_bmf (v) ))))
+			 
+			 )
+	      
+	      (component (type pore)
+			 (const  gbar_Kv1  = (1e3 * 0.011))
+			 (output gbar_Kv1 ))
+	      
+	      (component (type permeating-ion) (name k)
+			 (const e_Kv1 = -85)
+			 (output e_Kv1 ))
+	      
+	      ) ;; end Kv1 current
+   
+   (component (type ionic-current) (name Kv3)
+	      
+	      (component (type gate)
+			 
+			 ;; rate functions
+			 (defun Kv3_amf (v) 
+			   (let ((ca   0.22)
+				 (cva  16)
+				 (cka  -26.5))
+			     (ca * exp((neg (v + cva)) / cka) )))
+			 
+			 (defun Kv3_bmf (v) 
+			   (let ((ca   0.22)
+				 (cvb  16)
+				 (ckb  26.5))
+			     (ca * exp((neg (v + cvb)) / ckb) )))
+			 
+			 (hh-ionic-gate 
+			  (Kv3  ;; ion name: exported variables will be of the form {ion}_{id}
+			   (initial-m (Kv3_amf (Vrest) / (Kv3_amf (Vrest) + Kv3_bmf (Vrest))))
+			   (m-power   4)
+			   (h-power   0)
+			   (m-alpha   (temp_adj * Kv3_amf (v) ))
+			   (m-beta    (temp_adj * Kv3_bmf (v) ))))
+			 
+			 )
+	      
+	      (component (type pore)
+			 (const  gbar_Kv3  = (1e3 * 0.005))
+			 (output gbar_Kv3 ))
+	      
+	      (component (type permeating-ion) (name k)
+			 (const e_Kv3 = -85)
+			 (output e_Kv3 ))
+
+	      (component (type binary-gate) 
+			 (const switch_Kv3 = 0)
+			 
+			 (const e0 = 1.60217646e-19)
+			 (const gunit = 16)
+			 (const nc = (1e12 * gbar_Kv3 / gunit))
+			 (const zn = 1.9196)
+
+			 (defun gate_flip_Kv3 (v m) 
+			   (let ((a    (Kv3_amf (v)))
+				 (ab   (a + Kv3_bmf (v)))
+				 (tau  (1 / ab))
+				 (inf  (a / ab)))
+			     ((inf - m) / tau)))
+
+			 (i_gate_Kv3 = 
+                           (if (switch_Kv3 > 0) then (nc * 1e6 * e0 * 4 * zn * gate_flip_Kv3(v Kv3_m)) else 0))
+
+			 (output i_gate_Kv3 ))
+
+	      ) ;; end Kv3 current
+
+
+
+   (component (type ionic-current) (name Kv4)
+
+	      (component (type gate)
+			 
+			 ;; rate functions
+			 
+			 
+			 (defun Kv4_amf (v)  
+			   (let ((can    0.15743)
+				 (ckan   -32.19976)
+				 (cvan   57))
+			     (can * exp (neg ((v + cvan) / ckan)))))
+			 
+
+			 (defun Kv4_bmf (v)  
+			   (let ((cbn   0.15743)
+				 (ckbn  37.51346)
+				 (cvbn  57))
+			     (cbn * exp (neg ((v + cvbn) / ckbn)))))
+
+			 
+			 (defun Kv4_ahf (v)  
+			   (let ((cah   0.01342)
+				 (ckah  -7.86476)
+				 (cvah  60))
+			     (cah / (1.0 + (exp (neg ((v + cvah) / ckah)))))))
+
+			 
+			 (defun Kv4_bhf (v)  
+			   (let ((cbh   0.04477)
+				 (ckbh  11.3615)
+				 (cvbh  54))
+			     (cbh / (1.0 + (exp (neg ((v + cvbh) / ckbh)))))))
+
+			 (hh-ionic-gate 
+			  (Kv4  ;; ion name: exported variables will be of the form {ion}_{id}
+			   (initial-m (Kv4_amf (Vrest) / (Kv4_amf (Vrest) + Kv4_bmf (Vrest))) )
+			   (initial-h (Kv4_ahf (Vrest) / (Kv4_ahf (Vrest) + Kv4_bhf (Vrest))) ) 
+			   (m-power   4)
+			   (h-power   1)
+			   (m-alpha   (temp_adj * Kv4_amf (v)))
+			   (m-beta    (temp_adj * Kv4_bmf (v)))
+			   (h-alpha   (temp_adj * Kv4_ahf (v)))
+			   (h-beta    (temp_adj * Kv4_bhf (v)))
+			   ))
+			 
+			 )
+
+	      (component (type pore)
+			 (const  gbar_Kv4  = (1e3 * 0.0039))
+			 (output gbar_Kv4 ))
+	      
+	      (component (type permeating-ion) (name k)
+			 (const e_Kv4 = -85)
+			 (output e_Kv4 ))
+	      
+	      ) ;; end Kv4 current
+
+
+   (component (type ionic-current) (name Ih)
+	      
+	      (component (type gate)
+			 
+			 ;; rate functions
+			 
+			 (defun Ih_inf (v)
+			   (let ((cvn   90.1)
+				 (ckn   -9.9))
+			     (1.0 / (1.0 + exp (neg ((v + cvn) / ckn) )))))
+			 
+			 (defun Ih_tau (v)   
+			   (let ((cct  190)
+				 (cat  720)
+				 (cvt  81.5)
+				 (ckt  11.9))
+			     (cct + (cat * exp (neg (pow (((v + cvt) / ckt) 2)))))))
+			 
+			 (hh-ionic-gate 
+			  (Ih  ;; ion name: exported variables will be of the form {ion}_{id}
+			   (initial-m (Ih_inf (Vrest)))
+			   (m-power   1)
+			   (h-power   0)
+			   (m-inf     (Ih_inf (v)))
+			   (m-tau     (Ih_tau (v) / temp_adj))
+			   ))
+			 
+			 )
+
+	      (component (type pore)
+			 (const  gbar_Ih  = (1e3 * 0.0002))
+			 (output gbar_Ih ))
+	      
+	      (component (type permeating-ion) (name non-specific)
+			 (const e_Ih = -30)
+			 (output e_Ih ))
+	      
+	      ) ;; end Ih current
+
+   (component (type ionic-current) (name Leak)
+	      
+	      (component (type pore)
+			 (const  gbar_Leak  = (1e3 * 9e-5))
+			 (output gbar_Leak ))
+	      
+	      (component (type permeating-ion) (name non-specific)
+			 (const e_Leak = -61)
+			 (output e_Leak ))
+	      
+	      ) ;; end leak current
+
+
+   (component (type ionic-current) (name CaP)
+	      
+	      (component (type gate)
+			 
+			 ;; rate functions
+			 (defun CaP_inf (v)  
+			   (let ((cv  19)  (ck  5.5))
+			     (1.0 / (1.0 + exp (neg ((v + cv) / ck))))))
+			 
+			 (defun CaP_tau (v)  
+			   (if (v > -50) 
+			       then (1e3 * (0.000191 + (0.00376 * pow ((exp (neg ((v + 41.9) / 27.8)))  2))))
+			       else (1e3 * (0.00026367 + (0.1278 * exp (0.10327 * v))))))
+
+			 (hh-ionic-gate 
+			  (CaP  ;; ion name: exported variables will be of the form {ion}_{id}
+			   (initial-m  (CaP_inf (Vrest)))
+			   (m-power    1)
+			   (h-power    0)
+			   (m-inf      (CaP_inf (v)))
+			   (m-tau      (CaP_tau (v) / temp_adj))))
+			 
+			 )
+
+	      (component (type permeability)
+			 (const pcabar_CaP  = (1e3 * 0.01667))
+			 (const cao         = 2.4)
+			 (pca_CaP           = (pcabar_CaP * ghk (v celsius cai cao)))
+			 (output pca_CaP ))
+	      
+	      (component (type permeating-ion) (name ca) )
+	      
+	      
+	      ) ;; end CaP current
+
+   (component (type ionic-current) (name CaBK)
+	      
+	      (component (type gate)
+			 
+			 ;; rate functions
+			 
+			 (defun CaBK_zinf (cai)  
+			   (let ((zhalf 0.001))
+			     (1 / (1 + (zhalf / cai)))))
+
+			 (const CaBK_ztau = 1.0)
+			 
+			 (defun CaBK_minf (v)
+			   (let ((cvm  28.9)
+				 (ckm  6.2))
+			     (1.0 / (1.0 + exp (neg ((v + 5.0 + cvm) / ckm))))))
+			 
+			 (defun CaBK_mtau (v)
+			   (let ((ctm     0.000505)
+				 (cvtm1   86.4)
+				 (cktm1   -10.1)
+				 (cvtm2   -33.3)
+				 (cktm2   10))
+			     (ctm + (1.0 / (exp (neg ((v + 5.0 + cvtm1) / cktm1)) +
+						exp (neg ((v + 5.0 + cvtm2) / cktm2)))))))
+			 
+			 (defun CaBK_hinf (v) 
+			   (let ((ch    0.085)
+				 (cvh   32)
+				 (ckh   -5.8))
+			     (ch + ((1.0 - ch) / (1.0 + (exp (neg ((v + 5.0 + cvh) / ckh))))))))
+			 
+			 (defun CaBK_htau (v)
+			   (let ((cth     0.0019)
+				 (cvth1   48.5)
+				 (ckth1   -5.2)
+				 (cvth2   -54.2)
+				 (ckth2   12.9))
+			     (cth + (1.0 / (exp (neg ((v + cvth1) / ckth1)) +
+						exp (neg ((v + cvth2) / ckth2)))))))
+
+		         (CaBK_alpha = (CaBK_zinf (cai) / CaBK_ztau))
+		         (CaBK_beta  = ((1 - CaBK_zinf (cai)) / CaBK_ztau))
+
+			 
+			 (reaction
+			  (CaBK_z
+			   (transitions (<-> C O CaBK_beta CaBK_alpha))
+                           (conserve  (1 = (O + C)))
+			   (initial   (CaBK_zinf (1e-4)))
+			   (open O)   (power 2)))
+			 
+			 (output CaBK_z )  
+
+			 
+			 (hh-ionic-gate 
+			  (CaBK  ;; ion name: exported variables will be of the form {ion}_{id}
+			   (initial-m  (CaBK_minf (Vrest) / temp_adj))
+			   (initial-h  (CaBK_hinf (Vrest) / temp_adj))
+			   (m-power    3)
+			   (h-power    1)
+			   (m-inf      (CaBK_minf (v) / temp_adj) )
+			   (m-tau      (CaBK_mtau (v) / temp_adj) )
+			   (h-inf      (CaBK_hinf (v) / temp_adj) )
+			   (h-tau      (CaBK_htau (v) / temp_adj) )))
+			 
+			 )
+	      
+	      (component (type pore)
+			 (const  gbar_CaBK  = (1e3 * 0.014))
+			 (output gbar_CaBK ))
+	      
+	      (component (type permeating-ion) (name k)
+			 (const e_CaBK = -85)
+			 (output e_CaBK ))
+	      
+	      ) ;; end BK current
+
+   (functor (name Nafun) (type ionic-current) 
+	    ( Na_gbar Na_Con Na_Coff Na_Oon Na_Ooff Na_alfac Na_btfac
+		      Na_alpha Na_beta Na_gamma Na_delta Na_epsilon Na_zeta Na_x1 Na_x2
+		      Na_x3 Na_x4 Na_x5 Na_x6 ) =
+		     
+		     (component (type gate)
+				
+		;; rate functions
+		(f01 = (4.0 * Na_alpha * exp (v / Na_x1) * temp_adj))
+		(f02 = (3.0 * Na_alpha * exp (v / Na_x1) * temp_adj))
+		(f03 = (2.0 * Na_alpha * exp (v / Na_x1) * temp_adj))
+		(f04 = (Na_alpha * exp (v / Na_x1) * temp_adj))
+		(f0O = (Na_gamma * exp (v / Na_x3) * temp_adj))
+		(fip = (Na_epsilon * exp (v / Na_x5) * temp_adj))
+		(f11 = (4.0 * Na_alpha * Na_alfac * exp (v / Na_x1) * temp_adj))
+		(f12 = (3.0 * Na_alpha * Na_alfac * exp (v / Na_x1) * temp_adj))
+		(f13 = (2.0 * Na_alpha * Na_alfac * exp (v / Na_x1) * temp_adj))
+		(f14 = (Na_alpha * Na_alfac * exp (v / Na_x1) * temp_adj))
+		(f1n = (Na_gamma * exp (v / Na_x3) * temp_adj))
+		
+		(fi1 = (Na_Con * temp_adj))
+		(fi2 = (Na_Con * Na_alfac * temp_adj))
+		(fi3 = (Na_Con * Na_alfac * Na_alfac * temp_adj))
+		(fi4 = (Na_Con * Na_alfac * Na_alfac * Na_alfac * temp_adj))
+		(fi5 = (Na_Con * Na_alfac * Na_alfac * Na_alfac * Na_alfac * temp_adj))
+		(fin = (Na_Oon * temp_adj))
+		
+		(b01 = (Na_beta * exp (v / Na_x2) * temp_adj))
+		(b02 = (2.0 * Na_beta * exp (v / Na_x2) * temp_adj))
+		(b03 = (3.0 * Na_beta * exp (v / Na_x2) * temp_adj))
+		(b04 = (4.0 * Na_beta * exp (v / Na_x2) * temp_adj))
+		(b0O = (Na_delta * exp (v / Na_x4) * temp_adj))
+		(bip = (Na_zeta * exp (v / Na_x6) * temp_adj))
+		
+		(b11 = (Na_beta * Na_btfac * exp (v / Na_x2) * temp_adj))
+		(b12 = (2.0 * Na_beta * Na_btfac * exp (v / Na_x2) * temp_adj))
+		(b13 = (3.0 * Na_beta * Na_btfac * exp (v / Na_x2) * temp_adj))
+		(b14 = (4.0 * Na_beta * Na_btfac * exp (v / Na_x2) * temp_adj))
+		(b1n = (Na_delta * exp (v / Na_x4) * temp_adj))
+		
+		(bi1 = (Na_Coff * temp_adj))
+		(bi2 = (Na_Coff * Na_btfac * temp_adj))
+		(bi3 = (Na_Coff * Na_btfac * Na_btfac * temp_adj))
+		(bi4 = (Na_Coff * Na_btfac * Na_btfac * Na_btfac * temp_adj))
+		(bi5 = (Na_Coff * Na_btfac * Na_btfac * Na_btfac * Na_btfac * temp_adj))
+		(bin = (Na_Ooff * temp_adj))
+		
+		(reaction
+		    (Na_z
+		     (transitions
+		      (<-> C1 C2 f01 b01)
+		      (<-> C2 C3 f02 b02)
+		      (<-> C3 C4 f03 b03)
+		      (<-> C4 C5 f04 b04)
+		      (<-> C5 O  f0O b0O)
+		      (<-> O  B  fip bip)
+		      (<-> O  I6 fin bin)
+		      (<-> I1 I2 f11 b11)
+		      (<-> I2 I3 f12 b12)
+		      (<-> I3 I4 f13 b13)
+		      (<-> I4 I5 f14 b14)
+		      (<-> I5 I6 f1n b1n)
+		      (<-> C1 I1 fi1 bi1)
+		      (<-> C2 I2 fi2 bi2)
+		      (<-> C3 I3 fi3 bi3)
+		      (<-> C4 I4 fi4 bi4)
+		      (<-> C5 I5 fi5 bi5))
+
+		      (conserve (1 = (C1 + C2 + C3 + C4 + C5 + O + B + I1 + I2 + I3 + I4 + I5 + I6)))
+		     
+		     (open O)   (power 1)))
+		   
+		   (output Na_z )  
+		   
+		   )
+			
+		(component (type pore)
+			   (const  gbar  = Na_gbar)
+			   (output gbar ))
+		
+		(component (type permeating-ion) (name na)
+			   (const e = -88)
+			   (output e ))
+		
+		) ;; end Nafun functor
+
+
+
+     (component (name Na) =
+		Nafun ((const Na_gbar = (1e3 * 0.014))
+		
+		       (const Na_Con   = 0.005)
+		       (const Na_Coff  = 0.5)
+		       (const Na_Oon   = 2.3)
+		       (const Na_Ooff  = 0.005)
+		       
+		       (const Na_alfac = (pow ((Na_Oon / Na_Con) (1.0 / 4.0))))
+		       (const Na_btfac = (pow ((Na_Ooff / Na_Coff) (1.0 / 4.0))))
+		       
+		       (const Na_alpha = 150)
+		       (const Na_beta  = 3)
+		       (const Na_gamma = 150)
+		       (const Na_delta = 40)
+		       (const Na_epsilon = 1e-12)
+		       (const Na_zeta = 0.03)
+		       (const Na_x1 = 20)
+		       (const Na_x2 = -20)
+		       (const Na_x3 = 1000000000000.0)
+		       (const Na_x4 = -1000000000000.0)
+		       (const Na_x5 = 1000000000000.0)
+		       (const Na_x6 = -25)))
+     ;; end Na current
+
+     (component (name Narsg) =
+		Nafun ((const Na_gbar = (1e3 * 0.016))
+		
+		       (const Na_Con   = 0.005)
+		       (const Na_Coff  = 0.5)
+		       (const Na_Oon   = 0.75)
+		       (const Na_Ooff  = 0.005)
+		       
+		       (const Na_alfac = (pow ((Na_Oon / Na_Con) (1.0 / 4.0))))
+		       (const Na_btfac = (pow ((Na_Ooff / Na_Coff) (1.0 / 4.0))))
+		       
+		       (const Na_alpha = 150)
+		       (const Na_beta  = 3)
+		       (const Na_gamma = 150)
+		       (const Na_delta = 40)
+		       (const Na_epsilon = 1.75)
+		       (const Na_zeta = 0.03)
+		       (const Na_x1 = 20)
+		       (const Na_x2 = -20)
+		       (const Na_x3 = 1000000000000.0)
+		       (const Na_x4 = -1000000000000.0)
+		       (const Na_x5 = 1000000000000.0)
+		       (const Na_x6 = -25)))
+     ;; end Narsg current
+
+   ))

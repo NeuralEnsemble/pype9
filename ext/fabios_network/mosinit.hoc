@@ -1,0 +1,95 @@
+load_file("nrngui.hoc")
+/////////////////////////
+//Simulation parameters//
+////////////////////////
+tmax=150         
+cvode.active(0)  //Fixed time step 
+DT=0.025	
+
+//////////////////////////
+//MF stimulus parameters//   
+/////////////////////////
+MFfreq=100
+NETIN_SP_START=100
+SEED=1
+
+///////////////////////////////
+//uncomment gap junction flag//
+//////////////////////////////
+GJ=1      // with GJ between GoCs
+//GJ=0      // without GJ between GoCs
+
+///////////////////////////
+//Building Network Layers//
+///////////////////////////
+load_file("network.hoc") 
+
+//////////////////////
+//Running Simulation//
+/////////////////////
+cleanMF()      //clear MF buffers
+stimulus(NETIN_SP_START, MFfreq, tmax, SEED)  //start MF stimulus
+
+init()
+tstop=DT 
+run()  //run a single time step
+
+//set vinit to randomize vrest
+min=-84 
+max=-56 
+
+for i=0, NumberCellsb-1 {
+  xprob=prob.uniform(min,max)
+  GrC[i].setv(xprob)
+}
+for i=0, NumberCellsd-1 {
+  xprob=prob.uniform(min,max)
+  GoC[i].setv(xprob)
+}
+
+continuerun(tmax) //run the rest of simulation
+
+//simulation finished
+
+/////////////////////////
+//Generate Raster Plots//
+/////////////////////////
+objref g1
+g1 = new Graph()
+idvec1.mark(g1, timevec1, "|")
+
+objref g2
+g2 = new Graph()
+idvec2.mark(g2, timevec2, "|")
+
+///////////////////////
+//Save Data to Files//
+//////////////////////
+
+GoCMatrixS.resize(tmax,NumberCellsd) 
+GrCMatrixS.resize(tmax,NumberCellsb) 
+MFMatrixS.resize(tmax,NumberCellsa) 
+for i = 0, NumberCellsa-1 {
+MFMatrixS.setcol(i,fiber[i].spiketimes)  
+}
+for i = 0, NumberCellsb-1 {
+GrCMatrixS.setcol(i,GrC[i].spiketimes) 
+}
+for i = 0, NumberCellsd-1 {
+GoCMatrixS.setcol(i,GoC[i].spiketimes)  
+}
+
+//record Vectors to File	
+MFMatrixS.fprint(sav_MFMatrixS," %g")
+GrCMatrixS.fprint(sav_GrCMatrixS," %g")
+GoCMatrixS.fprint(sav_GoCMatrixS," %g")
+
+//Close Files	
+sav_MFMatrixS.close()
+sav_GrCMatrixS.close()
+sav_GoCMatrixS.close()
+
+//move the files to data folder
+strdef command
+sprint(command,"mv *.dat data/")
+system(command)
