@@ -30,6 +30,13 @@ def build (model_dir, build_mode=DEFAULT_BUILD_MODE, verbose=True):
     """
     Builds all NMODL files in a directory
     @param model_dir: The path of the directory to build
+    @param build_mode: Can be one of either, 'lazy', 'super_lazy', 'require', 'force', or \
+'compile_only'. 'lazy' runs nrnivmodl again to compile any touched mod files, 'super_lazy' doesn't \
+run nrnivmodl if the library is found, 'require', requires that the library is found otherwise \
+throws an exception (useful on clusters that require precompilation before parallelisation where \
+the error message could otherwise be confusing), 'force' removes existing library if found and \
+recompiles, and 'compile_only' removes existing library if found, recompile and then exits
+    @param verbose: Prints out verbose debugging messages
     """
     # Change working directory to model directory
     orig_dir = os.getcwd()
@@ -38,15 +45,15 @@ def build (model_dir, build_mode=DEFAULT_BUILD_MODE, verbose=True):
     except OSError:
         raise Exception("Could not find NMODL directory '%s'" % model_dir)
     # Clean up old build directories if present
-    found_lib = False
+    found_required_lib = False
     for arch in BUILD_ARCHS:
         path = os.path.join(model_dir, arch)
         if os.path.exists(path):
-            if build_mode == 'lazy' or build_mode == 'require':
-                found_lib = True
-            else:
+            if build_mode in ('super_lazy', 'require'):
+                found_required_lib = True
+            elif build_mode in ('force', 'compile_only'):
                 shutil.rmtree(path, ignore_errors=True)
-    if not found_lib:
+    if not found_required_lib:
         if build_mode == 'require':
             raise Exception("The required NMODL binaries were not found in directory '%s' (change the build mode from 'require' any of 'lazy', 'compile_only', or 'force' in order to compile them)." % model_dir)
         # Get platform specific command name
