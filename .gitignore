@@ -1,4 +1,3 @@
-/Documentation
 /doc/doxygen
 /tombo/work
 *.pyc
@@ -7,4 +6,4 @@
 .settings
 .texlipse
 /output
-/out
+x86_64
