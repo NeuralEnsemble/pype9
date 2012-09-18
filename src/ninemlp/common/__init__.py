@@ -203,17 +203,20 @@ def read_networkML(filename):
 class Network(object):
 
     def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, 
-                                                min_delay=None, max_delay=None, temperature=None):
+                                                min_delay=None, max_delay=None, temperature=None,
+                                                silent_build=False):
         assert  hasattr(self, "_pyNN_module") and \
                 hasattr(self, "_ncml_module") and \
                 hasattr(self, "_Population_class") and \
                 hasattr(self, "_Projection_class") and \
                 hasattr(self, "get_min_delay")
         self.load_network(filename, build_mode=build_mode, timestep=timestep, 
-                                  min_delay=min_delay, max_delay=max_delay, temperature=temperature)
+                                 min_delay=min_delay, max_delay=max_delay, temperature=temperature, 
+                                 silent_build=silent_build)
 
     def load_network(self, filename, build_mode=DEFAULT_BUILD_MODE, verbose=False, timestep=None, 
-                                                min_delay=None, max_delay=None, temperature=None):
+                                                min_delay=None, max_delay=None, temperature=None,
+                                                silent_build=False):
         self.networkML = read_networkML(filename)
         self._set_default_simulation_params(timestep, min_delay, max_delay, temperature)
         dirname = os.path.dirname(filename)
@@ -231,7 +234,8 @@ class Network(object):
                                                                 pop.layout,
                                                                 pop.cell_params.constants,
                                                                 pop.cell_params.distributions,
-                                                                verbose)
+                                                                verbose,
+                                                                silent_build)
         for proj in self.networkML.projections:
             self._projections[proj.id] = self._create_projection(proj.id,
                                                                  self._populations[proj.pre.pop_id],
@@ -246,11 +250,13 @@ class Network(object):
             print 'Finished compiling network, now exiting (use try: ... except SystemExit: ... if you want to do something afterwards)'
             raise SystemExit(0)
 
-    def _create_population(self, label, size, cell_type_name, layout, cell_params, cell_param_dists, verbose):
+    def _create_population(self, label, size, cell_type_name, layout, cell_params, cell_param_dists, 
+                                                                            verbose, silent_build):
         if cell_type_name + ".xml" in os.listdir(self.cells_dir):
             cell_type = self._ncml_module.load_cell_type(cell_type_name,
                                             os.path.join(self.cells_dir, cell_type_name + ".xml"),
-                                            build_mode=self.build_mode)
+                                            build_mode=self.build_mode,
+                                            silent=silent_build)
         elif cell_type_name in dir(self._pyNN_module.standardmodels.cells):
             # This is not as simple as it may have been, as a simple getattr on 
             # pyNN.nest.standardmodels.cells returns the pyNN.standardmodels.cells instead.

@@ -17,7 +17,7 @@ import os
 import numpy
 from ninemlp import SRC_PATH, DEFAULT_BUILD_MODE
 from ninemlp.utilities.nmodl import build as build_nmodl
-build_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=DEFAULT_BUILD_MODE)
+build_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=DEFAULT_BUILD_MODE, silent=True)
 import pyNN.neuron.standardmodels.cells
 import pyNN.neuron.connectors
 import pyNN.neuron.recording
@@ -122,7 +122,7 @@ class Projection(pyNN.neuron.Projection):
 class Network(ninemlp.common.Network):
 
     def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None, 
-                                                                 max_delay=None, temperature=None):
+                                             max_delay=None, temperature=None, silent_build=False):
         self._pyNN_module = pyNN.neuron
         self._ncml_module = ncml
         self._Population_class = Population
@@ -130,7 +130,8 @@ class Network(ninemlp.common.Network):
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         #Call the base function initialisation function.
         ninemlp.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep, 
-                                  min_delay=min_delay, max_delay=max_delay, temperature=temperature)
+                                        min_delay=min_delay, max_delay=max_delay, 
+                                        temperature=temperature, silent_build=silent_build)
 
     def _convert_units(self, value_str, units=None):
         if ' ' in value_str:

@@ -26,7 +26,7 @@ else:
     # I apologise for this hack (this is the path on my machine, to save me having to set the environment variable in eclipse)
     os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin' 
 
-def build (model_dir, build_mode=DEFAULT_BUILD_MODE, verbose=True):
+def build (model_dir, build_mode=DEFAULT_BUILD_MODE, silent=False):
     """
     Builds all NMODL files in a directory
     @param model_dir: The path of the directory to build
@@ -71,14 +71,14 @@ recompiles, and 'compile_only' removes existing library if found, recompile and 
         if not cmd_path:
             raise Exception("Could not find nrnivmodl on the system path '%s'" % os.environ['PATH'])
         print "Building mechanisms in '%s' directory." % model_dir
-        if verbose:
-            # Run nrnivmodl command on directory
-            build_error = subprocess.call(cmd_path)
-        else:
+        if silent:
             with open(os.devnull, "w") as fnull:
                 build_error = subprocess.call(cmd_path, stdout = fnull, stderr = fnull)
+        else:
+            # Run nrnivmodl command on directory
+            build_error = subprocess.call(cmd_path)
         if build_error:
             raise Exception("Could not compile NMODL files in directory '%s' - " % model_dir)
-    elif verbose:
+    elif not silent:
         print "Found existing mechanisms in '%s' directory, compile skipped (set 'build_mode' argument to 'force' enforce recompilation them)." % model_dir
     os.chdir(orig_dir)
