@@ -103,7 +103,10 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
         @param file_prefix: The file path prefix that the output files will be written to. Each file will be appended the post fix .<var-name>.
         """
         for var in self.celltype.recordable:
-            self.record(var, file_prefix + '.' + var)
+            try:
+                self.record(var, file_prefix + '.' + var)
+            except NameError:
+                print "Could not set recorded for '%s' variable" % var
 
 class Projection(pyNN.neuron.Projection):
 
