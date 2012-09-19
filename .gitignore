@@ -7,3 +7,5 @@
 .texlipse
 /output
 x86_64
+/external/sergios_golgi/SimData_*
+/external/sergios_golgi/Golgi_count.txt
