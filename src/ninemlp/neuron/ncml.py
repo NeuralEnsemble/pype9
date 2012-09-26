@@ -41,7 +41,7 @@ class Segment(nrn.Section): #@UndefinedVariable
         
         @param seg [common.ncml.MorphMLHandler.Segment]: Segment tuple loaded from MorphML (see common.ncml.MorphMLHandler)
         """ 
-        h.Section.__init__(self)
+        nrn.Section.__init__(self) #@UndefinedVariable
         h.pt3dclear(sec=self)
         self._distal = np.array((seg.distal.x, seg.distal.y, seg.distal.z))                        
         h.pt3dadd(seg.distal.x, seg.distal.y, seg.distal.z, seg.distal.diam, sec=self)
@@ -58,7 +58,7 @@ class Segment(nrn.Section): #@UndefinedVariable
         self._proximal = proximal
         length = 0.0
         for d, p in zip(self._distal, proximal):
-            length += (d - p)^2
+            length += (d - p)**2
         self.L = math.sqrt(length)
         h.pt3dadd(proximal[0], proximal[1], proximal[2], self.diam, sec=self)            
 
