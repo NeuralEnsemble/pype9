@@ -35,7 +35,7 @@ class Segment(nrn.Section): #@UndefinedVariable
     Wraps the basic NEURON section to allow non-NEURON attributes to be added to the segment.
     Additional functionality could be added as needed
     """
-    def __init__(self, seg):
+    def __init__(self, morphl_seg):
         """
         Initialises the Segment including its proximal and distal sections for connecting child segments
         
@@ -43,11 +43,17 @@ class Segment(nrn.Section): #@UndefinedVariable
         """ 
         nrn.Section.__init__(self) #@UndefinedVariable
         h.pt3dclear(sec=self)
-        self._distal = np.array((seg.distal.x, seg.distal.y, seg.distal.z))                        
-        h.pt3dadd(seg.distal.x, seg.distal.y, seg.distal.z, seg.distal.diam, sec=self)
-        if seg.proximal:
-            self._set_proximal((seg.proximal.x, seg.proximal.y, seg.proximal.z))
-        self.diam = seg.distal.diam
+        self.diam = float(morphl_seg.distal.diam)
+        self._distal = np.array((morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z))                        
+        h.pt3dadd(morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z, 
+                                                                 morphl_seg.distal.diam, sec=self)
+        if morphl_seg.proximal:
+            self._set_proximal((morphl_seg.proximal.x, morphl_seg.proximal.y, morphl_seg.proximal.z))
+        # Local information, though not sure if I need this here            
+        self.id = morphl_seg.id
+        self._parent = None
+        self._fraction_along = None
+        self._children = []
             
     def _set_proximal(self, proximal):
         """
@@ -55,11 +61,7 @@ class Segment(nrn.Section): #@UndefinedVariable
         
         @param proximal [float(3)]: The 3D position of the start of the segment
         """
-        self._proximal = proximal
-        length = 0.0
-        for d, p in zip(self._distal, proximal):
-            length += (d - p)**2
-        self.L = math.sqrt(length)
+        self._proximal = np.array(proximal)
         h.pt3dadd(proximal[0], proximal[1], proximal[2], self.diam, sec=self)            
 
     def _connect(self, parent, fraction_along):
@@ -71,10 +73,12 @@ class Segment(nrn.Section): #@UndefinedVariable
         @param fraction_along [float]: The fraction along the parent segment to connect to
         """
         assert(fraction_along >= 0.0 and fraction_along <= 1.0)
-        # Set proximal point
-        self._set_proximal(parent._distal)
         # Connect the segments in NEURON using h.Section's built-in method.
         self.connect(parent, fraction_along, 0)
+        # Store the segment's parent just in case
+        self._parent = parent
+        self._fraction_along = fraction_along
+        parent._children.append(self)
 
 class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
 
@@ -87,18 +91,51 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         self.gsyn_trace = {}
         self.recording_time = 0
 
-    def _init_morphology(self):
-        """ Reads morphology from a NeuroML2 file and creates the appropriate segments in neuron"""
+    def _init_morphology(self, barebones_only=True):
+        """
+        Reads morphology from a MorphML 2 file and creates the appropriate segments in neuron
+        
+        @param barebones_only [bool]: If set, extra helper fields will be delted after the are required, leaving the "barebones" pyNEURON structure for each nrn.Section
+        """
         # Initialise all segments
         self.segments = {}
-        for seg in self.morphml_model.segments:
-            sec = Segment(seg)
-            self.segments[seg.id] = sec
-            setattr(self, seg.id, sec)
+        self.root_segment = None
+        for morphml_seg in self.morphml_model.segments:
+            seg = Segment(morphml_seg)
+            self.segments[morphml_seg.id] = seg
+            setattr(self, morphml_seg.id, seg)
+            if not morphml_seg.parent:
+                if self.root_segment:
+                    raise Exception("Two segments ({0} and {1}) were declared without parents, meaning the neuronal tree is disconnected".format(self.root_segment.id, seg.id))
+                self.root_segment = seg            
+        if not self.root_segment:
+            raise Exception("The neuronal tree does not have a root segment, meaning it is connected in a circle (I assume this is not intended)")
         # Connect the segments together
-        for seg in self.morphml_model.segments:
-            if seg.parent:
-                self.segments[seg.id]._connect(self.segments[seg.parent.id], seg.parent.fractionAlong)
+        for morphml_seg in self.morphml_model.segments:
+            if morphml_seg.parent:
+                self.segments[morphml_seg.id]._connect(self.segments[morphml_seg.parent.id], 
+                                                                    morphml_seg.parent.fractionAlong)
+        # Work out the segment lengths properly accounting for the "fraction_along". This is performed
+        # via a tree traversal to ensure that the parents 'proximal' field has already been calculated
+        # beforehand
+        segment_stack = [self.root_segment]
+        while len(segment_stack):
+            seg = segment_stack.pop()
+            if seg._parent:
+                proximal = seg._parent._proximal * (1 - seg._fraction_along) + \
+                                                        seg._parent._distal * seg._fraction_along
+                seg._set_proximal(proximal)
+            segment_stack += seg._children
+        # Once the structure is created with the correct morphology the fields appended to the 
+        # nrn.Section class can be disposed of (or potentiall kept for later use). Probably a design
+        # decision needs to be made here but I am not sure of the best option at this point
+        if barebones_only:
+            for seg in self.segments.values():
+                del seg._proximal
+                del seg._distal
+                del seg._parent
+                del seg._fraction_along
+                del seg._children
         # Set up groups of segments for inserting mechanisms
         self.groups = {}
         for group in self.morphml_model.groups:
