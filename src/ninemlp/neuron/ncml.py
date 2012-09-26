@@ -22,6 +22,8 @@ from ninemlp.utilities.nmodl import build as build_nmodl
 from ninemlp import DEFAULT_BUILD_MODE
 from copy import copy
 from operator import attrgetter
+import math
+import numpy as np
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 
@@ -33,8 +35,46 @@ class Segment(nrn.Section): #@UndefinedVariable
     Wraps the basic NEURON section to allow non-NEURON attributes to be added to the segment.
     Additional functionality could be added as needed
     """
-    def __init__(self):
-        nrn.Section.__init__(self) #@UndefinedVariable   
+    def __init__(self, seg):
+        """
+        Initialises the Segment including its proximal and distal sections for connecting child segments
+        
+        @param seg [common.ncml.MorphMLHandler.Segment]: Segment tuple loaded from MorphML (see common.ncml.MorphMLHandler)
+        """ 
+        h.Section.__init__(self)
+        h.pt3dclear(sec=self)
+        self._distal = np.array((seg.distal.x, seg.distal.y, seg.distal.z))                        
+        h.pt3dadd(seg.distal.x, seg.distal.y, seg.distal.z, seg.distal.diam, sec=self)
+        if seg.proximal:
+            self._set_proximal((seg.proximal.x, seg.proximal.y, seg.proximal.z))
+        self.diam = seg.distal.diam
+            
+    def _set_proximal(self, proximal):
+        """
+        Sets the proximal position and calculates the length of the segment
+        
+        @param proximal [float(3)]: The 3D position of the start of the segment
+        """
+        self._proximal = proximal
+        length = 0.0
+        for d, p in zip(self._distal, proximal):
+            length += (d - p)^2
+        self.L = math.sqrt(length)
+        h.pt3dadd(proximal[0], proximal[1], proximal[2], self.diam, sec=self)            
+
+    def _connect(self, parent, fraction_along):
+        """
+        Connects the segment with its parent, setting its proximal position and calculating its length
+        if it needs to.
+        
+        @param parent [Segment]: The parent segment to connect to
+        @param fraction_along [float]: The fraction along the parent segment to connect to
+        """
+        assert(fraction_along >= 0.0 and fraction_along <= 1.0)
+        # Set proximal point
+        self._set_proximal(parent._distal)
+        # Connect the segments in NEURON using h.Section's built-in method.
+        self.connect(parent, fraction_along, 0)
 
 class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
 
@@ -49,22 +89,17 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
 
     def _init_morphology(self):
         """ Reads morphology from a NeuroML2 file and creates the appropriate segments in neuron"""
+        # Initialise all segments
         self.segments = {}
         for seg in self.morphml_model.segments:
-            sec = Segment()
+            sec = Segment(seg)
             self.segments[seg.id] = sec
             setattr(self, seg.id, sec)
-            h.pt3dclear(sec=sec)
-            if seg.proximal:
-                h.pt3dadd(seg.proximal.x, seg.proximal.y, seg.proximal.z, seg.proximal.diam,
-                                                                                            sec=sec)
-            h.pt3dadd(seg.distal.x, seg.distal.y, seg.distal.z, seg.distal.diam, sec=sec)
-            sec.diam = seg.distal.diam # FIXME: This should be handled by the pt3dadd I thought.
-            
+        # Connect the segments together
         for seg in self.morphml_model.segments:
             if seg.parent:
-                self.segments[seg.id].connect(self.segments[seg.parent.id],
-                                                                 seg.parent.fractionAlong, 0)
+                self.segments[seg.id]._connect(self.segments[seg.parent.id], seg.parent.fractionAlong)
+        # Set up groups of segments for inserting mechanisms
         self.groups = {}
         for group in self.morphml_model.groups:
             self.groups[group.id] = []
@@ -148,11 +183,13 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
 
     def get_group(self, group_id):
         if not group_id:
-            group = self.segments.values()
+            group = self.get_segments()
         else:
             group = self.groups[group_id]
         return group
-
+    
+    def get_segments(self):
+        return self.segments.values()
 
     def record(self, active):
         if active:
