@@ -21,6 +21,7 @@ import ninemlp.common.ncml
 from ninemlp.utilities.nmodl import build as build_nmodl
 from ninemlp import DEFAULT_BUILD_MODE
 from copy import copy
+from operator import attrgetter
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 
@@ -97,9 +98,13 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                 sec.insert('pas')
                 for seg in sec:
                     seg.pas.g = curr.cond_density.neuron()
-        for curr in self.ncml_model.currents:
+        for curr in sorted(self.ncml_model.currents, key=attrgetter('id')):
             for sec in self.get_group(curr.group_id):
-                sec.insert(curr.id)
+                try:
+                    sec.insert(curr.id)
+                except ValueError as e:
+                    raise Exception('Could not insert {curr_id} into section group {group_id} \
+({error})'.format(curr_id=curr.id, group_id=curr.group_id, error=e))
         #Loop through loaded membrane mechanisms and insert them into the relevant sections.
         for cm in self.ncml_model.capacitances:
             for sec in self.get_group(cm.group_id):
