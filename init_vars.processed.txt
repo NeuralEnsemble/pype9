@@ -1,0 +1,1 @@
+--init_mech_var GRC_CA gcabar 0.00046 --init_mech_var GRC_KCA gkbar 0.04 --init_mech_var GRC_KV gkbar 0.003 --init_mech_var GRC_KA gkbar 0.0032 --init_mech_var GRC_KM gkbar 0.00025 --init_mech_var GRC_KIR gkbar 0.0009 --init_mech_var GRC_LKG gl 15.68e-5 --init_mech_var GRC_LKG2 ggaba 3e-05 --init_mech_var GRC_NA gnabar 0.013 --init_mech_var GRC_CALC beta 1.5
