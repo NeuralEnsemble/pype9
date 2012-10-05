@@ -33,9 +33,6 @@ import neuron
 
 get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(pyNN.neuron.simulator)
 
-def build_pyNN(build_mode=DEFAULT_BUILD_MODE, silent=True):
-
-
 class Population(ninemlp.common.Population, pyNN.neuron.Population):
 
     def __init__(self, label, size, cell_type, params={}, build_mode=DEFAULT_BUILD_MODE):
@@ -127,7 +124,6 @@ class Network(ninemlp.common.Network):
 
     def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None, 
                                              max_delay=None, temperature=None, silent_build=False):
-        build_pyNN(build_mode=build_mode, silent=silent_build)
         self._pyNN_module = pyNN.neuron
         self._ncml_module = ncml
         self._Population_class = Population
