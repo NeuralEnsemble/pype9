@@ -15,8 +15,10 @@
 
 import os
 import numpy
-from ninemlp import SRC_PATH, DEFAULT_BUILD_MODE
+from ninemlp import SRC_PATH, DEFAULT_BUILD_MODE, pyNN_build_mode
 from ninemlp.utilities.nmodl import build as build_nmodl
+build_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN_build_mode, 
+                                                                                        silent=True)
 import pyNN.neuron.standardmodels.cells
 import pyNN.neuron.connectors
 import pyNN.neuron.recording
@@ -32,8 +34,7 @@ import neuron
 get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(pyNN.neuron.simulator)
 
 def build_pyNN(build_mode=DEFAULT_BUILD_MODE, silent=True):
-    build_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), 
-                                                            build_mode=build_mode, silent=silent)
+
 
 class Population(ninemlp.common.Population, pyNN.neuron.Population):
 
