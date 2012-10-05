@@ -28,6 +28,9 @@ get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, ra
 
 RELATIVE_BREP_BUILD_DIR = './build'
 
+def build_pyNN(build_mode=DEFAULT_BUILD_MODE, silent=True):
+    pass # Not required as of yet (this is needed for the neuron module though
+
 class Population(pyNN.nest.Population):
 
     def __init__(self, label, size, cell_type, params={}, build_mode=DEFAULT_BUILD_MODE):
