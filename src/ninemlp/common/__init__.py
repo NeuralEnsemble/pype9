@@ -74,9 +74,9 @@ class XMLHandler(xml.sax.handler.ContentHandler):
 
 class NetworkMLHandler(XMLHandler):
 
-    Network = collections.namedtuple('Network', 'id sim_params populations projections')
-    Population = collections.namedtuple('Population', 'id cell_type size layout cell_params')
-    Projection = collections.namedtuple('Projection', 'id pre post connection weight delay')
+    Network = collections.namedtuple('Network', 'id sim_params populations projections flags')
+    Population = collections.namedtuple('Population', 'id cell_type size layout cell_params flags not_flags')
+    Projection = collections.namedtuple('Projection', 'id pre post connection weight delay flags not_flags')
     Layout = collections.namedtuple('Layout', 'type args')
     CellParameters = collections.namedtuple('CellParameters', 'constants distributions')
     CellParameterDistr = collections.namedtuple('CellParameterDistr', 'param type component args')
@@ -91,16 +91,22 @@ class NetworkMLHandler(XMLHandler):
 
     def startElement(self, tag_name, attrs):
         if self._opening(tag_name, attrs, 'network'):
-            self.network = self.Network(attrs['id'], {}, [], [])
-        elif self._opening(tag_name, attrs, 'simulationParams', parents=['network']):
-            pass
-        elif self._opening(tag_name, attrs, 'temperature', parents=['simulationParams']):
+            self.network = self.Network(attrs['id'], {}, [], [], [])
+        elif self._opening(tag_name, attrs, 'parameters', parents=['network']): pass
+        elif self._opening(tag_name, attrs, 'flags', parents=['parameters']): pass
+        elif self._opening(tag_name, attrs, 'flag', parents=['parameters']):
+            if attrs['default'] == 'True':
+                self.network.flags[attrs['id']] = True
+            else:
+                self.network.flags[attrs['id']] = False
+        elif self._opening(tag_name, attrs, 'simulationDefaults', parents=['parameters']): pass
+        elif self._opening(tag_name, attrs, 'temperature', parents=['simulationDefaults']):
             self.network.sim_params['temperature'] = float(attrs['value'])
-        elif self._opening(tag_name, attrs, 'timeStep', parents=['simulationParams']):
+        elif self._opening(tag_name, attrs, 'timeStep', parents=['simulationDefaults']):
             self.network.sim_params['timestep'] = float(attrs['value'])
-        elif self._opening(tag_name, attrs, 'minDelay', parents=['simulationParams']):
+        elif self._opening(tag_name, attrs, 'minDelay', parents=['simulationDefaults']):
             self.network.sim_params['min_delay'] = float(attrs['value'])
-        elif self._opening(tag_name, attrs, 'maxDelay', parents=['simulationParams']):
+        elif self._opening(tag_name, attrs, 'maxDelay', parents=['simulationDefaults']):
             self.network.sim_params['max_delay'] = float(attrs['value'])                                    
         elif self._opening(tag_name, attrs, 'population', parents=['network']):
             self.pop_id = attrs['id']
@@ -108,6 +114,8 @@ class NetworkMLHandler(XMLHandler):
             self.pop_size = int(attrs.get('size', '-1'))
             self.pop_layout = None
             self.pop_cell_params = self.CellParameters({}, [])
+            self.pop_flags = attrs.get('flags', '').replace(' ', '').split(',')         
+            self.pop_not_flags = attrs.get('not_flags', '').replace(' ', '').split(',')            
         elif self._opening(tag_name, attrs, 'layout', parents=['population']):
             if self.pop_layout:
                 raise Exception("The layout is specified twice in population '%s'" % self.pop_id)
@@ -135,6 +143,8 @@ class NetworkMLHandler(XMLHandler):
             self.proj_connection = None
             self.proj_weight = attrs.get('weight', None)
             self.proj_delay = attrs.get('delay', None)
+            self.proj_flags = attrs.get('flags', '').replace(' ', '').split(',')
+            self.proj_not_flags = attrs.get('not_flags', '').replace(' ', '').split(',')               
         elif self._opening(tag_name, attrs, 'source', parents=['projection']):
             if self.proj_pre:
                 raise Exception("The pre is specified twice in projection %s'" % self.proj_id)
@@ -175,14 +185,18 @@ class NetworkMLHandler(XMLHandler):
                                                     self.pop_cell,
                                                     self.pop_size,
                                                     self.pop_layout,
-                                                    self.pop_cell_params))
+                                                    self.pop_cell_params,
+                                                    self.pop_flags,
+                                                    self.pop_not_flags))
         elif self._closing(name, 'projection', parents=['network']):
             self.network.projections.append(self.Projection(self.proj_id,
                                                     self.proj_pre,
                                                     self.proj_post,
                                                     self.proj_connection,
                                                     self.proj_weight,
-                                                    self.proj_delay))
+                                                    self.proj_delay,
+                                                    self.proj_flags,
+                                                    self.proj_not_flags))
         XMLHandler.endElement(self, name)
 
 
@@ -216,7 +230,7 @@ class Network(object):
 
     def load_network(self, filename, build_mode=DEFAULT_BUILD_MODE, verbose=False, timestep=None, 
                                                 min_delay=None, max_delay=None, temperature=None,
-                                                silent_build=False):
+                                                silent_build=False, flags=[]):
         self.networkML = read_networkML(filename)
         self._set_default_simulation_params(timestep, min_delay, max_delay, temperature)
         dirname = os.path.dirname(filename)
@@ -227,27 +241,45 @@ class Network(object):
         self.label = self.networkML.id
         self._populations = {}
         self._projections = {}
+        for flag in flags:
+            self.networkML.flags[flag] = True
         for pop in self.networkML.populations:
-            self._populations[pop.id] = self._create_population(pop.id,
-                                                                pop.size,
-                                                                pop.cell_type,
-                                                                pop.layout,
-                                                                pop.cell_params.constants,
-                                                                pop.cell_params.distributions,
-                                                                verbose,
-                                                                silent_build)
+            try:
+                flags_are_set = all([self.networkML.flags[flag] for flag in pop.flags]) and \
+                                    all([not self.networkML.flags[flag] for flag in pop.not_flags])
+            except KeyError as e:
+                raise Exception ('Did not find flag ''{flag}'' used for in population ''{pop}'' \
+in parameters block of NetworkML description'.format(flag=e, pop.id))                    
+            if flags_are_set:
+                self._populations[pop.id] = self._create_population(pop.id,
+                                                                    pop.size,
+                                                                    pop.cell_type,
+                                                                    pop.layout,
+                                                                    pop.cell_params.constants,
+                                                                    pop.cell_params.distributions,
+                                                                    verbose,
+                                                                    silent_build)
         for proj in self.networkML.projections:
-            self._projections[proj.id] = self._create_projection(proj.id,
-                                                                 self._populations[proj.pre.pop_id],
-                                                                 self._populations[proj.post.pop_id],
-                                                                 proj.connection,
-                                                                 proj.pre,
-                                                                 proj.post,
-                                                                 proj.weight,
-                                                                 proj.delay,
-                                                                 verbose)
+            try:
+                flags_are_set = all([self.networkML.flags[flag] for flag in proj.flags]) and \
+                                    all([not self.networkML.flags[flag] for flag in proj.not_flags])
+            except KeyError as e:
+                raise Exception ('Did not find flag ''{flag}'' used for in population ''{pop}'' \
+in parameters block of NetworkML description'.format(flag=e, pop.id))                    
+            if flags_are_set:            
+                self._projections[proj.id] = self._create_projection(
+                                                             proj.id,
+                                                             self._populations[proj.pre.pop_id],
+                                                             self._populations[proj.post.pop_id],
+                                                             proj.connection,
+                                                             proj.pre,
+                                                             proj.post,
+                                                             proj.weight,
+                                                             proj.delay,
+                                                             verbose)
         if build_mode == 'compile_only':
-            print 'Finished compiling network, now exiting (use try: ... except SystemExit: ... if you want to do something afterwards)'
+            print 'Finished compiling network, now exiting (use try: ... except SystemExit: ... \
+if you want to do something afterwards)'
             raise SystemExit(0)
 
     def _create_population(self, label, size, cell_type_name, layout, cell_params, cell_param_dists, 
