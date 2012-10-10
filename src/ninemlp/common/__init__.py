@@ -91,10 +91,10 @@ class NetworkMLHandler(XMLHandler):
 
     def startElement(self, tag_name, attrs):
         if self._opening(tag_name, attrs, 'network'):
-            self.network = self.Network(attrs['id'], {}, [], [], [])
+            self.network = self.Network(attrs['id'], {}, [], [], {})
         elif self._opening(tag_name, attrs, 'parameters', parents=['network']): pass
         elif self._opening(tag_name, attrs, 'flags', parents=['parameters']): pass
-        elif self._opening(tag_name, attrs, 'flag', parents=['parameters']):
+        elif self._opening(tag_name, attrs, 'flag', parents=['flags']):
             if attrs['default'] == 'True':
                 self.network.flags[attrs['id']] = True
             else:
@@ -107,15 +107,16 @@ class NetworkMLHandler(XMLHandler):
         elif self._opening(tag_name, attrs, 'minDelay', parents=['simulationDefaults']):
             self.network.sim_params['min_delay'] = float(attrs['value'])
         elif self._opening(tag_name, attrs, 'maxDelay', parents=['simulationDefaults']):
-            self.network.sim_params['max_delay'] = float(attrs['value'])                                    
+            self.network.sim_params['max_delay'] = float(attrs['value'])
         elif self._opening(tag_name, attrs, 'population', parents=['network']):
             self.pop_id = attrs['id']
             self.pop_cell = attrs['cell']
             self.pop_size = int(attrs.get('size', '-1'))
             self.pop_layout = None
             self.pop_cell_params = self.CellParameters({}, [])
-            self.pop_flags = attrs.get('flags', '').replace(' ', '').split(',')         
-            self.pop_not_flags = attrs.get('not_flags', '').replace(' ', '').split(',')            
+            # Split the flags attribute on ',' and remove empty values (the use of filter)            
+            self.pop_flags = filter(None, attrs.get('flags', '').replace(' ', '').split(','))
+            self.pop_not_flags = filter(None, attrs.get('not_flags', '').replace(' ', '').split(','))
         elif self._opening(tag_name, attrs, 'layout', parents=['population']):
             if self.pop_layout:
                 raise Exception("The layout is specified twice in population '%s'" % self.pop_id)
@@ -143,8 +144,9 @@ class NetworkMLHandler(XMLHandler):
             self.proj_connection = None
             self.proj_weight = attrs.get('weight', None)
             self.proj_delay = attrs.get('delay', None)
-            self.proj_flags = attrs.get('flags', '').replace(' ', '').split(',')
-            self.proj_not_flags = attrs.get('not_flags', '').replace(' ', '').split(',')               
+            # Split the flags attribute on ',' and remove empty values (the use of filter)
+            self.proj_flags = filter(None, attrs.get('flags', '').replace(' ', '').split(','))
+            self.proj_not_flags = filter(None, attrs.get('not_flags', '').replace(' ', '').split(','))
         elif self._opening(tag_name, attrs, 'source', parents=['projection']):
             if self.proj_pre:
                 raise Exception("The pre is specified twice in projection %s'" % self.proj_id)
@@ -180,7 +182,8 @@ class NetworkMLHandler(XMLHandler):
     def endElement(self, name):
         if self._closing(name, 'population', parents=['network']):
             if self.pop_size > -1 and self.pop_layout:
-                raise Exception("Population 'size' attribute cannot be used in conjunction with the 'layout' member (with layouts, the size is determined from the arguments to the structure)")
+                raise Exception("Population 'size' attribute cannot be used in conjunction with the\
+ 'layout' member (with layouts, the size is determined from the arguments to the structure)")
             self.network.populations.append(self.Population(self.pop_id,
                                                     self.pop_cell,
                                                     self.pop_size,
@@ -216,7 +219,7 @@ def read_networkML(filename):
 
 class Network(object):
 
-    def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, 
+    def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None,
                                                 min_delay=None, max_delay=None, temperature=None,
                                                 silent_build=False):
         assert  hasattr(self, "_pyNN_module") and \
@@ -224,11 +227,11 @@ class Network(object):
                 hasattr(self, "_Population_class") and \
                 hasattr(self, "_Projection_class") and \
                 hasattr(self, "get_min_delay")
-        self.load_network(filename, build_mode=build_mode, timestep=timestep, 
-                                 min_delay=min_delay, max_delay=max_delay, temperature=temperature, 
+        self.load_network(filename, build_mode=build_mode, timestep=timestep,
+                                 min_delay=min_delay, max_delay=max_delay, temperature=temperature,
                                  silent_build=silent_build)
 
-    def load_network(self, filename, build_mode=DEFAULT_BUILD_MODE, verbose=False, timestep=None, 
+    def load_network(self, filename, build_mode=DEFAULT_BUILD_MODE, verbose=False, timestep=None,
                                                 min_delay=None, max_delay=None, temperature=None,
                                                 silent_build=False, flags=[]):
         self.networkML = read_networkML(filename)
@@ -249,7 +252,7 @@ class Network(object):
                                     all([not self.networkML.flags[flag] for flag in pop.not_flags])
             except KeyError as e:
                 raise Exception ('Did not find flag ''{flag}'' used for in population ''{pop}'' \
-in parameters block of NetworkML description'.format(flag=e, pop.id))                    
+in parameters block of NetworkML description'.format(flag=e, pop=pop.id))
             if flags_are_set:
                 self._populations[pop.id] = self._create_population(pop.id,
                                                                     pop.size,
@@ -264,9 +267,9 @@ in parameters block of NetworkML description'.format(flag=e, pop.id))
                 flags_are_set = all([self.networkML.flags[flag] for flag in proj.flags]) and \
                                     all([not self.networkML.flags[flag] for flag in proj.not_flags])
             except KeyError as e:
-                raise Exception ('Did not find flag ''{flag}'' used for in population ''{pop}'' \
-in parameters block of NetworkML description'.format(flag=e, pop.id))                    
-            if flags_are_set:            
+                raise Exception ('Did not find flag ''{flag}'' used for in projection ''{pop}'' \
+in parameters block of NetworkML description'.format(flag=e, pop=pop.id))
+            if flags_are_set:
                 self._projections[proj.id] = self._create_projection(
                                                              proj.id,
                                                              self._populations[proj.pre.pop_id],
@@ -282,7 +285,7 @@ in parameters block of NetworkML description'.format(flag=e, pop.id))
 if you want to do something afterwards)'
             raise SystemExit(0)
 
-    def _create_population(self, label, size, cell_type_name, layout, cell_params, cell_param_dists, 
+    def _create_population(self, label, size, cell_type_name, layout, cell_params, cell_param_dists,
                                                                             verbose, silent_build):
         if cell_type_name + ".xml" in os.listdir(self.cells_dir):
             cell_type = self._ncml_module.load_cell_type(cell_type_name,
@@ -338,7 +341,8 @@ if you want to do something afterwards)'
                 GeometricExpression = getattr(geometry, expression)
                 connect_expr = GeometricExpression(**self._convert_all_units(connection.args))
             except TypeError as e:
-                raise Exception("Could not initialise distance expression class '%s' from given arguments '%s' ('%s')" % (expression, connection.args, e))
+                raise Exception("Could not initialise distance expression class '%s' from given \
+arguments '%s' ('%s')" % (expression, connection.args, e))
             if self.is_value_str(weight): # If weight is a string containing a simple value and units
                 weight = self._convert_units(weight)
             elif hasattr(weight, 'pattern'):
@@ -465,11 +469,11 @@ if you want to do something afterwards)'
         print "Populations:"
         for pop in self.all_populations():
             print pop.describe()
-        
+
         print "Projections:"
         for proj in self.all_projections():
             print proj.describe()
-            
+
     def save_connections(self, output_dir):
         """
         Saves generated connections to output directory
@@ -480,7 +484,7 @@ if you want to do something afterwards)'
             proj.saveConnections(os.path.join(output_dir, proj.label))
 
 class Population(object):
-    
+
     def set_poisson_spikes(self, rate, start_time, end_time):
         """
         Sets up a train of poisson spike times for a SpikeSourceArray population
@@ -495,7 +499,8 @@ class Population(object):
         stim_range = end_time - start_time
         if stim_range >= 0.0:
             estimated_num_spikes = stim_range / mean_interval
-            estimated_num_spikes = int(estimated_num_spikes + math.exp(-estimated_num_spikes / 10.0) * 10.0) # Add extra spikes to make sure spike train doesn't stop short
+            # Add extra spikes to make sure spike train doesn't stop short
+            estimated_num_spikes = int(estimated_num_spikes + math.exp(-estimated_num_spikes / 10.0) * 10.0)
             spike_intervals = numpy.random.exponential(mean_interval, size=(self.size, estimated_num_spikes))
             spike_times = numpy.cumsum(spike_intervals, axis=1) + start_time
             # FIXME: Should ensure that spike times don't exceed 'end_time' and make it at least until then.
@@ -509,7 +514,7 @@ class Population(object):
         Returns the cell type of the population
         """
         return type(self.celltype)
-        
+
 
 if __name__ == "__main__":
 
