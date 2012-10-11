@@ -339,7 +339,7 @@ class Projection(common.Projection):
                     # (TGC) Generated a "source variable" GID (NB: that this is completely separate 
                     # from the cell gid). 
                     #
-                    # Warning! This implementation assumes that there is only one projection with 
+                    # FIXME: Warning! This implementation assumes that there is only one projection with 
                     # gap junctions, maybe a safe offset for each could be calculated when the 
                     # projections are read from the XML and passed to the projection constructor
                     synapse_object.g = weight
