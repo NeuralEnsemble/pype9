@@ -28,10 +28,10 @@ import ncml
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, get_max_delay, rank, num_processes, record, record_v, record_gsyn, StepCurrentSource, ACSource, DCSource, NoisyCurrentSource
 import pyNN.neuron as sim
 from pyNN.common.control import build_state_queries
-import pyNN.neuron.simulator
+import pyNN.neuron.simulator as simulator
 import neuron
 
-get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(pyNN.neuron.simulator)
+get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 class Population(ninemlp.common.Population, pyNN.neuron.Population):
 
@@ -94,8 +94,8 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
                                                               position=position, variable=variable)
         self._record(variable_str, to_file=filename)
         # recorder_list is used by end()
-        if self.recorders[variable_str] not in pyNN.neuron.simulator.recorder_list:
-            pyNN.neuron.simulator.recorder_list.append(self.recorders[variable_str])  # this is a bit hackish - better to add to Population.__del__?
+        if self.recorders[variable_str] not in simulator.recorder_list:
+            simulator.recorder_list.append(self.recorders[variable_str])  # this is a bit hackish - better to add to Population.__del__?
 
     def record_all(self, file_prefix):
         """
