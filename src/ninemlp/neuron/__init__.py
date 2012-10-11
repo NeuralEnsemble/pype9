@@ -123,7 +123,7 @@ class Projection(pyNN.neuron.Projection):
 class Network(ninemlp.common.Network):
 
     def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None, 
-                                             max_delay=None, temperature=None, silent_build=False):
+                                 max_delay=None, temperature=None, silent_build=False, flags=[]):
         self._pyNN_module = pyNN.neuron
         self._ncml_module = ncml
         self._Population_class = Population
@@ -132,7 +132,7 @@ class Network(ninemlp.common.Network):
         #Call the base function initialisation function.
         ninemlp.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep, 
                                         min_delay=min_delay, max_delay=max_delay, 
-                                        temperature=temperature, silent_build=silent_build)
+                                    temperature=temperature, silent_build=silent_build, flags=flags)
 
     def _convert_units(self, value_str, units=None):
         if ' ' in value_str:

@@ -30,6 +30,30 @@ RELATIVE_BREP_DIR = "./brep"
 
 BASIC_PYNN_CONNECTORS = ['AllToAll', 'OneToOne']
 
+class ValueWithUnits(object):
+
+    def __init__(self, value, units):
+        self.value = float(eval(value))
+        self.units = units
+
+    def neuron(self):
+        if self.units == None:
+            return self.value
+        elif self.units == 'ms':
+            return self.value
+        elif self.units == 'uF_per_cm2':
+            return self.value
+        elif self.units == 'mV':
+            return self.value
+        elif self.units == 'ohm_cm':
+            return self.value
+        elif self.units == 'S_per_m2':
+            return self.value
+        else:
+            raise Exception("Unrecognised units '" + self.units + "' (A conversion from these units \
+                            to the standard NEURON units needs to be added to \
+                            'ninemlp.common.ncml.neuron_value' function).")
+
 class XMLHandler(xml.sax.handler.ContentHandler):
 
     def __init__(self):
@@ -123,8 +147,9 @@ class NetworkMLHandler(XMLHandler):
             args = dict(attrs)
             layout_type = args.pop('type')
             self.pop_layout = self.Layout(layout_type, args)
-        elif self._opening(tag_name, attrs, 'constant', parents=['population', 'cellParameters']):
-            self.pop_cell_params.constants[attrs['name']] = attrs['value']
+        elif self._opening(tag_name, attrs, 'cellParameters', parents=['population']): pass
+        elif self._opening(tag_name, attrs, 'const', parents=['population', 'cellParameters']):
+            self.pop_cell_params.constants[attrs['name']] = float(attrs['value']) # FIXME: Units are ignored here
         elif self._opening(tag_name, attrs, 'distribution', parents=['population', 'cellParameters']):
             args = dict(attrs)
             name = args.pop('name')
@@ -178,7 +203,6 @@ class NetworkMLHandler(XMLHandler):
             pattern = args.pop('pattern')
             self.proj_delay = self.Delay(pattern, args)
 
-
     def endElement(self, name):
         if self._closing(name, 'population', parents=['network']):
             if self.pop_size > -1 and self.pop_layout:
@@ -221,7 +245,7 @@ class Network(object):
 
     def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None,
                                                 min_delay=None, max_delay=None, temperature=None,
-                                                silent_build=False):
+                                                silent_build=False, flags=[]):
         assert  hasattr(self, "_pyNN_module") and \
                 hasattr(self, "_ncml_module") and \
                 hasattr(self, "_Population_class") and \
@@ -229,7 +253,7 @@ class Network(object):
                 hasattr(self, "get_min_delay")
         self.load_network(filename, build_mode=build_mode, timestep=timestep,
                                  min_delay=min_delay, max_delay=max_delay, temperature=temperature,
-                                 silent_build=silent_build)
+                                 silent_build=silent_build, flags=flags)
 
     def load_network(self, filename, build_mode=DEFAULT_BUILD_MODE, verbose=False, timestep=None,
                                                 min_delay=None, max_delay=None, temperature=None,
