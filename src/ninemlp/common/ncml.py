@@ -281,7 +281,7 @@ class BaseNCMLMetaClass(type):
         # necessary. The only benefit is that it would allow the constructor of the created cell type
         # to set these parameters. However, this can always be done after the cell is 
         # created using the set_parameter function of BaseNCMLCell
-        default_params = {}
+        default_params = {'parent': None}
 #        for curr in ncml_model.currents:
 #            for param in curr.params:
 #                default_params[_as_prefix(curr.group_id) + curr.name + "." + param.name] = param.value

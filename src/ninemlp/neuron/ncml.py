@@ -24,6 +24,7 @@ from copy import copy
 from operator import attrgetter
 import math
 import numpy as np
+import pyNN.neuron.simulator
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 
@@ -82,7 +83,7 @@ class Segment(nrn.Section): #@UndefinedVariable
 
 class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
 
-    def __init__(self):
+    def __init__(self, parent=None):
         self._init_morphology()
         self._init_biophysics()
         # for recording
@@ -90,6 +91,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         self.traces = {}
         self.gsyn_trace = {}
         self.recording_time = 0
+        self.parent = parent
 
     def _init_morphology(self, barebones_only=True):
         """
@@ -228,7 +230,25 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
     def get_segments(self):
         return self.segments.values()
 
-    def record(self, active):
+    def record(self, variable, output_path):
+        # This is a bit of a hack to remap this function name as record(self, active) is used in \
+        # Population.record to mean record_spikes
+        if self.parent:
+            assert(type(variable) == int)
+            self.record_spikes(active=variable)
+        # If parent is not set than this cell is not part of a Population and must create its own
+        # recorder.
+        else:
+            if variable == 'spikes':
+                self.record_spikes(1)
+            elif variable == 'v':
+                self.record_v(1)
+            else:
+                raise Exception('Unrecognised variable to record ''{}'' (can be ''spikes'' or ''v''\
+ at this stage)'.format(variable))
+            
+
+    def record_spikes(self, active):
         if active:
             self.rec = h.NetCon(self.source, None, sec=self.source_section)
             self.rec.record(self.spike_times)

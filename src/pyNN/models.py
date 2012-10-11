@@ -64,7 +64,7 @@ class BaseModelType(object):
                             parameters[k] = list(supplied_parameters[k])
                         except TypeError:
                             raise errors.InvalidParameterValueError(err_msg)
-                    else:
+                    elif default_parameters[k] is not None:
                         raise errors.InvalidParameterValueError(err_msg)
                 else:
                     raise errors.NonExistentParameterError(k, cls, cls.default_parameters.keys())
