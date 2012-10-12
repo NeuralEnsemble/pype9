@@ -24,6 +24,7 @@ from copy import copy
 from operator import attrgetter
 import math
 import numpy as np
+import pyNN.neuron.simulator
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 
@@ -82,14 +83,18 @@ class Segment(nrn.Section): #@UndefinedVariable
 
 class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
 
-    def __init__(self):
+    def __init__(self, parent=None):
         self._init_morphology()
         self._init_biophysics()
+        # Setup variables used by pyNN
+        self.source = self.soma(0.5)._ref_v
+        self.source_section = self.soma
         # for recording
         self.spike_times = h.Vector(0)
         self.traces = {}
         self.gsyn_trace = {}
         self.recording_time = 0
+        self.parent = parent
 
     def _init_morphology(self, barebones_only=True):
         """
@@ -228,7 +233,25 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
     def get_segments(self):
         return self.segments.values()
 
-    def record(self, active):
+    def record(self, variable, output_path=''):
+        # This is a bit of a hack to remap this function name as record(self, active) is used in \
+        # Population.record to mean record_spikes
+        if self.parent:
+            assert(type(variable) == int)
+            self.record_spikes(active=variable)
+        # If parent is not set than this cell is not part of a Population and must create its own
+        # recorder.
+        else:
+            if variable == 'spikes':
+                self.record_spikes(1)
+            elif variable == 'v':
+                self.record_v(1)
+            else:
+                raise Exception('Unrecognised variable to record ''{}'' (can be ''spikes'' or ''v''\
+ at this stage)'.format(variable))
+            
+
+    def record_spikes(self, active):
         if active:
             self.rec = h.NetCon(self.source, None, sec=self.source_section)
             self.rec.record(self.spike_times)
@@ -280,16 +303,17 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
     """
     def __new__(cls, name, bases, dct):
         #The __init__ function for the created class  
-        def __init__(self, parameters={}):
+        def cellclass__init__(self, parameters={}):
             pyNN.models.BaseCellType.__init__(self, parameters)
-            NCMLCell.__init__(self)
-            self.source = self.soma(0.5)._ref_v
-            self.source_section = self.soma
-        dct['__init__'] = __init__
-        cell_type = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
-        cell_type.model = cell_type
-        cls._validate_recordable(cell_type) #FIXME: This is a bit of a hack
-        return cell_type
+            NCMLCell.__init__(self, **parameters)
+        def modelclass__init__(self, **parameters):
+            cellclass__init__(self, parameters)
+        dct['__init__'] = cellclass__init__
+        cellclass = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
+        dct['__init__'] = modelclass__init__
+        cellclass.model = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
+        cls._validate_recordable(cellclass) #FIXME: This is a bit of a hack
+        return cellclass
     
     @staticmethod
     def _validate_recordable(cell_type):
@@ -346,6 +370,7 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
                         if '}' in line:
                             in_assigned_block = False
                         else:
+                            
                             var = line.strip()
                             if var:
                                 assigned.append(var)
