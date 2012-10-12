@@ -233,7 +233,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
     def get_segments(self):
         return self.segments.values()
 
-    def record(self, variable, output_path):
+    def record(self, variable, output_path=''):
         # This is a bit of a hack to remap this function name as record(self, active) is used in \
         # Population.record to mean record_spikes
         if self.parent:
@@ -370,6 +370,7 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
                         if '}' in line:
                             in_assigned_block = False
                         else:
+                            
                             var = line.strip()
                             if var:
                                 assigned.append(var)

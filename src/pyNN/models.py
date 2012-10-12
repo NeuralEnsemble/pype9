@@ -50,7 +50,8 @@ class BaseModelType(object):
                               (k, cls.__name__, type(default_parameters[k]),
                                type(supplied_parameters[k]), supplied_parameters[k])
                     # same type
-                    if type(supplied_parameters[k]) == type(default_parameters[k]): 
+                    if type(supplied_parameters[k]) == type(default_parameters[k]) or \
+                                                                 default_parameters[k] is None: 
                         parameters[k] = supplied_parameters[k]
                     # float and something that can be converted to a float
                     elif isinstance(default_parameters[k], float): 
@@ -64,7 +65,7 @@ class BaseModelType(object):
                             parameters[k] = list(supplied_parameters[k])
                         except TypeError:
                             raise errors.InvalidParameterValueError(err_msg)
-                    elif default_parameters[k] is not None:
+                    else:
                         raise errors.InvalidParameterValueError(err_msg)
                 else:
                     raise errors.NonExistentParameterError(k, cls, cls.default_parameters.keys())
