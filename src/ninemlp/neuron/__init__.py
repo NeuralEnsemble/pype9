@@ -19,11 +19,10 @@ from ninemlp import SRC_PATH, DEFAULT_BUILD_MODE, pyNN_build_mode
 from ninemlp.utilities.nmodl import build as build_nmodl
 build_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN_build_mode, 
                                                                                         silent=True)
-import ninemlp.common.ncml
+from ninemlp.neuron.ncml import NCMLCell
 import pyNN.neuron.standardmodels.cells
 import pyNN.neuron.connectors
 import pyNN.neuron.recording
-import ninemlp.common
 import ninemlp.common.geometry
 import ncml
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, get_max_delay, rank, num_processes, record, record_v, record_gsyn, StepCurrentSource, ACSource, DCSource, NoisyCurrentSource
@@ -53,8 +52,8 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
         if build_mode == 'compile_only':
             print "Warning! '--compile' option was set to 'compile_only', meaning the Population '%s' was not constructed and only the NMODL files were compiled." % label
         else:
-            # If cell_type is of NCML type append the population as a parent parameter
-            if issubclass(cell_type, ninemlp.common.ncml.BaseNCMLCell):
+            # If cell_type is of NCML type append the population as a parent parameter for its constructor
+            if issubclass(cell_type, NCMLCell):
                 params = params.copy()
                 params['parent'] = self
             pyNN.neuron.Population.__init__(self, size, cell_type, params, structure=None, 

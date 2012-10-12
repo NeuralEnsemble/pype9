@@ -86,6 +86,9 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
     def __init__(self, parent=None):
         self._init_morphology()
         self._init_biophysics()
+        # Setup variables used by pyNN
+        self.source = self.soma(0.5)._ref_v
+        self.source_section = self.soma
         # for recording
         self.spike_times = h.Vector(0)
         self.traces = {}
@@ -300,16 +303,17 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
     """
     def __new__(cls, name, bases, dct):
         #The __init__ function for the created class  
-        def __init__(self, parameters={}):
+        def cellclass__init__(self, parameters={}):
             pyNN.models.BaseCellType.__init__(self, parameters)
-            NCMLCell.__init__(self)
-            self.source = self.soma(0.5)._ref_v
-            self.source_section = self.soma
-        dct['__init__'] = __init__
-        cell_type = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
-        cell_type.model = cell_type
-        cls._validate_recordable(cell_type) #FIXME: This is a bit of a hack
-        return cell_type
+            NCMLCell.__init__(self, **parameters)
+        def modelclass__init__(self, **parameters):
+            cellclass__init__(self, parameters)
+        dct['__init__'] = cellclass__init__
+        cellclass = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
+        dct['__init__'] = modelclass__init__
+        cellclass.model = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
+        cls._validate_recordable(cellclass) #FIXME: This is a bit of a hack
+        return cellclass
     
     @staticmethod
     def _validate_recordable(cell_type):
