@@ -270,7 +270,7 @@ class Network(object):
         self._populations = {}
         self._projections = {}
         for flag in flags:
-            self.networkML.flags[flag] = True
+            self.networkML.free_params.flags[flag] = True
         for pop in self.networkML.populations:
             try:
                 flags_are_set = all([self.networkML.free_params.flags[flag] for flag in pop.flags]) and \
