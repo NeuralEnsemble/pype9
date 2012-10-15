@@ -118,12 +118,12 @@ class NetworkMLHandler(XMLHandler):
         if self._opening(tag_name, attrs, 'network'):
             self.network = self.Network(attrs['id'], {}, [], [], self.FreeParameters({}, {}))
         elif self._opening(tag_name, attrs, 'freeParameters', parents=['network']): pass
-        elif self._opening(tag_name, attrs, 'flags', parents=['freeParameters']): pass
+        elif self._opening(tag_name, attrs, 'flags', parents=['network']): pass
         elif self._opening(tag_name, attrs, 'flag', parents=['flags']):
             if attrs['default'] == 'True':
-                self.network.flags[attrs['id']] = True
+                self.network.free_params.flags[attrs['id']] = True
             else:
-                self.network.flags[attrs['id']] = False
+                self.network.free_params.flags[attrs['id']] = False
         elif self._opening(tag_name, attrs, 'simulationDefaults'): pass
         elif self._opening(tag_name, attrs, 'temperature', parents=['simulationDefaults']):
             self.network.sim_params['temperature'] = float(attrs['value'])
@@ -292,8 +292,8 @@ in parameters block of NetworkML description'.format(flag=e, pop=pop.id))
                 flags_are_set = all([self.networkML.free_params.flags[flag] for flag in proj.flags]) and \
                         all([not self.networkML.free_params.flags[flag] for flag in proj.not_flags])
             except KeyError as e:
-                raise Exception ('Did not find flag ''{flag}'' used for in projection ''{pop}'' \
-in parameters block of NetworkML description'.format(flag=e, pop=pop.id))
+                raise Exception ('Did not find flag ''{flag}'' used for in projection ''{proj}'' \
+in parameters block of NetworkML description'.format(flag=e, proj=proj.id))
             if flags_are_set:
                 self._projections[proj.id] = self._create_projection(
                                                              proj.id,
@@ -507,6 +507,19 @@ arguments '%s' ('%s')" % (expression, connection.args, e))
         """
         for proj in self.all_projections():
             proj.saveConnections(os.path.join(output_dir, proj.label))
+            
+    def record_all_spikes(self, file_prefix):
+        """
+        Record all spikes generated in the network
+        
+        @param filename: The prefix for every population files before the popluation name. The suffix '.spikes' will be appended to the filenames as well.
+        """
+        # Add a dot to separate the prefix from the population label if it doesn't already have one
+        # and isn't a directory
+        if not os.path.isdir(file_prefix) and not file_prefix.endswith('.'):
+            file_prefix += '.'
+        for pop in self.all_populations():
+            pop.record('spikes', file_prefix + pop.label + '.spikes') #@UndefinedVariable                
 
 class Population(object):
 

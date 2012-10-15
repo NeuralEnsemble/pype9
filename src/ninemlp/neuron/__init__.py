@@ -215,18 +215,6 @@ class Network(ninemlp.common.Network):
             segment = "soma"
         return segment + "." + synapse
 
-    def record_all_spikes(self, file_prefix):
-        """
-        Record all spikes generated in the network
-        
-        @param filename: The prefix for every population files before the popluation name. The suffix '.spikes' will be appended to the filenames as well.
-        """
-        # Add a dot to separate the prefix from the population label if it doesn't already have one
-        # and isn't a directory
-        if not os.path.isdir(file_prefix) and not file_prefix.endswith('.'):
-            file_prefix += '.'
-        for pop in self.all_populations():
-            pop.record('spikes', file_prefix + pop.label + '.spikes') #@UndefinedVariable
 
 if __name__ == "__main__":
 
