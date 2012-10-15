@@ -118,7 +118,7 @@ class NetworkMLHandler(XMLHandler):
         if self._opening(tag_name, attrs, 'network'):
             self.network = self.Network(attrs['id'], {}, [], [], self.FreeParameters({}, {}))
         elif self._opening(tag_name, attrs, 'freeParameters', parents=['network']): pass
-        elif self._opening(tag_name, attrs, 'flags', parents=['network']): pass
+        elif self._opening(tag_name, attrs, 'flags', parents=['freeParameters']): pass
         elif self._opening(tag_name, attrs, 'flag', parents=['flags']):
             if attrs['default'] == 'True':
                 self.network.free_params.flags[attrs['id']] = True
