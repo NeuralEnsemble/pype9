@@ -26,6 +26,7 @@ from operator import attrgetter
 import math
 import numpy as np
 import pyNN.neuron.simulator
+import weakref
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 
@@ -95,7 +96,10 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         self.traces = {}
         self.gsyn_trace = {}
         self.recording_time = 0
-        self.parent = parent
+        if parent:
+            # A weak reference is used to avoid a circular reference that would prevent the garbage 
+            # collector from being called on the cell class    
+            self.parent = weakref.ref(parent)
 
     def _init_morphology(self, barebones_only=True):
         """
