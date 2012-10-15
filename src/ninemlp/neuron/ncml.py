@@ -238,7 +238,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
     def record(self, *args):
         # If one assume that it is the pyNN version of this method (i.e. map to record_spikes)
         if len(args) == 1:
-            assert(self.parent is None)
+            assert(self.parent is not None)
             self.record_spikes(args[0])
         elif len(args) == 2:
             variable, output = args

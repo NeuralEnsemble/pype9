@@ -98,7 +98,7 @@ class XMLHandler(xml.sax.handler.ContentHandler):
 
 class NetworkMLHandler(XMLHandler):
 
-    Network = collections.namedtuple('Network', 'id sim_params populations projections flags')
+    Network = collections.namedtuple('Network', 'id sim_params populations projections free_params')
     Population = collections.namedtuple('Population', 'id cell_type size layout cell_params flags not_flags')
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay flags not_flags')
     Layout = collections.namedtuple('Layout', 'type args')
@@ -109,21 +109,22 @@ class NetworkMLHandler(XMLHandler):
     Delay = collections.namedtuple('Delay', 'pattern args')
     Source = collections.namedtuple('Source', 'pop_id terminal section')
     Destination = collections.namedtuple('Destination', 'pop_id synapse segment')
+    FreeParameters = collections.namedtuple('FreeParameters', 'flags scalars')
 
     def __init__(self):
         XMLHandler.__init__(self)
 
     def startElement(self, tag_name, attrs):
         if self._opening(tag_name, attrs, 'network'):
-            self.network = self.Network(attrs['id'], {}, [], [], {})
-        elif self._opening(tag_name, attrs, 'parameters', parents=['network']): pass
-        elif self._opening(tag_name, attrs, 'flags', parents=['parameters']): pass
+            self.network = self.Network(attrs['id'], {}, [], [], self.FreeParameters({}, {}))
+        elif self._opening(tag_name, attrs, 'freeParameters', parents=['network']): pass
+        elif self._opening(tag_name, attrs, 'flags', parents=['freeParameters']): pass
         elif self._opening(tag_name, attrs, 'flag', parents=['flags']):
             if attrs['default'] == 'True':
                 self.network.flags[attrs['id']] = True
             else:
                 self.network.flags[attrs['id']] = False
-        elif self._opening(tag_name, attrs, 'simulationDefaults', parents=['parameters']): pass
+        elif self._opening(tag_name, attrs, 'simulationDefaults'): pass
         elif self._opening(tag_name, attrs, 'temperature', parents=['simulationDefaults']):
             self.network.sim_params['temperature'] = float(attrs['value'])
         elif self._opening(tag_name, attrs, 'timeStep', parents=['simulationDefaults']):
@@ -272,8 +273,8 @@ class Network(object):
             self.networkML.flags[flag] = True
         for pop in self.networkML.populations:
             try:
-                flags_are_set = all([self.networkML.flags[flag] for flag in pop.flags]) and \
-                                    all([not self.networkML.flags[flag] for flag in pop.not_flags])
+                flags_are_set = all([self.networkML.free_params.flags[flag] for flag in pop.flags]) and \
+                        all([not self.networkML.free_params.flags[flag] for flag in pop.not_flags])
             except KeyError as e:
                 raise Exception ('Did not find flag ''{flag}'' used for in population ''{pop}'' \
 in parameters block of NetworkML description'.format(flag=e, pop=pop.id))
@@ -288,8 +289,8 @@ in parameters block of NetworkML description'.format(flag=e, pop=pop.id))
                                                                     silent_build)
         for proj in self.networkML.projections:
             try:
-                flags_are_set = all([self.networkML.flags[flag] for flag in proj.flags]) and \
-                                    all([not self.networkML.flags[flag] for flag in proj.not_flags])
+                flags_are_set = all([self.networkML.free_params.flags[flag] for flag in proj.flags]) and \
+                        all([not self.networkML.free_params.flags[flag] for flag in proj.not_flags])
             except KeyError as e:
                 raise Exception ('Did not find flag ''{flag}'' used for in projection ''{pop}'' \
 in parameters block of NetworkML description'.format(flag=e, pop=pop.id))
