@@ -123,14 +123,14 @@ class NetworkMLHandler(XMLHandler):
                 self.network.flags[attrs['id']] = True
             else:
                 self.network.flags[attrs['id']] = False
-        elif self._opening(tag_name, attrs, 'simulationParams', parents=['parameters']): pass
-        elif self._opening(tag_name, attrs, 'temperature', parents=['simulationParams']):
+        elif self._opening(tag_name, attrs, 'simulationDefaults', parents=['parameters']): pass
+        elif self._opening(tag_name, attrs, 'temperature', parents=['simulationDefaults']):
             self.network.sim_params['temperature'] = float(attrs['value'])
-        elif self._opening(tag_name, attrs, 'timeStep', parents=['simulationParams']):
+        elif self._opening(tag_name, attrs, 'timeStep', parents=['simulationDefaults']):
             self.network.sim_params['timestep'] = float(attrs['value'])
-        elif self._opening(tag_name, attrs, 'minDelay', parents=['simulationParams']):
+        elif self._opening(tag_name, attrs, 'minDelay', parents=['simulationDefaults']):
             self.network.sim_params['min_delay'] = float(attrs['value'])
-        elif self._opening(tag_name, attrs, 'maxDelay', parents=['simulationParams']):
+        elif self._opening(tag_name, attrs, 'maxDelay', parents=['simulationDefaults']):
             self.network.sim_params['max_delay'] = float(attrs['value'])
         elif self._opening(tag_name, attrs, 'population', parents=['network']):
             self.pop_id = attrs['id']
