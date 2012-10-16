@@ -11,4 +11,4 @@ x86_64
 /external/sergios_golgi/Golgi_count.txt
 *~
 *.swp
-/kbrain/external/nest/build/*
+/kbrain/external/nest/build

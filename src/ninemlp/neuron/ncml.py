@@ -19,7 +19,7 @@ from neuron import h, nrn, load_mechanisms
 import pyNN.models
 import pyNN.recording
 import ninemlp.common.ncml
-from ninemlp.utilities.nmodl import build as build_nmodl
+from ninemlp.neuron.build import build_modl
 from ninemlp import DEFAULT_BUILD_MODE
 from copy import copy
 from operator import attrgetter
@@ -443,7 +443,7 @@ def load_cell_type(name, path_to_xml_file, build_mode=DEFAULT_BUILD_MODE, silent
     dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(name, path_to_xml_file)
     mech_path = str(os.path.join(os.path.dirname(path_to_xml_file), RELATIVE_NMODL_DIR))
     if mech_path not in loaded_mech_paths:
-        build_nmodl(mech_path, build_mode=build_mode, silent=silent)
+        compile_nmodl(mech_path, build_mode=build_mode, silent=silent)
         load_mechanisms(mech_path)
         loaded_mech_paths.append(mech_path)
     dct['mech_path'] = mech_path
