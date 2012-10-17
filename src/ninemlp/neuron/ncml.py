@@ -19,7 +19,7 @@ from neuron import h, nrn, load_mechanisms
 import pyNN.models
 import pyNN.recording
 import ninemlp.common.ncml
-from ninemlp.neuron.build import build_modl
+from ninemlp.neuron.build import compile_nmodl
 from ninemlp import DEFAULT_BUILD_MODE
 from copy import copy
 from operator import attrgetter
