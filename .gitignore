@@ -11,3 +11,4 @@ x86_64
 /external/sergios_golgi/Golgi_count.txt
 *~
 *.swp
+build

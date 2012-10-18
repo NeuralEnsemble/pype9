@@ -30,6 +30,8 @@ RELATIVE_BREP_DIR = "./brep"
 
 BASIC_PYNN_CONNECTORS = ['AllToAll', 'OneToOne']
 
+_REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
+
 class ValueWithUnits(object):
 
     def __init__(self, value, units):
@@ -98,7 +100,7 @@ class XMLHandler(xml.sax.handler.ContentHandler):
 
 class NetworkMLHandler(XMLHandler):
 
-    Network = collections.namedtuple('Network', 'id sim_params populations projections flags')
+    Network = collections.namedtuple('Network', 'id sim_params populations projections free_params')
     Population = collections.namedtuple('Population', 'id cell_type size layout cell_params flags not_flags')
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay flags not_flags')
     Layout = collections.namedtuple('Layout', 'type args')
@@ -109,21 +111,22 @@ class NetworkMLHandler(XMLHandler):
     Delay = collections.namedtuple('Delay', 'pattern args')
     Source = collections.namedtuple('Source', 'pop_id terminal section')
     Destination = collections.namedtuple('Destination', 'pop_id synapse segment')
+    FreeParameters = collections.namedtuple('FreeParameters', 'flags scalars')
 
     def __init__(self):
         XMLHandler.__init__(self)
 
     def startElement(self, tag_name, attrs):
         if self._opening(tag_name, attrs, 'network'):
-            self.network = self.Network(attrs['id'], {}, [], [], {})
-        elif self._opening(tag_name, attrs, 'parameters', parents=['network']): pass
-        elif self._opening(tag_name, attrs, 'flags', parents=['parameters']): pass
+            self.network = self.Network(attrs['id'], {}, [], [], self.FreeParameters({}, {}))
+        elif self._opening(tag_name, attrs, 'freeParameters', parents=['network']): pass
+        elif self._opening(tag_name, attrs, 'flags', parents=['freeParameters']): pass
         elif self._opening(tag_name, attrs, 'flag', parents=['flags']):
             if attrs['default'] == 'True':
-                self.network.flags[attrs['id']] = True
+                self.network.free_params.flags[attrs['id']] = True
             else:
-                self.network.flags[attrs['id']] = False
-        elif self._opening(tag_name, attrs, 'simulationDefaults', parents=['parameters']): pass
+                self.network.free_params.flags[attrs['id']] = False
+        elif self._opening(tag_name, attrs, 'simulationDefaults'): pass
         elif self._opening(tag_name, attrs, 'temperature', parents=['simulationDefaults']):
             self.network.sim_params['temperature'] = float(attrs['value'])
         elif self._opening(tag_name, attrs, 'timeStep', parents=['simulationDefaults']):
@@ -259,7 +262,8 @@ class Network(object):
                                                 min_delay=None, max_delay=None, temperature=None,
                                                 silent_build=False, flags=[]):
         self.networkML = read_networkML(filename)
-        self._set_default_simulation_params(timestep, min_delay, max_delay, temperature)
+        self._set_simulation_params(timestep=timestep, min_delay=min_delay, max_delay=max_delay, 
+                                                                            temperature=temperature)
         dirname = os.path.dirname(filename)
         self.cells_dir = os.path.join(dirname, RELATIVE_NCML_DIR)
         self.pop_dir = os.path.join(dirname, RELATIVE_BREP_DIR, 'build', 'populations')
@@ -269,11 +273,11 @@ class Network(object):
         self._populations = {}
         self._projections = {}
         for flag in flags:
-            self.networkML.flags[flag] = True
+            self.networkML.free_params.flags[flag] = True
         for pop in self.networkML.populations:
             try:
-                flags_are_set = all([self.networkML.flags[flag] for flag in pop.flags]) and \
-                                    all([not self.networkML.flags[flag] for flag in pop.not_flags])
+                flags_are_set = all([self.networkML.free_params.flags[flag] for flag in pop.flags]) \
+                    and all([not self.networkML.free_params.flags[flag] for flag in pop.not_flags])
             except KeyError as e:
                 raise Exception ('Did not find flag ''{flag}'' used for in population ''{pop}'' \
 in parameters block of NetworkML description'.format(flag=e, pop=pop.id))
@@ -288,11 +292,11 @@ in parameters block of NetworkML description'.format(flag=e, pop=pop.id))
                                                                     silent_build)
         for proj in self.networkML.projections:
             try:
-                flags_are_set = all([self.networkML.flags[flag] for flag in proj.flags]) and \
-                                    all([not self.networkML.flags[flag] for flag in proj.not_flags])
+                flags_are_set = all([self.networkML.free_params.flags[flag] for flag in proj.flags]) and \
+                        all([not self.networkML.free_params.flags[flag] for flag in proj.not_flags])
             except KeyError as e:
-                raise Exception ('Did not find flag ''{flag}'' used for in projection ''{pop}'' \
-in parameters block of NetworkML description'.format(flag=e, pop=pop.id))
+                raise Exception ('Did not find flag ''{flag}'' used for in projection ''{proj}'' \
+in parameters block of NetworkML description'.format(flag=e, proj=proj.id))
             if flags_are_set:
                 self._projections[proj.id] = self._create_projection(
                                                              proj.id,
@@ -443,6 +447,17 @@ arguments '%s' ('%s')" % (expression, connection.args, e))
         return self._Projection_class(pre, dest, label, connector, source=source.terminal,
                                       target=self._get_target_str(target.synapse, target.segment),
                                       build_mode=self.build_mode)
+        
+    def _get_simulation_params(self, **params):
+        sim_params = self.networkML.sim_params
+        for key in _REQUIRED_SIM_PARAMS:
+            if params.has_key(key) and params[key]:
+                sim_params[key] = params[key]
+            elif not sim_params.has_key(key) or not sim_params[key]:
+                raise Exception ("'{}' parameter was not specified either in Network initialisation \
+or NetworkML specification".format(key))
+        return sim_params
+
 
     def _convert_units(self, value_str, units=None):
         raise NotImplementedError("_convert_units needs to be implemented by simulator specific Network class")
@@ -506,6 +521,19 @@ arguments '%s' ('%s')" % (expression, connection.args, e))
         """
         for proj in self.all_projections():
             proj.saveConnections(os.path.join(output_dir, proj.label))
+            
+    def record_all_spikes(self, file_prefix):
+        """
+        Record all spikes generated in the network
+        
+        @param filename: The prefix for every population files before the popluation name. The suffix '.spikes' will be appended to the filenames as well.
+        """
+        # Add a dot to separate the prefix from the population label if it doesn't already have one
+        # and isn't a directory
+        if not os.path.isdir(file_prefix) and not file_prefix.endswith('.'):
+            file_prefix += '.'
+        for pop in self.all_populations():
+            pop.record('spikes', file_prefix + pop.label + '.spikes') #@UndefinedVariable                
 
 class Population(object):
 

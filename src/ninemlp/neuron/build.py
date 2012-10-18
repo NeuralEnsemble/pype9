@@ -26,7 +26,7 @@ else:
     # I apologise for this hack (this is the path on my machine, to save me having to set the environment variable in eclipse)
     os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin' 
 
-def build (model_dir, build_mode=DEFAULT_BUILD_MODE, silent=False):
+def compile_nmodl (model_dir, build_mode=DEFAULT_BUILD_MODE, silent=False):
     """
     Builds all NMODL files in a directory
     @param model_dir: The path of the directory to build

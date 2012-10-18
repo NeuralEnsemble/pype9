@@ -17,14 +17,16 @@ import os.path
 
 from neuron import h, nrn, load_mechanisms
 import pyNN.models
+import pyNN.recording
 import ninemlp.common.ncml
-from ninemlp.utilities.nmodl import build as build_nmodl
+from ninemlp.neuron.build import compile_nmodl
 from ninemlp import DEFAULT_BUILD_MODE
 from copy import copy
 from operator import attrgetter
 import math
 import numpy as np
 import pyNN.neuron.simulator
+import weakref
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 
@@ -41,12 +43,12 @@ class Segment(nrn.Section): #@UndefinedVariable
         Initialises the Segment including its proximal and distal sections for connecting child segments
         
         @param seg [common.ncml.MorphMLHandler.Segment]: Segment tuple loaded from MorphML (see common.ncml.MorphMLHandler)
-        """ 
+        """
         nrn.Section.__init__(self) #@UndefinedVariable
         h.pt3dclear(sec=self)
         self.diam = float(morphl_seg.distal.diam)
-        self._distal = np.array((morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z))                        
-        h.pt3dadd(morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z, 
+        self._distal = np.array((morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z))
+        h.pt3dadd(morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z,
                                                                  morphl_seg.distal.diam, sec=self)
         if morphl_seg.proximal:
             self._set_proximal((morphl_seg.proximal.x, morphl_seg.proximal.y, morphl_seg.proximal.z))
@@ -55,7 +57,7 @@ class Segment(nrn.Section): #@UndefinedVariable
         self._parent = None
         self._fraction_along = None
         self._children = []
-            
+
     def _set_proximal(self, proximal):
         """
         Sets the proximal position and calculates the length of the segment
@@ -63,7 +65,7 @@ class Segment(nrn.Section): #@UndefinedVariable
         @param proximal [float(3)]: The 3D position of the start of the segment
         """
         self._proximal = np.array(proximal)
-        h.pt3dadd(proximal[0], proximal[1], proximal[2], self.diam, sec=self)            
+        h.pt3dadd(proximal[0], proximal[1], proximal[2], self.diam, sec=self)
 
     def _connect(self, parent, fraction_along):
         """
@@ -94,7 +96,10 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         self.traces = {}
         self.gsyn_trace = {}
         self.recording_time = 0
-        self.parent = parent
+        if parent:
+            # A weak reference is used to avoid a circular reference that would prevent the garbage 
+            # collector from being called on the cell class    
+            self.parent = weakref.ref(parent)
 
     def _init_morphology(self, barebones_only=True):
         """
@@ -112,13 +117,13 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
             if not morphml_seg.parent:
                 if self.root_segment:
                     raise Exception("Two segments ({0} and {1}) were declared without parents, meaning the neuronal tree is disconnected".format(self.root_segment.id, seg.id))
-                self.root_segment = seg            
+                self.root_segment = seg
         if not self.root_segment:
             raise Exception("The neuronal tree does not have a root segment, meaning it is connected in a circle (I assume this is not intended)")
         # Connect the segments together
         for morphml_seg in self.morphml_model.segments:
             if morphml_seg.parent:
-                self.segments[morphml_seg.id]._connect(self.segments[morphml_seg.parent.id], 
+                self.segments[morphml_seg.id]._connect(self.segments[morphml_seg.parent.id],
                                                                     morphml_seg.parent.fractionAlong)
         # Work out the segment lengths properly accounting for the "fraction_along". This is performed
         # via a tree traversal to ensure that the parents 'proximal' field has already been calculated
@@ -229,34 +234,29 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         else:
             group = self.groups[group_id]
         return group
-    
+
     def get_segments(self):
         return self.segments.values()
 
-    def record(self, variable, output_path=''):
-        # This is a bit of a hack to remap this function name as record(self, active) is used in \
-        # Population.record to mean record_spikes
-        if self.parent:
-            assert(type(variable) == int)
-            self.record_spikes(active=variable)
-        # If parent is not set than this cell is not part of a Population and must create its own
-        # recorder.
-        else:
+
+    def record(self, *args):
+        # If one assume that it is the pyNN version of this method (i.e. map to record_spikes)
+        if len(args) == 1:
+            assert(self.parent is not None)
+            self.record_spikes(args[0])
+        elif len(args) == 2:
+            variable, output = args
             if variable == 'spikes':
                 self.record_spikes(1)
             elif variable == 'v':
                 self.record_v(1)
             else:
-                raise Exception('Unrecognised variable to record ''{}'' (can be ''spikes'' or ''v''\
- at this stage)'.format(variable))
-            
-
-    def record_spikes(self, active):
-        if active:
-            self.rec = h.NetCon(self.source, None, sec=self.source_section)
-            self.rec.record(self.spike_times)
+                raise Exception('Unrecognised variable ''{}'' provided as first argument'.format(
+                                                                                         variable))
+            pyNN.neuron.simulator.recorder_list.append(self.Recorder(self, variable, output))
         else:
-            self.spike_times = h.Vector(0)
+            raise Exception ('Wrong number of arguments, expected either 2 or 3 got {}'.format(
+                                                                                       len(args) + 1))
 
     def record_v(self, active):
         if active:
@@ -288,6 +288,19 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
             if self.recording_time == 0:
                 self.record_times = None
 
+    def record_spikes(self, active):
+        """
+        Simple remapping of record onto record_spikes as well
+        
+        @param active [bool]: Whether the recorder is active or not (required by pyNN)
+        """
+        if active:
+            self.rec = h.NetCon(self.source, None, sec=self.source_section)
+            self.rec.record(self.spike_times)
+        else:
+            self.spike_times = h.Vector(0)
+
+
     def set_parameters(self, param_dict):
         for name in self.parameter_names:
             setattr(self, name, param_dict[name])
@@ -295,6 +308,30 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
     def get_threshold(self):
         return self.ncml_model.action_potential_threshold.get('v', 0.0)
 
+    # Create recorder to append to simulator.recorder_list
+    class Recorder(pyNN.neuron.Recorder):
+        def __init__(self, cell, variable, output):
+            self.cell = cell
+            self.variable = variable
+            self.file = output
+            self.population = None
+        def _get(self, gather=False, compatible_output=True, filter=None): #@UnusedVariable
+            if self.variable == 'spikes':
+                data = np.empty((0, 2))
+                spikes = np.array(self.cell.spike_times)
+                spikes = spikes[spikes <= pyNN.neuron.simulator.state.t + 1e-9]
+                if len(spikes) > 0:
+                    new_data = np.array([np.ones(spikes.shape)*0.0, spikes]).T
+                    data = np.concatenate((data, new_data))
+            elif self.variable == 'v':
+                data = np.empty((0, 3))
+                v = np.array(self.cell.vtrace)
+                t = np.array(self.cell.record_times)
+                new_data = np.array([np.ones(v.shape)*0.0, t, v]).T
+                data = np.concatenate((data, new_data))
+            if gather and pyNN.neuron.simulator.state.num_processes > 1:
+                data = pyNN.recording.gather(data)
+            return data
 
 class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
     """
@@ -314,7 +351,7 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
         cellclass.model = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
         cls._validate_recordable(cellclass) #FIXME: This is a bit of a hack
         return cellclass
-    
+
     @staticmethod
     def _validate_recordable(cell_type):
         """
@@ -334,8 +371,8 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
             if (var not in ninemlp.common.ncml.BaseNCMLMetaClass.COMMON_RECORDABLE and \
                                             not hasattr(test_seg, var)) or var.startswith('e'):
                 cell_type.recordable.remove(var)
-        
-    
+
+
     @classmethod
     def _construct_recordable(cls):
         """
@@ -358,7 +395,7 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
                 except:
                     raise Exception('Could not open mod file %s for inspection' % mod_file_path)
                 in_assigned_block = False
-                in_state_block = False                
+                in_state_block = False
                 assigned = []
                 states = []
                 for line in mod_file:
@@ -370,7 +407,7 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
                         if '}' in line:
                             in_assigned_block = False
                         else:
-                            
+
                             var = line.strip()
                             if var:
                                 assigned.append(var)
@@ -406,7 +443,7 @@ def load_cell_type(name, path_to_xml_file, build_mode=DEFAULT_BUILD_MODE, silent
     dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(name, path_to_xml_file)
     mech_path = str(os.path.join(os.path.dirname(path_to_xml_file), RELATIVE_NMODL_DIR))
     if mech_path not in loaded_mech_paths:
-        build_nmodl(mech_path, build_mode=build_mode, silent=silent)
+        compile_nmodl(mech_path, build_mode=build_mode, silent=silent)
         load_mechanisms(mech_path)
         loaded_mech_paths.append(mech_path)
     dct['mech_path'] = mech_path
