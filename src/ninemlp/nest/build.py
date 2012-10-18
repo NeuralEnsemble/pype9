@@ -29,9 +29,9 @@ def build_cellclass(cellclass_name, ncml_location, module_build_dir):
     @param ncml_location[str]: The location of the NCML file to compile
     """
     # Determine the paths for the src, build and install directories
-    src_dir = os.path.join(module_build_dir, _SRC_DIR)
-    build_dir = os.path.join(module_build_dir, _BUILD_DIR)
-    install_dir = os.path.join(module_build_dir, _INSTALL_DIR)
+    src_dir = os.path.normpath(os.path.join(module_build_dir, _SRC_DIR))
+    build_dir = os.path.normpath(os.path.join(module_build_dir, _BUILD_DIR))
+    install_dir = os.path.normpath(os.path.join(module_build_dir, _INSTALL_DIR))
     # Clean existing directories from previous builds
     shutil.rmtree(src_dir, ignore_errors=True)
     shutil.rmtree(build_dir, ignore_errors=True)

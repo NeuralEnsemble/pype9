@@ -30,6 +30,8 @@ RELATIVE_BREP_DIR = "./brep"
 
 BASIC_PYNN_CONNECTORS = ['AllToAll', 'OneToOne']
 
+_REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
+
 class ValueWithUnits(object):
 
     def __init__(self, value, units):
@@ -260,7 +262,8 @@ class Network(object):
                                                 min_delay=None, max_delay=None, temperature=None,
                                                 silent_build=False, flags=[]):
         self.networkML = read_networkML(filename)
-        self._set_default_simulation_params(timestep, min_delay, max_delay, temperature)
+        self._set_simulation_params(timestep=timestep, min_delay=min_delay, max_delay=max_delay, 
+                                                                            temperature=temperature)
         dirname = os.path.dirname(filename)
         self.cells_dir = os.path.join(dirname, RELATIVE_NCML_DIR)
         self.pop_dir = os.path.join(dirname, RELATIVE_BREP_DIR, 'build', 'populations')
@@ -273,8 +276,8 @@ class Network(object):
             self.networkML.free_params.flags[flag] = True
         for pop in self.networkML.populations:
             try:
-                flags_are_set = all([self.networkML.free_params.flags[flag] for flag in pop.flags]) and \
-                        all([not self.networkML.free_params.flags[flag] for flag in pop.not_flags])
+                flags_are_set = all([self.networkML.free_params.flags[flag] for flag in pop.flags]) \
+                    and all([not self.networkML.free_params.flags[flag] for flag in pop.not_flags])
             except KeyError as e:
                 raise Exception ('Did not find flag ''{flag}'' used for in population ''{pop}'' \
 in parameters block of NetworkML description'.format(flag=e, pop=pop.id))
@@ -444,6 +447,17 @@ arguments '%s' ('%s')" % (expression, connection.args, e))
         return self._Projection_class(pre, dest, label, connector, source=source.terminal,
                                       target=self._get_target_str(target.synapse, target.segment),
                                       build_mode=self.build_mode)
+        
+    def _get_simulation_params(self, **params):
+        sim_params = self.networkML.sim_params
+        for key in _REQUIRED_SIM_PARAMS:
+            if params.has_key(key) and params[key]:
+                sim_params[key] = params[key]
+            elif not sim_params.has_key(key) or not sim_params[key]:
+                raise Exception ("'{}' parameter was not specified either in Network initialisation \
+or NetworkML specification".format(key))
+        return sim_params
+
 
     def _convert_units(self, value_str, units=None):
         raise NotImplementedError("_convert_units needs to be implemented by simulator specific Network class")

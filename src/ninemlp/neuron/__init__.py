@@ -180,30 +180,16 @@ class Network(ninemlp.common.Network):
             raise Exception("Unrecognised units '%s'" % units)
 
 
-    def _set_default_simulation_params(self, timestep=None, min_delay=None, max_delay=None, temperature=None):      
-
-        if not timestep:
-            if self.networkML.sim_params.has_key('timestep'):
-                timestep = self.networkML.sim_params['timestep']
-            else:
-                raise Exception("'timestep' parameter was not specified either in Network initialisation or NetworkML specification")
-        if not min_delay:
-            if self.networkML.sim_params.has_key('min_delay'):
-                min_delay = self.networkML.sim_params['min_delay']
-            else:
-                raise Exception("'min_delay' parameter was not specified either in Network initialisation or NetworkML specification")
-        if not max_delay:
-            if self.networkML.sim_params.has_key('max_delay'):
-                max_delay = self.networkML.sim_params['max_delay']
-            else:
-                raise Exception("'max_delay' parameter was not specified either in Network initialisation or NetworkML specification")
-        setup(timestep, min_delay, max_delay)
-        if not temperature:
-            if self.networkML.sim_params.has_key('temperature'):
-                temperature = self.networkML.sim_params['temperature']
-            else:
-                raise Exception("'temperature' parameter was not specified either in Network initialisation or NetworkML specification")
-        neuron.h.celsius = temperature
+    def _set_simulation_params(self, **params):      
+        """
+        Sets the simulation parameters either from the passed parameters or from the networkML
+        description
+        
+        @param params[**kwargs]: Parameters that are either passed to the pyNN setup method or set explicitly
+        """
+        p = self._get_simulation_params(**params)
+        setup(p['timestep'], p['min_delay'], p['max_delay'])
+        neuron.h.celsius = p['temperature']
         
 
     def _get_target_str(self, synapse, segment=None):
