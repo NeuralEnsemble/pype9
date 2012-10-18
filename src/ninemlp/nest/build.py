@@ -11,6 +11,7 @@
 #    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
+import sys
 import os.path
 import subprocess as sp
 import shutil
@@ -41,14 +42,21 @@ def build_cellclass(cellclass_name, ncml_location, module_build_dir):
     os.makedirs(build_dir)
     os.makedirs(install_dir)
     # Compile the NCML file into NEST cpp code
-#    sp.check_call('nemo {ncml} --nest {output}'.format(ncml=ncml_location, 
-#                                                     output=os.path.join(src_dir, cellclass_name)))
-    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/mymodule.h', src_dir)
-    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/mymodule.cpp', src_dir)
-    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/pif_psc_alpha.cpp', src_dir)
-    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/pif_psc_alpha.h', src_dir)
-    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/drop_odd_spike_connection.h', src_dir)
-    shutil.copytree('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/sli', src_dir + '/sli')
+    if sys.platform == 'win32':
+        nemo_path = sp.check_output('where nemo', shell=True)
+    else:
+        nemo_path = sp.check_output('which nemo', shell=True)
+    try:
+        sp.check_call('{nemo_path} {ncml_path} --nest {output}'.format(nemo_path=nemo_path,
+                                            ncml_path=ncml_location, output=src_dir), shell=True)
+    except sp.CalledProcessError as e:
+        raise Exception('Error while compiling NCML description into NEST cpp code -> {}'.format(e))
+#    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/mymodule.h', src_dir)
+#    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/mymodule.cpp', src_dir)
+#    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/pif_psc_alpha.cpp', src_dir)
+#    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/pif_psc_alpha.h', src_dir)
+#    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/drop_odd_spike_connection.h', src_dir)
+#    shutil.copytree('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/sli', src_dir + '/sli')
     # Generate configure.ac file
     configure_ac = """
 AC_PREREQ(2.52)
