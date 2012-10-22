@@ -16,7 +16,7 @@
 import os
 import numpy
 from ninemlp import SRC_PATH, DEFAULT_BUILD_MODE, pyNN_build_mode
-from ninemlp.neuron.build import build_modl
+from ninemlp.neuron.build import compile_nmodl
 compile_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN_build_mode, 
                                                                                         silent=True)
 from ninemlp.neuron.ncml import NCMLCell
