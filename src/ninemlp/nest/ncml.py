@@ -66,8 +66,8 @@ def load_cell_type(cell_typename, ncml_path, build_mode=DEFAULT_BUILD_MODE, sile
         # Add module install directory to LD_LIBRARY_PATH
         module_build_dir = os.path.join(os.path.dirname(ncml_path), _RELATIVE_NEST_BUILD_DIR, 
                                                                                     cell_typename)
-        install_dir = build_cellclass(cell_typename,
-                                ncml_path, module_build_dir)
+        install_dir = build_cellclass(cell_typename, ncml_path, module_build_dir, 
+                                                                            build_mode=build_mode)
         lib_dir = os.path.join(install_dir, 'lib', 'nest')
         if sys.platform.startswith('linux') or \
                                     sys.platform in ['os2', 'os2emx', 'cygwin', 'atheos', 'ricos']:

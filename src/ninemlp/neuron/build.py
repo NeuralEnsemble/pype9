@@ -15,8 +15,9 @@
 import os.path
 import shutil
 import platform
-import subprocess
+import subprocess as sp
 from ninemlp import DEFAULT_BUILD_MODE
+from ninemlp.common.build import path_to_exec
 
 BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
 
@@ -25,6 +26,17 @@ if 'NRNHOME' in os.environ:
 else:
     # I apologise for this hack (this is the path on my machine, to save me having to set the environment variable in eclipse)
     os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin' 
+
+def build_cellclass(cellclass_name, ncml_location, module_build_dir, build_mode=DEFAULT_BUILD_MODE):
+    
+    nemo_path = path_to_exec('nemo')
+    try:
+        sp.check_call('{nemo_path} {ncml_path} --nmodl {output}'.format(nemo_path=nemo_path,
+                                            ncml_path=ncml_location, output=src_dir), shell=True)
+    except sp.CalledProcessError as e:
+        raise Exception('Error while compiling NCML description into NEST cpp code -> {}'.format(e))
+    
+    
 
 def compile_nmodl (model_dir, build_mode=DEFAULT_BUILD_MODE, silent=False):
     """
@@ -73,12 +85,29 @@ recompiles, and 'compile_only' removes existing library if found, recompile and 
         print "Building mechanisms in '%s' directory." % model_dir
         if silent:
             with open(os.devnull, "w") as fnull:
-                build_error = subprocess.call(cmd_path, stdout = fnull, stderr = fnull)
+                build_error = sp.call(cmd_path, stdout = fnull, stderr = fnull)
         else:
             # Run nrnivmodl command on directory
-            build_error = subprocess.call(cmd_path)
+            build_error = sp.call(cmd_path)
         if build_error:
             raise Exception("Could not compile NMODL files in directory '%s' - " % model_dir)
     elif not silent:
         print "Found existing mechanisms in '%s' directory, compile skipped (set 'build_mode' argument to 'force' enforce recompilation them)." % model_dir
     os.chdir(orig_dir)
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
