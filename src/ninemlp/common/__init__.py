@@ -275,7 +275,7 @@ class Network(object):
             if name not in self.flags:
                 raise Exception ("Did not find the passed flag '{}' in the Network ML description \
 ({})".format(name, self.flags))
-            self.flags[name] = flag[value]
+            self.flags[name] = value
 
     def check_flags(self, p):
         try:
