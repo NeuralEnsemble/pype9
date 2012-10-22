@@ -262,19 +262,19 @@ class Network(object):
         self.flags = self.networkML.free_params.flags
         for flag in flags:
             if type(flag) == str:
-              name = flag
-              value = True
+                name = flag
+                value = True
             elif type(flag) == tuple:
                 if len(flag) == 2:
                     name, value = flag
                 else:
                     raise Exception("Incorrect number of elements ({}) in flag tuple '{}', should be 2\
  (name or name and value)".format(len(flag), flag))
-            assert(type(name)==str)
-            assert(type(value)==bool)
+                assert(type(name) == str)
+                assert(type(value) == bool)
             if name not in self.flags:
-                raise Exception ("Did not find the passed flag '{}' in the Network ML description"
-                                                                                .format(name))                
+                raise Exception ("Did not find the passed flag '{}' in the Network ML description \
+({})".format(name, self.flags))
             self.flags[name] = flag[value]
 
     def check_flags(self, p):
@@ -284,7 +284,7 @@ class Network(object):
         except KeyError as e:
                 raise Exception ('Did not find flag ''{flag}'' used in ''{id}'' in freeParameters \
 block of NetworkML description'.format(flag=e, id=p.id))
-                
+
     def load_network(self, filename, build_mode=DEFAULT_BUILD_MODE, verbose=False, timestep=None,
                                                 min_delay=None, max_delay=None, temperature=None,
                                                 silent_build=False, flags=[]):
