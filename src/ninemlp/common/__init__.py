@@ -258,11 +258,39 @@ class Network(object):
                                  min_delay=min_delay, max_delay=max_delay, temperature=temperature,
                                  silent_build=silent_build, flags=flags)
 
+    def set_flags(self, flags):
+        self.flags = self.networkML.free_params.flags
+        for flag in flags:
+            # If not a tuple the flag is assumed to be just the flag name and value True
+            if len(flag) == 1:
+                name = flag
+                value = True
+            # If 2-tuple the first element is the flag name and the second its value
+            elif len(flag) == 2:
+                name, value = flag
+            else:
+                raise Exception("Incorrect number of elements ({}) in flag '{}', can be either 1 or\
+ 2 (name or name and value)")
+            assert(type(name)==str)
+            assert(type(value)==bool)
+            if name not in self.flags:
+                raise Exception ("Did not find the passed flag '{}' in the Network ML description"
+                                                                                .format(name))                
+            self.flags[name] = flag[value]
+
+    def check_flags(self, p):
+        try:
+            return all([self.flags[flag] for flag in p.flags]) and \
+                                            all([not self.flags[flag] for flag in p.not_flags])
+        except KeyError as e:
+                raise Exception ('Did not find flag ''{flag}'' used in ''{id}'' in freeParameters \
+block of NetworkML description'.format(flag=e, id=p.id))
+                
     def load_network(self, filename, build_mode=DEFAULT_BUILD_MODE, verbose=False, timestep=None,
                                                 min_delay=None, max_delay=None, temperature=None,
                                                 silent_build=False, flags=[]):
         self.networkML = read_networkML(filename)
-        self._set_simulation_params(timestep=timestep, min_delay=min_delay, max_delay=max_delay, 
+        self._set_simulation_params(timestep=timestep, min_delay=min_delay, max_delay=max_delay,
                                                                             temperature=temperature)
         dirname = os.path.dirname(filename)
         self.cells_dir = os.path.join(dirname, RELATIVE_NCML_DIR)
@@ -272,16 +300,9 @@ class Network(object):
         self.label = self.networkML.id
         self._populations = {}
         self._projections = {}
-        for flag in flags:
-            self.networkML.free_params.flags[flag] = True
+        self.set_flags(flags)
         for pop in self.networkML.populations:
-            try:
-                flags_are_set = all([self.networkML.free_params.flags[flag] for flag in pop.flags]) \
-                    and all([not self.networkML.free_params.flags[flag] for flag in pop.not_flags])
-            except KeyError as e:
-                raise Exception ('Did not find flag ''{flag}'' used for in population ''{pop}'' \
-in parameters block of NetworkML description'.format(flag=e, pop=pop.id))
-            if flags_are_set:
+            if self.check_flags(pop):
                 self._populations[pop.id] = self._create_population(pop.id,
                                                                     pop.size,
                                                                     pop.cell_type,
@@ -291,13 +312,7 @@ in parameters block of NetworkML description'.format(flag=e, pop=pop.id))
                                                                     verbose,
                                                                     silent_build)
         for proj in self.networkML.projections:
-            try:
-                flags_are_set = all([self.networkML.free_params.flags[flag] for flag in proj.flags]) and \
-                        all([not self.networkML.free_params.flags[flag] for flag in proj.not_flags])
-            except KeyError as e:
-                raise Exception ('Did not find flag ''{flag}'' used for in projection ''{proj}'' \
-in parameters block of NetworkML description'.format(flag=e, proj=proj.id))
-            if flags_are_set:
+            if self.check_flags(proj):
                 self._projections[proj.id] = self._create_projection(
                                                              proj.id,
                                                              self._populations[proj.pre.pop_id],
@@ -447,7 +462,7 @@ arguments '%s' ('%s')" % (expression, connection.args, e))
         return self._Projection_class(pre, dest, label, connector, source=source.terminal,
                                       target=self._get_target_str(target.synapse, target.segment),
                                       build_mode=self.build_mode)
-        
+
     def _get_simulation_params(self, **params):
         sim_params = self.networkML.sim_params
         for key in _REQUIRED_SIM_PARAMS:
@@ -521,7 +536,7 @@ or NetworkML specification".format(key))
         """
         for proj in self.all_projections():
             proj.saveConnections(os.path.join(output_dir, proj.label))
-            
+
     def record_all_spikes(self, file_prefix):
         """
         Record all spikes generated in the network
@@ -560,7 +575,7 @@ class Population(object):
         else:
             print "Warning, stimulation start time (%f) is after stimulation end time (%f)" % \
                                                                             (start_time, end_time)
-                                                                            
+
     def set_spikes(self, spike_times):
         """
         Sets up a train of poisson spike times for a SpikeSourceArray population
