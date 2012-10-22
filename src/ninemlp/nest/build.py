@@ -15,13 +15,15 @@ import sys
 import os.path
 import subprocess as sp
 import shutil
+from ninemlp import DEFAULT_BUILD_MODE
+from ninemlp.common.build import path_to_exec
 
 _SRC_DIR = 'src'
 _BUILD_DIR = 'build'
 _INSTALL_DIR = 'install'
 
 
-def build_cellclass(cellclass_name, ncml_location, module_build_dir):
+def build_cellclass(cellclass_name, ncml_location, module_build_dir, build_mode=DEFAULT_BUILD_MODE):
     """
     Generates the cpp code corresponding to the NCML file, then configures, and compiles and installs
     the corresponding module into nest
@@ -42,10 +44,7 @@ def build_cellclass(cellclass_name, ncml_location, module_build_dir):
     os.makedirs(build_dir)
     os.makedirs(install_dir)
     # Compile the NCML file into NEST cpp code
-    if sys.platform == 'win32':
-        nemo_path = sp.check_output('where nemo', shell=True)
-    else:
-        nemo_path = sp.check_output('which nemo', shell=True)
+    nemo_path = path_to_exec('nemo')
     try:
         sp.check_call('{nemo_path} {ncml_path} --nest {output}'.format(nemo_path=nemo_path,
                                             ncml_path=ncml_location, output=src_dir), shell=True)
