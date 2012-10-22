@@ -261,16 +261,15 @@ class Network(object):
     def set_flags(self, flags):
         self.flags = self.networkML.free_params.flags
         for flag in flags:
-            # If not a tuple the flag is assumed to be just the flag name and value True
-            if len(flag) == 1:
-                name = flag
-                value = True
-            # If 2-tuple the first element is the flag name and the second its value
-            elif len(flag) == 2:
-                name, value = flag
-            else:
-                raise Exception("Incorrect number of elements ({}) in flag '{}', can be either 1 or\
- 2 (name or name and value)")
+            if type(flag) == str:
+              name = flag
+              value = True
+            elif type(flag) == tuple:
+                if len(flag) == 2:
+                    name, value = flag
+                else:
+                    raise Exception("Incorrect number of elements ({}) in flag tuple '{}', should be 2\
+ (name or name and value)".format(len(flag), flag))
             assert(type(name)==str)
             assert(type(value)==bool)
             if name not in self.flags:
