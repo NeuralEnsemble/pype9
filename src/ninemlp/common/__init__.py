@@ -19,6 +19,8 @@ import os.path
 from ninemlp import DEFAULT_BUILD_MODE
 import geometry
 import pyNN.connectors
+from pyNN.random import RandomDistribution
+from inspect import getmro
 import warnings
 import math
 
@@ -31,6 +33,9 @@ RELATIVE_BREP_DIR = "./brep"
 BASIC_PYNN_CONNECTORS = ['AllToAll', 'OneToOne']
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
+
+RANDOM_DISTR_PARAMS = {'uniform': ('low', 'high'),
+                       'normal': ('mean', 'stddev')}
 
 class ValueWithUnits(object):
 
@@ -105,7 +110,7 @@ class NetworkMLHandler(XMLHandler):
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay flags not_flags')
     Layout = collections.namedtuple('Layout', 'type args')
     CellParameters = collections.namedtuple('CellParameters', 'constants distributions')
-    CellParameterDistr = collections.namedtuple('CellParameterDistr', 'param type component args')
+    CellParameterDistr = collections.namedtuple('CellParameterDistr', 'param type units seg_group args')
     Connection = collections.namedtuple('Connection', 'pattern args')
     Weight = collections.namedtuple('Weight', 'pattern args')
     Delay = collections.namedtuple('Delay', 'pattern args')
@@ -155,14 +160,23 @@ class NetworkMLHandler(XMLHandler):
             self.pop_cell_params.constants[attrs['name']] = float(attrs['value']) # FIXME: Units are ignored here
         elif self._opening(tag_name, attrs, 'distribution', parents=['population', 'cellParameters']):
             args = dict(attrs)
-            name = args.pop('name')
+            param = args.pop('param')
             distr_type = args.pop('type')
-            if args.has_key('component'):
-                component = args.pop('component')
-            else:
-                component = None
-            self.pop_cell_params.distributions.append(self.CellParameterDistr(name, distr_type,
-                                                                                   component, args))
+            units = args.pop('units') if args.has_key('units') else None           
+            segmentGroup = args.pop('segmentGroup') if args.has_key('segmentGroup') else None
+            try:
+                distr_param_keys = RANDOM_DISTR_PARAMS[distr_type]
+            except KeyError:
+                raise Exception ("Unrecognised distribution type '{type}' used to distribute \
+cell parameter '{param}' in population '{pop}'".format(type=distr_type, param=param, pop=self.id))                
+            try:
+                distr_params = [args[arg] for arg in distr_param_keys]
+            except KeyError as e:
+                raise Exception ("Missing parameter '{distr_param}' for '{type}' distribution used \
+to distribute cell parameter '{param}' in population '{pop}'".format(distr_param=e, type=distr_type, 
+                                                                        param=param, pop=self.id))                
+            self.pop_cell_params.distributions.append(self.CellParameterDistr(param, distr_type,
+                                                              units, segmentGroup, distr_params))
         elif self._opening(tag_name, attrs, 'arg', parents=['param_dist']):
             self.populations[-1].param_dists[-1].args[attrs['name']] = float(attrs['value'])
         elif self._opening(tag_name, attrs, 'projection', parents=['network']):
@@ -327,7 +341,7 @@ block of NetworkML description'.format(flag=e, id=p.id))
 if you want to do something afterwards)'
             raise SystemExit(0)
 
-    def _create_population(self, label, size, cell_type_name, layout, cell_params, cell_param_dists,
+    def _create_population(self, label, size, cell_type_name, layout, cell_params, cell_param_distrs,
                                                                             verbose, silent_build):
         if cell_type_name + ".xml" in os.listdir(self.cells_dir):
             cell_type = self._ncml_module.load_cell_type(cell_type_name,
@@ -363,11 +377,13 @@ if you want to do something afterwards)'
                     raise Exception("Unrecognised external layout engine, '%s'" % engine)
             else:
                 raise Exception("Not implemented error, support for built-in layout management is not done yet.")
+        # Actually create the population
         pop = self._Population_class(label, size, cell_type, params=cell_params,
                                                                         build_mode=self.build_mode)
+        # Set layout
         if layout and self.build_mode != 'compile_only':
             pop._set_positions(positions)
-        #TODO: Set parameter distributions here
+        pop._set_random_distributions(cell_param_distrs)
         return pop
 
     def _create_projection(self, label, pre, dest, connection, source, target, weight, delay, verbose):
@@ -550,6 +566,29 @@ or NetworkML specification".format(key))
             pop.record('spikes', file_prefix + pop.label + '.spikes') #@UndefinedVariable                
 
 class Population(object):
+
+    def _set_random_distributions(self, cell_param_distrs):
+        # Set distributed parameters
+        distributed_params = []
+        for param, distr_type, units, seg_group, args in cell_param_distrs: #@UnusedVariable: Can't work out how to use units effectively at the moment because args may include parameters that don't have units, so ignoring it for now but will hopefully come back to it
+            if param in distributed_params:
+                raise Exception("Parameter '{}' has two (or more) distributions specified for it in\
+ {} population".format(param, self.id))
+            # Create random distribution object
+            rand_distr = RandomDistribution(distribution=distr_type, parameters=args)
+            # If is an NCML type cell
+            if 'BaseNCMLCell' in [base.__name__ for base in getmro(self.celltype.__class__)]:
+                # Loop through all segments in networkML description and set parameters using rset.
+                for seg in self.celltype.get_group(seg_group):
+                    self.rset(seg.id + '.' + param, rand_distr)
+            else:
+                if seg_group:
+                    raise Exception("segmentGroup attribute of parameter distribution '{}' can only \
+be specified for cells described using NCML, not '{}' cell types".format(param, 
+                                                                 self.celltype.__class__.__name__))
+                self.rset(param, rand_distr)
+            # Add param to list of completed param distributions to check for duplicates
+            distributed_params.append(param)
 
     def set_poisson_spikes(self, rate, start_time, end_time):
         """
