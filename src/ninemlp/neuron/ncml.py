@@ -238,7 +238,6 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
     def get_segments(self):
         return self.segments.values()
 
-
     def record(self, *args):
         # If one assume that it is the pyNN version of this method (i.e. map to record_spikes)
         if len(args) == 1:

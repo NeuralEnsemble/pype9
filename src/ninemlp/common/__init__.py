@@ -580,7 +580,7 @@ class Population(object):
             if 'BaseNCMLCell' in [base.__name__ for base in getmro(self.celltype.__class__)]:
                 # Loop through all segments in networkML description and set parameters using rset.
                 for seg in self.celltype.get_group(seg_group):
-                    self.rset(seg.id + '.' + param, rand_distr)
+                    self.rset(param, rand_distr, components=[seg.id])
             else:
                 if seg_group:
                     raise Exception("segmentGroup attribute of parameter distribution '{}' can only \
