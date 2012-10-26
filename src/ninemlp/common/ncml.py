@@ -178,10 +178,10 @@ class NCMLHandler(XMLHandler):
             self.ncml.currents.append(self.IonicCurrent(attrs['id'],
                                                    attrs.get('segmentGroup', None),
                                                    []))
-        elif self._opening(tag_name, attrs, 'ncml:const', parents=['ionicCurrent']):
+        elif self._opening(tag_name, attrs, 'parameter', parents=['ionicCurrent']):
             self.ncml.currents[-1].params.append(self.IonicCurrentParam(attrs['name'],
                                                                     ValueWithUnits(attrs['value'],
-                                                                                   attrs.get('units', None))))
+                                                                       attrs.get('units', None))))
         elif self._opening(tag_name, attrs, 'passiveCurrent', parents=['membraneProperties']):
             self.ncml.passive_currents.append(self.PassiveCurrent(attrs.get('segmentGroup', None),
                                                               ValueWithUnits(attrs['condDensity'],
@@ -196,7 +196,7 @@ class NCMLHandler(XMLHandler):
                                                   attrs['type'],
                                                   attrs.get('segmentGroup', None),
                                                   []))
-        elif self._opening(tag_name, attrs, 'ncml:const', parents=['conductanceSynapse']):
+        elif self._opening(tag_name, attrs, 'parameter', parents=['conductanceSynapse']):
             self.ncml.synapses[-1].params.append(self.SynapseParam(attrs['name'],
                                                                     ValueWithUnits(attrs['value'],
                                                                                    attrs.get('units', None))))
@@ -271,29 +271,29 @@ class BaseNCMLMetaClass(type):
         Reads the default parameters in the NCML components and appends them to the parameters
         of the model class
         """
+        ncml_model = cls.dct["ncml_model"]
+        morphml_model = cls.dct["morphml_model"]
         def _as_prefix(name):
-            if name:
-                return name + "."
-            else:
-                return ""
-        # Uncomment this code to populate the default parameters with all the range variables
-        # in the NCML file, but since they will already be the default in MOD files it is probably not
-        # necessary. The only benefit is that it would allow the constructor of the created cell type
-        # to set these parameters. However, this can always be done after the cell is 
-        # created using the set_parameter function of BaseNCMLCell
+            return name + '.' if name else ''
         default_params = {'parent': None}
-#        for curr in ncml_model.currents:
-#            for param in curr.params:
-#                default_params[_as_prefix(curr.group_id) + curr.name + "." + param.name] = param.value
-#        for syn in ncml_model.synapses:
-#            for param in syn.params:
-#                default_params[_as_prefix(syn.group_id) + syn.name + "." + param.name] = param.value
-#        for cm in ncml_model.capacitances:
-#            default_params[_as_prefix(cm.group_id) + "cm"] = cm.value
-#        for ra in ncml_model.axial_resistances:
-#            default_params[_as_prefix(ra.group_id) + "ra"] = ra.value
-#        for e_v in ncml_model.reversal_potentials:
-#            default_params[_as_prefix(e_v.group_id) + e_v.species] = e_v.value
+        # Add current and synapse mechanisms parameters
+        for curr in ncml_model.currents:
+            for param in curr.params:
+                default_params[_as_prefix(curr.group_id) + curr.id + "." + param.name] = param.value
+        for syn in ncml_model.synapses:
+            for param in syn.params:
+                default_params[_as_prefix(syn.group_id) + syn.id + "." + param.name] = param.value
+        # Add basic electrical property parameters
+        for cm in ncml_model.capacitances:
+            default_params[_as_prefix(cm.group_id) + "cm"] = cm.value
+        for ra in ncml_model.axial_resistances:
+            default_params[_as_prefix(ra.group_id) + "ra"] = ra.value
+        for e_v in ncml_model.reversal_potentials:
+            default_params[_as_prefix(e_v.group_id) + "e_rev_" + e_v.species] = e_v.value
+        # A morphology parameters
+        for seg_group in morphml_model.groups:
+            default_params[seg_group.id + ".diameter"] = None # None, defers to the value loaded in the MorphML file but allows them to be overwritten
+            default_params[seg_group.id + ".length"] = None            
         return default_params
 
     @classmethod

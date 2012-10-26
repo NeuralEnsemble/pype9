@@ -85,7 +85,7 @@ class Segment(nrn.Section): #@UndefinedVariable
 
 class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
 
-    def __init__(self, parent=None):
+    def __init__(self, **parameters):
         self._init_morphology()
         self._init_biophysics()
         # Setup variables used by pyNN
@@ -96,10 +96,10 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         self.traces = {}
         self.gsyn_trace = {}
         self.recording_time = 0
-        if parent:
+        if parameters.get('parent', False):
             # A weak reference is used to avoid a circular reference that would prevent the garbage 
             # collector from being called on the cell class    
-            self.parent = weakref.ref(parent)
+            self.parent = weakref.ref(parameters['parent'])
 
     def _init_morphology(self, barebones_only=True):
         """

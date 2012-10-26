@@ -110,7 +110,7 @@ class NetworkMLHandler(XMLHandler):
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay flags not_flags')
     Layout = collections.namedtuple('Layout', 'type args')
     CellParameters = collections.namedtuple('CellParameters', 'constants distributions')
-    CellParameterDistr = collections.namedtuple('CellParameterDistr', 'param type units seg_group args')
+    CellParameterDistr = collections.namedtuple('CellParameterDistr', 'param type units seg_group component args')
     Connection = collections.namedtuple('Connection', 'pattern args')
     Weight = collections.namedtuple('Weight', 'pattern args')
     Delay = collections.namedtuple('Delay', 'pattern args')
@@ -162,7 +162,8 @@ class NetworkMLHandler(XMLHandler):
             args = dict(attrs)
             param = args.pop('param')
             distr_type = args.pop('type')
-            units = args.pop('units') if args.has_key('units') else None           
+            units = args.pop('units') if args.has_key('units') else None
+            component = args.pop('component') if args.has_key('component') else None      
             segmentGroup = args.pop('segmentGroup') if args.has_key('segmentGroup') else None
             try:
                 distr_param_keys = RANDOM_DISTR_PARAMS[distr_type]
@@ -176,7 +177,7 @@ cell parameter '{param}' in population '{pop}'".format(type=distr_type, param=pa
 to distribute cell parameter '{param}' in population '{pop}'".format(distr_param=e, type=distr_type, 
                                                                         param=param, pop=self.id))                
             self.pop_cell_params.distributions.append(self.CellParameterDistr(param, distr_type,
-                                                              units, segmentGroup, distr_params))
+                                                      units, segmentGroup, component, distr_params))
         elif self._opening(tag_name, attrs, 'arg', parents=['param_dist']):
             self.populations[-1].param_dists[-1].args[attrs['name']] = float(attrs['value'])
         elif self._opening(tag_name, attrs, 'projection', parents=['network']):
@@ -570,7 +571,7 @@ class Population(object):
     def _set_random_distributions(self, cell_param_distrs):
         # Set distributed parameters
         distributed_params = []
-        for param, distr_type, units, seg_group, args in cell_param_distrs: #@UnusedVariable: Can't work out how to use units effectively at the moment because args may include parameters that don't have units, so ignoring it for now but will hopefully come back to it
+        for param, distr_type, units, seg_group, component, args in cell_param_distrs: #@UnusedVariable: Can't work out how to use units effectively at the moment because args may include parameters that don't have units, so ignoring it for now but will hopefully come back to it
             if param in distributed_params:
                 raise Exception("Parameter '{}' has two (or more) distributions specified for it in\
  {} population".format(param, self.id))
@@ -578,9 +579,13 @@ class Population(object):
             rand_distr = RandomDistribution(distribution=distr_type, parameters=args)
             # If is an NCML type cell
             if 'BaseNCMLCell' in [base.__name__ for base in getmro(self.celltype.__class__)]:
-                # Loop through all segments in networkML description and set parameters using rset.
-                for seg in self.celltype.get_group(seg_group):
-                    self.rset(param, rand_distr, components=[seg.id])
+                param_scope = []
+                if seg_group:
+                    param_scope.append(seg_group)
+                if component:
+                    param_scope.append(component)
+                param_scope.append(param)
+                self.rset('.'.join(param_scope), rand_distr)
             else:
                 if seg_group:
                     raise Exception("segmentGroup attribute of parameter distribution '{}' can only \

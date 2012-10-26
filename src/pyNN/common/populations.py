@@ -273,7 +273,7 @@ class BasePopulation(object):
             values = numpy.array(values)[idx]
         return values
 
-    def set(self, param, val=None, components=[]):
+    def set(self, param, val=None):
         """
         Set one or more parameters for every cell in the population. param
         can be a dict, in which case val should not be supplied, or a string
@@ -309,7 +309,7 @@ class BasePopulation(object):
             for cell in self:
                 cell.set_parameters(**param_dict)
 
-    def tset(self, parametername, value_array, components=[]):
+    def tset(self, parametername, value_array):
         """
         'Topographic' set. Set the value of parametername to the values in
         value_array, which must have the same dimensions as the Population.
@@ -347,13 +347,9 @@ class BasePopulation(object):
             self._set_array(**{parametername: local_values})
         else:
             for cell, val in zip(self, local_values):
-                # Added by TGC 25/10/2012 to allow setting of parameters in components
-                comp = cell
-                for comp_name in components:
-                    comp = getattr(comp, comp_name)
-                setattr(comp, parametername, val)
+                setattr(cell, parametername, val)
 
-    def rset(self, parametername, rand_distr, components=[]):
+    def rset(self, parametername, rand_distr):
         """
         'Random' set. Set the value of parametername to a value taken from
         rand_distr, which should be a RandomDistribution object.
@@ -369,7 +365,7 @@ class BasePopulation(object):
             rarr = rand_distr.next(n=self.all_cells.size, mask_local=False)
             rarr = numpy.array(rarr)  # isn't rarr already an array?
             assert rarr.size == self.size, "%s != %s" % (rarr.size, self.size)
-            self.tset(parametername, rarr, components)
+            self.tset(parametername, rarr)
 
     def initialize(self, variable, value):
         """
