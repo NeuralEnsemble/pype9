@@ -30,7 +30,7 @@ class BaseNCMLCell(object):
         Currently unused but could be used in future to initialise simulator independent components
         of the NCML classes.
         """
-        pass
+        pass                
 
 
     def memb_init(self):
@@ -176,43 +176,43 @@ class NCMLHandler(XMLHandler):
             self.ncml.action_potential_threshold['v'] = float(attrs['v'])
         elif self._opening(tag_name, attrs, 'ionicCurrent', parents=['membraneProperties']):
             self.ncml.currents.append(self.IonicCurrent(attrs['id'],
-                                                   attrs.get('segmentGroup', None),
+                                                   attrs.get('segmentGroup', '__all__'),
                                                    []))
         elif self._opening(tag_name, attrs, 'parameter', parents=['ionicCurrent']):
             self.ncml.currents[-1].params.append(self.IonicCurrentParam(attrs['name'],
                                                                     ValueWithUnits(attrs['value'],
-                                                                       attrs.get('units', None))))
+                                                                   attrs.get('units', None))))
         elif self._opening(tag_name, attrs, 'passiveCurrent', parents=['membraneProperties']):
-            self.ncml.passive_currents.append(self.PassiveCurrent(attrs.get('segmentGroup', None),
+            self.ncml.passive_currents.append(self.PassiveCurrent(attrs.get('segmentGroup', '__all__'),
                                                               ValueWithUnits(attrs['condDensity'],
-                                                                             attrs.get('units', None))))
+                                                                     attrs.get('units', None))))
         elif self._opening(tag_name, attrs, 'conductanceSynapse', parents=['synapses']):
             self.ncml.synapses.append(self.Synapse(attrs['id'],
                                               attrs['type'],
-                                              attrs.get('segmentGroup', None),
+                                              attrs.get('segmentGroup', '__all__'),
                                                   []))
         elif self._opening(tag_name, attrs, 'gapJunction', parents=['synapses']):
             self.ncml.synapses.append(self.GapJunction(attrs['id'],
                                                   attrs['type'],
-                                                  attrs.get('segmentGroup', None),
+                                                  attrs.get('segmentGroup', '__all__'),
                                                   []))
         elif self._opening(tag_name, attrs, 'parameter', parents=['conductanceSynapse']):
             self.ncml.synapses[-1].params.append(self.SynapseParam(attrs['name'],
                                                                     ValueWithUnits(attrs['value'],
-                                                                                   attrs.get('units', None))))
+                                                                       attrs.get('units', None))))
         elif self._opening(tag_name, attrs, 'specificCapacitance', parents=['membraneProperties']):
             self.ncml.capacitances.append(self.SpecificCapacitance(ValueWithUnits(attrs['value'],
-                                                                             attrs.get('units', None)),
-                                                              attrs.get('segmentGroup', None)))
+                                                                     attrs.get('units', None)),
+                                                              attrs.get('segmentGroup', '__all__')))
         elif self._opening(tag_name, attrs, 'reversalPotential', parents=['membraneProperties']):
             self.ncml.reversal_potentials.append(self.ReversePotential(attrs['species'],
                                                                   ValueWithUnits(attrs['value'],
-                                                                                 attrs.get('units', None)),
-                                                                  attrs.get('segmentGroup', None)))
+                                                                         attrs.get('units', None)),
+                                                              attrs.get('segmentGroup', '__all__')))
         elif self._opening(tag_name, attrs, 'resistivity', parents=['intracellularProperties']):
             self.ncml.axial_resistances.append(self.AxialResistivity(ValueWithUnits(attrs['value'],
                                                                         attrs.get('units', None)),
-                                                                attrs.get('segmentGroup', None)))
+                                                            attrs.get('segmentGroup', '__all__')))
 
 
 def read_MorphML(name, filename):
@@ -273,27 +273,25 @@ class BaseNCMLMetaClass(type):
         """
         ncml_model = cls.dct["ncml_model"]
         morphml_model = cls.dct["morphml_model"]
-        def _as_prefix(name):
-            return name + '.' if name else ''
         default_params = {'parent': None}
         # Add current and synapse mechanisms parameters
         for curr in ncml_model.currents:
             for param in curr.params:
-                default_params[_as_prefix(curr.group_id) + curr.id + "." + param.name] = param.value
+                default_params[curr.group_id + "." + curr.id + "." + param.name] = param.value
         for syn in ncml_model.synapses:
             for param in syn.params:
-                default_params[_as_prefix(syn.group_id) + syn.id + "." + param.name] = param.value
+                default_params[syn.group_id + "." + syn.id + "." + param.name] = param.value
         # Add basic electrical property parameters
         for cm in ncml_model.capacitances:
-            default_params[_as_prefix(cm.group_id) + "cm"] = cm.value
+            default_params[cm.group_id + "." + "cm"] = cm.value
         for ra in ncml_model.axial_resistances:
-            default_params[_as_prefix(ra.group_id) + "ra"] = ra.value
+            default_params[ra.group_id + "."  + "ra"] = ra.value
         for e_v in ncml_model.reversal_potentials:
-            default_params[_as_prefix(e_v.group_id) + "e_rev_" + e_v.species] = e_v.value
+            default_params[e_v.group_id + "."  + "e_rev_" + e_v.species] = e_v.value
         # A morphology parameters
         for seg_group in morphml_model.groups:
-            default_params[seg_group.id + ".diameter"] = None # None, defers to the value loaded in the MorphML file but allows them to be overwritten
-            default_params[seg_group.id + ".length"] = None            
+            default_params[seg_group.id + ".diam"] = None # None, defers to the value loaded in the MorphML file but allows them to be overwritten
+            default_params[seg_group.id + ".L"] = None            
         return default_params
 
     @classmethod

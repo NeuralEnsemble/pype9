@@ -164,7 +164,7 @@ class NetworkMLHandler(XMLHandler):
             distr_type = args.pop('type')
             units = args.pop('units') if args.has_key('units') else None
             component = args.pop('component') if args.has_key('component') else None      
-            segmentGroup = args.pop('segmentGroup') if args.has_key('segmentGroup') else None
+            segmentGroup = args.pop('segmentGroup') if args.has_key('segmentGroup') else '__all__'
             try:
                 distr_param_keys = RANDOM_DISTR_PARAMS[distr_type]
             except KeyError:
@@ -578,10 +578,8 @@ class Population(object):
             # Create random distribution object
             rand_distr = RandomDistribution(distribution=distr_type, parameters=args)
             # If is an NCML type cell
-            if 'BaseNCMLCell' in [base.__name__ for base in getmro(self.celltype.__class__)]:
-                param_scope = []
-                if seg_group:
-                    param_scope.append(seg_group)
+            if self.celltype.__module__.startswith('ninemlp'):
+                param_scope = [seg_group]
                 if component:
                     param_scope.append(component)
                 param_scope.append(param)
@@ -591,6 +589,10 @@ class Population(object):
                     raise Exception("segmentGroup attribute of parameter distribution '{}' can only \
 be specified for cells described using NCML, not '{}' cell types".format(param, 
                                                                  self.celltype.__class__.__name__))
+                if component:
+                    raise Exception("component attribute of parameter distribution '{}' can only \
+be specified for cells described using NCML, not '{}' cell types".format(param, 
+                                                                 self.celltype.__class__.__name__))                    
                 self.rset(param, rand_distr)
             # Add param to list of completed param distributions to check for duplicates
             distributed_params.append(param)

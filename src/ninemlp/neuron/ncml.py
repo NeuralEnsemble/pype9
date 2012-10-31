@@ -101,6 +101,28 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
             # collector from being called on the cell class    
             self.parent = weakref.ref(parameters['parent'])
 
+    def __setattr__(self, name, value):
+        """
+        Any '.'s in the attribute name are treated as delimeters of a nested namespace lookup of
+        <segment-name>.<component-name>.<variable-name>. For attributes not in components the 
+        component name can be omitted.
+        
+        @param name [str]: name of the attribute or '.' delimeted string of segment, component and attribute names
+        @param value [*]: value of the attribute
+        """
+        if '.' in name:
+            assert name.count('.') <= 2
+            namespace = name.split('.')
+            for seg in self.groups[namespace[0]]:
+                if len(namespace) == 3:
+                    assert seg.nseg == 1
+                    setattr(getattr(seg(0.5), namespace[1]), namespace[2], value)
+                else:
+                    setattr(seg, namespace[-1], value)
+        else:
+            super(NCMLCell, self).__setattr__(name, value)
+
+
     def _init_morphology(self, barebones_only=True):
         """
         Reads morphology from a MorphML 2 file and creates the appropriate segments in neuron
@@ -109,10 +131,12 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         """
         # Initialise all segments
         self.segments = {}
+        self.groups = { '__all__': [] }
         self.root_segment = None
         for morphml_seg in self.morphml_model.segments:
             seg = Segment(morphml_seg)
             self.segments[morphml_seg.id] = seg
+            self.groups['__all__'].append(seg)
             setattr(self, morphml_seg.id, seg)
             if not morphml_seg.parent:
                 if self.root_segment:
@@ -147,7 +171,6 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                 del seg._fraction_along
                 del seg._children
         # Set up groups of segments for inserting mechanisms
-        self.groups = {}
         for group in self.morphml_model.groups:
             self.groups[group.id] = []
             for member_id in group.members:
@@ -176,12 +199,12 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         #FIXME: ionic currents and reversal potentials should undergo similar checks but they require
         # the species to be checked as well.
         for curr in self.ncml_model.passive_currents:
-            for sec in self.get_group(curr.group_id):
+            for sec in self.groups[curr.group_id]:
                 sec.insert('pas')
                 for seg in sec:
                     seg.pas.g = curr.cond_density.neuron()
         for curr in sorted(self.ncml_model.currents, key=attrgetter('id')):
-            for sec in self.get_group(curr.group_id):
+            for sec in self.groups[curr.group_id]:
                 try:
                     sec.insert(curr.id)
                 except ValueError as e:
@@ -189,14 +212,14 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
 ({error})'.format(curr_id=curr.id, group_id=curr.group_id, error=e))
         #Loop through loaded membrane mechanisms and insert them into the relevant sections.
         for cm in self.ncml_model.capacitances:
-            for sec in self.get_group(cm.group_id):
+            for sec in self.groups[cm.group_id]:
                 sec.cm = cm.value.neuron()
         #Loop through loaded membrane mechanisms and insert them into the relevant sections.
         for reversal in self.ncml_model.reversal_potentials:
-            for sec in self.get_group(reversal.group_id):
+            for sec in self.groups[reversal.group_id]:
                 setattr(sec, 'e' + reversal.species, reversal.value.neuron())
         for ra in self.ncml_model.axial_resistances:
-            for sec in self.get_group(ra.group_id):
+            for sec in self.groups[ra.group_id]:
                 sec.Ra = ra.value.neuron()
         for syn in self.ncml_model.synapses:
             if syn.type in dir(h):
@@ -206,7 +229,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                     SynapseType = eval(syn.type) #FIXME (TGC): I don't think that this will ever work.
                 except:
                     raise Exception ("Could not find synapse '%s' in loaded or built in synapses." % syn.id)
-            for sec in self.get_group(syn.group_id):
+            for sec in self.groups[syn.group_id]:
                 receptor = SynapseType(0.5, sec=sec)
                 setattr(sec, syn.id, receptor)
                 for param in syn.params:
@@ -216,7 +239,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                 GapJunction = eval(syn.type)
             except:
                 raise Exception ("Could not find synapse '%s' in loaded or built-in synapses." % syn.id)
-            for sec in self.get_group(syn.group_id):
+            for sec in self.groups[syn.group_id]:
                 receptor = SynapseType(0.5, sec=sec)
                 setattr(sec, syn.id, receptor)
                 for param in syn.params:
@@ -227,13 +250,6 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
 #        for sec in self.segments:
 #            sec.v = self.v_init
         pass
-
-    def get_group(self, group_id):
-        if not group_id:
-            group = self.get_segments()
-        else:
-            group = self.groups[group_id]
-        return group
 
     def get_segments(self):
         return self.segments.values()
@@ -320,13 +336,13 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                 spikes = np.array(self.cell.spike_times)
                 spikes = spikes[spikes <= pyNN.neuron.simulator.state.t + 1e-9]
                 if len(spikes) > 0:
-                    new_data = np.array([np.ones(spikes.shape)*0.0, spikes]).T
+                    new_data = np.array([np.ones(spikes.shape) * 0.0, spikes]).T
                     data = np.concatenate((data, new_data))
             elif self.variable == 'v':
                 data = np.empty((0, 3))
                 v = np.array(self.cell.vtrace)
                 t = np.array(self.cell.record_times)
-                new_data = np.array([np.ones(v.shape)*0.0, t, v]).T
+                new_data = np.array([np.ones(v.shape) * 0.0, t, v]).T
                 data = np.concatenate((data, new_data))
             if gather and pyNN.neuron.simulator.state.num_processes > 1:
                 data = pyNN.recording.gather(data)
