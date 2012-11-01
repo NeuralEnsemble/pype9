@@ -174,14 +174,16 @@ class NCMLHandler(XMLHandler):
             if self.ncml.action_potential_threshold.has_key('v'):
                 raise Exception("Action potential threshold is multiply specified.")
             self.ncml.action_potential_threshold['v'] = float(attrs['v'])
-        elif self._opening(tag_name, attrs, 'ionicCurrent', parents=['membraneProperties']):
+        elif self._opening(tag_name, attrs, 'ncml:ionicCurrent', parents=['membraneProperties']):
             self.ncml.currents.append(self.IonicCurrent(attrs['id'],
                                                    attrs.get('segmentGroup', '__all__'),
                                                    []))
+        # -- This tag is deprecated as it is replaced by output python properties file from nemo --#
         elif self._opening(tag_name, attrs, 'parameter', parents=['ionicCurrent']):
             self.ncml.currents[-1].params.append(self.IonicCurrentParam(attrs['name'],
                                                                     ValueWithUnits(attrs['value'],
                                                                    attrs.get('units', None))))
+        #-- END --#
         elif self._opening(tag_name, attrs, 'passiveCurrent', parents=['membraneProperties']):
             self.ncml.passive_currents.append(self.PassiveCurrent(attrs.get('segmentGroup', '__all__'),
                                                               ValueWithUnits(attrs['condDensity'],
