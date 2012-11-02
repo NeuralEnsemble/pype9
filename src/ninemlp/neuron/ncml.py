@@ -19,7 +19,7 @@ from neuron import h, nrn, load_mechanisms
 import pyNN.models
 import pyNN.recording
 import ninemlp.common.ncml
-from ninemlp.neuron.build import compile_nmodl
+from ninemlp.neuron.build import compile_nmodl, build_celltype
 from ninemlp import DEFAULT_BUILD_MODE
 from copy import copy
 from operator import attrgetter
@@ -31,7 +31,7 @@ import weakref
 RELATIVE_NMODL_DIR = 'build/nmodl'
 
 ## Used to store the directories from which NMODL objects have been loaded to avoid loading them twice
-loaded_mech_paths = []
+loaded_celltypes = {}
 
 class Segment(nrn.Section): #@UndefinedVariable
     """
@@ -452,17 +452,25 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
         return recordable
 
 
-def load_cell_type(name, path_to_xml_file, build_mode=DEFAULT_BUILD_MODE, silent=False):
-    dct = {}
-    dct['ncml_model'] = ninemlp.common.ncml.read_NCML(name, path_to_xml_file)
-    dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(name, path_to_xml_file)
-    mech_path = str(os.path.join(os.path.dirname(path_to_xml_file), RELATIVE_NMODL_DIR))
-    if mech_path not in loaded_mech_paths:
-        compile_nmodl(mech_path, build_mode=build_mode, silent=silent)
-        load_mechanisms(mech_path)
-        loaded_mech_paths.append(mech_path)
-    dct['mech_path'] = mech_path
-    return NCMLMetaClass(str(name), (pyNN.models.BaseCellType, NCMLCell), dct)
+def load_cell_type(celltype_name, ncml_path, build_mode=DEFAULT_BUILD_MODE, silent=False):
+    if loaded_celltypes.has_key(celltype_name):
+        celltype, prev_ncml_path = loaded_celltypes[celltype_name]        
+        if prev_ncml_path != ncml_path:
+            raise Exception('A NCML ''{celltype_name}'' cell type has already been loaded from a \
+different location, ''{previous}'', than the one provided ''{this}'''.format(
+                             celltype_name=celltype_name, previous=prev_ncml_path, this=ncml_path))
+    else:
+        dct = {}
+        dct['ncml_model'] = ninemlp.common.ncml.read_NCML(celltype_name, ncml_path)
+        dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(celltype_name, ncml_path)
+        install_dir = build_celltype(celltype_name, ncml_path, build_mode=build_mode)
+        compile_nmodl(install_dir, build_mode=build_mode, silent=silent)
+        load_mechanisms(install_dir)
+        dct['mech_path'] = install_dir
+        celltype = NCMLMetaClass(str(celltype_name), (pyNN.models.BaseCellType, NCMLCell), dct)
+        # Save cell type in case it needs to be used again
+        loaded_celltypes[celltype_name] = (celltype, ncml_path)
+    return celltype
 
 
 if __name__ == "__main__":

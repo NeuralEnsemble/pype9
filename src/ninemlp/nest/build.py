@@ -16,14 +16,12 @@ import os.path
 import subprocess as sp
 import shutil
 from ninemlp import DEFAULT_BUILD_MODE
-from ninemlp.common.build import path_to_exec
+from ninemlp.common.build import path_to_exec, get_build_paths
 
-_SRC_DIR = 'src'
-_BUILD_DIR = 'build'
-_INSTALL_DIR = 'install'
+_SIMULATOR_BUILD_NAME ='nest'
 
-
-def build_cellclass(cellclass_name, ncml_location, module_build_dir, build_mode=DEFAULT_BUILD_MODE):
+def build_celltype(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
+                                                build_mode=DEFAULT_BUILD_MODE, silent_build=False):
     """
     Generates the cpp code corresponding to the NCML file, then configures, and compiles and installs
     the corresponding module into nest
@@ -32,22 +30,23 @@ def build_cellclass(cellclass_name, ncml_location, module_build_dir, build_mode=
     @param ncml_location[str]: The location of the NCML file to compile
     """
     # Determine the paths for the src, build and install directories
-    src_dir = os.path.normpath(os.path.join(module_build_dir, _SRC_DIR))
-    build_dir = os.path.normpath(os.path.join(module_build_dir, _BUILD_DIR))
-    install_dir = os.path.normpath(os.path.join(module_build_dir, _INSTALL_DIR))
-    # Clean existing directories from previous builds
+    default_install_dir, src_dir, compile_dir = get_build_paths(ncml_path, celltype_name, 
+                                        _SIMULATOR_BUILD_NAME, build_parent_dir=build_parent_dir)
+    if not install_dir:
+        install_dir = default_install_dir
+    # Clean existing directories from previous builds. TODO: It is a bit wasteful to build the module again everytime, it should be checked to see if the module needs rebuilding first.
     shutil.rmtree(src_dir, ignore_errors=True)
-    shutil.rmtree(build_dir, ignore_errors=True)
+    shutil.rmtree(compile_dir, ignore_errors=True)
     shutil.rmtree(install_dir, ignore_errors=True)
     # Create fresh directories
     os.makedirs(src_dir)
-    os.makedirs(build_dir)
+    os.makedirs(compile_dir)
     os.makedirs(install_dir)
     # Compile the NCML file into NEST cpp code
     nemo_path = path_to_exec('nemo')
     try:
         sp.check_call('{nemo_path} {ncml_path} --nest {output}'.format(nemo_path=nemo_path,
-                                            ncml_path=ncml_location, output=src_dir), shell=True)
+                                            ncml_path=ncml_path, output=src_dir), shell=True)
     except sp.CalledProcessError as e:
         raise Exception('Error while compiling NCML description into NEST cpp code -> {}'.format(e))
 #    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/mymodule.h', src_dir)
@@ -254,8 +253,8 @@ echo "  make install"
 echo
 echo "{module_capitalized} will be installed to:"
 echo -n "  "; eval eval echo "$libdir"
-echo""".format(module_lower=cellclass_name.lower(), module_upper=cellclass_name.upper(),
-                                                    module_capitalized=cellclass_name.capitalize())
+echo""".format(module_lower=celltype_name.lower(), module_upper=celltype_name.upper(),
+                                                    module_capitalized=celltype_name.capitalize())
     # Write configure.ac with module names to file
     with open(os.path.join(src_dir, 'configure.ac'), 'w') as f:
         f.write(configure_ac)
@@ -263,16 +262,16 @@ echo""".format(module_lower=cellclass_name.lower(), module_upper=cellclass_name.
     makefile = """
 libdir= @libdir@/nest
 
-lib_LTLIBRARIES=      {cellclass_name}.la lib{cellclass_name}.la
+lib_LTLIBRARIES=      {celltype_name}.la lib{celltype_name}.la
 
-{cellclass_name}_la_CXXFLAGS= @AM_CXXFLAGS@
-{cellclass_name}_la_SOURCES=  {cellclass_name}.cpp      {cellclass_name}.h \\
+{celltype_name}_la_CXXFLAGS= @AM_CXXFLAGS@
+{celltype_name}_la_SOURCES=  {celltype_name}.cpp      {celltype_name}.h \\
                           pif_psc_alpha.cpp pif_psc_alpha.h \\
                           drop_odd_spike_connection.h
-{cellclass_name}_la_LDFLAGS=  -module
+{celltype_name}_la_LDFLAGS=  -module
 
-lib{cellclass_name}_la_CXXFLAGS= $({cellclass_name}_la_CXXFLAGS) -DLINKED_MODULE
-lib{cellclass_name}_la_SOURCES=  $({cellclass_name}_la_SOURCES)
+lib{celltype_name}_la_CXXFLAGS= $({celltype_name}_la_CXXFLAGS) -DLINKED_MODULE
+lib{celltype_name}_la_SOURCES=  $({celltype_name}_la_SOURCES)
 
 MAKEFLAGS= @MAKE_FLAGS@
 
@@ -282,7 +281,7 @@ AM_CPPFLAGS= @NEST_CPPFLAGS@ \\
 .PHONY: install-slidoc
 
 nobase_pkgdata_DATA=\\
-    sli/{cellclass_name}.sli
+    sli/{celltype_name}.sli
 
 install-slidoc:
     NESTRCFILENAME=/dev/null $(DESTDIR)$(NEST_PREFIX)/bin/sli --userargs="@HELPDIRS@" $(NEST_PREFIX)/share/nest/sli/install-help.sli
@@ -290,7 +289,7 @@ install-slidoc:
 install-data-hook: install-exec install-slidoc
 
 EXTRA_DIST= sli
-""".format(cellclass_name=cellclass_name)
+""".format(celltype_name=celltype_name)
     # Write configure.ac with module names to file
     with open(os.path.join(src_dir, 'Makefile.am'), 'w') as f:
         f.write(makefile)
@@ -347,7 +346,7 @@ echo "Done."
     os.chdir(src_dir)
     sp.check_call(bootstrap_cmd, shell=True)
     # Run configure script, passing the prefix of the installation directory
-    os.chdir(build_dir)
+    os.chdir(compile_dir)
     sp.check_call('{config_path} --prefix={install_dir}'.format(
                                            config_path=os.path.join(src_dir, 'configure'),
                                            install_dir=install_dir), shell=True)
@@ -360,7 +359,7 @@ echo "Done."
     return install_dir
 
 if __name__ == '__main__':
-    build_cellclass('mymodule', '/home/tclose/kbrain/xml/cerebellum/ncml/MyModule.xml')
+    build_celltype('mymodule', '/home/tclose/kbrain/xml/cerebellum/ncml/MyModule.xml')
 
 
 

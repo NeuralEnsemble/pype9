@@ -111,5 +111,5 @@ try changing the values for timestep ({time}) and min_delay ({delay}). (Message 
         self.temperature = p['temperature']
 
 if __name__ == "__main__":
-    pass
+    print "loaded"
 
