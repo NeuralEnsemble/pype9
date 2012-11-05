@@ -41,7 +41,7 @@ def build_celltype(celltype_name, ncml_path, install_dir=None, build_parent_dir=
 permissions or specify a different build directory -> {}'.format(install_dir, e))
     nemo_path = path_to_exec('nemo')
     try:
-        sp.check_call('{nemo_path} {ncml_path} --nmodl {output}'.format(nemo_path=nemo_path,
+        sp.check_call('{nemo_path} {ncml_path} --input-format=ixml --nmodl={output}'.format(nemo_path=nemo_path,
                     ncml_path=os.path.normpath(ncml_path), output=os.path.normpath(install_dir)), 
                                                                                         shell=True)
     except sp.CalledProcessError as e:

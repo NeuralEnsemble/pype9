@@ -45,7 +45,7 @@ def build_celltype(celltype_name, ncml_path, install_dir=None, build_parent_dir=
     # Compile the NCML file into NEST cpp code
     nemo_path = path_to_exec('nemo')
     try:
-        sp.check_call('{nemo_path} {ncml_path} --nest {output}'.format(nemo_path=nemo_path,
+        sp.check_call('{nemo_path} {ncml_path} --input-format=ixml --nest={output}'.format(nemo_path=nemo_path,
                                             ncml_path=ncml_path, output=src_dir), shell=True)
     except sp.CalledProcessError as e:
         raise Exception('Error while compiling NCML description into NEST cpp code -> {}'.format(e))
