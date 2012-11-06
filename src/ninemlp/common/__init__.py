@@ -106,11 +106,11 @@ class XMLHandler(xml.sax.handler.ContentHandler):
 class NetworkMLHandler(XMLHandler):
 
     Network = collections.namedtuple('Network', 'id sim_params populations projections free_params')
-    Population = collections.namedtuple('Population', 'id cell_type size layout cell_params flags not_flags')
+    Population = collections.namedtuple('Population', 'id cell_type size layout cell_params initial_conditions flags not_flags')
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay flags not_flags')
     Layout = collections.namedtuple('Layout', 'type args')
-    CellParameters = collections.namedtuple('CellParameters', 'constants distributions')
-    CellParameterDistr = collections.namedtuple('CellParameterDistr', 'param type units seg_group component args')
+    CustomAttributes = collections.namedtuple('CustomAttributes', 'constants distributions')
+    Distribution = collections.namedtuple('Distribution', 'attr type units seg_group component args')
     Connection = collections.namedtuple('Connection', 'pattern args')
     Weight = collections.namedtuple('Weight', 'pattern args')
     Delay = collections.namedtuple('Delay', 'pattern args')
@@ -145,7 +145,8 @@ class NetworkMLHandler(XMLHandler):
             self.pop_cell = attrs['cell']
             self.pop_size = int(attrs.get('size', '-1'))
             self.pop_layout = None
-            self.pop_cell_params = self.CellParameters({}, [])
+            self.pop_cell_params = self.CustomAttributes({}, [])
+            self.pop_initial_conditions = self.CustomAttributes({}, [])
             # Split the flags attribute on ',' and remove empty values (the use of filter)            
             self.pop_flags = filter(None, attrs.get('flags', '').replace(' ', '').split(','))
             self.pop_not_flags = filter(None, attrs.get('not_flags', '').replace(' ', '').split(','))
@@ -156,30 +157,41 @@ class NetworkMLHandler(XMLHandler):
             layout_type = args.pop('type')
             self.pop_layout = self.Layout(layout_type, args)
         elif self._opening(tag_name, attrs, 'cellParameters', parents=['population']): pass
+        elif self._opening(tag_name, attrs, 'initialConditions', parents=['population']): pass
         elif self._opening(tag_name, attrs, 'const', parents=['population', 'cellParameters']):
             self.pop_cell_params.constants[attrs['name']] = float(attrs['value']) # FIXME: Units are ignored here
-        elif self._opening(tag_name, attrs, 'distribution', parents=['population', 'cellParameters']):
+        elif self._opening(tag_name, attrs, 'const', parents=['population', 'initialConditions']):
+            self.pop_cell_params.constants[attrs['name']] = float(attrs['value']) # FIXME: Units are ignored here            
+        elif self._opening(tag_name, attrs, 'distribution', parents=['population', 'cellParameters']) or \
+             self._opening(tag_name, attrs, 'distribution', parents=['population', 'initialConditions']):
             args = dict(attrs)
-            param = args.pop('param')
+            attribute = args.pop('attr')
             distr_type = args.pop('type')
             units = args.pop('units') if args.has_key('units') else None
-            component = args.pop('component') if args.has_key('component') else None      
+            component = args.pop('component') if args.has_key('component') else None
             segmentGroup = args.pop('segmentGroup') if args.has_key('segmentGroup') else '__all__'
             try:
                 distr_param_keys = RANDOM_DISTR_PARAMS[distr_type]
             except KeyError:
                 raise Exception ("Unrecognised distribution type '{type}' used to distribute \
-cell parameter '{param}' in population '{pop}'".format(type=distr_type, param=param, pop=self.id))                
+cell attribute '{attribute}' in population '{pop}'".format(type=distr_type, attribute=attribute,
+                                                                                      pop=self.id))
             try:
                 distr_params = [args[arg] for arg in distr_param_keys]
             except KeyError as e:
-                raise Exception ("Missing parameter '{distr_param}' for '{type}' distribution used \
-to distribute cell parameter '{param}' in population '{pop}'".format(distr_param=e, type=distr_type, 
-                                                                        param=param, pop=self.id))                
-            self.pop_cell_params.distributions.append(self.CellParameterDistr(param, distr_type,
-                                                      units, segmentGroup, component, distr_params))
-        elif self._opening(tag_name, attrs, 'arg', parents=['param_dist']):
-            self.populations[-1].param_dists[-1].args[attrs['name']] = float(attrs['value'])
+                raise Exception ("Missing attribute '{distr_params}' for '{type}' distribution used \
+to distribute cell attribute '{attribute}' in population '{pop}'".format(distr_params=e,
+                                                                        type=distr_type,
+                                                                        attribute=attribute,
+                                                                        pop=self.id))
+            distr = self.Distribution(attribute, distr_type, units, segmentGroup, component,
+                                                                                     distr_params)
+            if self._open_components[-2] == 'cellParameters':
+                self.pop_cell_params.distributions.append(distr)
+            elif self._open_components[-2] == 'initialConditions':
+                self.pop_initial_conditions.distributions.append(distr)
+            else:
+                assert False
         elif self._opening(tag_name, attrs, 'projection', parents=['network']):
             self.proj_id = attrs['id']
             self.proj_pre = None
@@ -231,6 +243,7 @@ to distribute cell parameter '{param}' in population '{pop}'".format(distr_param
                                                     self.pop_size,
                                                     self.pop_layout,
                                                     self.pop_cell_params,
+                                                    self.pop_initial_conditions,
                                                     self.pop_flags,
                                                     self.pop_not_flags))
         elif self._closing(name, 'projection', parents=['network']):
@@ -323,6 +336,7 @@ block of NetworkML description'.format(flag=e, id=p.id))
                                                                     pop.layout,
                                                                     pop.cell_params.constants,
                                                                     pop.cell_params.distributions,
+                                                                    pop.initial_conditions.distributions,
                                                                     verbose,
                                                                     silent_build)
         for proj in self.networkML.projections:
@@ -343,7 +357,7 @@ if you want to do something afterwards)'
             raise SystemExit(0)
 
     def _create_population(self, label, size, cell_type_name, layout, cell_params, cell_param_distrs,
-                                                                            verbose, silent_build):
+                                                        initial_conditions, verbose, silent_build):
         if cell_type_name + ".xml" in os.listdir(self.cells_dir):
             cell_type = self._ncml_module.load_cell_type(cell_type_name,
                                             os.path.join(self.cells_dir, cell_type_name + ".xml"),
@@ -384,7 +398,8 @@ if you want to do something afterwards)'
         # Set layout
         if layout and self.build_mode != 'compile_only':
             pop._set_positions(positions)
-        pop._set_random_distributions(cell_param_distrs)
+        pop._randomly_distribute_params(cell_param_distrs)
+        pop._randomly_distribute_initial_conditions(initial_conditions)
         return pop
 
     def _create_projection(self, label, pre, dest, connection, source, target, weight, delay, verbose):
@@ -568,7 +583,7 @@ or NetworkML specification".format(key))
 
 class Population(object):
 
-    def _set_random_distributions(self, cell_param_distrs):
+    def _randomly_distribute_params(self, cell_param_distrs):
         # Set distributed parameters
         distributed_params = []
         for param, distr_type, units, seg_group, component, args in cell_param_distrs: #@UnusedVariable: Can't work out how to use units effectively at the moment because args may include parameters that don't have units, so ignoring it for now but will hopefully come back to it
@@ -587,15 +602,44 @@ class Population(object):
             else:
                 if seg_group:
                     raise Exception("segmentGroup attribute of parameter distribution '{}' can only \
-be specified for cells described using NCML, not '{}' cell types".format(param, 
+be specified for cells described using NCML, not '{}' cell types".format(param,
                                                                  self.celltype.__class__.__name__))
                 if component:
                     raise Exception("component attribute of parameter distribution '{}' can only \
-be specified for cells described using NCML, not '{}' cell types".format(param, 
-                                                                 self.celltype.__class__.__name__))                    
+be specified for cells described using NCML, not '{}' cell types".format(param,
+                                                                 self.celltype.__class__.__name__))
                 self.rset(param, rand_distr)
             # Add param to list of completed param distributions to check for duplicates
             distributed_params.append(param)
+
+    def _randomly_distribute_initial_conditions(self, initial_conditions):
+        # Set distributed parameters
+        distributed_conditions = []
+        for variable, distr_type, units, seg_group, component, args in initial_conditions: #@UnusedVariable: Can't work out how to use units effectively at the moment because args may include variables that don't have units, so ignoring it for now but will hopefully come back to it
+            if variable in distributed_conditions:
+                raise Exception("Parameter '{}' has two (or more) distributions specified for it in\
+ {} population".format(variable, self.id))
+            # Create random distribution object
+            rand_distr = RandomDistribution(distribution=distr_type, parameters=args)
+            # If is an NCML type cell
+            if self.celltype.__module__.startswith('ninemlp'):
+                variable_scope = [seg_group]
+                if component:
+                    variable_scope.append(component)
+                variable_scope.append(variable)
+                self.initialise('.'.join(variable_scope), rand_distr)
+            else:
+                if seg_group:
+                    raise Exception("segmentGroup attribute of variableeter distribution '{}' can only \
+be specified for cells described using NCML, not '{}' cell types".format(variable,
+                                                                 self.celltype.__class__.__name__))
+                if component:
+                    raise Exception("component attribute of variableeter distribution '{}' can only \
+be specified for cells described using NCML, not '{}' cell types".format(variable,
+                                                                 self.celltype.__class__.__name__))
+                self.initialise(variable, rand_distr)
+            # Add variable to list of completed variable distributions to check for duplicates
+            distributed_conditions.append(variable)
 
     def set_poisson_spikes(self, rate, start_time, end_time):
         """
