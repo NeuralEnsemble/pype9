@@ -17,9 +17,10 @@ import shutil
 import platform
 import subprocess as sp
 from ninemlp import DEFAULT_BUILD_MODE
-from ninemlp.common.build import path_to_exec
+from ninemlp.common.build import path_to_exec, get_build_paths
 
 BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
+_SIMULATOR_BUILD_NAME ='neuron'
 
 if 'NRNHOME' in os.environ:
     os.environ['PATH'] += os.pathsep + os.environ['NRNHOME']
@@ -27,15 +28,26 @@ else:
     # I apologise for this hack (this is the path on my machine, to save me having to set the environment variable in eclipse)
     os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin' 
 
-def build_cellclass(cellclass_name, ncml_location, module_build_dir, build_mode=DEFAULT_BUILD_MODE):
-    
+def build_celltype(celltype_name, ncml_path, install_dir=None, build_parent_dir=None, 
+                                                build_mode=DEFAULT_BUILD_MODE, silent_build=False):
+    if not install_dir:
+        install_dir, src_dir, compile_dir = get_build_paths(ncml_path, celltype_name, #@UnusedVariable
+                                        _SIMULATOR_BUILD_NAME, build_parent_dir=build_parent_dir)
+    if not os.path.exists(install_dir):
+        try:
+            os.makedirs(install_dir)
+        except IOError as e:
+            raise Exception('Could not create neuron build directory ''{}'', check the required \
+permissions or specify a different build directory -> {}'.format(install_dir, e))
     nemo_path = path_to_exec('nemo')
     try:
-        sp.check_call('{nemo_path} {ncml_path} --nmodl {output}'.format(nemo_path=nemo_path,
-                                            ncml_path=ncml_location, output=src_dir), shell=True)
+        sp.check_call('{nemo_path} {ncml_path} --input-format=ixml --nmodl={output}'.format(nemo_path=nemo_path,
+                    ncml_path=os.path.normpath(ncml_path), output=os.path.normpath(install_dir)), 
+                                                                                        shell=True)
     except sp.CalledProcessError as e:
         raise Exception('Error while compiling NCML description into NEST cpp code -> {}'.format(e))
-    
+    compile_nmodl(install_dir, build_mode=build_mode, silent=silent_build)
+    return install_dir
     
 
 def compile_nmodl (model_dir, build_mode=DEFAULT_BUILD_MODE, silent=False):
