@@ -315,10 +315,9 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         else:
             self.spike_times = h.Vector(0)
 
-
     def set_parameters(self, param_dict):
         for name in self.parameter_names:
-            setattr(self, name, param_dict[name])
+            setattr(self, name, param_dict[name])      
 
     def get_threshold(self):
         return self.ncml_model.action_potential_threshold.get('v', 0.0)
