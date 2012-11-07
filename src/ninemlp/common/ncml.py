@@ -281,7 +281,7 @@ class BaseNCMLMetaClass(type):
         dct["model_name"] = ncml_model.celltype_id
         dct["recordable"] = cls._construct_recordable()
         dct["weight_variables"] = cls._construct_weight_variables()
-        dct["component_parameters"] = cls._construct_component_parameters()
+        dct["parameter_names"] = cls._construct_parameter_names()
         return super(BaseNCMLMetaClass, cls).__new__(cls, name, bases, dct)
 
     @classmethod
