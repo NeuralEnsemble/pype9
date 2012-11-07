@@ -645,9 +645,9 @@ be specified for cells described using NCML, not '{}' cell types".format(variabl
         """
         Sets up a train of poisson spike times for a SpikeSourceArray population
         
-        @param rate: Rate of the poisson spike train
-        @param start_time: Start time of the stimulation
-        @param end_time: The end time of the stimulation.
+        @param rate: Rate of the poisson spike train (Hz)
+        @param start_time: Start time of the stimulation (ms)
+        @param end_time: The end time of the stimulation (ms)
         """
         if self.get_cell_type().__name__ != 'SpikeSourceArray':
             raise Exception("'set_poisson_spikes' method can only be used for 'SpikeSourceArray' populations.")

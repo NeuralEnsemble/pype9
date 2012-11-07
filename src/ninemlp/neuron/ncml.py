@@ -23,7 +23,6 @@ from ninemlp.neuron.build import compile_nmodl, build_celltype_files
 from ninemlp import DEFAULT_BUILD_MODE
 from copy import copy
 from operator import attrgetter
-import math
 import numpy as np
 import pyNN.neuron.simulator
 import weakref
@@ -463,9 +462,13 @@ different location, ''{previous}'', than the one provided ''{this}'''.format(
         dct['ncml_model'] = ninemlp.common.ncml.read_NCML(celltype_name, ncml_path)
         dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(celltype_name, ncml_path)
         build_options = dct['ncml_model'].build_options['nemo']['neuron']
-        install_dir = build_celltype_files(celltype_name, ncml_path, build_mode=build_mode, 
-                 method=build_options.method, kinetics=build_options.kinetics, silent_build=silent)
-        load_mechanisms(str(os.path.normpath(install_dir)))
+        install_dir, component_parameters = build_celltype_files(celltype_name, ncml_path, 
+                                                            build_mode=build_mode, 
+                                                            method=build_options.method, 
+                                                            kinetics=build_options.kinetics, 
+                                                            silent_build=silent)
+        load_mechanisms(install_dir)
+        dct['component_parameters'] = component_parameters
         dct['mech_path'] = install_dir
         celltype = NCMLMetaClass(str(celltype_name), (pyNN.models.BaseCellType, NCMLCell), dct)
         # Save cell type in case it needs to be used again

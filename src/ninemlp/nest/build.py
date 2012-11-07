@@ -16,7 +16,7 @@ import os.path
 import subprocess as sp
 import shutil
 from ninemlp import DEFAULT_BUILD_MODE
-from ninemlp.common.build import path_to_exec, get_build_paths
+from ninemlp.common.build import path_to_exec, get_build_paths, load_component_parameters
 
 _SIMULATOR_BUILD_NAME ='nest'
 
@@ -33,24 +33,27 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     @param method [str]: The method option to be passed to the NeMo interpreter command
     """
     # Determine the paths for the src, build and install directories
-    default_install_dir, src_dir, compile_dir = get_build_paths(ncml_path, celltype_name, 
+    default_install_dir, params_dir, src_dir, compile_dir = get_build_paths(ncml_path, celltype_name, 
                                         _SIMULATOR_BUILD_NAME, build_parent_dir=build_parent_dir)
     if not install_dir:
         install_dir = default_install_dir
     # Clean existing directories from previous builds. TODO: It is a bit wasteful to build the module again everytime, it should be checked to see if the module needs rebuilding first.
     shutil.rmtree(src_dir, ignore_errors=True)
+    shutil.rmtree(params_dir, ignore_errors=True)    
     shutil.rmtree(compile_dir, ignore_errors=True)
     shutil.rmtree(install_dir, ignore_errors=True)
     # Create fresh directories
     os.makedirs(src_dir)
+    os.makedirs(params_dir)    
     os.makedirs(compile_dir)
     os.makedirs(install_dir)
     # Compile the NCML file into NEST cpp code
     nemo_path = path_to_exec('nemo')
     try:
-        sp.check_call('{nemo_path} {ncml_path} -p --pyparams={output} --nest={output} \
+        sp.check_call('{nemo_path} {ncml_path} -p --pyparams={params} --nest={output} \
 --nest-method={method}'.format(nemo_path=nemo_path, method=method,
-                                            ncml_path=ncml_path, output=src_dir), shell=True)
+                                            ncml_path=ncml_path, output=src_dir, params=params_dir)
+                                                                                    , shell=True)
     except sp.CalledProcessError as e:
         raise Exception('Error while compiling NCML description into NEST cpp code -> {}'.format(e))
 #    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/mymodule.h', src_dir)
@@ -360,7 +363,8 @@ echo "Done."
     # Switch back to original dir
     os.chdir(orig_dir)
     # Return installation directory
-    return install_dir
+    component_parameters = load_component_parameters(celltype_name, params_dir)
+    return install_dir, component_parameters
 
 if __name__ == '__main__':
     build_celltype_files('mymodule', '/home/tclose/kbrain/xml/cerebellum/ncml/MyModule.xml')

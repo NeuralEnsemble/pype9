@@ -14,8 +14,10 @@
 import platform
 import os.path
 import subprocess as sp
+from runpy import run_path
 
 _RELATIVE_BUILD_DIR = 'build'
+_PARAMS_DIR = 'params'
 _SRC_DIR = 'src'
 _INSTALL_DIR = 'install'
 _COMPILE_DIR = 'compile' # Ignored for NEURON but used for NEST
@@ -32,12 +34,13 @@ def get_build_paths(ncml_path, celltype_name, simulator_name, build_parent_dir=N
     @return [str]: (<default-install_directory>, <source-directory>, <compile-directory>)
     """
     if not build_parent_dir:
-        build_parent_dir = os.path.join(os.path.dirname(ncml_path), _RELATIVE_BUILD_DIR, 
+        build_parent_dir = os.path.join(os.path.dirname(ncml_path), _RELATIVE_BUILD_DIR,
                                                                     simulator_name, celltype_name)
-    src_dir = os.path.join(build_parent_dir, _SRC_DIR)
-    default_install_dir = os.path.join(build_parent_dir, _INSTALL_DIR)
-    compile_dir = os.path.join(build_parent_dir, _COMPILE_DIR)
-    return (default_install_dir, src_dir, compile_dir)
+    src_dir = str(os.path.normpath(os.path.join(build_parent_dir, _SRC_DIR)))
+    default_install_dir = str(os.path.normpath(os.path.join(build_parent_dir, _INSTALL_DIR)))
+    compile_dir = str(os.path.normpath(os.path.join(build_parent_dir, _COMPILE_DIR)))
+    params_dir = str(os.path.normpath(os.path.join(build_parent_dir, _PARAMS_DIR)))
+    return (default_install_dir, params_dir, src_dir, compile_dir)
 
 def path_to_exec(exec_name):
     """
@@ -58,3 +61,21 @@ def path_to_exec(exec_name):
     if not exec_path:
         raise Exception("Could not find nrnivmodl on the system path '%s'" % os.environ['PATH'])
     return exec_path
+
+def load_component_parameters(celltype_name, params_dir):
+    """
+    Loads component parameter names to standard reference name (eg. 'ReversalPotential', 
+    'MaximalConductance') dictionary. For each file in the params directory with a '.py' extension 
+    starting with the celltype_name assume that it is a parameters file.
+    
+    @param celltype_name [str]: The name of the cell type to load the parameter names for
+    @param params_dir [str]: The path to the directory that contains the parameters
+    """
+    component_parameters = {}
+    for f_name in os.listdir(params_dir):
+        if f_name.startswith(celltype_name) and f_name.endswith('.py'):
+            component_name = f_name[len(celltype_name) + 1:-3]
+            vars = run_path(os.path.join(params_dir, f_name))
+            component_parameters[component_name] = vars['properties'] #@UndefinedVariable
+    return component_parameters
+

@@ -17,7 +17,7 @@ import shutil
 import platform
 import subprocess as sp
 from ninemlp import DEFAULT_BUILD_MODE
-from ninemlp.common.build import path_to_exec, get_build_paths
+from ninemlp.common.build import path_to_exec, get_build_paths, load_component_parameters
 
 BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
 _SIMULATOR_BUILD_NAME ='neuron'
@@ -40,27 +40,32 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     @param method [str]: The method option to be passed to the NeMo interpreter command
     @param kinetics [list(str)]: A list of ionic components to be generated using the kinetics option
     """
-    if not install_dir:
-        install_dir, src_dir, compile_dir = get_build_paths(ncml_path, celltype_name, #@UnusedVariable
+    default_install_dir, params_dir, src_dir, compile_dir = get_build_paths(ncml_path, celltype_name, #@UnusedVariable
                                         _SIMULATOR_BUILD_NAME, build_parent_dir=build_parent_dir)
-    if not os.path.exists(install_dir):
-        try:
-            os.makedirs(install_dir)
-        except IOError as e:
-            raise Exception('Could not create neuron build directory ''{}'', check the required \
-permissions or specify a different build directory -> {}'.format(install_dir, e))
+    if not install_dir:
+        install_dir = default_install_dir
+    try:
+        if not os.path.exists(install_dir):
+            os.makedirs(install_dir)            
+        if not os.path.exists(params_dir):
+            os.makedirs(params_dir)
+    except IOError as e:
+        raise Exception('Could not create a required neuron build directory, check the required \
+permissions or specify a different parent build directory -> {}'.format(e))         
     nemo_path = path_to_exec('nemo')
     try:
-        sp.check_call('{nemo_path} {ncml_path} -p --pyparams={output} --nmodl={output} \
+        sp.check_call('{nemo_path} {ncml_path} -p --pyparams={params} --nmodl={output} \
 --nmodl-method={method} --nmodl-kinetic={kinetics}'.format(nemo_path=nemo_path,
                                                             ncml_path=os.path.normpath(ncml_path), 
                                                             output=os.path.normpath(install_dir), 
+                                                            params=params_dir,
                                                             kinetics=','.join(kinetics), 
                                                             method=method), shell=True)
     except sp.CalledProcessError as e:
-        raise Exception('Error while compiling NCML description into NEST cpp code -> {}'.format(e))
+        raise Exception('Error while compiling NCML description into NMODL code -> {}'.format(e))
     compile_nmodl(install_dir, build_mode=build_mode, silent=silent_build)
-    return install_dir
+    component_parameters = load_component_parameters(celltype_name, params_dir)
+    return install_dir, component_parameters
     
 
 def compile_nmodl (model_dir, build_mode=DEFAULT_BUILD_MODE, silent=False):
