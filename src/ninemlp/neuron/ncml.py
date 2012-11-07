@@ -462,7 +462,9 @@ different location, ''{previous}'', than the one provided ''{this}'''.format(
         dct = {}
         dct['ncml_model'] = ninemlp.common.ncml.read_NCML(celltype_name, ncml_path)
         dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(celltype_name, ncml_path)
-        install_dir = build_celltype(celltype_name, ncml_path, build_mode=build_mode)
+        build_options = dct['ncml_model'].build_options['nemo']['neuron']
+        install_dir = build_celltype(celltype_name, ncml_path, build_mode=build_mode, 
+                                    method=build_options.method, kinetics=build_options.kinetics)
         compile_nmodl(install_dir, build_mode=build_mode, silent=silent)
         load_mechanisms(install_dir)
         dct['mech_path'] = install_dir

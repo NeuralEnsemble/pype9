@@ -21,13 +21,16 @@ from ninemlp.common.build import path_to_exec, get_build_paths
 _SIMULATOR_BUILD_NAME ='nest'
 
 def build_celltype(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
-                                                build_mode=DEFAULT_BUILD_MODE, silent_build=False):
+                                method='cvode', build_mode=DEFAULT_BUILD_MODE, silent_build=False):    
     """
     Generates the cpp code corresponding to the NCML file, then configures, and compiles and installs
     the corresponding module into nest
     
-    @param name[str]: Name of the module to compile and load
-    @param ncml_location[str]: The location of the NCML file to compile
+    @param celltype_name [str]: Name of the celltype to be built
+    @param ncml_path [str]: Path to the NCML file from which the NMODL files will be compiled and built
+    @param install_dir [str]: Path to the directory where the NMODL files will be generated and compiled
+    @param build_parent_dir [str]: Used to set the path for the default 'install_dir', and the 'src' and 'build' dirs path
+    @param method [str]: The method option to be passed to the NeMo interpreter command
     """
     # Determine the paths for the src, build and install directories
     default_install_dir, src_dir, compile_dir = get_build_paths(ncml_path, celltype_name, 
@@ -45,7 +48,8 @@ def build_celltype(celltype_name, ncml_path, install_dir=None, build_parent_dir=
     # Compile the NCML file into NEST cpp code
     nemo_path = path_to_exec('nemo')
     try:
-        sp.check_call('{nemo_path} {ncml_path} --input-format=ixml --nest={output}'.format(nemo_path=nemo_path,
+        sp.check_call('{nemo_path} {ncml_path} -p --pyparams={output} --nest={output} \
+--nest-method={method}'.format(nemo_path=nemo_path, method=method,
                                             ncml_path=ncml_path, output=src_dir), shell=True)
     except sp.CalledProcessError as e:
         raise Exception('Error while compiling NCML description into NEST cpp code -> {}'.format(e))

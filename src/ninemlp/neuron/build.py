@@ -29,7 +29,17 @@ else:
     os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin' 
 
 def build_celltype(celltype_name, ncml_path, install_dir=None, build_parent_dir=None, 
-                                                build_mode=DEFAULT_BUILD_MODE, silent_build=False):
+    method='derivimplicit', build_mode=DEFAULT_BUILD_MODE, silent_build=False, kinetics=[]):
+    """
+    Generates and builds the required NMODL files for a given NCML cell class
+    
+    @param celltype_name [str]: Name of the celltype to be built
+    @param ncml_path [str]: Path to the NCML file from which the NMODL files will be compiled and built
+    @param install_dir [str]: Path to the directory where the NMODL files will be generated and compiled
+    @param build_parent_dir [str]: Used to set the default 'install_dir' path
+    @param method [str]: The method option to be passed to the NeMo interpreter command
+    @param kinetics [list(str)]: A list of ionic components to be generated using the kinetics option
+    """
     if not install_dir:
         install_dir, src_dir, compile_dir = get_build_paths(ncml_path, celltype_name, #@UnusedVariable
                                         _SIMULATOR_BUILD_NAME, build_parent_dir=build_parent_dir)
@@ -41,9 +51,12 @@ def build_celltype(celltype_name, ncml_path, install_dir=None, build_parent_dir=
 permissions or specify a different build directory -> {}'.format(install_dir, e))
     nemo_path = path_to_exec('nemo')
     try:
-        sp.check_call('{nemo_path} {ncml_path} --input-format=ixml --nmodl={output}'.format(nemo_path=nemo_path,
-                    ncml_path=os.path.normpath(ncml_path), output=os.path.normpath(install_dir)), 
-                                                                                        shell=True)
+        sp.check_call('{nemo_path} {ncml_path} -p --pyparams={output} --nmodl={output} \
+--nmodl-method={method} --nmodl-kinetic={kinetics}'.format(nemo_path=nemo_path,
+                                                            ncml_path=os.path.normpath(ncml_path), 
+                                                            output=os.path.normpath(install_dir), 
+                                                            kinetics=','.join(kinetics), 
+                                                            method=method), shell=True)
     except sp.CalledProcessError as e:
         raise Exception('Error while compiling NCML description into NEST cpp code -> {}'.format(e))
     compile_nmodl(install_dir, build_mode=build_mode, silent=silent_build)

@@ -30,7 +30,7 @@ class BaseNCMLCell(object):
         Currently unused but could be used in future to initialise simulator independent components
         of the NCML classes.
         """
-        pass                
+        pass
 
 
     def memb_init(self):
@@ -78,7 +78,8 @@ class MorphMLHandler(XMLHandler):
         """
         if self._opening(tag_name, attrs, 'cell', required_attrs=[('id', self.cell_type_id)]):
             self.found_cell_id = True
-        elif self._opening(tag_name, attrs, 'morphology', parents=['cell'], required_attrs=[('id', self.morph_id)]):
+        elif self._opening(tag_name, attrs, 'morphology', parents=['cell'], 
+                                                            required_attrs=[('id', self.morph_id)]):
             self.morphology = self.Morphology(attrs['id'], self.cell_type_id, [], [])
         elif self._opening(tag_name, attrs, 'segment', parents=['morphology']):
             self.segment_id = attrs['id']
@@ -128,6 +129,7 @@ class NCMLHandler(XMLHandler):
 
     NCMLDescription = collections.namedtuple('NCMLDescription', 'cell_type_id \
                                                                  ncml_id \
+                                                                 build_options \
                                                                  currents synapses \
                                                                  gap_junctions \
                                                                  capacitances \
@@ -140,6 +142,7 @@ class NCMLHandler(XMLHandler):
     AxialResistivity = collections.namedtuple('AxialResistivity', 'value group_id')
 
     ## Ionic current of the segment group ('group_id').
+    BuildOptions = collections.namedtuple('BuildOptions', 'method kinetics')
     IonicCurrent = collections.namedtuple('IonicCurrent', 'id group_id params')
     IonicCurrentParam = collections.namedtuple('IonicCurrentParam', 'name value')
     PassiveCurrent = collections.namedtuple('PassiveCurrent', 'group_id cond_density')
@@ -159,18 +162,32 @@ class NCMLHandler(XMLHandler):
     def startElement(self, tag_name, attrs):
         if self._opening(tag_name, attrs, 'cell', required_attrs=[('id', self.cell_type_id)]):
             self.found_cell_id = True
-        elif self._opening(tag_name, attrs, 'biophysicalProperties', parents=['cell'], required_attrs=[('id', self.ncml_id)]):
-            self.ncml = self.NCMLDescription(attrs['id'], self.cell_type_id, [], [], [], [], [], [], [], {})
+        elif self._opening(tag_name, attrs, 'biophysicalProperties', parents=['cell'], 
+                                                            required_attrs=[('id', self.ncml_id)]):
+            self.ncml = self.NCMLDescription(
+                                 self.cell_type_id, attrs['id'], collections.defaultdict(dict), 
+                                                                [], [], [], [], [], [], [], {})
+        elif self._opening(tag_name, attrs, 'defaultBuildOptions',
+                                                                parents=['biophysicalProperties']):
+            pass
+        elif self._opening(tag_name, attrs, 'build', parents=['defaultBuildOptions']):
+            self.build_tool = attrs['tool']
+            self.build_simulator = attrs['simulator']
+            self.ncml.build_options[self.build_tool][self.build_simulator] = \
+                                                            self.BuildOptions(attrs['method'], [])
+        elif self._opening(tag_name, attrs, 'kinetic', parents=['defaultBuildOptions', 'build']):            
+            self.ncml.build_options[self.build_tool][self.build_simulator].kinetics.append(attrs['comp_id'])
         elif self._opening(tag_name, attrs, 'membraneProperties',
                                                                 parents=['biophysicalProperties']):
             pass
         elif self._opening(tag_name, attrs, 'synapses',
                                                                 parents=['biophysicalProperties']):
-            pass        
+            pass
         elif self._opening(tag_name, attrs, 'intracellularProperties',
                                                                 parents=['biophysicalProperties']):
             pass
-        elif self._opening(tag_name, attrs, 'actionPotentialThreshold', parents=['biophysicalProperties']):
+        elif self._opening(tag_name, attrs, 'actionPotentialThreshold', 
+                                                                parents=['biophysicalProperties']):
             if self.ncml.action_potential_threshold.has_key('v'):
                 raise Exception("Action potential threshold is multiply specified.")
             self.ncml.action_potential_threshold['v'] = float(attrs['v'])
@@ -185,7 +202,7 @@ class NCMLHandler(XMLHandler):
                                                                    attrs.get('units', None))))
         #-- END --#
         elif self._opening(tag_name, attrs, 'passiveCurrent', parents=['membraneProperties']):
-            self.ncml.passive_currents.append(self.PassiveCurrent(attrs.get('segmentGroup', '__all__'),
+            self.ncml.passive_currents.append(self.PassiveCurrent(attrs.get('segmentGroup', '__all__'), # If no 'segmentGroup' is provided, default to '__all__'
                                                               ValueWithUnits(attrs['condDensity'],
                                                                      attrs.get('units', None))))
         elif self._opening(tag_name, attrs, 'conductanceSynapse', parents=['synapses']):
@@ -223,9 +240,9 @@ def read_MorphML(name, filename):
     parser.setContentHandler(handler)
     parser.parse(filename)
     if not handler.found_cell_id:
-        raise Exception("Target cell id, '%s', was not found in given XML file '%s'" % (name, filename)) 
-    if not hasattr(handler,'morphology'):
-        raise Exception("'morphology' tag was not found in given XML file '%s'" % filename)        
+        raise Exception("Target cell id, '%s', was not found in given XML file '%s'" % (name, filename))
+    if not hasattr(handler, 'morphology'):
+        raise Exception("'morphology' tag was not found in given XML file '%s'" % filename)
     return handler.morphology
 
 
@@ -235,9 +252,9 @@ def read_NCML(name, filename):
     parser.setContentHandler(handler)
     parser.parse(filename)
     if not handler.found_cell_id:
-        raise Exception("Target cell id, '%s', was not found in given XML file '%s'" % (name, filename)) 
-    if not hasattr(handler,'ncml'):
-        raise Exception("'biophysicalProperties' tag was not found in given XML file '%s'" % filename)    
+        raise Exception("Target cell id, '%s', was not found in given XML file '%s'" % (name, filename))
+    if not hasattr(handler, 'ncml'):
+        raise Exception("'biophysicalProperties' tag was not found in given XML file '%s'" % filename)
     return handler.ncml
 
 
@@ -246,9 +263,9 @@ class BaseNCMLMetaClass(type):
     Metaclass for building NineMLCellType subclasses
     Called by nineml_celltype_from_model
     """
-    
+
     COMMON_RECORDABLE = ['v', 'spikes']
-    
+
     def __new__(cls, name, bases, dct):
         # Retrieved parsed model (it is placed in dct to conform with
         # with the standard structure for the "__new__" function of metaclasses).
@@ -287,13 +304,13 @@ class BaseNCMLMetaClass(type):
         for cm in ncml_model.capacitances:
             default_params[cm.group_id + "." + "cm"] = cm.value
         for ra in ncml_model.axial_resistances:
-            default_params[ra.group_id + "."  + "ra"] = ra.value
+            default_params[ra.group_id + "." + "ra"] = ra.value
         for e_v in ncml_model.reversal_potentials:
-            default_params[e_v.group_id + "."  + "e_rev_" + e_v.species] = e_v.value
+            default_params[e_v.group_id + "." + "e_rev_" + e_v.species] = e_v.value
         # A morphology parameters
         for seg_group in morphml_model.groups:
             default_params[seg_group.id + ".diam"] = None # None, defers to the value loaded in the MorphML file but allows them to be overwritten
-            default_params[seg_group.id + ".L"] = None            
+            default_params[seg_group.id + ".L"] = None
         return default_params
 
     @classmethod
