@@ -47,7 +47,7 @@ class MorphMLHandler(XMLHandler):
 
     # Create named tuples (sort of light-weight classes with no methods, like a struct in C/C++) to
     # store the extracted MorphML data.
-    Morphology = collections.namedtuple('Morphology', 'morph_id cell_type_id segments groups')
+    Morphology = collections.namedtuple('Morphology', 'morph_id celltype_id segments groups')
 
     ## The basic data required to create a segment. 'proximal' and 'distal' are 'Point3D' tuples specifying the location and diameter of the segment, and 'parent' is a 'Parent' tuple.
     Segment = collections.namedtuple('Segment', 'id proximal distal parent')
@@ -61,13 +61,13 @@ class MorphMLHandler(XMLHandler):
     ## A segment group. Contains the group's id and a list of its members.
     SegmentGroup = collections.namedtuple('SegmentGroup', 'id members')
 
-    def __init__(self, cell_type_id=None, morph_id=None):
+    def __init__(self, celltype_id=None, morph_id=None):
         """
         Initialises the handler, saving the cell name and creating the lists to hold the segments 
         and segment groups.
         """
         XMLHandler.__init__(self)
-        self.cell_type_id = cell_type_id
+        self.celltype_id = celltype_id
         self.morph_id = morph_id
         self.found_cell_id = False
 
@@ -76,11 +76,11 @@ class MorphMLHandler(XMLHandler):
         Overrides function in xml.sax.handler to parse all MorphML tag openings. Creates corresponding
         segment and segment-group tuples in the handler object.
         """
-        if self._opening(tag_name, attrs, 'cell', required_attrs=[('id', self.cell_type_id)]):
+        if self._opening(tag_name, attrs, 'cell', required_attrs=[('id', self.celltype_id)]):
             self.found_cell_id = True
         elif self._opening(tag_name, attrs, 'morphology', parents=['cell'], 
                                                             required_attrs=[('id', self.morph_id)]):
-            self.morphology = self.Morphology(attrs['id'], self.cell_type_id, [], [])
+            self.morphology = self.Morphology(attrs['id'], self.celltype_id, [], [])
         elif self._opening(tag_name, attrs, 'segment', parents=['morphology']):
             self.segment_id = attrs['id']
             self.proximal = None
@@ -127,7 +127,7 @@ class NCMLHandler(XMLHandler):
     read when neuron model objects are initialised from the generated NCML class.
     """
 
-    NCMLDescription = collections.namedtuple('NCMLDescription', 'cell_type_id \
+    NCMLDescription = collections.namedtuple('NCMLDescription', 'celltype_id \
                                                                  ncml_id \
                                                                  build_options \
                                                                  currents synapses \
@@ -153,19 +153,19 @@ class NCMLHandler(XMLHandler):
     ReversePotential = collections.namedtuple('NCMLReversePotential', 'species value group_id')
     ActionPotentialThreshold = collections.namedtuple('ActionPotentialThreshold', 'v')
 
-    def __init__(self, cell_type_id=None, ncml_id=None):
+    def __init__(self, celltype_id=None, ncml_id=None):
         XMLHandler.__init__(self)
-        self.cell_type_id = cell_type_id
+        self.celltype_id = celltype_id
         self.ncml_id = ncml_id
         self.found_cell_id = False
 
     def startElement(self, tag_name, attrs):
-        if self._opening(tag_name, attrs, 'cell', required_attrs=[('id', self.cell_type_id)]):
+        if self._opening(tag_name, attrs, 'cell', required_attrs=[('id', self.celltype_id)]):
             self.found_cell_id = True
         elif self._opening(tag_name, attrs, 'biophysicalProperties', parents=['cell'], 
                                                             required_attrs=[('id', self.ncml_id)]):
             self.ncml = self.NCMLDescription(
-                                 self.cell_type_id, attrs['id'], collections.defaultdict(dict), 
+                                 self.celltype_id, attrs['id'], collections.defaultdict(dict), 
                                                                 [], [], [], [], [], [], [], {})
         elif self._opening(tag_name, attrs, 'defaultBuildOptions',
                                                                 parents=['biophysicalProperties']):
@@ -278,7 +278,7 @@ class BaseNCMLMetaClass(type):
         dct["standard_receptor_type"] = False
         dct["injectable"] = True
         dct["conductance_based"] = True
-        dct["model_name"] = ncml_model.cell_type_id
+        dct["model_name"] = ncml_model.celltype_id
         dct["recordable"] = cls._construct_recordable()
         dct["weight_variables"] = cls._construct_weight_variables()
         dct["parameter_names"] = cls._construct_parameter_names()

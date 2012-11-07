@@ -19,7 +19,7 @@ import nest
 import pyNN.nest
 from ninemlp.common.ncml import BaseNCMLCell, BaseNCMLMetaClass, read_NCML, read_MorphML
 from ninemlp import DEFAULT_BUILD_MODE
-from ninemlp.nest.build import build_celltype
+from ninemlp.nest.build import build_celltype_files
 
 loaded_cell_types = {}
 
@@ -32,7 +32,8 @@ class NCMLCell(BaseNCMLCell, pyNN.nest.NativeCellType):
         pyNN.nest.NativeCellType.__init__(self, parameters)
 
     def memb_init(self):
-        # Initialisation of member states goes here        
+        # Initialisation of member states goes here
+        print "WARNING, membrane initialization function has not been implemented"
         pass
 
 class NCMLMetaClass(BaseNCMLMetaClass):
@@ -63,7 +64,7 @@ def load_cell_type(celltype_name, ncml_path, build_mode=DEFAULT_BUILD_MODE, sile
 ''{dir}'' but was already loaded from ''{old_dir}'''.format(typename=celltype_name, dir=ncml_path,
                                                                             old_dir=old_ncml_path))
     else:
-        install_dir = build_celltype(celltype_name, ncml_path, build_mode=build_mode)
+        install_dir = build_celltype_files(celltype_name, ncml_path, build_mode=build_mode)
         lib_dir = os.path.join(install_dir, 'lib', 'nest')
         if sys.platform.startswith('linux') or \
                                     sys.platform in ['os2', 'os2emx', 'cygwin', 'atheos', 'ricos']:

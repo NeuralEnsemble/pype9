@@ -19,7 +19,7 @@ from neuron import h, nrn, load_mechanisms
 import pyNN.models
 import pyNN.recording
 import ninemlp.common.ncml
-from ninemlp.neuron.build import compile_nmodl, build_celltype
+from ninemlp.neuron.build import compile_nmodl, build_celltype_files
 from ninemlp import DEFAULT_BUILD_MODE
 from copy import copy
 from operator import attrgetter
@@ -206,7 +206,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         for curr in sorted(self.ncml_model.currents, key=attrgetter('id')):
             for sec in self.groups[curr.group_id]:
                 try:
-                    sec.insert(curr.id)
+                    sec.insert(self.ncml_model.celltype_id + "_" + curr.id)
                 except ValueError as e:
                     raise Exception('Could not insert {curr_id} into section group {group_id} \
 ({error})'.format(curr_id=curr.id, group_id=curr.group_id, error=e))
@@ -463,10 +463,9 @@ different location, ''{previous}'', than the one provided ''{this}'''.format(
         dct['ncml_model'] = ninemlp.common.ncml.read_NCML(celltype_name, ncml_path)
         dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(celltype_name, ncml_path)
         build_options = dct['ncml_model'].build_options['nemo']['neuron']
-        install_dir = build_celltype(celltype_name, ncml_path, build_mode=build_mode, 
-                                    method=build_options.method, kinetics=build_options.kinetics)
-        compile_nmodl(install_dir, build_mode=build_mode, silent=silent)
-        load_mechanisms(install_dir)
+        install_dir = build_celltype_files(celltype_name, ncml_path, build_mode=build_mode, 
+                 method=build_options.method, kinetics=build_options.kinetics, silent_build=silent)
+        load_mechanisms(str(os.path.normpath(install_dir)))
         dct['mech_path'] = install_dir
         celltype = NCMLMetaClass(str(celltype_name), (pyNN.models.BaseCellType, NCMLCell), dct)
         # Save cell type in case it needs to be used again

@@ -28,7 +28,7 @@ else:
     # I apologise for this hack (this is the path on my machine, to save me having to set the environment variable in eclipse)
     os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin' 
 
-def build_celltype(celltype_name, ncml_path, install_dir=None, build_parent_dir=None, 
+def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_parent_dir=None, 
     method='derivimplicit', build_mode=DEFAULT_BUILD_MODE, silent_build=False, kinetics=[]):
     """
     Generates and builds the required NMODL files for a given NCML cell class

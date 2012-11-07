@@ -20,7 +20,7 @@ from ninemlp.common.build import path_to_exec, get_build_paths
 
 _SIMULATOR_BUILD_NAME ='nest'
 
-def build_celltype(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
+def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
                                 method='cvode', build_mode=DEFAULT_BUILD_MODE, silent_build=False):    
     """
     Generates the cpp code corresponding to the NCML file, then configures, and compiles and installs
@@ -363,7 +363,7 @@ echo "Done."
     return install_dir
 
 if __name__ == '__main__':
-    build_celltype('mymodule', '/home/tclose/kbrain/xml/cerebellum/ncml/MyModule.xml')
+    build_celltype_files('mymodule', '/home/tclose/kbrain/xml/cerebellum/ncml/MyModule.xml')
 
 
 
