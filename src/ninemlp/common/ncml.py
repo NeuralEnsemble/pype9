@@ -20,23 +20,6 @@ import xml.sax
 import collections
 from ninemlp.common import XMLHandler, ValueWithUnits
 
-class BaseNCMLCell(object):
-    """
-    A base cell object for NCML cell classes.
-    """
-
-    def __init__(self):
-        """
-        Currently unused but could be used in future to initialise simulator independent components
-        of the NCML classes.
-        """
-        pass
-
-
-    def memb_init(self):
-        # Initialisation of member states goes here        
-        raise NotImplementedError("'memb_init' should be implemented by the derived class.")
-
 
 class MorphMLHandler(XMLHandler):
     """
@@ -281,7 +264,7 @@ class BaseNCMLMetaClass(type):
         dct["model_name"] = ncml_model.celltype_id
         dct["recordable"] = cls._construct_recordable()
         dct["weight_variables"] = cls._construct_weight_variables()
-        dct["parameter_names"] = cls._construct_parameter_names()
+#        dct["parameter_names"] = cls._construct_parameter_names()
         return super(BaseNCMLMetaClass, cls).__new__(cls, name, bases, dct)
 
     @classmethod
@@ -293,10 +276,15 @@ class BaseNCMLMetaClass(type):
         ncml_model = cls.dct["ncml_model"]
         morphml_model = cls.dct["morphml_model"]
         default_params = {'parent': None}
+        component_parameters = cls.dct["component_parameters"]
         # Add current and synapse mechanisms parameters
         for curr in ncml_model.currents:
-            for param in curr.params:
-                default_params[curr.group_id + "." + curr.id + "." + param.name] = param.value
+            if component_parameters.has_key(curr.id):
+                default_params.update([ (curr.group_id + "." + curr.id + "." + key, val[0]) 
+                                       for key, val in component_parameters[curr.id].iteritems()])
+            else:
+                for param in curr.params:
+                    default_params[curr.group_id + "." + curr.id + "." + param.name] = param.value
         for syn in ncml_model.synapses:
             for param in syn.params:
                 default_params[syn.group_id + "." + syn.id + "." + param.name] = param.value
@@ -325,13 +313,14 @@ class BaseNCMLMetaClass(type):
         # this
         return initial_values
 
-    @classmethod
-    def _construct_parameter_names(cls):
-        """
-        Constructs the parameter names list of the cell class from the NCML model
-        """
-        parameter_names = [] #TODO: implement this function
-        return parameter_names
+#    @classmethod
+#    def _construct_parameter_names(cls):
+#        """
+#        Constructs the parameter names list of the cell class from the NCML model
+#        """
+#        ncml_modl = cls.dct['ncml_model']
+#        parameter_names = []        
+#        return parameter_names
 
     @classmethod
     def _construct_synapse_types(cls):
@@ -342,19 +331,45 @@ class BaseNCMLMetaClass(type):
         return [syn.id for syn in ncml_model.synapses]
 
     @classmethod
-    def _construct_recordable(cls): #@UnusedVariable
+    def _construct_recordable(cls):
         """
         Constructs the dictionary of recordable parameters from the NCML model
         """
         return BaseNCMLMetaClass.COMMON_RECORDABLE
 
     @classmethod
-    def _construct_weight_variables(cls): #@UnusedVariable
+    def _construct_weight_variables(cls):
         """
         Constructs the dictionary of weight variables from the NCML model
         """
         #FIXME: When weights are included into the NCML model, they should be added to the list here
         return {}
+
+class BaseNCMLCell(object):
+    """
+    A base cell object for NCML cell classes.
+    """
+
+    def __init__(self):
+        """
+        Currently unused but could be used in future to initialise simulator independent components
+        of the NCML classes.
+        """
+        pass
+
+
+    def memb_init(self):
+        # Initialisation of member states goes here        
+        raise NotImplementedError("'memb_init' should be implemented by the derived class.")
+
+    @classmethod
+    def get_parameter_names(cls):
+        """
+        Returns a list of parameters that can be set for the NCMLCell class.
+        
+        @return [list(str)]: The list of parameter names in the class
+        """
+        return cls.parameter_names
 
 
 if __name__ == "__main__":
