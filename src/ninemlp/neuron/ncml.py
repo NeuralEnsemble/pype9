@@ -52,6 +52,9 @@ class Segment(nrn.Section): #@UndefinedVariable
             super(Segment.ComponentTranslator, self).__setattr__('_component', component)
             super(Segment.ComponentTranslator, self).__setattr__('_translations', translations)            
     
+        def __dir__(self):
+            return self._translations.keys()
+    
         def __setattr__(self, var, value):
             try:
                 setattr(self._component, self._translations[var], value)
@@ -157,7 +160,8 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         """
         Any '.'s in the attribute name are treated as delimeters of a nested namespace lookup of
         <segment-name>.<component-name>.<variable-name>. For attributes not in components the 
-        component name can be omitted.
+        component name can be omitted. This is done to allow pyNN's population.tset method to
+        set attributes of cell components.
         
         @param name [str]: name of the attribute or '.' delimeted string of segment, component and attribute names
         @param value [*]: value of the attribute
@@ -165,9 +169,15 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         if '.' in name:
             assert name.count('.') <= 2
             namespace = name.split('.')
-            for seg in self.groups[namespace[0]]:
+            try:
+                for seg in self.groups[namespace[0]]:
+                    if len(namespace) == 3:
+                        setattr(getattr(seg, namespace[1]), namespace[2], value)
+                    else:
+                        setattr(seg, namespace[-1], value)
+            except AttributeError:
+                seg = getattr(self, namespace[0])
                 if len(namespace) == 3:
-                    assert seg.nseg == 1
                     setattr(getattr(seg, namespace[1]), namespace[2], value)
                 else:
                     setattr(seg, namespace[-1], value)
