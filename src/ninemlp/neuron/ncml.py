@@ -19,26 +19,26 @@ from neuron import h, nrn, load_mechanisms
 import pyNN.models
 import pyNN.recording
 import ninemlp.common.ncml
-from ninemlp.neuron.build import compile_nmodl, build_celltype_files
+from ninemlp.neuron.build import build_celltype_files
 from ninemlp import DEFAULT_BUILD_MODE
 from copy import copy
 from operator import attrgetter
 import numpy as np
 import pyNN.neuron.simulator
 import weakref
+from ninemlp.common.ncml import DEFAULT_V_INIT
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 
 ## Used to store the directories from which NMODL objects have been loaded to avoid loading them twice
 loaded_celltypes = {}
 
-
 class Segment(nrn.Section): #@UndefinedVariable
     """
     Wraps the basic NEURON section to allow non-NEURON attributes to be added to the segment.
     Additional functionality could be added as needed
     """
-    
+
     class ComponentTranslator(object):
         """
         Acts as a proxy for the true component that was inserted using NEURON's in built 'insert' 
@@ -47,26 +47,26 @@ class Segment(nrn.Section): #@UndefinedVariable
         providing a cleaner interface
         """
         def __init__(self, component, translations):
-    
+
             ## The translation of the parameter names
             super(Segment.ComponentTranslator, self).__setattr__('_component', component)
-            super(Segment.ComponentTranslator, self).__setattr__('_translations', translations)            
-    
+            super(Segment.ComponentTranslator, self).__setattr__('_translations', translations)
+
         def __dir__(self):
             return self._translations.keys()
-    
+
         def __setattr__(self, var, value):
             try:
                 setattr(self._component, self._translations[var], value)
             except AttributeError as e:
                 raise AttributeError("Component does not have translation for parameter '{}'".format(e))
-    
+
         def __getattr__(self, var):
-            try:        
+            try:
                 return getattr(self._component, self._translations[var])
             except AttributeError as e:
                 raise AttributeError("Component does not have translation for parameter '{}'".format(e))
-    
+
     def __init__(self, morphl_seg):
         """
         Initialises the Segment including its proximal and distal sections for connecting child segments
@@ -81,7 +81,9 @@ class Segment(nrn.Section): #@UndefinedVariable
                                                                  morphl_seg.distal.diam, sec=self)
         if morphl_seg.proximal:
             self._set_proximal((morphl_seg.proximal.x, morphl_seg.proximal.y, morphl_seg.proximal.z))
-        # Local information, though not sure if I need this here            
+        # Set initialisation variables here    
+        self.v_init = DEFAULT_V_INIT
+        # Local information, though not sure if I need this here
         self.id = morphl_seg.id
         self._parent_seg = None
         self._fraction_along = None
@@ -132,7 +134,7 @@ class Segment(nrn.Section): #@UndefinedVariable
         # a Component translator that intercepts getters and setters and redirects them to the 
         # translated values.
         if translations:
-            setattr(self, component_name, self.ComponentTranslator(getattr(self(0.5), mech_name), 
+            setattr(self, component_name, self.ComponentTranslator(getattr(self(0.5), mech_name),
                                                                                     translations))
         else:
             setattr(self, component_name, getattr(self(0.5), mech_name))
@@ -175,7 +177,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                         setattr(getattr(seg, namespace[1]), namespace[2], value)
                     else:
                         setattr(seg, namespace[-1], value)
-            except AttributeError:
+            except KeyError: # If the namespace[0] isn't the name of a group try to set a segment name instead.
                 seg = getattr(self, namespace[0])
                 if len(namespace) == 3:
                     setattr(getattr(seg, namespace[1]), namespace[2], value)
@@ -195,6 +197,8 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         self.groups = { '__all__': [] }
         self.root_segment = None
         for morphml_seg in self.morphml_model.segments:
+            if hasattr(self, morphml_seg.id):
+                raise Exception ("Segment id '{}' conflicts with a previously defined member of the cell object.")
             seg = Segment(morphml_seg)
             self.segments[morphml_seg.id] = seg
             self.groups['__all__'].append(seg)
@@ -221,9 +225,9 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                                                         seg._parent_seg._distal * seg._fraction_along
                 seg._set_proximal(proximal)
             segment_stack += seg._children
-        # Once the structure is created with the correct morphology the fields appended to the 
-        # nrn.Section class can be disposed of (or potentiall kept for later use). Probably a design
-        # decision needs to be made here but I am not sure of the best option at this point
+        # FIXME: Once the structure is created with the correct morphology the fields appended to the 
+        # nrn.Section class can be disposed of (or potentially kept for later use). Probably a design
+        # decision needs to be made here but I am not sure of the best option at this point 
         if barebones_only:
             for seg in self.segments.values():
                 del seg._proximal
@@ -265,13 +269,13 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                 seg.pas.g = curr.cond_density.neuron()
         for curr in sorted(self.ncml_model.currents, key=attrgetter('id')):
             if self.component_parameters.has_key(curr.id):
-                translations = dict([(key, val[0]) for key, val in 
+                translations = dict([(key, val[0]) for key, val in
                                                     self.component_parameters[curr.id].iteritems()])
             else:
-                translations = None                
+                translations = None
             for seg in self.groups[curr.group_id]:
                 try:
-                    seg.insert(curr.id, cell_id=self.ncml_model.celltype_id, 
+                    seg.insert(curr.id, cell_id=self.ncml_model.celltype_id,
                                                                         translations=translations)
                 except ValueError as e:
                     raise Exception('Could not insert {curr_id} into section group {group_id} \
@@ -292,7 +296,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                 SynapseType = getattr(h, syn.type)
             else:
                 try:
-                    SynapseType = eval(syn.type) #FIXME (TGC): I don't think that this will ever work.
+                    SynapseType = type(syn.type) #FIXME: This needs to be verified
                 except:
                     raise Exception ("Could not find synapse '%s' in loaded or built in synapses." % syn.id)
             for seg in self.groups[syn.group_id]:
@@ -302,7 +306,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                     setattr(receptor, param.name, param.value.neuron())
         for syn in self.ncml_model.gap_junctions:
             try:
-                GapJunction = eval(syn.type)
+                GapJunction = type(syn.type) #FIXME: This needs to be verified
             except:
                 raise Exception ("Could not find synapse '%s' in loaded or built-in synapses." % syn.id)
             for seg in self.groups[syn.group_id]:
@@ -313,9 +317,8 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
 
     def memb_init(self):
         # Initialisation of member states goes here
-#        for seg in self.segments:
-#            seg.v = self.v_init
-        pass
+        for seg in self.segments:
+            seg.v = self.v_init
 
     def get_segments(self):
         return self.segments.values()

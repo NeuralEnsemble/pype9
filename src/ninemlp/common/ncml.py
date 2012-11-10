@@ -20,6 +20,7 @@ import xml.sax
 import collections
 from ninemlp.common import XMLHandler, ValueWithUnits
 
+DEFAULT_V_INIT = -65
 
 class MorphMLHandler(XMLHandler):
     """
