@@ -14,6 +14,7 @@
 
 import os.path
 import shutil
+import time
 import platform
 import subprocess as sp
 from ninemlp import DEFAULT_BUILD_MODE
@@ -21,6 +22,7 @@ from ninemlp.common.build import path_to_exec, get_build_paths, load_component_p
 
 BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
 _SIMULATOR_BUILD_NAME ='neuron'
+_MODIFICATION_TIME_FILE = 'modification_time'
 
 if 'NRNHOME' in os.environ:
     os.environ['PATH'] += os.pathsep + os.environ['NRNHOME']
@@ -44,6 +46,11 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
                                         _SIMULATOR_BUILD_NAME, build_parent_dir=build_parent_dir)
     if not install_dir:
         install_dir = default_install_dir
+    
+    # ['lazy', 'force', 'compile_only', 'require']
+    if build_mode == 'force' or build_mode == 'compile_only':
+        shutil.rmtree(install_dir, ignore_errors=False)
+        shutil.rmtree(params_dir, ignore_errors=False)
     try:
         if not os.path.exists(install_dir):
             os.makedirs(install_dir)            
@@ -51,19 +58,42 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
             os.makedirs(params_dir)
     except IOError as e:
         raise Exception('Could not create a required neuron build directory, check the required \
-permissions or specify a different parent build directory -> {}'.format(e))         
-    nemo_path = path_to_exec('nemo')
-    try:
-        sp.check_call('{nemo_path} {ncml_path} -p --pyparams={params} --nmodl={output} \
---nmodl-method={method} --nmodl-kinetic={kinetics}'.format(nemo_path=nemo_path,
-                                                            ncml_path=os.path.normpath(ncml_path), 
-                                                            output=os.path.normpath(install_dir), 
-                                                            params=params_dir,
-                                                            kinetics=','.join(kinetics), 
-                                                            method=method), shell=True)
-    except sp.CalledProcessError as e:
-        raise Exception('Error while compiling NCML description into NMODL code -> {}'.format(e))
-    compile_nmodl(install_dir, build_mode=build_mode, silent=silent_build)
+permissions or specify a different parent build directory -> {}'.format(e))
+    # Get the stored modification time of the previous build if it exists
+    install_modification_time_path = os.path.join(install_dir, _MODIFICATION_TIME_FILE)
+    params_modification_time_path = os.path.join(params_dir, _MODIFICATION_TIME_FILE)    
+    if os.path.exists(install_modification_time_path):
+        with open(install_modification_time_path) as f:
+            prev_install_modification_time = f.readline()
+    else:
+        prev_install_modification_time = ''
+    if os.path.exists(params_modification_time_path):
+        with open(params_modification_time_path) as f:
+            prev_params_modification_time = f.readline()
+    else:
+        prev_params_modification_time = ''        
+    # Get the modification time of the source NCML file for comparison with the build directory       
+    ncml_modification_time = time.ctime(os.path.getmtime(ncml_path))
+    if ncml_modification_time != prev_install_modification_time or \
+                                            ncml_modification_time != prev_params_modification_time:
+        nemo_path = path_to_exec('nemo')
+        try:
+            sp.check_call('{nemo_path} {ncml_path} -p --pyparams={params} --nmodl={output} \
+    --nmodl-method={method} --nmodl-kinetic={kinetics}'.format(nemo_path=nemo_path,
+                                                                ncml_path=os.path.normpath(ncml_path), 
+                                                                output=os.path.normpath(install_dir), 
+                                                                params=params_dir,
+                                                                kinetics=','.join(kinetics), 
+                                                                method=method), shell=True)
+        except sp.CalledProcessError as e:
+            raise Exception('Error while compiling NCML description into NMODL code -> {}'.format(e))
+        # Build mode is set to 'force' because the mod files have been regenerated
+        compile_nmodl(install_dir, build_mode='force', silent=silent_build)
+        with open(install_modification_time_path, 'w') as f:
+            f.write(ncml_modification_time)
+        with open(params_modification_time_path, 'w') as f:
+            f.write(ncml_modification_time)            
+    # Load the parameter name translations from the params dir 
     component_parameters = load_component_parameters(celltype_name, params_dir)
     return install_dir, component_parameters
     
@@ -73,7 +103,7 @@ def compile_nmodl (model_dir, build_mode=DEFAULT_BUILD_MODE, silent=False):
     Builds all NMODL files in a directory
     @param model_dir: The path of the directory to build
     @param build_mode: Can be one of either, 'lazy', 'super_lazy', 'require', 'force', or \
-'compile_only'. 'lazy' runs nrnivmodl again to compile any touched mod files, 'super_lazy' doesn't \
+'compile_only'. 'lazy' doesn't \
 run nrnivmodl if the library is found, 'require', requires that the library is found otherwise \
 throws an exception (useful on clusters that require precompilation before parallelisation where \
 the error message could otherwise be confusing), 'force' removes existing library if found and \
@@ -91,9 +121,11 @@ recompiles, and 'compile_only' removes existing library if found, recompile and 
     for arch in BUILD_ARCHS:
         path = os.path.join(model_dir, arch)
         if os.path.exists(path):
-            if build_mode in ('super_lazy', 'require'):
+            if build_mode in ('lazy', 'require'):
+                # If the library is found, set the 'found_required_lib' flag.
                 found_required_lib = True
             elif build_mode in ('force', 'compile_only'):
+                # Instead of flagging 'found_required_lib', the library is removed to allow fresh compilation
                 shutil.rmtree(path, ignore_errors=True)
     if not found_required_lib:
         if build_mode == 'require':
