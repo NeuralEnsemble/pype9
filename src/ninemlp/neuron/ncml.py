@@ -60,13 +60,13 @@ class Segment(nrn.Section): #@UndefinedVariable
         def __setattr__(self, var, value):
             try:
                 setattr(self._component, self._translations[var], value)
-            except AttributeError as e:
+            except KeyError as e:
                 raise AttributeError("Component does not have translation for parameter '{}'".format(e))
 
         def __getattr__(self, var):
             try:
                 return getattr(self._component, self._translations[var])
-            except AttributeError as e:
+            except KeyError as e:
                 raise AttributeError("Component does not have translation for parameter '{}'".format(e))
 
     def __init__(self, morphl_seg):
@@ -90,6 +90,35 @@ class Segment(nrn.Section): #@UndefinedVariable
         self._parent_seg = None
         self._fraction_along = None
         self._children = []
+
+
+    def __getattr__(self, var):
+        """
+        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup. This 
+        is done to allow pyNN's population.tset method to set attributes of cell components.
+        
+        @param var [str]: var of the attribute or '.' delimeted string of segment, component and attribute vars
+        """
+        if '.' in var:
+            components = var.split('.', 1)
+            getattr(getattr(self, components[0]), components[1])
+        else:
+            raise AttributeError
+
+
+    def __setattr__(self, var, val):
+        """
+        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup.
+         This is done to allow pyNN's population.tset method to set attributes of cell components.
+        
+        @param var [str]: var of the attribute or '.' delimeted string of segment, component and attribute vars
+        @param val [*]: val of the attribute
+        """
+        if '.' in var:
+            components = var.split('.', 1)
+            setattr(getattr(self, components[0]), components[1], val)
+        else:
+            super(Segment, self).__setattr__(var, val)
 
     def _set_proximal(self, proximal):
         """
@@ -136,10 +165,11 @@ class Segment(nrn.Section): #@UndefinedVariable
         # a Component translator that intercepts getters and setters and redirects them to the 
         # translated values.
         if translations:
-            setattr(self, component_name, self.ComponentTranslator(getattr(self(0.5), mech_name),
-                                                                                    translations))
+            super(Segment, self).__setattr__(component_name, self.ComponentTranslator(
+                                                      getattr(self(0.5), mech_name), translations))
         else:
-            setattr(self, component_name, getattr(self(0.5), mech_name))
+            super(Segment, self).__setattr__(component_name, getattr(self(0.5), mech_name))
+
 
 class SegmentGroup(object):
 
@@ -149,23 +179,36 @@ class SegmentGroup(object):
     def __iter__(self):
         return iter(self._segments)
     
+    def __len__(self):
+        return len(self._segments)
+    
+    def __getitem__(self, index):
+        return self._segments[index]
+    
+    def __setitem__(self, index, value):
+        self._segments[index] = value
+    
     def append(self, segment):
         assert isinstance(segment, Segment)
         self._segments.append(segment)
 
     def __setattr__(self, var, value):
+        # Save the value in the group to signify that it has been set in this group (as opposed to
+        # groups at lower levels
         super(SegmentGroup, self).__setattr__(var, value)
         for seg in self:
             setattr(seg, var, value)
 
     def __getattr__(self, var):
-        val = super(SegmentGroup, self).__getattr_(var)
-        for seg in self:
-            if getattr(seg, var) != val:
-                raise InconsistentValueException("'{var}' attribute of is not defined uniformly \
-across the segment group, and therefore the value will not be retrived")
-        return val
-
+        """
+        If the segments in this group have the attribute but it hasn't been set in this group then
+        return None
+        """
+        if len(self) and hasattr(self[0], var):
+            return None
+        else:
+            raise AttributeError
+        
 
 class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
 
@@ -173,8 +216,8 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         self._init_morphology()
         self._init_biophysics()
         # Setup variables used by pyNN
-        self.source = self.soma(0.5)._ref_v
-        self.source_section = self.soma
+        self.source_section = self.segments['source']
+        self.source = self.source_section(0.5)._ref_v
         # for recording
         self.spike_times = h.Vector(0)
         self.traces = {}
@@ -185,33 +228,34 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
             # collector from being called on the cell class    
             self.parent = weakref.ref(parameters['parent'])
 
-    def __setattr__(self, name, value):
+    def __getattr__(self, var):
         """
-        Any '.'s in the attribute name are treated as delimeters of a nested namespace lookup of
-        <segment-name>.<component-name>.<variable-name>. For attributes not in components the 
-        component name can be omitted. This is done to allow pyNN's population.tset method to
-        set attributes of cell components.
+        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup. This 
+        is done to allow pyNN's population.tset method to set attributes of cell components.
         
-        @param name [str]: name of the attribute or '.' delimeted string of segment, component and attribute names
-        @param value [*]: value of the attribute
+        @param var [str]: var of the attribute or '.' delimeted string of segment, component and attribute vars
         """
-        if '.' in name:
-            assert name.count('.') <= 2
-            namespace = name.split('.')
-            try:
-                for seg in self.groups[namespace[0]]:
-                    if len(namespace) == 3:
-                        setattr(getattr(seg, namespace[1]), namespace[2], value)
-                    else:
-                        setattr(seg, namespace[-1], value)
-            except KeyError: # If the namespace[0] isn't the name of a group try to set a segment name instead.
-                seg = getattr(self, namespace[0])
-                if len(namespace) == 3:
-                    setattr(getattr(seg, namespace[1]), namespace[2], value)
-                else:
-                    setattr(seg, namespace[-1], value)
+        if '.' in var:
+            components = var.split('.', 1)
+            getattr(getattr(self, components[0]), components[1])
         else:
-            super(NCMLCell, self).__setattr__(name, value)
+            raise AttributeError
+
+
+    def __setattr__(self, var, val):
+        """
+        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup.
+         This is done to allow pyNN's population.tset method to set attributes of cell components.
+        
+        @param var [str]: var of the attribute or '.' delimeted string of segment, component and attribute vars
+        @param val [*]: val of the attribute
+        """
+        if '.' in var:
+            components = var.split('.', 1)
+            setattr(getattr(self, components[0]), components[1], val)
+        else:
+            super(NCMLCell, self).__setattr__(var, val)
+
 
     def _init_morphology(self, barebones_only=True):
         """
@@ -221,15 +265,17 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         """
         # Initialise all segments
         self.segments = {}
-        self.groups = { '_all_segments': [] }
+        # Create a group to hold all segments (this is the default group for components that don't specify a segment group)
+        self._all_segments = SegmentGroup()
+        self.groups = {'_all_segments': self._all_segments}
         self.root_segment = None
         for morphml_seg in self.morphml_model.segments:
             if hasattr(self, morphml_seg.id):
                 raise Exception ("Segment id '{}' conflicts with a previously defined member of the cell object.")
             seg = Segment(morphml_seg)
             self.segments[morphml_seg.id] = seg
-            self.groups['_all_segments'].append(seg)
-            setattr(self, morphml_seg.id, seg)
+            self._all_segments.append(seg)
+#            setattr(self, morphml_seg.id, seg)
             if not morphml_seg.parent:
                 if self.root_segment:
                     raise Exception("Two segments ({0} and {1}) were declared without parents, meaning the neuronal tree is disconnected".format(self.root_segment.id, seg.id))
@@ -255,22 +301,24 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         # FIXME: Once the structure is created with the correct morphology the fields appended to the 
         # nrn.Section class can be disposed of (or potentially kept for later use). Probably a design
         # decision needs to be made here but I am not sure of the best option at this point 
-        if barebones_only:
-            for seg in self.segments.values():
-                del seg._proximal
-                del seg._distal
-                del seg._parent_seg
-                del seg._fraction_along
-                del seg._children
+#        if barebones_only:
+        for seg in self.segments.values():
+            del seg._proximal
+            del seg._distal
+            del seg._parent_seg
+            del seg._fraction_along
+            del seg._children
         # Set up groups of segments for inserting mechanisms
-        for group in self.morphml_model.groups:
-            self.groups[group.id] = []
-            for member_id in group.members:
+        for grp in self.morphml_model.groups:
+            group = SegmentGroup()
+            self.groups[grp.id] = group
+            setattr(self, grp.id, group)
+            for member_id in grp.members:
                 try:
-                    self.groups[group.id].append(self.segments[member_id])
+                    group.append(self.segments[member_id])
                 except KeyError:
                     raise Exception('Member id %d (referenced in group ''%s'') was not found in \
-                                                           loaded segments' % (member_id, group.id))
+                                                           loaded segments' % (member_id, grp.id))
 
     def _init_biophysics(self):
         """
@@ -574,8 +622,5 @@ different location, ''{previous}'', than the one provided ''{this}'''.format(
 
 
 if __name__ == "__main__":
-    sg = SegmentGroup({'a': 'A', 'b':'B' })
-    sg._segments = [1, 2, 3, 4, 5]
-    for it in sg:
-        print it
+    pass
 
