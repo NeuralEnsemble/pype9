@@ -194,14 +194,14 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         """
         # Initialise all segments
         self.segments = {}
-        self.groups = { '__all__': [] }
+        self.groups = { '_all_segments': [] }
         self.root_segment = None
         for morphml_seg in self.morphml_model.segments:
             if hasattr(self, morphml_seg.id):
                 raise Exception ("Segment id '{}' conflicts with a previously defined member of the cell object.")
             seg = Segment(morphml_seg)
             self.segments[morphml_seg.id] = seg
-            self.groups['__all__'].append(seg)
+            self.groups['_all_segments'].append(seg)
             setattr(self, morphml_seg.id, seg)
             if not morphml_seg.parent:
                 if self.root_segment:

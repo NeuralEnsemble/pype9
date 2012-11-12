@@ -177,7 +177,7 @@ class NCMLHandler(XMLHandler):
             self.ncml.action_potential_threshold['v'] = float(attrs['v'])
         elif self._opening(tag_name, attrs, 'ncml:ionicCurrent', parents=['membraneProperties']):
             self.ncml.currents.append(self.IonicCurrent(attrs['name'],
-                                                   attrs.get('segmentGroup', '__all__'),
+                                                   attrs.get('segmentGroup', '_all_segments'),
                                                    []))
         # -- This tag is deprecated as it is replaced by output python properties file from nemo --#
         elif self._opening(tag_name, attrs, 'parameter', parents=['ionicCurrent']):
@@ -186,18 +186,18 @@ class NCMLHandler(XMLHandler):
                                                                    attrs.get('units', None))))
         #-- END --#
         elif self._opening(tag_name, attrs, 'passiveCurrent', parents=['membraneProperties']):
-            self.ncml.passive_currents.append(self.PassiveCurrent(attrs.get('segmentGroup', '__all__'), # If no 'segmentGroup' is provided, default to '__all__'
+            self.ncml.passive_currents.append(self.PassiveCurrent(attrs.get('segmentGroup', '_all_segments'), # If no 'segmentGroup' is provided, default to '_all_segments'
                                                               ValueWithUnits(attrs['condDensity'],
                                                                      attrs.get('units', None))))
         elif self._opening(tag_name, attrs, 'conductanceSynapse', parents=['synapses']):
             self.ncml.synapses.append(self.Synapse(attrs['id'],
                                               attrs['type'],
-                                              attrs.get('segmentGroup', '__all__'),
+                                              attrs.get('segmentGroup', '_all_segments'),
                                                   []))
         elif self._opening(tag_name, attrs, 'gapJunction', parents=['synapses']):
             self.ncml.synapses.append(self.GapJunction(attrs['id'],
                                                   attrs['type'],
-                                                  attrs.get('segmentGroup', '__all__'),
+                                                  attrs.get('segmentGroup', '_all_segments'),
                                                   []))
         elif self._opening(tag_name, attrs, 'parameter', parents=['conductanceSynapse']):
             self.ncml.synapses[-1].params.append(self.SynapseParam(attrs['name'],
@@ -206,16 +206,16 @@ class NCMLHandler(XMLHandler):
         elif self._opening(tag_name, attrs, 'specificCapacitance', parents=['membraneProperties']):
             self.ncml.capacitances.append(self.SpecificCapacitance(ValueWithUnits(attrs['value'],
                                                                      attrs.get('units', None)),
-                                                              attrs.get('segmentGroup', '__all__')))
+                                                              attrs.get('segmentGroup', '_all_segments')))
         elif self._opening(tag_name, attrs, 'reversalPotential', parents=['membraneProperties']):
             self.ncml.reversal_potentials.append(self.ReversePotential(attrs['species'],
                                                                   ValueWithUnits(attrs['value'],
                                                                          attrs.get('units', None)),
-                                                              attrs.get('segmentGroup', '__all__')))
+                                                              attrs.get('segmentGroup', '_all_segments')))
         elif self._opening(tag_name, attrs, 'resistivity', parents=['intracellularProperties']):
             self.ncml.axial_resistances.append(self.AxialResistivity(ValueWithUnits(attrs['value'],
                                                                         attrs.get('units', None)),
-                                                            attrs.get('segmentGroup', '__all__')))
+                                                            attrs.get('segmentGroup', '_all_segments')))
 
 
 def read_MorphML(name, filename):
@@ -265,7 +265,7 @@ class BaseNCMLMetaClass(type):
         dct["model_name"] = ncml_model.celltype_id
         dct["recordable"] = cls._construct_recordable()
         dct["weight_variables"] = cls._construct_weight_variables()
-#        dct["parameter_names"] = cls._construct_parameter_names()
+        dct["parameter_names"] = dct['default_parameters'].keys()
         return super(BaseNCMLMetaClass, cls).__new__(cls, name, bases, dct)
 
     @classmethod

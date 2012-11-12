@@ -169,7 +169,7 @@ class NetworkMLHandler(XMLHandler):
             distr_type = args.pop('type')
             units = args.pop('units') if args.has_key('units') else None
             component = args.pop('component') if args.has_key('component') else None
-            segmentGroup = args.pop('segmentGroup') if args.has_key('segmentGroup') else '__all__'
+            segmentGroup = args.pop('segmentGroup') if args.has_key('segmentGroup') else '_all_segments'
             try:
                 distr_param_keys = RANDOM_DISTR_PARAMS[distr_type]
             except KeyError:
