@@ -23,12 +23,14 @@ from ninemlp.neuron.build import build_celltype_files
 from ninemlp import DEFAULT_BUILD_MODE
 from copy import copy
 from operator import attrgetter
-import numpy as np
+import numpy
 import pyNN.neuron.simulator
 import weakref
 from ninemlp.common.ncml import DEFAULT_V_INIT
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
+
+class InconsistentValueException(Exception): pass
 
 ## Used to store the directories from which NMODL objects have been loaded to avoid loading them twice
 loaded_celltypes = {}
@@ -47,9 +49,9 @@ class Segment(nrn.Section): #@UndefinedVariable
         providing a cleaner interface
         """
         def __init__(self, component, translations):
-
-            ## The translation of the parameter names
+            ## The true component object that was created by the pyNEURON 'insert' method
             super(Segment.ComponentTranslator, self).__setattr__('_component', component)
+            ## The translation of the parameter names            
             super(Segment.ComponentTranslator, self).__setattr__('_translations', translations)
 
         def __dir__(self):
@@ -76,7 +78,7 @@ class Segment(nrn.Section): #@UndefinedVariable
         nrn.Section.__init__(self) #@UndefinedVariable
         h.pt3dclear(sec=self)
         self.diam = float(morphl_seg.distal.diam)
-        self._distal = np.array((morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z))
+        self._distal = numpy.array((morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z))
         h.pt3dadd(morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z,
                                                                  morphl_seg.distal.diam, sec=self)
         if morphl_seg.proximal:
@@ -95,7 +97,7 @@ class Segment(nrn.Section): #@UndefinedVariable
         
         @param proximal [float(3)]: The 3D position of the start of the segment
         """
-        self._proximal = np.array(proximal)
+        self._proximal = numpy.array(proximal)
         h.pt3dadd(proximal[0], proximal[1], proximal[2], self.diam, sec=self)
 
     def _connect(self, parent_seg, fraction_along):
@@ -138,6 +140,31 @@ class Segment(nrn.Section): #@UndefinedVariable
                                                                                     translations))
         else:
             setattr(self, component_name, getattr(self(0.5), mech_name))
+
+class SegmentGroup(object):
+
+    def __init__(self):
+        super(SegmentGroup, self).__setattr__('_segments', [])
+
+    def __iter__(self):
+        return iter(self._segments)
+    
+    def append(self, segment):
+        assert isinstance(segment, Segment)
+        self._segments.append(segment)
+
+    def __setattr__(self, var, value):
+        super(SegmentGroup, self).__setattr__(var, value)
+        for seg in self:
+            setattr(seg, var, value)
+
+    def __getattr__(self, var):
+        val = super(SegmentGroup, self).__getattr_(var)
+        for seg in self:
+            if getattr(seg, var) != val:
+                raise InconsistentValueException("'{var}' attribute of is not defined uniformly \
+across the segment group, and therefore the value will not be retrived")
+        return val
 
 
 class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
@@ -222,7 +249,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
             seg = segment_stack.pop()
             if seg._parent_seg:
                 proximal = seg._parent_seg._proximal * (1 - seg._fraction_along) + \
-                                                        seg._parent_seg._distal * seg._fraction_along
+                                                       seg._parent_seg._distal * seg._fraction_along
                 seg._set_proximal(proximal)
             segment_stack += seg._children
         # FIXME: Once the structure is created with the correct morphology the fields appended to the 
@@ -401,18 +428,18 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
             self.population = None
         def _get(self, gather=False, compatible_output=True, filter=None): #@UnusedVariable
             if self.variable == 'spikes':
-                data = np.empty((0, 2))
-                spikes = np.array(self.cell.spike_times)
+                data = numpy.empty((0, 2))
+                spikes = numpy.array(self.cell.spike_times)
                 spikes = spikes[spikes <= pyNN.neuron.simulator.state.t + 1e-9]
                 if len(spikes) > 0:
-                    new_data = np.array([np.ones(spikes.shape) * 0.0, spikes]).T
-                    data = np.concatenate((data, new_data))
+                    new_data = numpy.array([numpy.ones(spikes.shape) * 0.0, spikes]).T
+                    data = numpy.concatenate((data, new_data))
             elif self.variable == 'v':
-                data = np.empty((0, 3))
-                v = np.array(self.cell.vtrace)
-                t = np.array(self.cell.record_times)
-                new_data = np.array([np.ones(v.shape) * 0.0, t, v]).T
-                data = np.concatenate((data, new_data))
+                data = numpy.empty((0, 3))
+                v = numpy.array(self.cell.vtrace)
+                t = numpy.array(self.cell.record_times)
+                new_data = numpy.array([numpy.ones(v.shape) * 0.0, t, v]).T
+                data = numpy.concatenate((data, new_data))
             if gather and pyNN.neuron.simulator.state.num_processes > 1:
                 data = pyNN.recording.gather(data)
             return data
@@ -547,8 +574,8 @@ different location, ''{previous}'', than the one provided ''{this}'''.format(
 
 
 if __name__ == "__main__":
-    import pprint
-    Purkinje = load_cell_type("Purkinje",
-                               "/home/tclose/cerebellar/xml/cerebellum/cells/Purkinje.xml")
-    purkinje = Purkinje({})
-    pprint.pprint(purkinje)
+    sg = SegmentGroup({'a': 'A', 'b':'B' })
+    sg._segments = [1, 2, 3, 4, 5]
+    for it in sg:
+        print it
+
