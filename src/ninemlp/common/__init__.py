@@ -634,11 +634,11 @@ be specified for cells described using NCML, not '{}' cell types".format(param,
             rand_distr = RandomDistribution(distribution=distr_type, parameters=args)
             # If is an NCML type cell
             if self.celltype.__module__.startswith('ninemlp'):
-                variable_scope = [seg_group]
+                variable_scope = [group_varname(seg_group)]
                 if component:
                     variable_scope.append(component)
                 variable_scope.append(variable)
-                self.initialise('.'.join(variable_scope), rand_distr)
+                self.initialize('.'.join(variable_scope), rand_distr)
             else:
                 if seg_group:
                     raise Exception("segmentGroup attribute of variableeter distribution '{}' can only \
