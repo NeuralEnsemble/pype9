@@ -37,6 +37,17 @@ _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 RANDOM_DISTR_PARAMS = {'uniform': ('low', 'high'),
                        'normal': ('mean', 'stddev')}
 
+def group_varname(group_id):
+    if group_id:
+        varname = group_id + "_group"
+    else:
+        varname = "all_segs"
+    return varname
+
+def seg_varname(seg_id):
+    return seg_id + "_seg"
+
+
 class ValueWithUnits(object):
 
     def __init__(self, value, units):
@@ -169,7 +180,7 @@ class NetworkMLHandler(XMLHandler):
             distr_type = args.pop('type')
             units = args.pop('units') if args.has_key('units') else None
             component = args.pop('component') if args.has_key('component') else None
-            segmentGroup = args.pop('segmentGroup') if args.has_key('segmentGroup') else '_all_segments'
+            segmentGroup = args.pop('segmentGroup') if args.has_key('segmentGroup') else None
             try:
                 distr_param_keys = RANDOM_DISTR_PARAMS[distr_type]
             except KeyError:
@@ -594,7 +605,7 @@ class Population(object):
             rand_distr = RandomDistribution(distribution=distr_type, parameters=args)
             # If is an NCML type cell
             if self.celltype.__module__.startswith('ninemlp'):
-                param_scope = [seg_group]
+                param_scope = [group_varname(seg_group)]
                 if component:
                     param_scope.append(component)
                 param_scope.append(param)
