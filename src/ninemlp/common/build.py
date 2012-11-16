@@ -64,7 +64,7 @@ def path_to_exec(exec_name):
 
 def load_component_parameters(celltype_name, params_dir):
     """
-    Loads component parameter names to standard reference name (eg. 'ReversalPotential', 
+    Loads component parameter names to standard reference name (eg. 'e_rev', 
     'MaximalConductance') dictionary. For each file in the params directory with a '.py' extension 
     starting with the celltype_name assume that it is a parameters file.
     
