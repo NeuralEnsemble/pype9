@@ -364,19 +364,19 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
             for seg in self.get_group(curr.group_id):
                 seg.insert('pas')
                 seg.pas.g = curr.cond_density.neuron()
-        for curr in sorted(self.ncml_model.currents, key=attrgetter('id')):
-            if self.component_parameters.has_key(curr.id):
+        for mech in sorted(self.ncml_model.mechanisms, key=attrgetter('id')):
+            if self.component_parameters.has_key(mech.id):
                 translations = dict([(key, val[0]) for key, val in
-                                     self.component_parameters[curr.id].iteritems()])
+                                     self.component_parameters[mech.id].iteritems()])
             else:
                 translations = None
-            for seg in self.get_group(curr.group_id):
+            for seg in self.get_group(mech.group_id):
                 try:
-                    seg.insert(curr.id, cell_id=self.ncml_model.celltype_id,
+                    seg.insert(mech.id, cell_id=self.ncml_model.celltype_id,
                                                                         translations=translations)
                 except ValueError as e:
-                    raise Exception("Could not insert {curr_id} into section group {group_id} " \
-                                    "({error})".format(curr_id=curr.id, group_id=curr.group_id,
+                    raise Exception("Could not insert {mech_id} into section group {group_id} " \
+                                    "({error})".format(mech_id=mech.id, group_id=mech.group_id,
                                                        error=e))
         #Loop through loaded membrane mechanisms and insert them into the relevant sections.
         for cm in self.ncml_model.capacitances:

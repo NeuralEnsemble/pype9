@@ -135,7 +135,7 @@ class NCMLHandler(XMLHandler):
     NCMLDescription = collections.namedtuple('NCMLDescription', 'celltype_id \
                                                                  ncml_id \
                                                                  build_options \
-                                                                 currents synapses \
+                                                                 mechanisms synapses \
                                                                  gap_junctions \
                                                                  capacitances \
                                                                  axial_resistances \
@@ -197,13 +197,14 @@ class NCMLHandler(XMLHandler):
             if self.ncml.action_potential_threshold.has_key('v'):
                 raise Exception("Action potential threshold is multiply specified.")
             self.ncml.action_potential_threshold['v'] = float(attrs['v'])
-        elif self._opening(tag_name, attrs, 'ncml:ionicCurrent', parents=['membraneProperties']):
-            self.ncml.currents.append(self.IonicCurrent(attrs['name'],
+        elif self._opening(tag_name, attrs, 'ncml:ionicCurrent', parents=['membraneProperties']) or\
+                self._opening(tag_name, attrs, 'ncml:decayingPool', parents=['membraneProperties']):
+            self.ncml.mechanisms.append(self.IonicCurrent(attrs['name'],
                                                    attrs.get('segmentGroup', None),
                                                    []))
         # -- This tag is deprecated as it is replaced by output python properties file from nemo --#
         elif self._opening(tag_name, attrs, 'parameter', parents=['ionicCurrent']):
-            self.ncml.currents[-1].params.append(self.IonicCurrentParam(attrs['name'],
+            self.ncml.mechanisms[-1].params.append(self.IonicCurrentParam(attrs['name'],
                                                                     ValueWithUnits(attrs['value'],
                                                                    attrs.get('units', None))))
         #-- END --#
@@ -334,14 +335,14 @@ class BaseNCMLMetaClass(type):
         default_params = {'parent': None}
         component_parameters = cls.dct["component_parameters"]
         # Add current and synapse mechanisms parameters
-        for curr in ncml_model.currents:
-            if component_parameters.has_key(curr.id):
-                default_params.update([(group_varname(curr.group_id) + "." + curr.id + 
+        for mech in ncml_model.mechanisms:
+            if component_parameters.has_key(mech.id):
+                default_params.update([(group_varname(mech.group_id) + "." + mech.id + 
                                         "." + key, val[0])
-                                       for key, val in component_parameters[curr.id].iteritems()])
+                                       for key, val in component_parameters[mech.id].iteritems()])
             else:
-                for param in curr.params:
-                    default_params[group_varname(curr.group_id) + "." + curr.id + "." + 
+                for param in mech.params:
+                    default_params[group_varname(mech.group_id) + "." + mech.id + "." + 
                                    param.name] = param.value
         for syn in ncml_model.synapses:
             for param in syn.params:
