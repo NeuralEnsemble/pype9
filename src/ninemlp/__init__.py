@@ -22,7 +22,7 @@ __version__ = "0.0.1"
 SRC_PATH_ENV_NAME = 'NINEMLP_SRC_PATH'
 MPI_NAME = 'NINEMLP_MPI'
 
-BUILD_MODE_OPTIONS = ['lazy', 'force', 'compile_only', 'require']
+BUILD_MODE_OPTIONS = ['lazy', 'force', 'build_only', 'require', 'compile_only']
 DEFAULT_BUILD_MODE = 'lazy'
 pyNN_build_mode = DEFAULT_BUILD_MODE
 

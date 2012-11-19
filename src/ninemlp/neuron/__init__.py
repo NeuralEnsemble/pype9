@@ -50,11 +50,11 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
                         parameters are passed to every cell in the model)
         @param build_mode: Specifies whether cell models, or in NEURON's case, cell mechanisms need\
                             to be built. This is actually performed when the cell_type is loaded \
-                           but if build_mode is set to 'compile_only' then the population isn't \
+                           but if build_mode is set to 'build_only' then the population isn't \
                            actually constructed and only the NMODL files are compiled.
         """
-        if build_mode == 'compile_only':
-            print "Warning! '--compile' option was set to 'compile_only', meaning the Population " \
+        if build_mode == 'build_only':
+            print "Warning! '--compile' option was set to 'build_only', meaning the Population " \
                     "'{}' was not constructed and only the NMODL files were compiled.".format(label)
         else:
             # If cell_type is of NCML type append the population as a parent parameter for its 
@@ -129,8 +129,8 @@ class Projection(pyNN.neuron.Projection):
     def __init__(self, pre, dest, label, connector, source=None, target=None, 
                  build_mode=DEFAULT_BUILD_MODE):
         self.label = label
-        if build_mode == 'compile_only':
-            print "Warning! '--compile' option was set to 'compile_only', meaning the projection " \
+        if build_mode == 'build_only':
+            print "Warning! '--compile' option was set to 'build_only', meaning the projection " \
                     "'{}' was not constructed.".format(label)
         else:
             pyNN.neuron.Projection.__init__(self, pre, dest, connector, label=label, source=source,
