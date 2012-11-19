@@ -19,44 +19,114 @@ from neuron import h, nrn, load_mechanisms
 import pyNN.models
 import pyNN.recording
 import ninemlp.common.ncml
-from ninemlp.neuron.build import compile_nmodl
+from ninemlp.neuron.build import build_celltype_files
 from ninemlp import DEFAULT_BUILD_MODE
 from copy import copy
 from operator import attrgetter
-import math
-import numpy as np
+import numpy
 import pyNN.neuron.simulator
 import weakref
+from ninemlp.common import group_varname, seg_varname
+from ninemlp.common.ncml import DEFAULT_V_INIT
 
 RELATIVE_NMODL_DIR = 'build/nmodl'
 
+class InconsistentValueException(Exception): pass
+
 ## Used to store the directories from which NMODL objects have been loaded to avoid loading them twice
-loaded_mech_paths = []
+loaded_celltypes = {}
 
 class Segment(nrn.Section): #@UndefinedVariable
     """
     Wraps the basic NEURON section to allow non-NEURON attributes to be added to the segment.
     Additional functionality could be added as needed
     """
+
+    class ComponentTranslator(object):
+        """
+        Acts as a proxy for the true component that was inserted using NEURON's in built 'insert' 
+        method. Used as a way to avoid the unique-identifier prefix that is prepended to NeMo 
+        parameters, while allowing the cellname prefix to be dropped from the component, thus 
+        providing a cleaner interface
+        """
+        def __init__(self, component, translations):
+            ## The true component object that was created by the pyNEURON 'insert' method
+            super(Segment.ComponentTranslator, self).__setattr__('_component', component)
+            ## The translation of the parameter names            
+            super(Segment.ComponentTranslator, self).__setattr__('_translations', translations)
+
+        def __dir__(self):
+            return self._translations.keys()
+
+        def __setattr__(self, var, value):
+            try:
+                setattr(self._component, self._translations[var], value)
+            except KeyError as e:
+                raise AttributeError("Component does not have translation for parameter '{}'"\
+                                     .format(e))
+
+        def __getattr__(self, var):
+            try:
+                return getattr(self._component, self._translations[var])
+            except KeyError as e:
+                raise AttributeError("Component does not have translation for parameter '{}'"\
+                                     .format(e))
+
     def __init__(self, morphl_seg):
         """
-        Initialises the Segment including its proximal and distal sections for connecting child segments
+        Initialises the Segment including its proximal and distal sections for connecting child 
+        segments
         
-        @param seg [common.ncml.MorphMLHandler.Segment]: Segment tuple loaded from MorphML (see common.ncml.MorphMLHandler)
+        @param seg [common.ncml.MorphMLHandler.Segment]: Segment tuple loaded from MorphML \
+(see common.ncml.MorphMLHandler)
         """
         nrn.Section.__init__(self) #@UndefinedVariable
         h.pt3dclear(sec=self)
         self.diam = float(morphl_seg.distal.diam)
-        self._distal = np.array((morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z))
+        self._distal = numpy.array((morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z))
         h.pt3dadd(morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z,
-                                                                 morphl_seg.distal.diam, sec=self)
+                  morphl_seg.distal.diam, sec=self)
         if morphl_seg.proximal:
-            self._set_proximal((morphl_seg.proximal.x, morphl_seg.proximal.y, morphl_seg.proximal.z))
-        # Local information, though not sure if I need this here            
+            self._set_proximal((morphl_seg.proximal.x, morphl_seg.proximal.y, 
+                                morphl_seg.proximal.z))
+        # Set initialisation variables here    
+        self.v_init = DEFAULT_V_INIT
+        # Local information, though not sure if I need this here
         self.id = morphl_seg.id
-        self._parent = None
+        self._parent_seg = None
         self._fraction_along = None
         self._children = []
+
+
+    def __getattr__(self, var):
+        """
+        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup. This 
+        is done to allow pyNN's population.tset method to set attributes of cell components.
+        
+        @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
+attribute vars
+        """
+        if '.' in var:
+            components = var.split('.', 1)
+            return getattr(getattr(self, components[0]), components[1])
+        else:
+            raise AttributeError
+
+
+    def __setattr__(self, var, val):
+        """
+        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup.
+         This is done to allow pyNN's population.tset method to set attributes of cell components.
+        
+        @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
+attribute vars
+        @param val [*]: val of the attribute
+        """
+        if '.' in var:
+            components = var.split('.', 1)
+            setattr(getattr(self, components[0]), components[1], val)
+        else:
+            super(Segment, self).__setattr__(var, val)
 
     def _set_proximal(self, proximal):
         """
@@ -64,33 +134,112 @@ class Segment(nrn.Section): #@UndefinedVariable
         
         @param proximal [float(3)]: The 3D position of the start of the segment
         """
-        self._proximal = np.array(proximal)
+        self._proximal = numpy.array(proximal)
         h.pt3dadd(proximal[0], proximal[1], proximal[2], self.diam, sec=self)
 
-    def _connect(self, parent, fraction_along):
+    def _connect(self, parent_seg, fraction_along):
         """
-        Connects the segment with its parent, setting its proximal position and calculating its length
+        Connects the segment with its parent, setting its proximal position and calculating its \
+length
         if it needs to.
         
-        @param parent [Segment]: The parent segment to connect to
+        @param parent_seg [Segment]: The parent segment to connect to
         @param fraction_along [float]: The fraction along the parent segment to connect to
         """
         assert(fraction_along >= 0.0 and fraction_along <= 1.0)
         # Connect the segments in NEURON using h.Section's built-in method.
-        self.connect(parent, fraction_along, 0)
+        self.connect(parent_seg, fraction_along, 0)
         # Store the segment's parent just in case
-        self._parent = parent
+        self._parent_seg = parent_seg
         self._fraction_along = fraction_along
-        parent._children.append(self)
+        parent_seg._children.append(self)
+
+    def insert(self, component_name, cell_id=None, translations=None):
+        """
+        Inserts a mechanism using the in-built NEURON 'insert' method and then constructs a 
+        'Component' class to point to the variable parameters of the component using meaningful 
+        names
+        
+        @param component_name [str]: The name of the component to be inserted
+        @param cell_id [str]: If the cell_id is provided, then it is used as a prefix to the \
+component (eg. if cell_id='Granule' and component_name='CaHVA', the insert mechanism would be \
+'Granule_CaHVA'), in line with the naming convention used for NCML mechanisms
+        """
+        # Prepend the cell_id to the component name if provided
+        if cell_id:
+            mech_name = cell_id + "_" + component_name
+        else:
+            mech_name = component_name
+        # Insert the mechanism into the segment
+        super(Segment, self).insert(mech_name)
+        # Map the component (always at position 0.5 as a segment only ever has one "NEURON segment") 
+        # to an object in the Segment object. If translations are provided, wrap the component in
+        # a Component translator that intercepts getters and setters and redirects them to the 
+        # translated values.
+        if translations:
+            super(Segment, self).__setattr__(component_name, 
+                                             self.ComponentTranslator(getattr(self(0.5), mech_name),
+                                                                      translations))
+        else:
+            super(Segment, self).__setattr__(component_name, getattr(self(0.5), mech_name))
+
+
+class SegmentGroup(object):
+
+    def __init__(self):
+        super(SegmentGroup, self).__setattr__('_segments', [])
+        super(SegmentGroup, self).__setattr__('default', None)
+
+    def __iter__(self):
+        return iter(self._segments)
+
+    def __len__(self):
+        return len(self._segments)
+
+    def __getitem__(self, index):
+        return self._segments[index]
+
+    def __setitem__(self, index, value):
+        self._segments[index] = value
+
+    def __dir__(self):
+        return dir(self.default)
+
+    def append(self, segment, is_default=False):
+        assert isinstance(segment, Segment)
+        if is_default or not self.default:
+            super(SegmentGroup, self).__setattr__('default', segment)
+        self._segments.append(segment)
+
+    def __setattr__(self, var, value):
+        """
+        Set the attribute for all segments in this group
+        """
+        for seg in self:
+            setattr(seg, var, value)
+
+    def __getattr__(self, var):
+        """
+        Return the value of the default segment in this group
+        """
+        if not self._segments:
+            raise Exception("No segments have been added to this segment group")
+        return getattr(self.default, var)
+
 
 class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
+
+    class Params(object):
+
+        def __init__(self, params_dict):
+            self.__dict__ = params_dict
 
     def __init__(self, **parameters):
         self._init_morphology()
         self._init_biophysics()
         # Setup variables used by pyNN
-        self.source = self.soma(0.5)._ref_v
-        self.source_section = self.soma
+        self.source_section = self.default_group.default
+        self.source = self.source_section(0.5)._ref_v
         # for recording
         self.spike_times = h.Vector(0)
         self.traces = {}
@@ -101,161 +250,182 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
             # collector from being called on the cell class    
             self.parent = weakref.ref(parameters['parent'])
 
-    def __setattr__(self, name, value):
+    def __getattr__(self, var):
         """
-        Any '.'s in the attribute name are treated as delimeters of a nested namespace lookup of
-        <segment-name>.<component-name>.<variable-name>. For attributes not in components the 
-        component name can be omitted.
+        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup. This 
+        is done to allow pyNN's population.tset method to set attributes of cell components.
         
-        @param name [str]: name of the attribute or '.' delimeted string of segment, component and attribute names
-        @param value [*]: value of the attribute
+        @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
+attribute vars
         """
-        if '.' in name:
-            assert name.count('.') <= 2
-            namespace = name.split('.')
-            for seg in self.groups[namespace[0]]:
-                if len(namespace) == 3:
-                    assert seg.nseg == 1
-                    setattr(getattr(seg(0.5), namespace[1]), namespace[2], value)
-                else:
-                    setattr(seg, namespace[-1], value)
+        if '.' in var:
+            components = var.split('.', 1)
+            return getattr(getattr(self, components[0]), components[1])
         else:
-            super(NCMLCell, self).__setattr__(name, value)
+            raise AttributeError
 
 
-    def _init_morphology(self, barebones_only=True):
+    def __setattr__(self, var, val):
+        """
+        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup.
+         This is done to allow pyNN's population.tset method to set attributes of cell components.
+        
+        @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
+attribute vars
+        @param val [*]: val of the attribute
+        """
+        if '.' in var:
+            components = var.split('.', 1)
+            setattr(getattr(self, components[0]), components[1], val)
+        else:
+            super(NCMLCell, self).__setattr__(var, val)
+
+
+    def _init_morphology(self):
         """
         Reads morphology from a MorphML 2 file and creates the appropriate segments in neuron
         
-        @param barebones_only [bool]: If set, extra helper fields will be delted after the are required, leaving the "barebones" pyNEURON structure for each nrn.Section
+        @param barebones_only [bool]: If set, extra helper fields will be deleted after the are \
+required, leaving the "barebones" pyNEURON structure for each nrn.Section
         """
         # Initialise all segments
         self.segments = {}
-        self.groups = { '__all__': [] }
+        # Create a group to hold all segments (this is the default group for components that don't 
+        # specify a segment group). Create an object to provide 'attribute' route to update 
+        # parameter of model via segment groups
+        self.all_segs = SegmentGroup()
         self.root_segment = None
         for morphml_seg in self.morphml_model.segments:
+            if self.segments.has_key(morphml_seg.id):
+                raise Exception ("Segment id '{}' conflicts with a previously defined member of " \
+                                 "the cell object.".format(morphml_seg.id))
             seg = Segment(morphml_seg)
             self.segments[morphml_seg.id] = seg
-            self.groups['__all__'].append(seg)
-            setattr(self, morphml_seg.id, seg)
+            self.all_segs.append(seg)
+            setattr(self, seg_varname(morphml_seg.id), seg)
             if not morphml_seg.parent:
                 if self.root_segment:
-                    raise Exception("Two segments ({0} and {1}) were declared without parents, meaning the neuronal tree is disconnected".format(self.root_segment.id, seg.id))
+                    raise Exception("Two segments ({0} and {1}) were declared without parents, " \
+                                    "meaning the neuronal tree is disconnected"\
+                                    .format(self.root_segment.id, seg.id))
                 self.root_segment = seg
         if not self.root_segment:
-            raise Exception("The neuronal tree does not have a root segment, meaning it is connected in a circle (I assume this is not intended)")
+            raise Exception("The neuronal tree does not have a root segment, meaning it is " \
+                                            "connected in a circle (I assume this is not intended)")
         # Connect the segments together
         for morphml_seg in self.morphml_model.segments:
             if morphml_seg.parent:
                 self.segments[morphml_seg.id]._connect(self.segments[morphml_seg.parent.id],
-                                                                    morphml_seg.parent.fractionAlong)
-        # Work out the segment lengths properly accounting for the "fraction_along". This is performed
-        # via a tree traversal to ensure that the parents 'proximal' field has already been calculated
-        # beforehand
+                                                       morphml_seg.parent.fractionAlong)
+        # Work out the segment lengths properly accounting for the "fraction_along". This is 
+        # performed via a tree traversal to ensure that the parents 'proximal' field has already 
+        # been calculated beforehand
         segment_stack = [self.root_segment]
         while len(segment_stack):
             seg = segment_stack.pop()
-            if seg._parent:
-                proximal = seg._parent._proximal * (1 - seg._fraction_along) + \
-                                                        seg._parent._distal * seg._fraction_along
+            if seg._parent_seg:
+                proximal = seg._parent_seg._proximal * (1 - seg._fraction_along) + \
+                                                       seg._parent_seg._distal * seg._fraction_along
                 seg._set_proximal(proximal)
             segment_stack += seg._children
-        # Once the structure is created with the correct morphology the fields appended to the 
-        # nrn.Section class can be disposed of (or potentiall kept for later use). Probably a design
-        # decision needs to be made here but I am not sure of the best option at this point
-        if barebones_only:
-            for seg in self.segments.values():
-                del seg._proximal
-                del seg._distal
-                del seg._parent
-                del seg._fraction_along
-                del seg._children
         # Set up groups of segments for inserting mechanisms
-        for group in self.morphml_model.groups:
-            self.groups[group.id] = []
-            for member_id in group.members:
+        self.groups = {}
+        self.default_group = None # Will be overwritten in first iteration of loop
+        for morphml_group in self.morphml_model.groups:
+            group = SegmentGroup()
+            if morphml_group.id == self.morphml_model.default_group or not self.default_group:
+                self.default_group = group
+            self.groups[morphml_group.id] = group
+            setattr(self, group_varname(morphml_group.id), group)
+            for member_id in morphml_group.members:
                 try:
-                    self.groups[group.id].append(self.segments[member_id])
+                    group.append(self.segments[member_id],
+                                                    is_default=(member_id == morphml_group.default))
                 except KeyError:
-                    raise Exception('Member id %d (referenced in group ''%s'') was not found in \
-                                                           loaded segments' % (member_id, group.id))
+                    raise Exception("Member id {} (referenced in group '{}') was not found in " \
+                                    "loaded segments".format(member_id, morphml_group.id))
 
     def _init_biophysics(self):
         """
         Loop through loaded currents and synapses, and insert them into the relevant sections.
         """
         if len(self.ncml_model.passive_currents) > 1 and \
-                                any(not curr.group_id for curr in self.ncml_model.passive_currents):
-            raise Exception("Passive currents is duplicated or conflictingly specified (both \
-                                with 'segmentGroup'without 'segmentGroup')")
+                any(not curr.group_id for curr in self.ncml_model.passive_currents):
+            raise Exception("Passive currents is duplicated or conflictingly specified (both" \
+                            "with 'segmentGroup'without 'segmentGroup')")
         if len(self.ncml_model.capacitances) > 1 and \
-                                any(not curr.group_id for curr in self.ncml_model.capacitances):
-            raise Exception("Membrane capacitance is duplicated or conflictingly specified (both \
-                                with 'segmentGroup'without 'segmentGroup')")
+                any(not curr.group_id for curr in self.ncml_model.capacitances):
+            raise Exception("Membrane capacitance is duplicated or conflictingly specified (both" \
+                            "with 'segmentGroup'without 'segmentGroup')")
         if len(self.ncml_model.axial_resistances) > 1 and \
-                                any(not curr.group_id for curr in self.ncml_model.axial_resistances):
-            raise Exception("Axial resistance is duplicated or conflictingly specified (both \
-                                with 'segmentGroup'without 'segmentGroup')")
+                any(not curr.group_id for curr in self.ncml_model.axial_resistances):
+            raise Exception("Axial resistance is duplicated or conflictingly specified (both" \
+                            "with 'segmentGroup'without 'segmentGroup')")
         #FIXME: ionic currents and reversal potentials should undergo similar checks but they require
         # the species to be checked as well.
         for curr in self.ncml_model.passive_currents:
-            for sec in self.groups[curr.group_id]:
-                sec.insert('pas')
-                for seg in sec:
-                    seg.pas.g = curr.cond_density.neuron()
+            for seg in self.get_group(curr.group_id):
+                seg.insert('pas')
+                seg.pas.g = curr.cond_density.neuron()
         for curr in sorted(self.ncml_model.currents, key=attrgetter('id')):
-            for sec in self.groups[curr.group_id]:
+            if self.component_parameters.has_key(curr.id):
+                translations = dict([(key, val[0]) for key, val in 
+                                     self.component_parameters[curr.id].iteritems()])
+            else:
+                translations = None
+            for seg in self.get_group(curr.group_id):
                 try:
-                    sec.insert(curr.id)
+                    seg.insert(curr.id, cell_id=self.ncml_model.celltype_id,
+                                                                        translations=translations)
                 except ValueError as e:
-                    raise Exception('Could not insert {curr_id} into section group {group_id} \
-({error})'.format(curr_id=curr.id, group_id=curr.group_id, error=e))
+                    raise Exception("Could not insert {curr_id} into section group {group_id} " \
+                                    "({error})".format(curr_id=curr.id, group_id=curr.group_id, 
+                                                       error=e))
         #Loop through loaded membrane mechanisms and insert them into the relevant sections.
         for cm in self.ncml_model.capacitances:
-            for sec in self.groups[cm.group_id]:
-                sec.cm = cm.value.neuron()
+            for seg in self.get_group(cm.group_id):
+                seg.cm = cm.value.neuron()
         #Loop through loaded membrane mechanisms and insert them into the relevant sections.
         for reversal in self.ncml_model.reversal_potentials:
-            for sec in self.groups[reversal.group_id]:
-                setattr(sec, 'e' + reversal.species, reversal.value.neuron())
+            for seg in self.get_group(reversal.group_id):
+                setattr(seg, 'e' + reversal.species, reversal.value.neuron())
         for ra in self.ncml_model.axial_resistances:
-            for sec in self.groups[ra.group_id]:
-                sec.Ra = ra.value.neuron()
+            for seg in self.get_group(ra.group_id):
+                seg.Ra = ra.value.neuron()
         for syn in self.ncml_model.synapses:
             if syn.type in dir(h):
                 SynapseType = getattr(h, syn.type)
             else:
                 try:
-                    SynapseType = eval(syn.type) #FIXME (TGC): I don't think that this will ever work.
+                    SynapseType = type(syn.type) #FIXME: This needs to be verified
                 except:
-                    raise Exception ("Could not find synapse '%s' in loaded or built in synapses." % syn.id)
-            for sec in self.groups[syn.group_id]:
-                receptor = SynapseType(0.5, sec=sec)
-                setattr(sec, syn.id, receptor)
+                    raise Exception ("Could not find synapse '{}' in loaded or built in synapses."\
+                                     .format(syn.id))
+            for seg in self.get_group(syn.group_id):
+                receptor = SynapseType(0.5, sec=seg)
+                setattr(seg, syn.id, receptor)
                 for param in syn.params:
                     setattr(receptor, param.name, param.value.neuron())
         for syn in self.ncml_model.gap_junctions:
             try:
-                GapJunction = eval(syn.type)
+                GapJunction = type(syn.type) #FIXME: This needs to be verified
             except:
-                raise Exception ("Could not find synapse '%s' in loaded or built-in synapses." % syn.id)
-            for sec in self.groups[syn.group_id]:
-                receptor = SynapseType(0.5, sec=sec)
-                setattr(sec, syn.id, receptor)
+                raise Exception ("Could not find synapse '{}' in loaded or built-in synapses."\
+                                 .format(syn.id))
+            for seg in self.get_group(syn.group_id):
+                receptor = GapJunction(0.5, sec=seg)
+                setattr(seg, syn.id, receptor)
                 for param in syn.params:
                     setattr(receptor, param.name, param.value.neuron())
 
     def memb_init(self):
         # Initialisation of member states goes here
-#        for sec in self.segments:
-#            sec.v = self.v_init
-        pass
-
-    def get_segments(self):
-        return self.segments.values()
+        for seg in self.all_segs:
+            seg.v = seg.v_init
 
     def record(self, *args):
-        # If one assume that it is the pyNN version of this method (i.e. map to record_spikes)
+        # If one argument is provided assume that it is the pyNN version of this method 
+        # (i.e. map to record_spikes)
         if len(args) == 1:
             assert(self.parent is not None)
             self.record_spikes(args[0])
@@ -266,12 +436,12 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
             elif variable == 'v':
                 self.record_v(1)
             else:
-                raise Exception('Unrecognised variable ''{}'' provided as first argument'.format(
-                                                                                         variable))
+                raise Exception('Unrecognised variable ''{}'' provided as first argument'.\
+                                format(variable))
             pyNN.neuron.simulator.recorder_list.append(self.Recorder(self, variable, output))
         else:
-            raise Exception ('Wrong number of arguments, expected either 2 or 3 got {}'.format(
-                                                                                       len(args) + 1))
+            raise Exception ('Wrong number of arguments, expected either 2 or 3 got {}'.\
+                             format(len(args) + 1))
 
     def record_v(self, active):
         if active:
@@ -315,7 +485,6 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         else:
             self.spike_times = h.Vector(0)
 
-
     def set_parameters(self, param_dict):
         for name in self.parameter_names:
             setattr(self, name, param_dict[name])
@@ -332,18 +501,18 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
             self.population = None
         def _get(self, gather=False, compatible_output=True, filter=None): #@UnusedVariable
             if self.variable == 'spikes':
-                data = np.empty((0, 2))
-                spikes = np.array(self.cell.spike_times)
+                data = numpy.empty((0, 2))
+                spikes = numpy.array(self.cell.spike_times)
                 spikes = spikes[spikes <= pyNN.neuron.simulator.state.t + 1e-9]
                 if len(spikes) > 0:
-                    new_data = np.array([np.ones(spikes.shape) * 0.0, spikes]).T
-                    data = np.concatenate((data, new_data))
+                    new_data = numpy.array([numpy.ones(spikes.shape) * 0.0, spikes]).T
+                    data = numpy.concatenate((data, new_data))
             elif self.variable == 'v':
-                data = np.empty((0, 3))
-                v = np.array(self.cell.vtrace)
-                t = np.array(self.cell.record_times)
-                new_data = np.array([np.ones(v.shape) * 0.0, t, v]).T
-                data = np.concatenate((data, new_data))
+                data = numpy.empty((0, 3))
+                v = numpy.array(self.cell.vtrace)
+                t = numpy.array(self.cell.record_times)
+                new_data = numpy.array([numpy.ones(v.shape) * 0.0, t, v]).T
+                data = numpy.concatenate((data, new_data))
             if gather and pyNN.neuron.simulator.state.num_processes > 1:
                 data = pyNN.recording.gather(data)
             return data
@@ -452,22 +621,32 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
         return recordable
 
 
-def load_cell_type(name, path_to_xml_file, build_mode=DEFAULT_BUILD_MODE, silent=False):
-    dct = {}
-    dct['ncml_model'] = ninemlp.common.ncml.read_NCML(name, path_to_xml_file)
-    dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(name, path_to_xml_file)
-    mech_path = str(os.path.join(os.path.dirname(path_to_xml_file), RELATIVE_NMODL_DIR))
-    if mech_path not in loaded_mech_paths:
-        compile_nmodl(mech_path, build_mode=build_mode, silent=silent)
-        load_mechanisms(mech_path)
-        loaded_mech_paths.append(mech_path)
-    dct['mech_path'] = mech_path
-    return NCMLMetaClass(str(name), (pyNN.models.BaseCellType, NCMLCell), dct)
+def load_cell_type(celltype_name, ncml_path, build_mode=DEFAULT_BUILD_MODE, silent=False):
+    if loaded_celltypes.has_key(celltype_name):
+        celltype, prev_ncml_path = loaded_celltypes[celltype_name]
+        if prev_ncml_path != ncml_path:
+            raise Exception("A NCML '{celltype_name}' cell type has already been loaded from a " \
+                            "different location, '{previous}', than the one provided '{this}'".\
+                                format(celltype_name=celltype_name, previous=prev_ncml_path,
+                                                                                    this=ncml_path))
+    else:
+        dct = {}
+        dct['ncml_model'] = ninemlp.common.ncml.read_NCML(celltype_name, ncml_path)
+        dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(celltype_name, ncml_path)
+        build_options = dct['ncml_model'].build_options['nemo']['neuron']
+        install_dir, dct['component_parameters'] = build_celltype_files(celltype_name, ncml_path,
+                                                                build_mode=build_mode,
+                                                                method=build_options.method,
+                                                                kinetics=build_options.kinetics,
+                                                                silent_build=silent)
+        load_mechanisms(install_dir)
+        dct['mech_path'] = install_dir
+        celltype = NCMLMetaClass(str(celltype_name), (pyNN.models.BaseCellType, NCMLCell), dct)
+        # Save cell type in case it needs to be used again
+        loaded_celltypes[celltype_name] = (celltype, ncml_path)
+    return celltype
 
 
 if __name__ == "__main__":
-    import pprint
-    Purkinje = load_cell_type("Purkinje",
-                               "/home/tclose/cerebellar/xml/cerebellum/cells/Purkinje.xml")
-    purkinje = Purkinje({})
-    pprint.pprint(purkinje)
+    pass
+

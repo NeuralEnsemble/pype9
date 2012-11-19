@@ -19,6 +19,7 @@ from ninemlp import SRC_PATH, DEFAULT_BUILD_MODE, pyNN_build_mode
 from ninemlp.neuron.build import compile_nmodl
 compile_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN_build_mode, 
                                                                                         silent=True)
+from ninemlp.common import seg_varname
 from ninemlp.neuron.ncml import NCMLCell
 import pyNN.neuron.standardmodels.cells
 import pyNN.neuron.connectors
@@ -199,7 +200,7 @@ class Network(ninemlp.common.Network):
         # segment.
         if not segment:
             segment = "soma"
-        return segment + "." + synapse
+        return seg_varname(segment) + "." + synapse
 
 
 if __name__ == "__main__":
