@@ -49,8 +49,8 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     
     # ['lazy', 'force', 'compile_only', 'require']
     if build_mode == 'force' or build_mode == 'compile_only':
-        shutil.rmtree(install_dir, ignore_errors=False)
-        shutil.rmtree(params_dir, ignore_errors=False)
+        shutil.rmtree(install_dir, ignore_errors=True)
+        shutil.rmtree(params_dir, ignore_errors=True)
     try:
         if not os.path.exists(install_dir):
             os.makedirs(install_dir)            
