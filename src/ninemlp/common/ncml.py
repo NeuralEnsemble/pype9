@@ -25,14 +25,14 @@ DEFAULT_V_INIT = -65
 
 class MorphMLHandler(XMLHandler):
     """
-    A XML handler to extract morphology specifications from MorphML (version 2), storing them within
-    the handler object to be read when neuron model objects are initialised from a generated NCML
-    class.
+    A XML handler to extract morphology specifications from MorphML (version 2), storing them 
+    within the handler object to be read when neuron model objects are initialised from a generated 
+    NCML class.
     """
 
     # Create named tuples (sort of light-weight classes with no methods, like a struct in C/C++) to
     # store the extracted MorphML data.
-    Morphology = collections.namedtuple('Morphology', 'morph_id celltype_id segments groups '\
+    Morphology = collections.namedtuple('Morphology', 'morph_id celltype_id segments groups ' \
                                                       'default_group')
 
     ## The basic data required to create a segment. 'proximal' and 'distal' are 'Point3D' tuples specifying the location and diameter of the segment, and 'parent' is a 'Parent' tuple.
@@ -93,17 +93,18 @@ class MorphMLHandler(XMLHandler):
             self.segment_group_default_member = None
             if attrs.get('default', None) == 'True':
                 if self.default_group:
-                    raise Exception("Cannot have two default members for a single segmentGroup (\
-'{orig}' and '{new}'".format(orig=self.default_group, new=attrs['id']))
+                    raise Exception("Cannot have two default members for a single segmentGroup (" \
+                                    "'{orig}' and '{new}'".format(orig=self.default_group, 
+                                                                  new=attrs['id']))
                 self.default_group = attrs['id']
         elif self._opening(tag_name, attrs, 'member', parents=['segmentGroup']):
             self.segment_group_members.append(attrs['segment'])
             if attrs.get('default', None) == 'True':
                 if self.segment_group_default_member:
-                    raise Exception("Cannot have two default members for a single segmentGroup (\
-'{orig}' and '{new}'".format(orig=self.segment_group_default_member, new=attrs['segment']))
+                    raise Exception("Cannot have two default members for a single segmentGroup (" \
+                                    "'{orig}' and '{new}'".format(orig=self.segment_group_default_member, 
+                                                                  new=attrs['segment']))
                 self.segment_group_default_member = attrs['segment']
-
 
     def endElement(self, name):
         """
@@ -173,7 +174,7 @@ class NCMLHandler(XMLHandler):
                                  self.celltype_id, attrs['id'], collections.defaultdict(dict),
                                                                 [], [], [], [], [], [], [], {})
         elif self._opening(tag_name, attrs, 'defaultBuildOptions',
-                                                                parents=['biophysicalProperties']):
+                           parents=['biophysicalProperties']):
             pass
         elif self._opening(tag_name, attrs, 'build', parents=['defaultBuildOptions']):
             self.build_tool = attrs['tool']
@@ -184,13 +185,12 @@ class NCMLHandler(XMLHandler):
             self.ncml.build_options[self.build_tool][self.build_simulator].\
                     kinetics.append(attrs['comp_id'])
         elif self._opening(tag_name, attrs, 'membraneProperties',
-                                                                parents=['biophysicalProperties']):
+                           parents=['biophysicalProperties']):
             pass
-        elif self._opening(tag_name, attrs, 'synapses',
-                                                                parents=['biophysicalProperties']):
+        elif self._opening(tag_name, attrs, 'synapses', parents=['biophysicalProperties']):
             pass
         elif self._opening(tag_name, attrs, 'intracellularProperties',
-                                                                parents=['biophysicalProperties']):
+                           parents=['biophysicalProperties']):
             pass
         elif self._opening(tag_name, attrs, 'actionPotentialThreshold',
                                                                 parents=['biophysicalProperties']):
@@ -225,7 +225,7 @@ class NCMLHandler(XMLHandler):
                                                   []))
         elif self._opening(tag_name, attrs, 'parameter', parents=['conductanceSynapse']):
             self.ncml.synapses[-1].params.append(self.SynapseParam(attrs['name'],
-                                                                    ValueWithUnits(attrs['value'],
+                                                                   ValueWithUnits(attrs['value'],
                                                                        attrs.get('units', None))))
         elif self._opening(tag_name, attrs, 'specificCapacitance', parents=['membraneProperties']):
             self.ncml.capacitances.append(self.SpecificCapacitance(ValueWithUnits(attrs['value'],
@@ -248,10 +248,10 @@ def read_MorphML(name, filename):
     parser.setContentHandler(handler)
     parser.parse(filename)
     if not handler.found_cell_id:
-        raise Exception("Target cell id, '%s', was not found in given XML file '%s'" % (name,
-                                                                                        filename))
+        raise Exception("Target cell id, '%s', was not found in given XML file '{}'" .\
+                        format(name, filename))
     if not hasattr(handler, 'morphology'):
-        raise Exception("'morphology' tag was not found in given XML file '%s'" % filename)
+        raise Exception("'morphology' tag was not found in given XML file '{}'".format(filename))
     return handler.morphology
 
 
@@ -261,10 +261,11 @@ def read_NCML(name, filename):
     parser.setContentHandler(handler)
     parser.parse(filename)
     if not handler.found_cell_id:
-        raise Exception("Target cell id, '%s', was not found in given XML file '%s'" % (name,
-                                                                                        filename))
+        raise Exception("Target cell id, '%s', was not found in given XML file '{}'".\
+                        format(name, filename))
     if not hasattr(handler, 'ncml'):
-        raise Exception("'biophysicalProperties' tag was not found in given XML file '%s'" % filename)
+        raise Exception("'biophysicalProperties' tag was not found in given XML file '{}'".\
+                        format(filename))
     return handler.ncml
 
 
