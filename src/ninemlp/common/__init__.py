@@ -421,10 +421,11 @@ class Network(object):
         pop = self._Population_class(label, size, cell_type, params=cell_params,
                                                                         build_mode=self.build_mode)
         # Set layout
-        if layout and self.build_mode != 'build_only':
-            pop._set_positions(positions)
-        pop._randomly_distribute_params(cell_param_distrs)
-        pop._randomly_distribute_initial_conditions(initial_conditions)
+        if not (self.build_mode == 'build_only' or self.build_mode == 'compile_only'):
+            if layout: 
+                pop._set_positions(positions)
+            pop._randomly_distribute_params(cell_param_distrs)
+            pop._randomly_distribute_initial_conditions(initial_conditions)
         return pop
 
     def _create_projection(self, label, pre, dest, connection, source, target, weight, delay,

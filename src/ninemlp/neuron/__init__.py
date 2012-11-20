@@ -53,9 +53,10 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
                            but if build_mode is set to 'build_only' then the population isn't \
                            actually constructed and only the NMODL files are compiled.
         """
-        if build_mode == 'build_only':
-            print "Warning! '--compile' option was set to 'build_only', meaning the Population " \
-                    "'{}' was not constructed and only the NMODL files were compiled.".format(label)
+        if build_mode == 'build_only' or build_mode == 'compile_only':
+            print "Warning! '--compile' option was set to 'build_only' or 'compile_only', " \
+                  "meaning the Population '{}' was not constructed and only the NMODL files " \
+                  "were compiled.".format(label)
         else:
             # If cell_type is of NCML type append the population as a parent parameter for its 
             # constructor
