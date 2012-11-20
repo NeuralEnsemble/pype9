@@ -375,7 +375,7 @@ class Network(object):
                                                              proj.weight,
                                                              proj.delay,
                                                              verbose)
-        if build_mode == 'build_only':
+        if build_mode == 'build_only' or build_mode == 'compile_only':
             print "Finished compiling network, now exiting (use try: ... except SystemExit: ... " \
                     "if you want to do something afterwards)"
             raise SystemExit(0)
