@@ -375,7 +375,7 @@ class Network(object):
                                                              proj.weight,
                                                              proj.delay,
                                                              verbose)
-        if build_mode == 'compile_only':
+        if build_mode == 'build_only':
             print "Finished compiling network, now exiting (use try: ... except SystemExit: ... " \
                     "if you want to do something afterwards)"
             raise SystemExit(0)
@@ -421,7 +421,7 @@ class Network(object):
         pop = self._Population_class(label, size, cell_type, params=cell_params,
                                                                         build_mode=self.build_mode)
         # Set layout
-        if layout and self.build_mode != 'compile_only':
+        if layout and self.build_mode != 'build_only':
             pop._set_positions(positions)
         pop._randomly_distribute_params(cell_param_distrs)
         pop._randomly_distribute_initial_conditions(initial_conditions)
@@ -479,7 +479,7 @@ class Network(object):
                     raise Exception("Connection id '{}' was not found in search path ({}).".\
                                     format(proj_id, self.proj_dir))
                 # The load step can take a while and isn't necessary when compiling so can be skipped.
-                if self.build_mode != 'compile_only':
+                if self.build_mode != 'build_only':
                     connection_matrix = numpy.loadtxt(os.path.join(self.proj_dir,
                                                                    connection.args['id']))
                 else:
