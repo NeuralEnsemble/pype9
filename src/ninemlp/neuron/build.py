@@ -54,7 +54,7 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
         if not os.path.exists(install_dir) or not os.path.exists(params_dir):
             raise Exception("Prebuilt installation directory '{install}' and/or python parameters "\
                             "directory '{params}' are not present, which are required for " \
-                            "'require' and 'compile_only' build options".format(install=install_dir,
+                            "'require' or 'compile_only' build options".format(install=install_dir,
                                                                                 params=params_dir))
     try:
         if not os.path.exists(install_dir):
