@@ -109,13 +109,14 @@ def compile_nmodl (model_dir, build_mode=DEFAULT_BUILD_MODE, silent=False):
     """
     Builds all NMODL files in a directory
     @param model_dir: The path of the directory to build
-    @param build_mode: Can be one of either, 'lazy', 'super_lazy', 'require', 'force', or \
-'build_only'. 'lazy' doesn't \
-run nrnivmodl if the library is found, 'require', requires that the library is found otherwise \
-throws an exception (useful on clusters that require precompilation before parallelisation where \
-the error message could otherwise be confusing), 'force' removes existing library if found and \
-recompiles, and 'build_only' removes existing library if found, recompile and then exits
-    @param verbose: Prints out verbose debugging messages
+    @param build_mode: Can be one of either, 'lazy', 'super_lazy', 'require', 'force', or """ \
+                      "'build_only'. 'lazy' doesn't run nrnivmodl if the library is found, " \
+                      "'require', requires that the library is found otherwise throws an " \
+                      "exception (useful on clusters that require precompilation before " \
+                      "parallelisation where the error message could otherwise be confusing), " \
+                      "'force' removes existing library if found and recompiles, and " \
+                      "'build_only' removes existing library if found, recompile and then exits" \
+    """@param verbose: Prints out verbose debugging messages
     """
     # Change working directory to model directory
     orig_dir = os.getcwd()
