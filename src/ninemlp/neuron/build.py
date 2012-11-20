@@ -65,23 +65,23 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
         raise Exception("Could not create a required neuron build directory, check the required " \
                         "permissions or specify a different parent build directory -> {}".format(e))
     # Get the stored modification time of the previous build if it exists
-    install_modification_time_path = os.path.join(install_dir, _MODIFICATION_TIME_FILE)
-    params_modification_time_path = os.path.join(params_dir, _MODIFICATION_TIME_FILE)
-    if os.path.exists(install_modification_time_path):
-        with open(install_modification_time_path) as f:
-            prev_install_modification_time = f.readline()
+    install_mtime_path = os.path.join(install_dir, _MODIFICATION_TIME_FILE)
+    params_mtime_path = os.path.join(params_dir, _MODIFICATION_TIME_FILE)
+    if os.path.exists(install_mtime_path):
+        with open(install_mtime_path) as f:
+            prev_install_mtime = f.readline()
     else:
-        prev_install_modification_time = ''
-    if os.path.exists(params_modification_time_path):
-        with open(params_modification_time_path) as f:
-            prev_params_modification_time = f.readline()
+        prev_install_mtime = ''
+    if os.path.exists(params_mtime_path):
+        with open(params_mtime_path) as f:
+            prev_params_mtime = f.readline()
     else:
-        prev_params_modification_time = ''
+        prev_params_mtime = ''
     # Get the modification time of the source NCML file for comparison with the build directory       
-    ncml_modification_time = time.ctime(os.path.getmtime(ncml_path))
+    ncml_mtime = time.ctime(os.path.getmtime(ncml_path))
     rebuilt = False
-    if ncml_modification_time != prev_install_modification_time or \
-                                            ncml_modification_time != prev_params_modification_time:
+    if (ncml_mtime != prev_install_mtime or ncml_mtime != prev_params_mtime) and \
+            build_mode != 'compile_only':
         nemo_path = path_to_exec('nemo')
         try:
             sp.check_call("{nemo_path} {ncml_path} -p --pyparams={params} --nmodl={output} " \
@@ -93,10 +93,10 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
             raise Exception("Error while compiling NCML description into NMODL code -> {}".\
                             format(e))
         # Build mode is set to 'force' because the mod files have been regenerated
-        with open(install_modification_time_path, 'w') as f:
-            f.write(ncml_modification_time)
-        with open(params_modification_time_path, 'w') as f:
-            f.write(ncml_modification_time)
+        with open(install_mtime_path, 'w') as f:
+            f.write(ncml_mtime)
+        with open(params_mtime_path, 'w') as f:
+            f.write(ncml_mtime)
         rebuilt = True
     if rebuilt or build_mode == 'compile_only':
         compile_nmodl(install_dir, build_mode='force', silent=silent_build)            

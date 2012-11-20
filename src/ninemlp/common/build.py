@@ -1,9 +1,7 @@
 """
-
     This module defines common methods used in simulator specific build modules
 
     @author Tom Close
-
 """
 
 #######################################################################################
@@ -59,7 +57,8 @@ def path_to_exec(exec_name):
             exec_path = path
             break
     if not exec_path:
-        raise Exception("Could not find nrnivmodl on the system path '%s'" % os.environ['PATH'])
+        raise Exception("Could not find executable '{}' on the system path '{}'".\
+                        format(exec_name, os.environ['PATH']))
     return exec_path
 
 def load_component_parameters(celltype_name, params_dir):
