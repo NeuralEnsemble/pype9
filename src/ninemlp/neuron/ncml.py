@@ -633,7 +633,6 @@ def load_cell_type(celltype_name, ncml_path, build_mode=DEFAULT_BUILD_MODE, sile
         dct['ncml_model'] = ninemlp.common.ncml.read_NCML(celltype_name, ncml_path)
         dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(celltype_name, ncml_path)
         build_options = dct['ncml_model'].build_options['nemo']['neuron']
-        print build_mode
         install_dir, dct['component_parameters'] = \
                 build_celltype_files(celltype_name, ncml_path, build_mode=build_mode,
                                      method=build_options.method, kinetics=build_options.kinetics,
