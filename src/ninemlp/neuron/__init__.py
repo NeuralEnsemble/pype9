@@ -208,12 +208,8 @@ class Network(ninemlp.common.Network):
         
 
     def _get_target_str(self, synapse, segment=None):
-        # FIXME: This should probably not be hard-coded like this as it this is
-        # a id specified by the "user". Maybe should be included in the NINEML
-        # description as a separate tag, which then saves the name of the "soma"
-        # segment.
         if not segment:
-            segment = "soma"
+            segment = "source_section"
         return seg_varname(segment) + "." + synapse
 
 
