@@ -64,8 +64,26 @@ class MorphMLHandler(XMLHandler):
         """
         if self._opening(tag_name, attrs, 'cell', required_attrs=[('id', self.celltype_id)]):
             self.found_cell_id = True
+            # Get the default morph_id from the cell attributes
+            self.default_morph_id = attrs.get('defaultMorphology', None)
+            # If the morph_id wasn't explicitly specified in the Handler constructor use the 
+            # default value if it has been specified in the cell tag (otherwise there should only
+            # be one morphology present
+            if not self.morph_id and self.default_morph_id:
+                self.morph_id = self.default_morph_id
         elif self._opening(tag_name, attrs, 'morphology', parents=['cell'],
                                                             required_attrs=[('id', self.morph_id)]):
+            if hasattr(self, 'morphology'):
+                if self.morph_id:
+                    message = "Multiple morphologies were found in the '{celltype}' NCML file " \
+                              "matching the ID '{id}'".format(celltype=self.celltype_id, 
+                                                              id=self.morph_id) 
+                else:
+                    message = "Multiple morphologies are specified in the given '{celltype}' " \
+                              "NCML file but no morphology was specified either in the " \
+                              "NCMLHandler constructor or in the cell tag".\
+                              format(celltype=self.celltype_id)
+                raise Exception(message)
             self.segments = []
             self.segment_groups = []
             self.default_group = None
@@ -102,8 +120,8 @@ class MorphMLHandler(XMLHandler):
             if attrs.get('default', None) == 'True':
                 if self.segment_group_default_member:
                     raise Exception("Cannot have two default members for a single segmentGroup (" \
-                                    "'{orig}' and '{new}'".format(orig=self.segment_group_default_member, 
-                                                                  new=attrs['segment']))
+                                    "'{orig}' and '{new}'".format( \
+                                    orig=self.segment_group_default_member, new=attrs['segment']))
                 self.segment_group_default_member = attrs['segment']
 
     def endElement(self, name):
@@ -242,27 +260,27 @@ class NCMLHandler(XMLHandler):
                                                             attrs.get('segmentGroup', None)))
 
 
-def read_MorphML(name, filename):
+def read_MorphML(celltype_id, filename, morph_id=None):
     parser = xml.sax.make_parser()
-    handler = MorphMLHandler(name)
+    handler = MorphMLHandler(celltype_id, morph_id=morph_id)
     parser.setContentHandler(handler)
     parser.parse(filename)
     if not handler.found_cell_id:
         raise Exception("Target cell id, '%s', was not found in given XML file '{}'" .\
-                        format(name, filename))
+                        format(celltype_id, filename))
     if not hasattr(handler, 'morphology'):
         raise Exception("'morphology' tag was not found in given XML file '{}'".format(filename))
     return handler.morphology
 
 
-def read_NCML(name, filename):
+def read_NCML(celltype_id, filename):
     parser = xml.sax.make_parser()
-    handler = NCMLHandler(name)
+    handler = NCMLHandler(celltype_id)
     parser.setContentHandler(handler)
     parser.parse(filename)
     if not handler.found_cell_id:
         raise Exception("Target cell id, '%s', was not found in given XML file '{}'".\
-                        format(name, filename))
+                        format(celltype_id, filename))
     if not hasattr(handler, 'ncml'):
         raise Exception("'biophysicalProperties' tag was not found in given XML file '{}'".\
                         format(filename))
@@ -355,7 +373,8 @@ class BaseNCMLMetaClass(type):
         for ra in ncml_model.axial_resistances:
             default_params[group_varname(ra.group_id) + "." + "Ra"] = ra.value
 #        for e_v in ncml_model.reversal_potentials:
-#            default_params[self.group_varname(e_v.group_id) + "." + "e_rev_" + e_v.species] = e_v.value
+#            default_params[self.group_varname(e_v.group_id) + "." + \
+#                                               "e_rev_" + e_v.species] = e_v.value
         # A morphology parameters
         for seg_group in morphml_model.groups:
             # None, defers to the value loaded in the MorphML file but allows them to be overwritten

@@ -620,7 +620,11 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
         return recordable
 
 
-def load_cell_type(celltype_name, ncml_path, build_mode=DEFAULT_BUILD_MODE, silent=False):
+def load_cell_type(celltype_id, ncml_path, morph_id=None, build_mode=DEFAULT_BUILD_MODE, 
+                   silent=False):
+    celltype_name=celltype_id
+    if morph_id:
+        celltype_name += morph_id
     if loaded_celltypes.has_key(celltype_name):
         celltype, prev_ncml_path = loaded_celltypes[celltype_name]
         if prev_ncml_path != ncml_path:
@@ -630,11 +634,11 @@ def load_cell_type(celltype_name, ncml_path, build_mode=DEFAULT_BUILD_MODE, sile
                                    this=ncml_path))
     else:
         dct = {}
-        dct['ncml_model'] = ninemlp.common.ncml.read_NCML(celltype_name, ncml_path)
-        dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(celltype_name, ncml_path)
+        dct['ncml_model'] = ninemlp.common.ncml.read_NCML(celltype_id, ncml_path)
+        dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(celltype_id, ncml_path, morph_id)
         build_options = dct['ncml_model'].build_options['nemo']['neuron']
         install_dir, dct['component_parameters'] = \
-                build_celltype_files(celltype_name, ncml_path, build_mode=build_mode,
+                build_celltype_files(celltype_id, ncml_path, build_mode=build_mode,
                                      method=build_options.method, kinetics=build_options.kinetics,
                                      silent_build=silent)
         load_mechanisms(install_dir)

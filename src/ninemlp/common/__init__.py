@@ -118,8 +118,9 @@ class XMLHandler(xml.sax.handler.ContentHandler):
 class NetworkMLHandler(XMLHandler):
 
     Network = collections.namedtuple('Network', 'id sim_params populations projections free_params')
-    Population = collections.namedtuple('Population', 'id cell_type size layout cell_params ' \
-                                                      'initial_conditions flags not_flags')
+    Population = collections.namedtuple('Population', ('id', 'cell_type', 'morph_id', 'size', 
+                                                       'layout', 'cell_params', 
+                                                       'initial_conditions', 'flags', 'not_flags'))
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay flags ' \
                                                       'not_flags')
     Layout = collections.namedtuple('Layout', 'type args')
@@ -158,6 +159,7 @@ class NetworkMLHandler(XMLHandler):
         elif self._opening(tag_name, attrs, 'population', parents=['network']):
             self.pop_id = attrs['id']
             self.pop_cell = attrs['cell']
+            self.pop_morph_id = attrs.get('morphology', None)
             self.pop_size = int(attrs.get('size', '-1'))
             self.pop_layout = None
             self.pop_cell_params = self.CustomAttributes({}, [])
@@ -264,6 +266,7 @@ class NetworkMLHandler(XMLHandler):
                                 "the arguments to the structure)")
             self.network.populations.append(self.Population(self.pop_id,
                                                     self.pop_cell,
+                                                    self.pop_morph_id,
                                                     self.pop_size,
                                                     self.pop_layout,
                                                     self.pop_cell_params,
@@ -298,9 +301,8 @@ def read_networkML(filename):
 
 class Network(object):
 
-    def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None,
-                                                min_delay=None, max_delay=None, temperature=None,
-                                                silent_build=False, flags=[]):
+    def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None, 
+                 max_delay=None, temperature=None, silent_build=False, flags=[]):
         assert  hasattr(self, "_pyNN_module") and \
                 hasattr(self, "_ncml_module") and \
                 hasattr(self, "_Population_class") and \
@@ -357,6 +359,7 @@ class Network(object):
                 self._populations[pop.id] = self._create_population(pop.id,
                                                                     pop.size,
                                                                     pop.cell_type,
+                                                                    pop.morph_id,
                                                                     pop.layout,
                                                                     pop.cell_params.constants,
                                                                     pop.cell_params.distributions,
@@ -380,11 +383,12 @@ class Network(object):
                     "if you want to do something afterwards)"
             raise SystemExit(0)
 
-    def _create_population(self, label, size, cell_type_name, layout, cell_params, cell_param_distrs,
-                                                        initial_conditions, verbose, silent_build):
+    def _create_population(self, label, size, cell_type_name, morph_id, layout, cell_params, 
+                           cell_param_distrs, initial_conditions, verbose, silent_build):
         if cell_type_name + ".xml" in os.listdir(self.cells_dir):
             cell_type = self._ncml_module.load_cell_type(cell_type_name,
                                             os.path.join(self.cells_dir, cell_type_name + ".xml"),
+                                            morph_id = morph_id,
                                             build_mode=self.build_mode,
                                             silent=silent_build)
         elif cell_type_name in dir(self._pyNN_module.standardmodels.cells):
