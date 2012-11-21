@@ -78,7 +78,7 @@ class Segment(nrn.Section): #@UndefinedVariable
         segments
         
         @param seg [common.ncml.MorphMLHandler.Segment]: Segment tuple loaded from MorphML \
-(see common.ncml.MorphMLHandler)
+                                                         (see common.ncml.MorphMLHandler)
         """
         nrn.Section.__init__(self) #@UndefinedVariable
         h.pt3dclear(sec=self)
@@ -87,7 +87,7 @@ class Segment(nrn.Section): #@UndefinedVariable
         h.pt3dadd(morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z,
                   morphl_seg.distal.diam, sec=self)
         if morphl_seg.proximal:
-            self._set_proximal((morphl_seg.proximal.x, morphl_seg.proximal.y, 
+            self._set_proximal((morphl_seg.proximal.x, morphl_seg.proximal.y,
                                 morphl_seg.proximal.z))
         # Set initialisation variables here    
         self.v_init = DEFAULT_V_INIT
@@ -97,14 +97,13 @@ class Segment(nrn.Section): #@UndefinedVariable
         self._fraction_along = None
         self._children = []
 
-
     def __getattr__(self, var):
         """
         Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup. This 
         is done to allow pyNN's population.tset method to set attributes of cell components.
         
         @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
-attribute vars
+                          attribute vars
         """
         if '.' in var:
             components = var.split('.', 1)
@@ -112,14 +111,13 @@ attribute vars
         else:
             raise AttributeError
 
-
     def __setattr__(self, var, val):
         """
         Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup.
-         This is done to allow pyNN's population.tset method to set attributes of cell components.
+        This is done to allow pyNN's population.tset method to set attributes of cell components.
         
         @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
-attribute vars
+                          attribute vars
         @param val [*]: val of the attribute
         """
         if '.' in var:
@@ -139,9 +137,8 @@ attribute vars
 
     def _connect(self, parent_seg, fraction_along):
         """
-        Connects the segment with its parent, setting its proximal position and calculating its \
-length
-        if it needs to.
+        Connects the segment with its parent, setting its proximal position and calculating its
+        length if it needs to.
         
         @param parent_seg [Segment]: The parent segment to connect to
         @param fraction_along [float]: The fraction along the parent segment to connect to
@@ -162,8 +159,9 @@ length
         
         @param component_name [str]: The name of the component to be inserted
         @param cell_id [str]: If the cell_id is provided, then it is used as a prefix to the \
-component (eg. if cell_id='Granule' and component_name='CaHVA', the insert mechanism would be \
-'Granule_CaHVA'), in line with the naming convention used for NCML mechanisms
+                              component (eg. if cell_id='Granule' and component_name='CaHVA', the \
+                              insert mechanism would be 'Granule_CaHVA'), in line with the naming \
+                              convention used for NCML mechanisms
         """
         # Prepend the cell_id to the component name if provided
         if cell_id:
@@ -177,7 +175,7 @@ component (eg. if cell_id='Granule' and component_name='CaHVA', the insert mecha
         # a Component translator that intercepts getters and setters and redirects them to the 
         # translated values.
         if translations:
-            super(Segment, self).__setattr__(component_name, 
+            super(Segment, self).__setattr__(component_name,
                                              self.ComponentTranslator(getattr(self(0.5), mech_name),
                                                                       translations))
         else:
@@ -256,7 +254,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         is done to allow pyNN's population.tset method to set attributes of cell components.
         
         @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
-attribute vars
+                          attribute vars
         """
         if '.' in var:
             components = var.split('.', 1)
@@ -264,14 +262,13 @@ attribute vars
         else:
             raise AttributeError
 
-
     def __setattr__(self, var, val):
         """
         Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup.
          This is done to allow pyNN's population.tset method to set attributes of cell components.
         
         @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
-attribute vars
+                          attribute vars
         @param val [*]: val of the attribute
         """
         if '.' in var:
@@ -280,13 +277,13 @@ attribute vars
         else:
             super(NCMLCell, self).__setattr__(var, val)
 
-
     def _init_morphology(self):
         """
         Reads morphology from a MorphML 2 file and creates the appropriate segments in neuron
         
         @param barebones_only [bool]: If set, extra helper fields will be deleted after the are \
-required, leaving the "barebones" pyNEURON structure for each nrn.Section
+                                      required, leaving the "barebones" pyNEURON structure for \
+                                      each nrn.Section
         """
         # Initialise all segments
         self.segments = {}
@@ -311,7 +308,7 @@ required, leaving the "barebones" pyNEURON structure for each nrn.Section
                 self.root_segment = seg
         if not self.root_segment:
             raise Exception("The neuronal tree does not have a root segment, meaning it is " \
-                                            "connected in a circle (I assume this is not intended)")
+                            "connected in a circle (I assume this is not intended)")
         # Connect the segments together
         for morphml_seg in self.morphml_model.segments:
             if morphml_seg.parent:
@@ -325,7 +322,7 @@ required, leaving the "barebones" pyNEURON structure for each nrn.Section
             seg = segment_stack.pop()
             if seg._parent_seg:
                 proximal = seg._parent_seg._proximal * (1 - seg._fraction_along) + \
-                                                       seg._parent_seg._distal * seg._fraction_along
+                           seg._parent_seg._distal * seg._fraction_along
                 seg._set_proximal(proximal)
             segment_stack += seg._children
         # Set up groups of segments for inserting mechanisms
@@ -340,7 +337,7 @@ required, leaving the "barebones" pyNEURON structure for each nrn.Section
             for member_id in morphml_group.members:
                 try:
                     group.append(self.segments[member_id],
-                                                    is_default=(member_id == morphml_group.default))
+                                 is_default=(member_id == morphml_group.default))
                 except KeyError:
                     raise Exception("Member id {} (referenced in group '{}') was not found in " \
                                     "loaded segments".format(member_id, morphml_group.id))
@@ -361,25 +358,25 @@ required, leaving the "barebones" pyNEURON structure for each nrn.Section
                 any(not curr.group_id for curr in self.ncml_model.axial_resistances):
             raise Exception("Axial resistance is duplicated or conflictingly specified (both" \
                             "with 'segmentGroup'without 'segmentGroup')")
-        #FIXME: ionic currents and reversal potentials should undergo similar checks but they require
-        # the species to be checked as well.
+        #FIXME: ionic currents and reversal potentials should undergo similar checks but they 
+        #require the species to be checked as well.
         for curr in self.ncml_model.passive_currents:
             for seg in self.get_group(curr.group_id):
                 seg.insert('pas')
                 seg.pas.g = curr.cond_density.neuron()
-        for curr in sorted(self.ncml_model.currents, key=attrgetter('id')):
-            if self.component_parameters.has_key(curr.id):
-                translations = dict([(key, val[0]) for key, val in 
-                                     self.component_parameters[curr.id].iteritems()])
+        for mech in sorted(self.ncml_model.mechanisms, key=attrgetter('id')):
+            if self.component_parameters.has_key(mech.id):
+                translations = dict([(key, val[0]) for key, val in
+                                     self.component_parameters[mech.id].iteritems()])
             else:
                 translations = None
-            for seg in self.get_group(curr.group_id):
+            for seg in self.get_group(mech.group_id):
                 try:
-                    seg.insert(curr.id, cell_id=self.ncml_model.celltype_id,
+                    seg.insert(mech.id, cell_id=self.ncml_model.celltype_id,
                                                                         translations=translations)
                 except ValueError as e:
-                    raise Exception("Could not insert {curr_id} into section group {group_id} " \
-                                    "({error})".format(curr_id=curr.id, group_id=curr.group_id, 
+                    raise Exception("Could not insert {mech_id} into section group {group_id} " \
+                                    "({error})".format(mech_id=mech.id, group_id=mech.group_id,
                                                        error=e))
         #Loop through loaded membrane mechanisms and insert them into the relevant sections.
         for cm in self.ncml_model.capacitances:
@@ -493,6 +490,7 @@ required, leaving the "barebones" pyNEURON structure for each nrn.Section
         return self.ncml_model.action_potential_threshold.get('v', 0.0)
 
     # Create recorder to append to simulator.recorder_list
+
     class Recorder(pyNN.neuron.Recorder):
         def __init__(self, cell, variable, output):
             self.cell = cell
@@ -516,6 +514,7 @@ required, leaving the "barebones" pyNEURON structure for each nrn.Section
             if gather and pyNN.neuron.simulator.state.num_processes > 1:
                 data = pyNN.recording.gather(data)
             return data
+
 
 class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
     """
@@ -550,12 +549,11 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
         recordable = copy(cell_type.recordable)
         for var in recordable:
             # Check to see if the variable is part of the common recordables or is an attribute
-            # of the test segment. Also remove all reversal potentials (assumed to be all attributes
-            # starting with 'e') as they are unlikely to change.
+            # of the test segment. Also remove all reversal potentials (assumed to be all 
+            # attributes starting with 'e') as they are unlikely to change.
             if (var not in ninemlp.common.ncml.BaseNCMLMetaClass.COMMON_RECORDABLE and \
-                                            not hasattr(test_seg, var)) or var.startswith('e'):
+                        not hasattr(test_seg, var)) or var.startswith('e'):
                 cell_type.recordable.remove(var)
-
 
     @classmethod
     def _construct_recordable(cls):
@@ -577,7 +575,8 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
                 try:
                     mod_file = open(mod_file_path)
                 except:
-                    raise Exception('Could not open mod file %s for inspection' % mod_file_path)
+                    raise Exception('Could not open mod file {} for inspection'.\
+                                    format(mod_file_path))
                 in_assigned_block = False
                 in_state_block = False
                 assigned = []
@@ -612,33 +611,36 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
                         mech_states[mech_name].append(state)
                     else:
                         mech_states[mech_name] = [state]
-        # These didn't really work as I had hoped because there are a lot of mechanisms added to the 
-        # NMODL files that really shouldn't be, and they are not even accessible through pyNEURON
-        # anyway. So these are just included in the class out of interest more than anything 
-        # practical now.
+        # These didn't really work as I had hoped because there are a lot of mechanisms added to
+        # the NMODL files that really shouldn't be, and they are not even accessible through 
+        # pyNEURON anyway. So these are just included in the class out of interest more than 
+        # anything practical now.
         cls.dct['state_variables'] = variables
         cls.dct['mechanism_states'] = mech_states
         return recordable
 
 
-def load_cell_type(celltype_name, ncml_path, build_mode=DEFAULT_BUILD_MODE, silent=False):
+def load_cell_type(celltype_id, ncml_path, morph_id=None, build_mode=DEFAULT_BUILD_MODE, 
+                   silent=False):
+    celltype_name=celltype_id
+    if morph_id:
+        celltype_name += morph_id
     if loaded_celltypes.has_key(celltype_name):
         celltype, prev_ncml_path = loaded_celltypes[celltype_name]
         if prev_ncml_path != ncml_path:
             raise Exception("A NCML '{celltype_name}' cell type has already been loaded from a " \
                             "different location, '{previous}', than the one provided '{this}'".\
-                                format(celltype_name=celltype_name, previous=prev_ncml_path,
-                                                                                    this=ncml_path))
+                            format(celltype_name=celltype_name, previous=prev_ncml_path,
+                                   this=ncml_path))
     else:
         dct = {}
-        dct['ncml_model'] = ninemlp.common.ncml.read_NCML(celltype_name, ncml_path)
-        dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(celltype_name, ncml_path)
+        dct['ncml_model'] = ninemlp.common.ncml.read_NCML(celltype_id, ncml_path)
+        dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(celltype_id, ncml_path, morph_id)
         build_options = dct['ncml_model'].build_options['nemo']['neuron']
-        install_dir, dct['component_parameters'] = build_celltype_files(celltype_name, ncml_path,
-                                                                build_mode=build_mode,
-                                                                method=build_options.method,
-                                                                kinetics=build_options.kinetics,
-                                                                silent_build=silent)
+        install_dir, dct['component_parameters'] = \
+                build_celltype_files(celltype_id, ncml_path, build_mode=build_mode,
+                                     method=build_options.method, kinetics=build_options.kinetics,
+                                     silent_build=silent)
         load_mechanisms(install_dir)
         dct['mech_path'] = install_dir
         celltype = NCMLMetaClass(str(celltype_name), (pyNN.models.BaseCellType, NCMLCell), dct)
