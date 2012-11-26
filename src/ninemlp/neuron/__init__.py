@@ -33,7 +33,7 @@ import pyNN.neuron as sim
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
 import neuron
-
+from neuron import h
 
 get_current_time, get_time_step, get_min_delay, \
         get_max_delay, num_processes, rank = build_state_queries(simulator)
