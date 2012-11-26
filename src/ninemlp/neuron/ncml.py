@@ -12,9 +12,7 @@
 #    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
-
 import os.path
-
 from neuron import h, nrn, load_mechanisms
 import pyNN.models
 import pyNN.recording
@@ -28,10 +26,6 @@ import pyNN.neuron.simulator
 import weakref
 from ninemlp.common import group_varname, seg_varname
 from ninemlp.common.ncml import DEFAULT_V_INIT
-
-RELATIVE_NMODL_DIR = 'build/nmodl'
-
-class InconsistentValueException(Exception): pass
 
 ## Used to store the directories from which NMODL objects have been loaded to avoid loading them twice
 loaded_celltypes = {}
