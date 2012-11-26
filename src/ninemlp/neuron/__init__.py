@@ -130,7 +130,7 @@ class Projection(pyNN.neuron.Projection):
     def __init__(self, pre, dest, label, connector, source=None, target=None, 
                  build_mode=DEFAULT_BUILD_MODE):
         self.label = label
-        if build_mode == 'build_only':
+        if build_mode == 'build_only' or build_mode == 'compile_only':
             print "Warning! '--compile' option was set to 'build_only', meaning the projection " \
                     "'{}' was not constructed.".format(label)
         else:
