@@ -479,7 +479,7 @@ class Network(object):
         elif connection.pattern == "Extension":
             engine = connection.args.pop('engine') # TODO: The following lines of processing 
             if engine == "Brep":                   # shouldn't happen here, it should be part of the 
-                proj_id = connection.args['id']    # external engine.
+                proj_id = connection.args['id']    # external engine (EDIT: not sure what I mean by this now).
                 if proj_id not in os.listdir(self.proj_dir):
                     raise Exception("Connection id '{}' was not found in search path ({}).".\
                                     format(proj_id, self.proj_dir))

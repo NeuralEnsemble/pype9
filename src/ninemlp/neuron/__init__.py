@@ -33,7 +33,7 @@ import pyNN.neuron as sim
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
 import neuron
-
+from neuron import h
 
 get_current_time, get_time_step, get_min_delay, \
         get_max_delay, num_processes, rank = build_state_queries(simulator)
@@ -208,12 +208,8 @@ class Network(ninemlp.common.Network):
         
 
     def _get_target_str(self, synapse, segment=None):
-        # FIXME: This should probably not be hard-coded like this as it this is
-        # a id specified by the "user". Maybe should be included in the NINEML
-        # description as a separate tag, which then saves the name of the "soma"
-        # segment.
         if not segment:
-            segment = "soma"
+            segment = "source_section"
         return seg_varname(segment) + "." + synapse
 
 
