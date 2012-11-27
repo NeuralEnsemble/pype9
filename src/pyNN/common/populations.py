@@ -16,6 +16,7 @@ from pyNN import random, recording, errors, standardmodels, core, space, descrip
 from pyNN.recording import files
 from itertools import chain
 import collections
+from operator import itemgetter
 
 deprecated = core.deprecated
 logger = logging.getLogger("PyNN")
