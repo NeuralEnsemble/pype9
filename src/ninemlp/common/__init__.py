@@ -17,7 +17,7 @@ import collections
 import xml.sax
 import os.path
 from ninemlp import DEFAULT_BUILD_MODE
-import geometry
+import connectivity.point2point
 import pyNN.connectors
 from pyNN.random import RandomDistribution
 from inspect import getmro
@@ -440,7 +440,7 @@ class Network(object):
             allow_self_connections = True
         if connection.pattern == 'DistanceBased':
             expression = connection.args.pop('geometry')
-            if not hasattr(geometry, expression):
+            if not hasattr(connectivity.point2point, expression):
                 raise Exception("Unrecognised distance expression '{}'".format(expression))
             try:
                 GeometricExpression = getattr(geometry, expression)
@@ -448,22 +448,26 @@ class Network(object):
             except TypeError as e:
                 raise Exception("Could not initialise distance expression class '{}' from given " \
                                 "arguments '{}' ('{}')".format(expression, connection.args, e))
-            if self.is_value_str(weight): # If weight is a string containing a simple value and units
+            # If weight is a string containing a simple value and units
+            if self.is_value_str(weight): 
                 weight = self._convert_units(weight)
             elif hasattr(weight, 'pattern'):
                 if weight.pattern == 'DistanceBased':
-                    GeometricExpression = getattr(geometry, weight.args.pop('geometry'))
+                    GeometricExpression = getattr(connectivity.point2point, 
+                                                  weight.args.pop('geometry'))
                     weight_expr = GeometricExpression(**self._convert_all_units(weight.args))
                 else:
                     raise Exception("Invalid weight pattern ('{}') for DistanceBased connectivity".\
                                     format(weight.pattern))
             else:
                 raise Exception("Could not parse weight specification '{}'".format(weight))
-            if self.is_value_str(delay): # If delay is a string containing a simple value and units
+            # If delay is a string containing a simple value and units
+            if self.is_value_str(delay): 
                 delay = self._convert_units(delay)
             elif hasattr(delay, 'pattern'):
                 if delay.pattern == 'DistanceBased':
-                    GeometricExpression = getattr(geometry, delay.args.pop('geometry'))
+                    GeometricExpression = getattr(connectivity.point2point, 
+                                                  delay.args.pop('geometry'))
                     delay_expr = GeometricExpression(min_value=self.get_min_delay(),
                                                      **self._convert_all_units(delay.args))
                 else:
@@ -477,13 +481,17 @@ class Network(object):
                                     connect_expr, allow_self_connections=allow_self_connections,
                                     weights=weight_expr, delays=delay_expr)
         elif connection.pattern == "Extension":
-            engine = connection.args.pop('engine') # TODO: The following lines of processing 
-            if engine == "Brep":                   # shouldn't happen here, it should be part of the 
-                proj_id = connection.args['id']    # external engine (EDIT: not sure what I mean by this now).
+            engine = connection.args.pop('engine') 
+            # TODO: The following lines of processing 
+            # shouldn't happen here, it should be part of the 
+            # external engine (EDIT: not sure what I mean by this now).
+            if engine == "Brep":                   
+                proj_id = connection.args['id']    
                 if proj_id not in os.listdir(self.proj_dir):
                     raise Exception("Connection id '{}' was not found in search path ({}).".\
                                     format(proj_id, self.proj_dir))
-                # The load step can take a while and isn't necessary when compiling so can be skipped.
+                # The load step can take a while and isn't necessary when compiling so can be 
+                # skipped.
                 if self.build_mode != 'build_only':
                     connection_matrix = numpy.loadtxt(os.path.join(self.proj_dir,
                                                                    connection.args['id']))
