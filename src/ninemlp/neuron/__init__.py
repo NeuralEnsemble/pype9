@@ -19,6 +19,7 @@ from ninemlp import SRC_PATH, DEFAULT_BUILD_MODE, pyNN_build_mode
 from ninemlp.neuron.build import compile_nmodl
 compile_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN_build_mode, 
               silent=True)
+import ninemlp.common
 from ninemlp.common import seg_varname
 from ninemlp.neuron.ncml import NCMLCell
 import pyNN.neuron.standardmodels.cells

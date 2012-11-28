@@ -17,7 +17,7 @@ import collections
 import xml.sax
 import os.path
 from ninemlp import DEFAULT_BUILD_MODE
-import connectivity.point2point
+import ninemlp.connectivity.point2point
 import pyNN.connectors
 from pyNN.random import RandomDistribution
 from inspect import getmro
@@ -440,10 +440,10 @@ class Network(object):
             allow_self_connections = True
         if connection.pattern == 'DistanceBased':
             expression = connection.args.pop('geometry')
-            if not hasattr(connectivity.point2point, expression):
+            if not hasattr(ninemlp.connectivity.point2point, expression):
                 raise Exception("Unrecognised distance expression '{}'".format(expression))
             try:
-                GeometricExpression = getattr(geometry, expression)
+                GeometricExpression = getattr(ninemlp.connectivity.point2point, expression)
                 connect_expr = GeometricExpression(**self._convert_all_units(connection.args))
             except TypeError as e:
                 raise Exception("Could not initialise distance expression class '{}' from given " \
@@ -453,7 +453,7 @@ class Network(object):
                 weight = self._convert_units(weight)
             elif hasattr(weight, 'pattern'):
                 if weight.pattern == 'DistanceBased':
-                    GeometricExpression = getattr(connectivity.point2point, 
+                    GeometricExpression = getattr(ninemlp.connectivity.point2point, 
                                                   weight.args.pop('geometry'))
                     weight_expr = GeometricExpression(**self._convert_all_units(weight.args))
                 else:
@@ -466,7 +466,7 @@ class Network(object):
                 delay = self._convert_units(delay)
             elif hasattr(delay, 'pattern'):
                 if delay.pattern == 'DistanceBased':
-                    GeometricExpression = getattr(connectivity.point2point, 
+                    GeometricExpression = getattr(ninemlp.connectivity.point2point, 
                                                   delay.args.pop('geometry'))
                     delay_expr = GeometricExpression(min_value=self.get_min_delay(),
                                                      **self._convert_all_units(delay.args))
