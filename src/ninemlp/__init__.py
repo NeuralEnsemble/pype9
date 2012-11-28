@@ -76,7 +76,7 @@ class XMLHandler(xml.sax.handler.ContentHandler):
             return False
         
     def _parents_match(self, required_parents, open_parents):
-        if len(required_parents) > open_parents:
+        if len(required_parents) > len(open_parents):
             return False
         for required, open in zip(reversed(required_parents), reversed(open_parents)):
             if isinstance(required, str):
