@@ -1,13 +1,11 @@
 """
 
-  This module defines classes to be passed to 
-  pyNN.nineml r1065 
+  This module defines classes to be passed pyNN Connectors to connect populations based on 
+  simple point-to-point geometric connectivity rules
 
-  @file mod_loader.py
   @author Tom Close
 
 """
-
 #######################################################################################
 #
 #    Copyright 2011 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
