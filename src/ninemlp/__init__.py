@@ -60,9 +60,8 @@ class XMLHandler(xml.sax.handler.ContentHandler):
             self._required_attrs.pop()
 
     def _opening(self, tag_name, attr, ref_name, parents=[], required_attrs=[]):
-        if tag_name == ref_name and \
-          (not parents or parents == self._open_components[-len(parents):]) and \
-          all([(attr[key] == val or val == None) for key, val in required_attrs]):
+        if tag_name == ref_name and self._parents_match(parents, self._open_components) and \
+                all([(attr[key] == val or val == None) for key, val in required_attrs]):
             self._open_components.append(ref_name)
             self._required_attrs.append(required_attrs)
             return True
@@ -70,9 +69,38 @@ class XMLHandler(xml.sax.handler.ContentHandler):
             return False
 
     def _closing(self, tag_name, ref_name, parents=[], required_attrs=[]):
-        if tag_name == ref_name and \
-          (not parents or parents == self._open_components[-len(parents) - 1:-1]) and \
-          self._required_attrs[-1] == required_attrs:
+        if tag_name == ref_name and self._parents_match(parents, self._open_components[:-1]) and \
+                self._required_attrs[-1] == required_attrs:
             return True
         else:
             return False
+        
+    def _parents_match(self, required_parents, open_parents):
+        if len(required_parents) > open_parents:
+            return False
+        for required, open in zip(reversed(required_parents), reversed(open_parents)):
+            if isinstance(required, str):
+                if required != open:
+                    return False
+            else:
+                try:
+                    if not any([ open == r for r in required]):
+                        return False
+                except TypeError:
+                    raise Exception("Elements of the 'required_parents' argument need to be " \
+                                    "either strings or lists/tuples of strings") 
+        return True
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+        
