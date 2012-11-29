@@ -12,16 +12,19 @@
 #    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
+# Generic imports
 import numpy
 import collections
 import os.path
-from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
-import ninemlp.connectivity.point2point
-import pyNN.connectors
-from pyNN.random import RandomDistribution
+import xml.sax
 from inspect import getmro
 import warnings
 import math
+# Specific imports
+import pyNN.connectors
+from pyNN.random import RandomDistribution
+from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
+import ninemlp.connectivity.point2point
 
 ## The location relative to the NINEML-Network file to look for the folder containing the cell descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
 RELATIVE_NCML_DIR = "./ncml"
