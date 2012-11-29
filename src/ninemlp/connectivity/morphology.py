@@ -49,8 +49,8 @@ class Tree(object):
             point_index = self._flatten_points(branch, point_index)
         return point_index
     
-    
     def set_mask(self, vox_size):
+        # Ensure that vox_size is a 3-d vector (one for each dimension)
         vox_size = np.asarray(vox_size)
         if len(vox_size) == 1:
             vox_size = np.array((vox_size, vox_size, vox_size))
@@ -73,22 +73,21 @@ class Tree(object):
             @param vox_size [float]: The requested voxel sizes with which to divide up the mask with
             """
             self.vox_size = np.asarray(vox_size)
-            # Save int versions of the offset and limits for convenient matching with other arrays
+            # Get the start and finish indices of the mask, as determined by the bounds of the tree
             self.start_index = np.array(np.floor(tree.min_bounds / self.vox_size), dtype=np.int)
             self.finish_index = np.array(np.ceil(tree.max_bounds / self.vox_size), dtype=np.int)
-            # Get the offset and limits of the mask, which are lower and upper corners of the voxel
-            # array that cover the bounds of the tree
+            # Set the offset and limit of the mask from the start and finish indices
             self.offset = self.start_index * self.vox_size
             self.limit = self.finish_index * self.vox_size
             # Initialise the actual numpy array to hold the values
             self.dim = self.finish_index - self.start_index
             self._mask = np.zeros(self.dim, dtype=bool)
             # Create an grid of the voxel centres for efficient (and convenient) 
-            # calculation of the distance from voxel centres to the tree points. Since it is 
-            # open, it only takes up O(dim[0] + dim[1] + dim[2]) memory instead of 
-            # O(dim[0] * dim[1] * dim[2]), which it would take if it were dense. The funny notation
-            # where the complex number '1j' is used to specify that the sequences are to be 
-            # interpreted as self.dim[i] steps between grid_start[i] and grid_finish[i].
+            # calculation of the distance from voxel centres to the tree points. Regarding the 
+            # slightly odd notation of the numpy.mgrid function, the complex number '1j' is used 
+            # to specify that the sequences are to be interpreted as self.dim[i] steps between 
+            # grid_start[i] and grid_finish[i].
+            # (see http://docs.scipy.org/doc/numpy/reference/generated/numpy.mgrid.html)
             grid_start = self.offset + self.vox_size / 2.0
             grid_finish = self.limit - self.vox_size / 2.0
             X, Y, Z = np.mgrid[grid_start[0]:grid_finish[0]:(self.dim[0] * 1j),
@@ -170,6 +169,16 @@ def read_NeurolucidaXML(filename):
 if __name__ == '__main__':
     from os.path import normpath, join
     from ninemlp import SRC_PATH
+    import pylab
     trees = read_NeurolucidaXML(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
                                               'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
-    mask = Tree.Mask(trees[0], (1, 1, 1))
+    tree = trees[0]
+    tree.set_mask((1, 1, 1))
+#    pylab.imshow(tree.mask._mask[:,:,3])
+    for z in xrange(tree.mask.dim[2]):
+        pylab.figure()
+        pylab.imshow(tree.mask._mask[:,:,z])
+    pylab.show()
+    print "done"
+                    
+                    
