@@ -33,7 +33,6 @@ class Tree(object):
         self.min_bounds = np.squeeze(np.min(self.points - tiled_diams, axis=0))
         self.max_bounds = np.squeeze(np.max(self.points + tiled_diams, axis=0))
         self.mask = None
-        self.mask_vox = None
 
     def _flatten_points(self, branch, point_index=0):
         """
@@ -49,6 +48,16 @@ class Tree(object):
         for branch in branch.sub_branches:
             point_index = self._flatten_points(branch, point_index)
         return point_index
+    
+    
+    def set_mask(self, vox_size):
+        vox_size = np.asarray(vox_size)
+        if len(vox_size) == 1:
+            vox_size = np.array((vox_size, vox_size, vox_size))
+        elif len(vox_size) != 3:
+            raise Exception("'vox_size' parameter needs to be either a singleton or a 3-tuple " \
+                            "(provided dimension {})".format(len(vox_size)))
+        self.mask = self.Mask(self, vox_size)
 
     class Mask(object):
         """
@@ -74,7 +83,7 @@ class Tree(object):
             # Initialise the actual numpy array to hold the values
             self.dim = self.finish_index - self.start_index
             self._mask = np.zeros(self.dim, dtype=bool)
-            # Create an "open" grid of the voxel centres for efficient (and convenient) 
+            # Create an grid of the voxel centres for efficient (and convenient) 
             # calculation of the distance from voxel centres to the tree points. Since it is 
             # open, it only takes up O(dim[0] + dim[1] + dim[2]) memory instead of 
             # O(dim[0] * dim[1] * dim[2]), which it would take if it were dense. The funny notation
