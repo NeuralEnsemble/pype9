@@ -29,7 +29,7 @@ class Tree(object):
         self.points = np.zeros((point_count, 3))
         self.diams = np.zeros(point_count)
         self._flatten_points(self.root)
-        tiled_diams = np.tile(self.diams.reshape((-1,1)), (1,3))
+        tiled_diams = np.tile(self.diams.reshape((-1, 1)), (1, 3))
         self.min_bounds = np.squeeze(np.min(self.points - tiled_diams, axis=0))
         self.max_bounds = np.squeeze(np.max(self.points + tiled_diams, axis=0))
         self.mask = None
@@ -55,7 +55,7 @@ class Tree(object):
         A mask containing the probability of finding a synaptic/presynaptic location at voxels
         (3D pixels) of arbitrary width that divide up the bounding box of a dendritic/axonal tree
         """
-        
+
         def __init__(self, tree, vox_size):
             """
             Initialises the mask from a given Neurolucida tree and voxel size
@@ -73,19 +73,37 @@ class Tree(object):
             self.limit = self.finish_index * self.vox_size
             # Initialise the actual numpy array to hold the values
             self.dim = self.finish_index - self.start_index
-            self._mask = np.array(self.dim)
+            self._mask = np.zeros(self.dim, dtype=bool)
             # Create an "open" grid of the voxel centres for efficient (and convenient) 
-            # calculation of the distance from voxel centres to the tree points. (Note since it is 
-            # open it only takes up O(dim[0] + dim[1] + dim[2]) memory instead of 
-            # O(dim[0] * dim[1] * dim[2]), which it would take if it were dense.)
+            # calculation of the distance from voxel centres to the tree points. Since it is 
+            # open, it only takes up O(dim[0] + dim[1] + dim[2]) memory instead of 
+            # O(dim[0] * dim[1] * dim[2]), which it would take if it were dense. The funny notation
+            # where the complex number '1j' is used to specify that the sequences are to be 
+            # interpreted as self.dim[i] steps between grid_start[i] and grid_finish[i].
             grid_start = self.offset + self.vox_size / 2.0
             grid_finish = self.limit - self.vox_size / 2.0
-            self.X, self.Y, self.Z = np.ogrid[grid_start[0]:grid_finish[0]:(self.dim[0] * 1j),
-                                              grid_start[1]:grid_finish[1]:(self.dim[1] * 1j),
-                                              grid_start[2]:grid_finish[2]:(self.dim[2] * 1j)]
+            X, Y, Z = np.mgrid[grid_start[0]:grid_finish[0]:(self.dim[0] * 1j),
+                               grid_start[1]:grid_finish[1]:(self.dim[1] * 1j),
+                               grid_start[2]:grid_finish[2]:(self.dim[2] * 1j)]
             for point, diam in zip(tree.points, tree.diams):
-                # from extent to extent paint the voxels
-                pass
+                start = np.array(np.floor((point - self.offset - diam) / self.vox_size),
+                                 dtype=np.int)
+                finish = np.array(np.ceil((point - self.offset + diam) / self.vox_size),
+                                  dtype=np.int)
+                dist = np.sqrt((X[start[0]:finish[0], 
+                                  start[1]:finish[1], 
+                                  start[2]:finish[2]] - point[0]) ** 2 + \
+                               (Y[start[0]:finish[0], 
+                                  start[1]:finish[1], 
+                                  start[2]:finish[2]] - point[1]) ** 2 + \
+                               (Z[start[0]:finish[0], 
+                                  start[1]:finish[1], 
+                                  start[2]:finish[2]] - point[2]) ** 2)
+                point_mask = dist < diam
+                self._mask[start[0]:finish[0], 
+                           start[1]:finish[1], 
+                           start[2]:finish[2]] += point_mask
+
 
 class NeurolucidaXMLHandler(XMLHandler):
     """
@@ -143,6 +161,6 @@ def read_NeurolucidaXML(filename):
 if __name__ == '__main__':
     from os.path import normpath, join
     from ninemlp import SRC_PATH
-    trees = read_NeurolucidaXML(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml', 
+    trees = read_NeurolucidaXML(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
                                               'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
-    mask = Tree.Mask(trees[0], (10,10,10))
+    mask = Tree.Mask(trees[0], (1, 1, 1))
