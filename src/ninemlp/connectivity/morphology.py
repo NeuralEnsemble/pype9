@@ -11,6 +11,7 @@
 #    Copyright 2011 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
+from abc import ABCMeta
 import math
 import numpy as np
 from numpy.linalg import norm
@@ -122,8 +123,9 @@ class Mask(object):
     A mask containing the probability of finding a synaptic/presynaptic location at voxels
     (3D pixels) of arbitrary width that divide up the bounding box of a dendritic/axonal tree
     """
-
-    def __init__(self, tree, vox_size, sample_freq=0.0):
+    __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
+    
+    def __init__(self, tree, vox_size, point_radii):
         """
         Initialises the mask from a given Neurolucida tree and voxel size
         
@@ -131,12 +133,6 @@ class Mask(object):
         @param vox_size [float]: The requested voxel sizes with which to divide up the mask with
         """
         self.vox_size = np.asarray(vox_size)
-
-        # Set the minimum diameter required for a point to be guaranteed to effect
-        # at least one voxel
-        min_point_radius = np.max(self.vox_size) * (math.sqrt(3) / 2)
-        point_radii = tree.diams
-        point_radii[point_radii < min_point_radius] = min_point_radius
         # Get the start and finish indices of the mask, as determined by the bounds of the tree
         tiled_radii = np.tile(point_radii.reshape((-1, 1)), (1, 3))
         min_bounds = np.squeeze(np.min(tree.points - tiled_radii, axis=0))
@@ -148,7 +144,6 @@ class Mask(object):
         self.limit = self.finish_index * self.vox_size
         # Initialise the actual numpy array to hold the values
         self.dim = self.finish_index - self.start_index
-        self._mask_array = np.zeros(self.dim, dtype=bool)
         # Create an grid of the voxel centres for convenient (and more efficient) 
         # calculation of the distance from voxel centres to the tree points. Regarding the 
         # slightly odd notation of the numpy.mgrid function, the complex numbers ('1j') are used 
@@ -157,32 +152,10 @@ class Mask(object):
         # (see http://docs.scipy.org/doc/numpy/reference/generated/numpy.mgrid.html)
         grid_start = self.offset + self.vox_size / 2.0
         grid_finish = self.limit - self.vox_size / 2.0
-        X, Y, Z = np.mgrid[grid_start[0]:grid_finish[0]:(self.dim[0] * 1j),
-                           grid_start[1]:grid_finish[1]:(self.dim[1] * 1j),
-                           grid_start[2]:grid_finish[2]:(self.dim[2] * 1j)]
-        # Loop through all of the tree segments and "paint" the mask
-        for seg in tree.segments:
-            num_samples = np.ceil(norm(seg.end - seg.end) * sample_freq)
-            for frac in np.linspace(0, 1, num_samples):
-                point = (1.0 - frac) * seg.begin + frac * seg.end
-                point_radius = (1.0 - frac) * seg.begin_diam + frac * seg.end_diam
-                # Determine the extent of the mask indices that could be affected by the point
-                extent_start = np.floor((point - self.offset - point_radius) / self.vox_size)
-                extent_finish = np.ceil((point - self.offset + point_radius) / self.vox_size)
-                # Get an "open" grid (uses less memory if it is open) of voxel indices to apply 
-                # the distance function to.
-                # (see http://docs.scipy.org/doc/numpy/reference/generated/numpy.ogrid.html)
-                extent_indices = np.ogrid[int(extent_start[0]):int(extent_finish[0]),
-                                          int(extent_start[1]):int(extent_finish[1]),
-                                          int(extent_start[2]):int(extent_finish[2])]
-                # Calculate the distances from each of the voxel centres to the given point
-                dist = np.sqrt((X[extent_indices] - point[0]) ** 2 + \
-                               (Y[extent_indices] - point[1]) ** 2 + \
-                               (Z[extent_indices] - point[2]) ** 2)
-                # Mask all points that that are closer than the point diameter
-                point_mask = dist < point_radius
-                self._mask_array[extent_indices] += point_mask
-
+        self.X, self.Y, self.Z = np.mgrid[grid_start[0]:grid_finish[0]:(self.dim[0] * 1j),
+                                          grid_start[1]:grid_finish[1]:(self.dim[1] * 1j),
+                                          grid_start[2]:grid_finish[2]:(self.dim[2] * 1j)]
+        
     def overlap(self, mask):
         if np.any(mask.vox_size != self.vox_size):
             raise Exception("Voxel sizes do not match ({} and {})".format(self.vox_size,
@@ -233,6 +206,46 @@ class Mask(object):
         return vox_size
 
 
+class BinaryMask(Mask):
+    
+    def __init__(self, tree, vox_size, sample_diam_ratio = 2.0):    
+        # Set the minimum diameter required for a point to be guaranteed to effect
+        # at least one voxel
+        min_point_radius = np.max(self.vox_size) * (math.sqrt(3.0) / 2.0)
+        point_radii = tree.diams
+        point_radii[point_radii < min_point_radius] = min_point_radius
+        # Call the base 'Mask' class constructor to set up the 
+        Mask.__init__(self, tree, vox_size, point_radii)
+        # Initialise the mask_array
+        self._mask_array = np.zeros(self.dim, dtype=bool)
+        # Loop through all of the tree segments and "paint" the mask
+        for seg in tree.segments:
+            # Check to see whether the point radius is below the minimum
+            point_radius = seg.diam if seg.diam >= min_point_radius else min_point_radius
+            # Calculate the number of samples required for the current segment
+            num_samples = np.ceil(norm(seg.end - seg.end) * (sample_diam_ratio / seg.diam))
+            # Loop through the samples for the given segment and add their "point_mask" to the 
+            # overal mask
+            for frac in np.linspace(1, 0, num_samples, endpoint=False):
+                point = (1.0 - frac) * seg.begin + frac * seg.end
+                # Determine the extent of the mask indices that could be affected by the point
+                extent_start = np.floor((point - self.offset - point_radius) / self.vox_size)
+                extent_finish = np.ceil((point - self.offset + point_radius) / self.vox_size)
+                # Get an "open" grid (uses less memory if it is open) of voxel indices to apply 
+                # the distance function to.
+                # (see http://docs.scipy.org/doc/numpy/reference/generated/numpy.ogrid.html)
+                extent_indices = np.ogrid[int(extent_start[0]):int(extent_finish[0]),
+                                          int(extent_start[1]):int(extent_finish[1]),
+                                          int(extent_start[2]):int(extent_finish[2])]
+                # Calculate the distances from each of the voxel centres to the given point
+                dist = np.sqrt((self.X[extent_indices] - point[0]) ** 2 + \
+                               (self.Y[extent_indices] - point[1]) ** 2 + \
+                               (self.Z[extent_indices] - point[2]) ** 2)
+                # Mask all points that that are closer than the point diameter
+                point_mask = dist < point_radius
+                self._mask_array[extent_indices] += point_mask
+
+
 class ShiftedMask(Mask):
     """
     A shifted version of the Mask, that reuses the same mask array only with updated
@@ -248,9 +261,8 @@ class ShiftedMask(Mask):
         """
         self.shift = np.asarray(shift)
         if np.any(np.mod(self.shift, self.vox_size)):
-            raise ShiftVoxelSizeMismatchException("Shifts ({}) needs to be multiples of "
-                                                      "respective voxel sizes ({})"
-                                                      .format(shift, self.vox_size))
+            raise ShiftVoxelSizeMismatchException("Shifts ({}) needs to be multiples of  respective"
+                                                  " voxel sizes ({})".format(shift, self.vox_size))
         # Copy invariant parameters
         self.dim = mask.dim
         self.vox_size = mask.vox_size
@@ -265,7 +277,6 @@ class ShiftedMask(Mask):
         # This is the whole point of the ShiftedTree and ShiftedMasks, to avoid making \
         # unnecessary copies of this array.
         self._mask_array = mask._mask_array
-
 
 
 class NeurolucidaXMLHandler(XMLHandler):
