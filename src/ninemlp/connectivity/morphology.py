@@ -22,6 +22,8 @@ class ShiftVoxelSizeMismatchException(Exception): pass
 
 class Tree(object):
 
+    Segment = collections.namedtuple('Segment', 'start end start_diam end_diam')
+
     def __init__(self, root, point_count):
         """
         Initialised the Tree object
@@ -31,12 +33,12 @@ class Tree(object):
         """
         self.root = root
         self.points = np.zeros((point_count, 3))
-        self.diams = np.zeros(point_count)
-        self._create_segments(self.root)
+        self.diams = np.zeros((point_count, 1))
+        self.segments = []
+        self._flatten(self.root)
         self._masks = {}
 
-    def _create_segments(self, branch, start_point, seg_starts, seg_finish, finish_diams, finish_diams, 
-                         point_index=0):
+    def _flatten(self, branch, point_index=0, prev_point=None):
         """
         A recursive algorithm to flatten the loaded tree into a numpy array of points used in the
         tree constructor.
@@ -46,9 +48,13 @@ class Tree(object):
         for point in branch.points:
             self.points[point_index, :] = point[0:3]
             self.diams[point_index] = point[3]
+            if prev_point:
+                self.segments.append(Tree.Segment(prev_point[0:3], point[0:3], prev_point[3], 
+                                                  point[3]))
+            prev_point = point
             point_index += 1
         for branch in branch.sub_branches:
-            point_index = self._create_segments(branch, point_index)
+            point_index = self._flatten(branch, point_index, prev_point)
         return point_index
 
     def get_mask(self, vox_size):
@@ -77,7 +83,7 @@ class Tree(object):
         @param tree [Tree]: The second tree to calculate the overlap with
         @param vox_size [tuple(float)]: The voxel sizes to use when calculating the overlap
         """
-        overlap_mask = self.get_mask(vox_size).overlap_mask(tree.get_mask(vox_size))
+        overlap_mask = self.get_mask(vox_size).overlap(tree.get_mask(vox_size))
         return np.sum(overlap_mask)
 
     def any_connection_prob(self, tree, vox_size, gauss_kernel, sample_interval = 1):
@@ -87,7 +93,7 @@ class Tree(object):
         @param tree [Tree]: The second tree to calculate the overlap with
         @param vox_size [tuple(float)]: The voxel sizes to use when calculating the overlap
         """        
-        overlap_mask = self.get_mask(vox_size).overlap_mask(tree.get_mask(vox_size))
+        overlap_mask = self.get_mask(vox_size).overlap(tree.get_mask(vox_size))
         return 1.0 - np.prod(overlap_mask)
 
     class Mask(object):
@@ -108,15 +114,14 @@ class Tree(object):
             # Set the minimum diameter required for a point to be guaranteed to effect
             # at least one voxel
             min_point_radius = np.max(self.vox_size) * (math.sqrt(3) / 2)
-            point_radii = self.diams
+            point_radii = tree.diams
             point_radii[point_radii < min_point_radius] = min_point_radius
             # Get the start and finish indices of the mask, as determined by the bounds of the tree
             tiled_radii = np.tile(point_radii.reshape((-1, 1)), (1, 3))
-            self.min_bounds = np.squeeze(np.min(self.points - tiled_radii, axis=0))
-            self.max_bounds = np.squeeze(np.max(self.points + tiled_radii, axis=0))
-            # Get the start and finish indices of the mask, as determined by the bounds of the tree            
-            self.start_index = np.array(np.floor(tree.min_bounds / self.vox_size), dtype=np.int)
-            self.finish_index = np.array(np.ceil(tree.max_bounds / self.vox_size), dtype=np.int)
+            min_bounds = np.squeeze(np.min(tree.points - tiled_radii, axis=0))
+            max_bounds = np.squeeze(np.max(tree.points + tiled_radii, axis=0))
+            self.start_index = np.array(np.floor(min_bounds / self.vox_size), dtype=np.int)
+            self.finish_index = np.array(np.ceil(max_bounds / self.vox_size), dtype=np.int)
             # Set the offset and limit of the mask from the start and finish indices
             self.offset = self.start_index * self.vox_size
             self.limit = self.finish_index * self.vox_size
@@ -315,10 +320,8 @@ if __name__ == '__main__':
     import pylab
     trees = read_NeurolucidaXML(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
                                               'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
-    for tree in trees:
-        print "min: {}, max: {}".format(tree.min_bounds, tree.max_bounds)
     vox_size = (2.5,2.5,2.5)
-    print "overlap: {}".format(trees[2].overlapping(trees[4], vox_size=vox_size))
+    print "overlap: {}".format(trees[2].num_overlapping(trees[4], vox_size=vox_size))
     tree = trees[2]
     mask = tree.get_mask(vox_size)
     for z in xrange(mask.dim[2]):
