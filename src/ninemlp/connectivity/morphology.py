@@ -22,17 +22,17 @@ class Tree(object):
         """
         Initialised the Tree object
         
-        @param root [NeurolucidaXMLHandler.Branch]: The root branch of a tree loaded from a Neurolucida XML tree description
+        @param root [NeurolucidaXMLHandler.Branch]: The root branch of a tree loaded from a Neurolucida XML tree description 
         @param point_count [int]: The number of tree points that were loaded from the XML description
         """
         self.root = root
         self.points = np.zeros((point_count, 3))
         self.diams = np.zeros(point_count)
-        self._flatten_points(self.root)
+        self._create_segments(self.root)
         tiled_diams = np.tile(self.diams.reshape((-1, 1)), (1, 3))
         self.min_bounds = np.squeeze(np.min(self.points - tiled_diams, axis=0))
         self.max_bounds = np.squeeze(np.max(self.points + tiled_diams, axis=0))
-        self.mask = None
+        self._masks = {}
 
     def _flatten_points(self, branch, point_index=0):
         """
@@ -48,16 +48,29 @@ class Tree(object):
         for branch in branch.sub_branches:
             point_index = self._flatten_points(branch, point_index)
         return point_index
-    
-    def set_mask(self, vox_size):
-        # Ensure that vox_size is a 3-d vector (one for each dimension)
-        vox_size = np.asarray(vox_size)
-        if len(vox_size) == 1:
-            vox_size = np.array((vox_size, vox_size, vox_size))
-        elif len(vox_size) != 3:
-            raise Exception("'vox_size' parameter needs to be either a singleton or a 3-tuple " \
-                            "(provided dimension {})".format(len(vox_size)))
-        self.mask = self.Mask(self, vox_size)
+
+    def _set_mask(self, vox_size):
+        """
+        Creates a mask for the given voxel sizes and saves it in self._masks
+        
+        @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
+        """
+        vox_size = Tree.Mask.parse_vox_size(vox_size)
+        self.masks[vox_size] = self.Mask(self, vox_size)
+
+    def get_mask(self, vox_size):
+        """
+        Creates a mask for the given voxel sizes and saves it in self._masks
+        
+        @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
+        """
+        vox_size = Tree.Mask.parse_vox_size(vox_size)
+        if not self._masks.has_key(vox_size):
+            self._set_mask(vox_size)
+        return self._masks[vox_size]
+
+    def shifted_tree(self, shift):
+        return ShiftedTree(self, shift)
 
     class Mask(object):
         """
@@ -72,7 +85,7 @@ class Tree(object):
             @param tree [Tree]: A loaded Neurolucida tree
             @param vox_size [float]: The requested voxel sizes with which to divide up the mask with
             """
-            self.vox_size = np.asarray(vox_size)
+            self.vox_size = np.asarray(self.parse_vox_size(vox_size))
             # Get the start and finish indices of the mask, as determined by the bounds of the tree
             self.start_index = np.array(np.floor(tree.min_bounds / self.vox_size), dtype=np.int)
             self.finish_index = np.array(np.ceil(tree.max_bounds / self.vox_size), dtype=np.int)
@@ -82,35 +95,103 @@ class Tree(object):
             # Initialise the actual numpy array to hold the values
             self.dim = self.finish_index - self.start_index
             self._mask = np.zeros(self.dim, dtype=bool)
-            # Create an grid of the voxel centres for efficient (and convenient) 
+            # Create an grid of the voxel centres for convenient (and more efficient) 
             # calculation of the distance from voxel centres to the tree points. Regarding the 
             # slightly odd notation of the numpy.mgrid function, the complex number '1j' is used 
             # to specify that the sequences are to be interpreted as self.dim[i] steps between 
-            # grid_start[i] and grid_finish[i].
+            # grid_start[i] and grid_finish[i] instead of a typical slice sequence.
             # (see http://docs.scipy.org/doc/numpy/reference/generated/numpy.mgrid.html)
             grid_start = self.offset + self.vox_size / 2.0
             grid_finish = self.limit - self.vox_size / 2.0
             X, Y, Z = np.mgrid[grid_start[0]:grid_finish[0]:(self.dim[0] * 1j),
                                grid_start[1]:grid_finish[1]:(self.dim[1] * 1j),
                                grid_start[2]:grid_finish[2]:(self.dim[2] * 1j)]
+            # Loop through all of the tree segments and "paint" the mask
             for point, diam in zip(tree.points, tree.diams):
                 start = np.array(np.floor((point - self.offset - diam) / self.vox_size),
                                  dtype=np.int)
                 finish = np.array(np.ceil((point - self.offset + diam) / self.vox_size),
                                   dtype=np.int)
-                dist = np.sqrt((X[start[0]:finish[0], 
-                                  start[1]:finish[1], 
+                dist = np.sqrt((X[start[0]:finish[0],
+                                  start[1]:finish[1],
                                   start[2]:finish[2]] - point[0]) ** 2 + \
-                               (Y[start[0]:finish[0], 
-                                  start[1]:finish[1], 
+                               (Y[start[0]:finish[0],
+                                  start[1]:finish[1],
                                   start[2]:finish[2]] - point[1]) ** 2 + \
-                               (Z[start[0]:finish[0], 
-                                  start[1]:finish[1], 
+                               (Z[start[0]:finish[0],
+                                  start[1]:finish[1],
                                   start[2]:finish[2]] - point[2]) ** 2)
                 point_mask = dist < diam
-                self._mask[start[0]:finish[0], 
-                           start[1]:finish[1], 
+                self._mask[start[0]:finish[0],
+                           start[1]:finish[1],
                            start[2]:finish[2]] += point_mask
+
+        def shifted_mask(self, shift):
+            return Tree.ShiftedMask(self, shift)
+
+        @classmethod
+        def parse_vox_size(cls, vox_size):
+            """
+            Converts (if necessary) the vox_size param to a 3-d tuple
+            
+            @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
+            """
+            # Ensure that vox_size is a 3-d vector (one for each dimension)
+            try:
+                vox_size = tuple(vox_size)
+                if len(vox_size) != 3:
+                    raise Exception("Incorrect number of dimensions ('{}') for vox_size "
+                                    "parameter, requires 3.".format(len(vox_size)))
+            except TypeError:
+                try:
+                    vox_size = float(vox_size)
+                    vox_size = (vox_size, vox_size, vox_size)
+                except TypeError:
+                    raise Exception("'vox_size' parameter ('{}') needs to be able to be "
+                                    "converted to a tuple or a float ".format(vox_size))
+            return vox_size
+
+        class ShiftedMask(Tree.Mask):
+
+            def __init__(self, mask, shift):
+                self.shift = np.asarray(shift)
+                if np.any(np.mod(self.shift, self.vox_size)):
+                    raise Exception("Shifts ({}) needs to be multiple of respective voxel sizes "
+                                    "({})".format(shift, self.vox_size))
+                # Copy invariant parameters
+                self.dim = mask.dim
+                self.vox_size = mask.vox_size
+                # Shift the start and finish indices of the mask
+                self.index_shift = np.array(np.floor(self.shift / self.vox_size), dtype=np.int)
+                self.start_index = mask.start_index + self.index_shift
+                self.finish_index = mask.finish_index + self.index_shift
+                # Set the offset and limit of the mask from the start and finish indices
+                self.offset = tree.offset + self.shift
+                self.limit = tree.limit + self.shift
+                ## The actual mask array is the same as that of the original mask i.e. not a copy. \
+                #  This is the whole point of the ShiftedTree and ShiftedMasks avoiding making \
+                # copies of this array
+                self._mask = mask._mask                
+                
+
+class ShiftedTree(Tree):
+
+    def __init__(self, tree, shift):
+        """
+        Saves a reference to the original tree and records a shift in its origin
+        
+        @param tree [Tree]: The original tree
+        @param shift [tuple(float)]: The shift from the original tree
+        """
+        self._original_tree = tree
+        self.shift = shift
+        self._masks = {}
+
+    def get_mask(self, vox_size):
+        vox_size = Tree.Mask.parse_vox_size(vox_size)
+        if not self._masks.has_key(vox_size):
+            self._masks[vox_size] = self._original_tree.get_mask(vox_size).shifted_mask(self.shift)
+        return self._masks[vox_size]
 
 
 class NeurolucidaXMLHandler(XMLHandler):
@@ -177,8 +258,8 @@ if __name__ == '__main__':
 #    pylab.imshow(tree.mask._mask[:,:,3])
     for z in xrange(tree.mask.dim[2]):
         pylab.figure()
-        pylab.imshow(tree.mask._mask[:,:,z])
+        pylab.imshow(tree.mask._mask[:, :, z])
     pylab.show()
     print "done"
-                    
-                    
+
+
