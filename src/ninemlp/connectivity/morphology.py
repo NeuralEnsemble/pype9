@@ -99,16 +99,19 @@ class Tree(object):
                                grid_start[2]:grid_finish[2]:(self.dim[2] * 1j)]
             # Loop through all of the tree segments and "paint" the mask
             for point, diam in zip(tree.points, tree.diams):
-                start = np.floor((point - self.offset - diam) / self.vox_size)
-                finish = np.ceil((point - self.offset + diam) / self.vox_size)
-                indices = np.ogrid[int(start[0]):int(finish[0]),
-                                   int(start[1]):int(finish[1]),
-                                   int(start[2]):int(finish[2])]
-                dist = np.sqrt((X[indices] - point[0]) ** 2 + \
-                               (Y[indices] - point[1]) ** 2 + \
-                               (Z[indices] - point[2]) ** 2)
+                extent_start = np.floor((point - self.offset - diam) / self.vox_size)
+                extent_finish = np.ceil((point - self.offset + diam) / self.vox_size)
+                # Get an "open" grid (uses less memory if it is open) of voxel indices to apply the 
+                # distance function to.
+                extent_indices = np.ogrid[int(extent_start[0]):int(extent_finish[0]),
+                                          int(extent_start[1]):int(extent_finish[1]),
+                                          int(extent_start[2]):int(extent_finish[2])]
+                dist = np.sqrt((X[extent_indices] - point[0]) ** 2 + \
+                               (Y[extent_indices] - point[1]) ** 2 + \
+                               (Z[extent_indices] - point[2]) ** 2)
+                # Get all points that are smaller than the diameter
                 point_mask = dist < diam
-                self._mask[indices] += point_mask
+                self._mask[extent_indices] += point_mask
 
         def shifted_mask(self, shift):
             return Tree.ShiftedMask(self, shift)
@@ -136,25 +139,35 @@ class Tree(object):
             return vox_size
 
     class ShiftedMask(Mask):
+        """
+        A shifted version of the Tree.Mask, that reuses the same mask array only with updated
+        start and finish indices (also updated offset and limits)
+        """
 
         def __init__(self, mask, shift):
+            """
+            Initialises the shifted mask
+            
+            @param mask [Tree.Mask]: The original mask
+            @param shift [tuple(float)]: The shift applied to the mask
+            """
             self.shift = np.asarray(shift)
             if np.any(np.mod(self.shift, self.vox_size)):
-                raise Exception("Shifts ({}) needs to be multiple of respective voxel sizes "
+                raise Exception("Shifts ({}) needs to be multiples of respective voxel sizes "
                                 "({})".format(shift, self.vox_size))
             # Copy invariant parameters
             self.dim = mask.dim
             self.vox_size = mask.vox_size
             # Shift the start and finish indices of the mask
-            self.index_shift = np.array(np.floor(self.shift / self.vox_size), dtype=np.int)
+            self.index_shift = np.array(self.shift / self.vox_size, dtype=np.int)
             self.start_index = mask.start_index + self.index_shift
             self.finish_index = mask.finish_index + self.index_shift
             # Set the offset and limit of the mask from the start and finish indices
             self.offset = tree.offset + self.shift
             self.limit = tree.limit + self.shift
             ## The actual mask array is the same as that of the original mask i.e. not a copy. \
-            #  This is the whole point of the ShiftedTree and ShiftedMasks avoiding making \
-            # copies of this array
+            # This is the whole point of the ShiftedTree and ShiftedMasks, to avoid making \
+            # unnecessary copies of this array.
             self._mask = mask._mask                
                 
 
