@@ -17,7 +17,8 @@ import collections
 import xml.sax
 from ninemlp import XMLHandler
 
-class VoxelSizeDoesNotMatchShiftException(Exception): pass
+class ShiftVoxelSizeMismatchException(Exception): pass
+
 
 class Tree(object):
 
@@ -32,12 +33,10 @@ class Tree(object):
         self.points = np.zeros((point_count, 3))
         self.diams = np.zeros(point_count)
         self._create_segments(self.root)
-        self.tiled_diams = np.tile(self.diams.reshape((-1, 1)), (1, 3))
-        self.min_bounds = np.squeeze(np.min(self.points - self.tiled_diams, axis=0))
-        self.max_bounds = np.squeeze(np.max(self.points + self.tiled_diams, axis=0))
         self._masks = {}
 
-    def _create_segments(self, branch, point_index=0):
+    def _create_segments(self, branch, start_point, seg_starts, seg_finish, finish_diams, finish_diams, 
+                         point_index=0):
         """
         A recursive algorithm to flatten the loaded tree into a numpy array of points used in the
         tree constructor.
@@ -71,14 +70,25 @@ class Tree(object):
         """
         return ShiftedTree(self, shift)
 
-    def overlap(self, tree, vox_size):
+    def num_overlapping(self, tree, vox_size):
         """
-        Calculate the overlap between two trees
+        Calculate the number of overlapping voxels between two trees
         
         @param tree [Tree]: The second tree to calculate the overlap with
         @param vox_size [tuple(float)]: The voxel sizes to use when calculating the overlap
         """
-        return self.get_mask(vox_size).overlap(tree.get_mask(vox_size))          
+        overlap_mask = self.get_mask(vox_size).overlap_mask(tree.get_mask(vox_size))
+        return np.sum(overlap_mask)
+
+    def any_connection_prob(self, tree, vox_size, gauss_kernel, sample_interval = 1):
+        """
+        Calculate the probability of there being any connection (there may be multiple)
+        
+        @param tree [Tree]: The second tree to calculate the overlap with
+        @param vox_size [tuple(float)]: The voxel sizes to use when calculating the overlap
+        """        
+        overlap_mask = self.get_mask(vox_size).overlap_mask(tree.get_mask(vox_size))
+        return 1.0 - np.prod(overlap_mask)
 
     class Mask(object):
         """
@@ -94,7 +104,17 @@ class Tree(object):
             @param vox_size [float]: The requested voxel sizes with which to divide up the mask with
             """
             self.vox_size = np.asarray(vox_size)
+            
+            # Set the minimum diameter required for a point to be guaranteed to effect
+            # at least one voxel
+            min_point_radius = np.max(self.vox_size) * (math.sqrt(3) / 2)
+            point_radii = self.diams
+            point_radii[point_radii < min_point_radius] = min_point_radius
             # Get the start and finish indices of the mask, as determined by the bounds of the tree
+            tiled_radii = np.tile(point_radii.reshape((-1, 1)), (1, 3))
+            self.min_bounds = np.squeeze(np.min(self.points - tiled_radii, axis=0))
+            self.max_bounds = np.squeeze(np.max(self.points + tiled_radii, axis=0))
+            # Get the start and finish indices of the mask, as determined by the bounds of the tree            
             self.start_index = np.array(np.floor(tree.min_bounds / self.vox_size), dtype=np.int)
             self.finish_index = np.array(np.ceil(tree.max_bounds / self.vox_size), dtype=np.int)
             # Set the offset and limit of the mask from the start and finish indices
@@ -114,22 +134,11 @@ class Tree(object):
             X, Y, Z = np.mgrid[grid_start[0]:grid_finish[0]:(self.dim[0] * 1j),
                                grid_start[1]:grid_finish[1]:(self.dim[1] * 1j),
                                grid_start[2]:grid_finish[2]:(self.dim[2] * 1j)]
-            # Set the minimum diameter required for a point to be guaranteed to effect
-            # at least one voxel
-            min_diam = np.max(self.vox_size) * (math.sqrt(3) / 2)
             # Loop through all of the tree segments and "paint" the mask
-            for point, diam in zip(tree.points, tree.diams):
-                # Ensure that the point makes it to at least the nearest voxel
-                if diam < min_diam:
-                    diam = min_diam
+            for point, point_radius in zip(tree.points, point_radii):
                 # Determine the extent of the mask indices that could be affected by the point
-                extent_start = np.floor((point - self.offset - diam) / self.vox_size)
-                extent_finish = np.ceil((point - self.offset + diam) / self.vox_size)
-                # Ensure the extent falls within the bounds of the image
-                # FIXME: This should really be taken into account by the "bounds" calculations
-                # which means calculating that when the mask is created.
-                extent_start[extent_start < 0] = 0.0
-                extent_finish[extent_finish > self.dim] = self.dim[extent_finish > self.dim]
+                extent_start = np.floor((point - self.offset - point_radius) / self.vox_size)
+                extent_finish = np.ceil((point - self.offset + point_radius) / self.vox_size)
                 # Get an "open" grid (uses less memory if it is open) of voxel indices to apply the 
                 # distance function to.
                 # (see http://docs.scipy.org/doc/numpy/reference/generated/numpy.ogrid.html)
@@ -141,15 +150,17 @@ class Tree(object):
                                (Y[extent_indices] - point[1]) ** 2 + \
                                (Z[extent_indices] - point[2]) ** 2)
                 # Mask all points that that are closer than the point diameter
-                point_mask = dist < diam
+                point_mask = dist < point_radius
                 self._mask_array[extent_indices] += point_mask
 
         def overlap(self, mask):
             if np.any(mask.vox_size != self.vox_size):
                 raise Exception("Voxel sizes do not match ({} and {})".format(self.vox_size, 
                                                                               mask.vox_size))
-            start_index = np.max(np.vstack((self.start_index, mask.start_index)), axis=0)
-            finish_index = np.min(np.vstack((self.finish_index, mask.finish_index)), axis=0)        
+            start_index = np.select([self.start_index >= mask.start_index, True],
+                                    [self.start_index, mask.start_index])
+            finish_index = np.select([self.finish_index <= mask.finish_index, True],
+                                    [self.finish_index, mask.finish_index])            
             if np.all(finish_index > start_index):
                 self_start_index = start_index - self.start_index
                 self_finish_index = finish_index - self.start_index
@@ -162,10 +173,9 @@ class Tree(object):
                                mask._mask_array[mask_start_index[0]:mask_finish_index[0],
                                                 mask_start_index[1]:mask_finish_index[1],
                                                 mask_start_index[2]:mask_finish_index[2]]
-                overlap = np.sum(overlap_mask)
             else:
-                overlap = 0
-            return overlap
+                overlap_mask = np.array()
+            return overlap_mask
 
         def shifted_mask(self, shift):
             return Tree.ShiftedMask(self, shift)
@@ -207,7 +217,7 @@ class Tree(object):
             """
             self.shift = np.asarray(shift)
             if np.any(np.mod(self.shift, self.vox_size)):
-                raise VoxelSizeDoesNotMatchShiftException("Shifts ({}) needs to be multiples of "
+                raise ShiftVoxelSizeMismatchException("Shifts ({}) needs to be multiples of "
                                                           "respective voxel sizes ({})"
                                                           .format(shift, self.vox_size))
             # Copy invariant parameters
@@ -308,7 +318,7 @@ if __name__ == '__main__':
     for tree in trees:
         print "min: {}, max: {}".format(tree.min_bounds, tree.max_bounds)
     vox_size = (2.5,2.5,2.5)
-    print "overlap: {}".format(trees[2].overlap(trees[4], vox_size=vox_size))
+    print "overlap: {}".format(trees[2].overlapping(trees[4], vox_size=vox_size))
     tree = trees[2]
     mask = tree.get_mask(vox_size)
     for z in xrange(mask.dim[2]):
