@@ -103,7 +103,7 @@ class Tree(object):
         overlap_mask = self._get_binary_mask(vox_size).overlap(tree._get_binary_mask(vox_size))
         return np.sum(overlap_mask)
 
-    def any_connection_prob(self, tree, vox_size, gauss_kernel, sample_freq):
+    def connection_prob(self, tree, vox_size, gauss_kernel, sample_freq):
         """
         Calculate the probability of there being any connection (there may be multiple)
         
