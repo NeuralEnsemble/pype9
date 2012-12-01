@@ -11,7 +11,7 @@
 #    Copyright 2011 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
-from abc import ABCMeta
+from abc import ABCMeta # Abstract base class Metaclass
 import math
 import numpy as np
 from numpy.linalg import norm
@@ -53,7 +53,9 @@ class Tree(object):
             self.points[point_index, :] = point[0:3]
             self.diams[point_index] = point[3]
             if prev_point:
-                self.segments.append(Tree.Segment(prev_point[0:3], point[0:3], point[3]))
+                self.segments.append(Tree.Segment(np.array(prev_point[0:3], dtype=float), 
+                                                           np.array(point[0:3], dtype=float), 
+                                                           float(point[3])))
             prev_point = point
             point_index += 1
         for branch in branch.sub_branches:
@@ -112,6 +114,13 @@ class Tree(object):
                             overlap(tree._get_inv_prob_mask(vox_size, gauss_kernel, sample_freq))
         return 1.0 - np.prod(inv_prob_mask)
 
+    def plot_mask(self, vox_size, mask_type='binary', gauss_kernel=None, sample_freq=None, 
+                  show=True):
+        if mask_type== 'binary':
+            mask = self._get_binary_mask(vox_size)
+        elif mask_type == 'inverse_prob':
+            mask = self._get_inv_prob_mask(vox_size, gauss_kernel, sample_freq)
+        mask.plot(show)
 
 class ShiftedTree(Tree):
 
@@ -205,6 +214,14 @@ class Mask(object):
 
     def shifted_mask(self, shift):
         return ShiftedMask(self, shift)
+   
+    def plot(self, show=True):
+        for z in xrange(self.dim[2]):
+            pylab.figure()
+            pylab.imshow(self._mask_array[:, :, z])
+            pylab.title('z = {}'.format(z))
+        if show:
+            pylab.show()
 
     @classmethod
     def parse_vox_size(cls, vox_size):
@@ -396,15 +413,9 @@ if __name__ == '__main__':
     import pylab
     trees = read_NeurolucidaXML(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
                                               'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
-    vox_size = (2.5, 2.5, 2.5)
+    vox_size = (0.5, 0.5, 0.5)
     print "overlap: {}".format(trees[2].num_overlapping(trees[4], vox_size=vox_size))
-    tree = trees[2]
-    mask = tree.get_mask(vox_size)
-    for z in xrange(mask.dim[2]):
-        pylab.figure()
-        pylab.imshow(mask._mask_array[:, :, z])
-        pylab.title(z)
-    pylab.show()
-    print "done"
+    trees[2].plot_mask(vox_size)
+
 
 
