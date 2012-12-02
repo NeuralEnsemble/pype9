@@ -11,13 +11,16 @@
 #    Copyright 2011 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
-from abc import ABCMeta # Abstract base class Metaclass
+from abc import ABCMeta # Metaclass for abstract base classes
 import math
 import numpy as np
 from numpy.linalg import norm
 import collections
 import xml.sax
 from ninemlp import XMLHandler
+
+THRESHOLD_DEFAULT = 0.001
+SAMPLE_DIAM_RATIO_DEFAULT = 4.0
 
 class ShiftVoxelSizeMismatchException(Exception): pass
 
@@ -37,6 +40,10 @@ class Tree(object):
         self.num_points = point_count
         self.points = np.zeros((point_count, 3))
         self.diams = np.zeros((point_count, 1))
+        self.min_bounds = np.min(self.points - np.hstack((self.diams, self.diams, self.diams)),
+                                 axis=0)
+        self.max_bounds = np.max(self.points + np.hstack((self.diams, self.diams, self.diams)),
+                                 axis=0)
         self.segments = []
         self._flatten(self.root)
         self._binary_masks = {}
@@ -53,8 +60,8 @@ class Tree(object):
             self.points[point_index, :] = point[0:3]
             self.diams[point_index] = point[3]
             if prev_point:
-                self.segments.append(Tree.Segment(np.array(prev_point[0:3], dtype=float), 
-                                                           np.array(point[0:3], dtype=float), 
+                self.segments.append(Tree.Segment(np.array(prev_point[0:3], dtype=float),
+                                                           np.array(point[0:3], dtype=float),
                                                            float(point[3])))
             prev_point = point
             point_index += 1
@@ -62,7 +69,7 @@ class Tree(object):
             point_index = self._flatten(branch, point_index, prev_point)
         return point_index
 
-    def _get_binary_mask(self, vox_size):
+    def get_binary_mask(self, vox_size, sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
         """
         Creates a mask for the given voxel sizes and saves it in self._masks
         
@@ -70,21 +77,28 @@ class Tree(object):
         """
         vox_size = Mask.parse_vox_size(vox_size)
         if not self._binary_masks.has_key(vox_size):
-            self._binary_masks[vox_size] = BinaryMask(self, vox_size)
+            self._binary_masks[vox_size] = BinaryMask(self, vox_size, sample_diam_ratio)
         return self._binary_masks[vox_size]
 
-    def _get_inv_prob_mask(self, vox_size, gauss_kernel, sample_freq):
+    def get_inv_prob_mask(self, vox_size, gauss_kernel, threshold=THRESHOLD_DEFAULT,
+                           sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
         """
         Creates a mask for the given voxel sizes and saves it in self._masks
         
         @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
+        
         """
         vox_size = Mask.parse_vox_size(vox_size)
         if not self._inv_prob_masks.has_key(vox_size):
-            self._inv_prob_masks[vox_size] = InverseProbabilityMask(self, vox_size, gauss_kernel, 
-                                                                    sample_freq)
+            self._inv_prob_masks[vox_size] = InverseProbabilityMask(self, vox_size, gauss_kernel,
+                                                                    threshold, sample_diam_ratio)
         return self._inv_prob_masks[vox_size]
-    
+
+    def get_prob_mask(self, vox_size, gauss_kernel, threshold,
+                           sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
+        inv_prob_mask = self.get_inv_prob_mask(vox_size, gauss_kernel, threshold, sample_diam_ratio)
+        return 1.0 - inv_prob_mask
+
     def shifted_tree(self, shift):
         """
         Return shifted version of tree
@@ -100,26 +114,26 @@ class Tree(object):
         @param tree [Tree]: The second tree to calculate the overlap with
         @param vox_size [tuple(float)]: The voxel sizes to use when calculating the overlap
         """
-        overlap_mask = self._get_binary_mask(vox_size).overlap(tree._get_binary_mask(vox_size))
+        overlap_mask = self.get_binary_mask(vox_size).overlap(tree.get_binary_mask(vox_size))
         return np.sum(overlap_mask)
 
-    def connection_prob(self, tree, vox_size, gauss_kernel, sample_freq):
+    def connection_prob(self, tree, vox_size, gauss_kernel, threshold, sample_freq):
         """
         Calculate the probability of there being any connection (there may be multiple)
         
         @param tree [Tree]: The second tree to calculate the overlap with
         @param vox_size [tuple(float)]: The voxel sizes to use when calculating the overlap
         """
-        inv_prob_mask = self._get_inv_prob_mask(vox_size, gauss_kernel, sample_freq).\
-                            overlap(tree._get_inv_prob_mask(vox_size, gauss_kernel, sample_freq))
+        inv_prob_mask = self.get_inv_prob_mask(vox_size, gauss_kernel, sample_freq).\
+                            overlap(tree.get_inv_prob_mask(vox_size, gauss_kernel, sample_freq))
         return 1.0 - np.prod(inv_prob_mask)
 
-    def plot_mask(self, vox_size, mask_type='binary', gauss_kernel=None, sample_freq=None, 
+    def plot_mask(self, vox_size, mask_type='binary', gauss_kernel=None, sample_freq=None,
                   show=True):
-        if mask_type== 'binary':
-            mask = self._get_binary_mask(vox_size)
+        if mask_type == 'binary':
+            mask = self.get_binary_mask(vox_size)
         elif mask_type == 'inverse_prob':
-            mask = self._get_inv_prob_mask(vox_size, gauss_kernel, sample_freq)
+            mask = self.get_inv_prob_mask(vox_size, gauss_kernel, sample_freq)
         mask.plot(show)
 
 class ShiftedTree(Tree):
@@ -136,17 +150,18 @@ class ShiftedTree(Tree):
         self._binary_masks = {}
         self._inv_prob_masks = {}
 
-    def _get_binary_mask(self, vox_size):
+    def get_binary_mask(self, vox_size, sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
         vox_size = Mask.parse_vox_size(vox_size)
         if not self._binary_masks.has_key(vox_size):
-            self._binary_masks[vox_size] = self._original_tree._get_binary_mask(vox_size).\
+            self._binary_masks[vox_size] = self._original_tree.get_binary_mask(vox_size).\
                                                 shifted_mask(self.shift)
         return self._binary_masks[vox_size]
 
-    def _get_inv_prob_mask(self, vox_size):
+    def get_inv_prob_mask(self, vox_size, gauss_kernel,
+                           sample_ratio_diam=SAMPLE_DIAM_RATIO_DEFAULT):
         vox_size = Mask.parse_vox_size(vox_size)
         if not self._inv_prob_masks.has_key(vox_size):
-            self._inv_prob_masks[vox_size] = self._original_tree._get_inv_prob_mask(vox_size).\
+            self._inv_prob_masks[vox_size] = self._original_tree.get_inv_prob_mask(vox_size).\
                                                 shifted_mask(self.shift)
         return self._inv_prob_masks[vox_size]
 
@@ -157,7 +172,7 @@ class Mask(object):
     (3D pixels) of arbitrary width that divide up the bounding box of a dendritic/axonal tree
     """
     __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
-    
+
     def __init__(self, tree, vox_size, point_extents):
         """
         Initialises the mask from a given Neurolucida tree and voxel size
@@ -187,7 +202,7 @@ class Mask(object):
         self.X, self.Y, self.Z = np.mgrid[grid_start[0]:grid_finish[0]:(self.dim[0] * 1j),
                                           grid_start[1]:grid_finish[1]:(self.dim[1] * 1j),
                                           grid_start[2]:grid_finish[2]:(self.dim[2] * 1j)]
-        
+
     def overlap(self, mask):
         if np.any(mask.vox_size != self.vox_size):
             raise Exception("Voxel sizes do not match ({} and {})".format(self.vox_size,
@@ -214,12 +229,17 @@ class Mask(object):
 
     def shifted_mask(self, shift):
         return ShiftedMask(self, shift)
-   
-    def plot(self, show=True):
-        for z in xrange(self.dim[2]):
+
+    def plot(self, slice_dim=2, skip=1, show=True):
+        for i in xrange(0, self.dim[slice_dim], skip):
             pylab.figure()
-            pylab.imshow(self._mask_array[:, :, z])
-            pylab.title('z = {}'.format(z))
+            mask_shape = self._mask_array.shape
+            if slice_dim == 0: slice_indices = np.ogrid[i, 0:mask_shape[1], 0:mask_shape[2]]
+            elif slice_dim == 1: slice_indices = np.ogrid[0:mask_shape[0], i, 0:mask_shape[2]]
+            elif slice_dim == 2: slice_indices = np.ogrid[0:mask_shape[0], 0:mask_shape[1], i]
+            else: raise Exception("Slice dimension can only be 0-2 ({} provided)".format(slice_dim))
+            pylab.imshow(self._mask_array[slice_indices])
+            pylab.title('dim {}, index {}'.format(slice_dim, i))
         if show:
             pylab.show()
 
@@ -247,8 +267,8 @@ class Mask(object):
 
 
 class BinaryMask(Mask):
-    
-    def __init__(self, tree, vox_size, sample_diam_ratio = 2.0):    
+
+    def __init__(self, tree, vox_size, sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
         # Set the minimum diameter required for a point to be guaranteed to effect
         # at least one voxel
         min_point_radius = np.max(vox_size) * (math.sqrt(3.0) / 2.0)
@@ -288,8 +308,9 @@ class BinaryMask(Mask):
 
 
 class InverseProbabilityMask(Mask):
-    
-    def __init__(self, tree, vox_size, extent, gauss_kernel, sample_freq):
+
+    def __init__(self, tree, vox_size, gauss_kernel, threshold=THRESHOLD_DEFAULT,
+                 sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
         point_extents = np.ones((tree.num_points, 3)) * extent
         # Call the base 'Mask' class constructor to set up the 
         Mask.__init__(self, tree, vox_size, point_extents)
