@@ -29,6 +29,7 @@ class Tree(object):
 
     Segment = collections.namedtuple('Segment', 'begin end diam')
 
+    #FIXME: Remove point count and just work it out dynamically, and make more general constructor
     def __init__(self, root, point_count):
         """
         Initialised the Tree object
@@ -224,7 +225,7 @@ class Mask(object):
                                             mask_start_index[1]:mask_finish_index[1],
                                             mask_start_index[2]:mask_finish_index[2]]
         else:
-            overlap_mask = np.array()
+            overlap_mask = np.array([])
         return overlap_mask
 
     def shifted_mask(self, shift):
