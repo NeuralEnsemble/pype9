@@ -17,7 +17,7 @@ import os
 import numpy
 from ninemlp import SRC_PATH, DEFAULT_BUILD_MODE, pyNN_build_mode
 from ninemlp.neuron.build import compile_nmodl
-compile_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN_build_mode, 
+compile_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN_build_mode,
               silent=True)
 import ninemlp.common
 from ninemlp.common import seg_varname
@@ -63,7 +63,7 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
             if issubclass(cell_type, NCMLCell):
                 params = params.copy()
                 params['parent'] = self
-            pyNN.neuron.Population.__init__(self, size, cell_type, params, structure=None, 
+            pyNN.neuron.Population.__init__(self, size, cell_type, params, structure=None,
                                             label=label)
 
 
@@ -88,15 +88,15 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
                 if parts.has_key('position'): # Check to see if the position is between 0-1
                     pos = float(parts['position'])
                     if pos < 0.0 or pos > 1.0:
-                        raise Exception("Position parameter in recording string, {}, is out of " \
-                                        "range (0.0-1.0)".format(pos))                    
+                        raise Exception("Position parameter in recording string, {}, is out of "
+                                        "range (0.0-1.0)".format(pos))
                 return True
             else:
                 raise Exception("Could not parse variable name '%s'" % variable)
         else:
             return pyNN.neuron.Population.can_record(self, variable)
 
-    def record(self, variable, filename, section='source_section', position=0.5):
+    def record(self, variable, filename, cells=None, section='source_section', position=0.5):
         """
         Record spikes to a file. source can be an individual cell, a Population,
         PopulationView or Assembly.
@@ -104,13 +104,34 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
         if variable == 'spikes':
             variable_str = variable
         else:
-            variable_str = '{section}({position}).{variable}'.format(section=section, 
-                                                              position=position, variable=variable)
-        self._record(variable_str, to_file=filename)
-        # recorder_list is used by end()
+            variable_str = '{section}({position}).{variable}' \
+                           .format(section=section, position=position, variable=variable)
+        self._record(variable_str, to_file=filename)                           
+        # The following code is modified from  to allow
+        # individual cells to be recorded with voltage traces
+#        if variable is None:                             
+#            for recorder in self.recorders.values():
+#                recorder.reset()
+#            self.recorders = {}    
+#        else:
+#            if not self.can_record(variable):
+#                raise pyNN.neuron.errors.RecordingError(variable, self.celltype)        
+#            pyNN.neuron.logger.debug("%s.record('%s')", self.label, variable)
+#            if variable not in self.recorders:
+#                self._add_recorder(variable, filename)
+#            if self.record_filter is not None:
+#                self.recorders[variable].record(self.record_filter)
+#            else:
+#                self.recorders[variable].record(self.all_cells)
+#            #if isinstance(filename, basestring):
+#            #    self.recorders[variable].file = filename
+#            # recorder_list is used by end()
+#        # --------------------
+#        # END self._record(variable_str, to_filename) modification
+#        # --------------------
         if self.recorders[variable_str] not in simulator.recorder_list:
             # this is a bit hackish - better to add to Population.__del__?
-            simulator.recorder_list.append(self.recorders[variable_str])  
+            simulator.recorder_list.append(self.recorders[variable_str])
 
     def record_all(self, file_prefix):
         """
@@ -127,12 +148,12 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
 
 class Projection(pyNN.neuron.Projection):
 
-    def __init__(self, pre, dest, label, connector, source=None, target=None, 
+    def __init__(self, pre, dest, label, connector, source=None, target=None,
                  build_mode=DEFAULT_BUILD_MODE):
         self.label = label
         if build_mode == 'build_only' or build_mode == 'compile_only':
             print "Warning! '--compile' option was set to 'build_only', meaning the projection " \
-                    "'{}' was not constructed.".format(label)
+                  "'{}' was not constructed.".format(label)
         else:
             pyNN.neuron.Projection.__init__(self, pre, dest, connector, label=label, source=source,
                                                                                       target=target)
@@ -140,7 +161,7 @@ class Projection(pyNN.neuron.Projection):
 
 class Network(ninemlp.common.Network):
 
-    def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None, 
+    def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None,
                                  max_delay=None, temperature=None, silent_build=False, flags=[]):
         self._pyNN_module = pyNN.neuron
         self._ncml_module = ncml
@@ -148,15 +169,15 @@ class Network(ninemlp.common.Network):
         self._Projection_class = Projection
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         #Call the base function initialisation function.
-        ninemlp.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep, 
-                                        min_delay=min_delay, max_delay=max_delay, 
+        ninemlp.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep,
+                                        min_delay=min_delay, max_delay=max_delay,
                                     temperature=temperature, silent_build=silent_build, flags=flags)
 
     def _convert_units(self, value_str, units=None):
         if ' ' in value_str:
             if units:
-                raise Exception("Units defined in both argument ('{}') and value string ('{}')".\
-                                format(units, value_str))
+                raise Exception("Units defined in both argument ('{}') and value string ('{}')"
+                                .format(units, value_str))
             (value, units) = value_str.split()
         else:
             value = value_str
@@ -164,7 +185,7 @@ class Network(ninemlp.common.Network):
         try:
             value = float(value)
         except:
-            raise Exception("Incorrectly formatted value string '{}', should be a number optionally"\
+            raise Exception("Incorrectly formatted value string '{}', should be a number optionally"
                             " followed by a space and units (eg. '1.5 Hz')".format(value_str))
         if not units:
             return value
@@ -194,7 +215,7 @@ class Network(ninemlp.common.Network):
             raise Exception("Unrecognised units '%s'" % units)
 
 
-    def _set_simulation_params(self, **params):      
+    def _set_simulation_params(self, **params):
         """
         Sets the simulation parameters either from the passed parameters or from the networkML
         description
@@ -205,7 +226,7 @@ class Network(ninemlp.common.Network):
         p = self._get_simulation_params(**params)
         setup(p['timestep'], p['min_delay'], p['max_delay'])
         neuron.h.celsius = p['temperature']
-        
+
 
     def _get_target_str(self, synapse, segment=None):
         if not segment:
