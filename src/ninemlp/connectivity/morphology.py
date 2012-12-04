@@ -41,12 +41,13 @@ class Tree(object):
         self.num_points = point_count
         self.points = np.zeros((point_count, 3))
         self.diams = np.zeros((point_count, 1))
+        self.segments = []
+        self._flatten(self.root)
         self.min_bounds = np.min(self.points - np.hstack((self.diams, self.diams, self.diams)),
                                  axis=0)
         self.max_bounds = np.max(self.points + np.hstack((self.diams, self.diams, self.diams)),
                                  axis=0)
-        self.segments = []
-        self._flatten(self.root)
+        self.centroid = np.average(self.points, axis=0)
         self._binary_masks = {}
         self._inv_prob_masks = {}
 
@@ -357,9 +358,9 @@ class ShiftedMask(Mask):
         @param shift [tuple(float)]: The shift applied to the mask
         """
         self.shift = np.asarray(shift)
-        if np.any(np.mod(self.shift, self.vox_size)):
+        if np.any(np.mod(self.shift, mask.vox_size)):
             raise ShiftVoxelSizeMismatchException("Shifts ({}) needs to be multiples of respective "
-                                                  "voxel sizes ({})".format(shift, self.vox_size))
+                                                  "voxel sizes ({})".format(shift, mask.vox_size))
         # Copy invariant parameters
         self.dim = mask.dim
         self.vox_size = mask.vox_size
