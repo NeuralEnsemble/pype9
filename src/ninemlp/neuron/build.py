@@ -99,7 +99,7 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
             f.write(ncml_mtime)
         rebuilt = True
     if rebuilt or build_mode == 'compile_only':
-        compile_nmodl(install_dir, build_mode='force', silent=silent_build)            
+        compile_nmodl(install_dir, build_mode='force', silent=silent_build)
     # Load the parameter name translations from the params dir 
     component_parameters = load_component_parameters(celltype_name, params_dir)
     return install_dir, component_parameters

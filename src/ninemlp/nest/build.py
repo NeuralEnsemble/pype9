@@ -18,10 +18,10 @@ import shutil
 from ninemlp import DEFAULT_BUILD_MODE
 from ninemlp.common.build import path_to_exec, get_build_paths, load_component_parameters
 
-_SIMULATOR_BUILD_NAME ='nest'
+_SIMULATOR_BUILD_NAME = 'nest'
 
 def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
-                                method='cvode', build_mode=DEFAULT_BUILD_MODE, silent_build=False):    
+                                method='cvode', build_mode=DEFAULT_BUILD_MODE, silent_build=False):
     """
     Generates the cpp code corresponding to the NCML file, then configures, and compiles and installs
     the corresponding module into nest
@@ -33,18 +33,18 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     @param method [str]: The method option to be passed to the NeMo interpreter command
     """
     # Determine the paths for the src, build and install directories
-    default_install_dir, params_dir, src_dir, compile_dir = get_build_paths(ncml_path, celltype_name, 
+    default_install_dir, params_dir, src_dir, compile_dir = get_build_paths(ncml_path, celltype_name,
                                         _SIMULATOR_BUILD_NAME, build_parent_dir=build_parent_dir)
     if not install_dir:
         install_dir = default_install_dir
     # Clean existing directories from previous builds. TODO: It is a bit wasteful to build the module again everytime, it should be checked to see if the module needs rebuilding first.
     shutil.rmtree(src_dir, ignore_errors=True)
-    shutil.rmtree(params_dir, ignore_errors=True)    
+    shutil.rmtree(params_dir, ignore_errors=True)
     shutil.rmtree(compile_dir, ignore_errors=True)
     shutil.rmtree(install_dir, ignore_errors=True)
     # Create fresh directories
     os.makedirs(src_dir)
-    os.makedirs(params_dir)    
+    os.makedirs(params_dir)
     os.makedirs(compile_dir)
     os.makedirs(install_dir)
     # Compile the NCML file into NEST cpp code
@@ -348,7 +348,7 @@ automake --foreign --add-missing --force-missing --copy
 echo "Done."
 """.format(src_dir=src_dir)
     # Save original working directory to reinstate it afterwards (just to be polite)
-    orig_dir = os.getcwd() 
+    orig_dir = os.getcwd()
     # Run bootstrap command to create configure script
     os.chdir(src_dir)
     sp.check_call(bootstrap_cmd, shell=True)

@@ -73,13 +73,13 @@ class ValueWithUnits(object):
             raise Exception("Unrecognised units '{}' (A conversion from these units \
                             to the standard NEURON units needs to be added to \
                             'ninemlp.common.ncml.neuron_value' function).".format(self.units))
-            
+
 
 class NetworkMLHandler(XMLHandler):
 
     Network = collections.namedtuple('Network', 'id sim_params populations projections free_params')
-    Population = collections.namedtuple('Population', ('id', 'cell_type', 'morph_id', 'size', 
-                                                       'layout', 'cell_params', 
+    Population = collections.namedtuple('Population', ('id', 'cell_type', 'morph_id', 'size',
+                                                       'layout', 'cell_params',
                                                        'initial_conditions', 'flags', 'not_flags'))
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay flags ' \
                                                       'not_flags')
@@ -261,7 +261,7 @@ def read_networkML(filename):
 
 class Network(object):
 
-    def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None, 
+    def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None,
                  max_delay=None, temperature=None, silent_build=False, flags=[]):
         assert  hasattr(self, "_pyNN_module") and \
                 hasattr(self, "_ncml_module") and \
@@ -343,12 +343,12 @@ class Network(object):
                     "if you want to do something afterwards)"
             raise SystemExit(0)
 
-    def _create_population(self, label, size, cell_type_name, morph_id, layout, cell_params, 
+    def _create_population(self, label, size, cell_type_name, morph_id, layout, cell_params,
                            cell_param_distrs, initial_conditions, verbose, silent_build):
         if cell_type_name + ".xml" in os.listdir(self.cells_dir):
             cell_type = self._ncml_module.load_cell_type(cell_type_name,
                                             os.path.join(self.cells_dir, cell_type_name + ".xml"),
-                                            morph_id = morph_id,
+                                            morph_id=morph_id,
                                             build_mode=self.build_mode,
                                             silent=silent_build)
         elif cell_type_name in dir(self._pyNN_module.standardmodels.cells):
@@ -386,7 +386,7 @@ class Network(object):
                                                                         build_mode=self.build_mode)
         # Set layout
         if not (self.build_mode == 'build_only' or self.build_mode == 'compile_only'):
-            if layout: 
+            if layout:
                 pop._set_positions(positions)
             pop._randomly_distribute_params(cell_param_distrs)
             pop._randomly_distribute_initial_conditions(initial_conditions)
@@ -409,11 +409,11 @@ class Network(object):
                 raise Exception("Could not initialise distance expression class '{}' from given " \
                                 "arguments '{}' ('{}')".format(expression, connection.args, e))
             # If weight is a string containing a simple value and units
-            if self.is_value_str(weight): 
+            if self.is_value_str(weight):
                 weight = self._convert_units(weight)
             elif hasattr(weight, 'pattern'):
                 if weight.pattern == 'DistanceBased':
-                    GeometricExpression = getattr(ninemlp.connectivity.point2point, 
+                    GeometricExpression = getattr(ninemlp.connectivity.point2point,
                                                   weight.args.pop('geometry'))
                     weight_expr = GeometricExpression(**self._convert_all_units(weight.args))
                 else:
@@ -422,11 +422,11 @@ class Network(object):
             else:
                 raise Exception("Could not parse weight specification '{}'".format(weight))
             # If delay is a string containing a simple value and units
-            if self.is_value_str(delay): 
+            if self.is_value_str(delay):
                 delay = self._convert_units(delay)
             elif hasattr(delay, 'pattern'):
                 if delay.pattern == 'DistanceBased':
-                    GeometricExpression = getattr(ninemlp.connectivity.point2point, 
+                    GeometricExpression = getattr(ninemlp.connectivity.point2point,
                                                   delay.args.pop('geometry'))
                     delay_expr = GeometricExpression(min_value=self.get_min_delay(),
                                                      **self._convert_all_units(delay.args))
@@ -441,12 +441,12 @@ class Network(object):
                                     connect_expr, allow_self_connections=allow_self_connections,
                                     weights=weight_expr, delays=delay_expr)
         elif connection.pattern == "Extension":
-            engine = connection.args.pop('engine') 
+            engine = connection.args.pop('engine')
             # TODO: The following lines of processing 
             # shouldn't happen here, it should be part of the 
             # external engine (EDIT: not sure what I mean by this now).
-            if engine == "Brep":                   
-                proj_id = connection.args['id']    
+            if engine == "Brep":
+                proj_id = connection.args['id']
                 if proj_id not in os.listdir(self.proj_dir):
                     raise Exception("Connection id '{}' was not found in search path ({}).".\
                                     format(proj_id, self.proj_dir))

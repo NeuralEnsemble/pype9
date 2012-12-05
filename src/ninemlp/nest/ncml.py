@@ -65,7 +65,7 @@ def load_cell_type(celltype_name, ncml_path, build_mode=DEFAULT_BUILD_MODE, sile
                                                                             old_dir=old_ncml_path))
     else:
         dct = {}
-        install_dir, dct['component_parameters'] = build_celltype_files(celltype_name, ncml_path, 
+        install_dir, dct['component_parameters'] = build_celltype_files(celltype_name, ncml_path,
                                                                             build_mode=build_mode)
         lib_dir = os.path.join(install_dir, 'lib', 'nest')
         if sys.platform.startswith('linux') or \
@@ -84,7 +84,7 @@ def load_cell_type(celltype_name, ncml_path, build_mode=DEFAULT_BUILD_MODE, sile
         # Install nest module
         nest.Install(celltype_name)
         dct['ncml_model'] = read_NCML(celltype_name, ncml_path)
-        dct['morphml_model'] =read_MorphML(celltype_name, ncml_path)
+        dct['morphml_model'] = read_MorphML(celltype_name, ncml_path)
         dct['nest_model'] = celltype_name
         # Add the loaded cell type to the list of cell types that have been loaded
         cell_type = NCMLMetaClass(str(celltype_name), (pyNN.models.BaseCellType, NCMLCell), dct)

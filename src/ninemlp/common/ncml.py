@@ -76,8 +76,8 @@ class MorphMLHandler(XMLHandler):
             if hasattr(self, 'morphology'):
                 if self.morph_id:
                     message = "Multiple morphologies were found in the '{celltype}' NCML file " \
-                              "matching the ID '{id}'".format(celltype=self.celltype_id, 
-                                                              id=self.morph_id) 
+                              "matching the ID '{id}'".format(celltype=self.celltype_id,
+                                                              id=self.morph_id)
                 else:
                     message = "Multiple morphologies are specified in the given '{celltype}' " \
                               "NCML file but no morphology was specified either in the " \
@@ -112,7 +112,7 @@ class MorphMLHandler(XMLHandler):
             if attrs.get('default', None) == 'True':
                 if self.default_group:
                     raise Exception("Cannot have two default members for a single segmentGroup (" \
-                                    "'{orig}' and '{new}'".format(orig=self.default_group, 
+                                    "'{orig}' and '{new}'".format(orig=self.default_group,
                                                                   new=attrs['id']))
                 self.default_group = attrs['id']
         elif self._opening(tag_name, attrs, 'member', parents=['segmentGroup']):
@@ -120,7 +120,7 @@ class MorphMLHandler(XMLHandler):
             if attrs.get('default', None) == 'True':
                 if self.segment_group_default_member:
                     raise Exception("Cannot have two default members for a single segmentGroup (" \
-                                    "'{orig}' and '{new}'".format( \
+                                    "'{orig}' and '{new}'".format(\
                                     orig=self.segment_group_default_member, new=attrs['segment']))
                 self.segment_group_default_member = attrs['segment']
 
@@ -356,16 +356,16 @@ class BaseNCMLMetaClass(type):
         # Add current and synapse mechanisms parameters
         for mech in ncml_model.mechanisms:
             if component_parameters.has_key(mech.id):
-                default_params.update([(group_varname(mech.group_id) + "." + mech.id + 
+                default_params.update([(group_varname(mech.group_id) + "." + mech.id +
                                         "." + key, val[0])
                                        for key, val in component_parameters[mech.id].iteritems()])
             else:
                 for param in mech.params:
-                    default_params[group_varname(mech.group_id) + "." + mech.id + "." + 
+                    default_params[group_varname(mech.group_id) + "." + mech.id + "." +
                                    param.name] = param.value
         for syn in ncml_model.synapses:
             for param in syn.params:
-                default_params[group_varname(syn.group_id) + "." + syn.id + "." + 
+                default_params[group_varname(syn.group_id) + "." + syn.id + "." +
                                param.name] = param.value
         # Add basic electrical property parameters
         for cm in ncml_model.capacitances:

@@ -74,7 +74,7 @@ class XMLHandler(xml.sax.handler.ContentHandler):
             return True
         else:
             return False
-        
+
     def _parents_match(self, required_parents, open_parents):
         if len(required_parents) > len(open_parents):
             return False
@@ -88,19 +88,19 @@ class XMLHandler(xml.sax.handler.ContentHandler):
                         return False
                 except TypeError:
                     raise Exception("Elements of the 'required_parents' argument need to be " \
-                                    "either strings or lists/tuples of strings") 
+                                    "either strings or lists/tuples of strings")
         return True
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-                
-        
+
+
+
+
+
+
+
+
+
+
+
+
+
+

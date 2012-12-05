@@ -106,7 +106,7 @@ class Network(ninemlp.common.Network):
             raise Exception("There was an error setting the min_delay of the simulation, \
 try changing the values for timestep ({time}) and min_delay ({delay}). (Message - {e})".format(
                                                                               time=p['timestep'],
-                                                                              delay=p['min_delay'], 
+                                                                              delay=p['min_delay'],
                                                                               e=e))
         self.temperature = p['temperature']
 

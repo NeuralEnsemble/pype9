@@ -614,9 +614,9 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
         return recordable
 
 
-def load_cell_type(celltype_id, ncml_path, morph_id=None, build_mode=DEFAULT_BUILD_MODE, 
+def load_cell_type(celltype_id, ncml_path, morph_id=None, build_mode=DEFAULT_BUILD_MODE,
                    silent=False):
-    celltype_name=celltype_id
+    celltype_name = celltype_id
     if morph_id:
         celltype_name += morph_id
     if loaded_celltypes.has_key(celltype_name):
