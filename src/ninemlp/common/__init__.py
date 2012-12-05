@@ -572,7 +572,14 @@ class Network(object):
         for proj in self.all_projections():
             proj.saveConnections(os.path.join(output_dir, proj.label))
 
-    def record_all_spikes(self, file_prefix):
+    def record_spikes(self):
+        """
+        Record all spikes generated in the network (to be saved to file with Network.print_spikes)
+        """
+        for pop in self.all_populations():
+            pop.record() #@UndefinedVariable                
+
+    def print_spikes(self, file_prefix):
         """
         Record all spikes generated in the network
         
@@ -584,8 +591,7 @@ class Network(object):
         if not os.path.isdir(file_prefix) and not file_prefix.endswith('.'):
             file_prefix += '.'
         for pop in self.all_populations():
-            pop.record('spikes', file_prefix + pop.label + '.spikes') #@UndefinedVariable                
-
+            pop.printSpikes(file_prefix + pop.label + '.spikes') #@UndefinedVariable                
 
 class Population(object):
 
