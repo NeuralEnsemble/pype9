@@ -799,7 +799,7 @@ class PopulationView(BasePopulation):
                 self.mask = numpy.unique(self.mask)
                     # Added TGC 5/12/12
         self.all_cells    = self.parent.all_cells[self.mask]  # do we need to ensure this is ordered?
-        if not self.all_cells:
+        if not self.all_cells.shape[0]:
             raise Exception("Attempted to slice the population/assembly '{}' with empty indices "
                             "(population size={}, selector={})"
                             .format(parent.label, len(self.parent.all_cells), selector)) 
