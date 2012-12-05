@@ -589,7 +589,7 @@ class Network(object):
         # Add a dot to separate the prefix from the population label if it doesn't already have one
         # and isn't a directory
         if not os.path.isdir(file_prefix) and not file_prefix.endswith('.') \
-                and file_prefix.endswith('/'):
+                and not file_prefix.endswith('/'):
             file_prefix += '.'
         for pop in self.all_populations():
             pop.printSpikes(file_prefix + pop.label + '.spikes') #@UndefinedVariable                
