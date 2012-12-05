@@ -67,6 +67,7 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
                                             label=label)
 
 
+    #FIXME: I think this should be deleted
     def set_param(self, cell_id, param, value, component=None, section=None):
         raise NotImplementedError('set_param has not been implemented for Population class yet')
 
@@ -96,55 +97,55 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
         else:
             return pyNN.neuron.Population.can_record(self, variable)
 
-    def record(self, variable, filename, cells=None, section='source_section', position=0.5):
-        """
-        Record spikes to a file. source can be an individual cell, a Population,
-        PopulationView or Assembly.
-        """
-        if variable == 'spikes':
-            variable_str = variable
-        else:
-            variable_str = '{section}({position}).{variable}' \
-                           .format(section=section, position=position, variable=variable)
-        self._record(variable_str, to_file=filename)                           
-        # The following code is modified from  to allow
-        # individual cells to be recorded with voltage traces
-#        if variable is None:                             
-#            for recorder in self.recorders.values():
-#                recorder.reset()
-#            self.recorders = {}    
+#    def record(self, variable, filename, cells=None, section='source_section', position=0.5):
+#        """
+#        Record spikes to a file. source can be an individual cell, a Population,
+#        PopulationView or Assembly.
+#        """
+#        if variable == 'spikes':
+#            variable_str = variable
 #        else:
-#            if not self.can_record(variable):
-#                raise pyNN.neuron.errors.RecordingError(variable, self.celltype)        
-#            pyNN.neuron.logger.debug("%s.record('%s')", self.label, variable)
-#            if variable not in self.recorders:
-#                self._add_recorder(variable, filename)
-#            if self.record_filter is not None:
-#                self.recorders[variable].record(self.record_filter)
-#            else:
-#                self.recorders[variable].record(self.all_cells)
-#            #if isinstance(filename, basestring):
-#            #    self.recorders[variable].file = filename
-#            # recorder_list is used by end()
-#        # --------------------
-#        # END self._record(variable_str, to_filename) modification
-#        # --------------------
-        if self.recorders[variable_str] not in simulator.recorder_list:
-            # this is a bit hackish - better to add to Population.__del__?
-            simulator.recorder_list.append(self.recorders[variable_str])
+#            variable_str = '{section}({position}).{variable}' \
+#                           .format(section=section, position=position, variable=variable)
+#        self._record(variable_str, to_file=filename)                           
+#        # The following code is modified from  to allow
+#        # individual cells to be recorded with voltage traces
+##        if variable is None:                             
+##            for recorder in self.recorders.values():
+##                recorder.reset()
+##            self.recorders = {}    
+##        else:
+##            if not self.can_record(variable):
+##                raise pyNN.neuron.errors.RecordingError(variable, self.celltype)        
+##            pyNN.neuron.logger.debug("%s.record('%s')", self.label, variable)
+##            if variable not in self.recorders:
+##                self._add_recorder(variable, filename)
+##            if self.record_filter is not None:
+##                self.recorders[variable].record(self.record_filter)
+##            else:
+##                self.recorders[variable].record(self.all_cells)
+##            #if isinstance(filename, basestring):
+##            #    self.recorders[variable].file = filename
+##            # recorder_list is used by end()
+##        # --------------------
+##        # END self._record(variable_str, to_filename) modification
+##        # --------------------
+#        if self.recorders[variable_str] not in simulator.recorder_list:
+#            # this is a bit hackish - better to add to Population.__del__?
+#            simulator.recorder_list.append(self.recorders[variable_str])
 
-    def record_all(self, file_prefix):
-        """
-        Records all available variables
-        
-        @param file_prefix: The file path prefix that the output files will be written to. Each \
-                            file will be appended the post fix .<var-name>.
-        """
-        for var in self.celltype.recordable:
-            try:
-                self.record(var, file_prefix + '.' + var)
-            except NameError:
-                print "Could not set recorded for '%s' variable" % var
+#    def record_all(self, file_prefix):
+#        """
+#        Records all available variables
+#        
+#        @param file_prefix: The file path prefix that the output files will be written to. Each \
+#                            file will be appended the post fix .<var-name>.
+#        """
+#        for var in self.celltype.recordable:
+#            try:
+#                self.record(var, file_prefix + '.' + var)
+#            except NameError:
+#                print "Could not set recorder for '%s' variable" % var
 
 class Projection(pyNN.neuron.Projection):
 
