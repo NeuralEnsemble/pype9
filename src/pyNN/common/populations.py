@@ -782,7 +782,7 @@ class PopulationView(BasePopulation):
         """
         self.parent = parent
         self.mask = selector # later we can have fancier selectors, for now we just have numpy masks              
-        if not len(self.mask.ravel()):
+        if not len(self.mask):
             raise Exception("Attempted to slice the population/assembly '{}' with empty indices ({})"
                             .format(parent.label, selector))        
         self.label  = label or "view of %s with mask %s" % (parent.label, self.mask)
