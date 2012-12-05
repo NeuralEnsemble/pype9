@@ -782,10 +782,6 @@ class PopulationView(BasePopulation):
         """
         self.parent = parent
         self.mask = selector # later we can have fancier selectors, for now we just have numpy masks              
-        if not selector.stop >= selector.start:
-            raise Exception("Attempted to slice the population/assembly '{}' with empty indices "
-                            "({}:{}:{})".format(parent.label, selector.start, 
-                                                 selector.stop.selector.step))        
         self.label  = label or "view of %s with mask %s" % (parent.label, self.mask)
         # maybe just redefine __getattr__ instead of the following...
         self.celltype     = self.parent.celltype
@@ -803,6 +799,10 @@ class PopulationView(BasePopulation):
                 self.mask = numpy.unique(self.mask)
                     # Added TGC 5/12/12
         self.all_cells    = self.parent.all_cells[self.mask]  # do we need to ensure this is ordered?
+        if not self.all_cells:
+            raise Exception("Attempted to slice the population/assembly '{}' with empty indices "
+                            "(population size={}, selector={})"
+                            .format(parent.label, len(self.parent.all_cells), selector)) 
         idx = numpy.argsort(self.all_cells)
         self._is_sorted =  numpy.all(idx == numpy.arange(len(self.all_cells)))
         self.size         = len(self.all_cells)
