@@ -782,6 +782,9 @@ class PopulationView(BasePopulation):
         """
         self.parent = parent
         self.mask = selector # later we can have fancier selectors, for now we just have numpy masks              
+        if not len(self.mask.ravel()):
+            raise Exception("Attempted to slice the population/assembly '{}' with empty indices ({})"
+                            .format(parent.label, selector))        
         self.label  = label or "view of %s with mask %s" % (parent.label, self.mask)
         # maybe just redefine __getattr__ instead of the following...
         self.celltype     = self.parent.celltype
@@ -797,6 +800,7 @@ class PopulationView(BasePopulation):
             if len(numpy.unique(self.mask)) != len(self.mask):
                 logging.warning("PopulationView can contain only once each ID, duplicated IDs are remove")
                 self.mask = numpy.unique(self.mask)
+                    # Added TGC 5/12/12
         self.all_cells    = self.parent.all_cells[self.mask]  # do we need to ensure this is ordered?
         idx = numpy.argsort(self.all_cells)
         self._is_sorted =  numpy.all(idx == numpy.arange(len(self.all_cells)))
