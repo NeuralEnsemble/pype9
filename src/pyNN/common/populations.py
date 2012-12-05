@@ -1070,6 +1070,10 @@ class Assembly(object):
                 indices = numpy.arange(self.size)[index]
             else:
                 indices = index
+            # Added TGC 5/12/12
+            if not len(indices):
+                raise Exception("Attempted to slice the population/assembly '{}' with empty indices"
+                                .format(self.label))
             pindices = boundaries[1:].searchsorted(indices, side='right')
             views = (self.populations[i][indices[pindices==i] - boundaries[i]] for i in numpy.unique(pindices))
             return self.__class__(*views)
