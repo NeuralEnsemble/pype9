@@ -407,15 +407,21 @@ class Network(object):
                 connect_expr = GeometricExpression(**self._convert_all_units(connection.args))
             except TypeError as e:
                 raise Exception("Could not initialise distance expression class '{}' from given " \
-                                "arguments '{}' ('{}')".format(expression, connection.args, e))
+                                "arguments '{}' for projection '{}'\n('{}')"
+                                .format(expression, connection.args, label, e))
             # If weight is a string containing a simple value and units
             if self.is_value_str(weight):
                 weight = self._convert_units(weight)
             elif hasattr(weight, 'pattern'):
                 if weight.pattern == 'DistanceBased':
-                    GeometricExpression = getattr(ninemlp.connectivity.point2point,
-                                                  weight.args.pop('geometry'))
-                    weight_expr = GeometricExpression(**self._convert_all_units(weight.args))
+                    expr_name = weight.args.pop('geometry')
+                    GeometricExpression = getattr(ninemlp.connectivity.point2point, expr_name)
+                    try:
+                        weight_expr = GeometricExpression(**self._convert_all_units(weight.args))
+                    except TypeError as e:
+                        raise Exception("Could not initialise distance expression class '{}' from "
+                                        "given arguments '{}' for projection '{}'\n('{}')"
+                                        .format(expr_name, weight.args, label, e))                                        
                 else:
                     raise Exception("Invalid weight pattern ('{}') for DistanceBased connectivity".\
                                     format(weight.pattern))
@@ -426,10 +432,15 @@ class Network(object):
                 delay = self._convert_units(delay)
             elif hasattr(delay, 'pattern'):
                 if delay.pattern == 'DistanceBased':
-                    GeometricExpression = getattr(ninemlp.connectivity.point2point,
-                                                  delay.args.pop('geometry'))
-                    delay_expr = GeometricExpression(min_value=self.get_min_delay(),
-                                                     **self._convert_all_units(delay.args))
+                    expr_name = delay.args.pop('geometry')                    
+                    GeometricExpression = getattr(ninemlp.connectivity.point2point,expr_name)
+                    try:
+                        delay_expr = GeometricExpression(min_value=self.get_min_delay(),
+                                                         **self._convert_all_units(delay.args))
+                    except TypeError as e:
+                        raise Exception("Could not initialise distance expression class '{}' from "
+                                        "given arguments '{}' for projection '{}'\n('{}')"
+                                        .format(expr_name, delay.args, label, e))                   
                 else:
                     raise Exception("Invalid delay pattern ('{}') for DistanceBased connectivity".\
                                     format(delay.pattern))
