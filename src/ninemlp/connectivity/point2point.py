@@ -18,28 +18,29 @@ import numpy
 
 class LinearWithDistance(object):
 
-    def __init__(self, rate, offset=0.0, min_value=0.0):
+    def __init__(self, scalar, offset=0.0, min_value=0.0):
+        self.scalar = scalar
         self.offset = offset
-        self.rate = rate
         self.min_value = min_value
 
     def get_values(self, d):
         dist = numpy.sqrt(numpy.sum(numpy.square(d), axis=0))
-        values = self.offset + self.rate * dist
+        values = self.offset + self.scalar * dist
         if self.min_value:
             values[values < self.min_value] = self.min_value
         return values
 
 class ExponentialWithDistance(object):
 
-    def __init__(self, rate, origin=0.0, min_value=0.0):
-        self.origin = origin
-        self.rate = rate
+    def __init__(self, scalar, exponent, offset=0.0, min_value=0.0):
+        self.scalar = scalar
+        self.exponent = exponent
+        self.offset = offset
         self.min_value = min_value
 
     def get_values(self, d):
         dist = numpy.sqrt(numpy.sum(numpy.square(d), axis=0))
-        values = self.origin * numpy.exp(self.rate * dist)
+        values = self.offset + self.scalar * numpy.exp(self.exponent * dist)
         if self.min_value:
             values[values < self.min_value] = self.min_value
         return values
@@ -47,28 +48,29 @@ class ExponentialWithDistance(object):
 
 class LinearWith2DDistance(object):
 
-    def __init__(self, rate, offset=0.0, min_value=0.0):
-        self.offset = offset
-        self.rate = rate
+    def __init__(self, scalar, offset=0.0, min_value=0.0):
+        self.scalar = scalar
+        self.offset = offset        
         self.min_value = min_value
 
     def get_values(self, d):
         dist = numpy.sqrt(numpy.sum(numpy.square(d[0:2, :]), axis=0))
-        values = self.offset + self.rate * dist
+        values = self.offset + self.scalar * dist
         if self.min_value:
             values[values < self.min_value] = self.min_value
         return values
 
 class ExponentialWith2DDistance(object):
 
-    def __init__(self, rate, origin=0.0, min_value=0.0):
-        self.origin = origin
-        self.rate = rate
+    def __init__(self, scalar, exponent, offset=0.0, min_value=0.0):
+        self.scalar = scalar
+        self.exponent = exponent
+        self.offset = offset        
         self.min_value = min_value
 
     def get_values(self, d):
         dist = numpy.sqrt(numpy.sum(numpy.square(d[0:2, :]), axis=0))
-        values = self.origin * numpy.exp(self.rate * dist)
+        values = self.offset + self.scalar * numpy.exp(self.exponent * dist)
         if self.min_value:
             values[values < self.min_value] = self.min_value
         return values
