@@ -392,12 +392,50 @@ class Network(object):
             pop._randomly_distribute_initial_conditions(initial_conditions)
         return pop
 
+    def _get_connection_param_expr(self, label, param, min_value=0.0):
+        if isinstance(param, float) or param is None:
+            param_expr = param
+        elif self.is_value_str(param):
+            param_expr = self._convert_units(param)
+        elif hasattr(param, 'pattern'):
+            if param.pattern == "Constant":
+                param_expr = self._convert_units(param.args['value'])
+            elif param.pattern == 'DistanceBased':
+                expr_name = param.args.pop('geometry')
+                GeometricExpression = getattr(ninemlp.connectivity.point2point, expr_name)
+                try:
+                    param_expr = GeometricExpression(min_value=min_value,
+                                                     **self._convert_all_units(param.args))
+                except TypeError as e:
+                    raise Exception("Could not initialise distance expression class '{}' from "
+                                    "given arguments '{}' for projection '{}'\n('{}')"
+                                    .format(expr_name, param.args, label, e))
+            else:
+                raise Exception("Invalid parameter pattern ('{}') for projection '{}'".
+                                format(param.pattern, label))
+        else:
+            raise Exception("Could not parse parameter specification '{}' for projection '{}'"
+                            .format(param, label))
+        return param_expr
+
     def _create_projection(self, label, pre, dest, connection, source, target, weight, delay,
                            verbose):
         if pre == dest:
             allow_self_connections = False
         else:
             allow_self_connections = True
+        #---------------------------------------------------#
+        # Set expressions for connection weights and delays #
+        #---------------------------------------------------#            
+        weight_expr = self._get_connection_param_expr(label, weight)
+        if target.synapse == "Gap": # FIXME Maybe there should be a special attribute that signifies a Gap junction
+            delay_expr = 1.0 # Not required by Gap junctions so just set to something innocuous
+        else:
+            delay_expr = self._get_connection_param_expr(label, delay,
+                                                         min_value=self.get_min_delay())
+        #----------------------------#
+        # Set connection probability #
+        #----------------------------#            
         if connection.pattern == 'DistanceBased':
             expression = connection.args.pop('geometry')
             if not hasattr(ninemlp.connectivity.point2point, expression):
@@ -409,101 +447,55 @@ class Network(object):
                 raise Exception("Could not initialise distance expression class '{}' from given " \
                                 "arguments '{}' for projection '{}'\n('{}')"
                                 .format(expression, connection.args, label, e))
-            # If weight is a string containing a simple value and units
-            if self.is_value_str(weight):
-                weight = self._convert_units(weight)
-            elif hasattr(weight, 'pattern'):
-                if weight.pattern == 'DistanceBased':
-                    expr_name = weight.args.pop('geometry')
-                    GeometricExpression = getattr(ninemlp.connectivity.point2point, expr_name)
-                    try:
-                        weight_expr = GeometricExpression(**self._convert_all_units(weight.args))
-                    except TypeError as e:
-                        raise Exception("Could not initialise distance expression class '{}' from "
-                                        "given arguments '{}' for projection '{}'\n('{}')"
-                                        .format(expr_name, weight.args, label, e))                                        
-                else:
-                    raise Exception("Invalid weight pattern ('{}') for DistanceBased connectivity".\
-                                    format(weight.pattern))
-            else:
-                raise Exception("Could not parse weight specification '{}'".format(weight))
-            # If delay is a string containing a simple value and units
-            if self.is_value_str(delay):
-                delay = self._convert_units(delay)
-            elif hasattr(delay, 'pattern'):
-                if delay.pattern == 'DistanceBased':
-                    expr_name = delay.args.pop('geometry')                    
-                    GeometricExpression = getattr(ninemlp.connectivity.point2point,expr_name)
-                    try:
-                        delay_expr = GeometricExpression(min_value=self.get_min_delay(),
-                                                         **self._convert_all_units(delay.args))
-                    except TypeError as e:
-                        raise Exception("Could not initialise distance expression class '{}' from "
-                                        "given arguments '{}' for projection '{}'\n('{}')"
-                                        .format(expr_name, delay.args, label, e))                   
-                else:
-                    raise Exception("Invalid delay pattern ('{}') for DistanceBased connectivity".\
-                                    format(delay.pattern))
-            elif target.synapse == "Gap": #FIXME: Dirty Hack
-                delay_expr = 1.0
-            else:
-                raise Exception("Could not parse weight specification '{}'".format(weight))
             connector = self._pyNN_module.connectors.DistanceDependentProbabilityConnector(
                                     connect_expr, allow_self_connections=allow_self_connections,
                                     weights=weight_expr, delays=delay_expr)
+        # If connection pattern is external, load the weights and delays from a file in PyNN
+        # FromFileConnector format and then create a FromListConnector connector. Some additional
+        # preprocessing is performed here, which is why the FromFileConnector isn't used directly.
         elif connection.pattern == "Extension":
-            engine = connection.args.pop('engine')
-            # TODO: The following lines of processing 
-            # shouldn't happen here, it should be part of the 
-            # external engine (EDIT: not sure what I mean by this now).
-            if engine == "Brep":
-                proj_id = connection.args['id']
-                if proj_id not in os.listdir(self.proj_dir):
-                    raise Exception("Connection id '{}' was not found in search path ({}).".\
-                                    format(proj_id, self.proj_dir))
-                # The load step can take a while and isn't necessary when compiling so can be 
-                # skipped.
-                if self.build_mode != 'build_only':
-                    connection_matrix = numpy.loadtxt(os.path.join(self.proj_dir,
-                                                                   connection.args['id']))
-                else:
-                    connection_matrix = numpy.ones((1, 4))
-                if weight:
-                    connection_matrix[:, 2] = self._convert_units(weight)
-                if delay:
-                    connection_matrix[:, 3] = self._convert_units(delay)
-                # Get view onto delays in connection matrix for readability                    
-                delays = connection_matrix[:, 3]
-                below_min_indices = numpy.where(delays < self.get_min_delay())
-                if len(below_min_indices):
-                    if verbose:
-                        warnings.warn("{} out of {} connections are below the minimum delay in \
-                                        projection '{}'. They will be bounded to the minimum delay \
-                                        ({})".format(len(below_min_indices), len(delays), label),
-                                                     self.get_min_delay())
-                    # Bound loaded delays by specified minimum delay                        
-                    delays[below_min_indices] = self.get_min_delay()
-                connector = self._pyNN_module.connectors.FromListConnector(connection_matrix)
+            proj_id = connection.args['id']
+            if proj_id not in os.listdir(self.proj_dir):
+                raise Exception("Connection id '{}' was not found in search path ({}).".\
+                                format(proj_id, self.proj_dir))
+            # The load step can take a while and isn't necessary when compiling so can be 
+            # skipped.
+            if self.build_mode != 'build_only':
+                connection_matrix = numpy.loadtxt(os.path.join(self.proj_dir,
+                                                               connection.args['id']))
             else:
-                raise Exception ("Unrecognised external engine '{}'".format(engine))
+                connection_matrix = numpy.ones((1, 4))
+            if isinstance(weight_expr, float):
+                connection_matrix[:, 2] = weight_expr
+            if isinstance(delay_expr, float):
+                connection_matrix[:, 3] = delay_expr
+            # Get view onto delays in connection matrix for readability                    
+            delays = connection_matrix[:, 3]
+            below_min_indices = numpy.where(delays < self.get_min_delay())
+            if len(below_min_indices):
+                if verbose:
+                    warnings.warn("{} out of {} connections are below the minimum delay in \
+                                    projection '{}'. They will be bounded to the minimum delay \
+                                    ({})".format(len(below_min_indices), len(delays), label),
+                                                 self.get_min_delay())
+                # Bound loaded delays by specified minimum delay                        
+                delays[below_min_indices] = self.get_min_delay()
+            connector = self._pyNN_module.connectors.FromListConnector(connection_matrix)
+        # Use in-built pyNN connectors for simple patterns such as AllToAll and OneToOne
+        # NB: At this stage the pattern name is tied to the connector name in pyNN but could be
+        # decoupled from this at some point (but I am not sure you would want to)
         elif connection.pattern + 'Connector' in dir(pyNN.connectors):
-            if weight.pattern == "Constant":
-                weight = self._convert_units(weight.args['value'])
-            else:
-                raise Exception("Unrecognised weight pattern '{}'".format(weight.pattern))
-            if delay.pattern == "Constant":
-                delay = self._convert_units(delay.args['value'])
-            else:
-                raise Exception("Unrecognised delay pattern '{}'".format(delay.pattern))
             ConnectorClass = getattr(self._pyNN_module.connectors,
                                      '{}Connector'.format(connection.pattern))
             if ConnectorClass == pyNN.connectors.OneToOneConnector:
                 connector_specific_args = {}
             else:
                 connector_specific_args = {'allow_self_connections' : allow_self_connections}
-            connector = ConnectorClass(weights=weight, delays=delay, **connector_specific_args)
+            connector = ConnectorClass(weights=weight_expr, delays=delay_expr,
+                                       **connector_specific_args)
         else:
             raise Exception("Unrecognised pattern type '{}'".format(connection.pattern))
+        # Initialise the projection object and return
         return self._Projection_class(pre, dest, label, connector, source=source.terminal,
                                       target=self._get_target_str(target.synapse, target.segment),
                                       build_mode=self.build_mode)
