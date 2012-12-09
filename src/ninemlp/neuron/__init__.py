@@ -202,6 +202,8 @@ class Network(ninemlp.common.Network):
             return value * 1e-3
         elif units == 'uS':
             return value
+        elif units == 'mS':
+            return value * 1e+3
         elif units == 'nS':
             return value * 1e-3
         elif units == 'pS':
