@@ -424,18 +424,14 @@ class Network(object):
             allow_self_connections = False
         else:
             allow_self_connections = True
-        #---------------------------------------------------#
-        # Set expressions for connection weights and delays #
-        #---------------------------------------------------#            
+        # Set expressions for connection weights and delays
         weight_expr = self._get_connection_param_expr(label, weight)
         if target.synapse == "Gap": # FIXME Maybe there should be a special attribute that signifies a Gap junction
             delay_expr = 1.0 # Not required by Gap junctions so just set to something innocuous
         else:
             delay_expr = self._get_connection_param_expr(label, delay,
                                                          min_value=self.get_min_delay())
-        #----------------------------#
-        # Set connection probability #
-        #----------------------------#            
+        # Set connection probability     
         if connection.pattern == 'DistanceBased':
             expression = connection.args.pop('geometry')
             if not hasattr(ninemlp.connectivity.point2point, expression):
