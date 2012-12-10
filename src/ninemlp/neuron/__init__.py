@@ -222,17 +222,15 @@ class ElectricalSynapseProjection(Projection):
                     else:
                         section = cell.source_section
                     cell_secs.append((cell, section))
-                pre_post_id = int(source) * len(self.post) + int(target) + self.gid_start
-                post_pre_id = int(source) * len(self.post) + int(target) + self.gid_start + 1
+                pre_post_id = (self.pre.id_to_index(source) * len(self.post) + \
+                              self.post.id_to_index(target) + self.gid_start) * 2
+                post_pre_id = pre_post_id + 1
                 for (pre_cell, pre_sec), \
                     (post_cell, post_sec), var_gid in ((cell_secs[0], cell_secs[1], pre_post_id), 
                                                        (cell_secs[1], cell_secs[0], post_pre_id)) \
                                                    if not self.rectified else \
-                                                      ((cell_secs[0], cell_secs[1], pre_post_id)):
-                    var_gid = int(pre_cell) * len(self.post) + int(target)                                                               
+                                                      ((cell_secs[0], cell_secs[1], pre_post_id)):                                                            
                     if pre_cell.local:
-                        print pre_sec(0.5)
-                        print "Section &v: {}".format(pre_sec(0.5)._ref_v)
                         simulator.state.parallel_context.source_var(pre_sec(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
                     if post_cell.local:
                         try:
@@ -241,8 +239,6 @@ class ElectricalSynapseProjection(Projection):
                             raise Exception("Section '{}' doesn't have a 'Gap' synapse inserted"
                                             .format(sec_name if sec_name else 'source_section'))    
                         synapse.g = weight
-                        print synapse
-                        print "Synapse &vgap: {}".format(synapse._ref_vgap)                        
                         simulator.state.parallel_context.target_var(synapse._ref_vgap, var_gid) #@UndefinedVariableFromImport
                 # Save connection information to avoid duplicates, where the same cell connects
                 # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
