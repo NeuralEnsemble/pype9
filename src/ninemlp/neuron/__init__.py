@@ -213,31 +213,30 @@ class ElectricalSynapseProjection(Projection):
             # NB: In this case self.synapse_type and self.source will actually be the names of the 
             # respective segments. The names are inherited from the pyNN class, and I am not sure why it is called this as it seems a little
             # confusing.
-            if self.Connection(target, self.synapse_type, source, self.source) \
-                                                                           not in self.connections:
-                cell_secs = []
-                for cell, sec_name in ((source, self.source), (target, self.synapse_type)):
-                    if self.source:
-                        section = cell._cell.segments[sec_name]
-                    else:
-                        section = cell.source_section
-                    cell_secs.append((cell, section))
+            if self.Connection(target, self.synapse_type, 
+                               source, self.source) not in self.connections:
                 pre_post_id = (self.pre.id_to_index(source) * len(self.post) + \
                               self.post.id_to_index(target) + self.gid_start) * 2
                 post_pre_id = pre_post_id + 1
-                for (pre_cell, pre_sec), \
-                    (post_cell, post_sec), var_gid in ((cell_secs[0], cell_secs[1], pre_post_id), 
-                                                       (cell_secs[1], cell_secs[0], post_pre_id)) \
-                                                   if not self.rectified else \
-                                                      ((cell_secs[0], cell_secs[1], pre_post_id)):                                                            
+                if self.rectified:
+                    connection_list = (((source, self.source), 
+                                       (target, self.synapse_type), pre_post_id))
+                else:
+                    connection_list = (((source, self.source), (target, self.synapse_type), 
+                                        pre_post_id), 
+                                       ((target, self.synapse_type), (source, self.source), 
+                                        post_pre_id))
+                for (pre_cell, pre_seg), (post_cell, post_seg), var_gid in connection_list:                                
                     if pre_cell.local:
-                        simulator.state.parallel_context.source_var(pre_sec(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
+                        segment = pre_cell._cell.segments[pre_seg] if pre_seg else pre_cell.source_section
+                        simulator.state.parallel_context.source_var(segment(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
                     if post_cell.local:
+                        segment = post_cell._cell.segments[post_seg] if post_seg else post_cell.source_section
                         try:
-                            synapse = getattr(post_sec, 'Gap')
+                            synapse = getattr(segment, 'Gap')
                         except AttributeError:
                             raise Exception("Section '{}' doesn't have a 'Gap' synapse inserted"
-                                            .format(sec_name if sec_name else 'source_section'))    
+                                            .format(post_seg if post_seg else 'source_section'))    
                         synapse.g = weight
                         simulator.state.parallel_context.target_var(synapse._ref_vgap, var_gid) #@UndefinedVariableFromImport
                 # Save connection information to avoid duplicates, where the same cell connects
