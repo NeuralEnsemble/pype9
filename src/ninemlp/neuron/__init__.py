@@ -14,6 +14,7 @@
 #######################################################################################
 
 import os
+from collections import namedtuple
 import numpy
 from ninemlp import SRC_PATH, DEFAULT_BUILD_MODE, pyNN_build_mode
 from ninemlp.neuron.build import compile_nmodl
@@ -163,6 +164,9 @@ class Projection(pyNN.neuron.Projection):
 
 class ElectricalSynapseProjection(Projection):
 
+    ## A named tuple to hold a record of the generated electrical synapse connections
+    Connection = namedtuple('Connection', 'cell1 segment1 cell2 segment2')
+
     ## This holds the last reserved GID used to connect the source and target variables. It is incremented each time a Projection is initialised by the amount needed to hold an all-to-all connection
     gid_count = 0
 
@@ -209,7 +213,8 @@ class ElectricalSynapseProjection(Projection):
             # NB: In this case self.synapse_type and self.source will actually be the names of the 
             # respective segments. The names are inherited from the pyNN class, and I am not sure why it is called this as it seems a little
             # confusing.
-            if (target, self.synapse_type, source, self.source) not in self.connections:
+            if self.Connection(target, self.synapse_type, source, self.source) \
+                                                                           not in self.connections:
                 cell_secs = []
                 for cell, sec_name in ((source, self.source), (target, self.synapse_type)):
                     if self.source:
@@ -241,7 +246,8 @@ class ElectricalSynapseProjection(Projection):
                         simulator.state.parallel_context.target_var(synapse._ref_vgap, var_gid) #@UndefinedVariableFromImport
                 # Save connection information to avoid duplicates, where the same cell connects
                 # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
-                self.connections.append((source, self.source, target, self.synapse_type))
+                self.connections.append(self.Connection(source, self.source, target, 
+                                                        self.synapse_type))
 
     def _convergent_connect(self, sources, target, weights, delays):
         raise NotImplementedError
@@ -324,6 +330,13 @@ class Network(ninemlp.common.Network):
             segment = "source_section"
         return seg_varname(segment) + "." + synapse
 
+    def _finalise_construction(self):
+        includes_electrical = False
+        for proj in self.all_projections():
+            if isinstance(proj, ElectricalSynapseProjection):
+                includes_electrical = True
+        if includes_electrical:
+            simulator.state.parallel_context.setup_transfer() #@UndefinedVariableFromImport
 
 if __name__ == "__main__":
 
