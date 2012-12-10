@@ -81,16 +81,16 @@ class NetworkMLHandler(XMLHandler):
     Population = collections.namedtuple('Population', ('id', 'cell_type', 'morph_id', 'size',
                                                        'layout', 'cell_params',
                                                        'initial_conditions', 'flags', 'not_flags'))
-    Projection = collections.namedtuple('Projection', 'id pre post connection weight delay flags ' \
-                                                      'not_flags')
+    Projection = collections.namedtuple('Projection', 'id pre post connection weight delay '
+                                                      'synapse_family flags not_flags')
     Layout = collections.namedtuple('Layout', 'type args')
     CustomAttributes = collections.namedtuple('CustomAttributes', 'constants distributions')
-    Distribution = collections.namedtuple('Distribution', 'attr type units seg_group component ' \
+    Distribution = collections.namedtuple('Distribution', 'attr type units seg_group component '
                                                           'args')
     Connection = collections.namedtuple('Connection', 'pattern args')
     Weight = collections.namedtuple('Weight', 'pattern args')
     Delay = collections.namedtuple('Delay', 'pattern args')
-    Source = collections.namedtuple('Source', 'pop_id terminal section')
+    Source = collections.namedtuple('Source', 'pop_id terminal segment')
     Destination = collections.namedtuple('Destination', 'pop_id synapse segment')
     FreeParameters = collections.namedtuple('FreeParameters', 'flags scalars')
 
@@ -178,6 +178,7 @@ class NetworkMLHandler(XMLHandler):
             self.proj_connection = None
             self.proj_weight = attrs.get('weight', None)
             self.proj_delay = attrs.get('delay', None)
+            self.proj_synapse_family = attrs.get('synapseFamily', 'Chemical')
             # Split the flags attribute on ',' and remove empty values (the use of filter)
             self.proj_flags = filter(None, \
                                      attrs.get('flags', '').replace(' ', '').split(','))
@@ -188,7 +189,7 @@ class NetworkMLHandler(XMLHandler):
                 raise Exception("The pre is specified twice in projection {}'".format(self.proj_id))
             self.proj_pre = self.Source(attrs['id'],
                                         attrs.get('terminal', None),
-                                        attrs.get('section', None))
+                                        attrs.get('segment', None))
         elif self._opening(tag_name, attrs, 'destination', parents=['projection']):
             if self.proj_post:
                 raise Exception("The destination is specified twice in projection'{}'"\
@@ -240,6 +241,7 @@ class NetworkMLHandler(XMLHandler):
                                                     self.proj_connection,
                                                     self.proj_weight,
                                                     self.proj_delay,
+                                                    self.proj_synapse_family,
                                                     self.proj_flags,
                                                     self.proj_not_flags))
         XMLHandler.endElement(self, name)
@@ -267,6 +269,7 @@ class Network(object):
                 hasattr(self, "_ncml_module") and \
                 hasattr(self, "_Population_class") and \
                 hasattr(self, "_Projection_class") and \
+                hasattr(self, "_ElectricalSynapseProjection_class") and \
                 hasattr(self, "get_min_delay")
         self.load_network(filename, build_mode=build_mode, timestep=timestep,
                                  min_delay=min_delay, max_delay=max_delay, temperature=temperature,
@@ -337,6 +340,7 @@ class Network(object):
                                                              proj.post,
                                                              proj.weight,
                                                              proj.delay,
+                                                             proj.synapse_family,
                                                              verbose)
         if build_mode == 'build_only' or build_mode == 'compile_only':
             print "Finished compiling network, now exiting (use try: ... except SystemExit: ... " \
@@ -419,7 +423,7 @@ class Network(object):
         return param_expr
 
     def _create_projection(self, label, pre, dest, connection, source, target, weight, delay,
-                           verbose):
+                           synapse_family, verbose):
         if pre == dest:
             allow_self_connections = False
         else:
@@ -492,9 +496,21 @@ class Network(object):
         else:
             raise Exception("Unrecognised pattern type '{}'".format(connection.pattern))
         # Initialise the projection object and return
-        return self._Projection_class(pre, dest, label, connector, source=source.terminal,
+        if synapse_family == 'Chemical':
+            projection = self._Projection_class(pre, dest, label, connector, source=source.terminal,
                                       target=self._get_target_str(target.synapse, target.segment),
                                       build_mode=self.build_mode)
+        elif synapse_family == 'Electrical':
+            if not self._ElectricalSynapseProjection_class:
+                raise Exception("The selected simulator doesn't currently support electrical "
+                                "synapse projections")
+            projection = self._ElectricalSynapseProjection_class(pre, dest, label, connector, 
+                                                                 source=source.segment, 
+                                                                 target=target.segment,
+                                                                 build_mode=self.build_mode)            
+        else:
+            raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
+        return projection
 
     def _get_simulation_params(self, **params):
         sim_params = self.networkML.sim_params

@@ -22,13 +22,14 @@ compile_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN
 import ninemlp.common
 from ninemlp.common import seg_varname
 from ninemlp.neuron.ncml import NCMLCell
+import pyNN.common
 import pyNN.neuron.standardmodels.cells
 import pyNN.neuron.connectors
 import pyNN.neuron.recording
 import ncml
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, record, record_v, record_gsyn, \
-                        StepCurrentSource, ACSource, DCSource, NoisyCurrentSource
+                        StepCurrentSource, ACSource, DCSource, NoisyCurrentSource, errors, core
 import pyNN.neuron as sim
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
@@ -160,6 +161,92 @@ class Projection(pyNN.neuron.Projection):
                                                                                       target=target)
 
 
+class ElectricalSynapseProjection(Projection):
+
+    ## This holds the last reserved GID used to connect the source and target variables. It is incremented each time a Projection is initialised by the amount needed to hold an all-to-all connection
+    gid_count = 0
+
+    def __init__(self, pre, dest, label, connector, source=None, target=None,
+                 build_mode=DEFAULT_BUILD_MODE, rectified=False):
+        """
+        @param rectified [bool]: Whether the gap junction is rectified (only one direction)
+        """
+        ## Start of unique variable-GID range assigned for this projection (ends at gid_count + pre.size * dest.size * 2)
+        self.gid_start = self.__class__.gid_count
+        self.__class__.gid_count += pre.size * dest.size * 2
+        self.rectified = rectified
+        Projection.__init__(self, pre, dest, label, connector, source, target, build_mode)
+            
+
+    def _divergent_connect(self, source, targets, weights, delays=None): #@UnusedVariable
+        """
+        Connect a neuron to one or more other neurons with a static connection.
+        
+        @param source [pyNN.common.IDmixin]: the ID of the pre-synaptic cell.
+        @param [list(pyNN.common.IDmixin)]: a list/1D array of post-synaptic cell IDs, or a single ID.
+        @param [list(float) or float]: Connection weight(s). Must have the same length as `targets`.
+        @param delays [Null]: This is actually ignored but only included to match the same signature\
+ as the Population._divergent_connect method
+        """
+        if not isinstance(source, int) or source > simulator.state.gid_counter or source < 0:
+            errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
+                                                                     simulator.state.gid_counter)
+            raise errors.ConnectionError(errmsg)
+        if not core.is_listlike(targets):
+            targets = [targets]
+        if isinstance(weights, float):
+            weights = [weights]
+        assert len(targets) > 0
+        for target in targets:
+            if not isinstance(target, pyNN.common.IDMixin):
+                raise errors.ConnectionError("Invalid target ID: {}".format(target))
+        assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
+        self._resolve_synapse_type()
+        for target, weight in zip(targets, weights):
+            # Check connection information to avoid duplicates, where the same cell connects
+            # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
+            #
+            # NB: In this case self.synapse_type and self.source will actually be the names of the 
+            # respective segments. The names are inherited from the pyNN class, and I am not sure why it is called this as it seems a little
+            # confusing.
+            if (target, self.synapse_type, source, self.source) not in self.connections:
+                cell_secs = []
+                for cell, sec_name in ((source, self.source), (target, self.synapse_type)):
+                    if self.source:
+                        section = cell._cell.segments[sec_name]
+                    else:
+                        section = cell.source_section
+                    cell_secs.append((cell, section))
+                pre_post_id = int(source) * len(self.post) + int(target) + self.gid_start
+                post_pre_id = int(source) * len(self.post) + int(target) + self.gid_start + 1
+                for (pre_cell, pre_sec), \
+                    (post_cell, post_sec), var_gid in ((cell_secs[0], cell_secs[1], pre_post_id), 
+                                                       (cell_secs[1], cell_secs[0], post_pre_id)) \
+                                                   if not self.rectified else \
+                                                      ((cell_secs[0], cell_secs[1], pre_post_id)):
+                    var_gid = int(pre_cell) * len(self.post) + int(target)                                                               
+                    if pre_cell.local:
+                        print pre_sec(0.5)
+                        print "Section &v: {}".format(pre_sec(0.5)._ref_v)
+                        simulator.state.parallel_context.source_var(pre_sec(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
+                    if post_cell.local:
+                        try:
+                            synapse = getattr(post_sec, 'Gap')
+                        except AttributeError:
+                            raise Exception("Section '{}' doesn't have a 'Gap' synapse inserted"
+                                            .format(sec_name if sec_name else 'source_section'))    
+                        synapse.g = weight
+                        print synapse
+                        print "Synapse &vgap: {}".format(synapse._ref_vgap)                        
+                        simulator.state.parallel_context.target_var(synapse._ref_vgap, var_gid) #@UndefinedVariableFromImport
+                # Save connection information to avoid duplicates, where the same cell connects
+                # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
+                self.connections.append((source, self.source, target, self.synapse_type))
+
+    def _convergent_connect(self, sources, target, weights, delays):
+        raise NotImplementedError
+
+
 class Network(ninemlp.common.Network):
 
     def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None,
@@ -168,6 +255,7 @@ class Network(ninemlp.common.Network):
         self._ncml_module = ncml
         self._Population_class = Population
         self._Projection_class = Projection
+        self._ElectricalSynapseProjection_class = ElectricalSynapseProjection
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         #Call the base function initialisation function.
         ninemlp.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep,
