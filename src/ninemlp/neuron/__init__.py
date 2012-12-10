@@ -206,25 +206,25 @@ class ElectricalSynapseProjection(Projection):
                 raise errors.ConnectionError("Invalid target ID: {}".format(target))
         assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
         self._resolve_synapse_type()
+        # NB: In this case self.synapse_type and self.source will actually be the names of the 
+        # respective segments. The names are inherited from the pyNN class, and thus a little
+        # confusing so I rename them here for the local scope at least.
+        source_segname = self.source
+        target_segname = self.synapse_type
         for target, weight in zip(targets, weights):
             # Check connection information to avoid duplicates, where the same cell connects
             # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
-            #
-            # NB: In this case self.synapse_type and self.source will actually be the names of the 
-            # respective segments. The names are inherited from the pyNN class, and I am not sure why it is called this as it seems a little
-            # confusing.
-            if self.Connection(target, self.synapse_type, 
-                               source, self.source) not in self.connections:
+            if self.Connection(target, target_segname, source, source_segname) not in self.connections:
                 pre_post_id = (self.pre.id_to_index(source) * len(self.post) + \
                               self.post.id_to_index(target) + self.gid_start) * 2
                 post_pre_id = pre_post_id + 1
                 if self.rectified:
-                    connection_list = (((source, self.source), 
-                                       (target, self.synapse_type), pre_post_id))
+                    connection_list = (((source, source_segname), 
+                                       (target, target_segname), pre_post_id))
                 else:
-                    connection_list = (((source, self.source), (target, self.synapse_type), 
+                    connection_list = (((source, source_segname), (target, target_segname), 
                                         pre_post_id), 
-                                       ((target, self.synapse_type), (source, self.source), 
+                                       ((target, target_segname), (source, source_segname), 
                                         post_pre_id))
                 for (pre_cell, pre_seg), (post_cell, post_seg), var_gid in connection_list:                                
                     if pre_cell.local:
