@@ -346,7 +346,14 @@ class Network(object):
             print "Finished compiling network, now exiting (use try: ... except SystemExit: ... " \
                     "if you want to do something afterwards)"
             raise SystemExit(0)
+        self._finalise_construction()
 
+    def _finalise_construction(self):
+        """
+        Can be overloaded to do any simulator specific finalisation that is required
+        """
+        pass
+    
     def _create_population(self, label, size, cell_type_name, morph_id, layout, cell_params,
                            cell_param_distrs, initial_conditions, verbose, silent_build):
         if cell_type_name + ".xml" in os.listdir(self.cells_dir):
