@@ -437,8 +437,9 @@ class Network(object):
             allow_self_connections = True
         # Set expressions for connection weights and delays
         weight_expr = self._get_connection_param_expr(label, weight)
-        if target.synapse == "Gap": # FIXME Maybe there should be a special attribute that signifies a Gap junction
-            delay_expr = 1.0 # Not required by Gap junctions so just set to something innocuous
+        if synapse_family == 'Electrical':
+            # Delay is not required by Gap junctions so just set to something innocuous here
+            delay_expr = 1.0 
         else:
             delay_expr = self._get_connection_param_expr(label, delay,
                                                          min_value=self.get_min_delay())

@@ -180,7 +180,7 @@ class ElectricalSynapseProjection(Projection):
         self.__class__.gid_count += pre.size * dest.size * 2
         self.rectified = rectified
         Projection.__init__(self, pre, dest, label, connector, source, target, build_mode)
-            
+
 
     def _divergent_connect(self, source, targets, weights, delays=None): #@UnusedVariable
         """
@@ -208,40 +208,49 @@ class ElectricalSynapseProjection(Projection):
         self._resolve_synapse_type()
         # NB: In this case self.synapse_type and self.source will actually be the names of the 
         # respective segments. The names are inherited from the pyNN class, and thus a little
-        # confusing so I rename them here for the local scope at least.
+        # confusing so I rename them here in the local scope to try to make it a little clearer.
         source_segname = self.source
         target_segname = self.synapse_type
         for target, weight in zip(targets, weights):
-            # Check connection information to avoid duplicates, where the same cell connects
-            # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
-            if self.Connection(target, target_segname, source, source_segname) not in self.connections:
+            # Check connection information to avoid duplicates if the connection is not "rectified"
+            # (one-way), where there is a gap junction connecting from one cell1 to cell2 and then 
+            # another cell2 to cell1 (because the connections are mutual)
+            if self.rectified or \
+                    self.Connection(target, target_segname, source, source_segname) not in \
+                    self.connections:
+                # Generate unique but reproducible
                 pre_post_id = (self.pre.id_to_index(source) * len(self.post) + \
-                              self.post.id_to_index(target) + self.gid_start) * 2
+                               self.post.id_to_index(target) + self.gid_start) * 2
                 post_pre_id = pre_post_id + 1
-                if self.rectified:
-                    connection_list = (((source, source_segname), 
-                                       (target, target_segname), pre_post_id))
-                else:
-                    connection_list = (((source, source_segname), (target, target_segname), 
-                                        pre_post_id), 
-                                       ((target, target_segname), (source, source_segname), 
-                                        post_pre_id))
-                for (pre_cell, pre_seg), (post_cell, post_seg), var_gid in connection_list:                                
+                # Create a connection list containing the two connections going in both directions
+                # (if rectified only one direction)
+                connection_list = [((source, source_segname), (target, target_segname), 
+                                    pre_post_id)]                
+                if not self.rectified:
+                    connection_list.append(((target, target_segname), (source, source_segname),
+                                            post_pre_id))
+                for (pre_cell, pre_seg), (post_cell, post_seg), var_gid in connection_list:
                     if pre_cell.local:
-                        segment = pre_cell._cell.segments[pre_seg] if pre_seg else pre_cell.source_section
+                        if pre_seg:
+                            segment = pre_cell._cell.segments[pre_seg]
+                        else:
+                            pre_cell.source_section
                         simulator.state.parallel_context.source_var(segment(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
                     if post_cell.local:
-                        segment = post_cell._cell.segments[post_seg] if post_seg else post_cell.source_section
+                        if post_seg:
+                            segment = post_cell._cell.segments[post_seg]
+                        else:
+                            post_cell.source_section
                         try:
                             synapse = getattr(segment, 'Gap')
                         except AttributeError:
                             raise Exception("Section '{}' doesn't have a 'Gap' synapse inserted"
-                                            .format(post_seg if post_seg else 'source_section'))    
+                                            .format(post_seg if post_seg else 'source_section'))
                         synapse.g = weight
                         simulator.state.parallel_context.target_var(synapse._ref_vgap, var_gid) #@UndefinedVariableFromImport
                 # Save connection information to avoid duplicates, where the same cell connects
                 # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
-                self.connections.append(self.Connection(source, self.source, target, 
+                self.connections.append(self.Connection(source, self.source, target,
                                                         self.synapse_type))
 
     def _convergent_connect(self, sources, target, weights, delays):
