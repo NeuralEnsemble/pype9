@@ -329,6 +329,10 @@ class Network(object):
                                                                     pop.initial_conditions.distributions,
                                                                     verbose,
                                                                     silent_build)
+        if build_mode == 'build_only' or build_mode == 'compile_only':
+            print "Finished compiling network, now exiting (use try: ... except SystemExit: ... " \
+                    "if you want to do something afterwards)"
+            raise SystemExit(0)                
         for proj in self.networkML.projections:
             if self.check_flags(proj):
                 self._projections[proj.id] = self._create_projection(
@@ -342,10 +346,6 @@ class Network(object):
                                                              proj.delay,
                                                              proj.synapse_family,
                                                              verbose)
-        if build_mode == 'build_only' or build_mode == 'compile_only':
-            print "Finished compiling network, now exiting (use try: ... except SystemExit: ... " \
-                    "if you want to do something afterwards)"
-            raise SystemExit(0)
         self._finalise_construction()
 
     def _finalise_construction(self):
