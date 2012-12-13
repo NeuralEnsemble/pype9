@@ -234,13 +234,13 @@ class ElectricalSynapseProjection(Projection):
                         if pre_seg:
                             segment = pre_cell._cell.segments[pre_seg]
                         else:
-                            pre_cell.source_section
+                            segment = pre_cell.source_section
                         simulator.state.parallel_context.source_var(segment(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
                     if post_cell.local:
                         if post_seg:
                             segment = post_cell._cell.segments[post_seg]
                         else:
-                            post_cell.source_section
+                            segment = post_cell.source_section
                         try:
                             synapse = getattr(segment, 'Gap')
                         except AttributeError:
