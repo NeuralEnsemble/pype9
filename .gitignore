@@ -16,3 +16,4 @@ build
 *.v_dat
 *.spikes
 *.v
+/tom_bash
