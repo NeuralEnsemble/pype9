@@ -486,11 +486,13 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
     # Create recorder to append to simulator.recorder_list
 
     class Recorder(pyNN.neuron.Recorder):
+        
         def __init__(self, cell, variable, output):
             self.cell = cell
             self.variable = variable
             self.file = output
             self.population = None
+            
         def _get(self, gather=False, compatible_output=True, filter=None): #@UnusedVariable
             if self.variable == 'spikes':
                 data = numpy.empty((0, 2))
