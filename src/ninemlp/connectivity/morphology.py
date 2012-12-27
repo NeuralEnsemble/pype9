@@ -26,7 +26,8 @@ class ShiftVoxelSizeMismatchException(Exception): pass
 
 class Forest(object):
     
-    def __init__(self, roots):
+    def __init__(self, xml_filename):
+        roots = read_NeurolucidaXML(xml_filename)
         self.trees = []
         for root in roots:
             self.trees.append(Tree(root))
@@ -524,16 +525,14 @@ def read_NeurolucidaXML(filename):
     handler = NeurolucidaXMLHandler()
     parser.setContentHandler(handler)
     parser.parse(filename)
-    return Forest(handler.roots)
+    return handler.roots
 
 
 if __name__ == '__main__':
     from os.path import normpath, join
     from ninemlp import SRC_PATH
-    import pylab
-    forest = read_NeurolucidaXML(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
-                                              'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
-    
+    forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
+                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
     vox_size = (2, 2, 2)
 #    print "overlap: {}".format(forest[2].num_overlapping(forest[4], vox_size=vox_size))
     tree = forest[2]
