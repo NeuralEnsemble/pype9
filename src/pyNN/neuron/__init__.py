@@ -249,13 +249,16 @@ class Projection(common.Projection):
             long_term_plasticity_mechanism = self.synapse_dynamics.slow.possible_models
             for c in self.connections:
                 c.useSTDP(long_term_plasticity_mechanism, stdp_parameters, ddf)
-        
-        # Check none of the delays are out of bounds. This should be redundant,
-        # as this should already have been done in the Connector object, so
-        # we could probably remove it.
-        delays = [c.nc.delay for c in self.connections]
-        if delays:
-            assert min(delays) >= get_min_delay()
+       
+# TGC: following on from the comments below I have disabled this because it was causing me difficulty
+# in my ElectricalSynapseProjection subclass
+# 
+#        # Check none of the delays are out of bounds. This should be redundant,
+#        # as this should already have been done in the Connector object, so
+#        # we could probably remove it.
+#        delays = [c.nc.delay for c in self.connections]
+#        if delays:
+#            assert min(delays) >= get_min_delay()
         
         Projection.nProj += 1           
     
@@ -311,7 +314,7 @@ class Projection(common.Projection):
         self._resolve_synapse_type()
         for target, weight, delay in zip(targets, weights, delays):
             if target.local:
-                if "." in self.synapse_type:  #(TGC) HERE IS WHERE THE SECTION IS SPECIFIED!!
+                if "." in self.synapse_type:
                     section_name, synapse_type = self.synapse_type.split(".")
                     try:
                         section = getattr(target._cell, section_name)

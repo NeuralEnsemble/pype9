@@ -16,6 +16,7 @@ from pyNN import random, recording, errors, standardmodels, core, space, descrip
 from pyNN.recording import files
 from itertools import chain
 import collections
+from operator import itemgetter
 
 deprecated = core.deprecated
 logger = logging.getLogger("PyNN")
@@ -796,7 +797,12 @@ class PopulationView(BasePopulation):
             if len(numpy.unique(self.mask)) != len(self.mask):
                 logging.warning("PopulationView can contain only once each ID, duplicated IDs are remove")
                 self.mask = numpy.unique(self.mask)
+                    # Added TGC 5/12/12
         self.all_cells    = self.parent.all_cells[self.mask]  # do we need to ensure this is ordered?
+        if not self.all_cells.shape[0]:
+            raise Exception("Attempted to slice the population/assembly '{}' with empty indices "
+                            "(population size={}, selector={})"
+                            .format(parent.label, len(self.parent.all_cells), selector)) 
         idx = numpy.argsort(self.all_cells)
         self._is_sorted =  numpy.all(idx == numpy.arange(len(self.all_cells)))
         self.size         = len(self.all_cells)
@@ -1069,6 +1075,10 @@ class Assembly(object):
                 indices = numpy.arange(self.size)[index]
             else:
                 indices = index
+            # Added TGC 5/12/12
+            if not len(indices):
+                raise Exception("Attempted to slice the population/assembly '{}' with empty indices"
+                                .format(self.label))
             pindices = boundaries[1:].searchsorted(indices, side='right')
             views = (self.populations[i][indices[pindices==i] - boundaries[i]] for i in numpy.unique(pindices))
             return self.__class__(*views)

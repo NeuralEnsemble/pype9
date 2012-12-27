@@ -40,8 +40,8 @@ class Population(pyNN.nest.Population):
         """
         Initialises the population after reading the population parameters from file
         """
-        if build_mode == 'compile_only':
-            print "Warning! '--compile' option was set to 'compile_only', meaning the population '%s' was not constructed and only the NMODL files were compiled."
+        if build_mode == 'build_only':
+            print "Warning! '--compile' option was set to 'build_only', meaning the population '%s' was not constructed and only the NMODL files were compiled."
         else:
             pyNN.nest.Population.__init__(self, size, cell_type,
                                                   params, structure=None, label=label)
@@ -54,8 +54,8 @@ class Projection(pyNN.nest.Projection):
 
     def __init__(self, pre, dest, label, connector, source=None, target=None, build_mode=DEFAULT_BUILD_MODE):
         self.label = label
-        if build_mode == 'compile_only':
-            print "Warning! '--compile' option was set to 'compile_only', meaning the projection '%s' was not constructed." % label
+        if build_mode == 'build_only':
+            print "Warning! '--compile' option was set to 'build_only', meaning the projection '%s' was not constructed." % label
         else:
             pyNN.nest.Projection.__init__(self, pre, dest, connector, label=label, source=source,
                                                                                       target=target)
@@ -68,6 +68,7 @@ class Network(ninemlp.common.Network):
         self._ncml_module = ncml
         self._Population_class = Population
         self._Projection_class = Projection
+        self._ElectricalSynapseProjection_class = None
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         self.temperature = None
         ninemlp.common.Network.__init__(self, filename, build_mode=build_mode,
@@ -106,7 +107,7 @@ class Network(ninemlp.common.Network):
             raise Exception("There was an error setting the min_delay of the simulation, \
 try changing the values for timestep ({time}) and min_delay ({delay}). (Message - {e})".format(
                                                                               time=p['timestep'],
-                                                                              delay=p['min_delay'], 
+                                                                              delay=p['min_delay'],
                                                                               e=e))
         self.temperature = p['temperature']
 
