@@ -518,7 +518,12 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
     Called by nineml_celltype_from_model
     """
     def __new__(cls, name, bases, dct):
-        #The __init__ function for the created class  
+        # To be honest I probably don't understand the logic for the separation between model
+        # and the cell class in PyNN, which results in the slightly messy hack below, where I 
+        # produce basically two versions of the same __init__ function, one that takes a dictonary
+        # and the other that takes kwargs to pass to set as the cell class and model class __init__
+        # functions respectively.
+        #The __init__ function for the created class
         def cellclass__init__(self, parameters={}):
             pyNN.models.BaseCellType.__init__(self, parameters)
             NCMLCell.__init__(self, **parameters)
