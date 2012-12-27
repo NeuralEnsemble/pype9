@@ -32,13 +32,16 @@ class Forest(object):
         self.centroid = np.zeros(3)
         self.min_bounds = np.ones(3) * float('inf')
         self.min_bounds = np.ones(3) * float('-inf')        
-        for tree in trees:
-            self.centroid += trees.centroid
+        for tree in self.trees:
+            self.centroid += tree.centroid
             self.min_bounds = np.select([self.min_bounds <= tree.min_bounds, True],
                                 [self.min_bounds, tree.min_bounds])
             self.max_bounds = np.select([self.max_bounds >= tree.max_bounds, True],
                                 [self.max_bounds, tree.max_bounds])
-        self.centroid /= len(trees)
+        self.centroid /= len(roots)
+        
+    def __getitem__(self, index):
+        return self.trees[index]
         
     def rotate(self, theta, axis=2):
         """
@@ -114,24 +117,34 @@ class Tree(object):
         """
         Rotates the tree about the chosen axis by theta
         
-        @param theta [float]: The amount of counter-clockwise rotation
+        @param theta [float]: The amount of counter-clockwise rotation (in degrees)
         @param axis [str/int]: The axis about which to rotate the tree (either 'x'-'z' or 0-2, default 'z'/2)
         """
+        # Convert theta to radians
+        theta_rad = theta * 2 * np.pi / 360.0
+        # Precalculate the sine and cosine
+        cos_theta = np.cos(theta_rad)
+        sin_theta = np.sin(theta_rad)
+        # Get appropriate rotation matrix
         if axis == 0 or axis == 'x':        
-            rotation_matrix = np.array([[1, 0,             0]
-                                        [0, np.cos(theta), -np.sin(theta)],
-                                        [0, np.sin(theta), np.cos(theta)]])
+            rotation_matrix = np.array([[1, 0,         0]
+                                        [0, cos_theta, -sin_theta],
+                                        [0, sin_theta, cos_theta]])
         elif axis == 1 or axis == 'y':        
-            rotation_matrix = np.array([[np.cos(theta), 0, np.sin(theta)],
-                                        [0,             1, 0],
-                                        [-np.sin(theta), 0, np.cos(theta)]])
+            rotation_matrix = np.array([[cos_theta,  0, sin_theta],
+                                        [0,          1, 0],
+                                        [-sin_theta, 0, cos_theta]])
         elif axis == 2 or axis == 'z':        
-            rotation_matrix = np.array([[np.cos(theta), -np.sin(theta), 0],
-                                        [np.sin(theta), np.cos(theta),  0],
-                                        [0            , 0            ,  1]])
+            rotation_matrix = np.array([[cos_theta, -sin_theta, 0],
+                                        [sin_theta, cos_theta,  0],
+                                        [0,         0,          1]])
         else:
             raise Exception("'axis' argument must be either 0-2 or 'x'-'y' (found {})".format(axis))
+        # Rotate all the points in the tree
         self._points = np.dot(rotation_matrix, self._points)
+        # Clear masks, which will no longer match the rotated points
+        self._binary_masks = {}
+        self._inv_prob_masks = {}
         
 
     def get_binary_mask(self, vox_size, sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
@@ -166,7 +179,7 @@ class Tree(object):
 
     def shifted_tree(self, shift):
         """
-        Return shifted version of tree
+        Return shifted version of tree (a lightweight copy that borrows this trees masks)
         
         @param shift [tuple(float)]: Shift to apply to the tree
         """
@@ -510,19 +523,21 @@ def read_NeurolucidaXML(filename):
     handler = NeurolucidaXMLHandler()
     parser.setContentHandler(handler)
     parser.parse(filename)
-    return handler.roots
+    return Forest(handler.roots)
 
 
 if __name__ == '__main__':
     from os.path import normpath, join
     from ninemlp import SRC_PATH
     import pylab
-    trees = read_NeurolucidaXML(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
+    forest = read_NeurolucidaXML(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
                                               'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
     
-    vox_size = (0.5, 0.5, 0.5)
-    print "overlap: {}".format(trees[2].num_overlapping(trees[4], vox_size=vox_size))
-    trees[2].plot_mask(vox_size)
+    vox_size = (1, 1, 1)
+#    print "overlap: {}".format(forest[2].num_overlapping(forest[4], vox_size=vox_size))
+    tree = forest[2]
+    tree.rotate(45)
+    forest[2].plot_mask(vox_size)
 
 
 
