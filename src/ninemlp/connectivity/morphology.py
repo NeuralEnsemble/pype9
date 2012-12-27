@@ -27,11 +27,12 @@ class ShiftVoxelSizeMismatchException(Exception): pass
 class Forest(object):
     
     def __init__(self, roots):
+        self.trees = []
         for root in roots:
             self.trees.append(Tree(root))
         self.centroid = np.zeros(3)
         self.min_bounds = np.ones(3) * float('inf')
-        self.min_bounds = np.ones(3) * float('-inf')        
+        self.max_bounds = np.ones(3) * float('-inf')        
         for tree in self.trees:
             self.centroid += tree.centroid
             self.min_bounds = np.select([self.min_bounds <= tree.min_bounds, True],
@@ -47,7 +48,7 @@ class Forest(object):
         """
         Rotates the tree about the chosen axis by theta
         
-        @param theta [float]: The amount of counter-clockwise rotation
+        @param theta [float]: The degree of clockwise rotation (in degrees)
         @param axis [str/int]: The axis about which to rotate the tree (either 'x'-'z' or 0-2, default 'z'/2)
         """
         for tree in self.trees:
@@ -66,7 +67,7 @@ class Tree(object):
         @param point_count [int]: The number of tree points that were loaded from the XML description
         """
         # Recursively flatten all branches stemming from the root
-        self._points = [] 
+        self._points = []
         self._prev_indices = []
         self.diams = []
         self._flatten(root)
@@ -117,7 +118,7 @@ class Tree(object):
         """
         Rotates the tree about the chosen axis by theta
         
-        @param theta [float]: The amount of counter-clockwise rotation (in degrees)
+        @param theta [float]: The degree of clockwise rotation (in degrees)
         @param axis [str/int]: The axis about which to rotate the tree (either 'x'-'z' or 0-2, default 'z'/2)
         """
         # Convert theta to radians
@@ -127,7 +128,7 @@ class Tree(object):
         sin_theta = np.sin(theta_rad)
         # Get appropriate rotation matrix
         if axis == 0 or axis == 'x':        
-            rotation_matrix = np.array([[1, 0,         0]
+            rotation_matrix = np.array([[1, 0,         0],
                                         [0, cos_theta, -sin_theta],
                                         [0, sin_theta, cos_theta]])
         elif axis == 1 or axis == 'y':        
@@ -141,7 +142,7 @@ class Tree(object):
         else:
             raise Exception("'axis' argument must be either 0-2 or 'x'-'y' (found {})".format(axis))
         # Rotate all the points in the tree
-        self._points = np.dot(rotation_matrix, self._points)
+        self._points = np.dot(self._points, rotation_matrix)
         # Clear masks, which will no longer match the rotated points
         self._binary_masks = {}
         self._inv_prob_masks = {}
@@ -533,10 +534,11 @@ if __name__ == '__main__':
     forest = read_NeurolucidaXML(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
                                               'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
     
-    vox_size = (1, 1, 1)
+    vox_size = (2, 2, 2)
 #    print "overlap: {}".format(forest[2].num_overlapping(forest[4], vox_size=vox_size))
     tree = forest[2]
-    tree.rotate(45)
+    forest[2].plot_mask(vox_size, show=False)    
+    tree.rotate(10, axis=0)
     forest[2].plot_mask(vox_size)
 
 
