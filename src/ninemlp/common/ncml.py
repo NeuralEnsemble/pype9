@@ -299,7 +299,6 @@ class BaseNCMLCell(object):
         """
         pass
 
-
     def memb_init(self):
         # Initialisation of member states goes here        
         raise NotImplementedError("'memb_init' should be implemented by the derived class.")
