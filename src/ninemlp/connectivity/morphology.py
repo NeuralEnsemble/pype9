@@ -24,6 +24,32 @@ SAMPLE_DIAM_RATIO_DEFAULT = 4.0
 
 class ShiftVoxelSizeMismatchException(Exception): pass
 
+class Forest(object):
+    
+    def __init__(self, roots):
+        for root in roots:
+            self.trees.append(Tree(root))
+        self.centroid = np.zeros(3)
+        self.min_bounds = np.ones(3) * float('inf')
+        self.min_bounds = np.ones(3) * float('-inf')        
+        for tree in trees:
+            self.centroid += trees.centroid
+            self.min_bounds = np.select([self.min_bounds <= tree.min_bounds, True],
+                                [self.min_bounds, tree.min_bounds])
+            self.max_bounds = np.select([self.max_bounds >= tree.max_bounds, True],
+                                [self.max_bounds, tree.max_bounds])
+        self.centroid /= len(trees)
+        
+    def rotate(self, theta, axis=2):
+        """
+        Rotates the tree about the chosen axis by theta
+        
+        @param theta [float]: The amount of counter-clockwise rotation
+        @param axis [str/int]: The axis about which to rotate the tree (either 'x'-'z' or 0-2, default 'z'/2)
+        """
+        for tree in self.trees:
+            tree.rotate(theta, axis)
+
 
 class Tree(object):
 
@@ -83,6 +109,30 @@ class Tree(object):
             prev_index = len(self._points) - 1
         for branch in branch.sub_branches:
             self._flatten(branch, prev_index)
+
+    def rotate(self, theta, axis=2):
+        """
+        Rotates the tree about the chosen axis by theta
+        
+        @param theta [float]: The amount of counter-clockwise rotation
+        @param axis [str/int]: The axis about which to rotate the tree (either 'x'-'z' or 0-2, default 'z'/2)
+        """
+        if axis == 0 or axis == 'x':        
+            rotation_matrix = np.array([[1, 0,             0]
+                                        [0, np.cos(theta), -np.sin(theta)],
+                                        [0, np.sin(theta), np.cos(theta)]])
+        elif axis == 1 or axis == 'y':        
+            rotation_matrix = np.array([[np.cos(theta), 0, np.sin(theta)],
+                                        [0,             1, 0],
+                                        [-np.sin(theta), 0, np.cos(theta)]])
+        elif axis == 2 or axis == 'z':        
+            rotation_matrix = np.array([[np.cos(theta), -np.sin(theta), 0],
+                                        [np.sin(theta), np.cos(theta),  0],
+                                        [0            , 0            ,  1]])
+        else:
+            raise Exception("'axis' argument must be either 0-2 or 'x'-'y' (found {})".format(axis))
+        self._points = np.dot(rotation_matrix, self._points)
+        
 
     def get_binary_mask(self, vox_size, sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
         """
@@ -388,7 +438,7 @@ class InverseProbabilityMask(Mask):
         # Initialise the mask_array
         self._mask_array = np.zeros(self.dim, dtype=bool)
         # Loop through all of the tree _point_data and "paint" the mask
-        for begin, end in tree._point_data:
+        for begin, end in tree.segments:
             # Calculate the number of samples required for the current segment
             num_samples = np.ceil(norm(end - begin) * sample_freq)
             # Loop through the samples for the given segment and add their "point_mask" to the 
@@ -428,7 +478,7 @@ class NeurolucidaXMLHandler(XMLHandler):
         and segment groups.
         """
         XMLHandler.__init__(self)
-        self.trees = []
+        self.roots = []
         self.open_branches = []
 
     def startElement(self, tag_name, attrs):
@@ -449,7 +499,7 @@ class NeurolucidaXMLHandler(XMLHandler):
     def endElement(self, tag_name):
         if self._closing(tag_name, 'tree', required_attrs=[('type', 'Dendrite')]):
             assert(len(self.open_branches) == 1)
-            self.trees.append(Tree(self.open_branches.pop()))
+            self.roots.append(self.open_branches.pop())
         elif self._closing(tag_name, 'branch', parents=[('tree', 'branch')]):
             self.open_branches.pop()
         XMLHandler.endElement(self, tag_name)
@@ -460,7 +510,7 @@ def read_NeurolucidaXML(filename):
     handler = NeurolucidaXMLHandler()
     parser.setContentHandler(handler)
     parser.parse(filename)
-    return handler.trees
+    return handler.roots
 
 
 if __name__ == '__main__':
@@ -469,6 +519,7 @@ if __name__ == '__main__':
     import pylab
     trees = read_NeurolucidaXML(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
                                               'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
+    
     vox_size = (0.5, 0.5, 0.5)
     print "overlap: {}".format(trees[2].num_overlapping(trees[4], vox_size=vox_size))
     trees[2].plot_mask(vox_size)
