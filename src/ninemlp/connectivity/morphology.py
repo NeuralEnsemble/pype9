@@ -22,7 +22,7 @@ from ninemlp import XMLHandler
 THRESHOLD_DEFAULT = 0.001
 SAMPLE_DIAM_RATIO_DEFAULT = 4.0
 
-class ShiftVoxelSizeMismatchException(Exception): pass
+class DisplacedVoxelSizeMismatchException(Exception): pass
 
 class Forest(object):
     
@@ -64,7 +64,7 @@ class Tree(object):
         """
         Initialised the Tree object
         
-        @param root [NeurolucidaXMLHandler.Branch]: The root branch of a tree loaded from a Neurolucida XML tree description 
+        @param root [NeurolucidaXMLHandler.Branch]: The root branch of a tree loaded from a Neurolucida XML tree description
         @param point_count [int]: The number of tree points that were loaded from the XML description
         """
         # Recursively flatten all branches stemming from the root
@@ -81,8 +81,7 @@ class Tree(object):
         self.max_bounds = np.max(self.points + tiled_diams, axis=0)
         self.centroid = np.average(self.points, axis=0)
         # Create dictionaries to store tree masks to save having to regenerate them the next time
-        self._binary_masks = {}
-        self._inv_prob_masks = {}
+        self._masks = collections.defaultdict(dict)
 
     @property
     def points(self):
@@ -145,8 +144,7 @@ class Tree(object):
         # Rotate all the points in the tree
         self._points = np.dot(self._points, rotation_matrix)
         # Clear masks, which will no longer match the rotated points
-        self._binary_masks = {}
-        self._inv_prob_masks = {}
+        self._masks.clear()
         
 
     def get_binary_mask(self, vox_size, sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
@@ -156,9 +154,9 @@ class Tree(object):
         @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
         """
         vox_size = Mask.parse_vox_size(vox_size)
-        if not self._binary_masks.has_key(vox_size):
-            self._binary_masks[vox_size] = BinaryMask(self, vox_size, sample_diam_ratio)
-        return self._binary_masks[vox_size]
+        if not self._masks['binary'].has_key(vox_size):
+            self._masks['binary'][vox_size] = BinaryMask(self, vox_size, sample_diam_ratio)
+        return self._masks['binary'][vox_size]
 
     def get_inv_prob_mask(self, vox_size, gauss_kernel, threshold=THRESHOLD_DEFAULT,
                            sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
@@ -169,23 +167,23 @@ class Tree(object):
         
         """
         vox_size = Mask.parse_vox_size(vox_size)
-        if not self._inv_prob_masks.has_key(vox_size):
-            self._inv_prob_masks[vox_size] = InverseProbabilityMask(self, vox_size, gauss_kernel,
+        if not self._masks['inv_prob'].has_key(vox_size):
+            self._masks['inv_prob'][vox_size] = InverseProbabilityMask(self, vox_size, gauss_kernel,
                                                                     threshold, sample_diam_ratio)
-        return self._inv_prob_masks[vox_size]
+        return self._masks['inv_prob'][vox_size]
 
     def get_prob_mask(self, vox_size, gauss_kernel, threshold,
                            sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
         inv_prob_mask = self.get_inv_prob_mask(vox_size, gauss_kernel, threshold, sample_diam_ratio)
         return 1.0 - inv_prob_mask
 
-    def shifted_tree(self, shift):
+    def displaced_tree(self, displace):
         """
-        Return shifted version of tree (a lightweight copy that borrows this trees masks)
+        Return displaced version of tree (a lightweight copy that borrows this trees masks)
         
-        @param shift [tuple(float)]: Shift to apply to the tree
+        @param displace [tuple(float)]: Displace to apply to the tree
         """
-        return ShiftedTree(self, shift)
+        return DisplacedTree(self, displace)
 
     def num_overlapping(self, tree, vox_size):
         """
@@ -217,55 +215,69 @@ class Tree(object):
         mask.plot(show=show)
 
 
-class ShiftedTree(Tree):
+class DisplacedTree(Tree):
 
-    def __init__(self, tree, shift):
+    def __init__(self, tree, displacement):
         """
-        Saves a reference to the original tree and records a shift in its origin
+        A lightweight, displaced copy of the original tree, which avoids the regeneration of new 
+        masks if the displacement is an even multiple of the voxel dimensions of the mask by simply
+        offsetting the origin of the mask. Note that because it is a lightweight copy, changes to 
+        the original tree will be reflected in its displaced copies.
         
         @param tree [Tree]: The original tree
-        @param shift [tuple(float)]: The shift from the original tree
+        @param displace [tuple(float)]: The displace from the original tree
         """
-        if len(shift) != 3:
-            raise Exception("The 'shift' argument needs to be of length 3 (x, y & z coordinates), "
-                            "(found length {})".format(len(shift)))
-        self.shift = np.array(shift)
-        # The reference to the unshifted tree is used to store unshifted masks to be 
-        # accessed by all shifted copies
-        self._unshifted_tree = tree
-        # Shift the bounds and the centroid of the tree
-        self.centroid = tree.centroid + self.shift
-        self.min_bounds = tree.min_bounds + self.shift
-        self.max_bounds = tree.max_bounds + self.shift    
+        if len(displacement) != 3:
+            raise Exception("The 'displacement' argument needs to be of length 3 "
+                            "(x, y & z coordinates), (found length {})".format(len(displacement)))
+        self.displacement = np.array(displacement)
+        # The reference to the undisplaced tree is used to store undisplaced masks to be 
+        # accessed by all displaced copies
+        self._undisplaced_tree = tree
+        # Displace the bounds and the centroid of the tree
+        self.centroid = tree.centroid + self.displacement
+        self.min_bounds = tree.min_bounds + self.displacement
+        self.max_bounds = tree.max_bounds + self.displacement    
 
     def get_binary_mask(self, *mask_args):
         """
         Gets the binary mask for the given voxel size and sample diameter ratio. To avoid 
-        duplications the mask is accessed from the original (unshifted) tree, being created and 
+        duplications the mask is accessed from the original (undisplaced) tree, being created and 
         saved there if required.
         
         @param args: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
         """
-        return self._unshifted_tree.get_binary_mask(*mask_args).shifted_mask(self.shift)
+        try:
+            return self._undisplaced_tree.get_binary_mask(*mask_args).\
+                                                                   displaced_mask(self.displacement)
+        except DisplacedVoxelSizeMismatchException as e:
+            raise Exception("Cannot get binary mask of displaced tree because its displacement {} "
+                            "is not a multiple of the mask voxel sizes. {}"
+                            .format(self.displacement, e))
 
     def get_inv_prob_mask(self, *mask_args):
         """
         Gets the inverse probability mask for the given voxel size and sample diameter ratio. 
-        To avoid duplications the mask is accessed from the original (unshifted) tree, being 
+        To avoid duplications the mask is accessed from the original (undisplaced) tree, being 
         created and saved there if required.
         
         @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
-        """        
-        return self._unshifted_tree.get_inv_prob_mask(*mask_args).shifted_mask(self.shift)
-
+        """ 
+        try:               
+            return self._undisplaced_tree.get_inv_prob_mask(*mask_args).\
+                                                                   displaced_mask(self.displacement)
+        except DisplacedVoxelSizeMismatchException as e:
+            raise Exception("Cannot get inverse probability mask of displaced tree because its "
+                            "displacement {} is not a multiple of the mask voxel sizes. {}"
+                            .format(self.displacement, e))
     @property
     def points(self):
-        return self._points + self.shift
+        return self._points + self.displacement
 
     @property
     def segments(self):
-        for seg in self._unshifted_tree.segments:
-            yield Tree.Segment(seg.begin + self.shift, seg.end + self.shift, seg.diam)
+        for seg in self._undisplaced_tree.segments:
+            yield Tree.Segment(seg.begin + self.displacement, seg.end + self.displacement, seg.diam)
 
 
 class Mask(object):
@@ -330,10 +342,11 @@ class Mask(object):
             overlap_mask = np.array([])
         return overlap_mask
 
-    def shifted_mask(self, shift):
-        return ShiftedMask(self, shift)
+    def displaced_mask(self, displacement):
+        return DisplacedMask(self, displacement)
 
     def plot(self, slice_dim=2, skip=1, show=True):
+        import pylab
         for i in xrange(0, self.dim[slice_dim], skip):
             pylab.figure()
             mask_shape = self._mask_array.shape
@@ -369,35 +382,36 @@ class Mask(object):
         return vox_size
 
 
-class ShiftedMask(Mask):
+class DisplacedMask(Mask):
     """
-    A shifted version of the Mask, that reuses the same mask array only with updated
+    A displaced version of the Mask, that reuses the same mask array only with updated
     start and finish indices (also updated offset and limits)
     """
 
-    def __init__(self, mask, shift):
+    def __init__(self, mask, displacement):
         """
-        Initialises the shifted mask
+        Initialises the displaced mask
         
         @param mask [Mask]: The original mask
-        @param shift [tuple(float)]: The shift applied to the mask
+        @param displacement [tuple(float)]: The displacement of the "displaced mask"
         """
-        self.shift = np.asarray(shift)
-        if np.any(np.mod(self.shift, mask.vox_size)):
-            raise ShiftVoxelSizeMismatchException("Shifts ({}) needs to be multiples of respective "
-                                                  "voxel sizes ({})".format(shift, mask.vox_size))
+        self.displacement = np.asarray(displacement)
+        if np.any(np.mod(self.displacement, mask.vox_size)):
+            raise DisplacedVoxelSizeMismatchException(
+                    "Displacements ({}) need to be multiples of respective voxel sizes ({})"
+                    .format(displacement, mask.vox_size))
         # Copy invariant parameters
         self.dim = mask.dim
         self.vox_size = mask.vox_size
-        # Shift the start and finish indices of the mask
-        self.index_shift = np.array(self.shift / self.vox_size, dtype=np.int)
-        self.start_index = mask.start_index + self.index_shift
-        self.finish_index = mask.finish_index + self.index_shift
+        # Displace the start and finish indices of the mask
+        self.index_displacement = np.array(self.displacement / self.vox_size, dtype=np.int)
+        self.start_index = mask.start_index + self.index_displacement
+        self.finish_index = mask.finish_index + self.index_displacement
         # Set the offset and limit of the mask from the start and finish indices
-        self.offset = mask.offset + self.shift
-        self.limit = mask.limit + self.shift
+        self.offset = mask.offset + self.displacement
+        self.limit = mask.limit + self.displacement
         ## The actual mask array is the same as that of the original mask i.e. not a copy. \
-        # This is the whole point of the ShiftedTree and ShiftedMasks, to avoid making \
+        # This is the whole point of the DisplacedTree and DisplacedMasks, to avoid making \
         # unnecessary copies of this array.
         self._mask_array = mask._mask_array
 
