@@ -13,6 +13,7 @@
 #######################################################################################
 
 import numpy
+from warnings import warn
 
 #TOD: Should be able to specify axes for each of these geometries to align to
 
@@ -87,12 +88,12 @@ class MaskBased(object):
                 scale = number / num_nz
             else:
                 scale = 0.0
-                print "Warning! Number of connections for masked-based geometry (%s) could not be satisfied as no targets were found in mask" % str(number)
+                warn("Number of connections for masked-based geometry ({}) could not be satisfied "
+                     "as no targets were found in mask".format(number))
         # If probability exceeds 1 cap it at 1 as the best that can be done
         if scale > 1.0:
-            print "Warning! Number of requested connections (%d) could not be satisfied within given mask." % number
-            print "Only %d will be connected." % num_nz
-            print "(sorry I can't give you a more descriptive error message explaining which cell or even projection this comes from)."
+            warn("The number of requested connections (%d) could not be satisfied within given "
+                 "mask. Only %d will be connected.".format(number, num_nz))
             scale = 1.0
         probs = numpy.zeros(mask.shape)
         probs[mask] = scale
