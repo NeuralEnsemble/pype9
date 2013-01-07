@@ -13,7 +13,9 @@
 #######################################################################################
 
 import numpy
-from warnings import warn
+from warnings import warn, Warning
+
+class InsufficientTargetsWarning(Warning): pass
 
 #TOD: Should be able to specify axes for each of these geometries to align to
 
@@ -87,13 +89,11 @@ class MaskBased(object):
             if num_nz:
                 scale = number / num_nz
             else:
-                scale = 0.0
-                warn("Number of connections for masked-based geometry ({}) could not be satisfied "
-                     "as no targets were found in mask".format(number))
+                scale = float('inf')
         # If probability exceeds 1 cap it at 1 as the best that can be done
         if scale > 1.0:
-            warn("The number of requested connections (%d) could not be satisfied within given "
-                 "mask. Only %d will be connected.".format(number, num_nz))
+            warn("The number of requested connections ({}) could not be satisfied given size of "
+                 "mask ({})".format(number, num_nz), InsufficientTargetsWarning)
             scale = 1.0
         probs = numpy.zeros(mask.shape)
         probs[mask] = scale
