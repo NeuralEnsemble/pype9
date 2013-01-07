@@ -13,7 +13,7 @@
 #######################################################################################
 
 import numpy
-from warnings import warn, Warning
+from warnings import warn
 
 class InsufficientTargetsWarning(Warning): pass
 
@@ -93,7 +93,7 @@ class MaskBased(object):
         # If probability exceeds 1 cap it at 1 as the best that can be done
         if scale > 1.0:
             warn("The number of requested connections ({}) could not be satisfied given size of "
-                 "mask ({})".format(number, num_nz), InsufficientTargetsWarning)
+                 "mask ({})".format(int(number), num_nz), InsufficientTargetsWarning)
             scale = 1.0
         probs = numpy.zeros(mask.shape)
         probs[mask] = scale

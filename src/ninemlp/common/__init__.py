@@ -505,8 +505,8 @@ class Network(object):
         else:
             raise Exception("Unrecognised pattern type '{}'".format(connection.pattern))
         # Initialise the projection object and return
-        with warnings.catch_warnings as warnings_list:
-            warnings.simplefilter("always")
+        with warnings.catch_warnings(record=True) as warnings_list:
+            warnings.simplefilter("always", category=point2point.InsufficientTargetsWarning)
             if synapse_family == 'Chemical':
                 projection = self._Projection_class(pre, dest, label, connector, 
                                                     source=source.terminal, 
@@ -525,19 +525,18 @@ class Network(object):
                 raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
             # Collate raised "InsufficientTargets" warnings into a single warning message for better
             # readibility.
-            insufficient_targets_str = ""
-            parenthesis_reg_expr = re.compile("\(.*\)")
-            for w in warnings_list:
-                if w.category == point2point.InsufficientTargetsWarning:
-                    req_number, mask_size = re.findall(parenthesis_reg_expr, w.message)
-                    insufficient_targets_str += "{}|{}, ".format(req_number[2:-1], mask_size[2:-1])
-                else:
-                    warnings.warn(w.message, w.category)
-            if insufficient_targets_str:
-                warnings.warn("Could not satisfy all connection targets in projection {} because "
-                              "the requested number of connections exceeded the number in the "
-                              "generated masks in the following cases (requested|given): "
-                              .format(label) + insufficient_targets_str[:-2])
+            insufficient_targets_str = ""            
+            if warnings_list:
+                for w in warnings_list:
+                    if w.category == point2point.InsufficientTargetsWarning:
+                        req_number, mask_size = re.findall("\([^\)]*\)", str(w.message))
+                        insufficient_targets_str += " {},".format(mask_size[2:-1])
+        if insufficient_targets_str:
+            print "Could not satisfy all connection targets in projection '{}' " \
+                  "because the requested number of connections, {}, exceeded the size of " \
+                  "the generated masks of sizes:{}. The number of connections was reset to the " \
+                  "size of the respective masks in these cases.\n".format(label, req_number[2:-1], 
+                                                                          insufficient_targets_str[:-1])
         return projection
 
     def _get_simulation_params(self, **params):
