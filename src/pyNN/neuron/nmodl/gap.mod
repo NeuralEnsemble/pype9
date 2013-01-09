@@ -5,7 +5,8 @@
 NEURON {
   SUFFIX gap
   POINT_PROCESS gap
-  RANGE g, i, vgap
+  RANGE g, i
+  POINTER vgap
   ELECTRODE_CURRENT i
 }
 PARAMETER { g = 1e-10 (1/megohm) }

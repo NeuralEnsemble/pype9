@@ -398,13 +398,11 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                 for param in syn.params:
                     setattr(receptor, param.name, param.value.neuron())
         for syn in self.ncml_model.gap_junctions:
-            try:
-                GapJunction = type(syn.type) #FIXME: This needs to be verified
-            except:
-                raise Exception ("Could not find synapse '{}' in loaded or built-in synapses."\
-                                 .format(syn.id))
             for seg in self.get_group(syn.group_id):
-                receptor = GapJunction(0.5, sec=seg)
+                try:
+                    receptor = h.gap(0.5, sec=seg)
+                except AttributeError:
+                    raise Exception("Could not find in-built 'gap' synaptic mechanism")
                 setattr(seg, syn.id, receptor)
                 for param in syn.params:
                     setattr(receptor, param.name, param.value.neuron())
