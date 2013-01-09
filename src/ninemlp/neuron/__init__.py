@@ -197,9 +197,9 @@ class ElectricalSynapseProjection(Projection):
                         else:
                             segment = post_cell.source_section
                         try:
-                            synapse = getattr(segment, 'Gap')
+                            synapse = getattr(segment, 'gap')
                         except AttributeError:
-                            raise Exception("Section '{}' doesn't have a 'Gap' synapse inserted"
+                            raise Exception("Section '{}' doesn't have a 'gap' synapse inserted"
                                             .format(post_seg if post_seg else 'source_section'))
                         synapse.g = weight
                         simulator.state.parallel_context.target_var(synapse._ref_vgap, var_gid) #@UndefinedVariableFromImport
