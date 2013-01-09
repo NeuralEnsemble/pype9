@@ -167,8 +167,8 @@ class ElectricalSynapseProjection(Projection):
             # (one-way), where there is a gap junction connecting from one cell1 to cell2 and then 
             # another cell2 to cell1 (because the connections are mutual)
             if self.rectified or \
-                    self.Connection(target, target_segname, source, source_segname) not in \
-                    self.connections:
+                    ElectricalSynapseProjection.Connection(target, target_segname, 
+                                source, source_segname) not in self.connections:
                 # Generate unique but reproducible
                 pre_post_id = (self.pre.id_to_index(source) * len(self.post) + \
                                self.post.id_to_index(target) + self.gid_start) * 2
@@ -180,6 +180,7 @@ class ElectricalSynapseProjection(Projection):
                 if not self.rectified:
                     connection_list.append(((target, target_segname), (source, source_segname),
                                             post_pre_id))
+                print simulator.state.num_processes
                 for (pre_cell, pre_seg), (post_cell, post_seg), var_gid in connection_list:
                     if pre_cell.local:
                         if pre_seg:
@@ -187,6 +188,9 @@ class ElectricalSynapseProjection(Projection):
                         else:
                             segment = pre_cell.source_section
                         simulator.state.parallel_context.source_var(segment(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
+                        print "PRE: var_gid={var_gid}, process={mpi_rank}, cell_id={pre_cell}"\
+                              .format(mpi_rank=simulator.state.mpi_rank, pre_cell=int(pre_cell),
+                                      var_gid=var_gid)
                     if post_cell.local:
                         if post_seg:
                             segment = post_cell._cell.segments[post_seg]
@@ -199,6 +203,9 @@ class ElectricalSynapseProjection(Projection):
                                             .format(post_seg if post_seg else 'source_section'))
                         synapse.g = weight
                         simulator.state.parallel_context.target_var(synapse._ref_vgap, var_gid) #@UndefinedVariableFromImport
+                        print "POST: var_gid={var_gid}, process={mpi_rank}, cell_id={post_cell}"\
+                              .format(mpi_rank=simulator.state.mpi_rank, post_cell=int(post_cell),
+                                      var_gid=var_gid)                       
                 # Save connection information to avoid duplicates, where the same cell connects
                 # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
                 self.connections.append(self.Connection(source, self.source, target,
