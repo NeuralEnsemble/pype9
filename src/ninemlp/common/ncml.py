@@ -172,7 +172,7 @@ class NCMLHandler(XMLHandler):
     IonicCurrentParam = collections.namedtuple('IonicCurrentParam', 'name value')
     PassiveCurrent = collections.namedtuple('PassiveCurrent', 'group_id cond_density')
     Synapse = collections.namedtuple('Synapse', 'id type group_id params')
-    GapJunction = collections.namedtuple('GapJunction', 'group_id')
+    GapJunction = collections.namedtuple('GapJunction', 'id group_id params')
     SynapseParam = collections.namedtuple('SynapseParam', 'name value')
     SpecificCapacitance = collections.namedtuple('SpecificCapacitance', 'value group_id')
     ReversePotential = collections.namedtuple('NCMLReversePotential', 'species value group_id')
@@ -238,7 +238,9 @@ class NCMLHandler(XMLHandler):
                                               attrs.get('segmentGroup', None),
                                                   []))
         elif self._opening(tag_name, attrs, 'gapJunction', parents=['synapses']):
-            self.ncml.gap_junctions.append(self.GapJunction(attrs.get('segmentGroup', None)))
+            self.ncml.gap_junctions.append(self.GapJunction(attrs['id'],
+                                                            attrs.get('segmentGroup', None),
+                                                            []))
         elif self._opening(tag_name, attrs, 'parameter', parents=['conductanceSynapse']):
             self.ncml.synapses[-1].params.append(self.SynapseParam(attrs['name'],
                                                                    ValueWithUnits(attrs['value'],
