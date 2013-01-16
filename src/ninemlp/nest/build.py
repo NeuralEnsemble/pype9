@@ -56,12 +56,6 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
                                                                                     , shell=True)
     except sp.CalledProcessError as e:
         raise Exception('Error while compiling NCML description into NEST cpp code -> {}'.format(e))
-#    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/mymodule.h', src_dir)
-#    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/mymodule.cpp', src_dir)
-#    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/pif_psc_alpha.cpp', src_dir)
-#    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/pif_psc_alpha.h', src_dir)
-#    shutil.copy('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/drop_odd_spike_connection.h', src_dir)
-#    shutil.copytree('/home/tclose/git/kbrain/external/nest/nest-2.0.0-rc4/examples/MyModule/sli', src_dir + '/sli')
     # Generate configure.ac file
     configure_ac = """
 AC_PREREQ(2.52)
@@ -319,7 +313,7 @@ AM_LDFLAGS = @SUNDIALS_LDFLAGS@
 .PHONY: install-slidoc
 
 nobase_pkgdata_DATA=\\
-    {celltype_name}.sli
+    sli/{celltype_name}.sli
 
 install-slidoc:
     NESTRCFILENAME=/dev/null $(DESTDIR)$(NEST_PREFIX)/bin/sli --userargs="@HELPDIRS@" $(NEST_PREFIX)/share/nest/sli/install-help.sli
