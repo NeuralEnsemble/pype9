@@ -54,7 +54,17 @@ class NCMLMetaClass(BaseNCMLMetaClass):
         cell_type.model = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
         return cell_type
 
-def load_cell_type(celltype_name, ncml_path, build_mode=DEFAULT_BUILD_MODE, silent=False):
+def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode=DEFAULT_BUILD_MODE, 
+                   silent=False, nest_method='gsl'):
+    """
+    Loads a PyNN cell type for NEST from an XML description, compiling the necessary module files
+    
+    @param celltype_name [str]: Name of the cell class to extract from the xml file
+    @param ncml_path [str]: The location of the NCML XML file
+    @param morph_id [str]: Currently unused but kept for consistency with NEURON version of this function
+    @param build_mode [str]: Control the automatic building of required modules
+    @param silent [bool]: Whether or not to suppress build output
+    """
     if loaded_cell_types.has_key(celltype_name):
         # Select the previously loaded cell type
         cell_type, old_ncml_path = loaded_cell_types[celltype_name]
@@ -66,7 +76,8 @@ def load_cell_type(celltype_name, ncml_path, build_mode=DEFAULT_BUILD_MODE, sile
     else:
         dct = {}
         install_dir, dct['component_parameters'] = build_celltype_files(celltype_name, ncml_path,
-                                                                            build_mode=build_mode)
+                                                                        build_mode=build_mode,
+                                                                        method=nest_method)
         lib_dir = os.path.join(install_dir, 'lib', 'nest')
         if sys.platform.startswith('linux') or \
                                     sys.platform in ['os2', 'os2emx', 'cygwin', 'atheos', 'ricos']:

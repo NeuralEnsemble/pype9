@@ -21,7 +21,7 @@ from ninemlp.common.build import path_to_exec, get_build_paths, load_component_p
 _SIMULATOR_BUILD_NAME = 'nest'
 
 def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
-                                method='cvode', build_mode=DEFAULT_BUILD_MODE, silent_build=False):
+                                method='gsl', build_mode=DEFAULT_BUILD_MODE, silent_build=False):
     """
     Generates the cpp code corresponding to the NCML file, then configures, and compiles and installs
     the corresponding module into nest
@@ -50,7 +50,7 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     # Compile the NCML file into NEST cpp code
     nemo_path = path_to_exec('nemo')
     try:
-        sp.check_call('{nemo_path} {ncml_path} -p --pyparams={params} --nest={output} \
+        sp.check_call('{nemo_path} {ncml_path} --pyparams={params} --nest={output} \
 --nest-method={method}'.format(nemo_path=nemo_path, method=method,
                                             ncml_path=ncml_path, output=src_dir, params=params_dir)
                                                                                     , shell=True)
@@ -117,11 +117,27 @@ AC_ARG_WITH(nest,[  --with-nest=script    nest-config script including path],
 # END Handle options
 # -------------------------------------------
 
+# sundials-config
+SUNDIALS_CONFIG=`which sundials-config`
+AC_ARG_WITH(sundials,[  --with-sundials=script    sundials-config script including path],
+[
+  if test "$withval" != yes; then
+    SUNDIALS_CONFIG=$withval
+#  else
+#    AC_MSG_ERROR([--with-sundials-config expects the sundials-config script as argument. See README for details.])
+  fi
+])
 
 # does nest-config work
 AC_MSG_CHECKING([for nest-config ])
 AC_CHECK_FILE($NEST_CONFIG, HAVE_NEST=yes, 
               AC_MSG_ERROR([No usable nest-config was found. You may want to use --with-nest-config.]))
+AC_MSG_RESULT(found)
+
+# Does sundials-config work
+AC_MSG_CHECKING([for sundials-config ])
+AC_CHECK_FILE($SUNDIALS_CONFIG, HAVE_SUNDIALS=yes, 
+              AC_MSG_ERROR([No usable sundials-config was found. You may want to use --with-sundials-config.]))
 AC_MSG_RESULT(found)
 
 # the following will crash if nest-config does not run
@@ -132,6 +148,14 @@ NEST_CPPFLAGS=`$NEST_CONFIG --cflags`
 NEST_COMPILER=`$NEST_CONFIG --compiler`
 if test $prefix = NONE; then prefix=`$NEST_CONFIG --prefix`; fi
 AC_MSG_RESULT($NEST_CPPFLAGS)
+
+AC_MSG_CHECKING([for SUNDIALS preprocessor flags ])
+SUNDIALS_CPPFLAGS="`$SUNDIALS_CONFIG -m cvode -t s -l c -s cppflags`"
+AC_MSG_RESULT($SUNDIALS_CPPFLAGS)
+
+AC_MSG_CHECKING([for SUNDIALS linker options ])
+SUNDIALS_LDFLAGS="`$SUNDIALS_CONFIG -m cvode -t s -l c -s libs` -lblas -llapack"
+AC_MSG_RESULT($SUNDIALS_LDFLAGS)
 
 # Set the platform-dependent compiler flags based on the canonical
 # host string.  These flags are placed in AM_{{C,CXX}}FLAGS.  If
@@ -221,6 +245,9 @@ AC_SUBST(MAKE)
 AC_SUBST(MAKE_FLAGS)
 AC_SUBST(INCLTDL)
 AC_SUBST(LIBLTDL)
+AC_SUBST(SUNDIALS_CONFIG)
+AC_SUBST(SUNDIALS_CPPFLAGS)
+AC_SUBST(SUNDIALS_LDFLAGS)
 
 AM_CONFIG_HEADER({module_lower}_config.h:{module_lower}_config.h.in)
 AC_CONFIG_FILES(Makefile)
@@ -245,6 +272,8 @@ echo
 echo "C++ compiler        : $CXX"
 echo "C++ compiler flags  : $AM_CXXFLAGS"
 echo "NEST compiler flags : $NEST_CPPFLAGS"
+echo "SUNDIALS compiler flags : $SUNDIALS_CPPFLAGS"
+echo "SUNDIALS linker flags : $SUNDIALS_LDFLAGS"
 
 # these variables will still contain '${{prefix}}'
 # we want to have the versions where this is resolved, too:
@@ -272,9 +301,8 @@ libdir= @libdir@/nest
 lib_LTLIBRARIES=      {celltype_name}.la lib{celltype_name}.la
 
 {celltype_name}_la_CXXFLAGS= @AM_CXXFLAGS@
-{celltype_name}_la_SOURCES=  {celltype_name}.cpp      {celltype_name}.h \\
-                          pif_psc_alpha.cpp pif_psc_alpha.h \\
-                          drop_odd_spike_connection.h
+{celltype_name}_la_SOURCES=  {celltype_name}.cpp      {celltype_name}.h
+
 {celltype_name}_la_LDFLAGS=  -module
 
 lib{celltype_name}_la_CXXFLAGS= $({celltype_name}_la_CXXFLAGS) -DLINKED_MODULE
@@ -283,12 +311,15 @@ lib{celltype_name}_la_SOURCES=  $({celltype_name}_la_SOURCES)
 MAKEFLAGS= @MAKE_FLAGS@
 
 AM_CPPFLAGS= @NEST_CPPFLAGS@ \\
-             @INCLTDL@      
+             @SUNDIALS_CPPFLAGS@ \\
+             @INCLTDL@
+
+AM_LDFLAGS = @SUNDIALS_LDFLAGS@
 
 .PHONY: install-slidoc
 
 nobase_pkgdata_DATA=\\
-    sli/{celltype_name}.sli
+    {celltype_name}.sli
 
 install-slidoc:
     NESTRCFILENAME=/dev/null $(DESTDIR)$(NEST_PREFIX)/bin/sli --userargs="@HELPDIRS@" $(NEST_PREFIX)/share/nest/sli/install-help.sli
