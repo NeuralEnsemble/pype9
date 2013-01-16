@@ -45,6 +45,9 @@ class Forest(object):
     def __getitem__(self, index):
         return self.trees[index]
         
+    def __len__(self):
+        return len(self.trees)    
+        
     def rotate(self, theta, axis=2):
         """
         Rotates the tree about the chosen axis by theta
