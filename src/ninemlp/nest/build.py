@@ -7,7 +7,7 @@
 """
 
 #######################################################################################
-#
+#    
 #    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
@@ -19,6 +19,14 @@ from ninemlp import DEFAULT_BUILD_MODE
 from ninemlp.common.build import path_to_exec, get_build_paths, load_component_parameters
 
 _SIMULATOR_BUILD_NAME = 'nest'
+
+def ensure_camel_case(name):
+    if len(name) < 2:
+        raise Exception("The name ('{}') needs to be at least 2 letters long to enable the "
+                        " capitalized version to be different from upper case version".format(name))
+    if name == name.lower() or name == name.upper():
+        name = name.title()
+    return name
 
 def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
                                 method='gsl', build_mode=DEFAULT_BUILD_MODE, silent_build=False):
@@ -78,16 +86,17 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     # Return installation directory
     return install_dir, component_parameters
 
+
 def create_configure_ac(celltype_name, src_dir):
     configure_ac = """
 AC_PREREQ(2.52)
 
-AC_INIT({module_lower}, 1.0, nest_user@nest-initiative.org)
+AC_INIT({celltype_name_low}, 1.0, nest_user@nest-initiative.org)
 
 # These variables are exported to include/config.h
-{module_upper}_MAJOR=1
-{module_upper}_MINOR=0
-{module_upper}_PATCHLEVEL=0
+{celltype_name_upper}_MAJOR=1
+{celltype_name_upper}_MINOR=0
+{celltype_name_upper}_PATCHLEVEL=0
 
 # Exporting source and build directories requires full path names.
 # Thus we have to expand.
@@ -104,7 +113,7 @@ PKGBUILDDIR=`pwd`
 # moritz, 06-26-06
 AC_CONFIG_AUX_DIR(.)
 
-AM_INIT_AUTOMAKE(nest, ${module_upper}_VERSION)
+AM_INIT_AUTOMAKE(nest, ${celltype_name_upper}_VERSION)
 
 # obtain host system type; HEP 2004-12-20
 AC_CANONICAL_HOST
@@ -189,7 +198,7 @@ AC_MSG_RESULT($SUNDIALS_LDFLAGS)
 # here.
 # HEP 2004-12-21
 
-{module_upper}_SAVE_CXXFLAGS=$CXXFLAGS
+{celltype_name_upper}_SAVE_CXXFLAGS=$CXXFLAGS
 
 # Must first check if we are on AIX
 AC_AIX
@@ -199,8 +208,8 @@ AC_AIX
 AC_PROG_CXX([ $NEST_COMPILER ])
 
 # the following is makeshift, should have the macro set proper
-# {module_upper}_SET_CXXFLAGS
-AM_CXXFLAGS=${module_upper}_SAVE_CXXFLAGS
+# {celltype_name_upper}_SET_CXXFLAGS
+AM_CXXFLAGS=${celltype_name_upper}_SAVE_CXXFLAGS
 CXXFLAGS=
 
 ## Configure C environment
@@ -265,7 +274,7 @@ AC_SUBST(SUNDIALS_CONFIG)
 AC_SUBST(SUNDIALS_CPPFLAGS)
 AC_SUBST(SUNDIALS_LDFLAGS)
 
-AM_CONFIG_HEADER({module_lower}_config.h:{module_lower}_config.h.in)
+AM_CONFIG_HEADER({celltype_name_low}_config.h:{celltype_name_low}_config.h.in)
 AC_CONFIG_FILES(Makefile)
 
 # -----------------------------------------------
@@ -282,7 +291,7 @@ AC_OUTPUT
 
 echo
 echo "-------------------------------------------------------"
-echo "{module_capitalized} Configuration Summary"
+echo "{celltype_name_camel} Configuration Summary"
 echo "-------------------------------------------------------"
 echo
 echo "C++ compiler        : $CXX"
@@ -299,14 +308,14 @@ eval eval eval  PKGDATADIR_AS_CONFIGURED=$PKGDATADIR
 echo
 echo "-------------------------------------------------------"
 echo
-echo "You can build and install {module_capitalized} now, using"
+echo "You can build and install {celltype_name_camel} now, using"
 echo "  make"
 echo "  make install"
 echo
-echo "{module_capitalized} will be installed to:"
+echo "{celltype_name_camel} will be installed to:"
 echo -n "  "; eval eval echo "$libdir"
-echo""".format(module_lower=celltype_name.lower(), module_upper=celltype_name.upper(),
-               module_capitalized=celltype_name.capitalize())
+echo""".format(celltype_name_low=celltype_name.lower(), celltype_name_upper=celltype_name.upper(),
+               celltype_name_camel=ensure_camel_case(celltype_name))
     # Write configure.ac with module names to file
     with open(os.path.join(src_dir, 'configure.ac'), 'w') as f:
         f.write(configure_ac)
@@ -320,7 +329,7 @@ lib_LTLIBRARIES=      {celltype_name}.la lib{celltype_name}.la
 
 {celltype_name}_la_CXXFLAGS= @AM_CXXFLAGS@
 {celltype_name}_la_SOURCES=  {celltype_name}.cpp      {celltype_name}.h \\
-                             {celltype_name}_module.cpp {celltype_name}_module.h
+                             {celltype_name}Module.cpp {celltype_name}Module.h
 
 
 {celltype_name}_la_LDFLAGS=  -module
@@ -348,7 +357,7 @@ install-slidoc:
 install-data-hook: install-exec install-slidoc
 
 EXTRA_DIST= sli
-""".format(celltype_name=celltype_name)
+""".format(celltype_name=celltype_name.capitalized)
     # Write configure.ac with module names to file
     with open(os.path.join(src_dir, 'Makefile.am'), 'w') as f:
         f.write(makefile)
@@ -408,7 +417,7 @@ def create_boilerplate_cpp(celltype_name, src_dir):
     
     header_code="""
 /*
- *  granulemodule.h
+ *  {celltype_name}Modulemodule.h
  *
  *  This file is part of NEST.
  *
@@ -423,8 +432,8 @@ def create_boilerplate_cpp(celltype_name, src_dir):
  *
  */
 
-#ifndef GRANULEMODULE_H
-#define GranuleMODULE_H
+#ifndef {celltype_name_upper}MODULE_H
+#define {celltype_name_upper}MODULE_H
 
 #include "dynmodule.h"
 #include "slifunction.h"
@@ -435,13 +444,13 @@ namespace nest
 }
 
 // Put your stuff into your own namespace.
-namespace granulenest {
+namespace ncml {
   
 /**
  * Class defining your model.
  * @note For each model, you must define one such class, with a unique name.
  */
-class GranuleModule : public DynModule
+class {celltype_name_camel}Module : public DynModule
 {
 public:
 
@@ -451,13 +460,13 @@ public:
    * @note The constructor registers the module with the dynamic loader. 
    *       Initialization proper is performed by the init() method.
    */
-  GranuleModule();
+  {celltype_name_camel}Module();
   
   /**
    * @note The destructor does not do much in modules. Proper "downrigging"
    *       is the responsibility of the unregister() method.
    */
-  ~GranuleModule();
+  ~{celltype_name_camel}Module();
 
   /**
    * Initialize module by registering models with the network.
@@ -474,7 +483,7 @@ public:
   const std::string name(void) const;
   
   /**
-   * Return the name of a sli file to execute when granulemodule is loaded.
+   * Return the name of a sli file to execute when {celltype_name}Module is loaded.
    * This mechanism can be used to define SLI commands associated with your
    * module, in particular, set up type tries for functions you have defined.
    */
@@ -503,18 +512,18 @@ public:
 
      StepPatternConnect_Vi_i_Vi_i_lFunction stepPatternConnect_Vi_i_Vi_i_lFunction;
   };
-} // namespace granulenest
+} // namespace ncml
 
 #endif
-""".format(module_lower=celltype_name.lower(), module_upper=celltype_name.upper(),
-               module_capitalized=celltype_name.capitalize())
+""".format(celltype_name_low=celltype_name.lower(), celltype_name_upper=celltype_name.upper(),
+               celltype_name_camel=ensure_camel_case(celltype_name))
     # Write configure.ac with module names to file
     with open(os.path.join(src_dir, celltype_name + '_module.h'), 'w') as f:
         f.write(header_code)
     # Create the C++ file
     cpp_code="""
  /*   
- *  granulemodule.cpp
+ *  {celltype_name}Module.cpp
  *  This file is part of NEST.
  *
  *  Copyright (C) 2008 by
@@ -543,8 +552,8 @@ public:
 #include "nestmodule.h"
 
 // include headers with your own stuff
-#include "granulemodule.h"
-#include "Granule.h"
+#include "{celltype_name}Module.h"
+#include "{celltype_name}.h"
 #include "drop_odd_spike_connection.h"
 
 // -- Interface to dynamic module loader ---------------------------------------
@@ -559,11 +568,11 @@ public:
  * The dynamicloader can then load modulename and search for symbol "mod" in it.
  */
  
-granulenest::GranuleModule granulemodule_LTX_mod;
+ncml::{celltype_name_camel}Module {celltype_name}Module_LTX_mod;
 
 // -- DynModule functions ------------------------------------------------------
 
-granulenest::GranuleModule::GranuleModule()
+ncml::{celltype_name_camel}Module::{celltype_name_camel}Module()
   { 
 #ifdef LINKED_MODULE
      // register this module at the dynamic loader
@@ -573,26 +582,26 @@ granulenest::GranuleModule::GranuleModule()
 #endif     
    }
 
-granulenest::GranuleModule::~GranuleModule()
+ncml::{celltype_name_camel}Module::~{celltype_name_camel}Module()
    {
    }
 
-   const std::string granulenest::GranuleModule::name(void) const
+   const std::string ncml::{celltype_name_camel}Module::name(void) const
    {
-     return std::string("Granule Module"); // Return name of the module
+     return std::string("{celltype_name_camel} Module"); // Return name of the module
    }
 
-   const std::string granulenest::GranuleModule::commandstring(void) const
+   const std::string ncml::{celltype_name_camel}Module::commandstring(void) const
    {
-     /* 1. Tell interpreter that we provide the C++ part of GranuleModule with the
+     /* 1. Tell interpreter that we provide the C++ part of {celltype_name_camel}Module with the
            current revision number. 
-        2. Instruct the interpreter to check that granulemodule-init.sli exists, 
-           provides at least version 1.0 of the SLI interface to GranuleModule, and
+        2. Instruct the interpreter to check that {celltype_name}Module-init.sli exists, 
+           provides at least version 1.0 of the SLI interface to {celltype_name_camel}Module, and
            to load it.
       */
      return std::string(
-       "/granulemodule /C++ ($Revision: 8512 $) provide-component "
-       "/granulemodule /SLI (7165) require-component"
+       "/{celltype_name}Module /C++ ($Revision: 8512 $) provide-component "
+       "/{celltype_name}Module /SLI (7165) require-component"
        );
    }
 
@@ -646,7 +655,7 @@ granulenest::GranuleModule::~GranuleModule()
       SeeAlso:
       Connect, ConvergentConnect, DivergentConnect
    */
-   void granulenest::GranuleModule::StepPatternConnect_Vi_i_Vi_i_lFunction::execute(SLIInterpreter *i) const
+   void ncml::{celltype_name_camel}Module::StepPatternConnect_Vi_i_Vi_i_lFunction::execute(SLIInterpreter *i) const
    {
      // Check if we have (at least) five arguments on the stack.
      i->assert_stack_load(5);
@@ -697,7 +706,7 @@ granulenest::GranuleModule::~GranuleModule()
 
   //-------------------------------------------------------------------------------------
 
-  void granulenest::GranuleModule::init(SLIInterpreter *i, nest::Network*)
+  void ncml::{celltype_name_camel}Module::init(SLIInterpreter *i, nest::Network*)
   {
     /* Register a neuron or device model.
        Give node type as template argument and the name as second argument.
@@ -705,8 +714,8 @@ granulenest::GranuleModule::~GranuleModule()
        Return value is a handle for later unregistration.
     */
     //printf ("before register model\n");
-       nest::register_model<nest::Granule>(nest::NestModule::get_network(), 
-                        "Granule");
+       nest::register_model<nest::{celltype_name_camel}>(nest::NestModule::get_network(), 
+                        "{celltype_name}");
        // printf ("after register model\n");
 
     /* Register a synapse type.
@@ -720,18 +729,38 @@ granulenest::GranuleModule::~GranuleModule()
        The first argument is the function name for SLI, the second a pointer to
        the function object. If you do not want to overload the function in SLI,
        you do not need to give the mangled name. If you give a mangled name, you
-       should define a type trie in the granulemodule-init.sli file.
+       should define a type trie in the {celltype_name}Module-init.sli file.
     */
     i->createcommand("StepPatternConnect_Vi_i_Vi_i_l", 
                      &stepPatternConnect_Vi_i_Vi_i_lFunction);
 
-  }  // GranuleModule::init()
+  }  // {celltype_name_camel}Module::init()
     
-""".format(module_lower=celltype_name.lower(), module_upper=celltype_name.upper(),
-               module_capitalized=celltype_name.capitalize())
+""".format(celltype_name_low=celltype_name.lower(), celltype_name_upper=celltype_name.upper(),
+               celltype_name_camel=ensure_camel_case(celltype_name))
     # Write configure.ac with module names to file
     with open(os.path.join(src_dir, celltype_name + '_module.cpp'), 'w') as f:
         f.write(cpp_code)
+
+def create_sli_initialiser(celltype_name, src_dir):
+    
+    sli_str="""
+/* 
+ * Initialization file for {celltype_name_camel}Module.
+ * Run automatically when {celltype_name_camel}Module is loaded.
+ */
+
+M_DEBUG ({celltype_name}Module.sli) (Initializing SLI support for {celltype_name_camel}Module.) message
+
+/{celltype_name}Module /SLI ($Revision: 7918 $) provide-component
+/{celltype_name}Module /C++ (7165) require-component
+
+/StepPatternConnect [ /arraytype /integertype /arraytype /integertype /literaltype ]
+{ 
+  StepPatternConnect_Vi_i_Vi_i_l
+} def
+""".format(celltype_name_low=celltype_name.lower(), celltype_name_upper=celltype_name.upper(),
+               celltype_name_camel=ensure_camel_case(celltype_name))
 
 if __name__ == '__main__':
     build_celltype_files('mymodule', '/home/tclose/kbrain/xml/cerebellum/ncml/MyModule.xml')
