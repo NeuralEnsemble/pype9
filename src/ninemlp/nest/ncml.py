@@ -27,7 +27,7 @@ _RELATIVE_NEST_BUILD_DIR = os.path.join('build', 'nest')
 
 class NCMLCell(BaseNCMLCell, pyNN.nest.NativeCellType):
 
-    def __init__(self, parameters):
+    def __init__(self, **parameters):
         BaseNCMLCell.__init__(self)
         pyNN.nest.NativeCellType.__init__(self, parameters)
 
@@ -44,7 +44,6 @@ class NCMLMetaClass(BaseNCMLMetaClass):
     def __new__(cls, name, bases, dct):
         #The __init__ function for the created class  
         def cellclass__init__(self, parameters={}):
-            pyNN.models.BaseCellType.__init__(self, parameters)
             NCMLCell.__init__(self, **parameters)
         def modelclass__init__(self, **parameters):
             cellclass__init__(self, parameters)
@@ -98,7 +97,7 @@ def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode=DEFAULT_B
         dct['morphml_model'] = read_MorphML(celltype_name, ncml_path)
         dct['nest_model'] = celltype_name
         # Add the loaded cell type to the list of cell types that have been loaded
-        cell_type = NCMLMetaClass(str(celltype_name), (pyNN.models.BaseCellType, NCMLCell), dct)
+        cell_type = NCMLMetaClass(str(celltype_name), (NCMLCell,), dct)
         # Added the loaded cell_type to the dictionary of previously loaded cell types
         loaded_cell_types[celltype_name] = (cell_type, ncml_path)
     return cell_type
