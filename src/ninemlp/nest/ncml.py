@@ -91,9 +91,9 @@ def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode=DEFAULT_B
         else:
             os.environ[lib_path_key] = lib_dir
         # Add module install directory to NEST path
-        nest.sli_run('({}) addpath'.format(install_dir))
+        nest.sli_run('({}) addpath'.format(os.path.join(install_dir, 'share', 'nest'))) 
         # Install nest module
-        nest.Install(celltype_name)
+        nest.Install(celltype_name + 'Loader')
         dct['ncml_model'] = read_NCML(celltype_name, ncml_path)
         dct['morphml_model'] = read_MorphML(celltype_name, ncml_path)
         dct['nest_model'] = celltype_name

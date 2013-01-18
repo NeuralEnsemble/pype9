@@ -11,7 +11,7 @@
 #    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
-import sys
+import time
 import os.path
 import subprocess as sp
 import shutil
@@ -44,9 +44,8 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     orig_dir = os.getcwd()
     # Determine the paths for the src, build and install directories
     (default_install_dir, params_dir, 
-     src_dir, compile_dir) = get_build_paths(ncml_path, celltype_name,
-                                             _SIMULATOR_BUILD_NAME, 
-                                             build_parent_dir=build_parent_dir)
+            src_dir, compile_dir) = get_build_paths(ncml_path, celltype_name,_SIMULATOR_BUILD_NAME, 
+                                                    build_parent_dir=build_parent_dir)
     if not install_dir:
         install_dir = default_install_dir
     # Clean existing directories from previous builds. TODO: It is a bit wasteful to build the
@@ -72,11 +71,14 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     # Generate configure.ac and Makefile
     create_configure_ac(celltype_name, src_dir)
     create_makefile(celltype_name, src_dir)
+    create_boilerplate_cpp(celltype_name, src_dir)
+    create_sli_initialiser(celltype_name, src_dir)
     # Run the required shell commands to bootstrap the build configuration
     run_bootstrap(src_dir)
     # Run configure script, make and make install
     os.chdir(compile_dir)
-    sp.check_call('./configure --prefix={install_dir}'.format(install_dir=install_dir), shell=True)
+    sp.check_call('{src_dir}/configure --prefix={install_dir}'
+                  .format(src_dir=src_dir, install_dir=install_dir), shell=True)
     sp.check_call('make', shell=True)
     sp.check_call('make install', shell=True)
     # Switch back to original dir
@@ -89,7 +91,7 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
 
 def create_configure_ac(celltype_name, src_dir):
     configure_ac = """
-AC_PREREQ(2.52)
+AC_PREREQ(2.52)3
 
 AC_INIT({celltype_name}, 1.0, nest_user@nest-initiative.org)
 
@@ -324,17 +326,17 @@ def create_makefile(celltype_name, src_dir):
     makefile = """
 libdir= @libdir@/nest
 
-lib_LTLIBRARIES=      {celltype_name}.la lib{celltype_name}.la
+lib_LTLIBRARIES=      {celltype_name}Loader.la lib{celltype_name}Loader.la
 
-{celltype_name}_la_CXXFLAGS= @AM_CXXFLAGS@
-{celltype_name}_la_SOURCES=  {celltype_name}.cpp      {celltype_name}.h \\
-                             {celltype_name}Module.cpp {celltype_name}Module.h
+{celltype_name}Loader_la_CXXFLAGS= @AM_CXXFLAGS@
+{celltype_name}Loader_la_SOURCES=  {celltype_name}.cpp      {celltype_name}.h \\
+                             {celltype_name}Loader.cpp {celltype_name}Loader.h
 
 
-{celltype_name}_la_LDFLAGS=  -module
+{celltype_name}Loader_la_LDFLAGS=  -module
 
-lib{celltype_name}_la_CXXFLAGS= $({celltype_name}_la_CXXFLAGS) -DLINKED_MODULE
-lib{celltype_name}_la_SOURCES=  $({celltype_name}_la_SOURCES)
+lib{celltype_name}Loader_la_CXXFLAGS= $({celltype_name}Loader_la_CXXFLAGS) -DLINKED_MODULE
+lib{celltype_name}Loader_la_SOURCES=  $({celltype_name}Loader_la_SOURCES)
 
 MAKEFLAGS= @MAKE_FLAGS@
 
@@ -347,7 +349,7 @@ AM_LDFLAGS = @SUNDIALS_LDFLAGS@
 .PHONY: install-slidoc
 
 nobase_pkgdata_DATA=\\
-    sli/{celltype_name}.sli
+    {celltype_name}Loader.sli
 
 install-slidoc:
     NESTRCFILENAME=/dev/null $(DESTDIR)$(NEST_PREFIX)/bin/sli --userargs="@HELPDIRS@" \
@@ -416,7 +418,7 @@ def create_boilerplate_cpp(celltype_name, src_dir):
     
     header_code="""
 /*
- *  {celltype_name}Modulemodule.h
+ *  {celltype_name}Loader.h
  *
  *  This file is part of NEST.
  *
@@ -438,19 +440,19 @@ def create_boilerplate_cpp(celltype_name, src_dir):
 #include "slifunction.h"
 
 namespace nest
-{
+{{
   class Network;
-}
+}}
 
 // Put your stuff into your own namespace.
-namespace ncml {
+namespace ncml {{
   
 /**
  * Class defining your model.
  * @note For each model, you must define one such class, with a unique name.
  */
-class {celltype_name}Module : public DynModule
-{
+class {celltype_name}Loader : public DynModule
+{{
 public:
 
   // Interface functions ------------------------------------------
@@ -459,13 +461,13 @@ public:
    * @note The constructor registers the module with the dynamic loader. 
    *       Initialization proper is performed by the init() method.
    */
-  {celltype_name}Module();
+  {celltype_name}Loader();
   
   /**
    * @note The destructor does not do much in modules. Proper "downrigging"
    *       is the responsibility of the unregister() method.
    */
-  ~{celltype_name}Module();
+  ~{celltype_name}Loader();
 
   /**
    * Initialize module by registering models with the network.
@@ -482,7 +484,7 @@ public:
   const std::string name(void) const;
   
   /**
-   * Return the name of a sli file to execute when {celltype_name}Module is loaded.
+   * Return the name of a sli file to execute when {celltype_name}Loader is loaded.
    * This mechanism can be used to define SLI commands associated with your
    * module, in particular, set up type tries for functions you have defined.
    */
@@ -504,24 +506,24 @@ public:
    *       member.
    */
   class StepPatternConnect_Vi_i_Vi_i_lFunction: public SLIFunction
-     {
+     {{
      public:
        void execute(SLIInterpreter *) const;
-     };
+     }};
 
      StepPatternConnect_Vi_i_Vi_i_lFunction stepPatternConnect_Vi_i_Vi_i_lFunction;
-  };
-} // namespace ncml
+  }};
+}} // namespace ncml
 
 #endif
 """.format(celltype_name=celltype_name, celltype_name_upper=celltype_name.upper())
     # Write configure.ac with module names to file
-    with open(os.path.join(src_dir, celltype_name + 'Module.h'), 'w') as f:
+    with open(os.path.join(src_dir, celltype_name + 'Loader.h'), 'w') as f:
         f.write(header_code)
     # Create the C++ file
     cpp_code="""
  /*   
- *  {celltype_name}Module.cpp
+ *  {celltype_name}Loader.cpp
  *  This file is part of NEST.
  *
  *  Copyright (C) 2008 by
@@ -550,9 +552,8 @@ public:
 #include "nestmodule.h"
 
 // include headers with your own stuff
-#include "{celltype_name}Module.h"
+#include "{celltype_name}Loader.h"
 #include "{celltype_name}.h"
-#include "drop_odd_spike_connection.h"
 
 // -- Interface to dynamic module loader ---------------------------------------
 
@@ -566,42 +567,42 @@ public:
  * The dynamicloader can then load modulename and search for symbol "mod" in it.
  */
  
-ncml::{celltype_name}Module {celltype_name}Module_LTX_mod;
+ncml::{celltype_name}Loader {celltype_name}Loader_LTX_mod;
 
 // -- DynModule functions ------------------------------------------------------
 
-ncml::{celltype_name}Module::{celltype_name}Module()
-  { 
+ncml::{celltype_name}Loader::{celltype_name}Loader()
+  {{ 
 #ifdef LINKED_MODULE
      // register this module at the dynamic loader
      // this is needed to allow for linking in this module at compile time
      // all registered modules will be initialized by the main app's dynamic loader
      nest::DynamicLoaderModule::registerLinkedModule(this);
 #endif     
-   }
+   }}
 
-ncml::{celltype_name}Module::~{celltype_name}Module()
-   {
-   }
+ncml::{celltype_name}Loader::~{celltype_name}Loader()
+   {{
+   }}
 
-   const std::string ncml::{celltype_name}Module::name(void) const
-   {
-     return std::string("{celltype_name} Module"); // Return name of the module
-   }
+   const std::string ncml::{celltype_name}Loader::name(void) const
+   {{
+     return std::string("{celltype_name}"); // Return name of the module
+   }}
 
-   const std::string ncml::{celltype_name}Module::commandstring(void) const
-   {
-     /* 1. Tell interpreter that we provide the C++ part of {celltype_name}Module with the
+   const std::string ncml::{celltype_name}Loader::commandstring(void) const
+   {{
+     /* 1. Tell interpreter that we provide the C++ part of {celltype_name}Loader with the
            current revision number. 
-        2. Instruct the interpreter to check that {celltype_name}Module-init.sli exists, 
-           provides at least version 1.0 of the SLI interface to {celltype_name}Module, and
+        2. Instruct the interpreter to check that {celltype_name}Loader-init.sli exists, 
+           provides at least version 1.0 of the SLI interface to {celltype_name}Loader, and
            to load it.
       */
      return std::string(
-       "/{celltype_name}Module /C++ ($Revision: 8512 $) provide-component "
-       "/{celltype_name}Module /SLI (7165) require-component"
+       "/{celltype_name}Loader /C++ ($Revision: 8512 $) provide-component "
+       "/{celltype_name}Loader /SLI (7165) require-component"
        );
-   }
+   }}
 
    /* BeginDocumentation
       Name: StepPatternConnect - Connect sources and targets with a stepping pattern
@@ -637,7 +638,7 @@ ncml::{celltype_name}Module::~{celltype_name}Module()
       command will print the connections (you must paste the SLI
       command as one long line):
 
-      src { /s Set << /source s /synapse_type /static_synapse >> FindConnections { GetStatus /target get } Map dup length 0 gt { cout s <- ( -> ) <- exch <-- endl } if ; } forall
+      src {{ /s Set << /source s /synapse_type /static_synapse >> FindConnections {{ GetStatus /target get }} Map dup length 0 gt {{ cout s <- ( -> ) <- exch <-- endl }} if ; }} forall
       1 -> [21 25 29]
       7 -> [21 25 29]
       13 -> [21 25 29]
@@ -653,8 +654,8 @@ ncml::{celltype_name}Module::~{celltype_name}Module()
       SeeAlso:
       Connect, ConvergentConnect, DivergentConnect
    */
-   void ncml::{celltype_name}Module::StepPatternConnect_Vi_i_Vi_i_lFunction::execute(SLIInterpreter *i) const
-   {
+   void ncml::{celltype_name}Loader::StepPatternConnect_Vi_i_Vi_i_lFunction::execute(SLIInterpreter *i) const
+   {{
      // Check if we have (at least) five arguments on the stack.
      i->assert_stack_load(5);
 
@@ -680,7 +681,7 @@ ncml::{celltype_name}Module::~{celltype_name}Module()
      // Now connect all appropriate sources to this list of targets
      size_t Nconn = 0;  // counts connections
      for ( size_t s = 0 ; s < sources.size() ; s += src_step )
-     {
+     {{
        // We must first obtain the GID of the source as integer
        const nest::long_t sgid = getValue<nest::long_t>(sources[s]);
 
@@ -690,7 +691,7 @@ ncml::{celltype_name}Module::~{celltype_name}Module()
                              TokenArray(), TokenArray(),
                              synmodel_id);
        Nconn += selected_targets.size();
-     }
+     }}
 
      // We get here only if none of the operations above throws and exception.
      // Now we can safely remove the arguments from the stack and push Nconn
@@ -700,66 +701,69 @@ ncml::{celltype_name}Module::~{celltype_name}Module()
      
      // Finally, we pop the call to this functions from the execution stack.
      i->EStack.pop();
-   }
+   }}
 
   //-------------------------------------------------------------------------------------
 
-  void ncml::{celltype_name}Module::init(SLIInterpreter *i, nest::Network*)
-  {
+  void ncml::{celltype_name}Loader::init(SLIInterpreter *i, nest::Network*)
+  {{
     /* Register a neuron or device model.
        Give node type as template argument and the name as second argument.
        The first argument is always a reference to the network.
        Return value is a handle for later unregistration.
     */
-    //printf ("before register model\n");
        nest::register_model<nest::{celltype_name}>(nest::NestModule::get_network(), 
                         "{celltype_name}");
-       // printf ("after register model\n");
 
     /* Register a synapse type.
        Give synapse type as template argument and the name as second argument.
        The first argument is always a reference to the network.
     */
+/*
+    This is ommitted because this was just a dummy spike connection
     nest::register_prototype_connection<DropOddSpikeConnection>(nest::NestModule::get_network(), 
                                                        "drop_odd_synapse");
-
+*/
     /* Register a SLI function.
        The first argument is the function name for SLI, the second a pointer to
        the function object. If you do not want to overload the function in SLI,
        you do not need to give the mangled name. If you give a mangled name, you
-       should define a type trie in the {celltype_name}Module-init.sli file.
+       should define a type trie in the {celltype_name}Loader-init.sli file.
     */
     i->createcommand("StepPatternConnect_Vi_i_Vi_i_l", 
                      &stepPatternConnect_Vi_i_Vi_i_lFunction);
 
-  }  // {celltype_name}Module::init()
+  }}  // {celltype_name}Loader::init()
     
 """.format(celltype_name=celltype_name)
     # Write configure.ac with module names to file
-    with open(os.path.join(src_dir, celltype_name + 'Module.cpp'), 'w') as f:
+    with open(os.path.join(src_dir, celltype_name + 'Loader.cpp'), 'w') as f:
         f.write(cpp_code)
 
 def create_sli_initialiser(celltype_name, src_dir):
     
-    sli_str="""
+    sli_code="""
 /* 
- * Initialization file for {celltype_name}Module.
- * Run automatically when {celltype_name}Module is loaded.
+ * Initialization file for {celltype_name}.
+ * Run automatically when {celltype_name} is loaded.
  */
 
-M_DEBUG ({celltype_name}Module.sli) (Initializing SLI support for {celltype_name}Module.) message
+M_DEBUG ({celltype_name}Loader.sli) (Initializing SLI support for {celltype_name}.) message
 
-/{celltype_name}Module /SLI ($Revision: 7918 $) provide-component
-/{celltype_name}Module /C++ (7165) require-component
+/{celltype_name}Loader /SLI ($Revision: 7918 $) provide-component
+/{celltype_name}Loader /C++ (7165) require-component
 
 /StepPatternConnect [ /arraytype /integertype /arraytype /integertype /literaltype ]
-{ 
+{{ 
   StepPatternConnect_Vi_i_Vi_i_l
-} def
+}} def
 """.format(celltype_name=celltype_name)
+    # Write configure.ac with module names to file
+    with open(os.path.join(src_dir, celltype_name + 'Loader.sli'), 'w') as f:
+        f.write(sli_code)
 
 if __name__ == '__main__':
-    build_celltype_files('mymodule', '/home/tclose/kbrain/xml/cerebellum/ncml/MyModule.xml')
+    build_celltype_files('mymodule', '/home/tclose/kbrain/xml/cerebellum/ncml/Granule_DeSouza10.xml')
 
 
 
