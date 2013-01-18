@@ -19,6 +19,7 @@ from ninemlp import DEFAULT_BUILD_MODE
 from ninemlp.common.build import path_to_exec, get_build_paths, load_component_parameters
 
 _SIMULATOR_BUILD_NAME = 'nest'
+_MODIFICATION_TIME_FILE = 'modification_time'
 
 def ensure_camel_case(name):
     if len(name) < 2:
@@ -48,39 +49,60 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
                                                     build_parent_dir=build_parent_dir)
     if not install_dir:
         install_dir = default_install_dir
-    # Clean existing directories from previous builds. TODO: It is a bit wasteful to build the
-    # module again everytime, it should be checked to see if the module needs rebuilding first.
-    shutil.rmtree(src_dir, ignore_errors=True)
-    shutil.rmtree(params_dir, ignore_errors=True)
-    shutil.rmtree(compile_dir, ignore_errors=True)
-    shutil.rmtree(install_dir, ignore_errors=True)
-    # Create fresh directories
-    os.makedirs(src_dir)
-    os.makedirs(params_dir)
-    os.makedirs(compile_dir)
-    os.makedirs(install_dir)
-    # Compile the NCML file into NEST cpp code using NeMo
-    nemo_path = path_to_exec('nemo')
-    try:
-        sp.check_call("{nemo_path} {ncml_path} --pyparams={params} --nest={output} "
-                      "--nest-method={method}".format(nemo_path=nemo_path, method=method,
-                                                      ncml_path=ncml_path, output=src_dir, 
-                                                      params=params_dir), shell=True)
-    except sp.CalledProcessError as e:
-        raise Exception('Error while compiling NCML description into NEST cpp code -> {}'.format(e))
-    # Generate configure.ac and Makefile
-    create_configure_ac(celltype_name, src_dir)
-    create_makefile(celltype_name, src_dir)
-    create_boilerplate_cpp(celltype_name, src_dir)
-    create_sli_initialiser(celltype_name, src_dir)
-    # Run the required shell commands to bootstrap the build configuration
-    run_bootstrap(src_dir)
-    # Run configure script, make and make install
-    os.chdir(compile_dir)
-    sp.check_call('{src_dir}/configure --prefix={install_dir}'
-                  .format(src_dir=src_dir, install_dir=install_dir), shell=True)
-    sp.check_call('make', shell=True)
-    sp.check_call('make install', shell=True)
+    # Determine whether the installation needs rebuilding or whether there is an existing library
+    # module to use
+    install_mtime_path = os.path.join(install_dir, _MODIFICATION_TIME_FILE)    
+    if os.path.exists(install_mtime_path):
+        with open(install_mtime_path) as f:
+            prev_install_mtime = f.readline()
+    else:
+        prev_install_mtime = ''
+    ncml_mtime = time.ctime(os.path.getmtime(ncml_path))
+    # Create C++ and configuration files required for the build
+    if ncml_mtime != prev_install_mtime or build_mode in ('force', 'build_only'):
+        # Clean existing directories from previous builds.
+        shutil.rmtree(src_dir, ignore_errors=True)
+        shutil.rmtree(params_dir, ignore_errors=True)
+        shutil.rmtree(compile_dir, ignore_errors=True)
+        shutil.rmtree(install_dir, ignore_errors=True)
+        # Create fresh directories
+        os.makedirs(src_dir)
+        os.makedirs(params_dir)
+        os.makedirs(compile_dir)
+        os.makedirs(install_dir)
+        # Compile the NCML file into NEST cpp code using NeMo
+        nemo_path = path_to_exec('nemo')
+        try:
+            sp.check_call("{nemo_path} {ncml_path} --pyparams={params} --nest={output} "
+                          "--nest-method={method}".format(nemo_path=nemo_path, method=method,
+                                                          ncml_path=ncml_path, output=src_dir, 
+                                                          params=params_dir), shell=True)
+        except sp.CalledProcessError as e:
+            raise Exception('Error while compiling NCML description into NEST cpp code -> {}'
+                            .format(e))
+        # Generate configure.ac and Makefile
+        create_configure_ac(celltype_name, src_dir)
+        create_makefile(celltype_name, src_dir)
+        create_boilerplate_cpp(celltype_name, src_dir)
+        create_sli_initialiser(celltype_name, src_dir)
+    elif build_mode == 'compile_only':
+        if not os.path.exists(compile_dir) or not os.path.exists(src_dir):
+            raise Exception ("Source ('{}') and/or compilation ('{}') directories no longer exist. "
+                             "Cannot use 'compile_only' argument for '--build' option"
+                             .format(src_dir, compile_dir))
+    # Compile the generated C++ files, using generated makefile configurtion
+    if ncml_mtime != prev_install_mtime or build_mode in ('force', 'build_only', 'compile_only'):
+        # Run the required shell commands to bootstrap the build configuration
+        run_bootstrap(src_dir)
+        # Run configure script, make and make install
+        os.chdir(compile_dir)
+        sp.check_call('{src_dir}/configure --prefix={install_dir}'
+                      .format(src_dir=src_dir, install_dir=install_dir), shell=True)
+        sp.check_call('make', shell=True)
+        sp.check_call('make install', shell=True)
+        # Save the last modification time of the NCML file for future runs.
+        with open(install_mtime_path, 'w') as f:
+            f.write(ncml_mtime)
     # Switch back to original dir
     os.chdir(orig_dir)
     # Load component parameters for use in python interface
@@ -763,7 +785,9 @@ M_DEBUG ({celltype_name}Loader.sli) (Initializing SLI support for {celltype_name
         f.write(sli_code)
 
 if __name__ == '__main__':
-    build_celltype_files('mymodule', '/home/tclose/kbrain/xml/cerebellum/ncml/Granule_DeSouza10.xml')
+    install_dir, params = build_celltype_files('Granule_DeSouza10', '/home/tclose/kbrain/xml/cerebellum/ncml/Granule_DeSouza10.xml')
+    print install_dir
+    print params
 
 
 
