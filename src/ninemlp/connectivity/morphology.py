@@ -24,16 +24,18 @@ SAMPLE_DIAM_RATIO_DEFAULT = 4.0
 
 class DisplacedVoxelSizeMismatchException(Exception): pass
 
+
 class Forest(object):
-    
-    def __init__(self, xml_filename):
-        roots = read_NeurolucidaXML(xml_filename)
+
+    def __init__(self, xml_filename, include_somas=True):
+        # Load dendritic trees
+        roots = read_NeurolucidaTreeXML(xml_filename)
         self.trees = []
         for root in roots:
             self.trees.append(Tree(root))
         self.centroid = np.zeros(3)
         self.min_bounds = np.ones(3) * float('inf')
-        self.max_bounds = np.ones(3) * float('-inf')        
+        self.max_bounds = np.ones(3) * float('-inf')
         for tree in self.trees:
             self.centroid += tree.centroid
             self.min_bounds = np.select([self.min_bounds <= tree.min_bounds, True],
@@ -41,13 +43,19 @@ class Forest(object):
             self.max_bounds = np.select([self.max_bounds >= tree.max_bounds, True],
                                 [self.max_bounds, tree.max_bounds])
         self.centroid /= len(roots)
-        
+        # Load somas
+        self.somas = {}
+        if include_somas:
+            soma_contours = read_NeurolucidaSomaXML(xml_filename)
+            for name, soma_contours in soma_contours.items():
+                self.somas[name] = Soma(soma_contours.contours)
+
     def __getitem__(self, index):
         return self.trees[index]
-        
+
     def __len__(self):
-        return len(self.trees)    
-        
+        return len(self.trees)
+
     def rotate(self, theta, axis=2):
         """
         Rotates the tree about the chosen axis by theta
@@ -67,7 +75,7 @@ class Tree(object):
         """
         Initialised the Tree object
         
-        @param root [NeurolucidaXMLHandler.Branch]: The root branch of a tree loaded from a Neurolucida XML tree description
+        @param root [NeurolucidaTreeXMLHandler.Branch]: The root branch of a tree loaded from a Neurolucida XML tree description
         @param point_count [int]: The number of tree points that were loaded from the XML description
         """
         # Recursively flatten all branches stemming from the root
@@ -77,9 +85,9 @@ class Tree(object):
         self._flatten(root)
         # Convert flattened lists to numpy arrays
         self._points = np.array(self._points)
-        self.diams = np.array(self.diams)    
+        self.diams = np.array(self.diams)
         # Calculate bounds used in determining mask dimensions
-        tiled_diams = np.transpose(np.tile(self.diams, (3,1)))
+        tiled_diams = np.transpose(np.tile(self.diams, (3, 1)))
         self.min_bounds = np.min(self.points - tiled_diams, axis=0)
         self.max_bounds = np.max(self.points + tiled_diams, axis=0)
         self.centroid = np.average(self.points, axis=0)
@@ -98,14 +106,14 @@ class Tree(object):
         for i, diam in enumerate(self.diams):
             prev_index = self._prev_indices[i]
             if prev_index != -1:
-                yield self.Segment(self._points[prev_index, :], self.points[i, :], diam)     
+                yield self.Segment(self._points[prev_index, :], self.points[i, :], diam)
 
-    def _flatten(self, branch, prev_index=-1):
+    def _flatten(self, branch, prev_index= -1):
         """
         A recursive algorithm to flatten the loaded tree into a numpy array of _points used in the
         tree constructor.
         
-        @param branch[NeurolucidaXMLHandler.Branch]: The loaded branch
+        @param branch[NeurolucidaTreeXMLHandler.Branch]: The loaded branch
         @param point_index [int]: the index (point count) of the current point
         @param prev_index [int]: the index of the previous point (-1 signifies no previous point, i.e the segment is a root node)
         """
@@ -130,25 +138,25 @@ class Tree(object):
         cos_theta = np.cos(theta_rad)
         sin_theta = np.sin(theta_rad)
         # Get appropriate rotation matrix
-        if axis == 0 or axis == 'x':        
-            rotation_matrix = np.array([[1, 0,         0],
+        if axis == 0 or axis == 'x':
+            rotation_matrix = np.array([[1, 0, 0],
                                         [0, cos_theta, -sin_theta],
                                         [0, sin_theta, cos_theta]])
-        elif axis == 1 or axis == 'y':        
-            rotation_matrix = np.array([[cos_theta,  0, sin_theta],
-                                        [0,          1, 0],
+        elif axis == 1 or axis == 'y':
+            rotation_matrix = np.array([[cos_theta, 0, sin_theta],
+                                        [0, 1, 0],
                                         [-sin_theta, 0, cos_theta]])
-        elif axis == 2 or axis == 'z':        
+        elif axis == 2 or axis == 'z':
             rotation_matrix = np.array([[cos_theta, -sin_theta, 0],
-                                        [sin_theta, cos_theta,  0],
-                                        [0,         0,          1]])
+                                        [sin_theta, cos_theta, 0],
+                                        [0, 0, 1]])
         else:
             raise Exception("'axis' argument must be either 0-2 or 'x'-'y' (found {})".format(axis))
         # Rotate all the points in the tree
         self._points = np.dot(self._points, rotation_matrix)
         # Clear masks, which will no longer match the rotated points
         self._masks.clear()
-        
+
 
     def get_binary_mask(self, vox_size, sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
         """
@@ -240,7 +248,7 @@ class DisplacedTree(Tree):
         # Displace the bounds and the centroid of the tree
         self.centroid = tree.centroid + self.displacement
         self.min_bounds = tree.min_bounds + self.displacement
-        self.max_bounds = tree.max_bounds + self.displacement    
+        self.max_bounds = tree.max_bounds + self.displacement
 
     def get_binary_mask(self, *mask_args):
         """
@@ -265,8 +273,8 @@ class DisplacedTree(Tree):
         created and saved there if required.
         
         @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
-        """ 
-        try:               
+        """
+        try:
             return self._undisplaced_tree.get_inv_prob_mask(*mask_args).\
                                                                    displaced_mask(self.displacement)
         except DisplacedVoxelSizeMismatchException as e:
@@ -353,9 +361,9 @@ class Mask(object):
         for i in xrange(0, self.dim[slice_dim], skip):
             pylab.figure()
             mask_shape = self._mask_array.shape
-            if slice_dim == 0: slice_indices = np.ogrid[i:(i+1), 0:mask_shape[1], 0:mask_shape[2]]
-            elif slice_dim == 1: slice_indices = np.ogrid[0:mask_shape[0], i:(i+1), 0:mask_shape[2]]
-            elif slice_dim == 2: slice_indices = np.ogrid[0:mask_shape[0], 0:mask_shape[1], i:(i+1)]
+            if slice_dim == 0: slice_indices = np.ogrid[i:(i + 1), 0:mask_shape[1], 0:mask_shape[2]]
+            elif slice_dim == 1: slice_indices = np.ogrid[0:mask_shape[0], i:(i + 1), 0:mask_shape[2]]
+            elif slice_dim == 2: slice_indices = np.ogrid[0:mask_shape[0], 0:mask_shape[1], i:(i + 1)]
             else: raise Exception("Slice dimension can only be 0-2 ({} provided)".format(slice_dim))
             pylab.imshow(np.squeeze(self._mask_array[slice_indices]))
             pylab.title('dim {}, index {}'.format(slice_dim, i))
@@ -495,12 +503,34 @@ class InverseProbabilityMask(Mask):
                 self._mask_array[extent_indices] += point_mask
 
 
-class NeurolucidaXMLHandler(XMLHandler):
+class Soma(object):
+
+    def __init__(self, contours):
+        """
+        Initialises the Soma object
+        
+        @param contours [list(NeurolucidaSomaXMLHandler.Contour)]: A list of contour objects
+        """
+        # Recursively flatten all branches stemming from the root
+        num_points = sum([len(contour.points) for contour in contours])
+        self._points = np.zeros((num_points, 4))
+        point_count = 0
+        for contour in contours:
+            for point in contour.points:
+                self._points[point_count, :] = point
+                point_count += 1
+
+    @property
+    def points(self):
+        return self._points
+
+
+class NeurolucidaTreeXMLHandler(XMLHandler):
     """
     An XML handler to extract dendrite locates from Neurolucida XML format
     """
     # Create named tuples (sort of light-weight classes with no methods, like a struct in C/C++) to
-    # store the extracted NeurolucidaXMLHandler data.
+    # store the extracted NeurolucidaTreeXMLHandler data.
     Point = collections.namedtuple('Point', 'x y z diam')
     Branch = collections.namedtuple('Branch', 'points sub_branches')
 
@@ -525,7 +555,7 @@ class NeurolucidaXMLHandler(XMLHandler):
             self.open_branches[-1].sub_branches.append(branch)
             self.open_branches.append(branch)
         elif self._opening(tag_name, attrs, 'point', parents=[('tree', 'branch')]):
-            self.open_branches[-1].points.append(self.Point(float(attrs['x']), float(attrs['y']), 
+            self.open_branches[-1].points.append(self.Point(float(attrs['x']), float(attrs['y']),
                                                             float(attrs['z']), float(attrs['d'])))
 
     def endElement(self, tag_name):
@@ -537,13 +567,52 @@ class NeurolucidaXMLHandler(XMLHandler):
         XMLHandler.endElement(self, tag_name)
 
 
-def read_NeurolucidaXML(filename):
+class NeurolucidaSomaXMLHandler(XMLHandler):
+    """
+    An XML handler to extract dendrite locates from Neurolucida XML format
+    """
+    # Create named tuples (sort of light-weight classes with no methods, like a struct in C/C++) to
+    # store the extracted NeurolucidaTreeXMLHandler data.
+    Soma = collections.namedtuple('Soma', 'contours')
+    Contour = collections.namedtuple('Contour', 'points')
+    Point = collections.namedtuple('Point', 'x y z diam')
+
+    def __init__(self):
+        """
+        Initialises the handler, saving the cell name and creating the lists to hold the _point_data 
+        and segment groups.
+        """
+        XMLHandler.__init__(self)
+        self.somas = {}
+
+    def startElement(self, tag_name, attrs):
+        """
+        Overrides function in xml.sax.handler to parse all MorphML tag openings. Creates 
+        corresponding segment and segment-group tuples in the handler object.
+        """
+        if self._opening(tag_name, attrs, 'contour'):
+            contour_name = attrs['name']
+            if not self.somas.has_key(contour_name):
+                self.somas[contour_name] = self.Soma([])
+            self.current_contour = self.Contour([])
+            self.somas[contour_name].contours.append(self.current_contour)
+        elif self._opening(tag_name, attrs, 'point', parents=[('contour')]):
+            self.current_contour.points.append(self.Point(attrs['x'], attrs['y'], attrs['z'], attrs['d']))
+
+
+def read_NeurolucidaTreeXML(filename):
     parser = xml.sax.make_parser()
-    handler = NeurolucidaXMLHandler()
+    handler = NeurolucidaTreeXMLHandler()
     parser.setContentHandler(handler)
     parser.parse(filename)
     return handler.roots
 
+def read_NeurolucidaSomaXML(filename):
+    parser = xml.sax.make_parser()
+    handler = NeurolucidaSomaXMLHandler()
+    parser.setContentHandler(handler)
+    parser.parse(filename)
+    return handler.somas
 
 if __name__ == '__main__':
     from os.path import normpath, join
@@ -551,9 +620,9 @@ if __name__ == '__main__':
     forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
                                   'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
     vox_size = (2, 2, 2)
-#    print "overlap: {}".format(forest[2].num_overlapping(forest[4], vox_size=vox_size))
+    print "overlap: {}".format(forest[2].num_overlapping(forest[4], vox_size=vox_size))
     tree = forest[2]
-    forest[2].plot_mask(vox_size, show=False)    
+    forest[2].plot_mask(vox_size, show=False)
     tree.rotate(10, axis=0)
     forest[2].plot_mask(vox_size)
 
