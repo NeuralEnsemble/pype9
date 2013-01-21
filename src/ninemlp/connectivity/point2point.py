@@ -81,100 +81,112 @@ class ExponentialWith2DDistance(object):
 
 class MaskBased(object):
 
-    def _probs_from_mask(self, mask, number):
-        if not number: # If number is default value of None, all cells within the mask will be connected.
-            scale = 1.0
+    def __init__(self, probability=None, number=None):
+        
+        if (probability is not None and number is not None):
+            raise Exception ("Only one of probability ({}) and number can be supplied to Mask object")
+        self.probability = probability
+        self.number = number
+
+    def _probs_from_mask(self, mask):
+        if self.probability:
+            prob = self.probability
         else:
-            num_nz = numpy.count_nonzero(mask)
-            if num_nz:
-                scale = number / num_nz
+            if not self.number: # If number is default value of None, all cells within the mask will be connected.
+                prob = 1.0
             else:
-                scale = float('inf')
-        # If probability exceeds 1 cap it at 1 as the best that can be done
-        if scale > 1.0:
-            warn("The number of requested connections ({}) could not be satisfied given size of "
-                 "mask ({})".format(int(number), num_nz), InsufficientTargetsWarning)
-            scale = 1.0
+                num_nz = numpy.count_nonzero(mask)
+                if num_nz:
+                    prob = self.number / num_nz
+                else:
+                    prob = float('inf')
+            # If probability exceeds 1 cap it at 1 as the best that can be done
+            if prob > 1.0:
+                warn("The number of requested connections ({}) could not be satisfied given "
+                     "size of mask ({})".format(int(self.number), num_nz), 
+                     InsufficientTargetsWarning)
+                prob = 1.0
         probs = numpy.zeros(mask.shape)
-        probs[mask] = scale
+        probs[mask] = prob
         return probs
 
 class CircleMask(MaskBased):
     """
     A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
-    probability of connection within an elliptical region
+    probabilityability of connection within an elliptical region
     """
 
-    def __init__(self, radius, number=None):
+    def __init__(self, radius, probability=None, number=None):
         """
         @param radius: radius of the circle 
         @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
         """
+        super(self).__init__(probability, number)
         self.radius = radius
-        self.number = number
 
     def get_values(self, d):
         mask = numpy.sqrt(numpy.sum(numpy.square(d[0:2, :]), axis=0)) < self.radius
-        return self._probs_from_mask(mask, self.number)
+        return self._probs_from_mask(mask)
 
 class SphereMask(MaskBased):
     """
     A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
-    probability of connection within an elliptical region
+    probabilityability of connection within an elliptical region
     """
 
-    def __init__(self, radius, number=None):
+    def __init__(self, radius, probability=None, number=None):
         """
         @param radius: radius of the sphere 
         @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
         """
+        super(SphereMask, self).__init__(probability, number)
         self.radius = radius
-        self.number = number
 
     def get_values(self, d):
         mask = numpy.sqrt(numpy.sum(numpy.square(d), axis=0)) < self.radius
-        return self._probs_from_mask(mask, self.number)
+        return self._probs_from_mask(mask)
 
 
 class EllipseMask(MaskBased):
     """
     A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
-    probability of connection within an elliptical region
+    probabilityability of connection within an elliptical region
     """
 
-    def __init__(self, x_scale, y_scale, number=None):
+    def __init__(self, x_scale, y_scale, probability=None, number=None):
         """
         @param x: scale of the x axis of the ellipse
         @param y: scale of the y axis of the ellipse        
         @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
         """
+        super(EllipseMask, self).__init__(probability, number)
         self.x_scale = x_scale
         self.y_scale = y_scale
-        self.number = number
 
     def get_values(self, d):
         mask = numpy.square(d[0] / self.x_scale) + numpy.square(d[1] / self.y_scale) < 1
-        return self._probs_from_mask(mask, self.number)
+        return self._probs_from_mask(mask)
 
 
 class EllipsoidMask(MaskBased):
     """
     A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
-    probability of connection within an elliptical region
+    probabilityability of connection within an elliptical region
     """
 
-    def __init__(self, x_scale, y_scale, z_scale, number=None):
+    def __init__(self, x_scale, y_scale, z_scale, probability=None, number=None):
         """
         @param x: scale of the x axis of the ellipsoid
         @param y: scale of the y axis of the ellipsoid   
         @param z: scale of the z axis of the ellipsoid        
         @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
         """
+        super(EllipsoidMask, self).__init__(probability, number)
         self.x_scale = x_scale
         self.y_scale = y_scale
         self.z_scale = z_scale
-        self.number = number
 
     def get_values(self, d):
-        mask = numpy.square(d[0] / self.x_scale) + numpy.square(d[1] / self.y_scale) + numpy.square(d[2] / self.z_scale) < 1
-        return self._probs_from_mask(mask, self.number)
+        mask = (numpy.square(d[0] / self.x_scale) + numpy.square(d[1] / self.y_scale) + 
+                    numpy.square(d[2] / self.z_scale) < 1)
+        return self._probs_from_mask(mask)
