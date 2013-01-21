@@ -158,8 +158,8 @@ class SphereMask(MaskBased):
         super(SphereMask, self).__init__(probability, number)
         self.radius = radius
 
-    def __call__(self, d):
-        mask = d < self.radius
+    def __call__(self, dist):
+        mask = dist < self.radius
         return self._probs_from_mask(mask)
 
     @classmethod
