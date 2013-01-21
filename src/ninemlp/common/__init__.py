@@ -449,13 +449,13 @@ class Network(object):
             expression = connection.args.pop('geometry')
             if not hasattr(point2point, expression):
                 raise Exception("Unrecognised distance expression '{}'".format(expression))
-            try:
-                GeometricExpression = getattr(point2point, expression)
-                connect_expr = GeometricExpression(**self._convert_all_units(connection.args))
-            except TypeError as e:
-                raise Exception("Could not initialise distance expression class '{}' from given " \
-                                "arguments '{}' for projection '{}'\n('{}')"
-                                .format(expression, connection.args, label, e))
+#            try:
+            GeometricExpression = getattr(point2point, expression)
+            connect_expr = GeometricExpression(**self._convert_all_units(connection.args))
+#            except TypeError as e:
+#                raise Exception("Could not initialise distance expression class '{}' from given " \
+#                                "arguments '{}' for projection '{}'\n('{}')"
+#                                .format(expression, connection.args, label, e))
             connector = self._pyNN_module.connectors.DistanceDependentProbabilityConnector(
                                     connect_expr, allow_self_connections=allow_self_connections,
                                     weights=weight_expr, delays=delay_expr)
@@ -517,9 +517,13 @@ class Network(object):
                 if not self._ElectricalSynapseProjection_class:
                     raise Exception("The selected simulator doesn't currently support electrical "
                                     "synapse projections")
+                if target.synapse:
+                    target_str = target.segment + '.' + target.synapse
+                else:
+                    target_str = target.segment
                 projection = self._ElectricalSynapseProjection_class(pre, dest, label, connector, 
                                                                      source=source.segment, 
-                                                                     target=target.segment,
+                                                                     target=target_str,
                                                                      build_mode=self.build_mode)            
             else:
                 raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))

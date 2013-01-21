@@ -26,12 +26,15 @@ class LinearWithDistance(object):
         self.offset = offset
         self.min_value = min_value
 
-    def get_values(self, d):
-        dist = numpy.sqrt(numpy.sum(numpy.square(d), axis=0))
+    def __call__(self, dist):
         values = self.offset + self.scalar * dist
         if self.min_value:
             values[values < self.min_value] = self.min_value
         return values
+
+    @classmethod
+    def expand_distances(cls):
+        return False
 
 class ExponentialWithDistance(object):
 
@@ -41,13 +44,15 @@ class ExponentialWithDistance(object):
         self.offset = offset
         self.min_value = min_value
 
-    def get_values(self, d):
-        dist = numpy.sqrt(numpy.sum(numpy.square(d), axis=0))
+    def __call__(self, dist):
         values = self.offset + self.scalar * numpy.exp(self.exponent * dist)
         if self.min_value:
             values[values < self.min_value] = self.min_value
         return values
 
+    @classmethod
+    def expand_distances(cls):
+        return False
 
 class LinearWith2DDistance(object):
 
@@ -56,13 +61,17 @@ class LinearWith2DDistance(object):
         self.offset = offset        
         self.min_value = min_value
 
-    def get_values(self, d):
-        dist = numpy.sqrt(numpy.sum(numpy.square(d[0:2, :]), axis=0))
-        values = self.offset + self.scalar * dist
+    def __call__(self, disp):
+        dist2D = numpy.sqrt(numpy.sum(numpy.square(disp[0:2, :]), axis=0))
+        values = self.offset + self.scalar * dist2D
         if self.min_value:
             values[values < self.min_value] = self.min_value
         return values
 
+    @classmethod
+    def expand_distances(cls):
+        return True
+    
 class ExponentialWith2DDistance(object):
 
     def __init__(self, scalar, exponent, offset=0.0, min_value=0.0):
@@ -71,13 +80,16 @@ class ExponentialWith2DDistance(object):
         self.offset = offset        
         self.min_value = min_value
 
-    def get_values(self, d):
-        dist = numpy.sqrt(numpy.sum(numpy.square(d[0:2, :]), axis=0))
-        values = self.offset + self.scalar * numpy.exp(self.exponent * dist)
+    def __call__(self, disp):
+        dist2D = numpy.sqrt(numpy.sum(numpy.square(disp[0:2, :]), axis=0))
+        values = self.offset + self.scalar * numpy.exp(self.exponent * dist2D)
         if self.min_value:
             values[values < self.min_value] = self.min_value
         return values
 
+    @classmethod
+    def expand_distances(cls):
+        return True
 
 class MaskBased(object):
 
@@ -85,15 +97,15 @@ class MaskBased(object):
         
         if (probability is not None and number is not None):
             raise Exception ("Only one of probability ({}) and number can be supplied to Mask object")
-        self.probability = probability
+        self.prob = probability
         self.number = number
 
     def _probs_from_mask(self, mask):
-        if self.probability:
-            prob = self.probability
+        if self.prob:
+            prob = self.prob
         else:
-            if not self.number: # If number is default value of None, all cells within the mask will be connected.
-                prob = 1.0
+            if not self.number: # If both self.prob and self.number are None (the default).
+                prob = 1.0      # all cells within the mask will be connected.
             else:
                 num_nz = numpy.count_nonzero(mask)
                 if num_nz:
@@ -121,12 +133,16 @@ class CircleMask(MaskBased):
         @param radius: radius of the circle 
         @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
         """
-        super(self).__init__(probability, number)
+        super(CircleMask, self).__init__(probability, number)
         self.radius = radius
 
-    def get_values(self, d):
+    def __call__(self, d):
         mask = numpy.sqrt(numpy.sum(numpy.square(d[0:2, :]), axis=0)) < self.radius
         return self._probs_from_mask(mask)
+
+    @classmethod
+    def expand_distances(cls):
+        return True
 
 class SphereMask(MaskBased):
     """
@@ -142,9 +158,13 @@ class SphereMask(MaskBased):
         super(SphereMask, self).__init__(probability, number)
         self.radius = radius
 
-    def get_values(self, d):
-        mask = numpy.sqrt(numpy.sum(numpy.square(d), axis=0)) < self.radius
+    def __call__(self, d):
+        mask = d < self.radius
         return self._probs_from_mask(mask)
+
+    @classmethod
+    def expand_distances(cls):
+        return False
 
 
 class EllipseMask(MaskBased):
@@ -163,10 +183,13 @@ class EllipseMask(MaskBased):
         self.x_scale = x_scale
         self.y_scale = y_scale
 
-    def get_values(self, d):
+    def __call__(self, d):
         mask = numpy.square(d[0] / self.x_scale) + numpy.square(d[1] / self.y_scale) < 1
         return self._probs_from_mask(mask)
 
+    @classmethod
+    def expand_distances(cls):
+        return True
 
 class EllipsoidMask(MaskBased):
     """
@@ -186,7 +209,11 @@ class EllipsoidMask(MaskBased):
         self.y_scale = y_scale
         self.z_scale = z_scale
 
-    def get_values(self, d):
+    def __call__(self, d):
         mask = (numpy.square(d[0] / self.x_scale) + numpy.square(d[1] / self.y_scale) + 
                     numpy.square(d[2] / self.z_scale) < 1)
         return self._probs_from_mask(mask)
+
+    @classmethod
+    def expand_distances(cls):
+        return True

@@ -156,7 +156,6 @@ class NCMLHandler(XMLHandler):
                                                                  build_options \
                                                                  mechanisms \
                                                                  synapses \
-                                                                 gap_junctions \
                                                                  capacitances \
                                                                  axial_resistances \
                                                                  reversal_potentials \
@@ -172,7 +171,6 @@ class NCMLHandler(XMLHandler):
     IonicCurrentParam = collections.namedtuple('IonicCurrentParam', 'name value')
     PassiveCurrent = collections.namedtuple('PassiveCurrent', 'group_id cond_density')
     Synapse = collections.namedtuple('Synapse', 'id type group_id params')
-    GapJunction = collections.namedtuple('GapJunction', 'id group_id params')
     SynapseParam = collections.namedtuple('SynapseParam', 'name value')
     SpecificCapacitance = collections.namedtuple('SpecificCapacitance', 'value group_id')
     ReversePotential = collections.namedtuple('NCMLReversePotential', 'species value group_id')
@@ -191,7 +189,7 @@ class NCMLHandler(XMLHandler):
                                                             required_attrs=[('id', self.ncml_id)]):
             self.ncml = self.NCMLDescription(
                                  self.celltype_id, attrs['id'], collections.defaultdict(dict),
-                                                                [], [], [], [], [], [], [], {})
+                                                                [], [], [], [], [], [], {})
         elif self._opening(tag_name, attrs, 'defaultBuildOptions',
                            parents=['biophysicalProperties']):
             pass
@@ -237,10 +235,6 @@ class NCMLHandler(XMLHandler):
                                               attrs['type'],
                                               attrs.get('segmentGroup', None),
                                                   []))
-        elif self._opening(tag_name, attrs, 'gapJunction', parents=['synapses']):
-            self.ncml.gap_junctions.append(self.GapJunction(attrs['id'],
-                                                            attrs.get('segmentGroup', None),
-                                                            []))
         elif self._opening(tag_name, attrs, 'parameter', parents=['conductanceSynapse']):
             self.ncml.synapses[-1].params.append(self.SynapseParam(attrs['name'],
                                                                    ValueWithUnits(attrs['value'],

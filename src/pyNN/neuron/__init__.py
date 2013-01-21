@@ -250,8 +250,9 @@ class Projection(common.Projection):
             for c in self.connections:
                 c.useSTDP(long_term_plasticity_mechanism, stdp_parameters, ddf)
        
-# TGC: following on from the comments below I have disabled this because it was causing me difficulty
-# in my ElectricalSynapseProjection subclass
+# TGC: following on from the comments below which suggest that this check should be redundant 
+# I have disabled this because it was causing me difficulty in my ElectricalSynapseProjection 
+# subclass
 # 
 #        # Check none of the delays are out of bounds. This should be redundant,
 #        # as this should already have been done in the Connector object, so

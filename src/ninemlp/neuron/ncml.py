@@ -85,6 +85,8 @@ class Segment(nrn.Section): #@UndefinedVariable
                                 morphl_seg.proximal.z))
         # Set initialisation variables here    
         self.v_init = DEFAULT_V_INIT
+        # A list to store any gap junctions in
+        self._gap_junctions = []
         # Local information, though not sure if I need this here
         self.id = morphl_seg.id
         self._parent_seg = None
@@ -354,10 +356,6 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                             "with 'segmentGroup'without 'segmentGroup')")
         #FIXME: ionic currents and reversal potentials should undergo similar checks but they 
         #require the species to be checked as well.
-        for curr in self.ncml_model.passive_currents:
-            for seg in self.get_group(curr.group_id):
-                seg.insert('pas')
-                seg.pas.g = curr.cond_density.neuron()
         for mech in sorted(self.ncml_model.mechanisms, key=attrgetter('id')):
             if self.component_parameters.has_key(mech.id):
                 translations = dict([(key, val[0]) for key, val in
@@ -370,8 +368,9 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                                                                         translations=translations)
                 except ValueError as e:
                     raise Exception("Could not insert {mech_id} into section group {group_id} " \
-                                    "({error})".format(mech_id=mech.id, group_id=mech.group_id,
-                                                       error=e))
+                                    "({error})"
+                                    .format(mech_id=mech.id, error=e, 
+                                            group_id=mech.group_id if mech.group_id else 'all_segs'))
         #Loop through loaded membrane mechanisms and insert them into the relevant sections.
         for cm in self.ncml_model.capacitances:
             for seg in self.get_group(cm.group_id):
@@ -394,15 +393,6 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                                      .format(syn.id))
             for seg in self.get_group(syn.group_id):
                 receptor = SynapseType(0.5, sec=seg)
-                setattr(seg, syn.id, receptor)
-                for param in syn.params:
-                    setattr(receptor, param.name, param.value.neuron())
-        for syn in self.ncml_model.gap_junctions:
-            for seg in self.get_group(syn.group_id):
-                try:
-                    receptor = h.gap(0.5, sec=seg)
-                except AttributeError:
-                    raise Exception("Could not find in-built 'gap' synaptic mechanism")
                 setattr(seg, syn.id, receptor)
                 for param in syn.params:
                     setattr(receptor, param.name, param.value.neuron())
