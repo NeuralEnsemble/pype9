@@ -180,7 +180,6 @@ class ElectricalSynapseProjection(Projection):
                 if not self.rectified:
                     connection_list.append(((target, target_segname), (source, source_segname),
                                             post_pre_id))
-                print simulator.state.num_processes
                 for (pre_cell, pre_seg), (post_cell, post_seg), var_gid in connection_list:
                     if pre_cell.local:
                         if pre_seg:
@@ -188,9 +187,11 @@ class ElectricalSynapseProjection(Projection):
                         else:
                             segment = pre_cell.source_section
                         simulator.state.parallel_context.source_var(segment(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
-                        print "PRE: var_gid={var_gid}, process={mpi_rank}, cell_id={pre_cell}"\
-                              .format(mpi_rank=simulator.state.mpi_rank, pre_cell=int(pre_cell),
-                                      var_gid=var_gid)
+# --- DEBUGGING STATEMENTS ---
+#                        print "PRE: var_gid={var_gid}, process={mpi_rank}, cell_id={pre_cell}"\
+#                              .format(mpi_rank=simulator.state.mpi_rank, pre_cell=int(pre_cell),
+#                                      var_gid=var_gid)
+#-----------------------------
                     if post_cell.local:
                         if post_seg:
                             segment = post_cell._cell.segments[self.synapse_type]
