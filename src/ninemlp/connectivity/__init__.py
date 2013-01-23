@@ -90,7 +90,7 @@ if __name__ == "__main__":
     if True:
         points = np.mgrid[-1:1:10j, -1:1:10j, -1:1:10j]
         points = np.transpose(np.reshape(points, (3, -1)))
-        transform = transform_tensor((2,1,1), (5, 5, 5))
+        transform = transform_tensor((1,1,2), (0, 90, 45))
         transform_points = np.transpose(np.dot(transform,
                                                np.transpose(points)))
         ax.scatter(transform_points[:, 0], transform_points[:, 1], transform_points[:, 2])
