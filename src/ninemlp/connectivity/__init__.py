@@ -25,9 +25,9 @@ def transform_matrix(scale_z=1.0, scale_y=1.0, scale_x=1.0, az=0.0, el=0.0):
     angles = np.array((az, el)) * (np.pi / 180.0)
     sin = np.sin(angles)
     cos = np.cos(angles)
-    rotation = np.array(((cos[0] * cos[1], -sin[0], cos[0] * sin[1]),
-                         (sin[0] * cos [1], cos[0], sin[0] * sin[1]),
-                         (-sin[1], 0, cos[1])))
+    rotation = np.array((( cos[0] * cos[1],  sin[0], -cos[0] * sin[1]),
+                         (-sin[0] * cos [1], cos[0],  sin[0] * sin[1]),
+                         ( sin[1],           0,       cos[1])))
     # Combine scale and rotation for final rotation matrix
     transform = np.dot(rotation, scale)
 #    transform = scale
@@ -53,13 +53,7 @@ if __name__ == "__main__":
     points = np.mgrid[-1:1:10j, -1:1:10j, -1:1:10j]
     points = np.transpose(np.reshape(points, (3, -1))) 
     fig = plt.figure()
-#    ax1 = fig.add_subplot(211, projection='3d')
-#    ax1.set_aspect('equal')
-#    ax1.scatter(points[:,0], points[:, 1], points[:, 2])
-#    ax1.set_xlabel('X Label')
-#    ax1.set_ylabel('Y Label')
-#    ax1.set_zlabel('Z Label')
-    transform_points = np.transpose(np.dot(transform_matrix(2.0, az=45.0, el=90), 
+    transform_points = np.transpose(np.dot(transform_matrix(2.0, az=0.0, el=80), 
                                            np.transpose(points)))
     ax2 = fig.add_subplot(111, projection='3d')
     ax2.set_aspect('equal')    
