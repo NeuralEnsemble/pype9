@@ -39,12 +39,6 @@ def transform_tensor(scale=(1.0, 1.0, 1.0), rotation=(0.0, 0.0, 0.0)):
                          (-cos[1] * sin[2], cos[0] * cos[2] - sin[0] * sin[1] * sin[2],
                           sin[0] * cos[2] + cos[0] * sin[1] * sin[2]),
                          (sin[1], -sin[0] * cos[1], cos[0] * cos[1])))
-    x_rotate = np.array(((1, 0, 0), (0, cos[0], sin[0]), (0, -sin[0], cos[0])))
-    y_rotate = np.array(((cos[1], 0, -sin[1]), (0, 1, 0), (sin[1], 0, cos[1])))
-    z_rotate = np.array(((cos[2], sin[2], 0), (-sin[2], cos[2], 0), (0, 0, 1)))       
-    test_rotation = np.dot(z_rotate, np.dot(y_rotate, x_rotate))
-    print rotation
-    print test_rotation
     # Combine scale and rotation for final rotation matrix
     transform = np.dot(rotation, np.diag(scale))
     return transform
