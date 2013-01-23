@@ -72,6 +72,7 @@ def symmetric_tensor(orient, para_scale=1.0, perp_scale=1.0):
     tensor = np.dot(np.dot(eig_vectors, eig_values), np.transpose(eig_vectors))
     return tensor
 
+
 if __name__ == "__main__":
     from mpl_toolkits.mplot3d import Axes3D
     import matplotlib.pyplot as plt
