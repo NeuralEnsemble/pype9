@@ -8,7 +8,7 @@ This package defines methods for producing patterns of connectivity between neur
 """
 import numpy as np
 
-def transform_tensor(z_scale=1.0, y_scale=1.0, x_scale=1.0, az=0.0, el=0.0):
+def transform_tensor(scale=(1.0, 1.0, 1.0), rotation=(0.0, 0.0, 0.0)):
     """
     Produces a linear transformation matrix for a set of 3D point vectors so that they are scaled 
     by an ellipsoid from x, y and z axis scalings and azimuth and elevation angles
@@ -19,17 +19,34 @@ def transform_tensor(z_scale=1.0, y_scale=1.0, x_scale=1.0, az=0.0, el=0.0):
     @param az [float]: The "azimuth angle", the clockwise rotation (in degrees) in the x-y plane starting from the x-axis
     @param el [float]: The "elevation angle", the clockwise rotation (in degrees) in the x-z plane starting from the z axis
     """
-    # Put the axis scales into a diagonal matrix
-    scale = np.array(((x_scale, 0.0, 0.0), (0.0, y_scale, 0.0), (0.0, 0.0, z_scale)))
+    try:
+        scale = np.array(scale, dtype=float).reshape(3)
+    except:
+        raise Exception("Could not convert first argument ({}) into a three-dimensional vector"
+                        .format(scale))
+    try:
+        rotation = np.array(rotation, dtype=float).reshape(3)
+    except:
+        raise Exception("Could not convert second argument ({}) into a three-dimensional vector"
+                        .format(rotation))            
+    # Convert angles from degrees to radians
+    angles = np.array(rotation) * (np.pi / 180.0)
     # Calculate the rotation matrix from the azimuth and elevation angles
-    angles = np.array((az, el)) * (np.pi / 180.0)
     sin = np.sin(angles)
     cos = np.cos(angles)
-    rotation = np.array((( cos[0] * cos[1],  sin[0], -cos[0] * sin[1]),
-                         (-sin[0] * cos [1], cos[0],  sin[0] * sin[1]),
-                         ( sin[1],           0,       cos[1])))
+    rotation = np.array(((cos[1] * cos[2], cos[0] * sin[2] + sin[0] * sin[1] * cos[2],
+                          sin[0] * sin[2] - cos[0] * sin[1] * cos[2]),
+                         (-cos[1] * sin[2], cos[0] * cos[2] - sin[0] * sin[1] * sin[2],
+                          sin[0] * cos[2] + cos[0] * sin[1] * sin[2]),
+                         (sin[1], -sin[0] * cos[1], cos[0] * cos[1])))
+    x_rotate = np.array(((1, 0, 0), (0, cos[0], sin[0]), (0, -sin[0], cos[0])))
+    y_rotate = np.array(((cos[1], 0, -sin[1]), (0, 1, 0), (sin[1], 0, cos[1])))
+    z_rotate = np.array(((cos[2], sin[2], 0), (-sin[2], cos[2], 0), (0, 0, 1)))       
+    test_rotation = np.dot(z_rotate, np.dot(y_rotate, x_rotate))
+    print rotation
+    print test_rotation
     # Combine scale and rotation for final rotation matrix
-    transform = np.dot(rotation, scale)
+    transform = np.dot(rotation, np.diag(scale))
     return transform
 
 def symmetric_tensor(orient, para_scale=1.0, perp_scale=1.0):
@@ -60,34 +77,36 @@ def symmetric_tensor(orient, para_scale=1.0, perp_scale=1.0):
     eig_vector2 = np.cross(orient, ref_axis)
     eig_vector2 /= np.sqrt(np.sum(eig_vector2 * eig_vector2))
     eig_vector3 = np.cross(orient, eig_vector2)
-    eig_vector3 /= np.sqrt(np.sum(eig_vector3 * eig_vector3))    
+    eig_vector3 /= np.sqrt(np.sum(eig_vector3 * eig_vector3))
     eig_vectors = np.vstack((orient, eig_vector2, eig_vector3))
     # Combine eigenvector and eigenvalue matrices to create tensor
-    tensor = np.dot(np.dot(eig_vectors,eig_values), np.transpose(eig_vectors))
+    tensor = np.dot(np.dot(eig_vectors, eig_values), np.transpose(eig_vectors))
     return tensor
 
 if __name__ == "__main__":
     from mpl_toolkits.mplot3d import Axes3D
     import matplotlib.pyplot as plt
     import numpy.random
-    points = np.mgrid[-1:1:30j, -1:1:30j, -1:1:30j]
-    points = np.transpose(np.reshape(points, (3, -1)))     
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ax.set_aspect('equal')    
+    ax.set_aspect('equal')
     ax.set_xlabel('X Label')
     ax.set_ylabel('Y Label')
     ax.set_zlabel('Z Label')
-    if False:
-        transform = transform_tensor(2.0, az=0.0, el=80)
-        transform_points = np.transpose(np.dot(transform, 
+    if True:
+        points = np.mgrid[-1:1:10j, -1:1:10j, -1:1:10j]
+        points = np.transpose(np.reshape(points, (3, -1)))
+        transform = transform_tensor((2,1,1), (5, 5, 5))
+        transform_points = np.transpose(np.dot(transform,
                                                np.transpose(points)))
-        ax.scatter(transform_points[:,0], transform_points[:,1], transform_points[:,2])
+        ax.scatter(transform_points[:, 0], transform_points[:, 1], transform_points[:, 2])
     else:
-        tensor = symmetric_tensor((1,1,1), 4, 2)
+        points = np.mgrid[-1:1:30j, -1:1:30j, -1:1:30j]
+        points = np.transpose(np.reshape(points, (3, -1)))        
+        tensor = symmetric_tensor((1, 1, 1), 4, 2)
         transformed_points = np.transpose(np.dot(tensor, np.transpose(points)))
         dist = np.sqrt(np.sum(transformed_points * transformed_points, axis=1))
         selected_points = points[(dist < 1.0), :]
-        ax.scatter(selected_points[:,0], selected_points[:,1], selected_points[:,2])
+        ax.scatter(selected_points[:, 0], selected_points[:, 1], selected_points[:, 2])
     plt.show()
-    
+
