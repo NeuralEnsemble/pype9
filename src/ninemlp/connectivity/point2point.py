@@ -14,6 +14,7 @@
 
 import numpy
 from warnings import warn
+from ninemlp.connectivity import transform_tensor
 
 class InsufficientTargetsWarning(Warning): pass
 
@@ -242,3 +243,8 @@ class RectangleMask(MaskBased):
     @classmethod
     def expand_distances(cls):
         return True    
+    
+if __name__ == '__main__':
+    # Put testing code in here
+    print "Finished tests"
+    
