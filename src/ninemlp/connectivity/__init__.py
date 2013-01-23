@@ -37,11 +37,9 @@ def symmetric_tensor(orient, para_scale=1.0, perp_scale=1.0):
     Produces a linear transformation matrix for a set of 3D point vectors so that they are scaled 
     by an ellipsoid from x, y and z axis scalings and azimuth and elevation angles
     
-    @param scale_x [float]: Scale of the x-axis of the transformation matrix
-    @param scale_y [float]: Scale of the y-axis of the transformation matrix
-    @param scale_z [float]: Scale of the z-axis of the transformation matrix        
-    @param az [float]: The azimuth angle of the rotation in the X-Y plane (degrees)
-    @param el [float]: The elevation angle of the rotation from the Z plane (degrees)    
+    @param orient [np.array(3)]: A vector along with the tensor will be orientated
+    @param para_scale [float]: The scale of the tensor along the orientation of the orientation vector
+    @param perp_scale [float]: The scale of the tensor along the orientations perpedicular to the orientation vector
     """
     try:
         orient = np.array(orient, dtype=float).reshape(3)
@@ -54,8 +52,8 @@ def symmetric_tensor(orient, para_scale=1.0, perp_scale=1.0):
     eig_values = np.array(((para_scale, 0, 0), (0, perp_scale, 0), (0, 0, perp_scale)))
     # Create the eigenvector matrix
     ref_axis = np.zeros(3) # To avoid colinearity between orientation vector and reference vector 
-    #                        pick the axis with the smallest value to be the reference axis used to
-    #                        get perpendicular vectors
+    #                        pick the axis with the smallest value within the orientation vector 
+    #                        to be the reference axis generate the perpendicular vectors
     ref_axis[np.argmin(orient)] = 1.0
     eig_vector2 = np.cross(orient, ref_axis)
     eig_vector2 /= np.sqrt(np.sum(eig_vector2 * eig_vector2))
