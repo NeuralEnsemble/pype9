@@ -13,11 +13,8 @@ def transform_tensor(scale=(1.0, 1.0, 1.0), rotation=(0.0, 0.0, 0.0)):
     Produces a linear transformation matrix for a set of 3D point vectors so that they are scaled 
     by an ellipsoid from x, y and z axis scalings and azimuth and elevation angles
     
-    @param scale_x [float]: Scale of the x-axis of the transformation matrix
-    @param scale_y [float]: Scale of the y-axis of the transformation matrix
-    @param scale_z [float]: Scale of the z-axis of the transformation matrix        
-    @param az [float]: The "azimuth angle", the clockwise rotation (in degrees) in the x-y plane starting from the x-axis
-    @param el [float]: The "elevation angle", the clockwise rotation (in degrees) in the x-z plane starting from the z axis
+    @param scale [np.array(3)]: Scalars that are applied to the x, y and z axes respectively before the rotation
+    @param rotation [np.array(3)]: The rotation (in degrees) about the x, y and z axes respectively
     """
     try:
         scale = np.array(scale, dtype=float).reshape(3)
