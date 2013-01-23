@@ -430,29 +430,28 @@ class DisplacedMask(Mask):
 class BinaryMask(Mask):
 
     def __init__(self, tree, vox_size, sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
-        # Set the minimum diameter required for a point to be guaranteed to effect
+        # Set the minimum radius required for a point to be guaranteed to effect
         # at least one voxel
-        min_point_radius = np.max(vox_size) * (math.sqrt(3.0) / 2.0)
-        point_radii = tree.diams
-        point_radii[point_radii < min_point_radius] = min_point_radius
-        point_extents = np.tile(point_radii.reshape((-1, 1)), (1, 3))
+        assert len(vox_size)
+        min_extent = np.array(vox_size) * (math.sqrt(3.0) / 4.0)
+        point_extents = np.tile(np.reshape(tree.diams, (-1,1)), (1,3))
+        for d in xrange(3):
+            point_extents[point_extents[:, d] < min_extent[d], d] = min_extent[d]
         # Call the base 'Mask' class constructor to set up the 
         Mask.__init__(self, tree, vox_size, point_extents)
         # Initialise the mask_array
         self._mask_array = np.zeros(self.dim, dtype=bool)
         # Loop through all of the tree _point_data and "paint" the mask
-        for begin, end, diam in tree.segments:
-            # Check to see whether the point radius is below the minimum
-            point_radius = diam if diam >= min_point_radius else min_point_radius
+        for begin, end, point_extent in tree.segments:
             # Calculate the number of samples required for the current segment
-            num_samples = np.ceil(norm(end - begin) * (sample_diam_ratio / diam))
+            num_samples = np.ceil(np.dot(end - begin, point_extent) * sample_diam_ratio)
             # Loop through the samples for the given segment and add their "point_mask" to the 
             # overal mask
             for frac in np.linspace(1, 0, num_samples, endpoint=False):
                 point = (1.0 - frac) * begin + frac * end
                 # Determine the extent of the mask indices that could be affected by the point
-                extent_start = np.floor((point - self.offset - point_radius) / self.vox_size)
-                extent_finish = np.ceil((point - self.offset + point_radius) / self.vox_size)
+                extent_start = np.floor((point - self.offset - point_extent) / self.vox_size)
+                extent_finish = np.ceil((point - self.offset + point_extent) / self.vox_size)
                 # Get an "open" grid (uses less memory if it is open) of voxel indices to apply 
                 # the distance function to.
                 # (see http://docs.scipy.org/doc/numpy/reference/generated/numpy.ogrid.html)
@@ -460,11 +459,11 @@ class BinaryMask(Mask):
                                           int(extent_start[1]):int(extent_finish[1]),
                                           int(extent_start[2]):int(extent_finish[2])]
                 # Calculate the distances from each of the voxel centres to the given point
-                dist = np.sqrt((self.X[extent_indices] - point[0]) ** 2 + \
-                               (self.Y[extent_indices] - point[1]) ** 2 + \
-                               (self.Z[extent_indices] - point[2]) ** 2)
+                dist = np.sqrt(((self.X[extent_indices] - point[0]) / point_extent[0]) ** 2 + \
+                               ((self.Y[extent_indices] - point[1]) / point_extent[1]) ** 2 + \
+                               ((self.Z[extent_indices] - point[2]) / point_extent[2]) ** 2)
                 # Mask all _points that that are closer than the point diameter
-                point_mask = dist < point_radius
+                point_mask = dist < 1.0
                 self._mask_array[extent_indices] += point_mask
 
 
