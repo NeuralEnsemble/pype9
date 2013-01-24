@@ -13,6 +13,7 @@
 #
 #######################################################################################
 # Generic imports
+import re
 import numpy
 import collections
 import os.path
@@ -24,7 +25,7 @@ import math
 import pyNN.connectors
 from pyNN.random import RandomDistribution
 from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
-import ninemlp.connectivity.point2point
+import ninemlp.connectivity.point2point as point2point
 
 ## The location relative to the NINEML-Network file to look for the folder containing the cell descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
 RELATIVE_NCML_DIR = "./ncml"
@@ -329,6 +330,10 @@ class Network(object):
                                                                     pop.initial_conditions.distributions,
                                                                     verbose,
                                                                     silent_build)
+        if build_mode == 'build_only' or build_mode == 'compile_only':
+            print "Finished compiling network, now exiting (use try: ... except SystemExit: ... " \
+                    "if you want to do something afterwards)"
+            raise SystemExit(0)                
         for proj in self.networkML.projections:
             if self.check_flags(proj):
                 self._projections[proj.id] = self._create_projection(
@@ -342,10 +347,6 @@ class Network(object):
                                                              proj.delay,
                                                              proj.synapse_family,
                                                              verbose)
-        if build_mode == 'build_only' or build_mode == 'compile_only':
-            print "Finished compiling network, now exiting (use try: ... except SystemExit: ... " \
-                    "if you want to do something afterwards)"
-            raise SystemExit(0)
         self._finalise_construction()
 
     def _finalise_construction(self):
@@ -413,7 +414,7 @@ class Network(object):
                 param_expr = self._convert_units(param.args['value'])
             elif param.pattern == 'DistanceBased':
                 expr_name = param.args.pop('geometry')
-                GeometricExpression = getattr(ninemlp.connectivity.point2point, expr_name)
+                GeometricExpression = getattr(point2point, expr_name)
                 try:
                     param_expr = GeometricExpression(min_value=min_value,
                                                      **self._convert_all_units(param.args))
@@ -437,23 +438,24 @@ class Network(object):
             allow_self_connections = True
         # Set expressions for connection weights and delays
         weight_expr = self._get_connection_param_expr(label, weight)
-        if target.synapse == "Gap": # FIXME Maybe there should be a special attribute that signifies a Gap junction
-            delay_expr = 1.0 # Not required by Gap junctions so just set to something innocuous
+        if synapse_family == 'Electrical':
+            # Delay is not required by Gap junctions so just set to something innocuous here
+            delay_expr = 1.0 
         else:
             delay_expr = self._get_connection_param_expr(label, delay,
                                                          min_value=self.get_min_delay())
         # Set connection probability     
         if connection.pattern == 'DistanceBased':
             expression = connection.args.pop('geometry')
-            if not hasattr(ninemlp.connectivity.point2point, expression):
+            if not hasattr(point2point, expression):
                 raise Exception("Unrecognised distance expression '{}'".format(expression))
-            try:
-                GeometricExpression = getattr(ninemlp.connectivity.point2point, expression)
-                connect_expr = GeometricExpression(**self._convert_all_units(connection.args))
-            except TypeError as e:
-                raise Exception("Could not initialise distance expression class '{}' from given " \
-                                "arguments '{}' for projection '{}'\n('{}')"
-                                .format(expression, connection.args, label, e))
+#            try:
+            GeometricExpression = getattr(point2point, expression)
+            connect_expr = GeometricExpression(**self._convert_all_units(connection.args))
+#            except TypeError as e:
+#                raise Exception("Could not initialise distance expression class '{}' from given " \
+#                                "arguments '{}' for projection '{}'\n('{}')"
+#                                .format(expression, connection.args, label, e))
             connector = self._pyNN_module.connectors.DistanceDependentProbabilityConnector(
                                     connect_expr, allow_self_connections=allow_self_connections,
                                     weights=weight_expr, delays=delay_expr)
@@ -503,20 +505,42 @@ class Network(object):
         else:
             raise Exception("Unrecognised pattern type '{}'".format(connection.pattern))
         # Initialise the projection object and return
-        if synapse_family == 'Chemical':
-            projection = self._Projection_class(pre, dest, label, connector, source=source.terminal,
-                                      target=self._get_target_str(target.synapse, target.segment),
-                                      build_mode=self.build_mode)
-        elif synapse_family == 'Electrical':
-            if not self._ElectricalSynapseProjection_class:
-                raise Exception("The selected simulator doesn't currently support electrical "
-                                "synapse projections")
-            projection = self._ElectricalSynapseProjection_class(pre, dest, label, connector, 
-                                                                 source=source.segment, 
-                                                                 target=target.segment,
-                                                                 build_mode=self.build_mode)            
-        else:
-            raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
+        with warnings.catch_warnings(record=True) as warnings_list:
+            warnings.simplefilter("always", category=point2point.InsufficientTargetsWarning)
+            if synapse_family == 'Chemical':
+                projection = self._Projection_class(pre, dest, label, connector, 
+                                                    source=source.terminal, 
+                                                    target=self._get_target_str(target.synapse, 
+                                                                                target.segment),
+                                                    build_mode=self.build_mode)
+            elif synapse_family == 'Electrical':
+                if not self._ElectricalSynapseProjection_class:
+                    raise Exception("The selected simulator doesn't currently support electrical "
+                                    "synapse projections")
+                if target.synapse:
+                    target_str = target.segment + '.' + target.synapse
+                else:
+                    target_str = target.segment
+                projection = self._ElectricalSynapseProjection_class(pre, dest, label, connector, 
+                                                                     source=source.segment, 
+                                                                     target=target_str,
+                                                                     build_mode=self.build_mode)            
+            else:
+                raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
+            # Collate raised "InsufficientTargets" warnings into a single warning message for better
+            # readibility.
+            insufficient_targets_str = ""            
+            if warnings_list:
+                for w in warnings_list:
+                    if w.category == point2point.InsufficientTargetsWarning:
+                        req_number, mask_size = re.findall("\([^\)]*\)", str(w.message))
+                        insufficient_targets_str += " {},".format(mask_size[2:-1])
+        if insufficient_targets_str:
+            print "Could not satisfy all connection targets in projection '{}' " \
+                  "because the requested number of connections, {}, exceeded the size of " \
+                  "the generated masks of sizes:{}. The number of connections was reset to the " \
+                  "size of the respective masks in these cases.\n".format(label, req_number[2:-1], 
+                                                                          insufficient_targets_str[:-1])
         return projection
 
     def _get_simulation_params(self, **params):

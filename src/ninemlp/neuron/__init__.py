@@ -99,55 +99,6 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
         else:
             return pyNN.neuron.Population.can_record(self, variable)
 
-#    def record(self, variable, filename, cells=None, section='source_section', position=0.5):
-#        """
-#        Record spikes to a file. source can be an individual cell, a Population,
-#        PopulationView or Assembly.
-#        """
-#        if variable == 'spikes':
-#            variable_str = variable
-#        else:
-#            variable_str = '{section}({position}).{variable}' \
-#                           .format(section=section, position=position, variable=variable)
-#        self._record(variable_str, to_file=filename)                           
-#        # The following code is modified from  to allow
-#        # individual cells to be recorded with voltage traces
-##        if variable is None:                             
-##            for recorder in self.recorders.values():
-##                recorder.reset()
-##            self.recorders = {}    
-##        else:
-##            if not self.can_record(variable):
-##                raise pyNN.neuron.errors.RecordingError(variable, self.celltype)        
-##            pyNN.neuron.logger.debug("%s.record('%s')", self.label, variable)
-##            if variable not in self.recorders:
-##                self._add_recorder(variable, filename)
-##            if self.record_filter is not None:
-##                self.recorders[variable].record(self.record_filter)
-##            else:
-##                self.recorders[variable].record(self.all_cells)
-##            #if isinstance(filename, basestring):
-##            #    self.recorders[variable].file = filename
-##            # recorder_list is used by end()
-##        # --------------------
-##        # END self._record(variable_str, to_filename) modification
-##        # --------------------
-#        if self.recorders[variable_str] not in simulator.recorder_list:
-#            # this is a bit hackish - better to add to Population.__del__?
-#            simulator.recorder_list.append(self.recorders[variable_str])
-
-#    def record_all(self, file_prefix):
-#        """
-#        Records all available variables
-#        
-#        @param file_prefix: The file path prefix that the output files will be written to. Each \
-#                            file will be appended the post fix .<var-name>.
-#        """
-#        for var in self.celltype.recordable:
-#            try:
-#                self.record(var, file_prefix + '.' + var)
-#            except NameError:
-#                print "Could not set recorder for '%s' variable" % var
 
 class Projection(pyNN.neuron.Projection):
 
@@ -180,7 +131,7 @@ class ElectricalSynapseProjection(Projection):
         self.__class__.gid_count += pre.size * dest.size * 2
         self.rectified = rectified
         Projection.__init__(self, pre, dest, label, connector, source, target, build_mode)
-            
+
 
     def _divergent_connect(self, source, targets, weights, delays=None): #@UnusedVariable
         """
@@ -206,47 +157,62 @@ class ElectricalSynapseProjection(Projection):
                 raise errors.ConnectionError("Invalid target ID: {}".format(target))
         assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
         self._resolve_synapse_type()
+        # NB: In this case self.synapse_type and self.source will actually be the names of the 
+        # respective segments. The names are inherited from the pyNN class, and thus a little
+        # confusing so I rename them here in the local scope to try to make it a little clearer.
+        source_segname = self.source
+        target_segname = self.synapse_type
         for target, weight in zip(targets, weights):
-            # Check connection information to avoid duplicates, where the same cell connects
-            # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
-            #
-            # NB: In this case self.synapse_type and self.source will actually be the names of the 
-            # respective segments. The names are inherited from the pyNN class, and I am not sure why it is called this as it seems a little
-            # confusing.
-            if self.Connection(target, self.synapse_type, source, self.source) \
-                                                                           not in self.connections:
-                cell_secs = []
-                for cell, sec_name in ((source, self.source), (target, self.synapse_type)):
-                    if self.source:
-                        section = cell._cell.segments[sec_name]
-                    else:
-                        section = cell.source_section
-                    cell_secs.append((cell, section))
-                pre_post_id = int(source) * len(self.post) + int(target) + self.gid_start
-                post_pre_id = int(source) * len(self.post) + int(target) + self.gid_start + 1
-                for (pre_cell, pre_sec), \
-                    (post_cell, post_sec), var_gid in ((cell_secs[0], cell_secs[1], pre_post_id), 
-                                                       (cell_secs[1], cell_secs[0], post_pre_id)) \
-                                                   if not self.rectified else \
-                                                      ((cell_secs[0], cell_secs[1], pre_post_id)):
-                    var_gid = int(pre_cell) * len(self.post) + int(target)                                                               
+            # Check connection information to avoid duplicates if the connection is not "rectified"
+            # (one-way), where there is a gap junction connecting from one cell1 to cell2 and then 
+            # another cell2 to cell1 (because the connections are mutual)
+            if self.rectified or \
+                    ElectricalSynapseProjection.Connection(target, target_segname, 
+                                source, source_segname) not in self.connections:
+                # Generate unique but reproducible
+                pre_post_id = (self.pre.id_to_index(source) * len(self.post) + \
+                               self.post.id_to_index(target) + self.gid_start) * 2
+                post_pre_id = pre_post_id + 1
+                # Create a connection list containing the two connections going in both directions
+                # (if rectified only one direction)
+                connection_list = [((source, source_segname), (target, target_segname), 
+                                    pre_post_id)]                
+                if not self.rectified:
+                    connection_list.append(((target, target_segname), (source, source_segname),
+                                            post_pre_id))
+                for (pre_cell, pre_seg), (post_cell, post_seg), var_gid in connection_list:
                     if pre_cell.local:
-                        print pre_sec(0.5)
-                        print "Section &v: {}".format(pre_sec(0.5)._ref_v)
-                        simulator.state.parallel_context.source_var(pre_sec(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
+                        if pre_seg:
+                            segment = pre_cell._cell.segments[pre_seg.split('.')[0]]
+                        else:
+                            segment = pre_cell.source_section
+                        simulator.state.parallel_context.source_var(segment(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
+# --- DEBUGGING STATEMENTS ---
+#                        print "PRE: var_gid={var_gid}, process={mpi_rank}, cell_id={pre_cell}"\
+#                              .format(mpi_rank=simulator.state.mpi_rank, pre_cell=int(pre_cell),
+#                                      var_gid=var_gid)
+#-----------------------------
                     if post_cell.local:
-                        try:
-                            synapse = getattr(post_sec, 'Gap')
-                        except AttributeError:
-                            raise Exception("Section '{}' doesn't have a 'Gap' synapse inserted"
-                                            .format(sec_name if sec_name else 'source_section'))    
-                        synapse.g = weight
-                        print synapse
-                        print "Synapse &vgap: {}".format(synapse._ref_vgap)                        
-                        simulator.state.parallel_context.target_var(synapse._ref_vgap, var_gid) #@UndefinedVariableFromImport
+                        if post_seg:
+                            segment = post_cell._cell.segments[self.synapse_type]
+                        else:
+                            segment = post_cell.source_section
+                        # Create the gap_junction and set its weight
+                        gap_junction = h.gap(0.5, sec=segment)
+                        gap_junction.g = weight
+                        # Store gap junction in a list so it doesn't get collected by the garbage 
+                        # collector
+                        segment._gap_junctions.append(gap_junction)
+                        # Connect the gap junction with the sourc_var
+                        simulator.state.parallel_context.target_var(gap_junction._ref_vgap, var_gid) #@UndefinedVariableFromImport
+# --- DEBUGGING STATEMENTS ---
+#                        print "POST: var_gid={var_gid}, process={mpi_rank}, cell_id={post_cell}"\
+#                              .format(mpi_rank=simulator.state.mpi_rank, post_cell=int(post_cell),
+#                                      var_gid=var_gid)                       
+#-----------------------------
                 # Save connection information to avoid duplicates, where the same cell connects
                 # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
-                self.connections.append(self.Connection(source, self.source, target, 
+                self.connections.append(self.Connection(source, self.source, target,
                                                         self.synapse_type))
 
     def _convergent_connect(self, sources, target, weights, delays):
