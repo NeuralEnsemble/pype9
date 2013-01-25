@@ -18,6 +18,12 @@ from numpy.linalg import norm
 import collections
 import xml.sax
 from ninemlp import XMLHandler
+try:
+    import matplotlib.pyplot as plt
+except:
+    # If pyplot is not install, ignore it and only throw an error if a plotting function is called
+    plt = None 
+
 
 THRESHOLD_DEFAULT = 0.001
 SAMPLE_DIAM_RATIO_DEFAULT = 4.0
@@ -157,7 +163,6 @@ class Tree(object):
         # Clear masks, which will no longer match the rotated points
         self._masks.clear()
 
-
     def get_binary_mask(self, vox_size, sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
         """
         Creates a mask for the given voxel sizes and saves it in self._masks
@@ -218,12 +223,19 @@ class Tree(object):
         return 1.0 - np.prod(inv_prob_mask)
 
     def plot_mask(self, vox_size, mask_type='binary', gauss_kernel=None, sample_freq=None,
-                  show=True):
+                  show=True, colour_map=None):
+        if not plt:
+            raise Exception("Matplotlib could not be imported and therefore plotting functions "
+                            "have been disabled")
         if mask_type == 'binary':
             mask = self.get_binary_mask(vox_size)
+            if not colour_map:
+                colour_map = 'gray'
         elif mask_type == 'inverse_prob':
             mask = self.get_inv_prob_mask(vox_size, gauss_kernel, sample_freq)
-        mask.plot(show=show)
+            if not colour_map:
+                colour_map = 'jet'
+        mask.plot(show=show, colour_map=colour_map)
 
 
 class DisplacedTree(Tree):
@@ -298,14 +310,20 @@ class Mask(object):
     """
     __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
 
-    def __init__(self, tree, vox_size, point_extents):
+    def __init__(self, tree, vox_size, point_extents=None):
         """
         Initialises the mask from a given Neurolucida tree and voxel size
         
         @param tree [Tree]: A loaded Neurolucida tree
         @param vox_size [float]: The requested voxel sizes with which to divide up the mask with
         """
-        self.vox_size = np.asarray(vox_size)
+        try:
+            self.vox_size = np.asarray(vox_size).reshape(3)
+        except:
+            raise Exception ("Could not convert vox_size ({}) to a 3-d vector".format(vox_size))
+        # If point extents are not explicitly provided use the segment radius for each dimension
+        if not point_extents:
+            point_extents = np.tile(np.reshape(tree.diams / 2.0, (-1,1)), (1,3))
         # Get the start and finish indices of the mask, as determined by the bounds of the tree
         min_bounds = np.squeeze(np.min(tree._points - point_extents, axis=0))
         max_bounds = np.squeeze(np.max(tree._points + point_extents, axis=0))
@@ -356,19 +374,22 @@ class Mask(object):
     def displaced_mask(self, displacement):
         return DisplacedMask(self, displacement)
 
-    def plot(self, slice_dim=2, skip=1, show=True):
-        import pylab
+    def plot(self, slice_dim=2, skip=1, show=True, colour_map=None):
         for i in xrange(0, self.dim[slice_dim], skip):
-            pylab.figure()
+            if not plt:
+                raise Exception("Matplotlib could not be imported and therefore plotting functions "
+                                "have been disabled")
+            plt.figure()
             mask_shape = self._mask_array.shape
             if slice_dim == 0: slice_indices = np.ogrid[i:(i + 1), 0:mask_shape[1], 0:mask_shape[2]]
             elif slice_dim == 1: slice_indices = np.ogrid[0:mask_shape[0], i:(i + 1), 0:mask_shape[2]]
             elif slice_dim == 2: slice_indices = np.ogrid[0:mask_shape[0], 0:mask_shape[1], i:(i + 1)]
             else: raise Exception("Slice dimension can only be 0-2 ({} provided)".format(slice_dim))
-            pylab.imshow(np.squeeze(self._mask_array[slice_indices]))
-            pylab.title('dim {}, index {}'.format(slice_dim, i))
+            plt.imshow(np.squeeze(self._mask_array[slice_indices]), 
+                       cmap=plt.cm.get_cmap(colour_map))
+            plt.title('dim {}, index {}'.format(slice_dim, i))
         if show:
-            pylab.show()
+            plt.show()
 
     @classmethod
     def parse_vox_size(cls, vox_size):
@@ -430,28 +451,29 @@ class DisplacedMask(Mask):
 class BinaryMask(Mask):
 
     def __init__(self, tree, vox_size, sample_diam_ratio=SAMPLE_DIAM_RATIO_DEFAULT):
-        # Set the minimum radius required for a point to be guaranteed to effect
-        # at least one voxel
-        assert len(vox_size)
-        min_extent = np.array(vox_size) * (math.sqrt(3.0) / 4.0)
-        point_extents = np.tile(np.reshape(tree.diams, (-1,1)), (1,3))
-        for d in xrange(3):
-            point_extents[point_extents[:, d] < min_extent[d], d] = min_extent[d]
-        # Call the base 'Mask' class constructor to set up the 
-        Mask.__init__(self, tree, vox_size, point_extents)
-        # Initialise the mask_array
+        # Call the base 'Mask' class constructor
+        Mask.__init__(self, tree, vox_size)
+        # Initialise the mask_array with the appropriate data type
         self._mask_array = np.zeros(self.dim, dtype=bool)
+        # Set a minimum extent in each dimension to ensure the that the point extents are large 
+        # enough in each dimension to not "fall in the gaps" between voxels
+        min_extent = np.array(vox_size) * (math.sqrt(3.0) / 2.0)        
         # Loop through all of the tree _point_data and "paint" the mask
-        for begin, end, point_extent in tree.segments:
+        for seg in tree.segments:
+            # Set the point extent to be the segment diameter unless it is below the minimum along
+            # that dimension
+            point_extent = np.array((seg.diam, seg.diam, seg.diam))    
+            point_extent[point_extent < min_extent] = min_extent[point_extent < min_extent]
             # Calculate the number of samples required for the current segment
-            num_samples = np.ceil(np.dot(end - begin, point_extent) * sample_diam_ratio)
+            num_samples = np.ceil(norm(seg.end - seg.begin) * 
+                                  (sample_diam_ratio / min(point_extent)))
             # Loop through the samples for the given segment and add their "point_mask" to the 
-            # overal mask
+            # overall mask
             for frac in np.linspace(1, 0, num_samples, endpoint=False):
-                point = (1.0 - frac) * begin + frac * end
+                point = (1.0 - frac) * seg.begin + frac * seg.end
                 # Determine the extent of the mask indices that could be affected by the point
-                extent_start = np.floor((point - self.offset - point_extent) / self.vox_size)
-                extent_finish = np.ceil((point - self.offset + point_extent) / self.vox_size)
+                extent_start = np.floor((point - self.offset - seg.diam / 2.0) / self.vox_size)
+                extent_finish = np.ceil((point - self.offset + seg.diam / 2.0) / self.vox_size)
                 # Get an "open" grid (uses less memory if it is open) of voxel indices to apply 
                 # the distance function to.
                 # (see http://docs.scipy.org/doc/numpy/reference/generated/numpy.ogrid.html)
@@ -617,13 +639,8 @@ if __name__ == '__main__':
     from os.path import normpath, join
     from ninemlp import SRC_PATH
     forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
-                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
-    vox_size = (2, 2, 2)
-    print "overlap: {}".format(forest[2].num_overlapping(forest[4], vox_size=vox_size))
-    tree = forest[2]
-    forest[2].plot_mask(vox_size, show=False)
-    tree.rotate(10, axis=0)
-    forest[2].plot_mask(vox_size)
+                                  'tree2.xml')))
+    forest[0].plot_mask((0.1, 0.1, 50))
 
 
 
