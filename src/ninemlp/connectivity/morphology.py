@@ -535,19 +535,28 @@ class FuzzyMask(Mask):
     
 class GaussMask(FuzzyMask):
     
-    def __init__(self, tree, vox_size, orient, para_scale=1.0, perp_scale=1.0, 
+    def __init__(self, tree, vox_size, scale, orient, para_scale=1.0, perp_scale=1.0, 
                  threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT):
+        self.scale = scale
         self.tensor = symmetric_tensor(orient, para_scale, perp_scale)
+        if self.threshold >= 1.0:
+            raise Exception ("Extent threshold must be < 1.0")
         self.threshold = threshold
         self.sample_freq = sample_freq
         FuzzyMask.__init__(tree, vox_size)
         
     def point_spread_function(self, disps):
-        values = np.exp(-0.5 / np.dot(self.tensor, disps))
+        values = self.scale * np.exp(-0.5 * np.dot(np.transpose(disps), np.dot(self.tensor, disps)))
         return values
     
-    def get_point_extent(self):
-        raise NotImplementedError        
+    def get_point_extents(self):
+        eig_vals, eig_vecs = np.linalg.eig(self.tensor)
+        # Get the extent along each of the Eigen-vectors where the point-spread function reaches the
+        # threshold, the extent along the "internal" axes of the kernel
+        internal_extents = np.sqrt(2.0 * math.log(self.threshold) / eig_vals)
+        # Calculate the extent of the kernel along the x-y-z axes, the "external" axes
+        extents = np.sqrt(np.sum((eig_vecs * internal_extents) ** 2), axis=1)
+        return extents
    
     def get_sample_freq(self):
         return self.sample_freq
