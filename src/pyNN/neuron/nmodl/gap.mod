@@ -1,18 +1,19 @@
-: gap.mod
-: This is a conductance based gap junction model rather
-: than resistance because Traub occasionally likes to 
-: set g=0 which of course is infinite resistance.
 NEURON {
-  SUFFIX gap
   POINT_PROCESS gap
-  RANGE g, i
-  POINTER vgap
   ELECTRODE_CURRENT i
+  RANGE g, i, vgap
 }
-PARAMETER { g = 1e-10 (1/megohm) }
+
+PARAMETER {
+  g = 1 (nanosiemens)
+}
+
 ASSIGNED {
   v (millivolt)
   vgap (millivolt)
   i (nanoamp)
 }
-BREAKPOINT { i = (vgap - v)*g }
+
+BREAKPOINT {
+  i = g * (vgap - v)
+}

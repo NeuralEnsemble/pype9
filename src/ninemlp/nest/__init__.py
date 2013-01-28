@@ -15,6 +15,11 @@
 
 import os
 import numpy
+import sys
+# Remove any system arguments that may conflict with
+if '--debug' in sys.argv:
+    raise Exception("'--debug' argument passed to script conflicts with an argument to nest, "
+                    "causing the import to stop at the NEST prompt")
 import pyNN.nest.standardmodels.cells
 import pyNN.nest.connectors
 import ninemlp.common.brep

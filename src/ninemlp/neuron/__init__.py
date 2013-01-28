@@ -180,32 +180,36 @@ class ElectricalSynapseProjection(Projection):
                 if not self.rectified:
                     connection_list.append(((target, target_segname), (source, source_segname),
                                             post_pre_id))
-                print simulator.state.num_processes
                 for (pre_cell, pre_seg), (post_cell, post_seg), var_gid in connection_list:
                     if pre_cell.local:
                         if pre_seg:
-                            segment = pre_cell._cell.segments[pre_seg]
+                            segment = pre_cell._cell.segments[pre_seg.split('.')[0]]
                         else:
                             segment = pre_cell.source_section
                         simulator.state.parallel_context.source_var(segment(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
-                        print "PRE: var_gid={var_gid}, process={mpi_rank}, cell_id={pre_cell}"\
-                              .format(mpi_rank=simulator.state.mpi_rank, pre_cell=int(pre_cell),
-                                      var_gid=var_gid)
+# --- DEBUGGING STATEMENTS ---
+#                        print "PRE: var_gid={var_gid}, process={mpi_rank}, cell_id={pre_cell}"\
+#                              .format(mpi_rank=simulator.state.mpi_rank, pre_cell=int(pre_cell),
+#                                      var_gid=var_gid)
+#-----------------------------
                     if post_cell.local:
                         if post_seg:
-                            segment = post_cell._cell.segments[post_seg]
+                            segment = post_cell._cell.segments[self.synapse_type]
                         else:
                             segment = post_cell.source_section
-                        try:
-                            synapse = getattr(segment, 'gap')
-                        except AttributeError:
-                            raise Exception("Section '{}' doesn't have a 'gap' synapse inserted"
-                                            .format(post_seg if post_seg else 'source_section'))
-                        synapse.g = weight
-                        simulator.state.parallel_context.target_var(synapse._ref_vgap, var_gid) #@UndefinedVariableFromImport
-                        print "POST: var_gid={var_gid}, process={mpi_rank}, cell_id={post_cell}"\
-                              .format(mpi_rank=simulator.state.mpi_rank, post_cell=int(post_cell),
-                                      var_gid=var_gid)                       
+                        # Create the gap_junction and set its weight
+                        gap_junction = h.gap(0.5, sec=segment)
+                        gap_junction.g = weight
+                        # Store gap junction in a list so it doesn't get collected by the garbage 
+                        # collector
+                        segment._gap_junctions.append(gap_junction)
+                        # Connect the gap junction with the sourc_var
+                        simulator.state.parallel_context.target_var(gap_junction._ref_vgap, var_gid) #@UndefinedVariableFromImport
+# --- DEBUGGING STATEMENTS ---
+#                        print "POST: var_gid={var_gid}, process={mpi_rank}, cell_id={post_cell}"\
+#                              .format(mpi_rank=simulator.state.mpi_rank, post_cell=int(post_cell),
+#                                      var_gid=var_gid)                       
+#-----------------------------
                 # Save connection information to avoid duplicates, where the same cell connects
                 # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
                 self.connections.append(self.Connection(source, self.source, target,
