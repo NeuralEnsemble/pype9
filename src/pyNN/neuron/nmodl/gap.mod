@@ -1,7 +1,8 @@
 NEURON {
   POINT_PROCESS Gap
   NONSPECIFIC_CURRENT i
-  RANGE g, i, vgap
+  RANGE g, i
+  POINTER vgap
 }
 
 PARAMETER {
