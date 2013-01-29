@@ -116,6 +116,9 @@ class Tree(object):
             if prev_index != -1:
                 yield self.Segment(self._points[prev_index, :], self.points[i, :], diam)
 
+    def num_segments(self):
+        return len(self._points) - 1
+
     def _flatten(self, branch, prev_index= -1):
         """
         A recursive algorithm to flatten the loaded tree into a numpy array of _points used in the
@@ -321,7 +324,7 @@ class Mask(object):
         except:
             raise Exception ("Could not convert vox_size ({}) to a 3-d vector".format(vox_size))
         # If point extents are not explicitly provided use the segment radius for each dimension
-        if point_extents is not None:
+        if point_extents is None:
             point_extents = np.tile(np.reshape(tree.diams / 2.0, (-1, 1)), (1, 3))
         # Get the start and finish indices of the mask, as determined by the bounds of the tree
         min_bounds = np.squeeze(np.min(tree._points - point_extents, axis=0))
@@ -503,9 +506,9 @@ class FuzzyMask(Mask):
         # Call the base 'Mask' class constructor to set up the 
         Mask.__init__(self, tree, vox_size, np.tile(point_extent, (len(tree.points), 1)))
         # Initialise the mask_array
-        self._mask_array = np.zeros(self.dim, dtype=bool)
+        self._mask_array = np.zeros(self.dim, dtype=float)
         # Loop through all of the tree _point_data and "paint" the mask
-        for seg in tree.segments:
+        for count, seg in enumerate(tree.segments):
             # Calculate the number of samples required for the current segment
             num_samples = np.ceil(norm(seg.end - seg.begin) * sample_freq)
             # Loop through the samples for the given segment and add their "point_mask" to the 
@@ -533,6 +536,9 @@ class FuzzyMask(Mask):
                 values = self.point_spread_function(disps)
                 # Add the point-spread function values to the mask_array
                 self._mask_array[extent_indices] += values.reshape(X.shape)
+            if count % (tree.num_segments() // 10) == 0:
+                print "Generating mask - {}% complete" \
+                        .format(math.floor(count / tree.num_segments() * 100))
 
     def point_spread_function(self, disps):
         # Should be implemented in derived class
