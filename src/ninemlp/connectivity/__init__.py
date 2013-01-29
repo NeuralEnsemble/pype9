@@ -99,4 +99,6 @@ if __name__ == "__main__":
         selected_points = points[(dist < 1.0), :]
         ax.scatter(selected_points[:, 0], selected_points[:, 1], selected_points[:, 2])
     plt.show()
-
+    
+    
+    

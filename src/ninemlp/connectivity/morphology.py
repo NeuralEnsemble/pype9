@@ -501,7 +501,7 @@ class FuzzyMask(Mask):
         point_extent = self.get_point_extent() # The extent around each point that will be > threshold
         sample_freq = self.get_sample_freq() # The number of samples per unit length
         # Call the base 'Mask' class constructor to set up the 
-        Mask.__init__(self, tree, vox_size, np.ones((len(tree.points), 3)) * point_extent)
+        Mask.__init__(self, tree, vox_size, np.tile(point_extent, (len(tree.points), 1)))
         # Initialise the mask_array
         self._mask_array = np.zeros(self.dim, dtype=bool)
         # Loop through all of the tree _point_data and "paint" the mask
@@ -514,7 +514,8 @@ class FuzzyMask(Mask):
                 point = (1.0 - frac) * seg.begin + frac * seg.end
                 # Determine the extent of the mask indices that could be affected by the point
                 extent_start = np.floor((point - self.offset - point_extent) / self.vox_size)
-                extent_finish = np.ceil((point - self.offset + point_extent) / self.vox_size)
+                extent_finish = np.array(np.ceil((point - self.offset + point_extent) 
+                                                 / self.vox_size), dtype=int)
                 # Get an "open" grid (uses less memory if it is open) of voxel indices to apply 
                 # the distance function to.
                 # (see http://docs.scipy.org/doc/numpy/reference/generated/numpy.ogrid.html)
@@ -527,7 +528,7 @@ class FuzzyMask(Mask):
                 Y = self.Y[extent_indices]
                 Z = self.Z[extent_indices]                                
                 disps = np.vstack((X.ravel() - point[0], Y.ravel() - point[1], 
-                                   Z.ravel() - point[2]))
+                                   Z.ravel() - point[2])).transpose()
                 # Get the values of the point-spread function at each of the voxel centres
                 values = self.point_spread_function(disps)
                 # Add the point-spread function values to the mask_array
@@ -559,7 +560,9 @@ class GaussMask(FuzzyMask):
         FuzzyMask.__init__(self, tree, vox_size)
 
     def point_spread_function(self, disps):
-        values = self.scale * np.exp(-0.5 * np.dot(np.transpose(disps), np.dot(self.tensor, disps)))
+        # Calculate the Gaussian point spread function f = k * exp[-0.5 * d^t . W . d] for each 
+        # displacement, where 'W' is the weights matrix and 'd' is a displacement vector
+        values = self.scale * np.exp(-0.5 * np.sum(disps.dot(self.tensor) * disps, axis=1))
         return values
 
     def get_point_extent(self):
