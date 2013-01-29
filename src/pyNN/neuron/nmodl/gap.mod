@@ -6,12 +6,12 @@ NEURON {
 }
 
 PARAMETER {
+  v (millivolt)
+  vgap (millivolt)
   g = 1 (nanosiemens)
 }
 
 ASSIGNED {
-  v (millivolt)
-  vgap (millivolt)
   i (nanoamp)
 }
 
