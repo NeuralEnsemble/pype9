@@ -18,8 +18,7 @@ ENDCOMMENT
 NEURON {
 
     POINT_PROCESS Gap
-    POINTER vgap
-    RANGE g, i
+    RANGE g, i, vgap
     NONSPECIFIC_CURRENT i
 }
 
