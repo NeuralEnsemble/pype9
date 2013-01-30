@@ -26,7 +26,7 @@ except:
     plt = None
 
 
-THRESHOLD_DEFAULT = 0.001
+THRESHOLD_DEFAULT = 0.01
 SAMPLE_DIAM_RATIO = 4.0
 SAMPLE_FREQ_DEFAULT = 100
 
@@ -507,10 +507,14 @@ class FuzzyMask(Mask):
         Mask.__init__(self, tree, vox_size, np.tile(point_extent, (len(tree.points), 1)))
         # Initialise the mask_array
         self._mask_array = np.zeros(self.dim, dtype=float)
+        print "Generating mask..."
         # Loop through all of the tree _point_data and "paint" the mask
         for count, seg in enumerate(tree.segments):
             # Calculate the number of samples required for the current segment
             num_samples = np.ceil(norm(seg.end - seg.begin) * sample_freq)
+            # Calculate how much to scale the 
+            if num_samples:
+                length_scale = norm(seg.end - seg.begin) / num_samples
             # Loop through the samples for the given segment and add their "point_mask" to the 
             # overal mask
             for frac in np.linspace(1, 0, num_samples, endpoint=False):
@@ -535,10 +539,10 @@ class FuzzyMask(Mask):
                 # Get the values of the point-spread function at each of the voxel centres
                 values = self.point_spread_function(disps)
                 # Add the point-spread function values to the mask_array
-                self._mask_array[extent_indices] += values.reshape(X.shape)
-            if count % (tree.num_segments() // 10) == 0:
+                self._mask_array[extent_indices] += length_scale * values.reshape(X.shape)
+            if count % (tree.num_segments() // 10) == 0 and count != 0:
                 print "Generating mask - {}% complete" \
-                        .format(math.floor(count / tree.num_segments() * 100))
+                        .format(round(float(count) / float(tree.num_segments()) * 100))
 
     def point_spread_function(self, disps):
         # Should be implemented in derived class
@@ -705,7 +709,7 @@ if __name__ == '__main__':
     from ninemlp import SRC_PATH
     forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
                                   'tree2.xml')))
-    forest[0].plot_prob_mask((0.1, 0.1, 50))
+    forest[0].plot_prob_mask((1, 1, 1))
 
 
 
