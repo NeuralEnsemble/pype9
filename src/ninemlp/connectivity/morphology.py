@@ -18,7 +18,7 @@ from numpy.linalg import norm
 import collections
 import xml.sax
 from ninemlp import XMLHandler
-from ninemlp.connectivity import symmetric_tensor
+from ninemlp.connectivity import axially_symmetric_tensor
 try:
     import matplotlib.pyplot as plt
 except:
@@ -26,7 +26,7 @@ except:
     plt = None
 
 
-THRESHOLD_DEFAULT = 0.01
+THRESHOLD_DEFAULT = 0.02
 SAMPLE_DIAM_RATIO = 4.0
 SAMPLE_FREQ_DEFAULT = 100
 
@@ -179,7 +179,7 @@ class Tree(object):
             self._masks['binary'][vox_size] = BinaryMask(self, vox_size)
         return self._masks['binary'][vox_size]
 
-    def get_prob_mask(self, vox_size, scale, orient, para_scale=1.0, perp_scale=1.0,
+    def get_prob_mask(self, vox_size, scale, orient, decay_rate=0.1, isotropy=1.0,
                       threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT):
         """
         Creates a mask for the given voxel sizes and saves it in self._masks
@@ -190,7 +190,7 @@ class Tree(object):
         vox_size = Mask.parse_vox_size(vox_size)
         if not self._masks['prob'].has_key(vox_size):
             self._masks['prob'][vox_size] = GaussMask(self, vox_size, scale, orient,
-                                                      para_scale=para_scale, perp_scale=perp_scale,
+                                                      decay_rate=decay_rate, isotropy=isotropy,
                                                       threshold=threshold, sample_freq=sample_freq)
         return self._masks['prob'][vox_size]
 
@@ -233,15 +233,16 @@ class Tree(object):
             colour_map = 'gray'
         mask.plot(show=show, colour_map=colour_map)
 
-    def plot_prob_mask(self, vox_size, scale=1.0, orient=(1.0, 0.0, 0.0), para_scale=1.0,
-                       perp_scale=1.0, threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT,
+    def plot_prob_mask(self, vox_size, scale=1.0, orient=(1.0, 0.0, 0.0), decay_rate=0.1,
+                       isotropy=1.0, threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT,
                        show=True, colour_map=None):
-        mask = self.get_prob_mask(vox_size, scale, orient, para_scale=para_scale,
-                                  perp_scale=perp_scale, threshold=threshold,
+        mask = self.get_prob_mask(vox_size, scale, orient, decay_rate=decay_rate,
+                                  isotropy=isotropy, threshold=threshold,
                                   sample_freq=sample_freq)
         if not colour_map:
             colour_map = 'jet'
         mask.plot(show=show, colour_map=colour_map)
+
 
 class DisplacedTree(Tree):
 
@@ -493,7 +494,10 @@ class BinaryMask(Mask):
 
 class FuzzyMask(Mask):
 
-    def __init__(self, tree, vox_size):
+    def __init__(self,tree, vox_size):
+        self._generate_mask_array(tree, vox_size)
+
+    def _generate_mask_array(self, tree, vox_size):
         """
         
         @param tree [Tree]: The tree to draw the mask for
@@ -559,10 +563,10 @@ class FuzzyMask(Mask):
 
 class GaussMask(FuzzyMask):
 
-    def __init__(self, tree, vox_size, scale=1.0, orient=(1.0, 0.0, 0.0), para_scale=1.0,
-                 perp_scale=1.0, threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT):
+    def __init__(self, tree, vox_size, scale=1.0, orient=(1.0, 0.0, 0.0), decay_rate=0.1,
+                 isotropy=1.0, threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT):
         self.scale = scale
-        self.tensor = symmetric_tensor(orient, para_scale, perp_scale)
+        self.tensor = axially_symmetric_tensor(decay_rate, orient, isotropy)
         if threshold >= 1.0:
             raise Exception ("Extent threshold must be < 1.0 (was {})".format(threshold))
         self.threshold = threshold
@@ -709,7 +713,7 @@ if __name__ == '__main__':
     from ninemlp import SRC_PATH
     forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
                                   'tree2.xml')))
-    forest[0].plot_prob_mask((1, 1, 1))
+    forest[0].plot_prob_mask((5, 5, 5), decay_rate=0.01)
 
 
 
