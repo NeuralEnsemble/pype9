@@ -350,8 +350,9 @@ class BaseNCMLMetaClass(type):
         for mech in ncml_model.mechanisms:
             if component_parameters.has_key(mech.id):
                 default_params.update([(group_varname(mech.group_id) + "." + mech.id +
-                                        "." + key, val[0])
-                                       for key, val in component_parameters[mech.id].iteritems()])
+                                        "." + varname, mapping[0])
+                                       for varname, mapping in \
+                                                component_parameters[mech.id].iteritems()])
             else:
                 for param in mech.params:
                     default_params[group_varname(mech.group_id) + "." + mech.id + "." +
@@ -365,9 +366,6 @@ class BaseNCMLMetaClass(type):
             default_params[group_varname(cm.group_id) + "." + "cm"] = cm.value
         for ra in ncml_model.axial_resistances:
             default_params[group_varname(ra.group_id) + "." + "Ra"] = ra.value
-#        for e_v in ncml_model.reversal_potentials:
-#            default_params[self.group_varname(e_v.group_id) + "." + \
-#                                               "e_rev_" + e_v.species] = e_v.value
         # A morphology parameters
         for seg_group in morphml_model.groups:
             # None, defers to the value loaded in the MorphML file but allows them to be overwritten

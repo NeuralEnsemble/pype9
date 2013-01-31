@@ -25,11 +25,13 @@ _SIMULATOR_BUILD_NAME = 'neuron'
 _MODIFICATION_TIME_FILE = 'modification_time'
 
 if 'NRNHOME' in os.environ:
-    os.environ['PATH'] += os.pathsep + os.environ['NRNHOME']
-else:
+    os.environ['PATH'] += os.pathsep + os.path.join(os.environ['NRNHOME'], platform.machine(), 'bin')
+elif os.environ['LOGNAME'] == 'tclose':
     # I apologise for this little hack (this is the path on my machine, 
     # to save me having to set the environment variable in eclipse)
     os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin'
+else:
+    raise Exception("Please set the NRNHOME environment variable to the NEURON 'bin' directory")
 
 def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
     method='derivimplicit', build_mode=DEFAULT_BUILD_MODE, silent_build=False, kinetics=[]):

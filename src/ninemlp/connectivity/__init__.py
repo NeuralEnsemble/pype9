@@ -40,7 +40,7 @@ def transform_tensor(scale=(1.0, 1.0, 1.0), rotation=(0.0, 0.0, 0.0)):
     transform = np.dot(rotation, np.diag(scale))
     return transform
 
-def symmetric_tensor(orient, para_scale=1.0, perp_scale=1.0):
+def axially_symmetric_tensor(scale=1.0, orient=(0.0, 0.0, 1.0), isotropy=1.0):
     """
     Produces a linear transformation matrix for a set of 3D point vectors so that they are scaled 
     by an ellipsoid from x, y and z axis scalings and azimuth and elevation angles
@@ -57,9 +57,11 @@ def symmetric_tensor(orient, para_scale=1.0, perp_scale=1.0):
     # Ensure the orientation is normalised
     orient /= np.sqrt(np.sum(orient * orient))
     # Create the eigenvalue matrix
+    para_scale = scale * isotropy
+    perp_scale = scale / isotropy
     eig_values = np.array(((para_scale, 0, 0), (0, perp_scale, 0), (0, 0, perp_scale)))
-    # Create the eigenvector matrix
-    ref_axis = np.zeros(3) # To avoid colinearity between orientation vector and reference vector 
+    # Create the eigen-vector matrix
+    ref_axis = np.zeros(3) # To avoid co-linearity between orientation vector and reference vector 
     #                        pick the axis with the smallest value within the orientation vector 
     #                        to be the reference axis generate the perpendicular vectors
     ref_axis[np.argmin(orient)] = 1.0
@@ -99,4 +101,6 @@ if __name__ == "__main__":
         selected_points = points[(dist < 1.0), :]
         ax.scatter(selected_points[:, 0], selected_points[:, 1], selected_points[:, 2])
     plt.show()
-
+    
+    
+    
