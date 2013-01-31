@@ -235,8 +235,8 @@ class Tree(object):
         @param tree [Tree]: The second tree to calculate the overlap with
         @param vox_size [tuple(float)]: The voxel sizes to use when calculating the overlap
         """
-        prob_mask = self.get_fuzzy_mask(vox_size, gauss_kernel, sample_freq).\
-                            overlap(tree.get_fuzzy_mask(vox_size, gauss_kernel, sample_freq))
+        prob_mask = self.get_float_mask(vox_size, gauss_kernel, sample_freq).\
+                            overlap(tree.get_float_mask(vox_size, gauss_kernel, sample_freq))
         return 1.0 - np.prod(prob_mask)
 
     def plot_binary_mask(self, vox_size, gauss_kernel=None, sample_freq=None,
@@ -300,19 +300,19 @@ class DisplacedTree(Tree):
                             "is not a multiple of the mask voxel sizes. {}"
                             .format(self.displacement, e))
 
-    def get_fuzzy_mask(self, *mask_args):
+    def get_float_mask(self, *mask_args):
         """
-        Gets the fuzzy mask for the given voxel size and sample diameter ratio. 
+        Gets the float mask for the given voxel size and sample diameter ratio. 
         To avoid duplications the mask is accessed from the original (undisplaced) tree, being 
         created and saved there if required.
         
         @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
         """
         try:
-            return self._undisplaced_tree.get_fuzzy_mask(*mask_args).\
+            return self._undisplaced_tree.get_float_mask(*mask_args).\
                                                                    displaced_mask(self.displacement)
         except DisplacedVoxelSizeMismatchException as e:
-            raise Exception("Cannot get fuzzy mask of displaced tree because its "
+            raise Exception("Cannot get float mask of displaced tree because its "
                             "displacement {} is not a multiple of the mask voxel sizes. {}"
                             .format(self.displacement, e))
     @property
@@ -505,30 +505,45 @@ class BinaryMask(Mask):
                 self._mask_array[extent_indices] += point_mask
 
 
-class FuzzyMask(Mask):
+class FloatMask(Mask):
 
-    def __init__(self,tree, vox_size):
-        self._generate_mask_array(tree, vox_size)
+    __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
 
-    def _generate_mask_array(self, tree, vox_size):
+    def __init__(self, vox_size, tree_or_points, point_extent, sample_freq):
+        if type(tree_or_points) == Tree:
+            tree = tree_or_points
+            points = tree.points
+        elif type(tree_or_points) == np.array and tree_or_points.shape[1] == 3:
+            tree = None
+            points = tree_or_points
+        else:
+            raise Exception("Incorrect type for 'tree_or_points' parameter ({}), must be either "
+                            "'Tree' or numpy.array(N x 3)".format(type(tree_or_points)))
+        # The extent around each point that will be > threshold        
+        self.point_extent = point_extent
+        self.sample_freq = sample_freq
+        # Call the base 'Mask' class constructor to set up the 
+        Mask.__init__(self, vox_size, points, np.tile(point_extent, 
+                                                           (tree.num_points(), 1)))
+        # Initialise the mask_array
+        self._mask_array = np.zeros(self.dim, dtype=float)
+        # Add the tree to the mask
+        if tree:
+            self.add_tree_to_mask(tree)
+
+    def add_tree_to_mask(self, tree):
         """
+        Adds the tree to a given mask
         
         @param tree [Tree]: The tree to draw the mask for
         @param vox_size [np.array(3)]: The size of the voxels
         @param kernel [method]: A method that takes a displacement vector and returns a value 
         """
-        # Get the require parameters that are calculated by the derived class
-        point_extent = self.get_point_extent() # The extent around each point that will be > threshold
-        sample_freq = self.get_sample_freq() # The number of samples per unit length
-        # Call the base 'Mask' class constructor to set up the 
-        Mask.__init__(self, vox_size, tree.points, np.tile(point_extent, (tree.num_points(), 1)))
-        # Initialise the mask_array
-        self._mask_array = np.zeros(self.dim, dtype=float)
         print "Generating mask..."
         # Loop through all of the tree _point_data and "paint" the mask
         for count, seg in enumerate(tree.segments):
             # Calculate the number of samples required for the current segment
-            num_samples = np.ceil(norm(seg.end - seg.begin) * sample_freq)
+            num_samples = np.ceil(norm(seg.end - seg.begin) * self.sample_freq)
             # Calculate how much to scale the 
             if num_samples:
                 length_scale = norm(seg.end - seg.begin) / num_samples
@@ -537,8 +552,8 @@ class FuzzyMask(Mask):
             for frac in np.linspace(1, 0, num_samples, endpoint=False):
                 point = (1.0 - frac) * seg.begin + frac * seg.end
                 # Determine the extent of the mask indices that could be affected by the point
-                extent_start = np.floor((point - self.offset - point_extent) / self.vox_size)
-                extent_finish = np.array(np.ceil((point - self.offset + point_extent) 
+                extent_start = np.floor((point - self.offset - self.point_extent) / self.vox_size)
+                extent_finish = np.array(np.ceil((point - self.offset + self.point_extent) 
                                                  / self.vox_size), dtype=int)
                 # Get an "open" grid (uses less memory if it is open) of voxel indices to apply 
                 # the distance function to.
@@ -554,56 +569,50 @@ class FuzzyMask(Mask):
                 disps = np.vstack((X.ravel() - point[0], Y.ravel() - point[1], 
                                    Z.ravel() - point[2])).transpose()
                 # Get the values of the point-spread function at each of the voxel centres
-                values = self.point_spread_function(disps)
+                values = self._point_spread_function(disps)
                 # Add the point-spread function values to the mask_array
                 self._mask_array[extent_indices] += length_scale * values.reshape(X.shape)
             if count % (tree.num_segments() // 10) == 0 and count != 0:
                 print "Generating mask - {}% complete" \
                         .format(round(float(count) / float(tree.num_segments()) * 100))
 
-    def point_spread_function(self, disps):
+    def _point_spread_function(self, disps):
         # Should be implemented in derived class
         raise NotImplementedError
 
-    def get_point_extent(self):
-        # Should be implemented in derived class
-        raise NotImplementedError
 
-    def get_sample_freq(self):
-        # Should be implemented in derived class        
-        raise NotImplementedError
-
-
-class GaussMask(FuzzyMask):
+class GaussMask(FloatMask):
 
     def __init__(self, tree, vox_size, scale=1.0, orient=(1.0, 0.0, 0.0), decay_rate=0.1,
                  isotropy=1.0, threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT):
-        self.scale = scale
-        self.tensor = axially_symmetric_tensor(decay_rate, orient, isotropy)
         if threshold >= 1.0:
             raise Exception ("Extent threshold must be < 1.0 (was {})".format(threshold))
         self.threshold = threshold
-        self.sample_freq = sample_freq
-        FuzzyMask.__init__(self, tree, vox_size)
+        self.scale = scale
+        self.tensor = axially_symmetric_tensor(decay_rate, orient, isotropy)
+        FloatMask.__init__(self, vox_size, tree, 
+                           type(self).get_point_extent(self.tensor, threshold), sample_freq)
 
-    def point_spread_function(self, disps):
+    def _point_spread_function(self, disps):
         # Calculate the Gaussian point spread function f = k * exp[-0.5 * d^t . W . d] for each 
         # displacement, where 'W' is the weights matrix and 'd' is a displacement vector
         values = self.scale * np.exp(-0.5 * np.sum(disps.dot(self.tensor) * disps, axis=1))
+        # For even threshold out all values that fall beneath the threshold used to determine the
+        # extent of the required block of voxels. This removes dependence on the orientation 
+        # relative to the mask axes
+        values[values < self.threshold] = 0.0
         return values
 
-    def get_point_extent(self):
-        eig_vals, eig_vecs = np.linalg.eig(self.tensor)
+    @classmethod
+    def get_point_extent(cls, tensor, threshold):
+        eig_vals, eig_vecs = np.linalg.eig(tensor)
         # Get the extent along each of the Eigen-vectors where the point-spread function reaches the
         # threshold, the extent along the "internal" axes of the kernel
-        internal_extents = np.sqrt(-2.0 * math.log(self.threshold) / eig_vals)
+        internal_extents = np.sqrt(-2.0 * math.log(threshold) / eig_vals)
         # Calculate the extent of the kernel along the x-y-z axes, the "external" axes
-        extents = np.sqrt(np.sum((eig_vecs * internal_extents) ** 2, axis=1))
-        return extents
-
-    def get_sample_freq(self):
-        return self.sample_freq
-
+        point_extent = np.sqrt(np.sum((eig_vecs * internal_extents) ** 2, axis=1))
+        return point_extent
+    
 
 class Soma(object):
 
@@ -726,7 +735,7 @@ if __name__ == '__main__':
     from ninemlp import SRC_PATH
     forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
                                   'tree2.xml')))
-    forest[0].plot_prob_mask((5, 5, 5), decay_rate=0.01)
+    forest[0].plot_prob_mask((10, 10, 10), decay_rate=0.01)
 
 
 
