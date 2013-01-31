@@ -198,7 +198,7 @@ class ElectricalSynapseProjection(Projection):
                         else:
                             segment = post_cell.source_section
                         # Create the gap_junction and set its weight
-                        gap_junction = h.gap(0.5, sec=segment)
+                        gap_junction = h.Gap(0.5, sec=segment)
                         gap_junction.g = weight
                         # Store gap junction in a list so it doesn't get collected by the garbage 
                         # collector

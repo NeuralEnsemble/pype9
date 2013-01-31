@@ -11,7 +11,7 @@
 #######################################################################################
 import platform
 import os.path
-import subprocess as sp
+from collections import defaultdict
 from runpy import run_path
 
 _RELATIVE_BUILD_DIR = 'build'
@@ -70,11 +70,14 @@ def load_component_parameters(celltype_name, params_dir):
     @param celltype_name [str]: The name of the cell type to load the parameter names for
     @param params_dir [str]: The path to the directory that contains the parameters
     """
-    component_parameters = {}
+    component_parameters = defaultdict(dict)
+    # Loop through all the files in the params directory
     for f_name in os.listdir(params_dir):
         if f_name.startswith(celltype_name) and f_name.endswith('.py'):
-            component_name = f_name[len(celltype_name) + 1:-3]
-            vars = run_path(os.path.join(params_dir, f_name))
-            component_parameters[component_name] = vars['properties'] #@UndefinedVariable
+            # Load the properties from the parameters file
+            loaded_props = run_path(os.path.join(params_dir, f_name))['properties']
+            # Store in a dictionary of dictionaries indexed by component and variable names
+            for (comp_name, var_name), mapped_var in loaded_props.iteritems():           
+                component_parameters[comp_name][var_name] = mapped_var
     return component_parameters
 
