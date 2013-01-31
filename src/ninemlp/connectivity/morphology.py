@@ -60,6 +60,10 @@ class Forest(object):
 
     def __getitem__(self, index):
         return self.trees[index]
+    
+    def __iter__(self):
+        for tree in self.trees:
+            yield tree
 
     def __len__(self):
         return len(self.trees)
@@ -73,6 +77,11 @@ class Forest(object):
         """
         for tree in self.trees:
             tree.rotate(theta, axis)
+            
+    def combined_binary_mask(self, vox_size):
+        for tree in self.trees:
+            pass
+        
 
 
 class Tree(object):
@@ -105,6 +114,13 @@ class Tree(object):
     @property
     def points(self):
         return self._points
+    
+    @property
+    def point_extents(self):
+        return np.tile(np.reshape(self.diams / 2.0, (-1, 1)), (1, 3))
+
+    def num_points(self):
+        return len(self._points)
 
     @property
     def segments(self):
@@ -313,11 +329,10 @@ class Mask(object):
 
     __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
 
-    def __init__(self, tree, vox_size, point_extents=None):
+    def __init__(self, vox_size, points, point_extents):
         """
         Initialises the mask from a given Neurolucida tree and voxel size
         
-        @param tree [Tree]: A loaded Neurolucida tree
         @param vox_size [float]: The requested voxel sizes with which to divide up the mask with
         """
         try:
@@ -325,11 +340,9 @@ class Mask(object):
         except:
             raise Exception ("Could not convert vox_size ({}) to a 3-d vector".format(vox_size))
         # If point extents are not explicitly provided use the segment radius for each dimension
-        if point_extents is None:
-            point_extents = np.tile(np.reshape(tree.diams / 2.0, (-1, 1)), (1, 3))
         # Get the start and finish indices of the mask, as determined by the bounds of the tree
-        min_bounds = np.squeeze(np.min(tree._points - point_extents, axis=0))
-        max_bounds = np.squeeze(np.max(tree._points + point_extents, axis=0))
+        min_bounds = np.squeeze(np.min(points - point_extents, axis=0))
+        max_bounds = np.squeeze(np.max(points + point_extents, axis=0))
         self.start_index = np.array(np.floor(min_bounds / self.vox_size), dtype=np.int)
         self.finish_index = np.array(np.ceil(max_bounds / self.vox_size), dtype=np.int)
         # Set the offset and limit of the mask from the start and finish indices
@@ -455,7 +468,7 @@ class BinaryMask(Mask):
 
     def __init__(self, tree, vox_size):
         # Call the base 'Mask' class constructor
-        Mask.__init__(self, tree, vox_size)
+        Mask.__init__(self, vox_size, tree.points, tree.point_extents)
         # Initialise the mask_array with the appropriate data type
         self._mask_array = np.zeros(self.dim, dtype=bool)
         # Set a minimum extent in each dimension to ensure the that the point extents are large 
@@ -508,7 +521,7 @@ class FuzzyMask(Mask):
         point_extent = self.get_point_extent() # The extent around each point that will be > threshold
         sample_freq = self.get_sample_freq() # The number of samples per unit length
         # Call the base 'Mask' class constructor to set up the 
-        Mask.__init__(self, tree, vox_size, np.tile(point_extent, (len(tree.points), 1)))
+        Mask.__init__(self, vox_size, tree.points, np.tile(point_extent, (tree.num_points(), 1)))
         # Initialise the mask_array
         self._mask_array = np.zeros(self.dim, dtype=float)
         print "Generating mask..."
