@@ -47,9 +47,9 @@ class Forest(object):
         for tree in self.trees:
             self.centroid += tree.centroid
             self.min_bounds = np.select([self.min_bounds <= tree.min_bounds, True],
-                                [self.min_bounds, tree.min_bounds])
+                                        [self.min_bounds, tree.min_bounds])
             self.max_bounds = np.select([self.max_bounds >= tree.max_bounds, True],
-                                [self.max_bounds, tree.max_bounds])
+                                        [self.max_bounds, tree.max_bounds])
         self.centroid /= len(roots)
         # Load somas
         self.somas = {}
@@ -78,6 +78,16 @@ class Forest(object):
         for tree in self.trees:
             tree.rotate(theta, axis)      
 
+    def get_binary_mask(self, vox_size):       
+        mask = BinaryMask(vox_size, np.vstack([tree.points for tree in self.trees]),
+                          np.hstack([tree.diams for tree in self.trees]))
+        for tree in self.trees:
+            mask.add_tree(tree)
+        return mask
+    
+    def plot_binary_mask(self, vox_size, show=True, colour_map='gray'):
+        mask = self.get_binary_mask(vox_size)
+        mask.plot(show=show, colour_map=colour_map)
 
 class Tree(object):
 
@@ -109,10 +119,6 @@ class Tree(object):
     @property
     def points(self):
         return self._points
-    
-    @property
-    def point_extents(self):
-        return np.tile(np.reshape(self.diams / 2.0, (-1, 1)), (1, 3))
 
     def num_points(self):
         return len(self._points)
@@ -234,23 +240,19 @@ class Tree(object):
                             overlap(tree.get_float_mask(vox_size, gauss_kernel, sample_freq))
         return 1.0 - np.prod(prob_mask)
 
-    def plot_binary_mask(self, vox_size, show=True, colour_map=None):
+    def plot_binary_mask(self, vox_size, show=True, colour_map='gray'):
         if not plt:
             raise Exception("Matplotlib could not be imported and therefore plotting functions "
                             "have been disabled")
         mask = self.get_binary_mask(vox_size)
-        if not colour_map:
-            colour_map = 'gray'
         mask.plot(show=show, colour_map=colour_map)
 
     def plot_prob_mask(self, vox_size, scale=1.0, orient=(1.0, 0.0, 0.0), decay_rate=0.1,
                        isotropy=1.0, threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT,
-                       show=True, colour_map=None):
+                       show=True, colour_map='jet'):
         mask = self.get_prob_mask(vox_size, scale, orient, decay_rate=decay_rate,
                                   isotropy=isotropy, threshold=threshold,
                                   sample_freq=sample_freq)
-        if not colour_map:
-            colour_map = 'jet'
         mask.plot(show=show, colour_map=colour_map)
 
 
@@ -309,6 +311,7 @@ class DisplacedTree(Tree):
             raise Exception("Cannot get float mask of displaced tree because its "
                             "displacement {} is not a multiple of the mask voxel sizes. {}"
                             .format(self.displacement, e))
+    
     @property
     def points(self):
         return self._points + self.displacement
@@ -324,17 +327,25 @@ class Mask(object):
     __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
     
     @classmethod
-    def _parse_tree_or_points(cls, tree_or_points):
+    def _parse_tree_points(cls, tree_or_points, diams=None):
         if type(tree_or_points) == Tree:
             tree = tree_or_points
             points = tree.points
-        elif type(tree_or_points) == np.array and tree_or_points.shape[1] == 3:
+            if diams:
+                raise Exception("Diameters should only be provided if the 'tree_or_points' is an "
+                                "array of points")
+            diams = tree.diams
+        elif type(tree_or_points) == np.ndarray and tree_or_points.shape[1] == 3:
             tree = None
             points = tree_or_points
+            if points.shape[0] != len(diams):
+                raise Exception("Number of points ({}) and length of diams ({}) do not match."
+                                .format(points.shape[0], len(diams)))
         else:
             raise Exception("Incorrect type for 'tree_or_points' parameter ({}), must be either "
                             "'Tree' or numpy.array(N x 3)".format(type(tree_or_points)))
-        return tree, points
+        point_extents = np.tile(np.reshape(diams / 2.0, (-1, 1)), (1, 3))
+        return tree, points, point_extents
 
     def __init__(self, vox_size, points, point_extents):
         """
@@ -473,16 +484,22 @@ class DisplacedMask(Mask):
 
 class BinaryMask(Mask):
 
-    def __init__(self, vox_size, tree):
+    def __init__(self, vox_size, tree_or_points, diams=None):
+        # Get tree (if provided instead of list of points), points and point extents from provided 
+        # parameters
+        tree, points, point_extents = Mask._parse_tree_points(tree_or_points, diams)
         # Call the base 'Mask' class constructor
-        Mask.__init__(self, vox_size, tree.points, tree.point_extents)
-        # Initialise the mask_array with the appropriate data type
-        self._mask_array = np.zeros(self.dim, dtype=bool)
+        Mask.__init__(self, vox_size, points, point_extents)
         # Set a minimum extent in each dimension to ensure the that the point extents are large 
         # enough in each dimension to not "fall in the gaps" between voxels
-        self.min_extent = np.array(vox_size) * (math.sqrt(3.0) / 2.0)
+        self.min_extent = np.array(vox_size) * (math.sqrt(3.0) / 2.0)        
+        # Initialise the mask_array with the appropriate data type
+        self._mask_array = np.zeros(self.dim, dtype=bool)
+        # Add the tree to the mask if it was provided
+        if tree:
+            self.add_tree(tree)
 
-    def add_tree_to_mask(self, tree):
+    def add_tree(self, tree):
         # Loop through all of the tree _point_data and "paint" the mask
         for seg in tree.segments:
             # Set the point extent to be the segment diameter unless it is below the minimum along
@@ -520,7 +537,7 @@ class FloatMask(Mask):
     __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
 
     def __init__(self, vox_size, tree_or_points, point_extent, sample_freq):
-        tree, points = Mask._parse_tree_or_points(tree_or_points)
+        tree, points = Mask._parse_tree_points(tree_or_points)
         # The extent around each point that will be > threshold        
         self.point_extent = point_extent
         self.sample_freq = sample_freq
@@ -529,11 +546,11 @@ class FloatMask(Mask):
                                                            (tree.num_points(), 1)))
         # Initialise the mask_array
         self._mask_array = np.zeros(self.dim, dtype=float)
-        # Add the tree to the mask
+        # Add the tree to the mask if it was provided
         if tree:
-            self.add_tree_to_mask(tree)
+            self.add_tree(tree)
 
-    def add_tree_to_mask(self, tree):
+    def add_tree(self, tree):
         """
         Adds the tree to a given mask
         
@@ -736,8 +753,8 @@ if __name__ == '__main__':
     from os.path import normpath, join
     from ninemlp import SRC_PATH
     forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
-                                  'tree2.xml')))
-    forest[0].plot_prob_mask((10, 10, 10), decay_rate=0.01, isotropy=0.25, orient=(0,0,1))
+                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
+    forest.plot_binary_mask((0.1, 0.1, 10000))
 
 
 
