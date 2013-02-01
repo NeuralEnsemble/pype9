@@ -80,10 +80,14 @@ class Forest(object):
         for tree in self.trees:
             tree.rotate(theta, axis)
 
+    def offset(self, offset):
+        for tree in self:
+            tree.offset(offset)
+
     def get_volume_mask(self, vox_size, dtype=bool):
         mask = VolumeMask(vox_size, np.vstack([tree.points for tree in self.trees]),
                           np.hstack([tree.diams for tree in self.trees]), dtype)
-        for tree in self.trees:
+        for tree in self:
             mask.add_tree(tree)
         return mask
 
@@ -775,18 +779,11 @@ if __name__ == '__main__':
     from os.path import normpath, join
     from ninemlp import SRC_PATH
     print "Loading forest..."
-#    forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
-#                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
     forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
-                                  'tree2.xml')))    
+                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
     print "Finished loading forest."
-#    for i in [0, 8,10]:
-    tree = forest[0]
-    tree.offset((0.0, 0.0, -50))
-    tree.plot_volume_mask((2, 2, 100)) #, dtype=int, colour_map='jet')
-#    plt.title("Tree {}".format(i))
-#    print "Finished {}".format(i)
-#    plt.show()
+    forest.offset((0.0,0.0,-250))
+    forest.plot_volume_mask((0.1, 0.1, 500))
         
 
 
