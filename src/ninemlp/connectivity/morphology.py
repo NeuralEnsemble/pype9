@@ -60,7 +60,7 @@ class Forest(object):
 
     def __getitem__(self, index):
         return self.trees[index]
-    
+
     def __iter__(self):
         for tree in self.trees:
             yield tree
@@ -76,18 +76,19 @@ class Forest(object):
         @param axis [str/int]: The axis about which to rotate the tree (either 'x'-'z' or 0-2, default 'z'/2)
         """
         for tree in self.trees:
-            tree.rotate(theta, axis)      
+            tree.rotate(theta, axis)
 
-    def get_binary_mask(self, vox_size):       
-        mask = BinaryMask(vox_size, np.vstack([tree.points for tree in self.trees]),
+    def get_volume_mask(self, vox_size):
+        mask = VolumeMask(vox_size, np.vstack([tree.points for tree in self.trees]),
                           np.hstack([tree.diams for tree in self.trees]))
         for tree in self.trees:
             mask.add_tree(tree)
         return mask
-    
-    def plot_binary_mask(self, vox_size, show=True, colour_map='gray'):
-        mask = self.get_binary_mask(vox_size)
+
+    def plot_volume_mask(self, vox_size, show=True, colour_map='gray'):
+        mask = self.get_volume_mask(vox_size)
         mask.plot(show=show, colour_map=colour_map)
+
 
 class Tree(object):
 
@@ -185,16 +186,16 @@ class Tree(object):
         # Clear masks, which will no longer match the rotated points
         self._masks.clear()
 
-    def get_binary_mask(self, vox_size):
+    def get_volume_mask(self, vox_size):
         """
         Creates a mask for the given voxel sizes and saves it in self._masks
         
         @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
         """
         vox_size = Mask.parse_vox_size(vox_size)
-        if not self._masks['binary'].has_key(vox_size):
-            self._masks['binary'][vox_size] = BinaryMask(vox_size, self)
-        return self._masks['binary'][vox_size]
+        if not self._masks['volume'].has_key(vox_size):
+            self._masks['volume'][vox_size] = VolumeMask(vox_size, self)
+        return self._masks['volume'][vox_size]
 
     def get_prob_mask(self, vox_size, scale, orient, decay_rate=0.1, isotropy=1.0,
                       threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT):
@@ -211,13 +212,25 @@ class Tree(object):
                                                       threshold=threshold, sample_freq=sample_freq)
         return self._masks['prob'][vox_size]
 
-    def displaced_tree(self, displace):
+    def displaced_tree(self, displacement):
         """
-        Return displaced version of tree (a lightweight copy that borrows this trees masks)
+        Return displaced version of tree (a lightweight copy that borrows this tree's masks)
         
         @param displace [tuple(float)]: Displace to apply to the tree
         """
-        return DisplacedTree(self, displace)
+        return DisplacedTree(self, displacement)
+    
+    def offset(self, offset):
+        """
+        Unlike displaced tree, offset_tree moves all the points of the tree by the given offset 
+        (invalidating all masks)
+        
+        @param displace [tuple(float)]: Displace to apply to the tree
+        """
+        if len(offset) != 3:
+            raise Exception("Offset needs to be of length 3 (found {})".format(len(offset)))
+        self._points += offset
+        self._masks.clear()
 
     def num_overlapping(self, tree, vox_size):
         """
@@ -226,7 +239,7 @@ class Tree(object):
         @param tree [Tree]: The second tree to calculate the overlap with
         @param vox_size [tuple(float)]: The voxel sizes to use when calculating the overlap
         """
-        overlap_mask = self.get_binary_mask(vox_size).overlap(tree.get_binary_mask(vox_size))
+        overlap_mask = self.get_volume_mask(vox_size).overlap(tree.get_volume_mask(vox_size))
         return np.sum(overlap_mask)
 
     def connection_prob(self, tree, vox_size, gauss_kernel, threshold, sample_freq):
@@ -236,15 +249,15 @@ class Tree(object):
         @param tree [Tree]: The second tree to calculate the overlap with
         @param vox_size [tuple(float)]: The voxel sizes to use when calculating the overlap
         """
-        prob_mask = self.get_float_mask(vox_size, gauss_kernel, sample_freq).\
-                            overlap(tree.get_float_mask(vox_size, gauss_kernel, sample_freq))
+        prob_mask = self.get_convolved_mask(vox_size, gauss_kernel, sample_freq).\
+                            overlap(tree.get_convolved_mask(vox_size, gauss_kernel, sample_freq))
         return 1.0 - np.prod(prob_mask)
 
-    def plot_binary_mask(self, vox_size, show=True, colour_map='gray'):
+    def plot_volume_mask(self, vox_size, show=True, colour_map='gray'):
         if not plt:
             raise Exception("Matplotlib could not be imported and therefore plotting functions "
                             "have been disabled")
-        mask = self.get_binary_mask(vox_size)
+        mask = self.get_volume_mask(vox_size)
         mask.plot(show=show, colour_map=colour_map)
 
     def plot_prob_mask(self, vox_size, scale=1.0, orient=(1.0, 0.0, 0.0), decay_rate=0.1,
@@ -280,38 +293,38 @@ class DisplacedTree(Tree):
         self.min_bounds = tree.min_bounds + self.displacement
         self.max_bounds = tree.max_bounds + self.displacement
 
-    def get_binary_mask(self, *mask_args):
+    def get_volume_mask(self, *mask_args):
         """
-        Gets the binary mask for the given voxel size and sample diameter ratio. To avoid 
+        Gets the volume mask for the given voxel size and sample diameter ratio. To avoid 
         duplications the mask is accessed from the original (undisplaced) tree, being created and 
         saved there if required.
         
         @param args: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
         """
         try:
-            return self._undisplaced_tree.get_binary_mask(*mask_args).\
+            return self._undisplaced_tree.get_volume_mask(*mask_args).\
                                                                    displaced_mask(self.displacement)
         except DisplacedVoxelSizeMismatchException as e:
-            raise Exception("Cannot get binary mask of displaced tree because its displacement {} "
+            raise Exception("Cannot get volume mask of displaced tree because its displacement {} "
                             "is not a multiple of the mask voxel sizes. {}"
                             .format(self.displacement, e))
 
-    def get_float_mask(self, *mask_args):
+    def get_convolved_mask(self, *mask_args):
         """
-        Gets the float mask for the given voxel size and sample diameter ratio. 
+        Gets the convolved mask for the given voxel size and sample diameter ratio. 
         To avoid duplications the mask is accessed from the original (undisplaced) tree, being 
         created and saved there if required.
         
         @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
         """
         try:
-            return self._undisplaced_tree.get_float_mask(*mask_args).\
+            return self._undisplaced_tree.get_convolved_mask(*mask_args).\
                                                                    displaced_mask(self.displacement)
         except DisplacedVoxelSizeMismatchException as e:
-            raise Exception("Cannot get float mask of displaced tree because its "
+            raise Exception("Cannot get convolved mask of displaced tree because its "
                             "displacement {} is not a multiple of the mask voxel sizes. {}"
                             .format(self.displacement, e))
-    
+
     @property
     def points(self):
         return self._points + self.displacement
@@ -325,29 +338,8 @@ class DisplacedTree(Tree):
 class Mask(object):
 
     __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
-    
-    @classmethod
-    def _parse_tree_points(cls, tree_or_points, diams=None):
-        if type(tree_or_points) == Tree:
-            tree = tree_or_points
-            points = tree.points
-            if diams:
-                raise Exception("Diameters should only be provided if the 'tree_or_points' is an "
-                                "array of points")
-            diams = tree.diams
-        elif type(tree_or_points) == np.ndarray and tree_or_points.shape[1] == 3:
-            tree = None
-            points = tree_or_points
-            if points.shape[0] != len(diams):
-                raise Exception("Number of points ({}) and length of diams ({}) do not match."
-                                .format(points.shape[0], len(diams)))
-        else:
-            raise Exception("Incorrect type for 'tree_or_points' parameter ({}), must be either "
-                            "'Tree' or numpy.array(N x 3)".format(type(tree_or_points)))
-        point_extents = np.tile(np.reshape(diams / 2.0, (-1, 1)), (1, 3))
-        return tree, points, point_extents
 
-    def __init__(self, vox_size, points, point_extents):
+    def __init__(self, vox_size, points, point_extents, dtype):
         """
         Initialises the mask from a given Neurolucida tree and voxel size
         
@@ -379,6 +371,8 @@ class Mask(object):
         self.X, self.Y, self.Z = np.mgrid[grid_start[0]:grid_finish[0]:(self.dim[0] * 1j),
                                           grid_start[1]:grid_finish[1]:(self.dim[1] * 1j),
                                           grid_start[2]:grid_finish[2]:(self.dim[2] * 1j)]
+        # Initialise the mask_array with the appropriate data type
+        self._mask_array = np.zeros(self.dim, dtype=dtype)
 
     def overlap(self, mask):
         if np.any(mask.vox_size != self.vox_size):
@@ -447,6 +441,27 @@ class Mask(object):
                                 "converted to a tuple or a float ".format(vox_size))
         return vox_size
 
+    @classmethod
+    def _parse_tree_points(cls, tree_or_points, diams=None):
+        if type(tree_or_points) == Tree:
+            tree = tree_or_points
+            points = tree.points
+            if diams:
+                raise Exception("Diameters should only be provided if the 'tree_or_points' is an "
+                                "array of points")
+            diams = tree.diams
+        elif type(tree_or_points) == np.ndarray and tree_or_points.shape[1] == 3:
+            tree = None
+            points = tree_or_points
+            if points.shape[0] != len(diams):
+                raise Exception("Number of points ({}) and length of diams ({}) do not match."
+                                .format(points.shape[0], len(diams)))
+        else:
+            raise Exception("Incorrect type for 'tree_or_points' parameter ({}), must be either "
+                            "'Tree' or numpy.array(N x 3)".format(type(tree_or_points)))
+        point_extents = np.tile(np.reshape(diams / 2.0, (-1, 1)), (1, 3))
+        return tree, points, point_extents
+
 
 class DisplacedMask(Mask):
     """
@@ -482,19 +497,14 @@ class DisplacedMask(Mask):
         self._mask_array = mask._mask_array
 
 
-class BinaryMask(Mask):
+class VolumeMask(Mask):
 
     def __init__(self, vox_size, tree_or_points, diams=None):
         # Get tree (if provided instead of list of points), points and point extents from provided 
         # parameters
         tree, points, point_extents = Mask._parse_tree_points(tree_or_points, diams)
         # Call the base 'Mask' class constructor
-        Mask.__init__(self, vox_size, points, point_extents)
-        # Set a minimum extent in each dimension to ensure the that the point extents are large 
-        # enough in each dimension to not "fall in the gaps" between voxels
-        self.min_extent = np.array(vox_size) * (math.sqrt(3.0) / 2.0)        
-        # Initialise the mask_array with the appropriate data type
-        self._mask_array = np.zeros(self.dim, dtype=bool)
+        Mask.__init__(self, vox_size, points, point_extents, bool)
         # Add the tree to the mask if it was provided
         if tree:
             self.add_tree(tree)
@@ -502,21 +512,29 @@ class BinaryMask(Mask):
     def add_tree(self, tree):
         # Loop through all of the tree _point_data and "paint" the mask
         for seg in tree.segments:
-            # Set the point extent to be the segment diameter unless it is below the minimum along
-            # that dimension
-            point_extent = np.array((seg.diam, seg.diam, seg.diam))
-            point_extent[point_extent < self.min_extent] = \
-                    self.min_extent[point_extent < self.min_extent]
+            seg_radius = seg.diam / 2.0
             # Calculate the number of samples required for the current segment
             num_samples = np.ceil(norm(seg.end - seg.begin) *
-                                  (SAMPLE_DIAM_RATIO / min(point_extent)))
+                                  (SAMPLE_DIAM_RATIO / seg.diam))
             # Loop through the samples for the given segment and add their "point_mask" to the 
             # overall mask
             for frac in np.linspace(1, 0, num_samples, endpoint=False):
+                # Set the point extent to be the segment diameter unless it is below the minimum along
+                # that dimension
                 point = (1.0 - frac) * seg.begin + frac * seg.end
+                # Get the point in the reference frame of the mask
+                offset_point = point - self.offset
+                # Get an extent guaranteed to at least reach one voxel (but not extend into
+                # two unless its radius is big enough) and set the extent about the current point 
+                # to that or the segment radius depending on which is greater.
+                point_extent = offset_point % self.vox_size
+                over_half = point_extent > (self.vox_size / 2.0)
+                point_extent[over_half] = self.vox_size[over_half] - point_extent[over_half]
+                point_extent *= 2.0
+                point_extent[point_extent < seg_radius] = seg_radius
                 # Determine the extent of the mask indices that could be affected by the point
-                extent_start = np.floor((point - self.offset - seg.diam / 2.0) / self.vox_size)
-                extent_finish = np.ceil((point - self.offset + seg.diam / 2.0) / self.vox_size)
+                extent_start = np.floor((offset_point - seg_radius) / self.vox_size)
+                extent_finish = np.ceil((offset_point + seg_radius) / self.vox_size)
                 # Get an "open" grid (uses less memory if it is open) of voxel indices to apply 
                 # the distance function to.
                 # (see http://docs.scipy.org/doc/numpy/reference/generated/numpy.ogrid.html)
@@ -532,7 +550,7 @@ class BinaryMask(Mask):
                 self._mask_array[extent_indices] += point_mask
 
 
-class FloatMask(Mask):
+class ConvolvedMask(Mask):
 
     __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
 
@@ -542,10 +560,7 @@ class FloatMask(Mask):
         self.point_extent = point_extent
         self.sample_freq = sample_freq
         # Call the base 'Mask' class constructor to set up the 
-        Mask.__init__(self, vox_size, points, np.tile(point_extent, 
-                                                           (tree.num_points(), 1)))
-        # Initialise the mask_array
-        self._mask_array = np.zeros(self.dim, dtype=float)
+        Mask.__init__(self, vox_size, points, np.tile(point_extent, (tree.num_points(), 1)), float)
         # Add the tree to the mask if it was provided
         if tree:
             self.add_tree(tree)
@@ -572,7 +587,7 @@ class FloatMask(Mask):
                 point = (1.0 - frac) * seg.begin + frac * seg.end
                 # Determine the extent of the mask indices that could be affected by the point
                 extent_start = np.floor((point - self.offset - self.point_extent) / self.vox_size)
-                extent_finish = np.array(np.ceil((point - self.offset + self.point_extent) 
+                extent_finish = np.array(np.ceil((point - self.offset + self.point_extent)
                                                  / self.vox_size), dtype=int)
                 # Get an "open" grid (uses less memory if it is open) of voxel indices to apply 
                 # the distance function to.
@@ -584,8 +599,8 @@ class FloatMask(Mask):
                 # bounds of the extent.
                 X = self.X[extent_indices]
                 Y = self.Y[extent_indices]
-                Z = self.Z[extent_indices]                                
-                disps = np.vstack((X.ravel() - point[0], Y.ravel() - point[1], 
+                Z = self.Z[extent_indices]
+                disps = np.vstack((X.ravel() - point[0], Y.ravel() - point[1],
                                    Z.ravel() - point[2])).transpose()
                 # Get the values of the point-spread function at each of the voxel centres
                 values = self._point_spread_function(disps)
@@ -600,7 +615,7 @@ class FloatMask(Mask):
         raise NotImplementedError
 
 
-class GaussMask(FloatMask):
+class GaussMask(ConvolvedMask):
 
     def __init__(self, vox_size, tree, scale=1.0, orient=(1.0, 0.0, 0.0), decay_rate=0.1,
                  isotropy=1.0, threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT):
@@ -609,7 +624,7 @@ class GaussMask(FloatMask):
         self.threshold = threshold
         self.scale = scale
         self.tensor = axially_symmetric_tensor(decay_rate, orient, isotropy)
-        FloatMask.__init__(self, vox_size, tree, 
+        ConvolvedMask.__init__(self, vox_size, tree,
                            type(self).get_point_extent(self.tensor, threshold), sample_freq)
 
     def _point_spread_function(self, disps):
@@ -631,7 +646,7 @@ class GaussMask(FloatMask):
         # Calculate the extent of the kernel along the x-y-z axes, the "external" axes
         point_extent = np.sqrt(np.sum((eig_vecs * internal_extents) ** 2, axis=1))
         return point_extent
-    
+
 
 class Soma(object):
 
@@ -754,7 +769,14 @@ if __name__ == '__main__':
     from ninemlp import SRC_PATH
     forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
                                   'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
-    forest.plot_binary_mask((0.1, 0.1, 10000))
+    for i in [0, 8,10]:
+        tree = forest[i]
+        tree.offset((0.0, 0.0, -50))
+        tree.plot_volume_mask((20, 20, 100), show=False)
+        plt.title("Tree {}".format(i))
+        print "Finished {}".format(i)
+    plt.show()
+        
 
 
 
