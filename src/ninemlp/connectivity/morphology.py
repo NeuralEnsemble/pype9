@@ -29,6 +29,8 @@ except:
 THRESHOLD_DEFAULT = 0.02
 SAMPLE_DIAM_RATIO = 4.0
 SAMPLE_FREQ_DEFAULT = 100
+# Precalculated for speed (not sure if this would be a bottleneck though)
+SQRT_3 = math.sqrt(3)
 
 class DisplacedVoxelSizeMismatchException(Exception): pass
 
@@ -78,15 +80,15 @@ class Forest(object):
         for tree in self.trees:
             tree.rotate(theta, axis)
 
-    def get_volume_mask(self, vox_size):
+    def get_volume_mask(self, vox_size, dtype=bool):
         mask = VolumeMask(vox_size, np.vstack([tree.points for tree in self.trees]),
-                          np.hstack([tree.diams for tree in self.trees]))
+                          np.hstack([tree.diams for tree in self.trees]), dtype)
         for tree in self.trees:
             mask.add_tree(tree)
         return mask
 
-    def plot_volume_mask(self, vox_size, show=True, colour_map='gray'):
-        mask = self.get_volume_mask(vox_size)
+    def plot_volume_mask(self, vox_size, show=True, dtype=bool, colour_map='gray'):
+        mask = self.get_volume_mask(vox_size, dtype)
         mask.plot(show=show, colour_map=colour_map)
 
 
@@ -186,7 +188,7 @@ class Tree(object):
         # Clear masks, which will no longer match the rotated points
         self._masks.clear()
 
-    def get_volume_mask(self, vox_size):
+    def get_volume_mask(self, vox_size, dtype=bool):
         """
         Creates a mask for the given voxel sizes and saves it in self._masks
         
@@ -194,7 +196,7 @@ class Tree(object):
         """
         vox_size = Mask.parse_vox_size(vox_size)
         if not self._masks['volume'].has_key(vox_size):
-            self._masks['volume'][vox_size] = VolumeMask(vox_size, self)
+            self._masks['volume'][vox_size] = VolumeMask(vox_size, self, dtype=dtype)
         return self._masks['volume'][vox_size]
 
     def get_prob_mask(self, vox_size, scale, orient, decay_rate=0.1, isotropy=1.0,
@@ -253,12 +255,12 @@ class Tree(object):
                             overlap(tree.get_convolved_mask(vox_size, gauss_kernel, sample_freq))
         return 1.0 - np.prod(prob_mask)
 
-    def plot_volume_mask(self, vox_size, show=True, colour_map='gray'):
+    def plot_volume_mask(self, vox_size, show=True, colour_map='gray', dtype=bool):
         if not plt:
             raise Exception("Matplotlib could not be imported and therefore plotting functions "
                             "have been disabled")
-        mask = self.get_volume_mask(vox_size)
-        mask.plot(show=show, colour_map=colour_map)
+        mask = self.get_volume_mask(vox_size, dtype=dtype)
+        mask.plot(show=show, colour_map=colour_map)       
 
     def plot_prob_mask(self, vox_size, scale=1.0, orient=(1.0, 0.0, 0.0), decay_rate=0.1,
                        isotropy=1.0, threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT,
@@ -402,7 +404,7 @@ class Mask(object):
     def displaced_mask(self, displacement):
         return DisplacedMask(self, displacement)
 
-    def plot(self, slice_dim=2, skip=1, show=True, colour_map=None):
+    def plot(self, slice_dim=2, skip=1, show=True, colour_map=None, colour_bar=True):
         for i in xrange(0, self.dim[slice_dim], skip):
             if not plt:
                 raise Exception("Matplotlib could not be imported and therefore plotting functions "
@@ -413,9 +415,12 @@ class Mask(object):
             elif slice_dim == 1: slice_indices = np.ogrid[0:mask_shape[0], i:(i + 1), 0:mask_shape[2]]
             elif slice_dim == 2: slice_indices = np.ogrid[0:mask_shape[0], 0:mask_shape[1], i:(i + 1)]
             else: raise Exception("Slice dimension can only be 0-2 ({} provided)".format(slice_dim))
-            plt.imshow(np.squeeze(self._mask_array[slice_indices]),
-                       cmap=plt.cm.get_cmap(colour_map))
+            img = plt.imshow(np.squeeze(self._mask_array[slice_indices]),
+                             cmap=plt.cm.get_cmap(colour_map))
+            img.set_interpolation('nearest')
             plt.title('dim {}, index {}'.format(slice_dim, i))
+            if self._mask_array.dtype != np.dtype('bool'):
+                plt.colorbar()
         if show:
             plt.show()
 
@@ -499,12 +504,14 @@ class DisplacedMask(Mask):
 
 class VolumeMask(Mask):
 
-    def __init__(self, vox_size, tree_or_points, diams=None):
+    def __init__(self, vox_size, tree_or_points, diams=None, dtype=bool):
         # Get tree (if provided instead of list of points), points and point extents from provided 
         # parameters
         tree, points, point_extents = Mask._parse_tree_points(tree_or_points, diams)
         # Call the base 'Mask' class constructor
-        Mask.__init__(self, vox_size, points, point_extents, bool)
+        Mask.__init__(self, vox_size, points, point_extents, dtype)
+        # For convenience calculate this here to save calculating it each iteration
+        self.half_vox = self.vox_size / 2.0
         # Add the tree to the mask if it was provided
         if tree:
             self.add_tree(tree)
@@ -527,10 +534,10 @@ class VolumeMask(Mask):
                 # Get an extent guaranteed to at least reach one voxel (but not extend into
                 # two unless its radius is big enough) and set the extent about the current point 
                 # to that or the segment radius depending on which is greater.
-                point_extent = offset_point % self.vox_size
-                over_half = point_extent > (self.vox_size / 2.0)
+                point_extent = (offset_point + self.half_vox) % self.vox_size
+                over_half = point_extent > self.half_vox
                 point_extent[over_half] = self.vox_size[over_half] - point_extent[over_half]
-                point_extent *= 2.0
+                point_extent *= SQRT_3
                 point_extent[point_extent < seg_radius] = seg_radius
                 # Determine the extent of the mask indices that could be affected by the point
                 extent_start = np.floor((offset_point - seg_radius) / self.vox_size)
@@ -767,15 +774,19 @@ def read_NeurolucidaSomaXML(filename):
 if __name__ == '__main__':
     from os.path import normpath, join
     from ninemlp import SRC_PATH
+    print "Loading forest..."
+#    forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
+#                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
     forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
-                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
-    for i in [0, 8,10]:
-        tree = forest[i]
-        tree.offset((0.0, 0.0, -50))
-        tree.plot_volume_mask((20, 20, 100), show=False)
-        plt.title("Tree {}".format(i))
-        print "Finished {}".format(i)
-    plt.show()
+                                  'tree2.xml')))    
+    print "Finished loading forest."
+#    for i in [0, 8,10]:
+    tree = forest[0]
+    tree.offset((0.0, 0.0, -50))
+    tree.plot_volume_mask((2, 2, 100)) #, dtype=int, colour_map='jet')
+#    plt.title("Tree {}".format(i))
+#    print "Finished {}".format(i)
+#    plt.show()
         
 
 
