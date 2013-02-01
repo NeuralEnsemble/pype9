@@ -29,8 +29,10 @@ except:
 THRESHOLD_DEFAULT = 0.02
 SAMPLE_DIAM_RATIO = 4.0
 SAMPLE_FREQ_DEFAULT = 100
+DEEP_Z_VOX_SIZE = 10000 # This is the vox size used for the z axis to approximate infinite depth
 # Pre-calculated for speed (not sure if this would be a bottleneck though)
 SQRT_3 = math.sqrt(3)
+
 
 class DisplacedVoxelSizeMismatchException(Exception): pass
 
@@ -70,14 +72,23 @@ class Forest(object):
     def __len__(self):
         return len(self.trees)
 
+    def transform(self, transform):
+        """
+        Transforms the forest by the given transformation matrix
+        
+        @param transform [numpy.array(3,3)]: The transformation matrix by which to rotate the forest
+        """
+        for tree in self:
+            tree.transform(transform)
+
     def rotate(self, theta, axis=2):
         """
-        Rotates the tree about the chosen axis by theta
+        Rotates the forest about the chosen axis by theta
         
         @param theta [float]: The degree of clockwise rotation (in degrees)
         @param axis [str/int]: The axis about which to rotate the tree (either 'x'-'z' or 0-2, default 'z'/2)
         """
-        for tree in self.trees:
+        for tree in self:
             tree.rotate(theta, axis)
 
     def offset(self, offset):
@@ -95,11 +106,28 @@ class Forest(object):
         mask = self.get_volume_mask(vox_size, dtype)
         mask.plot(show=show, colour_map=colour_map)
         
-    def coverage(self, vox_size):
-        pass
-
+    def xy_coverage(self, vox_size, central_frac=(1.0,1.0)):
+        if len(vox_size) != 2:
+            raise Exception("Voxel size needs to be 2-D (X and Y dimensions), found {}D"
+                            .format(len(vox_size)))
+        self.offset((0.0, 0.0, DEEP_Z_VOX_SIZE / 2.0))
+        mask = self.get_volume_mask(vox_size + (DEEP_Z_VOX_SIZE,))
+        if mask.dim[2] != 1:
+            raise Exception("Not all voxels where contained with the \"deep\" z voxel dimension")
+        trimmed_frac = (1.0 - np.array(central_frac)) / 2.0
+        start = np.array(np.floor(mask.dim[:2] * trimmed_frac), dtype=int)
+        end = np.array(np.ceil(mask.dim[:2] * (1.0 - trimmed_frac)), dtype=int)
+        central_mask = mask._mask_array[start[0]:end[0], start[1]:end[1], 0].squeeze()
+        coverage = float(np.count_nonzero(central_mask)) / float(np.prod(central_mask.shape))
+        self.offset((0.0, 0.0, -DEEP_Z_VOX_SIZE / 2.0))
+        return coverage, central_mask      
+        
     def align(self):
-    
+        raise NotImplementedError
+
+    def randomize_trees(self):
+        raise NotImplementedError
+
 
 class Tree(object):
 
@@ -164,6 +192,20 @@ class Tree(object):
             prev_index = len(self._points) - 1
         for branch in branch.sub_branches:
             self._flatten(branch, prev_index)
+
+    def transform(self, transform):
+        """
+        Transforms the tree by the given transformation matrix
+        
+        @param transform [numpy.array(3,3)]: The transformation matrix by which to rotate the tree
+        """
+        if transform.shape != (3,3):
+            raise Exception("Rotation matrix needs to be a 3 x 3 matrix (found {shape[0]} x "
+                            "{shape[1]})".format(shape=transform.shape)) 
+        # Rotate all the points in the tree
+        self._points = np.dot(self._points, transform)
+        # Clear masks, which will no longer match the rotated points
+        self._masks.clear()
 
     def rotate(self, theta, axis=2):
         """
@@ -427,7 +469,7 @@ class Mask(object):
             img = plt.imshow(np.squeeze(self._mask_array[slice_indices]),
                              cmap=plt.cm.get_cmap(colour_map))
             img.set_interpolation('nearest')
-            plt.title('dim {}, index {}'.format(slice_dim, i))
+            plt.title('Dim {}, Index {}'.format(slice_dim, i))
             if self._mask_array.dtype != np.dtype('bool'):
                 plt.colorbar()
         if show:
@@ -780,6 +822,8 @@ def read_NeurolucidaSomaXML(filename):
 #    (3D pixels) of arbitrary width that divide up the bounding box of a dendritic/axonal tree
 #    """
 
+VOX_SIZE=(0.1, 0.1, 500)
+
 if __name__ == '__main__':
     from os.path import normpath, join
     from ninemlp import SRC_PATH
@@ -787,9 +831,13 @@ if __name__ == '__main__':
     forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
                                   'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
     print "Finished loading forest."
-    forest.offset((0.0,0.0,-250))
-    forest.plot_volume_mask((0.1, 0.1, 500))
-        
+#    forest.offset((0.0,0.0,-250))
+#    forest.plot_volume_mask(VOX_SIZE, show=False)
+    coverage, central_mask = forest.xy_coverage(VOX_SIZE[:2], (0.4, 0.4)) 
+    img = plt.imshow(central_mask, cmap=plt.cm.get_cmap('gray'))
+    img.set_interpolation('nearest')    
+    print "Coverage: {}".format(coverage)
+    plt.show()
 
 
 
