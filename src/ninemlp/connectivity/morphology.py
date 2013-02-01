@@ -29,7 +29,7 @@ except:
 THRESHOLD_DEFAULT = 0.02
 SAMPLE_DIAM_RATIO = 4.0
 SAMPLE_FREQ_DEFAULT = 100
-# Precalculated for speed (not sure if this would be a bottleneck though)
+# Pre-calculated for speed (not sure if this would be a bottleneck though)
 SQRT_3 = math.sqrt(3)
 
 class DisplacedVoxelSizeMismatchException(Exception): pass
@@ -94,7 +94,12 @@ class Forest(object):
     def plot_volume_mask(self, vox_size, show=True, dtype=bool, colour_map='gray'):
         mask = self.get_volume_mask(vox_size, dtype)
         mask.plot(show=show, colour_map=colour_map)
+        
+    def coverage(self, vox_size):
+        pass
 
+    def align(self):
+    
 
 class Tree(object):
 
