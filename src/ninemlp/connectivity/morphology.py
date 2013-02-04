@@ -36,6 +36,107 @@ SQRT_3 = math.sqrt(3)
 
 class DisplacedVoxelSizeMismatchException(Exception): pass
 
+#function [ n] = normal_dendrite( trees )
+#%UNTITLED Summary of this function goes here
+#%   Detailed explanation goes here
+#SIZE=size(trees);
+#k=SIZE(:,2);
+#N=[];
+#CONSTANT=[1 1 1];
+#i=1;
+#while i<=k
+#    diam_cut = 1.5;
+#    ind = (trees{i}.R~=1) & (trees{i}.D<diam_cut);
+#    x=trees{i}.X(ind);
+#    y=trees{i}.Y(ind);
+#    z=trees{i}.Z(ind);
+#    %X=[ones(size(x)) x y];
+#    %b=regress(z,X);
+#    %n=[ -b(2,:) -b(3,:) 1];
+#    pts = [x y z];
+#    [v, d] = eig(cov(pts));
+#    [temp, ind] = sort(diag(d));
+#    v1 = v(:,ind(end));
+#    v2 = v(:,ind(end-1));
+#    n = cross(v1,v2)';
+#    n=n/normest(n);   
+#    if n*CONSTANT'>0
+#        n=-n;
+#    end
+#    N=[N n'];
+#    i=i+1;
+#end
+#n=sum(N,2)/k;
+#n=n/normest(n);
+#end
+
+#function [ new_trees, rotation_matrix ] = intrinsic_coordinate( original_trees )
+#%UNTITLED5 Summary of this function goes here
+#%   Detailed explanation goes here
+#n1=normal_soma(original_trees);
+#n2=normal_dendrite(original_trees);
+#n3=cross(n2,n1);
+#n3=n3/normest(n3);
+#n2=cross(n3,n1);
+#n2=n2/normest(n2);
+#rotation_matrix=[ n3' n2' n1' ];
+#%construct the new trees
+#A=inv(rotation_matrix);
+#new_trees=original_trees;
+#i=1;
+#k=size(original_trees,2);
+#while i<=k
+#    B=[original_trees{i}.X original_trees{i}.Y original_trees{i}.Z]*A';
+#    new_trees{i}.X=B(:,1);
+#    new_trees{i}.Y=B(:,2);
+#    new_trees{i}.Z=B(:,3);
+#    i=i+1;
+#end
+#
+#end
+
+#function [ N] = mean_soma( trees )
+#%UNTITLED3 Summary of this function goes here
+#%   Detailed explanation goes here
+#k=size(trees,2);
+#i=1;
+#N=[];
+#while i<=k
+#    n=size(trees{i}.X(trees{i}.R==1),1);
+#    a=sum(trees{i}.X(trees{i}.R==1))/n;
+#    b=sum(trees{i}.Y(trees{i}.R==1))/n;
+#    c=sum(trees{i}.Z(trees{i}.R==1))/n;
+#    x=[a b c];
+#    N=[N x'];
+#    i=i+1;
+#end
+#N=N';
+#end
+
+#function [ normal_soma] = normal_soma( trees )
+#%UNTITLED4 Summary of this function goes here
+#%   Detailed explanation goes here
+#CONSTANT=[1 1 1];
+#N=mean_soma(trees);
+#%x=N(:,1);
+#%y=N(:,2);
+#%z=N(:,3);
+#%X=[ones(size(x)) x y];
+#%b=regress(z,X);
+#%n=[ -b(2,:) -b(3,:) 1];
+#[v, d] = eig(cov(N));
+#[temp, ind] = sort(diag(d));
+#v1 = v(:,ind(end));
+#v2 = v(:,ind(end-1));
+#n = cross(v1,v2)';
+#if n*CONSTANT'>0
+#        n=-n;
+#end
+#normal_soma=n/normest(n);
+#
+#end
+
+
 
 class Forest(object):
 
@@ -828,15 +929,17 @@ if __name__ == '__main__':
     from os.path import normpath, join
     from ninemlp import SRC_PATH
     print "Loading forest..."
+#    forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
+#                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
     forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
-                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
+                                  'tree2.xml')))    
     print "Finished loading forest."
-#    forest.offset((0.0,0.0,-250))
-#    forest.plot_volume_mask(VOX_SIZE, show=False)
-    coverage, central_mask = forest.xy_coverage(VOX_SIZE[:2], (0.4, 0.4)) 
-    img = plt.imshow(central_mask, cmap=plt.cm.get_cmap('gray'))
-    img.set_interpolation('nearest')    
-    print "Coverage: {}".format(coverage)
+    forest.offset((0.0,0.0,-250))
+    forest.plot_volume_mask(VOX_SIZE, show=False)
+#    coverage, central_mask = forest.xy_coverage(VOX_SIZE[:2], (0.4, 0.4)) 
+#    img = plt.imshow(central_mask, cmap=plt.cm.get_cmap('gray'))
+#    img.set_interpolation('nearest')    
+#    print "Coverage: {}".format(coverage)
     plt.show()
 
 
