@@ -19,6 +19,7 @@ import collections
 import xml.sax
 from ninemlp import XMLHandler
 from ninemlp.connectivity import axially_symmetric_tensor
+from copy import deepcopy
 try:
     import matplotlib.pyplot as plt
 except:
@@ -35,107 +36,6 @@ SQRT_3 = math.sqrt(3)
 
 
 class DisplacedVoxelSizeMismatchException(Exception): pass
-
-#function [ n] = normal_dendrite( trees )
-#%UNTITLED Summary of this function goes here
-#%   Detailed explanation goes here
-#SIZE=size(trees);
-#k=SIZE(:,2);
-#N=[];
-#CONSTANT=[1 1 1];
-#i=1;
-#while i<=k
-#    diam_cut = 1.5;
-#    ind = (trees{i}.R~=1) & (trees{i}.D<diam_cut);
-#    x=trees{i}.X(ind);
-#    y=trees{i}.Y(ind);
-#    z=trees{i}.Z(ind);
-#    %X=[ones(size(x)) x y];
-#    %b=regress(z,X);
-#    %n=[ -b(2,:) -b(3,:) 1];
-#    pts = [x y z];
-#    [v, d] = eig(cov(pts));
-#    [temp, ind] = sort(diag(d));
-#    v1 = v(:,ind(end));
-#    v2 = v(:,ind(end-1));
-#    n = cross(v1,v2)';
-#    n=n/normest(n);   
-#    if n*CONSTANT'>0
-#        n=-n;
-#    end
-#    N=[N n'];
-#    i=i+1;
-#end
-#n=sum(N,2)/k;
-#n=n/normest(n);
-#end
-
-#function [ new_trees, rotation_matrix ] = intrinsic_coordinate( original_trees )
-#%UNTITLED5 Summary of this function goes here
-#%   Detailed explanation goes here
-#n1=normal_soma(original_trees);
-#n2=normal_dendrite(original_trees);
-#n3=cross(n2,n1);
-#n3=n3/normest(n3);
-#n2=cross(n3,n1);
-#n2=n2/normest(n2);
-#rotation_matrix=[ n3' n2' n1' ];
-#%construct the new trees
-#A=inv(rotation_matrix);
-#new_trees=original_trees;
-#i=1;
-#k=size(original_trees,2);
-#while i<=k
-#    B=[original_trees{i}.X original_trees{i}.Y original_trees{i}.Z]*A';
-#    new_trees{i}.X=B(:,1);
-#    new_trees{i}.Y=B(:,2);
-#    new_trees{i}.Z=B(:,3);
-#    i=i+1;
-#end
-#
-#end
-
-#function [ N] = mean_soma( trees )
-#%UNTITLED3 Summary of this function goes here
-#%   Detailed explanation goes here
-#k=size(trees,2);
-#i=1;
-#N=[];
-#while i<=k
-#    n=size(trees{i}.X(trees{i}.R==1),1);
-#    a=sum(trees{i}.X(trees{i}.R==1))/n;
-#    b=sum(trees{i}.Y(trees{i}.R==1))/n;
-#    c=sum(trees{i}.Z(trees{i}.R==1))/n;
-#    x=[a b c];
-#    N=[N x'];
-#    i=i+1;
-#end
-#N=N';
-#end
-
-#function [ normal_soma] = normal_soma( trees )
-#%UNTITLED4 Summary of this function goes here
-#%   Detailed explanation goes here
-#CONSTANT=[1 1 1];
-#N=mean_soma(trees);
-#%x=N(:,1);
-#%y=N(:,2);
-#%z=N(:,3);
-#%X=[ones(size(x)) x y];
-#%b=regress(z,X);
-#%n=[ -b(2,:) -b(3,:) 1];
-#[v, d] = eig(cov(N));
-#[temp, ind] = sort(diag(d));
-#v1 = v(:,ind(end));
-#v2 = v(:,ind(end-1));
-#n = cross(v1,v2)';
-#if n*CONSTANT'>0
-#        n=-n;
-#end
-#normal_soma=n/normest(n);
-#
-#end
-
 
 
 class Forest(object):
@@ -159,9 +59,15 @@ class Forest(object):
         # Load somas
         self.somas = {}
         if include_somas:
-            soma_contours = read_NeurolucidaSomaXML(xml_filename)
-            for name, soma_contours in soma_contours.items():
-                self.somas[name] = Soma(soma_contours.contours)
+            soma_dict = read_NeurolucidaSomaXML(xml_filename)
+            if len(soma_dict) != len(self.trees):
+                raise Exception("Number of loaded somas ({}) and trees do not match ({}) "
+                                .format(len(soma_dict), len(self.trees)))
+            for label, soma in soma_dict.items():
+                self.trees[soma.index].add_soma(Soma(label, soma.contours))
+            self.has_somas = True
+        else:
+            self.has_somas = False
 
     def __getitem__(self, index):
         return self.trees[index]
@@ -199,15 +105,30 @@ class Forest(object):
     def get_volume_mask(self, vox_size, dtype=bool):
         mask = VolumeMask(vox_size, np.vstack([tree.points for tree in self.trees]),
                           np.hstack([tree.diams for tree in self.trees]), dtype)
-        for tree in self:
-            mask.add_tree(tree)
+        if dtype == bool:
+            for i, tree in enumerate(self):
+                mask.add_tree(tree)
+                print "Added {} tree to volume mask".format(i)
+        else:
+            bool_mask = VolumeMask(vox_size, np.vstack([tree.points for tree in self.trees]),
+                                   np.hstack([tree.diams for tree in self.trees]), bool)
+            for i, tree in enumerate(self):
+                tree_mask = deepcopy(bool_mask)
+                tree_mask.add_tree(tree)
+                mask += tree_mask
+                print "Added {} tree to volume mask".format(i)
         return mask
 
-    def plot_volume_mask(self, vox_size, show=True, dtype=bool, colour_map='gray'):
+    def plot_volume_mask(self, vox_size, show=True, dtype=bool, colour_map=None):
         mask = self.get_volume_mask(vox_size, dtype)
+        if not colour_map:
+            if dtype == bool:
+                colour_map = 'gray'
+            else:
+                colour_map = 'jet'
         mask.plot(show=show, colour_map=colour_map)
-        
-    def xy_coverage(self, vox_size, central_frac=(1.0,1.0)):
+
+    def xy_coverage(self, vox_size, central_frac=(1.0, 1.0)):
         if len(vox_size) != 2:
             raise Exception("Voxel size needs to be 2-D (X and Y dimensions), found {}D"
                             .format(len(vox_size)))
@@ -221,13 +142,46 @@ class Forest(object):
         central_mask = mask._mask_array[start[0]:end[0], start[1]:end[1], 0].squeeze()
         coverage = float(np.count_nonzero(central_mask)) / float(np.prod(central_mask.shape))
         self.offset((0.0, 0.0, -DEEP_Z_VOX_SIZE / 2.0))
-        return coverage, central_mask      
-        
-    def align(self):
-        raise NotImplementedError
+        return coverage, central_mask
+
+    def normal_to_dendrites(self):
+        avg = np.array((0.0, 0.0, 0.0))
+        for tree in self:
+            avg += tree.normal_to_dendrites()
+        avg /= norm(avg)
+        return avg
+
+    def normal_to_soma_plane(self):
+        if not self.has_somas:
+            raise Exception("Forest does not include somas, so their normal is not defined")
+        soma_centres = []
+        for tree in self:
+            soma_centres.append(tree.soma.centre())
+        eig_vals, eig_vecs = np.linalg.eig(np.cov(soma_centres, rowvar=0)) #@UnusedVariable
+        normal = eig_vecs[:, np.argmin(eig_vals)]
+        if normal.sum() < 0:
+            normal *= -1.0
+        return normal
+
+    def align_to_xyz_axes(self):
+        soma_axis = self.normal_to_soma_plane()
+        dendrite_axis = self.normal_to_dendrites()
+        third_axis = np.cross(dendrite_axis, soma_axis)
+        third_axis /= norm(third_axis) # Just to clean up any numerical errors
+        re_dendrite_axis = np.cross(third_axis, soma_axis)
+        align = np.vstack((soma_axis, third_axis, re_dendrite_axis))
+        # As the align matrix is unitary its inverse is equivalent to its transpose
+        inv_align = align.transpose();
+        for tree in self:
+            tree.transform(inv_align)
+        return align
 
     def randomize_trees(self):
         raise NotImplementedError
+
+    def perturb(self, mag):
+        for tree in self:
+            tree.pertub(mag)
 
 
 class Tree(object):
@@ -256,6 +210,9 @@ class Tree(object):
         self.centroid = np.average(self.points, axis=0)
         # Create dictionaries to store tree masks to save having to regenerate them the next time
         self._masks = collections.defaultdict(dict)
+
+    def add_soma(self, soma):
+        self.soma = soma
 
     @property
     def points(self):
@@ -300,9 +257,9 @@ class Tree(object):
         
         @param transform [numpy.array(3,3)]: The transformation matrix by which to rotate the tree
         """
-        if transform.shape != (3,3):
+        if transform.shape != (3, 3):
             raise Exception("Rotation matrix needs to be a 3 x 3 matrix (found {shape[0]} x "
-                            "{shape[1]})".format(shape=transform.shape)) 
+                            "{shape[1]})".format(shape=transform.shape))
         # Rotate all the points in the tree
         self._points = np.dot(self._points, transform)
         # Clear masks, which will no longer match the rotated points
@@ -340,6 +297,9 @@ class Tree(object):
         # Clear masks, which will no longer match the rotated points
         self._masks.clear()
 
+    def perturb(self, mag):
+        self._points += np.random.randn(mag)
+
     def get_volume_mask(self, vox_size, dtype=bool):
         """
         Creates a mask for the given voxel sizes and saves it in self._masks
@@ -373,7 +333,7 @@ class Tree(object):
         @param displace [tuple(float)]: Displace to apply to the tree
         """
         return DisplacedTree(self, displacement)
-    
+
     def offset(self, offset):
         """
         Unlike displaced tree, offset_tree moves all the points of the tree by the given offset 
@@ -407,12 +367,17 @@ class Tree(object):
                             overlap(tree.get_convolved_mask(vox_size, gauss_kernel, sample_freq))
         return 1.0 - np.prod(prob_mask)
 
-    def plot_volume_mask(self, vox_size, show=True, colour_map='gray', dtype=bool):
+    def plot_volume_mask(self, vox_size, show=True, colour_map=None, dtype=bool):
         if not plt:
             raise Exception("Matplotlib could not be imported and therefore plotting functions "
                             "have been disabled")
+        if not colour_map:
+            if dtype == bool:
+                colour_map = 'gray'
+            else:
+                colour_map = 'jet'
         mask = self.get_volume_mask(vox_size, dtype=dtype)
-        mask.plot(show=show, colour_map=colour_map)       
+        mask.plot(show=show, colour_map=colour_map)
 
     def plot_prob_mask(self, vox_size, scale=1.0, orient=(1.0, 0.0, 0.0), decay_rate=0.1,
                        isotropy=1.0, threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT,
@@ -421,6 +386,21 @@ class Tree(object):
                                   isotropy=isotropy, threshold=threshold,
                                   sample_freq=sample_freq)
         mask.plot(show=show, colour_map=colour_map)
+
+    def normal_to_dendrites(self, diam_threshold=1.5):
+        """
+        Calculate the normal to the plan for points on the dendritic tree that are above the 
+        diameter threshold
+        """
+        # Select points with diameters below a certain threshold
+        selected_points = self._points[self.diams < diam_threshold, :]
+        # Get normal to the covariance matrix of these points
+        eig_vals, eig_vecs = np.linalg.eig(np.cov(selected_points, rowvar=0))
+        normal = eig_vecs[:, np.argmin(eig_vals)]
+        # Ensure the normal is closer to the [1,1,1] vector than the [-1,-1,-1]
+        if normal.sum() < 0:
+            normal *= -1.0
+        return normal
 
 
 class DisplacedTree(Tree):
@@ -619,6 +599,26 @@ class Mask(object):
         point_extents = np.tile(np.reshape(diams / 2.0, (-1, 1)), (1, 3))
         return tree, points, point_extents
 
+    def _check_match(self, mask):
+        if any(self.vox_size != mask.vox_size):
+            raise Exception("Voxel sizes do not match ({} and {})"
+                            .format(self.vox_size, mask.vox_size))
+        if any(self.start_index != mask.start_index):
+            raise Exception("Start indices do not match ({} and {})"
+                            .format(self.start_index, mask.start_index))
+        if any(self.finish_index != mask.finish_index):
+            raise Exception("Finish indices do not match ({} and {})"
+                            .format(self.finish_index, mask.finish_index))
+                            
+    def __iadd__(self, mask):
+        self._check_match(mask)
+        self._mask_array += mask._mask_array
+        return self
+                            
+    def __add__(self, mask):
+        new_mask = deepcopy(self)
+        new_mask += mask._mask_array
+        return new_mask
 
 class DisplacedMask(Mask):
     """
@@ -809,12 +809,13 @@ class GaussMask(ConvolvedMask):
 
 class Soma(object):
 
-    def __init__(self, contours):
+    def __init__(self, label, contours):
         """
         Initialises the Soma object
         
         @param contours [list(NeurolucidaSomaXMLHandler.Contour)]: A list of contour objects
         """
+        self.label = label
         # Recursively flatten all branches stemming from the root
         num_points = sum([len(contour.points) for contour in contours])
         self._points = np.zeros((num_points, 4))
@@ -827,6 +828,10 @@ class Soma(object):
     @property
     def points(self):
         return self._points
+
+    def centre(self):
+        avg = np.sum(self._points[:, :3], axis=0)
+        return avg / norm(avg)
 
 
 class NeurolucidaTreeXMLHandler(XMLHandler):
@@ -877,7 +882,7 @@ class NeurolucidaSomaXMLHandler(XMLHandler):
     """
     # Create named tuples (sort of light-weight classes with no methods, like a struct in C/C++) to
     # store the extracted NeurolucidaTreeXMLHandler data.
-    Soma = collections.namedtuple('Soma', 'contours')
+    Soma = collections.namedtuple('Soma', 'index contours')
     Contour = collections.namedtuple('Contour', 'points')
     Point = collections.namedtuple('Point', 'x y z diam')
 
@@ -888,6 +893,7 @@ class NeurolucidaSomaXMLHandler(XMLHandler):
         """
         XMLHandler.__init__(self)
         self.somas = {}
+        self.soma_count = 0
 
     def startElement(self, tag_name, attrs):
         """
@@ -897,11 +903,13 @@ class NeurolucidaSomaXMLHandler(XMLHandler):
         if self._opening(tag_name, attrs, 'contour'):
             contour_name = attrs['name']
             if not self.somas.has_key(contour_name):
-                self.somas[contour_name] = self.Soma([])
+                self.somas[contour_name] = self.Soma(self.soma_count, [])
+                self.soma_count += 1
             self.current_contour = self.Contour([])
             self.somas[contour_name].contours.append(self.current_contour)
         elif self._opening(tag_name, attrs, 'point', parents=[('contour')]):
-            self.current_contour.points.append(self.Point(attrs['x'], attrs['y'], attrs['z'], attrs['d']))
+            self.current_contour.points.append(self.Point(attrs['x'], attrs['y'], attrs['z'],
+                                                          attrs['d']))
 
 
 def read_NeurolucidaTreeXML(filename):
@@ -923,22 +931,27 @@ def read_NeurolucidaSomaXML(filename):
 #    (3D pixels) of arbitrary width that divide up the bounding box of a dendritic/axonal tree
 #    """
 
-VOX_SIZE=(0.1, 0.1, 500)
+VOX_SIZE = (0.1, 0.1, 500)
 
 if __name__ == '__main__':
     from os.path import normpath, join
     from ninemlp import SRC_PATH
     print "Loading forest..."
-#    forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
-#                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
     forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
-                                  'tree2.xml')))    
+                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
+#    forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
+#                                  'tree2.xml')))    
     print "Finished loading forest."
-    forest.offset((0.0,0.0,-250))
-    forest.plot_volume_mask(VOX_SIZE, show=False)
-#    coverage, central_mask = forest.xy_coverage(VOX_SIZE[:2], (0.4, 0.4)) 
+    forest.offset((0.0, 0.0, -250))
+    forest.plot_volume_mask(VOX_SIZE, show=False, dtype=int)
+    plt.title('Original rotation')
+    print forest.align_to_xyz_axes()
+    # To move the forest away from zero so it is contained with in one z voxel    
+    forest.plot_volume_mask(VOX_SIZE, show=False, dtype=int)
+    plt.title('Aligned rotation')    
+#    coverage, central_mask = forest.xy_coverage(VOX_SIZE[:2], (1.0, 1.0))
 #    img = plt.imshow(central_mask, cmap=plt.cm.get_cmap('gray'))
-#    img.set_interpolation('nearest')    
+#    img.set_interpolation('nearest')
 #    print "Coverage: {}".format(coverage)
     plt.show()
 
