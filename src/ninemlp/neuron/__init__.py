@@ -167,13 +167,13 @@ class ElectricalSynapseProjection(Projection):
             # another cell2 to cell1 (because the connections are mutual)
             if self.Connection(target, target_segname, 
                                source, source_segname) not in self.connections:
-                # Generate unique but reproducible
-                pre_post_id = (self.pre.id_to_index(source) * len(self.post) + \
+                # Generate unique but reproducible indices
+                pre_post_gid = (self.pre.id_to_index(source) * len(self.post) + \
                                self.post.id_to_index(target) + self.gid_start) * 2
-                post_pre_id = pre_post_id + 1
+                post_pre_gid = pre_post_gid + 1
                 # Create a connection list containing the two connections going in both directions
-                conn_list = (((source, source_segname), (target, target_segname), pre_post_id),
-                             ((target, target_segname), (source, source_segname), post_pre_id))
+                conn_list = (((source, source_segname), (target, target_segname), pre_post_gid),
+                             ((target, target_segname), (source, source_segname), post_pre_gid))
                 for (pre_cell, pre_seg), (post_cell, post_seg), var_gid in conn_list:
                     if pre_cell.local:
                         if pre_seg:
@@ -181,6 +181,7 @@ class ElectricalSynapseProjection(Projection):
                         else:
                             segment = pre_cell.source_section
                         # Connect the pre cell voltage to the target var
+                        print "Setting source var on cell {} with gid {}".format(pre_cell, var_gid)
                         simulator.state.parallel_context.source_var(segment(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
                     if post_cell.local:
                         if post_seg:
@@ -194,6 +195,7 @@ class ElectricalSynapseProjection(Projection):
                         # collector
                         segment._gap_junctions.append(gap_junction)
                         # Connect the gap junction with the source_var
+                        print "Setting target var on cell {} with gid {}".format(post_cell, var_gid)
                         simulator.state.parallel_context.target_var(gap_junction._ref_vgap, var_gid) #@UndefinedVariableFromImport
                 # Save connection information to avoid duplicates, where the same cell connects
                 # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
