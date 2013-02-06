@@ -122,14 +122,13 @@ class ElectricalSynapseProjection(Projection):
     gid_count = 0
 
     def __init__(self, pre, dest, label, connector, source=None, target=None,
-                 build_mode=DEFAULT_BUILD_MODE, rectified=False):
+                 build_mode=DEFAULT_BUILD_MODE):
         """
         @param rectified [bool]: Whether the gap junction is rectified (only one direction)
         """
         ## Start of unique variable-GID range assigned for this projection (ends at gid_count + pre.size * dest.size * 2)
         self.gid_start = self.__class__.gid_count
         self.__class__.gid_count += pre.size * dest.size * 2
-        self.rectified = rectified
         Projection.__init__(self, pre, dest, label, connector, source, target, build_mode)
 
 
@@ -166,32 +165,23 @@ class ElectricalSynapseProjection(Projection):
             # Check connection information to avoid duplicates if the connection is not "rectified"
             # (one-way), where there is a gap junction connecting from one cell1 to cell2 and then 
             # another cell2 to cell1 (because the connections are mutual)
-            if self.rectified or \
-                    ElectricalSynapseProjection.Connection(target, target_segname, 
-                                source, source_segname) not in self.connections:
+            if self.Connection(target, target_segname, 
+                               source, source_segname) not in self.connections:
                 # Generate unique but reproducible
                 pre_post_id = (self.pre.id_to_index(source) * len(self.post) + \
                                self.post.id_to_index(target) + self.gid_start) * 2
                 post_pre_id = pre_post_id + 1
                 # Create a connection list containing the two connections going in both directions
-                # (if rectified only one direction)
-                connection_list = [((source, source_segname), (target, target_segname), 
-                                    pre_post_id)]                
-                if not self.rectified:
-                    connection_list.append(((target, target_segname), (source, source_segname),
-                                            post_pre_id))
-                for (pre_cell, pre_seg), (post_cell, post_seg), var_gid in connection_list:
+                conn_list = (((source, source_segname), (target, target_segname), pre_post_id),
+                             ((target, target_segname), (source, source_segname), post_pre_id))
+                for (pre_cell, pre_seg), (post_cell, post_seg), var_gid in conn_list:
                     if pre_cell.local:
                         if pre_seg:
                             segment = pre_cell._cell.segments[pre_seg.split('.')[0]]
                         else:
                             segment = pre_cell.source_section
+                        # Connect the pre cell voltage to the target var
                         simulator.state.parallel_context.source_var(segment(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
-# --- DEBUGGING STATEMENTS ---
-#                        print "PRE: var_gid={var_gid}, process={mpi_rank}, cell_id={pre_cell}"\
-#                              .format(mpi_rank=simulator.state.mpi_rank, pre_cell=int(pre_cell),
-#                                      var_gid=var_gid)
-#-----------------------------
                     if post_cell.local:
                         if post_seg:
                             segment = post_cell._cell.segments[self.synapse_type]
@@ -203,13 +193,8 @@ class ElectricalSynapseProjection(Projection):
                         # Store gap junction in a list so it doesn't get collected by the garbage 
                         # collector
                         segment._gap_junctions.append(gap_junction)
-                        # Connect the gap junction with the sourc_var
+                        # Connect the gap junction with the source_var
                         simulator.state.parallel_context.target_var(gap_junction._ref_vgap, var_gid) #@UndefinedVariableFromImport
-# --- DEBUGGING STATEMENTS ---
-#                        print "POST: var_gid={var_gid}, process={mpi_rank}, cell_id={post_cell}"\
-#                              .format(mpi_rank=simulator.state.mpi_rank, post_cell=int(post_cell),
-#                                      var_gid=var_gid)                       
-#-----------------------------
                 # Save connection information to avoid duplicates, where the same cell connects
                 # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
                 self.connections.append(self.Connection(source, self.source, target,

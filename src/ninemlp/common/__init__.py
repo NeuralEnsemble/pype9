@@ -517,13 +517,13 @@ class Network(object):
                 if not self._ElectricalSynapseProjection_class:
                     raise Exception("The selected simulator doesn't currently support electrical "
                                     "synapse projections")
-                if target.synapse:
-                    target_str = target.segment + '.' + target.synapse
-                else:
-                    target_str = target.segment
+#                if target.synapse:
+#                    target_str = target.segment + '.' + target.synapse
+#                else:
+#                    target_str = target.segment
                 projection = self._ElectricalSynapseProjection_class(pre, dest, label, connector, 
                                                                      source=source.segment, 
-                                                                     target=target_str,
+                                                                     target=target.segment,
                                                                      build_mode=self.build_mode)            
             else:
                 raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
