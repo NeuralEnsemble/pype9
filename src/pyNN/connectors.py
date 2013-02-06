@@ -325,6 +325,7 @@ class ProbabilisticConnector(Connector):
         cell, the array containing the connection probabilities for all the local
         targets of that pre-synaptic cell.
         """
+        print "size: {}".format(self.size)
         if numpy.isscalar(p) and p == 1:
             precreate = numpy.arange(self.size, dtype=numpy.int)
         else:
@@ -332,7 +333,6 @@ class ProbabilisticConnector(Connector):
             if not core.is_listlike(rarr) and numpy.isscalar(rarr): # if N=1, rarr will be a single number
                 rarr = numpy.array([rarr])
             precreate = numpy.where(rarr < p)[0]  
-
         self.distance_matrix.set_source(src.position)        
         if not self.allow_self_connections and self.projection.pre == self.projection.post:
             idx_src   = numpy.where(self.candidates == src)
@@ -349,10 +349,13 @@ class ProbabilisticConnector(Connector):
             create = create[:n_connections]
         else:
             create = precreate            
+        print "create: {}".format(create)
+        print "candidates: {}".format(self.candidates)
         targets = self.candidates[create]        
         weights = self.weights_generator.get(self.N, self.distance_matrix, create)
         delays  = self.delays_generator.get(self.N, self.distance_matrix, create)        
         
+        print "Number of targets {}".format(len(targets))
         if len(targets) > 0:
             self.projection._divergent_connect(src, targets.tolist(), weights, delays)
         
