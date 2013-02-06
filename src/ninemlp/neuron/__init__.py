@@ -155,52 +155,74 @@ class ElectricalSynapseProjection(Projection):
             if not isinstance(target, pyNN.common.IDMixin):
                 raise errors.ConnectionError("Invalid target ID: {}".format(target))
         assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
-        self._resolve_synapse_type()
-        # NB: In this case self.synapse_type and self.source will actually be the names of the 
-        # respective segments. The names are inherited from the pyNN class, and thus a little
-        # confusing so I rename them here in the local scope to try to make it a little clearer.
-        source_segname = self.source
-        target_segname = self.synapse_type
+        # Rename variable that has been repurposed slightly        
+        segname = self.synapse_type
+        gid_offset = self.pre.id_to_index(source) * len(self.post) + self.gid_start
         for target, weight in zip(targets, weights):
-            # Check connection information to avoid duplicates if the connection is not "rectified"
-            # (one-way), where there is a gap junction connecting from one cell1 to cell2 and then 
-            # another cell2 to cell1 (because the connections are mutual)
-            if self.Connection(target, target_segname, 
-                               source, source_segname) not in self.connections:
-                # Generate unique but reproducible indices
-                pre_post_gid = (self.pre.id_to_index(source) * len(self.post) + \
-                               self.post.id_to_index(target) + self.gid_start) * 2
-                post_pre_gid = pre_post_gid + 1
-                # Create a connection list containing the two connections going in both directions
-                conn_list = (((source, source_segname), (target, target_segname), pre_post_gid),
-                             ((target, target_segname), (source, source_segname), post_pre_gid))
-                for (pre_cell, pre_seg), (post_cell, post_seg), var_gid in conn_list:
-                    if pre_cell.local:
-                        if pre_seg:
-                            segment = pre_cell._cell.segments[pre_seg.split('.')[0]]
-                        else:
-                            segment = pre_cell.source_section
-                        # Connect the pre cell voltage to the target var
-                        print "Setting source var on cell {} with gid {}".format(pre_cell, var_gid)
-                        simulator.state.parallel_context.source_var(segment(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
-                    if post_cell.local:
-                        if post_seg:
-                            segment = post_cell._cell.segments[self.synapse_type]
-                        else:
-                            segment = post_cell.source_section
-                        # Create the gap_junction and set its weight
-                        gap_junction = h.Gap(0.5, sec=segment)
-                        gap_junction.g = weight
-                        # Store gap junction in a list so it doesn't get collected by the garbage 
-                        # collector
-                        segment._gap_junctions.append(gap_junction)
-                        # Connect the gap junction with the source_var
-                        print "Setting target var on cell {} with gid {}".format(post_cell, var_gid)
-                        simulator.state.parallel_context.target_var(gap_junction._ref_vgap, var_gid) #@UndefinedVariableFromImport
-                # Save connection information to avoid duplicates, where the same cell connects
-                # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
-                self.connections.append(self.Connection(source, self.source, target,
-                                                        self.synapse_type))
+            # "variable" GIDs (as distinct from the GIDs used for cells) for both the pre to post  
+            # connection the post to pre            
+            pre_post_gid = (gid_offset + self.post.id_to_index(target)) * 2
+            post_pre_gid = pre_post_gid + 1
+            # Get the segment on target cell the gap junction connects to
+            segment = target._cell.segments[segname] if segname else target.source_section            
+            # Connect the pre cell voltage to the target var
+            print "Setting source var on cell {} with gid {}".format(target, post_pre_gid)
+            simulator.state.parallel_context.source_var(segment(0.5)._ref_v, post_pre_gid) #@UndefinedVariableFromImport              
+            # Create the gap_junction and set its weight
+            gap_junction = h.Gap(0.5, sec=segment)
+            gap_junction.g = weight
+            # Store gap junction in a list so it doesn't get collected by the garbage 
+            # collector
+            segment._gap_junctions.append(gap_junction)
+            # Connect the gap junction with the source_var
+            print "Setting target var on cell {} with gid {}".format(target, pre_post_gid)
+            simulator.state.parallel_context.target_var(gap_junction._ref_vgap, pre_post_gid) #@UndefinedVariableFromImport
+
+    def _divergent_sources(self, source, targets, weights):
+        """
+        Connect a neuron to one or more other neurons with a static connection.
+        
+        @param source [pyNN.common.IDmixin]: the ID of the pre-synaptic cell.
+        @param [list(pyNN.common.IDmixin)]: a list/1D array of post-synaptic cell IDs, or a single ID.
+        @param [list(float) or float]: Connection weight(s). Must have the same length as `targets`.
+        @param delays [Null]: This is actually ignored but only included to match the same signature\
+ as the Population._divergent_connect method
+        """
+        if not source.local:
+            raise Exception("source needs to be local for _divergent_sources")
+        if not isinstance(source, int) or source > simulator.state.gid_counter or source < 0:
+            errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
+                                                                     simulator.state.gid_counter)
+            raise errors.ConnectionError(errmsg)
+        if not core.is_listlike(targets):
+            targets = [targets]
+        if isinstance(weights, float):
+            weights = [weights]
+        assert len(targets) > 0
+        for target in targets:
+            if not isinstance(target, pyNN.common.IDMixin):
+                raise errors.ConnectionError("Invalid target ID: {}".format(target))
+        assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
+        # Get the segment on the pre cell that the gap junction is connected to
+        segment = source._cell.segments[self.source] if self.source else source.source_section
+        gid_offset = self.pre.id_to_index(source) * len(self.post) + self.gid_start
+        for target, weight in zip(targets, weights):
+            # "variable" GIDs (as distinct from the GIDs used for cells) for both the pre to post  
+            # connection the post to pre
+            pre_post_gid = (gid_offset + self.post.id_to_index(target)) * 2
+            post_pre_gid = pre_post_gid + 1
+            # Connect the pre cell voltage to the target var
+            print "Setting source var on cell {} with gid {}".format(source, pre_post_gid)
+            simulator.state.parallel_context.source_var(segment(0.5)._ref_v, pre_post_gid) #@UndefinedVariableFromImport                    
+            # Create the gap_junction and set its weight
+            gap_junction = h.Gap(0.5, sec=segment)
+            gap_junction.g = weight
+            # Store gap junction in a list so it doesn't get collected by the garbage 
+            # collector
+            segment._gap_junctions.append(gap_junction)
+            # Connect the gap junction with the source_var
+            print "Setting target var on cell {} with gid {}".format(source, post_pre_gid)
+            simulator.state.parallel_context.target_var(gap_junction._ref_vgap, post_pre_gid) #@UndefinedVariableFromImport              
 
     def _convergent_connect(self, sources, target, weights, delays):
         raise NotImplementedError
