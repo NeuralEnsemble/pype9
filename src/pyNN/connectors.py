@@ -349,6 +349,8 @@ class ProbabilisticConnector(Connector):
         else:
             create = precreate            
         targets = self.candidates[create]        
+        if self.projection.label == 'Golgis_Golgis_Gap':
+            print "Gap create: {}".format(create)
         weights = self.weights_generator.get(self.N, self.distance_matrix, create)
         delays  = self.delays_generator.get(self.N, self.distance_matrix, create)        
         
