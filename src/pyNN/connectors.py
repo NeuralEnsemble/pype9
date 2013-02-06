@@ -301,10 +301,11 @@ class ProbabilisticConnector(Connector):
         self._distance_matrix  = None
         self.projection        = projection
         if self.include_non_local:
-            self.candidates = projection.post.all_cells
+            self.candidates    = projection.post.all_cells
+            self.size          = self.N
         else:
-            self.candidates = projection.post.local_cells
-        self.size              = self.local.sum()
+            self.candidates    = projection.post.local_cells
+            self.size          = self.local.sum()
         self.allow_self_connections = allow_self_connections
        
     @property 
@@ -907,9 +908,9 @@ class SmallWorldConnector(Connector):
         self.distance_matrix   = DistanceMatrix(projection.post.positions, self.space, local)
         self.projection        = projection
         if self.include_non_local:
-            self.candidates = projection.post.all_cells
+            self.candidates    = projection.post.all_cells
         else:
-            self.candidates = projection.post.all_cells          
+            self.candidates    = projection.post.all_cells          
         self.size              = len(projection.post)
         self.progressbar(len(projection.pre))        
         proba_generator = ProbaGenerator(self.d_expression, local)
