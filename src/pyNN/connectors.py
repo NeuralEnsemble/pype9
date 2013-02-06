@@ -348,7 +348,6 @@ class ProbabilisticConnector(Connector):
             create = create[:n_connections]
         else:
             create = precreate            
-        print "pyNN/connectors.py:351: create: {}, candidates {}".format(create, self.candidates)
         targets = self.candidates[create]        
         weights = self.weights_generator.get(self.N, self.distance_matrix, create)
         delays  = self.delays_generator.get(self.N, self.distance_matrix, create)        

@@ -460,8 +460,8 @@ class Network(object):
                                 "arguments '{}' for projection '{}'\n('{}')"
                                 .format(expression, connection.args, label, e))
             connector = self._pyNN_module.connectors.DistanceDependentProbabilityConnector(
-                                    connect_expr, allow_self_connections=allow_self_connections,
-                                    weights=weight_expr, delays=delay_expr, **other_connector_args)
+                                    connect_expr, weights=weight_expr, delays=delay_expr, 
+                                    **other_connector_args)
         # If connection pattern is external, load the weights and delays from a file in PyNN
         # FromFileConnector format and then create a FromListConnector connector. Some additional
         # preprocessing is performed here, which is why the FromFileConnector isn't used directly.
