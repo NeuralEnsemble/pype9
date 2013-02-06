@@ -431,11 +431,7 @@ class Network(object):
         return param_expr
 
     def _create_projection(self, label, pre, dest, connection, source, target, weight, delay,
-                           synapse_family, verbose):
-        if pre == dest:
-            allow_self_connections = False
-        else:
-            allow_self_connections = True
+                           synapse_family, verbose, allow_self_connections=False):
         # Set expressions for connection weights and delays
         weight_expr = self._get_connection_param_expr(label, weight)
         if synapse_family == 'Electrical':
@@ -449,13 +445,13 @@ class Network(object):
             expression = connection.args.pop('geometry')
             if not hasattr(point2point, expression):
                 raise Exception("Unrecognised distance expression '{}'".format(expression))
-#            try:
-            GeometricExpression = getattr(point2point, expression)
-            connect_expr = GeometricExpression(**self._convert_all_units(connection.args))
-#            except TypeError as e:
-#                raise Exception("Could not initialise distance expression class '{}' from given " \
-#                                "arguments '{}' for projection '{}'\n('{}')"
-#                                .format(expression, connection.args, label, e))
+            try:
+                GeometricExpression = getattr(point2point, expression)
+                connect_expr = GeometricExpression(**self._convert_all_units(connection.args))
+            except TypeError as e:
+                raise Exception("Could not initialise distance expression class '{}' from given " \
+                                "arguments '{}' for projection '{}'\n('{}')"
+                                .format(expression, connection.args, label, e))
             connector = self._pyNN_module.connectors.DistanceDependentProbabilityConnector(
                                     connect_expr, allow_self_connections=allow_self_connections,
                                     weights=weight_expr, delays=delay_expr)
