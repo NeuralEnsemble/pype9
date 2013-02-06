@@ -319,6 +319,7 @@ class ProbabilisticConnector(Connector):
         cell, the array containing the connection probabilities for all the local
         targets of that pre-synaptic cell.
         """
+        print "entering probabilistic connect pyNN/connectors.py:322"
         if numpy.isscalar(p) and p == 1:
             precreate = numpy.arange(self.size, dtype=numpy.int)
         else:
