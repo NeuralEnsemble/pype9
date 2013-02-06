@@ -126,10 +126,6 @@ class ElectricalSynapseProjection(Projection):
         """
         @param rectified [bool]: Whether the gap junction is rectified (only one direction)
         """
-        if not connector.include_non_local:
-            raise Exception("The 'include_non_local' parameter flag needs to be set in the "
-                            "connector constructor for use with the ElectricalSynapseProjection "
-                            "class")
         ## Start of unique variable-GID range assigned for this projection (ends at gid_count + pre.size * dest.size * 2)
         self.gid_start = self.__class__.gid_count
         self.__class__.gid_count += pre.size * dest.size * 2

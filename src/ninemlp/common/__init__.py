@@ -442,9 +442,6 @@ class Network(object):
                                                          min_value=self.get_min_delay())
         # Set up other required connector args
         other_connector_args = {}
-        if synapse_family == 'Electrical':
-            # Delay is not required by Gap junctions so just set to something innocuous here
-            other_connector_args['include_non_local'] = True
         if connection.pattern != "OneToOne":
             other_connector_args['allow_self_connections'] = allow_self_connections            
         # Create the "Connector" class to connect up the projection

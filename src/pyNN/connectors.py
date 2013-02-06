@@ -237,14 +237,12 @@ class DistanceMatrix(object):
 
 class Connector(object):
     
-    def __init__(self, weights=0.0, delays=None, space=Space(), safe=True, verbose=False,
-                 include_non_local=False):
+    def __init__(self, weights=0.0, delays=None, space=Space(), safe=True, verbose=False):
         self.weights = weights
         self.space   = space
         self.safe    = safe
         self.verbose = verbose
         self.delays = delays
-        self.include_non_local = include_non_local
     
     def connect(self, projection):
         raise NotImplementedError()
@@ -284,9 +282,9 @@ class Connector(object):
 class ProbabilisticConnector(Connector):
     
     def __init__(self, projection, weights=0.0, delays=None,
-                 allow_self_connections=True, space=Space(), safe=True, include_non_local=False):
+                 allow_self_connections=True, space=Space(), safe=True):
 
-        Connector.__init__(self, weights, delays, space, safe, include_non_local=include_non_local)
+        Connector.__init__(self, weights, delays, space, safe)
         if isinstance(projection.rng, random.NativeRNG):
             raise Exception("Use of NativeRNG not implemented.")
         else:
@@ -300,12 +298,8 @@ class ProbabilisticConnector(Connector):
         self.probas_generator  = ProbaGenerator(RandomDistribution('uniform', (0,1), rng=self.rng), self.local)
         self._distance_matrix  = None
         self.projection        = projection
-        if self.include_non_local:
-            self.candidates    = projection.post.all_cells
-            self.size          = self.N
-        else:
-            self.candidates    = projection.post.local_cells
-            self.size          = self.local.sum()
+        self.candidates        = projection.post.local_cells
+        self.size              = self.local.sum()
         self.allow_self_connections = allow_self_connections
        
     @property 
@@ -315,8 +309,7 @@ class ProbabilisticConnector(Connector):
         delay it until the distance matrix is actually used.
         """
         if self._distance_matrix is None:
-            self._distance_matrix = DistanceMatrix(self.projection.post.positions, self.space, 
-                    numpy.ones(self.N) if self.include_non_local else self.local)
+            self._distance_matrix = DistanceMatrix(self.projection.post.positions, self.space, self.local)
         return self._distance_matrix
         
     def _probabilistic_connect(self, src, p, n_connections=None):
@@ -333,6 +326,7 @@ class ProbabilisticConnector(Connector):
             if not core.is_listlike(rarr) and numpy.isscalar(rarr): # if N=1, rarr will be a single number
                 rarr = numpy.array([rarr])
             precreate = numpy.where(rarr < p)[0]  
+
         self.distance_matrix.set_source(src.position)        
         if not self.allow_self_connections and self.projection.pre == self.projection.post:
             idx_src   = numpy.where(self.candidates == src)
@@ -340,6 +334,7 @@ class ProbabilisticConnector(Connector):
                 i     = numpy.where(precreate == idx_src[0])
                 if len(i) > 0:
                     precreate = numpy.delete(precreate, i[0])
+                
         if (n_connections is not None) and (len(precreate) > 0):            
             create = numpy.array([], dtype=numpy.int)
             while len(create) < n_connections: # if the number of requested cells is larger than the size of the
@@ -349,8 +344,6 @@ class ProbabilisticConnector(Connector):
         else:
             create = precreate            
         targets = self.candidates[create]        
-        if self.projection.label == 'Golgis_Golgis_Gap':
-            print "Gap create: {}".format(create)
         weights = self.weights_generator.get(self.N, self.distance_matrix, create)
         delays  = self.delays_generator.get(self.N, self.distance_matrix, create)        
         
@@ -365,8 +358,7 @@ class AllToAllConnector(Connector):
     """
     parameter_names = ('allow_self_connections',)
     
-    def __init__(self, allow_self_connections=True, weights=0.0, delays=None, space=Space(), 
-                 safe=True, verbose=False, include_non_local=False):
+    def __init__(self, allow_self_connections=True, weights=0.0, delays=None, space=Space(), safe=True, verbose=False):
         """
         Create a new connector.
         
@@ -382,14 +374,12 @@ class AllToAllConnector(Connector):
         `space` -- a `Space` object, needed if you wish to specify distance-
                    dependent weights or delays
         """
-        Connector.__init__(self, weights, delays, space, safe, verbose, include_non_local)
+        Connector.__init__(self, weights, delays, space, safe, verbose)
         assert isinstance(allow_self_connections, bool)
         self.allow_self_connections = allow_self_connections
         
     def connect(self, projection):
-        connector = ProbabilisticConnector(projection, self.weights, self.delays, 
-                                           self.allow_self_connections, self.space, safe=self.safe,
-                                           include_non_local=self.include_non_local)        
+        connector = ProbabilisticConnector(projection, self.weights, self.delays, self.allow_self_connections, self.space, safe=self.safe)        
         self.progressbar(len(projection.pre))
         for count, src in enumerate(projection.pre.all()):
             connector._probabilistic_connect(src, 1)
@@ -404,7 +394,7 @@ class FixedProbabilityConnector(Connector):
     parameter_names = ('allow_self_connections', 'p_connect')
     
     def __init__(self, p_connect, allow_self_connections=True, weights=0.0,
-                 delays=None, space=Space(), safe=True, verbose=False, include_non_local=False):
+                 delays=None, space=Space(), safe=True, verbose=False):
         """
         Create a new connector.
         
@@ -422,7 +412,7 @@ class FixedProbabilityConnector(Connector):
         `space` -- a `Space` object, needed if you wish to specify distance-
                    dependent weights or delays
         """
-        Connector.__init__(self, weights, delays, space, safe, verbose, include_non_local)
+        Connector.__init__(self, weights, delays, space, safe, verbose)
         assert isinstance(allow_self_connections, bool)
         self.allow_self_connections = allow_self_connections
         self.p_connect = float(p_connect)
@@ -432,7 +422,7 @@ class FixedProbabilityConnector(Connector):
         #assert projection.rng.parallel_safe
         connector = ProbabilisticConnector(projection, self.weights, self.delays,
                                            self.allow_self_connections, self.space,
-                                           safe=self.safe, include_non_local=self.include_non_local)
+                                           safe=self.safe)
         self.progressbar(len(projection.pre))
         for count, src in enumerate(projection.pre.all()):
             connector._probabilistic_connect(src, self.p_connect)
@@ -446,8 +436,7 @@ class DistanceDependentProbabilityConnector(Connector):
     parameter_names = ('allow_self_connections', 'd_expression')
     
     def __init__(self, d_expression, allow_self_connections=True,
-                 weights=0.0, delays=None, space=Space(), safe=True, 
-                 verbose=False, n_connections=None, include_non_local=False):
+                 weights=0.0, delays=None, space=Space(), safe=True, verbose=False, n_connections=None):
         """
         Create a new connector.
         
@@ -461,7 +450,7 @@ class DistanceDependentProbabilityConnector(Connector):
         `delays`  -- as `weights`. If `None`, all synaptic delays will be set
                      to the global minimum delay.
         """
-        Connector.__init__(self, weights, delays, space, safe, verbose, include_non_local)
+        Connector.__init__(self, weights, delays, space, safe, verbose)
         if isinstance(d_expression, str) or callable(d_expression):
             try:
                 if isinstance(d_expression, str) and not expand_distances(d_expression):                       
@@ -479,10 +468,7 @@ class DistanceDependentProbabilityConnector(Connector):
         
     def connect(self, projection):
         """Connect-up a Projection."""
-        connector       = ProbabilisticConnector(projection, self.weights, self.delays, 
-                                                 self.allow_self_connections, self.space, 
-                                                 safe=self.safe, 
-                                                 include_non_local=self.include_non_local)
+        connector       = ProbabilisticConnector(projection, self.weights, self.delays, self.allow_self_connections, self.space, safe=self.safe)
         proba_generator = ProbaGenerator(self.d_expression, connector.local)
         self.progressbar(len(projection.pre))
         if (projection._simulator.state.num_processes > 1) and (self.n_connections is not None):
@@ -503,7 +489,7 @@ class FromListConnector(Connector):
     """
     parameter_names = ('conn_list',)
     
-    def __init__(self, conn_list, safe=True, verbose=False, include_non_local=False):
+    def __init__(self, conn_list, safe=True, verbose=False):
         """
         Create a new connector.
         
@@ -515,18 +501,14 @@ class FromListConnector(Connector):
                        the index of the postsynaptic neuron.
         """
         # needs extending for dynamic synapses.
-        Connector.__init__(self, 0.0, None, safe=safe, verbose=verbose, 
-                           include_non_local=include_non_local)
+        Connector.__init__(self, 0.0, None, safe=safe, verbose=verbose)
         self.conn_list  = numpy.array(conn_list)               
         
     def connect(self, projection):
         """Connect-up a Projection."""
         idx     = numpy.argsort(self.conn_list[:, 0])
         self.sources    = numpy.unique(self.conn_list[:,0]).astype(numpy.int)
-        if self.include_non_local:
-            self.candidates = projection.post.all_cells
-        else:
-            self.candidates = projection.post.local_cells
+        self.candidates = projection.post.local_cells
         self.conn_list  = self.conn_list[idx]
         self.progressbar(len(self.sources))        
         count = 0
@@ -559,7 +541,7 @@ class FromFileConnector(FromListConnector):
     """
     parameter_names = ('filename', 'distributed')
     
-    def __init__(self, file, distributed=False, safe=True, verbose=False, include_non_local=False):
+    def __init__(self, file, distributed=False, safe=True, verbose=False):
         """
         Create a new connector.
         
@@ -570,8 +552,7 @@ class FromFileConnector(FromListConnector):
                          rank. This speeds up loading connections for
                          distributed simulations.
         """
-        Connector.__init__(self, 0.0, None, safe=safe, verbose=verbose, 
-                           include_non_local=include_non_local)
+        Connector.__init__(self, 0.0, None, safe=safe, verbose=verbose)
         
         if isinstance(file, basestring):
             file = files.StandardTextFile(file, mode='r')        
@@ -600,8 +581,7 @@ class FixedNumberPostConnector(Connector):
     """
     parameter_names = ('allow_self_connections', 'n')
     
-    def __init__(self, n, allow_self_connections=True, weights=0.0, delays=None, 
-                 space=Space(), safe=True, verbose=False, include_non_local=False):
+    def __init__(self, n, allow_self_connections=True, weights=0.0, delays=None, space=Space(), safe=True, verbose=False):
         """
         Create a new connector.
         
@@ -619,7 +599,7 @@ class FixedNumberPostConnector(Connector):
         `delays`  -- as `weights`. If `None`, all synaptic delays will be set
                      to the global minimum delay.
         """
-        Connector.__init__(self, weights, delays, space, safe, verbose, include_non_local)
+        Connector.__init__(self, weights, delays, space, safe, verbose)
         assert isinstance(allow_self_connections, bool)
         self.allow_self_connections = allow_self_connections
         if isinstance(n, int):
@@ -689,8 +669,7 @@ class FixedNumberPreConnector(Connector):
     """
     parameter_names = ('allow_self_connections', 'n')
     
-    def __init__(self, n, allow_self_connections=True, weights=0.0, delays=None, 
-                 space=Space(), safe=True, verbose=False, include_non_local=False):
+    def __init__(self, n, allow_self_connections=True, weights=0.0, delays=None, space=Space(), safe=True, verbose=False):
         """
         Create a new connector.
         
@@ -708,7 +687,7 @@ class FixedNumberPreConnector(Connector):
         `delays`  -- as `weights`. If `None`, all synaptic delays will be set
                      to the global minimum delay.
         """
-        Connector.__init__(self, weights, delays, space, safe, verbose, include_non_local)
+        Connector.__init__(self, weights, delays, space, safe, verbose)
         assert isinstance(allow_self_connections, bool)
         self.allow_self_connections = allow_self_connections
         if isinstance(n, int):
@@ -772,8 +751,7 @@ class OneToOneConnector(Connector):
     """
     parameter_names = tuple()
     
-    def __init__(self, weights=0.0, delays=None, space=Space(), 
-                 safe=True, verbose=False, include_non_local=False):
+    def __init__(self, weights=0.0, delays=None, space=Space(), safe=True, verbose=False):
         """
         Create a new connector.
         
@@ -783,7 +761,7 @@ class OneToOneConnector(Connector):
         `delays`  -- as `weights`. If `None`, all synaptic delays will be set
                      to the global minimum delay.
         """
-        Connector.__init__(self, weights, delays, space, verbose, include_non_local)
+        Connector.__init__(self, weights, delays, space, verbose)
         self.space = space
         self.safe  = safe
     
@@ -821,8 +799,7 @@ class SmallWorldConnector(Connector):
     parameter_names = ('allow_self_connections', 'degree', 'rewiring')
     
     def __init__(self, degree, rewiring, allow_self_connections=True,
-                 weights=0.0, delays=None, space=Space(), safe=True, verbose=False, 
-                 n_connections=None, include_non_local=False):
+                 weights=0.0, delays=None, space=Space(), safe=True, verbose=False, n_connections=None):
         """
         Create a new connector.
         
@@ -840,7 +817,7 @@ class SmallWorldConnector(Connector):
         `delays`  -- as `weights`. If `None`, all synaptic delays will be set
                      to the global minimum delay.
         """
-        Connector.__init__(self, weights, delays, space, safe, verbose, include_non_local)
+        Connector.__init__(self, weights, delays, space, safe, verbose)
         assert 0 <= rewiring <= 1
         assert isinstance(allow_self_connections, bool)        
         self.rewiring               = rewiring    
@@ -908,10 +885,7 @@ class SmallWorldConnector(Connector):
         self.probas_generator  = ProbaGenerator(RandomDistribution('uniform',(0,1), rng=self.rng), local)
         self.distance_matrix   = DistanceMatrix(projection.post.positions, self.space, local)
         self.projection        = projection
-        if self.include_non_local:
-            self.candidates    = projection.post.all_cells
-        else:
-            self.candidates    = projection.post.all_cells          
+        self.candidates        = projection.post.all_cells          
         self.size              = len(projection.post)
         self.progressbar(len(projection.pre))        
         proba_generator = ProbaGenerator(self.d_expression, local)
@@ -926,12 +900,10 @@ class CSAConnector(Connector):
     parameter_names = ('cset',)
     
     if haveCSA:
-        def __init__ (self, cset, weights=None, delays=None, safe=True, verbose=False, 
-                      include_non_local=False):
+        def __init__ (self, cset, weights=None, delays=None, safe=True, verbose=False):
             """
             """
-            Connector.__init__(self, None, None, safe=safe, verbose=verbose, 
-                               include_non_local=include_non_local)
+            Connector.__init__(self, None, None, safe=safe, verbose=verbose)
             self.cset = cset
             if csa.arity(cset) == 0:
                 #assert weights is not None and delays is not None, \
@@ -945,7 +917,7 @@ class CSAConnector(Connector):
                 assert weights is None and delays is None, \
                        "weights or delays specified both in connection-set and as CSAConnector argument"
     else:
-        def __init__ (self, cset, safe=True, verbose=False, include_non_local=False):
+        def __init__ (self, cset, safe=True, verbose=False):
             raise RuntimeError, "CSAConnector not available---couldn't import csa module"
 
     @staticmethod
