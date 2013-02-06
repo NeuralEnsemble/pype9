@@ -161,6 +161,7 @@ class ElectricalSynapseProjection(Projection):
         # confusing so I rename them here in the local scope to try to make it a little clearer.
         source_segname = self.source
         target_segname = self.synapse_type
+        print "Pre mask: {}, post mask: {}".format(self.pre._mask_local, self.post._mask_local)
         for target, weight in zip(targets, weights):
             # Check connection information to avoid duplicates if the connection is not "rectified"
             # (one-way), where there is a gap junction connecting from one cell1 to cell2 and then 
