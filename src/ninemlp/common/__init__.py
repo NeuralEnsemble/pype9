@@ -436,11 +436,18 @@ class Network(object):
         weight_expr = self._get_connection_param_expr(label, weight)
         if synapse_family == 'Electrical':
             # Delay is not required by Gap junctions so just set to something innocuous here
-            delay_expr = 1.0 
+            delay_expr = 1.0
         else:
             delay_expr = self._get_connection_param_expr(label, delay,
                                                          min_value=self.get_min_delay())
-        # Set connection probability     
+        # Set up other required connector args
+        other_connector_args = {}
+        if synapse_family == 'Electrical':
+            # Delay is not required by Gap junctions so just set to something innocuous here
+            other_connector_args['include_non_local'] = True
+        if connection.pattern != "OneToOne":
+            other_connector_args['allow_self_connections'] = allow_self_connections            
+        # Create the "Connector" class to connect up the projection
         if connection.pattern == 'DistanceBased':
             expression = connection.args.pop('geometry')
             if not hasattr(point2point, expression):
@@ -454,7 +461,7 @@ class Network(object):
                                 .format(expression, connection.args, label, e))
             connector = self._pyNN_module.connectors.DistanceDependentProbabilityConnector(
                                     connect_expr, allow_self_connections=allow_self_connections,
-                                    weights=weight_expr, delays=delay_expr)
+                                    weights=weight_expr, delays=delay_expr, **other_connector_args)
         # If connection pattern is external, load the weights and delays from a file in PyNN
         # FromFileConnector format and then create a FromListConnector connector. Some additional
         # preprocessing is performed here, which is why the FromFileConnector isn't used directly.
@@ -485,22 +492,19 @@ class Network(object):
                                                  self.get_min_delay())
                 # Bound loaded delays by specified minimum delay                        
                 delays[below_min_indices] = self.get_min_delay()
-            connector = self._pyNN_module.connectors.FromListConnector(connection_matrix)
+            connector = self._pyNN_module.connectors.FromListConnector(connection_matrix,
+                                                                       **other_connector_args)
         # Use in-built pyNN connectors for simple patterns such as AllToAll and OneToOne
         # NB: At this stage the pattern name is tied to the connector name in pyNN but could be
         # decoupled from this at some point (but I am not sure you would want to)
         elif connection.pattern + 'Connector' in dir(pyNN.connectors):
             ConnectorClass = getattr(self._pyNN_module.connectors,
                                      '{}Connector'.format(connection.pattern))
-            if ConnectorClass == pyNN.connectors.OneToOneConnector:
-                connector_specific_args = {}
-            else:
-                connector_specific_args = {'allow_self_connections' : allow_self_connections}
             connector = ConnectorClass(weights=weight_expr, delays=delay_expr,
-                                       **connector_specific_args)
+                                       **other_connector_args)
         else:
             raise Exception("Unrecognised pattern type '{}'".format(connection.pattern))
-        # Initialise the projection object and return
+        # Initialise the rest of the projection object and return
         with warnings.catch_warnings(record=True) as warnings_list:
             warnings.simplefilter("always", category=point2point.InsufficientTargetsWarning)
             if synapse_family == 'Chemical':
@@ -513,10 +517,6 @@ class Network(object):
                 if not self._ElectricalSynapseProjection_class:
                     raise Exception("The selected simulator doesn't currently support electrical "
                                     "synapse projections")
-#                if target.synapse:
-#                    target_str = target.segment + '.' + target.synapse
-#                else:
-#                    target_str = target.segment
                 projection = self._ElectricalSynapseProjection_class(pre, dest, label, connector, 
                                                                      source=source.segment, 
                                                                      target=target.segment,

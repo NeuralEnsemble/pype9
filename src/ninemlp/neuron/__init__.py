@@ -126,6 +126,10 @@ class ElectricalSynapseProjection(Projection):
         """
         @param rectified [bool]: Whether the gap junction is rectified (only one direction)
         """
+        if not connector.include_non_local:
+            raise Exception("The 'include_non_local' parameter flag needs to be set in the "
+                            "connector constructor for use with the ElectricalSynapseProjection "
+                            "class")
         ## Start of unique variable-GID range assigned for this projection (ends at gid_count + pre.size * dest.size * 2)
         self.gid_start = self.__class__.gid_count
         self.__class__.gid_count += pre.size * dest.size * 2
@@ -161,7 +165,6 @@ class ElectricalSynapseProjection(Projection):
         # confusing so I rename them here in the local scope to try to make it a little clearer.
         source_segname = self.source
         target_segname = self.synapse_type
-        print "Pre mask: {}, post mask: {}".format(self.pre._mask_local, self.post._mask_local)
         for target, weight in zip(targets, weights):
             # Check connection information to avoid duplicates if the connection is not "rectified"
             # (one-way), where there is a gap junction connecting from one cell1 to cell2 and then 
@@ -176,7 +179,6 @@ class ElectricalSynapseProjection(Projection):
                 conn_list = (((source, source_segname), (target, target_segname), pre_post_gid),
                              ((target, target_segname), (source, source_segname), post_pre_gid))
                 for (pre_cell, pre_seg), (post_cell, post_seg), var_gid in conn_list:
-                    print "Creating connection between cell {} and cell {}".format(pre_cell, post_cell)
                     if pre_cell.local:
                         if pre_seg:
                             segment = pre_cell._cell.segments[pre_seg.split('.')[0]]
