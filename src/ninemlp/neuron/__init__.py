@@ -175,6 +175,7 @@ class ElectricalSynapseProjection(Projection):
                 conn_list = (((source, source_segname), (target, target_segname), pre_post_gid),
                              ((target, target_segname), (source, source_segname), post_pre_gid))
                 for (pre_cell, pre_seg), (post_cell, post_seg), var_gid in conn_list:
+                    print "Creating connection between cell {} and cell {}".format(pre_cell, post_cell)
                     if pre_cell.local:
                         if pre_seg:
                             segment = pre_cell._cell.segments[pre_seg.split('.')[0]]
