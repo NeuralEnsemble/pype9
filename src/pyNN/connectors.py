@@ -315,7 +315,8 @@ class ProbabilisticConnector(Connector):
         delay it until the distance matrix is actually used.
         """
         if self._distance_matrix is None:
-            self._distance_matrix = DistanceMatrix(self.projection.post.positions, self.space, self.local)
+            self._distance_matrix = DistanceMatrix(self.projection.post.positions, self.space, 
+                    numpy.ones(self.N) if self.include_non_local else self.local)
         return self._distance_matrix
         
     def _probabilistic_connect(self, src, p, n_connections=None):
@@ -339,7 +340,6 @@ class ProbabilisticConnector(Connector):
                 i     = numpy.where(precreate == idx_src[0])
                 if len(i) > 0:
                     precreate = numpy.delete(precreate, i[0])
-                
         if (n_connections is not None) and (len(precreate) > 0):            
             create = numpy.array([], dtype=numpy.int)
             while len(create) < n_connections: # if the number of requested cells is larger than the size of the
