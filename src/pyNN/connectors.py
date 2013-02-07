@@ -212,7 +212,6 @@ class DistanceMatrix(object):
         assert B.shape[0] == 3, B.shape
         self.space = space
         if mask is not None:
-            print "mask: {}, B: {}".format(mask, B)
             self.B = B[:, mask]
         else:
             self.B = B
