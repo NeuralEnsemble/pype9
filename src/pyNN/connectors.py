@@ -302,7 +302,7 @@ class ProbabilisticConnector(Connector):
         # gap junctions) we need to store the unmasked probas, weights, and delays matrices as well
         self.prepare_sources = hasattr(projection, '_prepare_sources')
         if self.prepare_sources:
-            self.full_mask = numpy.ones(self.N, dtype=int)
+            self.full_mask = numpy.ones(self.N, dtype=bool)
             self.full_weights_generator = WeightGenerator(weights, self.full_mask, projection, safe)
             self.full_delays_generator = DelayGenerator(self.delays, self.full_mask,
                                                         kernel=projection._simulator.state,
