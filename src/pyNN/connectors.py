@@ -297,11 +297,65 @@ class ProbabilisticConnector(Connector):
         self.delays_generator = DelayGenerator(self.delays, self.local, kernel=projection._simulator.state, safe=safe)
         self.probas_generator = ProbaGenerator(RandomDistribution('uniform', (0, 1), rng=self.rng), self.local)
         self._distance_matrix = None
+        # The projection requires the source cells to be prepared as well as the target cells (i.e.
+        # gap junctions) we need to store the unmasked probas, weights, and delays matrices as well
+        self.prepare_sources = hasattr(projection, '_prepare_sources')
+        if self.prepare_sources:
+            self.full_mask = numpy.ones(self.N, dtype=int)
+            self.full_weights_generator = WeightGenerator(weights, self.full_mask, projection, safe)
+            self.full_delays_generator = DelayGenerator(self.delays, self.full_mask,
+                                                        kernel=projection._simulator.state,
+                                                        safe=safe)
+            self.full_probas_generator = ProbaGenerator(RandomDistribution('uniform', (0, 1),
+                                                                           rng=self.rng),
+                                                        self.full_mask)
+            self._full_distance_matrix = None
+            self.full_candidates = projection.post.all_cells        
         self.projection = projection
         self.candidates = projection.post.local_cells
         self.size = self.local.sum()
         self.allow_self_connections = allow_self_connections
 
+    def _get_size(self, src):
+        if self.prepare_sources and src.local:
+            return self.N
+        else:
+            return self.size
+
+    def _get_delays(self, src, create):
+        if self.prepare_sources and src.local:
+            delays = self.full_delays_generator.get(self.N, self.full_distance_matrix, create)
+        else:
+            delays = self.delays_generator.get(self.N, self.distance_matrix, create)
+        return delays
+
+    def _get_weights(self, src, create):
+        if self.prepare_sources and src.local:
+            weights = self.full_weights_generator.get(self.N, self.full_distance_matrix, create)
+        else:
+            weights = self.weights_generator.get(self.N, self.distance_matrix, create)
+        return weights
+
+    def _get_probas(self, src):
+        if self.prepare_sources and src.local:
+            rarr = self.full_probas_generator.get(self.N)
+        else:
+            rarr = self.probas_generator.get(self.N)
+        return rarr
+
+    def _set_distance_matrix(self, src):
+        if self.prepare_sources and src.local:
+            self.full_distance_matrix.set_source(src.position)
+        else:
+            self.distance_matrix.set_source(src.position)
+            
+    def _get_candidates(self, src, create):
+        if self.prepare_sources and src.local:
+            candidates = self.full_candidates[create]
+        else:
+            candidates = self.candidates[create]
+        return candidates
+    
     @property
     def distance_matrix(self):
         """
@@ -312,6 +366,17 @@ class ProbabilisticConnector(Connector):
             self._distance_matrix = DistanceMatrix(self.projection.post.positions, self.space, self.local)
         return self._distance_matrix
 
+    @property
+    def full_distance_matrix(self):
+        """
+        We want to avoid calculating positions if it is not necessary, so we
+        delay it until the distance matrix is actually used.
+        """
+        if self._full_distance_matrix is None:
+            self._full_distance_matrix = DistanceMatrix(self.projection.post.positions, self.space,
+                                                        self.full_mask)
+        return self._full_distance_matrix
+
     def _probabilistic_connect(self, src, p, n_connections=None):
         """
         Connect-up a Projection with connection probability p, where p may be either
@@ -319,17 +384,17 @@ class ProbabilisticConnector(Connector):
         cell, the array containing the connection probabilities for all the local
         targets of that pre-synaptic cell.
         """
-        if hasattr(self.projection, '_divergent_sources') and src.local:
+        if self.prepare_sources and src.local:
             pass
         if numpy.isscalar(p) and p == 1:
-            precreate = numpy.arange(self.size, dtype=numpy.int)
+            precreate = numpy.arange(self._get_size(src), dtype=numpy.int)
         else:
-            rarr = self.probas_generator.get(self.N)
+            rarr = self._get_probas(src)
             if not core.is_listlike(rarr) and numpy.isscalar(rarr): # if N=1, rarr will be a single number
                 rarr = numpy.array([rarr])
             precreate = numpy.where(rarr < p)[0]
 
-        self.distance_matrix.set_source(src.position)
+        self._set_distance_matrix(src)
         if not self.allow_self_connections and self.projection.pre == self.projection.post:
             idx_src = numpy.where(self.candidates == src)
             if len(idx_src) > 0:
@@ -345,17 +410,22 @@ class ProbabilisticConnector(Connector):
             create = create[:n_connections]
         else:
             create = precreate
-        targets = self.candidates[create]
-        delays = self.delays_generator.get(self.N, self.distance_matrix, create)
-        weights = self.weights_generator.get(self.N, self.distance_matrix, create)
+        targets = self._get_candidates(src, create)
+        delays = self._get_delays(src, create)
+        weights = self._get_weights(src, create)
+        # If the projection requires the sources to be prepared as well (i.e. gap junctions).
+        if self.prepare_sources and src.local:
+            self.projection._prepare_sources(src, self.projection.post.all_cells[create], weights, 
+                                             delays)
+            # If the source side needs to be prepared then the full matrices needs to be passed
+            # to prepare_sources, whereas _divergent_connect expects only the targets on the current
+            # node.
+            local_indices = numpy.where([target.local for target in targets])
+            targets = targets[local_indices]
+            weights = weights[local_indices]
+            delays = delays[local_indices]
         if len(targets) > 0:
-            self.projection._divergent_connect(src, targets.tolist(), weights, delays)
-        # If the projection requires the _divergent_sources to be called as well (i.e. gap junctions)
-        if hasattr(self.projection, '_divergent_sources') and src.local:
-            self.projection._divergent_sources(src, self.projection.post.all_cells[create],
-                                               weights)
-            
-
+            self.projection._divergent_connect(src, targets.tolist(), weights, delays)          
 
 
 class AllToAllConnector(Connector):

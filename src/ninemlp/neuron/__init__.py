@@ -178,7 +178,7 @@ class ElectricalSynapseProjection(Projection):
             print "Setting target var on cell {} with gid {}".format(target, pre_post_gid)
             simulator.state.parallel_context.target_var(gap_junction._ref_vgap, pre_post_gid) #@UndefinedVariableFromImport
 
-    def _divergent_sources(self, source, targets, weights):
+    def _prepare_sources(self, source, targets, weights, delays=None): #@UnusedVariable
         """
         Connect a neuron to one or more other neurons with a static connection.
         
