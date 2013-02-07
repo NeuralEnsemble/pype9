@@ -547,13 +547,21 @@ class DistanceDependentProbabilityConnector(Connector):
         """Connect-up a Projection."""
         connector = ProbabilisticConnector(projection, self.weights, self.delays, self.allow_self_connections, self.space, safe=self.safe)
         proba_generator = ProbaGenerator(self.d_expression, connector.local)
+        # Used when source cells also need to be prepared (i.e. Gap junctions)
+        if connector.prepare_sources:
+            full_proba_generator = ProbaGenerator(self.d_expression, connector.full_mask)
         self.progressbar(len(projection.pre))
         if (projection._simulator.state.num_processes > 1) and (self.n_connections is not None):
             raise Exception("n_connections not implemented yet for this connector in parallel !")
 
         for count, src in enumerate(projection.pre.all()):
-            connector.distance_matrix.set_source(src.position)
-            proba = proba_generator.get(connector.N, connector.distance_matrix)
+            connector._set_distance_matrix(src)
+            # If source cells also need to be prepared (i.e. Gap junctions), the full connection
+            # matrix is required when the source is local
+            if connector.prepare_sources and src.local:
+                proba = full_proba_generator.get(connector.N, connector.full_distance_matrix)
+            else:
+                proba = proba_generator.get(connector.N, connector.distance_matrix)
             if proba.dtype == 'bool':
                 proba = proba.astype(float)
             connector._probabilistic_connect(src, proba, self.n_connections)
