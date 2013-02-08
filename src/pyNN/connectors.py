@@ -399,9 +399,10 @@ class ProbabilisticConnector(Connector):
             elif self.allow_self_connections == 'NotEvenMutual':
                 idx_del = numpy.where(self._get_candidates(src) <= src)
             if len(idx_del) > 0:
-                i = numpy.where(precreate == idx_del[0])
-                if len(i) > 0:
-                    precreate = numpy.delete(precreate, i[0])
+                precreate = numpy.delete(precreate, idx_del)
+#                i = numpy.where(precreate == idx_del[0])
+#                if len(i) > 0:
+#                    precreate = numpy.delete(precreate, i[0])
         if (n_connections is not None) and (len(precreate) > 0):
             create = numpy.array([], dtype=numpy.int)
             while len(create) < n_connections: # if the number of requested cells is larger than the size of the
