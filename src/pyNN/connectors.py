@@ -349,11 +349,11 @@ class ProbabilisticConnector(Connector):
         else:
             self.distance_matrix.set_source(src.position)
             
-    def _get_candidates(self, src, create):
+    def _get_candidates(self, src):
         if self.prepare_sources and src.local:
-            candidates = self.full_candidates[create]
+            candidates = self.full_candidates
         else:
-            candidates = self.candidates[create]
+            candidates = self.candidates
         return candidates
     
     @property
@@ -395,10 +395,9 @@ class ProbabilisticConnector(Connector):
         self._set_distance_matrix(src)
         if self.projection.pre == self.projection.post:
             if not self.allow_self_connections:            
-                idx_del = numpy.where(self.candidates == src)
+                idx_del = numpy.where(self._get_candidates(src) == src)
             elif self.allow_self_connections == 'NotEvenMutual':
-                idx_del = numpy.where(self.candidates <= src)
-            print "src {} - del: {}".format(src, idx_del)
+                idx_del = numpy.where(self._get_candidates(src) <= src)
             if len(idx_del) > 0:
                 i = numpy.where(precreate == idx_del[0])
                 if len(i) > 0:
@@ -411,7 +410,7 @@ class ProbabilisticConnector(Connector):
             create = create[:n_connections]
         else:
             create = precreate
-        targets = self._get_candidates(src, create)
+        targets = self._get_candidates(src)[create]
         delays = self._get_delays(src, create)
         weights = self._get_weights(src, create)
         # If the projection requires the sources to be prepared as well (i.e. gap junctions).
