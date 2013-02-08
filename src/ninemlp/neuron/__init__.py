@@ -167,7 +167,7 @@ class ElectricalSynapseProjection(Projection):
             # Get the segment on target cell the gap junction connects to
             segment = target._cell.segments[segname] if segname else target.source_section            
             # Connect the pre cell voltage to the target var
-            print "Setting source_var on target cell {} to connect to source cell {} with gid {}".format(target, source, post_pre_gid)
+            print "Setting source_var on target cell {} to connect to source cell {} with gid {} on process {}".format(target, source, post_pre_gid, simulator.state.mpi_rank)
             simulator.state.parallel_context.source_var(segment(0.5)._ref_v, post_pre_gid) #@UndefinedVariableFromImport              
             # Create the gap_junction and set its weight
             gap_junction = h.Gap(0.5, sec=segment)
@@ -176,7 +176,7 @@ class ElectricalSynapseProjection(Projection):
             # collector
             segment._gap_junctions.append(gap_junction)
             # Connect the gap junction with the source_var
-            print "Setting target_var on target cell {} to connect to source cell {} with gid {}".format(target, source, pre_post_gid)
+            print "Setting target_var on target cell {} to connect to source cell {} with gid {} on process {}".format(target, source, pre_post_gid, simulator.state.mpi_rank)
             simulator.state.parallel_context.target_var(gap_junction._ref_vgap, pre_post_gid) #@UndefinedVariableFromImport
 
     def _prepare_sources(self, source, targets, weights, delays=None): #@UnusedVariable
@@ -213,7 +213,7 @@ class ElectricalSynapseProjection(Projection):
             pre_post_gid = (gid_offset + self.post.id_to_index(target)) * 2
             post_pre_gid = pre_post_gid + 1
             # Connect the pre cell voltage to the target var
-            print "Setting source_var on source cell {} to connect to target cell {} with gid {}".format(source, target, pre_post_gid)
+            print "Setting source_var on source cell {} to connect to target cell {} with gid {} on process {}".format(source, target, pre_post_gid, simulator.state.mpi_rank)
             simulator.state.parallel_context.source_var(segment(0.5)._ref_v, pre_post_gid) #@UndefinedVariableFromImport                    
             # Create the gap_junction and set its weight
             gap_junction = h.Gap(0.5, sec=segment)
@@ -222,7 +222,7 @@ class ElectricalSynapseProjection(Projection):
             # collector
             segment._gap_junctions.append(gap_junction)
             # Connect the gap junction with the source_var
-            print "Setting target_var on source cell {} to connect to target cell {} with gid {}".format(source, target, post_pre_gid)
+            print "Setting target_var on source cell {} to connect to target cell {} with gid {} on process {}".format(source, target, post_pre_gid, simulator.state.mpi_rank)
             simulator.state.parallel_context.target_var(gap_junction._ref_vgap, post_pre_gid) #@UndefinedVariableFromImport              
 
     def _convergent_connect(self, sources, target, weights, delays):
