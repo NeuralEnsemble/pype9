@@ -221,7 +221,7 @@ class DistanceMatrix(object):
             if sub_mask is None:
                 self._distance_matrix = self.space.distances(self.A, self.B, expand)
             else:
-                self._distance_matrix = self.space.distances(self.A, self.B[:, sub_mask], expand)
+                    self._distance_matrix = self.space.distances(self.A, self.B[:, sub_mask], expand)
             if expand:
                 N = self._distance_matrix.shape[2]
                 self._distance_matrix = self._distance_matrix.reshape((3, N))
@@ -400,9 +400,6 @@ class ProbabilisticConnector(Connector):
                 idx_del = numpy.where(self._get_candidates(src) <= src)
             if len(idx_del) > 0:
                 precreate = numpy.delete(precreate, idx_del)
-#                i = numpy.where(precreate == idx_del[0])
-#                if len(i) > 0:
-#                    precreate = numpy.delete(precreate, i[0])
         if (n_connections is not None) and (len(precreate) > 0):
             create = numpy.array([], dtype=numpy.int)
             while len(create) < n_connections: # if the number of requested cells is larger than the size of the
@@ -411,23 +408,25 @@ class ProbabilisticConnector(Connector):
             create = create[:n_connections]
         else:
             create = precreate
-        targets = self._get_candidates(src)[create]
-        delays = self._get_delays(src, create)
-        weights = self._get_weights(src, create)
-        # If the projection requires the sources to be prepared as well (i.e. gap junctions).
-        if self.prepare_sources and src.local:
+        # If there are targets and/or sources to create
+        if len(create):
+            targets = self._get_candidates(src)[create]
+            delays = self._get_delays(src, create)
+            weights = self._get_weights(src, create)
+            # If the projection requires the sources to be prepared as well (i.e. gap junctions).
+            if self.prepare_sources and src.local:
+                if len(targets) > 0:
+                    self.projection._prepare_sources(src, self.projection.post.all_cells[create], 
+                                                     weights, delays)
+                    # If the source side needs to be prepared then the full matrices needs to be
+                    # passed to prepare_sources, whereas _divergent_connect expects only the 
+                    # targets on the current node.
+                    local_indices = numpy.where([target.local for target in targets])
+                    targets = targets[local_indices]
+                    weights = weights[local_indices]
+                    delays = delays[local_indices]
             if len(targets) > 0:
-                self.projection._prepare_sources(src, self.projection.post.all_cells[create], 
-                                                 weights, delays)
-                # If the source side needs to be prepared then the full matrices needs to be passed
-                # to prepare_sources, whereas _divergent_connect expects only the targets on the 
-                # current node.
-                local_indices = numpy.where([target.local for target in targets])
-                targets = targets[local_indices]
-                weights = weights[local_indices]
-                delays = delays[local_indices]
-        if len(targets) > 0:
-            self.projection._divergent_connect(src, targets.tolist(), weights, delays)          
+                self.projection._divergent_connect(src, targets.tolist(), weights, delays)          
 
 
 class AllToAllConnector(Connector):
