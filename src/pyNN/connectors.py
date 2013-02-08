@@ -398,6 +398,7 @@ class ProbabilisticConnector(Connector):
                 idx_del = numpy.where(self.candidates == src)
             elif self.allow_self_connections == 'NotEvenMutual':
                 idx_del = numpy.where(self.candidates <= src)
+            print "src {} - del: {}".format(src, idx_del)
             if len(idx_del) > 0:
                 i = numpy.where(precreate == idx_del[0])
                 if len(i) > 0:
