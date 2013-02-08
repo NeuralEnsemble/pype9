@@ -312,8 +312,9 @@ class Network(ninemlp.common.Network):
             if isinstance(proj, ElectricalSynapseProjection):
                 includes_electrical = True
         if includes_electrical:
-            print "Setting up transfer on MPI process {}".format(simulator.state.mpi_rank)
-            simulator.state.parallel_context.setup_transfer() #@UndefinedVariableFromImport
+            if simulator.state.mpi_rank != 2:
+                print "Setting up transfer on MPI process {}".format(simulator.state.mpi_rank)
+                simulator.state.parallel_context.setup_transfer() #@UndefinedVariableFromImport
 
 if __name__ == "__main__":
 
