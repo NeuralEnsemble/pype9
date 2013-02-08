@@ -384,8 +384,6 @@ class ProbabilisticConnector(Connector):
         cell, the array containing the connection probabilities for all the local
         targets of that pre-synaptic cell.
         """
-        if self.prepare_sources and src.local:
-            pass
         if numpy.isscalar(p) and p == 1:
             precreate = numpy.arange(self._get_size(src), dtype=numpy.int)
         else:
@@ -395,13 +393,15 @@ class ProbabilisticConnector(Connector):
             precreate = numpy.where(rarr < p)[0]
 
         self._set_distance_matrix(src)
-        if not self.allow_self_connections and self.projection.pre == self.projection.post:
-            idx_src = numpy.where(self.candidates == src)
-            if len(idx_src) > 0:
-                i = numpy.where(precreate == idx_src[0])
+        if self.projection.pre == self.projection.post:
+            if not self.allow_self_connections:            
+                idx_del = numpy.where(self.candidates == src)
+            elif self.allow_self_connections == 'NotEvenMutual':
+                idx_del = numpy.where(self.candidates <= src)
+            if len(idx_del) > 0:
+                i = numpy.where(precreate == idx_del[0])
                 if len(i) > 0:
                     precreate = numpy.delete(precreate, i[0])
-
         if (n_connections is not None) and (len(precreate) > 0):
             create = numpy.array([], dtype=numpy.int)
             while len(create) < n_connections: # if the number of requested cells is larger than the size of the
@@ -415,15 +415,16 @@ class ProbabilisticConnector(Connector):
         weights = self._get_weights(src, create)
         # If the projection requires the sources to be prepared as well (i.e. gap junctions).
         if self.prepare_sources and src.local:
-            self.projection._prepare_sources(src, self.projection.post.all_cells[create], weights, 
-                                             delays)
-            # If the source side needs to be prepared then the full matrices needs to be passed
-            # to prepare_sources, whereas _divergent_connect expects only the targets on the current
-            # node.
-            local_indices = numpy.where([target.local for target in targets])
-            targets = targets[local_indices]
-            weights = weights[local_indices]
-            delays = delays[local_indices]
+            if len(targets) > 0:
+                self.projection._prepare_sources(src, self.projection.post.all_cells[create], 
+                                                 weights, delays)
+                # If the source side needs to be prepared then the full matrices needs to be passed
+                # to prepare_sources, whereas _divergent_connect expects only the targets on the 
+                # current node.
+                local_indices = numpy.where([target.local for target in targets])
+                targets = targets[local_indices]
+                weights = weights[local_indices]
+                delays = delays[local_indices]
         if len(targets) > 0:
             self.projection._divergent_connect(src, targets.tolist(), weights, delays)          
 
@@ -452,7 +453,7 @@ class AllToAllConnector(Connector):
                    dependent weights or delays
         """
         Connector.__init__(self, weights, delays, space, safe, verbose)
-        assert isinstance(allow_self_connections, bool)
+        #assert isinstance(allow_self_connections, bool)
         self.allow_self_connections = allow_self_connections
 
     def connect(self, projection):
@@ -490,7 +491,7 @@ class FixedProbabilityConnector(Connector):
                    dependent weights or delays
         """
         Connector.__init__(self, weights, delays, space, safe, verbose)
-        assert isinstance(allow_self_connections, bool)
+        #assert isinstance(allow_self_connections, bool)
         self.allow_self_connections = allow_self_connections
         self.p_connect = float(p_connect)
         assert 0 <= self.p_connect
@@ -539,7 +540,7 @@ class DistanceDependentProbabilityConnector(Connector):
             raise Exception("Distance expression needs to be either an appropriate string or "
                             "callable method ('%s')" % d_expression)
         self.d_expression = d_expression
-        assert isinstance(allow_self_connections, bool)
+        #assert isinstance(allow_self_connections, bool)
         self.allow_self_connections = allow_self_connections
         self.n_connections = n_connections
 
@@ -685,7 +686,7 @@ class FixedNumberPostConnector(Connector):
                      to the global minimum delay.
         """
         Connector.__init__(self, weights, delays, space, safe, verbose)
-        assert isinstance(allow_self_connections, bool)
+        #assert isinstance(allow_self_connections, bool)
         self.allow_self_connections = allow_self_connections
         if isinstance(n, int):
             self.n = n
@@ -773,7 +774,7 @@ class FixedNumberPreConnector(Connector):
                      to the global minimum delay.
         """
         Connector.__init__(self, weights, delays, space, safe, verbose)
-        assert isinstance(allow_self_connections, bool)
+        #assert isinstance(allow_self_connections, bool)
         self.allow_self_connections = allow_self_connections
         if isinstance(n, int):
             self.n = n
@@ -904,7 +905,7 @@ class SmallWorldConnector(Connector):
         """
         Connector.__init__(self, weights, delays, space, safe, verbose)
         assert 0 <= rewiring <= 1
-        assert isinstance(allow_self_connections, bool)
+        #assert isinstance(allow_self_connections, bool)
         self.rewiring = rewiring
         self.d_expression = "d < %g" % degree
         self.allow_self_connections = allow_self_connections

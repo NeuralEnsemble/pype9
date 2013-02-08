@@ -437,6 +437,10 @@ class Network(object):
         if synapse_family == 'Electrical':
             # Delay is not required by Gap junctions so just set to something innocuous here
             delay_expr = 1.0
+            if allow_self_connections:
+                print ("Warning! 'allow_self_connections' argument was overidden for Electrial "
+                       "projection, which requires it to be set to 'NotEvenMutual'.")
+            allow_self_connections = 'NotEvenMutual'
         else:
             delay_expr = self._get_connection_param_expr(label, delay,
                                                          min_value=self.get_min_delay())
