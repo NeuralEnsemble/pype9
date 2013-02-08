@@ -30,7 +30,8 @@ import pyNN.neuron.recording
 import ncml
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, record, record_v, record_gsyn, \
-                        StepCurrentSource, ACSource, DCSource, NoisyCurrentSource, errors, core
+                        StepCurrentSource, DCSource, NoisyCurrentSource, errors, core
+#ACSource, 
 import pyNN.neuron as sim
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
@@ -311,6 +312,7 @@ class Network(ninemlp.common.Network):
             if isinstance(proj, ElectricalSynapseProjection):
                 includes_electrical = True
         if includes_electrical:
+            print "Setting up transfer on MPI process {}".format(simulator.state.mpi_rank)
             simulator.state.parallel_context.setup_transfer() #@UndefinedVariableFromImport
 
 if __name__ == "__main__":
