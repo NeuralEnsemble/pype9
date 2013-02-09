@@ -620,6 +620,7 @@ class Mask(object):
         new_mask += mask._mask_array
         return new_mask
 
+
 class DisplacedMask(Mask):
     """
     A displaced version of the Mask, that reuses the same mask array only with updated
