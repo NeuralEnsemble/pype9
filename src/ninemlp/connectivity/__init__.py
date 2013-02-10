@@ -95,7 +95,7 @@ if __name__ == "__main__":
     else:
         points = np.mgrid[-1:1:30j, -1:1:30j, -1:1:30j]
         points = np.transpose(np.reshape(points, (3, -1)))        
-        tensor = symmetric_tensor((1, 1, 1), 4, 2)
+        tensor = axially_symmetric_tensor((1, 1, 1), 4, 2)
         transformed_points = np.transpose(np.dot(tensor, np.transpose(points)))
         dist = np.sqrt(np.sum(transformed_points * transformed_points, axis=1))
         selected_points = points[(dist < 1.0), :]

@@ -333,7 +333,7 @@ class Network(object):
         if build_mode == 'build_only' or build_mode == 'compile_only':
             print "Finished compiling network, now exiting (use try: ... except SystemExit: ... " \
                     "if you want to do something afterwards)"
-            raise SystemExit(0)                
+            raise SystemExit(0)
         for proj in self.networkML.projections:
             if self.check_flags(proj):
                 self._projections[proj.id] = self._create_projection(
@@ -354,7 +354,7 @@ class Network(object):
         Can be overloaded to do any simulator specific finalisation that is required
         """
         pass
-    
+
     def _create_population(self, label, size, cell_type_name, morph_id, layout, cell_params,
                            cell_param_distrs, initial_conditions, verbose, silent_build):
         if cell_type_name + ".xml" in os.listdir(self.cells_dir):
@@ -447,7 +447,7 @@ class Network(object):
         # Set up other required connector args
         other_connector_args = {}
         if connection.pattern != "OneToOne":
-            other_connector_args['allow_self_connections'] = allow_self_connections            
+            other_connector_args['allow_self_connections'] = allow_self_connections
         # Create the "Connector" class to connect up the projection
         if connection.pattern == 'DistanceBased':
             expression = connection.args.pop('geometry')
@@ -461,7 +461,7 @@ class Network(object):
                                 "arguments '{}' for projection '{}'\n('{}')"
                                 .format(expression, connection.args, label, e))
             connector = self._pyNN_module.connectors.DistanceDependentProbabilityConnector(
-                                    connect_expr, weights=weight_expr, delays=delay_expr, 
+                                    connect_expr, weights=weight_expr, delays=delay_expr,
                                     **other_connector_args)
         # If connection pattern is external, load the weights and delays from a file in PyNN
         # FromFileConnector format and then create a FromListConnector connector. Some additional
@@ -509,24 +509,24 @@ class Network(object):
         with warnings.catch_warnings(record=True) as warnings_list:
             warnings.simplefilter("always", category=point2point.InsufficientTargetsWarning)
             if synapse_family == 'Chemical':
-                projection = self._Projection_class(pre, dest, label, connector, 
-                                                    source=source.terminal, 
-                                                    target=self._get_target_str(target.synapse, 
+                projection = self._Projection_class(pre, dest, label, connector,
+                                                    source=source.terminal,
+                                                    target=self._get_target_str(target.synapse,
                                                                                 target.segment),
                                                     build_mode=self.build_mode)
             elif synapse_family == 'Electrical':
                 if not self._ElectricalSynapseProjection_class:
                     raise Exception("The selected simulator doesn't currently support electrical "
                                     "synapse projections")
-                projection = self._ElectricalSynapseProjection_class(pre, dest, label, connector, 
-                                                                     source=source.segment, 
+                projection = self._ElectricalSynapseProjection_class(pre, dest, label, connector,
+                                                                     source=source.segment,
                                                                      target=target.segment,
-                                                                     build_mode=self.build_mode)            
+                                                                     build_mode=self.build_mode)
             else:
                 raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
             # Collate raised "InsufficientTargets" warnings into a single warning message for better
             # readibility.
-            insufficient_targets_str = ""            
+            insufficient_targets_str = ""
             if warnings_list:
                 for w in warnings_list:
                     if w.category == point2point.InsufficientTargetsWarning:
@@ -536,7 +536,7 @@ class Network(object):
             print "Could not satisfy all connection targets in projection '{}' " \
                   "because the requested number of connections, {}, exceeded the size of " \
                   "the generated masks of sizes:{}. The number of connections was reset to the " \
-                  "size of the respective masks in these cases.\n".format(label, req_number[2:-1], 
+                  "size of the respective masks in these cases.\n".format(label, req_number[2:-1],
                                                                           insufficient_targets_str[:-1])
         return projection
 
@@ -636,6 +636,7 @@ class Network(object):
             file_prefix += '.'
         for pop in self.all_populations():
             pop.printSpikes(file_prefix + pop.label + '.spikes') #@UndefinedVariable                
+
 
 class Population(object):
 

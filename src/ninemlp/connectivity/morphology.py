@@ -17,6 +17,7 @@ import numpy as np
 from numpy.linalg import norm
 import collections
 import xml.sax
+from pyNN.connectors import DistanceMatrix, ProbabilisticConnector
 from ninemlp import XMLHandler
 from ninemlp.connectivity import axially_symmetric_tensor
 from copy import deepcopy
@@ -620,6 +621,7 @@ class Mask(object):
         new_mask += mask._mask_array
         return new_mask
 
+
 class DisplacedMask(Mask):
     """
     A displaced version of the Mask, that reuses the same mask array only with updated
@@ -932,6 +934,37 @@ def read_NeurolucidaSomaXML(filename):
 #    """
 
 VOX_SIZE = (0.1, 0.1, 500)
+
+
+class MorphologyAndDistanceMatrix(connectors.DistanceMatrix):
+    # should probably move to space module
+
+    def __init__(self, B, space, mask=None):
+        assert B.shape[0] == 3, B.shape
+        self.space = space
+        if mask is not None:
+            self.B = B[:, mask]
+        else:
+            self.B = B
+
+    def as_array(self, sub_mask=None, expand=False):
+        if self._distance_matrix is None and self.A is not None:
+            if sub_mask is None:
+                self._distance_matrix = self.space.distances(self.A, self.B, expand)
+            else:
+                    self._distance_matrix = self.space.distances(self.A, self.B[:, sub_mask], expand)
+            if expand:
+                N = self._distance_matrix.shape[2]
+                self._distance_matrix = self._distance_matrix.reshape((3, N))
+            else:
+                self._distance_matrix = self._distance_matrix[0]
+        return self._distance_matrix
+
+    def set_source(self, A):
+        assert A.shape == (3,), A.shape
+        self.A = A
+        self._distance_matrix = None
+
 
 if __name__ == '__main__':
     from os.path import normpath, join
