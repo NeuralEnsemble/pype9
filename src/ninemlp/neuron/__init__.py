@@ -57,7 +57,7 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
                            actually constructed and only the NMODL files are compiled.
         """
         if build_mode == 'build_only' or build_mode == 'compile_only':
-            print "Warning! '--compile' option was set to 'build_only' or 'compile_only', " \
+            print "Warning! '--build' option was set to 'build_only' or 'compile_only', " \
                   "meaning the Population '{}' was not constructed and only the NMODL files " \
                   "were compiled.".format(label)
         else:
@@ -107,7 +107,7 @@ class Projection(pyNN.neuron.Projection):
                  build_mode=DEFAULT_BUILD_MODE):
         self.label = label
         if build_mode == 'build_only' or build_mode == 'compile_only':
-            print "Warning! '--compile' option was set to 'build_only', meaning the projection " \
+            print "Warning! '--build' option was set to 'build_only', meaning the projection " \
                   "'{}' was not constructed.".format(label)
         else:
             pyNN.neuron.Projection.__init__(self, pre, dest, connector, label=label, source=source,

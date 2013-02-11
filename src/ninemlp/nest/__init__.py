@@ -46,7 +46,7 @@ class Population(pyNN.nest.Population):
         Initialises the population after reading the population parameters from file
         """
         if build_mode == 'build_only':
-            print "Warning! '--compile' option was set to 'build_only', meaning the population '%s' was not constructed and only the NMODL files were compiled."
+            print "Warning! '--build' option was set to 'build_only', meaning the population '%s' was not constructed and only the NMODL files were compiled."
         else:
             pyNN.nest.Population.__init__(self, size, cell_type,
                                                   params, structure=None, label=label)
@@ -60,7 +60,7 @@ class Projection(pyNN.nest.Projection):
     def __init__(self, pre, dest, label, connector, source=None, target=None, build_mode=DEFAULT_BUILD_MODE):
         self.label = label
         if build_mode == 'build_only':
-            print "Warning! '--compile' option was set to 'build_only', meaning the projection '%s' was not constructed." % label
+            print "Warning! '--build' option was set to 'build_only', meaning the projection '%s' was not constructed." % label
         else:
             pyNN.nest.Projection.__init__(self, pre, dest, connector, label=label, source=source,
                                                                                       target=target)
