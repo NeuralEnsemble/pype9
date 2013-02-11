@@ -17,7 +17,7 @@ import numpy as np
 from numpy.linalg import norm
 import collections
 import xml.sax
-from pyNN.connectors import DistanceMatrix, ProbabilisticConnector
+import pyNN
 from ninemlp import XMLHandler
 from ninemlp.connectivity import axially_symmetric_tensor
 from copy import deepcopy
@@ -935,12 +935,47 @@ def read_NeurolucidaSomaXML(filename):
 
 VOX_SIZE = (0.1, 0.1, 500)
 
+class ProbabilisticConnector(pyNN.connectors.ProbabilisticConnector):
+    
+    def __init__(self, projection, weights=0.0, delays=None,
+                 allow_self_connections=True, safe=True):
+        pyNN.connectors.ProbabilisticConnector.__init__(self, projection=projection, 
+                                                        weights=weights, delays=delays,
+                                                        allow_self_connections=allow_self_connections,
+                                                        space=MorphologySpace(), safe=safe)
+    
+    def _set_distance_matrix(self, src):
+        if self.prepare_sources and src.local:
+            self.full_distance_matrix.set_source(src)
+        else:
+            self.distance_matrix.set_source(src)
+    
+    @property
+    def distance_matrix(self):
+        """
+        We want to avoid calculating positions if it is not necessary, so we
+        delay it until the distance matrix is actually used.
+        """
+        if self._distance_matrix is None:
+            self._distance_matrix = DistanceMatrix(self.projection.post, self.space, self.local)
+        return self._distance_matrix
 
-class MorphologyAndDistanceMatrix(connectors.DistanceMatrix):
+    @property
+    def full_distance_matrix(self):
+        """
+        We want to avoid calculating positions if it is not necessary, so we
+        delay it until the distance matrix is actually used.
+        """
+        if self._full_distance_matrix is None:
+            self._full_distance_matrix = DistanceMatrix(self.projection.post, self.space,
+                                                        self.full_mask)
+        return self._full_distance_matrix
+
+
+class DistanceMatrix(pyNN.connectors.DistanceMatrix):
     # should probably move to space module
 
     def __init__(self, B, space, mask=None):
-        assert B.shape[0] == 3, B.shape
         self.space = space
         if mask is not None:
             self.B = B[:, mask]
@@ -952,7 +987,7 @@ class MorphologyAndDistanceMatrix(connectors.DistanceMatrix):
             if sub_mask is None:
                 self._distance_matrix = self.space.distances(self.A, self.B, expand)
             else:
-                    self._distance_matrix = self.space.distances(self.A, self.B[:, sub_mask], expand)
+                self._distance_matrix = self.space.distances(self.A, self.B[:, sub_mask], expand)
             if expand:
                 N = self._distance_matrix.shape[2]
                 self._distance_matrix = self._distance_matrix.reshape((3, N))
@@ -961,9 +996,12 @@ class MorphologyAndDistanceMatrix(connectors.DistanceMatrix):
         return self._distance_matrix
 
     def set_source(self, A):
-        assert A.shape == (3,), A.shape
+        assert type(A) == pyNN.common.IDMixin
         self.A = A
         self._distance_matrix = None
+
+class MorphologySpace(pyNN.space.Space):
+    pass
 
 
 if __name__ == '__main__':
