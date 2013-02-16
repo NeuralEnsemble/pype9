@@ -26,10 +26,11 @@ _MODIFICATION_TIME_FILE = 'modification_time'
 
 if 'NRNHOME' in os.environ:
     os.environ['PATH'] += os.pathsep + os.path.join(os.environ['NRNHOME'], platform.machine(), 'bin')
-elif os.environ['LOGNAME'] == 'tclose':
+elif os.environ['HOME'] == '/home/tclose':
     # I apologise for this little hack (this is the path on my machine, 
     # to save me having to set the environment variable in eclipse)
     os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin'
+    os.environ['LD_PRELOAD']='/usr/lib/libmpi.so' # This is a work around for my MPI installation
 else:
     raise Exception("Please set the NRNHOME environment variable to the NEURON 'bin' directory")
 
