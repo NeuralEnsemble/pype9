@@ -80,11 +80,11 @@ class NetworkMLHandler(XMLHandler):
 
     Network = collections.namedtuple('Network', 'id sim_params populations projections free_params')
     Population = collections.namedtuple('Population', ('id', 'cell_type', 'morph_id', 'size',
-                                                       'layout', 'cell_params',
+                                                       'structure', 'cell_params',
                                                        'initial_conditions', 'flags', 'not_flags'))
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay '
                                                       'synapse_family flags not_flags')
-    Layout = collections.namedtuple('Layout', 'type args')
+    Structure = collections.namedtuple('Structure', 'type args')
     CustomAttributes = collections.namedtuple('CustomAttributes', 'constants distributions')
     Distribution = collections.namedtuple('Distribution', 'attr type units seg_group component '
                                                           'args')
@@ -122,19 +122,19 @@ class NetworkMLHandler(XMLHandler):
             self.pop_cell = attrs['cell']
             self.pop_morph_id = attrs.get('morphology', None)
             self.pop_size = int(attrs.get('size', '-1'))
-            self.pop_layout = None
+            self.pop_structure = None
             self.pop_cell_params = self.CustomAttributes({}, [])
             self.pop_initial_conditions = self.CustomAttributes({}, [])
             # Split the flags attribute on ',' and remove empty values (the use of filter)            
             self.pop_flags = filter(None, attrs.get('flags', '').replace(' ', '').split(','))
             self.pop_not_flags = filter(None, attrs.get('not_flags', '').replace(' ', '').split(','))
-        elif self._opening(tag_name, attrs, 'layout', parents=['population']):
-            if self.pop_layout:
-                raise Exception("The layout is specified twice in population '{}'".\
+        elif self._opening(tag_name, attrs, 'structure', parents=['population']):
+            if self.pop_structure:
+                raise Exception("The structure is specified twice in population '{}'".\
                                 format(self.pop_id))
             args = dict(attrs)
-            layout_type = args.pop('type')
-            self.pop_layout = self.Layout(layout_type, args)
+            structure_type = args.pop('type')
+            self.pop_structure = self.Structure(structure_type, args)
         elif self._opening(tag_name, attrs, 'cellParameters', parents=['population']): pass
         elif self._opening(tag_name, attrs, 'initialConditions', parents=['population']): pass
         elif self._opening(tag_name, attrs, 'const', parents=['population', 'cellParameters']):
@@ -222,15 +222,15 @@ class NetworkMLHandler(XMLHandler):
 
     def endElement(self, name):
         if self._closing(name, 'population', parents=['network']):
-            if self.pop_size > -1 and self.pop_layout:
+            if self.pop_size > -1 and self.pop_structure:
                 raise Exception("Population 'size' attribute cannot be used in conjunction with " \
-                                "the 'layout' member (with layouts, the size is determined from " \
+                                "the 'structure' member (with structures, the size is determined from " \
                                 "the arguments to the structure)")
             self.network.populations.append(self.Population(self.pop_id,
                                                     self.pop_cell,
                                                     self.pop_morph_id,
                                                     self.pop_size,
-                                                    self.pop_layout,
+                                                    self.pop_structure,
                                                     self.pop_cell_params,
                                                     self.pop_initial_conditions,
                                                     self.pop_flags,
@@ -324,7 +324,7 @@ class Network(object):
                                                                     pop.size,
                                                                     pop.cell_type,
                                                                     pop.morph_id,
-                                                                    pop.layout,
+                                                                    pop.structure,
                                                                     pop.cell_params.constants,
                                                                     pop.cell_params.distributions,
                                                                     pop.initial_conditions.distributions,
@@ -355,7 +355,7 @@ class Network(object):
         """
         pass
 
-    def _create_population(self, label, size, cell_type_name, morph_id, layout, cell_params,
+    def _create_population(self, label, size, cell_type_name, morph_id, structure, cell_params,
                            cell_param_distrs, initial_conditions, verbose, silent_build):
         if cell_type_name + ".xml" in os.listdir(self.cells_dir):
             cell_type = self._ncml_module.load_cell_type(cell_type_name,
@@ -372,11 +372,11 @@ class Network(object):
         else:
             raise Exception("Cell_type_name '{}' was not found in search directory ('{}') or in " \
                             "standard models".format(cell_type_name, self.cells_dir))
-        if layout:
-            if layout.type == "Extension":
-                engine = layout.args.pop("engine")
+        if structure:
+            if structure.type == "Extension":
+                engine = structure.args.pop("engine")
                 if engine == "Brep":
-                    pop_id = layout.args['id']
+                    pop_id = structure.args['id']
                     if pop_id not in os.listdir(self.pop_dir):
                         raise Exception("Population id '{}' was not found in search " \
                                         "path ({}).".format(pop_id, self.pop_dir))
@@ -389,16 +389,16 @@ class Network(object):
                         raise Exception("Could not load Brep positions from file '{}'"\
                                         .format(pos_file))
                 else:
-                    raise Exception("Unrecognised external layout engine, '{}'".format(engine))
+                    raise Exception("Unrecognised external structure engine, '{}'".format(engine))
             else:
-                raise Exception("Not implemented error, support for built-in layout management is "\
+                raise Exception("Not implemented error, support for built-in structure management is "\
                                 "not done yet.")
         # Actually create the population
         pop = self._Population_class(label, size, cell_type, params=cell_params,
                                                                         build_mode=self.build_mode)
-        # Set layout
+        # Set structure
         if not (self.build_mode == 'build_only' or self.build_mode == 'compile_only'):
-            if layout:
+            if structure:
                 pop._set_positions(positions)
             pop._randomly_distribute_params(cell_param_distrs)
             pop._randomly_distribute_initial_conditions(initial_conditions)
