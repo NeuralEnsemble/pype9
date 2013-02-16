@@ -26,6 +26,7 @@ import pyNN.connectors
 from pyNN.random import RandomDistribution
 from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
 import ninemlp.connectivity.point2point as point2point
+import ninemlp.connectivity.morphology as morphology
 
 ## The location relative to the NINEML-Network file to look for the folder containing the cell descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
 RELATIVE_NCML_DIR = "./ncml"
@@ -84,7 +85,8 @@ class NetworkMLHandler(XMLHandler):
                                                        'initial_conditions', 'flags', 'not_flags'))
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay '
                                                       'synapse_family flags not_flags')
-    Structure = collections.namedtuple('Structure', 'type args')
+    Structure = collections.namedtuple('Structure', 'type layout args')
+    StructureLayout = collections.namedtuple('StructureLayout', 'pattern args')
     CustomAttributes = collections.namedtuple('CustomAttributes', 'constants distributions')
     Distribution = collections.namedtuple('Distribution', 'attr type units seg_group component '
                                                           'args')
@@ -133,8 +135,13 @@ class NetworkMLHandler(XMLHandler):
                 raise Exception("The structure is specified twice in population '{}'".\
                                 format(self.pop_id))
             args = dict(attrs)
-            structure_type = args.pop('type')
-            self.pop_structure = self.Structure(structure_type, args)
+            self.pop_structure_type = args.pop('type')
+            self.pop_structure_layout = None
+            self.pop_structure_args = args
+        elif self._opening(tag_name, attrs, 'layout', parents=['structure']):
+            args = dict(attrs)
+            pattern = args.pop('pattern')
+            self.pop_structure_layout = self.StructureLayout(pattern, args)
         elif self._opening(tag_name, attrs, 'cellParameters', parents=['population']): pass
         elif self._opening(tag_name, attrs, 'initialConditions', parents=['population']): pass
         elif self._opening(tag_name, attrs, 'const', parents=['population', 'cellParameters']):
@@ -245,6 +252,9 @@ class NetworkMLHandler(XMLHandler):
                                                     self.proj_synapse_family,
                                                     self.proj_flags,
                                                     self.proj_not_flags))
+        elif self._closing(name, 'structure', parents=['population']):
+            self.pop_structure = self.Structure(self.pop_structure_type, self.pop_structure_layout,
+                                                self.pop_structure_args)
         XMLHandler.endElement(self, name)
 
 
@@ -373,7 +383,44 @@ class Network(object):
             raise Exception("Cell_type_name '{}' was not found in search directory ('{}') or in " \
                             "standard models".format(cell_type_name, self.cells_dir))
         if structure:
-            if structure.type == "Extension":
+            # Set default for populations without morphologies
+            morphologies = None
+            if structure.type == "MorphologyBased":
+                forest = morphology.Forest(structure.file)
+                if structure.layout:
+                    pattern = structure.layout.pattern
+                    args = structure.layout.args
+                if pattern == 'Tiled':
+                    forest.align_min_bounds_to_origin()
+                    base_offset = args.get('offset', numpy.zeros(3))
+                    tiling = numpy.array((args['x'], args['y'], args['z']))
+                    forest_positions = [tree.origin() for tree in forest]
+                    positions = numpy.zeros((len(forest) * tiling.prod(), 3))
+                    morphologies = []
+                    pos_count = 0
+                    for z in xrange(tiling[0]):
+                        for y in xrange(tiling[1]):
+                            for x in xrange(tiling[2]):
+                                offset = base_offset + forest.max_bounds * (x, y, z)
+                                for tree in forest:
+                                    morphologies.append(tree.displaced_tree(offset))
+                                positions[pos_count+len(forest), :] = forest_positions + offset
+                elif pattern == 'DistributedSoma':
+                    forest.collapse_to_origin()
+                    low = numpy.array(args['low'].split(' '))
+                    high = numpy.array(args['high'].split(' '))
+                    size = args['size']
+                    span = high - low
+                    positions = numpy.random.rand((size, 3))
+                    positions *= span
+                    positions += low
+                    morphologies = []
+                    for i in range(size):
+                        morphologies.append(forest[i % len(forest)].displaced_tree(positions[i,:]))
+                else:
+                    raise Exception("Unrecognised structure pattern '{}' in '{}' population"
+                                    .format(structure.pattern, label))
+            elif structure.type == "Extension":
                 engine = structure.args.pop("engine")
                 if engine == "Brep":
                     pop_id = structure.args['id']
@@ -399,7 +446,7 @@ class Network(object):
         # Set structure
         if not (self.build_mode == 'build_only' or self.build_mode == 'compile_only'):
             if structure:
-                pop._set_positions(positions)
+                pop._set_positions(positions, morphologies)
             pop._randomly_distribute_params(cell_param_distrs)
             pop._randomly_distribute_initial_conditions(initial_conditions)
         return pop
@@ -463,6 +510,21 @@ class Network(object):
             connector = self._pyNN_module.connectors.DistanceDependentProbabilityConnector(
                                     connect_expr, weights=weight_expr, delays=delay_expr,
                                     **other_connector_args)
+        elif connection.pattern == 'MorphologyBased':
+            expression = connection.args.pop('geometry')
+            if not hasattr(morphology, expression):
+                raise Exception("Unrecognised distance expression '{}'".format(expression))
+            try:
+                GeometricExpression = getattr(morphology, expression)
+                connect_expr = GeometricExpression(**self._convert_all_units(connection.args))
+            except TypeError as e:
+                raise Exception("Could not initialise distance expression class '{}' from given " \
+                                "arguments '{}' for projection '{}'\n('{}')"
+                                .format(expression, connection.args, label, e))
+#            geometry="ExponentialWithDistance" vox_size="1.0 1.0 1.0" scale="1.0" decay_rate="0.1"
+            connector = self._ninemlp_module.connectors.MorphologyBasedProbabilityConnector(
+                                connect_expr, weights=weight_expr, delays=delay_expr,
+                                **other_connector_args)
         # If connection pattern is external, load the weights and delays from a file in PyNN
         # FromFileConnector format and then create a FromListConnector connector. Some additional
         # preprocessing is performed here, which is why the FromFileConnector isn't used directly.
@@ -744,13 +806,16 @@ class Population(object):
         """
         return type(self.celltype)
 
+    def _set_positions(self, positions, morphologies=None):
+        super(Population, self)._set_positions(positions)
+        self.morphologies = morphologies
 
 if __name__ == "__main__":
 
     import pprint
 
     ## Generated when this module is called directly for testing purposes.
-    parsed_network = read_networkML("/home/tclose/cerebellar/xml/cerebellum/test.xml")
-    print 'Network: ' + parsed_network.network_id
+    parsed_network = read_networkML("/home/tclose/kbrain/xml/cerebellum/morph_test.xml")
+    print 'Network: ' + parsed_network.id
     pprint.pprint(parsed_network.populations)
     pprint.pprint(parsed_network.projections)
