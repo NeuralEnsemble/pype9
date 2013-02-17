@@ -91,7 +91,7 @@ class Forest(object):
 
     def rotate(self, theta, axis=2):
         """
-        Rotates the forest about the chosen axis by theta
+        Rotates the forest about the chosen axis by theta 
         
         @param theta [float]: The degree of clockwise rotation (in degrees)
         @param axis [str/int]: The axis about which to rotate the tree (either 'x'-'z' or 0-2, default 'z'/2)
@@ -936,6 +936,12 @@ def read_NeurolucidaSomaXML(filename):
 VOX_SIZE = (0.1, 0.1, 500)
 
 
+class MorphologicalDistance(pyNN.space.Space):
+    
+    def __init__(self):
+        pass
+
+
 class MorphologyBasedProbabilityConnector(pyNN.connectors.Connector):
     """
     For each pair of pre-post cells, the connection probability depends on distance.
@@ -943,7 +949,7 @@ class MorphologyBasedProbabilityConnector(pyNN.connectors.Connector):
     parameter_names = ('allow_self_connections', 'd_expression')
 
     def __init__(self, kernel, allow_self_connections=True,
-                 weights=0.0, delays=None, space=Space(), safe=True, verbose=False, n_connections=None):
+                 weights=0.0, delays=None, space=MorphologicalDistance(), safe=True, verbose=False, n_connections=None):
         """
         Create a new connector.
         
@@ -1050,9 +1056,6 @@ class DistanceMatrix(pyNN.connectors.DistanceMatrix):
         assert type(A) == pyNN.common.IDMixin
         self.A = A
         self._distance_matrix = None
-
-class MorphologicalDistance(pyNN.space.Space):
-    pass
 
 
 
