@@ -610,12 +610,12 @@ class Mask(object):
         if any(self.finish_index != mask.finish_index):
             raise Exception("Finish indices do not match ({} and {})"
                             .format(self.finish_index, mask.finish_index))
-                            
+
     def __iadd__(self, mask):
         self._check_match(mask)
         self._mask_array += mask._mask_array
         return self
-                            
+
     def __add__(self, mask):
         new_mask = deepcopy(self)
         new_mask += mask._mask_array
@@ -935,21 +935,72 @@ def read_NeurolucidaSomaXML(filename):
 
 VOX_SIZE = (0.1, 0.1, 500)
 
-class ProbabilisticConnector(pyNN.connectors.ProbabilisticConnector):
-    
+
+class MorphologyBasedProbabilityConnector(pyNN.connectors.Connector):
+    """
+    For each pair of pre-post cells, the connection probability depends on distance.
+    """
+    parameter_names = ('allow_self_connections', 'd_expression')
+
+    def __init__(self, kernel, allow_self_connections=True,
+                 weights=0.0, delays=None, space=Space(), safe=True, verbose=False, n_connections=None):
+        """
+        Create a new connector.
+        
+        `kernel` -- the kernel for the convolution with the morphology
+        `n_connections`  -- The number of efferent synaptic connections per neuron.                 
+        `space` -- a Space object.
+        `weights` -- may either be a float, a RandomDistribution object, a list/
+                     1D array with at least as many items as connections to be
+                     created, or a distance expression as for `d_expression`. Units nA.
+        `delays`  -- as `weights`. If `None`, all synaptic delays will be set
+                     to the global minimum delay.
+        """
+        pyNN.connectors.Connector.__init__(self, weights, delays, space, safe, verbose)
+        #assert isinstance(allow_self_connections, bool)
+        self.allow_self_connections = allow_self_connections
+        self.n_connections = n_connections
+
+    def connect(self, projection):
+        """Connect-up a Projection."""
+        connector = MorphologyBasedProbabilisticConnector(projection, self.weights, self.delays, self.allow_self_connections, self.space, safe=self.safe)
+        proba_generator = pyNN.connectors.ProbaGenerator(self.d_expression, connector.local)
+        # Used when source cells also need to be prepared (i.e. Gap junctions)
+        if connector.prepare_sources:
+            full_proba_generator = pyNN.connectors.ProbaGenerator(self.d_expression, connector.full_mask)
+        self.progressbar(len(projection.pre))
+        if (projection._simulator.state.num_processes > 1) and (self.n_connections is not None):
+            raise Exception("n_connections not implemented yet for this connector in parallel !")
+
+        for count, src in enumerate(projection.pre.all()):
+            connector._set_distance_matrix(src)
+            # If source cells also need to be prepared (i.e. Gap junctions), the full connection
+            # matrix is required when the source is local
+            if connector.prepare_sources and src.local:
+                proba = full_proba_generator.get(connector.N, connector.full_distance_matrix)
+            else:
+                proba = proba_generator.get(connector.N, connector.distance_matrix)
+            if proba.dtype == 'bool':
+                proba = proba.astype(float)
+            connector._probabilistic_connect(src, proba, self.n_connections)
+            self.progression(count, projection._simulator.state.mpi_rank)
+
+
+class MorphologyBasedProbabilisticConnector(pyNN.connectors.ProbabilisticConnector):
+
     def __init__(self, projection, weights=0.0, delays=None,
                  allow_self_connections=True, safe=True):
-        pyNN.connectors.ProbabilisticConnector.__init__(self, projection=projection, 
+        pyNN.connectors.ProbabilisticConnector.__init__(self, projection=projection,
                                                         weights=weights, delays=delays,
                                                         allow_self_connections=allow_self_connections,
-                                                        space=MorphologySpace(), safe=safe)
-    
+                                                        space=MorphologicalDistance(), safe=safe)
+
     def _set_distance_matrix(self, src):
         if self.prepare_sources and src.local:
             self.full_distance_matrix.set_source(src)
         else:
             self.distance_matrix.set_source(src)
-    
+
     @property
     def distance_matrix(self):
         """
@@ -1000,8 +1051,9 @@ class DistanceMatrix(pyNN.connectors.DistanceMatrix):
         self.A = A
         self._distance_matrix = None
 
-class MorphologySpace(pyNN.space.Space):
+class MorphologicalDistance(pyNN.space.Space):
     pass
+
 
 
 if __name__ == '__main__':
@@ -1019,7 +1071,7 @@ if __name__ == '__main__':
     print forest.align_to_xyz_axes()
     # To move the forest away from zero so it is contained with in one z voxel    
     forest.plot_volume_mask(VOX_SIZE, show=False, dtype=int)
-    plt.title('Aligned rotation')    
+    plt.title('Aligned rotation')
 #    coverage, central_mask = forest.xy_coverage(VOX_SIZE[:2], (1.0, 1.0))
 #    img = plt.imshow(central_mask, cmap=plt.cm.get_cmap('gray'))
 #    img.set_interpolation('nearest')

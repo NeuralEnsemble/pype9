@@ -522,7 +522,7 @@ class Network(object):
                                 "arguments '{}' for projection '{}'\n('{}')"
                                 .format(expression, connection.args, label, e))
 #            geometry="ExponentialWithDistance" vox_size="1.0 1.0 1.0" scale="1.0" decay_rate="0.1"
-            connector = self._ninemlp_module.connectors.MorphologyBasedProbabilityConnector(
+            connector = morphology.MorphologyBasedProbabilityConnector(
                                 connect_expr, weights=weight_expr, delays=delay_expr,
                                 **other_connector_args)
         # If connection pattern is external, load the weights and delays from a file in PyNN
