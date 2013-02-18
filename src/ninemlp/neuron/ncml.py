@@ -239,7 +239,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         self.traces = {}
         self.gsyn_trace = {}
         self.recording_time = 0
-        if parameters.get('parent', False):
+        if parameters.has_key('parent') and parameters['parent'] is not None:
             # A weak reference is used to avoid a circular reference that would prevent the garbage 
             # collector from being called on the cell class    
             self.parent = weakref.ref(parameters['parent'])

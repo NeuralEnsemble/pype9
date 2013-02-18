@@ -319,10 +319,9 @@ class Network(object):
         self.networkML = read_networkML(filename)
         self._set_simulation_params(timestep=timestep, min_delay=min_delay, max_delay=max_delay,
                                                                             temperature=temperature)
-        dirname = os.path.dirname(filename)
-        self.cells_dir = os.path.join(dirname, RELATIVE_NCML_DIR)
-        self.pop_dir = os.path.join(dirname, RELATIVE_BREP_DIR, 'build', 'populations')
-        self.proj_dir = os.path.join(dirname, RELATIVE_BREP_DIR, 'build', 'projections')
+        self.dirname = os.path.dirname(filename)
+        self.pop_dir = os.path.join(self.dirname, RELATIVE_BREP_DIR, 'build', 'populations')
+        self.proj_dir = os.path.join(self.dirname, RELATIVE_BREP_DIR, 'build', 'projections')
         self.build_mode = build_mode
         self.label = self.networkML.id
         self._populations = {}
@@ -367,59 +366,65 @@ class Network(object):
 
     def _create_population(self, label, size, cell_type_name, morph_id, structure, cell_params,
                            cell_param_distrs, initial_conditions, verbose, silent_build):
-        if cell_type_name + ".xml" in os.listdir(self.cells_dir):
-            cell_type = self._ncml_module.load_cell_type(cell_type_name,
-                                            os.path.join(self.cells_dir, cell_type_name + ".xml"),
-                                            morph_id=morph_id,
-                                            build_mode=self.build_mode,
-                                            silent=silent_build)
-        elif cell_type_name in dir(self._pyNN_module.standardmodels.cells):
+        if cell_type_name in dir(self._pyNN_module.standardmodels.cells):
             # This is not as simple as it may have been, as a simple getattr on 
             # pyNN.nest.standardmodels.cells returns the pyNN.standardmodels.cells instead.
             _temp_import = __import__('{}.standardmodels.cells'.format(self._pyNN_module.__name__),
                                        globals(), locals(), [cell_type_name], 0)
             cell_type = getattr(_temp_import, cell_type_name)
         else:
-            raise Exception("Cell_type_name '{}' was not found in search directory ('{}') or in " \
-                            "standard models".format(cell_type_name, self.cells_dir))
+            try:
+                cell_type = self._ncml_module.load_cell_type('.'.join(os.path.basename(cell_type_name).split('.')[:-1]),
+                                                             os.path.join(self.dirname,
+                                                                          cell_type_name),
+                                                             morph_id=morph_id,
+                                                             build_mode=self.build_mode,
+                                                             silent=silent_build)
+            except IOError:
+                raise Exception("Cell_type_name '{}' was not found in search directory ('{}') or " \
+                                "in standard models".format(cell_type_name, self.cells_dir))
         if structure:
             # Set default for populations without morphologies
             morphologies = None
             if structure.type == "MorphologyBased":
-                forest = morphology.Forest(structure.file)
+                forest = morphology.Forest(os.path.join(self.dirname, structure.args['morphology']))
                 if structure.layout:
                     pattern = structure.layout.pattern
                     args = structure.layout.args
-                if pattern == 'Tiled':
-                    forest.align_min_bounds_to_origin()
-                    base_offset = args.get('offset', numpy.zeros(3))
-                    tiling = numpy.array((args['x'], args['y'], args['z']))
-                    forest_positions = [tree.origin() for tree in forest]
-                    positions = numpy.zeros((len(forest) * tiling.prod(), 3))
-                    morphologies = []
-                    pos_count = 0
-                    for z in xrange(tiling[0]):
-                        for y in xrange(tiling[1]):
-                            for x in xrange(tiling[2]):
-                                offset = base_offset + forest.max_bounds * (x, y, z)
-                                for tree in forest:
-                                    morphologies.append(tree.displaced_tree(offset))
-                                positions[pos_count+len(forest), :] = forest_positions + offset
-                elif pattern == 'DistributedSoma':
-                    forest.collapse_to_origin()
-                    low = numpy.array(args['low'].split(' '))
-                    high = numpy.array(args['high'].split(' '))
-                    size = args['size']
-                    span = high - low
-                    positions = numpy.random.rand((size, 3))
-                    positions *= span
-                    positions += low
-                    morphologies = []
-                    for i in range(size):
-                        morphologies.append(forest[i % len(forest)].displaced_tree(positions[i,:]))
-                else:
-                    raise Exception("Unrecognised structure pattern '{}' in '{}' population"
-                                    .format(structure.pattern, label))
+                    if pattern == 'Tiled':
+                        forest.align_min_bound_to_origin()
+                        base_offset = args.get('offset', numpy.zeros(3))
+                        tiling = numpy.array((args.get('x', 1), args.get('y', 1), args.get('z', 1)),
+                                             dtype=int)
+                        soma_positions = [tree.soma_position() for tree in forest]
+                        positions = numpy.zeros((3, len(forest) * tiling.prod()))
+                        morphologies = []
+                        pos_count = 0
+                        for z in xrange(tiling[0]):
+                            for y in xrange(tiling[1]):
+                                for x in xrange(tiling[2]):
+                                    offset = base_offset + forest.max_bounds * (x, y, z)
+                                    for tree in forest:
+                                        morphologies.append(tree.displaced_tree(offset))
+                                    positions[:, pos_count:(pos_count + len(forest))] = \
+                                            numpy.transpose(soma_positions + offset)
+                    elif pattern == 'DistributedSoma':
+                        forest.collapse_to_origin()
+                        low = numpy.array(args['low'].split(' '), dtype=float)
+                        high = numpy.array(args['high'].split(' '), dtype=float)
+                        size = int(args['size'])
+                        span = high - low
+                        positions = numpy.random.rand(size, 3)
+                        positions *= span
+                        positions += low
+                        positions = positions.transpose()
+                        morphologies = []
+                        for i in range(size):
+                            morphologies.append(forest[i % len(forest)].displaced_tree(positions[:, i]))
+                    else:
+                        raise Exception("Unrecognised structure pattern '{}' in '{}' population"
+                                        .format(structure.pattern, label))
+                    size = len(morphologies)
             elif structure.type == "Extension":
                 engine = structure.args.pop("engine")
                 if engine == "Brep":
@@ -512,8 +517,8 @@ class Network(object):
                                     **other_connector_args)
         elif connection.pattern == 'MorphologyBased':
             kernel_name = connection.args.pop('kernel')
-            if not hasattr(morphology, expression):
-                raise Exception("Unrecognised distance expression '{}'".format(expression))
+            if not hasattr(morphology, kernel_name + 'Kernel'):
+                raise Exception("Unrecognised distance expression '{}'".format(kernel_name))
             try:
                 Kernel = getattr(morphology, kernel_name + 'Kernel')
                 kernel = Kernel(**self._convert_all_units(connection.args))

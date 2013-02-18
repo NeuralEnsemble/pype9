@@ -17,14 +17,14 @@ import numpy as np
 from numpy.linalg import norm
 import collections
 import xml.sax
-import pyNN
+import pyNN.connectors
 from ninemlp import XMLHandler
 from ninemlp.connectivity import axially_symmetric_tensor
 from copy import deepcopy
 try:
     import matplotlib.pyplot as plt
 except:
-    # If pyplot is not install, ignore it and only throw an error if a plotting function is called
+    # If pyplot is not installed, ignore it and only throw an error if a plotting function is called
     plt = None
 
 # Constants ----------------------------------------------------------------------------------------
@@ -63,12 +63,15 @@ class Forest(object):
         self.somas = {}
         if include_somas:
             soma_dict = read_NeurolucidaSomaXML(xml_filename)
-            if len(soma_dict) != len(self.trees):
-                raise Exception("Number of loaded somas ({}) and trees do not match ({}) "
-                                .format(len(soma_dict), len(self.trees)))
-            for label, soma in soma_dict.items():
-                self.trees[soma.index].add_soma(Soma(label, soma.contours))
-            self.has_somas = True
+            if not len(soma_dict):
+                self.has_somas = False
+            else:
+                if len(soma_dict) != len(self.trees):
+                    raise Exception("Number of loaded somas ({}) and trees do not match ({}) "
+                                    .format(len(soma_dict), len(self.trees)))
+                for label, soma in soma_dict.items():
+                    self.trees[soma.index].add_soma(Soma(label, soma.contours))
+                self.has_somas = True
         else:
             self.has_somas = False
 
@@ -179,6 +182,13 @@ class Forest(object):
             tree.transform(inv_align)
         return align
 
+    def align_min_bound_to_origin(self):
+        self.offset(-self.min_bounds)
+
+    def collapse_to_origin(self):
+        for tree in self:
+            tree.offset(-tree.centroid)
+
     def randomize_trees(self):
         raise NotImplementedError
 
@@ -216,6 +226,13 @@ class Tree(object):
 
     def add_soma(self, soma):
         self.soma = soma
+
+    def soma_position(self):
+        if self.soma:
+            pos = self.soma.centre
+        else:
+            pos = self._points[0, :]
+        return pos
 
     @property
     def points(self):
@@ -407,7 +424,36 @@ class DisplacedTree(Tree):
     def __init__(self, tree, displacement):
         """
         A lightweight, displaced copy of the original tree, which avoids the regeneration of new 
-        masks if the displacement is an even multiple of the voxel dimensions of the mask by simply
+        masks if the displacement is an even multiple of the voxel dimensionern == 'Tiled':
+                        forest.align_min_bound_to_origin()
+                        base_offset = args.get('offset', numpy.zeros(3))
+                        tiling = numpy.array((args.get('x', 1), args.get('y', 1), args.get('z',1)))
+                        soma_positions = [tree.soma_position() for tree in forest]
+                        positions = numpy.zeros((len(forest) * tiling.prod(), 3))
+                        morphologies = []
+                        pos_count = 0
+                        for z in xrange(tiling[0]):
+                            for y in xrange(tiling[1]):
+                                for x in xrange(tiling[2]):
+                                    offset = base_offset + forest.max_bounds * (x, y, z)
+                                    for tree in forest:
+                                        morphologies.append(tree.displaced_tree(offset))
+                                    positions[pos_count+len(forest), :] = soma_positions + offset
+                    elif pattern == 'DistributedSoma':
+                        forest.collapse_to_origin()
+                        low = numpy.array(args['low'].split(' '))
+                        high = numpy.array(args['high'].split(' '))
+                        size = args['size']
+                        span = high - low
+                        positions = numpy.random.rand((size, 3))
+                        positions *= span
+                        positions += low
+                        morphologies = []
+                        for i in range(size):
+                            morphologies.append(forest[i % len(forest)].displaced_tree(positions[i,:]))
+                    else:
+                        raise Exception("Unrecognised structure pattern '{}' in '{}' population"
+                              s of the mask by simply
         offsetting the origin of the mask. Note that because it is a lightweight copy, changes to 
         the original tree will be reflected in its displaced copies.
         
@@ -490,6 +536,7 @@ class Soma(object):
     def points(self):
         return self._points
 
+    @property
     def centre(self):
         avg = np.sum(self._points[:, :3], axis=0)
         return avg / norm(avg)
@@ -747,7 +794,7 @@ class ConvolvedMask(Mask):
         # The extent around each point that will be > threshold        
         self._kernel = kernel
         # Call the base 'Mask' class constructor to set up the 
-        Mask.__init__(self, kernel.vox_size, points, np.tile(kernel.extent, 
+        Mask.__init__(self, kernel.vox_size, points, np.tile(kernel.extent,
                                                              (tree.num_points(), 1)), float)
         # Add the tree to the mask if it was provided
         if tree:
@@ -806,31 +853,31 @@ class Kernel(object):
     """
     Base class for kernels to passed to convolvedMask
     """
-    
+
     __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
 
     def __call__(self, displacements):
         raise NotImplementedError("'__call__()' method should be implemented by derived class")
-           
+
     @property
     def extent(self):
-        raise NotImplementedError("'extent' property should be implemented by derived class")      
-          
+        raise NotImplementedError("'extent' property should be implemented by derived class")
+
     @property
     def vox_size(self):
-        raise NotImplementedError("'vox_size' property should be implemented by derived class")  
+        raise NotImplementedError("'vox_size' property should be implemented by derived class")
 
 
 class GaussianKernel(Kernel):
-    
-    def __init__(self, vox_size, scale, decay, threshold=GAUSS_THRESHOLD_DEFAULT, isotropy=1.0, 
+
+    def __init__(self, vox_size, scale, decay, threshold=GAUSS_THRESHOLD_DEFAULT, isotropy=1.0,
                  orient=(1.0, 0.0, 0.0), sample_freq=GAUSS_SAMPLE_FREQ_DEFAULT):
         if threshold >= 1.0:
             raise Exception ("Extent threshold must be < 1.0 (found '{}')".format(threshold))
         self._vox_size = vox_size
         self._threshold = threshold
         self._scale = scale
-        self._tensor =  axially_symmetric_tensor(decay, orient, isotropy)
+        self._tensor = axially_symmetric_tensor(decay, orient, isotropy)
         # Calculate the extent of the kernel along the x,y, and z axes
         eig_vals, eig_vecs = np.linalg.eig(self._tensor)
         # Get the extent along each of the Eigen-vectors where the point-spread function reaches the
@@ -838,7 +885,7 @@ class GaussianKernel(Kernel):
         internal_extents = np.sqrt(-2.0 * math.log(self._threshold) / eig_vals)
         # Calculate the extent of the kernel along the x-y-z axes, the "external" axes
         self._extent = np.sqrt(np.sum((eig_vecs * internal_extents) ** 2, axis=1))
-                 
+
     def __call__(self, disps):
         # Calculate the Gaussian point spread function f = k * exp[-0.5 * d^t . W . d] for each 
         # displacement, where 'W' is the weights matrix and 'd' is a displacement vector
@@ -852,11 +899,11 @@ class GaussianKernel(Kernel):
     @property
     def extent(self):
         return self._extent
-        
+
     @property
     def vox_size(self):
         return self._vox_size
-    
+
 
 #  Extensions to the PyNN connector classes required to use morphology based connectivity ----------
 
@@ -887,54 +934,54 @@ class ConnectionProbabilityMatrix(object):
         return self._prob_matrix
 
 
-#class ProbabilisticConnector(pyNN.connectors.ProbabilisticConnector):
-#
-#    def __init__(self, projection, weights=0.0, delays=None,
-#                 allow_self_connections=True, safe=True):
-#        pyNN.connectors.ProbabilisticConnector.__init__(self, projection=projection,
-#                                                        weights=weights, delays=delays,
-#                                                        allow_self_connections=allow_self_connections,
-#                                                        space=pyNN.connectors.Space(), safe=safe)
-#
-#    def _set_distance_matrix(self, src):
-#        if self.prepare_sources and src.local:
-#            self.full_distance_matrix.set_source(src.morphology)
-#        else:
-#            self.distance_matrix.set_source(src.morphology)
-#
-#    @property
-#    def distance_matrix(self):
-#        """
-#        We want to avoid calculating positions if it is not necessary, so we
-#        delay it until the distance matrix is actually used.
-#        """
-#        if self._distance_matrix is None:
-#            self._distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
-#                                                                self.space, self.local)
-#        return self._distance_matrix
-#
-#    @property
-#    def full_distance_matrix(self):
-#        """
-#        We want to avoid calculating positions if it is not necessary, so we
-#        delay it until the distance matrix is actually used.
-#        """
-#        if self._full_distance_matrix is None:
-#            self._full_distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
-#                                                                     self.space, self.full_mask)
-#        return self._full_distance_matrix
+class ProbabilisticConnector(pyNN.connectors.ProbabilisticConnector):
 
-#
-#class MorphologyBasedProbabilityConnector(pyNN.connectors.DistanceDependentProbabilityConnector):
-#    """
-#    For each pair of pre-post cells, the connection probability depends on distance.
-#    """
-#    parameter_names = ('allow_self_connections', 'd_expression')
-#    
-#    #Override the base classes Probabilistic connector to use the morphologies
-#    ProbConnector = ProbabilisticConnector
+    def __init__(self, projection, weights=0.0, delays=None,
+                 allow_self_connections=True, safe=True):
+        pyNN.connectors.ProbabilisticConnector.__init__(self, projection=projection,
+                                                        weights=weights, delays=delays,
+                                                        allow_self_connections=allow_self_connections,
+                                                        space=pyNN.connectors.Space(), safe=safe)
+
+    def _set_distance_matrix(self, src):
+        if self.prepare_sources and src.local:
+            self.full_distance_matrix.set_source(src.morphology)
+        else:
+            self.distance_matrix.set_source(src.morphology)
+
+    @property
+    def distance_matrix(self):
+        """
+        We want to avoid calculating positions if it is not necessary, so we
+        delay it until the distance matrix is actually used.
+        """
+        if self._distance_matrix is None:
+            self._distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
+                                                                self.space, self.local)
+        return self._distance_matrix
+
+    @property
+    def full_distance_matrix(self):
+        """
+        We want to avoid calculating positions if it is not necessary, so we
+        delay it until the distance matrix is actually used.
+        """
+        if self._full_distance_matrix is None:
+            self._full_distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
+                                                                     self.space, self.full_mask)
+        return self._full_distance_matrix
+
+
+class MorphologyBasedProbabilityConnector(pyNN.connectors.DistanceDependentProbabilityConnector):
+    """
+    For each pair of pre-post cells, the connection probability depends on distance.
+    """
+    parameter_names = ('allow_self_connections', 'd_expression')
     
-                 
+    #Override the base classes Probabilistic connector to use the morphologies
+    ProbConnector = ProbabilisticConnector
+
+
 #  Handlers to load the morphologies from Neurolucida xml files ------------------------------------
 
 class NeurolucidaTreeXMLHandler(XMLHandler):
@@ -1041,7 +1088,7 @@ if __name__ == '__main__':
 #    forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
 #                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
     forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
-                                  'tree2.xml')), include_somas=False)    
+                                  'tree2.xml')), include_somas=False)
     print "Finished loading forest."
     forest.offset((0.0, 0.0, -250))
 #    forest.plot_volume_mask(VOX_SIZE, show=False, dtype=int)
