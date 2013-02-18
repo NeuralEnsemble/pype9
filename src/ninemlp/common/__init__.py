@@ -511,19 +511,18 @@ class Network(object):
                                     connect_expr, weights=weight_expr, delays=delay_expr,
                                     **other_connector_args)
         elif connection.pattern == 'MorphologyBased':
-            expression = connection.args.pop('geometry')
+            kernel_name = connection.args.pop('kernel')
             if not hasattr(morphology, expression):
                 raise Exception("Unrecognised distance expression '{}'".format(expression))
             try:
-                GeometricExpression = getattr(morphology, expression)
-                connect_expr = GeometricExpression(**self._convert_all_units(connection.args))
+                Kernel = getattr(morphology, kernel_name + 'Kernel')
+                kernel = Kernel(**self._convert_all_units(connection.args))
             except TypeError as e:
                 raise Exception("Could not initialise distance expression class '{}' from given " \
                                 "arguments '{}' for projection '{}'\n('{}')"
                                 .format(expression, connection.args, label, e))
-#            geometry="ExponentialWithDistance" vox_size="1.0 1.0 1.0" scale="1.0" decay_rate="0.1"
             connector = morphology.MorphologyBasedProbabilityConnector(
-                                connect_expr, weights=weight_expr, delays=delay_expr,
+                                kernel, weights=weight_expr, delays=delay_expr,
                                 **other_connector_args)
         # If connection pattern is external, load the weights and delays from a file in PyNN
         # FromFileConnector format and then create a FromListConnector connector. Some additional

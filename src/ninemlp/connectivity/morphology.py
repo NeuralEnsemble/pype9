@@ -821,7 +821,7 @@ class Kernel(object):
         raise NotImplementedError("'vox_size' property should be implemented by derived class")  
 
 
-class GaussKernel(Kernel):
+class GaussianKernel(Kernel):
     
     def __init__(self, vox_size, scale, decay, threshold=GAUSS_THRESHOLD_DEFAULT, isotropy=1.0, 
                  orient=(1.0, 0.0, 0.0), sample_freq=GAUSS_SAMPLE_FREQ_DEFAULT):
