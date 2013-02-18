@@ -39,65 +39,6 @@ SQRT_3 = math.sqrt(3)
 
 class DisplacedVoxelSizeMismatchException(Exception): pass
 
-
-#  Kernels to use in convolved masks ---------------------------------------------------------------
-
-class Kernel(object):
-    """
-    Base class for kernels to passed to convolvedMask
-    """
-    
-    __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
-
-    def __call__(self, displacements):
-        raise NotImplementedError("'__call__()' method should be implemented by derived class")
-           
-    @property
-    def extent(self):
-        raise NotImplementedError("'extent' property should be implemented by derived class")      
-          
-    @property
-    def vox_size(self):
-        raise NotImplementedError("'vox_size' property should be implemented by derived class")  
-
-
-class GaussKernel(Kernel):
-    
-    def __init__(self, vox_size, scale, decay, threshold=GAUSS_THRESHOLD_DEFAULT, isotropy=1.0, 
-                 orient=(1.0, 0.0, 0.0), sample_freq=GAUSS_SAMPLE_FREQ_DEFAULT):
-        if threshold >= 1.0:
-            raise Exception ("Extent threshold must be < 1.0 (found '{}')".format(threshold))
-        self._vox_size = vox_size
-        self._threshold = threshold
-        self._scale = scale
-        self._tensor =  axially_symmetric_tensor(decay, orient, isotropy)
-        # Calculate the extent of the kernel along the x,y, and z axes
-        eig_vals, eig_vecs = np.linalg.eig(self._tensor)
-        # Get the extent along each of the Eigen-vectors where the point-spread function reaches the
-        # threshold, the extent along the "internal" axes of the kernel
-        internal_extents = np.sqrt(-2.0 * math.log(self._threshold) / eig_vals)
-        # Calculate the extent of the kernel along the x-y-z axes, the "external" axes
-        self._extent = np.sqrt(np.sum((eig_vecs * internal_extents) ** 2, axis=1))
-                 
-    def __call__(self, disps):
-        # Calculate the Gaussian point spread function f = k * exp[-0.5 * d^t . W . d] for each 
-        # displacement, where 'W' is the weights matrix and 'd' is a displacement vector
-        values = self._scale * np.exp(-0.5 * np.sum(disps.dot(self._tensor) * disps, axis=1))
-        # Threshold out all values that fall beneath the threshold used to determine the
-        # extent of the required block of voxels. This removes the dependence on the orientation 
-        # relative to the mask axes, where the kernels would otherwise be trimmed to
-        values[values < self._threshold] = 0.0
-        return values
-
-    @property
-    def extent(self):
-        return self._extent
-        
-    @property
-    def vox_size(self):
-        return self._vox_size
-    
-
 #  Objects to store the morphologies ---------------------------------------------------------------
 
 class Forest(object):
@@ -857,6 +798,142 @@ class ConvolvedMask(Mask):
                 print "Generating mask - {}% complete" \
                         .format(round(float(count) / float(tree.num_segments()) * 100))
 
+
+
+#  Kernels to use in convolved masks ---------------------------------------------------------------
+
+class Kernel(object):
+    """
+    Base class for kernels to passed to convolvedMask
+    """
+    
+    __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
+
+    def __call__(self, displacements):
+        raise NotImplementedError("'__call__()' method should be implemented by derived class")
+           
+    @property
+    def extent(self):
+        raise NotImplementedError("'extent' property should be implemented by derived class")      
+          
+    @property
+    def vox_size(self):
+        raise NotImplementedError("'vox_size' property should be implemented by derived class")  
+
+
+class GaussKernel(Kernel):
+    
+    def __init__(self, vox_size, scale, decay, threshold=GAUSS_THRESHOLD_DEFAULT, isotropy=1.0, 
+                 orient=(1.0, 0.0, 0.0), sample_freq=GAUSS_SAMPLE_FREQ_DEFAULT):
+        if threshold >= 1.0:
+            raise Exception ("Extent threshold must be < 1.0 (found '{}')".format(threshold))
+        self._vox_size = vox_size
+        self._threshold = threshold
+        self._scale = scale
+        self._tensor =  axially_symmetric_tensor(decay, orient, isotropy)
+        # Calculate the extent of the kernel along the x,y, and z axes
+        eig_vals, eig_vecs = np.linalg.eig(self._tensor)
+        # Get the extent along each of the Eigen-vectors where the point-spread function reaches the
+        # threshold, the extent along the "internal" axes of the kernel
+        internal_extents = np.sqrt(-2.0 * math.log(self._threshold) / eig_vals)
+        # Calculate the extent of the kernel along the x-y-z axes, the "external" axes
+        self._extent = np.sqrt(np.sum((eig_vecs * internal_extents) ** 2, axis=1))
+                 
+    def __call__(self, disps):
+        # Calculate the Gaussian point spread function f = k * exp[-0.5 * d^t . W . d] for each 
+        # displacement, where 'W' is the weights matrix and 'd' is a displacement vector
+        values = self._scale * np.exp(-0.5 * np.sum(disps.dot(self._tensor) * disps, axis=1))
+        # Threshold out all values that fall beneath the threshold used to determine the
+        # extent of the required block of voxels. This removes the dependence on the orientation 
+        # relative to the mask axes, where the kernels would otherwise be trimmed to
+        values[values < self._threshold] = 0.0
+        return values
+
+    @property
+    def extent(self):
+        return self._extent
+        
+    @property
+    def vox_size(self):
+        return self._vox_size
+    
+
+#  Extensions to the PyNN connector classes required to use morphology based connectivity ----------
+
+class ConnectionProbabilityMatrix(object):
+    """
+    The connection probability matrix between two morphologies
+    """
+
+    def __init__(self, B, kernel, mask=None):
+        self.A = None
+        self._prob_matrix = None
+        self.kernel = kernel
+        if mask is not None:
+            self.B = B[:, mask]
+        else:
+            self.B = B
+
+    def set_source(self, A):
+        self.A = A
+        self._prob_matrix = None
+
+    def as_array(self, sub_mask=None):
+        if self._prob_matrix is None and self.A is not None:
+            B = self.B if sub_mask is None else self.B[:, sub_mask]
+            self._prob_matrix = np.zeros(len(B))
+            for i in xrange(len(B)):
+                self._prob_matrix[i] = self.A.connection_prob(B[i], self.kernel)
+        return self._prob_matrix
+
+
+class ProbabilisticConnector(pyNN.connectors.ProbabilisticConnector):
+
+    def __init__(self, projection, weights=0.0, delays=None,
+                 allow_self_connections=True, safe=True):
+        pyNN.connectors.ProbabilisticConnector.__init__(self, projection=projection,
+                                                        weights=weights, delays=delays,
+                                                        allow_self_connections=allow_self_connections,
+                                                        space=pyNN.connectors.Space(), safe=safe)
+
+    def _set_distance_matrix(self, src):
+        if self.prepare_sources and src.local:
+            self.full_distance_matrix.set_source(src.morphology)
+        else:
+            self.distance_matrix.set_source(src.morphology)
+
+    @property
+    def distance_matrix(self):
+        """
+        We want to avoid calculating positions if it is not necessary, so we
+        delay it until the distance matrix is actually used.
+        """
+        if self._distance_matrix is None:
+            self._distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
+                                                                self.space, self.local)
+        return self._distance_matrix
+
+    @property
+    def full_distance_matrix(self):
+        """
+        We want to avoid calculating positions if it is not necessary, so we
+        delay it until the distance matrix is actually used.
+        """
+        if self._full_distance_matrix is None:
+            self._full_distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
+                                                                     self.space, self.full_mask)
+        return self._full_distance_matrix
+
+
+class MorphologyBasedProbabilityConnector(pyNN.connectors.DistanceDependentProbabilityConnector):
+    """
+    For each pair of pre-post cells, the connection probability depends on distance.
+    """
+    parameter_names = ('allow_self_connections', 'd_expression')
+    
+    #Override the base classes Probabilistic connector to use the morphologies
+    ProbConnector = ProbabilisticConnector
+    
                  
 #  Handlers to load the morphologies from Neurolucida xml files ------------------------------------
 
@@ -952,82 +1029,6 @@ def read_NeurolucidaSomaXML(filename):
     parser.parse(filename)
     return handler.somas
 
-
-#  Extensions to the PyNN connector classes required to use morphology based connectivity ----------
-
-class ConnectionProbabilityMatrix(object):
-    """
-    The connection probability matrix between two morphologies
-    """
-
-    def __init__(self, B, kernel, mask=None):
-        self.A = None
-        self._prob_matrix = None
-        self.kernel = kernel
-        if mask is not None:
-            self.B = B[:, mask]
-        else:
-            self.B = B
-
-    def set_source(self, A):
-        self.A = A
-        self._prob_matrix = None
-
-    def as_array(self, sub_mask=None):
-        if self._prob_matrix is None and self.A is not None:
-            B = self.B if sub_mask is None else self.B[:, sub_mask]
-            self._prob_matrix = np.zeros(len(B))
-            for i in xrange(len(B)):
-                self._prob_matrix[i] = self.A.connection_prob(B[i], self.kernel)
-        return self._prob_matrix
-
-
-class ProbabilisticConnector(pyNN.connectors.ProbabilisticConnector):
-
-    def __init__(self, projection, weights=0.0, delays=None,
-                 allow_self_connections=True, safe=True):
-        pyNN.connectors.ProbabilisticConnector.__init__(self, projection=projection,
-                                                        weights=weights, delays=delays,
-                                                        allow_self_connections=allow_self_connections,
-                                                        space=pyNN.connectors.Space(), safe=safe)
-
-    def _set_distance_matrix(self, src):
-        if self.prepare_sources and src.local:
-            self.full_distance_matrix.set_source(src.morphology)
-        else:
-            self.distance_matrix.set_source(src.morphology)
-
-    @property
-    def distance_matrix(self):
-        """
-        We want to avoid calculating positions if it is not necessary, so we
-        delay it until the distance matrix is actually used.
-        """
-        if self._distance_matrix is None:
-            self._distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
-                                                                self.space, self.local)
-        return self._distance_matrix
-
-    @property
-    def full_distance_matrix(self):
-        """
-        We want to avoid calculating positions if it is not necessary, so we
-        delay it until the distance matrix is actually used.
-        """
-        if self._full_distance_matrix is None:
-            self._full_distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
-                                                                     self.space, self.full_mask)
-        return self._full_distance_matrix
-
-
-class MorphologyBasedProbabilityConnector(pyNN.connectors.DistanceDependentProbabilityConnector):
-    """
-    For each pair of pre-post cells, the connection probability depends on distance.
-    """
-    parameter_names = ('allow_self_connections', 'd_expression')
-    
-    #Override the base classes Probabilistic connector to use the morphologies
-    ProbConnector = ProbabilisticConnector
 
 
 #  Testing functions -------------------------------------------------------------------------------
