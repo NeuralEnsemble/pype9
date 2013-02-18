@@ -221,7 +221,7 @@ class DistanceMatrix(object):
             if sub_mask is None:
                 self._distance_matrix = self.space.distances(self.A, self.B, expand)
             else:
-                    self._distance_matrix = self.space.distances(self.A, self.B[:, sub_mask], expand)
+                self._distance_matrix = self.space.distances(self.A, self.B[:, sub_mask], expand)
             if expand:
                 N = self._distance_matrix.shape[2]
                 self._distance_matrix = self._distance_matrix.reshape((3, N))
@@ -396,7 +396,9 @@ class ProbabilisticConnector(Connector):
         if self.projection.pre == self.projection.post:
             if not self.allow_self_connections:            
                 idx_del = numpy.where(self._get_candidates(src) == src)
-            elif self.allow_self_connections == 'NotEvenMutual':
+            # For connections which are always mutual, in the case of gap junctions, it doesn't 
+            # make sense to allow x->y connections and y->x connections because they are always x<->y.
+            elif self.allow_self_connections == 'NoMutual':
                 idx_del = numpy.where(self._get_candidates(src) <= src)
             if len(idx_del) > 0:
                 precreate = numpy.delete(precreate, idx_del)
@@ -512,7 +514,8 @@ class DistanceDependentProbabilityConnector(Connector):
     For each pair of pre-post cells, the connection probability depends on distance.
     """
     parameter_names = ('allow_self_connections', 'd_expression')
-
+    ProbConnector = ProbabilisticConnector
+    
     def __init__(self, d_expression, allow_self_connections=True,
                  weights=0.0, delays=None, space=Space(), safe=True, verbose=False, n_connections=None):
         """
@@ -546,7 +549,7 @@ class DistanceDependentProbabilityConnector(Connector):
 
     def connect(self, projection):
         """Connect-up a Projection."""
-        connector = ProbabilisticConnector(projection, self.weights, self.delays, self.allow_self_connections, self.space, safe=self.safe)
+        connector = self.ProbConnector(projection, self.weights, self.delays, self.allow_self_connections, self.space, safe=self.safe)
         proba_generator = ProbaGenerator(self.d_expression, connector.local)
         # Used when source cells also need to be prepared (i.e. Gap junctions)
         if connector.prepare_sources:

@@ -27,10 +27,11 @@ except:
     # If pyplot is not install, ignore it and only throw an error if a plotting function is called
     plt = None
 
+# Constants ----------------------------------------------------------------------------------------
 
-THRESHOLD_DEFAULT = 0.02
+GAUSS_THRESHOLD_DEFAULT = 0.02
 SAMPLE_DIAM_RATIO = 4.0
-SAMPLE_FREQ_DEFAULT = 100
+GAUSS_SAMPLE_FREQ_DEFAULT = 100
 DEEP_Z_VOX_SIZE = 10000 # This is the vox size used for the z axis to approximate infinite depth
 # Pre-calculated for speed (not sure if this would be a bottleneck though)
 SQRT_3 = math.sqrt(3)
@@ -38,6 +39,66 @@ SQRT_3 = math.sqrt(3)
 
 class DisplacedVoxelSizeMismatchException(Exception): pass
 
+
+#  Kernels to use in convolved masks ---------------------------------------------------------------
+
+class Kernel(object):
+    """
+    Base class for kernels to passed to convolvedMask
+    """
+    
+    __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
+
+    def __call__(self, displacements):
+        raise NotImplementedError("'__call__()' method should be implemented by derived class")
+           
+    @property
+    def extent(self):
+        raise NotImplementedError("'extent' property should be implemented by derived class")      
+          
+    @property
+    def vox_size(self):
+        raise NotImplementedError("'vox_size' property should be implemented by derived class")  
+
+
+class GaussKernel(Kernel):
+    
+    def __init__(self, vox_size, scale, decay, threshold=GAUSS_THRESHOLD_DEFAULT, isotropy=1.0, 
+                 orient=(1.0, 0.0, 0.0), sample_freq=GAUSS_SAMPLE_FREQ_DEFAULT):
+        if threshold >= 1.0:
+            raise Exception ("Extent threshold must be < 1.0 (found '{}')".format(threshold))
+        self._vox_size = vox_size
+        self._threshold = threshold
+        self._scale = scale
+        self._tensor =  axially_symmetric_tensor(decay, orient, isotropy)
+        # Calculate the extent of the kernel along the x,y, and z axes
+        eig_vals, eig_vecs = np.linalg.eig(self._tensor)
+        # Get the extent along each of the Eigen-vectors where the point-spread function reaches the
+        # threshold, the extent along the "internal" axes of the kernel
+        internal_extents = np.sqrt(-2.0 * math.log(self._threshold) / eig_vals)
+        # Calculate the extent of the kernel along the x-y-z axes, the "external" axes
+        self._extent = np.sqrt(np.sum((eig_vecs * internal_extents) ** 2, axis=1))
+                 
+    def __call__(self, disps):
+        # Calculate the Gaussian point spread function f = k * exp[-0.5 * d^t . W . d] for each 
+        # displacement, where 'W' is the weights matrix and 'd' is a displacement vector
+        values = self._scale * np.exp(-0.5 * np.sum(disps.dot(self._tensor) * disps, axis=1))
+        # Threshold out all values that fall beneath the threshold used to determine the
+        # extent of the required block of voxels. This removes the dependence on the orientation 
+        # relative to the mask axes, where the kernels would otherwise be trimmed to
+        values[values < self._threshold] = 0.0
+        return values
+
+    @property
+    def extent(self):
+        return self._extent
+        
+    @property
+    def vox_size(self):
+        return self._vox_size
+    
+
+#  Objects to store the morphologies ---------------------------------------------------------------
 
 class Forest(object):
 
@@ -308,24 +369,20 @@ class Tree(object):
         @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
         """
         vox_size = Mask.parse_vox_size(vox_size)
-        if not self._masks['volume'].has_key(vox_size):
-            self._masks['volume'][vox_size] = VolumeMask(vox_size, self, dtype=dtype)
-        return self._masks['volume'][vox_size]
+        if not self._masks.has_key(vox_size):
+            self._masks[vox_size] = VolumeMask(vox_size, self, dtype=dtype)
+        return self._masks[vox_size]
 
-    def get_prob_mask(self, vox_size, scale, orient, decay_rate=0.1, isotropy=1.0,
-                      threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT):
+    def get_prob_mask(self, kernel):
         """
         Creates a mask for the given voxel sizes and saves it in self._masks
         
         @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
         
         """
-        vox_size = Mask.parse_vox_size(vox_size)
-        if not self._masks['prob'].has_key(vox_size):
-            self._masks['prob'][vox_size] = GaussMask(vox_size, self, scale, orient,
-                                                      decay_rate=decay_rate, isotropy=isotropy,
-                                                      threshold=threshold, sample_freq=sample_freq)
-        return self._masks['prob'][vox_size]
+        if not self._masks.has_key(kernel):
+            self._masks[kernel] = ConvolvedMask(self, kernel)
+        return self._masks[kernel]
 
     def displaced_tree(self, displacement):
         """
@@ -381,7 +438,7 @@ class Tree(object):
         mask.plot(show=show, colour_map=colour_map)
 
     def plot_prob_mask(self, vox_size, scale=1.0, orient=(1.0, 0.0, 0.0), decay_rate=0.1,
-                       isotropy=1.0, threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT,
+                       isotropy=1.0, threshold=GAUSS_THRESHOLD_DEFAULT, sample_freq=GAUSS_SAMPLE_FREQ_DEFAULT,
                        show=True, colour_map='jet'):
         mask = self.get_prob_mask(vox_size, scale, orient, decay_rate=decay_rate,
                                   isotropy=isotropy, threshold=threshold,
@@ -469,6 +526,35 @@ class DisplacedTree(Tree):
         for seg in self._undisplaced_tree.segments:
             yield Tree.Segment(seg.begin + self.displacement, seg.end + self.displacement, seg.diam)
 
+
+class Soma(object):
+
+    def __init__(self, label, contours):
+        """
+        Initialises the Soma object
+        
+        @param contours [list(NeurolucidaSomaXMLHandler.Contour)]: A list of contour objects
+        """
+        self.label = label
+        # Recursively flatten all branches stemming from the root
+        num_points = sum([len(contour.points) for contour in contours])
+        self._points = np.zeros((num_points, 4))
+        point_count = 0
+        for contour in contours:
+            for point in contour.points:
+                self._points[point_count, :] = point
+                point_count += 1
+
+    @property
+    def points(self):
+        return self._points
+
+    def centre(self):
+        avg = np.sum(self._points[:, :3], axis=0)
+        return avg / norm(avg)
+
+
+#  Mask objects to map the morphologies to arrays of data ------------------------------------------
 
 class Mask(object):
 
@@ -715,13 +801,13 @@ class ConvolvedMask(Mask):
 
     __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
 
-    def __init__(self, vox_size, tree_or_points, point_extent, sample_freq):
+    def __init__(self, tree_or_points, kernel):
         tree, points = Mask._parse_tree_points(tree_or_points)
         # The extent around each point that will be > threshold        
-        self.point_extent = point_extent
-        self.sample_freq = sample_freq
+        self._kernel = kernel
         # Call the base 'Mask' class constructor to set up the 
-        Mask.__init__(self, vox_size, points, np.tile(point_extent, (tree.num_points(), 1)), float)
+        Mask.__init__(self, kernel.vox_size, points, np.tile(kernel.extent, 
+                                                             (tree.num_points(), 1)), float)
         # Add the tree to the mask if it was provided
         if tree:
             self.add_tree(tree)
@@ -747,8 +833,8 @@ class ConvolvedMask(Mask):
             for frac in np.linspace(1, 0, num_samples, endpoint=False):
                 point = (1.0 - frac) * seg.begin + frac * seg.end
                 # Determine the extent of the mask indices that could be affected by the point
-                extent_start = np.floor((point - self.offset - self.point_extent) / self.vox_size)
-                extent_finish = np.array(np.ceil((point - self.offset + self.point_extent)
+                extent_start = np.floor((point - self.offset - self._kernel.extent) / self.vox_size)
+                extent_finish = np.array(np.ceil((point - self.offset + self._kernel.extent)
                                                  / self.vox_size), dtype=int)
                 # Get an "open" grid (uses less memory if it is open) of voxel indices to apply 
                 # the distance function to.
@@ -764,77 +850,15 @@ class ConvolvedMask(Mask):
                 disps = np.vstack((X.ravel() - point[0], Y.ravel() - point[1],
                                    Z.ravel() - point[2])).transpose()
                 # Get the values of the point-spread function at each of the voxel centres
-                values = self._point_spread_function(disps)
+                values = self._kernel(disps)
                 # Add the point-spread function values to the mask_array
                 self._mask_array[extent_indices] += length_scale * values.reshape(X.shape)
             if count % (tree.num_segments() // 10) == 0 and count != 0:
                 print "Generating mask - {}% complete" \
                         .format(round(float(count) / float(tree.num_segments()) * 100))
 
-    def _point_spread_function(self, disps):
-        # Should be implemented in derived class
-        raise NotImplementedError
-
-
-class GaussMask(ConvolvedMask):
-
-    def __init__(self, vox_size, tree, scale=1.0, orient=(1.0, 0.0, 0.0), decay_rate=0.1,
-                 isotropy=1.0, threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT):
-        if threshold >= 1.0:
-            raise Exception ("Extent threshold must be < 1.0 (was {})".format(threshold))
-        self.threshold = threshold
-        self.scale = scale
-        self.tensor = axially_symmetric_tensor(decay_rate, orient, isotropy)
-        ConvolvedMask.__init__(self, vox_size, tree,
-                           type(self).get_point_extent(self.tensor, threshold), sample_freq)
-
-    def _point_spread_function(self, disps):
-        # Calculate the Gaussian point spread function f = k * exp[-0.5 * d^t . W . d] for each 
-        # displacement, where 'W' is the weights matrix and 'd' is a displacement vector
-        values = self.scale * np.exp(-0.5 * np.sum(disps.dot(self.tensor) * disps, axis=1))
-        # For even threshold out all values that fall beneath the threshold used to determine the
-        # extent of the required block of voxels. This removes dependence on the orientation 
-        # relative to the mask axes
-        values[values < self.threshold] = 0.0
-        return values
-
-    @classmethod
-    def get_point_extent(cls, tensor, threshold):
-        eig_vals, eig_vecs = np.linalg.eig(tensor)
-        # Get the extent along each of the Eigen-vectors where the point-spread function reaches the
-        # threshold, the extent along the "internal" axes of the kernel
-        internal_extents = np.sqrt(-2.0 * math.log(threshold) / eig_vals)
-        # Calculate the extent of the kernel along the x-y-z axes, the "external" axes
-        point_extent = np.sqrt(np.sum((eig_vecs * internal_extents) ** 2, axis=1))
-        return point_extent
-
-
-class Soma(object):
-
-    def __init__(self, label, contours):
-        """
-        Initialises the Soma object
-        
-        @param contours [list(NeurolucidaSomaXMLHandler.Contour)]: A list of contour objects
-        """
-        self.label = label
-        # Recursively flatten all branches stemming from the root
-        num_points = sum([len(contour.points) for contour in contours])
-        self._points = np.zeros((num_points, 4))
-        point_count = 0
-        for contour in contours:
-            for point in contour.points:
-                self._points[point_count, :] = point
-                point_count += 1
-
-    @property
-    def points(self):
-        return self._points
-
-    def centre(self):
-        avg = np.sum(self._points[:, :3], axis=0)
-        return avg / norm(avg)
-
+                 
+#  Handlers to load the morphologies from Neurolucida xml files ------------------------------------
 
 class NeurolucidaTreeXMLHandler(XMLHandler):
     """
@@ -928,84 +952,50 @@ def read_NeurolucidaSomaXML(filename):
     parser.parse(filename)
     return handler.somas
 
-#    """
-#    A mask containing the of finding a synaptic/presynaptic location at voxels
-#    (3D pixels) of arbitrary width that divide up the bounding box of a dendritic/axonal tree
-#    """
 
-VOX_SIZE = (0.1, 0.1, 500)
+#  Extensions to the PyNN connector classes required to use morphology based connectivity ----------
 
-
-class MorphologicalDistance(pyNN.space.Space):
-    
-    def __init__(self):
-        pass
-
-
-class MorphologyBasedProbabilityConnector(pyNN.connectors.Connector):
+class ConnectionProbabilityMatrix(object):
     """
-    For each pair of pre-post cells, the connection probability depends on distance.
+    The connection probability matrix between two morphologies
     """
-    parameter_names = ('allow_self_connections', 'd_expression')
 
-    def __init__(self, kernel, allow_self_connections=True,
-                 weights=0.0, delays=None, space=MorphologicalDistance(), safe=True, verbose=False, n_connections=None):
-        """
-        Create a new connector.
-        
-        `kernel` -- the kernel for the convolution with the morphology
-        `n_connections`  -- The number of efferent synaptic connections per neuron.                 
-        `space` -- a Space object.
-        `weights` -- may either be a float, a RandomDistribution object, a list/
-                     1D array with at least as many items as connections to be
-                     created, or a distance expression as for `d_expression`. Units nA.
-        `delays`  -- as `weights`. If `None`, all synaptic delays will be set
-                     to the global minimum delay.
-        """
-        pyNN.connectors.Connector.__init__(self, weights, delays, space, safe, verbose)
-        #assert isinstance(allow_self_connections, bool)
-        self.allow_self_connections = allow_self_connections
-        self.n_connections = n_connections
+    def __init__(self, B, kernel, mask=None):
+        self.A = None
+        self._prob_matrix = None
+        self.kernel = kernel
+        if mask is not None:
+            self.B = B[:, mask]
+        else:
+            self.B = B
 
-    def connect(self, projection):
-        """Connect-up a Projection."""
-        connector = MorphologyBasedProbabilisticConnector(projection, self.weights, self.delays, self.allow_self_connections, self.space, safe=self.safe)
-        proba_generator = pyNN.connectors.ProbaGenerator(self.d_expression, connector.local)
-        # Used when source cells also need to be prepared (i.e. Gap junctions)
-        if connector.prepare_sources:
-            full_proba_generator = pyNN.connectors.ProbaGenerator(self.d_expression, connector.full_mask)
-        self.progressbar(len(projection.pre))
-        if (projection._simulator.state.num_processes > 1) and (self.n_connections is not None):
-            raise Exception("n_connections not implemented yet for this connector in parallel !")
+    def set_source(self, A):
+        self.A = A
+        self._prob_matrix = None
 
-        for count, src in enumerate(projection.pre.all()):
-            connector._set_distance_matrix(src)
-            # If source cells also need to be prepared (i.e. Gap junctions), the full connection
-            # matrix is required when the source is local
-            if connector.prepare_sources and src.local:
-                proba = full_proba_generator.get(connector.N, connector.full_distance_matrix)
-            else:
-                proba = proba_generator.get(connector.N, connector.distance_matrix)
-            if proba.dtype == 'bool':
-                proba = proba.astype(float)
-            connector._probabilistic_connect(src, proba, self.n_connections)
-            self.progression(count, projection._simulator.state.mpi_rank)
+    def as_array(self, sub_mask=None):
+        if self._prob_matrix is None and self.A is not None:
+            B = self.B if sub_mask is None else self.B[:, sub_mask]
+            self._prob_matrix = np.zeros(len(B))
+            for i in xrange(len(B)):
+                self._prob_matrix[i] = self.A.connection_prob(B[i], self.kernel)
+        return self._prob_matrix
 
 
-class MorphologyBasedProbabilisticConnector(pyNN.connectors.ProbabilisticConnector):
+class ProbabilisticConnector(pyNN.connectors.ProbabilisticConnector):
 
     def __init__(self, projection, weights=0.0, delays=None,
                  allow_self_connections=True, safe=True):
         pyNN.connectors.ProbabilisticConnector.__init__(self, projection=projection,
                                                         weights=weights, delays=delays,
                                                         allow_self_connections=allow_self_connections,
-                                                        space=MorphologicalDistance(), safe=safe)
+                                                        space=pyNN.connectors.Space(), safe=safe)
 
     def _set_distance_matrix(self, src):
         if self.prepare_sources and src.local:
-            self.full_distance_matrix.set_source(src)
+            self.full_distance_matrix.set_source(src.morphology)
         else:
-            self.distance_matrix.set_source(src)
+            self.distance_matrix.set_source(src.morphology)
 
     @property
     def distance_matrix(self):
@@ -1014,7 +1004,8 @@ class MorphologyBasedProbabilisticConnector(pyNN.connectors.ProbabilisticConnect
         delay it until the distance matrix is actually used.
         """
         if self._distance_matrix is None:
-            self._distance_matrix = DistanceMatrix(self.projection.post, self.space, self.local)
+            self._distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
+                                                                self.space, self.local)
         return self._distance_matrix
 
     @property
@@ -1024,42 +1015,25 @@ class MorphologyBasedProbabilisticConnector(pyNN.connectors.ProbabilisticConnect
         delay it until the distance matrix is actually used.
         """
         if self._full_distance_matrix is None:
-            self._full_distance_matrix = DistanceMatrix(self.projection.post, self.space,
-                                                        self.full_mask)
+            self._full_distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
+                                                                     self.space, self.full_mask)
         return self._full_distance_matrix
 
 
-class DistanceMatrix(pyNN.connectors.DistanceMatrix):
-    # should probably move to space module
-
-    def __init__(self, B, space, mask=None):
-        self.space = space
-        if mask is not None:
-            self.B = B[:, mask]
-        else:
-            self.B = B
-
-    def as_array(self, sub_mask=None, expand=False):
-        if self._distance_matrix is None and self.A is not None:
-            if sub_mask is None:
-                self._distance_matrix = self.space.distances(self.A, self.B, expand)
-            else:
-                self._distance_matrix = self.space.distances(self.A, self.B[:, sub_mask], expand)
-            if expand:
-                N = self._distance_matrix.shape[2]
-                self._distance_matrix = self._distance_matrix.reshape((3, N))
-            else:
-                self._distance_matrix = self._distance_matrix[0]
-        return self._distance_matrix
-
-    def set_source(self, A):
-        assert type(A) == pyNN.common.IDMixin
-        self.A = A
-        self._distance_matrix = None
+class MorphologyBasedProbabilityConnector(pyNN.connectors.DistanceDependentProbabilityConnector):
+    """
+    For each pair of pre-post cells, the connection probability depends on distance.
+    """
+    parameter_names = ('allow_self_connections', 'd_expression')
+    
+    #Override the base classes Probabilistic connector to use the morphologies
+    ProbConnector = ProbabilisticConnector
 
 
+#  Testing functions -------------------------------------------------------------------------------
 
 if __name__ == '__main__':
+    VOX_SIZE = (0.1, 0.1, 500)
     from os.path import normpath, join
     from ninemlp import SRC_PATH
     print "Loading forest..."
@@ -1080,6 +1054,3 @@ if __name__ == '__main__':
 #    img.set_interpolation('nearest')
 #    print "Coverage: {}".format(coverage)
     plt.show()
-
-
-

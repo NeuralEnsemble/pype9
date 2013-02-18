@@ -486,8 +486,8 @@ class Network(object):
             delay_expr = 1.0
             if allow_self_connections:
                 print ("Warning! 'allow_self_connections' argument was overidden for Electrial "
-                       "projection, which requires it to be set to 'NotEvenMutual'.")
-            allow_self_connections = 'NotEvenMutual'
+                       "projection, which requires it to be set to 'NoMutual'.")
+            allow_self_connections = 'NoMutual'
         else:
             delay_expr = self._get_connection_param_expr(label, delay,
                                                          min_value=self.get_min_delay())
