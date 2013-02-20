@@ -14,7 +14,7 @@
 
 import numpy
 from warnings import warn
-from ninemlp.connectivity import transform_tensor
+from ninemlp.connectivity import axially_symmetric_tensor
 
 class InsufficientTargetsWarning(Warning): pass
 
@@ -192,13 +192,15 @@ class EllipseMask(MaskBased):
     def expand_distances(cls):
         return True
 
+    
+
 class EllipsoidMask(MaskBased):
     """
     A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
     probabilityability of connection within an elliptical region
     """
 
-    def __init__(self, x_scale, y_scale, z_scale, probability=None, number=None):
+    def __init__(self, scale, orient, isotropy, probability=None, number=None):
         """
         @param x: scale of the x axis of the ellipsoid
         @param y: scale of the y axis of the ellipsoid   
@@ -206,19 +208,31 @@ class EllipsoidMask(MaskBased):
         @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
         """
         super(EllipsoidMask, self).__init__(probability, number)
-        self.x_scale = x_scale
-        self.y_scale = y_scale
-        self.z_scale = z_scale
+        self.scale = scale
+        self.orient = orient
+        self.isotropy = isotropy
 
-    def __call__(self, d):
-        mask = (numpy.square(d[0] / self.x_scale) + numpy.square(d[1] / self.y_scale) + 
-                    numpy.square(d[2] / self.z_scale) < 1)
-        return self._probs_from_mask(mask)
+    def __call__(self, displacement):
+        
+        working_matrix = axially_symmetric_tensor(self.scale, self.orient, self.isotropy)
+        working_matrix_inverse = numpy.linalg.inv(working_matrix)
+        transformed_matrix = numpy.dot(displacement, working_matrix_inverse)
+        substract_matrix = []
+        i=0
+        distance = numpy.sqrt(transformed_matrix[:,0]**2+transformed_matrix[:,1]**2+transformed_matrix[:,2]**2)
+        mask = distance < 1.0
+        while i < len(transformed_matrix[:,0]):
+            distance = numpy.sqrt(transformed_matrix[i,0]**2+transformed_matrix[i,1]**2+transformed_matrix[i,2]**2)
+            if distance<=1:
+                substract_matrix.append(1)
+            else:
+                substract_matrix.append(0)
+            i=i+1
+        return substract_matrix
 
     @classmethod
     def expand_distances(cls):
         return True
-    
 
 class RectangleMask(MaskBased):
     """
