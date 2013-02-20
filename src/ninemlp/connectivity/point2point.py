@@ -14,7 +14,7 @@
 
 import numpy
 from warnings import warn
-from ninemlp.connectivity import transform_tensor
+from ninemlp.connectivity import axially_symmetric_tensor
 
 class InsufficientTargetsWarning(Warning): pass
 
@@ -205,7 +205,7 @@ class EllipsoidMask(MaskBased):
     probabilityability of connection within an elliptical region
     """
 
-    def __init__(self, x_scale, y_scale, z_scale, probability=None, number=None):
+    def __init__(self, scale, orient_x, orient_y, orient_z, isotropy, probability=None, number=None):
         """
         @param x: scale of the x axis of the ellipsoid
         @param y: scale of the y axis of the ellipsoid   
@@ -213,13 +213,17 @@ class EllipsoidMask(MaskBased):
         @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
         """
         super(EllipsoidMask, self).__init__(probability, number)
-        self.x_scale = x_scale
-        self.y_scale = y_scale
-        self.z_scale = z_scale
+        self.scale = scale
+        self.orient = numpy.array((orient_x, orient_y, orient_z))
+        self.isotropy = isotropy
 
-    def __call__(self, d):
-        mask = (numpy.square(d[0] / self.x_scale) + numpy.square(d[1] / self.y_scale) +
-                    numpy.square(d[2] / self.z_scale) < 1)
+    def __call__(self, displacement):
+        
+        working_matrix = axially_symmetric_tensor(self.scale, self.orient, self.isotropy)
+        working_matrix_inverse = numpy.linalg.inv(working_matrix)
+        transformed_matrix = numpy.dot(working_matrix_inverse, displacement)
+        distance = numpy.sqrt(transformed_matrix[0]**2+transformed_matrix[1]**2+transformed_matrix[2]**2)
+        mask = distance < 1.0
         return self._probs_from_mask(mask)
 
     @classmethod

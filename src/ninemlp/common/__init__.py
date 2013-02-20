@@ -49,7 +49,11 @@ def group_varname(group_id):
     return varname
 
 def seg_varname(seg_id):
-    return seg_id + "_seg"
+    if seg_id == 'source_section':
+        varname = seg_id
+    else:
+        varname = seg_id + "_seg"
+    return varname 
 
 
 class ValueWithUnits(object):
@@ -381,8 +385,8 @@ class Network(object):
                                                              build_mode=self.build_mode,
                                                              silent=silent_build)
             except IOError:
-                raise Exception("Cell_type_name '{}' was not found in search directory ('{}') or " \
-                                "in standard models".format(cell_type_name, self.cells_dir))
+                raise Exception("Cell_type_name '{}' was not found or " \
+                                "in standard models".format(cell_type_name))
         if structure:
             # Set default for populations without morphologies
             morphologies = None
