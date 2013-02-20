@@ -211,7 +211,7 @@ class NetworkMLHandler(XMLHandler):
                                 .format(self.proj_id))
             args = dict(attrs)
             pattern = args.pop('pattern')
-            self.proj_connection = self.Connection(pattern, args)
+            self.proj_connection = self.Connection(pattern, args)          
         elif self._opening(tag_name, attrs, 'weight', parents=['projection']):
             if self.proj_weight:
                 raise Exception("The weight is specified twice in projection '{}'"\
@@ -410,8 +410,8 @@ class Network(object):
                                             numpy.transpose(soma_positions + offset)
                     elif pattern == 'DistributedSoma':
                         forest.collapse_to_origin()
-                        low = numpy.array(args['low'].split(' '), dtype=float)
-                        high = numpy.array(args['high'].split(' '), dtype=float)
+                        low = numpy.array((args['low_x'], args['low_y'], args['low_z']), dtype=float)
+                        high = numpy.array((args['high_x'], args['high_y'], args['high_z']), dtype=float)
                         size = int(args['size'])
                         span = high - low
                         positions = numpy.random.rand(size, 3)
@@ -525,7 +525,7 @@ class Network(object):
             except TypeError as e:
                 raise Exception("Could not initialise distance expression class '{}' from given " \
                                 "arguments '{}' for projection '{}'\n('{}')"
-                                .format(expression, connection.args, label, e))
+                                .format(kernel_name, connection.args, label, e))
             connector = morphology.MorphologyBasedProbabilityConnector(
                                 kernel, weights=weight_expr, delays=delay_expr,
                                 **other_connector_args)

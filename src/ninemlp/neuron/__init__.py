@@ -165,7 +165,7 @@ class ElectricalSynapseProjection(Projection):
             pre_post_gid = (gid_offset + self.post.id_to_index(target)) * 2
             post_pre_gid = pre_post_gid + 1
             # Get the segment on target cell the gap junction connects to
-            segment = target._cell.segments[segname] if segname else target.source_section            
+            segment = target._cell.segments[segname] if segname else target.source_section
             # Connect the pre cell voltage to the target var
             print "Setting source_var on target cell {} to connect to source cell {} with gid {} on process {}".format(target, source, post_pre_gid, simulator.state.mpi_rank)
             simulator.state.parallel_context.source_var(segment(0.5)._ref_v, post_pre_gid) #@UndefinedVariableFromImport              

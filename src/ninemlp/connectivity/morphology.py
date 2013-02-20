@@ -20,6 +20,7 @@ import xml.sax
 import pyNN.connectors
 from ninemlp import XMLHandler
 from ninemlp.connectivity import axially_symmetric_tensor
+import itertools
 from copy import deepcopy
 try:
     import matplotlib.pyplot as plt
@@ -331,7 +332,7 @@ class Tree(object):
             self._masks[vox_size] = VolumeMask(vox_size, self, dtype=dtype)
         return self._masks[vox_size]
 
-    def get_prob_mask(self, kernel):
+    def get_mask(self, kernel):
         """
         Creates a mask for the given voxel sizes and saves it in self._masks
         
@@ -372,15 +373,14 @@ class Tree(object):
         overlap_mask = self.get_volume_mask(vox_size).overlap(tree.get_volume_mask(vox_size))
         return np.sum(overlap_mask)
 
-    def connection_prob(self, tree, vox_size, gauss_kernel, threshold, sample_freq):
+    def connection_prob(self, tree, kernel):
         """
         Calculate the probability of there being any connection (there may be multiple)
         
         @param tree [Tree]: The second tree to calculate the overlap with
-        @param vox_size [tuple(float)]: The voxel sizes to use when calculating the overlap
+        @param kernel [Kernel]: The kernel used to define the probability masks
         """
-        prob_mask = self.get_convolved_mask(vox_size, gauss_kernel, sample_freq).\
-                            overlap(tree.get_convolved_mask(vox_size, gauss_kernel, sample_freq))
+        prob_mask = self.get_mask(kernel).overlap(tree.get_mask(kernel))
         return 1.0 - np.prod(prob_mask)
 
     def plot_volume_mask(self, vox_size, show=True, colour_map=None, dtype=bool):
@@ -488,7 +488,7 @@ class DisplacedTree(Tree):
                             "is not a multiple of the mask voxel sizes. {}"
                             .format(self.displacement, e))
 
-    def get_convolved_mask(self, *mask_args):
+    def get_mask(self, *mask_args):
         """
         Gets the convolved mask for the given voxel size and sample diameter ratio. 
         To avoid duplications the mask is accessed from the original (undisplaced) tree, being 
@@ -497,12 +497,10 @@ class DisplacedTree(Tree):
         @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
         """
         try:
-            return self._undisplaced_tree.get_convolved_mask(*mask_args).\
-                                                                   displaced_mask(self.displacement)
+            return self._undisplaced_tree.get_mask(*mask_args).displaced_mask(self.displacement)
         except DisplacedVoxelSizeMismatchException as e:
-            raise Exception("Cannot get convolved mask of displaced tree because its "
-                            "displacement {} is not a multiple of the mask voxel sizes. {}"
-                            .format(self.displacement, e))
+            raise Exception("Cannot get mask of displaced tree because its displacement {} is not a"
+                            " multiple of the mask voxel sizes. {}".format(self.displacement, e))
 
     @property
     def points(self):
@@ -790,7 +788,7 @@ class ConvolvedMask(Mask):
     __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
 
     def __init__(self, tree_or_points, kernel):
-        tree, points = Mask._parse_tree_points(tree_or_points)
+        tree, points, point_extents = Mask._parse_tree_points(tree_or_points) #@UnusedVariable
         # The extent around each point that will be > threshold        
         self._kernel = kernel
         # Call the base 'Mask' class constructor to set up the 
@@ -870,14 +868,14 @@ class Kernel(object):
 
 class GaussianKernel(Kernel):
 
-    def __init__(self, vox_size, scale, decay, threshold=GAUSS_THRESHOLD_DEFAULT, isotropy=1.0,
-                 orient=(1.0, 0.0, 0.0), sample_freq=GAUSS_SAMPLE_FREQ_DEFAULT):
+    def __init__(self, vox_x, vox_y, vox_z, scale, decay_rate, threshold=GAUSS_THRESHOLD_DEFAULT,
+                 isotropy=1.0, orient=(1.0, 0.0, 0.0), sample_freq=GAUSS_SAMPLE_FREQ_DEFAULT):
         if threshold >= 1.0:
             raise Exception ("Extent threshold must be < 1.0 (found '{}')".format(threshold))
-        self._vox_size = vox_size
+        self._vox_size = np.array((vox_x, vox_y, vox_z))
         self._threshold = threshold
         self._scale = scale
-        self._tensor = axially_symmetric_tensor(decay, orient, isotropy)
+        self._tensor = axially_symmetric_tensor(decay_rate, orient, isotropy)
         # Calculate the extent of the kernel along the x,y, and z axes
         eig_vals, eig_vecs = np.linalg.eig(self._tensor)
         # Get the extent along each of the Eigen-vectors where the point-spread function reaches the
@@ -917,7 +915,7 @@ class ConnectionProbabilityMatrix(object):
         self._prob_matrix = None
         self.kernel = kernel
         if mask is not None:
-            self.B = B[:, mask]
+            self.B = list(itertools.compress(B, mask))
         else:
             self.B = B
 
@@ -927,7 +925,7 @@ class ConnectionProbabilityMatrix(object):
 
     def as_array(self, sub_mask=None):
         if self._prob_matrix is None and self.A is not None:
-            B = self.B if sub_mask is None else self.B[:, sub_mask]
+            B = self.B if sub_mask is None else list(itertools.compress(self.B, sub_mask))
             self._prob_matrix = np.zeros(len(B))
             for i in xrange(len(B)):
                 self._prob_matrix[i] = self.A.connection_prob(B[i], self.kernel)
@@ -937,17 +935,18 @@ class ConnectionProbabilityMatrix(object):
 class ProbabilisticConnector(pyNN.connectors.ProbabilisticConnector):
 
     def __init__(self, projection, weights=0.0, delays=None,
-                 allow_self_connections=True, safe=True):
+                 allow_self_connections=True, space=pyNN.connectors.Space(), safe=True):
         pyNN.connectors.ProbabilisticConnector.__init__(self, projection=projection,
                                                         weights=weights, delays=delays,
                                                         allow_self_connections=allow_self_connections,
-                                                        space=pyNN.connectors.Space(), safe=safe)
+                                                        space=space, safe=safe)
 
     def _set_distance_matrix(self, src):
+        morphology = src.parent.morphologies[src.parent.id_to_index(src)]
         if self.prepare_sources and src.local:
-            self.full_distance_matrix.set_source(src.morphology)
+            self.full_distance_matrix.set_source(morphology)
         else:
-            self.distance_matrix.set_source(src.morphology)
+            self.distance_matrix.set_source(morphology)
 
     @property
     def distance_matrix(self):
@@ -977,7 +976,7 @@ class MorphologyBasedProbabilityConnector(pyNN.connectors.DistanceDependentProba
     For each pair of pre-post cells, the connection probability depends on distance.
     """
     parameter_names = ('allow_self_connections', 'd_expression')
-    
+
     #Override the base classes Probabilistic connector to use the morphologies
     ProbConnector = ProbabilisticConnector
 
