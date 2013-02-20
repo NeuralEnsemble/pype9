@@ -205,7 +205,7 @@ class EllipsoidMask(MaskBased):
     probabilityability of connection within an elliptical region
     """
 
-    def __init__(self, scale, orient, isotropy, probability=None, number=None):
+    def __init__(self, scale, orient_x, orient_y, orient_z, isotropy, probability=None, number=None):
         """
         @param x: scale of the x axis of the ellipsoid
         @param y: scale of the y axis of the ellipsoid   
@@ -214,7 +214,7 @@ class EllipsoidMask(MaskBased):
         """
         super(EllipsoidMask, self).__init__(probability, number)
         self.scale = scale
-        self.orient = orient
+        self.orient = numpy.array((orient_x, orient_y, orient_z))
         self.isotropy = isotropy
 
     def __call__(self, displacement):
