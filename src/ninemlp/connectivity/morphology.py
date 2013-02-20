@@ -17,21 +17,29 @@ import numpy as np
 from numpy.linalg import norm
 import collections
 import xml.sax
+import pyNN.connectors
 from ninemlp import XMLHandler
 from ninemlp.connectivity import axially_symmetric_tensor
+from copy import deepcopy
 try:
     import matplotlib.pyplot as plt
 except:
-    # If pyplot is not install, ignore it and only throw an error if a plotting function is called
+    # If pyplot is not installed, ignore it and only throw an error if a plotting function is called
     plt = None
 
+# Constants ----------------------------------------------------------------------------------------
 
-THRESHOLD_DEFAULT = 0.02
+GAUSS_THRESHOLD_DEFAULT = 0.02
 SAMPLE_DIAM_RATIO = 4.0
-SAMPLE_FREQ_DEFAULT = 100
+GAUSS_SAMPLE_FREQ_DEFAULT = 100
+DEEP_Z_VOX_SIZE = 10000 # This is the vox size used for the z axis to approximate infinite depth
+# Pre-calculated for speed (not sure if this would be a bottleneck though)
+SQRT_3 = math.sqrt(3)
+
 
 class DisplacedVoxelSizeMismatchException(Exception): pass
 
+#  Objects to store the morphologies ---------------------------------------------------------------
 
 class Forest(object):
 
@@ -47,20 +55,29 @@ class Forest(object):
         for tree in self.trees:
             self.centroid += tree.centroid
             self.min_bounds = np.select([self.min_bounds <= tree.min_bounds, True],
-                                [self.min_bounds, tree.min_bounds])
+                                        [self.min_bounds, tree.min_bounds])
             self.max_bounds = np.select([self.max_bounds >= tree.max_bounds, True],
-                                [self.max_bounds, tree.max_bounds])
+                                        [self.max_bounds, tree.max_bounds])
         self.centroid /= len(roots)
         # Load somas
         self.somas = {}
         if include_somas:
-            soma_contours = read_NeurolucidaSomaXML(xml_filename)
-            for name, soma_contours in soma_contours.items():
-                self.somas[name] = Soma(soma_contours.contours)
+            soma_dict = read_NeurolucidaSomaXML(xml_filename)
+            if not len(soma_dict):
+                self.has_somas = False
+            else:
+                if len(soma_dict) != len(self.trees):
+                    raise Exception("Number of loaded somas ({}) and trees do not match ({}) "
+                                    .format(len(soma_dict), len(self.trees)))
+                for label, soma in soma_dict.items():
+                    self.trees[soma.index].add_soma(Soma(label, soma.contours))
+                self.has_somas = True
+        else:
+            self.has_somas = False
 
     def __getitem__(self, index):
         return self.trees[index]
-    
+
     def __iter__(self):
         for tree in self.trees:
             yield tree
@@ -68,15 +85,116 @@ class Forest(object):
     def __len__(self):
         return len(self.trees)
 
+    def transform(self, transform):
+        """
+        Transforms the forest by the given transformation matrix
+        
+        @param transform [numpy.array(3,3)]: The transformation matrix by which to rotate the forest
+        """
+        for tree in self:
+            tree.transform(transform)
+
     def rotate(self, theta, axis=2):
         """
-        Rotates the tree about the chosen axis by theta
+        Rotates the forest about the chosen axis by theta 
         
         @param theta [float]: The degree of clockwise rotation (in degrees)
         @param axis [str/int]: The axis about which to rotate the tree (either 'x'-'z' or 0-2, default 'z'/2)
         """
-        for tree in self.trees:
-            tree.rotate(theta, axis)      
+        for tree in self:
+            tree.rotate(theta, axis)
+
+    def offset(self, offset):
+        for tree in self:
+            tree.offset(offset)
+
+    def get_volume_mask(self, vox_size, dtype=bool):
+        mask = VolumeMask(vox_size, np.vstack([tree.points for tree in self.trees]),
+                          np.hstack([tree.diams for tree in self.trees]), dtype)
+        if dtype == bool:
+            for i, tree in enumerate(self):
+                mask.add_tree(tree)
+                print "Added {} tree to volume mask".format(i)
+        else:
+            bool_mask = VolumeMask(vox_size, np.vstack([tree.points for tree in self.trees]),
+                                   np.hstack([tree.diams for tree in self.trees]), bool)
+            for i, tree in enumerate(self):
+                tree_mask = deepcopy(bool_mask)
+                tree_mask.add_tree(tree)
+                mask += tree_mask
+                print "Added {} tree to volume mask".format(i)
+        return mask
+
+    def plot_volume_mask(self, vox_size, show=True, dtype=bool, colour_map=None):
+        mask = self.get_volume_mask(vox_size, dtype)
+        if not colour_map:
+            if dtype == bool:
+                colour_map = 'gray'
+            else:
+                colour_map = 'jet'
+        mask.plot(show=show, colour_map=colour_map)
+
+    def xy_coverage(self, vox_size, central_frac=(1.0, 1.0)):
+        if len(vox_size) != 2:
+            raise Exception("Voxel size needs to be 2-D (X and Y dimensions), found {}D"
+                            .format(len(vox_size)))
+        self.offset((0.0, 0.0, DEEP_Z_VOX_SIZE / 2.0))
+        mask = self.get_volume_mask(vox_size + (DEEP_Z_VOX_SIZE,))
+        if mask.dim[2] != 1:
+            raise Exception("Not all voxels where contained with the \"deep\" z voxel dimension")
+        trimmed_frac = (1.0 - np.array(central_frac)) / 2.0
+        start = np.array(np.floor(mask.dim[:2] * trimmed_frac), dtype=int)
+        end = np.array(np.ceil(mask.dim[:2] * (1.0 - trimmed_frac)), dtype=int)
+        central_mask = mask._mask_array[start[0]:end[0], start[1]:end[1], 0].squeeze()
+        coverage = float(np.count_nonzero(central_mask)) / float(np.prod(central_mask.shape))
+        self.offset((0.0, 0.0, -DEEP_Z_VOX_SIZE / 2.0))
+        return coverage, central_mask
+
+    def normal_to_dendrites(self):
+        avg = np.array((0.0, 0.0, 0.0))
+        for tree in self:
+            avg += tree.normal_to_dendrites()
+        avg /= norm(avg)
+        return avg
+
+    def normal_to_soma_plane(self):
+        if not self.has_somas:
+            raise Exception("Forest does not include somas, so their normal is not defined")
+        soma_centres = []
+        for tree in self:
+            soma_centres.append(tree.soma.centre())
+        eig_vals, eig_vecs = np.linalg.eig(np.cov(soma_centres, rowvar=0)) #@UnusedVariable
+        normal = eig_vecs[:, np.argmin(eig_vals)]
+        if normal.sum() < 0:
+            normal *= -1.0
+        return normal
+
+    def align_to_xyz_axes(self):
+        soma_axis = self.normal_to_soma_plane()
+        dendrite_axis = self.normal_to_dendrites()
+        third_axis = np.cross(dendrite_axis, soma_axis)
+        third_axis /= norm(third_axis) # Just to clean up any numerical errors
+        re_dendrite_axis = np.cross(third_axis, soma_axis)
+        align = np.vstack((soma_axis, third_axis, re_dendrite_axis))
+        # As the align matrix is unitary its inverse is equivalent to its transpose
+        inv_align = align.transpose();
+        for tree in self:
+            tree.transform(inv_align)
+        return align
+
+    def align_min_bound_to_origin(self):
+        self.offset(-self.min_bounds)
+
+    def collapse_to_origin(self):
+        for tree in self:
+            tree.offset(-tree.centroid)
+
+    def randomize_trees(self):
+        raise NotImplementedError
+
+    def perturb(self, mag):
+        for tree in self:
+            tree.pertub(mag)
 
 
 class Tree(object):
@@ -106,13 +224,19 @@ class Tree(object):
         # Create dictionaries to store tree masks to save having to regenerate them the next time
         self._masks = collections.defaultdict(dict)
 
+    def add_soma(self, soma):
+        self.soma = soma
+
+    def soma_position(self):
+        if self.soma:
+            pos = self.soma.centre
+        else:
+            pos = self._points[0, :]
+        return pos
+
     @property
     def points(self):
         return self._points
-    
-    @property
-    def point_extents(self):
-        return np.tile(np.reshape(self.diams / 2.0, (-1, 1)), (1, 3))
 
     def num_points(self):
         return len(self._points)
@@ -147,6 +271,20 @@ class Tree(object):
         for branch in branch.sub_branches:
             self._flatten(branch, prev_index)
 
+    def transform(self, transform):
+        """
+        Transforms the tree by the given transformation matrix
+        
+        @param transform [numpy.array(3,3)]: The transformation matrix by which to rotate the tree
+        """
+        if transform.shape != (3, 3):
+            raise Exception("Rotation matrix needs to be a 3 x 3 matrix (found {shape[0]} x "
+                            "{shape[1]})".format(shape=transform.shape))
+        # Rotate all the points in the tree
+        self._points = np.dot(self._points, transform)
+        # Clear masks, which will no longer match the rotated points
+        self._masks.clear()
+
     def rotate(self, theta, axis=2):
         """
         Rotates the tree about the chosen axis by theta
@@ -179,39 +317,50 @@ class Tree(object):
         # Clear masks, which will no longer match the rotated points
         self._masks.clear()
 
-    def get_binary_mask(self, vox_size):
+    def perturb(self, mag):
+        self._points += np.random.randn(mag)
+
+    def get_volume_mask(self, vox_size, dtype=bool):
         """
         Creates a mask for the given voxel sizes and saves it in self._masks
         
         @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
         """
         vox_size = Mask.parse_vox_size(vox_size)
-        if not self._masks['binary'].has_key(vox_size):
-            self._masks['binary'][vox_size] = BinaryMask(vox_size, self)
-        return self._masks['binary'][vox_size]
+        if not self._masks.has_key(vox_size):
+            self._masks[vox_size] = VolumeMask(vox_size, self, dtype=dtype)
+        return self._masks[vox_size]
 
-    def get_prob_mask(self, vox_size, scale, orient, decay_rate=0.1, isotropy=1.0,
-                      threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT):
+    def get_prob_mask(self, kernel):
         """
         Creates a mask for the given voxel sizes and saves it in self._masks
         
         @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
         
         """
-        vox_size = Mask.parse_vox_size(vox_size)
-        if not self._masks['prob'].has_key(vox_size):
-            self._masks['prob'][vox_size] = GaussMask(vox_size, self, scale, orient,
-                                                      decay_rate=decay_rate, isotropy=isotropy,
-                                                      threshold=threshold, sample_freq=sample_freq)
-        return self._masks['prob'][vox_size]
+        if not self._masks.has_key(kernel):
+            self._masks[kernel] = ConvolvedMask(self, kernel)
+        return self._masks[kernel]
 
-    def displaced_tree(self, displace):
+    def displaced_tree(self, displacement):
         """
-        Return displaced version of tree (a lightweight copy that borrows this trees masks)
+        Return displaced version of tree (a lightweight copy that borrows this tree's masks)
         
         @param displace [tuple(float)]: Displace to apply to the tree
         """
-        return DisplacedTree(self, displace)
+        return DisplacedTree(self, displacement)
+
+    def offset(self, offset):
+        """
+        Unlike displaced tree, offset_tree moves all the points of the tree by the given offset 
+        (invalidating all masks)
+        
+        @param displace [tuple(float)]: Displace to apply to the tree
+        """
+        if len(offset) != 3:
+            raise Exception("Offset needs to be of length 3 (found {})".format(len(offset)))
+        self._points += offset
+        self._masks.clear()
 
     def num_overlapping(self, tree, vox_size):
         """
@@ -220,7 +369,7 @@ class Tree(object):
         @param tree [Tree]: The second tree to calculate the overlap with
         @param vox_size [tuple(float)]: The voxel sizes to use when calculating the overlap
         """
-        overlap_mask = self.get_binary_mask(vox_size).overlap(tree.get_binary_mask(vox_size))
+        overlap_mask = self.get_volume_mask(vox_size).overlap(tree.get_volume_mask(vox_size))
         return np.sum(overlap_mask)
 
     def connection_prob(self, tree, vox_size, gauss_kernel, threshold, sample_freq):
@@ -230,28 +379,44 @@ class Tree(object):
         @param tree [Tree]: The second tree to calculate the overlap with
         @param vox_size [tuple(float)]: The voxel sizes to use when calculating the overlap
         """
-        prob_mask = self.get_float_mask(vox_size, gauss_kernel, sample_freq).\
-                            overlap(tree.get_float_mask(vox_size, gauss_kernel, sample_freq))
+        prob_mask = self.get_convolved_mask(vox_size, gauss_kernel, sample_freq).\
+                            overlap(tree.get_convolved_mask(vox_size, gauss_kernel, sample_freq))
         return 1.0 - np.prod(prob_mask)
 
-    def plot_binary_mask(self, vox_size, show=True, colour_map=None):
+    def plot_volume_mask(self, vox_size, show=True, colour_map=None, dtype=bool):
         if not plt:
             raise Exception("Matplotlib could not be imported and therefore plotting functions "
                             "have been disabled")
-        mask = self.get_binary_mask(vox_size)
         if not colour_map:
-            colour_map = 'gray'
+            if dtype == bool:
+                colour_map = 'gray'
+            else:
+                colour_map = 'jet'
+        mask = self.get_volume_mask(vox_size, dtype=dtype)
         mask.plot(show=show, colour_map=colour_map)
 
     def plot_prob_mask(self, vox_size, scale=1.0, orient=(1.0, 0.0, 0.0), decay_rate=0.1,
-                       isotropy=1.0, threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT,
-                       show=True, colour_map=None):
+                       isotropy=1.0, threshold=GAUSS_THRESHOLD_DEFAULT, sample_freq=GAUSS_SAMPLE_FREQ_DEFAULT,
+                       show=True, colour_map='jet'):
         mask = self.get_prob_mask(vox_size, scale, orient, decay_rate=decay_rate,
                                   isotropy=isotropy, threshold=threshold,
                                   sample_freq=sample_freq)
-        if not colour_map:
-            colour_map = 'jet'
         mask.plot(show=show, colour_map=colour_map)
+
+    def normal_to_dendrites(self, diam_threshold=1.5):
+        """
+        Calculate the normal to the plan for points on the dendritic tree that are above the 
+        diameter threshold
+        """
+        # Select points with diameters below a certain threshold
+        selected_points = self._points[self.diams < diam_threshold, :]
+        # Get normal to the covariance matrix of these points
+        eig_vals, eig_vecs = np.linalg.eig(np.cov(selected_points, rowvar=0))
+        normal = eig_vecs[:, np.argmin(eig_vals)]
+        # Ensure the normal is closer to the [1,1,1] vector than the [-1,-1,-1]
+        if normal.sum() < 0:
+            normal *= -1.0
+        return normal
 
 
 class DisplacedTree(Tree):
@@ -259,7 +424,36 @@ class DisplacedTree(Tree):
     def __init__(self, tree, displacement):
         """
         A lightweight, displaced copy of the original tree, which avoids the regeneration of new 
-        masks if the displacement is an even multiple of the voxel dimensions of the mask by simply
+        masks if the displacement is an even multiple of the voxel dimensionern == 'Tiled':
+                        forest.align_min_bound_to_origin()
+                        base_offset = args.get('offset', numpy.zeros(3))
+                        tiling = numpy.array((args.get('x', 1), args.get('y', 1), args.get('z',1)))
+                        soma_positions = [tree.soma_position() for tree in forest]
+                        positions = numpy.zeros((len(forest) * tiling.prod(), 3))
+                        morphologies = []
+                        pos_count = 0
+                        for z in xrange(tiling[0]):
+                            for y in xrange(tiling[1]):
+                                for x in xrange(tiling[2]):
+                                    offset = base_offset + forest.max_bounds * (x, y, z)
+                                    for tree in forest:
+                                        morphologies.append(tree.displaced_tree(offset))
+                                    positions[pos_count+len(forest), :] = soma_positions + offset
+                    elif pattern == 'DistributedSoma':
+                        forest.collapse_to_origin()
+                        low = numpy.array(args['low'].split(' '))
+                        high = numpy.array(args['high'].split(' '))
+                        size = args['size']
+                        span = high - low
+                        positions = numpy.random.rand((size, 3))
+                        positions *= span
+                        positions += low
+                        morphologies = []
+                        for i in range(size):
+                            morphologies.append(forest[i % len(forest)].displaced_tree(positions[i,:]))
+                    else:
+                        raise Exception("Unrecognised structure pattern '{}' in '{}' population"
+                              s of the mask by simply
         offsetting the origin of the mask. Note that because it is a lightweight copy, changes to 
         the original tree will be reflected in its displaced copies.
         
@@ -278,37 +472,38 @@ class DisplacedTree(Tree):
         self.min_bounds = tree.min_bounds + self.displacement
         self.max_bounds = tree.max_bounds + self.displacement
 
-    def get_binary_mask(self, *mask_args):
+    def get_volume_mask(self, *mask_args):
         """
-        Gets the binary mask for the given voxel size and sample diameter ratio. To avoid 
+        Gets the volume mask for the given voxel size and sample diameter ratio. To avoid 
         duplications the mask is accessed from the original (undisplaced) tree, being created and 
         saved there if required.
         
         @param args: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
         """
         try:
-            return self._undisplaced_tree.get_binary_mask(*mask_args).\
+            return self._undisplaced_tree.get_volume_mask(*mask_args).\
                                                                    displaced_mask(self.displacement)
         except DisplacedVoxelSizeMismatchException as e:
-            raise Exception("Cannot get binary mask of displaced tree because its displacement {} "
+            raise Exception("Cannot get volume mask of displaced tree because its displacement {} "
                             "is not a multiple of the mask voxel sizes. {}"
                             .format(self.displacement, e))
 
-    def get_float_mask(self, *mask_args):
+    def get_convolved_mask(self, *mask_args):
         """
-        Gets the float mask for the given voxel size and sample diameter ratio. 
+        Gets the convolved mask for the given voxel size and sample diameter ratio. 
         To avoid duplications the mask is accessed from the original (undisplaced) tree, being 
         created and saved there if required.
         
         @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
         """
         try:
-            return self._undisplaced_tree.get_float_mask(*mask_args).\
+            return self._undisplaced_tree.get_convolved_mask(*mask_args).\
                                                                    displaced_mask(self.displacement)
         except DisplacedVoxelSizeMismatchException as e:
-            raise Exception("Cannot get float mask of displaced tree because its "
+            raise Exception("Cannot get convolved mask of displaced tree because its "
                             "displacement {} is not a multiple of the mask voxel sizes. {}"
                             .format(self.displacement, e))
+
     @property
     def points(self):
         return self._points + self.displacement
@@ -319,24 +514,41 @@ class DisplacedTree(Tree):
             yield Tree.Segment(seg.begin + self.displacement, seg.end + self.displacement, seg.diam)
 
 
+class Soma(object):
+
+    def __init__(self, label, contours):
+        """
+        Initialises the Soma object
+        
+        @param contours [list(NeurolucidaSomaXMLHandler.Contour)]: A list of contour objects
+        """
+        self.label = label
+        # Recursively flatten all branches stemming from the root
+        num_points = sum([len(contour.points) for contour in contours])
+        self._points = np.zeros((num_points, 4))
+        point_count = 0
+        for contour in contours:
+            for point in contour.points:
+                self._points[point_count, :] = point
+                point_count += 1
+
+    @property
+    def points(self):
+        return self._points
+
+    @property
+    def centre(self):
+        avg = np.sum(self._points[:, :3], axis=0)
+        return avg / norm(avg)
+
+
+#  Mask objects to map the morphologies to arrays of data ------------------------------------------
+
 class Mask(object):
 
     __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
-    
-    @classmethod
-    def _parse_tree_or_points(cls, tree_or_points):
-        if type(tree_or_points) == Tree:
-            tree = tree_or_points
-            points = tree.points
-        elif type(tree_or_points) == np.array and tree_or_points.shape[1] == 3:
-            tree = None
-            points = tree_or_points
-        else:
-            raise Exception("Incorrect type for 'tree_or_points' parameter ({}), must be either "
-                            "'Tree' or numpy.array(N x 3)".format(type(tree_or_points)))
-        return tree, points
 
-    def __init__(self, vox_size, points, point_extents):
+    def __init__(self, vox_size, points, point_extents, dtype):
         """
         Initialises the mask from a given Neurolucida tree and voxel size
         
@@ -368,6 +580,8 @@ class Mask(object):
         self.X, self.Y, self.Z = np.mgrid[grid_start[0]:grid_finish[0]:(self.dim[0] * 1j),
                                           grid_start[1]:grid_finish[1]:(self.dim[1] * 1j),
                                           grid_start[2]:grid_finish[2]:(self.dim[2] * 1j)]
+        # Initialise the mask_array with the appropriate data type
+        self._mask_array = np.zeros(self.dim, dtype=dtype)
 
     def overlap(self, mask):
         if np.any(mask.vox_size != self.vox_size):
@@ -397,7 +611,7 @@ class Mask(object):
     def displaced_mask(self, displacement):
         return DisplacedMask(self, displacement)
 
-    def plot(self, slice_dim=2, skip=1, show=True, colour_map=None):
+    def plot(self, slice_dim=2, skip=1, show=True, colour_map=None, colour_bar=True):
         for i in xrange(0, self.dim[slice_dim], skip):
             if not plt:
                 raise Exception("Matplotlib could not be imported and therefore plotting functions "
@@ -408,9 +622,12 @@ class Mask(object):
             elif slice_dim == 1: slice_indices = np.ogrid[0:mask_shape[0], i:(i + 1), 0:mask_shape[2]]
             elif slice_dim == 2: slice_indices = np.ogrid[0:mask_shape[0], 0:mask_shape[1], i:(i + 1)]
             else: raise Exception("Slice dimension can only be 0-2 ({} provided)".format(slice_dim))
-            plt.imshow(np.squeeze(self._mask_array[slice_indices]),
-                       cmap=plt.cm.get_cmap(colour_map))
-            plt.title('dim {}, index {}'.format(slice_dim, i))
+            img = plt.imshow(np.squeeze(self._mask_array[slice_indices]),
+                             cmap=plt.cm.get_cmap(colour_map))
+            img.set_interpolation('nearest')
+            plt.title('Dim {}, Index {}'.format(slice_dim, i))
+            if self._mask_array.dtype != np.dtype('bool'):
+                plt.colorbar()
         if show:
             plt.show()
 
@@ -435,6 +652,48 @@ class Mask(object):
                 raise Exception("'vox_size' parameter ('{}') needs to be able to be "
                                 "converted to a tuple or a float ".format(vox_size))
         return vox_size
+
+    @classmethod
+    def _parse_tree_points(cls, tree_or_points, diams=None):
+        if type(tree_or_points) == Tree:
+            tree = tree_or_points
+            points = tree.points
+            if diams:
+                raise Exception("Diameters should only be provided if the 'tree_or_points' is an "
+                                "array of points")
+            diams = tree.diams
+        elif type(tree_or_points) == np.ndarray and tree_or_points.shape[1] == 3:
+            tree = None
+            points = tree_or_points
+            if points.shape[0] != len(diams):
+                raise Exception("Number of points ({}) and length of diams ({}) do not match."
+                                .format(points.shape[0], len(diams)))
+        else:
+            raise Exception("Incorrect type for 'tree_or_points' parameter ({}), must be either "
+                            "'Tree' or numpy.array(N x 3)".format(type(tree_or_points)))
+        point_extents = np.tile(np.reshape(diams / 2.0, (-1, 1)), (1, 3))
+        return tree, points, point_extents
+
+    def _check_match(self, mask):
+        if any(self.vox_size != mask.vox_size):
+            raise Exception("Voxel sizes do not match ({} and {})"
+                            .format(self.vox_size, mask.vox_size))
+        if any(self.start_index != mask.start_index):
+            raise Exception("Start indices do not match ({} and {})"
+                            .format(self.start_index, mask.start_index))
+        if any(self.finish_index != mask.finish_index):
+            raise Exception("Finish indices do not match ({} and {})"
+                            .format(self.finish_index, mask.finish_index))
+
+    def __iadd__(self, mask):
+        self._check_match(mask)
+        self._mask_array += mask._mask_array
+        return self
+
+    def __add__(self, mask):
+        new_mask = deepcopy(self)
+        new_mask += mask._mask_array
+        return new_mask
 
 
 class DisplacedMask(Mask):
@@ -471,35 +730,46 @@ class DisplacedMask(Mask):
         self._mask_array = mask._mask_array
 
 
-class BinaryMask(Mask):
+class VolumeMask(Mask):
 
-    def __init__(self, vox_size, tree):
+    def __init__(self, vox_size, tree_or_points, diams=None, dtype=bool):
+        # Get tree (if provided instead of list of points), points and point extents from provided 
+        # parameters
+        tree, points, point_extents = Mask._parse_tree_points(tree_or_points, diams)
         # Call the base 'Mask' class constructor
-        Mask.__init__(self, vox_size, tree.points, tree.point_extents)
-        # Initialise the mask_array with the appropriate data type
-        self._mask_array = np.zeros(self.dim, dtype=bool)
-        # Set a minimum extent in each dimension to ensure the that the point extents are large 
-        # enough in each dimension to not "fall in the gaps" between voxels
-        self.min_extent = np.array(vox_size) * (math.sqrt(3.0) / 2.0)
+        Mask.__init__(self, vox_size, points, point_extents, dtype)
+        # For convenience calculate this here to save calculating it each iteration
+        self.half_vox = self.vox_size / 2.0
+        # Add the tree to the mask if it was provided
+        if tree:
+            self.add_tree(tree)
 
-    def add_tree_to_mask(self, tree):
+    def add_tree(self, tree):
         # Loop through all of the tree _point_data and "paint" the mask
         for seg in tree.segments:
-            # Set the point extent to be the segment diameter unless it is below the minimum along
-            # that dimension
-            point_extent = np.array((seg.diam, seg.diam, seg.diam))
-            point_extent[point_extent < self.min_extent] = \
-                    self.min_extent[point_extent < self.min_extent]
+            seg_radius = seg.diam / 2.0
             # Calculate the number of samples required for the current segment
             num_samples = np.ceil(norm(seg.end - seg.begin) *
-                                  (SAMPLE_DIAM_RATIO / min(point_extent)))
+                                  (SAMPLE_DIAM_RATIO / seg.diam))
             # Loop through the samples for the given segment and add their "point_mask" to the 
             # overall mask
             for frac in np.linspace(1, 0, num_samples, endpoint=False):
+                # Set the point extent to be the segment diameter unless it is below the minimum along
+                # that dimension
                 point = (1.0 - frac) * seg.begin + frac * seg.end
+                # Get the point in the reference frame of the mask
+                offset_point = point - self.offset
+                # Get an extent guaranteed to at least reach one voxel (but not extend into
+                # two unless its radius is big enough) and set the extent about the current point 
+                # to that or the segment radius depending on which is greater.
+                point_extent = (offset_point + self.half_vox) % self.vox_size
+                over_half = point_extent > self.half_vox
+                point_extent[over_half] = self.vox_size[over_half] - point_extent[over_half]
+                point_extent *= SQRT_3
+                point_extent[point_extent < seg_radius] = seg_radius
                 # Determine the extent of the mask indices that could be affected by the point
-                extent_start = np.floor((point - self.offset - seg.diam / 2.0) / self.vox_size)
-                extent_finish = np.ceil((point - self.offset + seg.diam / 2.0) / self.vox_size)
+                extent_start = np.floor((offset_point - seg_radius) / self.vox_size)
+                extent_finish = np.ceil((offset_point + seg_radius) / self.vox_size)
                 # Get an "open" grid (uses less memory if it is open) of voxel indices to apply 
                 # the distance function to.
                 # (see http://docs.scipy.org/doc/numpy/reference/generated/numpy.ogrid.html)
@@ -515,25 +785,22 @@ class BinaryMask(Mask):
                 self._mask_array[extent_indices] += point_mask
 
 
-class FloatMask(Mask):
+class ConvolvedMask(Mask):
 
     __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
 
-    def __init__(self, vox_size, tree_or_points, point_extent, sample_freq):
-        tree, points = Mask._parse_tree_or_points(tree_or_points)
+    def __init__(self, tree_or_points, kernel):
+        tree, points = Mask._parse_tree_points(tree_or_points)
         # The extent around each point that will be > threshold        
-        self.point_extent = point_extent
-        self.sample_freq = sample_freq
+        self._kernel = kernel
         # Call the base 'Mask' class constructor to set up the 
-        Mask.__init__(self, vox_size, points, np.tile(point_extent, 
-                                                           (tree.num_points(), 1)))
-        # Initialise the mask_array
-        self._mask_array = np.zeros(self.dim, dtype=float)
-        # Add the tree to the mask
+        Mask.__init__(self, kernel.vox_size, points, np.tile(kernel.extent,
+                                                             (tree.num_points(), 1)), float)
+        # Add the tree to the mask if it was provided
         if tree:
-            self.add_tree_to_mask(tree)
+            self.add_tree(tree)
 
-    def add_tree_to_mask(self, tree):
+    def add_tree(self, tree):
         """
         Adds the tree to a given mask
         
@@ -554,8 +821,8 @@ class FloatMask(Mask):
             for frac in np.linspace(1, 0, num_samples, endpoint=False):
                 point = (1.0 - frac) * seg.begin + frac * seg.end
                 # Determine the extent of the mask indices that could be affected by the point
-                extent_start = np.floor((point - self.offset - self.point_extent) / self.vox_size)
-                extent_finish = np.array(np.ceil((point - self.offset + self.point_extent) 
+                extent_start = np.floor((point - self.offset - self._kernel.extent) / self.vox_size)
+                extent_finish = np.array(np.ceil((point - self.offset + self._kernel.extent)
                                                  / self.vox_size), dtype=int)
                 # Get an "open" grid (uses less memory if it is open) of voxel indices to apply 
                 # the distance function to.
@@ -567,76 +834,155 @@ class FloatMask(Mask):
                 # bounds of the extent.
                 X = self.X[extent_indices]
                 Y = self.Y[extent_indices]
-                Z = self.Z[extent_indices]                                
-                disps = np.vstack((X.ravel() - point[0], Y.ravel() - point[1], 
+                Z = self.Z[extent_indices]
+                disps = np.vstack((X.ravel() - point[0], Y.ravel() - point[1],
                                    Z.ravel() - point[2])).transpose()
                 # Get the values of the point-spread function at each of the voxel centres
-                values = self._point_spread_function(disps)
+                values = self._kernel(disps)
                 # Add the point-spread function values to the mask_array
                 self._mask_array[extent_indices] += length_scale * values.reshape(X.shape)
             if count % (tree.num_segments() // 10) == 0 and count != 0:
                 print "Generating mask - {}% complete" \
                         .format(round(float(count) / float(tree.num_segments()) * 100))
 
-    def _point_spread_function(self, disps):
-        # Should be implemented in derived class
-        raise NotImplementedError
 
 
-class GaussMask(FloatMask):
+#  Kernels to use in convolved masks ---------------------------------------------------------------
 
-    def __init__(self, vox_size, tree, scale=1.0, orient=(1.0, 0.0, 0.0), decay_rate=0.1,
-                 isotropy=1.0, threshold=THRESHOLD_DEFAULT, sample_freq=SAMPLE_FREQ_DEFAULT):
-        if threshold >= 1.0:
-            raise Exception ("Extent threshold must be < 1.0 (was {})".format(threshold))
-        self.threshold = threshold
-        self.scale = scale
-        self.tensor = axially_symmetric_tensor(decay_rate, orient, isotropy)
-        FloatMask.__init__(self, vox_size, tree, 
-                           type(self).get_point_extent(self.tensor, threshold), sample_freq)
+class Kernel(object):
+    """
+    Base class for kernels to passed to convolvedMask
+    """
 
-    def _point_spread_function(self, disps):
-        # Calculate the Gaussian point spread function f = k * exp[-0.5 * d^t . W . d] for each 
-        # displacement, where 'W' is the weights matrix and 'd' is a displacement vector
-        values = self.scale * np.exp(-0.5 * np.sum(disps.dot(self.tensor) * disps, axis=1))
-        # For even threshold out all values that fall beneath the threshold used to determine the
-        # extent of the required block of voxels. This removes dependence on the orientation 
-        # relative to the mask axes
-        values[values < self.threshold] = 0.0
-        return values
+    __metaclass__ = ABCMeta # Declare this class abstract to avoid accidental construction
 
-    @classmethod
-    def get_point_extent(cls, tensor, threshold):
-        eig_vals, eig_vecs = np.linalg.eig(tensor)
-        # Get the extent along each of the Eigen-vectors where the point-spread function reaches the
-        # threshold, the extent along the "internal" axes of the kernel
-        internal_extents = np.sqrt(-2.0 * math.log(threshold) / eig_vals)
-        # Calculate the extent of the kernel along the x-y-z axes, the "external" axes
-        point_extent = np.sqrt(np.sum((eig_vecs * internal_extents) ** 2, axis=1))
-        return point_extent
-    
-
-class Soma(object):
-
-    def __init__(self, contours):
-        """
-        Initialises the Soma object
-        
-        @param contours [list(NeurolucidaSomaXMLHandler.Contour)]: A list of contour objects
-        """
-        # Recursively flatten all branches stemming from the root
-        num_points = sum([len(contour.points) for contour in contours])
-        self._points = np.zeros((num_points, 4))
-        point_count = 0
-        for contour in contours:
-            for point in contour.points:
-                self._points[point_count, :] = point
-                point_count += 1
+    def __call__(self, displacements):
+        raise NotImplementedError("'__call__()' method should be implemented by derived class")
 
     @property
-    def points(self):
-        return self._points
+    def extent(self):
+        raise NotImplementedError("'extent' property should be implemented by derived class")
 
+    @property
+    def vox_size(self):
+        raise NotImplementedError("'vox_size' property should be implemented by derived class")
+
+
+class GaussianKernel(Kernel):
+
+    def __init__(self, vox_size, scale, decay, threshold=GAUSS_THRESHOLD_DEFAULT, isotropy=1.0,
+                 orient=(1.0, 0.0, 0.0), sample_freq=GAUSS_SAMPLE_FREQ_DEFAULT):
+        if threshold >= 1.0:
+            raise Exception ("Extent threshold must be < 1.0 (found '{}')".format(threshold))
+        self._vox_size = vox_size
+        self._threshold = threshold
+        self._scale = scale
+        self._tensor = axially_symmetric_tensor(decay, orient, isotropy)
+        # Calculate the extent of the kernel along the x,y, and z axes
+        eig_vals, eig_vecs = np.linalg.eig(self._tensor)
+        # Get the extent along each of the Eigen-vectors where the point-spread function reaches the
+        # threshold, the extent along the "internal" axes of the kernel
+        internal_extents = np.sqrt(-2.0 * math.log(self._threshold) / eig_vals)
+        # Calculate the extent of the kernel along the x-y-z axes, the "external" axes
+        self._extent = np.sqrt(np.sum((eig_vecs * internal_extents) ** 2, axis=1))
+
+    def __call__(self, disps):
+        # Calculate the Gaussian point spread function f = k * exp[-0.5 * d^t . W . d] for each 
+        # displacement, where 'W' is the weights matrix and 'd' is a displacement vector
+        values = self._scale * np.exp(-0.5 * np.sum(disps.dot(self._tensor) * disps, axis=1))
+        # Threshold out all values that fall beneath the threshold used to determine the
+        # extent of the required block of voxels. This removes the dependence on the orientation 
+        # relative to the mask axes, where the kernels would otherwise be trimmed to
+        values[values < self._threshold] = 0.0
+        return values
+
+    @property
+    def extent(self):
+        return self._extent
+
+    @property
+    def vox_size(self):
+        return self._vox_size
+
+
+#  Extensions to the PyNN connector classes required to use morphology based connectivity ----------
+
+class ConnectionProbabilityMatrix(object):
+    """
+    The connection probability matrix between two morphologies
+    """
+
+    def __init__(self, B, kernel, mask=None):
+        self.A = None
+        self._prob_matrix = None
+        self.kernel = kernel
+        if mask is not None:
+            self.B = B[:, mask]
+        else:
+            self.B = B
+
+    def set_source(self, A):
+        self.A = A
+        self._prob_matrix = None
+
+    def as_array(self, sub_mask=None):
+        if self._prob_matrix is None and self.A is not None:
+            B = self.B if sub_mask is None else self.B[:, sub_mask]
+            self._prob_matrix = np.zeros(len(B))
+            for i in xrange(len(B)):
+                self._prob_matrix[i] = self.A.connection_prob(B[i], self.kernel)
+        return self._prob_matrix
+
+
+class ProbabilisticConnector(pyNN.connectors.ProbabilisticConnector):
+
+    def __init__(self, projection, weights=0.0, delays=None,
+                 allow_self_connections=True, safe=True):
+        pyNN.connectors.ProbabilisticConnector.__init__(self, projection=projection,
+                                                        weights=weights, delays=delays,
+                                                        allow_self_connections=allow_self_connections,
+                                                        space=pyNN.connectors.Space(), safe=safe)
+
+    def _set_distance_matrix(self, src):
+        if self.prepare_sources and src.local:
+            self.full_distance_matrix.set_source(src.morphology)
+        else:
+            self.distance_matrix.set_source(src.morphology)
+
+    @property
+    def distance_matrix(self):
+        """
+        We want to avoid calculating positions if it is not necessary, so we
+        delay it until the distance matrix is actually used.
+        """
+        if self._distance_matrix is None:
+            self._distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
+                                                                self.space, self.local)
+        return self._distance_matrix
+
+    @property
+    def full_distance_matrix(self):
+        """
+        We want to avoid calculating positions if it is not necessary, so we
+        delay it until the distance matrix is actually used.
+        """
+        if self._full_distance_matrix is None:
+            self._full_distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
+                                                                     self.space, self.full_mask)
+        return self._full_distance_matrix
+
+
+class MorphologyBasedProbabilityConnector(pyNN.connectors.DistanceDependentProbabilityConnector):
+    """
+    For each pair of pre-post cells, the connection probability depends on distance.
+    """
+    parameter_names = ('allow_self_connections', 'd_expression')
+    
+    #Override the base classes Probabilistic connector to use the morphologies
+    ProbConnector = ProbabilisticConnector
+
+
+#  Handlers to load the morphologies from Neurolucida xml files ------------------------------------
 
 class NeurolucidaTreeXMLHandler(XMLHandler):
     """
@@ -686,7 +1032,7 @@ class NeurolucidaSomaXMLHandler(XMLHandler):
     """
     # Create named tuples (sort of light-weight classes with no methods, like a struct in C/C++) to
     # store the extracted NeurolucidaTreeXMLHandler data.
-    Soma = collections.namedtuple('Soma', 'contours')
+    Soma = collections.namedtuple('Soma', 'index contours')
     Contour = collections.namedtuple('Contour', 'points')
     Point = collections.namedtuple('Point', 'x y z diam')
 
@@ -697,6 +1043,7 @@ class NeurolucidaSomaXMLHandler(XMLHandler):
         """
         XMLHandler.__init__(self)
         self.somas = {}
+        self.soma_count = 0
 
     def startElement(self, tag_name, attrs):
         """
@@ -706,11 +1053,13 @@ class NeurolucidaSomaXMLHandler(XMLHandler):
         if self._opening(tag_name, attrs, 'contour'):
             contour_name = attrs['name']
             if not self.somas.has_key(contour_name):
-                self.somas[contour_name] = self.Soma([])
+                self.somas[contour_name] = self.Soma(self.soma_count, [])
+                self.soma_count += 1
             self.current_contour = self.Contour([])
             self.somas[contour_name].contours.append(self.current_contour)
         elif self._opening(tag_name, attrs, 'point', parents=[('contour')]):
-            self.current_contour.points.append(self.Point(attrs['x'], attrs['y'], attrs['z'], attrs['d']))
+            self.current_contour.points.append(self.Point(attrs['x'], attrs['y'], attrs['z'],
+                                                          attrs['d']))
 
 
 def read_NeurolucidaTreeXML(filename):
@@ -727,17 +1076,29 @@ def read_NeurolucidaSomaXML(filename):
     parser.parse(filename)
     return handler.somas
 
-#    """
-#    A mask containing the of finding a synaptic/presynaptic location at voxels
-#    (3D pixels) of arbitrary width that divide up the bounding box of a dendritic/axonal tree
-#    """
+
+
+#  Testing functions -------------------------------------------------------------------------------
 
 if __name__ == '__main__':
+    VOX_SIZE = (0.1, 0.1, 500)
     from os.path import normpath, join
     from ninemlp import SRC_PATH
+    print "Loading forest..."
+#    forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
+#                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
     forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
-                                  'tree2.xml')))
-    forest[0].plot_prob_mask((10, 10, 10), decay_rate=0.01, isotropy=0.25, orient=(0,0,1))
-
-
-
+                                  'tree2.xml')), include_somas=False)
+    print "Finished loading forest."
+    forest.offset((0.0, 0.0, -250))
+#    forest.plot_volume_mask(VOX_SIZE, show=False, dtype=int)
+#    plt.title('Original rotation')
+#    print forest.align_to_xyz_axes()
+    # To move the forest away from zero so it is contained with in one z voxel    
+    forest.plot_volume_mask(VOX_SIZE, show=False, dtype=int)
+    plt.title('Aligned rotation')
+#    coverage, central_mask = forest.xy_coverage(VOX_SIZE[:2], (1.0, 1.0))
+#    img = plt.imshow(central_mask, cmap=plt.cm.get_cmap('gray'))
+#    img.set_interpolation('nearest')
+#    print "Coverage: {}".format(coverage)
+    plt.show()

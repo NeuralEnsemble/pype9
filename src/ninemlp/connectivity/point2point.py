@@ -37,6 +37,7 @@ class LinearWithDistance(object):
     def expand_distances(cls):
         return False
 
+
 class ExponentialWithDistance(object):
 
     def __init__(self, scalar, exponent, offset=0.0, min_value=0.0):
@@ -55,11 +56,12 @@ class ExponentialWithDistance(object):
     def expand_distances(cls):
         return False
 
+
 class LinearWith2DDistance(object):
 
     def __init__(self, scalar, offset=0.0, min_value=0.0):
         self.scalar = scalar
-        self.offset = offset        
+        self.offset = offset
         self.min_value = min_value
 
     def __call__(self, disp):
@@ -72,13 +74,14 @@ class LinearWith2DDistance(object):
     @classmethod
     def expand_distances(cls):
         return True
-    
+
+
 class ExponentialWith2DDistance(object):
 
     def __init__(self, scalar, exponent, offset=0.0, min_value=0.0):
         self.scalar = scalar
         self.exponent = exponent
-        self.offset = offset        
+        self.offset = offset
         self.min_value = min_value
 
     def __call__(self, disp):
@@ -92,10 +95,11 @@ class ExponentialWith2DDistance(object):
     def expand_distances(cls):
         return True
 
+
 class MaskBased(object):
 
     def __init__(self, probability=None, number=None):
-        
+
         if (probability is not None and number is not None):
             raise Exception ("Only one of probability ({}) and number can be supplied to Mask object")
         self.prob = probability
@@ -116,12 +120,13 @@ class MaskBased(object):
             # If probability exceeds 1 cap it at 1 as the best that can be done
             if prob > 1.0:
                 warn("The number of requested connections ({}) could not be satisfied given "
-                     "size of mask ({})".format(int(self.number), num_nz), 
+                     "size of mask ({})".format(int(self.number), num_nz),
                      InsufficientTargetsWarning)
                 prob = 1.0
         probs = numpy.zeros(mask.shape)
         probs[mask] = prob
         return probs
+
 
 class CircleMask(MaskBased):
     """
@@ -144,6 +149,7 @@ class CircleMask(MaskBased):
     @classmethod
     def expand_distances(cls):
         return True
+
 
 class SphereMask(MaskBased):
     """
@@ -192,7 +198,6 @@ class EllipseMask(MaskBased):
     def expand_distances(cls):
         return True
 
-    
 
 class EllipsoidMask(MaskBased):
     """
@@ -219,11 +224,12 @@ class EllipsoidMask(MaskBased):
         transformed_matrix = numpy.dot(displacement, working_matrix_inverse)
         distance = numpy.sqrt(transformed_matrix[:,0]**2+transformed_matrix[:,1]**2+transformed_matrix[:,2]**2)
         mask = distance < 1.0
-        return mask
+        return self._probs_from_mask(mask)
 
     @classmethod
     def expand_distances(cls):
         return True
+
 
 class RectangleMask(MaskBased):
     """
@@ -247,9 +253,9 @@ class RectangleMask(MaskBased):
 
     @classmethod
     def expand_distances(cls):
-        return True    
-    
+        return True
+
 if __name__ == '__main__':
     # Put testing code in here
     print "Finished tests"
-    
+

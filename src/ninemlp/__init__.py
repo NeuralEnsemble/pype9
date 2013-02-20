@@ -34,6 +34,12 @@ else: # Otherwise determine from path to this module
 
 if MPI_NAME in os.environ:
     import mpi4py #@UnresolvedImport
+    
+if os.environ['HOME'] == '/home/tclose':
+    # I apologise for this little hack (this is the path on my machine, 
+    # to save me having to set the environment variable in eclipse)
+    os.environ['LD_PRELOAD']='/usr/lib/libmpi.so' # This is a work around for my MPI installation    
+    os.environ['NEURON_INIT_MPI'] = '1'
 
 
 class XMLHandler(xml.sax.handler.ContentHandler):
