@@ -217,18 +217,9 @@ class EllipsoidMask(MaskBased):
         working_matrix = axially_symmetric_tensor(self.scale, self.orient, self.isotropy)
         working_matrix_inverse = numpy.linalg.inv(working_matrix)
         transformed_matrix = numpy.dot(displacement, working_matrix_inverse)
-        substract_matrix = []
-        i=0
         distance = numpy.sqrt(transformed_matrix[:,0]**2+transformed_matrix[:,1]**2+transformed_matrix[:,2]**2)
         mask = distance < 1.0
-        while i < len(transformed_matrix[:,0]):
-            distance = numpy.sqrt(transformed_matrix[i,0]**2+transformed_matrix[i,1]**2+transformed_matrix[i,2]**2)
-            if distance<=1:
-                substract_matrix.append(1)
-            else:
-                substract_matrix.append(0)
-            i=i+1
-        return substract_matrix
+        return mask
 
     @classmethod
     def expand_distances(cls):
