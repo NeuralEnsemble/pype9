@@ -221,8 +221,8 @@ class EllipsoidMask(MaskBased):
         
         working_matrix = axially_symmetric_tensor(self.scale, self.orient, self.isotropy)
         working_matrix_inverse = numpy.linalg.inv(working_matrix)
-        transformed_matrix = numpy.dot(displacement, working_matrix_inverse)
-        distance = numpy.sqrt(transformed_matrix[:,0]**2+transformed_matrix[:,1]**2+transformed_matrix[:,2]**2)
+        transformed_matrix = numpy.dot(working_matrix_inverse, displacement)
+        distance = numpy.sqrt(transformed_matrix[0]**2+transformed_matrix[1]**2+transformed_matrix[2]**2)
         mask = distance < 1.0
         return self._probs_from_mask(mask)
 
