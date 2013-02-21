@@ -810,7 +810,7 @@ class ConvolvedMask(Mask):
         # Loop through all of the tree _point_data and "paint" the mask
         for count, seg in enumerate(tree.segments):
             # Calculate the number of samples required for the current segment
-            num_samples = np.ceil(norm(seg.end - seg.begin) * self.sample_freq)
+            num_samples = np.ceil(norm(seg.end - seg.begin) * self._kernel.sample_freq)
             # Calculate how much to scale the 
             if num_samples:
                 length_scale = norm(seg.end - seg.begin) / num_samples
@@ -876,6 +876,7 @@ class GaussianKernel(Kernel):
         self._threshold = threshold
         self._scale = scale
         self._tensor = axially_symmetric_tensor(decay_rate, orient, isotropy)
+        self.sample_freq = sample_freq
         # Calculate the extent of the kernel along the x,y, and z axes
         eig_vals, eig_vecs = np.linalg.eig(self._tensor)
         # Get the extent along each of the Eigen-vectors where the point-spread function reaches the
@@ -979,6 +980,15 @@ class MorphologyBasedProbabilityConnector(pyNN.connectors.DistanceDependentProba
 
     #Override the base classes Probabilistic connector to use the morphologies
     ProbConnector = ProbabilisticConnector
+
+    def __init__(self, kernel, allow_self_connections=True,
+                 weights=0.0, delays=None, safe=True, verbose=False, n_connections=None):
+        # This is a right hack, as I am using the "space" object to pass the kernel, which then 
+        # returns the probability in the distance matrix instead of the distance, hence the d_expression
+        # is just 'd'
+        super(MorphologyBasedProbabilityConnector, self).__init__('d', 
+                allow_self_connections=allow_self_connections, weights=weights, delays=delays,
+                space=kernel, safe=safe, verbose=verbose, n_connections=n_connections)
 
 
 #  Handlers to load the morphologies from Neurolucida xml files ------------------------------------
