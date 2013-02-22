@@ -24,8 +24,7 @@ from operator import attrgetter
 import numpy
 import pyNN.neuron.simulator
 import weakref
-from ninemlp.common import group_varname, seg_varname
-from ninemlp.common.ncml import DEFAULT_V_INIT
+from ninemlp.common.ncml import group_varname, seg_varname, DEFAULT_V_INIT
 
 ## Used to store the directories from which NMODL objects have been loaded to avoid loading them twice
 loaded_celltypes = {}
