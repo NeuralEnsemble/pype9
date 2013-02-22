@@ -5,7 +5,6 @@
 
   @author Tom Close
 
-
 """
 #######################################################################################
 #
@@ -31,7 +30,7 @@ except:
 THRESHOLD_DEFAULT = 0.02
 SAMPLE_DIAM_RATIO = 4.0
 SAMPLE_FREQ_DEFAULT = 100
-DEEP_Z_VOX_SIZE = 10000 # This is the vox size used for the z axis to approximate infinite depth
+DEEP_Z_VOX_SIZE = 1000# This is the vox size used for the z axis to approximate infinite depth
 # Pre-calculated for speed (not sure if this would be a bottleneck though)
 SQRT_3 = math.sqrt(3)
 
@@ -109,7 +108,7 @@ class Forest(object):
         if dtype == bool:
             for i, tree in enumerate(self):
                 mask.add_tree(tree)
-       #         print "Added {} tree to volume mask".format(i)
+                #print "Added {} tree to volume mask".format(i)
         else:
             bool_mask = VolumeMask(vox_size, np.vstack([tree.points for tree in self.trees]),
                                    np.hstack([tree.diams for tree in self.trees]), bool)
@@ -117,7 +116,7 @@ class Forest(object):
                 tree_mask = deepcopy(bool_mask)
                 tree_mask.add_tree(tree)
                 mask += tree_mask
-        #        print "Added {} tree to volume mask".format(i)
+                #print "Added {} tree to volume mask".format(i)
         return mask
 
     def plot_volume_mask(self, vox_size, show=True, dtype=bool, colour_map=None):
@@ -135,8 +134,6 @@ class Forest(object):
                             .format(len(vox_size)))
         self.offset((0.0, 0.0, DEEP_Z_VOX_SIZE / 2.0))
         mask = self.get_volume_mask(vox_size + (DEEP_Z_VOX_SIZE,))
-        if mask.dim[2] != 1:
-            raise Exception("Not all voxels where contained with the \"deep\" z voxel dimension")
         trimmed_frac = (1.0 - np.array(central_frac)) / 2.0
         start = np.array(np.floor(mask.dim[:2] * trimmed_frac), dtype=int)
         end = np.array(np.ceil(mask.dim[:2] * (1.0 - trimmed_frac)), dtype=int)
@@ -495,7 +492,6 @@ class Mask(object):
         self.limit = self.finish_index * self.vox_size
         # Initialise the actual numpy array to hold the values
         self.dim = self.finish_index - self.start_index
-        #print self.offset,self.limit
         # Create an grid of the voxel centres for convenient (and more efficient) 
         # calculation of the distance from voxel centres to the tree _points. Regarding the 
         # slightly odd notation of the numpy.mgrid function, the complex numbers ('1j') are used 

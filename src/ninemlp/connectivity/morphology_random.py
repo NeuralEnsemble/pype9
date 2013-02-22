@@ -488,6 +488,7 @@ class Mask(object):
         # Get the start and finish indices of the mask, as determined by the bounds of the tree
         min_bounds = np.squeeze(np.min(points - point_extents, axis=0))
         max_bounds = np.squeeze(np.max(points + point_extents, axis=0))
+        #print min_bounds,max_bounds
         self.start_index = np.array(np.floor(min_bounds / self.vox_size), dtype=np.int)
         self.finish_index = np.array(np.ceil(max_bounds / self.vox_size), dtype=np.int)
         # Set the offset and limit of the mask from the start and finish indices
