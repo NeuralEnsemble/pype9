@@ -41,21 +41,6 @@ _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 RANDOM_DISTR_PARAMS = {'uniform': ('low', 'high'),
                        'normal': ('mean', 'stddev')}
 
-def group_varname(group_id):
-    if group_id:
-        varname = group_id + "_group"
-    else:
-        varname = "all_segs"
-    return varname
-
-def seg_varname(seg_id):
-    if seg_id == 'source_section':
-        varname = seg_id
-    else:
-        varname = seg_id + "_seg"
-    return varname 
-
-
 class ValueWithUnits(object):
 
     def __init__(self, value, units):
@@ -215,7 +200,7 @@ class NetworkMLHandler(XMLHandler):
                                 .format(self.proj_id))
             args = dict(attrs)
             pattern = args.pop('pattern')
-            self.proj_connection = self.Connection(pattern, args)          
+            self.proj_connection = self.Connection(pattern, args)
         elif self._opening(tag_name, attrs, 'weight', parents=['projection']):
             if self.proj_weight:
                 raise Exception("The weight is specified twice in projection '{}'"\
@@ -710,6 +695,9 @@ class Network(object):
 
 class Population(object):
 
+    def __init__(self):
+        self.morphologies = None
+
     def _randomly_distribute_params(self, cell_param_distrs):
         # Set distributed parameters
         distributed_params = []
@@ -719,23 +707,7 @@ class Population(object):
                                 "in {} population".format(param, self.id))
             # Create random distribution object
             rand_distr = RandomDistribution(distribution=distr_type, parameters=args)
-            # If is an NCML type cell
-            if self.celltype.__module__.startswith('ninemlp'):
-                param_scope = [group_varname(seg_group)]
-                if component:
-                    param_scope.append(component)
-                param_scope.append(param)
-                self.rset('.'.join(param_scope), rand_distr)
-            else:
-                if seg_group:
-                    raise Exception("segmentGroup attribute of parameter distribution '{}' can " \
-                                    "be specified for cells described using NCML, not '{}' cell " \
-                                    "types".format(param, self.celltype.__class__.__name__))
-                if component:
-                    raise Exception("component attribute of parameter distribution '{}' can only " \
-                                    "be specified for cells described using NCML, not '{}' cell " \
-                                    "types".format(param, self.celltype.__class__.__name__))
-                self.rset(param, rand_distr)
+            self.rset(param, rand_distr, component=component, seg_group=seg_group)
             # Add param to list of completed param distributions to check for duplicates
             distributed_params.append(param)
 
@@ -748,23 +720,7 @@ class Population(object):
                                 "in {} population".format(variable, self.id))
             # Create random distribution object
             rand_distr = RandomDistribution(distribution=distr_type, parameters=args)
-            # If is an NCML type cell
-            if self.celltype.__module__.startswith('ninemlp'):
-                variable_scope = [group_varname(seg_group)]
-                if component:
-                    variable_scope.append(component)
-                variable_scope.append(variable)
-                self.initialize('.'.join(variable_scope), rand_distr)
-            else:
-                if seg_group:
-                    raise Exception("segmentGroup attribute of parameter distribution '{}' can " \
-                                    "only be specified for cells described using NCML, not '{}' " \
-                                    "cell types".format(variable, self.celltype.__class__.__name__))
-                if component:
-                    raise Exception("component attribute of parameter distribution '{}' can only " \
-                                    "be specified for cells described using NCML, not '{}' cell " \
-                                    "types".format(variable, self.celltype.__class__.__name__))
-                self.initialise(variable, rand_distr)
+            self.initialize(variable, rand_distr, component=component, seg_group=seg_group)
             # Add variable to list of completed variable distributions to check for duplicates
             distributed_conditions.append(variable)
 
@@ -817,6 +773,8 @@ class Population(object):
     def _set_positions(self, positions, morphologies=None):
         super(Population, self)._set_positions(positions)
         self.morphologies = morphologies
+            
+    
 
 if __name__ == "__main__":
 

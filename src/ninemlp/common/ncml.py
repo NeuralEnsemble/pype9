@@ -18,9 +18,25 @@
 
 import xml.sax
 import collections
-from ninemlp.common import XMLHandler, ValueWithUnits, group_varname
+from itertools import chain
+from ninemlp.common import XMLHandler, ValueWithUnits
 
 DEFAULT_V_INIT = -65
+
+
+def group_varname(group_id):
+    if group_id:
+        varname = group_id + "_group"
+    else:
+        varname = "all_segs"
+    return varname
+
+def seg_varname(seg_id):
+    if seg_id == 'source_section':
+        varname = seg_id
+    else:
+        varname = seg_id + "_seg"
+    return varname
 
 
 class MorphMLHandler(XMLHandler):
@@ -304,7 +320,10 @@ class BaseNCMLCell(object):
         
         @return [list(str)]: The list of parameter names in the class
         """
-        return cls.parameter_names
+        # Return all the parameter names plus the "raw" names used in the NeMo generated models
+        raw_names = list(chain.from_iterable([[param[0] for param in comp.values()] 
+                                              for comp in cls.component_parameters.values()]))
+        return cls.parameter_names + raw_names
 
     def get_group(self, group_id):
         return self.groups[group_id] if group_id else self.all_segs

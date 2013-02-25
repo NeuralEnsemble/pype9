@@ -21,8 +21,7 @@ from ninemlp.neuron.build import compile_nmodl
 compile_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN_build_mode,
               silent=True)
 import ninemlp.common
-from ninemlp.common import seg_varname
-from ninemlp.neuron.ncml import NCMLCell
+from ninemlp.neuron.ncml import NCMLCell, group_varname, seg_varname
 import pyNN.common
 import pyNN.neuron.standardmodels.cells
 import pyNN.neuron.connectors
@@ -74,6 +73,19 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
     def set_param(self, cell_id, param, value, component=None, section=None):
         raise NotImplementedError('set_param has not been implemented for Population class yet')
 
+    def rset(self, param, rand_distr, component=None, seg_group=None):
+        param_scope = [group_varname(seg_group)]
+        if component:
+            param_scope.append(component)
+        param_scope.append(param)
+        pyNN.neuron.Population.rset(self, '.'.join(param_scope), rand_distr)
+
+    def initialize(self, variable, rand_distr, component=None, seg_group=None):
+        variable_scope = [group_varname(seg_group)]
+        if component:
+            variable_scope.append(component)
+        variable_scope.append(variable)
+        pyNN.neuron.Population.initialize(self, '.'.join(variable_scope), rand_distr)
 
     def can_record(self, variable):
         """
