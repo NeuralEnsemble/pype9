@@ -752,7 +752,7 @@ ncml::{celltype_name}Loader::~{celltype_name}Loader()
        you do not need to give the mangled name. If you give a mangled name, you
        should define a type trie in the {celltype_name}Loader-init.sli file.
     */
-    i->createcommand("StepPatternConnect_Vi_i_Vi_i_l", 
+    i->createcommand("{celltype_name}StepPatternConnect_Vi_i_Vi_i_l", 
                      &stepPatternConnect_Vi_i_Vi_i_lFunction);
 
   }}  // {celltype_name}Loader::init()

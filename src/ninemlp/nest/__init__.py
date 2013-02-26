@@ -125,7 +125,33 @@ class Network(ninemlp.common.Network):
             value = float(value)
         except:
             raise Exception("Incorrectly formatted value string '%s', should be a number optionally followed by a space and units (eg. '1.5 Hz')" % value_str)
-
+        
+        if not units:
+            return value
+        elif units == "Hz":
+            return value
+        elif units == "um":
+            return value
+        elif units == "ms":
+            return value
+        elif units == "us":
+            return value * 1e-3
+        elif units == "us/um":
+            return value * 1e-3
+        elif units == 'uS':
+            return value
+        elif units == 'mS':
+            return value * 1e+3
+        elif units == 'nS':
+            return value * 1e-3
+        elif units == 'pS':
+            return value * 1e-6
+        elif units == 'MOhm':
+            return value
+        elif units == 'Ohm/cm':
+            return value
+        elif units == 'S/cm2':
+            return value
         raise Exception("Unrecognised units '%s'" % units)
 
     def _set_simulation_params(self, **params):
