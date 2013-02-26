@@ -40,6 +40,7 @@ if os.environ['HOME'] == '/home/tclose':
     # to save me having to set the environment variable in eclipse)
     os.environ['LD_PRELOAD']='/usr/lib/libmpi.so' # This is a work around for my MPI installation    
     os.environ['NEURON_INIT_MPI'] = '1'
+    
 
 
 class XMLHandler(xml.sax.handler.ContentHandler):
