@@ -280,6 +280,8 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                                       required, leaving the "barebones" pyNEURON structure for \
                                       each nrn.Section
         """
+        if not len(self.morphml_model.segments):
+            raise Exception("The loaded morphology does not contain any segments")
         # Initialise all segments
         self.segments = {}
         # Create a group to hold all segments (this is the default group for components that don't 
