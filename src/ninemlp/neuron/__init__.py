@@ -23,13 +23,14 @@ compile_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN
 import ninemlp.common
 from ninemlp.neuron.ncml import NCMLCell, group_varname, seg_varname
 import pyNN.common
+import pyNN.core
 import pyNN.neuron.standardmodels.cells
 import pyNN.neuron.connectors
 import pyNN.neuron.recording
 import ncml
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, record, record_v, record_gsyn, \
-                        StepCurrentSource, DCSource, NoisyCurrentSource, errors, core
+                        StepCurrentSource, DCSource, errors, NoisyCurrentSource
 #ACSource, 
 import pyNN.neuron as sim
 from pyNN.common.control import build_state_queries
@@ -159,7 +160,7 @@ class ElectricalSynapseProjection(Projection):
             errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
                                                                      simulator.state.gid_counter)
             raise errors.ConnectionError(errmsg)
-        if not core.is_listlike(targets):
+        if not pyNN.core.is_listlike(targets):
             targets = [targets]
         if isinstance(weights, float):
             weights = [weights]
@@ -207,7 +208,7 @@ class ElectricalSynapseProjection(Projection):
             errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
                                                                      simulator.state.gid_counter)
             raise errors.ConnectionError(errmsg)
-        if not core.is_listlike(targets):
+        if not pyNN.core.is_listlike(targets):
             targets = [targets]
         if isinstance(weights, float):
             weights = [weights]
