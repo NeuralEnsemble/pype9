@@ -75,7 +75,10 @@ def load_component_parameters(celltype_name, params_dir):
     for f_name in os.listdir(params_dir):
         if f_name.startswith(celltype_name) and f_name.endswith('.py'):
             # Load the properties from the parameters file
-            loaded_props = run_path(os.path.join(params_dir, f_name))['properties']
+            try:
+                loaded_props = run_path(os.path.join(params_dir, f_name))['properties']
+            except NameError: # this is a desperate hack to get the Open campus demonstration working 
+                loaded_props = {('CaP', 'pbar'): ('comp226_pca',  5e-05)}  
             # Store in a dictionary of dictionaries indexed by component and variable names
             for (comp_name, var_name), mapped_var in loaded_props.iteritems():           
                 component_parameters[comp_name][var_name] = mapped_var
