@@ -26,6 +26,7 @@ import pyNN.connectors
 from pyNN.random import RandomDistribution
 from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
 import ninemlp.connectivity.point2point as point2point
+import ninemlp.connectivity.morphology as morphology
 
 ## The location relative to the NINEML-Network file to look for the folder containing the cell descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
 RELATIVE_NCML_DIR = "./ncml"
@@ -39,17 +40,6 @@ _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
 RANDOM_DISTR_PARAMS = {'uniform': ('low', 'high'),
                        'normal': ('mean', 'stddev')}
-
-def group_varname(group_id):
-    if group_id:
-        varname = group_id + "_group"
-    else:
-        varname = "all_segs"
-    return varname
-
-def seg_varname(seg_id):
-    return seg_id + "_seg"
-
 
 class ValueWithUnits(object):
 
@@ -80,11 +70,12 @@ class NetworkMLHandler(XMLHandler):
 
     Network = collections.namedtuple('Network', 'id sim_params populations projections free_params')
     Population = collections.namedtuple('Population', ('id', 'cell_type', 'morph_id', 'size',
-                                                       'layout', 'cell_params',
+                                                       'structure', 'cell_params',
                                                        'initial_conditions', 'flags', 'not_flags'))
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay '
                                                       'synapse_family flags not_flags')
-    Layout = collections.namedtuple('Layout', 'type args')
+    Structure = collections.namedtuple('Structure', 'type layout args')
+    StructureLayout = collections.namedtuple('StructureLayout', 'pattern args')
     CustomAttributes = collections.namedtuple('CustomAttributes', 'constants distributions')
     Distribution = collections.namedtuple('Distribution', 'attr type units seg_group component '
                                                           'args')
@@ -122,19 +113,24 @@ class NetworkMLHandler(XMLHandler):
             self.pop_cell = attrs['cell']
             self.pop_morph_id = attrs.get('morphology', None)
             self.pop_size = int(attrs.get('size', '-1'))
-            self.pop_layout = None
+            self.pop_structure = None
             self.pop_cell_params = self.CustomAttributes({}, [])
             self.pop_initial_conditions = self.CustomAttributes({}, [])
             # Split the flags attribute on ',' and remove empty values (the use of filter)            
             self.pop_flags = filter(None, attrs.get('flags', '').replace(' ', '').split(','))
             self.pop_not_flags = filter(None, attrs.get('not_flags', '').replace(' ', '').split(','))
-        elif self._opening(tag_name, attrs, 'layout', parents=['population']):
-            if self.pop_layout:
-                raise Exception("The layout is specified twice in population '{}'".\
+        elif self._opening(tag_name, attrs, 'structure', parents=['population']):
+            if self.pop_structure:
+                raise Exception("The structure is specified twice in population '{}'".\
                                 format(self.pop_id))
             args = dict(attrs)
-            layout_type = args.pop('type')
-            self.pop_layout = self.Layout(layout_type, args)
+            self.pop_structure_type = args.pop('type')
+            self.pop_structure_layout = None
+            self.pop_structure_args = args
+        elif self._opening(tag_name, attrs, 'layout', parents=['structure']):
+            args = dict(attrs)
+            pattern = args.pop('pattern')
+            self.pop_structure_layout = self.StructureLayout(pattern, args)
         elif self._opening(tag_name, attrs, 'cellParameters', parents=['population']): pass
         elif self._opening(tag_name, attrs, 'initialConditions', parents=['population']): pass
         elif self._opening(tag_name, attrs, 'const', parents=['population', 'cellParameters']):
@@ -222,15 +218,15 @@ class NetworkMLHandler(XMLHandler):
 
     def endElement(self, name):
         if self._closing(name, 'population', parents=['network']):
-            if self.pop_size > -1 and self.pop_layout:
+            if self.pop_size > -1 and self.pop_structure:
                 raise Exception("Population 'size' attribute cannot be used in conjunction with " \
-                                "the 'layout' member (with layouts, the size is determined from " \
+                                "the 'structure' member (with structures, the size is determined from " \
                                 "the arguments to the structure)")
             self.network.populations.append(self.Population(self.pop_id,
                                                     self.pop_cell,
                                                     self.pop_morph_id,
                                                     self.pop_size,
-                                                    self.pop_layout,
+                                                    self.pop_structure,
                                                     self.pop_cell_params,
                                                     self.pop_initial_conditions,
                                                     self.pop_flags,
@@ -245,6 +241,9 @@ class NetworkMLHandler(XMLHandler):
                                                     self.proj_synapse_family,
                                                     self.proj_flags,
                                                     self.proj_not_flags))
+        elif self._closing(name, 'structure', parents=['population']):
+            self.pop_structure = self.Structure(self.pop_structure_type, self.pop_structure_layout,
+                                                self.pop_structure_args)
         XMLHandler.endElement(self, name)
 
 
@@ -309,10 +308,9 @@ class Network(object):
         self.networkML = read_networkML(filename)
         self._set_simulation_params(timestep=timestep, min_delay=min_delay, max_delay=max_delay,
                                                                             temperature=temperature)
-        dirname = os.path.dirname(filename)
-        self.cells_dir = os.path.join(dirname, RELATIVE_NCML_DIR)
-        self.pop_dir = os.path.join(dirname, RELATIVE_BREP_DIR, 'build', 'populations')
-        self.proj_dir = os.path.join(dirname, RELATIVE_BREP_DIR, 'build', 'projections')
+        self.dirname = os.path.dirname(filename)
+        self.pop_dir = os.path.join(self.dirname, RELATIVE_BREP_DIR, 'build', 'populations')
+        self.proj_dir = os.path.join(self.dirname, RELATIVE_BREP_DIR, 'build', 'projections')
         self.build_mode = build_mode
         self.label = self.networkML.id
         self._populations = {}
@@ -324,7 +322,7 @@ class Network(object):
                                                                     pop.size,
                                                                     pop.cell_type,
                                                                     pop.morph_id,
-                                                                    pop.layout,
+                                                                    pop.structure,
                                                                     pop.cell_params.constants,
                                                                     pop.cell_params.distributions,
                                                                     pop.initial_conditions.distributions,
@@ -355,28 +353,71 @@ class Network(object):
         """
         pass
 
-    def _create_population(self, label, size, cell_type_name, morph_id, layout, cell_params,
+    def _create_population(self, label, size, cell_type_name, morph_id, structure, cell_params,
                            cell_param_distrs, initial_conditions, verbose, silent_build):
-        if cell_type_name + ".xml" in os.listdir(self.cells_dir):
-            cell_type = self._ncml_module.load_cell_type(cell_type_name,
-                                            os.path.join(self.cells_dir, cell_type_name + ".xml"),
-                                            morph_id=morph_id,
-                                            build_mode=self.build_mode,
-                                            silent=silent_build)
-        elif cell_type_name in dir(self._pyNN_module.standardmodels.cells):
+        if cell_type_name in dir(self._pyNN_module.standardmodels.cells):
             # This is not as simple as it may have been, as a simple getattr on 
             # pyNN.nest.standardmodels.cells returns the pyNN.standardmodels.cells instead.
             _temp_import = __import__('{}.standardmodels.cells'.format(self._pyNN_module.__name__),
                                        globals(), locals(), [cell_type_name], 0)
             cell_type = getattr(_temp_import, cell_type_name)
         else:
-            raise Exception("Cell_type_name '{}' was not found in search directory ('{}') or in " \
-                            "standard models".format(cell_type_name, self.cells_dir))
-        if layout:
-            if layout.type == "Extension":
-                engine = layout.args.pop("engine")
+            try:
+                cell_type = self._ncml_module.load_cell_type('.'.join(os.path.basename(cell_type_name).split('.')[:-1]),
+                                                             os.path.join(self.dirname,
+                                                                          cell_type_name),
+                                                             morph_id=morph_id,
+                                                             build_mode=self.build_mode,
+                                                             silent=silent_build)
+            except IOError:
+                raise Exception("Cell_type_name '{}' was not found or " \
+                                "in standard models".format(cell_type_name))
+        if structure:
+            # Set default for populations without morphologies
+            morphologies = None
+            if structure.type == "MorphologyBased":
+                forest = morphology.Forest(os.path.join(self.dirname, structure.args['morphology']))
+                if structure.layout:
+                    pattern = structure.layout.pattern
+                    args = structure.layout.args
+                    if pattern == 'Tiled':
+                        forest.align_min_bound_to_origin()
+                        base_offset = args.get('offset', numpy.zeros(3))
+                        tiling = numpy.array((args.get('x', 1), args.get('y', 1), args.get('z', 1)),
+                                             dtype=int)
+                        soma_positions = [tree.soma_position() for tree in forest]
+                        positions = numpy.zeros((3, len(forest) * tiling.prod()))
+                        morphologies = []
+                        pos_count = 0
+                        for z in xrange(tiling[0]):
+                            for y in xrange(tiling[1]):
+                                for x in xrange(tiling[2]):
+                                    offset = base_offset + forest.max_bounds * (x, y, z)
+                                    for tree in forest:
+                                        morphologies.append(tree.displaced_tree(offset))
+                                    positions[:, pos_count:(pos_count + len(forest))] = \
+                                            numpy.transpose(soma_positions + offset)
+                    elif pattern == 'DistributedSoma':
+                        forest.collapse_to_origin()
+                        low = numpy.array((args['low_x'], args['low_y'], args['low_z']), dtype=float)
+                        high = numpy.array((args['high_x'], args['high_y'], args['high_z']), dtype=float)
+                        size = int(args['size'])
+                        span = high - low
+                        positions = numpy.random.rand(size, 3)
+                        positions *= span
+                        positions += low
+                        positions = positions.transpose()
+                        morphologies = []
+                        for i in range(size):
+                            morphologies.append(forest[i % len(forest)].displaced_tree(positions[:, i]))
+                    else:
+                        raise Exception("Unrecognised structure pattern '{}' in '{}' population"
+                                        .format(structure.pattern, label))
+                    size = len(morphologies)
+            elif structure.type == "Extension":
+                engine = structure.args.pop("engine")
                 if engine == "Brep":
-                    pop_id = layout.args['id']
+                    pop_id = structure.args['id']
                     if pop_id not in os.listdir(self.pop_dir):
                         raise Exception("Population id '{}' was not found in search " \
                                         "path ({}).".format(pop_id, self.pop_dir))
@@ -389,17 +430,17 @@ class Network(object):
                         raise Exception("Could not load Brep positions from file '{}'"\
                                         .format(pos_file))
                 else:
-                    raise Exception("Unrecognised external layout engine, '{}'".format(engine))
+                    raise Exception("Unrecognised external structure engine, '{}'".format(engine))
             else:
-                raise Exception("Not implemented error, support for built-in layout management is "\
+                raise Exception("Not implemented error, support for built-in structure management is "\
                                 "not done yet.")
         # Actually create the population
         pop = self._Population_class(label, size, cell_type, params=cell_params,
                                                                         build_mode=self.build_mode)
-        # Set layout
+        # Set structure
         if not (self.build_mode == 'build_only' or self.build_mode == 'compile_only'):
-            if layout:
-                pop._set_positions(positions)
+            if structure:
+                pop._set_positions(positions, morphologies)
             pop._randomly_distribute_params(cell_param_distrs)
             pop._randomly_distribute_initial_conditions(initial_conditions)
         return pop
@@ -439,8 +480,8 @@ class Network(object):
             delay_expr = 1.0
             if allow_self_connections:
                 print ("Warning! 'allow_self_connections' argument was overidden for Electrial "
-                       "projection, which requires it to be set to 'NotEvenMutual'.")
-            allow_self_connections = 'NotEvenMutual'
+                       "projection, which requires it to be set to 'NoMutual'.")
+            allow_self_connections = 'NoMutual'
         else:
             delay_expr = self._get_connection_param_expr(label, delay,
                                                          min_value=self.get_min_delay())
@@ -463,6 +504,20 @@ class Network(object):
             connector = self._pyNN_module.connectors.DistanceDependentProbabilityConnector(
                                     connect_expr, weights=weight_expr, delays=delay_expr,
                                     **other_connector_args)
+        elif connection.pattern == 'MorphologyBased':
+            kernel_name = connection.args.pop('kernel')
+            if not hasattr(morphology, kernel_name + 'Kernel'):
+                raise Exception("Unrecognised distance expression '{}'".format(kernel_name))
+            try:
+                Kernel = getattr(morphology, kernel_name + 'Kernel')
+                kernel = Kernel(**self._convert_all_units(connection.args))
+            except TypeError as e:
+                raise Exception("Could not initialise distance expression class '{}' from given " \
+                                "arguments '{}' for projection '{}'\n('{}')"
+                                .format(kernel_name, connection.args, label, e))
+            connector = morphology.MorphologyBasedProbabilityConnector(
+                                kernel, weights=weight_expr, delays=delay_expr,
+                                **other_connector_args)
         # If connection pattern is external, load the weights and delays from a file in PyNN
         # FromFileConnector format and then create a FromListConnector connector. Some additional
         # preprocessing is performed here, which is why the FromFileConnector isn't used directly.
@@ -640,6 +695,9 @@ class Network(object):
 
 class Population(object):
 
+    def __init__(self):
+        self.morphologies = None
+
     def _randomly_distribute_params(self, cell_param_distrs):
         # Set distributed parameters
         distributed_params = []
@@ -649,23 +707,7 @@ class Population(object):
                                 "in {} population".format(param, self.id))
             # Create random distribution object
             rand_distr = RandomDistribution(distribution=distr_type, parameters=args)
-            # If is an NCML type cell
-            if self.celltype.__module__.startswith('ninemlp'):
-                param_scope = [group_varname(seg_group)]
-                if component:
-                    param_scope.append(component)
-                param_scope.append(param)
-                self.rset('.'.join(param_scope), rand_distr)
-            else:
-                if seg_group:
-                    raise Exception("segmentGroup attribute of parameter distribution '{}' can " \
-                                    "be specified for cells described using NCML, not '{}' cell " \
-                                    "types".format(param, self.celltype.__class__.__name__))
-                if component:
-                    raise Exception("component attribute of parameter distribution '{}' can only " \
-                                    "be specified for cells described using NCML, not '{}' cell " \
-                                    "types".format(param, self.celltype.__class__.__name__))
-                self.rset(param, rand_distr)
+            self.rset(param, rand_distr, component=component, seg_group=seg_group)
             # Add param to list of completed param distributions to check for duplicates
             distributed_params.append(param)
 
@@ -678,23 +720,7 @@ class Population(object):
                                 "in {} population".format(variable, self.id))
             # Create random distribution object
             rand_distr = RandomDistribution(distribution=distr_type, parameters=args)
-            # If is an NCML type cell
-            if self.celltype.__module__.startswith('ninemlp'):
-                variable_scope = [group_varname(seg_group)]
-                if component:
-                    variable_scope.append(component)
-                variable_scope.append(variable)
-                self.initialize('.'.join(variable_scope), rand_distr)
-            else:
-                if seg_group:
-                    raise Exception("segmentGroup attribute of parameter distribution '{}' can " \
-                                    "only be specified for cells described using NCML, not '{}' " \
-                                    "cell types".format(variable, self.celltype.__class__.__name__))
-                if component:
-                    raise Exception("component attribute of parameter distribution '{}' can only " \
-                                    "be specified for cells described using NCML, not '{}' cell " \
-                                    "types".format(variable, self.celltype.__class__.__name__))
-                self.initialise(variable, rand_distr)
+            self.initialize(variable, rand_distr, component=component, seg_group=seg_group)
             # Add variable to list of completed variable distributions to check for duplicates
             distributed_conditions.append(variable)
 
@@ -744,13 +770,18 @@ class Population(object):
         """
         return type(self.celltype)
 
+    def _set_positions(self, positions, morphologies=None):
+        super(Population, self)._set_positions(positions)
+        self.morphologies = morphologies
+            
+    
 
 if __name__ == "__main__":
 
     import pprint
 
     ## Generated when this module is called directly for testing purposes.
-    parsed_network = read_networkML("/home/tclose/cerebellar/xml/cerebellum/test.xml")
-    print 'Network: ' + parsed_network.network_id
+    parsed_network = read_networkML("/home/tclose/kbrain/xml/cerebellum/morph_test.xml")
+    print 'Network: ' + parsed_network.id
     pprint.pprint(parsed_network.populations)
     pprint.pprint(parsed_network.projections)

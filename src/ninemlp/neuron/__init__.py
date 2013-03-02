@@ -21,16 +21,16 @@ from ninemlp.neuron.build import compile_nmodl
 compile_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN_build_mode,
               silent=True)
 import ninemlp.common
-from ninemlp.common import seg_varname
-from ninemlp.neuron.ncml import NCMLCell
+from ninemlp.neuron.ncml import NCMLCell, group_varname, seg_varname
 import pyNN.common
+import pyNN.core
 import pyNN.neuron.standardmodels.cells
 import pyNN.neuron.connectors
 import pyNN.neuron.recording
 import ncml
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, record, record_v, record_gsyn, \
-                        StepCurrentSource, DCSource, NoisyCurrentSource, errors, core
+                        StepCurrentSource, DCSource, errors, NoisyCurrentSource
 #ACSource, 
 import pyNN.neuron as sim
 from pyNN.common.control import build_state_queries
@@ -57,7 +57,7 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
                            actually constructed and only the NMODL files are compiled.
         """
         if build_mode == 'build_only' or build_mode == 'compile_only':
-            print "Warning! '--compile' option was set to 'build_only' or 'compile_only', " \
+            print "Warning! '--build' option was set to 'build_only' or 'compile_only', " \
                   "meaning the Population '{}' was not constructed and only the NMODL files " \
                   "were compiled.".format(label)
         else:
@@ -74,6 +74,19 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
     def set_param(self, cell_id, param, value, component=None, section=None):
         raise NotImplementedError('set_param has not been implemented for Population class yet')
 
+    def rset(self, param, rand_distr, component=None, seg_group=None):
+        param_scope = [group_varname(seg_group)]
+        if component:
+            param_scope.append(component)
+        param_scope.append(param)
+        pyNN.neuron.Population.rset(self, '.'.join(param_scope), rand_distr)
+
+    def initialize(self, variable, rand_distr, component=None, seg_group=None):
+        variable_scope = [group_varname(seg_group)]
+        if component:
+            variable_scope.append(component)
+        variable_scope.append(variable)
+        pyNN.neuron.Population.initialize(self, '.'.join(variable_scope), rand_distr)
 
     def can_record(self, variable):
         """
@@ -107,7 +120,7 @@ class Projection(pyNN.neuron.Projection):
                  build_mode=DEFAULT_BUILD_MODE):
         self.label = label
         if build_mode == 'build_only' or build_mode == 'compile_only':
-            print "Warning! '--compile' option was set to 'build_only', meaning the projection " \
+            print "Warning! '--build' option was set to 'build_only', meaning the projection " \
                   "'{}' was not constructed.".format(label)
         else:
             pyNN.neuron.Projection.__init__(self, pre, dest, connector, label=label, source=source,
@@ -147,7 +160,7 @@ class ElectricalSynapseProjection(Projection):
             errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
                                                                      simulator.state.gid_counter)
             raise errors.ConnectionError(errmsg)
-        if not core.is_listlike(targets):
+        if not pyNN.core.is_listlike(targets):
             targets = [targets]
         if isinstance(weights, float):
             weights = [weights]
@@ -165,7 +178,7 @@ class ElectricalSynapseProjection(Projection):
             pre_post_gid = (gid_offset + self.post.id_to_index(target)) * 2
             post_pre_gid = pre_post_gid + 1
             # Get the segment on target cell the gap junction connects to
-            segment = target._cell.segments[segname] if segname else target.source_section            
+            segment = target._cell.segments[segname] if segname else target.source_section
             # Connect the pre cell voltage to the target var
             print "Setting source_var on target cell {} to connect to source cell {} with gid {} on process {}".format(target, source, post_pre_gid, simulator.state.mpi_rank)
             simulator.state.parallel_context.source_var(segment(0.5)._ref_v, post_pre_gid) #@UndefinedVariableFromImport              
@@ -195,7 +208,7 @@ class ElectricalSynapseProjection(Projection):
             errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
                                                                      simulator.state.gid_counter)
             raise errors.ConnectionError(errmsg)
-        if not core.is_listlike(targets):
+        if not pyNN.core.is_listlike(targets):
             targets = [targets]
         if isinstance(weights, float):
             weights = [weights]

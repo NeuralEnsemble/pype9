@@ -24,8 +24,7 @@ from operator import attrgetter
 import numpy
 import pyNN.neuron.simulator
 import weakref
-from ninemlp.common import group_varname, seg_varname
-from ninemlp.common.ncml import DEFAULT_V_INIT
+from ninemlp.common.ncml import group_varname, seg_varname, DEFAULT_V_INIT
 
 ## Used to store the directories from which NMODL objects have been loaded to avoid loading them twice
 loaded_celltypes = {}
@@ -239,7 +238,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         self.traces = {}
         self.gsyn_trace = {}
         self.recording_time = 0
-        if parameters.get('parent', False):
+        if parameters.has_key('parent') and parameters['parent'] is not None:
             # A weak reference is used to avoid a circular reference that would prevent the garbage 
             # collector from being called on the cell class    
             self.parent = weakref.ref(parameters['parent'])
@@ -281,6 +280,8 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                                       required, leaving the "barebones" pyNEURON structure for \
                                       each nrn.Section
         """
+        if not len(self.morphml_model.segments):
+            raise Exception("The loaded morphology does not contain any segments")
         # Initialise all segments
         self.segments = {}
         # Create a group to hold all segments (this is the default group for components that don't 
