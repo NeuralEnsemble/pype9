@@ -326,7 +326,7 @@ class BaseNCMLCell(object):
         return cls.parameter_names + raw_names
 
     def get_group(self, group_id):
-        return self.groups[group_id + '_group'] if group_id else self.all_segs
+        return self.groups[group_id] if group_id else self.all_segs
 
 
 class BaseNCMLMetaClass(type):
