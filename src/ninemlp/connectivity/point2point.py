@@ -199,6 +199,32 @@ class EllipseMask(MaskBased):
         return True
 
 
+class OldEllipsoidMask(MaskBased):
+    """
+    A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
+    probabilityability of connection within an elliptical region
+    """
+
+    def __init__(self, x_scale, y_scale, z_scale, probability=None, number=None):
+        """
+        @param x: scale of the x axis of the ellipse
+        @param y: scale of the y axis of the ellipse        
+        @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
+        """
+        super(OldEllipsoidMask, self).__init__(probability, number)
+        self.x_scale = x_scale
+        self.y_scale = y_scale
+        self.z_scale = z_scale
+
+    def __call__(self, d):
+        mask = numpy.square(d[0] / self.x_scale) + numpy.square(d[1] / self.y_scale) + numpy.square(d[2] / self.z_scale) < 1
+        return self._probs_from_mask(mask)
+
+    @classmethod
+    def expand_distances(cls):
+        return True
+
+
 class EllipsoidMask(MaskBased):
     """
     A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
@@ -249,6 +275,32 @@ class RectangleMask(MaskBased):
 
     def __call__(self, d):
         mask = (d[0] < self.x_scale) * (d[1] < self.y_scale)
+        return self._probs_from_mask(mask)
+
+    @classmethod
+    def expand_distances(cls):
+        return True
+
+
+class BoxMask(MaskBased):
+    """
+    A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
+    probabilityability of connection within an elliptical region
+    """
+
+    def __init__(self, x_scale, y_scale, z_scale, probability=None, number=None):
+        """
+        @param x: scale of the x axis side of the rectangle
+        @param y: scale of the y axis side of the rectangle 
+        @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
+        """
+        super(RectangleMask, self).__init__(probability, number)
+        self.x_scale = x_scale
+        self.y_scale = y_scale
+        self.z_scale = z_scale
+
+    def __call__(self, d):
+        mask = (d[0] < self.x_scale) * (d[1] < self.y_scale) * (d[2] < self.z_scale)
         return self._probs_from_mask(mask)
 
     @classmethod
