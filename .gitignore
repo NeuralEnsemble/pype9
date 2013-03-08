@@ -18,3 +18,4 @@ build
 *.v
 /tom_bash
 .DS_Store
+/kbrain/external/nemo_testing/neuron/ncml_build_dir/*
