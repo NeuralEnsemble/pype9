@@ -85,13 +85,13 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     rebuilt = False
     if (ncml_mtime != prev_install_mtime or ncml_mtime != prev_params_mtime) and \
             build_mode != 'compile_only':
-        nemo_path = path_to_exec('nemo')
+        nemo_cmd = ("{nemo_path} {ncml_path} -p --pyparams={params} --nmodl={output} " 
+                    "--nmodl-method={method} --nmodl-kinetic={kinetics}"
+                    .format(nemo_path=path_to_exec('nemo'), ncml_path=os.path.normpath(ncml_path),
+                            output=os.path.normpath(install_dir), params=params_dir,
+                            kinetics=','.join(kinetics), method=method))
         try:
-            sp.check_call("{nemo_path} {ncml_path} -p --pyparams={params} --nmodl={output} " \
-                          "--nmodl-method={method} --nmodl-kinetic={kinetics}"\
-                          .format(nemo_path=nemo_path, ncml_path=os.path.normpath(ncml_path),
-                                  output=os.path.normpath(install_dir), params=params_dir,
-                                  kinetics=','.join(kinetics), method=method), shell=True)
+            sp.check_call(nemo_cmd, shell=True)
         except sp.CalledProcessError as e:
             raise Exception("Error while compiling NCML description into NMODL code -> {}".\
                             format(e))

@@ -71,12 +71,12 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
         os.makedirs(compile_dir)
         os.makedirs(install_dir)
         # Compile the NCML file into NEST cpp code using NeMo
-        nemo_path = path_to_exec('nemo')
+        nemo_cmd = ("{nemo_path} {ncml_path} --pyparams={params} --nest={output} "
+                    "--nest-method={method}".format(nemo_path=path_to_exec('nemo'), method=method,
+                                                    ncml_path=ncml_path, output=src_dir, 
+                                                    params=params_dir))
         try:
-            sp.check_call("{nemo_path} {ncml_path} --pyparams={params} --nest={output} "
-                          "--nest-method={method}".format(nemo_path=nemo_path, method=method,
-                                                          ncml_path=ncml_path, output=src_dir, 
-                                                          params=params_dir), shell=True)
+            sp.check_call(nemo_cmd, shell=True)
         except sp.CalledProcessError as e:
             raise Exception('Error while compiling NCML description into NEST cpp code -> {}'
                             .format(e))
