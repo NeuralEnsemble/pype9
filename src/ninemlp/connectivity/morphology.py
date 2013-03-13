@@ -425,36 +425,7 @@ class DisplacedTree(Tree):
     def __init__(self, tree, displacement):
         """
         A lightweight, displaced copy of the original tree, which avoids the regeneration of new 
-        masks if the displacement is an even multiple of the voxel dimensionern == 'Tiled':
-                        forest.align_min_bound_to_origin()
-                        base_offset = args.get('offset', numpy.zeros(3))
-                        tiling = numpy.array((args.get('x', 1), args.get('y', 1), args.get('z',1)))
-                        soma_positions = [tree.soma_position() for tree in forest]
-                        positions = numpy.zeros((len(forest) * tiling.prod(), 3))
-                        morphologies = []
-                        pos_count = 0
-                        for z in xrange(tiling[0]):
-                            for y in xrange(tiling[1]):
-                                for x in xrange(tiling[2]):
-                                    offset = base_offset + forest.max_bounds * (x, y, z)
-                                    for tree in forest:
-                                        morphologies.append(tree.displaced_tree(offset))
-                                    positions[pos_count+len(forest), :] = soma_positions + offset
-                    elif pattern == 'DistributedSoma':
-                        forest.collapse_to_origin()
-                        low = numpy.array(args['low'].split(' '))
-                        high = numpy.array(args['high'].split(' '))
-                        size = args['size']
-                        span = high - low
-                        positions = numpy.random.rand((size, 3))
-                        positions *= span
-                        positions += low
-                        morphologies = []
-                        for i in range(size):
-                            morphologies.append(forest[i % len(forest)].displaced_tree(positions[i,:]))
-                    else:
-                        raise Exception("Unrecognised structure pattern '{}' in '{}' population"
-                              s of the mask by simply
+        masks if the displacement is an even multiple of the voxel dimensions of the mask by simply
         offsetting the origin of the mask. Note that because it is a lightweight copy, changes to 
         the original tree will be reflected in its displaced copies.
         
