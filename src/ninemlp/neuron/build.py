@@ -30,9 +30,6 @@ elif os.environ['HOME'] == '/home/tclose':
     # I apologise for this little hack (this is the path on my machine, 
     # to save me having to set the environment variable in eclipse)
     os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin'
-    os.environ['LD_PRELOAD']='/usr/lib/libmpi.so' # This is a work around for my MPI installation
-else:
-    raise Exception("Please set the NRNHOME environment variable to the NEURON 'bin' directory")
 
 def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
     method='derivimplicit', build_mode=DEFAULT_BUILD_MODE, silent_build=False, kinetics=[]):
