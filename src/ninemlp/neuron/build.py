@@ -181,10 +181,3 @@ def compile_nmodl (model_dir, build_mode=DEFAULT_BUILD_MODE, silent=False):
 
 
 
-
-
-
-
-
-
-
