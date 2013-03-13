@@ -15,8 +15,14 @@
 
 import os
 import numpy
+import sys
+# Remove any system arguments that may conflict with
+if '--debug' in sys.argv:
+    raise Exception("'--debug' argument passed to script conflicts with an argument to nest, "
+                    "causing the import to stop at the NEST prompt")
 import pyNN.nest.standardmodels.cells
 import pyNN.nest.connectors
+import ninemlp.common
 import ninemlp.common.brep
 import ncml
 from ninemlp import DEFAULT_BUILD_MODE
@@ -34,14 +40,14 @@ RELATIVE_BREP_BUILD_DIR = './build'
 def build_pyNN(build_mode=DEFAULT_BUILD_MODE, silent=True):
     pass # Not required as of yet (this is needed for the neuron module though
 
-class Population(pyNN.nest.Population):
+class Population(ninemlp.common.Population, pyNN.nest.Population):
 
     def __init__(self, label, size, cell_type, params={}, build_mode=DEFAULT_BUILD_MODE):
         """
         Initialises the population after reading the population parameters from file
         """
         if build_mode == 'build_only':
-            print "Warning! '--compile' option was set to 'build_only', meaning the population '%s' was not constructed and only the NMODL files were compiled."
+            print "Warning! '--build' option was set to 'build_only', meaning the population '%s' was not constructed and only the NMODL files were compiled."
         else:
             pyNN.nest.Population.__init__(self, size, cell_type,
                                                   params, structure=None, label=label)
@@ -49,13 +55,42 @@ class Population(pyNN.nest.Population):
     def set_param(self, cell_id, param, value, component=None, section=None):
         raise NotImplementedError('set_param has not been implemented for Population class yet')
 
+    def rset(self, param, rand_distr, component=None, seg_group=None):
+        pyNN.nest.Population.rset(self, self._translate_param_name(param, component, seg_group),
+                                  rand_distr)
+    
+    def initialize(self, param, rand_distr, component=None, seg_group=None):
+        pyNN.nest.Population.initialize(self, self._translate_param_name(param, component, 
+                                                                         seg_group), 
+                                        rand_distr)  
+
+    def _translate_param_name(self, param, component, seg_group):
+        if seg_group and seg_group != 'source_section' and seg_group != 'soma':
+            raise NotImplementedError("Segment groups are not currently supported for NEST")
+        if component:
+            try:
+                translation = self.get_cell_type().component_parameters
+            except AttributeError:
+                raise Exception("Attempting to set component or segment group parameter on non-"
+                                "ninemlp cell type")
+            try:
+                comp_translation = translation[component]
+            except KeyError:
+                raise Exception("Cell type '{}' does not have a component '{}'"
+                                .format(self.get_cell_type().name, component))
+            try:
+                param = comp_translation[param][0]
+            except KeyError:
+                raise Exception("Component '{}' does not have a parameter '{}'"
+                                .format(component, param))
+        return param
 
 class Projection(pyNN.nest.Projection):
 
     def __init__(self, pre, dest, label, connector, source=None, target=None, build_mode=DEFAULT_BUILD_MODE):
         self.label = label
         if build_mode == 'build_only':
-            print "Warning! '--compile' option was set to 'build_only', meaning the projection '%s' was not constructed." % label
+            print "Warning! '--build' option was set to 'build_only', meaning the projection '%s' was not constructed." % label
         else:
             pyNN.nest.Projection.__init__(self, pre, dest, connector, label=label, source=source,
                                                                                       target=target)
@@ -90,7 +125,33 @@ class Network(ninemlp.common.Network):
             value = float(value)
         except:
             raise Exception("Incorrectly formatted value string '%s', should be a number optionally followed by a space and units (eg. '1.5 Hz')" % value_str)
-
+        
+        if not units:
+            return value
+        elif units == "Hz":
+            return value
+        elif units == "um":
+            return value
+        elif units == "ms":
+            return value
+        elif units == "us":
+            return value * 1e-3
+        elif units == "us/um":
+            return value * 1e-3
+        elif units == 'uS':
+            return value
+        elif units == 'mS':
+            return value * 1e+3
+        elif units == 'nS':
+            return value * 1e-3
+        elif units == 'pS':
+            return value * 1e-6
+        elif units == 'MOhm':
+            return value
+        elif units == 'Ohm/cm':
+            return value
+        elif units == 'S/cm2':
+            return value
         raise Exception("Unrecognised units '%s'" % units)
 
     def _set_simulation_params(self, **params):

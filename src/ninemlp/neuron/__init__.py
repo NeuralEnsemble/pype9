@@ -21,16 +21,17 @@ from ninemlp.neuron.build import compile_nmodl
 compile_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN_build_mode,
               silent=True)
 import ninemlp.common
-from ninemlp.common import seg_varname
-from ninemlp.neuron.ncml import NCMLCell
+from ninemlp.neuron.ncml import NCMLCell, group_varname, seg_varname
 import pyNN.common
+import pyNN.core
 import pyNN.neuron.standardmodels.cells
 import pyNN.neuron.connectors
 import pyNN.neuron.recording
 import ncml
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, record, record_v, record_gsyn, \
-                        StepCurrentSource, ACSource, DCSource, NoisyCurrentSource, errors, core
+                        StepCurrentSource, DCSource, errors, NoisyCurrentSource
+#ACSource, 
 import pyNN.neuron as sim
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
@@ -56,7 +57,7 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
                            actually constructed and only the NMODL files are compiled.
         """
         if build_mode == 'build_only' or build_mode == 'compile_only':
-            print "Warning! '--compile' option was set to 'build_only' or 'compile_only', " \
+            print "Warning! '--build' option was set to 'build_only' or 'compile_only', " \
                   "meaning the Population '{}' was not constructed and only the NMODL files " \
                   "were compiled.".format(label)
         else:
@@ -73,6 +74,19 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
     def set_param(self, cell_id, param, value, component=None, section=None):
         raise NotImplementedError('set_param has not been implemented for Population class yet')
 
+    def rset(self, param, rand_distr, component=None, seg_group=None):
+        param_scope = [group_varname(seg_group)]
+        if component:
+            param_scope.append(component)
+        param_scope.append(param)
+        pyNN.neuron.Population.rset(self, '.'.join(param_scope), rand_distr)
+
+    def initialize(self, variable, rand_distr, component=None, seg_group=None):
+        variable_scope = [group_varname(seg_group)]
+        if component:
+            variable_scope.append(component)
+        variable_scope.append(variable)
+        pyNN.neuron.Population.initialize(self, '.'.join(variable_scope), rand_distr)
 
     def can_record(self, variable):
         """
@@ -99,55 +113,6 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
         else:
             return pyNN.neuron.Population.can_record(self, variable)
 
-#    def record(self, variable, filename, cells=None, section='source_section', position=0.5):
-#        """
-#        Record spikes to a file. source can be an individual cell, a Population,
-#        PopulationView or Assembly.
-#        """
-#        if variable == 'spikes':
-#            variable_str = variable
-#        else:
-#            variable_str = '{section}({position}).{variable}' \
-#                           .format(section=section, position=position, variable=variable)
-#        self._record(variable_str, to_file=filename)                           
-#        # The following code is modified from  to allow
-#        # individual cells to be recorded with voltage traces
-##        if variable is None:                             
-##            for recorder in self.recorders.values():
-##                recorder.reset()
-##            self.recorders = {}    
-##        else:
-##            if not self.can_record(variable):
-##                raise pyNN.neuron.errors.RecordingError(variable, self.celltype)        
-##            pyNN.neuron.logger.debug("%s.record('%s')", self.label, variable)
-##            if variable not in self.recorders:
-##                self._add_recorder(variable, filename)
-##            if self.record_filter is not None:
-##                self.recorders[variable].record(self.record_filter)
-##            else:
-##                self.recorders[variable].record(self.all_cells)
-##            #if isinstance(filename, basestring):
-##            #    self.recorders[variable].file = filename
-##            # recorder_list is used by end()
-##        # --------------------
-##        # END self._record(variable_str, to_filename) modification
-##        # --------------------
-#        if self.recorders[variable_str] not in simulator.recorder_list:
-#            # this is a bit hackish - better to add to Population.__del__?
-#            simulator.recorder_list.append(self.recorders[variable_str])
-
-#    def record_all(self, file_prefix):
-#        """
-#        Records all available variables
-#        
-#        @param file_prefix: The file path prefix that the output files will be written to. Each \
-#                            file will be appended the post fix .<var-name>.
-#        """
-#        for var in self.celltype.recordable:
-#            try:
-#                self.record(var, file_prefix + '.' + var)
-#            except NameError:
-#                print "Could not set recorder for '%s' variable" % var
 
 class Projection(pyNN.neuron.Projection):
 
@@ -155,7 +120,7 @@ class Projection(pyNN.neuron.Projection):
                  build_mode=DEFAULT_BUILD_MODE):
         self.label = label
         if build_mode == 'build_only' or build_mode == 'compile_only':
-            print "Warning! '--compile' option was set to 'build_only', meaning the projection " \
+            print "Warning! '--build' option was set to 'build_only', meaning the projection " \
                   "'{}' was not constructed.".format(label)
         else:
             pyNN.neuron.Projection.__init__(self, pre, dest, connector, label=label, source=source,
@@ -171,16 +136,15 @@ class ElectricalSynapseProjection(Projection):
     gid_count = 0
 
     def __init__(self, pre, dest, label, connector, source=None, target=None,
-                 build_mode=DEFAULT_BUILD_MODE, rectified=False):
+                 build_mode=DEFAULT_BUILD_MODE):
         """
         @param rectified [bool]: Whether the gap junction is rectified (only one direction)
         """
         ## Start of unique variable-GID range assigned for this projection (ends at gid_count + pre.size * dest.size * 2)
         self.gid_start = self.__class__.gid_count
         self.__class__.gid_count += pre.size * dest.size * 2
-        self.rectified = rectified
         Projection.__init__(self, pre, dest, label, connector, source, target, build_mode)
-            
+
 
     def _divergent_connect(self, source, targets, weights, delays=None): #@UnusedVariable
         """
@@ -196,7 +160,7 @@ class ElectricalSynapseProjection(Projection):
             errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
                                                                      simulator.state.gid_counter)
             raise errors.ConnectionError(errmsg)
-        if not core.is_listlike(targets):
+        if not pyNN.core.is_listlike(targets):
             targets = [targets]
         if isinstance(weights, float):
             weights = [weights]
@@ -205,49 +169,74 @@ class ElectricalSynapseProjection(Projection):
             if not isinstance(target, pyNN.common.IDMixin):
                 raise errors.ConnectionError("Invalid target ID: {}".format(target))
         assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
-        self._resolve_synapse_type()
+        # Rename variable that has been repurposed slightly        
+        segname = self.synapse_type
+        gid_offset = self.pre.id_to_index(source) * len(self.post) + self.gid_start
         for target, weight in zip(targets, weights):
-            # Check connection information to avoid duplicates, where the same cell connects
-            # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
-            #
-            # NB: In this case self.synapse_type and self.source will actually be the names of the 
-            # respective segments. The names are inherited from the pyNN class, and I am not sure why it is called this as it seems a little
-            # confusing.
-            if self.Connection(target, self.synapse_type, source, self.source) \
-                                                                           not in self.connections:
-                cell_secs = []
-                for cell, sec_name in ((source, self.source), (target, self.synapse_type)):
-                    if self.source:
-                        section = cell._cell.segments[sec_name]
-                    else:
-                        section = cell.source_section
-                    cell_secs.append((cell, section))
-                pre_post_id = int(source) * len(self.post) + int(target) + self.gid_start
-                post_pre_id = int(source) * len(self.post) + int(target) + self.gid_start + 1
-                for (pre_cell, pre_sec), \
-                    (post_cell, post_sec), var_gid in ((cell_secs[0], cell_secs[1], pre_post_id), 
-                                                       (cell_secs[1], cell_secs[0], post_pre_id)) \
-                                                   if not self.rectified else \
-                                                      ((cell_secs[0], cell_secs[1], pre_post_id)):
-                    var_gid = int(pre_cell) * len(self.post) + int(target)                                                               
-                    if pre_cell.local:
-                        print pre_sec(0.5)
-                        print "Section &v: {}".format(pre_sec(0.5)._ref_v)
-                        simulator.state.parallel_context.source_var(pre_sec(0.5)._ref_v, var_gid) #@UndefinedVariableFromImport              
-                    if post_cell.local:
-                        try:
-                            synapse = getattr(post_sec, 'Gap')
-                        except AttributeError:
-                            raise Exception("Section '{}' doesn't have a 'Gap' synapse inserted"
-                                            .format(sec_name if sec_name else 'source_section'))    
-                        synapse.g = weight
-                        print synapse
-                        print "Synapse &vgap: {}".format(synapse._ref_vgap)                        
-                        simulator.state.parallel_context.target_var(synapse._ref_vgap, var_gid) #@UndefinedVariableFromImport
-                # Save connection information to avoid duplicates, where the same cell connects
-                # from one cell1 to cell2 and then cell2 to cell1 (because all connections are mutual)
-                self.connections.append(self.Connection(source, self.source, target, 
-                                                        self.synapse_type))
+            # "variable" GIDs (as distinct from the GIDs used for cells) for both the pre to post  
+            # connection the post to pre            
+            pre_post_gid = (gid_offset + self.post.id_to_index(target)) * 2
+            post_pre_gid = pre_post_gid + 1
+            # Get the segment on target cell the gap junction connects to
+            segment = target._cell.segments[segname] if segname else target.source_section
+            # Connect the pre cell voltage to the target var
+            print "Setting source_var on target cell {} to connect to source cell {} with gid {} on process {}".format(target, source, post_pre_gid, simulator.state.mpi_rank)
+            simulator.state.parallel_context.source_var(segment(0.5)._ref_v, post_pre_gid) #@UndefinedVariableFromImport              
+            # Create the gap_junction and set its weight
+            gap_junction = h.Gap(0.5, sec=segment)
+            gap_junction.g = weight
+            # Store gap junction in a list so it doesn't get collected by the garbage 
+            # collector
+            segment._gap_junctions.append(gap_junction)
+            # Connect the gap junction with the source_var
+            print "Setting target_var on target cell {} to connect to source cell {} with gid {} on process {}".format(target, source, pre_post_gid, simulator.state.mpi_rank)
+            simulator.state.parallel_context.target_var(gap_junction._ref_vgap, pre_post_gid) #@UndefinedVariableFromImport
+
+    def _prepare_sources(self, source, targets, weights, delays=None): #@UnusedVariable
+        """
+        Connect a neuron to one or more other neurons with a static connection.
+        
+        @param source [pyNN.common.IDmixin]: the ID of the pre-synaptic cell.
+        @param [list(pyNN.common.IDmixin)]: a list/1D array of post-synaptic cell IDs, or a single ID.
+        @param [list(float) or float]: Connection weight(s). Must have the same length as `targets`.
+        @param delays [Null]: This is actually ignored but only included to match the same signature\
+ as the Population._divergent_connect method
+        """
+        if not source.local:
+            raise Exception("source needs to be local for _divergent_sources")
+        if not isinstance(source, int) or source > simulator.state.gid_counter or source < 0:
+            errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
+                                                                     simulator.state.gid_counter)
+            raise errors.ConnectionError(errmsg)
+        if not pyNN.core.is_listlike(targets):
+            targets = [targets]
+        if isinstance(weights, float):
+            weights = [weights]
+        assert len(targets) > 0
+        for target in targets:
+            if not isinstance(target, pyNN.common.IDMixin):
+                raise errors.ConnectionError("Invalid target ID: {}".format(target))
+        assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
+        # Get the segment on the pre cell that the gap junction is connected to
+        segment = source._cell.segments[self.source] if self.source else source.source_section
+        gid_offset = self.pre.id_to_index(source) * len(self.post) + self.gid_start
+        for target, weight in zip(targets, weights):
+            # "variable" GIDs (as distinct from the GIDs used for cells) for both the pre to post  
+            # connection the post to pre
+            pre_post_gid = (gid_offset + self.post.id_to_index(target)) * 2
+            post_pre_gid = pre_post_gid + 1
+            # Connect the pre cell voltage to the target var
+            print "Setting source_var on source cell {} to connect to target cell {} with gid {} on process {}".format(source, target, pre_post_gid, simulator.state.mpi_rank)
+            simulator.state.parallel_context.source_var(segment(0.5)._ref_v, pre_post_gid) #@UndefinedVariableFromImport                    
+            # Create the gap_junction and set its weight
+            gap_junction = h.Gap(0.5, sec=segment)
+            gap_junction.g = weight
+            # Store gap junction in a list so it doesn't get collected by the garbage 
+            # collector
+            segment._gap_junctions.append(gap_junction)
+            # Connect the gap junction with the source_var
+            print "Setting target_var on source cell {} to connect to target cell {} with gid {} on process {}".format(source, target, post_pre_gid, simulator.state.mpi_rank)
+            simulator.state.parallel_context.target_var(gap_junction._ref_vgap, post_pre_gid) #@UndefinedVariableFromImport              
 
     def _convergent_connect(self, sources, target, weights, delays):
         raise NotImplementedError
@@ -336,6 +325,7 @@ class Network(ninemlp.common.Network):
             if isinstance(proj, ElectricalSynapseProjection):
                 includes_electrical = True
         if includes_electrical:
+            print "Setting up transfer on MPI process {}".format(simulator.state.mpi_rank)
             simulator.state.parallel_context.setup_transfer() #@UndefinedVariableFromImport
 
 if __name__ == "__main__":

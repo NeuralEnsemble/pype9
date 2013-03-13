@@ -25,11 +25,14 @@ _SIMULATOR_BUILD_NAME = 'neuron'
 _MODIFICATION_TIME_FILE = 'modification_time'
 
 if 'NRNHOME' in os.environ:
-    os.environ['PATH'] += os.pathsep + os.environ['NRNHOME']
-else:
+    os.environ['PATH'] += os.pathsep + os.path.join(os.environ['NRNHOME'], platform.machine(), 'bin')
+elif os.environ['HOME'] == '/home/tclose':
     # I apologise for this little hack (this is the path on my machine, 
     # to save me having to set the environment variable in eclipse)
     os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin'
+    os.environ['LD_PRELOAD']='/usr/lib/libmpi.so' # This is a work around for my MPI installation
+else:
+    raise Exception("Please set the NRNHOME environment variable to the NEURON 'bin' directory")
 
 def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
     method='derivimplicit', build_mode=DEFAULT_BUILD_MODE, silent_build=False, kinetics=[]):
@@ -82,13 +85,13 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     rebuilt = False
     if (ncml_mtime != prev_install_mtime or ncml_mtime != prev_params_mtime) and \
             build_mode != 'compile_only':
-        nemo_path = path_to_exec('nemo')
+        nemo_cmd = ("{nemo_path} {ncml_path} -p --pyparams={params} --nmodl={output} " 
+                    "--nmodl-method={method} --nmodl-kinetic={kinetics}"
+                    .format(nemo_path=path_to_exec('nemo'), ncml_path=os.path.normpath(ncml_path),
+                            output=os.path.normpath(install_dir), params=params_dir,
+                            kinetics=','.join(kinetics), method=method))
         try:
-            sp.check_call("{nemo_path} {ncml_path} -p --pyparams={params} --nmodl={output} " \
-                          "--nmodl-method={method} --nmodl-kinetic={kinetics}"\
-                          .format(nemo_path=nemo_path, ncml_path=os.path.normpath(ncml_path),
-                                  output=os.path.normpath(install_dir), params=params_dir,
-                                  kinetics=','.join(kinetics), method=method), shell=True)
+            sp.check_call(nemo_cmd, shell=True)
         except sp.CalledProcessError as e:
             raise Exception("Error while compiling NCML description into NMODL code -> {}".\
                             format(e))
@@ -168,13 +171,6 @@ def compile_nmodl (model_dir, build_mode=DEFAULT_BUILD_MODE, silent=False):
         print "Found existing mechanisms in '{}' directory, compile skipped (set 'build_mode' " \
               "argument to 'force' enforce recompilation them).".format(model_dir)
     os.chdir(orig_dir)
-
-
-
-
-
-
-
 
 
 

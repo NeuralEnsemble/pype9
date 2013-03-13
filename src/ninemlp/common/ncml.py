@@ -18,9 +18,25 @@
 
 import xml.sax
 import collections
-from ninemlp.common import XMLHandler, ValueWithUnits, group_varname
+from itertools import chain
+from ninemlp.common import XMLHandler, ValueWithUnits
 
 DEFAULT_V_INIT = -65
+
+
+def group_varname(group_id):
+    if group_id:
+        varname = group_id + "_group"
+    else:
+        varname = "all_segs"
+    return varname
+
+def seg_varname(seg_id):
+    if seg_id == 'source_section':
+        varname = seg_id
+    else:
+        varname = seg_id + "_seg"
+    return varname
 
 
 class MorphMLHandler(XMLHandler):
@@ -154,8 +170,8 @@ class NCMLHandler(XMLHandler):
     NCMLDescription = collections.namedtuple('NCMLDescription', 'celltype_id \
                                                                  ncml_id \
                                                                  build_options \
-                                                                 mechanisms synapses \
-                                                                 gap_junctions \
+                                                                 mechanisms \
+                                                                 synapses \
                                                                  capacitances \
                                                                  axial_resistances \
                                                                  reversal_potentials \
@@ -171,7 +187,6 @@ class NCMLHandler(XMLHandler):
     IonicCurrentParam = collections.namedtuple('IonicCurrentParam', 'name value')
     PassiveCurrent = collections.namedtuple('PassiveCurrent', 'group_id cond_density')
     Synapse = collections.namedtuple('Synapse', 'id type group_id params')
-    GapJunction = collections.namedtuple('GapJunction', 'id type group_id params')
     SynapseParam = collections.namedtuple('SynapseParam', 'name value')
     SpecificCapacitance = collections.namedtuple('SpecificCapacitance', 'value group_id')
     ReversePotential = collections.namedtuple('NCMLReversePotential', 'species value group_id')
@@ -190,7 +205,7 @@ class NCMLHandler(XMLHandler):
                                                             required_attrs=[('id', self.ncml_id)]):
             self.ncml = self.NCMLDescription(
                                  self.celltype_id, attrs['id'], collections.defaultdict(dict),
-                                                                [], [], [], [], [], [], [], {})
+                                                                [], [], [], [], [], [], {})
         elif self._opening(tag_name, attrs, 'defaultBuildOptions',
                            parents=['biophysicalProperties']):
             pass
@@ -235,11 +250,6 @@ class NCMLHandler(XMLHandler):
             self.ncml.synapses.append(self.Synapse(attrs['id'],
                                               attrs['type'],
                                               attrs.get('segmentGroup', None),
-                                                  []))
-        elif self._opening(tag_name, attrs, 'gapJunction', parents=['synapses']):
-            self.ncml.synapses.append(self.GapJunction(attrs['id'],
-                                                  attrs['type'],
-                                                  attrs.get('segmentGroup', None),
                                                   []))
         elif self._opening(tag_name, attrs, 'parameter', parents=['conductanceSynapse']):
             self.ncml.synapses[-1].params.append(self.SynapseParam(attrs['name'],
@@ -299,7 +309,6 @@ class BaseNCMLCell(object):
         """
         pass
 
-
     def memb_init(self):
         # Initialisation of member states goes here        
         raise NotImplementedError("'memb_init' should be implemented by the derived class.")
@@ -311,7 +320,10 @@ class BaseNCMLCell(object):
         
         @return [list(str)]: The list of parameter names in the class
         """
-        return cls.parameter_names
+        # Return all the parameter names plus the "raw" names used in the NeMo generated models
+        raw_names = list(chain.from_iterable([[param[0] for param in comp.values()] 
+                                              for comp in cls.component_parameters.values()]))
+        return cls.parameter_names + raw_names
 
     def get_group(self, group_id):
         return self.groups[group_id] if group_id else self.all_segs
@@ -357,8 +369,9 @@ class BaseNCMLMetaClass(type):
         for mech in ncml_model.mechanisms:
             if component_parameters.has_key(mech.id):
                 default_params.update([(group_varname(mech.group_id) + "." + mech.id +
-                                        "." + key, val[0])
-                                       for key, val in component_parameters[mech.id].iteritems()])
+                                        "." + varname, mapping[0])
+                                       for varname, mapping in \
+                                                component_parameters[mech.id].iteritems()])
             else:
                 for param in mech.params:
                     default_params[group_varname(mech.group_id) + "." + mech.id + "." +
@@ -372,9 +385,6 @@ class BaseNCMLMetaClass(type):
             default_params[group_varname(cm.group_id) + "." + "cm"] = cm.value
         for ra in ncml_model.axial_resistances:
             default_params[group_varname(ra.group_id) + "." + "Ra"] = ra.value
-#        for e_v in ncml_model.reversal_potentials:
-#            default_params[self.group_varname(e_v.group_id) + "." + \
-#                                               "e_rev_" + e_v.species] = e_v.value
         # A morphology parameters
         for seg_group in morphml_model.groups:
             # None, defers to the value loaded in the MorphML file but allows them to be overwritten

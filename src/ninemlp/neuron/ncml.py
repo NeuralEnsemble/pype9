@@ -24,8 +24,7 @@ from operator import attrgetter
 import numpy
 import pyNN.neuron.simulator
 import weakref
-from ninemlp.common import group_varname, seg_varname
-from ninemlp.common.ncml import DEFAULT_V_INIT
+from ninemlp.common.ncml import group_varname, seg_varname, DEFAULT_V_INIT
 
 ## Used to store the directories from which NMODL objects have been loaded to avoid loading them twice
 loaded_celltypes = {}
@@ -85,6 +84,8 @@ class Segment(nrn.Section): #@UndefinedVariable
                                 morphl_seg.proximal.z))
         # Set initialisation variables here    
         self.v_init = DEFAULT_V_INIT
+        # A list to store any gap junctions in
+        self._gap_junctions = []
         # Local information, though not sure if I need this here
         self.id = morphl_seg.id
         self._parent_seg = None
@@ -237,7 +238,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         self.traces = {}
         self.gsyn_trace = {}
         self.recording_time = 0
-        if parameters.get('parent', False):
+        if parameters.has_key('parent') and parameters['parent'] is not None:
             # A weak reference is used to avoid a circular reference that would prevent the garbage 
             # collector from being called on the cell class    
             self.parent = weakref.ref(parameters['parent'])
@@ -279,6 +280,8 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                                       required, leaving the "barebones" pyNEURON structure for \
                                       each nrn.Section
         """
+        if not len(self.morphml_model.segments):
+            raise Exception("The loaded morphology does not contain any segments")
         # Initialise all segments
         self.segments = {}
         # Create a group to hold all segments (this is the default group for components that don't 
@@ -354,10 +357,6 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                             "with 'segmentGroup'without 'segmentGroup')")
         #FIXME: ionic currents and reversal potentials should undergo similar checks but they 
         #require the species to be checked as well.
-        for curr in self.ncml_model.passive_currents:
-            for seg in self.get_group(curr.group_id):
-                seg.insert('pas')
-                seg.pas.g = curr.cond_density.neuron()
         for mech in sorted(self.ncml_model.mechanisms, key=attrgetter('id')):
             if self.component_parameters.has_key(mech.id):
                 translations = dict([(key, val[0]) for key, val in
@@ -370,8 +369,9 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                                                                         translations=translations)
                 except ValueError as e:
                     raise Exception("Could not insert {mech_id} into section group {group_id} " \
-                                    "({error})".format(mech_id=mech.id, group_id=mech.group_id,
-                                                       error=e))
+                                    "({error})"
+                                    .format(mech_id=mech.id, error=e, 
+                                            group_id=mech.group_id if mech.group_id else 'all_segs'))
         #Loop through loaded membrane mechanisms and insert them into the relevant sections.
         for cm in self.ncml_model.capacitances:
             for seg in self.get_group(cm.group_id):
@@ -394,17 +394,6 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                                      .format(syn.id))
             for seg in self.get_group(syn.group_id):
                 receptor = SynapseType(0.5, sec=seg)
-                setattr(seg, syn.id, receptor)
-                for param in syn.params:
-                    setattr(receptor, param.name, param.value.neuron())
-        for syn in self.ncml_model.gap_junctions:
-            try:
-                GapJunction = type(syn.type) #FIXME: This needs to be verified
-            except:
-                raise Exception ("Could not find synapse '{}' in loaded or built-in synapses."\
-                                 .format(syn.id))
-            for seg in self.get_group(syn.group_id):
-                receptor = GapJunction(0.5, sec=seg)
                 setattr(seg, syn.id, receptor)
                 for param in syn.params:
                     setattr(receptor, param.name, param.value.neuron())
@@ -486,11 +475,13 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
     # Create recorder to append to simulator.recorder_list
 
     class Recorder(pyNN.neuron.Recorder):
+        
         def __init__(self, cell, variable, output):
             self.cell = cell
             self.variable = variable
             self.file = output
             self.population = None
+            
         def _get(self, gather=False, compatible_output=True, filter=None): #@UnusedVariable
             if self.variable == 'spikes':
                 data = numpy.empty((0, 2))
@@ -516,7 +507,12 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
     Called by nineml_celltype_from_model
     """
     def __new__(cls, name, bases, dct):
-        #The __init__ function for the created class  
+        # To be honest I probably don't understand the logic for the separation between model
+        # and the cell class in PyNN, which results in the slightly messy hack below, where I 
+        # produce basically two versions of the same __init__ function, one that takes a dictonary
+        # and the other that takes kwargs to pass to set as the cell class and model class __init__
+        # functions respectively.
+        #The __init__ function for the created class
         def cellclass__init__(self, parameters={}):
             pyNN.models.BaseCellType.__init__(self, parameters)
             NCMLCell.__init__(self, **parameters)
