@@ -32,12 +32,15 @@ def get_build_paths(ncml_path, celltype_name, simulator_name, build_parent_dir=N
     @return [str]: (<default-install_directory>, <source-directory>, <compile-directory>)
     """
     if not build_parent_dir:
-        build_parent_dir = os.path.join(os.path.dirname(ncml_path), _RELATIVE_BUILD_DIR,
-                                                                    simulator_name, celltype_name)
-    src_dir = str(os.path.normpath(os.path.join(build_parent_dir, _SRC_DIR)))
-    default_install_dir = str(os.path.normpath(os.path.join(build_parent_dir, _INSTALL_DIR)))
-    compile_dir = str(os.path.normpath(os.path.join(build_parent_dir, _COMPILE_DIR)))
-    params_dir = str(os.path.normpath(os.path.join(build_parent_dir, _PARAMS_DIR)))
+        build_parent_dir = os.path.normpath(os.path.abspath(os.path.join(os.path.dirname(ncml_path),
+                                                                         _RELATIVE_BUILD_DIR,
+                                                                         simulator_name, celltype_name)))
+    src_dir = str(os.path.normpath(os.path.abspath(os.path.join(build_parent_dir, _SRC_DIR))))
+    default_install_dir = str(os.path.normpath(os.path.abspath(os.path.join(build_parent_dir, 
+                                                                            _INSTALL_DIR))))
+    compile_dir = str(os.path.normpath(os.path.abspath(os.path.join(build_parent_dir, 
+                                                                    _COMPILE_DIR))))
+    params_dir = str(os.path.normpath(os.path.abspath(os.path.join(build_parent_dir, _PARAMS_DIR))))
     return (default_install_dir, params_dir, src_dir, compile_dir)
 
 def path_to_exec(exec_name):
@@ -78,9 +81,9 @@ def load_component_parameters(celltype_name, params_dir):
             try:
                 loaded_props = run_path(os.path.join(params_dir, f_name))['properties']
             except NameError: # this is a desperate hack to get the Open campus demonstration working 
-                loaded_props = {('CaP', 'pbar'): ('comp226_pca',  5e-05)}  
+                loaded_props = {('CaP', 'pbar'): ('comp226_pca', 5e-05)}
             # Store in a dictionary of dictionaries indexed by component and variable names
-            for (comp_name, var_name), mapped_var in loaded_props.iteritems():           
+            for (comp_name, var_name), mapped_var in loaded_props.iteritems():
                 component_parameters[comp_name][var_name] = mapped_var
     return component_parameters
 
