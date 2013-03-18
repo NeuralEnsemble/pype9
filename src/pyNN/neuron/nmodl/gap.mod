@@ -1,20 +1,3 @@
-COMMENT
-
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-//
-// NOTICE OF COPYRIGHT AND OWNERSHIP OF SOFTWARE
-//
-// Copyright 2007, The University Of Pennsylvania
-//  School of Engineering & Applied Science.
-//   All rights reserved.
-//   For research use only; commercial use prohibited.
-//   Distribution without permission of Maciej T. Lazarewicz not permitted.
-//   mlazarew@seas.upenn.edu
-//
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-ENDCOMMENT
-
 NEURON {
 
     POINT_PROCESS Gap
