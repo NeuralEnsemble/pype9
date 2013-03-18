@@ -29,7 +29,7 @@ UNITS {
   (nS) = (nanosiemens)
 }
 
-PARAMETER { g = 0 (nS) }
+PARAMETER { g = 0 (uS) }
     
 ASSIGNED {
 
@@ -40,6 +40,6 @@ ASSIGNED {
  
 BREAKPOINT { 
 
-  if (g>0) {i = (1e-3) * g * (v-vgap) }
+  if (g>0) {i = g * (v-vgap) }
 
 }
