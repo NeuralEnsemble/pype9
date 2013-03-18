@@ -775,8 +775,8 @@ class Population(object):
     def _set_positions(self, positions, morphologies=None):
         super(Population, self)._set_positions(positions)
         self.morphologies = morphologies
-            
-    
+
+
 
 if __name__ == "__main__":
 
