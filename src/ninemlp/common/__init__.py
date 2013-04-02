@@ -23,6 +23,7 @@ import warnings
 import math
 # Specific imports
 import pyNN.connectors
+import pyNN.space
 from pyNN.random import RandomDistribution
 from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
 import ninemlp.connectivity.point2point as point2point
@@ -353,7 +354,7 @@ class Network(object):
         """
         pass
 
-    def _create_population(self, label, size, cell_type_name, morph_id, structure, cell_params,
+    def _create_population(self, label, size, cell_type_name, morph_id, structure_params, cell_params,
                            cell_param_distrs, initial_conditions, verbose, silent_build):
         if cell_type_name in dir(self._pyNN_module.standardmodels.cells):
             # This is not as simple as it may have been, as a simple getattr on 
@@ -372,14 +373,51 @@ class Network(object):
             except IOError:
                 raise Exception("Cell_type_name '{}' was not found or " \
                                 "in standard models".format(cell_type_name))
-        if structure:
+        if structure_params:
             # Set default for populations without morphologies
+            positions = None
+            structure = None
             morphologies = None
-            if structure.type == "MorphologyBased":
-                forest = morphology.Forest(os.path.join(self.dirname, structure.args['morphology']))
-                if structure.layout:
-                    pattern = structure.layout.pattern
-                    args = structure.layout.args
+            if structure_params.type == 'Grid':
+                if structure_params.layout:
+                    pattern = structure_params.layout.pattern
+                    args = structure_params.layout.args
+                    if pattern == '2D':
+                        structure = pyNN.space.Grid2D(aspect_ratio=float(args['aspect_ratio']), 
+                                                      dx=float(args['dx']), dy=float(args['dy']), 
+                                                      x0=float(args['x0']), y0=float(args['y0']), 
+                                                      z=float(args['z']))
+                    elif pattern == '3D':
+                        structure = pyNN.space.Grid2D(aspect_ratioXY=float(args['aspect_ratioXY']), 
+                                                      aspect_ratioXZ=float(args['aspect_ratioXZ']), 
+                                                      dx=float(args['dx']), dy=float(args['dy']), 
+                                                      dz=float(args['dz']), x0=float(args['x0']), 
+                                                      y0=float(args['y0']), z0=float(args['z0']))
+                else:
+                    raise Exception("Layout tags are required for structure of type 'Grid'")
+            elif structure_params.type == 'RandomlyDistributed':
+                if structure_params.layout:
+                    pattern = structure_params.layout.pattern
+                    args = structure_params.layout.args
+                    if pattern == 'Cuboid':
+                        boundary = pyNN.space.Cuboid(float(args['width']), float(args['height']), 
+                                                     float(args['depth']))
+                    elif pattern == 'Sphere':
+                        boundary = pyNN.space.Sphere(float(args['radius']))
+                    else:
+                        raise Exception("Unrecognised pattern '{}' for randomly distributed "
+                                        "population structure")
+                    origin = (float(args['x']), float(args['y']), float(args['z']))
+                    structure = pyNN.space.RandomStructure(boundary, origin)
+                else:
+                    raise Exception("Layout tags are required for structure of type "
+                                    "'RandomlyDistributed'") 
+            elif structure_params.type == "MorphologyBased":
+                forest = morphology.Forest(os.path.join(self.dirname, 
+                                                        structure_params.args['morphology']))
+                if structure_params.layout:
+                    pattern = structure_params.layout.pattern
+                    args = structure_params.layout.args
                     if pattern == 'Tiled':
                         forest.align_min_bound_to_origin()
                         base_offset = args.get('offset', numpy.zeros(3))
@@ -411,13 +449,13 @@ class Network(object):
                         for i in range(size):
                             morphologies.append(forest[i % len(forest)].displaced_tree(positions[:, i]))
                     else:
-                        raise Exception("Unrecognised structure pattern '{}' in '{}' population"
-                                        .format(structure.pattern, label))
+                        raise Exception("Unrecognised structure_params pattern '{}' in '{}' population"
+                                        .format(structure_params.pattern, label))
                     size = len(morphologies)
-            elif structure.type == "Extension":
-                engine = structure.args.pop("engine")
+            elif structure_params.type == "Extension":
+                engine = structure_params.args.pop("engine")
                 if engine == "Brep":
-                    pop_id = structure.args['id']
+                    pop_id = structure_params.args['id']
                     if pop_id not in os.listdir(self.pop_dir):
                         raise Exception("Population id '{}' was not found in search " \
                                         "path ({}).".format(pop_id, self.pop_dir))
@@ -430,16 +468,18 @@ class Network(object):
                         raise Exception("Could not load Brep positions from file '{}'"\
                                         .format(pos_file))
                 else:
-                    raise Exception("Unrecognised external structure engine, '{}'".format(engine))
+                    raise Exception("Unrecognised external structure_params engine, '{}'".format(engine))
             else:
-                raise Exception("Not implemented error, support for built-in structure management is "\
+                raise Exception("Not implemented error, support for built-in structure_params management is "\
                                 "not done yet.")
         # Actually create the population
         pop = self._Population_class(label, size, cell_type, params=cell_params,
                                                                         build_mode=self.build_mode)
-        # Set structure
+        # Set structure_params
         if not (self.build_mode == 'build_only' or self.build_mode == 'compile_only'):
             if structure:
+                pop._set_structure(structure)
+            else:
                 pop._set_positions(positions, morphologies)
             pop._randomly_distribute_params(cell_param_distrs)
             pop._randomly_distribute_initial_conditions(initial_conditions)
