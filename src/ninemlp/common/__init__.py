@@ -378,40 +378,37 @@ class Network(object):
             positions = None
             structure = None
             morphologies = None
-            if structure_params.type == 'Grid':
+            if structure_params.type == 'Distributed':
                 if structure_params.layout:
                     pattern = structure_params.layout.pattern
                     args = structure_params.layout.args
-                    if pattern == '2D':
+                    if pattern == 'Grid2D':
                         structure = pyNN.space.Grid2D(aspect_ratio=float(args['aspect_ratio']), 
                                                       dx=float(args['dx']), dy=float(args['dy']), 
                                                       x0=float(args['x0']), y0=float(args['y0']), 
                                                       z=float(args['z']))
-                    elif pattern == '3D':
+                    elif pattern == 'Grid3D':
                         structure = pyNN.space.Grid2D(aspect_ratioXY=float(args['aspect_ratioXY']), 
                                                       aspect_ratioXZ=float(args['aspect_ratioXZ']), 
                                                       dx=float(args['dx']), dy=float(args['dy']), 
                                                       dz=float(args['dz']), x0=float(args['x0']), 
                                                       y0=float(args['y0']), z0=float(args['z0']))
-                else:
-                    raise Exception("Layout tags are required for structure of type 'Grid'")
-            elif structure_params.type == 'RandomlyDistributed':
-                if structure_params.layout:
-                    pattern = structure_params.layout.pattern
-                    args = structure_params.layout.args
-                    if pattern == 'Cuboid':
-                        boundary = pyNN.space.Cuboid(float(args['width']), float(args['height']), 
-                                                     float(args['depth']))
-                    elif pattern == 'Sphere':
-                        boundary = pyNN.space.Sphere(float(args['radius']))
-                    else:
-                        raise Exception("Unrecognised pattern '{}' for randomly distributed "
-                                        "population structure")
-                    origin = (float(args['x']), float(args['y']), float(args['z']))
-                    structure = pyNN.space.RandomStructure(boundary, origin)
+                    elif pattern == 'RandomUniform':
+                        if args['shape'] == 'box':
+                            boundary = pyNN.space.Cuboid(float(args['width']), float(args['height']), 
+                                                         float(args['depth']))
+                        elif args['shape'] == 'Sphere':
+                            boundary = pyNN.space.Sphere(float(args['radius']))
+                        else:
+                            raise Exception("Unrecognised pattern '{}' for RandomUniform "
+                                            "population structure".format(args['shape']))
+                        origin = (float(args['x']), float(args['y']), float(args['z']))
+                        structure = pyNN.space.RandomStructure(boundary, origin)
+                    elif pattern == 'JitteredGrid3D':
+                        raise NotImplementedError
                 else:
                     raise Exception("Layout tags are required for structure of type "
-                                    "'RandomlyDistributed'") 
+                                    "'Distributed'") 
             elif structure_params.type == "MorphologyBased":
                 forest = morphology.Forest(os.path.join(self.dirname, 
                                                         structure_params.args['morphology']))
