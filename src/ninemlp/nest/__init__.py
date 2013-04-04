@@ -54,7 +54,7 @@ class Population(ninemlp.common.Population, pyNN.nest.Population):
             print "Warning! '--build' option was set to 'build_only', meaning the population '%s' was not constructed and only the NMODL files were compiled."
         else:
             pyNN.nest.Population.__init__(self, size, cell_type,
-                                                  params, structure=None, label=label)
+                                          params, structure=None, label=label)
 
     def set_param(self, cell_id, param, value, component=None, section=None):
         raise NotImplementedError('set_param has not been implemented for Population class yet')
@@ -64,8 +64,7 @@ class Population(ninemlp.common.Population, pyNN.nest.Population):
                                   rand_distr)
 
     def initialize(self, param, rand_distr, component=None, seg_group=None):
-        pyNN.nest.Population.initialize(self, self._translate_param_name(param, component,
-                                                                         seg_group),
+        pyNN.nest.Population.initialize(self, self._translate_param_name(param, component, seg_group),
                                         rand_distr)
 
     def _translate_param_name(self, param, component, seg_group):
@@ -91,108 +90,15 @@ class Population(ninemlp.common.Population, pyNN.nest.Population):
 
 class Projection(pyNN.nest.Projection):
 
-    def __init__(self, pre, dest, label, connector, source=None, target=None, build_mode=DEFAULT_BUILD_MODE):
+    def __init__(self, pre, dest, label, connector, source=None, target=None, 
+                 build_mode=DEFAULT_BUILD_MODE, rng=None):
         self.label = label
         if build_mode == 'build_only':
             print "Warning! '--build' option was set to 'build_only', meaning the projection '%s' was not constructed." % label
         else:
             pyNN.nest.Projection.__init__(self, pre, dest, connector, label=label, source=source,
-                                                                                      target=target)
-
-#    def _divergent_connect(self, source, targets, weights, delays):
-#        """
-#        Connect a neuron to one or more other neurons.
-#        
-#        `source`  -- the ID of the pre-synaptic cell.
-#        `targets` -- a list/1D array of post-synaptic cell IDs, or a single ID.
-#        `weight`  -- a list/1D array of connection weights, or a single weight.
-#                     Must have the same length as `targets`.
-#        `delays`  -- a list/1D array of connection delays, or a single delay.
-#                     Must have the same length as `targets`.
-#        """
-#        # are we sure the targets are all on the current node?
-#        if pyNN.core.is_listlike(source):
-#            assert len(source) == 1
-#            source = source[0]
-#        if not pyNN.core.is_listlike(targets):
-#            targets = [targets]
-#        assert len(targets) > 0
-#
-#        if self.synapse_type not in targets[0].celltype.synapse_types:
-#            raise pyNN.errors.ConnectionError("User gave synapse_type=%s, synapse_type must be one "
-#                    "of: {}".format(self.synapse_type, "'" + 
-#                    "', '".join(st for st in targets[0].celltype.synapse_types or
-#                                ['*No connections supported*'])) + "'")
-#        # Weights should be in nA or uS, but iaf_neuron uses pA and iaf_cond_neuron uses nS.
-#        # Using convention in this way is not ideal. We should
-#        # be able to look up the units used by each model somewhere.            
-#        weights = numpy.array(weights) * 1000.0 
-#        if self.synapse_type == 'inhibitory' and pyNN.common.is_conductance(targets[0]):
-#            weights *= -1 # NEST wants negative values for inhibitory weights, even if these are conductances
-#        if isinstance(weights, numpy.ndarray):
-#            weights = weights.tolist()
-#        elif isinstance(weights, float):
-#            weights = [weights]
-#        if isinstance(delays, numpy.ndarray):
-#            delays = delays.tolist()
-#        elif isinstance(delays, float):
-#            delays = [delays]
-#
-#        if targets[0].celltype.standard_receptor_type:
-#            try:
-#                nest.DivergentConnect([source], targets, weights, delays, self.synapse_model)
-#            except NESTError, e:
-#                raise pyNN.errors.ConnectionError("%s. source=%s, targets=%s, weights=%s, delays=%s, "
-#                                             "synapse model='%s'" % (e, source, targets, weights,
-#                                                                     delays, self.synapse_model))
-#        else:
-#            for target, w, d in zip(targets, weights, delays):
-#                nest.Connect([source], [target], {'weight': w, 'delay': d,
-#                                                       'receptor_type': target.celltype.get_receptor_type(self.synapse_type)})
-#        self._connections = None # reset the caching of the connection list, since this will have to be recalculated
-#        self._sources.append(source)
-#
-#
-#        def _convergent_connect(self, sources, target, weights, delays):
-#            """
-#            Connect one or more neurons to a single post-synaptic neuron.
-#            `sources` -- a list/1D array of pre-synaptic cell IDs, or a single ID.
-#            `target`  -- the ID of the post-synaptic cell.
-#            `weight`  -- a list/1D array of connection weights, or a single weight.
-#                         Must have the same length as `targets`.
-#            `delays`  -- a list/1D array of connection delays, or a single delay.
-#                         Must have the same length as `targets`.
-#            """
-#        # are we sure the targets are all on the current node?
-#        if pyNN.core.is_listlike(target):
-#            assert len(target) == 1
-#            target = target[0]
-#        if not pyNN.core.is_listlike(sources):
-#            sources = [sources]
-#        assert len(sources) > 0, sources
-#        if self.synapse_type not in ('excitatory', 'inhibitory', None):
-#            raise errors.ConnectionError("synapse_type must be 'excitatory', 'inhibitory', or None (equivalent to 'excitatory')")
-#        weights = numpy.array(weights)*1000.0# weights should be in nA or uS, but iaf_neuron uses pA and iaf_cond_neuron uses nS.
-#                                 # Using convention in this way is not ideal. We should
-#                                 # be able to look up the units used by each model somewhere.
-#        if self.synapse_type == 'inhibitory' and common.is_conductance(target):
-#            weights = -1*weights # NEST wants negative values for inhibitory weights, even if these are conductances
-#        if isinstance(weights, numpy.ndarray):
-#            weights = weights.tolist()
-#        elif isinstance(weights, float):
-#            weights = [weights]
-#        if isinstance(delays, numpy.ndarray):
-#            delays = delays.tolist()
-#        elif isinstance(delays, float):
-#            delays = [delays]
-#               
-#        try:
-#            nest.ConvergentConnect(sources, [target], weights, delays, self.synapse_model)            
-#        except nest.NESTError, e:
-#            raise errors.ConnectionError("%s. sources=%s, target=%s, weights=%s, delays=%s, synapse model='%s'" % (
-#                                         e, sources, target, weights, delays, self.synapse_model))
-#        self._connections = None # reset the caching of the connection list, since this will have to be recalculated
-#        self._sources.extend(sources)            
+                                          target=target, rng=rng)
+            
 
 class Network(ninemlp.common.Network):
 

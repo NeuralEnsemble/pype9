@@ -24,7 +24,7 @@ import math
 # Specific imports
 import pyNN.connectors
 import pyNN.space
-from pyNN.random import RandomDistribution
+from pyNN.random import RandomDistribution, NumpyRNG
 from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
 import ninemlp.connectivity.point2point as point2point
 import ninemlp.connectivity.morphology as morphology
@@ -311,7 +311,7 @@ class Network(object):
 
     def load_network(self, filename, build_mode=DEFAULT_BUILD_MODE, verbose=False, timestep=None,
                                                 min_delay=None, max_delay=None, temperature=None,
-                                                silent_build=False, flags=[]):
+                                                silent_build=False, flags=[], rng=None):
         self.networkML = read_networkML(filename)
         self._set_simulation_params(timestep=timestep, min_delay=min_delay, max_delay=max_delay,
                                                                             temperature=temperature)
@@ -323,6 +323,7 @@ class Network(object):
         self._populations = {}
         self._projections = {}
         self.set_flags(flags)
+        self.rng = rng if rng else NumpyRNG()
         for pop in self.networkML.populations:
             if self.check_flags(pop):
                 self._populations[pop.id] = self._create_population(pop.id,
@@ -616,7 +617,8 @@ class Network(object):
                                                     source=source.terminal,
                                                     target=self._get_target_str(target.synapse,
                                                                                 target.segment),
-                                                    build_mode=self.build_mode)
+                                                    build_mode=self.build_mode,
+                                                    rng=self.rng)
             elif synapse_family == 'Electrical':
                 if not self._ElectricalSynapseProjection_class:
                     raise Exception("The selected simulator doesn't currently support electrical "
@@ -624,7 +626,8 @@ class Network(object):
                 projection = self._ElectricalSynapseProjection_class(pre, dest, label, connector,
                                                                      source=source.segment,
                                                                      target=target.segment,
-                                                                     build_mode=self.build_mode)
+                                                                     build_mode=self.build_mode,
+                                                                     rng=self.rng)
             else:
                 raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
             # Collate raised "InsufficientTargets" warnings into a single warning message for better

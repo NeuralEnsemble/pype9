@@ -117,14 +117,14 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
 class Projection(pyNN.neuron.Projection):
 
     def __init__(self, pre, dest, label, connector, source=None, target=None,
-                 build_mode=DEFAULT_BUILD_MODE):
+                 build_mode=DEFAULT_BUILD_MODE, rng=None):
         self.label = label
         if build_mode == 'build_only' or build_mode == 'compile_only':
             print "Warning! '--build' option was set to 'build_only', meaning the projection " \
                   "'{}' was not constructed.".format(label)
         else:
             pyNN.neuron.Projection.__init__(self, pre, dest, connector, label=label, source=source,
-                                                                                      target=target)
+                                            target=target, rng=rng)
 
 
 class ElectricalSynapseProjection(Projection):
@@ -136,14 +136,14 @@ class ElectricalSynapseProjection(Projection):
     gid_count = 0
 
     def __init__(self, pre, dest, label, connector, source=None, target=None,
-                 build_mode=DEFAULT_BUILD_MODE):
+                 build_mode=DEFAULT_BUILD_MODE, rng=None):
         """
         @param rectified [bool]: Whether the gap junction is rectified (only one direction)
         """
         ## Start of unique variable-GID range assigned for this projection (ends at gid_count + pre.size * dest.size * 2)
         self.gid_start = self.__class__.gid_count
         self.__class__.gid_count += pre.size * dest.size * 2
-        Projection.__init__(self, pre, dest, label, connector, source, target, build_mode)
+        Projection.__init__(self, pre, dest, label, connector, source, target, build_mode, rng=rng)
 
 
     def _divergent_connect(self, source, targets, weights, delays=None): #@UnusedVariable
