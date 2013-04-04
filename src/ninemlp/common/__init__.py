@@ -271,7 +271,7 @@ def read_networkML(filename):
 class Network(object):
 
     def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None,
-                 max_delay=None, temperature=None, silent_build=False, flags=[]):
+                 max_delay=None, temperature=None, silent_build=False, flags=[], rng=None):
         assert  (hasattr(self, "_pyNN_module") and 
                  hasattr(self, "_ncml_module") and 
                  hasattr(self, "_Population_class") and 
@@ -280,7 +280,7 @@ class Network(object):
                  hasattr(self, "get_min_delay"))
         self.load_network(filename, build_mode=build_mode, timestep=timestep,
                                  min_delay=min_delay, max_delay=max_delay, temperature=temperature,
-                                 silent_build=silent_build, flags=flags)
+                                 silent_build=silent_build, flags=flags, rng=rng)
 
     def set_flags(self, flags):
         self.flags = self.networkML.free_params.flags
