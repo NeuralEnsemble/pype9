@@ -28,6 +28,7 @@ from pyNN.random import RandomDistribution
 from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
 import ninemlp.connectivity.point2point as point2point
 import ninemlp.connectivity.morphology as morphology
+import ninemlp.space
 
 ## The location relative to the NINEML-Network file to look for the folder containing the cell descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
 RELATIVE_NCML_DIR = "./ncml"
@@ -76,7 +77,7 @@ class NetworkMLHandler(XMLHandler):
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay '
                                                       'synapse_family flags not_flags')
     Structure = collections.namedtuple('Structure', 'type layout args')
-    StructureLayout = collections.namedtuple('StructureLayout', 'pattern args')
+    StructureLayout = collections.namedtuple('StructureLayout', 'pattern args distributions')
     CustomAttributes = collections.namedtuple('CustomAttributes', 'constants distributions')
     Distribution = collections.namedtuple('Distribution', 'attr type units seg_group component '
                                                           'args')
@@ -128,10 +129,10 @@ class NetworkMLHandler(XMLHandler):
             self.pop_structure_type = args.pop('type')
             self.pop_structure_layout = None
             self.pop_structure_args = args
-        elif self._opening(tag_name, attrs, 'layout', parents=['structure']):
+        elif self._opening(tag_name, attrs, 'layout', parents=['population', 'structure']):
             args = dict(attrs)
             pattern = args.pop('pattern')
-            self.pop_structure_layout = self.StructureLayout(pattern, args)
+            self.pop_structure_layout = self.StructureLayout(pattern, args, [])
         elif self._opening(tag_name, attrs, 'cellParameters', parents=['population']): pass
         elif self._opening(tag_name, attrs, 'initialConditions', parents=['population']): pass
         elif self._opening(tag_name, attrs, 'const', parents=['population', 'cellParameters']):
@@ -143,7 +144,8 @@ class NetworkMLHandler(XMLHandler):
               self._opening(tag_name, attrs, 'distribution', parents=['population',
                                                                       'initialConditions']) or
               self._opening(tag_name, attrs, 'distribution', parents=['population',
-                                                                      'structure'])):
+                                                                      'structure',
+                                                                      'layout'])):
             args = dict(attrs)
             attribute = args.pop('attr')
             distr_type = args.pop('type')
@@ -157,7 +159,7 @@ class NetworkMLHandler(XMLHandler):
                                  "cell attribute '{attribute}' in population '{pop}'"
                                  .format(type=distr_type, attribute=attribute, pop=self.id))
             try:
-                distr_params = [args[arg] for arg in distr_param_keys]
+                distr_params = [float(args[arg]) for arg in distr_param_keys]
             except KeyError as e:
                 raise Exception ("Missing attribute '{distr_params}' for '{type}' distribution " 
                                  "used to distribute cell attribute '{attribute}' in population " 
@@ -169,6 +171,8 @@ class NetworkMLHandler(XMLHandler):
                 self.pop_cell_params.distributions.append(distr)
             elif self._open_components[-2] == 'initialConditions':
                 self.pop_initial_conditions.distributions.append(distr)
+            elif self._open_components[-2] == 'layout':
+                self.pop_structure_layout.distributions.append(distr)                
             else:
                 assert False
         elif self._opening(tag_name, attrs, 'projection', parents=['network']):
@@ -221,10 +225,10 @@ class NetworkMLHandler(XMLHandler):
 
     def endElement(self, name):
         if self._closing(name, 'population', parents=['network']):
-            if self.pop_size > -1 and self.pop_structure:
+            if self.pop_size > -1 and self.pop_structure.type == 'Extension':
                 raise Exception("Population 'size' attribute cannot be used in conjunction with " 
-                                "the 'structure' member (with structures, the size is determined from " 
-                                "the arguments to the structure)")
+                                "the 'Extension' type structures because the size of the population"
+                                "is determined from the extension")
             self.network.populations.append(self.Population(self.pop_id,
                                                     self.pop_cell,
                                                     self.pop_morph_id,
@@ -332,8 +336,8 @@ class Network(object):
                                                                     verbose,
                                                                     silent_build)
         if build_mode == 'build_only' or build_mode == 'compile_only':
-            print "Finished compiling network, now exiting (use try: ... except SystemExit: ... " 
-                    "if you want to do something afterwards)"
+            print ("Finished compiling network, now exiting (use try: ... except SystemExit: ... " 
+                   "if you want to do something afterwards)")
             raise SystemExit(0)
         for proj in self.networkML.projections:
             if self.check_flags(proj):
@@ -381,39 +385,38 @@ class Network(object):
             structure = None
             morphologies = None
             if structure_params.type == 'Distributed':
-                if structure_params.layout:
-                    pattern = structure_params.layout.pattern
-                    args = structure_params.layout.args
-                    if pattern == 'Grid2D':
-                        structure = pyNN.space.Grid2D(aspect_ratio=float(args['aspect_ratio']), 
+                layout = structure_params.layout
+                if layout:
+                    args = layout.args                    
+                    if layout.pattern == 'Grid2D':
+                        structure = ninemlp.space.Grid2D(aspect_ratio=float(args['aspect_ratio']), 
                                                       dx=float(args['dx']), dy=float(args['dy']), 
                                                       x0=float(args['x0']), y0=float(args['y0']), 
                                                       z=float(args['z']))
-                    elif pattern == 'Grid3D':
-                        structure = pyNN.space.Grid3D(aspect_ratioXY=float(args['aspect_ratioXY']), 
+                    elif layout.pattern == 'Grid3D':
+                        structure = ninemlp.space.Grid3D(aspect_ratioXY=float(args['aspect_ratioXY']), 
                                                       aspect_ratioXZ=float(args['aspect_ratioXZ']), 
                                                       dx=float(args['dx']), dy=float(args['dy']), 
                                                       dz=float(args['dz']), x0=float(args['x0']), 
                                                       y0=float(args['y0']), z0=float(args['z0']))
-                    elif pattern == 'RandomUniform':
-                        if args['shape'] == 'box':
-                            boundary = pyNN.space.Cuboid(float(args['width']), float(args['height']), 
-                                                         float(args['depth']))
-                        elif args['shape'] == 'Sphere':
-                            boundary = pyNN.space.Sphere(float(args['radius']))
-                        else:
-                            raise Exception("Unrecognised pattern '{}' for RandomUniform "
-                                            "population structure".format(args['shape']))
+                    elif layout.pattern == 'UniformWithinBox':
+                        boundary = pyNN.space.Cuboid(float(args['width']), float(args['height']), 
+                                                     float(args['depth']))
+                        origin = (float(args['x']), float(args['y']), float(args['z']))
+                        structure = pyNN.space.RandomStructure(boundary, origin)                        
+                    elif layout.pattern == 'UniformWithinSphere':
+                        boundary = pyNN.space.Sphere(float(args['radius']))
                         origin = (float(args['x']), float(args['y']), float(args['z']))
                         structure = pyNN.space.RandomStructure(boundary, origin)
-                    elif pattern == 'PerturbedGrid3D':
-                        structure = ninemlp.space.PerturbedGrid3D(structure_params.distr.type, 
-                                                                 structure_params.distr.params,
-                                                                 aspect_ratioXY=float(args['aspect_ratioXY']), 
-                                                                 aspect_ratioXZ=float(args['aspect_ratioXZ']), 
-                                                                 dx=float(args['dx']), dy=float(args['dy']), 
-                                                                 dz=float(args['dz']), x0=float(args['x0']), 
-                                                                 y0=float(args['y0']), z0=float(args['z0']))
+                    else:
+                        raise Exception("Unrecognised pattern '{}' for 'Distributed population "
+                                        "structure type".format(layout.pattern))
+                    for distr in layout.distributions:
+#                        try:
+                        structure.apply_distribution(distr.attr, distr.type, distr.args)
+#                        except AttributeError:
+#                            raise Exception("Chosen structure type '{}' does not permit "
+#                                            "distributions".format(layout.pattern))
                 else:
                     raise Exception("Layout tags are required for structure of type "
                                     "'Distributed'") 
@@ -484,7 +487,7 @@ class Network(object):
         if not (self.build_mode == 'build_only' or self.build_mode == 'compile_only'):
             if structure:
                 pop._set_structure(structure)
-            else:
+            elif positions:
                 pop._set_positions(positions, morphologies)
             pop._randomly_distribute_params(cell_param_distrs)
             pop._randomly_distribute_initial_conditions(initial_conditions)
@@ -590,7 +593,7 @@ class Network(object):
                     warnings.warn("{} out of {} connections are below the minimum delay in "
                                   "projection '{}'. They will be bounded to the minimum delay "
                                   "({})".format(len(below_min_indices), len(delays), label,
-                                                self.get_min_delay())
+                                                self.get_min_delay()))
                 # Bound loaded delays by specified minimum delay                        
                 delays[below_min_indices] = self.get_min_delay()
             connector = self._pyNN_module.connectors.FromListConnector(connection_matrix,
@@ -633,11 +636,11 @@ class Network(object):
                         req_number, mask_size = re.findall("\([^\)]*\)", str(w.message))
                         insufficient_targets_str += " {},".format(mask_size[2:-1])
         if insufficient_targets_str:
-            print "Could not satisfy all connection targets in projection '{}' " 
+            print ("Could not satisfy all connection targets in projection '{}' " 
                   "because the requested number of connections, {}, exceeded the size of " 
                   "the generated masks of sizes:{}. The number of connections was reset to the " 
-                  "size of the respective masks in these cases.\n".format(label, req_number[2:-1],
-                                                                          insufficient_targets_str[:-1])
+                  "size of the respective masks in these cases.\n"
+                  .format(label, req_number[2:-1], insufficient_targets_str[:-1]))
         return projection
 
     def _get_simulation_params(self, **params):
