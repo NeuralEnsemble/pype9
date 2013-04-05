@@ -719,7 +719,16 @@ class Network(object):
         @param output_dir:
         """
         for proj in self.all_projections():
-            proj.saveConnections(os.path.join(output_dir, proj.label))
+            proj.saveConnections(os.path.join(output_dir, proj.label) + '.proj')
+
+    def save_positions(self, output_dir):
+        """
+        Saves generated cell positions to output directory
+        
+        @param output_dir:
+        """
+        for pop in self.all_populations():
+            pop.save_positions(os.path.join(output_dir, pop.label) + '.pop')
 
     def record_spikes(self):
         """

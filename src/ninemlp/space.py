@@ -13,7 +13,10 @@
 #######################################################################################
 
 import pyNN.space
-from pyNN.random import NumpyRNG
+from pyNN.random import NumpyRNG, RandomDistribution
+from collections import namedtuple
+
+DistributedParam = namedtuple("DistributedParam", "param distr")
 
 class Grid2D(pyNN.space.Grid2D):
 
@@ -21,7 +24,7 @@ class Grid2D(pyNN.space.Grid2D):
                  y0=0.0, z=0.0, fill_order="sequential"):
         pyNN.space.Grid2D.__init__(self, aspect_ratio=aspect_ratio, dx=dx, dy=dy, x0=x0, y0=y0,
                                    z=z, fill_order=fill_order)
-        self.distributions = []
+        self.distr_params = []
 
     def apply_distribution(self, dim, type, params, rng=None):
         if not rng:
@@ -31,16 +34,13 @@ class Grid2D(pyNN.space.Grid2D):
         elif dim == 'z': dim = 2
         elif dim not in [0, 1, 2]:
             raise Exception("Dimension needs to be either x-z or 0-2 (found {})".format(dim))
-        try:
-            self.distributions.append((dim, getattr(rng, type), (params)))
-        except AttributeError:
-            raise Exception("Provided random number generator does not have distribution '{}"
-                            .format(type))
+        self.distr_params.append(DistributedParam(dim, 
+                                                  RandomDistribution(type, params, rng=rng)))
 
     def generate_positions(self, n):
         positions = pyNN.space.Grid2D.generate_positions(self, n)
-        for distr in self.distributions:
-            positions[distr[0],:] += distr[1](*distr[2])
+        for d in self.distr_params:
+            positions[d.param,:] += d.distr.next(n)
         return positions
 
 class Grid3D(pyNN.space.Grid3D, Grid2D):
