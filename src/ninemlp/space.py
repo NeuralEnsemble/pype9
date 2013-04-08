@@ -26,21 +26,22 @@ class Grid2D(pyNN.space.Grid2D):
                                    z=z, fill_order=fill_order)
         self.distr_params = []
 
-    def apply_distribution(self, dim, type, params, rng=None):
+    def apply_distribution(self, dim, distr_type, params, rng=None):
         if not rng:
             rng = NumpyRNG()
-        if dim == 'x': dim = 0
-        elif dim == 'y': dim = 1
-        elif dim == 'z': dim = 2
-        elif dim not in [0, 1, 2]:
-            raise Exception("Dimension needs to be either x-z or 0-2 (found {})".format(dim))
+        # Convert the dimension from 'x', 'y', 'z' string into index
+        try:
+            dim = ['x', 'y', 'z'].index(dim) 
+        except ValueError:
+            if dim not in [0, 1, 2]:
+                raise Exception("Dimension needs to be either x-z or 0-2 (found {})".format(dim))
         self.distr_params.append(DistributedParam(dim, 
-                                                  RandomDistribution(type, params, rng=rng)))
+                                                  RandomDistribution(distr_type, params, rng=rng)))
 
     def generate_positions(self, n):
         positions = pyNN.space.Grid2D.generate_positions(self, n)
         for d in self.distr_params:
-            positions[d.param,:] += d.distr.next(n)
+            positions[d.param,:] += d.distr.next(n, mask_local=False)
         return positions
 
 class Grid3D(pyNN.space.Grid3D, Grid2D):
