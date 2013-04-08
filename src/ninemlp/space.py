@@ -38,8 +38,11 @@ class Grid2D(pyNN.space.Grid2D):
         self.distr_params.append(DistributedParam(dim, 
                                                   RandomDistribution(distr_type, params, rng=rng)))
 
+    def _generate_base_positions(self, n):
+        return pyNN.space.Grid2D.generate_positions(self, n)
+    
     def generate_positions(self, n):
-        positions = pyNN.space.Grid2D.generate_positions(self, n)
+        positions =  self._generate_base_positions(n)
         for d in self.distr_params:
             positions[d.param,:] += d.distr.next(n, mask_local=False)
         return positions
@@ -53,9 +56,6 @@ class Grid3D(pyNN.space.Grid3D, Grid2D):
                                    z0=z0, fill_order=fill_order)
         self.distributions = []
 
-    def generate_positions(self, n):
-        positions = pyNN.space.Grid3D.generate_positions(self, n)
-        for distr in self.distributions:
-            positions[distr[0],:] += distr[1](**distr[2])
-        return positions
+    def _generate_base_positions(self, n):
+        return pyNN.space.Grid3D.generate_positions(self, n)
 
