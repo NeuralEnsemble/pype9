@@ -276,7 +276,7 @@ class Network(object):
                  hasattr(self, "_ncml_module") and 
                  hasattr(self, "_Population_class") and 
                  hasattr(self, "_Projection_class") and 
-                 hasattr(self, "_ElectricalSynapseProjection_class") and 
+                 hasattr(self, "_GapJunctionProjection_class") and 
                  hasattr(self, "get_min_delay"))
         self.load_network(filename, build_mode=build_mode, timestep=timestep,
                                  min_delay=min_delay, max_delay=max_delay, temperature=temperature,
@@ -620,14 +620,13 @@ class Network(object):
                                                     build_mode=self.build_mode,
                                                     rng=self.rng)
             elif synapse_family == 'Electrical':
-                if not self._ElectricalSynapseProjection_class:
+                if not self._GapJunctionProjection_class:
                     raise Exception("The selected simulator doesn't currently support electrical "
                                     "synapse projections")
-                projection = self._ElectricalSynapseProjection_class(pre, dest, label, connector,
-                                                                     source=source.segment,
-                                                                     target=target.segment,
-                                                                     build_mode=self.build_mode,
-                                                                     rng=self.rng)
+                projection = self._GapJunctionProjection_class(pre, dest, label, connector,
+                                                               source_secname=source.segment + '_seg',
+                                                               target_secname=target.segment + '_seg',
+                                                               rng=self.rng)
             else:
                 raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
             # Collate raised "InsufficientTargets" warnings into a single warning message for better

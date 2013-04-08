@@ -255,7 +255,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
             components = var.split('.', 1)
             return getattr(getattr(self, components[0]), components[1])
         else:
-            raise AttributeError
+            raise AttributeError("'{}'".format(var))
 
     def __setattr__(self, var, val):
         """

@@ -251,7 +251,7 @@ class Projection(common.Projection):
                 c.useSTDP(long_term_plasticity_mechanism, stdp_parameters, ddf)
        
 # TGC: following on from the comments below which suggest that this check should be redundant 
-# I have disabled this because it was causing me difficulty in my ElectricalSynapseProjection 
+# I have disabled this because it was causing me difficulty in my GapJunctionProjection 
 # subclass
 # 
 #        # Check none of the delays are out of bounds. This should be redundant,

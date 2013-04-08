@@ -108,7 +108,7 @@ class Network(ninemlp.common.Network):
         self._ncml_module = ncml
         self._Population_class = Population
         self._Projection_class = Projection
-        self._ElectricalSynapseProjection_class = None
+        self._GapJunctionProjection_class = None
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         self.temperature = None
         ninemlp.common.Network.__init__(self, filename, build_mode=build_mode,
