@@ -54,7 +54,7 @@ class Grid3D(pyNN.space.Grid3D, Grid2D):
         pyNN.space.Grid3D.__init__(self, aspect_ratioXY=aspect_ratioXY,
                                    aspect_ratioXZ=aspect_ratioXZ, dx=dx, dy=dy, dz=dz, x0=x0, y0=y0,
                                    z0=z0, fill_order=fill_order)
-        self.distributions = []
+        self.distr_params = []
 
     def _generate_base_positions(self, n):
         return pyNN.space.Grid3D.generate_positions(self, n)
