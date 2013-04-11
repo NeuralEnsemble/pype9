@@ -824,6 +824,9 @@ class Population(object):
             raise Exception("'set_poisson_spikes' method can only be used for 'SpikeSourceArray' " 
                             "populations.")
         self.tset('spike_times', spike_times)
+        
+    def set_spatially_dependent_spikes(self):
+        pass 
 
     def get_cell_type(self):
         """

@@ -58,4 +58,4 @@ class Grid3D(pyNN.space.Grid3D, Grid2D):
 
     def _generate_base_positions(self, n):
         return pyNN.space.Grid3D.generate_positions(self, n)
-
+        
