@@ -386,6 +386,8 @@ class ProbabilisticConnector(Connector):
         """
         if numpy.isscalar(p) and p == 1:
             precreate = numpy.arange(self._get_size(src), dtype=numpy.int)
+        elif p.dtype == numpy.int:
+            precreate = p
         else:
             rarr = self._get_probas(src)
             if not core.is_listlike(rarr) and numpy.isscalar(rarr): # if N=1, rarr will be a single number

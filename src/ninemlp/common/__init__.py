@@ -23,6 +23,7 @@ import warnings
 import math
 # Specific imports
 import pyNN.connectors
+import ninemlp.connectors
 import pyNN.space
 from pyNN.random import RandomDistribution, NumpyRNG
 from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
@@ -269,6 +270,8 @@ def read_networkML(filename):
 
 
 class Network(object):
+    
+    class ProjectionToCloneNotCreatedYetException(Exception): pass
 
     def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None,
                  max_delay=None, temperature=None, silent_build=False, flags=[], rng=None):
@@ -342,17 +345,21 @@ class Network(object):
             raise SystemExit(0)
         for proj in self.networkML.projections:
             if self.check_flags(proj):
-                self._projections[proj.id] = self._create_projection(
-                                                             proj.id,
-                                                             self._populations[proj.pre.pop_id],
-                                                             self._populations[proj.post.pop_id],
-                                                             proj.connection,
-                                                             proj.pre,
-                                                             proj.post,
-                                                             proj.weight,
-                                                             proj.delay,
-                                                             proj.synapse_family,
-                                                             verbose)
+                try:
+                    self._projections[proj.id] = self._create_projection(
+                                                                 proj.id,
+                                                                 self._populations[proj.pre.pop_id],
+                                                                 self._populations[proj.post.pop_id],
+                                                                 proj.connection,
+                                                                 proj.pre,
+                                                                 proj.post,
+                                                                 proj.weight,
+                                                                 proj.delay,
+                                                                 proj.synapse_family,
+                                                                 verbose)
+                except self.ProjectionToCloneNotCreatedYetException:
+                    self.Network.projections.append(proj)
+                    
         self._finalise_construction()
 
     def _finalise_construction(self):
@@ -486,9 +493,9 @@ class Network(object):
                                                                         build_mode=self.build_mode)
         # Set structure_params
         if not (self.build_mode == 'build_only' or self.build_mode == 'compile_only'):
-            if structure:
+            if structure is not None:
                 pop._set_structure(structure)
-            elif positions:
+            elif positions is not None:
                 pop._set_positions(positions, morphologies)
             pop._randomly_distribute_params(cell_param_distrs)
             pop._randomly_distribute_initial_conditions(initial_conditions)
@@ -602,6 +609,18 @@ class Network(object):
         # Use in-built pyNN connectors for simple patterns such as AllToAll and OneToOne
         # NB: At this stage the pattern name is tied to the connector name in pyNN but could be
         # decoupled from this at some point (but I am not sure you would want to)
+        elif connection.pattern == 'Clone':
+            orig_proj_id = connection.args['projection']
+            try:
+                orig_proj = self.get_projection(orig_proj_id)
+            except KeyError:
+                if orig_proj_id in [p.id for p in self.networkML.projections]:
+                    raise self.ProjectionToCloneNotCreatedYetException
+                else:
+                    raise Exception("Projection '{}' attempted to clone connectivity patterns from "
+                                    "'{}', which was not found.".format(label, orig_proj_id))
+            connector = ninemlp.connectors.CloneConnector(orig_proj, weights=weight_expr, 
+                                                          delays=delay_expr, **other_connector_args)
         elif connection.pattern + 'Connector' in dir(pyNN.connectors):
             ConnectorClass = getattr(self._pyNN_module.connectors,
                                      '{}Connector'.format(connection.pattern))
