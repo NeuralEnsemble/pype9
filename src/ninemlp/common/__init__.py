@@ -226,7 +226,7 @@ class NetworkMLHandler(XMLHandler):
 
     def endElement(self, name):
         if self._closing(name, 'population', parents=['network']):
-            if self.pop_size > -1 and self.pop_structure.type == 'Extension':
+            if self.pop_size > -1 and self.pop_structure and self.pop_structure.type == 'Extension':
                 raise Exception("Population 'size' attribute cannot be used in conjunction with " 
                                 "the 'Extension' type structures because the size of the population"
                                 "is determined from the extension")
@@ -387,11 +387,11 @@ class Network(object):
             except IOError:
                 raise Exception("Cell_type_name '{}' was not found or " 
                                 "in standard models".format(cell_type_name))
+        # Set default for populations without morphologies
+        positions = None
+        structure = None
+        morphologies = None
         if structure_params:
-            # Set default for populations without morphologies
-            positions = None
-            structure = None
-            morphologies = None
             if structure_params.type == 'Distributed':
                 layout = structure_params.layout
                 if layout:
