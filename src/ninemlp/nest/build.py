@@ -58,8 +58,14 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     else:
         prev_install_mtime = ''
     ncml_mtime = time.ctime(os.path.getmtime(ncml_path))
+    if build_mode == 'compile_only' and (not os.path.exists(compile_dir) or 
+                                         not os.path.exists(src_dir)):
+            raise Exception ("Source ('{}') and/or compilation ('{}') directories no longer exist. "
+                             "Cannot use 'compile_only' argument for '--build' option"
+                             .format(src_dir, compile_dir))
     # Create C++ and configuration files required for the build
-    if ncml_mtime != prev_install_mtime or build_mode in ('force', 'build_only'):
+    if ((ncml_mtime != prev_install_mtime and build_mode not in ('require', 'complile_only'))
+            or build_mode in ('force', 'build_only')):
         # Clean existing directories from previous builds.
         shutil.rmtree(src_dir, ignore_errors=True)
         shutil.rmtree(params_dir, ignore_errors=True)
@@ -77,29 +83,34 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
                                                     params=params_dir))
         try:
             sp.check_call(nemo_cmd, shell=True)
-        except sp.CalledProcessError as e:
-            raise Exception('Error while compiling NCML description into NEST cpp code -> {}'
-                            .format(e))
+        except sp.CalledProcessError:
+                raise Exception("Translation of NineML to '{}' NEST C++ module failed."
+                                .format(celltype_name))
         # Generate configure.ac and Makefile
         create_configure_ac(celltype_name, src_dir)
         create_makefile(celltype_name, src_dir)
         create_boilerplate_cpp(celltype_name, src_dir)
         create_sli_initialiser(celltype_name, src_dir)
-    elif build_mode == 'compile_only':
-        if not os.path.exists(compile_dir) or not os.path.exists(src_dir):
-            raise Exception ("Source ('{}') and/or compilation ('{}') directories no longer exist. "
-                             "Cannot use 'compile_only' argument for '--build' option"
-                             .format(src_dir, compile_dir))
     # Compile the generated C++ files, using generated makefile configurtion
-    if ncml_mtime != prev_install_mtime or build_mode in ('force', 'build_only', 'compile_only'):
+    if ((ncml_mtime != prev_install_mtime and build_mode != 'require') 
+            or build_mode in ('force', 'build_only', 'compile_only')):
         # Run the required shell commands to bootstrap the build configuration
         run_bootstrap(src_dir)
         # Run configure script, make and make install
         os.chdir(compile_dir)
-        sp.check_call('{src_dir}/configure --prefix={install_dir}'
-                      .format(src_dir=src_dir, install_dir=install_dir), shell=True)
-        sp.check_call('make', shell=True)
-        sp.check_call('make install', shell=True)
+        try:
+            sp.check_call('{src_dir}/configure --prefix={install_dir}'
+                          .format(src_dir=src_dir, install_dir=install_dir), shell=True)
+        except sp.CalledProcessError:
+            raise Exception("Configuration of '{}' NEST module failed.".format(celltype_name))
+        try:
+            sp.check_call('make', shell=True)
+        except sp.CalledProcessError:
+            raise Exception("Compilation of '{}' NEST module failed.".format(celltype_name))
+        try:            
+            sp.check_call('make install', shell=True)
+        except sp.CalledProcessError:
+            raise Exception("Installation of '{}' NEST module failed.".format(celltype_name))
         # Save the last modification time of the NCML file for future runs.
         with open(install_mtime_path, 'w') as f:
             f.write(ncml_mtime)
@@ -433,8 +444,10 @@ automake --foreign --add-missing --force-missing --copy
 echo "Done."
 """.format(src_dir=src_dir)
     # Run bootstrap command to create configure script
+    orig_dir = os.getcwd()
     os.chdir(src_dir)
     sp.check_call(bootstrap_cmd, shell=True)
+    os.chdir(orig_dir)
 
 def create_boilerplate_cpp(celltype_name, src_dir):
     

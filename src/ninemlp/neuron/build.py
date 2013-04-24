@@ -30,9 +30,6 @@ elif os.environ['HOME'] == '/home/tclose':
     # I apologise for this little hack (this is the path on my machine, 
     # to save me having to set the environment variable in eclipse)
     os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin'
-    os.environ['LD_PRELOAD']='/usr/lib/libmpi.so' # This is a work around for my MPI installation
-else:
-    raise Exception("Please set the NRNHOME environment variable to the NEURON 'bin' directory")
 
 def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
     method='derivimplicit', build_mode=DEFAULT_BUILD_MODE, silent_build=False, kinetics=[]):
@@ -50,10 +47,10 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
                                         _SIMULATOR_BUILD_NAME, build_parent_dir=build_parent_dir)
     if not install_dir:
         install_dir = default_install_dir
-    if build_mode == 'force' or build_mode == 'build_only':
+    if build_mode in ('force', 'build_only'):
         shutil.rmtree(install_dir, ignore_errors=True)
         shutil.rmtree(params_dir, ignore_errors=True)
-    elif build_mode == 'compile_only' or build_mode == 'require':
+    elif build_mode in ('compile_only', 'require'):
         if not os.path.exists(install_dir) or not os.path.exists(params_dir):
             raise Exception("Prebuilt installation directory '{install}' and/or python parameters "\
                             "directory '{params}' are not present, which are required for " \

@@ -23,10 +23,13 @@ import warnings
 import math
 # Specific imports
 import pyNN.connectors
-from pyNN.random import RandomDistribution
+import ninemlp.connectors
+import pyNN.space
+from pyNN.random import RandomDistribution, NumpyRNG
 from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
 import ninemlp.connectivity.point2point as point2point
 import ninemlp.connectivity.morphology as morphology
+import ninemlp.space
 
 ## The location relative to the NINEML-Network file to look for the folder containing the cell descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
 RELATIVE_NCML_DIR = "./ncml"
@@ -61,9 +64,9 @@ class ValueWithUnits(object):
         elif self.units == 'S_per_m2':
             return self.value
         else:
-            raise Exception("Unrecognised units '{}' (A conversion from these units \
-                            to the standard NEURON units needs to be added to \
-                            'ninemlp.common.ncml.neuron_value' function).".format(self.units))
+            raise Exception("Unrecognised units '{}' (A conversion from these units "
+                            "to the standard NEURON units needs to be added to "
+                            "'ninemlp.common.ncml.neuron_value' function).".format(self.units))
 
 
 class NetworkMLHandler(XMLHandler):
@@ -75,7 +78,7 @@ class NetworkMLHandler(XMLHandler):
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay '
                                                       'synapse_family flags not_flags')
     Structure = collections.namedtuple('Structure', 'type layout args')
-    StructureLayout = collections.namedtuple('StructureLayout', 'pattern args')
+    StructureLayout = collections.namedtuple('StructureLayout', 'pattern args distributions')
     CustomAttributes = collections.namedtuple('CustomAttributes', 'constants distributions')
     Distribution = collections.namedtuple('Distribution', 'attr type units seg_group component '
                                                           'args')
@@ -121,26 +124,29 @@ class NetworkMLHandler(XMLHandler):
             self.pop_not_flags = filter(None, attrs.get('not_flags', '').replace(' ', '').split(','))
         elif self._opening(tag_name, attrs, 'structure', parents=['population']):
             if self.pop_structure:
-                raise Exception("The structure is specified twice in population '{}'".\
+                raise Exception("The structure is specified twice in population '{}'".
                                 format(self.pop_id))
             args = dict(attrs)
             self.pop_structure_type = args.pop('type')
             self.pop_structure_layout = None
             self.pop_structure_args = args
-        elif self._opening(tag_name, attrs, 'layout', parents=['structure']):
+        elif self._opening(tag_name, attrs, 'layout', parents=['population', 'structure']):
             args = dict(attrs)
             pattern = args.pop('pattern')
-            self.pop_structure_layout = self.StructureLayout(pattern, args)
+            self.pop_structure_layout = self.StructureLayout(pattern, args, [])
         elif self._opening(tag_name, attrs, 'cellParameters', parents=['population']): pass
         elif self._opening(tag_name, attrs, 'initialConditions', parents=['population']): pass
         elif self._opening(tag_name, attrs, 'const', parents=['population', 'cellParameters']):
             self.pop_cell_params.constants[attrs['name']] = float(attrs['value']) # FIXME: Units are ignored here
         elif self._opening(tag_name, attrs, 'const', parents=['population', 'initialConditions']):
             self.pop_cell_params.constants[attrs['name']] = float(attrs['value']) # FIXME: Units are ignored here            
-        elif self._opening(tag_name, attrs, 'distribution', parents=['population',
-                                                                     'cellParameters']) or \
-                self._opening(tag_name, attrs, 'distribution', parents=['population',
-                                                                     'initialConditions']):
+        elif (self._opening(tag_name, attrs, 'distribution', parents=['population',
+                                                                      'cellParameters']) or
+              self._opening(tag_name, attrs, 'distribution', parents=['population',
+                                                                      'initialConditions']) or
+              self._opening(tag_name, attrs, 'distribution', parents=['population',
+                                                                      'structure',
+                                                                      'layout'])):
             args = dict(attrs)
             attribute = args.pop('attr')
             distr_type = args.pop('type')
@@ -150,14 +156,14 @@ class NetworkMLHandler(XMLHandler):
             try:
                 distr_param_keys = RANDOM_DISTR_PARAMS[distr_type]
             except KeyError:
-                raise Exception ("Unrecognised distribution type '{type}' used to distribute " \
-                                 "cell attribute '{attribute}' in population '{pop}'"\
+                raise Exception ("Unrecognised distribution type '{type}' used to distribute " 
+                                 "cell attribute '{attribute}' in population '{pop}'"
                                  .format(type=distr_type, attribute=attribute, pop=self.id))
             try:
-                distr_params = [args[arg] for arg in distr_param_keys]
+                distr_params = [float(args[arg]) for arg in distr_param_keys]
             except KeyError as e:
-                raise Exception ("Missing attribute '{distr_params}' for '{type}' distribution " \
-                                 "used to distribute cell attribute '{attribute}' in population " \
+                raise Exception ("Missing attribute '{distr_params}' for '{type}' distribution " 
+                                 "used to distribute cell attribute '{attribute}' in population " 
                                  "'{pop}'".format(distr_params=e, type=distr_type,
                                                   attribute=attribute, pop=self.id))
             distr = self.Distribution(attribute, distr_type, units, segmentGroup, component,
@@ -166,6 +172,8 @@ class NetworkMLHandler(XMLHandler):
                 self.pop_cell_params.distributions.append(distr)
             elif self._open_components[-2] == 'initialConditions':
                 self.pop_initial_conditions.distributions.append(distr)
+            elif self._open_components[-2] == 'layout':
+                self.pop_structure_layout.distributions.append(distr)                
             else:
                 assert False
         elif self._opening(tag_name, attrs, 'projection', parents=['network']):
@@ -177,9 +185,9 @@ class NetworkMLHandler(XMLHandler):
             self.proj_delay = attrs.get('delay', None)
             self.proj_synapse_family = attrs.get('synapseFamily', 'Chemical')
             # Split the flags attribute on ',' and remove empty values (the use of filter)
-            self.proj_flags = filter(None, \
+            self.proj_flags = filter(None,
                                      attrs.get('flags', '').replace(' ', '').split(','))
-            self.proj_not_flags = filter(None, \
+            self.proj_not_flags = filter(None,
                                          attrs.get('not_flags', '').replace(' ', '').split(','))
         elif self._opening(tag_name, attrs, 'source', parents=['projection']):
             if self.proj_pre:
@@ -189,28 +197,28 @@ class NetworkMLHandler(XMLHandler):
                                         attrs.get('segment', None))
         elif self._opening(tag_name, attrs, 'destination', parents=['projection']):
             if self.proj_post:
-                raise Exception("The destination is specified twice in projection'{}'"\
+                raise Exception("The destination is specified twice in projection'{}'"
                                 .format(self.proj_id))
             self.proj_post = self.Destination(attrs['id'],
                                               attrs.get('synapse', None),
                                               attrs.get('segment', None))
         elif self._opening(tag_name, attrs, 'connection', parents=['projection']):
             if self.proj_connection:
-                raise Exception("The connection is specified twice in projection '{}'"\
+                raise Exception("The connection is specified twice in projection '{}'"
                                 .format(self.proj_id))
             args = dict(attrs)
             pattern = args.pop('pattern')
             self.proj_connection = self.Connection(pattern, args)
         elif self._opening(tag_name, attrs, 'weight', parents=['projection']):
             if self.proj_weight:
-                raise Exception("The weight is specified twice in projection '{}'"\
+                raise Exception("The weight is specified twice in projection '{}'"
                                 .format(self.proj_id))
             args = dict(attrs)
             pattern = args.pop('pattern')
             self.proj_weight = self.Weight(pattern, args)
         elif self._opening(tag_name, attrs, 'delay', parents=['projection']):
             if self.proj_delay:
-                raise Exception("The delay is specified twice in projection '{}'"\
+                raise Exception("The delay is specified twice in projection '{}'"
                                 .format(self.proj_id))
             args = dict(attrs)
             pattern = args.pop('pattern')
@@ -218,10 +226,10 @@ class NetworkMLHandler(XMLHandler):
 
     def endElement(self, name):
         if self._closing(name, 'population', parents=['network']):
-            if self.pop_size > -1 and self.pop_structure:
-                raise Exception("Population 'size' attribute cannot be used in conjunction with " \
-                                "the 'structure' member (with structures, the size is determined from " \
-                                "the arguments to the structure)")
+            if self.pop_size > -1 and self.pop_structure.type == 'Extension':
+                raise Exception("Population 'size' attribute cannot be used in conjunction with " 
+                                "the 'Extension' type structures because the size of the population"
+                                "is determined from the extension")
             self.network.populations.append(self.Population(self.pop_id,
                                                     self.pop_cell,
                                                     self.pop_morph_id,
@@ -262,18 +270,20 @@ def read_networkML(filename):
 
 
 class Network(object):
+    
+    class ProjectionToCloneNotCreatedYetException(Exception): pass
 
     def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None,
-                 max_delay=None, temperature=None, silent_build=False, flags=[]):
-        assert  hasattr(self, "_pyNN_module") and \
-                hasattr(self, "_ncml_module") and \
-                hasattr(self, "_Population_class") and \
-                hasattr(self, "_Projection_class") and \
-                hasattr(self, "_ElectricalSynapseProjection_class") and \
-                hasattr(self, "get_min_delay")
+                 max_delay=None, temperature=None, silent_build=False, flags=[], rng=None):
+        assert  (hasattr(self, "_pyNN_module") and 
+                 hasattr(self, "_ncml_module") and 
+                 hasattr(self, "_Population_class") and 
+                 hasattr(self, "_Projection_class") and 
+                 hasattr(self, "_GapJunctionProjection_class") and 
+                 hasattr(self, "get_min_delay"))
         self.load_network(filename, build_mode=build_mode, timestep=timestep,
                                  min_delay=min_delay, max_delay=max_delay, temperature=temperature,
-                                 silent_build=silent_build, flags=flags)
+                                 silent_build=silent_build, flags=flags, rng=rng)
 
     def set_flags(self, flags):
         self.flags = self.networkML.free_params.flags
@@ -285,26 +295,26 @@ class Network(object):
                 if len(flag) == 2:
                     name, value = flag
                 else:
-                    raise Exception("Incorrect number of elements ({}) in flag tuple '{}', " \
+                    raise Exception("Incorrect number of elements ({}) in flag tuple '{}', " 
                                     "should be 2 (name or name and value)".format(len(flag), flag))
                 assert(type(name) == str)
                 assert(type(value) == bool)
             if name not in self.flags:
-                raise Exception ("Did not find the passed flag '{}' in the Network ML description "\
+                raise Exception ("Did not find the passed flag '{}' in the Network ML description "
                                  "({})".format(name, self.flags))
             self.flags[name] = value
 
     def check_flags(self, p):
         try:
-            return all([self.flags[flag] for flag in p.flags]) and \
-                                            all([not self.flags[flag] for flag in p.not_flags])
+            return (all([self.flags[flag] for flag in p.flags]) and
+                    all([not self.flags[flag] for flag in p.not_flags]))
         except KeyError as e:
-                raise Exception ("Did not find flag '{flag}' used in '{id}' in freeParameters "\
+                raise Exception ("Did not find flag '{flag}' used in '{id}' in freeParameters "
                                  "block of NetworkML description".format(flag=e, id=p.id))
 
     def load_network(self, filename, build_mode=DEFAULT_BUILD_MODE, verbose=False, timestep=None,
                                                 min_delay=None, max_delay=None, temperature=None,
-                                                silent_build=False, flags=[]):
+                                                silent_build=False, flags=[], rng=None):
         self.networkML = read_networkML(filename)
         self._set_simulation_params(timestep=timestep, min_delay=min_delay, max_delay=max_delay,
                                                                             temperature=temperature)
@@ -316,6 +326,7 @@ class Network(object):
         self._populations = {}
         self._projections = {}
         self.set_flags(flags)
+        self.rng = rng if rng else NumpyRNG()
         for pop in self.networkML.populations:
             if self.check_flags(pop):
                 self._populations[pop.id] = self._create_population(pop.id,
@@ -329,22 +340,26 @@ class Network(object):
                                                                     verbose,
                                                                     silent_build)
         if build_mode == 'build_only' or build_mode == 'compile_only':
-            print "Finished compiling network, now exiting (use try: ... except SystemExit: ... " \
-                    "if you want to do something afterwards)"
+            print ("Finished compiling network, now exiting (use try: ... except SystemExit: ... " 
+                   "if you want to do something afterwards)")
             raise SystemExit(0)
         for proj in self.networkML.projections:
             if self.check_flags(proj):
-                self._projections[proj.id] = self._create_projection(
-                                                             proj.id,
-                                                             self._populations[proj.pre.pop_id],
-                                                             self._populations[proj.post.pop_id],
-                                                             proj.connection,
-                                                             proj.pre,
-                                                             proj.post,
-                                                             proj.weight,
-                                                             proj.delay,
-                                                             proj.synapse_family,
-                                                             verbose)
+                try:
+                    self._projections[proj.id] = self._create_projection(
+                                                                 proj.id,
+                                                                 self._populations[proj.pre.pop_id],
+                                                                 self._populations[proj.post.pop_id],
+                                                                 proj.connection,
+                                                                 proj.pre,
+                                                                 proj.post,
+                                                                 proj.weight,
+                                                                 proj.delay,
+                                                                 proj.synapse_family,
+                                                                 verbose)
+                except self.ProjectionToCloneNotCreatedYetException:
+                    self.Network.projections.append(proj)
+                    
         self._finalise_construction()
 
     def _finalise_construction(self):
@@ -353,7 +368,7 @@ class Network(object):
         """
         pass
 
-    def _create_population(self, label, size, cell_type_name, morph_id, structure, cell_params,
+    def _create_population(self, label, size, cell_type_name, morph_id, structure_params, cell_params,
                            cell_param_distrs, initial_conditions, verbose, silent_build):
         if cell_type_name in dir(self._pyNN_module.standardmodels.cells):
             # This is not as simple as it may have been, as a simple getattr on 
@@ -370,16 +385,55 @@ class Network(object):
                                                              build_mode=self.build_mode,
                                                              silent=silent_build)
             except IOError:
-                raise Exception("Cell_type_name '{}' was not found or " \
+                raise Exception("Cell_type_name '{}' was not found or " 
                                 "in standard models".format(cell_type_name))
-        if structure:
+        if structure_params:
             # Set default for populations without morphologies
+            positions = None
+            structure = None
             morphologies = None
-            if structure.type == "MorphologyBased":
-                forest = morphology.Forest(os.path.join(self.dirname, structure.args['morphology']))
-                if structure.layout:
-                    pattern = structure.layout.pattern
-                    args = structure.layout.args
+            if structure_params.type == 'Distributed':
+                layout = structure_params.layout
+                if layout:
+                    args = layout.args                    
+                    if layout.pattern == 'Grid2D':
+                        structure = ninemlp.space.Grid2D(aspect_ratio=float(args['aspect_ratio']), 
+                                                      dx=float(args['dx']), dy=float(args['dy']), 
+                                                      x0=float(args['x0']), y0=float(args['y0']), 
+                                                      z=float(args['z']))
+                    elif layout.pattern == 'Grid3D':
+                        structure = ninemlp.space.Grid3D(aspect_ratioXY=float(args['aspect_ratioXY']), 
+                                                      aspect_ratioXZ=float(args['aspect_ratioXZ']), 
+                                                      dx=float(args['dx']), dy=float(args['dy']), 
+                                                      dz=float(args['dz']), x0=float(args['x0']), 
+                                                      y0=float(args['y0']), z0=float(args['z0']))
+                    elif layout.pattern == 'UniformWithinBox':
+                        boundary = pyNN.space.Cuboid(float(args['width']), float(args['height']), 
+                                                     float(args['depth']))
+                        origin = (float(args['x']), float(args['y']), float(args['z']))
+                        structure = pyNN.space.RandomStructure(boundary, origin)                        
+                    elif layout.pattern == 'UniformWithinSphere':
+                        boundary = pyNN.space.Sphere(float(args['radius']))
+                        origin = (float(args['x']), float(args['y']), float(args['z']))
+                        structure = pyNN.space.RandomStructure(boundary, origin)
+                    else:
+                        raise Exception("Unrecognised pattern '{}' for 'Distributed population "
+                                        "structure type".format(layout.pattern))
+                    for distr in layout.distributions:
+#                        try:
+                        structure.apply_distribution(distr.attr, distr.type, distr.args)
+#                        except AttributeError:
+#                            raise Exception("Chosen structure type '{}' does not permit "
+#                                            "distributions".format(layout.pattern))
+                else:
+                    raise Exception("Layout tags are required for structure of type "
+                                    "'Distributed'") 
+            elif structure_params.type == "MorphologyBased":
+                forest = morphology.Forest(os.path.join(self.dirname, 
+                                                        structure_params.args['morphology']))
+                if structure_params.layout:
+                    pattern = structure_params.layout.pattern
+                    args = structure_params.layout.args
                     if pattern == 'Tiled':
                         forest.align_min_bound_to_origin()
                         base_offset = args.get('offset', numpy.zeros(3))
@@ -411,15 +465,15 @@ class Network(object):
                         for i in range(size):
                             morphologies.append(forest[i % len(forest)].displaced_tree(positions[:, i]))
                     else:
-                        raise Exception("Unrecognised structure pattern '{}' in '{}' population"
-                                        .format(structure.pattern, label))
+                        raise Exception("Unrecognised structure_params pattern '{}' in '{}' population"
+                                        .format(structure_params.pattern, label))
                     size = len(morphologies)
-            elif structure.type == "Extension":
-                engine = structure.args.pop("engine")
+            elif structure_params.type == "Extension":
+                engine = structure_params.args.pop("engine")
                 if engine == "Brep":
-                    pop_id = structure.args['id']
+                    pop_id = structure_params.args['id']
                     if pop_id not in os.listdir(self.pop_dir):
-                        raise Exception("Population id '{}' was not found in search " \
+                        raise Exception("Population id '{}' was not found in search " 
                                         "path ({}).".format(pop_id, self.pop_dir))
                     pos_file = os.path.normpath(os.path.join(self.pop_dir, pop_id))
                     try:
@@ -427,19 +481,21 @@ class Network(object):
                         positions = numpy.transpose(positions)
                         size = positions.shape[1]
                     except:
-                        raise Exception("Could not load Brep positions from file '{}'"\
+                        raise Exception("Could not load Brep positions from file '{}'"
                                         .format(pos_file))
                 else:
-                    raise Exception("Unrecognised external structure engine, '{}'".format(engine))
+                    raise Exception("Unrecognised external structure_params engine, '{}'".format(engine))
             else:
-                raise Exception("Not implemented error, support for built-in structure management is "\
+                raise Exception("Not implemented error, support for built-in structure_params management is "
                                 "not done yet.")
         # Actually create the population
         pop = self._Population_class(label, size, cell_type, params=cell_params,
                                                                         build_mode=self.build_mode)
-        # Set structure
+        # Set structure_params
         if not (self.build_mode == 'build_only' or self.build_mode == 'compile_only'):
-            if structure:
+            if structure is not None:
+                pop._set_structure(structure)
+            elif positions is not None:
                 pop._set_positions(positions, morphologies)
             pop._randomly_distribute_params(cell_param_distrs)
             pop._randomly_distribute_initial_conditions(initial_conditions)
@@ -498,7 +554,7 @@ class Network(object):
                 GeometricExpression = getattr(point2point, expression)
                 connect_expr = GeometricExpression(**self._convert_all_units(connection.args))
             except TypeError as e:
-                raise Exception("Could not initialise distance expression class '{}' from given " \
+                raise Exception("Could not initialise distance expression class '{}' from given " 
                                 "arguments '{}' for projection '{}'\n('{}')"
                                 .format(expression, connection.args, label, e))
             connector = self._pyNN_module.connectors.DistanceDependentProbabilityConnector(
@@ -512,7 +568,7 @@ class Network(object):
                 Kernel = getattr(morphology, kernel_name + 'Kernel')
                 kernel = Kernel(**self._convert_all_units(connection.args))
             except TypeError as e:
-                raise Exception("Could not initialise distance expression class '{}' from given " \
+                raise Exception("Could not initialise distance expression class '{}' from given " 
                                 "arguments '{}' for projection '{}'\n('{}')"
                                 .format(kernel_name, connection.args, label, e))
             connector = morphology.MorphologyBasedProbabilityConnector(
@@ -524,7 +580,7 @@ class Network(object):
         elif connection.pattern == "Extension":
             proj_id = connection.args['id']
             if proj_id not in os.listdir(self.proj_dir):
-                raise Exception("Connection id '{}' was not found in search path ({}).".\
+                raise Exception("Connection id '{}' was not found in search path ({}).".
                                 format(proj_id, self.proj_dir))
             # The load step can take a while and isn't necessary when compiling so can be 
             # skipped.
@@ -542,10 +598,10 @@ class Network(object):
             below_min_indices = numpy.where(delays < self.get_min_delay())
             if len(below_min_indices):
                 if verbose:
-                    warnings.warn("{} out of {} connections are below the minimum delay in \
-                                    projection '{}'. They will be bounded to the minimum delay \
-                                    ({})".format(len(below_min_indices), len(delays), label),
-                                                 self.get_min_delay())
+                    warnings.warn("{} out of {} connections are below the minimum delay in "
+                                  "projection '{}'. They will be bounded to the minimum delay "
+                                  "({})".format(len(below_min_indices), len(delays), label,
+                                                self.get_min_delay()))
                 # Bound loaded delays by specified minimum delay                        
                 delays[below_min_indices] = self.get_min_delay()
             connector = self._pyNN_module.connectors.FromListConnector(connection_matrix,
@@ -553,6 +609,18 @@ class Network(object):
         # Use in-built pyNN connectors for simple patterns such as AllToAll and OneToOne
         # NB: At this stage the pattern name is tied to the connector name in pyNN but could be
         # decoupled from this at some point (but I am not sure you would want to)
+        elif connection.pattern == 'Clone':
+            orig_proj_id = connection.args['projection']
+            try:
+                orig_proj = self.get_projection(orig_proj_id)
+            except KeyError:
+                if orig_proj_id in [p.id for p in self.networkML.projections]:
+                    raise self.ProjectionToCloneNotCreatedYetException
+                else:
+                    raise Exception("Projection '{}' attempted to clone connectivity patterns from "
+                                    "'{}', which was not found.".format(label, orig_proj_id))
+            connector = ninemlp.connectors.CloneConnector(orig_proj, weights=weight_expr, 
+                                                          delays=delay_expr, **other_connector_args)
         elif connection.pattern + 'Connector' in dir(pyNN.connectors):
             ConnectorClass = getattr(self._pyNN_module.connectors,
                                      '{}Connector'.format(connection.pattern))
@@ -568,15 +636,16 @@ class Network(object):
                                                     source=source.terminal,
                                                     target=self._get_target_str(target.synapse,
                                                                                 target.segment),
-                                                    build_mode=self.build_mode)
+                                                    build_mode=self.build_mode,
+                                                    rng=self.rng)
             elif synapse_family == 'Electrical':
-                if not self._ElectricalSynapseProjection_class:
+                if not self._GapJunctionProjection_class:
                     raise Exception("The selected simulator doesn't currently support electrical "
                                     "synapse projections")
-                projection = self._ElectricalSynapseProjection_class(pre, dest, label, connector,
-                                                                     source=source.segment,
-                                                                     target=target.segment,
-                                                                     build_mode=self.build_mode)
+                projection = self._GapJunctionProjection_class(pre, dest, label, connector,
+                                                               source_secname=source.segment + '_seg',
+                                                               target_secname=target.segment + '_seg',
+                                                               rng=self.rng)
             else:
                 raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
             # Collate raised "InsufficientTargets" warnings into a single warning message for better
@@ -588,11 +657,11 @@ class Network(object):
                         req_number, mask_size = re.findall("\([^\)]*\)", str(w.message))
                         insufficient_targets_str += " {},".format(mask_size[2:-1])
         if insufficient_targets_str:
-            print "Could not satisfy all connection targets in projection '{}' " \
-                  "because the requested number of connections, {}, exceeded the size of " \
-                  "the generated masks of sizes:{}. The number of connections was reset to the " \
-                  "size of the respective masks in these cases.\n".format(label, req_number[2:-1],
-                                                                          insufficient_targets_str[:-1])
+            print ("Could not satisfy all connection targets in projection '{}' " 
+                  "because the requested number of connections, {}, exceeded the size of " 
+                  "the generated masks of sizes:{}. The number of connections was reset to the " 
+                  "size of the respective masks in these cases.\n"
+                  .format(label, req_number[2:-1], insufficient_targets_str[:-1]))
         return projection
 
     def _get_simulation_params(self, **params):
@@ -601,12 +670,12 @@ class Network(object):
             if params.has_key(key) and params[key]:
                 sim_params[key] = params[key]
             elif not sim_params.has_key(key) or not sim_params[key]:
-                raise Exception ("'{}' parameter was not specified either in Network " \
+                raise Exception ("'{}' parameter was not specified either in Network " 
                                  "initialisation or NetworkML specification".format(key))
         return sim_params
 
     def _convert_units(self, value_str, units=None):
-        raise NotImplementedError("_convert_units needs to be implemented by simulator specific " \
+        raise NotImplementedError("_convert_units needs to be implemented by simulator specific " 
                                   "Network class")
 
     def _convert_all_units(self, values_dict):
@@ -622,7 +691,7 @@ class Network(object):
             return False
 
     def _get_target_str(self, synapse, segment=None):
-        raise NotImplementedError("_get_target_str needs to be implemented by simulator specific " \
+        raise NotImplementedError("_get_target_str needs to be implemented by simulator specific " 
                                   "Network class")
 
     def get_population(self, label):
@@ -668,7 +737,16 @@ class Network(object):
         @param output_dir:
         """
         for proj in self.all_projections():
-            proj.saveConnections(os.path.join(output_dir, proj.label))
+            proj.saveConnections(os.path.join(output_dir, proj.label) + '.proj')
+
+    def save_positions(self, output_dir):
+        """
+        Saves generated cell positions to output directory
+        
+        @param output_dir:
+        """
+        for pop in self.all_populations():
+            pop.save_positions(os.path.join(output_dir, pop.label) + '.pop')
 
     def record_spikes(self):
         """
@@ -686,8 +764,8 @@ class Network(object):
         """
         # Add a dot to separate the prefix from the population label if it doesn't already have one
         # and isn't a directory
-        if not os.path.isdir(file_prefix) and not file_prefix.endswith('.') \
-                and not file_prefix.endswith(os.path.sep):
+        if (not os.path.isdir(file_prefix) and not file_prefix.endswith('.')
+                and not file_prefix.endswith(os.path.sep)):
             file_prefix += '.'
         for pop in self.all_populations():
             pop.printSpikes(file_prefix + pop.label + '.spikes') #@UndefinedVariable                
@@ -703,7 +781,7 @@ class Population(object):
         distributed_params = []
         for param, distr_type, units, seg_group, component, args in cell_param_distrs: #@UnusedVariable: Can't work out how to use units effectively at the moment because args may include parameters that don't have units, so ignoring it for now but will hopefully come back to it
             if param in distributed_params:
-                raise Exception("Parameter '{}' has two (or more) distributions specified for it " \
+                raise Exception("Parameter '{}' has two (or more) distributions specified for it " 
                                 "in {} population".format(param, self.id))
             # Create random distribution object
             rand_distr = RandomDistribution(distribution=distr_type, parameters=args)
@@ -716,7 +794,7 @@ class Population(object):
         distributed_conditions = []
         for variable, distr_type, units, seg_group, component, args in initial_conditions: #@UnusedVariable: Can't work out how to use units effectively at the moment because args may include variables that don't have units, so ignoring it for now but will hopefully come back to it
             if variable in distributed_conditions:
-                raise Exception("Parameter '{}' has two (or more) distributions specified for it " \
+                raise Exception("Parameter '{}' has two (or more) distributions specified for it " 
                                 "in {} population".format(variable, self.id))
             # Create random distribution object
             rand_distr = RandomDistribution(distribution=distr_type, parameters=args)
@@ -733,7 +811,7 @@ class Population(object):
         @param end_time: The end time of the stimulation (ms)
         """
         if self.get_cell_type().__name__ != 'SpikeSourceArray':
-            raise Exception("'set_poisson_spikes' method can only be used for 'SpikeSourceArray' " \
+            raise Exception("'set_poisson_spikes' method can only be used for 'SpikeSourceArray' " 
                             "populations.")
         # If rate is set to zero do nothing
         if rate:
@@ -742,7 +820,7 @@ class Population(object):
             if stim_range >= 0.0:
                 estimated_num_spikes = stim_range / mean_interval
                 # Add extra spikes to make sure spike train doesn't stop short
-                estimated_num_spikes = int(estimated_num_spikes + \
+                estimated_num_spikes = int(estimated_num_spikes + 
                                            math.exp(-estimated_num_spikes / 10.0) * 10.0)
                 spike_intervals = numpy.random.exponential(mean_interval,
                                                            size=(self.size, estimated_num_spikes))
@@ -750,8 +828,8 @@ class Population(object):
                 # FIXME: Should ensure that spike times don't exceed 'end_time' and make it at least until then.
                 self.tset('spike_times', spike_times)
             else:
-                print "Warning, stimulation start time ({}) is after stimulation end time ({})".\
-                        format(start_time, end_time)
+                print ("Warning, stimulation start time ({}) is after stimulation end time ({})"
+                      .format(start_time, end_time))
 
     def set_spikes(self, spike_times):
         """
@@ -762,9 +840,12 @@ class Population(object):
         @param end_time: The end time of the stimulation.
         """
         if self.get_cell_type().__name__ != 'SpikeSourceArray':
-            raise Exception("'set_poisson_spikes' method can only be used for 'SpikeSourceArray' " \
+            raise Exception("'set_poisson_spikes' method can only be used for 'SpikeSourceArray' " 
                             "populations.")
         self.tset('spike_times', spike_times)
+        
+    def set_spatially_dependent_spikes(self):
+        pass 
 
     def get_cell_type(self):
         """
@@ -775,8 +856,8 @@ class Population(object):
     def _set_positions(self, positions, morphologies=None):
         super(Population, self)._set_positions(positions)
         self.morphologies = morphologies
-            
-    
+
+
 
 if __name__ == "__main__":
 

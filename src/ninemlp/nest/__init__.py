@@ -22,6 +22,9 @@ if '--debug' in sys.argv:
                     "causing the import to stop at the NEST prompt")
 import pyNN.nest.standardmodels.cells
 import pyNN.nest.connectors
+import pyNN.core
+import pyNN.errors
+import pyNN.common
 import ninemlp.common
 import ninemlp.common.brep
 import ncml
@@ -31,6 +34,7 @@ from pyNN.nest import setup, run, reset, end, get_time_step, get_current_time, g
                         NoisyCurrentSource
 from pyNN.common.control import build_state_queries
 import pyNN.nest.simulator
+import nest
 from nest.hl_api import NESTError
 
 get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(pyNN.nest.simulator)
@@ -50,7 +54,7 @@ class Population(ninemlp.common.Population, pyNN.nest.Population):
             print "Warning! '--build' option was set to 'build_only', meaning the population '%s' was not constructed and only the NMODL files were compiled."
         else:
             pyNN.nest.Population.__init__(self, size, cell_type,
-                                                  params, structure=None, label=label)
+                                          params, structure=None, label=label)
 
     def set_param(self, cell_id, param, value, component=None, section=None):
         raise NotImplementedError('set_param has not been implemented for Population class yet')
@@ -58,11 +62,10 @@ class Population(ninemlp.common.Population, pyNN.nest.Population):
     def rset(self, param, rand_distr, component=None, seg_group=None):
         pyNN.nest.Population.rset(self, self._translate_param_name(param, component, seg_group),
                                   rand_distr)
-    
+
     def initialize(self, param, rand_distr, component=None, seg_group=None):
-        pyNN.nest.Population.initialize(self, self._translate_param_name(param, component, 
-                                                                         seg_group), 
-                                        rand_distr)  
+        pyNN.nest.Population.initialize(self, self._translate_param_name(param, component, seg_group),
+                                        rand_distr)
 
     def _translate_param_name(self, param, component, seg_group):
         if seg_group and seg_group != 'source_section' and seg_group != 'soma':
@@ -87,13 +90,15 @@ class Population(ninemlp.common.Population, pyNN.nest.Population):
 
 class Projection(pyNN.nest.Projection):
 
-    def __init__(self, pre, dest, label, connector, source=None, target=None, build_mode=DEFAULT_BUILD_MODE):
+    def __init__(self, pre, dest, label, connector, source=None, target=None, 
+                 build_mode=DEFAULT_BUILD_MODE, rng=None):
         self.label = label
         if build_mode == 'build_only':
             print "Warning! '--build' option was set to 'build_only', meaning the projection '%s' was not constructed." % label
         else:
             pyNN.nest.Projection.__init__(self, pre, dest, connector, label=label, source=source,
-                                                                                      target=target)
+                                          target=target, rng=rng)
+            
 
 class Network(ninemlp.common.Network):
 
@@ -103,7 +108,7 @@ class Network(ninemlp.common.Network):
         self._ncml_module = ncml
         self._Population_class = Population
         self._Projection_class = Projection
-        self._ElectricalSynapseProjection_class = None
+        self._GapJunctionProjection_class = None
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         self.temperature = None
         ninemlp.common.Network.__init__(self, filename, build_mode=build_mode,
@@ -125,7 +130,7 @@ class Network(ninemlp.common.Network):
             value = float(value)
         except:
             raise Exception("Incorrectly formatted value string '%s', should be a number optionally followed by a space and units (eg. '1.5 Hz')" % value_str)
-        
+
         if not units:
             return value
         elif units == "Hz":

@@ -1,20 +1,3 @@
-COMMENT
-
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-//
-// NOTICE OF COPYRIGHT AND OWNERSHIP OF SOFTWARE
-//
-// Copyright 2007, The University Of Pennsylvania
-//  School of Engineering & Applied Science.
-//   All rights reserved.
-//   For research use only; commercial use prohibited.
-//   Distribution without permission of Maciej T. Lazarewicz not permitted.
-//   mlazarew@seas.upenn.edu
-//
-//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-ENDCOMMENT
-
 NEURON {
 
     POINT_PROCESS Gap
@@ -29,7 +12,7 @@ UNITS {
   (nS) = (nanosiemens)
 }
 
-PARAMETER { g = 0 (nS) }
+PARAMETER { g = 0 (uS) }
     
 ASSIGNED {
 
@@ -40,6 +23,6 @@ ASSIGNED {
  
 BREAKPOINT { 
 
-  if (g>0) {i = (1e-3) * g * (v-vgap) }
+  if (g>0) {i = g * (v-vgap) }
 
 }
