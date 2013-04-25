@@ -103,7 +103,8 @@ class Projection(pyNN.nest.Projection):
 class Network(ninemlp.common.Network):
 
     def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None,
-                 min_delay=None, max_delay=None, temperature=None, silent_build=False, flags=[]):
+                 min_delay=None, max_delay=None, temperature=None, silent_build=False, flags=[],
+                 solver_name='cvode'):
         self._pyNN_module = pyNN.nest
         self._ncml_module = ncml
         self._Population_class = Population
@@ -113,7 +114,8 @@ class Network(ninemlp.common.Network):
         self.temperature = None
         ninemlp.common.Network.__init__(self, filename, build_mode=build_mode,
                                         timestep=timestep, min_delay=min_delay, max_delay=max_delay,
-                                    temperature=temperature, silent_build=silent_build, flags=flags)
+                                    temperature=temperature, silent_build=silent_build, flags=flags,
+                                    solver_name=solver_name)
 
     def _get_target_str(self, synapse, segment=None):
         return synapse

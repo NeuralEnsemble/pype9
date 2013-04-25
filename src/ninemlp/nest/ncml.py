@@ -54,7 +54,7 @@ class NCMLMetaClass(BaseNCMLMetaClass):
         return cell_type
 
 def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode=DEFAULT_BUILD_MODE, 
-                   silent=False, nest_method='gsl'):
+                   silent=False, solver_name='cvode'):
     """
     Loads a PyNN cell type for NEST from an XML description, compiling the necessary module files
     
@@ -76,7 +76,7 @@ def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode=DEFAULT_B
         dct = {}
         install_dir, dct['component_parameters'] = build_celltype_files(celltype_name, ncml_path,
                                                                         build_mode=build_mode,
-                                                                        method=nest_method)
+                                                                        method=solver_name)
         lib_dir = os.path.join(install_dir, 'lib', 'nest')
         if sys.platform.startswith('linux') or \
                                     sys.platform in ['os2', 'os2emx', 'cygwin', 'atheos', 'ricos']:

@@ -274,7 +274,8 @@ class Network(object):
     class ProjectionToCloneNotCreatedYetException(Exception): pass
 
     def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None,
-                 max_delay=None, temperature=None, silent_build=False, flags=[], rng=None):
+                 max_delay=None, temperature=None, silent_build=False, flags=[], rng=None, 
+                 solver_name='cvode'):
         assert  (hasattr(self, "_pyNN_module") and 
                  hasattr(self, "_ncml_module") and 
                  hasattr(self, "_Population_class") and 
@@ -283,7 +284,8 @@ class Network(object):
                  hasattr(self, "get_min_delay"))
         self.load_network(filename, build_mode=build_mode, timestep=timestep,
                                  min_delay=min_delay, max_delay=max_delay, temperature=temperature,
-                                 silent_build=silent_build, flags=flags, rng=rng)
+                                 silent_build=silent_build, flags=flags, rng=rng, 
+                                 solver_name=solver_name)
 
     def set_flags(self, flags):
         self.flags = self.networkML.free_params.flags
@@ -314,7 +316,8 @@ class Network(object):
 
     def load_network(self, filename, build_mode=DEFAULT_BUILD_MODE, verbose=False, timestep=None,
                                                 min_delay=None, max_delay=None, temperature=None,
-                                                silent_build=False, flags=[], rng=None):
+                                                silent_build=False, flags=[], rng=None, 
+                                                solver_name='cvode'):
         self.networkML = read_networkML(filename)
         self._set_simulation_params(timestep=timestep, min_delay=min_delay, max_delay=max_delay,
                                                                             temperature=temperature)
@@ -338,7 +341,8 @@ class Network(object):
                                                                     pop.cell_params.distributions,
                                                                     pop.initial_conditions.distributions,
                                                                     verbose,
-                                                                    silent_build)
+                                                                    silent_build,
+                                                                    solver_name=solver_name)
         if build_mode == 'build_only' or build_mode == 'compile_only':
             print ("Finished compiling network, now exiting (use try: ... except SystemExit: ... " 
                    "if you want to do something afterwards)")
@@ -369,7 +373,8 @@ class Network(object):
         pass
 
     def _create_population(self, label, size, cell_type_name, morph_id, structure_params, cell_params,
-                           cell_param_distrs, initial_conditions, verbose, silent_build):
+                           cell_param_distrs, initial_conditions, verbose, silent_build, 
+                           solver_name='cvode'):
         if cell_type_name in dir(self._pyNN_module.standardmodels.cells):
             # This is not as simple as it may have been, as a simple getattr on 
             # pyNN.nest.standardmodels.cells returns the pyNN.standardmodels.cells instead.
@@ -383,7 +388,8 @@ class Network(object):
                                                                           cell_type_name),
                                                              morph_id=morph_id,
                                                              build_mode=self.build_mode,
-                                                             silent=silent_build)
+                                                             silent=silent_build,
+                                                             solver_name=solver_name)
             except IOError:
                 raise Exception("Cell_type_name '{}' was not found or " 
                                 "in standard models".format(cell_type_name))
