@@ -21,6 +21,13 @@ from ninemlp.common.build import path_to_exec, get_build_paths, load_component_p
 _SIMULATOR_BUILD_NAME = 'nest'
 _MODIFICATION_TIME_FILE = 'modification_time'
 
+if 'NEST_INSTALL_DIR' in os.environ:
+    os.environ['PATH'] += os.pathsep + os.path.join(os.environ['NEST_INSTALL_DIR'], 'bin')
+elif os.environ['HOME'] == '/home/tclose':
+    # I apologise for this little hack (this is the path on my machine, 
+    # to save me having to set the environment variable in eclipse)
+    os.environ['PATH'] += os.pathsep + '/opt/NEST/2.2.1/bin'
+
 def ensure_camel_case(name):
     if len(name) < 2:
         raise Exception("The name ('{}') needs to be at least 2 letters long to enable the "
@@ -366,7 +373,7 @@ lib_LTLIBRARIES=      {celltype_name}Loader.la lib{celltype_name}Loader.la
                              {celltype_name}Loader.cpp {celltype_name}Loader.h
 
 
-{celltype_name}Loader_la_LDFLAGS=  -module
+{celltype_name}Loader_la_LDFLAGS=  -module @SUNDIALS_LDFLAGS@
 
 lib{celltype_name}Loader_la_CXXFLAGS= $({celltype_name}Loader_la_CXXFLAGS) -DLINKED_MODULE
 lib{celltype_name}Loader_la_SOURCES=  $({celltype_name}Loader_la_SOURCES)
