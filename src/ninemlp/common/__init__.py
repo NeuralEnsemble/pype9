@@ -77,7 +77,7 @@ class NetworkMLHandler(XMLHandler):
                                                        'initial_conditions', 'flags', 'not_flags'))
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay '
                                                       'synapse_family flags not_flags')
-    Structure = collections.namedtuple('Structure', 'type layout args')
+    Structure = collections.namedtuple('Structure', 'type somaPositions args')
     StructureLayout = collections.namedtuple('StructureLayout', 'pattern args distributions')
     CustomAttributes = collections.namedtuple('CustomAttributes', 'constants distributions')
     Distribution = collections.namedtuple('Distribution', 'attr type units seg_group component '
@@ -128,12 +128,12 @@ class NetworkMLHandler(XMLHandler):
                                 format(self.pop_id))
             args = dict(attrs)
             self.pop_structure_type = args.pop('type')
-            self.pop_structure_layout = None
+            self.pop_structure_somaPositions = None
             self.pop_structure_args = args
-        elif self._opening(tag_name, attrs, 'layout', parents=['population', 'structure']):
+        elif self._opening(tag_name, attrs, 'somaPositions', parents=['population', 'structure']):
             args = dict(attrs)
             pattern = args.pop('pattern')
-            self.pop_structure_layout = self.StructureLayout(pattern, args, [])
+            self.pop_structure_somaPositions = self.StructureLayout(pattern, args, [])
         elif self._opening(tag_name, attrs, 'cellParameters', parents=['population']): pass
         elif self._opening(tag_name, attrs, 'initialConditions', parents=['population']): pass
         elif self._opening(tag_name, attrs, 'const', parents=['population', 'cellParameters']):
@@ -146,7 +146,7 @@ class NetworkMLHandler(XMLHandler):
                                                                       'initialConditions']) or
               self._opening(tag_name, attrs, 'distribution', parents=['population',
                                                                       'structure',
-                                                                      'layout'])):
+                                                                      'somaPositions'])):
             args = dict(attrs)
             attribute = args.pop('attr')
             distr_type = args.pop('type')
@@ -172,8 +172,8 @@ class NetworkMLHandler(XMLHandler):
                 self.pop_cell_params.distributions.append(distr)
             elif self._open_components[-2] == 'initialConditions':
                 self.pop_initial_conditions.distributions.append(distr)
-            elif self._open_components[-2] == 'layout':
-                self.pop_structure_layout.distributions.append(distr)                
+            elif self._open_components[-2] == 'somaPositions':
+                self.pop_structure_somaPositions.distributions.append(distr)                
             else:
                 assert False
         elif self._opening(tag_name, attrs, 'projection', parents=['network']):
@@ -250,7 +250,7 @@ class NetworkMLHandler(XMLHandler):
                                                     self.proj_flags,
                                                     self.proj_not_flags))
         elif self._closing(name, 'structure', parents=['population']):
-            self.pop_structure = self.Structure(self.pop_structure_type, self.pop_structure_layout,
+            self.pop_structure = self.Structure(self.pop_structure_type, self.pop_structure_somaPositions,
                                                 self.pop_structure_args)
         XMLHandler.endElement(self, name)
 
@@ -399,47 +399,47 @@ class Network(object):
         morphologies = None
         if structure_params:
             if structure_params.type == 'Distributed':
-                layout = structure_params.layout
-                if layout:
-                    args = layout.args                    
-                    if layout.pattern == 'Grid2D':
+                somaPositions = structure_params.somaPositions
+                if somaPositions:
+                    args = somaPositions.args                    
+                    if somaPositions.pattern == 'Grid2D':
                         structure = ninemlp.space.Grid2D(aspect_ratio=float(args['aspect_ratio']), 
                                                       dx=float(args['dx']), dy=float(args['dy']), 
                                                       x0=float(args['x0']), y0=float(args['y0']), 
                                                       z=float(args['z']))
-                    elif layout.pattern == 'Grid3D':
+                    elif somaPositions.pattern == 'Grid3D':
                         structure = ninemlp.space.Grid3D(aspect_ratioXY=float(args['aspect_ratioXY']), 
                                                       aspect_ratioXZ=float(args['aspect_ratioXZ']), 
                                                       dx=float(args['dx']), dy=float(args['dy']), 
                                                       dz=float(args['dz']), x0=float(args['x0']), 
                                                       y0=float(args['y0']), z0=float(args['z0']))
-                    elif layout.pattern == 'UniformWithinBox':
+                    elif somaPositions.pattern == 'UniformWithinBox':
                         boundary = pyNN.space.Cuboid(float(args['width']), float(args['height']), 
                                                      float(args['depth']))
                         origin = (float(args['x']), float(args['y']), float(args['z']))
                         structure = pyNN.space.RandomStructure(boundary, origin)                        
-                    elif layout.pattern == 'UniformWithinSphere':
+                    elif somaPositions.pattern == 'UniformWithinSphere':
                         boundary = pyNN.space.Sphere(float(args['radius']))
                         origin = (float(args['x']), float(args['y']), float(args['z']))
                         structure = pyNN.space.RandomStructure(boundary, origin)
                     else:
                         raise Exception("Unrecognised pattern '{}' for 'Distributed population "
-                                        "structure type".format(layout.pattern))
-                    for distr in layout.distributions:
+                                        "structure type".format(somaPositions.pattern))
+                    for distr in somaPositions.distributions:
 #                        try:
                         structure.apply_distribution(distr.attr, distr.type, distr.args)
 #                        except AttributeError:
 #                            raise Exception("Chosen structure type '{}' does not permit "
-#                                            "distributions".format(layout.pattern))
+#                                            "distributions".format(somaPositions.pattern))
                 else:
                     raise Exception("Layout tags are required for structure of type "
                                     "'Distributed'") 
             elif structure_params.type == "MorphologyBased":
                 forest = morphology.Forest(os.path.join(self.dirname, 
                                                         structure_params.args['morphology']))
-                if structure_params.layout:
-                    pattern = structure_params.layout.pattern
-                    args = structure_params.layout.args
+                if structure_params.somaPositions:
+                    pattern = structure_params.somaPositions.pattern
+                    args = structure_params.somaPositions.args
                     if pattern == 'Tiled':
                         forest.align_min_bound_to_origin()
                         base_offset = args.get('offset', numpy.zeros(3))
