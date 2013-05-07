@@ -12,7 +12,7 @@
 #
 #######################################################################################
 
-import numpy
+import numpy as np
 from warnings import warn
 from ninemlp.connectivity import axially_symmetric_tensor
 
@@ -47,7 +47,27 @@ class ExponentialWithDistance(object):
         self.min_value = min_value
 
     def __call__(self, dist):
-        values = self.offset + self.scalar * numpy.exp(self.exponent * dist)
+        values = self.offset + self.scalar * np.exp(self.exponent * dist)
+        if self.min_value:
+            values[values < self.min_value] = self.min_value
+        return values
+
+    @classmethod
+    def expand_distances(cls):
+        return False
+
+
+class BoltzmanWithDistance(object):
+
+    def __init__(self, a1, a2, x0, dx, min_value=0.0):
+        self.a1 = a1
+        self.a2 = a2
+        self.x0 = x0
+        self.dx = dx
+        self.min_value = min_value
+
+    def __call__(self, dist):
+        values = (self.a1 - self.a2) / (1 + np.exp ((dist - self.x0) / self.dx)) + self.a2
         if self.min_value:
             values[values < self.min_value] = self.min_value
         return values
@@ -65,7 +85,7 @@ class LinearWith2DDistance(object):
         self.min_value = min_value
 
     def __call__(self, disp):
-        dist2D = numpy.sqrt(numpy.sum(numpy.square(disp[0:2, :]), axis=0))
+        dist2D = np.sqrt(np.sum(np.square(disp[0:2, :]), axis=0))
         values = self.offset + self.scalar * dist2D
         if self.min_value:
             values[values < self.min_value] = self.min_value
@@ -85,8 +105,8 @@ class ExponentialWith2DDistance(object):
         self.min_value = min_value
 
     def __call__(self, disp):
-        dist2D = numpy.sqrt(numpy.sum(numpy.square(disp[0:2, :]), axis=0))
-        values = self.offset + self.scalar * numpy.exp(self.exponent * dist2D)
+        dist2D = np.sqrt(np.sum(np.square(disp[0:2, :]), axis=0))
+        values = self.offset + self.scalar * np.exp(self.exponent * dist2D)
         if self.min_value:
             values[values < self.min_value] = self.min_value
         return values
@@ -112,7 +132,7 @@ class MaskBased(object):
             if not self.number: # If both self.prob and self.number are None (the default).
                 prob = 1.0      # all cells within the mask will be connected.
             else:
-                num_nz = numpy.count_nonzero(mask)
+                num_nz = np.count_nonzero(mask)
                 if num_nz:
                     prob = self.number / num_nz
                 else:
@@ -123,27 +143,32 @@ class MaskBased(object):
                      "size of mask ({})".format(int(self.number), num_nz),
                      InsufficientTargetsWarning)
                 prob = 1.0
-        probs = numpy.zeros(mask.shape)
+        probs = np.zeros(mask.shape)
         probs[mask] = prob
         return probs
 
 
-class CircleMask(MaskBased):
+class CylinderMask(MaskBased):
     """
     A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
     probabilityability of connection within an elliptical region
     """
 
-    def __init__(self, radius, probability=None, number=None):
+    def __init__(self, radius, probability=None, axisX=0.0, axisY=0.0, axisZ=1.0, number=None):
         """
         @param radius: radius of the circle 
         @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
         """
-        super(CircleMask, self).__init__(probability, number)
+        super(CylinderMask, self).__init__(probability, number)
         self.radius = radius
+        self.axis = np.array((axisX, axisY, axisZ))
+        norm = np.linalg.norm(self.axis)
+        if not norm:
+            raise Exception("Zero length vector provided as axis of CylinderMask.")
+        self.axis /= norm
 
     def __call__(self, d):
-        mask = numpy.sqrt(numpy.sum(numpy.square(d[0:2, :]), axis=0)) < self.radius
+        mask = np.sqrt(np.sum(np.square(np.cross(self.axis, d, axis=0), axis=0))) < self.radius
         return self._probs_from_mask(mask)
 
     @classmethod
@@ -191,7 +216,7 @@ class EllipseMask(MaskBased):
         self.y_scale = y_scale
 
     def __call__(self, d):
-        mask = numpy.square(d[0] / self.x_scale) + numpy.square(d[1] / self.y_scale) < 1
+        mask = np.square(d[0] / self.x_scale) + np.square(d[1] / self.y_scale) < 1
         return self._probs_from_mask(mask)
 
     @classmethod
@@ -217,7 +242,7 @@ class OldEllipsoidMask(MaskBased):
         self.z_scale = z_scale
 
     def __call__(self, d):
-        mask = numpy.square(d[0] / self.x_scale) + numpy.square(d[1] / self.y_scale) + numpy.square(d[2] / self.z_scale) < 1
+        mask = np.square(d[0] / self.x_scale) + np.square(d[1] / self.y_scale) + np.square(d[2] / self.z_scale) < 1
         return self._probs_from_mask(mask)
 
     @classmethod
@@ -240,15 +265,15 @@ class EllipsoidMask(MaskBased):
         """
         super(EllipsoidMask, self).__init__(probability, number)
         self.scale = scale
-        self.orient = numpy.array((orient_x, orient_y, orient_z))
+        self.orient = np.array((orient_x, orient_y, orient_z))
         self.isotropy = isotropy
 
     def __call__(self, displacement):
         
         working_matrix = axially_symmetric_tensor(self.scale, self.orient, self.isotropy)
-        working_matrix_inverse = numpy.linalg.inv(working_matrix)
-        transformed_matrix = numpy.dot(working_matrix_inverse, displacement)
-        distance = numpy.sqrt(transformed_matrix[0]**2+transformed_matrix[1]**2+transformed_matrix[2]**2)
+        working_matrix_inverse = np.linalg.inv(working_matrix)
+        transformed_matrix = np.dot(working_matrix_inverse, displacement)
+        distance = np.sqrt(transformed_matrix[0]**2+transformed_matrix[1]**2+transformed_matrix[2]**2)
         mask = distance < 1.0
         return self._probs_from_mask(mask)
 
