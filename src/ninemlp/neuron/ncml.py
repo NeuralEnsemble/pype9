@@ -611,7 +611,7 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
 
 
 def load_cell_type(celltype_id, ncml_path, morph_id=None, build_mode=DEFAULT_BUILD_MODE,
-                   silent=False):
+                   silent=False, solver_name=None):
     celltype_name = celltype_id
     if morph_id:
         celltype_name += morph_id

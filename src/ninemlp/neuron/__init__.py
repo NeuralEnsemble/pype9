@@ -397,7 +397,8 @@ class GapJunctionProjection(Projection):
 class Network(ninemlp.common.Network):
 
     def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None,
-                                 max_delay=None, temperature=None, silent_build=False, flags=[]):
+                                 max_delay=None, temperature=None, silent_build=False, flags=[],
+                                 solver_name=None):
         self._pyNN_module = pyNN.neuron
         self._ncml_module = ncml
         self._Population_class = Population
