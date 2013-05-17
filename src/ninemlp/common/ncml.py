@@ -356,7 +356,7 @@ class BaseNCMLMetaClass(type):
         """
         ncml_model = cls.dct["ncml_model"]
         morphml_model = cls.dct["morphml_model"]
-        default_params = {'parent': None}
+        default_params = {}
 #        default_params = {'parent': None}
         component_parameters = cls.dct["component_parameters"]
         # Add current and synapse mechanisms parameters
@@ -380,10 +380,10 @@ class BaseNCMLMetaClass(type):
         for ra in ncml_model.axial_resistances:
             default_params[group_varname(ra.group_id) + "." + "Ra"] = ra.value
         # A morphology parameters
-        for seg_group in morphml_model.groups:
-            # None, defers to the value loaded in the MorphML file but allows them to be overwritten
-            default_params[group_varname(seg_group.id) + ".diam"] = None
-            default_params[group_varname(seg_group.id) + ".L"] = None
+#        for seg_group in morphml_model.groups:
+#            # None, defers to the value loaded in the MorphML file but allows them to be overwritten
+#            default_params[group_varname(seg_group.id) + ".diam"] = None
+#            default_params[group_varname(seg_group.id) + ".L"] = None
         return default_params
 
     @classmethod
