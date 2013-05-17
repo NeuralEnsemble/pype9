@@ -625,8 +625,9 @@ class Network(object):
                 else:
                     raise Exception("Projection '{}' attempted to clone connectivity patterns from "
                                     "'{}', which was not found.".format(label, orig_proj_id))
-            connector = ninemlp.connectors.CloneConnector(orig_proj, weights=weight_expr, 
-                                                          delays=delay_expr, **other_connector_args)
+            connector = self._pyNN_module.connectors.CloneConnector(orig_proj, weights=weight_expr, 
+                                                                    delays=delay_expr, 
+                                                                    **other_connector_args)
         elif connection.pattern + 'Connector' in dir(pyNN.connectors):
             ConnectorClass = getattr(self._pyNN_module.connectors,
                                      '{}Connector'.format(connection.pattern))
