@@ -906,62 +906,62 @@ class ConnectionProbabilityMatrix(object):
         return self._prob_matrix
 
 
-class ProbabilisticConnector(pyNN.connectors.ProbabilisticConnector):
+#class ProbabilisticConnector(pyNN.connectors.ProbabilisticConnector):
+#
+#    def __init__(self, projection, weights=0.0, delays=None,
+#                 allow_self_connections=True, space=pyNN.connectors.Space(), safe=True):
+#        pyNN.connectors.ProbabilisticConnector.__init__(self, projection=projection,
+#                                                        weights=weights, delays=delays,
+#                                                        allow_self_connections=allow_self_connections,
+#                                                        space=space, safe=safe)
+#
+#    def _set_distance_matrix(self, src):
+#        morphology = src.parent.morphologies[src.parent.id_to_index(src)]
+#        if self.prepare_sources and src.local:
+#            self.full_distance_matrix.set_source(morphology)
+#        else:
+#            self.distance_matrix.set_source(morphology)
+#
+#    @property
+#    def distance_matrix(self):
+#        """
+#        We want to avoid calculating positions if it is not necessary, so we
+#        delay it until the distance matrix is actually used.
+#        """
+#        if self._distance_matrix is None:
+#            self._distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
+#                                                                self.space, self.local)
+#        return self._distance_matrix
+#
+#    @property
+#    def full_distance_matrix(self):
+#        """
+#        We want to avoid calculating positions if it is not necessary, so we
+#        delay it until the distance matrix is actually used.
+#        """
+#        if self._full_distance_matrix is None:
+#            self._full_distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
+#                                                                     self.space, self.full_mask)
+#        return self._full_distance_matrix
 
-    def __init__(self, projection, weights=0.0, delays=None,
-                 allow_self_connections=True, space=pyNN.connectors.Space(), safe=True):
-        pyNN.connectors.ProbabilisticConnector.__init__(self, projection=projection,
-                                                        weights=weights, delays=delays,
-                                                        allow_self_connections=allow_self_connections,
-                                                        space=space, safe=safe)
-
-    def _set_distance_matrix(self, src):
-        morphology = src.parent.morphologies[src.parent.id_to_index(src)]
-        if self.prepare_sources and src.local:
-            self.full_distance_matrix.set_source(morphology)
-        else:
-            self.distance_matrix.set_source(morphology)
-
-    @property
-    def distance_matrix(self):
-        """
-        We want to avoid calculating positions if it is not necessary, so we
-        delay it until the distance matrix is actually used.
-        """
-        if self._distance_matrix is None:
-            self._distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
-                                                                self.space, self.local)
-        return self._distance_matrix
-
-    @property
-    def full_distance_matrix(self):
-        """
-        We want to avoid calculating positions if it is not necessary, so we
-        delay it until the distance matrix is actually used.
-        """
-        if self._full_distance_matrix is None:
-            self._full_distance_matrix = ConnectionProbabilityMatrix(self.projection.post.morphologies,
-                                                                     self.space, self.full_mask)
-        return self._full_distance_matrix
-
-
-class MorphologyBasedProbabilityConnector(pyNN.connectors.DistanceDependentProbabilityConnector):
-    """
-    For each pair of pre-post cells, the connection probability depends on distance.
-    """
-    parameter_names = ('allow_self_connections', 'd_expression')
-
-    #Override the base classes Probabilistic connector to use the morphologies
-    ProbConnector = ProbabilisticConnector
-
-    def __init__(self, kernel, allow_self_connections=True,
-                 weights=0.0, delays=None, safe=True, verbose=False, n_connections=None):
-        # This is a right hack, as I am using the "space" object to pass the kernel, which then 
-        # returns the probability in the distance matrix instead of the distance, hence the d_expression
-        # is just 'd'
-        super(MorphologyBasedProbabilityConnector, self).__init__('d', 
-                allow_self_connections=allow_self_connections, weights=weights, delays=delays,
-                space=kernel, safe=safe, verbose=verbose, n_connections=n_connections)
+#
+#class MorphologyBasedProbabilityConnector(pyNN.connectors.DistanceDependentProbabilityConnector):
+#    """
+#    For each pair of pre-post cells, the connection probability depends on distance.
+#    """
+#    parameter_names = ('allow_self_connections', 'd_expression')
+#
+#    #Override the base classes Probabilistic connector to use the morphologies
+#    ProbConnector = ProbabilisticConnector
+#
+#    def __init__(self, kernel, allow_self_connections=True,
+#                 weights=0.0, delays=None, safe=True, verbose=False, n_connections=None):
+#        # This is a right hack, as I am using the "space" object to pass the kernel, which then 
+#        # returns the probability in the distance matrix instead of the distance, hence the d_expression
+#        # is just 'd'
+#        super(MorphologyBasedProbabilityConnector, self).__init__('d', 
+#                allow_self_connections=allow_self_connections, weights=weights, delays=delays,
+#                space=kernel, safe=safe, verbose=verbose, n_connections=n_connections)
 
 
 #  Handlers to load the morphologies from Neurolucida xml files ------------------------------------

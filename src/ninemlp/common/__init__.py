@@ -43,30 +43,30 @@ _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
 RANDOM_DISTR_PARAMS = {'uniform': ('low', 'high'),
                        'normal': ('mean', 'stddev')}
-
-class ValueWithUnits(object):
-
-    def __init__(self, value, units):
-        self.value = float(eval(value))
-        self.units = units
-
-    def neuron(self):
-        if self.units == None:
-            return self.value
-        elif self.units == 'ms':
-            return self.value
-        elif self.units == 'uF_per_cm2':
-            return self.value
-        elif self.units == 'mV':
-            return self.value
-        elif self.units == 'ohm_cm':
-            return self.value
-        elif self.units == 'S_per_m2':
-            return self.value
-        else:
-            raise Exception("Unrecognised units '{}' (A conversion from these units "
-                            "to the standard NEURON units needs to be added to "
-                            "'ninemlp.common.ncml.neuron_value' function).".format(self.units))
+#
+#class ValueWithUnits(object):
+#
+#    def __init__(self, value, units):
+#        self.value = float(eval(value))
+#        self.units = units
+#
+#    def neuron(self):
+#        if self.units == None:
+#            return self.value
+#        elif self.units == 'ms':
+#            return self.value
+#        elif self.units == 'uF_per_cm2':
+#            return self.value
+#        elif self.units == 'mV':
+#            return self.value
+#        elif self.units == 'ohm_cm':
+#            return self.value
+#        elif self.units == 'S_per_m2':
+#            return self.value
+#        else:
+#            raise Exception("Unrecognised units '{}' (A conversion from these units "
+#                            "to the standard NEURON units needs to be added to "
+#                            "'ninemlp.common.ncml.neuron_value' function).".format(self.units))
 
 
 class NetworkMLHandler(XMLHandler):

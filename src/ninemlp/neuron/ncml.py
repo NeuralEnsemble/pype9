@@ -375,14 +375,14 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         #Loop through loaded membrane mechanisms and insert them into the relevant sections.
         for cm in self.ncml_model.capacitances:
             for seg in self.get_group(cm.group_id):
-                seg.cm = cm.value.neuron()
+                seg.cm = cm.value
         #Loop through loaded membrane mechanisms and insert them into the relevant sections.
         for reversal in self.ncml_model.reversal_potentials:
             for seg in self.get_group(reversal.group_id):
-                setattr(seg, 'e' + reversal.species, reversal.value.neuron())
+                setattr(seg, 'e' + reversal.species, reversal.value)
         for ra in self.ncml_model.axial_resistances:
             for seg in self.get_group(ra.group_id):
-                seg.Ra = ra.value.neuron()
+                seg.Ra = ra.value
         for syn in self.ncml_model.synapses:
             if syn.type in dir(h):
                 SynapseType = getattr(h, syn.type)
@@ -396,7 +396,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
                 receptor = SynapseType(0.5, sec=seg)
                 setattr(seg, syn.id, receptor)
                 for param in syn.params:
-                    setattr(receptor, param.name, param.value.neuron())
+                    setattr(receptor, param.name, param.value)
 
     def memb_init(self):
         # Initialisation of member states goes here
@@ -474,31 +474,31 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
 
     # Create recorder to append to simulator.recorder_list
 
-    class Recorder(pyNN.neuron.Recorder):
-        
-        def __init__(self, cell, variable, output):
-            self.cell = cell
-            self.variable = variable
-            self.file = output
-            self.population = None
-            
-        def _get(self, gather=False, compatible_output=True, filter=None): #@UnusedVariable
-            if self.variable == 'spikes':
-                data = numpy.empty((0, 2))
-                spikes = numpy.array(self.cell.spike_times)
-                spikes = spikes[spikes <= pyNN.neuron.simulator.state.t + 1e-9]
-                if len(spikes) > 0:
-                    new_data = numpy.array([numpy.ones(spikes.shape) * 0.0, spikes]).T
-                    data = numpy.concatenate((data, new_data))
-            elif self.variable == 'v':
-                data = numpy.empty((0, 3))
-                v = numpy.array(self.cell.vtrace)
-                t = numpy.array(self.cell.record_times)
-                new_data = numpy.array([numpy.ones(v.shape) * 0.0, t, v]).T
-                data = numpy.concatenate((data, new_data))
-            if gather and pyNN.neuron.simulator.state.num_processes > 1:
-                data = pyNN.recording.gather(data)
-            return data
+#    class Recorder(pyNN.neuron.recording.Recorder):
+#        
+#        def __init__(self, cell, variable, output):
+#            self.cell = cell
+#            self.variable = variable
+#            self.file = output
+#            self.population = None
+#            
+#        def _get(self, gather=False, compatible_output=True, filter=None): #@UnusedVariable
+#            if self.variable == 'spikes':
+#                data = numpy.empty((0, 2))
+#                spikes = numpy.array(self.cell.spike_times)
+#                spikes = spikes[spikes <= pyNN.neuron.simulator.state.t + 1e-9]
+#                if len(spikes) > 0:
+#                    new_data = numpy.array([numpy.ones(spikes.shape) * 0.0, spikes]).T
+#                    data = numpy.concatenate((data, new_data))
+#            elif self.variable == 'v':
+#                data = numpy.empty((0, 3))
+#                v = numpy.array(self.cell.vtrace)
+#                t = numpy.array(self.cell.record_times)
+#                new_data = numpy.array([numpy.ones(v.shape) * 0.0, t, v]).T
+#                data = numpy.concatenate((data, new_data))
+#            if gather and pyNN.neuron.simulator.state.num_processes > 1:
+#                data = pyNN.recording.gather(data)
+#            return data
 
 
 class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
@@ -513,37 +513,34 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
         # and the other that takes kwargs to pass to set as the cell class and model class __init__
         # functions respectively.
         #The __init__ function for the created class
-        def cellclass__init__(self, parameters={}):
-            pyNN.models.BaseCellType.__init__(self, parameters)
+        def cellclass__init__(self, **parameters):
+            pyNN.models.BaseCellType.__init__(self, **parameters)
             NCMLCell.__init__(self, **parameters)
-        def modelclass__init__(self, **parameters):
-            cellclass__init__(self, parameters)
         dct['__init__'] = cellclass__init__
         cellclass = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
-        dct['__init__'] = modelclass__init__
-        cellclass.model = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
-        cls._validate_recordable(cellclass) #FIXME: This is a bit of a hack
+        cellclass.model = cellclass
+#        cls._validate_recordable(cellclass) #FIXME: This is a bit of a hack
         return cellclass
 
-    @staticmethod
-    def _validate_recordable(cell_type):
-        """
-        This is a bit of a hack method, because I can't work out how to extract from the NMODL
-        files only the variables that are actually recordable, so I test them here and remove
-        the ones that don't work
-        
-        @param cell_type: The NCML cell class that needs its recordable variable validated
-        """
-        test_cell = cell_type()
-        test_seg = test_cell.source_section(0.5)
-        recordable = copy(cell_type.recordable)
-        for var in recordable:
-            # Check to see if the variable is part of the common recordables or is an attribute
-            # of the test segment. Also remove all reversal potentials (assumed to be all 
-            # attributes starting with 'e') as they are unlikely to change.
-            if (var not in ninemlp.common.ncml.BaseNCMLMetaClass.COMMON_RECORDABLE and \
-                        not hasattr(test_seg, var)) or var.startswith('e'):
-                cell_type.recordable.remove(var)
+#    @staticmethod
+#    def _validate_recordable(cell_type):
+#        """
+#        This is a bit of a hack method, because I can't work out how to extract from the NMODL
+#        files only the variables that are actually recordable, so I test them here and remove
+#        the ones that don't work
+#        
+#        @param cell_type: The NCML cell class that needs its recordable variable validated
+#        """
+#        test_cell = cell_type()
+#        test_seg = test_cell.source_section(0.5)
+#        recordable = copy(cell_type.recordable)
+#        for var in recordable:
+#            # Check to see if the variable is part of the common recordables or is an attribute
+#            # of the test segment. Also remove all reversal potentials (assumed to be all 
+#            # attributes starting with 'e') as they are unlikely to change.
+#            if (var not in ninemlp.common.ncml.BaseNCMLMetaClass.COMMON_RECORDABLE and \
+#                        not hasattr(test_seg, var)) or var.startswith('e'):
+#                cell_type.recordable.remove(var)
 
     @classmethod
     def _construct_recordable(cls):
