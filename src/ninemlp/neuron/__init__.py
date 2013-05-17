@@ -85,12 +85,12 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
         param_scope.append(param)
         pyNN.neuron.Population.rset(self, '.'.join(param_scope), rand_distr)
 
-    def initialize(self, variable, rand_distr, component=None, seg_group=None):
-        variable_scope = [group_varname(seg_group)]
-        if component:
-            variable_scope.append(component)
-        variable_scope.append(variable)
-        pyNN.neuron.Population.initialize(self, '.'.join(variable_scope), rand_distr)
+#    def initialize(self, variable, rand_distr, component=None, seg_group=None):
+#        variable_scope = [group_varname(seg_group)]
+#        if component:
+#            variable_scope.append(component)
+#        variable_scope.append(variable)
+#        pyNN.neuron.Population.initialize(self, '.'.join(variable_scope), rand_distr)
 
     def can_record(self, variable):
         """
