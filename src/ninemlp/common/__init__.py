@@ -564,8 +564,7 @@ class Network(object):
                                 "arguments '{}' for projection '{}'\n('{}')"
                                 .format(expression, connection.args, label, e))
             connector = self._pyNN_module.connectors.DistanceDependentProbabilityConnector(
-                                    connect_expr, weights=weight_expr, delays=delay_expr,
-                                    **other_connector_args)
+                                    connect_expr, **other_connector_args)
         elif connection.pattern == 'MorphologyBased':
             kernel_name = connection.args.pop('kernel')
             if not hasattr(morphology, kernel_name + 'Kernel'):
@@ -578,8 +577,7 @@ class Network(object):
                                 "arguments '{}' for projection '{}'\n('{}')"
                                 .format(kernel_name, connection.args, label, e))
             connector = morphology.MorphologyBasedProbabilityConnector(
-                                kernel, weights=weight_expr, delays=delay_expr,
-                                **other_connector_args)
+                                kernel, **other_connector_args)
         # If connection pattern is external, load the weights and delays from a file in PyNN
         # FromFileConnector format and then create a FromListConnector connector. Some additional
         # preprocessing is performed here, which is why the FromFileConnector isn't used directly.
@@ -625,21 +623,19 @@ class Network(object):
                 else:
                     raise Exception("Projection '{}' attempted to clone connectivity patterns from "
                                     "'{}', which was not found.".format(label, orig_proj_id))
-            connector = self._pyNN_module.connectors.CloneConnector(orig_proj, weights=weight_expr, 
-                                                                    delays=delay_expr, 
-                                                                    **other_connector_args)
+            connector = self._pyNN_module.connectors.CloneConnector(orig_proj, **other_connector_args)
         elif connection.pattern + 'Connector' in dir(pyNN.connectors):
             ConnectorClass = getattr(self._pyNN_module.connectors,
                                      '{}Connector'.format(connection.pattern))
-            connector = ConnectorClass(weights=weight_expr, delays=delay_expr,
-                                       **other_connector_args)
+            connector = ConnectorClass(**other_connector_args)
         else:
             raise Exception("Unrecognised pattern type '{}'".format(connection.pattern))
         # Initialise the rest of the projection object and return
+        synapse = self._pyNN_module.StaticSynapse(weight=weight_expr, delay=delay_expr)
         with warnings.catch_warnings(record=True) as warnings_list:
             warnings.simplefilter("always", category=point2point.InsufficientTargetsWarning)
             if synapse_family == 'Chemical':
-                projection = self._Projection_class(pre, dest, label, connector,
+                projection = self._Projection_class(pre, dest, label, connector, synapse,
                                                     source=source.terminal,
                                                     target=self._get_target_str(target.synapse,
                                                                                 target.segment),
@@ -805,7 +801,7 @@ class Population(object):
                                 "in {} population".format(variable, self.id))
             # Create random distribution object
             rand_distr = RandomDistribution(distribution=distr_type, parameters=args)
-            self.initialize(variable, rand_distr, component=component, seg_group=seg_group)
+            self.initialize_variable(variable, rand_distr, component=component, seg_group=seg_group)
             # Add variable to list of completed variable distributions to check for duplicates
             distributed_conditions.append(variable)
 

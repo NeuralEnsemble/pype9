@@ -338,8 +338,7 @@ class BaseNCMLMetaClass(type):
         ncml_model = dct['ncml_model']
         dct["default_parameters"] = cls._construct_default_parameters()
         dct["default_initial_values"] = cls._construct_initial_values()
-        dct["synapse_types"] = cls._construct_synapse_types()
-        dct["standard_receptor_type"] = False
+        dct["receptor_types"] = cls._construct_receptor_types()
         dct["injectable"] = True
         dct["conductance_based"] = True
         dct["model_name"] = ncml_model.celltype_id
@@ -380,10 +379,10 @@ class BaseNCMLMetaClass(type):
         for ra in ncml_model.axial_resistances:
             default_params[group_varname(ra.group_id) + "." + "Ra"] = ra.value
         # A morphology parameters
-#        for seg_group in morphml_model.groups:
-#            # None, defers to the value loaded in the MorphML file but allows them to be overwritten
-#            default_params[group_varname(seg_group.id) + ".diam"] = None
-#            default_params[group_varname(seg_group.id) + ".L"] = None
+        for seg_group in morphml_model.groups:
+            # None, defers to the value loaded in the MorphML file but allows them to be overwritten
+            default_params[group_varname(seg_group.id) + ".diam"] = -1.0
+            default_params[group_varname(seg_group.id) + ".L"] = -1.0
         return default_params
 
     @classmethod
@@ -408,12 +407,25 @@ class BaseNCMLMetaClass(type):
 #        return parameter_names
 
     @classmethod
-    def _construct_synapse_types(cls):
+    def _construct_receptor_types(cls):
         """
         Constructs the dictionary of recordable parameters from the NCML model
         """
         ncml_model = cls.dct['ncml_model']
-        return [syn.id for syn in ncml_model.synapses]
+        morphml_model = cls.dct['morphml_model']
+        receptors = []
+        for rec in ncml_model.synapses:
+            if rec.group_id is None:
+                members = [seg.id for seg in morphml_model.segments]
+            else:
+                group = [group for group in morphml_model.groups if group.id == rec.group_id]
+                if len(group) != 1:
+                    raise Exception("Error parsing xml ({} groups found matching id '{}')"
+                                    .format(len(group), rec.group_id))
+                members = group[0].members
+            for seg in members:
+                receptors.append(seg + '_seg.' + rec.id)
+        return receptors
 
     @classmethod
     def _construct_recordable(cls):

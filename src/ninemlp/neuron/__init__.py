@@ -85,12 +85,12 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
         param_scope.append(param)
         pyNN.neuron.Population.rset(self, '.'.join(param_scope), rand_distr)
 
-#    def initialize(self, variable, rand_distr, component=None, seg_group=None):
-#        variable_scope = [group_varname(seg_group)]
-#        if component:
-#            variable_scope.append(component)
-#        variable_scope.append(variable)
-#        pyNN.neuron.Population.initialize(self, '.'.join(variable_scope), rand_distr)
+    def initialize_variable(self, variable, rand_distr, component=None, seg_group=None):
+        variable_scope = [group_varname(seg_group)]
+        if component:
+            variable_scope.append(component)
+        variable_scope.append(variable)
+        pyNN.neuron.Population.initialize(self, **{'.'.join(variable_scope): rand_distr})
 
     def can_record(self, variable):
         """
@@ -120,15 +120,15 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
 
 class Projection(pyNN.neuron.Projection):
 
-    def __init__(self, pre, dest, label, connector, source=None, target=None,
+    def __init__(self, pre, dest, label, connector, synapse_type, source=None, target=None,
                  build_mode=DEFAULT_BUILD_MODE, rng=None):
         self.label = label
         if build_mode == 'build_only' or build_mode == 'compile_only':
             print "Warning! '--build' option was set to 'build_only', meaning the projection " \
                   "'{}' was not constructed.".format(label)
         else:
-            pyNN.neuron.Projection.__init__(self, pre, dest, connector, label=label, source=source,
-                                            target=target, rng=rng)
+            pyNN.neuron.Projection.__init__(self, pre, dest, connector, synapse_type, 
+                                            label=label, source=source, receptor_type=target) #, rng=rng)
 
 
 
