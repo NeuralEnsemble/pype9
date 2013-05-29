@@ -515,7 +515,7 @@ class Network(object):
         elif hasattr(param, 'pattern'):
             if param.pattern == "Constant":
                 param_expr = self._convert_units(param.args['value'])
-            elif param.pattern == 'DistanceBased':
+            elif param.pattern == 'DisplacementBased':
                 expr_name = param.args.pop('geometry')
                 GeometricExpression = getattr(point2point, expr_name)
                 try:
@@ -552,7 +552,7 @@ class Network(object):
         if connection.pattern != "OneToOne":
             other_connector_args['allow_self_connections'] = allow_self_connections
         # Create the "Connector" class to connect up the projection
-        if connection.pattern == 'DistanceBased':
+        if connection.pattern == 'DisplacementBased':
             expression = connection.args.pop('geometry')
             if not hasattr(point2point, expression):
                 raise Exception("Unrecognised distance expression '{}'".format(expression))
@@ -563,7 +563,7 @@ class Network(object):
                 raise Exception("Could not initialise distance expression class '{}' from given " 
                                 "arguments '{}' for projection '{}'\n('{}')"
                                 .format(expression, connection.args, label, e))
-            connector = self._pyNN_module.connectors.DistanceDependentProbabilityConnector(
+            connector = self._pyNN_module.connectors.DisplacementDependentProbabilityConnector(
                                     connect_expr, **other_connector_args)
         elif connection.pattern == 'MorphologyBased':
             kernel_name = connection.args.pop('kernel')
