@@ -519,8 +519,9 @@ class Network(object):
                 expr_name = param.args.pop('geometry')
                 GeometricExpression = getattr(point2point, expr_name)
                 try:
-                    param_expr = GeometricExpression(min_value=min_value,
-                                                     **self._convert_all_units(param.args))
+                    param_expr = pyNN.connectors.DisplacementDependentProbabilityConnector.\
+                                        IndexFunction(GeometricExpression(min_value=min_value,
+                                                     **self._convert_all_units(param.args)))
                 except TypeError as e:
                     raise Exception("Could not initialise distance expression class '{}' from "
                                     "given arguments '{}' for projection '{}'\n('{}')"
