@@ -168,7 +168,7 @@ class CylinderMask(MaskBased):
         self.axis /= norm
 
     def __call__(self, d):
-        mask = np.sqrt(np.sum(np.square(np.cross(self.axis, d, axis=0), axis=0))) < self.radius
+        mask = np.sqrt(np.sum(np.square(np.cross(self.axis, d, axis=0)), axis=0)) < self.radius
         return self._probs_from_mask(mask)
 
     @classmethod
