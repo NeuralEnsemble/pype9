@@ -23,7 +23,6 @@ import warnings
 import math
 # Specific imports
 import pyNN.connectors
-import ninemlp.connectors
 import pyNN.space
 from pyNN.random import RandomDistribution, NumpyRNG
 from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
@@ -752,12 +751,15 @@ class Network(object):
         for pop in self.all_populations():
             pop.save_positions(os.path.join(output_dir, pop.label) + '.pop')
 
-    def record_spikes(self):
+    def record_spikes(self, file_prefix):
         """
         Record all spikes generated in the network (to be saved to file with Network.print_spikes)
         """
+        if (not os.path.isdir(file_prefix) and not file_prefix.endswith('.')
+                and not file_prefix.endswith(os.path.sep)):
+            file_prefix += '.'
         for pop in self.all_populations():
-            pop.record() #@UndefinedVariable                
+            pop.record('spikes', file_prefix + pop.label + '.spikes.pkl') #@UndefinedVariable                
 
     def print_spikes(self, file_prefix):
         """
