@@ -519,8 +519,8 @@ class Network(object):
                 GeometricExpression = getattr(point2point, expr_name)
                 try:
                     param_expr = pyNN.connectors.DisplacementDependentProbabilityConnector.\
-                                        IndexFunction(GeometricExpression(min_value=min_value,
-                                                     **self._convert_all_units(param.args)))
+                                     DisplacementExpression(GeometricExpression(min_value=min_value,
+                                     **self._convert_all_units(param.args)))
                 except TypeError as e:
                     raise Exception("Could not initialise distance expression class '{}' from "
                                     "given arguments '{}' for projection '{}'\n('{}')"
@@ -751,15 +751,12 @@ class Network(object):
         for pop in self.all_populations():
             pop.save_positions(os.path.join(output_dir, pop.label) + '.pop')
 
-    def record_spikes(self, file_prefix):
+    def record_spikes(self):
         """
         Record all spikes generated in the network (to be saved to file with Network.print_spikes)
         """
-        if (not os.path.isdir(file_prefix) and not file_prefix.endswith('.')
-                and not file_prefix.endswith(os.path.sep)):
-            file_prefix += '.'
         for pop in self.all_populations():
-            pop.record('spikes', file_prefix + pop.label + '.spikes.pkl') #@UndefinedVariable                
+            pop.record() #@UndefinedVariable                
 
     def print_spikes(self, file_prefix):
         """
@@ -774,7 +771,7 @@ class Network(object):
                 and not file_prefix.endswith(os.path.sep)):
             file_prefix += '.'
         for pop in self.all_populations():
-            pop.printSpikes(file_prefix + pop.label + '.spikes') #@UndefinedVariable                
+            pop.write_data(file_prefix + pop.label + '.spikes', 'spikes') #@UndefinedVariable                
 
 
 class Population(object):
