@@ -756,7 +756,7 @@ class Network(object):
         Record all spikes generated in the network (to be saved to file with Network.print_spikes)
         """
         for pop in self.all_populations():
-            pop.record() #@UndefinedVariable                
+            pop.record('spikes') #@UndefinedVariable                
 
     def print_spikes(self, file_prefix):
         """
