@@ -398,7 +398,7 @@ class Network(ninemlp.common.Network):
 
     def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None,
                                  max_delay=None, temperature=None, silent_build=False, flags=[],
-                                 solver_name=None):
+                                 solver_name=None, rng=None):
         self._pyNN_module = pyNN.neuron
         self._ncml_module = ncml
         self._Population_class = Population
@@ -408,7 +408,8 @@ class Network(ninemlp.common.Network):
         #Call the base function initialisation function.
         ninemlp.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep,
                                         min_delay=min_delay, max_delay=max_delay,
-                                    temperature=temperature, silent_build=silent_build, flags=flags)
+                                    temperature=temperature, silent_build=silent_build, flags=flags,
+                                    rng=rng)
 
     def _convert_units(self, value_str, units=None):
         if ' ' in value_str:
