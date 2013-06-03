@@ -426,11 +426,11 @@ class Network(object):
                         raise Exception("Unrecognised pattern '{}' for 'Distributed population "
                                         "structure type".format(somas.pattern))
                     for distr in somas.distributions:
-#                        try:
-                        structure.apply_distribution(distr.attr, distr.type, distr.args)
-#                        except AttributeError:
-#                            raise Exception("Chosen structure type '{}' does not permit "
-#                                            "distributions".format(somas.pattern))
+                        try:
+                            structure.apply_distribution(distr.attr, distr.type, distr.args, rng=self._rng)
+                        except AttributeError:
+                            raise Exception("Chosen structure type '{}' does not permit "
+                                            "distributions".format(somas.pattern))
                 else:
                     raise Exception("Layout tags are required for structure of type "
                                     "'Distributed'") 
