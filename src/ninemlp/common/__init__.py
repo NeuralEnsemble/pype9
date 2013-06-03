@@ -771,7 +771,7 @@ class Network(object):
                 and not file_prefix.endswith(os.path.sep)):
             file_prefix += '.'
         for pop in self.all_populations():
-            pop.write_data(file_prefix + pop.label + '.spikes', 'spikes') #@UndefinedVariable                
+            pop.write_data(file_prefix + pop.label + '.spikes.pkl', 'spikes') #@UndefinedVariable                
 
 
 class Population(object):
@@ -801,7 +801,7 @@ class Population(object):
                                 "in {} population".format(variable, self.id))
             # Create random distribution object
             rand_distr = RandomDistribution(distribution=distr_type, parameters=args, rng=rng)
-            self.initialize(variable, rand_distr, component=component, seg_group=seg_group)
+            self.initialize_variable(variable, rand_distr, component=component, seg_group=seg_group)
             # Add variable to list of completed variable distributions to check for duplicates
             distributed_conditions.append(variable)
 
