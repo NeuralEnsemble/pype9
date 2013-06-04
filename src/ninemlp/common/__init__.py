@@ -537,14 +537,7 @@ class Network(object):
                            synapse_family, verbose, allow_self_connections=False):
         # Set expressions for connection weights and delays
         weight_expr = self._get_connection_param_expr(label, weight)
-        if synapse_family == 'Electrical':
-            # Delay is not required by Gap junctions so just set to something innocuous here
-            delay_expr = 1.0
-            if allow_self_connections:
-                print ("Warning! 'allow_self_connections' argument was overidden for Electrial "
-                       "projection, which requires it to be set to 'NoMutual'.")
-            allow_self_connections = 'NoMutual'
-        else:
+        if synapse_family != 'Electrical':
             delay_expr = self._get_connection_param_expr(label, delay,
                                                          min_value=self.get_min_delay())
         # Set up other required connector args
@@ -631,40 +624,35 @@ class Network(object):
         else:
             raise Exception("Unrecognised pattern type '{}'".format(connection.pattern))
         # Initialise the rest of the projection object and return
-        synapse = self._pyNN_module.StaticSynapse(weight=weight_expr, delay=delay_expr)
         with warnings.catch_warnings(record=True) as warnings_list:
             warnings.simplefilter("always", category=point2point.InsufficientTargetsWarning)
             if synapse_family == 'Chemical':
-                projection = self._Projection_class(pre, dest, label, connector, synapse,
-                                                    source=source.terminal,
-                                                    target=self._get_target_str(target.synapse,
-                                                                                target.segment),
-                                                    build_mode=self.build_mode,
-                                                    rng=self._rng)
-            elif synapse_family == 'Electrical':
-                if not self._GapJunctionProjection_class:
-                    raise Exception("The selected simulator doesn't currently support electrical "
-                                    "synapse projections")
-                projection = self._GapJunctionProjection_class(pre, dest, label, connector,
-                                                               source_secname=source.segment + '_seg',
-                                                               target_secname=target.segment + '_seg',
-                                                               rng=self._rng)
+                synapse = self._pyNN_module.StaticSynapse(weight=weight_expr, delay=delay_expr)
+                source_terminal = source.terminal
+                receptor_type = self._get_target_str(target.synapse, target.segment)
+            elif synapse_family == 'Electrical':    
+                synapse = self._pyNN_module.ElectricalSynapse(weight=weight_expr)
+                source_terminal = source.segment + '_seg'
+                receptor_type = target.segment + '_seg.gap'
             else:
                 raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
+            projection = self._Projection_class(pre, dest, label, connector, synapse_type=synapse,
+                                                source=source_terminal, target=receptor_type,
+                                                build_mode=self.build_mode, rng=self._rng)
             # Collate raised "InsufficientTargets" warnings into a single warning message for better
             # readibility.
-            insufficient_targets_str = ""
-            if warnings_list:
-                for w in warnings_list:
-                    if w.category == point2point.InsufficientTargetsWarning:
-                        req_number, mask_size = re.findall("\([^\)]*\)", str(w.message))
-                        insufficient_targets_str += " {},".format(mask_size[2:-1])
-        if insufficient_targets_str:
-            print ("Could not satisfy all connection targets in projection '{}' " 
-                  "because the requested number of connections, {}, exceeded the size of " 
-                  "the generated masks of sizes:{}. The number of connections was reset to the " 
-                  "size of the respective masks in these cases.\n"
-                  .format(label, req_number[2:-1], insufficient_targets_str[:-1]))
+#            insufficient_targets_str = ""
+#            if warnings_list:
+#                for w in warnings_list:
+#                    if w.category == point2point.InsufficientTargetsWarning:
+#                        req_number, mask_size = re.findall("\([^\)]*\)", str(w.message))
+#                        insufficient_targets_str += " {},".format(mask_size[2:-1])
+#        if insufficient_targets_str:
+#            print ("Could not satisfy all connection targets in projection '{}' " 
+#                  "because the requested number of connections, {}, exceeded the size of " 
+#                  "the generated masks of sizes:{}. The number of connections was reset to the " 
+#                  "size of the respective masks in these cases.\n"
+#                  .format(label, req_number[2:-1], insufficient_targets_str[:-1]))
         return projection
 
     def _get_simulation_params(self, **params):

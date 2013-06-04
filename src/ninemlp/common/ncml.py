@@ -425,6 +425,9 @@ class BaseNCMLMetaClass(type):
                 members = group[0].members
             for seg in members:
                 receptors.append(seg + '_seg.' + rec.id)
+        # Append all segments as potential gap junctions 
+        for seg in morphml_model.segments:
+            receptors.append(seg.id + '_seg.gap')
         return receptors
 
     @classmethod
