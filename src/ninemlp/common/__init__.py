@@ -620,7 +620,8 @@ class Network(object):
         elif connection.pattern + 'Connector' in dir(pyNN.connectors):
             ConnectorClass = getattr(self._pyNN_module.connectors,
                                      '{}Connector'.format(connection.pattern))
-            connector = ConnectorClass(**other_connector_args)
+            connection.args.update(other_connector_args)
+            connector = ConnectorClass(**connection.args)
         else:
             raise Exception("Unrecognised pattern type '{}'".format(connection.pattern))
         # Initialise the rest of the projection object and return
