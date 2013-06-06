@@ -808,7 +808,7 @@ class Population(object):
                             "populations.")
         # If rate is set to zero do nothing
         if rate:
-            mean_interval = 1000 / rate # Convert from Hz to ms
+            mean_interval = 1 / rate
             stim_range = end_time - start_time
             if stim_range >= 0.0:
                 estimated_num_spikes = stim_range / mean_interval
