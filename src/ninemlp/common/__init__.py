@@ -24,6 +24,7 @@ import math
 # Specific imports
 import pyNN.connectors
 import pyNN.space
+import pyNN.parameters
 from pyNN.random import RandomDistribution, NumpyRNG
 from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
 import ninemlp.connectivity.point2point as point2point
@@ -819,7 +820,7 @@ class Population(object):
                                                            size=(self.size, estimated_num_spikes))
                 spike_times = numpy.cumsum(spike_intervals, axis=1) + start_time
                 # FIXME: Should ensure that spike times don't exceed 'end_time' and make it at least until then.
-                self.tset('spike_times', spike_times)
+                self.set(spike_times=[pyNN.parameters.Sequence(train) for train in spike_times])
             else:
                 print ("Warning, stimulation start time ({}) is after stimulation end time ({})"
                       .format(start_time, end_time))
