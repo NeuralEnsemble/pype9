@@ -741,12 +741,16 @@ class Network(object):
         for pop in self.all_populations():
             pop.save_positions(os.path.join(output_dir, pop.label) + '.pop')
 
-    def record_spikes(self):
+    def record_spikes(self, file_prefix=None):
         """
         Record all spikes generated in the network (to be saved to file with Network.print_spikes)
         """
         for pop in self.all_populations():
-            pop.record('spikes') #@UndefinedVariable                
+            if file_prefix:
+                filename = file_prefix + pop.label + '.spikes.pkl'
+            else:
+                filename = None
+            pop.record('spikes', to_file=filename) #@UndefinedVariable                
 
     def print_spikes(self, file_prefix):
         """
