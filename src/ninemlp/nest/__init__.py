@@ -63,7 +63,7 @@ class Population(ninemlp.common.Population, pyNN.nest.Population):
         pyNN.nest.Population.rset(self, self._translate_param_name(param, component, seg_group),
                                   rand_distr)
 
-    def initialize(self, param, rand_distr, component=None, seg_group=None):
+    def initialize_variable(self, param, rand_distr, component=None, seg_group=None):
         pyNN.nest.Population.initialize(self, self._translate_param_name(param, component, seg_group),
                                         rand_distr)
 

@@ -29,7 +29,7 @@ class NCMLCell(BaseNCMLCell, pyNN.nest.NativeCellType):
 
     def __init__(self, **parameters):
         BaseNCMLCell.__init__(self)
-        pyNN.nest.NativeCellType.__init__(self, parameters)
+        pyNN.nest.NativeCellType.__init__(self, **parameters)
 
     def memb_init(self):
         # Initialisation of member states goes here
@@ -48,6 +48,7 @@ class NCMLMetaClass(BaseNCMLMetaClass):
         def modelclass__init__(self, **parameters):
             cellclass__init__(self, parameters)
         dct['__init__'] = cellclass__init__
+        dct['nest_name'] = {"on_grid": name, "off_grid": name}
         cell_type = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
         dct['__init__'] = modelclass__init__
         cell_type.model = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
