@@ -741,16 +741,12 @@ class Network(object):
         for pop in self.all_populations():
             pop.save_positions(os.path.join(output_dir, pop.label) + '.pop')
 
-    def record_spikes(self, file_prefix=None):
+    def record_spikes(self):
         """
         Record all spikes generated in the network (to be saved to file with Network.print_spikes)
         """
         for pop in self.all_populations():
-            if file_prefix:
-                filename = file_prefix + pop.label + '.spikes.pkl'
-            else:
-                filename = None
-            pop.record('spikes', to_file=filename) #@UndefinedVariable                
+            pop.record('spikes') #@UndefinedVariable           
 
     def print_spikes(self, file_prefix):
         """
@@ -766,6 +762,21 @@ class Network(object):
             file_prefix += '.'
         for pop in self.all_populations():
             pop.write_data(file_prefix + pop.label + '.spikes.pkl', 'spikes') #@UndefinedVariable                
+
+    def write_data(self, file_prefix):
+        """
+        Record all spikes generated in the network
+        
+        @param filename: The prefix for every population files before the popluation name. The \
+                         suffix '.spikes' will be appended to the filenames as well.
+        """
+        # Add a dot to separate the prefix from the population label if it doesn't already have one
+        # and isn't a directory
+        if (not os.path.isdir(file_prefix) and not file_prefix.endswith('.')
+                and not file_prefix.endswith(os.path.sep)):
+            file_prefix += '.'
+        for pop in self.all_populations():
+            pop.write_data(file_prefix + pop.label + '.pkl') #@UndefinedVariable
 
 
 class Population(object):
