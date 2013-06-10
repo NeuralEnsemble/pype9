@@ -186,8 +186,8 @@ class NCMLHandler(XMLHandler):
     IonicCurrent = collections.namedtuple('IonicCurrent', 'id group_id params')
     IonicCurrentParam = collections.namedtuple('IonicCurrentParam', 'name value')
     PassiveCurrent = collections.namedtuple('PassiveCurrent', 'group_id cond_density')
-    Synapse = collections.namedtuple('Synapse', 'id type group_id params')
-    SynapseParam = collections.namedtuple('SynapseParam', 'name value')
+    Synapse = collections.namedtuple('Synapse', 'id group_id')
+#    SynapseParam = collections.namedtuple('SynapseParam', 'name value')
     SpecificCapacitance = collections.namedtuple('SpecificCapacitance', 'value group_id')
     ReversePotential = collections.namedtuple('NCMLReversePotential', 'species value group_id')
     ActionPotentialThreshold = collections.namedtuple('ActionPotentialThreshold', 'v')
@@ -235,6 +235,9 @@ class NCMLHandler(XMLHandler):
             self.ncml.mechanisms.append(self.IonicCurrent(attrs['name'],
                                                    attrs.get('segmentGroup', None),
                                                    []))
+        elif self._opening(tag_name, attrs, 'ncml:conductanceSynapse', parents=['membraneProperties']):
+            self.ncml.synapses.append(self.Synapse(attrs['id'],
+                                                   attrs.get('segmentGroup', None)))            
         # -- This tag is deprecated as it is replaced by output python properties file from nemo --#
         elif self._opening(tag_name, attrs, 'parameter', parents=['ionicCurrent']):
             self.ncml.mechanisms[-1].params.append(self.IonicCurrentParam(attrs['name'],
@@ -244,13 +247,13 @@ class NCMLHandler(XMLHandler):
             # If no 'segmentGroup' is provided, default to None
             self.ncml.passive_currents.append(self.PassiveCurrent(attrs.get('segmentGroup', None),
                                                                   attrs['condDensity']))
-        elif self._opening(tag_name, attrs, 'conductanceSynapse', parents=['synapses']):
-            self.ncml.synapses.append(self.Synapse(attrs['id'],
-                                              attrs['type'],
-                                              attrs.get('segmentGroup', None),
-                                                  []))
-        elif self._opening(tag_name, attrs, 'parameter', parents=['conductanceSynapse']):
-            self.ncml.synapses[-1].params.append(self.SynapseParam(attrs['name'], float(attrs['value'])))
+#        elif self._opening(tag_name, attrs, 'conductanceSynapse', parents=['synapses']):
+#            self.ncml.synapses.append(self.Synapse(attrs['id'],
+#                                              attrs['type'],
+#                                              attrs.get('segmentGroup', None),
+#                                                  []))
+#        elif self._opening(tag_name, attrs, 'parameter', parents=['conductanceSynapse']):
+#            self.ncml.synapses[-1].params.append(self.SynapseParam(attrs['name'], float(attrs['value'])))
         elif self._opening(tag_name, attrs, 'specificCapacitance', parents=['membraneProperties']):
             self.ncml.capacitances.append(self.SpecificCapacitance(float(attrs['value']),
                                                                    attrs.get('segmentGroup', None)))
@@ -369,10 +372,6 @@ class BaseNCMLMetaClass(type):
                 for param in mech.params:
                     default_params[group_varname(mech.group_id) + "." + mech.id + "." +
                                    param.name] = param.value
-        for syn in ncml_model.synapses:
-            for param in syn.params:
-                default_params[group_varname(syn.group_id) + "." + syn.id + "." +
-                               param.name] = param.value
         # Add basic electrical property parameters
         for cm in ncml_model.capacitances:
             default_params[group_varname(cm.group_id) + "." + "cm"] = cm.value

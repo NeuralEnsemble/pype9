@@ -385,19 +385,26 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
             for seg in self.get_group(ra.group_id):
                 seg.Ra = ra.value
         for syn in self.ncml_model.synapses:
-            if syn.type in dir(h):
-                SynapseType = getattr(h, syn.type)
+            hoc_name = self.ncml_model.celltype_id + '_' + syn.id
+            if hoc_name in dir(h):
+                SynapseType = getattr(h, hoc_name)
             else:
-                try:
-                    SynapseType = type(syn.type) #FIXME: This needs to be verified
-                except:
-                    raise Exception ("Could not find synapse '{}' in loaded or built in synapses."\
-                                     .format(syn.id))
+                raise Exception("Did not find '{}' synapse type".format(hoc_name))
+#                try:
+#                    SynapseType = type(syn.type) #FIXME: This needs to be verified
+#                except:
+#                    raise Exception ("Could not find synapse '{}' in loaded or built in synapses."\
+#                                     .format(syn.id))
+#            if self.component_parameters.has_key(syn.id):
+#                param_translations = dict([(key, val[0]) for key, val in
+#                                           self.component_parameters[syn.id].iteritems()])
+#            else:
+#                param_translations = None
             for seg in self.get_group(syn.group_id):
                 receptor = SynapseType(0.5, sec=seg)
                 setattr(seg, syn.id, receptor)
-                for param in syn.params:
-                    setattr(receptor, param.name, param.value)
+#                for param in param_translations:
+#                    setattr(receptor, param.name, param.value)
 
     def memb_init(self):
         # Initialisation of member states goes here
