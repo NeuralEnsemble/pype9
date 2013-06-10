@@ -23,8 +23,8 @@ import warnings
 import math
 # Specific imports
 import pyNN.connectors
-import ninemlp.connectors
 import pyNN.space
+import pyNN.parameters
 from pyNN.random import RandomDistribution, NumpyRNG
 from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
 import ninemlp.connectivity.point2point as point2point
@@ -43,30 +43,30 @@ _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
 RANDOM_DISTR_PARAMS = {'uniform': ('low', 'high'),
                        'normal': ('mean', 'stddev')}
-
-class ValueWithUnits(object):
-
-    def __init__(self, value, units):
-        self.value = float(eval(value))
-        self.units = units
-
-    def neuron(self):
-        if self.units == None:
-            return self.value
-        elif self.units == 'ms':
-            return self.value
-        elif self.units == 'uF_per_cm2':
-            return self.value
-        elif self.units == 'mV':
-            return self.value
-        elif self.units == 'ohm_cm':
-            return self.value
-        elif self.units == 'S_per_m2':
-            return self.value
-        else:
-            raise Exception("Unrecognised units '{}' (A conversion from these units "
-                            "to the standard NEURON units needs to be added to "
-                            "'ninemlp.common.ncml.neuron_value' function).".format(self.units))
+#
+#class ValueWithUnits(object):
+#
+#    def __init__(self, value, units):
+#        self.value = float(eval(value))
+#        self.units = units
+#
+#    def neuron(self):
+#        if self.units == None:
+#            return self.value
+#        elif self.units == 'ms':
+#            return self.value
+#        elif self.units == 'uF_per_cm2':
+#            return self.value
+#        elif self.units == 'mV':
+#            return self.value
+#        elif self.units == 'ohm_cm':
+#            return self.value
+#        elif self.units == 'S_per_m2':
+#            return self.value
+#        else:
+#            raise Exception("Unrecognised units '{}' (A conversion from these units "
+#                            "to the standard NEURON units needs to be added to "
+#                            "'ninemlp.common.ncml.neuron_value' function).".format(self.units))
 
 
 class NetworkMLHandler(XMLHandler):
@@ -515,12 +515,13 @@ class Network(object):
         elif hasattr(param, 'pattern'):
             if param.pattern == "Constant":
                 param_expr = self._convert_units(param.args['value'])
-            elif param.pattern == 'DistanceBased':
+            elif param.pattern == 'DisplacementBased':
                 expr_name = param.args.pop('geometry')
                 GeometricExpression = getattr(point2point, expr_name)
                 try:
-                    param_expr = GeometricExpression(min_value=min_value,
-                                                     **self._convert_all_units(param.args))
+                    param_expr = pyNN.connectors.DisplacementDependentProbabilityConnector.\
+                                     DisplacementExpression(GeometricExpression(min_value=min_value,
+                                     **self._convert_all_units(param.args)))
                 except TypeError as e:
                     raise Exception("Could not initialise distance expression class '{}' from "
                                     "given arguments '{}' for projection '{}'\n('{}')"
@@ -537,14 +538,7 @@ class Network(object):
                            synapse_family, verbose, allow_self_connections=False):
         # Set expressions for connection weights and delays
         weight_expr = self._get_connection_param_expr(label, weight)
-        if synapse_family == 'Electrical':
-            # Delay is not required by Gap junctions so just set to something innocuous here
-            delay_expr = 1.0
-            if allow_self_connections:
-                print ("Warning! 'allow_self_connections' argument was overidden for Electrial "
-                       "projection, which requires it to be set to 'NoMutual'.")
-            allow_self_connections = 'NoMutual'
-        else:
+        if synapse_family != 'Electrical':
             delay_expr = self._get_connection_param_expr(label, delay,
                                                          min_value=self.get_min_delay())
         # Set up other required connector args
@@ -552,7 +546,7 @@ class Network(object):
         if connection.pattern != "OneToOne":
             other_connector_args['allow_self_connections'] = allow_self_connections
         # Create the "Connector" class to connect up the projection
-        if connection.pattern == 'DistanceBased':
+        if connection.pattern == 'DisplacementBased':
             expression = connection.args.pop('geometry')
             if not hasattr(point2point, expression):
                 raise Exception("Unrecognised distance expression '{}'".format(expression))
@@ -563,9 +557,8 @@ class Network(object):
                 raise Exception("Could not initialise distance expression class '{}' from given " 
                                 "arguments '{}' for projection '{}'\n('{}')"
                                 .format(expression, connection.args, label, e))
-            connector = self._pyNN_module.connectors.DistanceDependentProbabilityConnector(
-                                    connect_expr, weights=weight_expr, delays=delay_expr,
-                                    **other_connector_args)
+            connector = self._pyNN_module.connectors.DisplacementDependentProbabilityConnector(
+                                    connect_expr, **other_connector_args)
         elif connection.pattern == 'MorphologyBased':
             kernel_name = connection.args.pop('kernel')
             if not hasattr(morphology, kernel_name + 'Kernel'):
@@ -578,8 +571,7 @@ class Network(object):
                                 "arguments '{}' for projection '{}'\n('{}')"
                                 .format(kernel_name, connection.args, label, e))
             connector = morphology.MorphologyBasedProbabilityConnector(
-                                kernel, weights=weight_expr, delays=delay_expr,
-                                **other_connector_args)
+                                kernel, **other_connector_args)
         # If connection pattern is external, load the weights and delays from a file in PyNN
         # FromFileConnector format and then create a FromListConnector connector. Some additional
         # preprocessing is performed here, which is why the FromFileConnector isn't used directly.
@@ -625,49 +617,44 @@ class Network(object):
                 else:
                     raise Exception("Projection '{}' attempted to clone connectivity patterns from "
                                     "'{}', which was not found.".format(label, orig_proj_id))
-            connector = ninemlp.connectors.CloneConnector(orig_proj, weights=weight_expr, 
-                                                          delays=delay_expr, **other_connector_args)
+            connector = self._pyNN_module.connectors.CloneConnector(orig_proj, **other_connector_args)
         elif connection.pattern + 'Connector' in dir(pyNN.connectors):
             ConnectorClass = getattr(self._pyNN_module.connectors,
                                      '{}Connector'.format(connection.pattern))
-            connector = ConnectorClass(weights=weight_expr, delays=delay_expr,
-                                       **other_connector_args)
+            connection.args.update(other_connector_args)
+            connector = ConnectorClass(**connection.args)
         else:
             raise Exception("Unrecognised pattern type '{}'".format(connection.pattern))
         # Initialise the rest of the projection object and return
         with warnings.catch_warnings(record=True) as warnings_list:
             warnings.simplefilter("always", category=point2point.InsufficientTargetsWarning)
             if synapse_family == 'Chemical':
-                projection = self._Projection_class(pre, dest, label, connector,
-                                                    source=source.terminal,
-                                                    target=self._get_target_str(target.synapse,
-                                                                                target.segment),
-                                                    build_mode=self.build_mode,
-                                                    rng=self._rng)
-            elif synapse_family == 'Electrical':
-                if not self._GapJunctionProjection_class:
-                    raise Exception("The selected simulator doesn't currently support electrical "
-                                    "synapse projections")
-                projection = self._GapJunctionProjection_class(pre, dest, label, connector,
-                                                               source_secname=source.segment + '_seg',
-                                                               target_secname=target.segment + '_seg',
-                                                               rng=self._rng)
+                synapse = self._pyNN_module.StaticSynapse(weight=weight_expr, delay=delay_expr)
+                source_terminal = source.terminal
+                receptor_type = self._get_target_str(target.synapse, target.segment)
+            elif synapse_family == 'Electrical':    
+                synapse = self._pyNN_module.ElectricalSynapse(weight=weight_expr)
+                source_terminal = source.segment + '_seg'
+                receptor_type = target.segment + '_seg.gap'
             else:
                 raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
+            projection = self._Projection_class(pre, dest, label, connector, synapse_type=synapse,
+                                                source=source_terminal, target=receptor_type,
+                                                build_mode=self.build_mode, rng=self._rng)
             # Collate raised "InsufficientTargets" warnings into a single warning message for better
             # readibility.
-            insufficient_targets_str = ""
-            if warnings_list:
-                for w in warnings_list:
-                    if w.category == point2point.InsufficientTargetsWarning:
-                        req_number, mask_size = re.findall("\([^\)]*\)", str(w.message))
-                        insufficient_targets_str += " {},".format(mask_size[2:-1])
-        if insufficient_targets_str:
-            print ("Could not satisfy all connection targets in projection '{}' " 
-                  "because the requested number of connections, {}, exceeded the size of " 
-                  "the generated masks of sizes:{}. The number of connections was reset to the " 
-                  "size of the respective masks in these cases.\n"
-                  .format(label, req_number[2:-1], insufficient_targets_str[:-1]))
+#            insufficient_targets_str = ""
+#            if warnings_list:
+#                for w in warnings_list:
+#                    if w.category == point2point.InsufficientTargetsWarning:
+#                        req_number, mask_size = re.findall("\([^\)]*\)", str(w.message))
+#                        insufficient_targets_str += " {},".format(mask_size[2:-1])
+#        if insufficient_targets_str:
+#            print ("Could not satisfy all connection targets in projection '{}' " 
+#                  "because the requested number of connections, {}, exceeded the size of " 
+#                  "the generated masks of sizes:{}. The number of connections was reset to the " 
+#                  "size of the respective masks in these cases.\n"
+#                  .format(label, req_number[2:-1], insufficient_targets_str[:-1]))
         return projection
 
     def _get_simulation_params(self, **params):
@@ -759,7 +746,7 @@ class Network(object):
         Record all spikes generated in the network (to be saved to file with Network.print_spikes)
         """
         for pop in self.all_populations():
-            pop.record() #@UndefinedVariable                
+            pop.record('spikes') #@UndefinedVariable           
 
     def print_spikes(self, file_prefix):
         """
@@ -774,7 +761,22 @@ class Network(object):
                 and not file_prefix.endswith(os.path.sep)):
             file_prefix += '.'
         for pop in self.all_populations():
-            pop.printSpikes(file_prefix + pop.label + '.spikes') #@UndefinedVariable                
+            pop.write_data(file_prefix + pop.label + '.spikes.pkl', 'spikes') #@UndefinedVariable                
+
+    def write_data(self, file_prefix):
+        """
+        Record all spikes generated in the network
+        
+        @param filename: The prefix for every population files before the popluation name. The \
+                         suffix '.spikes' will be appended to the filenames as well.
+        """
+        # Add a dot to separate the prefix from the population label if it doesn't already have one
+        # and isn't a directory
+        if (not os.path.isdir(file_prefix) and not file_prefix.endswith('.')
+                and not file_prefix.endswith(os.path.sep)):
+            file_prefix += '.'
+        for pop in self.all_populations():
+            pop.write_data(file_prefix + pop.label + '.pkl') #@UndefinedVariable
 
 
 class Population(object):
@@ -804,7 +806,7 @@ class Population(object):
                                 "in {} population".format(variable, self.id))
             # Create random distribution object
             rand_distr = RandomDistribution(distribution=distr_type, parameters=args, rng=rng)
-            self.initialize(variable, rand_distr, component=component, seg_group=seg_group)
+            self.initialize_variable(variable, rand_distr, component=component, seg_group=seg_group)
             # Add variable to list of completed variable distributions to check for duplicates
             distributed_conditions.append(variable)
 
@@ -822,7 +824,7 @@ class Population(object):
                             "populations.")
         # If rate is set to zero do nothing
         if rate:
-            mean_interval = 1000 / rate # Convert from Hz to ms
+            mean_interval = 1000.0 / rate
             stim_range = end_time - start_time
             if stim_range >= 0.0:
                 estimated_num_spikes = stim_range / mean_interval
@@ -833,7 +835,7 @@ class Population(object):
                                                            size=(self.size, estimated_num_spikes))
                 spike_times = numpy.cumsum(spike_intervals, axis=1) + start_time
                 # FIXME: Should ensure that spike times don't exceed 'end_time' and make it at least until then.
-                self.tset('spike_times', spike_times)
+                self.set(spike_times=[pyNN.parameters.Sequence(train) for train in spike_times])
             else:
                 print ("Warning, stimulation start time ({}) is after stimulation end time ({})"
                       .format(start_time, end_time))

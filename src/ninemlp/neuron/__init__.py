@@ -18,8 +18,8 @@ from collections import namedtuple
 import numpy
 from ninemlp import SRC_PATH, DEFAULT_BUILD_MODE, pyNN_build_mode
 from ninemlp.neuron.build import compile_nmodl
-compile_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN_build_mode,
-              silent=True)
+#compile_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN_build_mode,
+#              silent=True)
 import ninemlp.common
 from ninemlp.neuron.ncml import NCMLCell, group_varname, seg_varname
 import pyNN.common
@@ -30,7 +30,7 @@ import pyNN.neuron.recording
 import ncml
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, record, record_v, record_gsyn, \
-                        StepCurrentSource, DCSource, errors, NoisyCurrentSource
+                        StepCurrentSource, DCSource, NoisyCurrentSource
 #ACSource, 
 import pyNN.neuron as sim
 from pyNN.common.control import build_state_queries
@@ -67,9 +67,9 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
         else:
             # If cell_type is of NCML type append the population as a parent parameter for its 
             # constructor
-            if issubclass(cell_type, NCMLCell):
-                params = params.copy()
-                params['parent'] = self
+#            if issubclass(cell_type, NCMLCell):
+#                params = params.copy()
+##                params['parent'] = self
             pyNN.neuron.Population.__init__(self, size, cell_type, params, structure=None,
                                             label=label)
 
@@ -85,12 +85,12 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
         param_scope.append(param)
         pyNN.neuron.Population.rset(self, '.'.join(param_scope), rand_distr)
 
-    def initialize(self, variable, rand_distr, component=None, seg_group=None):
+    def initialize_variable(self, variable, rand_distr, component=None, seg_group=None):
         variable_scope = [group_varname(seg_group)]
         if component:
             variable_scope.append(component)
         variable_scope.append(variable)
-        pyNN.neuron.Population.initialize(self, '.'.join(variable_scope), rand_distr)
+        pyNN.neuron.Population.initialize(self, **{'.'.join(variable_scope): rand_distr})
 
     def can_record(self, variable):
         """
@@ -120,15 +120,15 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
 
 class Projection(pyNN.neuron.Projection):
 
-    def __init__(self, pre, dest, label, connector, source=None, target=None,
+    def __init__(self, pre, dest, label, connector, synapse_type, source=None, target=None,
                  build_mode=DEFAULT_BUILD_MODE, rng=None):
         self.label = label
         if build_mode == 'build_only' or build_mode == 'compile_only':
             print "Warning! '--build' option was set to 'build_only', meaning the projection " \
                   "'{}' was not constructed.".format(label)
         else:
-            pyNN.neuron.Projection.__init__(self, pre, dest, connector, label=label, source=source,
-                                            target=target, rng=rng)
+            pyNN.neuron.Projection.__init__(self, pre, dest, connector, synapse_type, 
+                                            label=label, source=source, receptor_type=target) #, rng=rng)
 
 
 
@@ -167,7 +167,7 @@ class GapJunctionProjection(Projection):
         if not isinstance(source, int) or source > simulator.state.gid_counter or source < 0:
             errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
                                                                      simulator.state.gid_counter)
-            raise errors.ConnectionError(errmsg)
+            raise pyNN.errors.ConnectionError(errmsg)
         if not pyNN.core.is_listlike(targets):
             targets = [targets]
         if isinstance(weights, float):
@@ -175,7 +175,7 @@ class GapJunctionProjection(Projection):
         assert len(targets) > 0
         for target in targets:
             if not isinstance(target, pyNN.common.IDMixin):
-                raise errors.ConnectionError("Invalid target ID: {}".format(target))
+                raise pyNN.errors.ConnectionError("Invalid target ID: {}".format(target))
         assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
         vargid_offset = self.pre.id_to_index(source) * len(self.post) * 2 + self.vargid_start
         for target, weight in zip(targets, weights):
@@ -220,7 +220,7 @@ class GapJunctionProjection(Projection):
         if not isinstance(source, int) or source > simulator.state.gid_counter or source < 0:
             errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
                                                                      simulator.state.gid_counter)
-            raise errors.ConnectionError(errmsg)
+            raise pyNN.errors.ConnectionError(errmsg)
         if not pyNN.core.is_listlike(targets):
             targets = [targets]
         if isinstance(weights, float):
@@ -228,7 +228,7 @@ class GapJunctionProjection(Projection):
         assert len(targets) > 0
         for target in targets:
             if not isinstance(target, pyNN.common.IDMixin):
-                raise errors.ConnectionError("Invalid target ID: {}".format(target))
+                raise pyNN.errors.ConnectionError("Invalid target ID: {}".format(target))
         assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
         # Get the section on the pre cell that the gap junction is connected to
         section = getattr(source._cell, self.source_secname)
@@ -311,7 +311,7 @@ class GapJunctionProjection(Projection):
 #        if not isinstance(source, int) or source > simulator.state.gid_counter or source < 0:
 #            errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
 #                                                                     simulator.state.gid_counter)
-#            raise errors.ConnectionError(errmsg)
+#            raise pyNN.errors.ConnectionError(errmsg)
 #        if not pyNN.core.is_listlike(targets):
 #            targets = [targets]
 #        if isinstance(weights, float):
@@ -319,7 +319,7 @@ class GapJunctionProjection(Projection):
 #        assert len(targets) > 0
 #        for target in targets:
 #            if not isinstance(target, pyNN.common.IDMixin):
-#                raise errors.ConnectionError("Invalid target ID: {}".format(target))
+#                raise pyNN.errors.ConnectionError("Invalid target ID: {}".format(target))
 #        assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
 #        # Rename variable that has been repurposed slightly        
 #        segname = self.synapse_type
@@ -359,7 +359,7 @@ class GapJunctionProjection(Projection):
 #        if not isinstance(source, int) or source > simulator.state.gid_counter or source < 0:
 #            errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
 #                                                                     simulator.state.gid_counter)
-#            raise errors.ConnectionError(errmsg)
+#            raise pyNN.errors.ConnectionError(errmsg)
 #        if not pyNN.core.is_listlike(targets):
 #            targets = [targets]
 #        if isinstance(weights, float):
@@ -367,7 +367,7 @@ class GapJunctionProjection(Projection):
 #        assert len(targets) > 0
 #        for target in targets:
 #            if not isinstance(target, pyNN.common.IDMixin):
-#                raise errors.ConnectionError("Invalid target ID: {}".format(target))
+#                raise pyNN.errors.ConnectionError("Invalid target ID: {}".format(target))
 #        assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
 #        # Get the segment on the pre cell that the gap junction is connected to
 #        segment = source._cell.segments[self.source] if self.source else source.source_section

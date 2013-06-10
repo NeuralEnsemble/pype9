@@ -19,7 +19,7 @@
 import xml.sax
 import collections
 from itertools import chain
-from ninemlp.common import XMLHandler, ValueWithUnits
+from ninemlp.common import XMLHandler
 
 DEFAULT_V_INIT = -65
 
@@ -238,36 +238,29 @@ class NCMLHandler(XMLHandler):
         # -- This tag is deprecated as it is replaced by output python properties file from nemo --#
         elif self._opening(tag_name, attrs, 'parameter', parents=['ionicCurrent']):
             self.ncml.mechanisms[-1].params.append(self.IonicCurrentParam(attrs['name'],
-                                                                    ValueWithUnits(attrs['value'],
-                                                                   attrs.get('units', None))))
+                                                                          float(attrs['value'])))
         #-- END --#
         elif self._opening(tag_name, attrs, 'passiveCurrent', parents=['membraneProperties']):
             # If no 'segmentGroup' is provided, default to None
             self.ncml.passive_currents.append(self.PassiveCurrent(attrs.get('segmentGroup', None),
-                                                              ValueWithUnits(attrs['condDensity'],
-                                                                     attrs.get('units', None))))
+                                                                  attrs['condDensity']))
         elif self._opening(tag_name, attrs, 'conductanceSynapse', parents=['synapses']):
             self.ncml.synapses.append(self.Synapse(attrs['id'],
                                               attrs['type'],
                                               attrs.get('segmentGroup', None),
                                                   []))
         elif self._opening(tag_name, attrs, 'parameter', parents=['conductanceSynapse']):
-            self.ncml.synapses[-1].params.append(self.SynapseParam(attrs['name'],
-                                                                   ValueWithUnits(attrs['value'],
-                                                                       attrs.get('units', None))))
+            self.ncml.synapses[-1].params.append(self.SynapseParam(attrs['name'], float(attrs['value'])))
         elif self._opening(tag_name, attrs, 'specificCapacitance', parents=['membraneProperties']):
-            self.ncml.capacitances.append(self.SpecificCapacitance(ValueWithUnits(attrs['value'],
-                                                                     attrs.get('units', None)),
-                                                              attrs.get('segmentGroup', None)))
+            self.ncml.capacitances.append(self.SpecificCapacitance(float(attrs['value']),
+                                                                   attrs.get('segmentGroup', None)))
         elif self._opening(tag_name, attrs, 'reversalPotential', parents=['membraneProperties']):
             self.ncml.reversal_potentials.append(self.ReversePotential(attrs['species'],
-                                                                  ValueWithUnits(attrs['value'],
-                                                                         attrs.get('units', None)),
-                                                              attrs.get('segmentGroup', None)))
+                                                                       float(attrs['value']),
+                                                                       attrs.get('segmentGroup', None)))
         elif self._opening(tag_name, attrs, 'resistivity', parents=['intracellularProperties']):
-            self.ncml.axial_resistances.append(self.AxialResistivity(ValueWithUnits(attrs['value'],
-                                                                        attrs.get('units', None)),
-                                                            attrs.get('segmentGroup', None)))
+            self.ncml.axial_resistances.append(self.AxialResistivity(float(attrs['value']),
+                                                                     attrs.get('segmentGroup', None)))
 
 
 def read_MorphML(celltype_id, filename, morph_id=None):
@@ -345,8 +338,7 @@ class BaseNCMLMetaClass(type):
         ncml_model = dct['ncml_model']
         dct["default_parameters"] = cls._construct_default_parameters()
         dct["default_initial_values"] = cls._construct_initial_values()
-        dct["synapse_types"] = cls._construct_synapse_types()
-        dct["standard_receptor_type"] = False
+        dct["receptor_types"] = cls._construct_receptor_types()
         dct["injectable"] = True
         dct["conductance_based"] = True
         dct["model_name"] = ncml_model.celltype_id
@@ -363,13 +355,14 @@ class BaseNCMLMetaClass(type):
         """
         ncml_model = cls.dct["ncml_model"]
         morphml_model = cls.dct["morphml_model"]
-        default_params = {'parent': None}
+        default_params = {}
+#        default_params = {'parent': None}
         component_parameters = cls.dct["component_parameters"]
         # Add current and synapse mechanisms parameters
         for mech in ncml_model.mechanisms:
             if component_parameters.has_key(mech.id):
                 default_params.update([(group_varname(mech.group_id) + "." + mech.id +
-                                        "." + varname, mapping[0])
+                                        "." + varname, mapping[1])
                                        for varname, mapping in \
                                                 component_parameters[mech.id].iteritems()])
             else:
@@ -388,8 +381,8 @@ class BaseNCMLMetaClass(type):
         # A morphology parameters
         for seg_group in morphml_model.groups:
             # None, defers to the value loaded in the MorphML file but allows them to be overwritten
-            default_params[group_varname(seg_group.id) + ".diam"] = None
-            default_params[group_varname(seg_group.id) + ".L"] = None
+            default_params[group_varname(seg_group.id) + ".diam"] = -1.0
+            default_params[group_varname(seg_group.id) + ".L"] = -1.0
         return default_params
 
     @classmethod
@@ -414,12 +407,28 @@ class BaseNCMLMetaClass(type):
 #        return parameter_names
 
     @classmethod
-    def _construct_synapse_types(cls):
+    def _construct_receptor_types(cls):
         """
         Constructs the dictionary of recordable parameters from the NCML model
         """
         ncml_model = cls.dct['ncml_model']
-        return [syn.id for syn in ncml_model.synapses]
+        morphml_model = cls.dct['morphml_model']
+        receptors = []
+        for rec in ncml_model.synapses:
+            if rec.group_id is None:
+                members = [seg.id for seg in morphml_model.segments]
+            else:
+                group = [group for group in morphml_model.groups if group.id == rec.group_id]
+                if len(group) != 1:
+                    raise Exception("Error parsing xml ({} groups found matching id '{}')"
+                                    .format(len(group), rec.group_id))
+                members = group[0].members
+            for seg in members:
+                receptors.append(seg + '_seg.' + rec.id)
+        # Append all segments as potential gap junctions 
+        for seg in morphml_model.segments:
+            receptors.append(seg.id + '_seg.gap')
+        return receptors
 
     @classmethod
     def _construct_recordable(cls):
