@@ -541,6 +541,7 @@ class Network(object):
         if synapse_family != 'Electrical':
             delay_expr = self._get_connection_param_expr(label, delay,
                                                          min_value=self.get_min_delay())
+            allow_self_connections='NoMutual'
         # Set up other required connector args
         other_connector_args = {}
         if connection.pattern != "OneToOne":
