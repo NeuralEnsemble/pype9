@@ -730,7 +730,11 @@ class Network(object):
         @param output_dir:
         """
         for proj in self.all_projections():
-            proj.saveConnections(os.path.join(output_dir, proj.label) + '.proj')
+            if isinstance(proj.synapse_type, pyNN.standardmodels.synapses.ElectricalSynapse):
+                attributes = 'weight'
+            else:
+                attributes = 'all'
+            proj.save(attributes, os.path.join(output_dir, proj.label), format='list', gather=True)
 
     def save_positions(self, output_dir):
         """
