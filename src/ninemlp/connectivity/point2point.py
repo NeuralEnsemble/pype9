@@ -85,7 +85,6 @@ class LinearWith2DDistance(object):
         self.min_value = min_value
 
     def __call__(self, disp):
-        disp = disp.reshape(-1,1)
         dist2D = np.sqrt(np.sum(np.square(disp[0:2, :]), axis=0))
         values = self.offset + self.scalar * dist2D
         if self.min_value:
