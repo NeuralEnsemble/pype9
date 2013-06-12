@@ -736,7 +736,7 @@ class Network(object):
                 attributes = 'weight'
             else:
                 attributes = 'all'
-            proj.save(attributes, os.path.join(output_dir, proj.label), format='list', gather=True)
+            proj.save(attributes, os.path.join(output_dir, proj.label + '.proj'), format='list', gather=True)
 
     def save_positions(self, output_dir):
         """
