@@ -538,7 +538,9 @@ class Network(object):
                            synapse_family, verbose, allow_self_connections=False):
         # Set expressions for connection weights and delays
         weight_expr = self._get_connection_param_expr(label, weight)
-        if synapse_family != 'Electrical':
+        if synapse_family == 'Electrical':
+            allow_self_connections='NoMutual'
+        else:
             delay_expr = self._get_connection_param_expr(label, delay,
                                                          min_value=self.get_min_delay())
             allow_self_connections = 'NoMutual'
@@ -731,7 +733,11 @@ class Network(object):
         @param output_dir:
         """
         for proj in self.all_projections():
-            proj.saveConnections(os.path.join(output_dir, proj.label) + '.proj')
+            if isinstance(proj.synapse_type, pyNN.standardmodels.synapses.ElectricalSynapse):
+                attributes = 'weight'
+            else:
+                attributes = 'all'
+            proj.save(attributes, os.path.join(output_dir, proj.label), format='list', gather=True)
 
     def save_positions(self, output_dir):
         """
