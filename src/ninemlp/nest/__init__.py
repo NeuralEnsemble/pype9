@@ -97,14 +97,14 @@ class Population(ninemlp.common.Population, pyNN.nest.Population):
 
 class Projection(pyNN.nest.Projection):
 
-    def __init__(self, pre, dest, label, connector, source=None, target=None, 
+    def __init__(self, pre, dest, label, connector, synapse_type, source=None, target=None,
                  build_mode=DEFAULT_BUILD_MODE, rng=None):
         self.label = label
         if build_mode == 'build_only':
             print "Warning! '--build' option was set to 'build_only', meaning the projection '%s' was not constructed." % label
         else:
-            pyNN.nest.Projection.__init__(self, pre, dest, connector, label=label, source=source,
-                                          target=target, rng=rng)
+            pyNN.nest.Projection.__init__(self, pre, dest, connector, synapse_type, source=source,
+                                          receptor_type=target, label=label)
             
 
 class Network(ninemlp.common.Network):
