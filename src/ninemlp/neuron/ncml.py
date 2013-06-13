@@ -359,9 +359,9 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         #FIXME: ionic currents and reversal potentials should undergo similar checks but they 
         #require the species to be checked as well.
         for mech in sorted(self.ncml_model.mechanisms, key=attrgetter('id')):
-            if self.component_parameters.has_key(mech.id):
+            if self.component_translations.has_key(mech.id):
                 translations = dict([(key, val[0]) for key, val in
-                                     self.component_parameters[mech.id].iteritems()])
+                                     self.component_translations[mech.id].iteritems()])
             else:
                 translations = None
             for seg in self.get_group(mech.group_id):
@@ -395,9 +395,9 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
 #                except:
 #                    raise Exception ("Could not find synapse '{}' in loaded or built in synapses."\
 #                                     .format(syn.id))
-#            if self.component_parameters.has_key(syn.id):
+#            if self.component_translations.has_key(syn.id):
 #                param_translations = dict([(key, val[0]) for key, val in
-#                                           self.component_parameters[syn.id].iteritems()])
+#                                           self.component_translations[syn.id].iteritems()])
 #            else:
 #                param_translations = None
             for seg in self.get_group(syn.group_id):
@@ -632,7 +632,7 @@ def load_cell_type(celltype_id, ncml_path, morph_id=None, build_mode=DEFAULT_BUI
         dct['ncml_model'] = ninemlp.common.ncml.read_NCML(celltype_id, ncml_path)
         dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(celltype_id, ncml_path, morph_id)
         build_options = dct['ncml_model'].build_options['nemo']['neuron']
-        install_dir, dct['component_parameters'] = \
+        install_dir, dct['component_translations'] = \
                 build_celltype_files(celltype_id, ncml_path, build_mode=build_mode,
                                      method=build_options.method, kinetics=build_options.kinetics,
                                      silent_build=silent)

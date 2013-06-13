@@ -26,7 +26,7 @@ DEFAULT_V_INIT = -65
 
 def group_varname(group_id):
     if group_id:
-        varname = group_id + "_group"
+        varname = str(group_id) + "_group"
     else:
         varname = "all_segs"
     return varname
@@ -35,7 +35,7 @@ def seg_varname(seg_id):
     if seg_id == 'source_section':
         varname = seg_id
     else:
-        varname = seg_id + "_seg"
+        varname = str(seg_id) + "_seg"
     return varname
 
 
@@ -318,7 +318,7 @@ class BaseNCMLCell(object):
         """
         # Return all the parameter names plus the "raw" names used in the NeMo generated models
         raw_names = list(chain.from_iterable([[param[0] for param in comp.values()] 
-                                              for comp in cls.component_parameters.values()]))
+                                              for comp in cls.component_translations.values()]))
         return cls.parameter_names + raw_names
 
     def get_group(self, group_id):
@@ -359,18 +359,17 @@ class BaseNCMLMetaClass(type):
         ncml_model = cls.dct["ncml_model"]
         morphml_model = cls.dct["morphml_model"]
         default_params = {}
-#        default_params = {'parent': None}
-        component_parameters = cls.dct["component_parameters"]
+        component_translations = cls.dct["component_translations"]
         # Add current and synapse mechanisms parameters
         for mech in ncml_model.mechanisms:
-            if component_parameters.has_key(mech.id):
-                default_params.update([(group_varname(mech.group_id) + "." + mech.id +
+            if component_translations.has_key(mech.id):
+                default_params.update([(group_varname(mech.group_id) + "." + str(mech.id) +
                                         "." + varname, mapping[1])
                                        for varname, mapping in \
-                                                component_parameters[mech.id].iteritems()])
+                                                component_translations[mech.id].iteritems()])
             else:
                 for param in mech.params:
-                    default_params[group_varname(mech.group_id) + "." + mech.id + "." +
+                    default_params[group_varname(mech.group_id) + "." + str(mech.id) + "." +
                                    param.name] = param.value
         # Add basic electrical property parameters
         for cm in ncml_model.capacitances:
@@ -446,37 +445,7 @@ class BaseNCMLMetaClass(type):
 
 
 if __name__ == "__main__":
-
-#    import re
-#
-#    recordable_pattern = re.compile(r'((?P<section>\w+)(\((?P<location>[-+]?[0-9]*\.?[0-9]+)\))?\.)?(?P<var>\w+)')
-#
-#    match = recordable_pattern.match('soma(0.5).esyn_i')
-#    if match:
-#        parts = match.groupdict()
-##        print 'section: ' + parts.get('section', '-')
-##        print 'location: ' + parts.get('location', '-')
-##        print 'location: ' + parts.get('var', '-')
-#
-#        print parts.get('section', '-')
-#        print parts.get('location', '-')
-#        print parts.get('var', '-')
-#
-#    else:
-#        print "no match"
-
-#
-    import pprint
-#
-#    parsed_morphML = read_MorphML("/home/tclose/cerebellar/declarative_model/cells/purkinje/default.xml")
-#    pprint.pprint(parsed_morphML.segments)
-#    pprint.pprint(parsed_morphML.segmentGroups)
-#
-    parsed_NCMML = read_NCML("Purkinje", "/home/tclose/cerebellar/declarative_model/cells/Purkinje.xml")
-    pprint.pprint(parsed_NCMML.mechanisms)
-    pprint.pprint(parsed_NCMML.capacitances)
-    pprint.pprint(parsed_NCMML.axial_resistances)
-    pprint.pprint(parsed_NCMML.reversal_potentials)
+    print "doing nothing"
 
 
 

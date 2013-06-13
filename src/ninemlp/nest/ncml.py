@@ -15,9 +15,12 @@
 
 import sys
 import os.path
+from collections import defaultdict
 import nest
 import pyNN.nest
-from ninemlp.common.ncml import BaseNCMLCell, BaseNCMLMetaClass, read_NCML, read_MorphML
+import pyNN.standardmodels
+from pyNN.parameters import ParameterSpace
+from ninemlp.common.ncml import BaseNCMLCell, BaseNCMLMetaClass, read_NCML, read_MorphML, group_varname
 from ninemlp import DEFAULT_BUILD_MODE
 from ninemlp.nest.build import build_celltype_files
 
@@ -25,34 +28,74 @@ loaded_cell_types = {}
 
 _RELATIVE_NEST_BUILD_DIR = os.path.join('build', 'nest')
 
-class NCMLCell(BaseNCMLCell, pyNN.nest.NativeCellType):
+class NCMLCell(BaseNCMLCell, pyNN.standardmodels.StandardCellType):
 
     def __init__(self, **parameters):
         BaseNCMLCell.__init__(self)
-        pyNN.nest.NativeCellType.__init__(self, **parameters)
+        pyNN.standardmodels.StandardCellType.__init__(self, **parameters)
 
     def memb_init(self):
         # Initialisation of member states goes here
         print "WARNING, membrane initialization function has not been implemented"
         pass
+    
+    def translate(self, parameters):
+        """
+        Translate standardized model parameters to simulator-specific parameters. Overrides the
+        the method in StandardModelType to provide a simpler translation that avoids the evaluation 
+        of the 'dots' in the standard name
+        """
+        native_parameters = {}
+        for name in parameters.keys():
+            # A hack before Ivan implements this as a parameter
+            if name != 'all_segs.Ra':
+                try:
+                    native_parameters[self.translations[name]['translated_name']] = parameters[name]
+                except KeyError:
+                    print "Omitting parameter '{}'".format(name)
+        return ParameterSpace(native_parameters, schema=None, shape=parameters.shape)
+
+    def get_receptor_type(self, name):
+        return nest.GetDefaults(self.nest_model)["receptor_types"][name]
 
 class NCMLMetaClass(BaseNCMLMetaClass):
     """
-    Metaclass for compileing NineMLCellType subclasses
+    Metaclass for compiling NineMLCellType subclases
     Called by nineml_celltype_from_model
     """
     def __new__(cls, name, bases, dct):
-        #The __init__ function for the created class  
-        def cellclass__init__(self, parameters={}):
-            NCMLCell.__init__(self, **parameters)
-        def modelclass__init__(self, **parameters):
-            cellclass__init__(self, parameters)
-        dct['__init__'] = cellclass__init__
         dct['nest_name'] = {"on_grid": name, "off_grid": name}
+        dct['translations'] = cls._construct_translations(dct['ncml_model'], 
+                                                          dct["component_translations"])
         cell_type = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
-        dct['__init__'] = modelclass__init__
         cell_type.model = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
         return cell_type
+
+    @classmethod
+    def _construct_translations(cls, ncml_model, component_translations):
+        comp_groups = defaultdict(list)
+        for comp in ncml_model.mechanisms:
+            comp_groups[str(comp.id)].append(group_varname(comp.group_id))
+        translations = []
+        for comp, params in component_translations.iteritems():
+            if comp != 'Extracellular':
+                for param, native_n_val in params.iteritems():
+                    # These are hacks just to get it to work initially, which will be removed once
+                    # the neuron version of the cell respects these components at which point they
+                    # should be accessed via
+                    if comp in ('Geometry', 'Membrane'):
+                        if comp == 'Geometry':
+                            standard_name = 'soma_group.' + str(param)
+                        elif comp == 'Membrane':
+                            standard_name = 'all_segs.' + str(param)
+                        translations.append((standard_name, native_n_val[0]))
+                    else:
+                        for seg_group in comp_groups[comp]:
+                            standard_name = '{}.{}.{}'.format(seg_group, comp, param)
+                            translations.append((standard_name, native_n_val[0]))
+        return pyNN.standardmodels.build_translations(*translations)
+        
+
 
 def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode=DEFAULT_BUILD_MODE, 
                    silent=False, solver_name='cvode'):
@@ -75,7 +118,7 @@ def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode=DEFAULT_B
                                                                             old_dir=old_ncml_path))
     else:
         dct = {}
-        install_dir, dct['component_parameters'] = build_celltype_files(celltype_name, ncml_path,
+        install_dir, dct['component_translations'] = build_celltype_files(celltype_name, ncml_path,
                                                                         build_mode=build_mode,
                                                                         method=solver_name)
         lib_dir = os.path.join(install_dir, 'lib', 'nest')

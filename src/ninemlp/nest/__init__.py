@@ -25,7 +25,7 @@ import pyNN.nest.connectors
 import pyNN.core
 import pyNN.errors
 import pyNN.common
-import ninemlp.common
+import ninemlp.common.ncml
 import ninemlp.common.brep
 import ncml
 from ninemlp import DEFAULT_BUILD_MODE
@@ -60,19 +60,26 @@ class Population(ninemlp.common.Population, pyNN.nest.Population):
         raise NotImplementedError('set_param has not been implemented for Population class yet')
 
     def rset(self, param, rand_distr, component=None, seg_group=None):
-        pyNN.nest.Population.rset(self, self._translate_param_name(param, component, seg_group),
-                                  rand_distr)
-
+        param_name = ninemlp.common.ncml.group_varname(seg_group)
+        if component:
+            param_name += '.' + component
+        param_name += '.' + param
+        self.set(**{param_name: rand_distr})
+        
     def initialize_variable(self, param, rand_distr, component=None, seg_group=None):
-        pyNN.nest.Population.initialize(self, self._translate_param_name(param, component, seg_group),
-                                        rand_distr)
-
+        param_name = ninemlp.common.ncml.group_varname(seg_group)
+        if component:
+            param_name += '.' + component
+        param_name += '.' + param
+        print "WARNING, can't initialise voltage at this stage"
+#        self.set(**{param_name: rand_distr})
+        
     def _translate_param_name(self, param, component, seg_group):
         if seg_group and seg_group != 'source_section' and seg_group != 'soma':
             raise NotImplementedError("Segment groups are not currently supported for NEST")
         if component:
             try:
-                translation = self.get_cell_type().component_parameters
+                translation = self.get_cell_type().component_translations
             except AttributeError:
                 raise Exception("Attempting to set component or segment group parameter on non-"
                                 "ninemlp cell type")

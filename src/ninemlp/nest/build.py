@@ -16,7 +16,7 @@ import os.path
 import subprocess as sp
 import shutil
 from ninemlp import DEFAULT_BUILD_MODE
-from ninemlp.common.build import path_to_exec, get_build_paths, load_component_parameters
+from ninemlp.common.build import path_to_exec, get_build_paths, load_component_translations
 
 _SIMULATOR_BUILD_NAME = 'nest'
 _MODIFICATION_TIME_FILE = 'modification_time'
@@ -124,9 +124,9 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     # Switch back to original dir
     os.chdir(orig_dir)
     # Load component parameters for use in python interface
-    component_parameters = load_component_parameters(celltype_name, params_dir)
+    component_translations = load_component_translations(celltype_name, params_dir)
     # Return installation directory
-    return install_dir, component_parameters
+    return install_dir, component_translations
 
 
 def create_configure_ac(celltype_name, src_dir):

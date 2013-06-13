@@ -18,7 +18,7 @@ import time
 import platform
 import subprocess as sp
 from ninemlp import DEFAULT_BUILD_MODE
-from ninemlp.common.build import path_to_exec, get_build_paths, load_component_parameters
+from ninemlp.common.build import path_to_exec, get_build_paths, load_component_translations
 
 BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
 _SIMULATOR_BUILD_NAME = 'neuron'
@@ -101,8 +101,8 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     if rebuilt or build_mode == 'compile_only':
         compile_nmodl(install_dir, build_mode='force', silent=silent_build)
     # Load the parameter name translations from the params dir 
-    component_parameters = load_component_parameters(celltype_name, params_dir)
-    return install_dir, component_parameters
+    component_translations = load_component_translations(celltype_name, params_dir)
+    return install_dir, component_translations
 
 
 def compile_nmodl (model_dir, build_mode=DEFAULT_BUILD_MODE, silent=False):

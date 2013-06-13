@@ -64,7 +64,7 @@ def path_to_exec(exec_name):
                         format(exec_name, os.environ['PATH']))
     return exec_path
 
-def load_component_parameters(celltype_name, params_dir):
+def load_component_translations(celltype_name, params_dir):
     """
     Loads component parameter names to standard reference name (eg. 'e_rev', 
     'MaximalConductance') dictionary. For each file in the params directory with a '.py' extension 
@@ -73,7 +73,7 @@ def load_component_parameters(celltype_name, params_dir):
     @param celltype_name [str]: The name of the cell type to load the parameter names for
     @param params_dir [str]: The path to the directory that contains the parameters
     """
-    component_parameters = defaultdict(dict)
+    component_translations = defaultdict(dict)
     # Loop through all the files in the params directory
     for f_name in os.listdir(params_dir):
         if f_name.startswith(celltype_name) and f_name.endswith('.py'):
@@ -81,6 +81,6 @@ def load_component_parameters(celltype_name, params_dir):
             loaded_props = run_path(os.path.join(params_dir, f_name))['properties']
             # Store in a dictionary of dictionaries indexed by component and variable names
             for (comp_name, var_name), mapped_var in loaded_props.iteritems():
-                component_parameters[comp_name][var_name] = mapped_var
-    return component_parameters
+                component_translations[comp_name][var_name] = mapped_var
+    return component_translations
 
