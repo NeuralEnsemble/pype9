@@ -91,9 +91,6 @@ class LinearWith2DDistance(object):
             values[values < self.min_value] = self.min_value
         return values
 
-    @classmethod
-    def expand_distances(cls):
-        return True
 
 
 class ExponentialWith2DDistance(object):
@@ -111,9 +108,6 @@ class ExponentialWith2DDistance(object):
             values[values < self.min_value] = self.min_value
         return values
 
-    @classmethod
-    def expand_distances(cls):
-        return True
 
 
 class MaskBased(object):
@@ -150,8 +144,8 @@ class MaskBased(object):
 
 class CylinderMask(MaskBased):
     """
-    A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
-    probabilityability of connection within an elliptical region
+    A class designed to be passed to the pyNN.DisplacementBasedProbabilityConnector to determine the 
+    probability of connection within an elliptical region
     """
 
     def __init__(self, radius, probability=None, axisX=0.0, axisY=0.0, axisZ=1.0, number=None):
@@ -171,15 +165,12 @@ class CylinderMask(MaskBased):
         mask = np.sqrt(np.sum(np.square(np.cross(self.axis, d, axis=0)), axis=0)) < self.radius
         return self._probs_from_mask(mask)
 
-    @classmethod
-    def expand_distances(cls):
-        return True
 
 
 class SphereMask(MaskBased):
     """
-    A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
-    probabilityability of connection within an elliptical region
+    A class designed to be passed to the pyNN.DisplacmentBasedProbabilityConnector to determine the 
+    probability of connection within an elliptical region
     """
 
     def __init__(self, radius, probability=None, number=None):
@@ -201,8 +192,8 @@ class SphereMask(MaskBased):
 
 class EllipseMask(MaskBased):
     """
-    A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
-    probabilityability of connection within an elliptical region
+    A class designed to be passed to the pyNN.DisplacementBasedProbabilityConnector to determine the 
+    probability of connection within an elliptical region
     """
 
     def __init__(self, x_scale, y_scale, probability=None, number=None):
@@ -219,15 +210,12 @@ class EllipseMask(MaskBased):
         mask = np.square(d[0] / self.x_scale) + np.square(d[1] / self.y_scale) < 1
         return self._probs_from_mask(mask)
 
-    @classmethod
-    def expand_distances(cls):
-        return True
 
 
 class OldEllipsoidMask(MaskBased):
     """
-    A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
-    probabilityability of connection within an elliptical region
+    A class designed to be passed to the pyNN.DisplacementBasedProbabilityConnector to determine the 
+    probability of connection within an elliptical region
     """
 
     def __init__(self, x_scale, y_scale, z_scale, probability=None, number=None):
@@ -242,18 +230,16 @@ class OldEllipsoidMask(MaskBased):
         self.z_scale = z_scale
 
     def __call__(self, d):
-        mask = np.square(d[0] / self.x_scale) + np.square(d[1] / self.y_scale) + np.square(d[2] / self.z_scale) < 1
+        mask = (np.square(d[0] / self.x_scale) + np.square(d[1] / self.y_scale) 
+                + np.square(d[2] / self.z_scale) < 1)
         return self._probs_from_mask(mask)
 
-    @classmethod
-    def expand_distances(cls):
-        return True
 
 
 class EllipsoidMask(MaskBased):
     """
-    A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
-    probabilityability of connection within an elliptical region
+    A class designed to be passed to the pyNN.DisplacementBasedProbabilityConnector to determine the 
+    probability of connection within an elliptical region
     """
 
     def __init__(self, scale, orient_x, orient_y, orient_z, isotropy, probability=None, number=None):
@@ -277,15 +263,11 @@ class EllipsoidMask(MaskBased):
         mask = distance < 1.0
         return self._probs_from_mask(mask)
 
-    @classmethod
-    def expand_distances(cls):
-        return True
-
 
 class RectangleMask(MaskBased):
     """
-    A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
-    probabilityability of connection within an elliptical region
+    A class designed to be passed to the pyNN.DisplacementBasedProbabilityConnector to determine the 
+    probability of connection within an elliptical region
     """
 
     def __init__(self, x_scale, y_scale, probability=None, number=None):
@@ -299,18 +281,14 @@ class RectangleMask(MaskBased):
         self.y_scale = y_scale
 
     def __call__(self, d):
-        mask = (d[0] < self.x_scale) * (d[1] < self.y_scale)
+        mask = (np.abs(d[0]) < self.x_scale) * (np.abs(d[1]) < self.y_scale)
         return self._probs_from_mask(mask)
-
-    @classmethod
-    def expand_distances(cls):
-        return True
 
 
 class BoxMask(MaskBased):
     """
-    A class designed to be passed to the pyNN.DistanceBasedProbabilityConnector to determine the 
-    probabilityability of connection within an elliptical region
+    A class designed to be passed to the pyNN.DisplacementBasedProbabilityConnector to determine the 
+    probability of connection within an elliptical region
     """
 
     def __init__(self, x_scale, y_scale, z_scale, probability=None, number=None):
@@ -325,12 +303,9 @@ class BoxMask(MaskBased):
         self.z_scale = z_scale
 
     def __call__(self, d):
-        mask = (d[0] < self.x_scale) * (d[1] < self.y_scale) * (d[2] < self.z_scale)
+        mask = (np.abs(d[0]) < self.x_scale) * (np.abs(d[1]) < self.y_scale) * (np.abs(d[2]) < self.z_scale)
         return self._probs_from_mask(mask)
 
-    @classmethod
-    def expand_distances(cls):
-        return True
 
 if __name__ == '__main__':
     # Put testing code in here
