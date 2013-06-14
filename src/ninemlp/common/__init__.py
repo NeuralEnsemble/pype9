@@ -610,7 +610,6 @@ class Network(object):
         else:
             raise Exception("Unrecognised pattern type '{}'".format(connection.pattern))
         # Initialise the rest of the projection object and return
-        warnings.simplefilter("always", category=point2point.InsufficientTargetsWarning)
         if synapse_family == 'Chemical':
             synapse = self._pyNN_module.StaticSynapse(weight=weight_expr, delay=delay_expr)
             source_terminal = source.terminal
