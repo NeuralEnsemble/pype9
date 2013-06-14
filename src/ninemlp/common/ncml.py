@@ -388,7 +388,7 @@ class BaseNCMLMetaClass(type):
         """
         Constructs the default initial values dictionary of the cell class from the NCML model
         """
-        initial_values = {}
+        initial_values = {'v': -65.0}
         # Similar to _construct_initial_values, here initial values are read from the parsed model
         # to populate the intial_values dictionary.
         # FIXME: Should be read from the NCML model (will need to check with Ivan the best way to do
