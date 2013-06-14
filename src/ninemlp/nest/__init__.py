@@ -67,13 +67,8 @@ class Population(ninemlp.common.Population, pyNN.nest.Population):
         param_name += '.' + param
         self.set(**{param_name: rand_distr})
         
-    def initialize_variable(self, param, rand_distr, component=None, seg_group=None):
-        param_name = ninemlp.common.ncml.group_varname(seg_group)
-        if component:
-            param_name += '.' + component
-        param_name += '.' + param
-        print "WARNING, can't initialise voltage at this stage"
-#        self.set(**{param_name: rand_distr})
+    def initialize_variable(self, param, rand_distr, component=None, seg_group=None): #@UnusedVariable, component and seg_group are not used at this stage as this is only used for the membrane voltage at this stage. 
+        self.initialize(**{param: rand_distr})
         
     def _translate_param_name(self, param, component, seg_group):
         if seg_group and seg_group != 'source_section' and seg_group != 'soma':
