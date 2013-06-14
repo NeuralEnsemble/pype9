@@ -30,6 +30,8 @@ _RELATIVE_NEST_BUILD_DIR = os.path.join('build', 'nest')
 
 class NCMLCell(BaseNCMLCell, pyNN.standardmodels.StandardCellType):
 
+    standard_receptor_type = None
+
     def __init__(self, **parameters):
         BaseNCMLCell.__init__(self)
         pyNN.standardmodels.StandardCellType.__init__(self, **parameters)
@@ -38,7 +40,7 @@ class NCMLCell(BaseNCMLCell, pyNN.standardmodels.StandardCellType):
         # Initialisation of member states goes here
         print "WARNING, membrane initialization function has not been implemented"
         pass
-    
+
     def translate(self, parameters):
         """
         Translate standardized model parameters to simulator-specific parameters. Overrides the
@@ -56,7 +58,8 @@ class NCMLCell(BaseNCMLCell, pyNN.standardmodels.StandardCellType):
         return ParameterSpace(native_parameters, schema=None, shape=parameters.shape)
 
     def get_receptor_type(self, name):
-        return nest.GetDefaults(self.nest_model)["receptor_types"][name]
+        seg, receptor_name = name.split('.') #@UnusedVariable - at this stage just throw away the segment
+        return nest.GetDefaults(self.nest_model)["receptor_types"][receptor_name]
 
 class NCMLMetaClass(BaseNCMLMetaClass):
     """
@@ -65,7 +68,7 @@ class NCMLMetaClass(BaseNCMLMetaClass):
     """
     def __new__(cls, name, bases, dct):
         dct['nest_name'] = {"on_grid": name, "off_grid": name}
-        dct['translations'] = cls._construct_translations(dct['ncml_model'], 
+        dct['translations'] = cls._construct_translations(dct['ncml_model'],
                                                           dct["component_translations"])
         cell_type = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
         cell_type.model = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
@@ -94,10 +97,10 @@ class NCMLMetaClass(BaseNCMLMetaClass):
                             standard_name = '{}.{}.{}'.format(seg_group, comp, param)
                             translations.append((standard_name, native_n_val[0]))
         return pyNN.standardmodels.build_translations(*translations)
-        
 
 
-def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode=DEFAULT_BUILD_MODE, 
+
+def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode=DEFAULT_BUILD_MODE,
                    silent=False, solver_name='cvode'):
     """
     Loads a PyNN cell type for NEST from an XML description, compiling the necessary module files
@@ -134,7 +137,7 @@ def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode=DEFAULT_B
         else:
             os.environ[lib_path_key] = lib_dir
         # Add module install directory to NEST path
-        nest.sli_run('({}) addpath'.format(os.path.join(install_dir, 'share', 'nest'))) 
+        nest.sli_run('({}) addpath'.format(os.path.join(install_dir, 'share', 'nest')))
         # Install nest module
         nest.Install(celltype_name + 'Loader')
         dct['ncml_model'] = read_NCML(celltype_name, ncml_path)

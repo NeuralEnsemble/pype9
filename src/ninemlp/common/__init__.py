@@ -25,6 +25,7 @@ import math
 import pyNN.connectors
 import pyNN.space
 import pyNN.parameters
+from ncml import seg_varname
 from pyNN.random import RandomDistribution, NumpyRNG
 from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
 import ninemlp.connectivity.point2point as point2point
@@ -43,30 +44,6 @@ _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
 RANDOM_DISTR_PARAMS = {'uniform': ('low', 'high'),
                        'normal': ('mean', 'stddev')}
-#
-#class ValueWithUnits(object):
-#
-#    def __init__(self, value, units):
-#        self.value = float(eval(value))
-#        self.units = units
-#
-#    def neuron(self):
-#        if self.units == None:
-#            return self.value
-#        elif self.units == 'ms':
-#            return self.value
-#        elif self.units == 'uF_per_cm2':
-#            return self.value
-#        elif self.units == 'mV':
-#            return self.value
-#        elif self.units == 'ohm_cm':
-#            return self.value
-#        elif self.units == 'S_per_m2':
-#            return self.value
-#        else:
-#            raise Exception("Unrecognised units '{}' (A conversion from these units "
-#                            "to the standard NEURON units needs to be added to "
-#                            "'ninemlp.common.ncml.neuron_value' function).".format(self.units))
 
 
 class NetworkMLHandler(XMLHandler):
@@ -278,14 +255,19 @@ class Network(object):
                  solver_name='cvode'):
         assert  (hasattr(self, "_pyNN_module") and 
                  hasattr(self, "_ncml_module") and 
-                 hasattr(self, "_Population_class") and 
-                 hasattr(self, "_Projection_class") and 
-                 hasattr(self, "_GapJunctionProjection_class") and 
+                 hasattr(self, "_population_type") and 
+                 hasattr(self, "_projection_type") and 
                  hasattr(self, "get_min_delay"))
         self.load_network(filename, build_mode=build_mode, timestep=timestep,
                                  min_delay=min_delay, max_delay=max_delay, temperature=temperature,
                                  silent_build=silent_build, flags=flags, rng=rng, 
                                  solver_name=solver_name)
+
+    @classmethod
+    def _get_target_str(cls, synapse, segment=None):
+        if not segment:
+            segment = "source_section"
+        return seg_varname(segment) + "." + synapse
 
     def set_flags(self, flags):
         self.flags = self.networkML.free_params.flags
@@ -495,7 +477,7 @@ class Network(object):
                 raise Exception("Not implemented error, support for built-in structure_params management is "
                                 "not done yet.")
         # Actually create the population
-        pop = self._Population_class(label, size, cell_type, params=cell_params,
+        pop = self._population_type(label, size, cell_type, params=cell_params,
                                                                         build_mode=self.build_mode)
         # Set structure_params
         if not (self.build_mode == 'build_only' or self.build_mode == 'compile_only'):
@@ -640,23 +622,9 @@ class Network(object):
                 receptor_type = target.segment + '_seg.gap'
             else:
                 raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
-            projection = self._Projection_class(pre, dest, label, connector, synapse_type=synapse,
+            projection = self._projection_type(pre, dest, label, connector, synapse_type=synapse,
                                                 source=source_terminal, target=receptor_type,
                                                 build_mode=self.build_mode, rng=self._rng)
-            # Collate raised "InsufficientTargets" warnings into a single warning message for better
-            # readibility.
-#            insufficient_targets_str = ""
-#            if warnings_list:
-#                for w in warnings_list:
-#                    if w.category == point2point.InsufficientTargetsWarning:
-#                        req_number, mask_size = re.findall("\([^\)]*\)", str(w.message))
-#                        insufficient_targets_str += " {},".format(mask_size[2:-1])
-#        if insufficient_targets_str:
-#            print ("Could not satisfy all connection targets in projection '{}' " 
-#                  "because the requested number of connections, {}, exceeded the size of " 
-#                  "the generated masks of sizes:{}. The number of connections was reset to the " 
-#                  "size of the respective masks in these cases.\n"
-#                  .format(label, req_number[2:-1], insufficient_targets_str[:-1]))
         return projection
 
     def _get_simulation_params(self, **params):
@@ -684,10 +652,6 @@ class Network(object):
             return True
         except:
             return False
-
-    def _get_target_str(self, synapse, segment=None):
-        raise NotImplementedError("_get_target_str needs to be implemented by simulator specific " 
-                                  "Network class")
 
     def get_population(self, label):
         try:

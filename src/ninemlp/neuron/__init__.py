@@ -41,7 +41,6 @@ import logging
 
 logger = logging.getLogger("PyNN")
 
-
 get_current_time, get_time_step, get_min_delay, \
         get_max_delay, num_processes, rank = build_state_queries(simulator)
 
@@ -65,11 +64,6 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
                   "meaning the Population '{}' was not constructed and only the NMODL files " \
                   "were compiled.".format(label)
         else:
-            # If cell_type is of NCML type append the population as a parent parameter for its 
-            # constructor
-#            if issubclass(cell_type, NCMLCell):
-#                params = params.copy()
-##                params['parent'] = self
             pyNN.neuron.Population.__init__(self, size, cell_type, params, structure=None,
                                             label=label)
 
@@ -128,270 +122,7 @@ class Projection(pyNN.neuron.Projection):
                   "'{}' was not constructed.".format(label)
         else:
             pyNN.neuron.Projection.__init__(self, pre, dest, connector, synapse_type, 
-                                            label=label, source=source, receptor_type=target) #, rng=rng)
-
-
-
-class GapJunctionProjection(Projection):
-
-    def __init__(self, pre, dest, label, connector, source_secname=None, target_secname=None, 
-                 rng=None):
-        """
-        ` rectified [bool]: Whether the gap junction is rectified (only one direction)
-        """
-        ## Start of unique variable-GID range assigned for this projection (ends at gid_count + pre.size * dest.size * 2)
-        self.vargid_start = simulator.state.vargid_counter
-        # Allocate a range of vargid's for this projection that allows all pre-synaptic cells 
-        # to be connected to all post-synaptic cells once. This seems a reasonable to me but 
-        # looking at the code the for FixedNumberPostConnector this may not be true in all cases.
-        # Any thoughts on how to be more general about this? We could probably use just really big 
-        # intervals between projections
-        simulator.state.vargid_counter += pre.size * dest.size * 2
-        # Stores the connection objects (simulator.GapJunctionConnection) in a dictionary rather than 
-        # a list as it is in the Projection class so they can be more easily accessed on the
-        # target side.
-        self._connections_dict = {}
-        self.source_secname = source_secname if source_secname else 'source_section'
-        self.target_secname = target_secname if target_secname else 'source_section'
-        Projection.__init__(self, pre, dest, label, connector, None, None, rng=rng)
-
-    def _divergent_connect(self, source, targets, weights, delays=None): #@UnusedVariable
-        """
-        Connect a neuron to one or more other neurons with a static connection.
-        
-        `source` -- the ID of the pre-synaptic cell [common.IDmixin].
-        `targets` -- a list/1D array of post-synaptic cell IDs, or a single ID [list(common.IDmixin)].
-        `weights` -- Connection weight(s). Must have the same length as "targets" [list(float) or float].
-        `delays` -- This is actually ignored but only included to match the same signature as the Population._divergent_connect method
-        """
-        if not isinstance(source, int) or source > simulator.state.gid_counter or source < 0:
-            errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
-                                                                     simulator.state.gid_counter)
-            raise pyNN.errors.ConnectionError(errmsg)
-        if not pyNN.core.is_listlike(targets):
-            targets = [targets]
-        if isinstance(weights, float):
-            weights = [weights]
-        assert len(targets) > 0
-        for target in targets:
-            if not isinstance(target, pyNN.common.IDMixin):
-                raise pyNN.errors.ConnectionError("Invalid target ID: {}".format(target))
-        assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
-        vargid_offset = self.pre.id_to_index(source) * len(self.post) * 2 + self.vargid_start
-        for target, weight in zip(targets, weights):
-            # Get the variable-GIDs (as distinct from the GIDs used for cells) for both the pre to post  
-            # connection the post to pre            
-            pre_post_vargid = vargid_offset + self.post.id_to_index(target) * 2
-            post_pre_vargid = pre_post_vargid + 1
-            # Get the segment on target cell the gap junction connects to
-            section = getattr(target._cell, self.target_secname)
-            # Connect the pre cell voltage to the target var
-            logger.info("Setting source_var on target cell {} to connect to source cell {} with "
-                        "vargid {} on process {}"
-                        .format(target, source, post_pre_vargid, simulator.state.mpi_rank))
-            simulator.state.parallel_context.source_var(section(0.5)._ref_v, post_pre_vargid) #@UndefinedVariableFromImport              
-            # Create the gap_junction and set its weight
-            gap_junction = h.Gap(0.5, sec=section)
-            gap_junction.g = weight
-            # Connect the gap junction with the source_var
-            logger.info("Setting target_var on target cell {} to connect to source cell {} with "
-                        "vargid {} on process {}"
-                        .format(target, source, pre_post_vargid, simulator.state.mpi_rank))
-            simulator.state.parallel_context.target_var(gap_junction._ref_vgap, pre_post_vargid) #@UndefinedVariableFromImport
-            # Add target gap mechanism to the dictionary holding the connections so that its 
-            # conductance can be changed after construction.
-            try:
-                self._connections_dict[(source, target)].target_gap = gap_junction
-            except KeyError: #If source does not exist on the local node
-                self._connections_dict[(source, target)] = simulator.GapJunctionConnection(
-                                                               source, target, None, gap_junction)
-
-    def _prepare_sources(self, source, targets, weights, delays=None): #@UnusedVariable
-        """
-        Connect a neuron to one or more other neurons with a static connection.
-        
-        `source` -- the ID of the pre-synaptic cell [common.IDmixin].
-        `targets` -- a list/1D array of post-synaptic cell IDs, or a single ID [list(common.IDmixin)].
-        `weights` -- Connection weight(s). Must have the same length as `targets` [list(float) or float].
-        `delays` -- This is actually ignored but only included to match the same signature as the _divergent_connect method
-        """
-        if not source.local:
-            raise Exception("source needs to be local for _divergent_sources")
-        if not isinstance(source, int) or source > simulator.state.gid_counter or source < 0:
-            errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
-                                                                     simulator.state.gid_counter)
-            raise pyNN.errors.ConnectionError(errmsg)
-        if not pyNN.core.is_listlike(targets):
-            targets = [targets]
-        if isinstance(weights, float):
-            weights = [weights]
-        assert len(targets) > 0
-        for target in targets:
-            if not isinstance(target, pyNN.common.IDMixin):
-                raise pyNN.errors.ConnectionError("Invalid target ID: {}".format(target))
-        assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
-        # Get the section on the pre cell that the gap junction is connected to
-        section = getattr(source._cell, self.source_secname)
-        vargid_offset = self.pre.id_to_index(source) * len(self.post) * 2 + self.vargid_start
-        for target, weight in zip(targets, weights):
-            # Get the variable-GIDs (as distinct from the GIDs used for cells) for both the pre to post  
-            # connection the post to pre
-            pre_post_vargid = vargid_offset + self.post.id_to_index(target) * 2
-            post_pre_vargid = pre_post_vargid + 1
-            # Connect the pre cell voltage to the target var
-            logger.info("Setting source_var on source cell {} to connect to target cell {} with "
-                        "vargid {} on process {}"
-                        .format(source, target, pre_post_vargid, simulator.state.mpi_rank))
-            simulator.state.parallel_context.source_var(section(0.5)._ref_v, pre_post_vargid) #@UndefinedVariableFromImport                    
-            # Create the gap_junction and set its weight
-            gap_junction = h.Gap(0.5, sec=section)
-            gap_junction.g = weight
-            # Connect the gap junction with the source_var
-            logger.info("Setting target_var on source cell {} to connect to target cell {} with "
-                        "vargid {} on process {}"
-                        .format(source, target, post_pre_vargid, simulator.state.mpi_rank))
-            simulator.state.parallel_context.target_var(gap_junction._ref_vgap, post_pre_vargid) #@UndefinedVariableFromImport              
-            # Store mechanism so that its conductance can be changed after construction
-            self._connections_dict[(source, target)] = simulator.GapJunctionConnection(
-                                                               source, target, gap_junction)
-
-    def _convergent_connect(self, sources, target, weights, delays):
-        raise NotImplementedError
-
-    def _get_connections(self):
-        """
-        Used to make the connections_dict act like a list so it can be used in Projection
-        class functions.
-        """
-        return self._connections_dict.values()
-
-    def _set_connections(self, c):
-        """
-        Only allows the dictionary, which pretends to be a list to be set to the empty list.
-        Feels a little hackish.
-        """
-        if len(c):
-            raise Exception("Can only initialise connections of GapJunctionProjection to an empty "
-                            "list")
-        self._connections_dict.clear()
-
-    connections = property(_get_connections, _set_connections)
-
-#    
-#
-#class ElectricalSynapseProjection(Projection):
-#
-#    ## A named tuple to hold a record of the generated electrical synapse connections
-#    Connection = namedtuple('Connection', 'cell1 segment1 cell2 segment2')
-#
-#    ## This holds the last reserved GID used to connect the source and target variables. It is incremented each time a Projection is initialised by the amount needed to hold an all-to-all connection
-#    gid_count = 0
-#
-#    def __init__(self, pre, dest, label, connector, source=None, target=None,
-#                 build_mode=DEFAULT_BUILD_MODE, rng=None):
-#        """
-#        @param rectified [bool]: Whether the gap junction is rectified (only one direction)
-#        """
-#        ## Start of unique variable-GID range assigned for this projection (ends at gid_count + pre.size * dest.size * 2)
-#        self.gid_start = self.__class__.gid_count
-#        self.__class__.gid_count += pre.size * dest.size * 2
-#        Projection.__init__(self, pre, dest, label, connector, source, target, build_mode, rng=rng)
-#
-#
-#    def _divergent_connect(self, source, targets, weights, delays=None): #@UnusedVariable
-#        """
-#        Connect a neuron to one or more other neurons with a static connection.
-#        
-#        @param source [pyNN.common.IDmixin]: the ID of the pre-synaptic cell.
-#        @param [list(pyNN.common.IDmixin)]: a list/1D array of post-synaptic cell IDs, or a single ID.
-#        @param [list(float) or float]: Connection weight(s). Must have the same length as `targets`.
-#        @param delays [Null]: This is actually ignored but only included to match the same signature\
-# as the Population._divergent_connect method
-#        """
-#        if not isinstance(source, int) or source > simulator.state.gid_counter or source < 0:
-#            errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
-#                                                                     simulator.state.gid_counter)
-#            raise pyNN.errors.ConnectionError(errmsg)
-#        if not pyNN.core.is_listlike(targets):
-#            targets = [targets]
-#        if isinstance(weights, float):
-#            weights = [weights]
-#        assert len(targets) > 0
-#        for target in targets:
-#            if not isinstance(target, pyNN.common.IDMixin):
-#                raise pyNN.errors.ConnectionError("Invalid target ID: {}".format(target))
-#        assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
-#        # Rename variable that has been repurposed slightly        
-#        segname = self.synapse_type
-#        gid_offset = self.pre.id_to_index(source) * len(self.post) + self.gid_start
-#        for target, weight in zip(targets, weights):
-#            # "variable" GIDs (as distinct from the GIDs used for cells) for both the pre to post  
-#            # connection the post to pre            
-#            pre_post_gid = (gid_offset + self.post.id_to_index(target)) * 2
-#            post_pre_gid = pre_post_gid + 1
-#            # Get the segment on target cell the gap junction connects to
-#            segment = target._cell.segments[segname] if segname else target.source_section
-#            # Connect the pre cell voltage to the target var
-##            print "Setting source_var on target cell {} to connect to source cell {} with gid {} on process {}".format(target, source, post_pre_gid, simulator.state.mpi_rank)
-#            simulator.state.parallel_context.source_var(segment(0.5)._ref_v, post_pre_gid) #@UndefinedVariableFromImport              
-#            # Create the gap_junction and set its weight
-#            gap_junction = h.Gap(0.5, sec=segment)
-#            gap_junction.g = weight
-#            # Store gap junction in a list so it doesn't get collected by the garbage 
-#            # collector
-#            segment._gap_junctions.append(gap_junction)
-#            # Connect the gap junction with the source_var
-##            print "Setting target_var on target cell {} to connect to source cell {} with gid {} on process {}".format(target, source, pre_post_gid, simulator.state.mpi_rank)
-#            simulator.state.parallel_context.target_var(gap_junction._ref_vgap, pre_post_gid) #@UndefinedVariableFromImport
-#
-#    def _prepare_sources(self, source, targets, weights, delays=None): #@UnusedVariable
-#        """
-#        Connect a neuron to one or more other neurons with a static connection.
-#        
-#        @param source [pyNN.common.IDmixin]: the ID of the pre-synaptic cell.
-#        @param [list(pyNN.common.IDmixin)]: a list/1D array of post-synaptic cell IDs, or a single ID.
-#        @param [list(float) or float]: Connection weight(s). Must have the same length as `targets`.
-#        @param delays [Null]: This is actually ignored but only included to match the same signature\
-# as the Population._divergent_connect method
-#        """
-#        if not source.local:
-#            raise Exception("source needs to be local for _divergent_sources")
-#        if not isinstance(source, int) or source > simulator.state.gid_counter or source < 0:
-#            errmsg = "Invalid source ID: {} (gid_counter={})".format(source,
-#                                                                     simulator.state.gid_counter)
-#            raise pyNN.errors.ConnectionError(errmsg)
-#        if not pyNN.core.is_listlike(targets):
-#            targets = [targets]
-#        if isinstance(weights, float):
-#            weights = [weights]
-#        assert len(targets) > 0
-#        for target in targets:
-#            if not isinstance(target, pyNN.common.IDMixin):
-#                raise pyNN.errors.ConnectionError("Invalid target ID: {}".format(target))
-#        assert len(targets) == len(weights), "{} {}".format(len(targets), len(weights))
-#        # Get the segment on the pre cell that the gap junction is connected to
-#        segment = source._cell.segments[self.source] if self.source else source.source_section
-#        gid_offset = self.pre.id_to_index(source) * len(self.post) + self.gid_start
-#        for target, weight in zip(targets, weights):
-#            # "variable" GIDs (as distinct from the GIDs used for cells) for both the pre to post  
-#            # connection the post to pre
-#            pre_post_gid = (gid_offset + self.post.id_to_index(target)) * 2
-#            post_pre_gid = pre_post_gid + 1
-#            # Connect the pre cell voltage to the target var
-##            print "Setting source_var on source cell {} to connect to target cell {} with gid {} on process {}".format(source, target, pre_post_gid, simulator.state.mpi_rank)
-#            simulator.state.parallel_context.source_var(segment(0.5)._ref_v, pre_post_gid) #@UndefinedVariableFromImport                    
-#            # Create the gap_junction and set its weight
-#            gap_junction = h.Gap(0.5, sec=segment)
-#            gap_junction.g = weight
-#            # Store gap junction in a list so it doesn't get collected by the garbage 
-#            # collector
-#            segment._gap_junctions.append(gap_junction)
-#            # Connect the gap junction with the source_var
-##            print "Setting target_var on source cell {} to connect to target cell {} with gid {} on process {}".format(source, target, post_pre_gid, simulator.state.mpi_rank)
-#            simulator.state.parallel_context.target_var(gap_junction._ref_vgap, post_pre_gid) #@UndefinedVariableFromImport              
-#
-#    def _convergent_connect(self, sources, target, weights, delays):
-#        raise NotImplementedError
+                                            label=label, source=source, receptor_type=target)
 
 
 class Network(ninemlp.common.Network):
@@ -401,9 +132,8 @@ class Network(ninemlp.common.Network):
                                  solver_name=None, rng=None):
         self._pyNN_module = pyNN.neuron
         self._ncml_module = ncml
-        self._Population_class = Population
-        self._Projection_class = Projection
-        self._GapJunctionProjection_class = GapJunctionProjection
+        self._population_type = Population
+        self._projection_type = Projection
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         #Call the base function initialisation function.
         ninemlp.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep,
@@ -466,12 +196,6 @@ class Network(ninemlp.common.Network):
         p = self._get_simulation_params(**params)
         setup(p['timestep'], p['min_delay'], p['max_delay'])
         neuron.h.celsius = p['temperature']
-
-
-    def _get_target_str(self, synapse, segment=None):
-        if not segment:
-            segment = "source_section"
-        return seg_varname(segment) + "." + synapse
 
     def _finalise_construction(self):
         includes_electrical = False
