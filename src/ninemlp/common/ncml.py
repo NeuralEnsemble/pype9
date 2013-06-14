@@ -19,7 +19,7 @@
 import xml.sax
 import collections
 from itertools import chain
-from ninemlp.common import XMLHandler
+from ninemlp import XMLHandler
 
 DEFAULT_V_INIT = -65
 

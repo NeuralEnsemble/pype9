@@ -44,6 +44,7 @@ RELATIVE_BREP_BUILD_DIR = './build'
 def build_pyNN(build_mode=DEFAULT_BUILD_MODE, silent=True):
     pass # Not required as of yet (this is needed for the neuron module though
 
+
 class Population(ninemlp.common.Population, pyNN.nest.Population):
 
     def __init__(self, label, size, cell_type, params={}, build_mode=DEFAULT_BUILD_MODE):
@@ -95,16 +96,17 @@ class Population(ninemlp.common.Population, pyNN.nest.Population):
                                 .format(component, param))
         return param
 
+
 class Projection(pyNN.nest.Projection):
 
-    def __init__(self, pre, dest, label, connector, source=None, target=None, 
+    def __init__(self, pre, dest, label, connector, synapse_type, source=None, target=None,
                  build_mode=DEFAULT_BUILD_MODE, rng=None):
         self.label = label
         if build_mode == 'build_only':
             print "Warning! '--build' option was set to 'build_only', meaning the projection '%s' was not constructed." % label
         else:
-            pyNN.nest.Projection.__init__(self, pre, dest, connector, label=label, source=source,
-                                          target=target, rng=rng)
+            pyNN.nest.Projection.__init__(self, pre, dest, connector, synapse_type, source=source,
+                                          receptor_type=target, label=label)
             
 
 class Network(ninemlp.common.Network):
@@ -114,18 +116,14 @@ class Network(ninemlp.common.Network):
                  solver_name='cvode', rng=None):
         self._pyNN_module = pyNN.nest
         self._ncml_module = ncml
-        self._Population_class = Population
-        self._Projection_class = Projection
-        self._GapJunctionProjection_class = None
+        self._population_type = Population
+        self._projection_type = Projection
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         self.temperature = None
         ninemlp.common.Network.__init__(self, filename, build_mode=build_mode,
                                         timestep=timestep, min_delay=min_delay, max_delay=max_delay,
                                     temperature=temperature, silent_build=silent_build, flags=flags,
                                     solver_name=solver_name, rng=rng)
-
-    def _get_target_str(self, synapse, segment=None):
-        return synapse
 
     def _convert_units(self, value_str, units=None):
         if ' ' in value_str:
