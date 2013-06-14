@@ -610,21 +610,20 @@ class Network(object):
         else:
             raise Exception("Unrecognised pattern type '{}'".format(connection.pattern))
         # Initialise the rest of the projection object and return
-        with warnings.catch_warnings(record=True) as warnings_list:
-            warnings.simplefilter("always", category=point2point.InsufficientTargetsWarning)
-            if synapse_family == 'Chemical':
-                synapse = self._pyNN_module.StaticSynapse(weight=weight_expr, delay=delay_expr)
-                source_terminal = source.terminal
-                receptor_type = self._get_target_str(target.synapse, target.segment)
-            elif synapse_family == 'Electrical':    
-                synapse = self._pyNN_module.ElectricalSynapse(weight=weight_expr)
-                source_terminal = source.segment + '_seg'
-                receptor_type = target.segment + '_seg.gap'
-            else:
-                raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
-            projection = self._projection_type(pre, dest, label, connector, synapse_type=synapse,
-                                                source=source_terminal, target=receptor_type,
-                                                build_mode=self.build_mode, rng=self._rng)
+        warnings.simplefilter("always", category=point2point.InsufficientTargetsWarning)
+        if synapse_family == 'Chemical':
+            synapse = self._pyNN_module.StaticSynapse(weight=weight_expr, delay=delay_expr)
+            source_terminal = source.terminal
+            receptor_type = self._get_target_str(target.synapse, target.segment)
+        elif synapse_family == 'Electrical':    
+            synapse = self._pyNN_module.ElectricalSynapse(weight=weight_expr)
+            source_terminal = source.segment + '_seg'
+            receptor_type = target.segment + '_seg.gap'
+        else:
+            raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
+        projection = self._projection_type(pre, dest, label, connector, synapse_type=synapse,
+                                            source=source_terminal, target=receptor_type,
+                                            build_mode=self.build_mode, rng=self._rng)
         return projection
 
     def _get_simulation_params(self, **params):
