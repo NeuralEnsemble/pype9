@@ -18,6 +18,7 @@
 
 import xml.sax
 import collections
+import math
 from itertools import chain
 from ninemlp import XMLHandler
 
@@ -376,11 +377,33 @@ class BaseNCMLMetaClass(type):
             default_params[group_varname(cm.group_id) + "." + "cm"] = cm.value
         for ra in ncml_model.axial_resistances:
             default_params[group_varname(ra.group_id) + "." + "Ra"] = ra.value
-        # A morphology parameters
+        # Check each group for consistent morphology parameters and if so create a variable
+        # parameter for them
+        #FIXME: This should really part of the XML parser
         for seg_group in morphml_model.groups:
-            # None, defers to the value loaded in the MorphML file but allows them to be overwritten
-            default_params[group_varname(seg_group.id) + ".diam"] = -1.0
-            default_params[group_varname(seg_group.id) + ".L"] = -1.0
+            diameter = 'NotFound'
+            length = 'NotFound'
+            for seg in morphml_model.segments:
+                if seg.id in seg_group:
+                    new_diameter = seg.distal.diam
+                    if seg.proximal: # This is a bit of a hack until I rework the new XML parser
+                        new_length = math.sqrt((seg.distal[0] - seg.proximal[0])**2 + 
+                                               (seg.distal[1] - seg.proximal[1])**2 +
+                                               (seg.distal[2] - seg.proximal[2])**2)
+                    else:
+                        new_length = 'NotConstant'
+                    if diameter == 'NotFound':
+                        diameter = new_diameter
+                    elif diameter != new_diameter:
+                        diameter = 'NotConstant'
+                    if length == 'NotFound':
+                        length = new_length
+                    elif length != new_length:
+                        length = 'NotConstant'
+            if type(diameter) == float:
+                default_params[group_varname(seg_group.id) + ".diam"] = diameter
+            if type(length) == float:
+                default_params[group_varname(seg_group.id) + ".L"] = length
         return default_params
 
     @classmethod
@@ -389,7 +412,7 @@ class BaseNCMLMetaClass(type):
         Constructs the default initial values dictionary of the cell class from the NCML model
         """
         initial_values = {'v': -65.0}
-        # Similar to _construct_initial_values, here initial values are read from the parsed model
+        # Here initial values are read from the parsed model
         # to populate the intial_values dictionary.
         # FIXME: Should be read from the NCML model (will need to check with Ivan the best way to do
         # this

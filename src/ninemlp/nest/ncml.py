@@ -98,8 +98,6 @@ class NCMLMetaClass(BaseNCMLMetaClass):
                             translations.append((standard_name, native_n_val[0]))
         return pyNN.standardmodels.build_translations(*translations)
 
-
-
 def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode=DEFAULT_BUILD_MODE,
                    silent=False, solver_name='cvode'):
     """
