@@ -197,14 +197,6 @@ class Network(ninemlp.common.Network):
         setup(p['timestep'], p['min_delay'], p['max_delay'])
         neuron.h.celsius = p['temperature']
 
-    def _finalise_construction(self):
-        includes_electrical = False
-        for proj in self.all_projections():
-            if isinstance(proj, GapJunctionProjection):
-                includes_electrical = True
-        if includes_electrical:
-            print "Setting up transfer on MPI process {}".format(simulator.state.mpi_rank)
-            simulator.state.parallel_context.setup_transfer() #@UndefinedVariableFromImport
 
 if __name__ == "__main__":
 
