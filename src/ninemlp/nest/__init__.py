@@ -20,8 +20,8 @@ import sys
 if '--debug' in sys.argv:
     raise Exception("'--debug' argument passed to script conflicts with an argument to nest, "
                     "causing the import to stop at the NEST prompt")
-import pyNN.nest.standardmodels.cells
-import pyNN.nest.connectors
+import pyNN.nest.standardmodels as standardmodels
+import pyNN.nest.connectors as connectors
 import pyNN.core
 import pyNN.errors
 import pyNN.common

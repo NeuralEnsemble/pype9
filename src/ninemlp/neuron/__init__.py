@@ -24,8 +24,8 @@ import ninemlp.common
 from ninemlp.neuron.ncml import NCMLCell, group_varname, seg_varname
 import pyNN.common
 import pyNN.core
-import pyNN.neuron.standardmodels.cells
-import pyNN.neuron.connectors
+import pyNN.neuron.standardmodels as standardmodels
+import pyNN.neuron.connectors as connectors
 import pyNN.neuron.recording
 import ncml
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
