@@ -613,7 +613,10 @@ class Network(object):
         if synapse_family == 'Chemical':
             synapse = self._pyNN_module.StaticSynapse(weight=weight_expr, delay=delay_expr)
             source_terminal = source.terminal
-            receptor_type = self._get_target_str(target.synapse, target.segment)
+            if target.synapse is None:
+                receptor_type = 'excitatory'
+            else:
+                receptor_type = self._get_target_str(target.synapse, target.segment)
         elif synapse_family == 'Electrical':    
             synapse = self._pyNN_module.ElectricalSynapse(weight=weight_expr)
             source_terminal = source.segment + '_seg'
