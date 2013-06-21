@@ -17,6 +17,7 @@
 
 import os
 import xml.sax
+import time
 
 __version__ = "0.0.1"
 
@@ -41,7 +42,36 @@ if os.environ['HOME'] == '/home/tclose':
     os.environ['LD_PRELOAD']='/usr/lib/libmpi.so' # This is a work around for my MPI installation    
     os.environ['NEURON_INIT_MPI'] = '1'
     
-
+def get_mpi_rank(simulator):
+    
+    eval("from pyNN.{}.simulator import state".format(simulator))
+    return state.mpi_rank #@UndefinedVariable    
+    
+    
+def create_seeds(specified_seeds, num_processes=1, process_rank=0):
+    """
+    If the random number generation is to be independent of the number of processes used 
+    ("parallel_safe = True" in PyNN), then `num_processes` and `process_rank` should be left at
+    1 and 0 respectively
+    """
+    num_seeds = len(specified_seeds)
+    generated_seed = long(time.time() * 256) 
+    out_seeds = []
+    if num_seeds == 1:
+        specified_seeds = [specified_seeds]
+    for seed in specified_seeds:
+        if seed is not None:
+            out_seeds.append(int(seed))
+        else:
+            proposed_seed = generated_seed + process_rank
+            # Ensure the proposed seed isn't the same as one of the specified seeds (not sure if 
+            # this is necessary but it could possibly cause some weirdness if they were the same I 
+            # imagine)
+            while proposed_seed in specified_seeds:
+                proposed_seed += num_seeds * num_processes
+            out_seeds.append(proposed_seed)
+            generated_seed += num_processes
+    return out_seeds[0] if num_seeds == 1 else out_seeds 
 
 class XMLHandler(xml.sax.handler.ContentHandler):
 
