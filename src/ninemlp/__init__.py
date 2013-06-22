@@ -42,21 +42,25 @@ if os.environ['HOME'] == '/home/tclose':
     os.environ['LD_PRELOAD']='/usr/lib/libmpi.so' # This is a work around for my MPI installation    
     os.environ['NEURON_INIT_MPI'] = '1'    
     
-def create_seeds(specified_seeds, inconsistent_seeds=False, simulator='neuron'):
+def create_seeds(specified_seeds, sim_state=None):
     """
-    If the random number generation is to be independent of the number of processes used 
-    ("parallel_safe = True" in PyNN), then `num_processes` and `process_rank` should be left at
-    1 and 0 respectively
+    If sim_state (pyNN.*simulator_name*.simulator.state) is provided the number of processes and the 
+    process rank is taken into account so that each process is provided a different seed. If wanting
+    to use PyNN's "parallel_safe" option then it shouldn't be provided.
     """
     try:
         num_seeds = len(specified_seeds)
     except TypeError:
         specified_seeds = [specified_seeds]
         num_seeds = 1
-    if inconsistent_seeds:
-        eval("from pyNN.{}.simulator import state".format(simulator))
-        process_rank = state.mpi_rank  #@UndefinedVariable
-        num_processes = state.num_processes #@UndefinedVariable
+    if sim_state:
+        process_rank = sim_state.mpi_rank  #@UndefinedVariable
+        num_processes = sim_state.num_processes #@UndefinedVariable
+        if num_processes != 1:
+            transformed_seeds = []
+            for seed in specified_seeds:
+                transformed_seeds = seed * num_processes + process_rank
+            specified_seeds = transformed_seeds
     else:
         process_rank = 0
         num_processes = 1   
