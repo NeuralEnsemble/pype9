@@ -17,6 +17,7 @@
 
 import os
 import xml.sax
+import time
 
 __version__ = "0.0.1"
 
@@ -39,9 +40,48 @@ if os.environ['HOME'] == '/home/tclose':
     # I apologise for this little hack (this is the path on my machine, 
     # to save me having to set the environment variable in eclipse)
     os.environ['LD_PRELOAD']='/usr/lib/libmpi.so' # This is a work around for my MPI installation    
-    os.environ['NEURON_INIT_MPI'] = '1'
+    os.environ['NEURON_INIT_MPI'] = '1'    
     
-
+def get_mpi_rank(simulator):
+    eval("from pyNN.{}.simulator import state")
+    return state.mpi_rank() #@UndefinedVariable    
+    
+def create_seeds(specified_seeds, process_rank_of_np=None):
+    """
+    If the random number generation is to be independent of the number of processes used 
+    ("parallel_safe = True" in PyNN), then `num_processes` and `process_rank` should be left at
+    1 and 0 respectively
+    """
+    try:
+        num_seeds = len(specified_seeds)
+    except TypeError:
+        num_seeds = 1
+    if process_rank_of_np:
+        try:
+            process_rank, num_processes = process_rank_of_np
+        except (ValueError, TypeError):
+            raise TypeError("'process_rank_of_np must be a 2-tuple containing the mpi process and the number "
+                   "processes")
+    else:
+        process_rank = 0
+        num_processes = 1
+    generated_seed = int(time.time() * 256) 
+    out_seeds = []
+    if num_seeds == 1:
+        specified_seeds = [specified_seeds]
+    for seed in specified_seeds:
+        if seed is not None:
+            out_seeds.append(int(seed))
+        else:
+            proposed_seed = generated_seed + process_rank
+            # Ensure the proposed seed isn't the same as one of the specified seeds (not sure if 
+            # this is necessary but it could possibly cause some weirdness if they were the same I 
+            # imagine)
+            while proposed_seed in specified_seeds:
+                proposed_seed += num_seeds * num_processes
+            out_seeds.append(proposed_seed)
+            generated_seed += num_processes
+    return out_seeds[0] if num_seeds == 1 else out_seeds 
 
 class XMLHandler(xml.sax.handler.ContentHandler):
 
