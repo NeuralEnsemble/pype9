@@ -59,7 +59,7 @@ def create_seeds(specified_seeds, sim_state=None):
         if num_processes != 1:
             transformed_seeds = []
             for seed in specified_seeds:
-                transformed_seeds = seed * num_processes + process_rank
+                transformed_seeds.append(seed * num_processes + process_rank)
             specified_seeds = transformed_seeds
     else:
         process_rank = 0
