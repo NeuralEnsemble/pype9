@@ -40,22 +40,32 @@ if os.environ['HOME'] == '/home/tclose':
     # I apologise for this little hack (this is the path on my machine, 
     # to save me having to set the environment variable in eclipse)
     os.environ['LD_PRELOAD']='/usr/lib/libmpi.so' # This is a work around for my MPI installation    
-    os.environ['NEURON_INIT_MPI'] = '1'
+    os.environ['NEURON_INIT_MPI'] = '1'    
     
 def get_mpi_rank(simulator):
+    eval("from pyNN.{}.simulator import state")
+    return state.mpi_rank() #@UndefinedVariable    
     
-    eval("from pyNN.{}.simulator import state".format(simulator))
-    return state.mpi_rank #@UndefinedVariable    
-    
-    
-def create_seeds(specified_seeds, num_processes=1, process_rank=0):
+def create_seeds(specified_seeds, process_rank_of_np=None):
     """
     If the random number generation is to be independent of the number of processes used 
     ("parallel_safe = True" in PyNN), then `num_processes` and `process_rank` should be left at
     1 and 0 respectively
     """
-    num_seeds = len(specified_seeds)
-    generated_seed = long(time.time() * 256) 
+    try:
+        num_seeds = len(specified_seeds)
+    except TypeError:
+        num_seeds = 1
+    if process_rank_of_np:
+        try:
+            process_rank, num_processes = process_rank_of_np
+        except (ValueError, TypeError):
+            raise TypeError("'process_rank_of_np must be a 2-tuple containing the mpi process and the number "
+                   "processes")
+    else:
+        process_rank = 0
+        num_processes = 1
+    generated_seed = int(time.time() * 256) 
     out_seeds = []
     if num_seeds == 1:
         specified_seeds = [specified_seeds]
