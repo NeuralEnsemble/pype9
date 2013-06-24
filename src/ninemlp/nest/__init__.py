@@ -33,11 +33,11 @@ from pyNN.nest import setup, run, reset, end, get_time_step, get_current_time, g
                         get_max_delay, rank, num_processes, StepCurrentSource, ACSource, DCSource, \
                         NoisyCurrentSource
 from pyNN.common.control import build_state_queries
-import pyNN.nest.simulator
+import pyNN.nest.simulator as simulator
 import nest
 from nest.hl_api import NESTError
 
-get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(pyNN.nest.simulator)
+get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 RELATIVE_BREP_BUILD_DIR = './build'
 
