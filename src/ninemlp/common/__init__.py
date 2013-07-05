@@ -396,8 +396,8 @@ class Network(object):
                                                       dz=float(args['dz']), x0=float(args['x0']), 
                                                       y0=float(args['y0']), z0=float(args['z0']))
                     elif somas.pattern == 'UniformWithinBox':
-                        boundary = pyNN.space.Cuboid(float(args['width']), float(args['height']), 
-                                                     float(args['depth']))
+                        boundary = pyNN.space.Cuboid(float(args['length']), float(args['width']), 
+                                                           float(args['height']))
                         origin = (float(args['x']), float(args['y']), float(args['z']))
                         structure = pyNN.space.RandomStructure(boundary, origin, rng=self._rng)                        
                     elif somas.pattern == 'UniformWithinSphere':
