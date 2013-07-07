@@ -212,7 +212,7 @@ class EllipseMask(MaskBased):
 
 
 
-class OldEllipsoidMask(MaskBased):
+class EllipsoidMask(MaskBased):
     """
     A class designed to be passed to the pyNN.DisplacementBasedProbabilityConnector to determine the 
     probability of connection within an elliptical region
@@ -224,7 +224,7 @@ class OldEllipsoidMask(MaskBased):
         @param y: scale of the y axis of the ellipse        
         @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
         """
-        super(OldEllipsoidMask, self).__init__(probability, number)
+        super(EllipsoidMask, self).__init__(probability, number)
         self.x_scale = x_scale
         self.y_scale = y_scale
         self.z_scale = z_scale
@@ -236,7 +236,7 @@ class OldEllipsoidMask(MaskBased):
 
 
 
-class EllipsoidMask(MaskBased):
+class NewEllipsoidMask(MaskBased):
     """
     A class designed to be passed to the pyNN.DisplacementBasedProbabilityConnector to determine the 
     probability of connection within an elliptical region
@@ -249,7 +249,7 @@ class EllipsoidMask(MaskBased):
         @param z: scale of the z axis of the ellipsoid        
         @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
         """
-        super(EllipsoidMask, self).__init__(probability, number)
+        super(NewEllipsoidMask, self).__init__(probability, number)
         self.scale = scale
         self.orient = np.array((orient_x, orient_y, orient_z))
         self.isotropy = isotropy
