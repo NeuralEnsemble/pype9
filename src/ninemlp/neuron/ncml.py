@@ -104,7 +104,7 @@ class Segment(nrn.Section): #@UndefinedVariable
             components = var.split('.', 1)
             return getattr(getattr(self, components[0]), components[1])
         else:
-            raise AttributeError
+            return getattr(self(0.5), var)
 
     def __setattr__(self, var, val):
         """
@@ -234,6 +234,9 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         self.source_section = self.default_group.default
         self.source = self.source_section(0.5)._ref_v
         # for recording
+        self.recordable = {}
+        for seg_id, seg in self.segments.iteritems():
+            self.recordable[seg_varname(seg_id) + '.v'] = seg._ref_v 
         self.spike_times = h.Vector(0)
         self.traces = {}
         self.gsyn_trace = {}
@@ -550,62 +553,67 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
 #                        not hasattr(test_seg, var)) or var.startswith('e'):
 #                cell_type.recordable.remove(var)
 
-    @classmethod
-    def _construct_recordable(cls):
-        """
-        Constructs the dictionary of recordable parameters from the NCML model
-        """
-        recordable = copy(ninemlp.common.ncml.BaseNCMLMetaClass.COMMON_RECORDABLE)
-        mech_path = cls.dct['mech_path']
-        variables = []
-        mech_states = {}
-        for filename in os.listdir(mech_path):
-            split_filename = filename.split('.')
-            mech_id = '.'.join(split_filename[0:-1])
-            cell_name = mech_id.split('_')[0]
-            mech_name = '_'.join(mech_id.split('_')[1:])
-            ext = split_filename[-1]
-            if cell_name == cls.name and ext == 'mod':
-                mod_file_path = os.path.join(mech_path, filename)
-                try:
-                    mod_file = open(mod_file_path)
-                except:
-                    raise Exception('Could not open mod file {} for inspection'.\
-                                    format(mod_file_path))
-                in_assigned_block = False
-                in_state_block = False
-                assigned = []
-                states = []
-                for line in mod_file:
-                    if 'STATE' in line:
-                        in_state_block = True
-                    elif 'ASSIGNED' in line:
-                        in_assigned_block = True
-                    elif in_assigned_block:
-                        if '}' in line:
-                            in_assigned_block = False
-                        else:
-
-                            var = line.strip()
-                            if var:
-                                assigned.append(var)
-                    elif in_state_block:
-                        if '}' in line:
-                            in_state_block = False
-                        else:
-                            state = line.strip()
-                            if state:
-                                states.append(state)
-                for var in assigned:
-                    if var not in recordable:
-                        recordable.append(var)
-                        variables.append(var)
-                for state in states:
-                    recordable.append(mech_name + "::" + state)
-                    if mech_states.has_key(mech_name):
-                        mech_states[mech_name].append(state)
-                    else:
-                        mech_states[mech_name] = [state]
+#    @classmethod
+#    def _construct_recordable(cls):
+#        """
+#        Constructs the dictionary of recordable parameters from the NCML model
+#        """
+#        morphml_model = cls.dct["morphml_model"]
+#        recordable = {}
+#        for seg in morphml_model.segments:
+#            recordable[seg_varname(seg) + '.v'] =  
+#        recordable = copy(ninemlp.common.ncml.BaseNCMLMetaClass.COMMON_RECORDABLE)
+#        
+#        mech_path = cls.dct['mech_path']
+#        variables = []
+#        mech_states = {}
+#        for filename in os.listdir(mech_path):
+#            split_filename = filename.split('.')
+#            mech_id = '.'.join(split_filename[0:-1])
+#            cell_name = mech_id.split('_')[0]
+#            mech_name = '_'.join(mech_id.split('_')[1:])
+#            ext = split_filename[-1]
+#            if cell_name == cls.name and ext == 'mod':
+#                mod_file_path = os.path.join(mech_path, filename)
+#                try:
+#                    mod_file = open(mod_file_path)
+#                except:
+#                    raise Exception('Could not open mod file {} for inspection'.\
+#                                    format(mod_file_path))
+#                in_assigned_block = False
+#                in_state_block = False
+#                assigned = []
+#                states = []
+#                for line in mod_file:
+#                    if 'STATE' in line:
+#                        in_state_block = True
+#                    elif 'ASSIGNED' in line:
+#                        in_assigned_block = True
+#                    elif in_assigned_block:
+#                        if '}' in line:
+#                            in_assigned_block = False
+#                        else:
+#
+#                            var = line.strip()
+#                            if var:
+#                                assigned.append(var)
+#                    elif in_state_block:
+#                        if '}' in line:
+#                            in_state_block = False
+#                        else:
+#                            state = line.strip()
+#                            if state:
+#                                states.append(state)
+#                for var in assigned:
+#                    if var not in recordable:
+#                        recordable.append(var)
+#                        variables.append(var)
+#                for state in states:
+#                    recordable.append(mech_name + "::" + state)
+#                    if mech_states.has_key(mech_name):
+#                        mech_states[mech_name].append(state)
+#                    else:
+#                        mech_states[mech_name] = [state]
         # These didn't really work as I had hoped because there are a lot of mechanisms added to
         # the NMODL files that really shouldn't be, and they are not even accessible through 
         # pyNEURON anyway. So these are just included in the class out of interest more than 

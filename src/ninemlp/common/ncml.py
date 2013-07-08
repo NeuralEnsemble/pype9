@@ -332,8 +332,6 @@ class BaseNCMLMetaClass(type):
     Called by nineml_celltype_from_model
     """
 
-    COMMON_RECORDABLE = ['v', 'spikes']
-
     def __new__(cls, name, bases, dct):
         # Retrieved parsed model (it is placed in dct to conform with
         # with the standard structure for the "__new__" function of metaclasses).
@@ -346,7 +344,7 @@ class BaseNCMLMetaClass(type):
         dct["injectable"] = True
         dct["conductance_based"] = True
         dct["model_name"] = ncml_model.celltype_id
-        dct["recordable"] = cls._construct_recordable()
+#        dct["recordable"] = cls._construct_recordable()
         dct["weight_variables"] = cls._construct_weight_variables()
         dct["parameter_names"] = dct['default_parameters'].keys()
         return super(BaseNCMLMetaClass, cls).__new__(cls, name, bases, dct)
@@ -456,7 +454,7 @@ class BaseNCMLMetaClass(type):
         """
         Constructs the dictionary of recordable parameters from the NCML model
         """
-        return BaseNCMLMetaClass.COMMON_RECORDABLE
+        raise NotImplementedError("'_construct_recordable' should be implemented by derived class")
 
     @classmethod
     def _construct_weight_variables(cls):

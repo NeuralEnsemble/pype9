@@ -18,6 +18,7 @@
 import os
 import xml.sax
 import time
+import numpy
 
 __version__ = "0.0.1"
 
@@ -78,6 +79,24 @@ def create_seeds(specified_seeds, sim_state=None):
             out_seeds.append(proposed_seed)
             generated_seed += num_processes
     return out_seeds if num_seeds != 1 else out_seeds[0] 
+
+def select_range(range_str, range_end):
+    if range_str and ':' in range_str[0]:
+        slice_args = [int(i) for i in range_str[0].split(':')]
+        if len(slice_args) == 1:
+            parsed_include = range(range_end)[int(slice_args[0]):(int(slice_args[0]) + 1)]
+        elif len(slice_args) == 2:
+            parsed_include = range(range_end)[int(slice_args[0]):int(slice_args[1])]
+        elif len(slice_args) == 3:
+            parsed_include = range(range_end)[int(slice_args[0]):int(slice_args[1]):int(slice_args[2])]
+        else:
+            raise Exception("Only up to 4 arguments can be provided to include option ({})"
+                            .format(range_str))
+    elif range_str:
+        parsed_include = [int(i) for i in range_str]
+    else:
+        parsed_include = range(range_end)
+    return numpy.array(parsed_include, dtype=int)
 
 class XMLHandler(xml.sax.handler.ContentHandler):
 

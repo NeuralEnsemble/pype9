@@ -86,30 +86,30 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
         variable_scope.append(variable)
         pyNN.neuron.Population.initialize(self, **{'.'.join(variable_scope): rand_distr})
 
-    def can_record(self, variable):
-        """
-        Overloads that from pyNN.common.BasePopulation to allow section names and positions to 
-        be passed.
-        """
-        if hasattr(self.celltype, 'ncml_model'): # If cell is generated from NCML file
-            match = pyNN.neuron.recording.recordable_pattern.match(variable)
-            if match:
-                parts = match.groupdict()
-                if parts['var'] not in self.celltype.recordable:
-                    return False
-                if parts['section']: # Check to see if section exists
-                    if not hasattr(self.celltype, parts['section']):
-                        return False
-                if parts.has_key('position'): # Check to see if the position is between 0-1
-                    pos = float(parts['position'])
-                    if pos < 0.0 or pos > 1.0:
-                        raise Exception("Position parameter in recording string, {}, is out of "
-                                        "range (0.0-1.0)".format(pos))
-                return True
-            else:
-                raise Exception("Could not parse variable name '%s'" % variable)
-        else:
-            return pyNN.neuron.Population.can_record(self, variable)
+#    def can_record(self, variable):
+#        """
+#        Overloads that from pyNN.common.BasePopulation to allow section names and positions to 
+#        be passed.
+#        """
+#        if hasattr(self.celltype, 'ncml_model'): # If cell is generated from NCML file
+#            match = pyNN.neuron.recording.recordable_pattern.match(variable)
+#            if match:
+#                parts = match.groupdict()
+#                if parts['var'] not in self.celltype.recordable:
+#                    return False
+#                if parts['section']: # Check to see if section exists
+#                    if not hasattr(self.celltype, parts['section']):
+#                        return False
+#                if parts.has_key('position'): # Check to see if the position is between 0-1
+#                    pos = float(parts['position'])
+#                    if pos < 0.0 or pos > 1.0:
+#                        raise Exception("Position parameter in recording string, {}, is out of "
+#                                        "range (0.0-1.0)".format(pos))
+#                return True
+#            else:
+#                raise Exception("Could not parse variable name '%s'" % variable)
+#        else:
+#            return pyNN.neuron.Population.can_record(self, variable)
 
 
 class Projection(pyNN.neuron.Projection):
