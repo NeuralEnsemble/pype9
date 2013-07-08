@@ -734,7 +734,7 @@ class Network(object):
         for pop in self.all_populations():
             pop.write_data(file_prefix + pop.label + '.spikes.pkl', 'spikes') #@UndefinedVariable                
 
-    def write_data(self, file_prefix):
+    def write_data(self, file_prefix, **kwargs):
         """
         Record all spikes generated in the network
         
@@ -747,7 +747,7 @@ class Network(object):
                 and not file_prefix.endswith(os.path.sep)):
             file_prefix += '.'
         for pop in self.all_populations():
-            pop.write_data(file_prefix + pop.label + '.pkl') #@UndefinedVariable
+            pop.write_data(file_prefix + pop.label + '.pkl', **kwargs) #@UndefinedVariable
 
 
 class Population(object):
