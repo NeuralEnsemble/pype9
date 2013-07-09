@@ -234,7 +234,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
         self.source_section = self.default_group.default
         self.source = self.source_section(0.5)._ref_v
         # for recording
-        self.recordable = {}
+        self.recordable = {'spikes':None}
         for seg_id, seg in self.segments.iteritems():
             self.recordable[seg_varname(seg_id) + '.v'] = seg._ref_v 
         self.spike_times = h.Vector(0)
