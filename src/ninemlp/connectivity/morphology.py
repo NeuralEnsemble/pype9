@@ -935,6 +935,7 @@ class MorphologyBasedConnector(pyNN.connectors.IndexBasedProbabilityConnector):
                 self.KernelOverlapExpression(pre_kernel, post_kernel), 
                 allow_self_connections=allow_self_connections, safe=safe, rng=rng, callback=callback)
 
+
 class NeurolucidaTreeXMLHandler(XMLHandler):
     """
     An XML handler to extract dendrite locates from Neurolucida XML format
