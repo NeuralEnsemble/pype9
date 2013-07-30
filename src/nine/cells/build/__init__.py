@@ -12,6 +12,7 @@
 import platform
 import os.path
 from collections import defaultdict
+from runpy import run_path
 
 _RELATIVE_BUILD_DIR = 'nine.build'
 _PARAMS_DIR = 'params'
