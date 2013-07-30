@@ -37,7 +37,7 @@ def seg_varname(seg_id):
     return varname
 
 
-class BaseNCMLCell(object):
+class Cell(object):
     """
     A base cell object for NCML cell classes.
     """
@@ -56,7 +56,7 @@ class BaseNCMLCell(object):
     @classmethod
     def get_parameter_names(cls):
         """
-        Returns a list of parameters that can be set for the NCMLCell class.
+        Returns a list of parameters that can be set for the Cell class.
         
         @return [list(str)]: The list of parameter names in the class
         """
@@ -69,7 +69,7 @@ class BaseNCMLCell(object):
         return self.groups[group_id] if group_id else self.all_segs
 
 
-class BaseNCMLMetaClass(type):
+class CellMetaClass(type):
     """
     Metaclass for building NineMLCellType subclasses
     Called by nineml_celltype_from_model
@@ -90,7 +90,7 @@ class BaseNCMLMetaClass(type):
 #        dct["recordable"] = cls._construct_recordable()
         dct["weight_variables"] = cls._construct_weight_variables()
         dct["parameter_names"] = dct['default_parameters'].keys()
-        return super(BaseNCMLMetaClass, cls).__new__(cls, name, bases, dct)
+        return super(CellMetaClass, cls).__new__(cls, name, bases, dct)
 
     @classmethod
     def _construct_default_parameters(cls): #@UnusedVariable

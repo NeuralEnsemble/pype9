@@ -12,9 +12,8 @@
 import platform
 import os.path
 from collections import defaultdict
-from runpy import run_path
 
-_RELATIVE_BUILD_DIR = 'build'
+_RELATIVE_BUILD_DIR = 'nine.build'
 _PARAMS_DIR = 'params'
 _SRC_DIR = 'src'
 _INSTALL_DIR = 'install'
@@ -66,7 +65,7 @@ def path_to_exec(exec_name):
 
 def load_component_translations(celltype_name, params_dir):
     """
-    Loads component parameter names to standard reference name (eg. 'e_rev', 
+    Loads component parameter translations from names to standard reference name (eg. 'e_rev', 
     'MaximalConductance') dictionary. For each file in the params directory with a '.py' extension 
     starting with the celltype_name assume that it is a parameters file.
     

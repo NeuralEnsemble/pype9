@@ -20,20 +20,21 @@ import nest
 import pyNN.nest
 import pyNN.standardmodels
 from pyNN.parameters import ParameterSpace
-from ninemlp.common.ncml import BaseNCMLCell, BaseNCMLMetaClass, read_NCML, read_MorphML, group_varname
-from ninemlp import DEFAULT_BUILD_MODE
-from ninemlp.nest.build import build_celltype_files
+from .__init__ import Cell as BaseCell
+from .__init__ import CellMetaClass as BaseCellMetaClass
+from .__init__ import group_varname
+from .readers import read_NCML, read_MorphML
+from .build.nest import build_celltype_files
 
 loaded_cell_types = {}
 
-_RELATIVE_NEST_BUILD_DIR = os.path.join('build', 'nest')
 
-class NCMLCell(BaseNCMLCell, pyNN.standardmodels.StandardCellType):
+class Cell(BaseCell, pyNN.standardmodels.StandardCellType):
 
     standard_receptor_type = None
 
     def __init__(self, **parameters):
-        BaseNCMLCell.__init__(self)
+        BaseCell.__init__(self)
         pyNN.standardmodels.StandardCellType.__init__(self, **parameters)
 
     def memb_init(self):
@@ -61,7 +62,8 @@ class NCMLCell(BaseNCMLCell, pyNN.standardmodels.StandardCellType):
         seg, receptor_name = name.split('.') #@UnusedVariable - at this stage just throw away the segment
         return nest.GetDefaults(self.nest_model)["receptor_types"][receptor_name]
 
-class NCMLMetaClass(BaseNCMLMetaClass):
+
+class CellMetaClass(BaseCellMetaClass):
     """
     Metaclass for compiling NineMLCellType subclases
     Called by nineml_celltype_from_model
@@ -70,8 +72,8 @@ class NCMLMetaClass(BaseNCMLMetaClass):
         dct['nest_name'] = {"on_grid": name, "off_grid": name}
         dct['translations'] = cls._construct_translations(dct['ncml_model'],
                                                           dct["component_translations"])
-        cell_type = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
-        cell_type.model = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
+        cell_type = super(CellMetaClass, cls).__new__(cls, name, bases, dct)
+        cell_type.model = super(CellMetaClass, cls).__new__(cls, name, bases, dct)
         return cell_type
 
     @classmethod
@@ -98,7 +100,8 @@ class NCMLMetaClass(BaseNCMLMetaClass):
                             translations.append((standard_name, native_n_val[0]))
         return pyNN.standardmodels.build_translations(*translations)
 
-def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode=DEFAULT_BUILD_MODE,
+
+def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode='lazy',
                    silent=False, solver_name='cvode'):
     """
     Loads a PyNN cell type for NEST from an XML description, compiling the necessary module files
@@ -142,7 +145,7 @@ def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode=DEFAULT_B
         dct['morphml_model'] = read_MorphML(celltype_name, ncml_path)
         dct['nest_model'] = celltype_name
         # Add the loaded cell type to the list of cell types that have been loaded
-        cell_type = NCMLMetaClass(str(celltype_name), (NCMLCell,), dct)
+        cell_type = CellMetaClass(str(celltype_name), (Cell,), dct)
         # Added the loaded cell_type to the dictionary of previously loaded cell types
         loaded_cell_types[celltype_name] = (cell_type, ncml_path)
     return cell_type

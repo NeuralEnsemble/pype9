@@ -15,8 +15,8 @@ import time
 import os.path
 import subprocess as sp
 import shutil
-from ninemlp import DEFAULT_BUILD_MODE
-from ninemlp.common.build import path_to_exec, get_build_paths, load_component_translations
+
+from .__init__ import path_to_exec, get_build_paths, load_component_translations
 
 _SIMULATOR_BUILD_NAME = 'nest'
 _MODIFICATION_TIME_FILE = 'modification_time'
@@ -37,7 +37,7 @@ def ensure_camel_case(name):
     return name
 
 def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
-                                method='gsl', build_mode=DEFAULT_BUILD_MODE, silent_build=False):
+                                method='gsl', build_mode='lazy', silent_build=False):
     """
     Generates the cpp code corresponding to the NCML file, then configures, and compiles and installs
     the corresponding module into nest

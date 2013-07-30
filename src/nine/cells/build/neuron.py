@@ -17,8 +17,8 @@ import shutil
 import time
 import platform
 import subprocess as sp
-from ninemlp import DEFAULT_BUILD_MODE
-from ninemlp.common.build import path_to_exec, get_build_paths, load_component_translations
+
+from .__init__ import path_to_exec, get_build_paths, load_component_translations
 
 BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
 _SIMULATOR_BUILD_NAME = 'neuron'
@@ -32,7 +32,7 @@ elif os.environ['HOME'] == '/home/tclose':
     os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin'
 
 def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
-    method='derivimplicit', build_mode=DEFAULT_BUILD_MODE, silent_build=False, kinetics=[]):
+    method='derivimplicit', build_mode='lazy', silent_build=False, kinetics=[]):
     """
     Generates and builds the required NMODL files for a given NCML cell class
     
@@ -105,7 +105,7 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     return install_dir, component_translations
 
 
-def compile_nmodl (model_dir, build_mode=DEFAULT_BUILD_MODE, silent=False):
+def compile_nmodl (model_dir, build_mode='lazy', silent=False):
     """
     Builds all NMODL files in a directory
     @param model_dir: The path of the directory to build

@@ -28,7 +28,7 @@ import pyNN.common
 import ninemlp.common.ncml
 import ninemlp.common.brep
 import ncml
-from ninemlp import DEFAULT_BUILD_MODE
+
 from pyNN.nest import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, StepCurrentSource, ACSource, DCSource, \
                         NoisyCurrentSource
@@ -41,13 +41,13 @@ get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, ra
 
 RELATIVE_BREP_BUILD_DIR = './build'
 
-def build_pyNN(build_mode=DEFAULT_BUILD_MODE, silent=True):
+def build_pyNN(build_mode='lazy', silent=True):
     pass # Not required as of yet (this is needed for the neuron module though
 
 
 class Population(ninemlp.common.Population, pyNN.nest.Population):
 
-    def __init__(self, label, size, cell_type, params={}, build_mode=DEFAULT_BUILD_MODE):
+    def __init__(self, label, size, cell_type, params={}, build_mode='lazy'):
         """
         Initialises the population after reading the population parameters from file
         """
@@ -95,7 +95,7 @@ class Population(ninemlp.common.Population, pyNN.nest.Population):
 class Projection(pyNN.nest.Projection):
 
     def __init__(self, pre, dest, label, connector, synapse_type, source=None, target=None,
-                 build_mode=DEFAULT_BUILD_MODE, rng=None):
+                 build_mode='lazy', rng=None):
         self.label = label
         if build_mode == 'build_only':
             print "Warning! '--build' option was set to 'build_only', meaning the projection '%s' was not constructed." % label
@@ -106,7 +106,7 @@ class Projection(pyNN.nest.Projection):
 
 class Network(ninemlp.common.Network):
 
-    def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None,
+    def __init__(self, filename, build_mode='lazy', timestep=None,
                  min_delay=None, max_delay=None, temperature=None, silent_build=False, flags=[],
                  solver_name='cvode', rng=None):
         self._pyNN_module = pyNN.nest

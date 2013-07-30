@@ -12,22 +12,23 @@
 #    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
-import os.path
+
 from neuron import h, nrn, load_mechanisms
 import pyNN.models
-import pyNN.recording
-import ninemlp.common.ncml
-from ninemlp.neuron.build import build_celltype_files
-from ninemlp import DEFAULT_BUILD_MODE
-from copy import copy
+#import pyNN.recording
+from nine.cells.build.neuron import build_celltype_files
 from operator import attrgetter
 import numpy
 import pyNN.neuron.simulator
 import weakref
-from ninemlp.common.ncml import group_varname, seg_varname, DEFAULT_V_INIT
+from nine.cells import group_varname, seg_varname, DEFAULT_V_INIT
+import nine.cells.readers
+from .__init__ import Cell as BaseCell
+from .__init__ import CellMetaClass as BaseCellMetaClass
 
 ## Used to store the directories from which NMODL objects have been loaded to avoid loading them twice
 loaded_celltypes = {}
+
 
 class Segment(nrn.Section): #@UndefinedVariable
     """
@@ -220,7 +221,7 @@ class SegmentGroup(object):
         return getattr(self.default, var)
 
 
-class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
+class Cell(BaseCell):
 
     class Params(object):
 
@@ -274,7 +275,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
             components = var.split('.', 1)
             setattr(getattr(self, components[0]), components[1], val)
         else:
-            super(NCMLCell, self).__setattr__(var, val)
+            super(Cell, self).__setattr__(var, val)
 
     def _init_morphology(self):
         """
@@ -512,7 +513,7 @@ class NCMLCell(ninemlp.common.ncml.BaseNCMLCell):
 #            return data
 
 
-class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
+class CellMetaClass(BaseCellMetaClass):
     """
     Metaclass for building NineMLCellType subclasses
     Called by nineml_celltype_from_model
@@ -526,9 +527,9 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
         #The __init__ function for the created class
         def cellclass__init__(self, **parameters):
             pyNN.models.BaseCellType.__init__(self, **parameters)
-            NCMLCell.__init__(self, **parameters)
+            Cell.__init__(self, **parameters)
         dct['__init__'] = cellclass__init__
-        cellclass = super(NCMLMetaClass, cls).__new__(cls, name, bases, dct)
+        cellclass = super(CellMetaClass, cls).__new__(cls, name, bases, dct)
         cellclass.model = cellclass
 #        cls._validate_recordable(cellclass) #FIXME: This is a bit of a hack
         return cellclass
@@ -549,7 +550,7 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
 #            # Check to see if the variable is part of the common recordables or is an attribute
 #            # of the test segment. Also remove all reversal potentials (assumed to be all 
 #            # attributes starting with 'e') as they are unlikely to change.
-#            if (var not in ninemlp.common.ncml.BaseNCMLMetaClass.COMMON_RECORDABLE and \
+#            if (var not in ninemlp.common.ncml.BaseCellMetaClass.COMMON_RECORDABLE and \
 #                        not hasattr(test_seg, var)) or var.startswith('e'):
 #                cell_type.recordable.remove(var)
 
@@ -562,7 +563,7 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
 #        recordable = {}
 #        for seg in morphml_model.segments:
 #            recordable[seg_varname(seg) + '.v'] =  
-#        recordable = copy(ninemlp.common.ncml.BaseNCMLMetaClass.COMMON_RECORDABLE)
+#        recordable = copy(ninemlp.common.ncml.BaseCellMetaClass.COMMON_RECORDABLE)
 #        
 #        mech_path = cls.dct['mech_path']
 #        variables = []
@@ -618,12 +619,12 @@ class NCMLMetaClass(ninemlp.common.ncml.BaseNCMLMetaClass):
         # the NMODL files that really shouldn't be, and they are not even accessible through 
         # pyNEURON anyway. So these are just included in the class out of interest more than 
         # anything practical now.
-        cls.dct['state_variables'] = variables
-        cls.dct['mechanism_states'] = mech_states
-        return recordable
+#        cls.dct['state_variables'] = variables
+#        cls.dct['mechanism_states'] = mech_states
+#        return recordable
 
 
-def load_cell_type(celltype_id, ncml_path, morph_id=None, build_mode=DEFAULT_BUILD_MODE,
+def load_cell_type(celltype_id, ncml_path, morph_id=None, build_mode='lazy',
                    silent=False, solver_name=None):
     celltype_name = celltype_id
     if morph_id:
@@ -637,8 +638,8 @@ def load_cell_type(celltype_id, ncml_path, morph_id=None, build_mode=DEFAULT_BUI
                                    this=ncml_path))
     else:
         dct = {}
-        dct['ncml_model'] = ninemlp.common.ncml.read_NCML(celltype_id, ncml_path)
-        dct['morphml_model'] = ninemlp.common.ncml.read_MorphML(celltype_id, ncml_path, morph_id)
+        dct['ncml_model'] = nine.cells.readers.read_NCML(celltype_id, ncml_path)
+        dct['morphml_model'] = nine.cells.readers.read_MorphML(celltype_id, ncml_path, morph_id)
         build_options = dct['ncml_model'].build_options['nemo']['neuron']
         install_dir, dct['component_translations'] = \
                 build_celltype_files(celltype_id, ncml_path, build_mode=build_mode,
@@ -646,7 +647,7 @@ def load_cell_type(celltype_id, ncml_path, morph_id=None, build_mode=DEFAULT_BUI
                                      silent_build=silent)
         load_mechanisms(install_dir)
         dct['mech_path'] = install_dir
-        celltype = NCMLMetaClass(str(celltype_name), (pyNN.models.BaseCellType, NCMLCell), dct)
+        celltype = CellMetaClass(str(celltype_name), (pyNN.models.BaseCellType, Cell), dct)
         # Save cell type in case it needs to be used again
         loaded_celltypes[celltype_name] = (celltype, ncml_path)
     return celltype

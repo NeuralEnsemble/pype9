@@ -26,8 +26,8 @@ SRC_PATH_ENV_NAME = 'NINEMLP_SRC_PATH'
 MPI_NAME = 'NINEMLP_MPI'
 
 BUILD_MODE_OPTIONS = ['lazy', 'force', 'build_only', 'require', 'compile_only']
-DEFAULT_BUILD_MODE = 'lazy'
-pyNN_build_mode = DEFAULT_BUILD_MODE
+'lazy' = 'lazy'
+pyNN_build_mode = 'lazy'
 
 if SRC_PATH_ENV_NAME in os.environ: # NINEMLP_SRC_PATH has been set as an environment variable use it
     SRC_PATH = os.environ[SRC_PATH_ENV_NAME]

@@ -27,7 +27,7 @@ import pyNN.space
 import pyNN.parameters
 from ncml import seg_varname
 from pyNN.random import RandomDistribution, NumpyRNG
-from ninemlp import DEFAULT_BUILD_MODE, XMLHandler
+from ninemlp import XMLHandler
 import ninemlp.connectivity.point2point as point2point
 import ninemlp.connectivity.morphology as morphology
 import ninemlp.space
@@ -250,7 +250,7 @@ class Network(object):
     
     class ProjectionToCloneNotCreatedYetException(Exception): pass
 
-    def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None,
+    def __init__(self, filename, build_mode='lazy', timestep=None, min_delay=None,
                  max_delay=None, temperature=None, silent_build=False, flags=[], rng=None, 
                  solver_name='cvode'):
         assert  (hasattr(self, "_pyNN_module") and 
@@ -296,7 +296,7 @@ class Network(object):
                 raise Exception ("Did not find flag '{flag}' used in '{id}' in freeParameters "
                                  "block of NetworkML description".format(flag=e, id=p.id))
 
-    def load_network(self, filename, build_mode=DEFAULT_BUILD_MODE, verbose=False, timestep=None,
+    def load_network(self, filename, build_mode='lazy', verbose=False, timestep=None,
                                                 min_delay=None, max_delay=None, temperature=None,
                                                 silent_build=False, flags=[], rng=None, 
                                                 solver_name='cvode'):

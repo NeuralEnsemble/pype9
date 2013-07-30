@@ -20,12 +20,12 @@ except:
 import os
 from collections import namedtuple
 import numpy
-from ninemlp import SRC_PATH, DEFAULT_BUILD_MODE, pyNN_build_mode
+from ninemlp import SRC_PATH, 'lazy', pyNN_build_mode
 from ninemlp.neuron.build import compile_nmodl
 #compile_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN_build_mode,
 #              silent=True)
 import ninemlp.common
-from ninemlp.neuron.ncml import NCMLCell, group_varname, seg_varname
+from ninemlp.neuron.ncml import Cell, group_varname, seg_varname
 import pyNN.common
 import pyNN.core
 import pyNN.neuron.standardmodels as standardmodels
@@ -50,7 +50,7 @@ get_current_time, get_time_step, get_min_delay, \
 
 class Population(ninemlp.common.Population, pyNN.neuron.Population):
 
-    def __init__(self, label, size, cell_type, params={}, build_mode=DEFAULT_BUILD_MODE):
+    def __init__(self, label, size, cell_type, params={}, build_mode='lazy'):
         """
         Initialises the population after reading the population parameters from file
         @param label: the label assigned to the population (its NINEML id)
@@ -119,7 +119,7 @@ class Population(ninemlp.common.Population, pyNN.neuron.Population):
 class Projection(pyNN.neuron.Projection):
 
     def __init__(self, pre, dest, label, connector, synapse_type, source=None, target=None,
-                 build_mode=DEFAULT_BUILD_MODE, rng=None):
+                 build_mode='lazy', rng=None):
         self.label = label
         if build_mode == 'build_only' or build_mode == 'compile_only':
             print "Warning! '--build' option was set to 'build_only', meaning the projection " \
@@ -131,7 +131,7 @@ class Projection(pyNN.neuron.Projection):
 
 class Network(ninemlp.common.Network):
 
-    def __init__(self, filename, build_mode=DEFAULT_BUILD_MODE, timestep=None, min_delay=None,
+    def __init__(self, filename, build_mode='lazy', timestep=None, min_delay=None,
                                  max_delay=None, temperature=None, silent_build=False, flags=[],
                                  solver_name=None, rng=None):
         self._pyNN_module = pyNN.neuron
