@@ -21,18 +21,14 @@ except:
 import os
 from collections import namedtuple
 import numpy
-from ninemlp import SRC_PATH, 'lazy', pyNN_build_mode
-from ninemlp.neuron.build import compile_nmodl
-#compile_nmodl(os.path.join(SRC_PATH, 'pyNN', 'neuron', 'nmodl'), build_mode=pyNN_build_mode,
-#              silent=True)
-import ninemlp.common
-from ninemlp.neuron.ncml import Cell, group_varname, seg_varname
+import nine.cells.neuron
+import nine.pyNN.common
+from nine.cells.neuron import group_varname, seg_varname
 import pyNN.common
 import pyNN.core
 import pyNN.neuron.standardmodels as standardmodels
 import pyNN.neuron.connectors as connectors
 import pyNN.neuron.recording
-import ncml
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, record, record_v, record_gsyn, \
                         StepCurrentSource, DCSource, NoisyCurrentSource
@@ -49,7 +45,7 @@ logger = logging.getLogger("PyNN")
 get_current_time, get_time_step, get_min_delay, \
         get_max_delay, num_processes, rank = build_state_queries(simulator)
 
-class Population(ninemlp.common.Population, pyNN.neuron.Population):
+class Population(nine.pyNN.common.Population, pyNN.neuron.Population):
 
     def __init__(self, label, size, cell_type, params={}, build_mode='lazy'):
         """
@@ -130,18 +126,18 @@ class Projection(pyNN.neuron.Projection):
                                             label=label, source=source, receptor_type=target)
 
 
-class Network(ninemlp.common.Network):
+class Network(nine.pyNN.common.Network):
 
     def __init__(self, filename, build_mode='lazy', timestep=None, min_delay=None,
                                  max_delay=None, temperature=None, silent_build=False, flags=[],
                                  solver_name=None, rng=None):
         self._pyNN_module = pyNN.neuron
-        self._ncml_module = ncml
+        self._ncml_module = nine.cells.neuron
         self._population_type = Population
         self._projection_type = Projection
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         #Call the base function initialisation function.
-        ninemlp.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep,
+        nine.pyNN.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep,
                                         min_delay=min_delay, max_delay=max_delay,
                                     temperature=temperature, silent_build=silent_build, flags=flags,
                                     rng=rng)

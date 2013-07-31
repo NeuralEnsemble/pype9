@@ -23,8 +23,8 @@ import pyNN.neuron.simulator
 import weakref
 from nine.cells import group_varname, seg_varname, DEFAULT_V_INIT
 import nine.cells.readers
-from .__init__ import Cell as BaseCell
-from .__init__ import CellMetaClass as BaseCellMetaClass
+from . import Cell as BaseCell
+from . import CellMetaClass as BaseCellMetaClass
 
 ## Used to store the directories from which NMODL objects have been loaded to avoid loading them twice
 loaded_celltypes = {}
@@ -550,7 +550,7 @@ class CellMetaClass(BaseCellMetaClass):
 #            # Check to see if the variable is part of the common recordables or is an attribute
 #            # of the test segment. Also remove all reversal potentials (assumed to be all 
 #            # attributes starting with 'e') as they are unlikely to change.
-#            if (var not in ninemlp.common.ncml.BaseCellMetaClass.COMMON_RECORDABLE and \
+#            if (var not in nine.pyNN.common.ncml.BaseCellMetaClass.COMMON_RECORDABLE and \
 #                        not hasattr(test_seg, var)) or var.startswith('e'):
 #                cell_type.recordable.remove(var)
 
@@ -563,7 +563,7 @@ class CellMetaClass(BaseCellMetaClass):
 #        recordable = {}
 #        for seg in morphml_model.segments:
 #            recordable[seg_varname(seg) + '.v'] =  
-#        recordable = copy(ninemlp.common.ncml.BaseCellMetaClass.COMMON_RECORDABLE)
+#        recordable = copy(nine.pyNN.common.ncml.BaseCellMetaClass.COMMON_RECORDABLE)
 #        
 #        mech_path = cls.dct['mech_path']
 #        variables = []

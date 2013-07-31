@@ -26,8 +26,8 @@ import pyNN.nest.connectors as connectors
 import pyNN.core
 import pyNN.errors
 import pyNN.common
-import ninemlp.common.ncml
-import ninemlp.common.brep
+import nine.pyNN.common.ncml
+import nine.pyNN.common.brep
 import ncml
 
 from pyNN.nest import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
@@ -46,7 +46,7 @@ def build_pyNN(build_mode='lazy', silent=True):
     pass # Not required as of yet (this is needed for the neuron module though
 
 
-class Population(ninemlp.common.Population, pyNN.nest.Population):
+class Population(nine.pyNN.common.Population, pyNN.nest.Population):
 
     def __init__(self, label, size, cell_type, params={}, build_mode='lazy'):
         """
@@ -62,7 +62,7 @@ class Population(ninemlp.common.Population, pyNN.nest.Population):
         raise NotImplementedError('set_param has not been implemented for Population class yet')
 
     def rset(self, param, rand_distr, component=None, seg_group=None):
-        param_name = ninemlp.common.ncml.group_varname(seg_group)
+        param_name = nine.pyNN.common.ncml.group_varname(seg_group)
         if component:
             param_name += '.' + component
         param_name += '.' + param
@@ -105,7 +105,7 @@ class Projection(pyNN.nest.Projection):
                                           receptor_type=target, label=label)
             
 
-class Network(ninemlp.common.Network):
+class Network(nine.pyNN.common.Network):
 
     def __init__(self, filename, build_mode='lazy', timestep=None,
                  min_delay=None, max_delay=None, temperature=None, silent_build=False, flags=[],
@@ -116,7 +116,7 @@ class Network(ninemlp.common.Network):
         self._projection_type = Projection
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         self.temperature = None
-        ninemlp.common.Network.__init__(self, filename, build_mode=build_mode,
+        nine.pyNN.common.Network.__init__(self, filename, build_mode=build_mode,
                                         timestep=timestep, min_delay=min_delay, max_delay=max_delay,
                                     temperature=temperature, silent_build=silent_build, flags=flags,
                                     solver_name=solver_name, rng=rng)

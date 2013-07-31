@@ -21,9 +21,9 @@ import nest
 import pyNN.nest
 import pyNN.standardmodels
 from pyNN.parameters import ParameterSpace
-from .__init__ import Cell as BaseCell
-from .__init__ import CellMetaClass as BaseCellMetaClass
-from .__init__ import group_varname
+from . import Cell as BaseCell
+from . import CellMetaClass as BaseCellMetaClass
+from . import group_varname
 from .readers import read_NCML, read_MorphML
 from .build.nest import build_celltype_files
 
