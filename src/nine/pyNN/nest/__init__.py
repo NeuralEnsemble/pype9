@@ -79,7 +79,7 @@ class Population(nine.pyNN.common.Population, pyNN.nest.Population):
                 translation = self.get_cell_type().component_translations
             except AttributeError:
                 raise Exception("Attempting to set component or segment group parameter on non-"
-                                "ninemlp cell type")
+                                "'Nine' cell type")
             try:
                 comp_translation = translation[component]
             except KeyError:

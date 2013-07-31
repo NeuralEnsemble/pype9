@@ -14,7 +14,7 @@
 from __future__ import absolute_import
 import numpy as np
 from warnings import warn
-from ninemlp.connectivity import axially_symmetric_tensor
+from nine.trees import axially_symmetric_tensor
 
 class InsufficientTargetsWarning(Warning): pass
 

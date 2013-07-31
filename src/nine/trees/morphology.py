@@ -20,8 +20,8 @@ from numpy.linalg import norm
 import collections
 import xml.sax
 import pyNN.connectors
-from ninemlp import XMLHandler
-from ninemlp.connectivity import axially_symmetric_tensor
+from nine import XMLHandler
+from nine.trees import axially_symmetric_tensor
 import itertools
 from copy import deepcopy
 try:
@@ -1040,11 +1040,10 @@ def read_NeurolucidaSomaXML(filename):
 if __name__ == '__main__':
     VOX_SIZE = (0.1, 0.1, 500)
     from os.path import normpath, join
-    from ninemlp import SRC_PATH
     print "Loading forest..."
 #    forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
 #                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
-    forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
+    forest = Forest(normpath(join('home','tclose','git','kbrain', 'morph', 'Purkinje', 'xml',
                                   'tree2.xml')), include_somas=False)
     print "Finished loading forest."
     forest.offset((0.0, 0.0, -250))

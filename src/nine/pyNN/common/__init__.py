@@ -26,12 +26,12 @@ import math
 import pyNN.connectors
 import pyNN.space
 import pyNN.parameters
-from ncml import seg_varname
+from nine.cells import seg_varname
 from pyNN.random import RandomDistribution, NumpyRNG
-from ninemlp import XMLHandler
-import ninemlp.connectivity.point2point as point2point
-import ninemlp.connectivity.morphology as morphology
-import ninemlp.space
+from nine import XMLHandler
+import nine.trees.point2point as point2point
+import nine.trees.morphology as morphology
+import nine.trees.space
 
 ## The location relative to the NINEML-Network file to look for the folder containing the cell descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
 RELATIVE_NCML_DIR = "./ncml"
@@ -386,12 +386,12 @@ class Network(object):
                 if somas:
                     args = somas.args                    
                     if somas.pattern == 'Grid2D':
-                        structure = ninemlp.space.Grid2D(aspect_ratio=float(args['aspect_ratio']), 
+                        structure = nine.trees.space.Grid2D(aspect_ratio=float(args['aspect_ratio']), 
                                                       dx=float(args['dx']), dy=float(args['dy']), 
                                                       x0=float(args['x0']), y0=float(args['y0']), 
                                                       z=float(args['z']))
                     elif somas.pattern == 'Grid3D':
-                        structure = ninemlp.space.Grid3D(aspect_ratioXY=float(args['aspect_ratioXY']), 
+                        structure = nine.trees.space.Grid3D(aspect_ratioXY=float(args['aspect_ratioXY']), 
                                                       aspect_ratioXZ=float(args['aspect_ratioXZ']), 
                                                       dx=float(args['dx']), dy=float(args['dy']), 
                                                       dz=float(args['dz']), x0=float(args['x0']), 
