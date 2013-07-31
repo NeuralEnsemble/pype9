@@ -9,6 +9,7 @@
 #    Copyright 2011 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
+from __future__ import absolute_import
 import platform
 import os.path
 from collections import defaultdict

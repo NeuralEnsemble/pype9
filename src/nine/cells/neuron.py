@@ -12,7 +12,7 @@
 #    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
-
+from __future__ import absolute_import
 from neuron import h, nrn, load_mechanisms
 import pyNN.models
 #import pyNN.recording
@@ -624,7 +624,7 @@ class CellMetaClass(BaseCellMetaClass):
 #        return recordable
 
 
-def load_cell_type(celltype_id, ncml_path, morph_id=None, build_mode='lazy',
+def load_celltype(celltype_id, ncml_path, morph_id=None, build_mode='lazy',
                    silent=False, solver_name=None):
     celltype_name = celltype_id
     if morph_id:

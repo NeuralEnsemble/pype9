@@ -11,7 +11,7 @@
 #    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
-
+from __future__ import absolute_import
 import os.path
 import shutil
 import time

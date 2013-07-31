@@ -11,7 +11,7 @@
 #    Copyright 2011 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
-
+from __future__ import absolute_import
 import numpy as np
 from warnings import warn
 from ninemlp.connectivity import axially_symmetric_tensor

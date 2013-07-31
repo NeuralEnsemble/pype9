@@ -12,7 +12,8 @@
 #    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
-# This is required to ensure that the right MPI variables are set before NEURON is initiated 
+# This is required to ensure that the right MPI variables are set before NEURON is initiated
+from __future__ import absolute_import 
 try:
     from mpi4py import MPI # @UnresolvedImport @UnusedImport
 except:

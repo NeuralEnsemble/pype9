@@ -6,6 +6,7 @@ This package defines methods for producing patterns of connectivity between neur
 @author: Tom Close
 @date: 23/01/13
 """
+from __future__ import absolute_import
 import numpy as np
 
 def transform_tensor(scale=(1.0, 1.0, 1.0), rotation=(0.0, 0.0, 0.0)):

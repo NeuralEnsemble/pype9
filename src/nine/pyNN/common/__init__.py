@@ -13,6 +13,7 @@
 #
 #######################################################################################
 # Generic imports
+from __future__ import absolute_import
 import re
 import numpy
 import collections
@@ -365,7 +366,7 @@ class Network(object):
             cell_type = getattr(_temp_import, cell_type_name)
         else:
             try:
-                cell_type = self._ncml_module.load_cell_type('.'.join(os.path.basename(cell_type_name).split('.')[:-1]),
+                cell_type = self._ncml_module.load_celltype('.'.join(os.path.basename(cell_type_name).split('.')[:-1]),
                                                              os.path.join(self.dirname,
                                                                           cell_type_name),
                                                              morph_id=morph_id,

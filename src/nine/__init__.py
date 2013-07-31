@@ -14,7 +14,7 @@
 #    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
-
+from __future__ import absolute_import
 import os
 import xml.sax
 import time
@@ -26,7 +26,6 @@ SRC_PATH_ENV_NAME = 'NINEMLP_SRC_PATH'
 MPI_NAME = 'NINEMLP_MPI'
 
 BUILD_MODE_OPTIONS = ['lazy', 'force', 'build_only', 'require', 'compile_only']
-'lazy' = 'lazy'
 pyNN_build_mode = 'lazy'
 
 if SRC_PATH_ENV_NAME in os.environ: # NINEMLP_SRC_PATH has been set as an environment variable use it
@@ -152,10 +151,6 @@ class XMLHandler(xml.sax.handler.ContentHandler):
                     raise Exception("Elements of the 'required_parents' argument need to be " \
                                     "either strings or lists/tuples of strings")
         return True
-
-
-
-
 
 
 

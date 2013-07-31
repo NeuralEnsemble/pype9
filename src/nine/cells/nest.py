@@ -13,6 +13,7 @@
 #
 #######################################################################################
 
+from __future__ import absolute_import
 import sys
 import os.path
 from collections import defaultdict
@@ -101,7 +102,7 @@ class CellMetaClass(BaseCellMetaClass):
         return pyNN.standardmodels.build_translations(*translations)
 
 
-def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode='lazy',
+def load_celltype(celltype_name, ncml_path, morph_id=None, build_mode='lazy',
                    silent=False, solver_name='cvode'):
     """
     Loads a PyNN cell type for NEST from an XML description, compiling the necessary module files
@@ -149,3 +150,7 @@ def load_cell_type(celltype_name, ncml_path, morph_id=None, build_mode='lazy',
         # Added the loaded cell_type to the dictionary of previously loaded cell types
         loaded_cell_types[celltype_name] = (cell_type, ncml_path)
     return cell_type
+    
+    
+    
+    
