@@ -907,7 +907,7 @@ class ConnectionProbabilityMatrix(object):
         return self._prob_matrix
 
 
-class MorphologyBasedConnector(pyNN.connectors.IndexBasedProbabilityConnector):
+class MorphologyBasedProbabilityConnector(pyNN.connectors.IndexBasedProbabilityConnector):
             
     class KernelOverlapExpression(pyNN.connectors.IndexBasedExpression):
         """
@@ -936,7 +936,7 @@ class MorphologyBasedConnector(pyNN.connectors.IndexBasedProbabilityConnector):
             
     def __init__(self, pre_kernel, post_kernel, allow_self_connections=True,
                  rng=None, safe=True, callback=None):
-        super(MorphologyBasedConnector, self).__init__(
+        super(MorphologyBasedProbabilityConnector, self).__init__(
                 self.KernelOverlapExpression(pre_kernel, post_kernel), 
                 allow_self_connections=allow_self_connections, safe=safe, rng=rng, callback=callback)
 

@@ -15,6 +15,8 @@ import os.path
 from collections import defaultdict
 from runpy import run_path
 
+BUILD_MODE_OPTIONS = ['lazy', 'force', 'build_only', 'require', 'compile_only']
+
 _RELATIVE_BUILD_DIR = 'nine.build'
 _PARAMS_DIR = 'params'
 _SRC_DIR = 'src'

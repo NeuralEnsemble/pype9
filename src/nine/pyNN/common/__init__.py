@@ -12,17 +12,14 @@
 #    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
-# Generic imports
 from __future__ import absolute_import
 import re
 import numpy
 import collections
 import os.path
 import xml.sax
-from inspect import getmro
 import warnings
 import math
-# Specific imports
 import pyNN.connectors
 import pyNN.space
 import pyNN.parameters
@@ -555,8 +552,8 @@ class Network(object):
                 raise Exception("Could not initialise distance expression class '{}' from given " 
                                 "arguments '{}' for projection '{}'\n('{}')"
                                 .format(kernel_name, connection.args, label, e))
-            connector = morphology.MorphologyBasedProbabilityConnector(
-                                kernel, **other_connector_args)
+            connector = nine.trees.morphology.MorphologyBasedProbabilityConnector(
+                                                                    kernel, **other_connector_args)
         # If connection pattern is external, load the weights and delays from a file in PyNN
         # FromFileConnector format and then create a FromListConnector connector. Some additional
         # preprocessing is performed here, which is why the FromFileConnector isn't used directly.
