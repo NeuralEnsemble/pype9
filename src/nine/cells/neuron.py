@@ -22,8 +22,8 @@ import pyNN.neuron.simulator
 import weakref
 from nine.cells import group_varname, seg_varname, DEFAULT_V_INIT
 import nine.cells.readers
-from . import Cell as BaseCell
-from . import CellMetaClass as BaseCellMetaClass
+from . import NineCell as BaseNineCell
+from . import NineCellMetaClass as BaseNineCellMetaClass
 
 ## Used to store the directories from which NMODL objects have been loaded to avoid loading them twice
 loaded_celltypes = {}
@@ -220,7 +220,7 @@ class SegmentGroup(object):
         return getattr(self.default, var)
 
 
-class Cell(BaseCell):
+class NineCell(BaseNineCell):
 
     class Params(object):
 
@@ -246,35 +246,6 @@ class Cell(BaseCell):
             # A weak reference is used to avoid a circular reference that would prevent the garbage 
             # collector from being called on the cell class    
             self.parent = weakref.ref(parameters['parent'])
-
-    def __getattr__(self, var):
-        """
-        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup. This 
-        is done to allow pyNN's population.tset method to set attributes of cell components.
-        
-        @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
-                          attribute vars
-        """
-        if '.' in var:
-            components = var.split('.', 1)
-            return getattr(getattr(self, components[0]), components[1])
-        else:
-            raise AttributeError("'{}'".format(var))
-
-    def __setattr__(self, var, val):
-        """
-        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup.
-         This is done to allow pyNN's population.tset method to set attributes of cell components.
-        
-        @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
-                          attribute vars
-        @param val [*]: val of the attribute
-        """
-        if '.' in var:
-            components = var.split('.', 1)
-            setattr(getattr(self, components[0]), components[1], val)
-        else:
-            super(Cell, self).__setattr__(var, val)
 
     def _init_morphology(self):
         """
@@ -388,67 +359,6 @@ class Cell(BaseCell):
         for seg in self.all_segs:
             seg.v = seg.v_init
 
-    def record(self, *args):
-        # If one argument is provided assume that it is the pyNN version of this method 
-        # (i.e. map to record_spikes)
-        if len(args) == 1:
-            assert(self.parent is not None)
-            self.record_spikes(args[0])
-        elif len(args) == 2:
-            variable, output = args
-            if variable == 'spikes':
-                self.record_spikes(1)
-            elif variable == 'v':
-                self.record_v(1)
-            else:
-                raise Exception('Unrecognised variable ''{}'' provided as first argument'.\
-                                format(variable))
-            pyNN.neuron.simulator.recorder_list.append(self.Recorder(self, variable, output))
-        else:
-            raise Exception ('Wrong number of arguments, expected either 2 or 3 got {}'.\
-                             format(len(args) + 1))
-
-    def record_v(self, active):
-        if active:
-            self.vtrace = h.Vector()
-            self.vtrace.record(self.source_section(0.5)._ref_v)
-            if not self.recording_time:
-                self.record_times = h.Vector()
-                self.record_times.record(h._ref_t)
-                self.recording_time += 1
-        else:
-            self.vtrace = None
-            self.recording_time -= 1
-            if self.recording_time == 0:
-                self.record_times = None
-
-    def record_gsyn(self, syn_name, active):
-        # how to deal with static and T-M synapses?
-        # record both and sum?
-        if active:
-            self.gsyn_trace[syn_name] = h.Vector()
-            self.gsyn_trace[syn_name].record(getattr(self, syn_name)._ref_g)
-            if not self.recording_time:
-                self.record_times = h.Vector()
-                self.record_times.record(h._ref_t)
-                self.recording_time += 1
-        else:
-            self.gsyn_trace[syn_name] = None
-            self.recording_time -= 1
-            if self.recording_time == 0:
-                self.record_times = None
-
-    def record_spikes(self, active):
-        """
-        Simple remapping of record onto record_spikes as well
-        
-        @param active [bool]: Whether the recorder is active or not (required by pyNN)
-        """
-        if active:
-            self.rec = h.NetCon(self.source, None, sec=self.source_section)
-            self.rec.record(self.spike_times)
-        else:
-            self.spike_times = h.Vector(0)
 
     def set_parameters(self, param_dict):
         for name in self.parameter_names:
@@ -458,19 +368,13 @@ class Cell(BaseCell):
         return self.ncml_model.action_potential_threshold.get('v', 0.0)
 
 
-class CellMetaClass(BaseCellMetaClass):
+class NineCellMetaClass(BaseNineCellMetaClass):
     """
-    Metaclass for building NineMLCellType subclasses
+    Metaclass for building NineMLNineCellType subclasses
     Called by nineml_celltype_from_model
     """
     def __new__(cls, name, bases, dct):
-        #The __init__ function for the created class
-        def cellclass__init__(self, **parameters):
-            pyNN.models.BaseCellType.__init__(self, **parameters)
-            Cell.__init__(self, **parameters)
-        dct['__init__'] = cellclass__init__
-        cellclass = super(CellMetaClass, cls).__new__(cls, name, bases, dct)
-        cellclass.model = cellclass
+        cellclass = super(NineCellMetaClass, cls).__new__(cls, name, bases, dct)
         return cellclass
 
 
@@ -497,7 +401,7 @@ def load_celltype(celltype_id, ncml_path, morph_id=None, build_mode='lazy',
                                      silent_build=silent)
         load_mechanisms(install_dir)
         dct['mech_path'] = install_dir
-        celltype = CellMetaClass(str(celltype_name), (pyNN.models.BaseCellType, Cell), dct)
+        celltype = NineCellMetaClass(str(celltype_name), (pyNN.models.BaseNineCellType, NineCell), dct)
         # Save cell type in case it needs to be used again
         loaded_celltypes[celltype_name] = (celltype, ncml_path)
     return celltype
