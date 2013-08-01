@@ -229,7 +229,7 @@ class Projection(pyNN.neuron.Projection):
                   "'{}' was not constructed.".format(label)
         else:
             pyNN.neuron.Projection.__init__(self, pre, dest, connector, synapse_type, 
-                                            label=label, source=source, receptor_type=target)
+                                            label=label, source=source, receptor_type=target, rng=rng)
 
 class Network(nine.pyNN.common.Network):
 
@@ -244,9 +244,9 @@ class Network(nine.pyNN.common.Network):
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         #Call the base function initialisation function.
         nine.pyNN.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep,
-                                        min_delay=min_delay, max_delay=max_delay,
-                                    temperature=temperature, silent_build=silent_build, flags=flags,
-                                    rng=rng)
+                                          min_delay=min_delay, max_delay=max_delay,
+                                          temperature=temperature, silent_build=silent_build, 
+                                          flags=flags, solver_name=solver_name, rng=rng)
 
     def _convert_units(self, value_str, units=None):
         if ' ' in value_str:
