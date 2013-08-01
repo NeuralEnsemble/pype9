@@ -43,7 +43,7 @@ get_current_time, get_time_step, get_min_delay, \
         get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 
-class NinePyNNCell(CommonNinePyNNCell):
+class NinePyNNCell(pyNN.models.BaseCellType, CommonNinePyNNCell):
     
     def __getattr__(self, var):
         """
@@ -145,14 +145,8 @@ class NinePyNNCellMetaClass(CommonNinePyNNCellMetaClass):
         if cls.loaded_celltypes.has_key((name, nineml_path)):
             celltype = cls.loaded_celltypes((name, nineml_path))
         else:
-            def cellclass__init__(self, **parameters):
-                pyNN.models.BaseCellType.__init__(self, **parameters)
-                NinePyNNCell.__init__(self, **parameters)
-            dct = {'__init__': cellclass__init__}         # The __init__ function for the created class
-            dct['model'] = NineCellMetaClass(name, nineml_path)
-            celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, name, 
-                                                                 (pyNN.models.BaseCellType, 
-                                                                 NinePyNNCell), dct)
+            dct = {'model': NineCellMetaClass(name, nineml_path)}
+            celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, name, (NinePyNNCell,), dct)
             cls.loaded_celltypes[(name, nineml_path)] = celltype
         return celltype
 
