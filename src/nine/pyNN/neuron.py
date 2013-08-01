@@ -27,19 +27,14 @@ import nine.pyNN.common
 from nine.cells.neuron import group_varname, seg_varname
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, record, record_v, record_gsyn, \
-                        StepCurrentSource, DCSource, NoisyCurrentSource
+                        StepCurrentSource, DCSource, NoisyCurrentSource #@UnusedVariable
 import pyNN.neuron.simulator
-# import pyNN.common
-# import pyNN.core
-# import pyNN.neuron.standardmodels as standardmodels
-# import pyNN.neuron.connectors as connectors
-# import pyNN.neuron.recording
-# import pyNN.neuron as sim
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
 import neuron
 from neuron import h
 from nine.cells.neuron import NineCell, NineCellMetaClass
+from .common.cells import CommonNinePyNNCell, CommonNinePyNNCellMetaClass
 import logging
 
 logger = logging.getLogger("PyNN")
@@ -48,7 +43,7 @@ get_current_time, get_time_step, get_min_delay, \
         get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 
-class NinePyNNCell(object):
+class NinePyNNCell(CommonNinePyNNCell):
     
     def __getattr__(self, var):
         """
@@ -142,15 +137,24 @@ class NinePyNNCell(object):
             self.spike_times = h.Vector(0)
 
 
-class NinePyNNCellMetaClass(type):   
+class NinePyNNCellMetaClass(CommonNinePyNNCellMetaClass):
     
-    def __new__(cls, name, bases, dct):
-        def cellclass__init__(self, **parameters):
-            pyNN.models.BaseCellType.__init__(self, **parameters)
-            NinePyNNCell.__init__(self, **parameters)
-        dct['__init__'] = cellclass__init__         # The __init__ function for the created class
-        dct['model'] = NineCellMetaClass.__new__(cls, name, bases, dct)
-
+    loaded_celltypes = {}
+    
+    def __new__(cls, name, nineml_path):
+        if cls.loaded_celltypes.has_key((name, nineml_path)):
+            celltype = cls.loaded_celltypes((name, nineml_path))
+        else:
+            def cellclass__init__(self, **parameters):
+                pyNN.models.BaseCellType.__init__(self, **parameters)
+                NinePyNNCell.__init__(self, **parameters)
+            dct = {'__init__': cellclass__init__}         # The __init__ function for the created class
+            dct['model'] = NineCellMetaClass(name, nineml_path)
+            celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, name, 
+                                                                 (pyNN.models.BaseCellType, 
+                                                                 NinePyNNCell), dct)
+            cls.loaded_celltypes[(name, nineml_path)] = celltype
+        return celltype
 
 
 class Population(nine.pyNN.common.Population, pyNN.neuron.Population):
@@ -200,7 +204,7 @@ class Population(nine.pyNN.common.Population, pyNN.neuron.Population):
 #        Overloads that from pyNN.common.BasePopulation to allow section names and positions to 
 #        be passed.
 #        """
-#        if hasattr(self.celltype, 'ncml_model'): # If cell is generated from NCML file
+#        if hasattr(self.celltype, 'memb_model'): # If cell is generated from NCML file
 #            match = pyNN.neuron.recording.recordable_pattern.match(variable)
 #            if match:
 #                parts = match.groupdict()
@@ -236,7 +240,7 @@ class Projection(pyNN.neuron.Projection):
 class Network(nine.pyNN.common.Network):
 
     _pyNN_module = pyNN.neuron
-    _nine_cells_module = nine.cells.neuron
+    _NineCellMetaClass = NinePyNNCellMetaClass
     _Population = Population
     _Projection = Projection
 

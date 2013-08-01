@@ -71,16 +71,16 @@ class CellMetaClass(BaseCellMetaClass):
     """
     def __new__(cls, name, bases, dct):
         dct['nest_name'] = {"on_grid": name, "off_grid": name}
-        dct['translations'] = cls._construct_translations(dct['ncml_model'],
+        dct['translations'] = cls._construct_translations(dct['memb_model'],
                                                           dct["component_translations"])
         cell_type = super(CellMetaClass, cls).__new__(cls, name, bases, dct)
         cell_type.model = super(CellMetaClass, cls).__new__(cls, name, bases, dct)
         return cell_type
 
     @classmethod
-    def _construct_translations(cls, ncml_model, component_translations):
+    def _construct_translations(cls, memb_model, component_translations):
         comp_groups = defaultdict(list)
-        for comp in ncml_model.mechanisms:
+        for comp in memb_model.mechanisms:
             comp_groups[str(comp.id)].append(group_varname(comp.group_id))
         translations = []
         for comp, params in component_translations.iteritems():
@@ -142,8 +142,8 @@ def load_celltype(celltype_name, ncml_path, morph_id=None, build_mode='lazy',
         nest.sli_run('({}) addpath'.format(os.path.join(install_dir, 'share', 'nest')))
         # Install nest module
         nest.Install(celltype_name + 'Loader')
-        dct['ncml_model'] = read_NCML(celltype_name, ncml_path)
-        dct['morphml_model'] = read_MorphML(celltype_name, ncml_path)
+        dct['memb_model'] = read_NCML(celltype_name, ncml_path)
+        dct['morph_model'] = read_MorphML(celltype_name, ncml_path)
         dct['nest_model'] = celltype_name
         # Add the loaded cell type to the list of cell types that have been loaded
         cell_type = CellMetaClass(str(celltype_name), (Cell,), dct)

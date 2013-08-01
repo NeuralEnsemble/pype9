@@ -255,7 +255,7 @@ class NineCell(BaseNineCell):
                                       required, leaving the "barebones" pyNEURON structure for \
                                       each nrn.Section
         """
-        if not len(self.morphml_model.segments):
+        if not len(self.morph_model.segments):
             raise Exception("The loaded morphology does not contain any segments")
         # Initialise all segments
         self.segments = {}
@@ -264,7 +264,7 @@ class NineCell(BaseNineCell):
         # parameter of model via segment groups
         self.all_segs = SegmentGroup()
         self.root_segment = None
-        for morphml_seg in self.morphml_model.segments:
+        for morphml_seg in self.morph_model.segments:
             if self.segments.has_key(morphml_seg.id):
                 raise Exception ("Segment id '{}' conflicts with a previously defined member of " \
                                  "the cell object.".format(morphml_seg.id))
@@ -282,7 +282,7 @@ class NineCell(BaseNineCell):
             raise Exception("The neuronal tree does not have a root segment, meaning it is " \
                             "connected in a circle (I assume this is not intended)")
         # Connect the segments together
-        for morphml_seg in self.morphml_model.segments:
+        for morphml_seg in self.morph_model.segments:
             if morphml_seg.parent:
                 self.segments[morphml_seg.id]._connect(self.segments[morphml_seg.parent.id],
                                                        morphml_seg.parent.fractionAlong)
@@ -300,9 +300,9 @@ class NineCell(BaseNineCell):
         # Set up groups of segments for inserting mechanisms
         self.groups = {}
         self.default_group = None # Will be overwritten in first iteration of loop
-        for morphml_group in self.morphml_model.groups:
+        for morphml_group in self.morph_model.groups:
             group = SegmentGroup()
-            if morphml_group.id == self.morphml_model.default_group or not self.default_group:
+            if morphml_group.id == self.morph_model.default_group or not self.default_group:
                 self.default_group = group
             self.groups[morphml_group.id] = group
             setattr(self, group_varname(morphml_group.id), group)
@@ -318,7 +318,7 @@ class NineCell(BaseNineCell):
         """
         Loop through loaded currents and synapses, and insert them into the relevant sections.
         """
-        for mech in sorted(self.ncml_model.mechanisms, key=attrgetter('id')):
+        for mech in sorted(self.memb_model.mechanisms, key=attrgetter('id')):
             if self.component_translations.has_key(mech.id):
                 translations = dict([(key, val[0]) for key, val in
                                      self.component_translations[mech.id].iteritems()])
@@ -326,7 +326,7 @@ class NineCell(BaseNineCell):
                 translations = None
             for seg in self.get_group(mech.group_id):
                 try:
-                    seg.insert(mech.id, cell_id=self.ncml_model.celltype_id,
+                    seg.insert(mech.id, cell_id=self.memb_model.celltype_id,
                                                                         translations=translations)
                 except ValueError as e:
                     raise Exception("Could not insert {mech_id} into section group {group_id} " \
@@ -334,18 +334,18 @@ class NineCell(BaseNineCell):
                                     .format(mech_id=mech.id, error=e, 
                                             group_id=mech.group_id if mech.group_id else 'all_segs'))
         #Loop through loaded membrane mechanisms and insert them into the relevant sections.
-        for cm in self.ncml_model.capacitances:
+        for cm in self.memb_model.capacitances:
             for seg in self.get_group(cm.group_id):
                 seg.cm = cm.value
         #Loop through loaded membrane mechanisms and insert them into the relevant sections.
-        for reversal in self.ncml_model.reversal_potentials:
+        for reversal in self.memb_model.reversal_potentials:
             for seg in self.get_group(reversal.group_id):
                 setattr(seg, 'e' + reversal.species, reversal.value)
-        for ra in self.ncml_model.axial_resistances:
+        for ra in self.memb_model.axial_resistances:
             for seg in self.get_group(ra.group_id):
                 seg.Ra = ra.value
-        for syn in self.ncml_model.synapses:
-            hoc_name = self.ncml_model.celltype_id + '_' + syn.id
+        for syn in self.memb_model.synapses:
+            hoc_name = self.memb_model.celltype_id + '_' + syn.id
             if hoc_name in dir(h):
                 SynapseType = getattr(h, hoc_name)
             else:
@@ -365,7 +365,7 @@ class NineCell(BaseNineCell):
             setattr(self, name, param_dict[name])
 
     def get_threshold(self):
-        return self.ncml_model.action_potential_threshold.get('v', 0.0)
+        return self.memb_model.action_potential_threshold.get('v', 0.0)
 
 
 class NineCellMetaClass(BaseNineCellMetaClass):
@@ -378,8 +378,8 @@ class NineCellMetaClass(BaseNineCellMetaClass):
         return cellclass
 
 
-def load_celltype(celltype_id, ncml_path, morph_id=None, build_mode='lazy',
-                   silent=False, solver_name=None):
+def load_nine_celltype(celltype_id, ncml_path, morph_id=None, build_mode='lazy',
+                       silent=False, solver_name=None):
     celltype_name = celltype_id
     if morph_id:
         celltype_name += morph_id
@@ -392,9 +392,9 @@ def load_celltype(celltype_id, ncml_path, morph_id=None, build_mode='lazy',
                                    this=ncml_path))
     else:
         dct = {}
-        dct['ncml_model'] = nine.cells.readers.read_NCML(celltype_id, ncml_path)
-        dct['morphml_model'] = nine.cells.readers.read_MorphML(celltype_id, ncml_path, morph_id)
-        build_options = dct['ncml_model'].build_options['nemo']['neuron']
+        dct['memb_model'] = nine.cells.readers.read_NCML(celltype_id, ncml_path)
+        dct['morph_model'] = nine.cells.readers.read_MorphML(celltype_id, ncml_path, morph_id)
+        build_options = dct['memb_model'].build_options['nemo']['neuron']
         install_dir, dct['component_translations'] = \
                 build_celltype_files(celltype_id, ncml_path, build_mode=build_mode,
                                      method=build_options.method, kinetics=build_options.kinetics,

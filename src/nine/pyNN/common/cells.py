@@ -2,7 +2,7 @@ import math
 from itertools import chain
 from nine.cells import group_varname
 
-class BaseCell(object):
+class CommonNinePyNNCell(object):
     """
     A base cell object for NCML cell classes.
     """
@@ -34,7 +34,7 @@ class BaseCell(object):
         return self.groups[group_id] if group_id else self.all_segs
 
 
-class BaseCellMetaClass(type):
+class CommonNinePyNNCellMetaClass(type):
     """
     Metaclass for building NineMLCellType subclasses
     Called by nineml_celltype_from_model
@@ -45,30 +45,28 @@ class BaseCellMetaClass(type):
         # with the standard structure for the "__new__" function of metaclasses).
         cls.name = name
         cls.dct = dct
-        ncml_model = dct['ncml_model']
-        dct["default_parameters"] = cls._construct_default_parameters()
+        memb_model = dct['memb_model']
+        morph_model = dct['morph_model']
+        dct["default_parameters"] = cls._construct_default_parameters(memb_model, morph_model)
         dct["default_initial_values"] = cls._construct_initial_values()
-        dct["receptor_types"] = cls._construct_receptor_types()
+        dct["receptor_types"] = cls._construct_receptor_types(memb_model, morph_model)
         dct["injectable"] = True
         dct["conductance_based"] = True
-        dct["model_name"] = ncml_model.celltype_id
-#        dct["recordable"] = cls._construct_recordable()
+        dct["model_name"] = memb_model.celltype_id
         dct["weight_variables"] = cls._construct_weight_variables()
         dct["parameter_names"] = dct['default_parameters'].keys()
-        return super(BaseCellMetaClass, cls).__new__(cls, name, bases, dct)
+        return super(CommonNinePyNNCellMetaClass, cls).__new__(cls, name, bases, dct)
 
     @classmethod
-    def _construct_default_parameters(cls): #@UnusedVariable
+    def _construct_default_parameters(cls, memb_model, morph_model): #@UnusedVariable
         """
         Reads the default parameters in the NCML components and appends them to the parameters
         of the model class
         """
-        ncml_model = cls.dct["ncml_model"]
-        morphml_model = cls.dct["morphml_model"]
         default_params = {}
         component_translations = cls.dct["component_translations"]
         # Add current and synapse mechanisms parameters
-        for mech in ncml_model.mechanisms:
+        for mech in memb_model.mechanisms:
             if component_translations.has_key(mech.id):
                 default_params.update([(group_varname(mech.group_id) + "." + str(mech.id) +
                                         "." + varname, mapping[1])
@@ -79,17 +77,17 @@ class BaseCellMetaClass(type):
                     default_params[group_varname(mech.group_id) + "." + str(mech.id) + "." +
                                    param.name] = param.value
         # Add basic electrical property parameters
-        for cm in ncml_model.capacitances:
+        for cm in memb_model.capacitances:
             default_params[group_varname(cm.group_id) + "." + "cm"] = cm.value
-        for ra in ncml_model.axial_resistances:
+        for ra in memb_model.axial_resistances:
             default_params[group_varname(ra.group_id) + "." + "Ra"] = ra.value
         # Check each group for consistent morphology parameters and if so create a variable
         # parameter for them
         #FIXME: This should really part of the XML parser
-        for seg_group in morphml_model.groups:
+        for seg_group in morph_model.groups:
             diameter = 'NotFound'
             length = 'NotFound'
-            for seg in morphml_model.segments:
+            for seg in morph_model.segments:
                 if seg.id in seg_group:
                     new_diameter = seg.distal.diam
                     if seg.proximal: # This is a bit of a hack until I rework the new XML parser
@@ -124,28 +122,17 @@ class BaseCellMetaClass(type):
         # this
         return initial_values
 
-#    @classmethod
-#    def _construct_parameter_names(cls):
-#        """
-#        Constructs the parameter names list of the cell class from the NCML model
-#        """
-#        ncml_modl = cls.dct['ncml_model']
-#        parameter_names = []        
-#        return parameter_names
-
     @classmethod
-    def _construct_receptor_types(cls):
+    def _construct_receptor_types(cls, memb_model, morph_model):
         """
         Constructs the dictionary of recordable parameters from the NCML model
         """
-        ncml_model = cls.dct['ncml_model']
-        morphml_model = cls.dct['morphml_model']
         receptors = []
-        for rec in ncml_model.synapses:
+        for rec in memb_model.synapses:
             if rec.group_id is None:
-                members = [seg.id for seg in morphml_model.segments]
+                members = [seg.id for seg in morph_model.segments]
             else:
-                group = [group for group in morphml_model.groups if group.id == rec.group_id]
+                group = [group for group in morph_model.groups if group.id == rec.group_id]
                 if len(group) != 1:
                     raise Exception("Error parsing xml ({} groups found matching id '{}')"
                                     .format(len(group), rec.group_id))
@@ -153,7 +140,7 @@ class BaseCellMetaClass(type):
             for seg in members:
                 receptors.append(seg + '_seg.' + rec.id)
         # Append all segments as potential gap junctions 
-        for seg in morphml_model.segments:
+        for seg in morph_model.segments:
             receptors.append(seg.id + '_seg.gap')
         return receptors
 
