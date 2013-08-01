@@ -22,6 +22,7 @@ import os
 from collections import namedtuple
 import numpy
 import nine.cells.neuron
+from nine.cells.neuron import load_celltype
 import nine.pyNN.common
 from nine.cells.neuron import group_varname, seg_varname
 import pyNN.common
@@ -43,6 +44,9 @@ logger = logging.getLogger("PyNN")
 
 get_current_time, get_time_step, get_min_delay, \
         get_max_delay, num_processes, rank = build_state_queries(simulator)
+
+
+
 
 class Population(nine.pyNN.common.Population, pyNN.neuron.Population):
 
@@ -124,16 +128,16 @@ class Projection(pyNN.neuron.Projection):
             pyNN.neuron.Projection.__init__(self, pre, dest, connector, synapse_type, 
                                             label=label, source=source, receptor_type=target)
 
-
 class Network(nine.pyNN.common.Network):
+
+    _pyNN_module = pyNN.neuron
+    _nine_cells_module = nine.cells.neuron
+    _Population = Population
+    _Projection = Projection
 
     def __init__(self, filename, build_mode='lazy', timestep=None, min_delay=None,
                                  max_delay=None, temperature=None, silent_build=False, flags=[],
                                  solver_name=None, rng=None):
-        self._pyNN_module = pyNN.neuron
-        self._ncml_module = nine.cells.neuron
-        self._population_type = Population
-        self._projection_type = Projection
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         #Call the base function initialisation function.
         nine.pyNN.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep,
@@ -196,7 +200,6 @@ class Network(nine.pyNN.common.Network):
         p = self._get_simulation_params(**params)
         setup(p['timestep'], p['min_delay'], p['max_delay'])
         neuron.h.celsius = p['temperature']
-
 
 if __name__ == "__main__":
 

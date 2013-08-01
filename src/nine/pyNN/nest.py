@@ -26,9 +26,7 @@ import pyNN.nest.connectors as connectors
 import pyNN.core
 import pyNN.errors
 import pyNN.common
-import nine.pyNN.common.ncml
-import nine.pyNN.common.brep
-import ncml
+from nine.cells.nest import load_celltype
 
 from pyNN.nest import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, StepCurrentSource, ACSource, DCSource, \
@@ -107,13 +105,14 @@ class Projection(pyNN.nest.Projection):
 
 class Network(nine.pyNN.common.Network):
 
+    _pyNN_module = pyNN.nest
+    _nine_cells_module = nine.cells.nest
+    _Population = Population
+    _Projection = Projection
+
     def __init__(self, filename, build_mode='lazy', timestep=None,
                  min_delay=None, max_delay=None, temperature=None, silent_build=False, flags=[],
                  solver_name='cvode', rng=None):
-        self._pyNN_module = pyNN.nest
-        self._ncml_module = ncml
-        self._population_type = Population
-        self._projection_type = Projection
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         self.temperature = None
         nine.pyNN.common.Network.__init__(self, filename, build_mode=build_mode,
