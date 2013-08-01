@@ -15,7 +15,6 @@
 from __future__ import absolute_import
 from neuron import h, nrn, load_mechanisms
 import pyNN.models
-#import pyNN.recording
 from nine.cells.build.neuron import build_celltype_files
 from operator import attrgetter
 import numpy
@@ -348,20 +347,6 @@ class Cell(BaseCell):
         """
         Loop through loaded currents and synapses, and insert them into the relevant sections.
         """
-        if len(self.ncml_model.passive_currents) > 1 and \
-                any(not curr.group_id for curr in self.ncml_model.passive_currents):
-            raise Exception("Passive currents is duplicated or conflictingly specified (both" \
-                            "with 'segmentGroup'without 'segmentGroup')")
-        if len(self.ncml_model.capacitances) > 1 and \
-                any(not curr.group_id for curr in self.ncml_model.capacitances):
-            raise Exception("Membrane capacitance is duplicated or conflictingly specified (both" \
-                            "with 'segmentGroup'without 'segmentGroup')")
-        if len(self.ncml_model.axial_resistances) > 1 and \
-                any(not curr.group_id for curr in self.ncml_model.axial_resistances):
-            raise Exception("Axial resistance is duplicated or conflictingly specified (both" \
-                            "with 'segmentGroup'without 'segmentGroup')")
-        #FIXME: ionic currents and reversal potentials should undergo similar checks but they 
-        #require the species to be checked as well.
         for mech in sorted(self.ncml_model.mechanisms, key=attrgetter('id')):
             if self.component_translations.has_key(mech.id):
                 translations = dict([(key, val[0]) for key, val in
@@ -394,21 +379,9 @@ class Cell(BaseCell):
                 SynapseType = getattr(h, hoc_name)
             else:
                 raise Exception("Did not find '{}' synapse type".format(hoc_name))
-#                try:
-#                    SynapseType = type(syn.type) #FIXME: This needs to be verified
-#                except:
-#                    raise Exception ("Could not find synapse '{}' in loaded or built in synapses."\
-#                                     .format(syn.id))
-#            if self.component_translations.has_key(syn.id):
-#                param_translations = dict([(key, val[0]) for key, val in
-#                                           self.component_translations[syn.id].iteritems()])
-#            else:
-#                param_translations = None
             for seg in self.get_group(syn.group_id):
                 receptor = SynapseType(0.5, sec=seg)
                 setattr(seg, syn.id, receptor)
-#                for param in param_translations:
-#                    setattr(receptor, param.name, param.value)
 
     def memb_init(self):
         # Initialisation of member states goes here
@@ -484,34 +457,6 @@ class Cell(BaseCell):
     def get_threshold(self):
         return self.ncml_model.action_potential_threshold.get('v', 0.0)
 
-    # Create recorder to append to simulator.recorder_list
-
-#    class Recorder(pyNN.neuron.recording.Recorder):
-#        
-#        def __init__(self, cell, variable, output):
-#            self.cell = cell
-#            self.variable = variable
-#            self.file = output
-#            self.population = None
-#            
-#        def _get(self, gather=False, compatible_output=True, filter=None): #@UnusedVariable
-#            if self.variable == 'spikes':
-#                data = numpy.empty((0, 2))
-#                spikes = numpy.array(self.cell.spike_times)
-#                spikes = spikes[spikes <= pyNN.neuron.simulator.state.t + 1e-9]
-#                if len(spikes) > 0:
-#                    new_data = numpy.array([numpy.ones(spikes.shape) * 0.0, spikes]).T
-#                    data = numpy.concatenate((data, new_data))
-#            elif self.variable == 'v':
-#                data = numpy.empty((0, 3))
-#                v = numpy.array(self.cell.vtrace)
-#                t = numpy.array(self.cell.record_times)
-#                new_data = numpy.array([numpy.ones(v.shape) * 0.0, t, v]).T
-#                data = numpy.concatenate((data, new_data))
-#            if gather and pyNN.neuron.simulator.state.num_processes > 1:
-#                data = pyNN.recording.gather(data)
-#            return data
-
 
 class CellMetaClass(BaseCellMetaClass):
     """
@@ -519,11 +464,6 @@ class CellMetaClass(BaseCellMetaClass):
     Called by nineml_celltype_from_model
     """
     def __new__(cls, name, bases, dct):
-        # To be honest I probably don't understand the logic for the separation between model
-        # and the cell class in PyNN, which results in the slightly messy hack below, where I 
-        # produce basically two versions of the same __init__ function, one that takes a dictonary
-        # and the other that takes kwargs to pass to set as the cell class and model class __init__
-        # functions respectively.
         #The __init__ function for the created class
         def cellclass__init__(self, **parameters):
             pyNN.models.BaseCellType.__init__(self, **parameters)
@@ -531,97 +471,7 @@ class CellMetaClass(BaseCellMetaClass):
         dct['__init__'] = cellclass__init__
         cellclass = super(CellMetaClass, cls).__new__(cls, name, bases, dct)
         cellclass.model = cellclass
-#        cls._validate_recordable(cellclass) #FIXME: This is a bit of a hack
         return cellclass
-
-#    @staticmethod
-#    def _validate_recordable(cell_type):
-#        """
-#        This is a bit of a hack method, because I can't work out how to extract from the NMODL
-#        files only the variables that are actually recordable, so I test them here and remove
-#        the ones that don't work
-#        
-#        @param cell_type: The NCML cell class that needs its recordable variable validated
-#        """
-#        test_cell = cell_type()
-#        test_seg = test_cell.source_section(0.5)
-#        recordable = copy(cell_type.recordable)
-#        for var in recordable:
-#            # Check to see if the variable is part of the common recordables or is an attribute
-#            # of the test segment. Also remove all reversal potentials (assumed to be all 
-#            # attributes starting with 'e') as they are unlikely to change.
-#            if (var not in nine.pyNN.common.ncml.BaseCellMetaClass.COMMON_RECORDABLE and \
-#                        not hasattr(test_seg, var)) or var.startswith('e'):
-#                cell_type.recordable.remove(var)
-
-#    @classmethod
-#    def _construct_recordable(cls):
-#        """
-#        Constructs the dictionary of recordable parameters from the NCML model
-#        """
-#        morphml_model = cls.dct["morphml_model"]
-#        recordable = {}
-#        for seg in morphml_model.segments:
-#            recordable[seg_varname(seg) + '.v'] =  
-#        recordable = copy(nine.pyNN.common.ncml.BaseCellMetaClass.COMMON_RECORDABLE)
-#        
-#        mech_path = cls.dct['mech_path']
-#        variables = []
-#        mech_states = {}
-#        for filename in os.listdir(mech_path):
-#            split_filename = filename.split('.')
-#            mech_id = '.'.join(split_filename[0:-1])
-#            cell_name = mech_id.split('_')[0]
-#            mech_name = '_'.join(mech_id.split('_')[1:])
-#            ext = split_filename[-1]
-#            if cell_name == cls.name and ext == 'mod':
-#                mod_file_path = os.path.join(mech_path, filename)
-#                try:
-#                    mod_file = open(mod_file_path)
-#                except:
-#                    raise Exception('Could not open mod file {} for inspection'.\
-#                                    format(mod_file_path))
-#                in_assigned_block = False
-#                in_state_block = False
-#                assigned = []
-#                states = []
-#                for line in mod_file:
-#                    if 'STATE' in line:
-#                        in_state_block = True
-#                    elif 'ASSIGNED' in line:
-#                        in_assigned_block = True
-#                    elif in_assigned_block:
-#                        if '}' in line:
-#                            in_assigned_block = False
-#                        else:
-#
-#                            var = line.strip()
-#                            if var:
-#                                assigned.append(var)
-#                    elif in_state_block:
-#                        if '}' in line:
-#                            in_state_block = False
-#                        else:
-#                            state = line.strip()
-#                            if state:
-#                                states.append(state)
-#                for var in assigned:
-#                    if var not in recordable:
-#                        recordable.append(var)
-#                        variables.append(var)
-#                for state in states:
-#                    recordable.append(mech_name + "::" + state)
-#                    if mech_states.has_key(mech_name):
-#                        mech_states[mech_name].append(state)
-#                    else:
-#                        mech_states[mech_name] = [state]
-        # These didn't really work as I had hoped because there are a lot of mechanisms added to
-        # the NMODL files that really shouldn't be, and they are not even accessible through 
-        # pyNEURON anyway. So these are just included in the class out of interest more than 
-        # anything practical now.
-#        cls.dct['state_variables'] = variables
-#        cls.dct['mechanism_states'] = mech_states
-#        return recordable
 
 
 def load_celltype(celltype_id, ncml_path, morph_id=None, build_mode='lazy',

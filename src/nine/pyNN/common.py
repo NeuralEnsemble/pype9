@@ -13,7 +13,6 @@
 #
 #######################################################################################
 from __future__ import absolute_import
-import re
 import numpy
 import collections
 import os.path

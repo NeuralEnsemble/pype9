@@ -32,7 +32,6 @@ import pyNN.neuron.recording
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, record, record_v, record_gsyn, \
                         StepCurrentSource, DCSource, NoisyCurrentSource
-#ACSource, 
 import pyNN.neuron as sim
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
@@ -69,9 +68,9 @@ class Population(nine.pyNN.common.Population, pyNN.neuron.Population):
                                             label=label)
 
 
-    #FIXME: I think this should be deleted
-    def set_param(self, cell_id, param, value, component=None, section=None):
-        raise NotImplementedError('set_param has not been implemented for Population class yet')
+#    #FIXME: I think this should be deleted
+#    def set_param(self, cell_id, param, value, component=None, section=None):
+#        raise NotImplementedError('set_param has not been implemented for Population class yet')
 
     def rset(self, param, rand_distr, component=None, seg_group=None):
         param_scope = [group_varname(seg_group)]
