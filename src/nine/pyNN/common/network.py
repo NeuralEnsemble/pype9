@@ -1,16 +1,15 @@
 import numpy
 import os.path
 import warnings
-import math
 import pyNN.connectors
 import pyNN.space
-import pyNN.parameters
 from nine.cells import seg_varname
-from pyNN.random import RandomDistribution, NumpyRNG
+from pyNN.random import NumpyRNG
+import pyNN.standardmodels
 import nine.trees.point2point as point2point
 import nine.trees.morphology as morphology
 import nine.trees.space
-from .readers import read_networkML
+from ..readers import read_networkML
 
 ## The location relative to the NINEML-Network file to look for the folder containing the cell descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
 RELATIVE_NCML_DIR = "./ncml"

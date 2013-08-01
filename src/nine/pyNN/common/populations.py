@@ -1,4 +1,6 @@
-
+import numpy
+import pyNN.parameters
+from pyNN.random import RandomDistribution
 
 class Population(object):
 
@@ -51,7 +53,7 @@ class Population(object):
                 estimated_num_spikes = stim_range / mean_interval
                 # Add extra spikes to make sure spike train doesn't stop short
                 estimated_num_spikes = int(estimated_num_spikes + 
-                                           math.exp(-estimated_num_spikes / 10.0) * 10.0)
+                                           numpy.exp(-estimated_num_spikes / 10.0) * 10.0)
                 spike_intervals = rng.exponential(mean_interval,
                                                            size=(self.size, estimated_num_spikes))
                 spike_times = numpy.cumsum(spike_intervals, axis=1) + start_time
