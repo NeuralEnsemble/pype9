@@ -1,18 +1,11 @@
 import math
 from itertools import chain
-from nine.cells import group_varname
+from nine.cells import NineCell
 
-class CommonNinePyNNCell(object):
+class NinePyNNCell(object):
     """
     A base cell object for NCML cell classes.
     """
-
-    def __init__(self):
-        """
-        Currently unused but could be used in future to initialise simulator independent components
-        of the NCML classes.
-        """
-        pass
 
     def memb_init(self):
         # Initialisation of member states goes here        
@@ -34,7 +27,7 @@ class CommonNinePyNNCell(object):
         return self.groups[group_id] if group_id else self.all_segs
 
 
-class CommonNinePyNNCellMetaClass(type):
+class NinePyNNCellMetaClass(type):
     """
     Metaclass for building NineMLCellType subclasses
     Called by nineml_celltype_from_model
@@ -55,7 +48,7 @@ class CommonNinePyNNCellMetaClass(type):
         dct["model_name"] = memb_model.celltype_id
         dct["weight_variables"] = cls._construct_weight_variables()
         dct["parameter_names"] = dct['default_parameters'].keys()
-        return super(CommonNinePyNNCellMetaClass, cls).__new__(cls, name, bases, dct)
+        return super(NinePyNNCellMetaClass, cls).__new__(cls, name, bases, dct)
 
     @classmethod
     def _construct_default_parameters(cls, memb_model, morph_model): #@UnusedVariable
@@ -68,19 +61,19 @@ class CommonNinePyNNCellMetaClass(type):
         # Add current and synapse mechanisms parameters
         for mech in memb_model.mechanisms:
             if component_translations.has_key(mech.id):
-                default_params.update([(group_varname(mech.group_id) + "." + str(mech.id) +
+                default_params.update([(NineCell.group_varname(mech.group_id) + "." + str(mech.id) +
                                         "." + varname, mapping[1])
                                        for varname, mapping in \
                                                 component_translations[mech.id].iteritems()])
             else:
                 for param in mech.params:
-                    default_params[group_varname(mech.group_id) + "." + str(mech.id) + "." +
+                    default_params[NineCell.group_varname(mech.group_id) + "." + str(mech.id) + "." +
                                    param.name] = param.value
         # Add basic electrical property parameters
         for cm in memb_model.capacitances:
-            default_params[group_varname(cm.group_id) + "." + "cm"] = cm.value
+            default_params[NineCell.group_varname(cm.group_id) + "." + "cm"] = cm.value
         for ra in memb_model.axial_resistances:
-            default_params[group_varname(ra.group_id) + "." + "Ra"] = ra.value
+            default_params[NineCell.group_varname(ra.group_id) + "." + "Ra"] = ra.value
         # Check each group for consistent morphology parameters and if so create a variable
         # parameter for them
         #FIXME: This should really part of the XML parser
@@ -105,9 +98,9 @@ class CommonNinePyNNCellMetaClass(type):
                     elif length != new_length:
                         length = 'NotConstant'
             if type(diameter) == float:
-                default_params[group_varname(seg_group.id) + ".diam"] = diameter
+                default_params[NineCell.group_varname(seg_group.id) + ".diam"] = diameter
             if type(length) == float:
-                default_params[group_varname(seg_group.id) + ".L"] = length
+                default_params[NineCell.group_varname(seg_group.id) + ".L"] = length
         return default_params
 
     @classmethod

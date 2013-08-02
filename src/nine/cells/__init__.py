@@ -22,20 +22,30 @@ from itertools import chain
 
 DEFAULT_V_INIT = -65
 
-def group_varname(group_id):
-    if group_id:
-        varname = str(group_id) + "_group"
-    else:
-        varname = "all_segs"
-    return varname
+class NineCell(object):
+    
+    @classmethod
+    def group_varname(cls, group_id):
+        if group_id:
+            varname = str(group_id) + "_group"
+        else:
+            varname = "all_segs"
+        return varname
+    
+    @classmethod
+    def seg_varname(cls, seg_id):
+        if seg_id == 'source_section':
+            varname = seg_id
+        else:
+            varname = str(seg_id) + "_seg"
+        return varname
 
-def seg_varname(seg_id):
-    if seg_id == 'source_section':
-        varname = seg_id
-    else:
-        varname = str(seg_id) + "_seg"
-    return varname
 
+class NineCellMetaClass(type):
+    """
+    Not sure if I need this at this stage
+    """
+    pass
 
 
 if __name__ == "__main__":

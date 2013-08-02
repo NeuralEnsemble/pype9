@@ -13,21 +13,12 @@
 #
 #######################################################################################
 from __future__ import absolute_import
-from neuron import h, nrn, load_mechanisms
-import pyNN.models
-from nine.cells.build.neuron import build_celltype_files
 from operator import attrgetter
 import numpy
-import pyNN.neuron.simulator
 import weakref
-from nine.cells import group_varname, seg_varname, DEFAULT_V_INIT
+from neuron import h, nrn, load_mechanisms
+from nine.cells.build.neuron import build_celltype_files
 import nine.cells.readers
-from . import NineCell as BaseNineCell
-from . import NineCellMetaClass as BaseNineCellMetaClass
-
-## Used to store the directories from which NMODL objects have been loaded to avoid loading them twice
-loaded_celltypes = {}
-
 
 class Segment(nrn.Section): #@UndefinedVariable
     """
@@ -83,7 +74,7 @@ class Segment(nrn.Section): #@UndefinedVariable
             self._set_proximal((morphl_seg.proximal.x, morphl_seg.proximal.y,
                                 morphl_seg.proximal.z))
         # Set initialisation variables here    
-        self.v_init = DEFAULT_V_INIT
+        self.v_init = nine.cells.DEFAULT_V_INIT
         # A list to store any gap junctions in
         self._gap_junctions = []
         # Local information, though not sure if I need this here
@@ -220,7 +211,7 @@ class SegmentGroup(object):
         return getattr(self.default, var)
 
 
-class NineCell(BaseNineCell):
+class NineCell(nine.cells.NineCell):
 
     class Params(object):
 
@@ -236,7 +227,7 @@ class NineCell(BaseNineCell):
         # for recording
         self.recordable = {'spikes': None, 'v': self.source_section._ref_v}
         for seg_id, seg in self.segments.iteritems():
-            self.recordable[seg_varname(seg_id) + '.v'] = seg._ref_v 
+            self.recordable[self.seg_varname(seg_id) + '.v'] = seg._ref_v 
         self.spike_times = h.Vector(0)
         self.traces = {}
         self.gsyn_trace = {}
@@ -271,7 +262,7 @@ class NineCell(BaseNineCell):
             seg = Segment(morphml_seg)
             self.segments[morphml_seg.id] = seg
             self.all_segs.append(seg)
-            setattr(self, seg_varname(morphml_seg.id), seg)
+            setattr(self, self.seg_varname(morphml_seg.id), seg)
             if not morphml_seg.parent:
                 if self.root_segment:
                     raise Exception("Two segments ({0} and {1}) were declared without parents, " \
@@ -305,7 +296,7 @@ class NineCell(BaseNineCell):
             if morphml_group.id == self.morph_model.default_group or not self.default_group:
                 self.default_group = group
             self.groups[morphml_group.id] = group
-            setattr(self, group_varname(morphml_group.id), group)
+            setattr(self, self.group_varname(morphml_group.id), group)
             for member_id in morphml_group.members:
                 try:
                     group.append(self.segments[member_id],
@@ -368,43 +359,36 @@ class NineCell(BaseNineCell):
         return self.memb_model.action_potential_threshold.get('v', 0.0)
 
 
-class NineCellMetaClass(BaseNineCellMetaClass):
+class NineCellMetaClass(nine.cells.NineCellMetaClass):
     """
     Metaclass for building NineMLNineCellType subclasses
     Called by nineml_celltype_from_model
     """
-    def __new__(cls, name, bases, dct):
-        cellclass = super(NineCellMetaClass, cls).__new__(cls, name, bases, dct)
-        return cellclass
 
+    loaded_celltypes = {}
 
-def load_nine_celltype(celltype_id, ncml_path, morph_id=None, build_mode='lazy',
-                       silent=False, solver_name=None):
-    celltype_name = celltype_id
-    if morph_id:
-        celltype_name += morph_id
-    if loaded_celltypes.has_key(celltype_name):
-        celltype, prev_ncml_path = loaded_celltypes[celltype_name]
-        if prev_ncml_path != ncml_path:
-            raise Exception("A NCML '{celltype_name}' cell type has already been loaded from a " \
-                            "different location, '{previous}', than the one provided '{this}'".\
-                            format(celltype_name=celltype_name, previous=prev_ncml_path,
-                                   this=ncml_path))
-    else:
-        dct = {}
-        dct['memb_model'] = nine.cells.readers.read_NCML(celltype_id, ncml_path)
-        dct['morph_model'] = nine.cells.readers.read_MorphML(celltype_id, ncml_path, morph_id)
-        build_options = dct['memb_model'].build_options['nemo']['neuron']
-        install_dir, dct['component_translations'] = \
-                build_celltype_files(celltype_id, ncml_path, build_mode=build_mode,
-                                     method=build_options.method, kinetics=build_options.kinetics,
-                                     silent_build=silent)
-        load_mechanisms(install_dir)
-        dct['mech_path'] = install_dir
-        celltype = NineCellMetaClass(str(celltype_name), (pyNN.models.BaseNineCellType, NineCell), dct)
-        # Save cell type in case it needs to be used again
-        loaded_celltypes[celltype_name] = (celltype, ncml_path)
-    return celltype
+    def __new__(cls, celltype_id, nineml_path, morph_id=None, build_mode='lazy',
+                           silent=False, solver_name=None):
+        celltype_name = celltype_id
+        if morph_id:
+            celltype_name += morph_id
+        try:
+            celltype = cls.loaded_celltypes[(celltype_name, nineml_path)]
+        except KeyError:
+            dct = {'memb_model': nine.cells.readers.read_NCML(celltype_id, nineml_path),
+                   'morph_model': nine.cells.readers.read_MorphML(celltype_id, nineml_path, morph_id)}
+            build_options = dct['memb_model'].build_options['nemo']['neuron']
+            install_dir, dct['component_translations'] = \
+                    build_celltype_files(celltype_id, nineml_path, build_mode=build_mode,
+                                         method=build_options.method, 
+                                         kinetics=build_options.kinetics,
+                                         silent_build=silent)
+            load_mechanisms(install_dir)
+            dct['mech_path'] = install_dir
+            celltype = super(NineCellMetaClass, cls).__new__(cls, celltype_name, (NineCell,), dct)
+            # Save cell type in case it needs to be used again
+            cls.loaded_celltypes[(celltype_name, nineml_path)] = celltype
+        return celltype
 
 
 if __name__ == "__main__":

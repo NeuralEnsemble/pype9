@@ -22,19 +22,17 @@ import os
 from collections import namedtuple
 import numpy
 import nine.cells.neuron
-from nine.cells.neuron import load_celltype
 import nine.pyNN.common
-from nine.cells.neuron import group_varname, seg_varname
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, record, record_v, record_gsyn, \
                         StepCurrentSource, DCSource, NoisyCurrentSource #@UnusedVariable
 import pyNN.neuron.simulator
 from pyNN.common.control import build_state_queries
+import pyNN.neuron.standardmodels
 import pyNN.neuron.simulator as simulator
 import neuron
 from neuron import h
 from nine.cells.neuron import NineCell, NineCellMetaClass
-from .common.cells import CommonNinePyNNCell, CommonNinePyNNCellMetaClass
 import logging
 
 logger = logging.getLogger("PyNN")
@@ -43,7 +41,7 @@ get_current_time, get_time_step, get_min_delay, \
         get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 
-class NinePyNNCell(pyNN.models.BaseCellType, CommonNinePyNNCell):
+class NinePyNNCell(pyNN.models.BaseCellType, nine.pyNN.common.cells.NinePyNNCell):
     
     def __getattr__(self, var):
         """
@@ -81,7 +79,7 @@ class NinePyNNCell(pyNN.models.BaseCellType, CommonNinePyNNCell):
             assert(self.parent is not None)
             self.record_spikes(args[0])
         elif len(args) == 2:
-            variable, output = args
+            variable, output = args #@UnusedVariable
             if variable == 'spikes':
                 self.record_spikes(1)
             elif variable == 'v':
@@ -89,7 +87,8 @@ class NinePyNNCell(pyNN.models.BaseCellType, CommonNinePyNNCell):
             else:
                 raise Exception('Unrecognised variable ''{}'' provided as first argument'.\
                                 format(variable))
-            pyNN.neuron.simulator.recorder_list.append(self.Recorder(self, variable, output))
+            raise Exception("Not sure how this is meant to work anymore")
+#             pyNN.neuron.simulator.recorder_list.append(self.Recorder(self, variable, output))
         else:
             raise Exception ('Wrong number of arguments, expected either 2 or 3 got {}'.\
                              format(len(args) + 1))
@@ -137,7 +136,7 @@ class NinePyNNCell(pyNN.models.BaseCellType, CommonNinePyNNCell):
             self.spike_times = h.Vector(0)
 
 
-class NinePyNNCellMetaClass(CommonNinePyNNCellMetaClass):
+class NinePyNNCellMetaClass(nine.pyNN.common.cells.NinePyNNCellMetaClass):
     
     loaded_celltypes = {}
     
@@ -152,6 +151,10 @@ class NinePyNNCellMetaClass(CommonNinePyNNCellMetaClass):
 
 
 class Population(nine.pyNN.common.Population, pyNN.neuron.Population):
+
+    _pyNN_standard_celltypes = dict([(cellname, getattr(pyNN.neuron.standardmodels.cells, cellname))
+                                     for cellname in pyNN.neuron.list_standard_models()])
+    _NineCellMetaClass = NinePyNNCellMetaClass
 
     def __init__(self, label, size, cell_type, params={}, build_mode='lazy'):
         """
@@ -180,14 +183,14 @@ class Population(nine.pyNN.common.Population, pyNN.neuron.Population):
 #        raise NotImplementedError('set_param has not been implemented for Population class yet')
 
     def rset(self, param, rand_distr, component=None, seg_group=None):
-        param_scope = [group_varname(seg_group)]
+        param_scope = [NineCell.group_varname(seg_group)]
         if component:
             param_scope.append(component)
         param_scope.append(param)
         pyNN.neuron.Population.rset(self, '.'.join(param_scope), rand_distr)
 
     def initialize_variable(self, variable, rand_distr, component=None, seg_group=None):
-        variable_scope = [group_varname(seg_group)]
+        variable_scope = [NineCell.group_varname(seg_group)]
         if component:
             variable_scope.append(component)
         variable_scope.append(variable)
@@ -221,6 +224,12 @@ class Population(nine.pyNN.common.Population, pyNN.neuron.Population):
 
 class Projection(pyNN.neuron.Projection):
 
+    _pyNN_module = pyNN.neuron
+
+    @classmethod
+    def get_min_delay(self):
+        return get_min_delay()
+
     def __init__(self, pre, dest, label, connector, synapse_type, source=None, target=None,
                  build_mode='lazy', rng=None):
         self.label = label
@@ -230,23 +239,6 @@ class Projection(pyNN.neuron.Projection):
         else:
             pyNN.neuron.Projection.__init__(self, pre, dest, connector, synapse_type, 
                                             label=label, source=source, receptor_type=target, rng=rng)
-
-class Network(nine.pyNN.common.Network):
-
-    _pyNN_module = pyNN.neuron
-    _NineCellMetaClass = NinePyNNCellMetaClass
-    _Population = Population
-    _Projection = Projection
-
-    def __init__(self, filename, build_mode='lazy', timestep=None, min_delay=None,
-                                 max_delay=None, temperature=None, silent_build=False, flags=[],
-                                 solver_name=None, rng=None):
-        self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
-        #Call the base function initialisation function.
-        nine.pyNN.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep,
-                                          min_delay=min_delay, max_delay=max_delay,
-                                          temperature=temperature, silent_build=silent_build, 
-                                          flags=flags, solver_name=solver_name, rng=rng)
 
     def _convert_units(self, value_str, units=None):
         if ' ' in value_str:
@@ -290,6 +282,23 @@ class Network(nine.pyNN.common.Network):
             return value
         else:
             raise Exception("Unrecognised units '%s'" % units)
+
+class Network(nine.pyNN.common.Network):
+
+    _Population = Population
+    _Projection = Projection
+
+    def __init__(self, filename, build_mode='lazy', timestep=None, min_delay=None,
+                                 max_delay=None, temperature=None, silent_build=False, flags=[],
+                                 solver_name=None, rng=None):
+        self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
+        #Call the base function initialisation function.
+        nine.pyNN.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep,
+                                          min_delay=min_delay, max_delay=max_delay,
+                                          temperature=temperature, silent_build=silent_build, 
+                                          flags=flags, solver_name=solver_name, rng=rng)
+
+
 
 
     def _set_simulation_params(self, **params):
