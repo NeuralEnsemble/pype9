@@ -89,6 +89,7 @@ class Network(object):
             print ("Finished compiling network, now exiting (use try: ... except SystemExit: ... " 
                    "if you want to do something afterwards)")
             raise SystemExit(0)
+        clone_count = 0
         for proj in self.networkML.projections:
             if self.check_flags(proj):
                 try:
@@ -110,6 +111,10 @@ class Network(object):
                 except nine.pyNN.common.Projection.ProjectionToCloneNotCreatedYetException as e:
                     if e.orig_proj_id in [p.id for p in self.networkML.projections]:
                         self.Network.projections.append(proj)
+                        clone_count += 1
+                        if clone_count > len(self.Network.projections):
+                            raise Exception("Projections using 'Clone' pattern form a circular "
+                                            "reference")
                     else:
                         raise Exception("Projection '{}' attempted to clone connectivity patterns " 
                                         "from '{}', which was not found in network."
