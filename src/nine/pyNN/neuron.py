@@ -41,7 +41,7 @@ get_current_time, get_time_step, get_min_delay, \
         get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 
-class NinePyNNCell(pyNN.models.BaseCellType, nine.pyNN.common.cells.NinePyNNCell):
+class NinePyNNCell(pyNN.models.BaseCellType, nine.pyNN.common.cells.NinePyNNCell):   
     
     def __getattr__(self, var):
         """
@@ -70,7 +70,7 @@ class NinePyNNCell(pyNN.models.BaseCellType, nine.pyNN.common.cells.NinePyNNCell
             components = var.split('.', 1)
             setattr(getattr(self, components[0]), components[1], val)
         else:
-            super(NineCell, self).__setattr__(var, val)
+            super(NinePyNNCell, self).__setattr__(var, val)
 
     def record(self, *args):
         # If one argument is provided assume that it is the pyNN version of this method 
@@ -140,43 +140,23 @@ class NinePyNNCellMetaClass(nine.pyNN.common.cells.NinePyNNCellMetaClass):
     
     loaded_celltypes = {}
     
-    def __new__(cls, name, nineml_path):
+    def __new__(cls, name, nineml_path, morph_id=None, build_mode='lazy', silent=False, 
+                solver_name=None):
         if cls.loaded_celltypes.has_key((name, nineml_path)):
             celltype = cls.loaded_celltypes((name, nineml_path))
         else:
-            dct = {'model': NineCellMetaClass(name, nineml_path)}
-            celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, name, (NinePyNNCell,), dct)
+            model = NineCellMetaClass(name, nineml_path, morph_id=morph_id, build_mode=build_mode, 
+                                      silent=silent, solver_name=solver_name)
+            celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, name, (NinePyNNCell,), model)
             cls.loaded_celltypes[(name, nineml_path)] = celltype
         return celltype
+    
 
-
-class Population(nine.pyNN.common.Population, pyNN.neuron.Population):
+class Population(pyNN.neuron.Population, nine.pyNN.common.Population):
 
     _pyNN_standard_celltypes = dict([(cellname, getattr(pyNN.neuron.standardmodels.cells, cellname))
                                      for cellname in pyNN.neuron.list_standard_models()])
     _NineCellMetaClass = NinePyNNCellMetaClass
-
-    def __init__(self, label, size, cell_type, params={}, build_mode='lazy'):
-        """
-        Initialises the population after reading the population parameters from file
-        @param label: the label assigned to the population (its NINEML id)
-        @param size: the size of the population
-        @param cell_type: The cell model used to instantiate the population.
-        @param params: the parameters passed to the cell model (Note that at this stage the same \
-                        parameters are passed to every cell in the model)
-        @param build_mode: Specifies whether cell models, or in NEURON's case, cell mechanisms need\
-                            to be built. This is actually performed when the cell_type is loaded \
-                           but if build_mode is set to 'build_only' then the population isn't \
-                           actually constructed and only the NMODL files are compiled.
-        """
-        if build_mode == 'build_only' or build_mode == 'compile_only':
-            print "Warning! '--build' option was set to 'build_only' or 'compile_only', " \
-                  "meaning the Population '{}' was not constructed and only the NMODL files " \
-                  "were compiled.".format(label)
-        else:
-            pyNN.neuron.Population.__init__(self, size, cell_type, params, structure=None,
-                                            label=label)
-
 
 #    #FIXME: I think this should be deleted
 #    def set_param(self, cell_id, param, value, component=None, section=None):
@@ -222,7 +202,7 @@ class Population(nine.pyNN.common.Population, pyNN.neuron.Population):
 #            return pyNN.neuron.Population.can_record(self, variable)
 
 
-class Projection(pyNN.neuron.Projection):
+class Projection(pyNN.neuron.Projection, nine.pyNN.common.Projection):
 
     _pyNN_module = pyNN.neuron
 
@@ -230,17 +210,8 @@ class Projection(pyNN.neuron.Projection):
     def get_min_delay(self):
         return get_min_delay()
 
-    def __init__(self, pre, dest, label, connector, synapse_type, source=None, target=None,
-                 build_mode='lazy', rng=None):
-        self.label = label
-        if build_mode == 'build_only' or build_mode == 'compile_only':
-            print "Warning! '--build' option was set to 'build_only', meaning the projection " \
-                  "'{}' was not constructed.".format(label)
-        else:
-            pyNN.neuron.Projection.__init__(self, pre, dest, connector, synapse_type, 
-                                            label=label, source=source, receptor_type=target, rng=rng)
-
-    def _convert_units(self, value_str, units=None):
+    @classmethod
+    def _convert_units(cls, value_str, units=None):
         if ' ' in value_str:
             if units:
                 raise Exception("Units defined in both argument ('{}') and value string ('{}')"

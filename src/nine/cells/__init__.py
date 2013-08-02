@@ -40,13 +40,15 @@ class NineCell(object):
             varname = str(seg_id) + "_seg"
         return varname
 
-
 class NineCellMetaClass(type):
-    """
-    Not sure if I need this at this stage
-    """
-    pass
+    
 
+    def __init__(cls, celltype_name, nineml_path, morph_id=None, build_mode='lazy', #@NoSelf
+                   silent=False, solver_name='cvode'):
+        """
+        Not required, but since I have changed the signature of the new method it otherwise 
+        complains
+        """
 
 if __name__ == "__main__":
     print "doing nothing"

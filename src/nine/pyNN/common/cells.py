@@ -23,9 +23,6 @@ class NinePyNNCell(object):
                                               for comp in cls.component_translations.values()]))
         return cls.parameter_names + raw_names
 
-    def get_group(self, group_id):
-        return self.groups[group_id] if group_id else self.all_segs
-
 
 class NinePyNNCellMetaClass(type):
     """
@@ -33,31 +30,37 @@ class NinePyNNCellMetaClass(type):
     Called by nineml_celltype_from_model
     """
 
-    def __new__(cls, name, bases, dct):
+    def __new__(cls, celltype_id, bases, model): #@NoSelf
         # Retrieved parsed model (it is placed in dct to conform with
         # with the standard structure for the "__new__" function of metaclasses).
-        cls.name = name
-        cls.dct = dct
-        memb_model = dct['memb_model']
-        morph_model = dct['morph_model']
-        dct["default_parameters"] = cls._construct_default_parameters(memb_model, morph_model)
+        dct = {'model': model}
+        dct["default_parameters"] = cls._construct_default_parameters(model.memb_model, 
+                                                                      model.morph_model,
+                                                                      model.component_translations)
         dct["default_initial_values"] = cls._construct_initial_values()
-        dct["receptor_types"] = cls._construct_receptor_types(memb_model, morph_model)
+        dct["receptor_types"] = cls._construct_receptor_types(model.memb_model, model.morph_model)
         dct["injectable"] = True
         dct["conductance_based"] = True
-        dct["model_name"] = memb_model.celltype_id
+        dct["model_name"] = model.memb_model.celltype_id
         dct["weight_variables"] = cls._construct_weight_variables()
         dct["parameter_names"] = dct['default_parameters'].keys()
-        return super(NinePyNNCellMetaClass, cls).__new__(cls, name, bases, dct)
+        return super(NinePyNNCellMetaClass, cls).__new__(cls, celltype_id + 'PyNN', bases, dct)
+    
+    def __init__(cls, name, nineml_path, morph_id=None, build_mode='lazy', silent=False, #@NoSelf 
+                solver_name=None):
+        """
+        Not required, but since I have changed the signature of the new method it otherwise 
+        complains
+        """
+        pass
 
     @classmethod
-    def _construct_default_parameters(cls, memb_model, morph_model): #@UnusedVariable
+    def _construct_default_parameters(cls, memb_model, morph_model, component_translations): #@UnusedVariable
         """
         Reads the default parameters in the NCML components and appends them to the parameters
         of the model class
         """
         default_params = {}
-        component_translations = cls.dct["component_translations"]
         # Add current and synapse mechanisms parameters
         for mech in memb_model.mechanisms:
             if component_translations.has_key(mech.id):

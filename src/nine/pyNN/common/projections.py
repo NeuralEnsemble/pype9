@@ -2,7 +2,8 @@ import os
 import numpy
 import warnings
 import pyNN.connectors
-import nine.trees
+import nine.trees.point2point
+import nine.trees.morphology
 from nine.cells import NineCell
 
 class Projection(object):
@@ -14,7 +15,7 @@ class Projection(object):
     
     @classmethod
     def factory(cls, label, pre, dest, connection, source, target, weight, delay, synapse_family, 
-                proj_dir, rng, build_mode, already_created_projections=[], verbose=False, 
+                proj_dir, rng, already_created_projections=[], verbose=False, 
                 allow_self_connections=False):
         # Set expressions for connection weights and delays
         weight_expr = cls._get_connection_param_expr(label, weight)
@@ -34,7 +35,7 @@ class Projection(object):
                 raise Exception("Unrecognised distance expression '{}'".format(expression))
             try:
                 GeometricExpression = getattr(nine.trees.point2point, expression)
-                connect_expr = GeometricExpression(**cls.convert_all_units(connection.args))
+                connect_expr = GeometricExpression(**cls._convert_all_units(connection.args))
             except TypeError as e:
                 raise Exception("Could not initialise distance expression class '{}' from given " 
                                 "arguments '{}' for projection '{}'\n('{}')"
@@ -47,7 +48,7 @@ class Projection(object):
                 raise Exception("Unrecognised distance expression '{}'".format(kernel_name))
             try:
                 Kernel = getattr(nine.trees.morphology, kernel_name + 'Kernel')
-                kernel = Kernel(**cls.convert_all_units(connection.args))
+                kernel = Kernel(**cls._convert_all_units(connection.args))
             except TypeError as e:
                 raise Exception("Could not initialise distance expression class '{}' from given " 
                                 "arguments '{}' for projection '{}'\n('{}')"
@@ -62,13 +63,8 @@ class Projection(object):
             if proj_id not in os.listdir(proj_dir):
                 raise Exception("Connection id '{}' was not found in search path ({}).".
                                 format(proj_id, proj_dir))
-            # The load step can take a while and isn't necessary when compiling so can be 
-            # skipped.
-            if build_mode != 'build_only':
-                connection_matrix = numpy.loadtxt(os.path.join(proj_dir,
-                                                               connection.args['id']))
-            else:
-                connection_matrix = numpy.ones((1, 4))
+            connection_matrix = numpy.loadtxt(os.path.join(proj_dir, connection.args['id']))
+            connection_matrix = numpy.ones((1, 4))
             if isinstance(weight_expr, float):
                 connection_matrix[:, 2] = weight_expr
             if isinstance(delay_expr, float):
@@ -117,10 +113,9 @@ class Projection(object):
             receptor_type = target.segment + '_seg.gap'
         else:
             raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
-        projection = cls(pre, dest, label, connector, synapse_type=synapse, source=source_terminal, 
-                         target=receptor_type, build_mode=build_mode, rng=rng)
-        return projection
-    
+        projection = cls(pre, dest, connector, synapse_type=synapse, source=source_terminal,
+                         receptor_type=receptor_type, label=label)
+        return projection   
     
     @classmethod
     def _get_target_str(cls, synapse, segment=None):
@@ -156,15 +151,22 @@ class Projection(object):
                             .format(param, label))
         return param_expr
     
+    @classmethod
+    def is_value_str(cls, value_str):
+        try:
+            cls._convert_units(value_str)
+            return True
+        except:
+            return False
     
     @classmethod
-    def _convert_units(self, value_str, units=None):
+    def _convert_units(cls, value_str, units=None):
         raise NotImplementedError("_convert_units needs to be implemented by simulator specific " 
                                   "Network class")
 
     @classmethod
-    def _convert_all_units(self, values_dict):
+    def _convert_all_units(cls, values_dict):
         for key, val in values_dict.items():
-            values_dict[key] = self._convert_units(val)
+            values_dict[key] = cls._convert_units(val)
         return values_dict    
 

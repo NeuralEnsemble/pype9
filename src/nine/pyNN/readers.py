@@ -9,7 +9,7 @@ RANDOM_DISTR_PARAMS = {'uniform': ('low', 'high'),
 class NetworkMLHandler(XMLHandler):
 
     Network = collections.namedtuple('Network', 'id sim_params populations projections free_params')
-    Population = collections.namedtuple('Population', ('id', 'cell_type', 'morph_id', 'size',
+    Population = collections.namedtuple('Population', ('id', 'celltype', 'morph_id', 'size',
                                                        'structure', 'cell_params',
                                                        'initial_conditions', 'flags', 'not_flags'))
     Projection = collections.namedtuple('Projection', 'id pre post connection weight delay '

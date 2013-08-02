@@ -71,7 +71,7 @@ class Network(object):
             if self.check_flags(pop):
                 self._populations[pop.id] = self._Population.factory(pop.id,
                                                                     pop.size,
-                                                                    pop.cell_type,
+                                                                    str(pop.celltype),
                                                                     pop.morph_id,
                                                                     pop.structure,
                                                                     pop.cell_params.constants,
@@ -84,41 +84,37 @@ class Network(object):
                                                                     build_mode,
                                                                     silent_build,
                                                                     solver_name=solver_name)
-        if build_mode == 'build_only' or build_mode == 'compile_only':
-            print ("Finished compiling network, now exiting (use try: ... except SystemExit: ... " 
-                   "if you want to do something afterwards)")
-            raise SystemExit(0)
-        clone_count = 0
-        for proj in self.networkML.projections:
-            if self.check_flags(proj):
-                try:
-                    self._projections[proj.id] = self._Projection.factory(
-                                                                 proj.id,
-                                                                 self._populations[proj.pre.pop_id],
-                                                                 self._populations[proj.post.pop_id],
-                                                                 proj.connection,
-                                                                 proj.pre,
-                                                                 proj.post,
-                                                                 proj.weight,
-                                                                 proj.delay,
-                                                                 proj.synapse_family,
-                                                                 self.proj_dir,
-                                                                 self._rng,
-                                                                 build_mode,
-                                                                 self._projections,
-                                                                 verbose)
-                except nine.pyNN.common.Projection.ProjectionToCloneNotCreatedYetException as e:
-                    if e.orig_proj_id in [p.id for p in self.networkML.projections]:
-                        self.Network.projections.append(proj)
-                        clone_count += 1
-                        if clone_count > len(self.Network.projections):
-                            raise Exception("Projections using 'Clone' pattern form a circular "
-                                            "reference")
-                    else:
-                        raise Exception("Projection '{}' attempted to clone connectivity patterns " 
-                                        "from '{}', which was not found in network."
-                                        .format(proj.id, e.orig_proj_id))
-        self._finalise_construction()
+        if build_mode not in ('build_only', 'compile_only'):
+            clone_count = 0
+            for proj in self.networkML.projections:
+                if self.check_flags(proj):
+                    try:
+                        self._projections[proj.id] = self._Projection.factory(
+                                                                     proj.id,
+                                                                     self._populations[proj.pre.pop_id],
+                                                                     self._populations[proj.post.pop_id],
+                                                                     proj.connection,
+                                                                     proj.pre,
+                                                                     proj.post,
+                                                                     proj.weight,
+                                                                     proj.delay,
+                                                                     proj.synapse_family,
+                                                                     self.proj_dir,
+                                                                     self._rng,
+                                                                     self._projections,
+                                                                     verbose)
+                    except nine.pyNN.common.Projection.ProjectionToCloneNotCreatedYetException as e:
+                        if e.orig_proj_id in [p.id for p in self.networkML.projections]:
+                            self.Network.projections.append(proj)
+                            clone_count += 1
+                            if clone_count > len(self.Network.projections):
+                                raise Exception("Projections using 'Clone' pattern form a circular "
+                                                "reference")
+                        else:
+                            raise Exception("Projection '{}' attempted to clone connectivity patterns " 
+                                            "from '{}', which was not found in network."
+                                            .format(proj.id, e.orig_proj_id))
+            self._finalise_construction()
 
     def _finalise_construction(self):
         """
@@ -144,13 +140,6 @@ class Network(object):
         for key, val in values_dict.items():
             values_dict[key] = self._convert_units(val)
         return values_dict
-
-    def is_value_str(self, value_str):
-        try:
-            self._convert_units(value_str)
-            return True
-        except:
-            return False
 
     def get_population(self, label):
         try:

@@ -233,10 +233,11 @@ class NineCell(nine.cells.NineCell):
         self.gsyn_trace = {}
         self.recording_time = 0
         self.rec = h.NetCon(self.source, None, sec=self.source_section)
-        if parameters.has_key('parent') and parameters['parent'] is not None:
-            # A weak reference is used to avoid a circular reference that would prevent the garbage 
-            # collector from being called on the cell class    
-            self.parent = weakref.ref(parameters['parent'])
+
+#         if parameters.has_key('parent') and parameters['parent'] is not None:
+#             # A weak reference is used to avoid a circular reference that would prevent the garbage 
+#             # collector from being called on the cell class    
+#             self.parent = weakref.ref(parameters['parent'])
 
     def _init_morphology(self):
         """
@@ -357,6 +358,9 @@ class NineCell(nine.cells.NineCell):
 
     def get_threshold(self):
         return self.memb_model.action_potential_threshold.get('v', 0.0)
+    
+    def get_group(self, group_id):
+        return self.groups[group_id] if group_id else self.all_segs    
 
 
 class NineCellMetaClass(nine.cells.NineCellMetaClass):

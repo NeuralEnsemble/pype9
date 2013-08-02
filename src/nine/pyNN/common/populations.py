@@ -1,29 +1,29 @@
 import os.path
 import numpy
 import pyNN.parameters
-import nine.trees
+import nine.trees.space
 from pyNN.random import RandomDistribution
 
 class Population(object):
 
     @classmethod
-    def factory(cls, label, size, celltype_name, morph_id, structure_params, cell_params,
+    def factory(cls, label, size, celltype_name, morph_id, structure_params, cellparams,
                 cell_param_distrs, initial_conditions, dirname, pop_dir, rng, verbose=False, 
                 build_mode='lazy', silent_build=False, solver_name='cvode'):
         try:
-            celltype = cls._pyNN_standard_celltypes['celltype_name']
+            celltype = cls._pyNN_standard_celltypes[celltype_name]
         except KeyError:
-            try:
-                celltype = cls._NineCellMetaClass.load_celltype(
-                                        '.'.join(os.path.basename(celltype_name).split('.')[:-1]),
-                                        os.path.join(dirname, celltype_name), 
-                                        morph_id=morph_id,
-                                        build_mode=build_mode,
-                                        silent=silent_build,
-                                        solver_name=solver_name)
-            except IOError:
-                raise Exception("Cell_type_name '{}' was not found or " 
-                                "in standard models".format(celltype_name))
+#             try:
+            celltype = cls._NineCellMetaClass(
+                                    '.'.join(os.path.basename(celltype_name).split('.')[:-1]),
+                                    os.path.join(dirname, celltype_name), 
+                                    morph_id=morph_id,
+                                    build_mode=build_mode,
+                                    silent=silent_build,
+                                    solver_name=solver_name)
+#             except IOError:
+#                 raise Exception("Cell_type_name '{}' was not found or " 
+#                                 "in standard models".format(celltype_name))
         if build_mode not in ('build_only', 'compile_only'):
             # Set default for populations without morphologies
             positions = None
@@ -127,7 +127,7 @@ class Population(object):
                     raise Exception("Not implemented error, support for built-in structure_params management is "
                                     "not done yet.")
             # Actually create the population
-            pop = cls(size, celltype, params=cell_params, structure=structure, label=label)
+            pop = cls(size, celltype, cellparams=cellparams, structure=structure, label=label)
             if structure is None and positions is not None:
                 pop._set_positions(positions, morphologies)
             pop._randomly_distribute_params(cell_param_distrs, rng=rng)

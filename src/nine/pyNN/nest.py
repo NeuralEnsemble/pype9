@@ -75,7 +75,7 @@ class NinePyNNCellMetaClass(nine.pyNN.common.cells.NinePyNNCellMetaClass):
     Metaclass for compiling NineMLCellType subclases
     Called by nineml_celltype_from_model
     """
-    def __new__(cls, celltype_name, nineml_path, morph_id=None, build_mode='lazy',
+    def __new__(cls, celltype_name, nineml_path, morph_id=None, build_mode='lazy', #@NoSelf
                    silent=False, solver_name='cvode'):
         dct = {}
         dct['nest_name'] = {"on_grid": celltype_name, "off_grid": celltype_name}
@@ -83,9 +83,9 @@ class NinePyNNCellMetaClass(nine.pyNN.common.cells.NinePyNNCellMetaClass):
                                                           dct["component_translations"])
         dct['model'] = NineCellMetaClass(celltype_name, nineml_path, morph_id=morph_id, 
                                         build_mode=build_mode, silent=silent, solver_name='cvode')
-        cell_type = super(NinePyNNCellMetaClass, cls).__new__(cls, celltype_name, (NinePyNNCell,),
+        celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, celltype_name, (NinePyNNCell,),
                                                               dct)       
-        return cell_type
+        return celltype
 
     @classmethod
     def _construct_translations(cls, memb_model, component_translations):
@@ -118,14 +118,14 @@ class Population(nine.pyNN.common.Population, pyNN.nest.Population):
                                      for cellname in pyNN.nest.list_standard_models()])
     _NineCellMetaClass = NinePyNNCellMetaClass
 
-    def __init__(self, label, size, cell_type, params={}, build_mode='lazy'):
+    def __init__(self, label, size, celltype, params={}, build_mode='lazy'):
         """
         Initialises the population after reading the population parameters from file
         """
         if build_mode == 'build_only':
             print "Warning! '--build' option was set to 'build_only', meaning the population '%s' was not constructed and only the NMODL files were compiled."
         else:
-            pyNN.nest.Population.__init__(self, size, cell_type,
+            pyNN.nest.Population.__init__(self, size, celltype,
                                           params, structure=None, label=label)
 
     def set_param(self, cell_id, param, value, component=None, section=None):
@@ -146,7 +146,7 @@ class Population(nine.pyNN.common.Population, pyNN.nest.Population):
             raise NotImplementedError("Segment groups are not currently supported for NEST")
         if component:
             try:
-                translation = self.get_cell_type().component_translations
+                translation = self.get_celltype().component_translations
             except AttributeError:
                 raise Exception("Attempting to set component or segment group parameter on non-"
                                 "'Nine' cell type")
@@ -154,7 +154,7 @@ class Population(nine.pyNN.common.Population, pyNN.nest.Population):
                 comp_translation = translation[component]
             except KeyError:
                 raise Exception("Cell type '{}' does not have a component '{}'"
-                                .format(self.get_cell_type().name, component))
+                                .format(self.get_celltype().name, component))
             try:
                 param = comp_translation[param][0]
             except KeyError:
@@ -163,7 +163,7 @@ class Population(nine.pyNN.common.Population, pyNN.nest.Population):
         return param
 
 
-class Projection(pyNN.nest.Projection):
+class Projection(pyNN.nest.Projection, nine.pyNN.common.Projection):
 
     _pyNN_module = pyNN.nest
 
@@ -180,7 +180,8 @@ class Projection(pyNN.nest.Projection):
             pyNN.nest.Projection.__init__(self, pre, dest, connector, synapse_type, source=source,
                                           receptor_type=target, label=label)
             
-    def _convert_units(self, value_str, units=None):
+    @classmethod
+    def _convert_units(cls, value_str, units=None):
         if ' ' in value_str:
             if units:
                 raise Exception("Units defined in both argument ('%s') and value string ('%s')" % (units, value_str))
