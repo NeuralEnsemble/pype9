@@ -80,9 +80,10 @@ class NinePyNNCellMetaClass(nine.pyNN.common.cells.NinePyNNCellMetaClass):
         dct = {'model': NineCellMetaClass(celltype_name, nineml_path, morph_id=morph_id, 
                                         build_mode=build_mode, silent=silent, solver_name='cvode')}
         dct['nest_name'] = {"on_grid": celltype_name, "off_grid": celltype_name}
+        dct['nest_model'] = celltype_name
         dct['translations'] = cls._construct_translations(dct['model'].memb_model,
                                                           dct['model'].component_translations)        
-        celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, celltype_name, (NinePyNNCell,),
+        celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, celltype_name + 'PyNN', (NinePyNNCell,),
                                                               dct)       
         return celltype
 
@@ -157,17 +158,8 @@ class Projection(pyNN.nest.Projection, nine.pyNN.common.Projection):
     _pyNN_module = pyNN.nest
 
     @classmethod
-    def get_min_delay():
+    def get_min_delay(self):
         return get_min_delay()
-
-    def __init__(self, pre, dest, label, connector, synapse_type, source=None, target=None,
-                 build_mode='lazy', rng=None):
-        self.label = label
-        if build_mode == 'build_only':
-            print "Warning! '--build' option was set to 'build_only', meaning the projection '%s' was not constructed." % label
-        else:
-            pyNN.nest.Projection.__init__(self, pre, dest, connector, synapse_type, source=source,
-                                          receptor_type=target, label=label)
             
     @classmethod
     def _convert_units(cls, value_str, units=None):
