@@ -7,10 +7,6 @@ class NinePyNNCell(object):
     A base cell object for NCML cell classes.
     """
 
-    def memb_init(self):
-        # Initialisation of member states goes here        
-        raise NotImplementedError("'memb_init' should be implemented by the derived class.")
-
     @classmethod
     def get_parameter_names(cls):
         """
@@ -30,18 +26,20 @@ class NinePyNNCellMetaClass(type):
     Called by nineml_celltype_from_model
     """
 
-    def __new__(cls, celltype_id, bases, model): #@NoSelf
+    def __new__(cls, celltype_id, bases, dct): #@NoSelf
         # Retrieved parsed model (it is placed in dct to conform with
         # with the standard structure for the "__new__" function of metaclasses).
-        dct = {'model': model}
-        dct["default_parameters"] = cls._construct_default_parameters(model.memb_model, 
-                                                                      model.morph_model,
-                                                                      model.component_translations)
+        dct["default_parameters"] = cls._construct_default_parameters(dct['model'].memb_model, 
+                                                                      dct['model'].morph_model,
+                                                                      dct['model'].component_translations)
         dct["default_initial_values"] = cls._construct_initial_values()
-        dct["receptor_types"] = cls._construct_receptor_types(model.memb_model, model.morph_model)
+        dct["receptor_types"] = cls._construct_receptor_types(dct['model'].memb_model, 
+                                                              dct['model'].morph_model)
+        # FIXME: This requires instantiating a model and taking the keys to its recordable 
+        # dictionary, which doesn't feel right but seems to be how PyNN is organised at the present.
         dct["injectable"] = True
         dct["conductance_based"] = True
-        dct["model_name"] = model.memb_model.celltype_id
+        dct["model_name"] = celltype_id
         dct["weight_variables"] = cls._construct_weight_variables()
         dct["parameter_names"] = dct['default_parameters'].keys()
         return super(NinePyNNCellMetaClass, cls).__new__(cls, celltype_id + 'PyNN', bases, dct)

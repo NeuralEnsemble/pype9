@@ -77,12 +77,11 @@ class NinePyNNCellMetaClass(nine.pyNN.common.cells.NinePyNNCellMetaClass):
     """
     def __new__(cls, celltype_name, nineml_path, morph_id=None, build_mode='lazy', #@NoSelf
                    silent=False, solver_name='cvode'):
-        dct = {}
+        dct = {'model': NineCellMetaClass(celltype_name, nineml_path, morph_id=morph_id, 
+                                        build_mode=build_mode, silent=silent, solver_name='cvode')}
         dct['nest_name'] = {"on_grid": celltype_name, "off_grid": celltype_name}
-        dct['translations'] = cls._construct_translations(dct['memb_model'],
-                                                          dct["component_translations"])
-        dct['model'] = NineCellMetaClass(celltype_name, nineml_path, morph_id=morph_id, 
-                                        build_mode=build_mode, silent=silent, solver_name='cvode')
+        dct['translations'] = cls._construct_translations(dct['model'].memb_model,
+                                                          dct['model'].component_translations)        
         celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, celltype_name, (NinePyNNCell,),
                                                               dct)       
         return celltype
@@ -112,21 +111,11 @@ class NinePyNNCellMetaClass(nine.pyNN.common.cells.NinePyNNCellMetaClass):
         return pyNN.standardmodels.build_translations(*translations)
 
 
-class Population(nine.pyNN.common.Population, pyNN.nest.Population):
+class Population(pyNN.nest.Population, nine.pyNN.common.Population):
 
     _pyNN_standard_celltypes = dict([(cellname, getattr(pyNN.nest.standardmodels.cells, cellname))
                                      for cellname in pyNN.nest.list_standard_models()])
     _NineCellMetaClass = NinePyNNCellMetaClass
-
-    def __init__(self, label, size, celltype, params={}, build_mode='lazy'):
-        """
-        Initialises the population after reading the population parameters from file
-        """
-        if build_mode == 'build_only':
-            print "Warning! '--build' option was set to 'build_only', meaning the population '%s' was not constructed and only the NMODL files were compiled."
-        else:
-            pyNN.nest.Population.__init__(self, size, celltype,
-                                          params, structure=None, label=label)
 
     def set_param(self, cell_id, param, value, component=None, section=None):
         raise NotImplementedError('set_param has not been implemented for Population class yet')

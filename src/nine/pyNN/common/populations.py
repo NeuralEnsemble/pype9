@@ -134,9 +134,6 @@ class Population(object):
             pop._randomly_distribute_initial_conditions(initial_conditions, rng=rng)
             return pop
         
-    def __init__(self):
-        self.morphologies = None
-
     def _randomly_distribute_params(self, cell_param_distrs, rng):
         # Set distributed parameters
         distributed_params = []

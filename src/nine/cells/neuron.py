@@ -346,6 +346,98 @@ class NineCell(nine.cells.NineCell):
                 receptor = SynapseType(0.5, sec=seg)
                 setattr(seg, syn.id, receptor)
 
+    def __getattr__(self, var):
+        """
+        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup. This 
+        is done to allow pyNN's population.tset method to set attributes of cell components.
+        
+        @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
+                          attribute vars
+        """
+        if '.' in var:
+            components = var.split('.', 1)
+            return getattr(getattr(self, components[0]), components[1])
+        else:
+            raise AttributeError("'{}'".format(var))
+
+    def __setattr__(self, var, val):
+        """
+        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup.
+         This is done to allow pyNN's population.tset method to set attributes of cell components.
+        
+        @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
+                          attribute vars
+        @param val [*]: val of the attribute
+        """
+        if '.' in var:
+            components = var.split('.', 1)
+            setattr(getattr(self, components[0]), components[1], val)
+        else:
+            super(NineCell, self).__setattr__(var, val)
+
+    def record(self, *args):
+        # If one argument is provided assume that it is the pyNN version of this method 
+        # (i.e. map to record_spikes)
+        if len(args) == 1:
+            assert(self.parent is not None)
+            self.record_spikes(args[0])
+        elif len(args) == 2:
+            variable, output = args #@UnusedVariable
+            if variable == 'spikes':
+                self.record_spikes(1)
+            elif variable == 'v':
+                self.record_v(1)
+            else:
+                raise Exception('Unrecognised variable ''{}'' provided as first argument'.\
+                                format(variable))
+            raise Exception("Not sure how this is meant to work anymore")
+#             pyNN.neuron.simulator.recorder_list.append(self.Recorder(self, variable, output))
+        else:
+            raise Exception ('Wrong number of arguments, expected either 2 or 3 got {}'.\
+                             format(len(args) + 1))
+
+    def record_v(self, active):
+        if active:
+            self.vtrace = h.Vector()
+            self.vtrace.record(self.source_section(0.5)._ref_v)
+            if not self.recording_time:
+                self.record_times = h.Vector()
+                self.record_times.record(h._ref_t)
+                self.recording_time += 1
+        else:
+            self.vtrace = None
+            self.recording_time -= 1
+            if self.recording_time == 0:
+                self.record_times = None
+
+    def record_gsyn(self, syn_name, active):
+        # how to deal with static and T-M synapses?
+        # record both and sum?
+        if active:
+            self.gsyn_trace[syn_name] = h.Vector()
+            self.gsyn_trace[syn_name].record(getattr(self, syn_name)._ref_g)
+            if not self.recording_time:
+                self.record_times = h.Vector()
+                self.record_times.record(h._ref_t)
+                self.recording_time += 1
+        else:
+            self.gsyn_trace[syn_name] = None
+            self.recording_time -= 1
+            if self.recording_time == 0:
+                self.record_times = None
+
+    def record_spikes(self, active):
+        """
+        Simple remapping of record onto record_spikes as well
+        
+        @param active [bool]: Whether the recorder is active or not (required by pyNN)
+        """
+        if active:
+            self.rec = h.NetCon(self.source, None, sec=self.source_section)
+            self.rec.record(self.spike_times)
+        else:
+            self.spike_times = h.Vector(0)
+
     def memb_init(self):
         # Initialisation of member states goes here
         for seg in self.all_segs:

@@ -70,9 +70,9 @@ class NineCellMetaClass(nine.cells.NineCellMetaClass):
             dct['morph_model'] = read_MorphML(celltype_name, nineml_path)
             dct['nest_model'] = celltype_name
             # Add the loaded cell type to the list of cell types that have been loaded
-            celltype = super(celltype_name, cls).__new__(cls, celltype_name, (NineCell,), dct)
+            celltype = super(NineCellMetaClass, cls).__new__(cls, celltype_name, (NineCell,), dct)
             # Added the loaded celltype to the dictionary of previously loaded cell types
-            loaded_celltypes[celltype_name] = (celltype, nineml_path)
+            loaded_celltypes[(celltype_name, nineml_path)] = celltype
         return celltype
     
     
