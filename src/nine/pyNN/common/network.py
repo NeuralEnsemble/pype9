@@ -15,7 +15,6 @@ BASIC_PYNN_CONNECTORS = ['AllToAll', 'OneToOne']
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
 class Network(object):
-    
 
     def __init__(self, filename, build_mode='lazy', timestep=None, min_delay=None,
                  max_delay=None, temperature=None, silent_build=False, flags=[], rng=None, 
