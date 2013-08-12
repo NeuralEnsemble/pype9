@@ -14,9 +14,8 @@ class Projection(object):
             self.orig_proj_id = orig_proj_id
     
     @classmethod
-    def factory(cls, label, pre, dest, connection, source, target, weight, delay, synapse_family, 
-                proj_dir, rng, already_created_projections=[], verbose=False, 
-                allow_self_connections=False):
+    def factory(cls, label, model9ml, proj_dir, rng, already_created_projections=[], 
+                verbose=False, allow_self_connections=False):
         # Set expressions for connection weights and delays
         weight_expr = cls._get_connection_param_expr(label, weight)
         if synapse_family == 'Electrical':

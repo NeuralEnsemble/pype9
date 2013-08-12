@@ -190,17 +190,17 @@ class NetworkMLHandler(XMLHandler):
             self.pop_structure = self.Structure(self.pop_structure_type, self.pop_structure_somas,
                                                 self.pop_structure_args)
         XMLHandler.endElement(self, name)
-
-
-def read_networkML(filename):
-    """
-    Extracts the network specified in the given file and returns a NetworkMLHandler with the parsed 
-    network specification.
-    
-    @param filename: The location of the NINEML-Network file to read the network from.
-    """
-    parser = xml.sax.make_parser()
-    handler = NetworkMLHandler()
-    parser.setContentHandler(handler)
-    parser.parse(os.path.normpath(filename))
-    return handler.network
+# 
+# 
+# def read_nineml(filename):
+#     """
+#     Extracts the network specified in the given file and returns a NetworkMLHandler with the parsed 
+#     network specification.
+#     
+#     @param filename: The location of the NINEML-Network file to read the network from.
+#     """
+#     parser = xml.sax.make_parser()
+#     handler = NetworkMLHandler()
+#     parser.setContentHandler(handler)
+#     parser.parse(os.path.normpath(filename))
+#     return handler.network

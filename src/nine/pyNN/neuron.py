@@ -188,7 +188,7 @@ class Network(nine.pyNN.common.Network):
 
     def _set_simulation_params(self, **params):
         """
-        Sets the simulation parameters either from the passed parameters or from the networkML
+        Sets the simulation parameters either from the passed parameters or from the nineml
         description
         
         @param params[**kwargs]: Parameters that are either passed to the pyNN setup method or set \

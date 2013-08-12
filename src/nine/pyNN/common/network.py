@@ -1,8 +1,9 @@
 import os.path
 from pyNN.random import NumpyRNG
 import pyNN.standardmodels
-from ..readers import read_networkML
+import nineml.user_layer
 import nine.pyNN.common
+import quantities as pq
 
 ## The location relative to the NINEML-Network file to look for the folder containing the cell descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
 RELATIVE_NCML_DIR = "./ncml"
@@ -25,7 +26,13 @@ class Network(object):
                                  solver_name=solver_name)
 
     def set_flags(self, flags):
-        self.flags = self.networkML.free_params.flags
+        if self.nineml.parameters.has_key('flags'):
+            try:
+                self.flags = dict([(f.name, bool(f.value)) for f in self.nineml.parameters['flags']])
+            except ValueError as e:
+                raise Exception("Could not convert flag to boolean: {}".format(e))
+        else:
+            self.flags = {}
         for flag in flags:
             if type(flag) == str:
                 name = flag
@@ -51,69 +58,56 @@ class Network(object):
                 raise Exception ("Did not find flag '{flag}' used in '{id}' in freeParameters "
                                  "block of NetworkML description".format(flag=e, id=p.id))
 
-    def load_network(self, filename, build_mode='lazy', verbose=False, timestep=None,
-                                                min_delay=None, max_delay=None, temperature=None,
-                                                silent_build=False, flags=[], rng=None, 
-                                                solver_name='cvode'):
-        self.networkML = read_networkML(filename)
+    def load_network(self, filename, network_name=None, build_mode='lazy', verbose=False, 
+                     timestep=None, min_delay=None, max_delay=None, temperature=None,
+                     silent_build=False, flags=[], rng=None, solver_name='cvode'):
+        parsed_nineml = nineml.user_layer.parse(filename)
+        if network_name:
+            try:
+                self.nineml = parsed_nineml.groups[network_name]
+            except KeyError:
+                raise Exception("Nineml file '{}' does not contain network named '{}'"
+                                .format(filename, network_name))
+        else:
+            try:
+                self.nineml = parsed_nineml.groups.values()[0]
+            except IndexError:
+                raise Exception("No network objects loaded from NineMl file '{}'".format(filename))
         self._set_simulation_params(timestep=timestep, min_delay=min_delay, max_delay=max_delay,
                                                                             temperature=temperature)
         self.dirname = os.path.dirname(filename)
         self.pop_dir = os.path.join(self.dirname, RELATIVE_BREP_DIR, 'build', 'populations')
         self.proj_dir = os.path.join(self.dirname, RELATIVE_BREP_DIR, 'build', 'projections')
         self.build_mode = build_mode
-        self.label = self.networkML.id
+        self.label = self.nineml.name
         self._populations = {}
         self._projections = {}
         self.set_flags(flags)
         self._rng = rng if rng else NumpyRNG()
-        for pop in self.networkML.populations:
-            if self.check_flags(pop):
-                self._populations[pop.id] = self._Population.factory(pop.id,
-                                                                    pop.size,
-                                                                    str(pop.celltype),
-                                                                    pop.morph_id,
-                                                                    pop.structure,
-                                                                    pop.cell_params.constants,
-                                                                    pop.cell_params.distributions,
-                                                                    pop.initial_conditions.distributions,
-                                                                    self.dirname,
-                                                                    self.pop_dir,
-                                                                    self._rng,
-                                                                    verbose,
-                                                                    build_mode,
-                                                                    silent_build,
-                                                                    solver_name=solver_name)
+        for name, model in self.nineml.populations.iteritems():
+#             if self.check_flags(pop):
+            self._populations[name] = self._Population.factory(model, self.dirname, self.pop_dir,
+                                                               self._rng, verbose, build_mode,
+                                                               silent_build, solver_name=solver_name)
         if build_mode not in ('build_only', 'compile_only'):
             clone_count = 0
-            for proj in self.networkML.projections:
-                if self.check_flags(proj):
-                    try:
-                        self._projections[proj.id] = self._Projection.factory(
-                                                                     proj.id,
-                                                                     self._populations[proj.pre.pop_id],
-                                                                     self._populations[proj.post.pop_id],
-                                                                     proj.connection,
-                                                                     proj.pre,
-                                                                     proj.post,
-                                                                     proj.weight,
-                                                                     proj.delay,
-                                                                     proj.synapse_family,
-                                                                     self.proj_dir,
-                                                                     self._rng,
-                                                                     self._projections,
-                                                                     verbose)
-                    except nine.pyNN.common.Projection.ProjectionToCloneNotCreatedYetException as e:
-                        if e.orig_proj_id in [p.id for p in self.networkML.projections]:
-                            self.Network.projections.append(proj)
-                            clone_count += 1
-                            if clone_count > len(self.Network.projections):
-                                raise Exception("Projections using 'Clone' pattern form a circular "
-                                                "reference")
-                        else:
-                            raise Exception("Projection '{}' attempted to clone connectivity patterns " 
-                                            "from '{}', which was not found in network."
-                                            .format(proj.id, e.orig_proj_id))
+            for name, model in self.nineml.projections.iteritems():
+#                 if self.check_flags(proj):
+                try:
+                    self._projections[name] = self._Projection.factory(model, self.proj_dir,
+                                                                       self._rng, self._projections,
+                                                                       verbose)
+                except nine.pyNN.common.Projection.ProjectionToCloneNotCreatedYetException as e:
+                    if e.orig_proj_id in [p.id for p in self.nineml.projections]:
+                        self.Network.projections.append(model)
+                        clone_count += 1
+                        if clone_count > len(self.Network.projections):
+                            raise Exception("Projections using 'Clone' pattern form a circular "
+                                            "reference")
+                    else:
+                        raise Exception("Projection '{}' attempted to clone connectivity patterns " 
+                                        "from '{}', which was not found in network."
+                                        .format(name, e.orig_proj_id))
             self._finalise_construction()
 
     def _finalise_construction(self):
@@ -123,7 +117,8 @@ class Network(object):
         pass
 
     def _get_simulation_params(self, **params):
-        sim_params = self.networkML.sim_params
+        sim_params = dict([(p.name, pq.Quantity(p.value, p.unit)) 
+                           for p in self.nineml.parameters.values()])
         for key in _REQUIRED_SIM_PARAMS:
             if params.has_key(key) and params[key]:
                 sim_params[key] = params[key]

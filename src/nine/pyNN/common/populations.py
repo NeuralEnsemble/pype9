@@ -7,8 +7,7 @@ from pyNN.random import RandomDistribution
 class Population(object):
 
     @classmethod
-    def factory(cls, label, size, celltype_name, morph_id, structure_params, cellparams,
-                cell_param_distrs, initial_conditions, dirname, pop_dir, rng, verbose=False, 
+    def factory(cls, model9ml, dirname, pop_dir, rng, verbose=False, 
                 build_mode='lazy', silent_build=False, solver_name='cvode'):
         try:
             celltype = cls._pyNN_standard_celltypes[celltype_name]
