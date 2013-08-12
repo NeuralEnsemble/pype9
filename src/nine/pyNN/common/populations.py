@@ -1,14 +1,25 @@
 import os.path
 import numpy
 import pyNN.parameters
-import nine.trees.space
+import nine.structure.space
+import nine.pyNN.structure
 from pyNN.random import RandomDistribution
+
+NINEML_STRUCTURES = {'Perturbed2DGrid': nine.pyNN.structure.Perturbed2DGrid}
 
 class Population(object):
 
     @classmethod
     def factory(cls, model9ml, dirname, pop_dir, rng, verbose=False, 
                 build_mode='lazy', silent_build=False, solver_name='cvode'):
+        
+        # This is a temporary hack until the cell models are fully converted to the 9ml format
+        celltype_name = os.path.splitext(os.path.basename(model9ml.prototype.definition.url))[0]
+        if '_' in celltype_name:
+            name_parts = celltype_name.split('_')
+            for i, p in enumerate(name_parts):
+                name_parts[i] = p.capitalize()
+            celltype_name = ''.join(name_parts)
         try:
             celltype = cls._pyNN_standard_celltypes[celltype_name]
         except KeyError:
@@ -34,12 +45,12 @@ class Population(object):
                     if somas:
                         args = somas.args                    
                         if somas.pattern == 'Grid2D':
-                            structure = nine.trees.space.Grid2D(aspect_ratio=float(args['aspect_ratio']), 
+                            structure = nine.structure.space.Grid2D(aspect_ratio=float(args['aspect_ratio']), 
                                                                 dx=float(args['dx']), dy=float(args['dy']), 
                                                                 x0=float(args['x0']), y0=float(args['y0']), 
                                                                 z=float(args['z']))
                         elif somas.pattern == 'Grid3D':
-                            structure = nine.trees.space.Grid3D(aspect_ratioXY=float(args['aspect_ratioXY']), 
+                            structure = nine.structure.space.Grid3D(aspect_ratioXY=float(args['aspect_ratioXY']), 
                                                           aspect_ratioXZ=float(args['aspect_ratioXZ']), 
                                                           dx=float(args['dx']), dy=float(args['dy']), 
                                                           dz=float(args['dz']), x0=float(args['x0']), 
@@ -66,7 +77,7 @@ class Population(object):
                         raise Exception("Layout tags are required for structure of type "
                                         "'Distributed'") 
                 elif structure_params.type == "MorphologyBased":
-                    forest = nine.trees.morphology.Forest(os.path.join(dirname, 
+                    forest = nine.structure.morphology.Forest(os.path.join(dirname, 
                                                             structure_params.args['morphology']))
                     if structure_params.somas:
                         pattern = structure_params.somas.pattern

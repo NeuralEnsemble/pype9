@@ -2,8 +2,8 @@ import os
 import numpy
 import warnings
 import pyNN.connectors
-import nine.trees.point2point
-import nine.trees.morphology
+import nine.structure.point2point
+import nine.structure.morphology
 from nine.cells import NineCell
 
 class Projection(object):
@@ -30,10 +30,10 @@ class Projection(object):
         # Create the "Connector" class to connect up the projection
         if connection.pattern == 'DisplacementBased':
             expression = connection.args.pop('geometry')
-            if not hasattr(nine.trees.point2point, expression):
+            if not hasattr(nine.structure.point2point, expression):
                 raise Exception("Unrecognised distance expression '{}'".format(expression))
             try:
-                GeometricExpression = getattr(nine.trees.point2point, expression)
+                GeometricExpression = getattr(nine.structure.point2point, expression)
                 connect_expr = GeometricExpression(**cls._convert_all_units(connection.args))
             except TypeError as e:
                 raise Exception("Could not initialise distance expression class '{}' from given " 
@@ -43,16 +43,16 @@ class Projection(object):
                                     connect_expr, **other_connector_args)
         elif connection.pattern == 'MorphologyBased':
             kernel_name = connection.args.pop('kernel')
-            if not hasattr(nine.trees.morphology, kernel_name + 'Kernel'):
+            if not hasattr(nine.structure.morphology, kernel_name + 'Kernel'):
                 raise Exception("Unrecognised distance expression '{}'".format(kernel_name))
             try:
-                Kernel = getattr(nine.trees.morphology, kernel_name + 'Kernel')
+                Kernel = getattr(nine.structure.morphology, kernel_name + 'Kernel')
                 kernel = Kernel(**cls._convert_all_units(connection.args))
             except TypeError as e:
                 raise Exception("Could not initialise distance expression class '{}' from given " 
                                 "arguments '{}' for projection '{}'\n('{}')"
                                 .format(kernel_name, connection.args, label, e))
-            connector = nine.trees.morphology.MorphologyBasedProbabilityConnector(
+            connector = nine.structure.morphology.MorphologyBasedProbabilityConnector(
                                                                     kernel, **other_connector_args)
         # If connection pattern is external, load the weights and delays from a file in PyNN
         # FromFileConnector format and then create a FromListConnector connector. Some additional
@@ -133,7 +133,7 @@ class Projection(object):
                 param_expr = cls._convert_units(param.args['value'])
             elif param.pattern == 'DisplacementBased':
                 expr_name = param.args.pop('geometry')
-                GeometricExpression = getattr(nine.trees.point2point, expr_name)
+                GeometricExpression = getattr(nine.structure.point2point, expr_name)
                 try:
                     param_expr = pyNN.connectors.DisplacementDependentProbabilityConnector.\
                                      DisplacementExpression(GeometricExpression(min_value=min_value,
