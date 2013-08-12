@@ -1,11 +1,16 @@
 import os.path
 import numpy
 import pyNN.parameters
-import nine.structure.space
-import nine.pyNN.structure
+import nine.structure.positions
 from pyNN.random import RandomDistribution
 
-NINEML_STRUCTURES = {'Perturbed2DGrid': nine.pyNN.structure.Perturbed2DGrid}
+nineml_translations = {'Line': pyNN.space.Line,
+                       '2DGrid': pyNN.space.Grid2D,
+                       '3DGrid': pyNN.space.Grid3D,
+                       'Perturbed2DGrid': nine.structure.positions.PerturbedGrid2D,
+                       'Perturbed3DGrid': nine.structure.positions.PerturbedGrid3D,
+                       'UniformWithinSphere': nine.structure.positions.UniformWithinSphere,
+                       'UniformWithinBox': nine.structure.positions.UniformWithinBox}
 
 class Population(object):
 

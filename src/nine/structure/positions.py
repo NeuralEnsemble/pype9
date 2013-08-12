@@ -17,7 +17,28 @@ from collections import namedtuple
 
 DistributedParam = namedtuple("DistributedParam", "param distr")
 
-class Grid2D(pyNN.space.Grid2D):
+
+class UniformWithinBox(pyNN.space.RandomStructure):
+    """
+    Overrides pyNN.space.RandomStructure to provide a new 'box' specific constructor to match
+    9ml stub
+    """
+    def __init__(self, x, y, z, x0, y0, z0):
+        box = pyNN.space.Cuboid(x, y, z)
+        super(UniformWithinBox, self).__init__(box, origin=(x0, y0, z0))
+
+
+class UniformWithinSphere(pyNN.space.RandomStructure):
+    """
+    Overrides pyNN.space.RandomStructure to provide a new 'sphere' specific constructor to match
+    9ml stub
+    """
+    def __init__(self, radius, x0, y0, z0):
+        sphere = pyNN.space.Sphere(radius)
+        super(UniformWithinBox, self).__init__(sphere, origin=(x0, y0, z0))
+    
+
+class PerturbedGrid2D(pyNN.space.Grid2D):
 
     def __init__(self, aspect_ratio=1.0, dx=1.0, dy=1.0, x0=0.0,
                  y0=0.0, z=0.0, fill_order="sequential"):
@@ -46,7 +67,8 @@ class Grid2D(pyNN.space.Grid2D):
             positions[d.param,:] += d.distr.next(n, mask_local=False)
         return positions
 
-class Grid3D(pyNN.space.Grid3D, Grid2D):
+
+class PerturbedGrid3D(pyNN.space.Grid3D, PerturbedGrid2D):
 
     def __init__(self, aspect_ratioXY=1.0, aspect_ratioXZ=1.0, dx=1.0,
                  dy=1.0, dz=1.0, x0=0.0, y0=0.0, z0=0, fill_order="sequential"):
