@@ -3,6 +3,7 @@ import quantities
 import nineml.user_layer
 import pyNN.connectors
 import nineline.pyNN.random
+import ninline.pyNN.structure.expression
 
 class Connector(object):
     
@@ -26,6 +27,10 @@ class Connector(object):
                 RandomDistributionClass = getattr(nineline.pyNN.random, 
                                                   p.value.definition.component.name)
                 conv_param = RandomDistributionClass(p.value.parameters, rng)
+            elif isinstance(p.value, nineml.user_layer.StructureExpression):
+                StructureExpressionClass = getattr(nineline.pyNN.structure.expression, 
+                                                  p.value.definition.component.name)
+                conv_param = StructureExpressionClass(p.value.parameters, rng)                
             converted_params[cls.translations[name]] = conv_param 
         return converted_params
     
@@ -52,6 +57,9 @@ class DistanceDependentProbabilityConnector(Connector,
     
     translations = {'allowSelfConnections':'allow_self_connections', 
                     'expression':'d_expression'}
+    
+    def __init__(self, nineml_params, rng):
+        raise NotImplementedError
 
 
 class DisplacementDependentProbabilityConnector(Connector, 
@@ -59,6 +67,9 @@ class DisplacementDependentProbabilityConnector(Connector,
     
     translations = {'allowSelfConnections':'allow_self_connections', 
                     'expression':'disp_function'}
+    
+    def __init__(self, nineml_params, rng):
+        raise NotImplementedError
 
 
 class FixedNumberPostConnector(Connector, pyNN.connectors.FixedNumberPostConnector):
