@@ -29,19 +29,19 @@ from pyNN.common.control import build_state_queries
 import pyNN.nest.simulator as simulator
 import nest
 from nest.hl_api import NESTError
-import nine.pyNN.common
-from nine.cells.nest import NineCell, NineCellMetaClass
+import nineline.pyNN.common
+from nineline.cells.nest import NineCell, NineCellMetaClass
 
 get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 RELATIVE_BREP_BUILD_DIR = './build'
 
-class NinePyNNCell(nine.pyNN.common.cells.NinePyNNCell, pyNN.standardmodels.StandardCellType):
+class NinePyNNCell(nineline.pyNN.common.cells.NinePyNNCell, pyNN.standardmodels.StandardCellType):
 
     standard_receptor_type = None
 
     def __init__(self, **parameters):
-        nine.pyNN.common.cells.NinePyNNCell.__init__(self)
+        nineline.pyNN.common.cells.NinePyNNCell.__init__(self)
         pyNN.standardmodels.StandardCellType.__init__(self, **parameters)
 
     def memb_init(self):
@@ -70,7 +70,7 @@ class NinePyNNCell(nine.pyNN.common.cells.NinePyNNCell, pyNN.standardmodels.Stan
         return nest.GetDefaults(self.nest_model)["receptor_types"][receptor_name]
 
 
-class NinePyNNCellMetaClass(nine.pyNN.common.cells.NinePyNNCellMetaClass):
+class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
     """
     Metaclass for compiling NineMLCellType subclases
     Called by nineml_celltype_from_model
@@ -112,7 +112,7 @@ class NinePyNNCellMetaClass(nine.pyNN.common.cells.NinePyNNCellMetaClass):
         return pyNN.standardmodels.build_translations(*translations)
 
 
-class Population(pyNN.nest.Population, nine.pyNN.common.Population):
+class Population(pyNN.nest.Population, nineline.pyNN.common.Population):
 
     _pyNN_standard_celltypes = dict([(cellname, getattr(pyNN.nest.standardmodels.cells, cellname))
                                      for cellname in pyNN.nest.list_standard_models()])
@@ -153,7 +153,7 @@ class Population(pyNN.nest.Population, nine.pyNN.common.Population):
         return param
 
 
-class Projection(pyNN.nest.Projection, nine.pyNN.common.Projection):
+class Projection(pyNN.nest.Projection, nineline.pyNN.common.Projection):
 
     _pyNN_module = pyNN.nest
 
@@ -204,7 +204,7 @@ class Projection(pyNN.nest.Projection, nine.pyNN.common.Projection):
         raise Exception("Unrecognised units '%s'" % units)            
 
 
-class Network(nine.pyNN.common.Network):
+class Network(nineline.pyNN.common.Network):
 
     _Population = Population
     _Projection = Projection
@@ -214,7 +214,7 @@ class Network(nine.pyNN.common.Network):
                  solver_name='cvode', rng=None):
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         self.temperature = None
-        nine.pyNN.common.Network.__init__(self, filename, build_mode=build_mode,
+        nineline.pyNN.common.Network.__init__(self, filename, build_mode=build_mode,
                                         timestep=timestep, min_delay=min_delay, max_delay=max_delay,
                                     temperature=temperature, silent_build=silent_build, flags=flags,
                                     solver_name=solver_name, rng=rng)

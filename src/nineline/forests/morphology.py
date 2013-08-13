@@ -21,7 +21,7 @@ import collections
 import xml.sax
 import pyNN.connectors
 from nine import XMLHandler
-from nine.forests import axially_symmetric_tensor
+from nineline.forests import axially_symmetric_tensor
 import itertools
 from copy import deepcopy
 try:

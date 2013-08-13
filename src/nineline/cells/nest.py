@@ -19,15 +19,15 @@ import os.path
 import nest
 from .readers import read_NCML, read_MorphML
 from .build.nest import build_celltype_files
-import nine.cells
+import nineline.cells
 
 loaded_celltypes = {}
 
-class NineCell(nine.cells.NineCell):
+class NineCell(nineline.cells.NineCell):
     pass
 
 
-class NineCellMetaClass(nine.cells.NineCellMetaClass):
+class NineCellMetaClass(nineline.cells.NineCellMetaClass):
     
     loaded_celltypes = {}
     

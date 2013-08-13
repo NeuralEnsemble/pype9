@@ -2,7 +2,7 @@ import os.path
 from pyNN.random import NumpyRNG
 import pyNN.standardmodels
 import nineml.user_layer
-import nine.pyNN.common
+import nineline.pyNN.common
 import quantities as pq
 
 ## The location relative to the NINEML-Network file to look for the folder containing the cell descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
@@ -97,7 +97,7 @@ class Network(object):
                     self._projections[name] = self._Projection.factory(model, self.proj_dir,
                                                                        self._rng, self._projections,
                                                                        verbose)
-                except nine.pyNN.common.Projection.ProjectionToCloneNotCreatedYetException as e:
+                except nineline.pyNN.common.Projection.ProjectionToCloneNotCreatedYetException as e:
                     if e.orig_proj_id in [p.id for p in self.nineml.projections]:
                         self.Network.projections.append(model)
                         clone_count += 1

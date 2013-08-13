@@ -21,8 +21,8 @@ except:
 import os
 from collections import namedtuple
 import numpy
-import nine.cells.neuron
-import nine.pyNN.common
+import nineline.cells.neuron
+import nineline.pyNN.common
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, record, record_v, record_gsyn, \
                         StepCurrentSource, DCSource, NoisyCurrentSource #@UnusedVariable
@@ -32,7 +32,7 @@ import pyNN.neuron.standardmodels
 import pyNN.neuron.simulator as simulator
 import neuron
 from neuron import h
-from nine.cells.neuron import NineCell, NineCellMetaClass
+from nineline.cells.neuron import NineCell, NineCellMetaClass
 import logging
 
 logger = logging.getLogger("PyNN")
@@ -41,14 +41,14 @@ get_current_time, get_time_step, get_min_delay, \
         get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 
-class NinePyNNCell(pyNN.models.BaseCellType, nine.pyNN.common.cells.NinePyNNCell):   
+class NinePyNNCell(pyNN.models.BaseCellType, nineline.pyNN.common.cells.NinePyNNCell):   
     """
     At this stage it doesn't appear necessary to include this cell type but will keep it for now.
     """
     pass
 
 
-class NinePyNNCellMetaClass(nine.pyNN.common.cells.NinePyNNCellMetaClass):
+class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
     
     loaded_celltypes = {}
     
@@ -66,7 +66,7 @@ class NinePyNNCellMetaClass(nine.pyNN.common.cells.NinePyNNCellMetaClass):
         return celltype
     
 
-class Population(pyNN.neuron.Population, nine.pyNN.common.Population):
+class Population(pyNN.neuron.Population, nineline.pyNN.common.Population):
 
     _pyNN_standard_celltypes = dict([(cellname, getattr(pyNN.neuron.standardmodels.cells, cellname))
                                      for cellname in pyNN.neuron.list_standard_models()])
@@ -116,7 +116,7 @@ class Population(pyNN.neuron.Population, nine.pyNN.common.Population):
 #            return pyNN.neuron.Population.can_record(self, variable)
 
 
-class Projection(pyNN.neuron.Projection, nine.pyNN.common.Projection):
+class Projection(pyNN.neuron.Projection, nineline.pyNN.common.Projection):
 
     _pyNN_module = pyNN.neuron
 
@@ -168,7 +168,7 @@ class Projection(pyNN.neuron.Projection, nine.pyNN.common.Projection):
         else:
             raise Exception("Unrecognised units '%s'" % units)
 
-class Network(nine.pyNN.common.Network):
+class Network(nineline.pyNN.common.Network):
 
     _Population = Population
     _Projection = Projection
@@ -178,7 +178,7 @@ class Network(nine.pyNN.common.Network):
                                  solver_name=None, rng=None):
         self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
         #Call the base function initialisation function.
-        nine.pyNN.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep,
+        nineline.pyNN.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep,
                                           min_delay=min_delay, max_delay=max_delay,
                                           temperature=temperature, silent_build=silent_build, 
                                           flags=flags, solver_name=solver_name, rng=rng)

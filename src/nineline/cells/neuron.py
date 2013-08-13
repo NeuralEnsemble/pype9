@@ -17,8 +17,8 @@ from operator import attrgetter
 import numpy
 import weakref
 from neuron import h, nrn, load_mechanisms
-from nine.cells.build.neuron import build_celltype_files
-import nine.cells.readers
+from nineline.cells.build.neuron import build_celltype_files
+import nineline.cells.readers
 
 class Segment(nrn.Section): #@UndefinedVariable
     """
@@ -74,7 +74,7 @@ class Segment(nrn.Section): #@UndefinedVariable
             self._set_proximal((morphl_seg.proximal.x, morphl_seg.proximal.y,
                                 morphl_seg.proximal.z))
         # Set initialisation variables here    
-        self.v_init = nine.cells.DEFAULT_V_INIT
+        self.v_init = nineline.cells.DEFAULT_V_INIT
         # A list to store any gap junctions in
         self._gap_junctions = []
         # Local information, though not sure if I need this here
@@ -211,7 +211,7 @@ class SegmentGroup(object):
         return getattr(self.default, var)
 
 
-class NineCell(nine.cells.NineCell):
+class NineCell(nineline.cells.NineCell):
 
     class Params(object):
 
@@ -455,7 +455,7 @@ class NineCell(nine.cells.NineCell):
         return self.groups[group_id] if group_id else self.all_segs    
 
 
-class NineCellMetaClass(nine.cells.NineCellMetaClass):
+class NineCellMetaClass(nineline.cells.NineCellMetaClass):
     """
     Metaclass for building NineMLNineCellType subclasses
     Called by nineml_celltype_from_model
@@ -471,8 +471,8 @@ class NineCellMetaClass(nine.cells.NineCellMetaClass):
         try:
             celltype = cls.loaded_celltypes[(celltype_name, nineml_path)]
         except KeyError:
-            dct = {'memb_model': nine.cells.readers.read_NCML(celltype_id, nineml_path),
-                   'morph_model': nine.cells.readers.read_MorphML(celltype_id, nineml_path, morph_id)}
+            dct = {'memb_model': nineline.cells.readers.read_NCML(celltype_id, nineml_path),
+                   'morph_model': nineline.cells.readers.read_MorphML(celltype_id, nineml_path, morph_id)}
             build_options = dct['memb_model'].build_options['nemo']['neuron']
             install_dir, dct['component_translations'] = \
                     build_celltype_files(celltype_id, nineml_path, build_mode=build_mode,

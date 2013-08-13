@@ -1,6 +1,6 @@
 import math
 from itertools import chain
-from nine.cells import NineCell
+from nineline.cells import NineCell
 
 class NinePyNNCell(object):
     """
