@@ -8,25 +8,7 @@ import nineline.pyNN.structure
 from pyNN.random import RandomDistribution
 
 
-class Population(object):
-
-    @classmethod
-    def convert_params(cls, nineml_params, rng):
-        """
-        Converts parameters from lib9ml objects into values with 'quantities' units and or 
-        random distributions
-        """
-        converted_params = {}
-        for name, p in nineml_params.iteritems():
-            if p.unit:
-                converted_params[name] = quantities.Quantity(p.value, p.unit)
-            elif isinstance(p.value, str):
-                converted_params[name] = p.value
-            elif isinstance(p.value, nineml.user_layer.RandomDistribution):
-                RandomDistributionClass = getattr(nineline.pyNN.random, p.value.definition.component.name)
-                converted_params[name] = RandomDistributionClass(p.value.parameters, rng) 
-        return converted_params
-            
+class Population(object):            
 
     @classmethod
     def factory(cls, nineml_model, dirname, pop_dir, rng, verbose=False, 
@@ -42,23 +24,23 @@ class Population(object):
         try:
             celltype = cls._pyNN_standard_celltypes[celltype_name]
         except KeyError:
-#             try:
-            celltype = cls._NineCellMetaClass(
-                                    '.'.join(os.path.basename(celltype_name).split('.')[:-1]),
-                                    os.path.join(dirname, celltype_name), 
-                                    morph_id=morph_id,
-                                    build_mode=build_mode,
-                                    silent=silent_build,
-                                    solver_name=solver_name)
-#             except IOError:
-#                 raise Exception("Cell_type_name '{}' was not found or " 
-#                                 "in standard models".format(celltype_name))
+            try:
+                celltype = cls._NineCellMetaClass(
+                                        '.'.join(os.path.basename(celltype_name).split('.')[:-1]),
+                                        os.path.join(dirname, celltype_name), 
+                                        morph_id=morph_id,
+                                        build_mode=build_mode,
+                                        silent=silent_build,
+                                        solver_name=solver_name)
+            except IOError:
+                raise Exception("Cell_type_name '{}' was not found or in standard models"
+                                .format(celltype_name))
         if build_mode not in ('build_only', 'compile_only'):
             # Set default for populations without morphologies
             structure = nineml_model.positions.structure
             if structure:
                 StructureClass = getattr(nineline.pyNN.structure, structure.definition.component.name)
-                structure = StructureClass(**cls.convert_params(structure.parameters, rng))
+                structure = StructureClass(structure.parameters, rng)
 #                 if structure_params.type == 'Distributed':
 #                     somas = structure_params.somas
 #                     if somas:

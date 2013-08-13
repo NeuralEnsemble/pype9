@@ -1,7 +1,7 @@
 import os.path
 import collections
 import xml.sax
-from nine import XMLHandler
+from nineline import XMLHandler
 
 RANDOM_DISTR_PARAMS = {'uniform': ('low', 'high'),
                        'normal': ('mean', 'stddev')}

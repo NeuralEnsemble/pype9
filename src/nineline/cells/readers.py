@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import xml.sax
 import collections
-from nine import XMLHandler
+from nineline import XMLHandler
 
 class MorphMLHandler(XMLHandler):
     """
