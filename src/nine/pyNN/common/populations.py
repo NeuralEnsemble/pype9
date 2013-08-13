@@ -1,25 +1,47 @@
 import os.path
 import numpy
+import quantities
+import nineml.user_layer
 import pyNN.parameters
-import nine.structure.positions
+import nine.pyNN.random
+import nine.pyNN.structure
 from pyNN.random import RandomDistribution
 
-nineml_translations = {'Line': pyNN.space.Line,
-                       '2DGrid': pyNN.space.Grid2D,
-                       '3DGrid': pyNN.space.Grid3D,
-                       'Perturbed2DGrid': nine.structure.positions.PerturbedGrid2D,
-                       'Perturbed3DGrid': nine.structure.positions.PerturbedGrid3D,
-                       'UniformWithinSphere': nine.structure.positions.UniformWithinSphere,
-                       'UniformWithinBox': nine.structure.positions.UniformWithinBox}
 
 class Population(object):
 
+    structure_translations = {'Line': pyNN.space.Line,
+                              '2DGrid': pyNN.space.Grid2D,
+                              '3DGrid': pyNN.space.Grid3D,
+                              'Perturbed2DGrid': nine.pyNN.structure.PerturbedGrid2D,
+                              'Perturbed3DGrid': nine.pyNN.structure.PerturbedGrid3D,
+                              'UniformWithinSphere': nine.pyNN.structure.UniformWithinSphere,
+                              'UniformWithinBox': nine.pyNN.structure.UniformWithinBox}
+
     @classmethod
-    def factory(cls, model9ml, dirname, pop_dir, rng, verbose=False, 
+    def convert_params(cls, nineml_params, rng):
+        """
+        Converts parameters from lib9ml objects into values with 'quantities' units and or 
+        random distributions
+        """
+        converted_params = {}
+        for name, p in nineml_params.iteritems():
+            if p.unit:
+                converted_params[name] = quantities.Quantity(p.value, p.unit)
+            elif isinstance(p.value, str):
+                converted_params[name] = p.value
+            elif isinstance(p.value, nineml.user_layer.RandomDistribution):
+                RandomDistributionClass = getattr(nine.pyNN.random, p.value.definition.component.name)
+                converted_params[name] = RandomDistributionClass(p.value.parameters, rng) 
+        return converted_params
+            
+
+    @classmethod
+    def factory(cls, nineml_model, dirname, pop_dir, rng, verbose=False, 
                 build_mode='lazy', silent_build=False, solver_name='cvode'):
         
         # This is a temporary hack until the cell models are fully converted to the 9ml format
-        celltype_name = os.path.splitext(os.path.basename(model9ml.prototype.definition.url))[0]
+        celltype_name = os.path.splitext(os.path.basename(nineml_model.prototype.definition.url))[0]
         if '_' in celltype_name:
             name_parts = celltype_name.split('_')
             for i, p in enumerate(name_parts):
@@ -42,111 +64,114 @@ class Population(object):
         if build_mode not in ('build_only', 'compile_only'):
             # Set default for populations without morphologies
             positions = None
-            structure = None
+            structure = nineml_model.positions.structure
             morphologies = None
-            if structure_params:
-                if structure_params.type == 'Distributed':
-                    somas = structure_params.somas
-                    if somas:
-                        args = somas.args                    
-                        if somas.pattern == 'Grid2D':
-                            structure = nine.structure.space.Grid2D(aspect_ratio=float(args['aspect_ratio']), 
-                                                                dx=float(args['dx']), dy=float(args['dy']), 
-                                                                x0=float(args['x0']), y0=float(args['y0']), 
-                                                                z=float(args['z']))
-                        elif somas.pattern == 'Grid3D':
-                            structure = nine.structure.space.Grid3D(aspect_ratioXY=float(args['aspect_ratioXY']), 
-                                                          aspect_ratioXZ=float(args['aspect_ratioXZ']), 
-                                                          dx=float(args['dx']), dy=float(args['dy']), 
-                                                          dz=float(args['dz']), x0=float(args['x0']), 
-                                                          y0=float(args['y0']), z0=float(args['z0']))
-                        elif somas.pattern == 'UniformWithinBox':
-                            boundary = pyNN.space.Cuboid(float(args['length']), float(args['width']), 
-                                                               float(args['height']))
-                            origin = (float(args['x']), float(args['y']), float(args['z']))
-                            structure = pyNN.space.RandomStructure(boundary, origin, rng=rng)                        
-                        elif somas.pattern == 'UniformWithinSphere':
-                            boundary = pyNN.space.Sphere(float(args['radius']))
-                            origin = (float(args['x']), float(args['y']), float(args['z']))
-                            structure = pyNN.space.RandomStructure(boundary, origin, rng=rng)
-                        else:
-                            raise Exception("Unrecognised pattern '{}' for 'Distributed population "
-                                            "structure type".format(somas.pattern))
-                        for distr in somas.distributions:
-                            try:
-                                structure.apply_distribution(distr.attr, distr.type, distr.args, rng=rng)
-                            except AttributeError:
-                                raise Exception("Chosen structure type '{}' does not permit "
-                                                "distributions".format(somas.pattern))
-                    else:
-                        raise Exception("Layout tags are required for structure of type "
-                                        "'Distributed'") 
-                elif structure_params.type == "MorphologyBased":
-                    forest = nine.structure.morphology.Forest(os.path.join(dirname, 
-                                                            structure_params.args['morphology']))
-                    if structure_params.somas:
-                        pattern = structure_params.somas.pattern
-                        args = structure_params.somas.args
-                        if pattern == 'Tiled':
-                            forest.align_min_bound_to_origin()
-                            base_offset = args.get('offset', numpy.zeros(3))
-                            tiling = numpy.array((args.get('x', 1), args.get('y', 1), args.get('z', 1)),
-                                                 dtype=int)
-                            soma_positions = [tree.soma_position() for tree in forest]
-                            positions = numpy.zeros((3, len(forest) * tiling.prod()))
-                            morphologies = []
-                            pos_count = 0
-                            for z in xrange(tiling[0]):
-                                for y in xrange(tiling[1]):
-                                    for x in xrange(tiling[2]):
-                                        offset = base_offset + forest.max_bounds * (x, y, z)
-                                        for tree in forest:
-                                            morphologies.append(tree.displaced_tree(offset))
-                                        positions[:, pos_count:(pos_count + len(forest))] = \
-                                                numpy.transpose(soma_positions + offset)
-                        elif pattern == 'DistributedSoma':
-                            forest.collapse_to_origin()
-                            low = numpy.array((args['low_x'], args['low_y'], args['low_z']), dtype=float)
-                            high = numpy.array((args['high_x'], args['high_y'], args['high_z']), dtype=float)
-                            size = int(args['size'])
-                            span = high - low
-                            positions = rng.rand(size, 3)
-                            positions *= span
-                            positions += low
-                            positions = positions.transpose()
-                            morphologies = []
-                            for i in range(size):
-                                morphologies.append(forest[i % len(forest)].displaced_tree(positions[:, i]))
-                        else:
-                            raise Exception("Unrecognised structure_params pattern '{}' in '{}' population"
-                                            .format(structure_params.pattern, label))
-                        size = len(morphologies)
-                elif structure_params.type == "Extension":
-                    engine = structure_params.args.pop("engine")
-                    if engine == "Brep":
-                        pop_id = structure_params.args['id']
-                        if pop_id not in os.listdir(pop_dir):
-                            raise Exception("Population id '{}' was not found in search " 
-                                            "path ({}).".format(pop_id, pop_dir))
-                        pos_file = os.path.normpath(os.path.join(pop_dir, pop_id))
-                        try:
-                            positions = numpy.loadtxt(pos_file)
-                            positions = numpy.transpose(positions)
-                            size = positions.shape[1]
-                        except:
-                            raise Exception("Could not load Brep positions from file '{}'"
-                                            .format(pos_file))
-                    else:
-                        raise Exception("Unrecognised external structure_params engine, '{}'".format(engine))
-                else:
-                    raise Exception("Not implemented error, support for built-in structure_params management is "
-                                    "not done yet.")
+            if structure:
+                StructureClass = cls.structure_translations[structure.definition.component.name]
+                structure = StructureClass(**cls.convert_params(structure.parameters, rng))
+#                 if structure_params.type == 'Distributed':
+#                     somas = structure_params.somas
+#                     if somas:
+#                         args = somas.args                    
+#                         if somas.pattern == 'Grid2D':
+#                             structure = nine.trees.space.Grid2D(aspect_ratio=float(args['aspect_ratio']), 
+#                                                                 dx=float(args['dx']), dy=float(args['dy']), 
+#                                                                 x0=float(args['x0']), y0=float(args['y0']), 
+#                                                                 z=float(args['z']))
+#                         elif somas.pattern == 'Grid3D':
+#                             structure = nine.trees.space.Grid3D(aspect_ratioXY=float(args['aspect_ratioXY']), 
+#                                                           aspect_ratioXZ=float(args['aspect_ratioXZ']), 
+#                                                           dx=float(args['dx']), dy=float(args['dy']), 
+#                                                           dz=float(args['dz']), x0=float(args['x0']), 
+#                                                           y0=float(args['y0']), z0=float(args['z0']))
+#                         elif somas.pattern == 'UniformWithinBox':
+#                             boundary = pyNN.space.Cuboid(float(args['length']), float(args['width']), 
+#                                                                float(args['height']))
+#                             origin = (float(args['x']), float(args['y']), float(args['z']))
+#                             structure = pyNN.space.RandomStructure(boundary, origin, rng=rng)                        
+#                         elif somas.pattern == 'UniformWithinSphere':
+#                             boundary = pyNN.space.Sphere(float(args['radius']))
+#                             origin = (float(args['x']), float(args['y']), float(args['z']))
+#                             structure = pyNN.space.RandomStructure(boundary, origin, rng=rng)
+#                         else:
+#                             raise Exception("Unrecognised pattern '{}' for 'Distributed population "
+#                                             "structure type".format(somas.pattern))
+#                         for distr in somas.distributions:
+#                             try:
+#                                 structure.apply_distribution(distr.attr, distr.type, distr.args, rng=rng)
+#                             except AttributeError:
+#                                 raise Exception("Chosen structure type '{}' does not permit "
+#                                                 "distributions".format(somas.pattern))
+#                     else:
+#                         raise Exception("Layout tags are required for structure of type "
+#                                         "'Distributed'") 
+#                 elif structure_params.type == "MorphologyBased":
+#                     forest = nine.trees.morphology.Forest(os.path.join(dirname, 
+#                                                             structure_params.args['morphology']))
+#                     if structure_params.somas:
+#                         pattern = structure_params.somas.pattern
+#                         args = structure_params.somas.args
+#                         if pattern == 'Tiled':
+#                             forest.align_min_bound_to_origin()
+#                             base_offset = args.get('offset', numpy.zeros(3))
+#                             tiling = numpy.array((args.get('x', 1), args.get('y', 1), args.get('z', 1)),
+#                                                  dtype=int)
+#                             soma_positions = [tree.soma_position() for tree in forest]
+#                             positions = numpy.zeros((3, len(forest) * tiling.prod()))
+#                             morphologies = []
+#                             pos_count = 0
+#                             for z in xrange(tiling[0]):
+#                                 for y in xrange(tiling[1]):
+#                                     for x in xrange(tiling[2]):
+#                                         offset = base_offset + forest.max_bounds * (x, y, z)
+#                                         for tree in forest:
+#                                             morphologies.append(tree.displaced_tree(offset))
+#                                         positions[:, pos_count:(pos_count + len(forest))] = \
+#                                                 numpy.transpose(soma_positions + offset)
+#                         elif pattern == 'DistributedSoma':
+#                             forest.collapse_to_origin()
+#                             low = numpy.array((args['low_x'], args['low_y'], args['low_z']), dtype=float)
+#                             high = numpy.array((args['high_x'], args['high_y'], args['high_z']), dtype=float)
+#                             size = int(args['size'])
+#                             span = high - low
+#                             positions = rng.rand(size, 3)
+#                             positions *= span
+#                             positions += low
+#                             positions = positions.transpose()
+#                             morphologies = []
+#                             for i in range(size):
+#                                 morphologies.append(forest[i % len(forest)].displaced_tree(positions[:, i]))
+#                         else:
+#                             raise Exception("Unrecognised structure_params pattern '{}' in '{}' population"
+#                                             .format(structure_params.pattern, label))
+#                         size = len(morphologies)
+#                 elif structure_params.type == "Extension":
+#                     engine = structure_params.args.pop("engine")
+#                     if engine == "Brep":
+#                         pop_id = structure_params.args['id']
+#                         if pop_id not in os.listdir(pop_dir):
+#                             raise Exception("Population id '{}' was not found in search " 
+#                                             "path ({}).".format(pop_id, pop_dir))
+#                         pos_file = os.path.normpath(os.path.join(pop_dir, pop_id))
+#                         try:
+#                             positions = numpy.loadtxt(pos_file)
+#                             positions = numpy.transpose(positions)
+#                             size = positions.shape[1]
+#                         except:
+#                             raise Exception("Could not load Brep positions from file '{}'"
+#                                             .format(pos_file))
+#                     else:
+#                         raise Exception("Unrecognised external structure_params engine, '{}'".format(engine))
+#                 else:
+#                     raise Exception("Not implemented error, support for built-in structure_params management is "
+#                                     "not done yet.")
             # Actually create the population
-            pop = cls(size, celltype, cellparams=cellparams, structure=structure, label=label)
-            if structure is None and positions is not None:
-                pop._set_positions(positions, morphologies)
-            pop._randomly_distribute_params(cell_param_distrs, rng=rng)
-            pop._randomly_distribute_initial_conditions(initial_conditions, rng=rng)
+            pop = cls(nineml_model.number, celltype, cellparams={}, structure=structure, 
+                      label=nineml_model.name)
+#             if structure is None and positions is not None:
+#                 pop._set_positions(positions, morphologies)
+#             pop._randomly_distribute_params(cell_param_distrs, rng=rng)
+#             pop._randomly_distribute_initial_conditions(initial_conditions, rng=rng)
             return pop
         
     def _randomly_distribute_params(self, cell_param_distrs, rng):

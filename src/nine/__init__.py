@@ -18,8 +18,9 @@ import os
 import xml.sax
 import time
 import numpy
+import nineml.user_layer
 
-__version__ = "0.0.1"
+__version__ = "0.0.1"  
 
 class XMLHandler(xml.sax.handler.ContentHandler):
 
