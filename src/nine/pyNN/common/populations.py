@@ -55,9 +55,7 @@ class Population(object):
 #                                 "in standard models".format(celltype_name))
         if build_mode not in ('build_only', 'compile_only'):
             # Set default for populations without morphologies
-            positions = None
             structure = nineml_model.positions.structure
-            morphologies = None
             if structure:
                 StructureClass = getattr(nine.pyNN.structure, structure.definition.component.name)
                 structure = StructureClass(**cls.convert_params(structure.parameters, rng))
