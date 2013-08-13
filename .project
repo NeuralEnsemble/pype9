@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>Nine</name>
-	<comment>A python package to generate multi-simulator implementations of neural networks from NineML descriptions</comment>
+	<name>NineLine</name>
+	<comment>A software pipeline to generate multi-simulator implementations of neural networks from NineML descriptions</comment>
 	<buildSpec>
 		<buildCommand>
 			<name>org.python.pydev.PyDevBuilder</name>
