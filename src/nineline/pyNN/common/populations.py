@@ -15,20 +15,22 @@ class Population(object):
                 build_mode='lazy', silent_build=False, solver_name='cvode'):
         
         # This is a temporary hack until the cell models are fully converted to the 9ml format
-        celltype_name = os.path.splitext(os.path.basename(nineml_model.prototype.definition.url))[0]
-        if '_' in celltype_name:
-            name_parts = celltype_name.split('_')
-            for i, p in enumerate(name_parts):
-                name_parts[i] = p.capitalize()
-            celltype_name = ''.join(name_parts)
-        try:
+        if nineml_model.prototype.definition:
+            celltype_name = os.path.splitext(os.path.basename(nineml_model.prototype.definition.url))[0]
+            if '_' in celltype_name:
+                name_parts = celltype_name.split('_')
+                for i, p in enumerate(name_parts):
+                    name_parts[i] = p.capitalize()
+                celltype_name = ''.join(name_parts)
+            
             celltype = cls._pyNN_standard_celltypes[celltype_name]
-        except KeyError:
+        else:
+            celltype_name = nineml_model.prototype.name
             try:
                 celltype = cls._NineCellMetaClass(
-                                        '.'.join(os.path.basename(celltype_name).split('.')[:-1]),
-                                        os.path.join(dirname, celltype_name), 
-                                        morph_id=morph_id,
+                                        celltype_name,
+                                        os.path.join(dirname, '..', 'neurons', celltype_name + '.xml'), 
+                                        morph_id=None,
                                         build_mode=build_mode,
                                         silent=silent_build,
                                         solver_name=solver_name)
