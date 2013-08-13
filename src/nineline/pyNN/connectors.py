@@ -51,14 +51,14 @@ class DistanceDependentProbabilityConnector(Connector,
                                             pyNN.connectors.DistanceDependentProbabilityConnector):
     
     translations = {'allowSelfConnections':'allow_self_connections', 
-                    'distanceExpression':'d_expression'}
+                    'expression':'d_expression'}
 
 
 class DisplacementDependentProbabilityConnector(Connector, 
                                                 pyNN.connectors.DisplacementDependentProbabilityConnector):
     
     translations = {'allowSelfConnections':'allow_self_connections', 
-                    'displacementExpression':'disp_function'}
+                    'expression':'disp_function'}
 
 
 class FixedNumberPostConnector(Connector, pyNN.connectors.FixedNumberPostConnector):

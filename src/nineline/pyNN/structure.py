@@ -114,9 +114,3 @@ class UniformWithinSphere(Structure, pyNN.space.RandomStructure):
                                                             params['z0']), rng=rng)
 
 
-class Ring(Structure, pyNN.space.Line):
-    
-    def __init__(self, parameters, rng):
-        raise NotImplementedError
-
-
