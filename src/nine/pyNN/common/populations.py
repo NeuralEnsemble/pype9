@@ -10,14 +10,6 @@ from pyNN.random import RandomDistribution
 
 class Population(object):
 
-    structure_translations = {'Line': pyNN.space.Line,
-                              '2DGrid': pyNN.space.Grid2D,
-                              '3DGrid': pyNN.space.Grid3D,
-                              'Perturbed2DGrid': nine.pyNN.structure.PerturbedGrid2D,
-                              'Perturbed3DGrid': nine.pyNN.structure.PerturbedGrid3D,
-                              'UniformWithinSphere': nine.pyNN.structure.UniformWithinSphere,
-                              'UniformWithinBox': nine.pyNN.structure.UniformWithinBox}
-
     @classmethod
     def convert_params(cls, nineml_params, rng):
         """
@@ -67,19 +59,19 @@ class Population(object):
             structure = nineml_model.positions.structure
             morphologies = None
             if structure:
-                StructureClass = cls.structure_translations[structure.definition.component.name]
+                StructureClass = getattr(nine.pyNN.structure, structure.definition.component.name)
                 structure = StructureClass(**cls.convert_params(structure.parameters, rng))
 #                 if structure_params.type == 'Distributed':
 #                     somas = structure_params.somas
 #                     if somas:
 #                         args = somas.args                    
 #                         if somas.pattern == 'Grid2D':
-#                             structure = nine.trees.space.Grid2D(aspect_ratio=float(args['aspect_ratio']), 
+#                             structure = nine.forests.space.Grid2D(aspect_ratio=float(args['aspect_ratio']), 
 #                                                                 dx=float(args['dx']), dy=float(args['dy']), 
 #                                                                 x0=float(args['x0']), y0=float(args['y0']), 
 #                                                                 z=float(args['z']))
 #                         elif somas.pattern == 'Grid3D':
-#                             structure = nine.trees.space.Grid3D(aspect_ratioXY=float(args['aspect_ratioXY']), 
+#                             structure = nine.forests.space.Grid3D(aspect_ratioXY=float(args['aspect_ratioXY']), 
 #                                                           aspect_ratioXZ=float(args['aspect_ratioXZ']), 
 #                                                           dx=float(args['dx']), dy=float(args['dy']), 
 #                                                           dz=float(args['dz']), x0=float(args['x0']), 
@@ -106,7 +98,7 @@ class Population(object):
 #                         raise Exception("Layout tags are required for structure of type "
 #                                         "'Distributed'") 
 #                 elif structure_params.type == "MorphologyBased":
-#                     forest = nine.trees.morphology.Forest(os.path.join(dirname, 
+#                     forest = nine.forests.morphology.Forest(os.path.join(dirname, 
 #                                                             structure_params.args['morphology']))
 #                     if structure_params.somas:
 #                         pattern = structure_params.somas.pattern
