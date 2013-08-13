@@ -18,6 +18,29 @@ from collections import namedtuple
 DistributedParam = namedtuple("DistributedParam", "param distr")
 
 
+class Structure(object):
+    
+    @classmethod
+    def _convert_params(cls, params, rng):
+        raise NotImplementedError
+
+class Line(pyNN.space.Line):
+    def __init__(self, parameters, rng):
+        raise NotImplementedError
+
+class Grid2D(pyNN.space.Grid2D):
+    def __init__(self, parameters, rng):
+        raise NotImplementedError
+
+class Grid3D(pyNN.space.Grid3D):
+    def __init__(self, parameters, rng):
+        raise NotImplementedError
+
+class Ring(pyNN.space.Line):
+    
+    def __init__(self, parameters, rng):
+        raise NotImplementedError
+
 class UniformWithinBox(pyNN.space.RandomStructure):
     """
     Overrides pyNN.space.RandomStructure to provide a new 'box' specific constructor to match
