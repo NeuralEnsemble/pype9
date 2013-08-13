@@ -136,29 +136,13 @@ class Network(object):
             values_dict[key] = self._convert_units(val)
         return values_dict
 
-    def get_population(self, label):
-        try:
-            return self._populations[label]
-        except KeyError:
-            raise KeyError("Network does not have population with label '" + label + "'.")
-
-    def get_projection(self, label):
-        try:
-            return self._projections[label]
-        except KeyError:
-            raise KeyError("Network does not have projection with label '" + label + "'.")
-
-    def list_population_names(self):
-        return self._populations.keys()
-
-    def list_projection_names(self):
-        return self._projections.keys()
-
-    def all_populations(self):
-        return self._populations.values()
-
-    def all_projections(self):
-        return self._projections.values()
+    @property
+    def populations(self):
+        return self._populations
+    
+    @property
+    def projections(self):
+        return self._projections
 
     def describe(self):
         """
@@ -193,6 +177,13 @@ class Network(object):
         """
         for pop in self.all_populations():
             pop.save_positions(os.path.join(output_dir, pop.label) + '.pop')
+
+    def record(self, variable):
+        """
+        Record variable from complete network
+        """
+        for pop in self.populations:
+            pop.record(variable)
 
     def record_spikes(self):
         """
