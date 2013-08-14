@@ -33,7 +33,8 @@ class Synapse(object):
                                                    p.value.definition.component.name)
                 conv_param = StructureExpressionClass(p.value.parameters, rng)
             else: 
-                conv_param = quantities.Quantity(p.value, p.unit).simplified
+                raise Exception("Parameter '{}' is of unrecognised type '{}'"
+                                .format(p.value, type(p.value)))
             converted_params[cls.param_translations[name]] = conv_param 
         return converted_params
 
