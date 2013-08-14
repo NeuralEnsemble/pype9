@@ -1,9 +1,6 @@
 import os.path
 import numpy
-import quantities
-import nineml.user_layer
 import pyNN.parameters
-import nineline.pyNN.random
 import nineline.pyNN.structure
 from pyNN.random import RandomDistribution
 
@@ -41,7 +38,8 @@ class Population(object):
             # Set default for populations without morphologies
             structure = nineml_model.positions.structure
             if structure:
-                StructureClass = getattr(nineline.pyNN.structure, structure.definition.component.name)
+                StructureClass = getattr(nineline.pyNN.structure, 
+                                         structure.definition.component.name)
                 structure = StructureClass(structure.parameters, rng)
             pop = cls(nineml_model.number, celltype, cellparams={}, structure=structure, 
                       label=nineml_model.name)

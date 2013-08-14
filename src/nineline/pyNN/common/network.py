@@ -95,8 +95,7 @@ class Network(object):
 #                 if self.check_flags(proj):
                 try:
                     self._projections[name] = self._Projection.factory(model, self.proj_dir,
-                                                                       self._rng, self._projections,
-                                                                       verbose)
+                                                                       self._rng, verbose)
                 except nineline.pyNN.common.Projection.ProjectionToCloneNotCreatedYetException as e:
                     if e.orig_proj_id in [p.id for p in self.nineml.projections]:
                         self.Network.projections.append(model)

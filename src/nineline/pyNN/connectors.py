@@ -52,21 +52,10 @@ class FixedProbabilityConnector(Connector, pyNN.connectors.FixedProbabilityConne
     translations = {'allowSelfConnections':'allow_self_connections', 'probability':'p_connect'}
 
 
-class DistanceDependentProbabilityConnector(Connector, 
-                                            pyNN.connectors.DistanceDependentProbabilityConnector):
+class PositionBasedProbabilityConnector(Connector, pyNN.connectors.PositionBasedProbabilityConnector):
     
     translations = {'allowSelfConnections':'allow_self_connections', 
-                    'expression':'d_expression'}
-    
-    def __init__(self, nineml_params, rng):
-        raise NotImplementedError
-
-
-class DisplacementDependentProbabilityConnector(Connector, 
-                                                pyNN.connectors.DisplacementDependentProbabilityConnector):
-    
-    translations = {'allowSelfConnections':'allow_self_connections', 
-                    'expression':'disp_function'}
+                    'expression':'position_function'}
     
     def __init__(self, nineml_params, rng):
         raise NotImplementedError
