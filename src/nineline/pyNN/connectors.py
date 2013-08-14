@@ -3,7 +3,7 @@ import quantities
 import nineml.user_layer
 import pyNN.connectors
 import nineline.pyNN.random
-import ninline.pyNN.structure.expression
+import nineline.pyNN.structure.expression
 
 class Connector(object):
     

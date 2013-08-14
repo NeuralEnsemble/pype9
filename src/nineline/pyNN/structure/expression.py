@@ -2,6 +2,7 @@ from abc import ABCMeta
 import quantities
 import nineml.user_layer
 import pyNN.connectors
+from .. import create_anonymous_function
 
 class StructureExpression(object):
 
@@ -21,6 +22,8 @@ class StructureExpression(object):
                 conv_param = p.value
             elif isinstance(p.value, str):
                 conv_param = p.value
+            elif isinstance(nineml.user_layer.AnonymousFunction):
+                conv_param = create_anonymous_function(p.value)
             else:
                 conv_param = quantities.Quantity(p.value, p.unit)
             converted_params[cls.param_translations[name]] = conv_param 
@@ -31,8 +34,9 @@ class StructureExpression(object):
         # the MRO), I thought of a few ways to do this but none were completely satisfactory.
         PyNNClass = self.__class__.__mro__[2]
         assert PyNNClass.__module__.startswith('pyNN')
-        super(PyNNClass, self).__init__(parameters=self._convert_params(nineml_params), 
-                                        rng=rng)
+        params = self._convert_params(nineml_params)
+        params['rng'] = rng
+        super(PyNNClass, self).__init__(**params)
     
 
 class PositionBasedExpression(StructureExpression, pyNN.connectors.PositionBasedExpression):

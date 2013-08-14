@@ -1,10 +1,6 @@
-import os
-import numpy
-import warnings
 import pyNN.connectors
 import nineline.pyNN.connectors
 import nineline.forests.point2point
-import nineline.forests.morphology
 from nineline.cells import NineCell
 
 class Projection(object):
@@ -22,30 +18,13 @@ class Projection(object):
                                  nineml_model.rule.definition.component.name)
         connector = ConnectorClass(nineml_model.rule.parameters, rng)
         
-        SynapseClass = getattr(nineline.pyNN.synapses, nineml_model.connection_type.component.name)
+        SynapseClass = getattr(nineline.pyNN.synapses, 
+                               nineml_model.connection_type.definition.component.name)
+        synapse = SynapseClass(nineml_model.connection_type.parameters)
         
-        # Set expressions for connection weights and delays
-        weight_expr = cls._get_connection_param_expr(label, weight)
-        if synapse_family == 'Electrical':
-            allow_self_connections='NoMutual'
-        else:
-            delay_expr = cls._get_connection_param_expr(label, delay,
-                                                         min_value=cls.get_min_delay())
-        if synapse_family == 'Chemical':
-            synapse = cls._pyNN_module.StaticSynapse(weight=weight_expr, delay=delay_expr)
-            source_terminal = source.terminal
-            if target.synapse is None:
-                receptor_type = 'excitatory'
-            else:
-                receptor_type = cls._get_target_str(target.synapse, target.segment)
-        elif synapse_family == 'Electrical':    
-            synapse = cls._pyNN_module.ElectricalSynapse(weight=weight_expr)
-            source_terminal = source.segment + '_seg'
-            receptor_type = target.segment + '_seg.gap'
-        else:
-            raise Exception("Unrecognised synapse family type '{}'".format(synapse_family))
-        projection = cls(pre, dest, connector, synapse_type=synapse, source=source_terminal,
-                         receptor_type=receptor_type, label=label)
+        projection = cls(nineml_model.source.population, nineml_model.target.population, 
+                         connector, synapse_type=synapse, source=nineml_model.source.segment,
+                         receptor_type=nineml_model.synaptic_response, label=nineml_model.name)
         return projection   
     
     @classmethod
