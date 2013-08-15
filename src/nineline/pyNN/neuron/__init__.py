@@ -37,7 +37,7 @@ get_current_time, get_time_step, get_min_delay, \
         get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 
-class Population(pyNN.neuron.Population, nineline.pyNN.common.Population):
+class Population(nineline.pyNN.common.Population, pyNN.neuron.Population):
 
     _pyNN_standard_celltypes = dict([(cellname, getattr(pyNN.neuron.standardmodels.cells, cellname))
                                      for cellname in pyNN.neuron.list_standard_models()])
@@ -87,7 +87,7 @@ class Population(pyNN.neuron.Population, nineline.pyNN.common.Population):
 #            return pyNN.neuron.Population.can_record(self, variable)
 
 
-class Projection(pyNN.neuron.Projection, nineline.pyNN.common.Projection):
+class Projection(nineline.pyNN.common.Projection, pyNN.neuron.Projection):
 
     _synapses_module = synapses_module
 

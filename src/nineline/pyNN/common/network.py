@@ -18,50 +18,9 @@ _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
 class Network(object):
 
-    def __init__(self, filename, build_mode='lazy', timestep=None, min_delay=None,
-                 max_delay=None, temperature=None, silent_build=False, flags=[], rng=None, 
-                 solver_name='cvode'):
-        self.load_network(filename, build_mode=build_mode, timestep=timestep,
-                                 min_delay=min_delay, max_delay=max_delay, temperature=temperature,
-                                 silent_build=silent_build, flags=flags, rng=rng, 
-                                 solver_name=solver_name)
-
-    def set_flags(self, flags):
-        if self.nineml.parameters.has_key('flags'):
-            try:
-                self.flags = dict([(f.name, bool(f.value)) for f in self.nineml.parameters['flags']])
-            except ValueError as e:
-                raise Exception("Could not convert flag to boolean: {}".format(e))
-        else:
-            self.flags = {}
-        for flag in flags:
-            if type(flag) == str:
-                name = flag
-                value = True
-            elif type(flag) == tuple:
-                if len(flag) == 2:
-                    name, value = flag
-                else:
-                    raise Exception("Incorrect number of elements ({}) in flag tuple '{}', " 
-                                    "should be 2 (name or name and value)".format(len(flag), flag))
-                assert(type(name) == str)
-                assert(type(value) == bool)
-            if name not in self.flags:
-                raise Exception ("Did not find the passed flag '{}' in the Network ML description "
-                                 "({})".format(name, self.flags))
-            self.flags[name] = value
-
-    def check_flags(self, p):
-        try:
-            return (all([self.flags[flag] for flag in p.flags]) and
-                    all([not self.flags[flag] for flag in p.not_flags]))
-        except KeyError as e:
-                raise Exception ("Did not find flag '{flag}' used in '{id}' in freeParameters "
-                                 "block of NetworkML description".format(flag=e, id=p.id))
-
-    def load_network(self, filename, network_name=None, build_mode='lazy', verbose=False, 
-                     timestep=None, min_delay=None, max_delay=None, temperature=None,
-                     silent_build=False, flags=[], rng=None, solver_name='cvode'):
+    def __init__(self, filename, network_name=None, build_mode='lazy', verbose=False, timestep=None,
+                 min_delay=None, max_delay=None, temperature=None, silent_build=False, flags=[], 
+                 rng=None, solver_name='cvode'):
         parsed_nineml = nineml.user_layer.parse(filename)
         if network_name:
             try:
@@ -86,14 +45,12 @@ class Network(object):
         self.set_flags(flags)
         self._rng = rng if rng else NumpyRNG()
         for name, model in self.nineml.populations.iteritems():
-#             if self.check_flags(pop):
             self._populations[name] = self._Population.factory(model, self.dirname, self.pop_dir,
                                                                self._rng, verbose, build_mode,
                                                                silent_build, solver_name=solver_name)
         if build_mode not in ('build_only', 'compile_only'):
             clone_count = 0
             for name, model in self.nineml.projections.iteritems():
-#                 if self.check_flags(proj):
                 try:
                     self._projections[name] = self._Projection.factory(
                                                   self._populations[model.source.population.name],
@@ -114,7 +71,7 @@ class Network(object):
 
     def _finalise_construction(self):
         """
-        Is overriden by deriving classes to do any simulator-specific finalisation that is required
+        Can be overriden by deriving classes to do any simulator-specific finalisation that is required
         """
         pass
 
@@ -223,3 +180,37 @@ class Network(object):
             file_prefix += '.'
         for pop in self.all_populations():
             pop.write_data(file_prefix + pop.label + '.pkl', **kwargs) #@UndefinedVariable
+            
+
+#     def set_flags(self, flags):
+#         if self.nineml.parameters.has_key('flags'):
+#             try:
+#                 self.flags = dict([(f.name, bool(f.value)) for f in self.nineml.parameters['flags']])
+#             except ValueError as e:
+#                 raise Exception("Could not convert flag to boolean: {}".format(e))
+#         else:
+#             self.flags = {}
+#         for flag in flags:
+#             if type(flag) == str:
+#                 name = flag
+#                 value = True
+#             elif type(flag) == tuple:
+#                 if len(flag) == 2:
+#                     name, value = flag
+#                 else:
+#                     raise Exception("Incorrect number of elements ({}) in flag tuple '{}', " 
+#                                     "should be 2 (name or name and value)".format(len(flag), flag))
+#                 assert(type(name) == str)
+#                 assert(type(value) == bool)
+#             if name not in self.flags:
+#                 raise Exception ("Did not find the passed flag '{}' in the Network ML description "
+#                                  "({})".format(name, self.flags))
+#             self.flags[name] = value
+# 
+#     def check_flags(self, p):
+#         try:
+#             return (all([self.flags[flag] for flag in p.flags]) and
+#                     all([not self.flags[flag] for flag in p.not_flags]))
+#         except KeyError as e:
+#                 raise Exception ("Did not find flag '{flag}' used in '{id}' in freeParameters "
+#                                  "block of NetworkML description".format(flag=e, id=p.id))            

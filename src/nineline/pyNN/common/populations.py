@@ -9,7 +9,7 @@ from pyNN.random import RandomDistribution
 class Population(object):            
 
     @classmethod
-    def factory(cls, nineml_model, dirname, pop_dir, rng, verbose=False, 
+    def factory(cls, nineml_model, dirname, rng, verbose=False, 
                 build_mode='lazy', silent_build=False, solver_name='cvode'):
         
         # This is a temporary hack until the cell models are fully converted to the 9ml format
@@ -37,14 +37,30 @@ class Population(object):
                                 .format(celltype_name))
         if build_mode not in ('build_only', 'compile_only'):
             # Set default for populations without morphologies
-            structure = nineml_model.positions.structure
-            if structure:
+            structures = {}
+            for struct_model in nineml_model.positions:
                 StructureClass = getattr(nineline.pyNN.structure, 
-                                         structure.definition.component.name)
-                structure = StructureClass(structure.parameters, rng)
-            pop = cls(nineml_model.number, celltype, cellparams={}, structure=structure, 
+                                         struct_model.definition.component.name)
+                try:
+                    struct_name = struct_model.attrib['name']
+                except KeyError:
+                    struct_name = 'structure_' + len(structures)  
+                structures[struct_name] = StructureClass(struct_model.parameters, rng)
+            pop = cls(nineml_model.number, celltype, cellparams={}, structures=structures, 
                       label=nineml_model.name)
             return pop
+        
+    def __init__(self, size, celltype, cell_params, structures, label):
+        # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class in 
+        # the MRO), I thought of a few ways to do this but none were completely satisfactory.
+        PyNNClass = self.__class__.__mro__[2]
+        assert (PyNNClass.__module__.startswith('pyNN') and 
+                PyNNClass.__module__.startswith('Population'))
+        # Save the structures in the Nineline class to be able to handle multiple structures
+        self.structures = structures
+        PyNNClass.__init__(self, size=size, celltype=celltype, cell_params=cell_params, 
+                           structure=None, label=label)
+        
         
     def _randomly_distribute_params(self, cell_param_distrs, rng):
         # Set distributed parameters

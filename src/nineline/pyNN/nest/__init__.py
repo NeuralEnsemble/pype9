@@ -38,7 +38,7 @@ get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, ra
 RELATIVE_BREP_BUILD_DIR = './build'
 
 
-class Population(pyNN.nest.Population, nineline.pyNN.common.Population):
+class Population(nineline.pyNN.common.Population, pyNN.nest.Population):
 
     _pyNN_standard_celltypes = dict([(cellname, getattr(pyNN.nest.standardmodels.cells, cellname))
                                      for cellname in pyNN.nest.list_standard_models()])
@@ -79,7 +79,7 @@ class Population(pyNN.nest.Population, nineline.pyNN.common.Population):
         return param
 
 
-class Projection(pyNN.nest.Projection, nineline.pyNN.common.Projection):
+class Projection(nineline.pyNN.common.Projection, pyNN.nest.Projection):
 
     _synapses_module = synapses_module
 
