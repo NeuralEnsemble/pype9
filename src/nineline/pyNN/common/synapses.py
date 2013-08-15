@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from abc import ABCMeta
 import quantities
 import nineml.user_layer
@@ -47,7 +48,7 @@ class Synapse(object):
                                         rng=rng)
     
 
-class Static(Synapse):
+class StaticSynapse(Synapse):
     """
     Wraps the pyNN RandomDistribution class and provides a new __init__ method that handles
     the nineml parameter objects
@@ -56,7 +57,7 @@ class Static(Synapse):
     param_translations = {'weight':'weight', 'delay':'delay'}
     
     
-class StaticElectrical(Synapse):
+class ElectricalSynapse(Synapse):
     """
     Wraps the pyNN RandomDistribution class and provides a new __init__ method that handles
     the nineml parameter objects

@@ -21,7 +21,6 @@ if '--debug' in sys.argv:
 from collections import defaultdict
 import pyNN.nest.standardmodels
 import pyNN.standardmodels
-from pyNN.parameters import ParameterSpace
 from pyNN.nest import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, StepCurrentSource, ACSource, DCSource, \
                         NoisyCurrentSource #@UnusedVariable
@@ -30,86 +29,12 @@ import pyNN.nest.simulator as simulator
 import nest
 from nest.hl_api import NESTError
 import nineline.pyNN.common
-from nineline.cells.nest import NineCell, NineCellMetaClass
+from nineline.pyNN.nest.cells import NinePyNNCellMetaClass
+from nineline.cells.nest import NineCell
 
 get_current_time, get_time_step, get_min_delay, get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 RELATIVE_BREP_BUILD_DIR = './build'
-
-class NinePyNNCell(nineline.pyNN.common.cells.NinePyNNCell, pyNN.standardmodels.StandardCellType):
-
-    standard_receptor_type = None
-
-    def __init__(self, **parameters):
-        nineline.pyNN.common.cells.NinePyNNCell.__init__(self)
-        pyNN.standardmodels.StandardCellType.__init__(self, **parameters)
-
-    def memb_init(self):
-        # Initialisation of member states goes here
-        print "WARNING, membrane initialization function has not been implemented"
-        pass
-
-    def translate(self, parameters):
-        """
-        Translate standardized model parameters to simulator-specific parameters. Overrides the
-        the method in StandardModelType to provide a simpler translation that avoids the evaluation 
-        of the 'dots' in the standard name
-        """
-        native_parameters = {}
-        for name in parameters.keys():
-            # A hack before Ivan implements this as a parameter
-            if name != 'all_segs.Ra':
-                try:
-                    native_parameters[self.translations[name]['translated_name']] = parameters[name]
-                except KeyError:
-                    print "Omitting parameter '{}'".format(name)
-        return ParameterSpace(native_parameters, schema=None, shape=parameters.shape)
-
-    def get_receptor_type(self, name):
-        seg, receptor_name = name.split('.') #@UnusedVariable - at this stage just throw away the segment
-        return nest.GetDefaults(self.nest_model)["receptor_types"][receptor_name]
-
-
-class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
-    """
-    Metaclass for compiling NineMLCellType subclases
-    Called by nineml_celltype_from_model
-    """
-    def __new__(cls, celltype_name, nineml_path, morph_id=None, build_mode='lazy', #@NoSelf
-                   silent=False, solver_name='cvode'):
-        dct = {'model': NineCellMetaClass(celltype_name, nineml_path, morph_id=morph_id, 
-                                        build_mode=build_mode, silent=silent, solver_name='cvode')}
-        dct['nest_name'] = {"on_grid": celltype_name, "off_grid": celltype_name}
-        dct['nest_model'] = celltype_name
-        dct['translations'] = cls._construct_translations(dct['model'].memb_model,
-                                                          dct['model'].component_translations)        
-        celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, celltype_name + 'PyNN', (NinePyNNCell,),
-                                                              dct)       
-        return celltype
-
-    @classmethod
-    def _construct_translations(cls, memb_model, component_translations):
-        comp_groups = defaultdict(list)
-        for comp in memb_model.mechanisms:
-            comp_groups[str(comp.id)].append(NineCell.group_varname(comp.group_id))
-        translations = []
-        for comp, params in component_translations.iteritems():
-            if comp != 'Extracellular':
-                for param, native_n_val in params.iteritems():
-                    # These are hacks just to get it to work initially, which will be removed once
-                    # the neuron version of the cell respects these components at which point they
-                    # should be accessed via
-                    if comp in ('Geometry', 'Membrane'):
-                        if comp == 'Geometry':
-                            standard_name = 'soma_group.' + str(param)
-                        elif comp == 'Membrane':
-                            standard_name = 'all_segs.' + str(param)
-                        translations.append((standard_name, native_n_val[0]))
-                    else:
-                        for seg_group in comp_groups[comp]:
-                            standard_name = '{}.{}.{}'.format(seg_group, comp, param)
-                            translations.append((standard_name, native_n_val[0]))
-        return pyNN.standardmodels.build_translations(*translations)
 
 
 class Population(pyNN.nest.Population, nineline.pyNN.common.Population):
@@ -155,7 +80,7 @@ class Population(pyNN.nest.Population, nineline.pyNN.common.Population):
 
 class Projection(pyNN.nest.Projection, nineline.pyNN.common.Projection):
 
-    _pyNN_module = pyNN.nest
+    _synapses_module = nineline.pyNN.nest.synapses
 
     @classmethod
     def get_min_delay(self):

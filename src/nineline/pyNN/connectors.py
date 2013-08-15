@@ -30,8 +30,8 @@ class Connector(object):
             elif isinstance(p.value, nineml.user_layer.StructureExpression):
                 StructureExpressionClass = getattr(nineline.pyNN.structure.expression, 
                                                   p.value.definition.component.name)
-                conv_param = StructureExpressionClass(p.value.parameters, rng)                
-            converted_params[cls.translations[name]] = conv_param 
+                conv_param = StructureExpressionClass(p.value.parameters, rng)
+            converted_params[cls.translations[name]] = conv_param
         return converted_params
     
     def __init__(self, nineml_params, rng=None):
@@ -55,10 +55,8 @@ class FixedProbabilityConnector(Connector, pyNN.connectors.FixedProbabilityConne
 class PositionBasedProbabilityConnector(Connector, pyNN.connectors.PositionBasedProbabilityConnector):
     
     translations = {'allowSelfConnections':'allow_self_connections', 
-                    'expression':'position_function'}
-    
-    def __init__(self, nineml_params, rng):
-        raise NotImplementedError
+                    'probabilityExpression':'prob_expression', 'sourceBranch': 'source_branch',
+                    'targetBranch':'target_branch'}
 
 
 class FixedNumberPostConnector(Connector, pyNN.connectors.FixedNumberPostConnector):

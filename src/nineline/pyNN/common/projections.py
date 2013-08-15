@@ -1,5 +1,7 @@
+from __future__ import absolute_import
 import pyNN.connectors
 import nineline.pyNN.connectors
+import nineline.pyNN.synapses
 import nineline.forests.point2point
 from nineline.cells import NineCell
 
@@ -18,7 +20,7 @@ class Projection(object):
                                  nineml_model.rule.definition.component.name)
         connector = ConnectorClass(nineml_model.rule.parameters, rng)
         
-        SynapseClass = getattr(nineline.pyNN.synapses, 
+        SynapseClass = getattr(cls._synapses_module, 
                                nineml_model.connection_type.definition.component.name)
         synapse = SynapseClass(nineml_model.connection_type.parameters)
         
