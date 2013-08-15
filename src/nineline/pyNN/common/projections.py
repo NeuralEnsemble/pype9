@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 import pyNN.connectors
 import nineline.pyNN.connectors
-import nineline.pyNN.synapses
 import nineline.forests.point2point
 from nineline.cells import NineCell
 
@@ -15,18 +14,19 @@ class Projection(object):
     created_projections = []
     
     @classmethod
-    def factory(cls, nineml_model, proj_dir, rng=None, verbose=False):
+    def factory(cls, source, target, nineml_model, rng=None):
         ConnectorClass = getattr(nineline.pyNN.connectors, 
                                  nineml_model.rule.definition.component.name)
         connector = ConnectorClass(nineml_model.rule.parameters, rng)
         
         SynapseClass = getattr(cls._synapses_module, 
                                nineml_model.connection_type.definition.component.name)
-        synapse = SynapseClass(nineml_model.connection_type.parameters)
-        
-        projection = cls(nineml_model.source.population, nineml_model.target.population, 
-                         connector, synapse_type=synapse, source=nineml_model.source.segment,
-                         receptor_type=nineml_model.synaptic_response, label=nineml_model.name)
+        synapse = SynapseClass(nineml_model.connection_type.parameters, rng)
+        receptor = '.'.join((nineml_model.target.segment + '_seg',
+                             nineml_model.synaptic_response.parameters['responseName'].value))
+        projection = cls(source, target, connector, synapse_type=synapse, 
+                         source=nineml_model.source.segment + '_seg', receptor_type=receptor, 
+                         label=nineml_model.name)
         return projection   
     
     @classmethod

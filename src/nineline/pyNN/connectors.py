@@ -31,7 +31,7 @@ class Connector(object):
                 StructureExpressionClass = getattr(nineline.pyNN.structure.expression, 
                                                   p.value.definition.component.name)
                 conv_param = StructureExpressionClass(p.value.parameters, rng)
-            converted_params[cls.translations[name]] = conv_param
+            converted_params[cls.nineml_translations[name]] = conv_param
         return converted_params
     
     def __init__(self, nineml_params, rng=None):
@@ -44,44 +44,45 @@ class Connector(object):
 
 class AllToAllConnector(Connector, pyNN.connectors.AllToAllConnector):
     
-    translations = {'allowSelfConnections': 'allow_self_connections'}
+    nineml_translations = {'allowSelfConnections': 'allow_self_connections'}
 
 
 class FixedProbabilityConnector(Connector, pyNN.connectors.FixedProbabilityConnector):
     
-    translations = {'allowSelfConnections':'allow_self_connections', 'probability':'p_connect'}
+    nineml_translations = {'allowSelfConnections':'allow_self_connections', 
+                           'probability':'p_connect'}
 
 
 class PositionBasedProbabilityConnector(Connector, pyNN.connectors.PositionBasedProbabilityConnector):
     
-    translations = {'allowSelfConnections':'allow_self_connections', 
-                    'probabilityExpression':'prob_expression', 'sourceBranch': 'source_branch',
-                    'targetBranch':'target_branch'}
+    nineml_translations = {'allowSelfConnections':'allow_self_connections', 
+                           'probabilityExpression':'prob_expression', 
+                           'sourceBranch': 'source_branch', 'targetBranch':'target_branch'}
 
 
 class FixedNumberPostConnector(Connector, pyNN.connectors.FixedNumberPostConnector):
     
-    translations = {'allowSelfConnections':'allow_self_connections', 'number':'n'}
+    nineml_translations = {'allowSelfConnections':'allow_self_connections', 'number':'n'}
 
 
 class FixedNumberPreConnector(Connector, pyNN.connectors.FixedNumberPreConnector):
     
-    translations = {'allowSelfConnections':'allow_self_connections', 'number':'n'}
+    nineml_translations = {'allowSelfConnections':'allow_self_connections', 'number':'n'}
 
 
 class OneToOneConnector(Connector, pyNN.connectors.OneToOneConnector):
     
-    translations = {}
+    nineml_translations = {}
 
 
 class SmallWorldConnector(Connector, pyNN.connectors.SmallWorldConnector):
     
-    translations = {'allowSelfConnections':'allow_self_connections', 'degree': 'degree', 
-                    'rewiring':'rewiring', 'numberOfConnections':'n_connections'}
+    nineml_translations = {'allowSelfConnections':'allow_self_connections', 'degree': 'degree', 
+                           'rewiring':'rewiring', 'numberOfConnections':'n_connections'}
 
 
 class CloneConnector(Connector, pyNN.connectors.CloneConnector):
     
-    translations = {'projection':'reference_projection'}            
+    nineml_translations = {'projection':'reference_projection'}            
 
         

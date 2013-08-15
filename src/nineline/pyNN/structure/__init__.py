@@ -40,7 +40,7 @@ class Structure(object):
                 RandomDistributionClass = getattr(nineline.pyNN.random, 
                                                   p.value.definition.component.name)
                 conv_param = RandomDistributionClass(p.value.parameters, rng)
-            converted_params[cls.translations[name]] = conv_param 
+            converted_params[cls.nineml_translations[name]] = conv_param 
         return converted_params
     
     def __init__(self, nineml_params, rng=None):
@@ -53,36 +53,36 @@ class Structure(object):
 
 class Line(Structure, pyNN.space.Line):
     
-    translations = {'dx': 'dx', 'x0': 'x0', 'y': 'y', 'z': 'z' }
+    nineml_translations = {'dx': 'dx', 'x0': 'x0', 'y': 'y', 'z': 'z' }
 
 
 class Grid2D(Structure, pyNN.space.Grid2D):
     
-    translations = {'aspectRatioXY': 'aspect_ratio', 'dx': 'dx', 'dy': 'dy', 'x0': 'x0', 
-                          'y0': 'y0', 'z0': 'z0', 'fillOrder': 'fill_order'}
+    nineml_translations = {'aspectRatioXY': 'aspect_ratio', 'dx': 'dx', 'dy': 'dy', 'x0': 'x0', 
+                           'y0': 'y0', 'z0': 'z0', 'fillOrder': 'fill_order'}
     
 
 class Grid3D(Structure, pyNN.space.Grid3D):
     
-    translations = {'aspectRatioXY': 'aspect_ratioXY', 'aspectRatioXZ': 'aspect_ratioXZ', 
-                          'dx': 'dx', 'dy': 'dy', 'dz': 'dz', 'x0': 'x0', 'y0': 'y0', 'z0': 'z0', 
-                          'fillOrder': 'fill_order'}
+    nineml_translations = {'aspectRatioXY': 'aspect_ratioXY', 'aspectRatioXZ': 'aspect_ratioXZ', 
+                           'dx': 'dx', 'dy': 'dy', 'dz': 'dz', 'x0': 'x0', 'y0': 'y0', 'z0': 'z0', 
+                           'fillOrder': 'fill_order'}
    
 
 class PerturbedGrid2D(Structure, pyNN.space.PerturbedGrid2D):
 
-    translations = {'aspectRatioXY': 'aspect_ratio', 'dx': 'dx', 'dy': 'dy', 'x0': 'x0', 
-                    'y0': 'y0', 'z0': 'z0', 'xPerturbation':'perturb_x', 
-                    'yPerturbation':'perturb_y', 'zPerturbation':'perturb_z', 
-                    'fillOrder': 'fill_order'}
+    nineml_translations = {'aspectRatioXY': 'aspect_ratio', 'dx': 'dx', 'dy': 'dy', 'x0': 'x0', 
+                           'y0': 'y0', 'z0': 'z0', 'xPerturbation':'perturb_x', 
+                           'yPerturbation':'perturb_y', 'zPerturbation':'perturb_z', 
+                           'fillOrder': 'fill_order'}
 
 
 class PerturbedGrid3D(Structure, pyNN.space.PerturbedGrid3D):
 
-    translations = {'aspectRatioXY': 'aspect_ratioXY', 'aspectRatioXZ': 'aspect_ratioXZ', 
-                    'dx': 'dx', 'dy': 'dy', 'dz': 'dz', 'x0': 'x0', 'y0': 'y0', 'z0': 'z0',
-                    'xPerturbation':'perturb_x', 'yPerturbation':'perturb_y', 
-                    'zPerturbation':'perturb_z', 'fillOrder': 'fill_order'}        
+    nineml_translations = {'aspectRatioXY': 'aspect_ratioXY', 'aspectRatioXZ': 'aspect_ratioXZ', 
+                           'dx': 'dx', 'dy': 'dy', 'dz': 'dz', 'x0': 'x0', 'y0': 'y0', 'z0': 'z0',
+                           'xPerturbation':'perturb_x', 'yPerturbation':'perturb_y', 
+                           'zPerturbation':'perturb_z', 'fillOrder': 'fill_order'}        
 
 
 class UniformWithinBox(Structure, pyNN.space.RandomStructure):
@@ -90,7 +90,7 @@ class UniformWithinBox(Structure, pyNN.space.RandomStructure):
     Overrides pyNN.space.RandomStructure to provide a new 'box' specific constructor to match
     9ml stub
     """
-    translations = {'x': 'x', 'y': 'y', 'z': 'z', 'x0': 'x0', 'y0': 'y0', 'z0': 'z0'}
+    nineml_translations = {'x': 'x', 'y': 'y', 'z': 'z', 'x0': 'x0', 'y0': 'y0', 'z0': 'z0'}
     
     def __init__(self, nineml_params, rng=None):
         params = self._convert_params(nineml_params, rng)
@@ -105,7 +105,7 @@ class UniformWithinSphere(Structure, pyNN.space.RandomStructure):
     9ml stub
     """
     
-    translations = {'radius': 'radius', 'x0': 'x0', 'y0': 'y0', 'z0': 'z0'}
+    nineml_translations = {'radius': 'radius', 'x0': 'x0', 'y0': 'y0', 'z0': 'z0'}
     
     def __init__(self, nineml_params, rng=None):
         params = self._convert_params(nineml_params, rng)

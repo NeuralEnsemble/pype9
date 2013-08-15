@@ -1,7 +1,9 @@
 from __future__ import absolute_import
 import pyNN.neuron.standardmodels.synapses
-from nineline.pyNN.common.synapses import Synapse
+import nineline.pyNN.common.synapses
 
-class StaticSynapse(Synapse, pyNN.neuron.standardmodels.synapses.StaticSynapse): pass
+class StaticSynapse(nineline.pyNN.common.synapses.StaticSynapse, 
+                    pyNN.neuron.standardmodels.synapses.StaticSynapse): pass
     
-class ElectricalSynapse(Synapse, pyNN.neuron.standardmodels.synapses.ElectricalSynapse): pass
+class ElectricalSynapse(nineline.pyNN.common.synapses.Synapse, 
+                        pyNN.neuron.standardmodels.synapses.ElectricalSynapse): pass

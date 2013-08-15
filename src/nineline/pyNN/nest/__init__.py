@@ -29,6 +29,7 @@ import pyNN.nest.simulator as simulator
 import nest
 from nest.hl_api import NESTError
 import nineline.pyNN.common
+from . import synapses as synapses_module
 from nineline.pyNN.nest.cells import NinePyNNCellMetaClass
 from nineline.cells.nest import NineCell
 
@@ -80,7 +81,7 @@ class Population(pyNN.nest.Population, nineline.pyNN.common.Population):
 
 class Projection(pyNN.nest.Projection, nineline.pyNN.common.Projection):
 
-    _synapses_module = nineline.pyNN.nest.synapses
+    _synapses_module = synapses_module
 
     @classmethod
     def get_min_delay(self):

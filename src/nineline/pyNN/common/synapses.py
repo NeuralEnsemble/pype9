@@ -32,20 +32,19 @@ class Synapse(object):
             elif isinstance(p.value, nineml.user_layer.StructureExpression):
                 StructureExpressionClass = getattr(nineline.pyNN.structure.expression,
                                                    p.value.definition.component.name)
-                conv_param = StructureExpressionClass(p.value.parameters, rng)
+                conv_param = StructureExpressionClass(p.value.parameters)
             else: 
                 raise Exception("Parameter '{}' is of unrecognised type '{}'"
                                 .format(p.value, type(p.value)))
-            converted_params[cls.param_translations[name]] = conv_param 
+            converted_params[cls.nineml_translations[name]] = conv_param 
         return converted_params
 
     def __init__(self, nineml_params, rng):
         # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class in 
         # the MRO), I thought of a few ways to do this but none were completely satisfactory.
-        PyNNClass = self.__class__.__mro__[2]
+        PyNNClass = self.__class__.__mro__[3]
         assert PyNNClass.__module__.startswith('pyNN')
-        super(PyNNClass, self).__init__(parameters=self._convert_params(nineml_params), 
-                                        rng=rng)
+        super(PyNNClass, self).__init__(**self._convert_params(nineml_params, rng))
     
 
 class StaticSynapse(Synapse):
@@ -54,7 +53,7 @@ class StaticSynapse(Synapse):
     the nineml parameter objects
     """
     
-    param_translations = {'weight':'weight', 'delay':'delay'}
+    nineml_translations = {'weight':'weight', 'delay':'delay'}
     
     
 class ElectricalSynapse(Synapse):
@@ -63,4 +62,4 @@ class ElectricalSynapse(Synapse):
     the nineml parameter objects
     """
     
-    param_translations = {'weight':'weight'}    
+    nineml_translations = {'weight':'weight'}    

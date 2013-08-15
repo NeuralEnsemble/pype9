@@ -26,8 +26,9 @@ from pyNN.common.control import build_state_queries
 import pyNN.neuron.standardmodels
 import pyNN.neuron.simulator as simulator
 import neuron
-from nineline.pyNN.nest.cells import NinePyNNCellMetaClass
+from nineline.pyNN.neuron.cells import NinePyNNCellMetaClass
 from nineline.cells.neuron import NineCell
+from . import synapses as synapses_module
 import logging
 
 logger = logging.getLogger("PyNN")
@@ -88,7 +89,7 @@ class Population(pyNN.neuron.Population, nineline.pyNN.common.Population):
 
 class Projection(pyNN.neuron.Projection, nineline.pyNN.common.Projection):
 
-    _synapses_module = nineline.pyNN.neuron.synapses
+    _synapses_module = synapses_module
 
     @classmethod
     def get_min_delay(self):

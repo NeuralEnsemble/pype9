@@ -22,21 +22,20 @@ class StructureExpression(object):
                 conv_param = p.value
             elif isinstance(p.value, str):
                 conv_param = p.value
-            elif isinstance(nineml.user_layer.AnonymousFunction):
+            elif isinstance(p.value, nineml.user_layer.AnonymousFunction):
                 conv_param = create_anonymous_function(p.value)
             else:
                 conv_param = quantities.Quantity(p.value, p.unit)
-            converted_params[cls.param_translations[name]] = conv_param 
+            converted_params[cls.nineml_translations[name]] = conv_param 
         return converted_params
 
-    def __init__(self, nineml_params, rng):
+    def __init__(self, nineml_params):
         # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class in 
         # the MRO), I thought of a few ways to do this but none were completely satisfactory.
         PyNNClass = self.__class__.__mro__[2]
         assert PyNNClass.__module__.startswith('pyNN')
         params = self._convert_params(nineml_params)
-        params['rng'] = rng
-        super(PyNNClass, self).__init__(**params)
+        PyNNClass.__init__(self, **params)
     
 
 class PositionBasedExpression(StructureExpression, pyNN.connectors.PositionBasedExpression):
@@ -45,5 +44,5 @@ class PositionBasedExpression(StructureExpression, pyNN.connectors.PositionBased
     the nineml parameter objects
     """
     
-    param_translations = {'expression': 'expression', 'sourceBranch':'source_branch',
+    nineml_translations = {'expression': 'expression', 'sourceBranch':'source_branch',
                           'targetBranch':'target_branch'}

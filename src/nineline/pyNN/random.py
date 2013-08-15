@@ -27,7 +27,7 @@ class RandomDistribution(pyNN.random.RandomDistribution):
                 elif units != conv_param.units:
                     raise Exception("Dimensions of random distribution parameters do not match "
                                     "({} and {})".format(units, conv_param.units))    
-            converted_params[cls.param_translations[name]] = conv_param 
+            converted_params[cls.nineml_translations[name]] = conv_param 
         return converted_params, units
 
     def __init__(self, nineml_params, rng):
@@ -52,5 +52,5 @@ class UniformDistribution(RandomDistribution):
     """
     distr_name = 'uniform'
     
-    param_translations = {'low': 'low', 'high': 'high'}
+    nineml_translations = {'low': 'low', 'high': 'high'}
 
