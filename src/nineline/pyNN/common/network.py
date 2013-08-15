@@ -24,40 +24,36 @@ class Network(object):
         parsed_nineml = nineml.user_layer.parse(filename)
         if network_name:
             try:
-                self.nineml = parsed_nineml.groups[network_name]
+                self.nineml_model = parsed_nineml.groups[network_name]
             except KeyError:
                 raise Exception("Nineml file '{}' does not contain network named '{}'"
                                 .format(filename, network_name))
         else:
             try:
-                self.nineml = parsed_nineml.groups.values()[0]
+                self.nineml_model = parsed_nineml.groups.values()[0]
             except IndexError:
                 raise Exception("No network objects loaded from NineMl file '{}'".format(filename))
         self._set_simulation_params(timestep=timestep, min_delay=min_delay, max_delay=max_delay,
                                                                             temperature=temperature)
-        self.dirname = os.path.dirname(filename)
-        self.pop_dir = os.path.join(self.dirname, RELATIVE_BREP_DIR, 'build', 'populations')
-        self.proj_dir = os.path.join(self.dirname, RELATIVE_BREP_DIR, 'build', 'projections')
-        self.build_mode = build_mode
-        self.label = self.nineml.name
-        self._populations = {}
-        self._projections = {}
-        self.set_flags(flags)
+        self.label = self.nineml_model.name
+#         self.set_flags(flags)
         self._rng = rng if rng else NumpyRNG()
-        for name, model in self.nineml.populations.iteritems():
+        self._populations = {}
+        for name, model in self.nineml_model.populations.iteritems():
             self._populations[name] = self._Population.factory(model, self.dirname, self.pop_dir,
                                                                self._rng, verbose, build_mode,
                                                                silent_build, solver_name=solver_name)
         if build_mode not in ('build_only', 'compile_only'):
             clone_count = 0
-            for name, model in self.nineml.projections.iteritems():
+            self._projections = {}
+            for name, model in self.nineml_model.projections.iteritems():
                 try:
                     self._projections[name] = self._Projection.factory(
                                                   self._populations[model.source.population.name],
                                                   self._populations[model.target.population.name],
                                                   model, rng=self._rng)
                 except nineline.pyNN.common.Projection.ProjectionToCloneNotCreatedYetException as e:
-                    if e.orig_proj_id in [p.id for p in self.nineml.projections]:
+                    if e.orig_proj_id in [p.id for p in self.nineml_model.projections]:
                         self.Network.projections.append(model)
                         clone_count += 1
                         if clone_count > len(self.Network.projections):
@@ -77,7 +73,7 @@ class Network(object):
 
     def _get_simulation_params(self, **params):
         sim_params = dict([(p.name, pq.Quantity(p.value, p.unit)) 
-                           for p in self.nineml.parameters.values()])
+                           for p in self.nineml_model.parameters.values()])
         for key in _REQUIRED_SIM_PARAMS:
             if params.has_key(key) and params[key]:
                 sim_params[key] = params[key]
@@ -183,9 +179,9 @@ class Network(object):
             
 
 #     def set_flags(self, flags):
-#         if self.nineml.parameters.has_key('flags'):
+#         if self.nineml_model.parameters.has_key('flags'):
 #             try:
-#                 self.flags = dict([(f.name, bool(f.value)) for f in self.nineml.parameters['flags']])
+#                 self.flags = dict([(f.name, bool(f.value)) for f in self.nineml_model.parameters['flags']])
 #             except ValueError as e:
 #                 raise Exception("Could not convert flag to boolean: {}".format(e))
 #         else:
