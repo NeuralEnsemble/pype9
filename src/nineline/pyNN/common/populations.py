@@ -57,7 +57,7 @@ class Population(object):
         assert (PyNNClass.__module__.startswith('pyNN') and 
                 PyNNClass.__module__.endswith('Population'))
         # Save the structures in the Nineline class to be able to handle multiple structures
-        self.structures = structures
+        self._structures = structures
         PyNNClass.__init__(self, size=size, celltype=celltype, cell_params=cell_params, 
                            structure=None, label=label)
         
