@@ -31,7 +31,7 @@ class Structure(object):
         
     @property
     def positions(self):
-        if not self._positions:
-            self._positions = self.layout.generate_positions(self.size)
+        if self._positions is None:
+            self._positions = self.layout.generate_positions(self.size).T * quantities.m
         return self._positions
 

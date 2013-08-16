@@ -12,6 +12,7 @@
 #
 #######################################################################################
 from abc import ABCMeta
+import numpy
 import quantities
 import nineml.user_layer
 import pyNN.space
@@ -33,6 +34,10 @@ class Layout(object):
                 conv_param = p.value
             elif p.unit:
                 conv_param = quantities.Quantity(p.value, p.unit)
+                # Convert to SI units and drop the quantity as it may interfere with the layout
+                # function (it will be added in again after the positions are generated, with the
+                # assumption that all dimensions are length)
+                conv_param = float(conv_param.simplified)
             elif isinstance(p.value, str):
                 conv_param = p.value
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
@@ -51,12 +56,6 @@ class Layout(object):
         assert PyNNClass.__module__.startswith('pyNN')
         PyNNClass.__init__(self, **self._convert_params(nineml_params, rng))
         
-    @property
-    def positions(self):
-        if not self._positions:
-            self._positions = self.get_positions(self.size)
-        return self._positions
-
 
 class Line(Layout, pyNN.space.Line):
     

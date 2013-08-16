@@ -28,11 +28,14 @@ def create_anonymous_function(nineml_model):
         else:
             args.append(name)
     # Instantiate the required constants
-    consts = { 'numpy':numpy }
+    local_vars = { 'numpy':numpy }
     for name, p in nineml_model.constants.iteritems():
-        consts[name] = pq.Quantity(p.value, p.unit) if p.unit != 'dimensionless' else p.value
+        local_vars[name] = pq.Quantity(p.value, p.unit) if p.unit != 'dimensionless' else p.value
+        # This is a little hackish, whereby the constants are saved in the lambda function as defaults
+        # of optional parameters
+        args.append(name+'='+name)
     # Create the lambda function of the expression
     function = eval('lambda {args}: {expr}'.format(args=', '.join(args), expr=expression_str), 
-                    globals(), consts)
+                    globals(), local_vars)
     return function
 

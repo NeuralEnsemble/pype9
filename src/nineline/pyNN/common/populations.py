@@ -57,9 +57,9 @@ class Population(object):
     def positions(self):
         raise NotImplementedError("Not sure if this is working yet")
         try:
-            return self.structures['soma'].positions
+            return self.structures['soma'].positions.T
         except KeyError:
-            return next(self.structures.itervalues()).positions
+            return next(self.structures.itervalues()).positions.T
         
         
     def _randomly_distribute_params(self, cell_param_distrs, rng):
