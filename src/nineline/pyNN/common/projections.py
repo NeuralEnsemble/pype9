@@ -13,21 +13,24 @@ class Projection(object):
             
     created_projections = []
     
-    @classmethod
-    def factory(cls, source, target, nineml_model, rng=None):
+    def __init__(self, source, target, nineml_model, rng=None):
         ConnectorClass = getattr(nineline.pyNN.connectors, 
                                  nineml_model.rule.definition.component.name)
         connector = ConnectorClass(nineml_model.rule.parameters, rng)
         
-        SynapseClass = getattr(cls._synapses_module, 
+        SynapseClass = getattr(self._synapses_module, 
                                nineml_model.connection_type.definition.component.name)
         synapse = SynapseClass(nineml_model.connection_type.parameters, rng)
         receptor = '.'.join((nineml_model.target.segment + '_seg',
                              nineml_model.synaptic_response.parameters['responseName'].value))
-        projection = cls(source, target, connector, synapse_type=synapse, 
+        # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class in 
+        # the MRO), I thought of a few ways to do this but none were completely satisfactory.
+        PyNNClass = self.__class__.__mro__[2]
+        assert (PyNNClass.__module__.startswith('pyNN') and 
+                PyNNClass.__module__.endswith('projections'))
+        PyNNClass.__init__(self, source, target, connector, synapse_type=synapse, 
                          source=nineml_model.source.segment + '_seg', receptor_type=receptor, 
-                         label=nineml_model.name)
-        return projection   
+                         label=nineml_model.name)   
     
     @classmethod
     def _get_target_str(cls, synapse, segment=None):

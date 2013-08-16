@@ -2,32 +2,33 @@ from __future__ import absolute_import
 import os.path
 import numpy
 import pyNN.parameters
-import nineline.pyNN.structure
+from nineline.pyNN.structure import Structure
 from pyNN.random import RandomDistribution
 
 
 class Population(object):            
 
-    @classmethod
-    def factory(cls, nineml_model, dirname, rng, verbose=False, 
-                build_mode='lazy', silent_build=False, solver_name='cvode'):
+    def __init__(self, nineml_model, dirname, rng, build_mode='lazy', silent_build=False, 
+                solver_name='cvode'):
         
         # This is a temporary hack until the cell models are fully converted to the 9ml format
         if nineml_model.prototype.definition:
-            celltype_name = os.path.splitext(os.path.basename(nineml_model.prototype.definition.url))[0]
+            celltype_name = os.path.splitext(
+                                    os.path.basename(nineml_model.prototype.definition.url))[0]
             if '_' in celltype_name:
                 name_parts = celltype_name.split('_')
                 for i, p in enumerate(name_parts):
                     name_parts[i] = p.capitalize()
                 celltype_name = ''.join(name_parts)
             
-            celltype = cls._pyNN_standard_celltypes[celltype_name]
+            celltype = self._pyNN_standard_celltypes[celltype_name]
         else:
             celltype_name = nineml_model.prototype.name
             try:
-                celltype = cls._NineCellMetaClass(
+                celltype = self._NineCellMetaClass(
                                         celltype_name,
-                                        os.path.join(dirname, '..', 'neurons', celltype_name + '.xml'), 
+                                        os.path.join(dirname, '..', 'neurons', 
+                                                     celltype_name + '.xml'), 
                                         morph_id=None,
                                         build_mode=build_mode,
                                         silent=silent_build,
@@ -37,29 +38,28 @@ class Population(object):
                                 .format(celltype_name))
         if build_mode not in ('build_only', 'compile_only'):
             # Set default for populations without morphologies
-            structures = {}
-            for struct_model in nineml_model.positions:
-                StructureClass = getattr(nineline.pyNN.structure, 
-                                         struct_model.definition.component.name)
-                try:
-                    struct_name = struct_model.attrib['name']
-                except KeyError:
-                    struct_name = 'structure_' + len(structures)  
-                structures[struct_name] = StructureClass(struct_model.parameters, rng)
-            pop = cls(nineml_model.number, celltype, cellparams={}, structures=structures, 
-                      label=nineml_model.name)
-            return pop
+            self.structures = {}
+            for struct_model in nineml_model.structures:
+                if struct_model.name:
+                    struct_name = struct_model.name
+                else:
+                    struct_name = 'structure_' + len(self.structures)  
+                self.structures[struct_name] = Structure(struct_name, nineml_model.number, 
+                                                         struct_model, rng)
+            # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class  
+            # in the MRO), I thought of a few ways to do this but none were completely satisfactory.
+            PyNNClass = self.__class__.__mro__[2]
+            assert PyNNClass.__module__.startswith('pyNN') and PyNNClass.__name__ == 'Population'
+            PyNNClass.__init__(self, nineml_model.number, celltype, cellparams={}, structure=None, 
+                               label=nineml_model.name)
         
-    def __init__(self, size, celltype, cell_params, structures, label):
-        # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class in 
-        # the MRO), I thought of a few ways to do this but none were completely satisfactory.
-        PyNNClass = self.__class__.__mro__[2]
-        assert (PyNNClass.__module__.startswith('pyNN') and 
-                PyNNClass.__module__.endswith('Population'))
-        # Save the structures in the Nineline class to be able to handle multiple structures
-        self._structures = structures
-        PyNNClass.__init__(self, size=size, celltype=celltype, cell_params=cell_params, 
-                           structure=None, label=label)
+    @property
+    def positions(self):
+        raise NotImplementedError("Not sure if this is working yet")
+        try:
+            return self.structures['soma'].positions
+        except KeyError:
+            return next(self.structures.itervalues()).positions
         
         
     def _randomly_distribute_params(self, cell_param_distrs, rng):

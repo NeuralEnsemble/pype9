@@ -27,19 +27,21 @@ class Network(object):
                 raise Exception("No network objects loaded from NineMl file '{}'".format(filename))
         self._set_simulation_params(timestep=timestep, min_delay=min_delay, max_delay=max_delay,
                                                                             temperature=temperature)
+        self.dirname = os.path.dirname(filename)
         self.label = self.nineml_model.name
         self._rng = rng if rng else NumpyRNG()
         self._populations = {}
+        PopulationClass = self._Population
         for name, model in self.nineml_model.populations.iteritems():
-            self._populations[name] = self._Population.factory(model, self.dirname, self.pop_dir,
-                                                               self._rng, verbose, build_mode,
-                                                               silent_build, solver_name=solver_name)
+            self._populations[name] = PopulationClass(model, self.dirname, self._rng, build_mode, 
+                                                      silent_build, solver_name=solver_name)
         if build_mode not in ('build_only', 'compile_only'):
             clone_count = 0
             self._projections = {}
+            ProjectionClass = self._Projection
             for name, model in self.nineml_model.projections.iteritems():
                 try:
-                    self._projections[name] = self._Projection.factory(
+                    self._projections[name] = ProjectionClass(
                                                   self._populations[model.source.population.name],
                                                   self._populations[model.target.population.name],
                                                   model, rng=self._rng)

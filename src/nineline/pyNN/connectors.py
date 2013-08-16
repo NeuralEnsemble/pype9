@@ -3,8 +3,8 @@ import quantities
 import nineml.user_layer
 import pyNN.connectors
 import nineline.pyNN.random
-import nineline.pyNN.structure.expression
-from nineline.pyNN.structure.expression import PositionBasedExpression
+from . import create_anonymous_function
+from nineline.pyNN.structure.expression import _PositionBasedExpression
 
 class Connector(object):
     
@@ -22,16 +22,19 @@ class Connector(object):
                 conv_param = p.value
             elif p.unit:
                 conv_param = quantities.Quantity(p.value, p.unit)
+            elif p.value in  ('True', 'False'):
+                conv_param = bool(p.value)     
             elif isinstance(p.value, str):
                 conv_param = p.value
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
                 RandomDistributionClass = getattr(nineline.pyNN.random, 
                                                   p.value.definition.component.name)
                 conv_param = RandomDistributionClass(p.value.parameters, rng)
-            elif isinstance(p.value, nineml.user_layer.StructureExpression):
-                StructureExpressionClass = getattr(nineline.pyNN.structure.expression, 
-                                                  p.value.definition.component.name)
-                conv_param = StructureExpressionClass(p.value.parameters, rng)
+            elif isinstance(p.value, nineml.user_layer.AnonymousFunction):
+                conv_param = create_anonymous_function(p.value)
+            else:
+                raise Exception("Unrecognised child '{}' of type '{}'"
+                                .format(p.value, type(p.value)))
             converted_params[cls.nineml_translations[name]] = conv_param
         return converted_params
     
@@ -39,7 +42,8 @@ class Connector(object):
         # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class in 
         # the MRO), I thought of a few ways to do this but none were completely satisfactory.
         PyNNClass = self.__class__.__mro__[2]
-        assert PyNNClass.__module__.startswith('pyNN') and PyNNClass.__module__.endswith('Connector') 
+        assert (PyNNClass.__module__.startswith('pyNN') and 
+                PyNNClass.__module__.endswith('connectors')) 
         PyNNClass.__init__(self, **self._convert_params(nineml_params, rng))
 
 
@@ -76,8 +80,9 @@ class PositionBasedProbabilityConnector(Connector, pyNN.connectors.IndexBasedPro
     def __init__(self, nineml_params, rng):
         conv_params = self._convert_params(nineml_params, rng)
         pyNN.connectors.IndexBasedProbabilityConnector.__init__(self,
-                PositionBasedExpression(conv_params['prob_expression'], conv_params['source_branch'],
-                                        conv_params['target_branch']), 
+                _PositionBasedExpression(expression=conv_params['prob_expression'], 
+                                         source_branch=conv_params['source_branch'],
+                                         target_branch=conv_params['target_branch']), 
                 allow_self_connections=conv_params['allow_self_connections'], rng=rng)    
                 
 
