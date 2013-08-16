@@ -4,6 +4,7 @@ import nineml.user_layer
 import pyNN.connectors
 import nineline.pyNN.random
 import nineline.pyNN.structure.expression
+from nineline.pyNN.structure.expression import PositionBasedExpression
 
 class Connector(object):
     
@@ -40,7 +41,45 @@ class Connector(object):
         PyNNClass = self.__class__.__mro__[2]
         assert PyNNClass.__module__.startswith('pyNN') and PyNNClass.__module__.startswith('Connector') 
         PyNNClass.__init__(self, **self._convert_params(nineml_params, rng))
-        
+
+
+class PositionBasedProbabilityConnector(Connector, pyNN.connectors.IndexBasedProbabilityConnector):
+    """
+    For each pair of pre-post cells, the connection probability depends on an function of the 
+    displacement between them.
+
+    Takes any of the standard :class:`Connector` optional arguments and, in
+    addition:
+
+        `prob_expression`:
+            a function that takes a source position and a target position array and calculates a
+            probability matrix from them.
+        `source_branch`, `target_branch`:
+            the part of the source and target cells to use as the reference points. This allows
+            multiple reference points on the cell to be used, eg. soma, dendritic/axonal branch 
+            points.  If a cell only has one set of positions then they do not need to be 
+            specified (typically a soma)
+        `allow_self_connections`:
+            if the connector is used to connect a Population to itself, this
+            flag determines whether a neuron is allowed to connect to itself,
+            or only to other neurons in the Population.
+        `rng`:
+            an :class:`RNG` instance used to evaluate whether connections exist
+    """        
+    
+    nineml_translations = {'allowSelfConnections':'allow_self_connections', 
+                           'probabilityExpression':'prob_expression', 
+                           'sourceBranch': 'source_branch', 'targetBranch':'target_branch'}
+    
+    parameter_names = ('allow_self_connections', 'prob_expression', 'source_branch', 'target_branch')        
+            
+    def __init__(self, nineml_params, rng):
+        conv_params = self._convert_params(nineml_params, rng)
+        pyNN.connectors.IndexBasedProbabilityConnector.__init__(self,
+                PositionBasedExpression(conv_params['prob_expression'], conv_params['source_branch'],
+                                        conv_params['target_branch']), 
+                allow_self_connections=conv_params['allow_self_connections'], rng=rng)    
+                
 
 class AllToAllConnector(Connector, pyNN.connectors.AllToAllConnector):
     
@@ -51,14 +90,6 @@ class FixedProbabilityConnector(Connector, pyNN.connectors.FixedProbabilityConne
     
     nineml_translations = {'allowSelfConnections':'allow_self_connections', 
                            'probability':'p_connect'}
-
-
-class PositionBasedProbabilityConnector(Connector, pyNN.connectors.PositionBasedProbabilityConnector):
-    
-    nineml_translations = {'allowSelfConnections':'allow_self_connections', 
-                           'probabilityExpression':'prob_expression', 
-                           'sourceBranch': 'source_branch', 'targetBranch':'target_branch'}
-
 
 class FixedNumberPostConnector(Connector, pyNN.connectors.FixedNumberPostConnector):
     

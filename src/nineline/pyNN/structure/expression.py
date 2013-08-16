@@ -37,12 +37,32 @@ class StructureExpression(object):
         params = self._convert_params(nineml_params)
         PyNNClass.__init__(self, **params)
     
-
-class PositionBasedExpression(StructureExpression, pyNN.connectors.PositionBasedExpression):
+                
+class PositionBasedExpression(StructureExpression, pyNN.connectors.IndexBasedExpression):
     """
-    Wraps the pyNN RandomDistribution class and provides a new __init__ method that handles
-    the nineml parameter objects
+    A displacement based prob_expression function used to determine the connection probability
+    and the value of variable connection parameters of a projection 
     """
     
     nineml_translations = {'expression': 'expression', 'sourceBranch':'source_branch',
                           'targetBranch':'target_branch'}
+    
+    def __init__(self, nineml_params):
+        """
+        `function`: a function that takes a 3xN numpy position matrix and maps each row
+                         (displacement) to a probability between 0 and 1
+        """
+        conv_params = self._convert_params(nineml_params)
+        self.expression = conv_params['expression']
+        self.source_branch = conv_params['source_branch']
+        self.target_branch = conv_params['target_branch']
+                    
+    def __call__(self, i, j):
+        source_positions = self.projection.pre._positions[self.source_branch][i]
+        target_positions = self.projection.post._positions[self.target_branch][j]             
+        return self.expression(sourceX=source_positions[0], 
+                               sourceY=source_positions[1], 
+                               sourceZ=source_positions[2], 
+                               targetX=target_positions[0], 
+                               targetY=target_positions[1], 
+                               targetZ=target_positions[2])   
