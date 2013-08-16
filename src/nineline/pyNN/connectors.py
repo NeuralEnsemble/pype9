@@ -39,7 +39,7 @@ class Connector(object):
         # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class in 
         # the MRO), I thought of a few ways to do this but none were completely satisfactory.
         PyNNClass = self.__class__.__mro__[2]
-        assert PyNNClass.__module__.startswith('pyNN') and PyNNClass.__module__.startswith('Connector') 
+        assert PyNNClass.__module__.startswith('pyNN') and PyNNClass.__module__.endswith('Connector') 
         PyNNClass.__init__(self, **self._convert_params(nineml_params, rng))
 
 

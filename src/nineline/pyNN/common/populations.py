@@ -55,7 +55,7 @@ class Population(object):
         # the MRO), I thought of a few ways to do this but none were completely satisfactory.
         PyNNClass = self.__class__.__mro__[2]
         assert (PyNNClass.__module__.startswith('pyNN') and 
-                PyNNClass.__module__.startswith('Population'))
+                PyNNClass.__module__.endswith('Population'))
         # Save the structures in the Nineline class to be able to handle multiple structures
         self.structures = structures
         PyNNClass.__init__(self, size=size, celltype=celltype, cell_params=cell_params, 
