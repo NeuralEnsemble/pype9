@@ -6,14 +6,6 @@ import nineml.user_layer
 import nineline.pyNN.common
 import quantities as pq
 
-## The location relative to the NINEML-Network file to look for the folder containing the cell descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
-RELATIVE_NCML_DIR = "./ncml"
-
-## The location relative to the NINEML-Network file to look for the folder containing the BRep connectivity descriptions. Should eventually be replaced with a specification in the NINEML-Network declaration itself.
-RELATIVE_BREP_DIR = "./brep"
-
-BASIC_PYNN_CONNECTORS = ['AllToAll', 'OneToOne']
-
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
 class Network(object):
@@ -36,7 +28,6 @@ class Network(object):
         self._set_simulation_params(timestep=timestep, min_delay=min_delay, max_delay=max_delay,
                                                                             temperature=temperature)
         self.label = self.nineml_model.name
-#         self.set_flags(flags)
         self._rng = rng if rng else NumpyRNG()
         self._populations = {}
         for name, model in self.nineml_model.populations.iteritems():
@@ -70,26 +61,6 @@ class Network(object):
         Can be overriden by deriving classes to do any simulator-specific finalisation that is required
         """
         pass
-
-    def _get_simulation_params(self, **params):
-        sim_params = dict([(p.name, pq.Quantity(p.value, p.unit)) 
-                           for p in self.nineml_model.parameters.values()])
-        for key in _REQUIRED_SIM_PARAMS:
-            if params.has_key(key) and params[key]:
-                sim_params[key] = params[key]
-            elif not sim_params.has_key(key) or not sim_params[key]:
-                raise Exception ("'{}' parameter was not specified either in Network " 
-                                 "initialisation or NetworkML specification".format(key))
-        return sim_params
-
-    def _convert_units(self, value_str, units=None):
-        raise NotImplementedError("_convert_units needs to be implemented by simulator specific " 
-                                  "Network class")
-
-    def _convert_all_units(self, values_dict):
-        for key, val in values_dict.items():
-            values_dict[key] = self._convert_units(val)
-        return values_dict
 
     @property
     def populations(self):
@@ -138,29 +109,7 @@ class Network(object):
         Record variable from complete network
         """
         for pop in self.populations:
-            pop.record(variable)
-
-    def record_spikes(self):
-        """
-        Record all spikes generated in the network (to be saved to file with Network.print_spikes)
-        """
-        for pop in self.all_populations():
-            pop.record('spikes') #@UndefinedVariable           
-
-    def print_spikes(self, file_prefix):
-        """
-        Record all spikes generated in the network
-        
-        @param filename: The prefix for every population files before the popluation name. The \
-                         suffix '.spikes' will be appended to the filenames as well.
-        """
-        # Add a dot to separate the prefix from the population label if it doesn't already have one
-        # and isn't a directory
-        if (not os.path.isdir(file_prefix) and not file_prefix.endswith('.')
-                and not file_prefix.endswith(os.path.sep)):
-            file_prefix += '.'
-        for pop in self.all_populations():
-            pop.write_data(file_prefix + pop.label + '.spikes.pkl', 'spikes') #@UndefinedVariable                
+            pop.record(variable)                   
 
     def write_data(self, file_prefix, **kwargs):
         """
@@ -176,6 +125,27 @@ class Network(object):
             file_prefix += '.'
         for pop in self.all_populations():
             pop.write_data(file_prefix + pop.label + '.pkl', **kwargs) #@UndefinedVariable
+
+    def _get_simulation_params(self, **params):
+        sim_params = dict([(p.name, pq.Quantity(p.value, p.unit)) 
+                           for p in self.nineml_model.parameters.values()])
+        for key in _REQUIRED_SIM_PARAMS:
+            if params.has_key(key) and params[key]:
+                sim_params[key] = params[key]
+            elif not sim_params.has_key(key) or not sim_params[key]:
+                raise Exception ("'{}' parameter was not specified either in Network " 
+                                 "initialisation or NetworkML specification".format(key))
+        return sim_params
+ 
+
+#     def _convert_units(self, value_str, units=None):
+#         raise NotImplementedError("_convert_units needs to be implemented by simulator specific " 
+#                                   "Network class")
+# 
+#     def _convert_all_units(self, values_dict):
+#         for key, val in values_dict.items():
+#             values_dict[key] = self._convert_units(val)
+#         return values_dict
             
 
 #     def set_flags(self, flags):
