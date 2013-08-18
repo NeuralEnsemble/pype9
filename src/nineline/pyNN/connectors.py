@@ -1,10 +1,12 @@
+from __future__ import absolute_import
 from abc import ABCMeta
 import quantities
 import nineml.user_layer
 import pyNN.connectors
 import nineline.pyNN.random
-from . import create_anonymous_function
-from nineline.pyNN.structure.expression import _PositionBasedExpression
+import nineline.pyNN.common.projections
+from nineline.pyNN.expression import create_anonymous_function
+from nineline.pyNN.expression.structure import _PositionBasedExpression
 
 class Connector(object):
     
@@ -23,9 +25,14 @@ class Connector(object):
             elif p.unit:
                 conv_param = quantities.Quantity(p.value, p.unit)
             elif p.value in  ('True', 'False'):
-                conv_param = bool(p.value)     
+                conv_param = bool(p.value)
             elif isinstance(p.value, str):
                 conv_param = p.value
+            elif isinstance(p.value, nineml.user_layer.Reference):
+                try:
+                    conv_param = nineline.pyNN.common.projections.Projection.created_projections[p.value.name]
+                except KeyError:
+                    raise nineline.pyNN.common.projections.Projection.ProjectionToCloneNotCreatedYetException
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
                 RandomDistributionClass = getattr(nineline.pyNN.random, 
                                                   p.value.definition.component.name)
@@ -55,7 +62,7 @@ class PositionBasedProbabilityConnector(Connector, pyNN.connectors.IndexBasedPro
     Takes any of the standard :class:`Connector` optional arguments and, in
     addition:
 
-        `prob_expression`:
+        `expression`:
             a function that takes a source position and a target position array and calculates a
             probability matrix from them.
         `source_branch`, `target_branch`:
@@ -72,15 +79,20 @@ class PositionBasedProbabilityConnector(Connector, pyNN.connectors.IndexBasedPro
     """        
     
     nineml_translations = {'allowSelfConnections':'allow_self_connections', 
-                           'probabilityExpression':'prob_expression', 
+                           'probabilityExpression':'expression', 
                            'sourceBranch': 'source_branch', 'targetBranch':'target_branch'}
     
-    parameter_names = ('allow_self_connections', 'prob_expression', 'source_branch', 'target_branch')        
+    parameter_names = ('allow_self_connections', 'expression', 'source_branch', 'target_branch')        
             
     def __init__(self, nineml_params, rng):
         conv_params = self._convert_params(nineml_params, rng)
+        # The branch names are not actually needed here but are just included for the automatic PyNN
+        # description function.
+        self.source_branch = conv_params['source_branch']
+        self.target_branch = conv_params['source_branch']
+        # Initialise the index-based probability connector with position-based expression
         pyNN.connectors.IndexBasedProbabilityConnector.__init__(self,
-                _PositionBasedExpression(expression=conv_params['prob_expression'], 
+                _PositionBasedExpression(expression=conv_params['expression'], 
                                          source_branch=conv_params['source_branch'],
                                          target_branch=conv_params['target_branch']), 
                 allow_self_connections=conv_params['allow_self_connections'], rng=rng)    

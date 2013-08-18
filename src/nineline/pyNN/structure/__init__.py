@@ -11,6 +11,7 @@
 #    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
 #######################################################################################
+from __future__ import absolute_import
 from abc import ABCMeta
 import quantities
 import nineml.user_layer
@@ -32,6 +33,6 @@ class Structure(object):
     @property
     def positions(self):
         if self._positions is None:
-            self._positions = self.layout.generate_positions(self.size).T * quantities.m
+            self._positions = self.layout.generate_positions(self.size)
         return self._positions
 

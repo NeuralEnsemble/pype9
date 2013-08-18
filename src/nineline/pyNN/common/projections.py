@@ -11,7 +11,7 @@ class Projection(object):
         def __init__(self, orig_proj_id):
             self.orig_proj_id = orig_proj_id
             
-    created_projections = []
+    created_projections = {}
     
     def __init__(self, source, target, nineml_model, rng=None):
         ConnectorClass = getattr(nineline.pyNN.connectors, 
@@ -30,7 +30,10 @@ class Projection(object):
                 PyNNClass.__module__.endswith('projections'))
         PyNNClass.__init__(self, source, target, connector, synapse_type=synapse, 
                          source=nineml_model.source.segment + '_seg', receptor_type=receptor, 
-                         label=nineml_model.name)   
+                         label=nineml_model.name)
+        # This is used in the clone connectors, there should be a better way than this though
+        # I reckon
+        self.created_projections[nineml_model.name] = self
     
     @classmethod
     def _get_target_str(cls, synapse, segment=None):

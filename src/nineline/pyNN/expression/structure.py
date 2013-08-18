@@ -1,8 +1,9 @@
+from __future__ import absolute_import
 from abc import ABCMeta
 import quantities
 import nineml.user_layer
 import pyNN.connectors
-from .. import create_anonymous_function
+from . import create_anonymous_function
 
 class StructureExpression(object):
 
@@ -56,8 +57,8 @@ class _PositionBasedExpression(pyNN.connectors.IndexBasedExpression):
         self.target_branch = target_branch
                     
     def __call__(self, i, j):
-        source_positions = self.projection.pre.structures[self.source_branch].positions[i]
-        target_positions = self.projection.post.structures[self.target_branch].positions[j]             
+        source_positions = self.projection.pre.structures[self.source_branch].positions[:, i]
+        target_positions = self.projection.post.structures[self.target_branch].positions[:, j]             
         return self.expression(sourceX=source_positions[0], 
                                sourceY=source_positions[1], 
                                sourceZ=source_positions[2], 
@@ -74,14 +75,5 @@ class PositionBasedExpression(StructureExpression, _PositionBasedExpression):
     
     nineml_translations = {'expression': 'expression', 'sourceBranch':'source_branch',
                           'targetBranch':'target_branch'}
-                    
-    def __call__(self, i, j):
-        source_positions = self.projection.pre._structures[self.source_branch].positions[i]
-        target_positions = self.projection.post._structures[self.target_branch].positions[j]             
-        return self.expression(sourceX=source_positions[0], 
-                               sourceY=source_positions[1], 
-                               sourceZ=source_positions[2], 
-                               targetX=target_positions[0], 
-                               targetY=target_positions[1], 
-                               targetZ=target_positions[2])
+
         

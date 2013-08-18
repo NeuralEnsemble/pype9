@@ -77,11 +77,11 @@ class Network(object):
         Describes all populations and projections within the network
         """
         print "Populations:"
-        for pop in self.all_populations():
+        for pop in self.populations.itervalues():
             print pop.describe()
 
         print "Projections:"
-        for proj in self.all_projections():
+        for proj in self.projections.itervalues():
             print proj.describe()
 
     def save_connections(self, output_dir):
@@ -90,7 +90,7 @@ class Network(object):
         
         @param output_dir:
         """
-        for proj in self.all_projections():
+        for proj in self.projections.itervalues():
             if isinstance(proj.synapse_type, pyNN.standardmodels.synapses.ElectricalSynapse):
                 attributes = 'weight'
             else:
@@ -103,14 +103,14 @@ class Network(object):
         
         @param output_dir:
         """
-        for pop in self.all_populations():
+        for pop in self.populations.itervalues():
             pop.save_positions(os.path.join(output_dir, pop.label) + '.pop')
 
     def record(self, variable):
         """
         Record variable from complete network
         """
-        for pop in self.populations:
+        for pop in self.populations.itervalues():
             pop.record(variable)                   
 
     def write_data(self, file_prefix, **kwargs):
@@ -125,7 +125,7 @@ class Network(object):
         if (not os.path.isdir(file_prefix) and not file_prefix.endswith('.')
                 and not file_prefix.endswith(os.path.sep)):
             file_prefix += '.'
-        for pop in self.all_populations():
+        for pop in self.populations.itervalues():
             pop.write_data(file_prefix + pop.label + '.pkl', **kwargs) #@UndefinedVariable
 
     def _get_simulation_params(self, **params):

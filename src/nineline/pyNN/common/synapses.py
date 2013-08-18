@@ -3,7 +3,7 @@ from abc import ABCMeta
 import quantities
 import nineml.user_layer
 import nineline.pyNN.random
-import nineline.pyNN.structure.expression
+import nineline.pyNN.expression.structure
 
 class Synapse(object):
 
@@ -30,7 +30,7 @@ class Synapse(object):
                                                   p.value.definition.component.name)
                 conv_param = RandomDistributionClass(p.value.parameters, rng)                
             elif isinstance(p.value, nineml.user_layer.StructureExpression):
-                StructureExpressionClass = getattr(nineline.pyNN.structure.expression,
+                StructureExpressionClass = getattr(nineline.pyNN.expression.structure,
                                                    p.value.definition.component.name)
                 conv_param = StructureExpressionClass(p.value.parameters)
             else: 
