@@ -4,20 +4,22 @@ import nineline.pyNN.connectors
 import nineline.forests.point2point
 from nineline.cells import NineCell
 
-class Projection(object):
-    
-    class ProjectionToCloneNotCreatedYetException(Exception):
+class ProjectionToCloneNotCreatedYetException(Exception):
         
-        def __init__(self, orig_proj_id):
-            self.orig_proj_id = orig_proj_id
+    def __init__(self, orig_proj_id=None):
+        self.orig_proj_id = orig_proj_id
+
+class Projection(object):
             
     created_projections = {}
     
     def __init__(self, source, target, nineml_model, rng=None):
         ConnectorClass = getattr(nineline.pyNN.connectors, 
                                  nineml_model.rule.definition.component.name)
-        connector = ConnectorClass(nineml_model.rule.parameters, rng)
-        
+        try:
+            connector = ConnectorClass(nineml_model.rule.parameters, rng)
+        except ProjectionToCloneNotCreatedYetException:
+            raise ProjectionToCloneNotCreatedYetException(nineml_model.name)
         SynapseClass = getattr(self._synapses_module, 
                                nineml_model.connection_type.definition.component.name)
         synapse = SynapseClass(nineml_model.connection_type.parameters, rng)

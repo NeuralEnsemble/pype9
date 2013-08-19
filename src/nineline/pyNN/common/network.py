@@ -36,20 +36,23 @@ class Network(object):
             self._populations[name] = PopulationClass(model, self.dirname, self._rng, build_mode, 
                                                       silent_build, solver_name=solver_name)
         if build_mode not in ('build_only', 'compile_only'):
-            clone_count = 0
             self._projections = {}
             ProjectionClass = self._Projection
-            for name, model in self.nineml_model.projections.iteritems():
+            projection_models = self.nineml_model.projections.values()
+            num_projections = len(projection_models)
+            for model in projection_models:
                 try:
-                    self._projections[name] = ProjectionClass(
+                    self._projections[model.name] = ProjectionClass(
                                                   self._populations[model.source.population.name],
                                                   self._populations[model.target.population.name],
                                                   model, rng=self._rng)
-                except nineline.pyNN.common.Projection.ProjectionToCloneNotCreatedYetException as e:
-                    if e.orig_proj_id in [p.id for p in self.nineml_model.projections]:
-                        self.Network.projections.append(model)
-                        clone_count += 1
-                        if clone_count > len(self.Network.projections):
+                except nineline.pyNN.common.projections.ProjectionToCloneNotCreatedYetException as e:
+                    if e.orig_proj_id in self.nineml_model.projections.keys():
+                        projection_models.append(model)
+                        # I think this is the theoretical limit for the number of iterations this 
+                        # loop will have to make for the worst ordering of cloned projections
+                        if len(projection_models) - num_projections > (num_projections * 
+                                                                       (num_projections + 1) / 2):  
                             raise Exception("Projections using 'Clone' pattern form a circular "
                                             "reference")
                     else:

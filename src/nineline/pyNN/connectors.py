@@ -32,7 +32,7 @@ class Connector(object):
                 try:
                     conv_param = nineline.pyNN.common.projections.Projection.created_projections[p.value.name]
                 except KeyError:
-                    raise nineline.pyNN.common.projections.Projection.ProjectionToCloneNotCreatedYetException
+                    raise nineline.pyNN.common.projections.ProjectionToCloneNotCreatedYetException
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
                 RandomDistributionClass = getattr(nineline.pyNN.random, 
                                                   p.value.definition.component.name)
