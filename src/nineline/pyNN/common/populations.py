@@ -55,9 +55,8 @@ class Population(object):
         
     @property
     def positions(self):
-        raise NotImplementedError("Not sure if this is working yet")
         try:
-            return self.structures['soma'].positions.T
+            return self.structures['soma'].positions
         except KeyError:
             return next(self.structures.itervalues()).positions.T
         
