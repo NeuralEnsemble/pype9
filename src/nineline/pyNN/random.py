@@ -1,9 +1,8 @@
 from __future__ import absolute_import
 from abc import ABCMeta
-import numpy
-import quantities
 import nineml.user_layer
 import pyNN.random
+from nineline.pyNN import convert_to_pyNN_units
 
 class RandomDistribution(pyNN.random.RandomDistribution):
 
@@ -23,17 +22,18 @@ class RandomDistribution(pyNN.random.RandomDistribution):
             if p.unit == 'dimensionless':
                 conv_param = p.value
             else: 
-                conv_param = quantities.Quantity(p.value, p.unit).simplified
+                conv_param, param_units = convert_to_pyNN_units(p.value, p.unit)
                 if units is None:
-                    units = conv_param.units
-                elif units != conv_param.units:
+                    units = param_units
+                elif units != param_units:
                     raise Exception("Dimensions of random distribution parameters do not match "
-                                    "({} and {})".format(units, conv_param.units))    
-            converted_params[cls.nineml_translations[name]] = float(conv_param) 
+                                    "({} and {})".format(units, param_units))
+            converted_params[cls.nineml_translations[name]] = conv_param 
         return converted_params, units
 
-    def __init__(self, nineml_params, rng):
-        converted_params, self.units = self._convert_params(nineml_params)
+    def __init__(self, nineml_params, rng, use_units=True):
+        converted_params, units = self._convert_params(nineml_params)
+        self.units = units if use_units else None
         ordered_params = []
         for name in self.parameter_order:
             ordered_params.append(converted_params[name])

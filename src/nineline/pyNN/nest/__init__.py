@@ -132,8 +132,8 @@ class Projection(nineline.pyNN.common.Projection, pyNN.nest.Projection):
 
 class Network(nineline.pyNN.common.Network):
 
-    _Population = Population
-    _Projection = Projection
+    _PopulationClass = Population
+    _ProjectionClass = Projection
 
     def __init__(self, filename, build_mode='lazy', timestep=None,
                  min_delay=None, max_delay=None, temperature=None, silent_build=False, flags=[],

@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 from abc import ABCMeta
 import numpy
-import quantities as pq
 import nineml.user_layer
+from nineline.pyNN import convert_to_pyNN_units
 
 _numpy_constants_functions = set(['pi', 'exp', 'sin', 'cos', 'log', 'log10', 'pow', 'sinh', 'cosh', 
                                   'tanh', 'sqrt', 'mod', 'sum', 'atan', 'asin', 'acos', 'asinh', 
@@ -25,8 +25,7 @@ def create_anonymous_function(nineml_model):
         if p.unit == 'dimensionless':
             value = p.value
         else:
-            value = pq.Quantity(p.value, p.unit).simplified
-            value = float(value)
+            value, units = convert_to_pyNN_units(p.value, p.unit) #@UnusedVariable
         expression_str = expression_str.replace(name, str(value))
     # Replace escape sequences that would otherwise interfere with xml parsing
     expression_str = expression_str.replace('&lt;', '<')

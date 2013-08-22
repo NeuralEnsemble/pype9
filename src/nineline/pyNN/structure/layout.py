@@ -13,11 +13,10 @@
 #######################################################################################
 from __future__ import absolute_import
 from abc import ABCMeta
-import numpy
-import quantities
 import nineml.user_layer
 import pyNN.space
 import nineline.pyNN.random
+from nineline.pyNN import convert_to_pyNN_units
 
 class Layout(object):
     
@@ -34,11 +33,7 @@ class Layout(object):
             if p.unit == 'dimensionless':
                 conv_param = p.value
             elif p.unit:
-                conv_param = quantities.Quantity(p.value, p.unit)
-                # Convert to SI units and drop the quantity as it may interfere with the layout
-                # function (it will be added in again after the positions are generated, with the
-                # assumption that all dimensions are length)
-                conv_param = float(conv_param.simplified)
+                conv_param, units = convert_to_pyNN_units(p.value, p.unit) #@UnusedVariable
             elif isinstance(p.value, str):
                 conv_param = p.value
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):

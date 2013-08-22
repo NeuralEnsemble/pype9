@@ -8,6 +8,7 @@ import nineline.pyNN.common.projections
 from nineline.pyNN.expression import create_anonymous_function
 from nineline.pyNN.expression.structure import _PositionBasedExpression
 
+
 class Connector(object):
     
     __metaclass__ = ABCMeta

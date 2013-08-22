@@ -13,22 +13,22 @@
 #
 #######################################################################################
 # This is required to ensure that the right MPI variables are set before NEURON is initiated
-from __future__ import absolute_import 
+from __future__ import absolute_import
 try:
-    from mpi4py import MPI # @UnresolvedImport @UnusedImport
+    from mpi4py import MPI  # @UnresolvedImport @UnusedImport
 except:
     pass
 import nineline.pyNN.common
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, record, record_v, record_gsyn, \
-                        StepCurrentSource, DCSource, NoisyCurrentSource #@UnusedVariable
+                        StepCurrentSource, DCSource, NoisyCurrentSource  # @UnusedVariable
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.standardmodels
 import pyNN.neuron.simulator as simulator
 import neuron
 from nineline.pyNN.neuron.cells import NinePyNNCellMetaClass
 from nineline.cells.neuron import NineCell
-from . import synapses as synapses_module
+from . import synapses as synapses_module #@UnresolvedImport
 import logging
 
 logger = logging.getLogger("PyNN")
@@ -37,15 +37,12 @@ get_current_time, get_time_step, get_min_delay, \
         get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 
+
 class Population(nineline.pyNN.common.Population, pyNN.neuron.Population):
 
     _pyNN_standard_celltypes = dict([(cellname, getattr(pyNN.neuron.standardmodels.cells, cellname))
                                      for cellname in pyNN.neuron.list_standard_models()])
     _NineCellMetaClass = NinePyNNCellMetaClass
-
-#    #FIXME: I think this should be deleted
-#    def set_param(self, cell_id, param, value, component=None, section=None):
-#        raise NotImplementedError('set_param has not been implemented for Population class yet')
 
     def rset(self, param, rand_distr, component=None, seg_group=None):
         param_scope = [NineCell.group_varname(seg_group)]
@@ -63,7 +60,7 @@ class Population(nineline.pyNN.common.Population, pyNN.neuron.Population):
 
 #    def can_record(self, variable):
 #        """
-#        Overloads that from pyNN.common.BasePopulation to allow section names and positions to 
+#        Overloads that from pyNN.common.BasePopulation to allow section names and positions to
 #        be passed.
 #        """
 #        if hasattr(self.celltype, 'memb_model'): # If cell is generated from NCML file
@@ -94,68 +91,22 @@ class Projection(nineline.pyNN.common.Projection, pyNN.neuron.Projection):
     @classmethod
     def get_min_delay(self):
         return get_min_delay()
-
-    @classmethod
-    def _convert_units(cls, value_str, units=None):
-        if ' ' in value_str:
-            if units:
-                raise Exception("Units defined in both argument ('{}') and value string ('{}')"
-                                .format(units, value_str))
-            (value, units) = value_str.split()
-        else:
-            value = value_str
-            units = None
-        try:
-            value = float(value)
-        except:
-            raise Exception("Incorrectly formatted value string '{}', should be a number optionally"
-                            " followed by a space and units (eg. '1.5 Hz')".format(value_str))
-        if not units:
-            return value
-        elif units == "Hz":
-            return value
-        elif units == "um":
-            return value
-        elif units == "ms":
-            return value
-        elif units == "us":
-            return value * 1e-3
-        elif units == "us/um":
-            return value * 1e-3
-        elif units == 'uS':
-            return value
-        elif units == 'mS':
-            return value * 1e+3
-        elif units == 'nS':
-            return value * 1e-3
-        elif units == 'pS':
-            return value * 1e-6
-        elif units == 'MOhm':
-            return value
-        elif units == 'Ohm/cm':
-            return value
-        elif units == 'S/cm2':
-            return value
-        else:
-            raise Exception("Unrecognised units '%s'" % units)
+    
 
 class Network(nineline.pyNN.common.Network):
 
-    _Population = Population
-    _Projection = Projection
+    _PopulationClass = Population
+    _ProjectionClass = Projection
 
     def __init__(self, filename, build_mode='lazy', timestep=None, min_delay=None,
                                  max_delay=None, temperature=None, silent_build=False, flags=[],
                                  solver_name=None, rng=None):
-        self.get_min_delay = get_min_delay # Sets the 'get_min_delay' function for use in the network init
-        #Call the base function initialisation function.
+        self.get_min_delay = get_min_delay  # Sets the 'get_min_delay' function for use in the network init
+        # Call the base function initialisation function.
         nineline.pyNN.common.Network.__init__(self, filename, build_mode=build_mode, timestep=timestep,
                                           min_delay=min_delay, max_delay=max_delay,
-                                          temperature=temperature, silent_build=silent_build, 
+                                          temperature=temperature, silent_build=silent_build,
                                           flags=flags, solver_name=solver_name, rng=rng)
-
-
-
 
     def _set_simulation_params(self, **params):
         """
@@ -168,6 +119,7 @@ class Network(nineline.pyNN.common.Network):
         p = self._get_simulation_params(**params)
         setup(p['timestep'], p['min_delay'], p['max_delay'])
         neuron.h.celsius = p['temperature']
+
 
 if __name__ == "__main__":
 
