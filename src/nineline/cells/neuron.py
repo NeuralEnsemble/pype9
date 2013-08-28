@@ -15,7 +15,6 @@
 from __future__ import absolute_import
 from operator import attrgetter
 import numpy
-import weakref
 from neuron import h, nrn, load_mechanisms
 from nineline.cells.build.neuron import build_celltype_files
 import nineline.cells.readers

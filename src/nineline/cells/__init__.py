@@ -50,8 +50,9 @@ class NineCellMetaClass(type):
     def __init__(cls, celltype_name, nineml_path, morph_id=None, build_mode=None, #@NoSelf
                    silent=None, solver_name=None):
         """
-        This initialiser is empty, but since I have changed the signature of the __new__ method it  
-        complains otherwise (not sure if there is a more elegant way around this problem.
+        This initialiser is empty, but since I have changed the signature of the __new__ method in 
+        the deriving metaclasses it complains otherwise (not sure if there is a more elegant way 
+        around this problem).
         """
         pass
 
