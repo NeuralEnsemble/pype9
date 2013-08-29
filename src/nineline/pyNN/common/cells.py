@@ -45,8 +45,7 @@ class NinePyNNCellMetaClass(type):
         dct["parameter_names"] = dct['default_parameters'].keys()
         return super(NinePyNNCellMetaClass, cls).__new__(cls, celltype_id + 'PyNN', bases, dct)
     
-    def __init__(cls, name, nineml_path, morph_id=None, build_mode='lazy', silent=False, #@NoSelf 
-                solver_name=None):
+    def __init__(self, nineml_model, build_mode='lazy', silent=False, solver_name=None):
         """
         Not required, but since I have changed the signature of the new method it otherwise 
         complains

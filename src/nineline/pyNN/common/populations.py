@@ -4,38 +4,30 @@ import numpy
 import pyNN.parameters
 from nineline.pyNN.structure import Structure
 from pyNN.random import RandomDistribution
+from nineml.abstraction_layer.component import ComponentClassStub
+import nineml.extensions.biophysical_cells
 
+_pyNN_standard_class_translations = {}
 
 class Population(object):            
 
     def __init__(self, nineml_model, dirname, rng, build_mode='lazy', silent_build=False, 
                 solver_name='cvode'):
-        
-        # This is a temporary hack until the cell models are fully converted to the 9ml format
-        if nineml_model.prototype.definition:
-            celltype_name = os.path.splitext(
-                                    os.path.basename(nineml_model.prototype.definition.url))[0]
-            if '_' in celltype_name:
-                name_parts = celltype_name.split('_')
-                for i, p in enumerate(name_parts):
-                    name_parts[i] = p.capitalize()
-                celltype_name = ''.join(name_parts)
-            
-            celltype = self._pyNN_standard_celltypes[celltype_name]
+        celltype_model = nineml_model.prototype.definition.component
+        celltype_name = nineml_model.prototype.name if nineml_model.prototype.name else celltype_model.name
+        # Store the definition url inside the cell type for use when checking reloading of cell 
+        # model
+        celltype_model.url = nineml_model.prototype.definition.url
+        if isinstance(celltype_model, ComponentClassStub):
+            celltype = self._pyNN_standard_celltypes[celltype_model.name]
+        elif isinstance(celltype_model, nineml.extensions.biophysical_cells.ComponentClass):
+            celltype = self._NineCellMetaClass(celltype_name,
+                                               celltype_model,
+                                               build_mode=build_mode,
+                                               silent=silent_build,
+                                               solver_name=solver_name)
         else:
-            celltype_name = nineml_model.prototype.name
-            try:
-                celltype = self._NineCellMetaClass(
-                                        celltype_name,
-                                        os.path.join(dirname, '..', 'neurons', 
-                                                     celltype_name + '.xml'), 
-                                        morph_id=None,
-                                        build_mode=build_mode,
-                                        silent=silent_build,
-                                        solver_name=solver_name)
-            except IOError:
-                raise Exception("Cell_type_name '{}' was not found or in standard models"
-                                .format(celltype_name))
+            raise Exception("'{}' component type is not supported yet".format(type(celltype_model)))    
         if build_mode not in ('build_only', 'compile_only'):
             # Set default for populations without morphologies
             self.structures = {}

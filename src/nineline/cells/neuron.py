@@ -462,27 +462,23 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
 
     loaded_celltypes = {}
 
-    def __new__(cls, celltype_id, nineml_path, morph_id=None, build_mode='lazy',
-                           silent=False, solver_name=None):
-        celltype_name = celltype_id
-        if morph_id:
-            celltype_name += morph_id
+    def __new__(cls, celltype_name, nineml_model, build_mode='lazy', silent=False, solver_name=None):
         try:
-            celltype = cls.loaded_celltypes[(celltype_name, nineml_path)]
+            celltype = cls.loaded_celltypes[(nineml_model.name, nineml_model.url)]
         except KeyError:
-            dct = {'memb_model': nineline.cells.readers.read_NCML(celltype_id, nineml_path),
-                   'morph_model': nineline.cells.readers.read_MorphML(celltype_id, nineml_path, morph_id)}
-            build_options = dct['memb_model'].build_options['nemo']['neuron']
+            dct = {'nineml_model': nineml_model}
+            build_options = nineml_model.biophysics.build_hints['nemo']['neuron']
             install_dir, dct['component_translations'] = \
-                    build_celltype_files(celltype_id, nineml_path, build_mode=build_mode,
+                    build_celltype_files(celltype_name, nineml_model.url, 
+                                         build_mode=build_mode,
                                          method=build_options.method, 
-                                         kinetics=build_options.kinetics,
+                                         kinetics=build_options.kinetic_components,
                                          silent_build=silent)
             load_mechanisms(install_dir)
             dct['mech_path'] = install_dir
             celltype = super(NineCellMetaClass, cls).__new__(cls, celltype_name, (NineCell,), dct)
             # Save cell type in case it needs to be used again
-            cls.loaded_celltypes[(celltype_name, nineml_path)] = celltype
+            cls.loaded_celltypes[(celltype_name, nineml_model.url)] = celltype
         return celltype
 
 

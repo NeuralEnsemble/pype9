@@ -27,16 +27,17 @@ class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
     
     loaded_celltypes = {}
     
-    def __new__(cls, name, nineml_path, morph_id=None, build_mode='lazy', silent=False, 
-                solver_name=None):
-        if cls.loaded_celltypes.has_key((name, nineml_path)):
-            celltype = cls.loaded_celltypes((name, nineml_path))
-        else:
-            model = NineCellMetaClass(name, nineml_path, morph_id=morph_id, build_mode=build_mode, 
-                                      silent=silent, solver_name=solver_name)
+    def __new__(cls, name, nineml_model, build_mode='lazy', silent=False, solver_name=None):
+        try:
+            celltype = cls.loaded_celltypes[(nineml_model.name, nineml_model.url)]
+        except KeyError:
+            model = NineCellMetaClass(name, nineml_model, build_mode=build_mode, silent=silent, 
+                                      solver_name=solver_name)
             dct = {'model': model,
                    'recordable': model().recordable.keys()}
             celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, name, (NinePyNNCell,), dct)
-            cls.loaded_celltypes[(name, nineml_path)] = celltype
+            # If the url where the celltype is defined is specified save the celltype to be retried later
+            if nineml_model.url is not None: 
+                cls.loaded_celltypes[(name, nineml_model.url)] = celltype
         return celltype
     
