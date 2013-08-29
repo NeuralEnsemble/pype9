@@ -46,14 +46,14 @@ class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
     Metaclass for compiling NineMLCellType subclases
     Called by nineml_celltype_from_model
     """
-    def __new__(cls, nineml_model, build_mode='lazy', silent=False, solver_name='cvode'): #@NoSelf
-        dct = {'model': NineCellMetaClass(nineml_model, build_mode=build_mode, silent=silent, 
-                                          solver_name='cvode')}
-        dct['nest_name'] = {"on_grid": nineml_model.name, "off_grid": nineml_model.name}
-        dct['nest_model'] = nineml_model.name
+    def __new__(cls, celltype_name, nineml_model, build_mode='lazy', silent=False, solver_name='cvode'): #@NoSelf
+        dct = {'model': NineCellMetaClass(celltype_name, nineml_model, build_mode=build_mode, 
+                                          silent=silent, solver_name='cvode')}
+        dct['nest_name'] = {"on_grid": celltype_name, "off_grid": celltype_name}
+        dct['nest_model'] = celltype_name
         dct['translations'] = cls._construct_translations(dct['model'].memb_model,
                                                           dct['model'].component_translations)        
-        celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, nineml_model.name + 'PyNN', 
+        celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, celltype_name + 'PyNN', 
                                                              (NinePyNNCell,), dct)       
         return celltype
 
