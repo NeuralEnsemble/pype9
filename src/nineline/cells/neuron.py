@@ -167,11 +167,11 @@ class Segment(nrn.Section): #@UndefinedVariable
             super(Segment, self).__setattr__(component_name, getattr(self(0.5), mech_name))
 
 
-class SegmentGroup(object):
+class SegmentClass(object):
 
     def __init__(self):
-        super(SegmentGroup, self).__setattr__('_segments', [])
-        super(SegmentGroup, self).__setattr__('default', None)
+        super(SegmentClass, self).__setattr__('_segments', [])
+        super(SegmentClass, self).__setattr__('default', None)
 
     def __iter__(self):
         return iter(self._segments)
@@ -191,7 +191,7 @@ class SegmentGroup(object):
     def append(self, segment, is_default=False):
         assert isinstance(segment, Segment)
         if is_default or not self.default:
-            super(SegmentGroup, self).__setattr__('default', segment)
+            super(SegmentClass, self).__setattr__('default', segment)
         self._segments.append(segment)
 
     def __setattr__(self, var, value):
@@ -246,37 +246,33 @@ class NineCell(nineline.cells.NineCell):
                                       required, leaving the "barebones" pyNEURON structure for \
                                       each nrn.Section
         """
-        if not len(self.morph_model.segments):
+        if not len(self.nineml_model.morphology.segments):
             raise Exception("The loaded morphology does not contain any segments")
         # Initialise all segments
         self.segments = {}
         # Create a group to hold all segments (this is the default group for components that don't 
         # specify a segment group). Create an object to provide 'attribute' route to update 
         # parameter of model via segment groups
-        self.all_segs = SegmentGroup()
         self.root_segment = None
-        for morphml_seg in self.morph_model.segments:
-            if self.segments.has_key(morphml_seg.id):
-                raise Exception ("Segment id '{}' conflicts with a previously defined member of " \
-                                 "the cell object.".format(morphml_seg.id))
-            seg = Segment(morphml_seg)
-            self.segments[morphml_seg.id] = seg
-            self.all_segs.append(seg)
-            setattr(self, self.seg_varname(morphml_seg.id), seg)
-            if not morphml_seg.parent:
+        for model in self.nineml_model.morphology.segments:
+            seg = Segment(model)
+            self.segments[model.name] = seg
+            #TODO This should really be part of the 9ML package
+            if not model.parent:
                 if self.root_segment:
-                    raise Exception("Two segments ({0} and {1}) were declared without parents, " \
-                                    "meaning the neuronal tree is disconnected"\
-                                    .format(self.root_segment.id, seg.id))
+                    raise Exception("Two segments ({0} and {1}) were declared without parents, " 
+                                    "meaning the neuronal tree is disconnected"
+                                    .format(self.root_segment.name, seg.name))
                 self.root_segment = seg
+        #TODO And this check too
         if not self.root_segment:
-            raise Exception("The neuronal tree does not have a root segment, meaning it is " \
+            raise Exception("The neuronal tree does not have a root segment, meaning it is " 
                             "connected in a circle (I assume this is not intended)")
         # Connect the segments together
-        for morphml_seg in self.morph_model.segments:
-            if morphml_seg.parent:
-                self.segments[morphml_seg.id]._connect(self.segments[morphml_seg.parent.id],
-                                                       morphml_seg.parent.fractionAlong)
+        for model in self.nineml_model.morphology.segments:
+            if model.parent:
+                self.segments[model.name]._connect(self.segments[model.parent.name],
+                                                   model.parent.fractionAlong)
         # Work out the segment lengths properly accounting for the "fraction_along". This is 
         # performed via a tree traversal to ensure that the parents 'proximal' field has already 
         # been calculated beforehand
@@ -284,27 +280,25 @@ class NineCell(nineline.cells.NineCell):
         while len(segment_stack):
             seg = segment_stack.pop()
             if seg._parent_seg:
-                proximal = seg._parent_seg._proximal * (1 - seg._fraction_along) + \
-                           seg._parent_seg._distal * seg._fraction_along
+                proximal = (seg._parent_seg._proximal * (1 - seg._fraction_along) + 
+                            seg._parent_seg._distal * seg._fraction_along)
                 seg._set_proximal(proximal)
             segment_stack += seg._children
-        # Set up groups of segments for inserting mechanisms
-        self.groups = {}
-        self.default_group = None # Will be overwritten in first iteration of loop
-        for morphml_group in self.morph_model.groups:
-            group = SegmentGroup()
-            if morphml_group.id == self.morph_model.default_group or not self.default_group:
-                self.default_group = group
-            self.groups[morphml_group.id] = group
-            setattr(self, self.group_varname(morphml_group.id), group)
-            for member_id in morphml_group.members:
-                try:
-                    group.append(self.segments[member_id],
-                                 is_default=(member_id == morphml_group.default))
-                except KeyError:
-                    raise Exception("Member id {} (referenced in group '{}') was not found in " \
-                                    "loaded segments".format(member_id, morphml_group.id))
-
+        # Set up segment classifications for inserting mechanisms
+        self.classifications = {}
+        for model in self.nineml_model.morphology.classifications:
+            classification = {}
+            for cls_model in model.divisions:
+                seg_class = SegmentClass()
+                for member in cls_model.members:
+                    try:
+                        seg_class.append(self.segments[member])
+                    except KeyError:
+                        raise Exception("Member '{}' (referenced in group '{}') was not found in "
+                                        "loaded segments".format(member, cls_model.name))
+                classification[cls_model.name] = seg_class
+            self.classifications[classification]
+                
     def _init_biophysics(self):
         """
         Loop through loaded currents and synapses, and insert them into the relevant sections.

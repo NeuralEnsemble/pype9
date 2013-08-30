@@ -31,23 +31,23 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
     
     loaded_celltypes = {}
     
-    def __new__(cls, celltype_name, nineml_path, morph_id=None, build_mode='lazy',
+    def __new__(cls, celltype_name, nineml_model, morph_id=None, build_mode='lazy',
                    silent=False, solver_name='cvode'):
         """
         Loads a PyNN cell type for NEST from an XML description, compiling the necessary module files
         
         @param celltype_name [str]: Name of the cell class to extract from the xml file
-        @param nineml_path [str]: The location of the NCML XML file
+        @param nineml_model [str]: The parsed 9ML biophysical cell model
         @param morph_id [str]: Currently unused but kept for consistency with NEURON version of this function
         @param build_mode [str]: Control the automatic building of required modules
         @param silent [bool]: Whether or not to suppress build output
         """
         try:
-            celltype = loaded_celltypes[(celltype_name, nineml_path)]
+            celltype = loaded_celltypes[(celltype_name, nineml_model.url)]
         except KeyError:
             dct = {}
             install_dir, dct['component_translations'] = build_celltype_files(celltype_name, 
-                                                                              nineml_path,
+                                                                              nineml_model.url,
                                                                               build_mode=build_mode,
                                                                               method=solver_name)
             lib_dir = os.path.join(install_dir, 'lib', 'nest')
@@ -66,12 +66,11 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
             nest.sli_run('({}) addpath'.format(os.path.join(install_dir, 'share', 'nest')))
             # Install nest module
             nest.Install(celltype_name + 'Loader')
-            dct['memb_model'] = read_NCML(celltype_name, nineml_path)
-            dct['morph_model'] = read_MorphML(celltype_name, nineml_path)
+            dct['nineml_model'] = nineml_model
             # Add the loaded cell type to the list of cell types that have been loaded
             celltype = super(NineCellMetaClass, cls).__new__(cls, celltype_name, (NineCell,), dct)
             # Added the loaded celltype to the dictionary of previously loaded cell types
-            loaded_celltypes[(celltype_name, nineml_path)] = celltype
+            loaded_celltypes[(celltype_name, nineml_model.url)] = celltype
         return celltype
     
     
