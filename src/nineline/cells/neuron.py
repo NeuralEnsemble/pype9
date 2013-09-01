@@ -13,11 +13,35 @@
 #
 #######################################################################################
 from __future__ import absolute_import
-from operator import attrgetter
 import numpy
+import quantities
 from neuron import h, nrn, load_mechanisms
 from nineline.cells.build.neuron import build_celltype_files
-import nineline.cells.readers
+import nineline.cells
+from .. import create_unit_conversions, convert_units
+
+_basic_SI_to_pyNN_conversions = (('s', 'ms'),
+                                 ('V', 'mV'),
+                                 ('A', 'nA'),
+                                 ('S', 'uS'),
+                                 ('F', 'nF'),
+                                 ('m', 'um'),
+                                 ('Hz', 'Hz'),
+                                 ('Ohm', 'MOhm'),
+                                 ('M', 'mM'))
+
+_compound_SI_to_pyNN_conversions = (((('A', 1), ('m', -2)), (('mA', 1), ('cm', -2))),
+                                    ((('F', 1), ('m', -2)), (('uF', 1), ('cm', -2))),
+                                    ((('S', 1), ('m', -2)), (('S', 1), ('cm', -2))))
+
+
+_basic_unit_dict, _compound_unit_dict = create_unit_conversions(_basic_SI_to_pyNN_conversions,
+                                                                _compound_SI_to_pyNN_conversions)
+
+
+def convert_to_neuron_units(value, unit_str):
+    return convert_units(value, unit_str, _basic_unit_dict, _compound_unit_dict)
+
 
 class Segment(nrn.Section): #@UndefinedVariable
     """
@@ -55,7 +79,7 @@ class Segment(nrn.Section): #@UndefinedVariable
                 raise AttributeError("Component does not have translation for parameter '{}'"\
                                      .format(e))
 
-    def __init__(self, morphl_seg):
+    def __init__(self, nineml_model):
         """
         Initialises the Segment including its proximal and distal sections for connecting child 
         segments
@@ -65,19 +89,19 @@ class Segment(nrn.Section): #@UndefinedVariable
         """
         nrn.Section.__init__(self) #@UndefinedVariable
         h.pt3dclear(sec=self)
-        self.diam = float(morphl_seg.distal.diam)
-        self._distal = numpy.array((morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z))
-        h.pt3dadd(morphl_seg.distal.x, morphl_seg.distal.y, morphl_seg.distal.z,
-                  morphl_seg.distal.diam, sec=self)
-        if morphl_seg.proximal:
-            self._set_proximal((morphl_seg.proximal.x, morphl_seg.proximal.y,
-                                morphl_seg.proximal.z))
+        self.diam = float(nineml_model.distal.diameter)
+        self._distal = numpy.array((nineml_model.distal.x, nineml_model.distal.y, nineml_model.distal.z))
+        h.pt3dadd(nineml_model.distal.x, nineml_model.distal.y, nineml_model.distal.z,
+                  nineml_model.distal.diameter, sec=self)
+        if nineml_model.proximal:
+            self._set_proximal((nineml_model.proximal.x, nineml_model.proximal.y,
+                                nineml_model.proximal.z))
         # Set initialisation variables here    
         self.v_init = nineline.cells.DEFAULT_V_INIT
         # A list to store any gap junctions in
         self._gap_junctions = []
         # Local information, though not sure if I need this here
-        self.id = morphl_seg.id
+        self.name = nineml_model.name
         self._parent_seg = None
         self._fraction_along = None
         self._children = []
@@ -136,21 +160,21 @@ class Segment(nrn.Section): #@UndefinedVariable
         self._fraction_along = fraction_along
         parent_seg._children.append(self)
 
-    def insert(self, component_name, cell_id=None, translations=None):
+    def insert(self, component_name, biophysics_name=None, translations=None):
         """
         Inserts a mechanism using the in-built NEURON 'insert' method and then constructs a 
         'Component' class to point to the variable parameters of the component using meaningful 
         names
         
         @param component_name [str]: The name of the component to be inserted
-        @param cell_id [str]: If the cell_id is provided, then it is used as a prefix to the \
-                              component (eg. if cell_id='Granule' and component_name='CaHVA', the \
+        @param biophysics_name [str]: If the biophysics_name is provided, then it is used as a prefix to the \
+                              component (eg. if biophysics_name='Granule' and component_name='CaHVA', the \
                               insert mechanism would be 'Granule_CaHVA'), in line with the naming \
                               convention used for NCML mechanisms
         """
-        # Prepend the cell_id to the component name if provided
-        if cell_id:
-            mech_name = cell_id + "_" + component_name
+        # Prepend the biophysics_name to the component name if provided
+        if biophysics_name:
+            mech_name = biophysics_name + "_" + component_name
         else:
             mech_name = component_name
         # Insert the mechanism into the segment
@@ -221,7 +245,11 @@ class NineCell(nineline.cells.NineCell):
         self._init_morphology()
         self._init_biophysics()
         # Setup variables used by pyNN
-        self.source_section = self.default_group.default
+        try:
+            self.source_section = self.segments['soma']
+        except KeyError:
+            print "WARNING! No 'soma' section specified for {} cell class".format(self.nineml_model.name)
+            self.source_section = next(self.segments.itervalues()) # Get the first segment to be the default
         self.source = self.source_section(0.5)._ref_v
         # for recording
         self.recordable = {'spikes': None, 'v': self.source_section._ref_v}
@@ -254,7 +282,7 @@ class NineCell(nineline.cells.NineCell):
         # specify a segment group). Create an object to provide 'attribute' route to update 
         # parameter of model via segment groups
         self.root_segment = None
-        for model in self.nineml_model.morphology.segments:
+        for model in self.nineml_model.morphology.segments.values():
             seg = Segment(model)
             self.segments[model.name] = seg
             #TODO This should really be part of the 9ML package
@@ -269,10 +297,10 @@ class NineCell(nineline.cells.NineCell):
             raise Exception("The neuronal tree does not have a root segment, meaning it is " 
                             "connected in a circle (I assume this is not intended)")
         # Connect the segments together
-        for model in self.nineml_model.morphology.segments:
+        for model in self.nineml_model.morphology.segments.values():
             if model.parent:
-                self.segments[model.name]._connect(self.segments[model.parent.name],
-                                                   model.parent.fractionAlong)
+                self.segments[model.name]._connect(self.segments[model.parent.segment_name],
+                                                   model.parent.fraction_along)
         # Work out the segment lengths properly accounting for the "fraction_along". This is 
         # performed via a tree traversal to ensure that the parents 'proximal' field has already 
         # been calculated beforehand
@@ -286,58 +314,65 @@ class NineCell(nineline.cells.NineCell):
             segment_stack += seg._children
         # Set up segment classifications for inserting mechanisms
         self.classifications = {}
-        for model in self.nineml_model.morphology.classifications:
+        for model in self.nineml_model.morphology.classifications.values():
             classification = {}
-            for cls_model in model.divisions:
+            for cls_model in model.classes:
                 seg_class = SegmentClass()
                 for member in cls_model.members:
                     try:
-                        seg_class.append(self.segments[member])
+                        seg_class.append(self.segments[member.segment_name])
                     except KeyError:
                         raise Exception("Member '{}' (referenced in group '{}') was not found in "
                                         "loaded segments".format(member, cls_model.name))
                 classification[cls_model.name] = seg_class
-            self.classifications[classification]
+            self.classifications[model.name] = classification
                 
     def _init_biophysics(self):
         """
         Loop through loaded currents and synapses, and insert them into the relevant sections.
         """
-        for mech in sorted(self.memb_model.mechanisms, key=attrgetter('id')):
-            if self.component_translations.has_key(mech.id):
-                translations = dict([(key, val[0]) for key, val in
-                                     self.component_translations[mech.id].iteritems()])
-            else:
-                translations = None
-            for seg in self.get_group(mech.group_id):
-                try:
-                    seg.insert(mech.id, cell_id=self.memb_model.celltype_id,
-                                                                        translations=translations)
-                except ValueError as e:
-                    raise Exception("Could not insert {mech_id} into section group {group_id} " \
-                                    "({error})"
-                                    .format(mech_id=mech.id, error=e, 
-                                            group_id=mech.group_id if mech.group_id else 'all_segs'))
-        #Loop through loaded membrane mechanisms and insert them into the relevant sections.
-        for cm in self.memb_model.capacitances:
-            for seg in self.get_group(cm.group_id):
-                seg.cm = cm.value
-        #Loop through loaded membrane mechanisms and insert them into the relevant sections.
-        for reversal in self.memb_model.reversal_potentials:
-            for seg in self.get_group(reversal.group_id):
-                setattr(seg, 'e' + reversal.species, reversal.value)
-        for ra in self.memb_model.axial_resistances:
-            for seg in self.get_group(ra.group_id):
-                seg.Ra = ra.value
-        for syn in self.memb_model.synapses:
-            hoc_name = self.memb_model.celltype_id + '_' + syn.id
-            if hoc_name in dir(h):
-                SynapseType = getattr(h, hoc_name)
-            else:
-                raise Exception("Did not find '{}' synapse type".format(hoc_name))
-            for seg in self.get_group(syn.group_id):
-                receptor = SynapseType(0.5, sec=seg)
-                setattr(seg, syn.id, receptor)
+        for mapping in self.nineml_model.mappings:
+            for comp_name in mapping.components:
+                component = self.nineml_model.biophysics.components[comp_name]
+                if component.type == 'membrane-capacitance':
+                    cm = convert_to_neuron_units(float(component.parameters['C_m'].value),
+                                                 component.parameters['C_m'].unit)[0]
+                    for seg_class in mapping.segment_classes:
+                        for seg in self.classifications[mapping.classification][seg_class]:
+                            seg.cm = cm
+                            
+                elif component.type == 'defaults':
+                    Ra = convert_to_neuron_units(float(component.parameters['Ra'].value),
+                                                 component.parameters['Ra'].unit)[0]
+                    for seg_class in mapping.segment_classes:
+                        for seg in self.classifications[mapping.classification][seg_class]:
+                            seg.Ra = Ra
+                elif component.type == 'post-synaptic-conductance':
+                    hoc_name = self.nineml_model.biophysics.name + '_' + comp_name
+                    if hoc_name in dir(h):
+                        SynapseType = getattr(h, hoc_name)
+                    else:
+                        raise Exception("Did not find '{}' synapse type".format(hoc_name))
+                    for seg_class in mapping.segment_classes:
+                        for seg in self.classifications[mapping.classification][seg_class]:
+                            receptor = SynapseType(0.5, sec=seg)
+                            setattr(seg, comp_name, receptor)
+                else:
+                    if self.component_translations.has_key(comp_name):
+                        translations = dict([(key, val[0]) for key, val in
+                                             self.component_translations[comp_name].iteritems()])
+                    else:
+                        translations = None
+                    for seg_class in mapping.segment_classes:
+                        for seg in self.classifications[mapping.classification][seg_class]:
+                            try:
+                                seg.insert(comp_name, 
+                                           biophysics_name=self.nineml_model.biophysics.name,
+                                           translations=translations)
+                            except ValueError as e:
+                                raise Exception("Could not insert {mech} into section group {clss} "
+                                                "({error})".format(mech=comp_name, error=e, 
+                                                                   clss=seg_class))
 
     def __getattr__(self, var):
         """
