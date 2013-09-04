@@ -20,7 +20,7 @@ from nineline.cells.build.neuron import build_celltype_files
 import nineline.cells
 from .. import create_unit_conversions, convert_units
 
-_basic_SI_to_pyNN_conversions = (('s', 'ms'),
+_basic_SI_to_neuron_conversions = (('s', 'ms'),
                                  ('V', 'mV'),
                                  ('A', 'nA'),
                                  ('S', 'uS'),
@@ -30,13 +30,13 @@ _basic_SI_to_pyNN_conversions = (('s', 'ms'),
                                  ('Ohm', 'MOhm'),
                                  ('M', 'mM'))
 
-_compound_SI_to_pyNN_conversions = (((('A', 1), ('m', -2)), (('mA', 1), ('cm', -2))),
+_compound_SI_to_neuron_conversions = (((('A', 1), ('m', -2)), (('mA', 1), ('cm', -2))),
                                     ((('F', 1), ('m', -2)), (('uF', 1), ('cm', -2))),
                                     ((('S', 1), ('m', -2)), (('S', 1), ('cm', -2))))
 
 
-_basic_unit_dict, _compound_unit_dict = create_unit_conversions(_basic_SI_to_pyNN_conversions,
-                                                                _compound_SI_to_pyNN_conversions)
+_basic_unit_dict, _compound_unit_dict = create_unit_conversions(_basic_SI_to_neuron_conversions,
+                                                                _compound_SI_to_neuron_conversions)
 
 
 def convert_to_neuron_units(value, unit_str):
@@ -337,15 +337,15 @@ class NineCell(nineline.cells.NineCell):
                 if component.type == 'membrane-capacitance':
                     cm = convert_to_neuron_units(float(component.parameters['C_m'].value),
                                                  component.parameters['C_m'].unit)[0]
-                    for seg_class in mapping.segment_classes:
-                        for seg in self.classifications[mapping.classification][seg_class]:
+                    for seg_class in mapping.segments:
+                        for seg in self.classifications[mapping.segments.classification][seg_class]:
                             seg.cm = cm
                             
                 elif component.type == 'defaults':
                     Ra = convert_to_neuron_units(float(component.parameters['Ra'].value),
                                                  component.parameters['Ra'].unit)[0]
-                    for seg_class in mapping.segment_classes:
-                        for seg in self.classifications[mapping.classification][seg_class]:
+                    for seg_class in mapping.segments:
+                        for seg in self.classifications[mapping.segments.classification][seg_class]:
                             seg.Ra = Ra
                 elif component.type == 'post-synaptic-conductance':
                     hoc_name = self.nineml_model.biophysics.name + '_' + comp_name
@@ -353,8 +353,8 @@ class NineCell(nineline.cells.NineCell):
                         SynapseType = getattr(h, hoc_name)
                     else:
                         raise Exception("Did not find '{}' synapse type".format(hoc_name))
-                    for seg_class in mapping.segment_classes:
-                        for seg in self.classifications[mapping.classification][seg_class]:
+                    for seg_class in mapping.segments:
+                        for seg in self.classifications[mapping.segments.classification][seg_class]:
                             receptor = SynapseType(0.5, sec=seg)
                             setattr(seg, comp_name, receptor)
                 else:
@@ -363,8 +363,8 @@ class NineCell(nineline.cells.NineCell):
                                              self.component_translations[comp_name].iteritems()])
                     else:
                         translations = None
-                    for seg_class in mapping.segment_classes:
-                        for seg in self.classifications[mapping.classification][seg_class]:
+                    for seg_class in mapping.segments:
+                        for seg in self.classifications[mapping.segments.classification][seg_class]:
                             try:
                                 seg.insert(comp_name, 
                                            biophysics_name=self.nineml_model.biophysics.name,
