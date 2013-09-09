@@ -31,14 +31,6 @@ class NineCell(object):
         else:
             varname = "all_segs"
         return varname
-    
-    @classmethod
-    def seg_varname(cls, seg_id):
-        if seg_id == 'source_section':
-            varname = seg_id
-        else:
-            varname = str(seg_id) + "_seg"
-        return varname
 
     def memb_init(self):
         # Initialisation of member states goes here        

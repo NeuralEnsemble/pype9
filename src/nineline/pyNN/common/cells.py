@@ -56,15 +56,22 @@ class NinePyNNCellMetaClass(type):
         Constructs the default parameters of the 9ML class from the nineml model
         """
         default_params = {}
-        for param_model in nineml_model.parameters:
-            if param_model.component == 'Geometry':
-                default_value = None
-            elif param_model.component == 'InitialState':
-                default_value = None
+        for p in nineml_model.parameters:
+            if p.component == 'Geometry':
+                if p.reference == 'Diameter':
+                    default_value = nineml_model.biophysics.components['__GEOMETRY__'].\
+                                                            parameters['diam'].value
+                else:
+                    default_value = 1.0
+            elif p.component == 'InitialState':
+                if p.reference == 'Voltage':
+                    default_value = -65
+                else:
+                    default_value = 0.0
             else:
-                default_value = nineml_model.biophysics.components[param_model.component].\
-                                                            parameters[param_model.reference].value
-            default_params[param_model.name] = default_value
+                default_value = nineml_model.biophysics.components[p.component].\
+                                                            parameters[p.reference].value
+            default_params[p.name] = default_value
         return default_params
 
     @classmethod

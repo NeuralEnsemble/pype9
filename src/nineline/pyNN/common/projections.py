@@ -23,7 +23,7 @@ class Projection(object):
         SynapseClass = getattr(self._synapses_module, 
                                nineml_model.connection_type.definition.component.name)
         synapse = SynapseClass(nineml_model.connection_type.parameters, rng)
-        receptor = '.'.join((nineml_model.target.segment + '_seg',
+        receptor = '.'.join((nineml_model.target.segment,
                              nineml_model.synaptic_response.parameters['responseName'].value))
         # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class in 
         # the MRO), I thought of a few ways to do this but none were completely satisfactory.
@@ -31,7 +31,7 @@ class Projection(object):
         assert (PyNNClass.__module__.startswith('pyNN') and 
                 PyNNClass.__module__.endswith('projections'))
         PyNNClass.__init__(self, source, target, connector, synapse_type=synapse, 
-                         source=nineml_model.source.segment + '_seg', receptor_type=receptor, 
+                         source=nineml_model.source.segment, receptor_type=receptor, 
                          label=nineml_model.name)
         # This is used in the clone connectors, there should be a better way than this though
         # I reckon
@@ -41,7 +41,7 @@ class Projection(object):
     def _get_target_str(cls, synapse, segment=None):
         if not segment:
             segment = "source_section"
-        return NineCell.seg_varname(segment) + "." + synapse
+        return segment + "." + synapse
     
     @classmethod
     def _get_connection_param_expr(cls, label, param, min_value=0.0):

@@ -253,8 +253,8 @@ class NineCell(nineline.cells.NineCell):
         self.source = self.source_section(0.5)._ref_v
         # for recording
         self.recordable = {'spikes': None, 'v': self.source_section._ref_v}
-        for seg_id, seg in self.segments.iteritems():
-            self.recordable[self.seg_varname(seg_id) + '.v'] = seg._ref_v 
+        for seg_name, seg in self.segments.iteritems():
+            self.recordable[seg_name + '.v'] = seg._ref_v 
         self.spike_times = h.Vector(0)
         self.traces = {}
         self.gsyn_trace = {}
@@ -477,7 +477,7 @@ class NineCell(nineline.cells.NineCell):
             setattr(self, name, param_dict[name])
 
     def get_threshold(self):
-        return self.memb_model.action_potential_threshold.get('v', 0.0)
+        return self.nineml_model.biophysics.components['__GLOBALS_COMPONENT__'].parameters['V_t'].value
     
     def get_group(self, group_id):
         return self.groups[group_id] if group_id else self.all_segs    

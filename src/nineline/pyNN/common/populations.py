@@ -3,6 +3,7 @@ import os.path
 import numpy
 import pyNN.parameters
 from nineline.pyNN.structure import Structure
+import nineline.pyNN.random
 from pyNN.random import RandomDistribution
 from nineml.abstraction_layer.component import ComponentClassStub
 import nineml.extensions.biophysical_cells
@@ -38,12 +39,23 @@ class Population(object):
                     struct_name = 'structure_' + len(self.structures)  
                 self.structures[struct_name] = Structure(struct_name, nineml_model.number, 
                                                          struct_model, rng)
+            cellparams = {}
+            for name, p in nineml_model.prototype.parameters.iteritems():
+                if isinstance(p.value, float):
+                    param = p.value
+                elif isinstance(p.value, nineml.user_layer.RandomDistribution):
+                    RandomDistributionClass = getattr(nineline.pyNN.random,
+                                                  p.value.definition.component.name)
+                    param = RandomDistributionClass(p.value.parameters, rng, use_units=False)
+                else:
+                    raise Exception("Unrecognised parameter type '{}'".format(type(p.value)))
+                cellparams[name] = param
             # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class  
             # in the MRO), I thought of a few ways to do this but none were completely satisfactory.
             PyNNClass = self.__class__.__mro__[2]
             assert PyNNClass.__module__.startswith('pyNN') and PyNNClass.__name__ == 'Population'
-            PyNNClass.__init__(self, nineml_model.number, celltype, cellparams={}, structure=None, 
-                               label=nineml_model.name)
+            PyNNClass.__init__(self, nineml_model.number, celltype, cellparams=cellparams, 
+                               structure=None, label=nineml_model.name)
         
     @property
     def positions(self):
