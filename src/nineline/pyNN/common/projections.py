@@ -23,8 +23,8 @@ class Projection(object):
         SynapseClass = getattr(self._synapses_module, 
                                nineml_model.connection_type.definition.component.name)
         synapse = SynapseClass(nineml_model.connection_type.parameters, rng)
-        receptor = '.'.join((nineml_model.target.segment,
-                             nineml_model.synaptic_response.parameters['responseName'].value))
+        receptor = ('{' + nineml_model.target.segment + '}' +
+                    nineml_model.synaptic_response.parameters['responseName'].value)
         # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class in 
         # the MRO), I thought of a few ways to do this but none were completely satisfactory.
         PyNNClass = self.__class__.__mro__[2]

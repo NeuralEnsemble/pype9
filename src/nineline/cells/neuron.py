@@ -14,7 +14,6 @@
 #######################################################################################
 from __future__ import absolute_import
 import numpy
-import quantities
 from neuron import h, nrn, load_mechanisms
 from nineline.cells.build.neuron import build_celltype_files
 import nineline.cells
@@ -316,7 +315,7 @@ class NineCell(nineline.cells.NineCell):
         self.classifications = {}
         for model in self.nineml_model.morphology.classifications.values():
             classification = {}
-            for cls_model in model.classes:
+            for name, cls_model in model.classes.iteritems(): #@UnusedVariable
                 seg_class = SegmentClass()
                 for member in cls_model.members:
                     try:
@@ -376,15 +375,14 @@ class NineCell(nineline.cells.NineCell):
 
     def __getattr__(self, var):
         """
-        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup. This 
-        is done to allow pyNN's population.tset method to set attributes of cell components.
+        To support the access to components on particular segments in PyNN the segment name can 
+        be prepended enclosed in curly brackets (i.e. '{}').
         
-        @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
-                          attribute vars
+        @param var [str]: var of the attribute, with optional segment segment name enclosed with {} and prepended
         """
-        if '.' in var:
-            components = var.split('.', 1)
-            return getattr(getattr(self, components[0]), components[1])
+        if var.startswith('{'):
+            seg_name, comp_name = var[1:].split('}', 1)
+            return getattr(self.segments[seg_name], comp_name)
         else:
             raise AttributeError("'{}'".format(var))
 
@@ -397,9 +395,9 @@ class NineCell(nineline.cells.NineCell):
                           attribute vars
         @param val [*]: val of the attribute
         """
-        if '.' in var:
-            components = var.split('.', 1)
-            setattr(getattr(self, components[0]), components[1], val)
+        if var.startswith('{'):
+            seg_name, comp_name = var[1:].split('}', 1)
+            setattr(self.segments[seg_name], comp_name, val)
         else:
             super(NineCell, self).__setattr__(var, val)
 
@@ -468,7 +466,7 @@ class NineCell(nineline.cells.NineCell):
 
     def memb_init(self):
         # Initialisation of member states goes here
-        for seg in self.all_segs:
+        for seg in self.segments.itervalues():
             seg.v = seg.v_init
 
 
