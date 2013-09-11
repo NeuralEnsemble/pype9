@@ -190,59 +190,12 @@ class Segment(nrn.Section): #@UndefinedVariable
             super(Segment, self).__setattr__(component_name, getattr(self(0.5), mech_name))
 
 
-class SegmentClass(object):
-
-    def __init__(self):
-        super(SegmentClass, self).__setattr__('_segments', [])
-        super(SegmentClass, self).__setattr__('default', None)
-
-    def __iter__(self):
-        return iter(self._segments)
-
-    def __len__(self):
-        return len(self._segments)
-
-    def __getitem__(self, index):
-        return self._segments[index]
-
-    def __setitem__(self, index, value):
-        self._segments[index] = value
-
-    def __dir__(self):
-        return dir(self.default)
-
-    def append(self, segment, is_default=False):
-        assert isinstance(segment, Segment)
-        if is_default or not self.default:
-            super(SegmentClass, self).__setattr__('default', segment)
-        self._segments.append(segment)
-
-    def __setattr__(self, var, value):
-        """
-        Set the attribute for all segments in this group
-        """
-        for seg in self:
-            setattr(seg, var, value)
-
-    def __getattr__(self, var):
-        """
-        Return the value of the default segment in this group
-        """
-        if not self._segments:
-            raise Exception("No segments have been added to this segment group")
-        return getattr(self.default, var)
-
-
 class NineCell(nineline.cells.NineCell):
-
-    class Params(object):
-
-        def __init__(self, params_dict):
-            self.__dict__ = params_dict
 
     def __init__(self, **parameters):
         self._init_morphology()
         self._init_biophysics()
+        self.set_parameters(parameters)
         # Setup variables used by pyNN
         try:
             self.source_section = self.segments['soma']
@@ -316,7 +269,7 @@ class NineCell(nineline.cells.NineCell):
         for model in self.nineml_model.morphology.classifications.values():
             classification = {}
             for name, cls_model in model.classes.iteritems(): #@UnusedVariable
-                seg_class = SegmentClass()
+                seg_class = []
                 for member in cls_model.members:
                     try:
                         seg_class.append(self.segments[member.segment_name])
@@ -470,9 +423,9 @@ class NineCell(nineline.cells.NineCell):
             seg.v = seg.v_init
 
 
-    def set_parameters(self, param_dict):
+    def set_parameters(self, parameters):
         for name in self.parameter_names:
-            setattr(self, name, param_dict[name])
+            setattr(self, name, parameters[name])
 
     def get_threshold(self):
         return self.nineml_model.biophysics.components['__GLOBALS_COMPONENT__'].parameters['V_t'].value
