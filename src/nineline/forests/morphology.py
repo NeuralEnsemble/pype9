@@ -115,13 +115,13 @@ class Forest(object):
         mask = VolumeMask(vox_size, numpy.vstack([tree.points for tree in self.trees]),
                           numpy.hstack([tree.diams for tree in self.trees]), dtype)
         if dtype == bool:
-            for i, tree in enumerate(self):
+            for i, tree in enumerate(self): #@UnusedVariable
                 mask.add_tree(tree)
-       #         print "Added {} tree to volume mask".format(i)
+#         print "Added {} tree to volume mask".format(i)
         else:
             bool_mask = VolumeMask(vox_size, numpy.vstack([tree.points for tree in self.trees]),
                                    numpy.hstack([tree.diams for tree in self.trees]), bool)
-            for i, tree in enumerate(self):
+            for i, tree in enumerate(self):  #@UnusedVariable
                 tree_mask = deepcopy(bool_mask)
                 tree_mask.add_tree(tree)
                 mask += tree_mask
@@ -926,7 +926,7 @@ class MorphologyBasedProbabilityConnector(pyNN.connectors.IndexBasedProbabilityC
             try:
                 post_morph = self.projection.post.morphologies[post_index]
                 pre_morphs = self.projection.pre.morphologies[pre_indices]
-            except AttributeError as e:
+            except AttributeError:
                 raise pyNN.errors.ConnectionError("Pre and/or post-synaptic projections do not have"
                                                   " cell morphologies")
             probs = numpy.empty(len(pre_indices))

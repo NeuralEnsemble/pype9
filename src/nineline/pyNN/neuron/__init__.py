@@ -44,19 +44,19 @@ class Population(nineline.pyNN.common.Population, pyNN.neuron.Population):
                                      for cellname in pyNN.neuron.list_standard_models()])
     _NineCellMetaClass = NinePyNNCellMetaClass
 
-    def rset(self, param, rand_distr, component=None, seg_group=None):
-        param_scope = [NineCell.group_varname(seg_group)]
-        if component:
-            param_scope.append(component)
-        param_scope.append(param)
-        pyNN.neuron.Population.rset(self, '.'.join(param_scope), rand_distr)
-
-    def initialize_variable(self, variable, rand_distr, component=None, seg_group=None):
-        variable_scope = [NineCell.group_varname(seg_group)]
-        if component:
-            variable_scope.append(component)
-        variable_scope.append(variable)
-        pyNN.neuron.Population.initialize(self, **{'.'.join(variable_scope): rand_distr})
+#     def rset(self, param, rand_distr, component=None, seg_group=None):
+#         param_scope = [NineCell.group_varname(seg_group)]
+#         if component:
+#             param_scope.append(component)
+#         param_scope.append(param)
+#         pyNN.neuron.Population.rset(self, '.'.join(param_scope), rand_distr)
+# 
+#     def initialize_variable(self, variable, rand_distr, component=None, seg_group=None):
+#         variable_scope = [NineCell.group_varname(seg_group)]
+#         if component:
+#             variable_scope.append(component)
+#         variable_scope.append(variable)
+#         pyNN.neuron.Population.initialize(self, **{'.'.join(variable_scope): rand_distr})
 
 #    def can_record(self, variable):
 #        """

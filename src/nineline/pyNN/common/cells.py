@@ -1,7 +1,5 @@
 from __future__ import absolute_import
-import math
 from itertools import chain
-from nineline.cells import NineCell
 
 class NinePyNNCell(object):
     """

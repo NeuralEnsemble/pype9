@@ -89,7 +89,8 @@ class Segment(nrn.Section): #@UndefinedVariable
         nrn.Section.__init__(self) #@UndefinedVariable
         h.pt3dclear(sec=self)
         self.diam = float(nineml_model.distal.diameter)
-        self._distal = numpy.array((nineml_model.distal.x, nineml_model.distal.y, nineml_model.distal.z))
+        self._distal = numpy.array((nineml_model.distal.x, nineml_model.distal.y, 
+                                    nineml_model.distal.z))
         h.pt3dadd(nineml_model.distal.x, nineml_model.distal.y, nineml_model.distal.z,
                   nineml_model.distal.diameter, sec=self)
         if nineml_model.proximal:
@@ -196,27 +197,6 @@ class NineCell(nineline.cells.NineCell):
         self._init_morphology()
         self._init_biophysics()
         self.set_parameters(parameters)
-        # Setup variables used by pyNN
-        try:
-            self.source_section = self.segments['soma']
-        except KeyError:
-            print "WARNING! No 'soma' section specified for {} cell class".format(self.nineml_model.name)
-            self.source_section = next(self.segments.itervalues()) # Get the first segment to be the default
-        self.source = self.source_section(0.5)._ref_v
-        # for recording
-        self.recordable = {'spikes': None, 'v': self.source_section._ref_v}
-        for seg_name, seg in self.segments.iteritems():
-            self.recordable[seg_name + '.v'] = seg._ref_v 
-        self.spike_times = h.Vector(0)
-        self.traces = {}
-        self.gsyn_trace = {}
-        self.recording_time = 0
-        self.rec = h.NetCon(self.source, None, sec=self.source_section)
-
-#         if parameters.has_key('parent') and parameters['parent'] is not None:
-#             # A weak reference is used to avoid a circular reference that would prevent the garbage 
-#             # collector from being called on the cell class    
-#             self.parent = weakref.ref(parameters['parent'])
 
     def _init_morphology(self):
         """
@@ -230,9 +210,6 @@ class NineCell(nineline.cells.NineCell):
             raise Exception("The loaded morphology does not contain any segments")
         # Initialise all segments
         self.segments = {}
-        # Create a group to hold all segments (this is the default group for components that don't 
-        # specify a segment group). Create an object to provide 'attribute' route to update 
-        # parameter of model via segment groups
         self.root_segment = None
         for model in self.nineml_model.morphology.segments.values():
             seg = Segment(model)
@@ -292,7 +269,6 @@ class NineCell(nineline.cells.NineCell):
                     for seg_class in mapping.segments:
                         for seg in self.classifications[mapping.segments.classification][seg_class]:
                             seg.cm = cm
-                            
                 elif component.type == 'defaults':
                     Ra = convert_to_neuron_units(float(component.parameters['Ra'].value),
                                                  component.parameters['Ra'].unit)[0]
@@ -326,112 +302,12 @@ class NineCell(nineline.cells.NineCell):
                                                 "({error})".format(mech=comp_name, error=e, 
                                                                    clss=seg_class))
 
-    def __getattr__(self, var):
-        """
-        To support the access to components on particular segments in PyNN the segment name can 
-        be prepended enclosed in curly brackets (i.e. '{}').
-        
-        @param var [str]: var of the attribute, with optional segment segment name enclosed with {} and prepended
-        """
-        if var.startswith('{'):
-            seg_name, comp_name = var[1:].split('}', 1)
-            return getattr(self.segments[seg_name], comp_name)
-        else:
-            raise AttributeError("'{}'".format(var))
-
-    def __setattr__(self, var, val):
-        """
-        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup.
-         This is done to allow pyNN's population.tset method to set attributes of cell components.
-        
-        @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
-                          attribute vars
-        @param val [*]: val of the attribute
-        """
-        if var.startswith('{'):
-            seg_name, comp_name = var[1:].split('}', 1)
-            setattr(self.segments[seg_name], comp_name, val)
-        else:
-            super(NineCell, self).__setattr__(var, val)
-
-    def record(self, *args):
-        # If one argument is provided assume that it is the pyNN version of this method 
-        # (i.e. map to record_spikes)
-        if len(args) == 1:
-            assert(self.parent is not None)
-            self.record_spikes(args[0])
-        elif len(args) == 2:
-            variable, output = args #@UnusedVariable
-            if variable == 'spikes':
-                self.record_spikes(1)
-            elif variable == 'v':
-                self.record_v(1)
-            else:
-                raise Exception('Unrecognised variable ''{}'' provided as first argument'.\
-                                format(variable))
-            raise Exception("Not sure how this is meant to work anymore")
-#             pyNN.neuron.simulator.recorder_list.append(self.Recorder(self, variable, output))
-        else:
-            raise Exception ('Wrong number of arguments, expected either 2 or 3 got {}'.\
-                             format(len(args) + 1))
-
-    def record_v(self, active):
-        if active:
-            self.vtrace = h.Vector()
-            self.vtrace.record(self.source_section(0.5)._ref_v)
-            if not self.recording_time:
-                self.record_times = h.Vector()
-                self.record_times.record(h._ref_t)
-                self.recording_time += 1
-        else:
-            self.vtrace = None
-            self.recording_time -= 1
-            if self.recording_time == 0:
-                self.record_times = None
-
-    def record_gsyn(self, syn_name, active):
-        # how to deal with static and T-M synapses?
-        # record both and sum?
-        if active:
-            self.gsyn_trace[syn_name] = h.Vector()
-            self.gsyn_trace[syn_name].record(getattr(self, syn_name)._ref_g)
-            if not self.recording_time:
-                self.record_times = h.Vector()
-                self.record_times.record(h._ref_t)
-                self.recording_time += 1
-        else:
-            self.gsyn_trace[syn_name] = None
-            self.recording_time -= 1
-            if self.recording_time == 0:
-                self.record_times = None
-
-    def record_spikes(self, active):
-        """
-        Simple remapping of record onto record_spikes as well
-        
-        @param active [bool]: Whether the recorder is active or not (required by pyNN)
-        """
-        if active:
-            self.rec = h.NetCon(self.source, None, sec=self.source_section)
-            self.rec.record(self.spike_times)
-        else:
-            self.spike_times = h.Vector(0)
-
-    def memb_init(self):
-        # Initialisation of member states goes here
-        for seg in self.segments.itervalues():
-            seg.v = seg.v_init
-
-
     def set_parameters(self, parameters):
         for name in self.parameter_names:
             setattr(self, name, parameters[name])
 
     def get_threshold(self):
-        return self.nineml_model.biophysics.components['__GLOBALS_COMPONENT__'].parameters['V_t'].value
-    
-    def get_group(self, group_id):
-        return self.groups[group_id] if group_id else self.all_segs    
+        return self.nineml_model.biophysics.components['__GLOBALS__'].parameters['V_t'].value
 
 
 class NineCellMetaClass(nineline.cells.NineCellMetaClass):
@@ -442,7 +318,7 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
 
     loaded_celltypes = {}
 
-    def __new__(cls, celltype_name, nineml_model, build_mode='lazy', silent=False, solver_name=None):
+    def __new__(cls, celltype_name, nineml_model, build_mode='lazy', silent=False, solver_name=None): #@UnusedVariable
         try:
             celltype = cls.loaded_celltypes[(nineml_model.name, nineml_model.url)]
         except KeyError:

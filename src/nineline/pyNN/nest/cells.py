@@ -28,7 +28,7 @@ class NinePyNNCell(nineline.pyNN.common.cells.NinePyNNCell, pyNN.standardmodels.
         """
         native_parameters = {}
         for name in parameters.keys():
-            # A hack before Ivan implements this as a parameter
+            # FIXME: A hack before Ivan implements this as a parameter 
             if name != 'all_segs.Ra':
                 try:
                     native_parameters[self.translations[name]['translated_name']] = parameters[name]

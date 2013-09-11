@@ -17,7 +17,6 @@ from __future__ import absolute_import
 import sys
 import os.path
 import nest
-from .readers import read_NCML, read_MorphML
 from .build.nest import build_celltype_files
 import nineline.cells
 
@@ -31,8 +30,8 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
     
     loaded_celltypes = {}
     
-    def __new__(cls, celltype_name, nineml_model, morph_id=None, build_mode='lazy',
-                   silent=False, solver_name='cvode'):
+    def __new__(cls, celltype_name, nineml_model, morph_id=None, build_mode='lazy', silent=False, #@UnusedVariable 
+                solver_name='cvode'):
         """
         Loads a PyNN cell type for NEST from an XML description, compiling the necessary module files
         

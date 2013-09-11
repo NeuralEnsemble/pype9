@@ -2,7 +2,6 @@ from __future__ import absolute_import
 import pyNN.connectors
 import nineline.pyNN.connectors
 import nineline.forests.point2point
-from nineline.cells import NineCell
 
 class ProjectionToCloneNotCreatedYetException(Exception):
         

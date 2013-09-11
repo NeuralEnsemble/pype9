@@ -24,17 +24,21 @@ DEFAULT_V_INIT = -65
 
 class NineCell(object):
     
-    @classmethod
-    def group_varname(cls, group_id):
-        if group_id:
-            varname = str(group_id) + "_group"
-        else:
-            varname = "all_segs"
-        return varname
+    class Parameter(object):
+        
+        def __init__(self, varname, segments, default_value):
+            self.varname = varname
+            self.segments = segments
+            self.value = default_value
+            
+        def set(self, value):
+            for seg in self.segments:
+                setattr(seg, self.varname, value)
 
     def memb_init(self):
         # Initialisation of member states goes here        
         raise NotImplementedError("'memb_init' should be implemented by the derived class.")
+
 
 class NineCellMetaClass(type):
     
@@ -44,10 +48,10 @@ class NineCellMetaClass(type):
         """
         This initialiser is empty, but since I have changed the signature of the __new__ method in 
         the deriving metaclasses it complains otherwise (not sure if there is a more elegant way 
-        around this problem).
+        to do this).
         """
         pass
-
+    
 if __name__ == "__main__":
     print "doing nothing"
 
