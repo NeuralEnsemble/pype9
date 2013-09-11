@@ -24,26 +24,16 @@ DEFAULT_V_INIT = -65
 
 class NineCell(object):
     
-    class Parameter(object):
-        
-        def __init__(self, varname, segments, default_value):
-            self.varname = varname
-            self.segments = segments
-            self.value = default_value
-            
-        def set(self, value):
-            for seg in self.segments:
-                setattr(seg, self.varname, value)
-
-    def memb_init(self):
-        # Initialisation of member states goes here        
-        raise NotImplementedError("'memb_init' should be implemented by the derived class.")
+    pass
 
 
 class NineCellMetaClass(type):
     
+    def __new__(cls, celltype_name, nineml_model, bases, dct):
+        dct['parameter_names'] = [p.name for p in nineml_model.parameters]
+        return super(NineCellMetaClass, cls).__new__(cls, celltype_name, bases, dct)
 
-    def __init__(cls, celltype_name, nineml_path, morph_id=None, build_mode=None, #@NoSelf
+    def __init__(cls, celltype_name, nineml_model, morph_id=None, build_mode=None, #@NoSelf
                    silent=None, solver_name=None):
         """
         This initialiser is empty, but since I have changed the signature of the __new__ method in 
@@ -51,6 +41,7 @@ class NineCellMetaClass(type):
         to do this).
         """
         pass
+    
     
 if __name__ == "__main__":
     print "doing nothing"

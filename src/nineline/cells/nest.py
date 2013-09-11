@@ -20,10 +20,10 @@ import nest
 from .build.nest import build_celltype_files
 import nineline.cells
 
-loaded_celltypes = {}
-
 class NineCell(nineline.cells.NineCell):
-    pass
+    
+    def set_parameters(self, parameters):
+        raise NotImplementedError
 
 
 class NineCellMetaClass(nineline.cells.NineCellMetaClass):
@@ -42,7 +42,7 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
         @param silent [bool]: Whether or not to suppress build output
         """
         try:
-            celltype = loaded_celltypes[(celltype_name, nineml_model.url)]
+            celltype = cls.loaded_celltypes[(celltype_name, nineml_model.url)]
         except KeyError:
             dct = {}
             install_dir, dct['component_translations'] = build_celltype_files(celltype_name, 
@@ -67,9 +67,10 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
             nest.Install(celltype_name + 'Loader')
             dct['nineml_model'] = nineml_model
             # Add the loaded cell type to the list of cell types that have been loaded
-            celltype = super(NineCellMetaClass, cls).__new__(cls, celltype_name, (NineCell,), dct)
+            celltype = super(NineCellMetaClass, cls).__new__(cls, celltype_name, nineml_model, 
+                                                             (NineCell,), dct)
             # Added the loaded celltype to the dictionary of previously loaded cell types
-            loaded_celltypes[(celltype_name, nineml_model.url)] = celltype
+            cls.loaded_celltypes[(celltype_name, nineml_model.url)] = celltype
         return celltype
     
     

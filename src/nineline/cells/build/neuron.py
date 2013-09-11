@@ -31,19 +31,19 @@ elif os.environ['HOME'] == '/home/tclose':
     # to save me having to set the environment variable in eclipse)
     os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin'
 
-def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
+def build_celltype_files(biophysics_name, nineml_path, install_dir=None, build_parent_dir=None,
     method='derivimplicit', build_mode='lazy', silent_build=False, kinetics=[]):
     """
     Generates and builds the required NMODL files for a given NCML cell class
     
-    @param celltype_name [str]: Name of the celltype to be built
-    @param ncml_path [str]: Path to the NCML file from which the NMODL files will be compiled and built
+    @param biophysics_name [str]: Name of the celltype to be built
+    @param nineml_path [str]: Path to the NCML file from which the NMODL files will be compiled and built
     @param install_dir [str]: Path to the directory where the NMODL files will be generated and compiled
     @param build_parent_dir [str]: Used to set the default 'install_dir' path
     @param method [str]: The method option to be passed to the NeMo interpreter command
     @param kinetics [list(str)]: A list of ionic components to be generated using the kinetics option
     """
-    default_install_dir, params_dir, src_dir, compile_dir = get_build_paths(ncml_path, celltype_name, #@UnusedVariable
+    default_install_dir, params_dir, src_dir, compile_dir = get_build_paths(nineml_path, biophysics_name, #@UnusedVariable
                                         _SIMULATOR_BUILD_NAME, build_parent_dir=build_parent_dir)
     if not install_dir:
         install_dir = default_install_dir
@@ -78,13 +78,13 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     else:
         prev_params_mtime = ''
     # Get the modification time of the source NCML file for comparison with the build directory       
-    ncml_mtime = time.ctime(os.path.getmtime(ncml_path))
+    ncml_mtime = time.ctime(os.path.getmtime(nineml_path))
     rebuilt = False
     if (ncml_mtime != prev_install_mtime or ncml_mtime != prev_params_mtime) and \
             build_mode != 'compile_only':
-        nemo_cmd = ("{nemo_path} {ncml_path} -p --pyparams={params} --nmodl={output} " 
+        nemo_cmd = ("{nemo_path} {nineml_path} -p --pyparams={params} --nmodl={output} " 
                     "--nmodl-method={method} --nmodl-kinetic={kinetics}"
-                    .format(nemo_path=path_to_exec('nemo'), ncml_path=os.path.normpath(ncml_path),
+                    .format(nemo_path=path_to_exec('nemo'), nineml_path=os.path.normpath(nineml_path),
                             output=os.path.normpath(install_dir), params=params_dir,
                             kinetics=','.join(kinetics), method=method))
         try:
@@ -101,7 +101,7 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     if rebuilt or build_mode == 'compile_only':
         compile_nmodl(install_dir, build_mode='force', silent=silent_build)
     # Load the parameter name translations from the params dir 
-    component_translations = load_component_translations(celltype_name, params_dir)
+    component_translations = load_component_translations(biophysics_name, params_dir)
     return install_dir, component_translations
 
 

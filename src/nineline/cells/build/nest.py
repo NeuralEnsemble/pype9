@@ -37,14 +37,14 @@ def ensure_camel_case(name):
         name = name.title()
     return name
 
-def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_parent_dir=None,
+def build_celltype_files(celltype_name, nineml_path, install_dir=None, build_parent_dir=None,
                                 method='gsl', build_mode='lazy', silent_build=False):
     """
     Generates the cpp code corresponding to the NCML file, then configures, and compiles and installs
     the corresponding module into nest
     
     @param celltype_name [str]: Name of the celltype to be built
-    @param ncml_path [str]: Path to the NCML file from which the NMODL files will be compiled and built
+    @param nineml_path [str]: Path to the NCML file from which the NMODL files will be compiled and built
     @param install_dir [str]: Path to the directory where the NMODL files will be generated and compiled
     @param build_parent_dir [str]: Used to set the path for the default 'install_dir', and the 'src' and 'build' dirs path
     @param method [str]: The method option to be passed to the NeMo interpreter command
@@ -53,7 +53,7 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
     orig_dir = os.getcwd()
     # Determine the paths for the src, build and install directories
     (default_install_dir, params_dir, 
-            src_dir, compile_dir) = get_build_paths(ncml_path, celltype_name,_SIMULATOR_BUILD_NAME, 
+            src_dir, compile_dir) = get_build_paths(nineml_path, celltype_name,_SIMULATOR_BUILD_NAME, 
                                                     build_parent_dir=build_parent_dir)
     if not install_dir:
         install_dir = default_install_dir
@@ -65,7 +65,7 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
             prev_install_mtime = f.readline()
     else:
         prev_install_mtime = ''
-    ncml_mtime = time.ctime(os.path.getmtime(ncml_path))
+    ncml_mtime = time.ctime(os.path.getmtime(nineml_path))
     if build_mode == 'compile_only' and (not os.path.exists(compile_dir) or 
                                          not os.path.exists(src_dir)):
             raise Exception ("Source ('{}') and/or compilation ('{}') directories no longer exist. "
@@ -85,9 +85,9 @@ def build_celltype_files(celltype_name, ncml_path, install_dir=None, build_paren
         os.makedirs(compile_dir)
         os.makedirs(install_dir)
         # Compile the NCML file into NEST cpp code using NeMo
-        nemo_cmd = ("{nemo_path} {ncml_path} --pyparams={params} --nest={output} "
+        nemo_cmd = ("{nemo_path} {nineml_path} --pyparams={params} --nest={output} "
                     "--nest-method={method}".format(nemo_path=path_to_exec('nemo'), method=method,
-                                                    ncml_path=ncml_path, output=src_dir, 
+                                                    nineml_path=nineml_path, output=src_dir, 
                                                     params=params_dir))
         try:
             sp.check_call(nemo_cmd, shell=True)
