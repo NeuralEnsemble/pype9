@@ -6,6 +6,7 @@ import pyNN.standardmodels
 import nest
 from nineline.cells.nest import NineCell, NineCellMetaClass
 
+_default_variable_translations = {'Voltage': 'V_m', 'Diameter': 'diam'}
 
 class NinePyNNCell(nineline.pyNN.common.cells.NinePyNNCell, pyNN.standardmodels.StandardCellType):
 
@@ -27,18 +28,14 @@ class NinePyNNCell(nineline.pyNN.common.cells.NinePyNNCell, pyNN.standardmodels.
         of the 'dots' in the standard name
         """
         native_parameters = {}
-        for name in parameters.keys():
-            # FIXME: A hack before Ivan implements this as a parameter 
-            if name != 'all_segs.Ra':
-                try:
-                    native_parameters[self.translations[name]['translated_name']] = parameters[name]
-                except KeyError:
-                    print "Omitting parameter '{}'".format(name)
+        for name in parameters.keys():            
+            native_parameters[self.translations[name]['translated_name']] = parameters[name]
         return ParameterSpace(native_parameters, schema=None, shape=parameters.shape)
 
     def get_receptor_type(self, name):
-        seg, receptor_name = name.split('.') #@UnusedVariable - at this stage just throw away the segment
-        return nest.GetDefaults(self.nest_model)["receptor_types"][receptor_name]
+        if name.startswith('{'):
+            name = name[name.find('}')+1:]
+        return nest.GetDefaults(self.nest_model)["receptor_types"][name]
 
 
 class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
@@ -51,32 +48,22 @@ class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
                                           silent=silent, solver_name='cvode')}
         dct['nest_name'] = {"on_grid": celltype_name, "off_grid": celltype_name}
         dct['nest_model'] = celltype_name
-        dct['translations'] = cls._construct_translations(dct['model'].memb_model,
+        dct['translations'] = cls._construct_translations(dct['model'].nineml_model,
                                                           dct['model'].component_translations)        
         celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, celltype_name + 'PyNN', 
                                                              (NinePyNNCell,), dct)       
         return celltype
 
     @classmethod
-    def _construct_translations(cls, memb_model, component_translations):
-        comp_groups = defaultdict(list)
-        for comp in memb_model.mechanisms:
-            comp_groups[str(comp.id)].append(NineCell.group_varname(comp.group_id))
+    def _construct_translations(cls, nineml_model, component_translations):
         translations = []
-        for comp, params in component_translations.iteritems():
-            if comp != 'Extracellular':
-                for param, native_n_val in params.iteritems():
-                    # These are hacks just to get it to work initially, which will be removed once
-                    # the neuron version of the cell respects these components at which point they
-                    # should be accessed via
-                    if comp in ('Geometry', 'Membrane'):
-                        if comp == 'Geometry':
-                            standard_name = 'soma_group.' + str(param)
-                        elif comp == 'Membrane':
-                            standard_name = 'all_segs.' + str(param)
-                        translations.append((standard_name, native_n_val[0]))
-                    else:
-                        for seg_group in comp_groups[comp]:
-                            standard_name = '{}.{}.{}'.format(seg_group, comp, param)
-                            translations.append((standard_name, native_n_val[0]))
+        for p in nineml_model.parameters:
+            if p.component == 'InitialState' and p.reference == 'Voltage':
+                translations.append((p.name, 'V_m'))
+            else:
+                try:
+                    varname = _default_variable_translations[p.reference]
+                except KeyError:
+                    varname = p.reference
+                translations.append((p.name, component_translations[p.component][varname][0]))
         return pyNN.standardmodels.build_translations(*translations)

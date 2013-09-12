@@ -37,13 +37,13 @@ def ensure_camel_case(name):
         name = name.title()
     return name
 
-def build_celltype_files(celltype_name, nineml_path, install_dir=None, build_parent_dir=None,
+def build_celltype_files(celltype_name, biophysics_name, nineml_path, install_dir=None, build_parent_dir=None,
                                 method='gsl', build_mode='lazy', silent_build=False):
     """
     Generates the cpp code corresponding to the NCML file, then configures, and compiles and installs
     the corresponding module into nest
     
-    @param celltype_name [str]: Name of the celltype to be built
+    @param biophysics_name [str]: Name of the celltype to be built
     @param nineml_path [str]: Path to the NCML file from which the NMODL files will be compiled and built
     @param install_dir [str]: Path to the directory where the NMODL files will be generated and compiled
     @param build_parent_dir [str]: Used to set the path for the default 'install_dir', and the 'src' and 'build' dirs path
@@ -53,7 +53,7 @@ def build_celltype_files(celltype_name, nineml_path, install_dir=None, build_par
     orig_dir = os.getcwd()
     # Determine the paths for the src, build and install directories
     (default_install_dir, params_dir, 
-            src_dir, compile_dir) = get_build_paths(nineml_path, celltype_name,_SIMULATOR_BUILD_NAME, 
+            src_dir, compile_dir) = get_build_paths(nineml_path, biophysics_name,_SIMULATOR_BUILD_NAME, 
                                                     build_parent_dir=build_parent_dir)
     if not install_dir:
         install_dir = default_install_dir
@@ -93,12 +93,12 @@ def build_celltype_files(celltype_name, nineml_path, install_dir=None, build_par
             sp.check_call(nemo_cmd, shell=True)
         except sp.CalledProcessError:
                 raise Exception("Translation of NineML to '{}' NEST C++ module failed."
-                                .format(celltype_name))
+                                .format(biophysics_name))
         # Generate configure.ac and Makefile
-        create_configure_ac(celltype_name, src_dir)
-        create_makefile(celltype_name, src_dir)
-        create_boilerplate_cpp(celltype_name, src_dir)
-        create_sli_initialiser(celltype_name, src_dir)
+        create_configure_ac(biophysics_name, src_dir)
+        create_makefile(celltype_name, biophysics_name, src_dir)
+        create_boilerplate_cpp(biophysics_name, src_dir)
+        create_sli_initialiser(biophysics_name, src_dir)
     # Compile the generated C++ files, using generated makefile configurtion
     if ((ncml_mtime != prev_install_mtime and build_mode != 'require') 
             or build_mode in ('force', 'build_only', 'compile_only')):
@@ -110,22 +110,22 @@ def build_celltype_files(celltype_name, nineml_path, install_dir=None, build_par
             sp.check_call('{src_dir}/configure --prefix={install_dir}'
                           .format(src_dir=src_dir, install_dir=install_dir), shell=True)
         except sp.CalledProcessError:
-            raise Exception("Configuration of '{}' NEST module failed.".format(celltype_name))
+            raise Exception("Configuration of '{}' NEST module failed.".format(biophysics_name))
         try:
             sp.check_call('make', shell=True)
         except sp.CalledProcessError:
-            raise Exception("Compilation of '{}' NEST module failed.".format(celltype_name))
+            raise Exception("Compilation of '{}' NEST module failed.".format(biophysics_name))
         try:            
             sp.check_call('make install', shell=True)
         except sp.CalledProcessError:
-            raise Exception("Installation of '{}' NEST module failed.".format(celltype_name))
+            raise Exception("Installation of '{}' NEST module failed.".format(biophysics_name))
         # Save the last modification time of the NCML file for future runs.
         with open(install_mtime_path, 'w') as f:
             f.write(ncml_mtime)
     # Switch back to original dir
     os.chdir(orig_dir)
     # Load component parameters for use in python interface
-    component_translations = load_component_translations(celltype_name, params_dir)
+    component_translations = load_component_translations(biophysics_name, params_dir)
     # Return installation directory
     return install_dir, component_translations
 
@@ -362,7 +362,7 @@ echo""".format(celltype_name=celltype_name, celltype_name_upper=celltype_name.up
     with open(os.path.join(src_dir, 'configure.ac'), 'w') as f:
         f.write(configure_ac)
 
-def create_makefile(celltype_name, src_dir):
+def create_makefile(celltype_name, biophysics_name, src_dir):
 # Generate makefile
     makefile = """
 libdir= @libdir@/nest
@@ -370,7 +370,7 @@ libdir= @libdir@/nest
 lib_LTLIBRARIES=      {celltype_name}Loader.la lib{celltype_name}Loader.la
 
 {celltype_name}Loader_la_CXXFLAGS= @AM_CXXFLAGS@
-{celltype_name}Loader_la_SOURCES=  {celltype_name}.cpp      {celltype_name}.h \\
+{celltype_name}Loader_la_SOURCES=  {biophysics_name}.cpp      {biophysics_name}.h \\
                              {celltype_name}Loader.cpp {celltype_name}Loader.h
 
 
@@ -399,7 +399,7 @@ install-slidoc:
 install-data-hook: install-exec install-slidoc
 
 EXTRA_DIST= sli
-""".format(celltype_name=celltype_name)
+""".format(celltype_name=celltype_name, biophysics_name=biophysics_name)
     # Write configure.ac with module names to file
     with open(os.path.join(src_dir, 'Makefile.am'), 'w') as f:
         f.write(makefile)

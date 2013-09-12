@@ -45,7 +45,8 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
             celltype = cls.loaded_celltypes[(celltype_name, nineml_model.url)]
         except KeyError:
             dct = {}
-            install_dir, dct['component_translations'] = build_celltype_files(celltype_name, 
+            install_dir, dct['component_translations'] = build_celltype_files(celltype_name,
+                                                                              nineml_model.biophysics.name,
                                                                               nineml_model.url,
                                                                               build_mode=build_mode,
                                                                               method=solver_name)

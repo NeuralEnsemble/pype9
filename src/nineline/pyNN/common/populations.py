@@ -1,5 +1,4 @@
 from __future__ import absolute_import
-import os.path
 import numpy
 import pyNN.parameters
 from nineline.pyNN.structure import Structure
@@ -47,6 +46,8 @@ class Population(object):
                     RandomDistributionClass = getattr(nineline.pyNN.random,
                                                   p.value.definition.component.name)
                     param = RandomDistributionClass(p.value.parameters, rng, use_units=False)
+                elif isinstance(p.value, nineml.user_layer.Sequence):
+                    param = pyNN.parameters.Sequence(p.value)
                 else:
                     raise Exception("Unrecognised parameter type '{}'".format(type(p.value)))
                 cellparams[name] = param
