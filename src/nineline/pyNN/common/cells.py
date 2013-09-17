@@ -13,10 +13,7 @@ class NinePyNNCell(object):
         
         @return [list(str)]: The list of parameter names in the class
         """
-        # Return all the parameter names plus the "raw" names used in the NeMo generated models
-        raw_names = list(chain.from_iterable([[param[0] for param in comp.values()]
-                                              for comp in cls.component_translations.values()]))
-        return cls.parameter_names + raw_names
+        return cls.parameter_names
 
 
 class NinePyNNCellMetaClass(type):

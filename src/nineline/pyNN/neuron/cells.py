@@ -17,7 +17,7 @@ get_current_time, get_time_step, get_min_delay, \
         get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 
-class NinePyNNCell(pyNN.models.BaseCellType, nineline.pyNN.common.cells.NinePyNNCell, NineCell):   
+class NinePyNNCell(pyNN.models.BaseCellType, nineline.pyNN.common.cells.NinePyNNCell):   
     """
     Extends the vanilla NineCell to include all the PyNN requirements
     """

@@ -21,10 +21,7 @@ from .build.nest import build_celltype_files
 import nineline.cells
 
 class NineCell(nineline.cells.NineCell):
-    
-    def set_parameters(self, parameters):
-        raise NotImplementedError
-
+    pass
 
 class NineCellMetaClass(nineline.cells.NineCellMetaClass):
     

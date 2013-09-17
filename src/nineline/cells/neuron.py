@@ -19,15 +19,19 @@ from nineline.cells.build.neuron import build_celltype_files
 import nineline.cells
 from .. import create_unit_conversions, convert_units
 
+import logging
+
+logger = logging.getLogger("NineLine")
+
 _basic_SI_to_neuron_conversions = (('s', 'ms'),
-                                 ('V', 'mV'),
-                                 ('A', 'nA'),
-                                 ('S', 'uS'),
-                                 ('F', 'nF'),
-                                 ('m', 'um'),
-                                 ('Hz', 'Hz'),
-                                 ('Ohm', 'MOhm'),
-                                 ('M', 'mM'))
+                                   ('V', 'mV'),
+                                   ('A', 'nA'),
+                                   ('S', 'uS'),
+                                   ('F', 'nF'),
+                                   ('m', 'um'),
+                                   ('Hz', 'Hz'),
+                                   ('Ohm', 'MOhm'),
+                                   ('M', 'mM'))
 
 _compound_SI_to_neuron_conversions = (((('A', 1), ('m', -2)), (('mA', 1), ('cm', -2))),
                                     ((('F', 1), ('m', -2)), (('uF', 1), ('cm', -2))),
@@ -37,7 +41,7 @@ _compound_SI_to_neuron_conversions = (((('A', 1), ('m', -2)), (('mA', 1), ('cm',
 _basic_unit_dict, _compound_unit_dict = create_unit_conversions(_basic_SI_to_neuron_conversions,
                                                                 _compound_SI_to_neuron_conversions)
 
-_default_variable_translations = {'Voltage': 'v', 'Diameter': 'diam'}
+_default_variable_translations = {'Voltage': 'init_v', 'Diameter': 'diam'} #FIXME: This is a little hackish
 
 
 def convert_to_neuron_units(value, unit_str):
@@ -67,9 +71,6 @@ class NineCell(nineline.cells.NineCell):
                 super(NineCell.Segment.ComponentTranslator, self).__setattr__('_translations', 
                                                                               translations)
     
-            def __dir__(self):
-                return self._translations.keys()
-    
             def __setattr__(self, var, value):
                 try:
                     setattr(self._component, self._translations[var], value)
@@ -83,6 +84,10 @@ class NineCell(nineline.cells.NineCell):
                 except KeyError as e:
                     raise AttributeError("Component does not have translation for parameter '{}'"\
                                          .format(e))
+                    
+            def __dir__(self):
+                return (super(NineCell.Segment.ComponentTranslator, self).__dir__ + 
+                        self._translations.keys())
     
         def __init__(self, nineml_model):
             """
@@ -198,25 +203,37 @@ class NineCell(nineline.cells.NineCell):
 
     class Parameter(object):
         
-        def __init__(self, varname, components):
+        def __init__(self, name, varname, components):
+            self.name = name
             self.varname = varname
             self.components = components
             
         def set(self, value):
             for comp in self.components:
                 setattr(comp, self.varname, value)
+                
+        def get(self):
+            if self.components:
+                value = getattr(self.components[0], self.varname) 
+                for comp in self.components:
+                    if value != getattr(comp, self.varname):
+                        raise Exception("Found inconsistent values for parameter '{}' ({} and {})"
+                                        "across mapped segments"
+                                        .format(self.name, value, getattr(comp, self.varname)))
+            else:
+                raise Exception("Parameter '{}' does not map to any segments ".format(self.name))
+            return value
+                
 
     def __init__(self, **parameters):
         self._construct_morphology(self.nineml_model.morphology)
         self._map_biophysics_to_morphology(self.nineml_model)
-        self._create_parameter_links(self.nineml_model)
-        self.set_parameters(parameters)
-        # Setup variables used by pyNN
+        # Setup variables required by pyNN
         try:
             self.source_section = self.segments['soma']
         except KeyError:
-            print ("WARNING! No 'soma' section specified for {} cell class"
-                   .format(self.nineml_model.name))
+            logger.warning("'soma' section specified for {} cell class, randomly select"
+                           .format(self.nineml_model.name))
             self.source_section = next(self.segments.itervalues())
         self.source = self.source_section(0.5)._ref_v
         # for recording
@@ -228,6 +245,12 @@ class NineCell(nineline.cells.NineCell):
         self.gsyn_trace = {}
         self.recording_time = 0
         self.rec = h.NetCon(self.source, None, sec=self.source_section)
+        # Set up references from parameter names to internal variables and set parameters
+        self._link_parameters(self.nineml_model)
+        self.set_parameters(parameters)
+        # After the cell is created prevent any new attributes from being added
+        self.__setattr__ = self.___setattr__
+        
         
     def _construct_morphology(self, nineml_model):
         """
@@ -333,9 +356,13 @@ class NineCell(nineline.cells.NineCell):
                                                 "({error})".format(mech=comp_name, error=e, 
                                                                    clss=seg_class))
 
-    def _create_parameter_links(self, nineml_model):
-        self.param_links = {}
+    def _link_parameters(self, nineml_model):
+        self._parameters = {}
         for p in nineml_model.parameters:
+            if hasattr(self, p.name) and not self.param_links_tested:
+                logger.warning("Naming conflict between parameter '{}' and class member of the same"
+                               " name. Parameter can be set but will not be able to be retrieved"
+                               .format(p.name))
             components = []
             if p.component == 'Geometry' or p.component == 'InitialState':
                 varname = _default_variable_translations[p.reference]
@@ -346,17 +373,16 @@ class NineCell(nineline.cells.NineCell):
                 for seg_class in p.segments:
                     components.extend([getattr(seg, p.component) for seg in 
                                        self.classifications[p.segments.classification][seg_class]])
-            self.param_links[p.name] = self.Parameter(varname, components)
-        return self.param_links
-
+            self._parameters[p.name] = self.Parameter(p.name, varname, components)
+        self.param_links_tested = True
+        
     def set_parameters(self, parameters):
         for name, value in parameters.iteritems():
             try:
-                self.param_links[name].set(value)
+                self._parameters[name].set(value)
             except KeyError:
                 raise Exception("NineLine celltype '{}' does not have parameter '{}'"
                                 .format(type(self), name))
-            setattr(self, name, parameters[name])
 
     def get_threshold(self):
         return self.nineml_model.biophysics.components['__GLOBALS__'].parameters['V_t'].value
@@ -408,20 +434,23 @@ class NineCell(nineline.cells.NineCell):
         for seg in self.segments.itervalues():
             seg.v = seg.v_init
             
-    def __getattr__(self, var):
+    def __getattr__(self, varname):
         """
         To support the access to components on particular segments in PyNN the segment name can 
         be prepended enclosed in curly brackets (i.e. '{}').
-        
+         
         @param var [str]: var of the attribute, with optional segment segment name enclosed with {} and prepended
         """
-        if var.startswith('{'):
-            seg_name, comp_name = var[1:].split('}', 1)
-            return getattr(self.segments[seg_name], comp_name)
-        else:
-            raise AttributeError("'{}'".format(var))
+        try:
+            return self._parameters[varname].get()
+        except KeyError:
+            if varname.startswith('{'):
+                seg_name, comp_name = varname[1:].split('}', 1)
+                return getattr(self.segments[seg_name], comp_name)
+            else:
+                raise AttributeError(varname)
 
-    def __setattr__(self, var, val):
+    def ___setattr__(self, varname, val):
         """
         Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup.
          This is done to allow pyNN's population.tset method to set attributes of cell components.
@@ -430,11 +459,17 @@ class NineCell(nineline.cells.NineCell):
                           attribute vars
         @param val [*]: val of the attribute
         """
-        if var.startswith('{'):
-            seg_name, comp_name = var[1:].split('}', 1)
+        if self._parameters.has_key():
+            self._parameters[varname].set(val)
+        elif varname.startswith('{'):
+            seg_name, comp_name = varname[1:].split('}', 1)
             setattr(self.segments[seg_name], comp_name, val)
         else:
-            super(NineCell, self).__setattr__(var, val)
+            raise Exception("Cannot add new attribute '{}' to cell {} class".format(varname, 
+                                                                                    type(self)))
+            
+    def __dir__(self):
+        return dir(super(NineCell, self)) + self._parameters.keys()
 
 class NineCellMetaClass(nineline.cells.NineCellMetaClass):
     """
@@ -458,6 +493,7 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
                                          silent_build=silent)
             load_mechanisms(install_dir)
             dct['mech_path'] = install_dir
+            dct['param_links_tested'] = False
             celltype = super(NineCellMetaClass, cls).__new__(cls, celltype_name, nineml_model, 
                                                              (NineCell,), dct)
             # Save cell type in case it needs to be used again

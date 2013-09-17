@@ -35,4 +35,7 @@ def create_anonymous_function(nineml_model):
     for sym in _numpy_constants_functions:
         expression_str = expression_str.replace(sym, 'numpy.' + sym)
     # Create the lambda function of the expression
-    return eval('lambda {args}: {expr}'.format(args=', '.join(args), expr=expression_str))
+    func = eval('lambda {args}: {expr}'.format(args=', '.join(args), expr=expression_str))
+    # Save the expression in the lambda function for pretty display
+    func.str = '({args}): {expr}'.format(args=', '.join(args), expr=expression_str)
+    return func

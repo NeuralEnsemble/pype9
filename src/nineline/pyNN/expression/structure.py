@@ -39,6 +39,7 @@ class StructureExpression(object):
         params = self._convert_params(nineml_params)
         PyNNClass.__init__(self, **params)
 
+
         
 class _PositionBasedExpression(pyNN.connectors.IndexBasedExpression):
     """
@@ -65,7 +66,9 @@ class _PositionBasedExpression(pyNN.connectors.IndexBasedExpression):
                                targetX=target_positions[0], 
                                targetY=target_positions[1], 
                                targetZ=target_positions[2]) 
-    
+        
+    def __str__(self):
+        return str(self.expression.str)    
                 
 class PositionBasedExpression(StructureExpression, _PositionBasedExpression):
     """
