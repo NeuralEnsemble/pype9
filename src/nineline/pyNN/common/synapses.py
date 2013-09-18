@@ -39,13 +39,17 @@ class Synapse(object):
             converted_params[cls.nineml_translations[name]] = conv_param
         return converted_params
 
-    def __init__(self, nineml_params, rng):
+    def __init__(self, nineml_params, min_delay, rng):
         # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class in
         # the MRO), I thought of a few ways to do this but none were completely satisfactory.
         PyNNClass = self.__class__.__mro__[3]
         assert (PyNNClass.__module__.startswith('pyNN') and
                 PyNNClass.__module__.endswith('standardmodels.synapses'))
-        super(PyNNClass, self).__init__(**self._convert_params(nineml_params, rng))
+        params = self._convert_params(nineml_params, rng)        
+        if (params.has_key('delay') and 
+            isinstance(params['delay'], nineline.pyNN.expression.structure.StructureExpression)):
+            params['delay'].set_min_value(min_delay)
+        super(PyNNClass, self).__init__(**params)
 
 
 class StaticSynapse(Synapse):

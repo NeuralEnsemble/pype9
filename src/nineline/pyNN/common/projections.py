@@ -21,7 +21,7 @@ class Projection(object):
             raise ProjectionToCloneNotCreatedYetException(nineml_model.name)
         SynapseClass = getattr(self._synapses_module, 
                                nineml_model.connection_type.definition.component.name)
-        synapse = SynapseClass(nineml_model.connection_type.parameters, rng)
+        synapse = SynapseClass(nineml_model.connection_type.parameters, self.get_min_delay(), rng)
         receptor = ('{' + nineml_model.target.segment + '}' +
                     nineml_model.synaptic_response.parameters['responseName'].value)
         # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class in 
