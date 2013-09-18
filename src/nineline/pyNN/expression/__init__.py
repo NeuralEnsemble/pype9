@@ -20,6 +20,7 @@ def create_anonymous_function(nineml_model):
             args.append(alias.strip())
         else:
             args.append(name)
+    args.sort()
     # Instantiate the required constants
     for name, p in nineml_model.constants.iteritems():
         if p.unit == 'dimensionless':
@@ -37,5 +38,5 @@ def create_anonymous_function(nineml_model):
     # Create the lambda function of the expression
     func = eval('lambda {args}: {expr}'.format(args=', '.join(args), expr=expression_str))
     # Save the expression in the lambda function for pretty display
-    func.str = '({args}): {expr}'.format(args=', '.join(args), expr=expression_str)
+    func.str = 'f({args}) -> {expr}'.format(args=', '.join(args), expr=expression_str)
     return func
