@@ -385,7 +385,7 @@ class NineCell(nineline.cells.NineCell):
                                 .format(type(self), name))
 
     def get_threshold(self):
-        return self.nineml_model.biophysics.components['__GLOBALS__'].parameters['V_t'].value
+        return self.nineml_model.biophysics.components['__NO_COMPONENT__'].parameters['V_t'].value
 
     def record_v(self, active):
         if active:

@@ -1,6 +1,9 @@
 from __future__ import absolute_import
 from itertools import chain
 
+_param_translations = {'Diameter':'diam'}
+_state_translations = {'Voltage':'v'}
+
 class NinePyNNCell(object):
     """
     A base cell object for NCML cell classes.
@@ -52,33 +55,35 @@ class NinePyNNCellMetaClass(type):
         """
         default_params = {}
         for p in nineml_model.parameters:
-            if p.component == 'Geometry':
-                if p.reference == 'Diameter':
-                    default_value = nineml_model.biophysics.components['__GEOMETRY__'].\
-                                                            parameters['diam'].value
+            if p.type != 'initialState':
+                if p.component:
+                    component = nineml_model.biophysics.components[p.component]
                 else:
-                    default_value = 1.0
-            elif p.component == 'InitialState':
-                if p.reference == 'Voltage':
-                    default_value = -65
-                else:
-                    default_value = 0.0
-            else:
-                default_value = nineml_model.biophysics.components[p.component].\
-                                                            parameters[p.reference].value
-            default_params[p.name] = default_value
+                    component = nineml_model.biophysics.components['__NO_COMPONENT__']
+                try:
+                    reference = _param_translations[p.reference]
+                except KeyError:
+                    reference = p.reference
+                default_params[p.name] = component.parameters[reference].value
         return default_params
 
     @classmethod
-    def _construct_initial_values(cls):  # @UnusedVariable
+    def _construct_initial_values(cls, nineml_model):  # @UnusedVariable
         """
         Constructs the default initial values dictionary of the cell class from the NCML model
         """
-        initial_values = {'v':-65.0}
-        # Here initial values are read from the parsed model
-        # to populate the intial_values dictionary.
-        # FIXME: Should be read from the NCML model (will need to check with Ivan the best way to do
-        # this
+        initial_values = {}
+        for p in nineml_model.parameters:
+            if p.type == 'initialState':
+                if p.component:
+                    component = nineml_model.biophysics.components[p.component]
+                else:
+                    component = nineml_model.biophysics.components['__NO_COMPONENT__']
+                try:
+                    reference = _param_translations[p.reference]
+                except KeyError:
+                    reference = p.reference
+                initial_values[p.name] = component.parameters[reference].value
         return initial_values
 
     @classmethod
@@ -95,8 +100,8 @@ class NinePyNNCellMetaClass(type):
                     for seg_cls in mapping.segments:
                         for member in clsfctn[seg_cls].members:
                             receptors.append('{' + str(member) + '}' + component.name)
-        return receptors      
-                    
+        return receptors
+
     @classmethod
     def _construct_recordable(cls):
         """
