@@ -8,7 +8,7 @@ from neuron import h
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
 import pyNN.models
-from nineline.cells.neuron import NineCellMetaClass, NineCell
+from nineline.cells.neuron import NineCellMetaClass, basic_nineml_translations
 import logging
 
 logger = logging.getLogger("PyNN")
@@ -26,6 +26,7 @@ class NinePyNNCell(pyNN.models.BaseCellType, nineline.pyNN.common.cells.NinePyNN
 
 class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
     
+    _basic_nineml_translations = basic_nineml_translations   
     loaded_celltypes = {}
     
     def __new__(cls, name, nineml_model, build_mode='lazy', silent=False, solver_name=None):

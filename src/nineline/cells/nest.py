@@ -20,6 +20,8 @@ import nest
 from .build.nest import build_celltype_files
 import nineline.cells
 
+basic_nineml_translations = {'Voltage': 'V_m', 'Diameter': 'diam', 'Length':'L'}
+
 class NineCell(nineline.cells.NineCell):
     pass
 

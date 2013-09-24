@@ -1,12 +1,9 @@
 from __future__ import absolute_import
 import nineline.pyNN.common.cells
 from pyNN.parameters import ParameterSpace
-from collections import defaultdict
 import pyNN.standardmodels
 import nest
-from nineline.cells.nest import NineCell, NineCellMetaClass
-
-_default_variable_translations = {'Voltage': 'V_m', 'Diameter': 'diam', 'Length':'L'}
+from nineline.cells.nest import NineCellMetaClass, basic_nineml_translations
 
 class NinePyNNCell(nineline.pyNN.common.cells.NinePyNNCell, pyNN.standardmodels.StandardCellType):
 
@@ -43,15 +40,26 @@ class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
     Metaclass for compiling NineMLCellType subclases
     Called by nineml_celltype_from_model
     """
-    def __new__(cls, celltype_name, nineml_model, build_mode='lazy', silent=False, solver_name='cvode'): #@NoSelf
-        dct = {'model': NineCellMetaClass(celltype_name, nineml_model, build_mode=build_mode, 
-                                          silent=silent, solver_name='cvode')}
-        dct['nest_name'] = {"on_grid": celltype_name, "off_grid": celltype_name}
-        dct['nest_model'] = celltype_name
-        dct['translations'] = cls._construct_translations(dct['model'].nineml_model,
-                                                          dct['model'].component_translations)        
-        celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, celltype_name + 'PyNN', 
-                                                             (NinePyNNCell,), dct)       
+    
+    _basic_nineml_translations = basic_nineml_translations
+    loaded_celltypes = {}
+    
+    def __new__(cls, name, nineml_model, build_mode='lazy', silent=False, solver_name='cvode'): #@NoSelf
+        try:
+            celltype = cls.loaded_celltypes[(nineml_model.name, nineml_model.url)]
+        except KeyError:
+            dct = {'model': NineCellMetaClass(name, nineml_model, build_mode=build_mode, 
+                                              silent=silent, solver_name='cvode')}
+            dct['nest_name'] = {"on_grid": name, "off_grid": name}
+            dct['nest_model'] = name
+            dct['translations'] = cls._construct_translations(dct['model'].nineml_model,
+                                                              dct['model'].component_translations)        
+            celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, name + 'PyNN', 
+                                                                 (NinePyNNCell,), dct)
+            # If the url where the celltype is defined is specified save the celltype to be retried 
+            # later
+            if nineml_model.url is not None: 
+                cls.loaded_celltypes[(name, nineml_model.url)] = celltype  
         return celltype
 
     @classmethod
@@ -66,7 +74,7 @@ class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
                 else:
                     component = p.component
                 try:
-                    varname = _default_variable_translations[p.reference]
+                    varname = cls._basic_nineml_translations[p.reference]
                 except KeyError:
                     varname = p.reference
                 translations.append((p.name, component_translations[component][varname][0]))

@@ -19,6 +19,8 @@ from nineline.cells.build.neuron import build_celltype_files
 import nineline.cells
 from .. import create_unit_conversions, convert_units
 
+basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length':'L'}
+
 import logging
 
 logger = logging.getLogger("NineLine")
@@ -41,7 +43,6 @@ _compound_SI_to_neuron_conversions = (((('A', 1), ('m', -2)), (('mA', 1), ('cm',
 _basic_unit_dict, _compound_unit_dict = create_unit_conversions(_basic_SI_to_neuron_conversions,
                                                                 _compound_SI_to_neuron_conversions)
 
-_default_variable_translations = {'Voltage': 'init_v', 'Diameter': 'diam'} #FIXME: This is a little hackish
 
 
 def convert_to_neuron_units(value, unit_str):
@@ -107,8 +108,6 @@ class NineCell(nineline.cells.NineCell):
             if nineml_model.proximal:
                 self._set_proximal((nineml_model.proximal.x, nineml_model.proximal.y,
                                     nineml_model.proximal.z))
-            # Set initialisation variables here    
-            self.v_init = nineline.cells.DEFAULT_V_INIT
             # A list to store any gap junctions in
             self._gap_junctions = []
             # Local information, though not sure if I need this here
@@ -231,13 +230,18 @@ class NineCell(nineline.cells.NineCell):
             self.varname = varname
             self.components = components
             self.value = None
+            self._initialized = False
             
         def set(self, value):
+            if self._initialized:
+                raise Exception("Attempted to set initial state '{}' after the cell states have " 
+                                "been initialised".format(self.name))
             self.value = value
             
-        def initialise_state(self):
+        def initialize_state(self):
             for comp in self.components:
                 setattr(comp, self.varname, self.value)
+            self._initialized = True
             
         def get(self):
             if self.value is None:
@@ -265,7 +269,6 @@ class NineCell(nineline.cells.NineCell):
         self.gsyn_trace = {}
         self.recording_time = 0
         self.rec = h.NetCon(self.source, None, sec=self.source_section)
-        self._initialized = False
         # Set up references from parameter names to internal variables and set parameters
         self._link_parameters(self.nineml_model)
         self.set_parameters(parameters)
@@ -376,7 +379,6 @@ class NineCell(nineline.cells.NineCell):
 
     def _link_parameters(self, nineml_model):
         self._parameters = {}
-        self._initial_states = {}
         for p in nineml_model.parameters:
             if hasattr(self, p.name) and not self.param_links_tested:
                 logger.warning("Naming conflict between parameter '{}' and class member of the same"
@@ -385,7 +387,7 @@ class NineCell(nineline.cells.NineCell):
                                " selecting a different name if possible."
                                .format(p.name))
             try:
-                varname = _default_variable_translations[p.reference]
+                varname = basic_nineml_translations[p.reference]
             except KeyError:
                 varname = p.reference
             components = []
@@ -396,10 +398,8 @@ class NineCell(nineline.cells.NineCell):
                 else:
                     class_components = segments
             components.extend(class_components)
-            if p.type == 'initialState':
-                self._initial_states[p.name] = self.InitialState(p.name, varname, components) 
-            else:
-                self._parameters[p.name] = self.Parameter(p.name, varname, components)
+            ParamClass = self.InitialState if p.type == 'initialState' else self.Parameter
+            self._parameters[p.name] = ParamClass(p.name, varname, components)
         self.__class__._param_links_tested = True
         
     def set_parameters(self, parameters):
@@ -407,16 +407,8 @@ class NineCell(nineline.cells.NineCell):
             try:
                 self._parameters[name].set(value)
             except KeyError:
-                try:
-                    initial_state = self._initial_states[name]
-                except KeyError:
-                    raise Exception("NineLine celltype '{}' does not have parameter '{}'"
-                                    .format(type(self), name))
-                    if not self._initialized:
-                        initial_state.set(value)
-                    else:
-                        raise Exception("Attempted to set initial state '{}' after the cell has " 
-                                        "been initialised".format(name))
+                raise Exception("NineLine celltype '{}' does not have parameter '{}'"
+                                .format(type(self), name))
 
     def get_threshold(self):
         return self.nineml_model.biophysics.components['__NO_COMPONENT__'].parameters['V_t'].value
@@ -464,9 +456,9 @@ class NineCell(nineline.cells.NineCell):
             self.spike_times = h.Vector(0)
 
     def memb_init(self):
-        for state in self._initial_states.itervalues():
-            state.initialize_state()
-        self._initialized = True
+        for param in self._parameters.itervalues():
+            if isinstance(param, self.InitialState):
+                param.initialize_state()
             
     def __getattr__(self, varname):
         """
@@ -476,19 +468,16 @@ class NineCell(nineline.cells.NineCell):
         @param var [str]: var of the attribute, with optional segment segment name enclosed with {} and prepended
         """
         # Retrieving the _parameters attribute with __getattribute__ first avoids infinite recursive
-        # loops of __getattr__.
+        # loops of __getattr__ if the cell hasn't been initialised yet.
         parameters = self.__getattribute__('_parameters')
         try:
             return parameters[varname].get()
         except KeyError:
-            try:
-                return self._initial_states[varname].get()
-            except KeyError:
-                if varname.startswith('{'):
-                    seg_name, comp_name = varname[1:].split('}', 1)
-                    return getattr(self.segments[seg_name], comp_name)
-                else:
-                    raise AttributeError(varname)
+            if varname.startswith('{'):
+                seg_name, comp_name = varname[1:].split('}', 1)
+                return getattr(self.segments[seg_name], comp_name)
+            else:
+                raise AttributeError(varname)
 
     def __setattr__(self, varname, val):
         """
@@ -507,13 +496,34 @@ class NineCell(nineline.cells.NineCell):
         except AttributeError:
             super(NineCell, self).__setattr__(varname, val)
             return
+        # If the varname is a parameter
         if parameters.has_key(varname):
             parameters[varname].set(val)
-        elif varname.startswith('{'):
+        # Any attribute that ends with '_init' is assumed to be an initial state (this is how PyNN 
+        # sets neuron initial states)
+        elif varname.endswith('_init'):
+            try:
+                parameter = parameters[varname[:-5]]
+            except KeyError:
+                raise Exception("Cell does not have initial state '{}' (as specified by attempting "
+                                "to set '{}' on the cell)".format(varname[:-5], varname))
+            if not isinstance(parameter, self.InitialState): 
+                raise Exception("Parameter '{}' is not an initial state (as specified by attempting"
+                                " to set '{}' on the cell)" .format(varname[:-5], varname))
+            parameter.set(val)
+        # Component parameters can also be directly accessed (without the need to specify them 
+        # explicitly as a parameter) by placing the segment name in brackets beforehand, then using
+        # a '.' to separate the component name from the parameter name if required, i.e. 
+        #
+        # {segment}component.parameter for a parameter of a component
+        #
+        # or 
+        # 
+        # {segment}parameter for a parameter of the segment directly
+        #
+        elif varname.startswith('{'): 
             seg_name, comp_name = varname[1:].split('}', 1)
             setattr(self.segments[seg_name], comp_name, val)
-        elif varname.endswith('_init'):
-            dir(self)
         else:
             raise Exception("Cannot add new attribute '{}' to cell {} class".format(varname, 
                                                                                     type(self)))

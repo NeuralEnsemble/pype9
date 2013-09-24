@@ -1,8 +1,5 @@
 from __future__ import absolute_import
-from itertools import chain
-
-_param_translations = {'Diameter':'diam'}
-_state_translations = {'Voltage':'v'}
+from ... import DEFAULT_V_INIT
 
 class NinePyNNCell(object):
     """
@@ -55,15 +52,17 @@ class NinePyNNCellMetaClass(type):
         """
         default_params = {}
         for p in nineml_model.parameters:
-            if p.type != 'initialState':
-                if p.component:
-                    component = nineml_model.biophysics.components[p.component]
-                else:
-                    component = nineml_model.biophysics.components['__NO_COMPONENT__']
-                try:
-                    reference = _param_translations[p.reference]
-                except KeyError:
-                    reference = p.reference
+            if p.component:
+                component = nineml_model.biophysics.components[p.component]
+            else:
+                component = nineml_model.biophysics.components['__NO_COMPONENT__']
+            try:
+                reference = cls._basic_nineml_translations[p.reference]
+            except KeyError:
+                reference = p.reference
+            if reference == 'v':
+                default_params[p.name] = DEFAULT_V_INIT
+            else:
                 default_params[p.name] = component.parameters[reference].value
         return default_params
 
@@ -80,7 +79,7 @@ class NinePyNNCellMetaClass(type):
                 else:
                     component = nineml_model.biophysics.components['__NO_COMPONENT__']
                 try:
-                    reference = _state_translations[p.reference]
+                    reference = basic_nineml_translations[p.reference]
                 except KeyError:
                     reference = p.reference
                 if reference == 'v':

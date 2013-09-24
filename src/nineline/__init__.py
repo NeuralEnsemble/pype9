@@ -24,6 +24,9 @@ from quantities.dimensionality import Dimensionality
 
 __version__ = "0.0.1"
 
+DEFAULT_V_INIT = -65.0
+
+
 def create_unit_conversions(basic_conversions, compound_conversions):
     basic_dict = {}
     for SI_unit, pyNN_unit in basic_conversions:

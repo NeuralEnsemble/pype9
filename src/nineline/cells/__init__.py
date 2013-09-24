@@ -20,7 +20,7 @@ import collections
 import math
 from itertools import chain
 
-DEFAULT_V_INIT = -65
+# DEFAULT_V_INIT = -65
 
 class NineCell(object):
     
