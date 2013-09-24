@@ -29,7 +29,7 @@ class NinePyNNCellMetaClass(type):
         # Retrieved parsed model (it is placed in dct to conform with
         # with the standard structure for the "__new__" function of metaclasses).
         dct["default_parameters"] = cls._construct_default_parameters(dct['model'].nineml_model)
-        dct["default_initial_values"] = cls._construct_initial_values()
+        dct["default_initial_values"] = cls._construct_initial_values(dct['model'].nineml_model)
         dct["receptor_types"] = cls._construct_receptor_types(dct['model'].nineml_model)
         # FIXME: This requires instantiating a model and taking the keys to its recordable
         # dictionary, which doesn't feel right but seems to be how PyNN is organised at the present.
@@ -80,10 +80,14 @@ class NinePyNNCellMetaClass(type):
                 else:
                     component = nineml_model.biophysics.components['__NO_COMPONENT__']
                 try:
-                    reference = _param_translations[p.reference]
+                    reference = _state_translations[p.reference]
                 except KeyError:
                     reference = p.reference
-                initial_values[p.name] = component.parameters[reference].value
+                if reference == 'v':
+                    value = -65.0
+                else:
+                    value = component.parameters[reference].value
+                initial_values[p.name] = value
         return initial_values
 
     @classmethod

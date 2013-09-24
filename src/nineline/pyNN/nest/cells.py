@@ -6,7 +6,7 @@ import pyNN.standardmodels
 import nest
 from nineline.cells.nest import NineCell, NineCellMetaClass
 
-_default_variable_translations = {'Voltage': 'V_m', 'Diameter': 'diam'}
+_default_variable_translations = {'Voltage': 'V_m', 'Diameter': 'diam', 'Length':'L'}
 
 class NinePyNNCell(nineline.pyNN.common.cells.NinePyNNCell, pyNN.standardmodels.StandardCellType):
 
@@ -58,12 +58,16 @@ class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
     def _construct_translations(cls, nineml_model, component_translations):
         translations = []
         for p in nineml_model.parameters:
-            if p.component == 'InitialState' and p.reference == 'Voltage':
+            if p.reference == 'Voltage':
                 translations.append((p.name, 'V_m'))
             else:
+                if p.reference in ('Diameter', 'Length'):
+                    component = 'Geometry'
+                else:
+                    component = p.component
                 try:
                     varname = _default_variable_translations[p.reference]
                 except KeyError:
                     varname = p.reference
-                translations.append((p.name, component_translations[p.component][varname][0]))
+                translations.append((p.name, component_translations[component][varname][0]))
         return pyNN.standardmodels.build_translations(*translations)

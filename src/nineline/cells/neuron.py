@@ -152,7 +152,7 @@ class NineCell(nineline.cells.NineCell):
             
             @param proximal [float(3)]: The 3D position of the start of the segment
             """
-            self._proximal = numpy.array(proximal)
+            self._proximal = numpy.asarray(proximal)
             h.pt3dadd(proximal[0], proximal[1], proximal[2], self.diam, sec=self)
     
         def _connect(self, parent_seg, fraction_along):
@@ -222,9 +222,29 @@ class NineCell(nineline.cells.NineCell):
                                         .format(self.name, value, getattr(comp, self.varname)))
             else:
                 raise Exception("Parameter '{}' does not map to any segments ".format(self.name))
-            return value
+            return value        
+        
+    class InitialState(object):
+        
+        def __init__(self, name, varname, components):
+            self.name = name
+            self.varname = varname
+            self.components = components
+            self.value = None
+            
+        def set(self, value):
+            self.value = value
+            
+        def initialise_state(self):
+            for comp in self.components:
+                setattr(comp, self.varname, self.value)
+            
+        def get(self):
+            if self.value is None:
+                logger.warning("Tried to retrieve value of initial state '{}' before it was set"
+                               .format(self.varname))
+            return self.value
                 
-
     def __init__(self, **parameters):
         self._construct_morphology(self.nineml_model.morphology)
         self._map_biophysics_to_morphology(self.nineml_model)
@@ -245,13 +265,11 @@ class NineCell(nineline.cells.NineCell):
         self.gsyn_trace = {}
         self.recording_time = 0
         self.rec = h.NetCon(self.source, None, sec=self.source_section)
+        self._initialized = False
         # Set up references from parameter names to internal variables and set parameters
         self._link_parameters(self.nineml_model)
         self.set_parameters(parameters)
-        # After the cell is created prevent any new attributes from being added
-        self.__setattr__ = self.___setattr__
-        
-        
+         
     def _construct_morphology(self, nineml_model):
         """
         Reads morphology from a MorphML 2 file and creates the appropriate segments in neuron
@@ -358,31 +376,47 @@ class NineCell(nineline.cells.NineCell):
 
     def _link_parameters(self, nineml_model):
         self._parameters = {}
+        self._initial_states = {}
         for p in nineml_model.parameters:
             if hasattr(self, p.name) and not self.param_links_tested:
                 logger.warning("Naming conflict between parameter '{}' and class member of the same"
-                               " name. Parameter can be set but will not be able to be retrieved"
+                               " name. Parameter can be set but will not be able to be retrieved "
+                               "except indirectly through the 'segments' attribute. Please consider"
+                               " selecting a different name if possible."
                                .format(p.name))
-            components = []
-            if p.component == 'Geometry' or p.component == 'InitialState':
+            try:
                 varname = _default_variable_translations[p.reference]
-                for seg_class in p.segments:
-                    components.extend(self.classifications[p.segments.classification][seg_class])
-            else:
+            except KeyError:
                 varname = p.reference
-                for seg_class in p.segments:
-                    components.extend([getattr(seg, p.component) for seg in 
-                                       self.classifications[p.segments.classification][seg_class]])
-            self._parameters[p.name] = self.Parameter(p.name, varname, components)
-        self.param_links_tested = True
+            components = []
+            for seg_class in p.segments:
+                segments = self.classifications[p.segments.classification][seg_class]
+                if p.component:
+                    class_components = [getattr(seg, p.component) for seg in segments]
+                else:
+                    class_components = segments
+            components.extend(class_components)
+            if p.type == 'initialState':
+                self._initial_states[p.name] = self.InitialState(p.name, varname, components) 
+            else:
+                self._parameters[p.name] = self.Parameter(p.name, varname, components)
+        self.__class__._param_links_tested = True
         
     def set_parameters(self, parameters):
         for name, value in parameters.iteritems():
             try:
                 self._parameters[name].set(value)
             except KeyError:
-                raise Exception("NineLine celltype '{}' does not have parameter '{}'"
-                                .format(type(self), name))
+                try:
+                    initial_state = self._initial_states[name]
+                except KeyError:
+                    raise Exception("NineLine celltype '{}' does not have parameter '{}'"
+                                    .format(type(self), name))
+                    if not self._initialized:
+                        initial_state.set(value)
+                    else:
+                        raise Exception("Attempted to set initial state '{}' after the cell has " 
+                                        "been initialised".format(name))
 
     def get_threshold(self):
         return self.nineml_model.biophysics.components['__NO_COMPONENT__'].parameters['V_t'].value
@@ -430,9 +464,9 @@ class NineCell(nineline.cells.NineCell):
             self.spike_times = h.Vector(0)
 
     def memb_init(self):
-        # Initialisation of member states goes here
-        for seg in self.segments.itervalues():
-            seg.v = seg.v_init
+        for state in self._initial_states.itervalues():
+            state.initialize_state()
+        self._initialized = True
             
     def __getattr__(self, varname):
         """
@@ -441,16 +475,22 @@ class NineCell(nineline.cells.NineCell):
          
         @param var [str]: var of the attribute, with optional segment segment name enclosed with {} and prepended
         """
+        # Retrieving the _parameters attribute with __getattribute__ first avoids infinite recursive
+        # loops of __getattr__.
+        parameters = self.__getattribute__('_parameters')
         try:
-            return self._parameters[varname].get()
+            return parameters[varname].get()
         except KeyError:
-            if varname.startswith('{'):
-                seg_name, comp_name = varname[1:].split('}', 1)
-                return getattr(self.segments[seg_name], comp_name)
-            else:
-                raise AttributeError(varname)
+            try:
+                return self._initial_states[varname].get()
+            except KeyError:
+                if varname.startswith('{'):
+                    seg_name, comp_name = varname[1:].split('}', 1)
+                    return getattr(self.segments[seg_name], comp_name)
+                else:
+                    raise AttributeError(varname)
 
-    def ___setattr__(self, varname, val):
+    def __setattr__(self, varname, val):
         """
         Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup.
          This is done to allow pyNN's population.tset method to set attributes of cell components.
@@ -459,15 +499,25 @@ class NineCell(nineline.cells.NineCell):
                           attribute vars
         @param val [*]: val of the attribute
         """
-        if self._parameters.has_key():
-            self._parameters[varname].set(val)
+        # Check to see if cell has the '_parameters' attribute, which is initialised last out of the
+        # internal member variables, after which the cell is assumed to be initialised and only 
+        # parameters can be set as attributes.
+        try:
+            parameters = self.__getattribute__('_parameters')
+        except AttributeError:
+            super(NineCell, self).__setattr__(varname, val)
+            return
+        if parameters.has_key(varname):
+            parameters[varname].set(val)
         elif varname.startswith('{'):
             seg_name, comp_name = varname[1:].split('}', 1)
             setattr(self.segments[seg_name], comp_name, val)
+        elif varname.endswith('_init'):
+            dir(self)
         else:
             raise Exception("Cannot add new attribute '{}' to cell {} class".format(varname, 
                                                                                     type(self)))
-            
+        
     def __dir__(self):
         return dir(super(NineCell, self)) + self._parameters.keys()
 
@@ -493,7 +543,7 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
                                          silent_build=silent)
             load_mechanisms(install_dir)
             dct['mech_path'] = install_dir
-            dct['param_links_tested'] = False
+            dct['_param_links_tested'] = False
             celltype = super(NineCellMetaClass, cls).__new__(cls, celltype_name, nineml_model, 
                                                              (NineCell,), dct)
             # Save cell type in case it needs to be used again

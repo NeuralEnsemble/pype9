@@ -54,29 +54,56 @@ class Population(nineline.pyNN.common.Population, pyNN.nest.Population):
 #         param_name += '.' + param
 #         self.set(**{param_name: rand_distr})
         
-    def initialize_variable(self, param, rand_distr, component=None, seg_group=None): #@UnusedVariable, component and seg_group are not used at this stage as this is only used for the membrane voltage at this stage. 
-        self.initialize(**{param: rand_distr})
-        
-    def _translate_param_name(self, param, component, seg_group):
-        if seg_group and seg_group != 'source_section' and seg_group != 'soma':
-            raise NotImplementedError("Segment groups are not currently supported for NEST")
-        if component:
-            try:
-                translation = self.get_celltype().component_translations
-            except AttributeError:
-                raise Exception("Attempting to set component or segment group parameter on non-"
-                                "'Nine' cell type")
-            try:
-                comp_translation = translation[component]
-            except KeyError:
-                raise Exception("Cell type '{}' does not have a component '{}'"
-                                .format(self.get_celltype().name, component))
-            try:
-                param = comp_translation[param][0]
-            except KeyError:
-                raise Exception("Component '{}' does not have a parameter '{}'"
-                                .format(component, param))
-        return param
+            
+    def initialize(self, **initial_values):
+        """
+        Set initial values of state variables, e.g. the membrane potential.
+
+        Values passed to initialize() may be:
+            (1) single numeric values (all neurons set to the same value)
+            (2) RandomDistribution objects
+            (3) lists/arrays of numbers of the same size as the population
+            (4) mapping functions, where a mapping function accepts a single
+                argument (the cell index) and returns a single number.
+
+        Values should be expressed in the standard PyNN units (i.e. millivolts,
+        nanoamps, milliseconds, microsiemens, nanofarads, event per second).
+
+        Examples::
+
+            p.initialize(v=-70.0)
+            p.initialize(v=rand_distr, gsyn_exc=0.0)
+            p.initialize(v=lambda i: -65 + i/10.0)
+        """
+        translated_initial_values = {}
+        for name, value in initial_values.iteritems():
+            translated_name = self.celltype.translations[name]['reverse_transform']
+            translated_initial_values[translated_name] = value
+        super(Population, self).initialize(**translated_initial_values)    
+#         
+#     def initialize_variable(self, param, rand_distr, component=None, seg_group=None): #@UnusedVariable, component and seg_group are not used at this stage as this is only used for the membrane voltage at this stage. 
+#         self.initialize(**{param: rand_distr})
+#         
+#     def _translate_param_name(self, param, component, seg_group):
+#         if seg_group and seg_group != 'source_section' and seg_group != 'soma':
+#             raise NotImplementedError("Segment groups are not currently supported for NEST")
+#         if component:
+#             try:
+#                 translation = self.get_celltype().component_translations
+#             except AttributeError:
+#                 raise Exception("Attempting to set component or segment group parameter on non-"
+#                                 "'Nine' cell type")
+#             try:
+#                 comp_translation = translation[component]
+#             except KeyError:
+#                 raise Exception("Cell type '{}' does not have a component '{}'"
+#                                 .format(self.get_celltype().name, component))
+#             try:
+#                 param = comp_translation[param][0]
+#             except KeyError:
+#                 raise Exception("Component '{}' does not have a parameter '{}'"
+#                                 .format(component, param))
+#         return param
 
 
 class Projection(nineline.pyNN.common.Projection, pyNN.nest.Projection):

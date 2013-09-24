@@ -40,7 +40,8 @@ class Population(object):
                                                          struct_model, rng)
             cellparams = {}
             initial_values = {}
-            for name, p in nineml_model.prototype.parameters.iteritems():
+            for param_definition in nineml_model.prototype.definition.component.parameters:
+                p = nineml_model.prototype.parameters[param_definition.name]
                 if isinstance(p.value, float):
                     param = p.value
                 elif isinstance(p.value, nineml.user_layer.RandomDistribution):
@@ -51,10 +52,10 @@ class Population(object):
                     param = pyNN.parameters.Sequence(p.value)
                 else:
                     raise Exception("Unrecognised parameter type '{}'".format(type(p.value)))
-                if p.type == 'initialValue':
-                    initial_values[name] = param
+                if hasattr(param_definition, 'type') and param_definition.type == 'initialState':
+                    initial_values[p.name] = param
                 else:
-                    cellparams[name] = param
+                    cellparams[p.name] = param
             # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class  
             # in the MRO), I thought of a few ways to do this but none were completely satisfactory.
             PyNNClass = self.__class__.__mro__[2]
@@ -69,7 +70,6 @@ class Population(object):
             return self.structures['soma'].positions
         except KeyError:
             return next(self.structures.itervalues()).positions.T
-        
         
     def _randomly_distribute_params(self, cell_param_distrs, rng):
         # Set distributed parameters
