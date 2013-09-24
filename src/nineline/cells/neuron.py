@@ -525,8 +525,10 @@ class NineCell(nineline.cells.NineCell):
             seg_name, comp_name = varname[1:].split('}', 1)
             setattr(self.segments[seg_name], comp_name, val)
         else:
-            raise Exception("Cannot add new attribute '{}' to cell {} class".format(varname, 
-                                                                                    type(self)))
+            super(NineCell, self).__setattr__(varname, val)
+            # FIXME: Need to work out if I want this to throw an error or not.
+#             raise Exception("Cannot add new attribute '{}' to cell {} class".format(varname, 
+#                                                                                     type(self)))
         
     def __dir__(self):
         return dir(super(NineCell, self)) + self._parameters.keys()
