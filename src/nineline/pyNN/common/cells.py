@@ -25,8 +25,8 @@ class NinePyNNCellMetaClass(type):
     def __new__(cls, celltype_id, bases, dct):  # @NoSelf
         # Retrieved parsed model (it is placed in dct to conform with
         # with the standard structure for the "__new__" function of metaclasses).
-        dct["default_parameters"] = cls._construct_default_parameters(dct['model'].nineml_model)
-        dct["default_initial_values"] = cls._construct_initial_values(dct['model'].nineml_model)
+        (dct["default_parameters"],
+         dct["default_initial_values"]) = cls._construct_default_parameters(dct['model'].nineml_model)
         dct["receptor_types"] = cls._construct_receptor_types(dct['model'].nineml_model)
         # FIXME: This requires instantiating a model and taking the keys to its recordable
         # dictionary, which doesn't feel right but seems to be how PyNN is organised at the present.
@@ -51,6 +51,7 @@ class NinePyNNCellMetaClass(type):
         Constructs the default parameters of the 9ML class from the nineml model
         """
         default_params = {}
+        initial_values = {}
         for p in nineml_model.parameters:
             if p.component:
                 component = nineml_model.biophysics.components[p.component]
@@ -60,34 +61,14 @@ class NinePyNNCellMetaClass(type):
                 reference = cls._basic_nineml_translations[p.reference]
             except KeyError:
                 reference = p.reference
-            if reference == 'v':
-                default_params[p.name] = DEFAULT_V_INIT
+            if p.reference == 'Voltage':
+                parameter = DEFAULT_V_INIT #FIXME: This is a bit hackish, should probably be set somewhere else
             else:
-                default_params[p.name] = component.parameters[reference].value
-        return default_params
-
-    @classmethod
-    def _construct_initial_values(cls, nineml_model):  # @UnusedVariable
-        """
-        Constructs the default initial values dictionary of the cell class from the NCML model
-        """
-        initial_values = {}
-        for p in nineml_model.parameters:
+                parameter = component.parameters[reference].value
+            default_params[p.name] = parameter
             if p.type == 'initialState':
-                if p.component:
-                    component = nineml_model.biophysics.components[p.component]
-                else:
-                    component = nineml_model.biophysics.components['__NO_COMPONENT__']
-                try:
-                    reference = basic_nineml_translations[p.reference]
-                except KeyError:
-                    reference = p.reference
-                if reference == 'v':
-                    value = -65.0
-                else:
-                    value = component.parameters[reference].value
-                initial_values[p.name] = value
-        return initial_values
+                initial_values[p.name] = parameter
+        return default_params, initial_values
 
     @classmethod
     def _construct_receptor_types(cls, nineml_model):
