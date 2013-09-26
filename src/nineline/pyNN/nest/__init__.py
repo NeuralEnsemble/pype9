@@ -42,18 +42,24 @@ class Population(nineline.pyNN.common.Population, pyNN.nest.Population):
 
     _pyNN_standard_celltypes = dict([(cellname, getattr(pyNN.nest.standardmodels.cells, cellname))
                                      for cellname in pyNN.nest.list_standard_models()])
-    _NineCellMetaClass = NinePyNNCellMetaClass
+    _NineCellMetaClass = NinePyNNCellMetaClass       
 
-    def set_param(self, cell_id, param, value, component=None, section=None):
-        raise NotImplementedError('set_param has not been implemented for Population class yet')
-
-#     def rset(self, param, rand_distr, component=None, seg_group=None):
-#         param_name = NineCell.group_varname(seg_group)
-#         if component:
-#             param_name += '.' + component
-#         param_name += '.' + param
-#         self.set(**{param_name: rand_distr})
+    @classmethod
+    def _translate_variable(cls, variable):
+        # FIXME: This is a bit of a hack until I coordinate with Ivan about the naming of variables
+        # in NEST
+        if variable.startswith('{'):
+            variable = variable[variable.find('}')+1:]
+            if variable == 'v':
+                variable = 'V_m'
+        return variable
+                
+    def record(self, variable, to_file=None):
+        variable = self._translate_variable(variable)
+        super(Population, self).record(variable, to_file) 
         
+    def can_record(self, variable):
+        return variable in [self._translate_variable(var) for var in self.celltype.recordable]                      
             
     def initialize(self, **initial_values):
         """
@@ -80,30 +86,6 @@ class Population(nineline.pyNN.common.Population, pyNN.nest.Population):
             translated_name = self.celltype.translations[name]['reverse_transform']
             translated_initial_values[translated_name] = value
         super(Population, self).initialize(**translated_initial_values)    
-#         
-#     def initialize_variable(self, param, rand_distr, component=None, seg_group=None): #@UnusedVariable, component and seg_group are not used at this stage as this is only used for the membrane voltage at this stage. 
-#         self.initialize(**{param: rand_distr})
-#         
-#     def _translate_param_name(self, param, component, seg_group):
-#         if seg_group and seg_group != 'source_section' and seg_group != 'soma':
-#             raise NotImplementedError("Segment groups are not currently supported for NEST")
-#         if component:
-#             try:
-#                 translation = self.get_celltype().component_translations
-#             except AttributeError:
-#                 raise Exception("Attempting to set component or segment group parameter on non-"
-#                                 "'Nine' cell type")
-#             try:
-#                 comp_translation = translation[component]
-#             except KeyError:
-#                 raise Exception("Cell type '{}' does not have a component '{}'"
-#                                 .format(self.get_celltype().name, component))
-#             try:
-#                 param = comp_translation[param][0]
-#             except KeyError:
-#                 raise Exception("Component '{}' does not have a parameter '{}'"
-#                                 .format(component, param))
-#         return param
 
 
 class Projection(nineline.pyNN.common.Projection, pyNN.nest.Projection):

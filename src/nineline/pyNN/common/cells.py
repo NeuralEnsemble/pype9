@@ -25,11 +25,11 @@ class NinePyNNCellMetaClass(type):
     def __new__(cls, celltype_id, bases, dct):  # @NoSelf
         # Retrieved parsed model (it is placed in dct to conform with
         # with the standard structure for the "__new__" function of metaclasses).
+        nineml_model = dct['model'].nineml_model
         (dct["default_parameters"],
-         dct["default_initial_values"]) = cls._construct_default_parameters(dct['model'].nineml_model)
-        dct["receptor_types"] = cls._construct_receptor_types(dct['model'].nineml_model)
-        # FIXME: This requires instantiating a model and taking the keys to its recordable
-        # dictionary, which doesn't feel right but seems to be how PyNN is organised at the present.
+         dct["default_initial_values"]) = cls._construct_default_parameters(nineml_model)
+        dct["receptor_types"] = cls._construct_receptor_types(nineml_model)
+        dct['recordable'] = cls._construct_recordable(nineml_model)
         dct["injectable"] = True
         dct["conductance_based"] = True
         dct["model_name"] = celltype_id
@@ -87,16 +87,17 @@ class NinePyNNCellMetaClass(type):
         return receptors
 
     @classmethod
-    def _construct_recordable(cls):
+    def _construct_recordable(cls, nineml_model):
         """
         Constructs the dictionary of recordable parameters from the NCML model
         """
-        raise NotImplementedError("'_construct_recordable' should be implemented by derived class")
+        #TODO: Make selected component variables also recordable  
+        return ['spikes'] + ['{' + seg + '}v' for seg in nineml_model.morphology.segments.keys()]
 
     @classmethod
     def _construct_weight_variables(cls):
         """
         Constructs the dictionary of weight variables from the NCML model
         """
-        # FIXME: When weights are included into the NCML model, they should be added to the list here
+        # TODO: When weights are included into the NCML model, they should be added to the list here
         return {}

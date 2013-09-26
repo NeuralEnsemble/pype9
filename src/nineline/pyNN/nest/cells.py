@@ -54,8 +54,7 @@ class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
             dct['nest_model'] = name
             dct['translations'] = cls._construct_translations(dct['model'].nineml_model,
                                                               dct['model'].component_translations)        
-            celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, name + 'PyNN', 
-                                                                 (NinePyNNCell,), dct)
+            celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, name, (NinePyNNCell,), dct)
             # If the url where the celltype is defined is specified save the celltype to be retried 
             # later
             if nineml_model.url is not None: 

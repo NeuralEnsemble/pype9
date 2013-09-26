@@ -263,7 +263,7 @@ class NineCell(nineline.cells.NineCell):
         # for recording
         self.recordable = {'spikes': None, 'v': self.source_section._ref_v}
         for seg_name, seg in self.segments.iteritems():
-            self.recordable[seg_name + '.v'] = seg._ref_v 
+            self.recordable['{' + seg_name + '}v'] = seg._ref_v 
         self.spike_times = h.Vector(0)
         self.traces = {}
         self.gsyn_trace = {}

@@ -37,51 +37,11 @@ get_current_time, get_time_step, get_min_delay, \
         get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 
-
 class Population(nineline.pyNN.common.Population, pyNN.neuron.Population):
 
     _pyNN_standard_celltypes = dict([(cellname, getattr(pyNN.neuron.standardmodels.cells, cellname))
                                      for cellname in pyNN.neuron.list_standard_models()])
     _NineCellMetaClass = NinePyNNCellMetaClass
-
-#     def rset(self, param, rand_distr, component=None, seg_group=None):
-#         param_scope = [NineCell.group_varname(seg_group)]
-#         if component:
-#             param_scope.append(component)
-#         param_scope.append(param)
-#         pyNN.neuron.Population.rset(self, '.'.join(param_scope), rand_distr)
-# 
-#     def initialize_variable(self, variable, rand_distr, component=None, seg_group=None):
-#         variable_scope = [NineCell.group_varname(seg_group)]
-#         if component:
-#             variable_scope.append(component)
-#         variable_scope.append(variable)
-#         pyNN.neuron.Population.initialize(self, **{'.'.join(variable_scope): rand_distr})
-
-#    def can_record(self, variable):
-#        """
-#        Overloads that from pyNN.common.BasePopulation to allow section names and positions to
-#        be passed.
-#        """
-#        if hasattr(self.celltype, 'memb_model'): # If cell is generated from NCML file
-#            match = pyNN.neuron.recording.recordable_pattern.match(variable)
-#            if match:
-#                parts = match.groupdict()
-#                if parts['var'] not in self.celltype.recordable:
-#                    return False
-#                if parts['section']: # Check to see if section exists
-#                    if not hasattr(self.celltype, parts['section']):
-#                        return False
-#                if parts.has_key('position'): # Check to see if the position is between 0-1
-#                    pos = float(parts['position'])
-#                    if pos < 0.0 or pos > 1.0:
-#                        raise Exception("Position parameter in recording string, {}, is out of "
-#                                        "range (0.0-1.0)".format(pos))
-#                return True
-#            else:
-#                raise Exception("Could not parse variable name '%s'" % variable)
-#        else:
-#            return pyNN.neuron.Population.can_record(self, variable)
 
 
 class Projection(nineline.pyNN.common.Projection, pyNN.neuron.Projection):
