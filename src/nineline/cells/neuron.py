@@ -37,7 +37,8 @@ _basic_SI_to_neuron_conversions = (('s', 'ms'),
 
 _compound_SI_to_neuron_conversions = (((('A', 1), ('m', -2)), (('mA', 1), ('cm', -2))),
                                     ((('F', 1), ('m', -2)), (('uF', 1), ('cm', -2))),
-                                    ((('S', 1), ('m', -2)), (('S', 1), ('cm', -2))))
+                                    ((('S', 1), ('m', -2)), (('S', 1), ('cm', -2))),
+                                    ((('Ohm', 1), ('m', 1)), (('Ohm', 1), ('cm', 1))))
 
 
 _basic_unit_dict, _compound_unit_dict = create_unit_conversions(_basic_SI_to_neuron_conversions,
@@ -256,12 +257,12 @@ class NineCell(nineline.cells.NineCell):
         try:
             self.source_section = self.segments['soma']
         except KeyError:
-            logger.warning("'soma' section specified for {} cell class, randomly select"
-                           .format(self.nineml_model.name))
+            logger.warning("'soma' section not specified for {} cell class, will randomly select a"
+                           "section to be the 'source_section'".format(self.nineml_model.name))
             self.source_section = next(self.segments.itervalues())
         self.source = self.source_section(0.5)._ref_v
         # for recording
-        self.recordable = {'spikes': None, 'v': self.source_section._ref_v}
+        self.recordable = {'spikes': None} #  'v': self.source_section._ref_v, not sure about this
         for seg_name, seg in self.segments.iteritems():
             self.recordable['{' + seg_name + '}v'] = seg._ref_v 
         self.spike_times = h.Vector(0)
@@ -376,6 +377,22 @@ class NineCell(nineline.cells.NineCell):
                                 raise Exception("Could not insert {mech} into section group {clss} "
                                                 "({error})".format(mech=comp_name, error=e, 
                                                                    clss=seg_class))
+        try:
+            ra_param = nineml_model.biophysics.components['__NO_COMPONENT__'].parameters['Ra']
+            axial_resistance = convert_to_neuron_units(ra_param.value, ra_param.unit)[0]
+        except KeyError:
+            raise Exception("Axial resistance was not set for celltype '{}'"
+                            .format(nineml_model.name))
+        try:
+            cm_param = nineml_model.biophysics.components['__NO_COMPONENT__'].parameters['C_m']
+            capacitance = convert_to_neuron_units(cm_param.value, cm_param.unit)[0]
+        except KeyError:
+            raise Exception("Membrane capacitance was not set for celltype '{}'"
+                            .format(nineml_model.name))
+        for seg in self.segments.values():
+            seg.Ra = axial_resistance
+            seg.cm = capacitance
+                
 
     def _link_parameters(self, nineml_model):
         self._parameters = {}

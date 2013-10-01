@@ -37,10 +37,9 @@ class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
                                       solver_name=solver_name)
             dct = {'model': model}
             celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, name, (NinePyNNCell,), dct)
-            assert celltype.recordable == model.recordable.keys(), ("Mismatch of recordable keys "
-                                                                    "between NineCellPyNN and "
-                                                                    "NineCell class '{}'"
-                                                                    .format(name))
+            assert sorted(celltype.recordable) == sorted(model().recordable.keys()), \
+                    ("Mismatch of recordable keys between NineCellPyNN and NineCell class '{}'"
+                     .format(name))
             # If the url where the celltype is defined is specified save the celltype to be retried 
             # later
             if nineml_model.url is not None: 
