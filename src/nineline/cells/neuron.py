@@ -379,16 +379,16 @@ class NineCell(nineline.cells.NineCell):
                                                                    clss=seg_class))
         try:
             ra_param = nineml_model.biophysics.components['__NO_COMPONENT__'].parameters['Ra']
-            axial_resistance = convert_to_neuron_units(ra_param.value, ra_param.unit)[0]
         except KeyError:
             raise Exception("Axial resistance was not set for celltype '{}'"
                             .format(nineml_model.name))
+        axial_resistance = convert_to_neuron_units(ra_param.value, ra_param.unit)[0]
         try:
             cm_param = nineml_model.biophysics.components['__NO_COMPONENT__'].parameters['C_m']
-            capacitance = convert_to_neuron_units(cm_param.value, cm_param.unit)[0]
         except KeyError:
             raise Exception("Membrane capacitance was not set for celltype '{}'"
                             .format(nineml_model.name))
+        capacitance = convert_to_neuron_units(cm_param.value, cm_param.unit)[0]
         for seg in self.segments.values():
             seg.Ra = axial_resistance
             seg.cm = capacitance

@@ -41,7 +41,7 @@ def create_unit_conversions(basic_conversions, compound_conversions):
             simplified_SI.append((Quantity(1, SI_cmp[0]).simplified._dimensionality,
                                    SI_cmp[1]))
             nl_unit *= pow(Quantity(1, nl_cmp[0]), nl_cmp[1])
-        compound_dict[tuple(simplified_SI)] = nl_unit
+        compound_dict[tuple(sorted(simplified_SI))] = nl_unit
     return basic_dict, compound_dict
 
 
@@ -63,7 +63,7 @@ def convert_units(value, unit_str, basic_dict, compound_dict):
         for unit_comp, exponent in quantity._dimensionality.iteritems():
             simplified_units.append((unit_comp.simplified._dimensionality, exponent))
         try:
-            units = compound_dict[tuple(simplified_units)]
+            units = compound_dict[tuple(sorted(simplified_units))]
         except KeyError:  # If there isn't an explicit compound conversion, try to use combination of basic conversions
             units = 1.0
             for unit_dim, exponent in simplified_units:
