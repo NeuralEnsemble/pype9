@@ -26,10 +26,14 @@ _MODIFICATION_TIME_FILE = 'modification_time'
 
 if 'NRNHOME' in os.environ:
     os.environ['PATH'] += os.pathsep + os.path.join(os.environ['NRNHOME'], platform.machine(), 'bin')
-elif os.environ['HOME'] == '/home/tclose':
-    # I apologise for this little hack (this is the path on my machine, 
-    # to save me having to set the environment variable in eclipse)
-    os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin'
+else:
+  try:
+      if os.environ['HOME'] == '/home/tclose':
+          # I apologise for this little hack (this is the path on my machine, 
+          # to save me having to set the environment variable in eclipse)
+          os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin'
+  except KeyError:
+      pass
 
 def build_celltype_files(biophysics_name, nineml_path, install_dir=None, build_parent_dir=None,
     method='derivimplicit', build_mode='lazy', silent_build=False, kinetics=[]):
