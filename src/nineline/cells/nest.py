@@ -54,7 +54,7 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
                                         sys.platform in ['os2', 'os2emx', 'cygwin', 'atheos', 'ricos']:
                 lib_path_key = 'LD_LIBRARY_PATH'
             elif sys.platform == 'darwin':
-                lib_path_key = 'DLYD_LIBRARY_PATH'
+                lib_path_key = 'DYLD_LIBRARY_PATH'
             elif sys.platform == 'win32':
                 lib_path_key = 'PATH'
             if os.environ.has_key(lib_path_key):
