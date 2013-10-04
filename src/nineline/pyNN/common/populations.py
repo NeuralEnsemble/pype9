@@ -11,7 +11,7 @@ _pyNN_standard_class_translations = {}
 
 class Population(object):            
 
-    def __init__(self, nineml_model, dirname, rng, build_mode='lazy', silent_build=False, 
+    def __init__(self, nineml_model, rng, build_mode='lazy', silent_build=False, 
                 solver_name='cvode'):
         celltype_model = nineml_model.prototype.definition.component
         celltype_name = nineml_model.prototype.name if nineml_model.prototype.name else celltype_model.name

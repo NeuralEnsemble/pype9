@@ -33,8 +33,8 @@ class Network(object):
         self._populations = {}
         PopulationClass = self._PopulationClass
         for name, model in self.nineml_model.populations.iteritems():
-            self._populations[name] = PopulationClass(model, self.dirname, self._rng, build_mode, 
-                                                      silent_build, solver_name=solver_name)
+            self._populations[name] = PopulationClass(model, self._rng, build_mode, silent_build, 
+                                                      solver_name=solver_name)
         if build_mode not in ('build_only', 'compile_only'):
             self._projections = {}
             ProjectionClass = self._ProjectionClass
