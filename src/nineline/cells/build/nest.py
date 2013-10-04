@@ -24,10 +24,14 @@ _MODIFICATION_TIME_FILE = 'modification_time'
 
 if 'NEST_INSTALL_DIR' in os.environ:
     os.environ['PATH'] += os.pathsep + os.path.join(os.environ['NEST_INSTALL_DIR'], 'bin')
-elif os.environ['HOME'] == '/home/tclose':
-    # I apologise for this little hack (this is the path on my machine, 
-    # to save me having to set the environment variable in eclipse)
-    os.environ['PATH'] += os.pathsep + '/opt/NEST/2.2.1/bin'
+else:
+    try:
+        if os.environ['HOME'] == '/home/tclose':
+            # I apologise for this little hack (this is the path on my machine, 
+            # to save me having to set the environment variable in eclipse)
+            os.environ['PATH'] += os.pathsep + '/opt/NEST/2.2.1/bin'
+    except KeyError:
+        pass
 
 def ensure_camel_case(name):
     if len(name) < 2:
