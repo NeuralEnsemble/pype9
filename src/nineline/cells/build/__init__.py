@@ -17,7 +17,7 @@ from runpy import run_path
 
 BUILD_MODE_OPTIONS = ['lazy', 'force', 'build_only', 'require', 'compile_only']
 
-_RELATIVE_BUILD_DIR = 'nineline.build'
+_RELATIVE_BUILD_DIR = '.9build'
 _PARAMS_DIR = 'params'
 _SRC_DIR = 'src'
 _INSTALL_DIR = 'install'

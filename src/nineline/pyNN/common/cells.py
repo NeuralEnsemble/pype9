@@ -62,7 +62,7 @@ class NinePyNNCellMetaClass(type):
             except KeyError:
                 reference = p.reference
             if p.reference == 'Voltage':
-                parameter = DEFAULT_V_INIT #FIXME: This is a bit hackish, should probably be set somewhere else
+                parameter = DEFAULT_V_INIT
             else:
                 parameter = component.parameters[reference].value
             default_params[p.name] = parameter

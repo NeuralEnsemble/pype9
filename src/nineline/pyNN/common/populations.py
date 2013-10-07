@@ -121,7 +121,6 @@ class Population(object):
                 spike_intervals = rng.exponential(mean_interval,
                                                            size=(self.size, estimated_num_spikes))
                 spike_times = numpy.cumsum(spike_intervals, axis=1) + start_time
-                # FIXME: Should ensure that spike times don't exceed 'end_time' and make it at least until then.
                 self.set(spike_times=[pyNN.parameters.Sequence(train) for train in spike_times])
             else:
                 print ("Warning, stimulation start time ({}) is after stimulation end time ({})"
