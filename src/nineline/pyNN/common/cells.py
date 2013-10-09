@@ -92,7 +92,7 @@ class NinePyNNCellMetaClass(type):
         Constructs the dictionary of recordable parameters from the NCML model
         """
         #TODO: Make selected component variables also recordable  
-        return ['spikes'] + ['{' + seg + '}v' for seg in nineml_model.morphology.segments.keys()]
+        return ['spikes', 'v'] + ['{' + seg + '}v' for seg in nineml_model.morphology.segments.keys()]
 
     @classmethod
     def _construct_weight_variables(cls):

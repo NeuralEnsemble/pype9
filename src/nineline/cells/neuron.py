@@ -262,7 +262,7 @@ class NineCell(nineline.cells.NineCell):
             self.source_section = next(self.segments.itervalues())
         self.source = self.source_section(0.5)._ref_v
         # for recording
-        self.recordable = {'spikes': None} #  'v': self.source_section._ref_v, not sure about this
+        self.recordable = {'spikes': None, 'v': self.source_section._ref_v} # Once NEST supports sections, it might be an idea to drop this in favour of a more explicit scheme
         for seg_name, seg in self.segments.iteritems():
             self.recordable['{' + seg_name + '}v'] = seg._ref_v 
         self.spike_times = h.Vector(0)
