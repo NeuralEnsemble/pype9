@@ -66,7 +66,7 @@ class PositionBasedProbabilityConnector(Connector, pyNN.connectors.IndexBasedPro
         `expression`:
             a function that takes a source position and a target position array and calculates a
             probability matrix from them.
-        `source_branch`, `target_branch`:
+        `source_structure`, `target_structure`:
             the part of the source and target cells to use as the reference points. This allows
             multiple reference points on the cell to be used, eg. soma, dendritic/axonal branch 
             points.  If a cell only has one set of positions then they do not need to be 
@@ -81,21 +81,21 @@ class PositionBasedProbabilityConnector(Connector, pyNN.connectors.IndexBasedPro
     
     nineml_translations = {'allowSelfConnections':'allow_self_connections', 
                            'probabilityExpression':'expression', 
-                           'sourceBranch': 'source_branch', 'targetBranch':'target_branch'}
+                           'sourceStructure': 'source_structure', 'targetStructure':'target_structure'}
     
-    parameter_names = ('allow_self_connections', 'expression', 'source_branch', 'target_branch')        
+    parameter_names = ('allow_self_connections', 'expression', 'source_structure', 'target_structure')        
             
     def __init__(self, nineml_params, rng):
         conv_params = self._convert_params(nineml_params, rng)
         # The branch names are not actually needed here but are just included for the automatic PyNN
         # description function.
-        self.source_branch = conv_params['source_branch']
-        self.target_branch = conv_params['source_branch']
+        self.source_structure = conv_params['source_structure']
+        self.target_structure = conv_params['source_structure']
         # Initialise the index-based probability connector with position-based expression
         pyNN.connectors.IndexBasedProbabilityConnector.__init__(self,
                 _PositionBasedExpression(expression=conv_params['expression'], 
-                                         source_branch=conv_params['source_branch'],
-                                         target_branch=conv_params['target_branch']), 
+                                         source_structure=conv_params['source_structure'],
+                                         target_structure=conv_params['target_structure']), 
                 allow_self_connections=conv_params['allow_self_connections'], rng=rng)    
                 
 

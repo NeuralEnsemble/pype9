@@ -47,19 +47,19 @@ class _PositionBasedExpression(pyNN.connectors.IndexBasedExpression):
     can also be used in the PositionBasedProbabiliityConnector
     """
 
-    def __init__(self, expression, source_branch, target_branch):
+    def __init__(self, expression, source_structure, target_structure):
         """
         `function`: a function that takes a 3xN numpy position matrix and maps each row
                          (displacement) to a probability between 0 and 1
         """
         self.expression = expression
-        self.source_branch = source_branch
-        self.target_branch = target_branch
+        self.source_structure = source_structure
+        self.target_structure = target_structure
         pyNN.connectors.IndexBasedExpression.__init__(self)
 
     def __call__(self, i, j):
-        source_positions = self.projection.pre.structures[self.source_branch].positions[:, i]
-        target_positions = self.projection.post.structures[self.target_branch].positions[:, j]
+        source_positions = self.projection.pre.structures[self.source_structure].positions[:, i]
+        target_positions = self.projection.post.structures[self.target_structure].positions[:, j]
         values = self.expression(sourceX=source_positions[0],
                                  sourceY=source_positions[1],
                                  sourceZ=source_positions[2],
@@ -78,7 +78,7 @@ class PositionBasedExpression(StructureExpression, _PositionBasedExpression):
     and the value of variable connection parameters of a projection 
     """
 
-    nineml_translations = {'expression': 'expression', 'sourceBranch':'source_branch',
-                          'targetBranch':'target_branch'}
+    nineml_translations = {'expression': 'expression', 'sourceStructure':'source_structure',
+                          'targetStructure':'target_structure'}
 
 
