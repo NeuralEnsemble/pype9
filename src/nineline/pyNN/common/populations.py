@@ -4,7 +4,7 @@ import pyNN.parameters
 from nineline.pyNN.structure import Structure
 import nineline.pyNN.random
 from pyNN.random import RandomDistribution
-from nineml.abstraction_layer.component import ComponentClassStub
+from nineml.abstraction_layer.component import BaseComponentClass
 import nineml.extensions.biophysical_cells
 
 _pyNN_standard_class_translations = {}
@@ -18,7 +18,7 @@ class Population(object):
         # Store the definition url inside the cell type for use when checking reloading of cell 
         # model
         celltype_model.url = nineml_model.prototype.definition.url
-        if isinstance(celltype_model, ComponentClassStub):
+        if isinstance(celltype_model, BaseComponentClass):
             celltype = self._pyNN_standard_celltypes[celltype_model.name]
         elif isinstance(celltype_model, nineml.extensions.biophysical_cells.ComponentClass):
             celltype = self._NineCellMetaClass(celltype_name,
