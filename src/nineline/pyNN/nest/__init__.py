@@ -50,16 +50,18 @@ class Population(nineline.pyNN.common.Population, pyNN.nest.Population):
         # in NEST
         if variable.startswith('{'):
             variable = variable[variable.find('}')+1:]
-            if variable == 'v':
-                variable = 'V_m'
+        if variable == 'v':
+            variable = 'V_m'
         return variable
                 
     def record(self, variable, to_file=None):
         variable = self._translate_variable(variable)
-        super(Population, self).record(variable, to_file) 
-        
-    def can_record(self, variable):
-        return variable in [self._translate_variable(var) for var in self.celltype.recordable]                      
+        super(Population, self).record(variable, to_file)                      
+            
+    def _get_cell_initial_value(self, id, variable):
+        """Get the initial value of a state variable of the cell."""
+        return super(Population, self)._get_cell_initial_value(id, 
+                                                               self._translate_variable(variable))
             
     def initialize(self, **initial_values):
         """
