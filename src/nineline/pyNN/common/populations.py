@@ -6,6 +6,8 @@ import nineline.pyNN.random
 from pyNN.random import RandomDistribution
 from nineml.abstraction_layer.component import BaseComponentClass
 import nineml.extensions.biophysical_cells
+import nineml.user_layer
+import os.path
 
 _pyNN_standard_class_translations = {}
 
@@ -151,3 +153,23 @@ class Population(object):
     def _set_positions(self, positions, morphologies=None):
         super(Population, self)._set_positions(positions)
         self.morphologies = morphologies
+        
+
+def create_singleton_9ml(prototype_path, parameters):
+    """
+    Create a singleton population model given a path to a SpikingNode prototype
+    """
+     
+    layout_def = os.path.join(os.path.dirname(prototype_path), '..','nineml_catalog', 
+                              'networkstructures', 'line.xml')
+    layout_params = {'dx':(1, 'dimensionless'), 'x0':(0, 'dimensionless'), 'y':(0,'dimensionless'), 
+                     'z':(0, 'dimensionless')}
+    structlist = nineml.user_layer.StructureList([nineml.user_layer.Structure('none', 
+                         nineml.user_layer.Layout('line', definition=layout_def, 
+                                                  parameters=layout_params), None)])
+    definition = nineml.user_layer.Definition(prototype_path, '')
+    prototype = nineml.user_layer.SpikingNodeType('LoadedCell', definition, parameters)
+    
+    prototype = nineml.user_layer.get_or_create_prototype(comp_element, [], [], prototype_path) 
+    Population('Singleton', 1, prototype, structlist)
+             

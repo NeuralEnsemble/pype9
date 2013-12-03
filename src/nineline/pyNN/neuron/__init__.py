@@ -30,6 +30,7 @@ from nineline.pyNN.neuron.cells import NinePyNNCellMetaClass
 from nineline.cells.neuron import NineCell
 from . import synapses as synapses_module #@UnresolvedImport
 import logging
+from pyNN.random import NumpyRNG
 
 logger = logging.getLogger("PyNN")
 
@@ -81,9 +82,10 @@ class Network(nineline.pyNN.common.Network):
         neuron.h.celsius = p['temperature']
 
 
-if __name__ == "__main__":
-
-    net = Network('/home/tclose/Projects/Cerebellar/xml/cerebellum/test.xml')
-
-    print 'done'
+def create_singleton_population(prototype_path, build_mode='lazy', silent_build=False, 
+                                solver_name='cvode'):
+    pop_9ml = nineline.pyNN.common.populations.create_singleton_9ml(prototype_path)
+    pop = Population(pop_9ml, NumpyRNG(), build_mode, silent_build=silent_build, 
+                     solver_name=solver_name) 
+    return pop, pop[0]
 

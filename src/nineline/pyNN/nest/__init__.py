@@ -30,6 +30,7 @@ import nest
 from nest.hl_api import NESTError
 import nineline.pyNN.common
 from . import synapses as synapses_module
+from pyNN.random import NumpyRNG
 from nineline.pyNN.nest.cells import NinePyNNCellMetaClass
 from nineline.cells.nest import NineCell
 
@@ -175,6 +176,11 @@ try changing the values for timestep ({time}) and min_delay ({delay}). (Message 
                                                                               e=e))
         self.temperature = p['temperature']
 
-if __name__ == "__main__":
-    print "loaded"
 
+def create_singleton_population(prototype_path, build_mode='lazy', silent_build=False, 
+                                solver_name='cvode'):
+    pop_9ml = nineline.pyNN.common.populations.create_singleton_9ml(prototype_path)
+    pop = Population(pop_9ml, NumpyRNG(), build_mode, silent_build=silent_build, 
+                     solver_name=solver_name) 
+    return pop, pop[0]
+    
