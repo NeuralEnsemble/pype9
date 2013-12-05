@@ -177,9 +177,9 @@ try changing the values for timestep ({time}) and min_delay ({delay}). (Message 
         self.temperature = p['temperature']
 
 
-def create_singleton_population(prototype_path, build_mode='lazy', silent_build=False, 
+def create_singleton_population(prototype_path, parameters, build_mode='lazy', silent_build=False, 
                                 solver_name='cvode'):
-    pop_9ml = nineline.pyNN.common.populations.create_singleton_9ml(prototype_path)
+    pop_9ml = nineline.pyNN.common.populations.create_singleton_9ml(prototype_path, parameters)
     pop = Population(pop_9ml, NumpyRNG(), build_mode, silent_build=silent_build, 
                      solver_name=solver_name) 
     return pop, pop[0]

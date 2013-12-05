@@ -82,7 +82,7 @@ class NinePyNNCellMetaClass(type):
                 if component.type == 'post-synaptic-conductance':
                     clsfctn = nineml_model.morphology.classifications[mapping.segments.classification]
                     for seg_cls in mapping.segments:
-                        for member in clsfctn[seg_cls].members:
+                        for member in clsfctn[seg_cls]:
                             receptors.append('{' + str(member) + '}' + component.name)
         return receptors
 

@@ -323,7 +323,7 @@ class NineCell(nineline.cells.NineCell):
             classification = {}
             for name, cls_model in model.classes.iteritems(): #@UnusedVariable
                 seg_class = []
-                for member in cls_model.members:
+                for member in cls_model:
                     try:
                         seg_class.append(self.segments[member.segment_name])
                     except KeyError:

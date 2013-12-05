@@ -168,8 +168,6 @@ def create_singleton_9ml(prototype_path, parameters):
                          nineml.user_layer.Layout('line', definition=layout_def, 
                                                   parameters=layout_params), None)])
     definition = nineml.user_layer.Definition(prototype_path, '')
-    prototype = nineml.user_layer.SpikingNodeType('LoadedCell', definition, parameters)
-    
-    prototype = nineml.user_layer.get_or_create_prototype(comp_element, [], [], prototype_path) 
-    Population('Singleton', 1, prototype, structlist)
-             
+    prototype_name = next(nineml.extensions.biophysical_cells.parse(prototype_path).iterkeys())
+    prototype = nineml.user_layer.SpikingNodeType(prototype_name, definition, parameters)
+    return nineml.user_layer.Population('Singleton', 1, prototype, structlist)
