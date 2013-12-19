@@ -254,12 +254,6 @@ class NineCell(nineline.cells.NineCell):
         self._construct_morphology(self.nineml_model.morphology)
         self._map_biophysics_to_morphology(self.nineml_model)
         # Setup variables required by pyNN
-        try:
-            self.source_section = self.segments['soma']
-        except KeyError:
-            logger.warning("'soma' section not specified for {} cell class, will randomly select a"
-                           "section to be the 'source_section'".format(self.nineml_model.name))
-            self.source_section = next(self.segments.itervalues())
         self.source = self.source_section(0.5)._ref_v
         # for recording
         self.recordable = {'spikes': None, 'v': self.source_section._ref_v} # Once NEST supports sections, it might be an idea to drop this in favour of a more explicit scheme
@@ -286,19 +280,19 @@ class NineCell(nineline.cells.NineCell):
             raise Exception("The loaded morphology does not contain any segments")
         # Initialise all segments
         self.segments = {}
-        self.root_segment = None
+        self.source_section = None
         for model in nineml_model.segments.values():
             seg = NineCell.Segment(model)
             self.segments[model.name] = seg
             #TODO This should really be part of the 9ML package
             if not model.parent:
-                if self.root_segment:
+                if self.source_section:
                     raise Exception("Two segments ({0} and {1}) were declared without parents, " 
                                     "meaning the neuronal tree is disconnected"
-                                    .format(self.root_segment.name, seg.name))
-                self.root_segment = seg
+                                    .format(self.source_section.name, seg.name))
+                self.source_section = seg
         #TODO And this check too
-        if not self.root_segment:
+        if not self.source_section:
             raise Exception("The neuronal tree does not have a root segment, meaning it is " 
                             "connected in a circle (I assume this is not intended)")
         # Connect the segments together
@@ -309,7 +303,7 @@ class NineCell(nineline.cells.NineCell):
         # Work out the segment lengths properly accounting for the "fraction_along". This is 
         # performed via a tree traversal to ensure that the parents 'proximal' field has already 
         # been calculated beforehand
-        segment_stack = [self.root_segment]
+        segment_stack = [self.source_section]
         while len(segment_stack):
             seg = segment_stack.pop()
             if seg._parent_seg:
