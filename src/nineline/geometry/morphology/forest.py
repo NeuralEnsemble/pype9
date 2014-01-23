@@ -4,7 +4,7 @@ from numpy.linalg import norm
 from .tree import Tree, Soma
 from copy import deepcopy
 from .mask import VolumeMask
-from .io.neurolucida import read_NeurolucidaTreeXML, read_NeurolucidaSomaXML
+from .io.neurolucida import read_NeurolucidaTreeXML, read_NeurolucidaSomaXML, DEEP_Z_VOX_SIZE
 
 try:
     import matplotlib.pyplot as plt

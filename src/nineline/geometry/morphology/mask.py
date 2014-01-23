@@ -17,7 +17,11 @@ except:
 
 # Constants ----------------------------------------------------------------------------------------
 
-
+GAUSS_THRESHOLD_DEFAULT = 0.02
+GAUSS_SAMPLE_FREQ_DEFAULT = 100
+DEEP_Z_VOX_SIZE = 10000 # This is the vox size used for the z axis to approximate infinite depth
+# Pre-calculated for speed (not sure if this would be a bottleneck though)
+SQRT_3 = math.sqrt(3)
 SAMPLE_DIAM_RATIO = 4.0
 
 # Pre-calculated for speed (not sure if this would be a bottleneck though)
@@ -94,7 +98,7 @@ class Mask(object):
     def displaced_mask(self, displacement):
         return DisplacedMask(self, displacement)
 
-    def plot(self, slice_dim=2, skip=1, show=True, colour_map=None, colour_bar=True):
+    def plot(self, slice_dim=2, skip=1, show=True, colour_map=None):
         for i in xrange(0, self.dim[slice_dim], skip):
             if not plt:
                 raise Exception("Matplotlib could not be imported and therefore plotting functions "

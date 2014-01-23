@@ -15,11 +15,7 @@
 from __future__ import absolute_import
 import numpy
 import collections
-from .mask import DisplacedVoxelSizeMismatchException, Mask, ConvolvedMask, VolumeMask
-
-GAUSS_THRESHOLD_DEFAULT = 0.02
-GAUSS_SAMPLE_FREQ_DEFAULT = 100
-
+from .mask import DisplacedVoxelSizeMismatchException, Mask, ConvolvedMask, VolumeMask, GAUSS_THRESHOLD_DEFAULT, GAUSS_SAMPLE_FREQ_DEFAULT
 
 try:
     import matplotlib.pyplot as plt
