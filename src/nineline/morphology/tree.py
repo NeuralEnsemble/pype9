@@ -16,6 +16,7 @@ from __future__ import absolute_import
 import numpy
 import collections
 from . import mask
+from .io.neurolucida import read_NeurolucidaTreeXML
 
 try:
     import matplotlib.pyplot as plt
@@ -50,6 +51,12 @@ class Tree(object):
         # Create dictionaries to store tree masks to save having to regenerate them the next time
         self._masks = collections.defaultdict(dict)
         
+    @classmethod
+    def load_neurolucidaXML(cls, filename):
+        roots = read_NeurolucidaTreeXML(filename)
+        if len(roots) > 1:
+            raise Exception("More than one tree loaded from file '{}'".format(filename))
+        return cls(roots[0])
 
     def _flatten(self, branch, prev_index= -1):
         """

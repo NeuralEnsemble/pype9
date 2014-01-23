@@ -143,5 +143,17 @@ class SWCTree:
             f.write("<!-- Generated xml file from '{}' SWC file -->\n".format(filename))
             f.write('<tree  type="Dendrite" leaf="Normal">\n')
             write_branch_xml(f, self.start, '    ')
-            f.write("</mbf>\n</tree>\n")
+            f.write("</tree>\n</mbf>\n")
         print "Finished writing tree"
+        
+        
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input_file', type=str, help="Input filename (swc format)")
+    parser.add_argument('output_file', type=str, help="Output filename (neurolucida XML format)")
+    args = parser.parse_args()
+    tree = SWCTree(args.input_file, skip_axon=False)
+    tree.save_NeurolucidaXML(args.output_file)
+    print "Converted '{}' from SWC format to '{}' in NeurolucidaXML format".format(args.input_file,
+                                                                                   args.output_file)

@@ -4,7 +4,6 @@ import math
 import numpy
 from numpy.linalg import norm
 from copy import deepcopy
-from . import tree
 from .utils import axially_symmetric_tensor
 
 try:
@@ -142,7 +141,8 @@ class Mask(object):
 
     @classmethod
     def _parse_tree_points(cls, tree_or_points, diams=None):
-        if type(tree_or_points) == tree.Tree:
+        assert(False), 'need to check this code still works'
+        if tree_or_points.__class__ == 'Tree':
             tree = tree_or_points
             points = tree.points
             if diams:

@@ -21,10 +21,9 @@ import collections
 import xml.sax
 import pyNN.connectors
 from nineline import XMLHandler
-from ..__init__ import axially_symmetric_tensor
+from .utils import axially_symmetric_tensor
 import itertools
 from .forest import Forest
-from .mask import VolumeMask
 from .tree import Tree
 from copy import deepcopy
 try:
@@ -100,7 +99,7 @@ class MorphologyBasedProbabilityConnector(pyNN.connectors.IndexBasedProbabilityC
 #  Testing functions -------------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    import nineline.geometry.morphology
+    print 'nothing'
 #     VOX_SIZE = (0.1, 0.1, 500)
 #     from os.path import normpath, join
 #     print "Loading forest..."

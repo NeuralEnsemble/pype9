@@ -1,7 +1,7 @@
 
 import collections
 import xml.sax
-from ....__init__ import XMLHandler
+from ...__init__ import XMLHandler
 
 class NeurolucidaTreeXMLHandler(XMLHandler):
     """
