@@ -49,36 +49,7 @@ class Tree(object):
         self.centroid = numpy.average(self.points, axis=0)
         # Create dictionaries to store tree masks to save having to regenerate them the next time
         self._masks = collections.defaultdict(dict)
-
-    def add_soma(self, soma):
-        self.soma = soma
-
-    def soma_position(self):
-        if self.soma:
-            pos = self.soma.centre
-        else:
-            pos = self._points[0, :]
-        return pos
-
-    @property
-    def points(self):
-        return self._points
-
-    def num_points(self):
-        return len(self._points)
-
-    @property
-    def segments(self):
-        """
-        Iterates through all the segments in the tree
-        """
-        for i, diam in enumerate(self.diams):
-            prev_index = self._prev_indices[i]
-            if prev_index != -1:
-                yield self.Segment(self._points[prev_index, :], self.points[i, :], diam)
-
-    def num_segments(self):
-        return len(self._points) - 1
+        
 
     def _flatten(self, branch, prev_index= -1):
         """
@@ -95,7 +66,39 @@ class Tree(object):
             self._prev_indices.append(prev_index)
             prev_index = len(self._points) - 1
         for branch in branch.sub_branches:
-            self._flatten(branch, prev_index)
+            self._flatten(branch, prev_index)        
+
+    def add_soma(self, soma):
+        self.soma = soma
+
+    def soma_position(self):
+        if self.soma:
+            pos = self.soma.centre
+        else:
+            pos = self._points[0, :]
+        return pos
+
+    @property
+    def points(self):
+        return self._points
+
+    @property
+    def num_points(self):
+        return len(self._points)
+
+    @property
+    def segments(self):
+        """
+        Iterates through all the segments in the tree
+        """
+        for i, diam in enumerate(self.diams):
+            prev_index = self._prev_indices[i]
+            if prev_index != -1:
+                yield self.Segment(self._points[prev_index, :], self.points[i, :], diam)
+
+    @property
+    def num_segments(self):
+        return len(self._points) - 1
 
     def transform(self, transform):
         """

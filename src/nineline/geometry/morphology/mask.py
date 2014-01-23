@@ -4,7 +4,7 @@ import math
 import numpy
 from numpy.linalg import norm
 from copy import deepcopy
-from .tree import Tree
+import .tree as tree
 from ..__init__ import axially_symmetric_tensor
 
 try:
@@ -142,7 +142,7 @@ class Mask(object):
 
     @classmethod
     def _parse_tree_points(cls, tree_or_points, diams=None):
-        if type(tree_or_points) == Tree:
+        if type(tree_or_points) == tree.Tree:
             tree = tree_or_points
             points = tree.points
             if diams:
@@ -291,7 +291,7 @@ class ConvolvedMask(Mask):
         """
         Adds the tree to a given mask
         
-        @param tree [Tree]: The tree to draw the mask for
+        @param tree [tree.Tree]: The tree to draw the mask for
         @param vox_size [numpy.array(3)]: The size of the voxels
         @param kernel [method]: A method that takes a displacement vector and returns a value 
         """

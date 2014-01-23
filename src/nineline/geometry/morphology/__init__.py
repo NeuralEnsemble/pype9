@@ -25,6 +25,7 @@ from ..__init__ import axially_symmetric_tensor
 import itertools
 from .forest import Forest
 from .mask import VolumeMask
+from .tree import Tree
 from copy import deepcopy
 try:
     import matplotlib.pyplot as plt
