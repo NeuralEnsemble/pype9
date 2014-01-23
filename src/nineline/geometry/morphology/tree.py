@@ -15,7 +15,7 @@
 from __future__ import absolute_import
 import numpy
 import collections
-from .mask import DisplacedVoxelSizeMismatchException, Mask, ConvolvedMask, VolumeMask, GAUSS_THRESHOLD_DEFAULT, GAUSS_SAMPLE_FREQ_DEFAULT
+import .mask
 
 try:
     import matplotlib.pyplot as plt
@@ -155,9 +155,9 @@ class Tree(object):
         
         @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
         """
-        vox_size = Mask.parse_vox_size(vox_size)
+        vox_size = mask.Mask.parse_vox_size(vox_size)
         if not self._masks.has_key(vox_size):
-            self._masks[vox_size] = VolumeMask(vox_size, self, dtype=dtype)
+            self._masks[vox_size] = mask.VolumeMask(vox_size, self, dtype=dtype)
         return self._masks[vox_size]
 
     def get_mask(self, kernel):
@@ -168,7 +168,7 @@ class Tree(object):
         
         """
         if not self._masks.has_key(kernel):
-            self._masks[kernel] = ConvolvedMask(self, kernel)
+            self._masks[kernel] = mask.ConvolvedMask(self, kernel)
         return self._masks[kernel]
 
     def displaced_tree(self, displacement):
@@ -224,8 +224,8 @@ class Tree(object):
         mask.plot(show=show, colour_map=colour_map)
 
     def plot_prob_mask(self, vox_size, scale=1.0, orient=(1.0, 0.0, 0.0), decay_rate=0.1,
-                       isotropy=1.0, threshold=GAUSS_THRESHOLD_DEFAULT, sample_freq=GAUSS_SAMPLE_FREQ_DEFAULT,
-                       show=True, colour_map='jet'):
+                       isotropy=1.0, threshold=mask.GAUSS_THRESHOLD_DEFAULT, 
+                       sample_freq=mask.GAUSS_SAMPLE_FREQ_DEFAULT, show=True, colour_map='jet'):
         mask = self.get_prob_mask(vox_size, scale, orient, decay_rate=decay_rate,
                                   isotropy=isotropy, threshold=threshold,
                                   sample_freq=sample_freq)
@@ -282,7 +282,7 @@ class DisplacedTree(Tree):
         try:
             return self._undisplaced_tree.get_volume_mask(*mask_args).\
                                                                    displaced_mask(self.displacement)
-        except DisplacedVoxelSizeMismatchException as e:
+        except mask.DisplacedVoxelSizeMismatchException as e:
             raise Exception("Cannot get volume mask of displaced tree because its displacement {} "
                             "is not a multiple of the mask voxel sizes. {}"
                             .format(self.displacement, e))
@@ -297,7 +297,7 @@ class DisplacedTree(Tree):
         """
         try:
             return self._undisplaced_tree.get_mask(*mask_args).displaced_mask(self.displacement)
-        except DisplacedVoxelSizeMismatchException as e:
+        except mask.DisplacedVoxelSizeMismatchException as e:
             raise Exception("Cannot get mask of displaced tree because its displacement {} is not a"
                             " multiple of the mask voxel sizes. {}".format(self.displacement, e))
 

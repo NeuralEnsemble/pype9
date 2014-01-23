@@ -4,7 +4,7 @@ import math
 import numpy
 from numpy.linalg import norm
 from copy import deepcopy
-import .tree as tree
+import .tree
 from ..__init__ import axially_symmetric_tensor
 
 try:
