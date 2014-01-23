@@ -14,7 +14,7 @@
 from __future__ import absolute_import
 import numpy as np
 from warnings import warn
-from nineline.forests import axially_symmetric_tensor
+from .__init__ import axially_symmetric_tensor
 
 class InsufficientTargetsWarning(Warning): pass
 
