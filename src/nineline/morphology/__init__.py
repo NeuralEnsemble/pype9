@@ -100,23 +100,24 @@ class MorphologyBasedProbabilityConnector(pyNN.connectors.IndexBasedProbabilityC
 #  Testing functions -------------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    VOX_SIZE = (0.1, 0.1, 500)
-    from os.path import normpath, join
-    print "Loading forest..."
-#    forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
-#                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
-    forest = Forest(normpath(join('home','tclose','git','kbrain', 'morph', 'Purkinje', 'xml',
-                                  'tree2.xml')), include_somas=False)
-    print "Finished loading forest."
-    forest.offset((0.0, 0.0, -250))
-#    forest.plot_volume_mask(VOX_SIZE, show=False, dtype=int)
-#    plt.title('Original rotation')
-#    print forest.align_to_xyz_axes()
-    # To move the forest away from zero so it is contained with in one z voxel    
-    forest.plot_volume_mask(VOX_SIZE, show=False, dtype=int)
-    plt.title('Aligned rotation')
-#    coverage, central_mask = forest.xy_coverage(VOX_SIZE[:2], (1.0, 1.0))
-#    img = plt.imshow(central_mask, cmap=plt.cm.get_cmap('gray'))
-#    img.set_interpolation('nearest')
-#    print "Coverage: {}".format(coverage)
-    plt.show()
+    import nineline.geometry.morphology
+#     VOX_SIZE = (0.1, 0.1, 500)
+#     from os.path import normpath, join
+#     print "Loading forest..."
+# #    forest = Forest(normpath(join(SRC_PATH, '..', 'morph', 'Purkinje', 'xml',
+# #                                  'GFP_P60.1_slide7_2ndslice-HN-FINAL.xml')))
+#     forest = Forest(normpath(join('home','tclose','git','kbrain', 'morph', 'Purkinje', 'xml',
+#                                   'tree2.xml')), include_somas=False)
+#     print "Finished loading forest."
+#     forest.offset((0.0, 0.0, -250))
+# #    forest.plot_volume_mask(VOX_SIZE, show=False, dtype=int)
+# #    plt.title('Original rotation')
+# #    print forest.align_to_xyz_axes()
+#     # To move the forest away from zero so it is contained with in one z voxel    
+#     forest.plot_volume_mask(VOX_SIZE, show=False, dtype=int)
+#     plt.title('Aligned rotation')
+# #    coverage, central_mask = forest.xy_coverage(VOX_SIZE[:2], (1.0, 1.0))
+# #    img = plt.imshow(central_mask, cmap=plt.cm.get_cmap('gray'))
+# #    img.set_interpolation('nearest')
+# #    print "Coverage: {}".format(coverage)
+#     plt.show()

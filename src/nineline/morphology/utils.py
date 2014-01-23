@@ -1,12 +1,3 @@
-"""
-
-This package defines methods for producing patterns of connectivity between neuron populations
-
-
-@author: Tom Close
-@date: 23/01/13
-"""
-from __future__ import absolute_import
 import numpy as np
 
 def transform_tensor(scale=(1.0, 1.0, 1.0), rotation=(0.0, 0.0, 0.0)):
@@ -102,4 +93,3 @@ if __name__ == "__main__":
         selected_points = points[(dist < 1.0), :]
         ax.scatter(selected_points[:, 0], selected_points[:, 1], selected_points[:, 2])
     plt.show()
-

@@ -15,7 +15,7 @@
 from __future__ import absolute_import
 import numpy
 import collections
-import .mask
+from . import mask
 
 try:
     import matplotlib.pyplot as plt

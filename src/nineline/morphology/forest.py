@@ -1,10 +1,10 @@
 from __future__ import absolute_import
 import numpy
 from numpy.linalg import norm
-from .tree import Tree, Soma
+from . import tree
 from copy import deepcopy
-from .mask import VolumeMask
-from .io.neurolucida import read_NeurolucidaTreeXML, read_NeurolucidaSomaXML, DEEP_Z_VOX_SIZE
+from . import mask
+from .io.neurolucida import read_NeurolucidaTreeXML, read_NeurolucidaSomaXML
 
 try:
     import matplotlib.pyplot as plt
@@ -21,7 +21,7 @@ class Forest(object):
         roots = read_NeurolucidaTreeXML(xml_filename)
         self.trees = []
         for root in roots:
-            self.trees.append(Tree(root))
+            self.trees.append(tree.Tree(root))
         self.centroid = numpy.zeros(3)
         self.min_bounds = numpy.ones(3) * float('inf')
         self.max_bounds = numpy.ones(3) * float('-inf')
@@ -43,7 +43,7 @@ class Forest(object):
                     raise Exception("Number of loaded somas ({}) and trees do not match ({}) "
                                     .format(len(soma_dict), len(self.trees)))
                 for label, soma in soma_dict.items():
-                    self.trees[soma.index].add_soma(Soma(label, soma.contours))
+                    self.trees[soma.index].add_soma(tree.Soma(label, soma.contours))
                 self.has_somas = True
         else:
             self.has_somas = False
@@ -82,14 +82,14 @@ class Forest(object):
             tree.offset(offset)
 
     def get_volume_mask(self, vox_size, dtype=bool):
-        mask = VolumeMask(vox_size, numpy.vstack([tree.points for tree in self.trees]),
+        mask = mask.VolumeMask(vox_size, numpy.vstack([tree.points for tree in self.trees]),
                           numpy.hstack([tree.diams for tree in self.trees]), dtype)
         if dtype == bool:
             for i, tree in enumerate(self): #@UnusedVariable
                 mask.add_tree(tree)
 #         print "Added {} tree to volume mask".format(i)
         else:
-            bool_mask = VolumeMask(vox_size, numpy.vstack([tree.points for tree in self.trees]),
+            bool_mask = mask.VolumeMask(vox_size, numpy.vstack([tree.points for tree in self.trees]),
                                    numpy.hstack([tree.diams for tree in self.trees]), bool)
             for i, tree in enumerate(self):  #@UnusedVariable
                 tree_mask = deepcopy(bool_mask)
@@ -111,8 +111,8 @@ class Forest(object):
         if len(vox_size) != 2:
             raise Exception("Voxel size needs to be 2-D (X and Y dimensions), found {}D"
                             .format(len(vox_size)))
-        self.offset((0.0, 0.0, DEEP_Z_VOX_SIZE / 2.0))
-        mask = self.get_volume_mask(vox_size + (DEEP_Z_VOX_SIZE,))
+        self.offset((0.0, 0.0, mask.DEEP_Z_VOX_SIZE / 2.0))
+        mask = self.get_volume_mask(vox_size + (mask.DEEP_Z_VOX_SIZE,))
         if mask.dim[2] != 1:
             raise Exception("Not all voxels where contained with the \"deep\" z voxel dimension")
         trimmed_frac = (1.0 - numpy.array(central_frac)) / 2.0
@@ -120,7 +120,7 @@ class Forest(object):
         end = numpy.array(numpy.ceil(mask.dim[:2] * (1.0 - trimmed_frac)), dtype=int)
         central_mask = mask._mask_array[start[0]:end[0], start[1]:end[1], 0].squeeze()
         coverage = float(numpy.count_nonzero(central_mask)) / float(numpy.prod(central_mask.shape))
-        self.offset((0.0, 0.0, -DEEP_Z_VOX_SIZE / 2.0))
+        self.offset((0.0, 0.0, -mask.DEEP_Z_VOX_SIZE / 2.0))
         return coverage, central_mask
 
     def normal_to_dendrites(self):
