@@ -23,6 +23,61 @@ try:
 except:
     # If pyplot is not installed, ignore it and only throw an error if a plotting function is called
     plt = None
+    
+# try:
+#     from pyface.qt import QtGui, QtCore
+#     from PyQt4 import uic
+#     
+#     from traits.api import HasTraits, Instance, on_trait_change, \
+#         Int, Dict
+#     from traitsui.api import View, Item
+#     from mayavi.core.ui.api import MayaviScene, MlabSceneModel, \
+#             SceneEditor
+#     from mayavi import mlab
+#     
+#     ################################################################################
+#     #The actual visualization
+#     class Visualization(HasTraits):
+#         scene = Instance(MlabSceneModel, ())
+#     
+#         @on_trait_change('scene.activated')
+#         def update_plot(self):
+#             # This function is called when the view is opened. We don't
+#             # populate the scene when the view is not yet open, as some 
+#             # VTK features require a GLContext.
+#     
+#             # We can do normal mlab calls on the embedded scene.
+#     #        self.scene.mlab.test_points3d()
+#             pass
+#     
+#         # the layout of the dialog screated
+#         view = View(Item('scene', editor=SceneEditor(scene_class=MayaviScene),
+#                          height=400, width=500, show_label=False),
+#                     resizable=True # We need this to resize with the parent widget
+#                     )
+# 
+#     # The QWidget containing the visualization, this is pure PyQt4 code.
+#     class MayaviQWidget(QtGui.QWidget):
+#         def __init__(self, parent=None):
+#             QtGui.QWidget.__init__(self, parent)
+#             layout = QtGui.QVBoxLayout(self)
+#             layout.setContentsMargins(0,0,0,0)
+#             layout.setSpacing(0)
+#             self.visualization = Visualization()
+#     
+#             # If you want to debug, beware that you need to remove the Qt
+#             # input hook.
+#             #QtCore.pyqtRemoveInputHook()
+#             #import pdb ; pdb.set_trace()
+#             #QtCore.pyqtRestoreInputHook()
+#     
+#             # The edit_traits call will generate the widget to embed.
+#             self.ui = self.visualization.edit_traits(parent=self, 
+#                                                      kind='subpanel').control
+#             layout.addWidget(self.ui)
+#             self.ui.setParent(self)
+# except:
+mlab = None
 
 class Tree(object):
 
@@ -39,6 +94,7 @@ class Tree(object):
         self._points = []
         self._prev_indices = []
         self.diams = []
+        self.connected_segments = []
         self._flatten(root)
         # Convert flattened lists to numpy arrays
         self._points = numpy.array(self._points)
@@ -67,11 +123,15 @@ class Tree(object):
         @param point_index [int]: the index (point count) of the current point
         @param prev_index [int]: the index of the previous point (-1 signifies no previous point, i.e the segment is a root node)
         """
+        connected = []
         for point in branch.points:
+            index = len(self._points)
             self._points.append(point[0:3])
             self.diams.append(point[3])
             self._prev_indices.append(prev_index)
-            prev_index = len(self._points) - 1
+            connected.append(index)
+            prev_index = index
+        self.connected_segments.append(numpy.array(connected))
         for branch in branch.sub_branches:
             self._flatten(branch, prev_index)        
 
@@ -252,7 +312,49 @@ class Tree(object):
         if normal.sum() < 0:
             normal *= -1.0
         return normal
-
+    
+    def plot3D(self, mayavi):
+        "Draw the surface the first time"
+        
+        f = mlab.figure(1, bgcolor=(0, 0, 0))
+        
+#         for tube_indices in self.connected_segments:
+#             points = self.points[tube_indices,:]
+#             diam = numpy.average(self.diams[tube_indices])
+#             surface = mlab.plot3d(points[:,0], points[:,1], points[:,2], tube_radius=diam, 
+#                                   colormap='Greys')
+#         return f
+        # rendering disabled
+        mayavi.visualization.scene.disable_render = True
+         
+        points = mlab.pipeline.scalar_scatter(self.points[:,0], self.points[:,1], self.points[:,2], 
+                                              self.diams / 2.0)
+         
+        dataset = points.mlab_source.dataset
+        dataset.point_data.get_array(0).name = 'diameter'
+        dataset.lines = numpy.hstack((numpy.reshape(numpy.arange(self.num_points-1), (1,-1)), 
+                                      numpy.reshape(self._prev_indices[2:], (1,-1))))
+        dataset.point_data.update()
+ 
+        # The tube
+        src = mlab.pipeline.set_active_attribute(points, point_scalars='diameter')
+        stripper = mlab.pipeline.stripper(src)
+        tube = mlab.pipeline.tube(stripper, tube_sides = 6, tube_radius = 1)
+        tube.filter.capping = True
+#        tube.filter.use_default_normal = False
+        tube.filter.vary_radius = 'vary_radius_by_absolute_scalar'
+         
+#         array_id = dataset.point_data.add_array(1.0)
+#         dataset.point_data.get_array(array_id).name = 'none'
+#         dataset.point_data.update()
+        src2 = mlab.pipeline.set_active_attribute(tube, 
+                                                   point_scalars='none')
+        self.surf = mlab.pipeline.surface(src2, colormap='blue-red')        
+                 
+        # ReEnable the rendering
+#         mayavi.visualization.scene.disable_render = False
+        return (tube, dataset)
+            
 
 class DisplacedTree(Tree):
 
@@ -316,7 +418,7 @@ class DisplacedTree(Tree):
     def segments(self):
         for seg in self._undisplaced_tree.segments:
             yield Tree.Segment(seg.begin + self.displacement, seg.end + self.displacement, seg.diam)
-            
+    
 
 
 class Soma(object):

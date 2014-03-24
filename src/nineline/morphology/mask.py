@@ -97,25 +97,44 @@ class Mask(object):
     def displaced_mask(self, displacement):
         return DisplacedMask(self, displacement)
 
-    def plot(self, slice_dim=2, skip=1, show=True, colour_map=None):
+    def plot(self, slice_dim=2, skip=1, show=True, colour_map=None, alpha=1):
+        cmap = plt.cm.get_cmap(colour_map)
+        if alpha < 1.0:
+            plt.figure()
+            ax = plt.gca()
+            ax.hold(1)
+            cmap.set_under('k', alpha=0)
         for i in xrange(0, self.dim[slice_dim], skip):
             if not plt:
                 raise Exception("Matplotlib could not be imported and therefore plotting functions "
                                 "have been disabled")
-            plt.figure()
+            if alpha == 1:
+                plt.figure()
             mask_shape = self._mask_array.shape
-            if slice_dim == 0: slice_indices = numpy.ogrid[i:(i + 1), 0:mask_shape[1], 0:mask_shape[2]]
-            elif slice_dim == 1: slice_indices = numpy.ogrid[0:mask_shape[0], i:(i + 1), 0:mask_shape[2]]
-            elif slice_dim == 2: slice_indices = numpy.ogrid[0:mask_shape[0], 0:mask_shape[1], i:(i + 1)]
+            if slice_dim == 0: 
+                slice_indices = numpy.ogrid[i:(i + 1), 0:mask_shape[1], 0:mask_shape[2]]
+                extent=[self.min_bounds[1], self.max_bounds[1],
+                        self.min_bounds[2], self.max_bounds[2]]
+            elif slice_dim == 1: 
+                slice_indices = numpy.ogrid[0:mask_shape[0], i:(i + 1), 0:mask_shape[2]]
+                extent=[self.min_bounds[0], self.max_bounds[0],
+                        self.min_bounds[2], self.max_bounds[2]]
+            elif slice_dim == 2: 
+                slice_indices = numpy.ogrid[0:mask_shape[0], 0:mask_shape[1], i:(i + 1)]
+                extent=[self.min_bounds[0], self.max_bounds[0],
+                        self.min_bounds[1], self.max_bounds[1]]
             else: raise Exception("Slice dimension can only be 0-2 ({} provided)".format(slice_dim))
+            
             img = plt.imshow(numpy.squeeze(self._mask_array[slice_indices]),
-                             cmap=plt.cm.get_cmap(colour_map))
+                             cmap=cmap, alpha=alpha, clim=[GAUSS_THRESHOLD_DEFAULT, 1],
+                             extent=extent)
             img.set_interpolation('nearest')
-            plt.title('Dim {}, Index {}'.format(slice_dim, i))
-            if self._mask_array.dtype != numpy.dtype('bool'):
-                plt.colorbar()
+            if alpha == 1:
+                plt.title('Dim {}, Index {}'.format(slice_dim, i))
+                if self._mask_array.dtype != numpy.dtype('bool'):
+                    plt.colorbar()
         if show:
-            plt.show()
+            plt.show()           
 
     @classmethod
     def parse_vox_size(cls, vox_size):
@@ -141,8 +160,7 @@ class Mask(object):
 
     @classmethod
     def _parse_tree_points(cls, tree_or_points, diams=None):
-        assert(False), 'need to check this code still works'
-        if tree_or_points.__class__ == 'Tree':
+        if tree_or_points.__class__.__name__ == 'Tree':
             tree = tree_or_points
             points = tree.points
             if diams:
@@ -181,6 +199,9 @@ class Mask(object):
         new_mask = deepcopy(self)
         new_mask += mask._mask_array
         return new_mask
+    
+    def plot3D(self):
+        mlab.pipeline.volume(mlab.pipeline.scalar_field(self._mask_array))
 
 
 class DisplacedMask(Mask):
@@ -282,7 +303,7 @@ class ConvolvedMask(Mask):
         self._kernel = kernel
         # Call the base 'Mask' class constructor to set up the 
         Mask.__init__(self, kernel.vox_size, points, numpy.tile(kernel.extent,
-                                                             (tree.num_points(), 1)), float)
+                                                             (tree.num_points, 1)), float)
         # Add the tree to the mask if it was provided
         if tree:
             self.add_tree(tree)
@@ -328,9 +349,9 @@ class ConvolvedMask(Mask):
                 values = self._kernel(disps)
                 # Add the point-spread function values to the mask_array
                 self._mask_array[extent_indices] += length_scale * values.reshape(X.shape)
-            if count % (tree.num_segments() // 10) == 0 and count != 0:
+            if count % (tree.num_segments // 10) == 0 and count != 0:
                 print "Generating mask - {}% complete" \
-                        .format(round(float(count) / float(tree.num_segments()) * 100))
+                        .format(round(float(count) / float(tree.num_segments) * 100.0))
 
 
 

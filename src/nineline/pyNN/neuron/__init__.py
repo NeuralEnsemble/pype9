@@ -14,14 +14,14 @@
 #######################################################################################
 # This is required to ensure that the right MPI variables are set before NEURON is initiated
 from __future__ import absolute_import
-try:
-    from mpi4py import MPI  # @UnresolvedImport @UnusedImport
-except:
-    pass
 import nineline.pyNN.common
 from pyNN.neuron import setup, run, reset, end, get_time_step, get_current_time, get_min_delay, \
                         get_max_delay, rank, num_processes, record, record_v, record_gsyn, \
                         StepCurrentSource, DCSource, NoisyCurrentSource  # @UnusedVariable
+try:
+    from mpi4py import MPI  # @UnresolvedImport @UnusedImport
+except:
+    pass
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.standardmodels
 import pyNN.neuron.simulator as simulator

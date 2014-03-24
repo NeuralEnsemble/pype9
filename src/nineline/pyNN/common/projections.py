@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import pyNN.connectors
 import nineline.pyNN.connectors
-import nineline.forests.point2point
+import nineline.morphology.point2point
 
 class ProjectionToCloneNotCreatedYetException(Exception):
         
@@ -53,7 +53,7 @@ class Projection(object):
                 param_expr = cls._convert_units(param.args['value'])
             elif param.pattern == 'DisplacementBased':
                 expr_name = param.args.pop('geometry')
-                GeometricExpression = getattr(nineline.forests.point2point, expr_name)
+                GeometricExpression = getattr(nineline.morphology.point2point, expr_name)
                 try:
                     param_expr = pyNN.connectors.DisplacementDependentProbabilityConnector.\
                                      DisplacementExpression(GeometricExpression(min_value=min_value,

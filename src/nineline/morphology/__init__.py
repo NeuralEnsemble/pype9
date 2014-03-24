@@ -14,6 +14,8 @@
 #######################################################################################
 from __future__ import absolute_import
 from abc import ABCMeta # Metaclass for abstract base classes
+import itertools
+from copy import deepcopy
 import math
 import numpy
 from numpy.linalg import norm
@@ -22,10 +24,9 @@ import xml.sax
 import pyNN.connectors
 from nineline import XMLHandler
 from .utils import axially_symmetric_tensor
-import itertools
 from .forest import Forest
 from .tree import Tree
-from copy import deepcopy
+
 try:
     import matplotlib.pyplot as plt
 except:
