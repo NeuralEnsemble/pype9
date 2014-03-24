@@ -34,7 +34,7 @@ class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
             celltype = cls.loaded_celltypes[(nineml_model.name, nineml_model.url)]
         except KeyError:
             model = NineCellMetaClass(name, nineml_model, build_mode=build_mode, silent=silent, 
-                                      solver_name=solver_name)
+                                      solver_name=solver_name, standalone=False)
             dct = {'model': model}
             celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, name, (NinePyNNCell,), dct)
             assert sorted(celltype.recordable) == sorted(model().recordable.keys()), \

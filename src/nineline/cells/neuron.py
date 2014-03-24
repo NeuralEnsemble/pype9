@@ -50,7 +50,7 @@ def convert_to_neuron_units(value, unit_str):
     return convert_units(value, unit_str, _basic_unit_dict, _compound_unit_dict)
 
 
-class NineCell(nineline.cells.NineCell):
+class _BaseNineCell(nineline.cells.NineCell):
 
     class Segment(nrn.Section): #@UndefinedVariable
         """
@@ -67,12 +67,12 @@ class NineCell(nineline.cells.NineCell):
             """
             def __init__(self, component, translations):
                 ## The true component object that was created by the pyNEURON 'insert' method
-                super(NineCell.Segment.ComponentTranslator, self).__setattr__('_component', 
-                                                                              component)
+                super(_BaseNineCell.Segment.ComponentTranslator, self).__setattr__('_component', 
+                                                                                   component)
                 ## The translation of the parameter names            
-                super(NineCell.Segment.ComponentTranslator, self).__setattr__('_translations', 
-                                                                              translations)
-    
+                super(_BaseNineCell.Segment.ComponentTranslator, self).__setattr__('_translations', 
+                                                                                  translations)
+        
             def __setattr__(self, var, value):
                 try:
                     setattr(self._component, self._translations[var], value)
@@ -88,7 +88,7 @@ class NineCell(nineline.cells.NineCell):
                                          .format(e))
                     
             def __dir__(self):
-                return (super(NineCell.Segment.ComponentTranslator, self).__dir__ + 
+                return (super(_BaseNineCell.Segment.ComponentTranslator, self).__dir__ + 
                         self._translations.keys())
     
         def __init__(self, nineml_model):
@@ -144,7 +144,7 @@ class NineCell(nineline.cells.NineCell):
                 components = var.split('.', 1)
                 setattr(getattr(self, components[0]), components[1], val)
             else:
-                super(NineCell.Segment, self).__setattr__(var, val)
+                super(_BaseNineCell.Segment, self).__setattr__(var, val)
     
         def _set_proximal(self, proximal):
             """
@@ -189,66 +189,17 @@ class NineCell(nineline.cells.NineCell):
             else:
                 mech_name = component_name
             # Insert the mechanism into the segment
-            super(NineCell.Segment, self).insert(mech_name)
+            super(_BaseNineCell.Segment, self).insert(mech_name)
             # Map the component (always at position 0.5 as a segment only ever has one "NEURON segment") 
             # to an object in the Segment object. If translations are provided, wrap the component in
             # a Component translator that intercepts getters and setters and redirects them to the 
             # translated values.
             if translations:
-                super(NineCell.Segment, self).__setattr__(component_name,
-                                                 self.ComponentTranslator(getattr(self(0.5), mech_name),
-                                                                          translations))
+                super(_BaseNineCell.Segment, self).__setattr__(component_name,
+                            self.ComponentTranslator(getattr(self(0.5), mech_name), translations))
             else:
-                super(NineCell.Segment, self).__setattr__(component_name, getattr(self(0.5), mech_name))
-
-    class Parameter(object):
-        
-        def __init__(self, name, varname, components):
-            self.name = name
-            self.varname = varname
-            self.components = components
-            
-        def set(self, value):
-            for comp in self.components:
-                setattr(comp, self.varname, value)
-                
-        def get(self):
-            if self.components:
-                value = getattr(self.components[0], self.varname) 
-                for comp in self.components:
-                    if value != getattr(comp, self.varname):
-                        raise Exception("Found inconsistent values for parameter '{}' ({} and {})"
-                                        "across mapped segments"
-                                        .format(self.name, value, getattr(comp, self.varname)))
-            else:
-                raise Exception("Parameter '{}' does not map to any segments ".format(self.name))
-            return value        
-        
-    class InitialState(object):
-        
-        def __init__(self, name, varname, components):
-            self.name = name
-            self.varname = varname
-            self.components = components
-            self.value = None
-            self._initialized = False
-            
-        def set(self, value):
-            if self._initialized:
-                raise Exception("Attempted to set initial state '{}' after the cell states have " 
-                                "been initialised".format(self.name))
-            self.value = value
-            
-        def initialize_state(self):
-            for comp in self.components:
-                setattr(comp, self.varname, self.value)
-            self._initialized = True
-            
-        def get(self):
-            if self.value is None:
-                logger.warning("Tried to retrieve value of initial state '{}' before it was set"
-                               .format(self.varname))
-            return self.value
+                super(_BaseNineCell.Segment, self).__setattr__(component_name, getattr(self(0.5), 
+                                                                                       mech_name))
                 
     def __init__(self, **parameters):
         self._construct_morphology(self.nineml_model.morphology)
@@ -282,7 +233,7 @@ class NineCell(nineline.cells.NineCell):
         self.segments = {}
         self.source_section = None
         for model in nineml_model.segments.values():
-            seg = NineCell.Segment(model)
+            seg = _BaseNineCell.Segment(model)
             self.segments[model.name] = seg
             #TODO This should really be part of the 9ML package
             if not model.parent:
@@ -386,7 +337,62 @@ class NineCell(nineline.cells.NineCell):
         for seg in self.segments.values():
             seg.Ra = axial_resistance
             seg.cm = capacitance
+
+    def get_threshold(self):
+        return self.nineml_model.biophysics.components['__NO_COMPONENT__'].parameters['V_t'].value
+
+
+class NineCell(_BaseNineCell):
+    
+    class Parameter(object):
+        
+        def __init__(self, name, varname, components):
+            self.name = name
+            self.varname = varname
+            self.components = components
+            
+        def set(self, value):
+            for comp in self.components:
+                setattr(comp, self.varname, value)
                 
+        def get(self):
+            if self.components:
+                value = getattr(self.components[0], self.varname) 
+                for comp in self.components:
+                    if value != getattr(comp, self.varname):
+                        raise Exception("Found inconsistent values for parameter '{}' ({} and {})"
+                                        "across mapped segments"
+                                        .format(self.name, value, getattr(comp, self.varname)))
+            else:
+                raise Exception("Parameter '{}' does not map to any segments ".format(self.name))
+            return value        
+        
+    class InitialState(object):
+        
+        def __init__(self, name, varname, components):
+            self.name = name
+            self.varname = varname
+            self.components = components
+            self.value = None
+            self._initialized = False
+            
+        def set(self, value):
+            if self._initialized:
+                raise Exception("Attempted to set initial state '{}' after the cell states have " 
+                                "been initialised".format(self.name))
+            self.value = value
+            
+        def initialize_state(self):
+            for comp in self.components:
+                setattr(comp, self.varname, self.value)
+            self._initialized = True
+            
+        def get(self):
+            if self.value is None:
+                logger.warning("Tried to retrieve value of initial state '{}' before it was set"
+                               .format(self.varname))
+            return self.value
+
     def _link_parameters(self, nineml_model):
         self._parameters = {}
         for p in nineml_model.parameters:
@@ -419,57 +425,7 @@ class NineCell(nineline.cells.NineCell):
             except KeyError:
                 raise Exception("NineLine celltype '{}' does not have parameter '{}'"
                                 .format(type(self), name))
-
-    def get_threshold(self):
-        return self.nineml_model.biophysics.components['__NO_COMPONENT__'].parameters['V_t'].value
-
-    def record_v(self, active):
-        if active:
-            self.vtrace = h.Vector()
-            self.vtrace.record(self.source_section(0.5)._ref_v)
-            if not self.recording_time:
-                self.record_times = h.Vector()
-                self.record_times.record(h._ref_t)
-                self.recording_time += 1
-        else:
-            self.vtrace = None
-            self.recording_time -= 1
-            if self.recording_time == 0:
-                self.record_times = None
-
-    def record_gsyn(self, syn_name, active):
-        # how to deal with static and T-M synapses?
-        # record both and sum?
-        if active:
-            self.gsyn_trace[syn_name] = h.Vector()
-            self.gsyn_trace[syn_name].record(getattr(self, syn_name)._ref_g)
-            if not self.recording_time:
-                self.record_times = h.Vector()
-                self.record_times.record(h._ref_t)
-                self.recording_time += 1
-        else:
-            self.gsyn_trace[syn_name] = None
-            self.recording_time -= 1
-            if self.recording_time == 0:
-                self.record_times = None
-
-    def record_spikes(self, active):
-        """
-        Simple remapping of record onto record_spikes as well
-        
-        @param active [bool]: Whether the recorder is active or not (required by pyNN)
-        """
-        if active:
-            self.rec = h.NetCon(self.source, None, sec=self.source_section)
-            self.rec.record(self.spike_times)
-        else:
-            self.spike_times = h.Vector(0)
-
-    def memb_init(self):
-        for param in self._parameters.itervalues():
-            if isinstance(param, self.InitialState):
-                param.initialize_state()
-            
+    
     def __getattr__(self, varname):
         """
         To support the access to components on particular segments in PyNN the segment name can 
@@ -539,11 +495,98 @@ class NineCell(nineline.cells.NineCell):
             super(NineCell, self).__setattr__(varname, val)
 #             raise Exception("Cannot add new attribute '{}' to cell {} class".format(varname, 
 #                                                                                     type(self)))
-        
-        
+                
     def __dir__(self):
-        return dir(super(NineCell, self)) + self._parameters.keys()
+        return dir(super(_BaseNineCell, self)) + self._parameters.keys()
+        
+    def memb_init(self):
+        for param in self._parameters.itervalues():
+            if isinstance(param, self.InitialState):
+                param.initialize_state()
 
+
+class NineCellStandAlone(_BaseNineCell):
+    
+    def __getattr__(self, varname):
+        """
+        To support the access to components on particular segments in PyNN the segment name can 
+        be prepended enclosed in curly brackets (i.e. '{}').
+         
+        @param var [str]: var of the attribute, with optional segment segment name enclosed with {} and prepended
+        """
+        if varname.startswith('{'):
+            seg_name, comp_name = varname[1:].split('}', 1)
+            return getattr(self.segments[seg_name], comp_name)
+        else:
+            super(NineCellStandAlone, self).__getattr__(varname) 
+
+    def __setattr__(self, varname, val):
+        """
+        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup.
+         This is done to allow pyNN's population.tset method to set attributes of cell components.
+        
+        @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
+                          attribute vars
+        @param val [*]: val of the attribute
+        """
+        # Component parameters can also be directly accessed (without the need to specify them 
+        # explicitly as a parameter) by placing the segment name in brackets beforehand, then using
+        # a '.' to separate the component name from the parameter name if required, i.e. 
+        #
+        # {segment}component.parameter for a parameter of a component
+        #
+        # or 
+        # 
+        # {segment}parameter for a parameter of the segment directly
+        #
+        if varname.startswith('{'): 
+            seg_name, comp_name = varname[1:].split('}', 1)
+            setattr(self.segments[seg_name], comp_name, val)
+        else:
+            super(NineCellStandAlone, self).__setattr__(varname, val)                
+    
+    def record_v(self, active):
+        if active:
+            self.vtrace = h.Vector()
+            self.vtrace.record(self.source_section(0.5)._ref_v)
+            if not self.recording_time:
+                self.record_times = h.Vector()
+                self.record_times.record(h._ref_t)
+                self.recording_time += 1
+        else:
+            self.vtrace = None
+            self.recording_time -= 1
+            if self.recording_time == 0:
+                self.record_times = None
+
+    def record_gsyn(self, syn_name, active):
+        # how to deal with static and T-M synapses?
+        # record both and sum?
+        if active:
+            self.gsyn_trace[syn_name] = h.Vector()
+            self.gsyn_trace[syn_name].record(getattr(self, syn_name)._ref_g)
+            if not self.recording_time:
+                self.record_times = h.Vector()
+                self.record_times.record(h._ref_t)
+                self.recording_time += 1
+        else:
+            self.gsyn_trace[syn_name] = None
+            self.recording_time -= 1
+            if self.recording_time == 0:
+                self.record_times = None
+
+    def record_spikes(self, active):
+        """
+        Simple remapping of record onto record_spikes as well
+        
+        @param active [bool]: Whether the recorder is active or not (required by pyNN)
+        """
+        if active:
+            self.rec = h.NetCon(self.source, None, sec=self.source_section)
+            self.rec.record(self.spike_times)
+        else:
+            self.spike_times = h.Vector(0)
+    
 
 class NineCellMetaClass(nineline.cells.NineCellMetaClass):
     """
@@ -553,9 +596,11 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
 
     loaded_celltypes = {}
 
-    def __new__(cls, celltype_name, nineml_model, build_mode='lazy', silent=False, solver_name=None): #@UnusedVariable
+    def __new__(cls, celltype_name, nineml_model, build_mode='lazy', silent=False, solver_name=None,
+                standalone=True): #@UnusedVariable
+        opt_args = (solver_name, standalone)
         try:
-            celltype = cls.loaded_celltypes[(nineml_model.name, nineml_model.url)]
+            celltype = cls.loaded_celltypes[(nineml_model.name, nineml_model.url, opt_args)]
         except KeyError:
             dct = {'nineml_model': nineml_model}
             build_options = nineml_model.biophysics.build_hints['nemo']['neuron']
@@ -568,10 +613,14 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
             load_mechanisms(install_dir)
             dct['mech_path'] = install_dir
             dct['_param_links_tested'] = False
+            if standalone:
+                BaseClass = NineCellStandAlone
+            else:
+                BaseClass = NineCell
             celltype = super(NineCellMetaClass, cls).__new__(cls, celltype_name, nineml_model, 
-                                                             (NineCell,), dct)
+                                                             (BaseClass,), dct)
             # Save cell type in case it needs to be used again
-            cls.loaded_celltypes[(celltype_name, nineml_model.url)] = celltype
+            cls.loaded_celltypes[(celltype_name, nineml_model.url, opt_args)] = celltype
         return celltype
 
 
