@@ -13,8 +13,11 @@
 #
 #######################################################################################
 from __future__ import absolute_import
+from datetime import datetime
 import numpy
 from neuron import h, nrn, load_mechanisms
+import neo
+import quantities as pq
 from nineline.cells.build.neuron import build_celltype_files
 import nineline.cells
 from .. import create_unit_conversions, convert_units
@@ -43,7 +46,6 @@ _compound_SI_to_neuron_conversions = (((('A', 1), ('m', -2)), (('mA', 1), ('cm',
 
 _basic_unit_dict, _compound_unit_dict = create_unit_conversions(_basic_SI_to_neuron_conversions,
                                                                 _compound_SI_to_neuron_conversions)
-
 
 
 def convert_to_neuron_units(value, unit_str):
@@ -519,10 +521,41 @@ class NineCellStandAlone(_BaseNineCell):
          
         @param var [str]: var of the attribute, with optional segment segment name enclosed with {} and prepended
         """
-        try:
-            return self.segments[varname]
-        except KeyError:
-            super(NineCellStandAlone, self).__getattr__(varname) 
+        if '.' in varname:
+            parts = varname.split('.')
+            if len(parts) == 3:
+                seg, comp, var = parts
+                return getattr(getattr(self.segments[seg], comp), var) 
+            elif len(parts) == 2:
+                seg, var = parts
+                return getattr(self.segments[seg], var)
+            else:
+                raise AttributeError('Invalid number of components ({})'.format(len(parts)))
+        else:
+            try:
+                return self.segments[varname]
+            except KeyError:
+                super(NineCellStandAlone, self).__getattr__(varname)
+                
+    def __setattr__(self, varname, value):
+        """
+        First test to see if varname is a segment name and if so return the segment else fall back 
+        to 
+         
+        @param var [str]: var of the attribute, with optional segment segment name enclosed with {} and prepended
+        """
+        if '.' in varname:
+            parts = varname.split('.')
+            if len(parts) == 3:
+                seg, comp, var = parts
+                setattr(getattr(self.segments[seg], comp), var, value) 
+            elif len(parts) == 2:
+                seg, var = parts
+                setattr(self.segments[seg], var, value)
+            else:
+                raise AttributeError('Invalid number of components ({})'.format(len(parts)))
+        else:
+            super(NineCellStandAlone, self).__setattr__(varname, value) 
             
     def record(self, variable, segname=None, component=None):
         if segname is None:
@@ -542,21 +575,79 @@ class NineCellStandAlone(_BaseNineCell):
             pointer = getattr(container, '_ref_' + variable)
             self._recordings[key] = recording = h.Vector()
             recording.record(pointer)
-            if not self._recordings.has_key('time'):
-                self._recordings['time'] = time_recording = h.Vector()
-                time_recording.record(h._ref_t)
+#             if not self._recordings.has_key('time'):
+#                 self._recordings['time'] = time_recording = h.Vector()
+#                 time_recording.record(h._ref_t)
 
-    def get_recording(self, variable, segname=None, component=None):
+    def get_recording(self, variable, segname=None, component=None, in_block=False):
+        """
+        Gets a recording or recordings of previously recorded variable
         
-                    
+        `variable`  -- the name of the variable or a list of names of variables to return [str | list(str)]
+        `segname`   -- the segment name the variable is located or a list of segment names 
+                       (in which case length must match number of variables) [str | list(str)].
+                       "None" variables will be translated to the 'source_section' segment
+        `component` -- the component name the variable is part of or a list of components names 
+                       (in which case length must match number of variables) [str | list(str)].
+                       "None" variables will be translated as segment variables (i.e. no component)
+        `in_block`  -- returns a neo.Block object instead of a neo.SpikeTrain | neo.AnalogSignal
+                       object (or list of for multiple variable names)
+        """
+        variables = variable if isinstance(variable, list) else [variable]
+        if isinstance(segname, list):
+            segnames = segname
+        else:
+            segnames = [segname] * len(variables)
+        if isinstance(component, list):
+            components = component
+        else:
+            components = [component] * len(variables)
+        if in_block:
+            segment = neo.Segment(rec_datetime=datetime.now())
+        else:
+            recordings = []
+        for key in zip(variables, segnames, components):
+            if key[0] == 'spikes':
+                spike_train = neo.SpikeTrain(self._recordings[key], t_start=0.0 * pq.ms, 
+                                             t_stop=h.t * pq.ms, units='ms')
+                if in_block:
+                    segment.spiketrains.append(spike_train)
+                else:
+                    recordings.append(spike_train)
+            else:
+                analog_signal = neo.AnalogSignal(self._recordings[key],
+                                                 sampling_period = h.dt * pq.ms,
+                                                 t_start=0.0 * pq.ms,
+                                                 name='.'.join([x for x in key if x is not None]))
+                if in_block:
+                    segment.analogsignals.append(analog_signal)
+                else:
+                    recordings.append(analog_signal)
+        if in_block:
+            data = neo.Block()
+            data.description("Recording from NineLine stand-alone cell")
+            data.segments = [segment]
+        elif isinstance(variable, list):
+            return recordings
+        else:
+            return recordings[0]
+            
 
     def reset_recordings(self):
-        "Resets the recordings for the cell"
+        """
+        Resets the recordings for the cell and the NEURON simulator (assumes that only one cell is 
+        instantiated)
+        """
+        for rec in self._recordings.itervalues():
+            rec.resize(0)
+        
+    def clear_recorders(self):
+        """
+        Clears all recorders and recordings
+        """    
         self._recorders = {}
         self._recordings = {}
-        
-    
-    
+
 
 class NineCellMetaClass(nineline.cells.NineCellMetaClass):
     """
@@ -593,7 +684,30 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
             cls.loaded_celltypes[(celltype_name, nineml_model.url, opt_args)] = celltype
         return celltype
 
+class _SimulationController(object):
+    
+    def __init__(self):
+        self.running = False
+    
+    def run(self, simulation_time, reset=True, timestep='cvode', rtol=None, atol=None):
+        """
+        Run the simulation for a certain time.
+        """
+        if timestep == 'cvode':
+            self.cvode = h.CVode()
+            if rtol is not None:
+                self.cvode.rtol = rtol
+            if atol is not None:
+                self.cvode.atol = atol 
+        else:
+            h.dt = timestep
+        if reset or not self.running:
+            self.running = True
+            h.finitialize()
+            self.tstop = 0
+        self.tstop += simulation_time
+        self.fadvance(self.tstop)
+        
 
-if __name__ == "__main__":
-    pass
-
+simulation_controller = _SimulationController()
+del _SimulationController
