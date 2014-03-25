@@ -507,143 +507,55 @@ class NineCell(_BaseNineCell):
 
 class NineCellStandAlone(_BaseNineCell):
     
+    def __init__(self, **parameters):
+        super(NineCellStandAlone, self).__init__(**parameters)
+        self._recorders = {}
+        self._recordings = {}
+    
     def __getattr__(self, varname):
         """
-        To support the access to components on particular segments in PyNN the segment name can 
-        be prepended enclosed in curly brackets (i.e. '{}').
+        First test to see if varname is a segment name and if so return the segment else fall back 
+        to 
          
         @param var [str]: var of the attribute, with optional segment segment name enclosed with {} and prepended
         """
-        if varname.startswith('{'):
-            seg_name, comp_name = varname[1:].split('}', 1)
-            return getattr(self.segments[seg_name], comp_name)
-        else:
+        try:
+            return self.segments[varname]
+        except KeyError:
             super(NineCellStandAlone, self).__getattr__(varname) 
-
-    def __setattr__(self, varname, val):
-        """
-        Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup.
-         This is done to allow pyNN's population.tset method to set attributes of cell components.
-        
-        @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
-                          attribute vars
-        @param val [*]: val of the attribute
-        """
-        # Component parameters can also be directly accessed (without the need to specify them 
-        # explicitly as a parameter) by placing the segment name in brackets beforehand, then using
-        # a '.' to separate the component name from the parameter name if required, i.e. 
-        #
-        # {segment}component.parameter for a parameter of a component
-        #
-        # or 
-        # 
-        # {segment}parameter for a parameter of the segment directly
-        #
-        if varname.startswith('{'): 
-            seg_name, comp_name = varname[1:].split('}', 1)
-            setattr(self.segments[seg_name], comp_name, val)
-        else:
-            super(NineCellStandAlone, self).__setattr__(varname, val)
             
-    def _record(self, variable, new_ids):
-        """Add the cells in `new_ids` to the set of recorded cells."""
+    def record(self, variable, segname=None, component=None):
+        if segname is None:
+            seg = self.source_section
+        else:
+            try:
+                seg = self.segments[segname]
+            except KeyError:
+                raise Exception("Did not find segment '{}' in cell morphology".format(segname))
+        key = (variable, segname, component)
         if variable == 'spikes':
-            for id in new_ids:
-                if id._cell.rec is not None:
-                    id._cell.rec.record(id._cell.spike_times)
+            self._recorders[key] = recorder = h.NetCon(seg, None, self.get_threshold(), sec=seg)
+            self._recordings[key] = recording = h.Vector()
+            recorder.record(recording)
         else:
-            for id in new_ids:
-                self._record_state_variable(id._cell, variable)
+            container = getattr(seg, component) if component is not None else seg
+            pointer = getattr(container, '_ref_' + variable)
+            self._recordings[key] = recording = h.Vector()
+            recording.record(pointer)
+            if not self._recordings.has_key('time'):
+                self._recordings['time'] = time_recording = h.Vector()
+                time_recording.record(h._ref_t)
 
-    def _record_state_variable(self, cell, variable):
-        if hasattr(cell, 'recordable') and variable in cell.recordable:
-            hoc_var = cell.recordable[variable]
-        elif variable == 'v':
-            hoc_var = cell.source_section(0.5)._ref_v  # or use "seg.v"?
-        elif variable == 'gsyn_exc':
-            hoc_var = cell.esyn._ref_g
-        elif variable == 'gsyn_inh':
-            hoc_var = cell.isyn._ref_g
-        else:
-            source, var_name = self._resolve_variable(cell, variable)
-            hoc_var = getattr(source, "_ref_%s" % var_name)
-        cell.traces[variable] = vec = h.Vector()
-        vec.record(hoc_var)
-        if not cell.recording_time:
-            cell.record_times = h.Vector()
-            cell.record_times.record(h._ref_t)
-            cell.recording_time += 1
-
-    #could be staticmethod
-    def _resolve_variable(self, cell, variable_path):
-        match = recordable_pattern.match(variable_path)
-        if match:
-            parts = match.groupdict()
-            if parts['section']:
-                section = getattr(cell, parts['section'])
-                if parts['location']:
-                    source = section(float(parts['location']))
-                else:
-                    source = section
-            else:
-                source = cell.source
-            return source, parts['var']
-        else:
-            raise AttributeError("Recording of %s not implemented." % variable_path)
+    def get_recording(self, variable, segname=None, component=None):
+        
+                    
 
     def reset_recordings(self):
-        """Reset the list of things to be recorded."""
-        for id in set.union(*self.recorded.values()):
-            id._cell.traces = {}
-            id._cell.spike_times = h.Vector(0)
-        id._cell.recording_time == 0
-        id._cell.record_times = None
-        for id in set.union(*self.recorded.values()):
-            for variable in id._cell.traces:
-                id._cell.traces[variable].resize(0)
-            id._cell.spike_times.resize(0)      
-    
-    def record_v(self, active):
-        if active:
-            self.vtrace = h.Vector()
-            self.vtrace.record(self.source_section(0.5)._ref_v)
-            if not self.recording_time:
-                self.record_times = h.Vector()
-                self.record_times.record(h._ref_t)
-                self.recording_time += 1
-        else:
-            self.vtrace = None
-            self.recording_time -= 1
-            if self.recording_time == 0:
-                self.record_times = None
-
-    def record_gsyn(self, syn_name, active):
-        # how to deal with static and T-M synapses?
-        # record both and sum?
-        if active:
-            self.gsyn_trace[syn_name] = h.Vector()
-            self.gsyn_trace[syn_name].record(getattr(self, syn_name)._ref_g)
-            if not self.recording_time:
-                self.record_times = h.Vector()
-                self.record_times.record(h._ref_t)
-                self.recording_time += 1
-        else:
-            self.gsyn_trace[syn_name] = None
-            self.recording_time -= 1
-            if self.recording_time == 0:
-                self.record_times = None
-
-    def record_spikes(self, active):
-        """
-        Simple remapping of record onto record_spikes as well
+        "Resets the recordings for the cell"
+        self._recorders = {}
+        self._recordings = {}
         
-        @param active [bool]: Whether the recorder is active or not (required by pyNN)
-        """
-        if active:
-            self.rec = h.NetCon(self.source, None, sec=self.source_section)
-            self.rec.record(self.spike_times)
-        else:
-            self.spike_times = h.Vector(0)
+    
     
 
 class NineCellMetaClass(nineline.cells.NineCellMetaClass):
