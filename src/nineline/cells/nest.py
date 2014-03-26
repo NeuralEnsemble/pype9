@@ -29,8 +29,8 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
     
     loaded_celltypes = {}
     
-    def __new__(cls, nineml_model, celltype_name, morph_id=None, build_mode='lazy', silent=False, #@UnusedVariable 
-                solver_name='cvode'):
+    def __new__(cls, nineml_model, celltype_name=None, morph_id=None, build_mode='lazy', #@UnusedVariable 
+                silent=False, solver_name='cvode', standalone=False):
         """
         Loads a PyNN cell type for NEST from an XML description, compiling the necessary module files
         
@@ -40,8 +40,11 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
         @param build_mode [str]: Control the automatic building of required modules
         @param silent [bool]: Whether or not to suppress build output
         """
+        if celltype_name is None:
+            celltype_name = nineml_model.name
+        opt_args = (solver_name, standalone)
         try:
-            celltype = cls.loaded_celltypes[(celltype_name, nineml_model.url)]
+            celltype = cls.loaded_celltypes[(celltype_name, nineml_model.url, opt_args)]
         except KeyError:
             dct = {}
             install_dir, dct['component_translations'] = build_celltype_files(celltype_name,
@@ -70,7 +73,7 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
             celltype = super(NineCellMetaClass, cls).__new__(cls, nineml_model, celltype_name,
                                                              (NineCell,), dct)
             # Added the loaded celltype to the dictionary of previously loaded cell types
-            cls.loaded_celltypes[(celltype_name, nineml_model.url)] = celltype
+            cls.loaded_celltypes[(celltype_name, nineml_model.url, opt_args)] = celltype
         return celltype
     
     

@@ -657,11 +657,13 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
 
     loaded_celltypes = {}
 
-    def __new__(cls, nineml_model, celltype_name, build_mode='lazy', silent=False, solver_name=None,
-                standalone=True): #@UnusedVariable
+    def __new__(cls, nineml_model, celltype_name=None, build_mode='lazy', silent=False, 
+                solver_name=None, standalone=True): #@UnusedVariable
+        if celltype_name is None:
+            celltype_name = nineml_model.name
         opt_args = (solver_name, standalone)
         try:
-            celltype = cls.loaded_celltypes[(nineml_model.name, nineml_model.url, opt_args)]
+            celltype = cls.loaded_celltypes[(celltype_name, nineml_model.url, opt_args)]
         except KeyError:
             dct = {'nineml_model': nineml_model}
             build_options = nineml_model.biophysics.build_hints['nemo']['neuron']
