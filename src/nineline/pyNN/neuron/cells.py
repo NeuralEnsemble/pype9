@@ -29,11 +29,11 @@ class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
     _basic_nineml_translations = basic_nineml_translations   
     loaded_celltypes = {}
     
-    def __new__(cls, name, nineml_model, build_mode='lazy', silent=False, solver_name=None):
+    def __new__(cls, nineml_model, name, build_mode='lazy', silent=False, solver_name=None):
         try:
             celltype = cls.loaded_celltypes[(nineml_model.name, nineml_model.url)]
         except KeyError:
-            model = NineCellMetaClass(name, nineml_model, build_mode=build_mode, silent=silent, 
+            model = NineCellMetaClass(nineml_model, name, build_mode=build_mode, silent=silent, 
                                       solver_name=solver_name, standalone=False)
             dct = {'model': model}
             celltype = super(NinePyNNCellMetaClass, cls).__new__(cls, name, (NinePyNNCell,), dct)

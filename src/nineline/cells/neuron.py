@@ -657,7 +657,7 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
 
     loaded_celltypes = {}
 
-    def __new__(cls, celltype_name, nineml_model, build_mode='lazy', silent=False, solver_name=None,
+    def __new__(cls, nineml_model, celltype_name, build_mode='lazy', silent=False, solver_name=None,
                 standalone=True): #@UnusedVariable
         opt_args = (solver_name, standalone)
         try:
@@ -678,7 +678,7 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
                 BaseClass = NineCellStandAlone
             else:
                 BaseClass = NineCell
-            celltype = super(NineCellMetaClass, cls).__new__(cls, celltype_name, nineml_model, 
+            celltype = super(NineCellMetaClass, cls).__new__(cls, nineml_model, celltype_name, 
                                                              (BaseClass,), dct)
             # Save cell type in case it needs to be used again
             cls.loaded_celltypes[(celltype_name, nineml_model.url, opt_args)] = celltype

@@ -29,13 +29,13 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
     
     loaded_celltypes = {}
     
-    def __new__(cls, celltype_name, nineml_model, morph_id=None, build_mode='lazy', silent=False, #@UnusedVariable 
+    def __new__(cls, nineml_model, celltype_name, morph_id=None, build_mode='lazy', silent=False, #@UnusedVariable 
                 solver_name='cvode'):
         """
         Loads a PyNN cell type for NEST from an XML description, compiling the necessary module files
         
-        @param celltype_name [str]: Name of the cell class to extract from the xml file
         @param nineml_model [str]: The parsed 9ML biophysical cell model
+        @param celltype_name [str]: Name of the cell class to extract from the xml file
         @param morph_id [str]: Currently unused but kept for consistency with NEURON version of this function
         @param build_mode [str]: Control the automatic building of required modules
         @param silent [bool]: Whether or not to suppress build output
@@ -67,7 +67,7 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
             nest.Install(celltype_name + 'Loader')
             dct['nineml_model'] = nineml_model
             # Add the loaded cell type to the list of cell types that have been loaded
-            celltype = super(NineCellMetaClass, cls).__new__(cls, celltype_name, nineml_model, 
+            celltype = super(NineCellMetaClass, cls).__new__(cls, nineml_model, celltype_name,
                                                              (NineCell,), dct)
             # Added the loaded celltype to the dictionary of previously loaded cell types
             cls.loaded_celltypes[(celltype_name, nineml_model.url)] = celltype
