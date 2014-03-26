@@ -33,7 +33,7 @@ class NineCellMetaClass(type):
         dct['parameter_names'] = [p.name for p in nineml_model.parameters]
         return super(NineCellMetaClass, cls).__new__(cls, celltype_name, bases, dct)
 
-    def __init__(cls, nineml_model, celltype_name, morph_id=None, build_mode=None, #@NoSelf
+    def __init__(cls, nineml_model, celltype_name=None, morph_id=None, build_mode=None, #@NoSelf
                    silent=None, solver_name=None):
         """
         This initialiser is empty, but since I have changed the signature of the __new__ method in 

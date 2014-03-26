@@ -16,6 +16,7 @@ from __future__ import absolute_import
 from datetime import datetime
 import numpy
 from neuron import h, nrn, load_mechanisms
+import nineml.extensions.biophysical_cells
 import neo
 import quantities as pq
 from nineline.cells.build.neuron import build_celltype_files
@@ -208,18 +209,6 @@ class _BaseNineCell(nineline.cells.NineCell):
         self._map_biophysics_to_morphology(self.nineml_model)
         # Setup variables required by pyNN
         self.source = self.source_section(0.5)._ref_v
-        # for recording
-        self.recordable = {'spikes': None, 'v': self.source_section._ref_v} # Once NEST supports sections, it might be an idea to drop this in favour of a more explicit scheme
-        for seg_name, seg in self.segments.iteritems():
-            self.recordable['{' + seg_name + '}v'] = seg._ref_v 
-        self.spike_times = h.Vector(0)
-        self.traces = {}
-        self.gsyn_trace = {}
-        self.recording_time = 0
-        self.rec = h.NetCon(self.source, None, sec=self.source_section)
-        # Set up references from parameter names to internal variables and set parameters
-        self._link_parameters(self.nineml_model)
-        self.set_parameters(parameters)
          
     def _construct_morphology(self, nineml_model):
         """
@@ -395,6 +384,21 @@ class NineCell(_BaseNineCell):
                                .format(self.varname))
             return self.value
 
+    def __init__(self, **parameters):
+        super(NineCell, self).__init__(**parameters)
+        # for recording
+        self.recordable = {'spikes': None, 'v': self.source_section._ref_v} # Once NEST supports sections, it might be an idea to drop this in favour of a more explicit scheme
+        for seg_name, seg in self.segments.iteritems():
+            self.recordable['{' + seg_name + '}v'] = seg._ref_v 
+        self.spike_times = h.Vector(0)
+        self.traces = {}
+        self.gsyn_trace = {}
+        self.recording_time = 0
+        self.rec = h.NetCon(self.source, None, sec=self.source_section)
+        # Set up references from parameter names to internal variables and set parameters
+        self._link_parameters(self.nineml_model)
+        self.set_parameters(parameters)
+
     def _link_parameters(self, nineml_model):
         self._parameters = {}
         for p in nineml_model.parameters:
@@ -535,7 +539,7 @@ class NineCellStandAlone(_BaseNineCell):
             try:
                 return self.segments[varname]
             except KeyError:
-                super(NineCellStandAlone, self).__getattr__(varname)
+                super(NineCellStandAlone, self).__getattribute__(varname)
                 
     def __setattr__(self, varname, value):
         """
@@ -579,29 +583,37 @@ class NineCellStandAlone(_BaseNineCell):
 #                 self._recordings['time'] = time_recording = h.Vector()
 #                 time_recording.record(h._ref_t)
 
-    def get_recording(self, variable, segname=None, component=None, in_block=False):
+    def get_recording(self, variables=None, segnames=None, components=None, in_block=False):
         """
         Gets a recording or recordings of previously recorded variable
         
-        `variable`  -- the name of the variable or a list of names of variables to return [str | list(str)]
-        `segname`   -- the segment name the variable is located or a list of segment names 
+        `variables`  -- the name of the variable or a list of names of variables to return [str | list(str)]
+        `segnames`   -- the segment name the variable is located or a list of segment names 
                        (in which case length must match number of variables) [str | list(str)].
                        "None" variables will be translated to the 'source_section' segment
-        `component` -- the component name the variable is part of or a list of components names 
+        `components` -- the component name the variable is part of or a list of components names 
                        (in which case length must match number of variables) [str | list(str)].
                        "None" variables will be translated as segment variables (i.e. no component)
         `in_block`  -- returns a neo.Block object instead of a neo.SpikeTrain | neo.AnalogSignal
                        object (or list of for multiple variable names)
         """
-        variables = variable if isinstance(variable, list) else [variable]
-        if isinstance(segname, list):
-            segnames = segname
+        return_single = False
+        if variables is None:
+            if segnames is None:
+                raise Exception("As no variables were provided all recordings will be returned, so"
+                                "it doesn't make sense to provide segnames")
+            if components is None:
+                raise Exception("As no variables were provided all recordings will be returned, so"
+                                "it doesn't make sense to provide components")
+            variables, segnames, components = zip(*self._recordings.keys())
         else:
-            segnames = [segname] * len(variables)
-        if isinstance(component, list):
-            components = component
-        else:
-            components = [component] * len(variables)
+            if isinstance(variables, basestring):
+                variables = [variables]
+                return_single = True
+            if isinstance(segnames, basestring) or segnames is None:
+                segnames = [segnames] * len(variables)
+            if isinstance(components, basestring) or components is None:
+                components = [components] * len(variables)
         if in_block:
             segment = neo.Segment(rec_datetime=datetime.now())
         else:
@@ -618,7 +630,8 @@ class NineCellStandAlone(_BaseNineCell):
                 analog_signal = neo.AnalogSignal(self._recordings[key],
                                                  sampling_period = h.dt * pq.ms,
                                                  t_start=0.0 * pq.ms,
-                                                 name='.'.join([x for x in key if x is not None]))
+                                                 name='.'.join([x for x in key if x is not None]),
+                                                 units='ms')
                 if in_block:
                     segment.analogsignals.append(analog_signal)
                 else:
@@ -627,10 +640,10 @@ class NineCellStandAlone(_BaseNineCell):
             data = neo.Block()
             data.description("Recording from NineLine stand-alone cell")
             data.segments = [segment]
-        elif isinstance(variable, list):
-            return recordings
-        else:
+        elif return_single:
             return recordings[0]
+        else:
+            return recordings
             
 
     def reset_recordings(self):
@@ -659,6 +672,19 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
 
     def __new__(cls, nineml_model, celltype_name=None, build_mode='lazy', silent=False, 
                 solver_name=None, standalone=True): #@UnusedVariable
+        """
+        `nineml_model` -- Either a parsed lib9ml SpikingNode object or a url to a 9ml file
+        """
+        if isinstance(nineml_model, str):
+            loaded_models = nineml.extensions.biophysical_cells.parse(nineml_model)
+            if celltype_name is not None:
+                nineml_model = loaded_models[celltype_name]
+            elif len(loaded_models) == 1:
+                nineml_model = loaded_models.values()[0]
+            else:
+                raise Exception("9ml file '{}' contains multiple cell classes ({}), please specify "
+                                "which one you intend to use by the 'celltype_name' parameter"
+                                .format(nineml_model, ', '.join(loaded_models.keys())))
         if celltype_name is None:
             celltype_name = nineml_model.name
         opt_args = (solver_name, standalone)
@@ -707,8 +733,9 @@ class _SimulationController(object):
             self.running = True
             h.finitialize()
             self.tstop = 0
+        for t in numpy.arange(h.dt, simulation_time, h.dt): #@UnusedVariable t
+            h.fadvance()
         self.tstop += simulation_time
-        self.fadvance(self.tstop)
         
 
 simulation_controller = _SimulationController()
