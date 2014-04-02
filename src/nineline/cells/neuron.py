@@ -14,6 +14,7 @@
 #######################################################################################
 from __future__ import absolute_import
 from datetime import datetime
+import weakref
 import numpy
 from neuron import h, nrn, load_mechanisms
 import nineml.extensions.biophysical_cells
@@ -517,6 +518,7 @@ class NineCellStandAlone(_BaseNineCell):
         super(NineCellStandAlone, self).__init__(**parameters)
         self._recorders = {}
         self._recordings = {}
+        simulation_controller.register_cell(self)
     
     def __getattr__(self, varname):
         """
@@ -627,11 +629,15 @@ class NineCellStandAlone(_BaseNineCell):
                 else:
                     recordings.append(spike_train)
             else:
+                if key[0] == 'v':
+                    units = 'mV'
+                else:
+                    units = 'nA'
                 analog_signal = neo.AnalogSignal(self._recordings[key],
                                                  sampling_period = h.dt * pq.ms,
                                                  t_start=0.0 * pq.ms,
                                                  name='.'.join([x for x in key if x is not None]),
-                                                 units='ms')
+                                                 units=units)
                 if in_block:
                     segment.analogsignals.append(analog_signal)
                 else:
@@ -716,6 +722,10 @@ class _SimulationController(object):
     
     def __init__(self):
         self.running = False
+        self.registered_cells = []
+        
+    def register_cell(self, cell):
+        self.registered_cells.append(weakref.ref(cell))
     
     def run(self, simulation_time, reset=True, timestep='cvode', rtol=None, atol=None):
         """
@@ -736,6 +746,14 @@ class _SimulationController(object):
         for t in numpy.arange(h.dt, simulation_time, h.dt): #@UnusedVariable t
             h.fadvance()
         self.tstop += simulation_time
+        
+    def reset(self):
+        for cell_ref in reversed(self.registered_cells):
+            if cell_ref():
+                cell_ref().reset_recordings()
+            else:
+                self.registered_cells.remove(cell_ref)
+        h.finitialize()
         
 
 simulation_controller = _SimulationController()
