@@ -16,6 +16,12 @@ from __future__ import absolute_import
 from datetime import datetime
 import weakref
 import numpy
+# MPI may not be required but NEURON sometimes needs to be initialised after MPI so I am doing it
+# here just to be safe (and to save me headaches in the future) 
+try:
+    from mpi4py import MPI #@UnusedImport
+except ImportError:
+    pass
 from neuron import h, nrn, load_mechanisms
 import nineml.extensions.biophysical_cells
 import neo
