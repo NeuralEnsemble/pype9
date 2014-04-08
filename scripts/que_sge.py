@@ -313,7 +313,7 @@ echo "============== Done ==============="
         `work_dir` -- The work directory to set the envinroment variables for
         """
         env = os.environ.copy()
-        new_path = ''
+        new_path = os.path.abspath(os.path.dirname(self.script_path)) + os.pathsep
         if self.py_dir:
             new_path += os.path.join(self.py_dir, 'bin') + os.pathsep
         if self.mpi_dir:
@@ -325,8 +325,7 @@ echo "============== Done ==============="
         if self.sdials_dir:
             os.path.join(self.sdials_dir, 'bin') + os.pathsep
         env['PATH'] = new_path + env['PATH']
-        new_pythonpath = (os.path.abspath(os.path.dirname(self.script_path)) + os.pathsep +
-                          os.path.join(work_dir, 'depend') + os.pathsep)
+        new_pythonpath = os.path.join(work_dir, 'depend') + os.pathsep
         if self.nest_dir:
             new_pythonpath += (os.path.join(self.nest_dir, 'lib', 'python2.7', 'dist-packages') +
                                os.pathsep)
