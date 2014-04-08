@@ -81,14 +81,14 @@ class _BaseNineCell(nineline.cells.NineCell):
                 try:
                     setattr(self._component, self._translations[var], value)
                 except KeyError as e:
-                    raise AttributeError("Component does not have translation for parameter '{}'"\
+                    raise AttributeError("Component does not have translation for parameter {}"\
                                          .format(e))
     
             def __getattr__(self, var):
                 try:
                     return getattr(self._component, self._translations[var])
                 except KeyError as e:
-                    raise AttributeError("Component does not have translation for parameter '{}'"\
+                    raise AttributeError("Component does not have translation for parameter {}"\
                                          .format(e))
                     
             def __dir__(self):
