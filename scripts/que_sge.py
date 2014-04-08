@@ -17,9 +17,15 @@ class SGESubmitter(object):
     cluster
     """
 
-    def __init__(self, script_path, python_install_dir=None, open_mpi_install_dir=None, 
+    def __init__(self, script_path, np=8, que_name='short', max_memory='3g', virtual_memory='2g',
+                 python_install_dir=None, open_mpi_install_dir=None, 
                  neuron_install_dir=None, nest_install_dir=None, sundials_install_dir=None,
                  work_dir_parent=None, output_dir_parent=None):
+        self.script_path = script_path
+        self.np = np
+        self.que_name = que_name
+        self.max_memory = max_memory
+        self.virtual_memory = virtual_memory
         if python_install_dir:
             self.py_dir = python_install_dir
         else:
@@ -41,7 +47,7 @@ class SGESubmitter(object):
         else:
             self.sdials_dir = os.environ.get('SUNDIALSHOME', None)
         # Import the script as a module
-        self.script_path = script_path
+        
         if os.path.dirname(self.script_path):
             sys.path.append(os.path.dirname(self.script_path))
         self.script_name = os.path.splitext(os.path.basename(script_path))[0]
@@ -105,10 +111,6 @@ class SGESubmitter(object):
         # Write time string to file for future reference
         with open(os.path.join(self.work_dir, 'output', 'time_stamp'), 'w') as f:
             f.write(time_str + '\n')
-        # Make src directory
-        os.mkdir(os.path.join(self.work_dir, 'src'))
-        shutil.copy2(self.script_path, os.path.join(self.work_dir, 'src', 
-                                                    os.path.basename(self.script_path)))
         # Determine the path for the output directory when it is copied to the output directory destination
         self.output_dir = os.path.join(output_dir_parent, os.path.split(self.work_dir)[1])
         # Copy snapshot of selected subdirectories to working directory
@@ -121,26 +123,25 @@ class SGESubmitter(object):
             for from_, to_ in dependencies:
                 shutil.copytree(from_, os.path.join(dependency_dir, to_))
     
-    def parse_arguments(self, argv, np=8, que_name='short', max_memory='3g', virtual_memory='2g', 
-                        remove_options_from_script=('plot','output','disable_mpi')):
+    def parse_arguments(self, argv, remove_options_from_script=('plot','output','disable_mpi')):
         parser = self.script.parser
         for opt in remove_options_from_script:
             try:
                 parser._remove_action(next(a for a in parser._actions if a.dest == opt))
             except StopIteration:
                 pass
-        parser.add_argument('--np', type=int, default=np,
+        parser.add_argument('--np', type=int, default=self.np,
                         help="The the number of processes to use for the simulation "
                              "(default: %(default)s)")
-        parser.add_argument('--que_name', type=str, default=que_name,
+        parser.add_argument('--que_name', type=str, default=self.que_name,
                             help="The the que to submit the job to (default: '%(default)s')")
         parser.add_argument('--output_dir', default=None, type=str,
                             help="The parent directory in which the output directory will be created "
                                  "(default: $HOME/Output)")
-        parser.add_argument('--max_memory', type=str, default=max_memory,
+        parser.add_argument('--max_memory', type=str, default=self.max_memory,
                             help="The maximum memory allocated to run the network "
                                  "(default: '%(default)s')")
-        parser.add_argument('--virtual_memory', type=str, default=virtual_memory,
+        parser.add_argument('--virtual_memory', type=str, default=self.virtual_memory,
                             help="The average memory usage required by the program, decides when "
                                   "the scheduler is able to run the job (default: '%(default)s')")
         parser.add_argument('--time_limit', type=float, default=None,
@@ -155,9 +156,14 @@ class SGESubmitter(object):
                                  "cluster for testing")
         parser.add_argument('--work_dir', type=str, default=None,
                             help="The work directory in which to run the simulation")
-        self.args = parser.parse_args(argv)
+        args = parser.parse_args(argv)
+        self.np = args.np
+        self.que_name = args.que_name
+        self.max_memory = args.max_memory
+        self.virtual_memory = args.virtual_memory
+        return args
 
-    def submit(self, override_args={}, env=None, copy_to_output=['xml'], strip_build_from_copy=True,
+    def submit(self, args, env=None, copy_to_output=[], strip_9build_from_copy=True,
                name=None, dry_run=False):
         """
         Create a jobscript in the work directory and then submit it to the tombo que
@@ -168,13 +174,10 @@ class SGESubmitter(object):
         `strip_build_from_copy` -- Removes all files and directories to be copied that have the name 'build'
         `name`           -- Records a name for the run (when generating multiple runs) so that the output directory can be easily renamed to a more informative name after it is copied to its destination via the command "mv <output_dir> `cat <output_dir>/name`"
         """
-        # Override
-        for key, val in override_args.iteritems():
-            setattr(self.args, key, val)
         # Copy necessary files into work directory and compile if necessary
-        self.script.prepare_work_dir(self.work_dir, self.args)
+        self.script.prepare_work_dir(self.work_dir, args)
         # Create command line to be run in job script from parsed arguments
-        cmdline = self._create_cmdline()
+        cmdline = self._create_cmdline(args)
         if not env:
             env = self._create_env(self.work_dir)
         else:
@@ -182,8 +185,8 @@ class SGESubmitter(object):
         copy_cmd = ''
         for to_copy in copy_to_output:
             origin = self.work_dir + os.path.sep + to_copy
-            if strip_build_from_copy:
-                copy_cmd += 'find {origin} -name build -exec rm -r {{}} \; 2>/dev/null\n'.\
+            if strip_9build_from_copy:
+                copy_cmd += 'find {origin} -name .9build -exec rm -r {{}} \; 2>/dev/null\n'.\
                           format(origin=origin)
             destination = self.output_dir + os.path.sep + to_copy
             base_dir = os.path.dirname(destination[:-1] if destination.endswith('/') else destination)
@@ -194,12 +197,12 @@ cp -r {origin} {destination}
 """
                          .format(base_dir=base_dir, origin=origin, destination=destination))
         # Create jobscript
-        if self.args.time_limit:
-            if type(self.args.time_limit) != str or len(self.args.time_limit.split(':')) != 3:
+        if args.time_limit:
+            if type(args.time_limit) != str or len(args.time_limit.split(':')) != 3:
                 raise Exception("Poorly formatted time limit string '{}' passed to submit job"
-                                .format(self.args.time_limit))
+                                .format(args.time_limit))
             time_limit_option = ("\n# Set the maximum run time\n#$ -l h_rt {}\n"
-                                 .format(self.args.time_limit))
+                                 .format(args.time_limit))
         else:
             time_limit_option = ''
         if name:
@@ -222,14 +225,14 @@ cp -r {origin} {destination}
 #$ -e {work_dir}/output_stream
 
 # Name of the queue
-#$ -q {args.que_name}
+#$ -q {que_name}
 
-# use OpenMPI parallel environment with {args.np} processes
-#$ -pe openmpi {args.np}
+# use OpenMPI parallel environment with {np} processes
+#$ -pe openmpi {np}
 {time_limit}
 # Set the memory limits for the script
-#$ -l h_vmem={args.max_memory}
-#$ -l virtual_free={args.virtual_memory}
+#$ -l h_vmem={max_memory}
+#$ -l virtual_free={virtual_memory}
 
 # Export the following env variables:
 #$ -v HOME
@@ -267,10 +270,12 @@ cp {work_dir}/output_stream {output_dir}/output
 
 echo "============== Done ===============" 
 """
-            .format(work_dir=self.work_dir, args=self.args, path=env['PATH'], 
-                    pythonpath=env['PYTHONPATH'], ld_library_path=env['LD_LIBRARY_PATH'], 
-                    cmdline=cmdline, output_dir=self.output_dir, name_cmd=name_cmd, 
-                    copy_cmd=copy_cmd, jobscript_path=jobscript_path, time_limit=time_limit_option))
+            .format(work_dir=self.work_dir, args=args, path=env['PATH'], np=self.np, 
+                    que_name=self.que_name, max_memory = self.max_memory, 
+                    virtual_memory=self.virtual_memory, pythonpath=env['PYTHONPATH'], 
+                    ld_library_path=env['LD_LIBRARY_PATH'], cmdline=cmdline, 
+                    output_dir=self.output_dir, name_cmd=name_cmd, copy_cmd=copy_cmd, 
+                    jobscript_path=jobscript_path, time_limit=time_limit_option))
         # Submit job
         print "Submitting job '%s' to que" % jobscript_path
         if dry_run:
@@ -284,14 +289,13 @@ echo "============== Done ==============="
         print ("Once completed the output files (including the output stream and job script) of "
                "this job will be copied to: {}".format(self.output_dir))
     
-    def _create_cmdline(self):
-        cmdline = 'time mpirun python {}.py'.format(os.path.join(self.work_dir, 'src', 
-                                                                 self.script_name))
+    def _create_cmdline(self, args):
+        cmdline = 'time mpirun python {}.py'.format(self.script_name)
         options = ' --output {}/output/'.format(self.work_dir)
         for arg in self.script_args:
             name = arg.dest
-            if hasattr(self.args, name):
-                val = getattr(self.args, name)
+            if hasattr(args, name):
+                val = getattr(args, name)
                 if arg.required:
                         cmdline += ' {}'.format(val)
                 else:
@@ -321,7 +325,7 @@ echo "============== Done ==============="
         if self.sdials_dir:
             os.path.join(self.sdials_dir, 'bin') + os.pathsep
         env['PATH'] = new_path + env['PATH']
-        new_pythonpath = (os.path.join(work_dir, 'src') + os.pathsep +
+        new_pythonpath = (os.path.abspath(os.path.dirname(self.script_path)) + os.pathsep +
                           os.path.join(work_dir, 'depend') + os.pathsep)
         if self.nest_dir:
             new_pythonpath += (os.path.join(self.nest_dir, 'lib', 'python2.7', 'dist-packages') +
@@ -343,5 +347,5 @@ if __name__ == '__main__':
         raise Exception("At least one argument (the script name to submit to the que) should be "
                         "passed to que_sge.py")
     submitter = SGESubmitter(sys.argv[1])
-    submitter.parse_arguments(sys.argv[2:])
-    submitter.submit(dry_run=True)
+    args = submitter.parse_arguments(sys.argv[2:])
+    submitter.submit(args, dry_run=True)
