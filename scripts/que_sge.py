@@ -5,8 +5,11 @@ Wraps a executable to enable that script to be submitted to an SGE cluster engin
 import sys
 import os.path
 import argparse
-from neurotune.tuner.mpi import SGESubmitter
-   
+from copy import copy
+import time
+import subprocess
+import shutil
+
 
 class SGESubmitter(object):
     """
@@ -14,91 +17,292 @@ class SGESubmitter(object):
     cluster
     """
 
-#     PYTHON_INSTALL_DIR='/apps/python/272'
-#     OPEN_MPI_INSTALL_DIR='/opt/mpi/gnu/openmpi-1.6.3'
-#     NEURON_INSTALL_DIR='/apps/DeschutterU/NEURON-7.3'
-#     NEST_INSTALL_DIR='/apps/DeschutterU/nest-2.2.1'
-#     SUNDIALS_INSTALL_DIR='/apps/DeschutterU/sundials-2.5.0'
-#     NEUROFITTER_INSTALL_DIR='/home/t/tclose/git/neurofitter/bin'
-    
-    def __init__(self, python_install_dir=None, open_mpi_install_dir=None, neuron_install_dir=None, 
-                 nest_install_dir=None, sundials_install_dir=None):
-        self.py_dir=python_install_dir if python_install_dir else os.environ.get('PYTHONHOME', None)
-        self.mpi_dir=(open_mpi_install_dir 
-                      if open_mpi_install_dir else os.environ.get('MPIHOME', None))
-        self.nrn_dir=neuron_install_dir if neuron_install_dir else os.environ.get('NRNHOME', None)
-        self.nest_dir=nest_install_dir if nest_install_dir else os.environ.get('NESTHOME', None)
-        self.sdials_dir=(sundials_install_dir 
-                         if sundials_install_dir else os.environ.get('SUNDIALSHOME', None))
-        
-        script_name = sys.argv[1]
-        # Create submitter object
-        submitter = SGESubmitter()
+    def __init__(self, script_path, python_install_dir=None, open_mpi_install_dir=None, 
+                 neuron_install_dir=None, nest_install_dir=None, sundials_install_dir=None,
+                 work_dir_parent=None, output_dir_parent=None):
+        if python_install_dir:
+            self.py_dir = python_install_dir
+        else:
+            self.py_dir = os.environ.get('PYTHONHOME', None)
+        if open_mpi_install_dir:
+            self.mpi_dir = open_mpi_install_dir
+        else:
+            self.mpi_dir = os.environ.get('MPIHOME', None)
+        if neuron_install_dir:
+            self.nrn_dir = neuron_install_dir
+        else:
+            self.nrn_dir = os.environ.get('NRNHOME', None)
+        if nest_install_dir:
+            self.nest_dir = nest_install_dir
+        else:
+            self.nest_dir = os.environ.get('NESTHOME', None)
+        if sundials_install_dir:
+            self.sdials_dir = sundials_install_dir
+        else:
+            self.sdials_dir = os.environ.get('SUNDIALSHOME', None)
         # Import the script as a module
-        script = None # Actually set by the following 'exec' statement but initialised here to squash PyLint
-        if os.path.dirname(script_name):
-            sys.path.append(os.path.dirname(script_name))
-        exec("import {} as script".format(os.path.splitext(os.path.basename(script_name))[0]))
-        # Place empty versions of parser and src_dir_init if they are not provided by script
-        if not hasattr(script, 'parser'):  
-            script.parser = argparse.ArgumentParser() 
-        if not hasattr(script, 'prepare_work_dir'): 
+        self.script_path = script_path
+        if os.path.dirname(self.script_path):
+            sys.path.append(os.path.dirname(self.script_path))
+        self.script_name = os.path.splitext(os.path.basename(script_path))[0]
+        exec("import {} as script".format(self.script_name))
+        self.script = script
+        # Place empty versions of parser and prepare_work_dir if they are not provided by script
+        if not hasattr(self.script, 'parser'):
+            self.script.parser = argparse.ArgumentParser()
+        self.script_args = copy(self.script.parser._actions)
+        if not hasattr(script, 'prepare_work_dir'):
             def dummy_func(src_dir, args):
                 pass
-            script.prepare_work_dir = dummy_func
-        parser, script_args = submitter.add_sge_arguments(script.parser)  # @UndefinedVariable: script
-        # Try to import 'src_dir_init' method from script otherwise fail gracefully
-        # Parse arguments that were supplied to script
-        args = parser.parse_args(sys.argv[2:])
-        # Create work dir on 
-        work_dir, output_dir = submitter.create_work_dir(script_name)
-        # Create command line to be run in job script from parsed arguments
-        cmdline = submitter.create_cmdline(script_name, script_args, work_dir, args)
-        # Initialise work directory
-        submitter.work_dir_init(work_dir)
-        # Copy and 
-        script.prepare_work_dir(work_dir, args)
-        # Submit script to scheduler
-        submitter.submit(script_name, cmdline, work_dir, output_dir, args)
-    
-    def add_sge_arguments(self, parser, np=256, que_name='short', max_memory='3g', 
-                          virtual_memory='2g'):
-        original_actions = copy(parser._actions)
-        def remove_parser_arg(argname):
+            self.script.prepare_work_dir = dummy_func
+        # Create work dir and set output dir path
+        self._create_work_dir(work_dir_parent, output_dir_parent)
+
+    def _create_work_dir(self, work_dir_parent=None, output_dir_parent=None, required_dirs=[], 
+                         dependencies=[]):
+        """
+        Generates unique paths for the work and output directories, creating the work directory in the 
+        process.
+        
+        `script_name`       -- The name of the script, used to name the directories appropriately
+        `work_dir`          -- The name of the 
+        `output_dir_parent` -- The name of the parent directory in which the output directory """ \
+                               "will be created (defaults to $HOME/Output)."
+        "`required_dirs`    -- The sub-directories that need to be copied into the work directory"
+        if not output_dir_parent:
+            output_dir_parent = os.path.join(os.environ['HOME'], 'output')
+        work_dir_parent = os.path.realpath(os.path.join(os.environ['HOME'], 'work'))
+        if not os.path.exists(work_dir_parent):
+            raise Exception("Symbolic link to work directory is missing from your home directory "
+                            "(i.e. $HOME/work). A symbolic link should be created that points to "
+                            "an appropriate directory in your units sub-directory of '/work' "
+                            "(i.e. ln -s /work/<unit-name>/<user-name> $HOME/work)")
+        if not work_dir_parent.startswith('/work'):
+            raise Exception("$HOME/work be a symbolic link to a sub-directory of the "
+                            "high-performance filesystem mounted at '/work' (typically "
+                            "/work/<unit-name>/<user-name>).")
+        # Automatically generate paths
+        # Unique time for distinguishing runs
+        time_str = time.strftime('%Y-%m-%d-%A_%H-%M-%S', time.localtime())
+        # Working directory path
+        self.work_dir = os.path.join(work_dir_parent, self.script_name + "." + time_str + ".1")
+        # Ensure that working directory is unique
+        created_work_dir = False
+        count = 1
+        while not created_work_dir:
             try:
-                parser._remove_action(next(a for a in parser._actions if a.dest == argname))
+                created_work_dir = not os.makedirs(self.work_dir)
+            except IOError as e:
+                count += 1
+                if count > 1000:
+                    print "Something has gone wrong, can't create directory '{}' after 1000 " \
+                          "attempts".format(self.work_dir)
+                    raise e
+                # Replace old count at the end of work directory with new count
+                self.work_dir = '.'.join(self.work_dir.split('.')[:-1] + [str(count)])
+        # Make output directory for the generated files
+        os.mkdir(os.path.join(self.work_dir, 'output'))
+        # Write time string to file for future reference
+        with open(os.path.join(self.work_dir, 'output', 'time_stamp'), 'w') as f:
+            f.write(time_str + '\n')
+        # Make src directory
+        os.mkdir(os.path.join(self.work_dir, 'src'))
+        shutil.copy2(self.script_path, os.path.join(self.work_dir, 'src', 
+                                                    os.path.basename(self.script_path)))
+        # Determine the path for the output directory when it is copied to the output directory destination
+        self.output_dir = os.path.join(output_dir_parent, os.path.split(self.work_dir)[1])
+        # Copy snapshot of selected subdirectories to working directory
+        for directory in required_dirs:
+            print "Copying '{}' sub-directory to work directory".format(directory)
+            shutil.copytree(directory, os.path.join(work_dir, directory), symlinks=True)
+        if dependencies:
+            dependency_dir = os.path.join(work_dir, 'depend')
+            os.mkdir(dependency_dir)
+            for from_, to_ in dependencies:
+                shutil.copytree(from_, os.path.join(dependency_dir, to_))
+    
+    def parse_arguments(self, argv, np=8, que_name='short', max_memory='3g', virtual_memory='2g', 
+                        remove_options_from_script=('plot','output','disable_mpi')):
+        parser = self.script.parser
+        for opt in remove_options_from_script:
+            try:
+                parser._remove_action(next(a for a in parser._actions if a.dest == opt))
             except StopIteration:
                 pass
-        remove_parser_arg('plot')
-        remove_parser_arg('output')
-        remove_parser_arg('disable_mpi')
-        parser.add_argument('--np', type=int, default=np, 
+        parser.add_argument('--np', type=int, default=np,
                         help="The the number of processes to use for the simulation "
                              "(default: %(default)s)")
-        parser.add_argument('--que_name', type=str, default=que_name, 
+        parser.add_argument('--que_name', type=str, default=que_name,
                             help="The the que to submit the job to (default: '%(default)s')")
-        parser.add_argument('--output_dir', default=None, type=str, 
+        parser.add_argument('--output_dir', default=None, type=str,
                             help="The parent directory in which the output directory will be created "
                                  "(default: $HOME/Output)")
-        parser.add_argument('--max_memory', type=str, default=max_memory, 
+        parser.add_argument('--max_memory', type=str, default=max_memory,
                             help="The maximum memory allocated to run the network "
                                  "(default: '%(default)s')")
-        parser.add_argument('--virtual_memory', type=str, default=virtual_memory, 
+        parser.add_argument('--virtual_memory', type=str, default=virtual_memory,
                             help="The average memory usage required by the program, decides when "
                                   "the scheduler is able to run the job (default: '%(default)s')")
-        parser.add_argument('--jobname', type=str, default=None, 
+        parser.add_argument('--time_limit', type=float, default=None,
+                            help="The time limit after which the job will be terminated")
+        parser.add_argument('--jobname', type=str, default=None,
                             help="Saves a file within the output directory with the descriptive name"
                                  " for easy renaming of the output directory after it is copied to "
                                  "its final destination, via the command "
                                  "'mv <output_dir> `cat <output_dir>/name`'")
-        parser.add_argument('--dry_run', action='store_true', 
+        parser.add_argument('--dry_run', action='store_true',
                             help="Performs a dry run without trying to  submit the job to the "
                                  "cluster for testing")
         parser.add_argument('--work_dir', type=str, default=None,
                             help="The work directory in which to run the simulation")
-        return parser, original_actions
+        self.args = parser.parse_args(argv)
+
+    def submit(self, override_args={}, env=None, copy_to_output=['xml'], strip_build_from_copy=True,
+               name=None, dry_run=False):
+        """
+        Create a jobscript in the work directory and then submit it to the tombo que
         
-    def create_env(self, work_dir):
+        `override_args`  -- Override existing arguments parsed from command line
+        `env`            -- The required environment variables (defaults to those generated by '_create_env(work_dir)')    
+        `copy_to_output` -- Directories to copy into the output directory
+        `strip_build_from_copy` -- Removes all files and directories to be copied that have the name 'build'
+        `name`           -- Records a name for the run (when generating multiple runs) so that the output directory can be easily renamed to a more informative name after it is copied to its destination via the command "mv <output_dir> `cat <output_dir>/name`"
+        """
+        # Override
+        for key, val in override_args.iteritems():
+            setattr(self.args, key, val)
+        # Copy necessary files into work directory and compile if necessary
+        self.script.prepare_work_dir(self.work_dir, self.args)
+        # Create command line to be run in job script from parsed arguments
+        cmdline = self._create_cmdline()
+        if not env:
+            env = self._create_env(self.work_dir)
+        else:
+            env = copy(env)
+        copy_cmd = ''
+        for to_copy in copy_to_output:
+            origin = self.work_dir + os.path.sep + to_copy
+            if strip_build_from_copy:
+                copy_cmd += 'find {origin} -name build -exec rm -r {{}} \; 2>/dev/null\n'.\
+                          format(origin=origin)
+            destination = self.output_dir + os.path.sep + to_copy
+            base_dir = os.path.dirname(destination[:-1] if destination.endswith('/') else destination)
+            copy_cmd += (
+"""
+mkdir -p {base_dir}
+cp -r {origin} {destination}
+"""
+                         .format(base_dir=base_dir, origin=origin, destination=destination))
+        # Create jobscript
+        if self.args.time_limit:
+            if type(self.args.time_limit) != str or len(self.args.time_limit.split(':')) != 3:
+                raise Exception("Poorly formatted time limit string '{}' passed to submit job"
+                                .format(self.args.time_limit))
+            time_limit_option = ("\n# Set the maximum run time\n#$ -l h_rt {}\n"
+                                 .format(self.args.time_limit))
+        else:
+            time_limit_option = ''
+        if name:
+            name_cmd = "echo '{name}' > {output_dir}/name"
+        else:
+            name_cmd = ""
+        jobscript_path = os.path.join(self.work_dir, self.script_name + '.job')
+        with open(jobscript_path, 'w') as f:
+            f.write(
+"""#!/usr/bin/env sh
+    
+# Parse the job script using this shell
+#$ -S /bin/bash
+
+# Send stdout and stderr to the same file.
+#$ -j y
+
+# Standard output and standard error files
+#$ -o {work_dir}/output_stream
+#$ -e {work_dir}/output_stream
+
+# Name of the queue
+#$ -q {args.que_name}
+
+# use OpenMPI parallel environment with {args.np} processes
+#$ -pe openmpi {args.np}
+{time_limit}
+# Set the memory limits for the script
+#$ -l h_vmem={args.max_memory}
+#$ -l virtual_free={args.virtual_memory}
+
+# Export the following env variables:
+#$ -v HOME
+#$ -v PATH
+#$ -v PYTHONPATH
+#$ -v LD_LIBRARY_PATH
+#$ -v NINEMLP_SRC_PATH
+#$ -v NINEMLP_MPI
+#$ -v BREP_DEVEL
+#$ -v PARAMDIR
+#$ -v VERBOSE
+
+###################################################
+### Copy the model to all machines we are using ###
+###################################################
+
+# Set up the correct paths 
+export PATH={path}:$PATH
+export PYTHONPATH={pythonpath}
+export LD_LIBRARY_PATH={ld_library_path}
+
+echo "============== Starting mpirun ===============" 
+
+cd {work_dir}
+{cmdline}
+
+echo "============== Mpirun has ended =============="
+
+echo "Copying files to output directory '{output_dir}'"
+cp -r {work_dir}/output {output_dir}
+cp {jobscript_path} {output_dir}/job
+cp {work_dir}/output_stream {output_dir}/output
+{name_cmd}
+{copy_cmd}
+
+echo "============== Done ===============" 
+"""
+            .format(work_dir=self.work_dir, args=self.args, path=env['PATH'], 
+                    pythonpath=env['PYTHONPATH'], ld_library_path=env['LD_LIBRARY_PATH'], 
+                    cmdline=cmdline, output_dir=self.output_dir, name_cmd=name_cmd, 
+                    copy_cmd=copy_cmd, jobscript_path=jobscript_path, time_limit=time_limit_option))
+        # Submit job
+        print "Submitting job '%s' to que" % jobscript_path
+        if dry_run:
+            print ("Would normally call 'qsub {}' here but 'dry_run' option was provided"
+                   .format(jobscript_path))
+        else:
+            subprocess.check_call('qsub {}'.format(jobscript_path), shell=True)
+        print "Your job '{}' has been submitted".format(jobscript_path)
+        print "The output stream can be viewed by:"
+        print "less {}".format(os.path.join(self.work_dir, 'output_stream'))
+        print ("Once completed the output files (including the output stream and job script) of "
+               "this job will be copied to: {}".format(self.output_dir))
+    
+    def _create_cmdline(self):
+        cmdline = 'time mpirun python {}.py'.format(os.path.join(self.work_dir, 'src', 
+                                                                 self.script_name))
+        options = ' --output {}/output/'.format(self.work_dir)
+        for arg in self.script_args:
+            name = arg.dest
+            if hasattr(self.args, name):
+                val = getattr(self.args, name)
+                if arg.required:
+                        cmdline += ' {}'.format(val)
+                else:
+                    if val is not False:
+                        options += ' --{}'.format(name)
+                        if val is not True:
+                            options += ' {}'.format(val)
+        cmdline += options
+        return cmdline
+
+    def _create_env(self, work_dir):
         """
         Creates a dictionary containing the appropriate environment variables
         
@@ -131,235 +335,13 @@ class SGESubmitter(object):
         if self.sdials_dir:
             new_library_path += os.path.join(self.sdials_dir, 'lib')
         env['NINEML_SRC_PATH'] = os.path.join(work_dir, 'src')
-        return env        
-
-#     def get_project_dir(self):
-#         """
-#         Returns the root directory of the project
-#         """
-#         # Root directory of the project code
-#         return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')) 
-    
-    def create_work_dir(self, script_name, output_dir_parent=None):
-        """
-        Generates unique paths for the work and output directories, creating the work directory in the 
-        process.
-        
-        `script_name`       -- The name of the script, used to name the directories appropriately
-        `work_dir`          -- The name of the 
-        `output_dir_parent` -- The name of the parent directory in which the output directory """ \
-                               "will be created (defaults to $HOME/Output)." \
-        "`required_dirs`    -- The sub-directories that need to be copied into the work directory"
-        if not output_dir_parent:
-            output_dir_parent = os.path.join(os.environ['HOME'], 'output')
-        work_dir_parent = os.path.realpath(os.path.join(os.environ['HOME'], 'work'))
-        if not os.path.exists(work_dir_parent):
-            raise Exception("Symbolic link to work directory is missing from your home directory " \
-                            "(i.e. $HOME/work). A symbolic link should be created that points to " \
-                            "an appropriate directory in your units sub-directory of '/work' " \
-                            "(i.e. ln -s /work/<unit-name>/<user-name> $HOME/work)")
-        if not work_dir_parent.startswith('/work'):
-            raise Exception("$HOME/work be a symbolic link to a sub-directory of the " \
-                            "high-performance filesystem mounted at '/work' (typically "\
-                            "/work/<unit-name>/<user-name>).")
-        # Automatically generate paths
-        # Unique time for distinguishing runs    
-        time_str = time.strftime('%Y-%m-%d-%A_%H-%M-%S', time.localtime()) 
-        # Working directory path
-        work_dir = os.path.join(work_dir_parent, script_name + "." + time_str + ".1") 
-        #Ensure that working directory is unique
-        created_work_dir=False
-        count = 1
-        while not created_work_dir:
-            try:
-                created_work_dir = not os.makedirs(work_dir) 
-            except IOError as e:
-                count += 1
-                if count > 1000:
-                    print "Something has gone wrong, can't create directory '{}' after 1000 " \
-                          "attempts".format(work_dir)
-                    raise e
-                # Replace old count at the end of work directory with new count
-                work_dir = '.'.join(work_dir.split('.')[:-1] + [str(count)])
-        # Make output directory for the generated files
-        os.mkdir(os.path.join(work_dir, 'output'))      
-        # Write time string to file for future reference
-        with open(os.path.join(work_dir, 'output', 'time_stamp'), 'w') as f:
-            f.write(time_str + '\n')
-        # Determine the path for the output directory when it is copied to the output directory destination
-        output_dir = os.path.join(output_dir_parent, os.path.split(work_dir)[1])
-        return work_dir, output_dir
-    
-    def work_dir_init(self, work_dir, required_dirs=[], dependencies=[]):
-        """
-        Copies directories from the project directory to the work directory
-        
-        `work_dir`      -- The destination work directory
-        `required_dirs` -- The required sub-directories to be copied to the work directory
-        """
-        os.mkdir(os.path.join(work_dir, 'src'))
-        # Copy snapshot of selected subdirectories to working directory
-        for directory in required_dirs:
-            print "Copying '{}' sub-directory to work directory".format(directory)
-            shutil.copytree(directory, os.path.join(work_dir,directory), symlinks=True)
-        if dependencies:
-            dependency_dir = os.path.join(work_dir, 'depend') 
-            os.mkdir(dependency_dir)
-            for from_, to_ in dependencies:
-#                 # If not an absolute path prepend the project directory as a relative path (useful for
-#                 # getting dependencies from directories installed alongside the project directory
-#                 if not from_.startswith('/'):
-#                     from_ = get_project_dir() + os.path.sep + from_
-                shutil.copytree(from_, os.path.join(dependency_dir, to_))
-                
-    def create_cmdline(self, script_name, script_args, work_dir, args):
-        cmdline = 'time mpirun python {}.py'.format(script_name)
-        options=' --output {}/output/'.format(work_dir)
-        for arg in script_args:
-            name = arg.dest
-            if hasattr(args, name):
-                val = getattr(args, name)
-                if arg.required:
-                        cmdline += ' {}'.format(val)
-                else:
-                    if val is not False:
-                        options += ' --{}'.format(name)
-                        if val is not True:
-                            options += ' {}'.format(val)
-        cmdline += options
-        return cmdline
-        
-    def submit(self, script_name, cmds, work_dir, output_dir, args, que_name='longP', 
-                   max_memory='4g', virtual_memory='3g', time_limit=None, env=None, 
-                   copy_to_output=['xml'], strip_build_from_copy=True, name=None, dry_run=False):
-        """
-        Create a jobscript in the work directory and then submit it to the tombo que
-        
-        `script_name`    -- The name of the script (used to give a meaningful name to the job)
-        `cmds`           -- The commands to run on the cluster
-        `np`             -- The number of processors to request for the job
-        `work_dir`       -- The working directory to run the script from
-        `output_dir`     -- The output directory to copy the results to
-        `time_limit`     -- The hard time limit for the job in "HH:MM:SS" format (increases the preference assigned by the scheduler)
-        `env`            -- The required environment variables (defaults to those generated by 'create_env(work_dir)')    
-        `copy_to_output` -- Directories to copy into the output directory
-        `strip_build_from_copy` -- Removes all files and directories to be copied that have the name 'build'
-        `name`           -- Records a name for the run (when generating multiple runs) so that the output directory can be easily renamed to a more informative name after it is copied to its destination via the command "mv <output_dir> `cat <output_dir>/name`"
-        """
-        if not env:
-            env = self.create_env(work_dir)
-        else:
-            env = copy(env)
-        copy_cmd = ''
-        for to_copy in copy_to_output:
-            origin = work_dir + os.path.sep + to_copy
-            if strip_build_from_copy:
-                copy_cmd+='find {origin} -name build -exec rm -r {{}} \; 2>/dev/null\n'.\
-                          format(origin=origin)
-            destination = output_dir + os.path.sep + to_copy
-            base_dir = os.path.dirname(destination[:-1] if destination.endswith('/') else destination)
-            copy_cmd += (
-"""
-mkdir -p {base_dir}
-cp -r {origin} {destination}
-"""
-                         .format(base_dir=base_dir, origin=origin, destination=destination))
-        #Create jobscript
-        if time_limit:
-            if type(time_limit) != str or len(time_limit.split(':')) != 3:
-                raise Exception("Poorly formatted time limit string '{}' passed to submit job"
-                                .format(time_limit))
-            time_limit_option= "\n# Set the maximum run time\n#$ -l h_rt {}\n".format(time_limit)
-        else:
-            time_limit_option=''
-        if name:
-            name_cmd = "echo '{name}' > {output_dir}/name"
-        else:
-            name_cmd = ""
-        jobscript_path = os.path.join(work_dir, script_name + '.job')
-        f = open(jobscript_path, 'w')
-        f.write(
-"""#!/usr/bin/env sh
-    
-# Parse the job script using this shell
-#$ -S /bin/bash
-
-# Send stdout and stderr to the same file.
-#$ -j y
-
-# Standard output and standard error files
-#$ -o {work_dir}/output_stream
-#$ -e {work_dir}/output_stream
-
-# Name of the queue
-#$ -q {que_name}
-
-# use OpenMPI parallel environment with {np} processes
-#$ -pe openmpi {np}
-{time_limit}
-# Set the memory limits for the script
-#$ -l h_vmem={max_mem}
-#$ -l virtual_free={virt_mem}
-
-# Export the following env variables:
-#$ -v HOME
-#$ -v PATH
-#$ -v PYTHONPATH
-#$ -v LD_LIBRARY_PATH
-#$ -v NINEMLP_SRC_PATH
-#$ -v NINEMLP_MPI
-#$ -v BREP_DEVEL
-#$ -v PARAMDIR
-#$ -v VERBOSE
-
-###################################################
-### Copy the model to all machines we are using ###
-###################################################
-
-# Set up the correct paths 
-export PATH={path}:$PATH
-export PYTHONPATH={pythonpath}
-export LD_LIBRARY_PATH={ld_library_path}
-export NINEMLP_SRC_PATH={nine_src_path}
-export NINEMLP_MPI=1
-
-echo "============== Starting mpirun ===============" 
-
-cd {work_dir}
-{cmds}
-
-echo "============== Mpirun has ended =============="
-
-echo "Copying files to output directory '{output_dir}'"
-cp -r {work_dir}/output {output_dir}
-cp {jobscript_path} {output_dir}/job
-cp {work_dir}/output_stream {output_dir}/output
-{name_cmd}
-{copy_cmd}
-
-echo "============== Done ===============" 
-"""
-        .format(work_dir=work_dir, path=env['PATH'], pythonpath=env['PYTHONPATH'],
-          ld_library_path=env['LD_LIBRARY_PATH'], nine_src_path=os.path.join(work_dir,'src'), np=args.np,
-          que_name=que_name, max_mem=max_memory, virt_mem=virtual_memory, cmds=cmds, 
-          output_dir=output_dir, name_cmd=name_cmd, copy_cmd=copy_cmd, jobscript_path=jobscript_path, 
-          time_limit=time_limit_option))
-        f.close()
-        # Submit job
-        print "Submitting job '%s' to que" % jobscript_path
-        if dry_run:
-            print ("Would normally call 'qsub {}' here but 'dry_run' option was provided"
-                   .format(jobscript_path))
-        else:
-            subprocess.check_call('qsub {}'.format(jobscript_path), shell=True)
-        print "Your job '%s' has been submitted" % jobscript_path
-        print "The output stream can be viewed by:"
-        print "less " + os.path.join(work_dir, 'output_stream')
-        print ("Once completed the output files (including the output stream and job script) of "
-               "this job will be copied to:")
-        print output_dir
+        return env
 
 
 if __name__ == '__main__':
-    submitter = SGESubmitter(sys.argv)
-    submitter.submit()
+    if len(sys.argv) < 2:
+        raise Exception("At least one argument (the script name to submit to the que) should be "
+                        "passed to que_sge.py")
+    submitter = SGESubmitter(sys.argv[1])
+    submitter.parse_arguments(sys.argv[2:])
+    submitter.submit(dry_run=True)

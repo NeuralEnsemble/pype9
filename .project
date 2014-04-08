@@ -2,6 +2,8 @@
 <projectDescription>
 	<name>NineLine</name>
 	<comment>A software pipeline to generate multi-simulator implementations of neural networks from NineML descriptions</comment>
+	<projects>
+	</projects>
 	<buildSpec>
 		<buildCommand>
 			<name>org.python.pydev.PyDevBuilder</name>
