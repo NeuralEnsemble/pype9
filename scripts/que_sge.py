@@ -21,7 +21,7 @@ class SGESubmitter(object):
                  python_install_dir=None, open_mpi_install_dir=None, 
                  neuron_install_dir=None, nest_install_dir=None, sundials_install_dir=None,
                  work_dir_parent=None, output_dir_parent=None):
-        self.script_path = script_path
+        self.script_path = os.path.abspath(script_path)
         self.np = np
         self.que_name = que_name
         self.max_memory = max_memory
@@ -290,7 +290,7 @@ echo "============== Done ==============="
                "this job will be copied to: {}".format(self.output_dir))
     
     def _create_cmdline(self, args):
-        cmdline = 'time mpirun python {}.py'.format(self.script_name)
+        cmdline = 'time mpirun python {}'.format(self.script_path)
         options = ' --output {}/output/'.format(self.work_dir)
         for arg in self.script_args:
             name = arg.dest
@@ -313,7 +313,7 @@ echo "============== Done ==============="
         `work_dir` -- The work directory to set the envinroment variables for
         """
         env = os.environ.copy()
-        new_path = os.path.abspath(os.path.dirname(self.script_path)) + os.pathsep
+        new_path = '' #os.path.abspath(os.path.dirname(self.script_path)) + os.pathsep
         if self.py_dir:
             new_path += os.path.join(self.py_dir, 'bin') + os.pathsep
         if self.mpi_dir:
