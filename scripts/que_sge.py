@@ -347,4 +347,4 @@ if __name__ == '__main__':
                         "passed to que_sge.py")
     submitter = SGESubmitter(sys.argv[1])
     args = submitter.parse_arguments(sys.argv[2:])
-    submitter.submit(args, dry_run=True)
+    submitter.submit(args)
