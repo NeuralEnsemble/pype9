@@ -18,9 +18,9 @@ class SGESubmitter(object):
     """
 
     def __init__(self, script_path, np=8, que_name='short', max_memory='3g', virtual_memory='2g',
-                 python_install_dir=None, open_mpi_install_dir=None, 
-                 neuron_install_dir=None, nest_install_dir=None, sundials_install_dir=None,
-                 work_dir_parent=None, output_dir_parent=None):
+                 python_install_dir=None, mpi_install_dir=None,  neuron_install_dir=None, 
+                 nest_install_dir=None, sundials_install_dir=None, work_dir_parent=None, 
+                 output_dir_parent=None):
         self.script_path = os.path.abspath(script_path)
         self.np = np
         self.que_name = que_name
@@ -30,8 +30,8 @@ class SGESubmitter(object):
             self.py_dir = python_install_dir
         else:
             self.py_dir = os.environ.get('PYTHONHOME', None)
-        if open_mpi_install_dir:
-            self.mpi_dir = open_mpi_install_dir
+        if mpi_install_dir:
+            self.mpi_dir = mpi_install_dir
         else:
             self.mpi_dir = os.environ.get('MPIHOME', None)
         if neuron_install_dir:
