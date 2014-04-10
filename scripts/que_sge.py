@@ -17,7 +17,7 @@ class SGESubmitter(object):
     cluster
     """
 
-    def __init__(self, script_path, np=8, que_name='short', max_memory='3g', virtual_memory='2g',
+    def __init__(self, script_path, np=8, que_name='shortP', max_memory='3g', virtual_memory='2g',
                  python_install_dir=None, mpi_install_dir=None,  neuron_install_dir=None, 
                  nest_install_dir=None, sundials_install_dir=None, work_dir_parent=None, 
                  output_dir_parent=None):
