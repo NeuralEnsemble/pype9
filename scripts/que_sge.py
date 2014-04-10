@@ -283,11 +283,10 @@ echo "============== Done ==============="
                    .format(jobscript_path))
         else:
             subprocess.check_call('qsub {}'.format(jobscript_path), shell=True)
-        print "Your job '{}' has been submitted".format(jobscript_path)
-        print "A working directory has been created at '{}'".format(self.work_dir)
+        print "\nA working directory has been created at '{}'".format(self.work_dir)
         print "Once completed the output files will be copied to '{}'\n".format(self.output_dir)
-        print "The output stream can be viewed by the following command:"
-        print "less {}".format(os.path.join(self.output_dir, 'output'))
+        print "The output stream can be viewed by the following command:\n"
+        print "less {}\n".format(os.path.join(self.output_dir, 'output'))
         
     
     def _create_cmdline(self, args):
