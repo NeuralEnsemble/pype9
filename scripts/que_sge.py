@@ -113,6 +113,7 @@ class SGESubmitter(object):
             f.write(time_str + '\n')
         # Determine the path for the output directory when it is copied to the output directory destination
         self.output_dir = os.path.join(output_dir_parent, os.path.split(self.work_dir)[1])
+        os.mkdir(self.output_dir)
         # Copy snapshot of selected subdirectories to working directory
         for directory in required_dirs:
             print "Copying '{}' sub-directory to work directory".format(directory)
@@ -221,8 +222,8 @@ cp -r {origin} {destination}
 #$ -j y
 
 # Standard output and standard error files
-#$ -o {work_dir}/output_stream
-#$ -e {work_dir}/output_stream
+#$ -o {output_dir}/output
+#$ -e {output_dir}/output
 
 # Name of the queue
 #$ -q {que_name}
@@ -262,9 +263,8 @@ cd {work_dir}
 echo "============== Mpirun has ended =============="
 
 echo "Copying files to output directory '{output_dir}'"
-cp -r {work_dir}/output {output_dir}
+cp -r {work_dir}/output/* {output_dir}
 cp {jobscript_path} {output_dir}/job
-cp {work_dir}/output_stream {output_dir}/output
 {name_cmd}
 {copy_cmd}
 
@@ -284,10 +284,11 @@ echo "============== Done ==============="
         else:
             subprocess.check_call('qsub {}'.format(jobscript_path), shell=True)
         print "Your job '{}' has been submitted".format(jobscript_path)
-        print "The output stream can be viewed by:"
-        print "less {}".format(os.path.join(self.work_dir, 'output_stream'))
-        print ("Once completed the output files (including the output stream and job script) of "
-               "this job will be copied to: {}".format(self.output_dir))
+        print "A working directory has been created at '{}'".format(self.work_dir)
+        print "Once completed the output files will be copied to '{}'\n".format(self.output_dir)
+        print "The output stream can be viewed by the following command:"
+        print "less {}".format(os.path.join(self.output_dir, 'output'))
+        
     
     def _create_cmdline(self, args):
         cmdline = 'time mpirun python {}'.format(self.script_path)
