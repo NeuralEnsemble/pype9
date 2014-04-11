@@ -124,11 +124,14 @@ class SGESubmitter(object):
             for from_, to_ in dependencies:
                 shutil.copytree(from_, os.path.join(dependency_dir, to_))
     
-    def parse_arguments(self, argv, remove_options_from_script=('plot','output','disable_mpi')):
+    def parse_arguments(self, argv, output_args=['output'],  args_to_remove=['plot']):
         parser = self.script.parser
-        for opt in remove_options_from_script:
+        removed_args = []
+        for opt in args_to_remove:
             try:
-                parser._remove_action(next(a for a in parser._actions if a.dest == opt))
+                action = next(a for a in parser._actions if a.dest == opt)
+                removed_args.append((action.dest, action.default))
+                parser._remove_action(action)
             except StopIteration:
                 pass
         parser.add_argument('--np', type=int, default=self.np,
@@ -137,8 +140,8 @@ class SGESubmitter(object):
         parser.add_argument('--que_name', type=str, default=self.que_name,
                             help="The the que to submit the job to (default: '%(default)s')")
         parser.add_argument('--output_dir', default=None, type=str,
-                            help="The parent directory in which the output directory will be created "
-                                 "(default: $HOME/Output)")
+                            help="The parent directory in which the output directory will be "
+                                 "created  (default: $HOME/Output)")
         parser.add_argument('--max_memory', type=str, default=self.max_memory,
                             help="The maximum memory allocated to run the network "
                                  "(default: '%(default)s')")
@@ -162,6 +165,15 @@ class SGESubmitter(object):
         self.que_name = args.que_name
         self.max_memory = args.max_memory
         self.virtual_memory = args.virtual_memory
+        for out_arg in output_args:
+            try:
+                new_path = self.work_dir + '/output/' + os.path.basename(getattr(args, out_arg))
+                setattr(args, out_arg, new_path)
+            except AttributeError:
+                raise Exception("Output path argument proved to parse_arguments '{}' does not "
+                                "appear in script arguments".format(out_arg))
+        for name, default_val in removed_args:
+            setattr(args, name, default_val) 
         return args
 
     def submit(self, args, env=None, copy_to_output=[], strip_9build_from_copy=True,
@@ -278,7 +290,7 @@ echo "============== Done ==============="
                     jobscript_path=jobscript_path, time_limit=time_limit_option))
         # Submit job
         print "\nSubmitting job {} to que {}".format(jobscript_path, self.que_name)
-        if dry_run:
+        if args.dry_run:
             print ("Would normally call 'qsub {}' here but '--dry_run' option was provided"
                    .format(jobscript_path))
         else:
@@ -291,7 +303,7 @@ echo "============== Done ==============="
     
     def _create_cmdline(self, args):
         cmdline = 'time mpirun python {}'.format(self.script_path)
-        options = ' --output {}/output/'.format(self.work_dir)
+        options = ''
         for arg in self.script_args:
             name = arg.dest
             if hasattr(args, name):
