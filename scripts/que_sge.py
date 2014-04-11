@@ -277,14 +277,14 @@ echo "============== Done ==============="
                     output_dir=self.output_dir, name_cmd=name_cmd, copy_cmd=copy_cmd, 
                     jobscript_path=jobscript_path, time_limit=time_limit_option))
         # Submit job
-        print "\nSubmitting job '{}' to que '{}'".format(jobscript_path, self.que_name)
+        print "\nSubmitting job {} to que {}".format(jobscript_path, self.que_name)
         if dry_run:
-            print ("Would normally call 'qsub {}' here but 'dry_run' option was provided"
+            print ("Would normally call 'qsub {}' here but '--dry_run' option was provided"
                    .format(jobscript_path))
         else:
             subprocess.check_call('qsub {}'.format(jobscript_path), shell=True)
-        print "\nA working directory has been created at '{}'".format(self.work_dir)
-        print "Once completed the output files will be copied to '{}'\n".format(self.output_dir)
+        print "\nA working directory has been created at {}".format(self.work_dir)
+        print "Once completed the output files will be copied to {}\n".format(self.output_dir)
         print "The output stream can be viewed by the following command:\n"
         print "less {}\n".format(os.path.join(self.output_dir, 'output'))
         
