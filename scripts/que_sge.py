@@ -277,7 +277,7 @@ echo "============== Done ==============="
                     output_dir=self.output_dir, name_cmd=name_cmd, copy_cmd=copy_cmd, 
                     jobscript_path=jobscript_path, time_limit=time_limit_option))
         # Submit job
-        print "Submitting job '{}' to que '{}'".format(jobscript_path, self.que_name)
+        print "\nSubmitting job '{}' to que '{}'".format(jobscript_path, self.que_name)
         if dry_run:
             print ("Would normally call 'qsub {}' here but 'dry_run' option was provided"
                    .format(jobscript_path))
