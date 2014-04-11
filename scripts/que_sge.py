@@ -124,7 +124,7 @@ class SGESubmitter(object):
             for from_, to_ in dependencies:
                 shutil.copytree(from_, os.path.join(dependency_dir, to_))
     
-    def parse_arguments(self, argv, output_args=['output'],  args_to_remove=['plot']):
+    def parse_arguments(self, argv, output_args=['output'],  args_to_remove=['plot', 'plot_saved']):
         parser = self.script.parser
         removed_args = []
         for opt in args_to_remove:
