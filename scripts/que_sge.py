@@ -17,15 +17,24 @@ class SGESubmitter(object):
     cluster
     """
 
-    def __init__(self, script_path, np=8, que_name='shortP', max_memory='3g', virtual_memory='2g',
-                 python_install_dir=None, mpi_install_dir=None,  neuron_install_dir=None, 
-                 nest_install_dir=None, sundials_install_dir=None, work_dir_parent=None, 
-                 output_dir_parent=None):
+    MEAN_MEMORY_RATIO_DEFAULT = 0.8
+
+    def __init__(self, script_path, num_processes=8, que_name='shortP', max_memory='4800m',
+                 mean_memory=None, python_install_dir=None, mpi_install_dir=None, 
+                 neuron_install_dir=None, nest_install_dir=None, sundials_install_dir=None, 
+                 work_dir_parent=None, output_dir_parent=None):
         self.script_path = os.path.abspath(script_path)
-        self.np = np
+        self.num_processes = num_processes
         self.que_name = que_name
         self.max_memory = max_memory
-        self.virtual_memory = virtual_memory
+        if mean_memory is None:
+            max_mem_in_mb = float(max_memory[:-1])
+            if max_memory[-1] in ('g', 'G'):
+                max_mem_in_mb *= 1000
+            elif max_memory[-1] not in ('m', 'M'):
+                raise Exception("Unrecognised memory unit '{}'".format(max_memory[-1]))
+            mean_memory = str(int(round(max_mem_in_mb * self.MEAN_MEMORY_RATIO_DEFAULT))) + 'm'
+        self.mean_memory = mean_memory
         if python_install_dir:
             self.py_dir = python_install_dir
         else:
@@ -134,7 +143,7 @@ class SGESubmitter(object):
                 parser._remove_action(action)
             except StopIteration:
                 pass
-        parser.add_argument('--np', type=int, default=self.np,
+        parser.add_argument('--np', type=int, default=self.num_processes,
                         help="The the number of processes to use for the simulation "
                              "(default: %(default)s)")
         parser.add_argument('--que_name', type=str, default=self.que_name,
@@ -145,7 +154,7 @@ class SGESubmitter(object):
         parser.add_argument('--max_memory', type=str, default=self.max_memory,
                             help="The maximum memory allocated to run the network "
                                  "(default: '%(default)s')")
-        parser.add_argument('--virtual_memory', type=str, default=self.virtual_memory,
+        parser.add_argument('--mean_memory', type=str, default=self.mean_memory,
                             help="The average memory usage required by the program, decides when "
                                   "the scheduler is able to run the job (default: '%(default)s')")
         parser.add_argument('--time_limit', type=float, default=None,
@@ -161,10 +170,10 @@ class SGESubmitter(object):
         parser.add_argument('--work_dir', type=str, default=None,
                             help="The work directory in which to run the simulation")
         args = parser.parse_args(argv)
-        self.np = args.np
+        self.num_processes = args.np
         self.que_name = args.que_name
         self.max_memory = args.max_memory
-        self.virtual_memory = args.virtual_memory
+        self.mean_memory = args.mean_memory
         for out_arg in output_args:
             try:
                 new_path = self.work_dir + '/output/' + os.path.basename(getattr(args, out_arg))
@@ -245,7 +254,7 @@ cp -r {origin} {destination}
 {time_limit}
 # Set the memory limits for the script
 #$ -l h_vmem={max_memory}
-#$ -l virtual_free={virtual_memory}
+#$ -l virtual_free={mean_memory}
 
 # Export the following env variables:
 #$ -v HOME
@@ -282,9 +291,9 @@ cp {jobscript_path} {output_dir}/job
 
 echo "============== Done ===============" 
 """
-            .format(work_dir=self.work_dir, args=args, path=env['PATH'], np=self.np, 
+            .format(work_dir=self.work_dir, args=args, path=env['PATH'], np=self.num_processes, 
                     que_name=self.que_name, max_memory = self.max_memory, 
-                    virtual_memory=self.virtual_memory, pythonpath=env['PYTHONPATH'], 
+                    mean_memory=self.mean_memory, pythonpath=env['PYTHONPATH'], 
                     ld_library_path=env['LD_LIBRARY_PATH'], cmdline=cmdline, 
                     output_dir=self.output_dir, name_cmd=name_cmd, copy_cmd=copy_cmd, 
                     jobscript_path=jobscript_path, time_limit=time_limit_option))
