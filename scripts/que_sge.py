@@ -294,7 +294,10 @@ echo "============== Done ==============="
             print ("Would normally call 'qsub {}' here but '--dry_run' option was provided"
                    .format(jobscript_path))
         else:
-            subprocess.check_call('qsub {}'.format(jobscript_path), shell=True)
+            sub_text = subprocess.check_output('qsub {}'.format(jobscript_path), shell=True)
+            # Save jobID to file inside output directory
+            with open(os.path.join(self.work_dir, 'output', 'jobID'), 'w') as f:
+                f.write(sub_text.split()[-1])
         print "\nA working directory has been created at {}".format(self.work_dir)
         print "Once completed the output files will be copied to {}\n".format(self.output_dir)
         print "The output stream can be viewed by the following command:\n"
