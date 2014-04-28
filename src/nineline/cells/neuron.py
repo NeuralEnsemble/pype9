@@ -724,6 +724,7 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
             cls.loaded_celltypes[(celltype_name, nineml_model.url, opt_args)] = celltype
         return celltype
 
+
 class _SimulationController(object):
     
     def __init__(self):
