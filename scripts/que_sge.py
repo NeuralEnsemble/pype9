@@ -307,7 +307,7 @@ echo "============== Done ==============="
             print sub_text
             # Save jobID to file inside output directory
             with open(os.path.join(self.work_dir, 'output', 'jobID'), 'w') as f:
-                f.write(sub_text.split()[-3])
+                f.write(sub_text.split()[2])
         print "\nA working directory has been created at {}".format(self.work_dir)
         print "Once completed the output files will be copied to {}\n".format(self.output_dir)
         print "The output stream can be viewed by the following command:\n"
