@@ -56,11 +56,11 @@ class SGESubmitter(object):
         else:
             self.sdials_dir = os.environ.get('SUNDIALSHOME', None)
         # Import the script as a module
-        
-        if os.path.dirname(self.script_path):
-            sys.path.append(os.path.dirname(self.script_path))
         self.script_name = os.path.splitext(os.path.basename(script_path))[0]
+        if os.path.dirname(self.script_path):
+            sys.path.insert(0, os.path.dirname(self.script_path))
         exec("import {} as script".format(self.script_name))
+        sys.path.pop(0)
         self.script = script  # @UndefinedVariable
         # Place empty versions of parser and prepare_work_dir if they are not provided by script
         if not hasattr(self.script, 'parser'):
