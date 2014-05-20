@@ -20,9 +20,9 @@ class SGESubmitter(object):
     MEAN_MEMORY_RATIO_DEFAULT = 0.8
 
     def __init__(self, script_path, num_processes=8, que_name='shortP', max_memory='4800m',
-                 mean_memory=None, python_install_dir=None, mpi_install_dir=None, 
-                 neuron_install_dir=None, nest_install_dir=None, sundials_install_dir=None, 
-                 work_dir_parent=None, output_dir_parent=None):
+                 mean_memory=None, python_install_dir=None, mpi_install_dir=None,
+                 neuron_install_dir=None, nest_install_dir=None, sundials_install_dir=None,
+                 work_dir_parent=None, output_dir_parent=None, logging_dir=None):
         self.script_path = os.path.abspath(script_path)
         self.num_processes = num_processes
         self.que_name = que_name
@@ -71,23 +71,30 @@ class SGESubmitter(object):
                 pass
             self.script.prepare_work_dir = dummy_func
         # Create work dir and set output dir path
-        self._create_work_dir(work_dir_parent, output_dir_parent)
+        self._create_work_dir(work_dir_parent, output_dir_parent,
+                              logging_dir)
 
-    def _create_work_dir(self, work_dir_parent=None, output_dir_parent=None, required_dirs=[], 
+    def _create_work_dir(self, work_dir_parent=None, output_dir_parent=None,
+                         logging_dir=None, required_dirs=[],
                          dependencies=[]):
         """
         Generates unique paths for the work and output directories, creating the work directory in the 
         process.
-        
+
         `script_name`       -- The name of the script, used to name the directories appropriately
         `work_dir`          -- The name of the 
-        `output_dir_parent` -- The name of the parent directory in which the output directory """ \
-                               "will be created (defaults to $HOME/Output)."
-        "`required_dirs`    -- The sub-directories that need to be copied into the work directory"
-        if not output_dir_parent:
+        `output_dir_parent` -- The name of the parent directory in which the output directory
+                               "will be created (defaults to $HOME/Output).
+        `required_dirs`    -- The sub-directories that need to be copied into the work directory
+        """
+        if output_dir_parent is None:
             output_dir_parent = os.path.join(os.environ['HOME'], 'output')
         if work_dir_parent is None:
-            work_dir_parent = os.path.realpath(os.path.join(os.environ['HOME'], 'work'))
+            work_dir_parent = os.path.realpath(os.path.join(os.environ['HOME'],
+                                                            'work'))
+        if logging_dir is None:
+            logging_dir = os.path.realpath(os.path.join(os.environ['HOME'],
+                                                        'running'))
         if not os.path.exists(work_dir_parent):
             raise Exception("Symbolic link to work directory is missing from your home directory "
                             "(i.e. $HOME/work). A symbolic link should be created that points to "
@@ -116,6 +123,8 @@ class SGESubmitter(object):
                     raise e
                 # Replace old count at the end of work directory with new count
                 self.work_dir = '.'.join(self.work_dir.split('.')[:-1] + [str(count)])
+        self.logging_path = os.path.join(logging_dir,
+                                         os.path.basename(self.work_dir))
         # Make output directory for the generated files
         os.mkdir(os.path.join(self.work_dir, 'output'))
         # Write time string to file for future reference
@@ -133,8 +142,8 @@ class SGESubmitter(object):
             os.mkdir(dependency_dir)
             for from_, to_ in dependencies:
                 shutil.copytree(from_, os.path.join(dependency_dir, to_))
-    
-    def parse_arguments(self, argv=None, output_args=['output'], 
+
+    def parse_arguments(self, argv=None, output_args=['output'],
                         args_to_remove=['plot', 'plot_saved']):
         if argv is None:
             argv = sys.argv[1:]
@@ -186,7 +195,7 @@ class SGESubmitter(object):
                 raise Exception("Output path argument proved to parse_arguments '{}' does not "
                                 "appear in script arguments".format(out_arg))
         for name, default_val in removed_args:
-            setattr(args, name, default_val) 
+            setattr(args, name, default_val)
         return args
 
     def submit(self, args, env=None, copy_to_output=[], strip_9build_from_copy=True,
@@ -247,8 +256,8 @@ cp -r {origin} {destination}
 #$ -j y
 
 # Standard output and standard error files
-#$ -o {output_dir}/output
-#$ -e {output_dir}/output
+#$ -o {logging_path}
+#$ -e {logging_path}
 
 # Name of the queue
 #$ -q {que_name}
@@ -294,18 +303,20 @@ echo "============== Mpirun has ended =============="
 echo "Copying files to output directory '{output_dir}'"
 cp -r {work_dir}/output/* {output_dir}
 cp {jobscript_path} {output_dir}/job
+cp {logging_path} {output_dir}/log
 {name_cmd}
 {copy_cmd}
 
 echo "============== Done ===============" 
 """
-            .format(work_dir=self.work_dir, args=args, path=env.get('PATH', ''), 
-                    np=self.num_processes, que_name=self.que_name, max_memory = self.max_memory, 
-                    mean_memory=self.mean_memory, pythonpath=env.get('PYTHONPATH', ''), 
-                    ld_library_path=env.get('LD_LIBRARY_PATH', ''), cmdline=cmdline, 
-                    output_dir=self.output_dir, name_cmd=name_cmd, copy_cmd=copy_cmd, 
+            .format(work_dir=self.work_dir, args=args, path=env.get('PATH', ''),
+                    np=self.num_processes, que_name=self.que_name, max_memory=self.max_memory,
+                    mean_memory=self.mean_memory, pythonpath=env.get('PYTHONPATH', ''),
+                    ld_library_path=env.get('LD_LIBRARY_PATH', ''), cmdline=cmdline,
+                    output_dir=self.output_dir, name_cmd=name_cmd, copy_cmd=copy_cmd,
                     jobscript_path=jobscript_path, time_limit=time_limit_option,
-                    username=os.environ['USER']))
+                    username=os.environ['USER'],
+                    logging_path=self.logging_path))
         # Submit job
         print "\nSubmitting job {} to que {}".format(jobscript_path, self.que_name)
         if args.dry_run:
@@ -319,10 +330,10 @@ echo "============== Done ==============="
                 f.write(sub_text.split()[2])
         print "\nA working directory has been created at {}".format(self.work_dir)
         print "Once completed the output files will be copied to {}\n".format(self.output_dir)
-        print "The output stream can be viewed by the following command:\n"
-        print "less {}\n".format(os.path.join(self.output_dir, 'output'))
-        
-    
+        print ("While the job is running the output stream can be viewed by "
+               "the following command:\n")
+        print "less {}\n".format(self.logging_path)
+
     def _create_cmdline(self, args):
         cmdline = 'time mpirun python {}'.format(self.script_path)
         options = ''
@@ -360,7 +371,7 @@ echo "============== Done ==============="
         `work_dir` -- The work directory to set the envinroment variables for
         """
         env = os.environ.copy()
-        new_path = '' #os.path.abspath(os.path.dirname(self.script_path)) + os.pathsep
+        new_path = ''  # os.path.abspath(os.path.dirname(self.script_path)) + os.pathsep
         if self.py_dir:
             new_path += os.path.join(self.py_dir, 'bin') + os.pathsep
         if self.mpi_dir:
