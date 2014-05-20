@@ -303,7 +303,7 @@ echo "============== Mpirun has ended =============="
 echo "Copying files to output directory '{output_dir}'"
 cp -r {work_dir}/output/* {output_dir}
 cp {jobscript_path} {output_dir}/job
-cp {logging_path} {output_dir}/log
+mv {logging_path} {output_dir}/log
 {name_cmd}
 {copy_cmd}
 
