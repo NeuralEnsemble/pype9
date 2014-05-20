@@ -253,6 +253,10 @@ cp -r {origin} {destination}
 # Name of the queue
 #$ -q {que_name}
 
+# Setup mailing list
+#$ -M {username}@oist.jp
+#$ -m abe
+
 # use OpenMPI parallel environment with {np} processes
 #$ -pe openmpi {np}
 {time_limit}
@@ -300,7 +304,8 @@ echo "============== Done ==============="
                     mean_memory=self.mean_memory, pythonpath=env.get('PYTHONPATH', ''), 
                     ld_library_path=env.get('LD_LIBRARY_PATH', ''), cmdline=cmdline, 
                     output_dir=self.output_dir, name_cmd=name_cmd, copy_cmd=copy_cmd, 
-                    jobscript_path=jobscript_path, time_limit=time_limit_option))
+                    jobscript_path=jobscript_path, time_limit=time_limit_option,
+                    username=os.environ['USER']))
         # Submit job
         print "\nSubmitting job {} to que {}".format(jobscript_path, self.que_name)
         if args.dry_run:
