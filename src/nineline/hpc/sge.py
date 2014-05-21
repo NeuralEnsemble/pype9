@@ -333,6 +333,9 @@ echo "============== Done ==============="
         print ("While the job is running the output stream can be viewed by "
                "the following command:\n")
         print "less {}\n".format(self.logging_path)
+        print ("After it is finished the job it can be viewed at "
+       "the following command:\n")
+        print "less {}\n".format(os.path.join(self.output_dir, 'log'))
 
     def _create_cmdline(self, args):
         cmdline = 'time mpirun python {}'.format(self.script_path)
