@@ -132,7 +132,7 @@ class SGESubmitter(object):
             f.write(time_str + '\n')
         # Determine the path for the output directory when it is copied to the output directory destination
         self.output_dir = os.path.join(output_dir_parent, os.path.split(self.work_dir)[1])
-        os.mkdir(self.output_dir)
+        #os.mkdir(self.output_dir)
         # Copy snapshot of selected subdirectories to working directory
         for directory in required_dirs:
             print "Copying '{}' sub-directory to work directory".format(directory)
@@ -301,7 +301,8 @@ cd {work_dir}
 echo "============== Mpirun has ended =============="
 
 echo "Copying files to output directory '{output_dir}'"
-cp -r {work_dir}/output/* {output_dir}
+mv {work_dir}/output {output_dir}
+mkdir {work_dir}/output  # in case you want to debug the script again
 cp {jobscript_path} {output_dir}/job
 mv {logging_path} {output_dir}/log
 {name_cmd}
