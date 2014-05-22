@@ -248,7 +248,7 @@ cp -r {origin} {destination}
         with open(jobscript_path, 'w') as f:
             f.write(
 """#!/usr/bin/env sh
-    
+
 # Parse the job script using this shell
 #$ -S /bin/bash
 
@@ -263,7 +263,7 @@ cp -r {origin} {destination}
 #$ -q {que_name}
 
 # Setup mailing list
-#$ -M {username}@oist.jp
+{email}
 #$ -m abe
 
 # use OpenMPI parallel environment with {np} processes
@@ -288,12 +288,12 @@ cp -r {origin} {destination}
 ### Copy the model to all machines we are using ###
 ###################################################
 
-# Set up the correct paths 
+# Set up the correct paths
 export PATH={path}:$PATH
 export PYTHONPATH={pythonpath}
 export LD_LIBRARY_PATH={ld_library_path}
 
-echo "============== Starting mpirun ===============" 
+echo "============== Starting mpirun ==============="
 
 cd {work_dir}
 {cmdline}
@@ -307,7 +307,7 @@ mv {logging_path} {output_dir}/log
 {name_cmd}
 {copy_cmd}
 
-echo "============== Done ===============" 
+echo "============== Done ==============="
 """
             .format(work_dir=self.work_dir, args=args, path=env.get('PATH', ''),
                     np=self.num_processes, que_name=self.que_name, max_memory=self.max_memory,
@@ -315,7 +315,8 @@ echo "============== Done ==============="
                     ld_library_path=env.get('LD_LIBRARY_PATH', ''), cmdline=cmdline,
                     output_dir=self.output_dir, name_cmd=name_cmd, copy_cmd=copy_cmd,
                     jobscript_path=jobscript_path, time_limit=time_limit_option,
-                    username=os.environ['USER'],
+                    email=('#$ -M ' + os.environ['EMAIL']
+                           if 'EMAIL' in os.environ else ''),
                     logging_path=self.logging_path))
         # Submit job
         print "\nSubmitting job {} to que {}".format(jobscript_path, self.que_name)
