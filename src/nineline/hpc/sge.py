@@ -370,7 +370,7 @@ echo "============== Done ==============="
     def _create_env(self, work_dir):
         """
         Creates a dictionary containing the appropriate environment variables
-        
+
         `work_dir` -- The work directory to set the envinroment variables for
         """
         env = os.environ.copy()
