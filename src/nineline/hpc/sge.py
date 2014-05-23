@@ -301,8 +301,7 @@ cd {work_dir}
 echo "============== Mpirun has ended =============="
 
 echo "Copying files to output directory '{output_dir}'"
-mv {work_dir}/output {output_dir}
-mkdir {work_dir}/output  # in case you want to debug the script again
+cp -r {work_dir}/output {output_dir}
 cp {jobscript_path} {output_dir}/job
 mv {logging_path} {output_dir}/log
 {name_cmd}
