@@ -143,7 +143,8 @@ class SGESubmitter(object):
             for from_, to_ in dependencies:
                 shutil.copytree(from_, os.path.join(dependency_dir, to_))
 
-    def parse_arguments(self, argv=None, output_args=['output'],
+    def parse_arguments(self, argv=None, output_args=['output', 
+                                                      'save_recordings'],
                         args_to_remove=['plot', 'plot_saved']):
         if argv is None:
             argv = sys.argv[1:]
