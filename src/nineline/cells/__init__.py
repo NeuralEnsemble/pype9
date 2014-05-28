@@ -34,7 +34,7 @@ class NineCellMetaClass(type):
         return super(NineCellMetaClass, cls).__new__(cls, celltype_name, bases, dct)
 
     def __init__(cls, nineml_model, celltype_name=None, morph_id=None, build_mode=None, #@NoSelf
-                   silent=None, solver_name=None):
+                   silent=None, solver_name=None, standalone=False):
         """
         This initialiser is empty, but since I have changed the signature of the __new__ method in 
         the deriving metaclasses it complains otherwise (not sure if there is a more elegant way 

@@ -37,8 +37,8 @@ class NinePyNNCellMetaClass(type):
         dct["parameter_names"] = dct['default_parameters'].keys()
         return super(NinePyNNCellMetaClass, cls).__new__(cls, celltype_id + 'PyNN', bases, dct)
 
-    def __init__(self, celltype_name, nineml_model, build_mode='lazy', silent=False, 
-                 solver_name=None):
+    def __init__(self, celltype_name, nineml_model, build_mode='lazy',
+                 silent=False, solver_name=None, standalone=False):
         """
         Not required, but since I have changed the signature of the new method it otherwise 
         complains
@@ -91,7 +91,7 @@ class NinePyNNCellMetaClass(type):
         """
         Constructs the dictionary of recordable parameters from the NCML model
         """
-        #TODO: Make selected component variables also recordable  
+        # TODO: Make selected component variables also recordable
         return ['spikes', 'v'] + ['{' + seg + '}v' for seg in nineml_model.morphology.segments.keys()]
 
     @classmethod

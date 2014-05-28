@@ -11,6 +11,79 @@ import time
 import subprocess
 import shutil
 from ..cells.build import path_to_exec
+# try:
+#     from mpy4py import MPI
+#     comm = MPI.COMM_WORLD  # The MPI communicator object
+#     rank = comm.Get_rank()  # The ID of the current process
+#     num_processes = comm.Get_size()
+# except ImportError:
+num_processes = 1
+rank = 0
+
+
+def outputpath(arg):
+    return str(arg)
+
+
+class randomseed(int):
+
+    counter = 0
+
+    def __new__(cls, arg=None, mirror_mpi=False):
+        """
+        `seed`        -- the passed argument
+        `mirror_mpi` -- flags whether the seeds should be the same on different
+                        MPI nodes or not
+        """
+        if arg is None or arg == 'None' or int(arg) == 0:
+            seed = int(time.time() * 256) + cls.counter
+            cls.counter += 1
+        else:
+            seed = int(arg)
+        # Ensure a different seed gets used on each MPI node
+        if not mirror_mpi:
+            seed = seed * num_processes + rank
+        return seed
+
+
+def create_seeds(specified_seeds, sim_state=None):
+    """
+    If sim_state (pyNN.*simulator_name*.simulator.state) is provided the number
+    of processes and the process rank is taken into account so that each
+    process is provided a different seed. If wanting to use PyNN's
+    "parallel_safe" option then it shouldn't be provided.
+    """
+    try:
+        num_seeds = len(specified_seeds)
+    except TypeError:
+        specified_seeds = [specified_seeds]
+        num_seeds = 1
+    if sim_state:
+        process_rank = sim_state.mpi_rank  # @UndefinedVariable
+        num_processes = sim_state.num_processes  # @UndefinedVariable
+        if num_processes != 1:
+            transformed_seeds = []
+            for seed in specified_seeds:
+                transformed_seeds.append(seed * num_processes + process_rank)
+            specified_seeds = transformed_seeds
+    else:
+        process_rank = 0
+        num_processes = 1
+    generated_seed = int(time.time() * 256)
+    out_seeds = []
+    for seed in specified_seeds:
+        if seed is not None:
+            out_seeds.append(int(seed))
+        else:
+            proposed_seed = generated_seed + process_rank
+            # Ensure the proposed seed isn't the same as one of the specified
+            # seeds (not sure if this is necessary but it could theoretically
+            # be a problem if they were the same)
+            while proposed_seed in specified_seeds:
+                proposed_seed += num_seeds * num_processes
+            out_seeds.append(proposed_seed)
+            generated_seed += num_processes
+    return out_seeds if num_seeds != 1 else out_seeds[0]
 
 
 class SGESubmitter(object):
@@ -166,7 +239,6 @@ class SGESubmitter(object):
                 shutil.copytree(from_, os.path.join(dependency_dir, to_))
 
     def parse_arguments(self, argv=None,
-                        output_args=['output', 'save_recordings'],
                         args_to_remove=['plot', 'plot_saved']):
         if argv is None:
             argv = sys.argv[1:]
@@ -220,15 +292,11 @@ class SGESubmitter(object):
         self.que_name = args.que_name
         self.max_memory = args.max_memory
         self.mean_memory = args.mean_memory
-        for out_arg in output_args:
-            try:
-                new_path = (self.work_dir + '/output/' +
-                            os.path.basename(getattr(args, out_arg)))
-                setattr(args, out_arg, new_path)
-            except AttributeError:
-                raise Exception("Output path argument proved to "
-                                "parse_arguments '{}' does not appear in "
-                                "script arguments".format(out_arg))
+        for arg in self.script_args:
+            if arg.type is outputpath:
+                basename = os.path.basename(getattr(args, arg.dest))
+                new_path = self.work_dir + '/output/' + basename
+                setattr(args, arg.dest, new_path)
         for name, default_val in removed_args:
             setattr(args, name, default_val)
         return args
@@ -245,7 +313,7 @@ class SGESubmitter(object):
         `name`           -- Records a name for the run (when generating multiple runs) so that the output directory can be easily renamed to a more informative name after it is copied to its destination via the command "mv <output_dir> `cat <output_dir>/name`"
         """
         # Copy necessary files into work directory and compile if necessary
-        self.script.prepare_work_dir(self.work_dir, args)
+        self.script.prepare_work_dir(self, args)
         # Create command line to be run in job script from parsed arguments
         cmdline = self._create_cmdline(args)
         if not env:
@@ -334,7 +402,7 @@ export LD_LIBRARY_PATH={ld_library_path}
 echo "============== Starting mpirun ==============="
 
 cd {work_dir}
-{cmdline}
+time mpirun {cmdline}
 
 echo "============== Mpirun has ended =============="
 
@@ -383,12 +451,12 @@ echo "============== Done ==============="
                "the following command:\n")
         print "less {}\n".format(os.path.join(self.output_dir, 'log'))
 
-    def _create_cmdline(self, args):
-        cmdline = 'time mpirun python {}'.format(self.script_path)
+    def _create_cmdline(self, args, skip_args=[]):
+        cmdline = 'python {}'.format(self.script_path)
         options = ''
         for arg in self.script_args:
             name = arg.dest
-            if hasattr(args, name):
+            if hasattr(args, name) and name not in skip_args:
                 val = getattr(args, name)
                 if arg.required:
                     cmdline += ' {}'.format(val)
@@ -467,16 +535,16 @@ echo "============== Done ==============="
         env['NINEMLP_MPI'] = '1'
         # Remove NMODL build directory for pyNN neuron so it can be recompiled
         # in script
-        if args.simulator == 'neuron':
-            pynn_nmodl_path = os.path.join(self.work_dir, 'depend', 'pyNN',
-                                           'neuron', 'nmodl')
-            if os.path.exists(os.path.join(pynn_nmodl_path, 'x86_64')):
-                shutil.rmtree(os.path.join(pynn_nmodl_path, 'x86_64'))
-            subprocess.check_call('cd {}; {}'
-                                  .format(pynn_nmodl_path,
-                                          path_to_exec('nrnivmodl')),
-                                  shell=True)
-        cmd_line = self._create_cmdline(args)
+#         if args.simulator == 'neuron':
+#             pynn_nmodl_path = os.path.join(self.work_dir, 'depend', 'pyNN',
+#                                            'neuron', 'nmodl')
+#             if os.path.exists(os.path.join(pynn_nmodl_path, 'x86_64')):
+#                 shutil.rmtree(os.path.join(pynn_nmodl_path, 'x86_64'))
+#             subprocess.check_call('cd {}; {}'
+#                                   .format(pynn_nmodl_path,
+#                                           path_to_exec('nrnivmodl')),
+#                                   shell=True)
+        cmd_line = self._create_cmdline(args, skip_args=['build'])
         cmd_line += ' --build build_only'
         print "Compiling required NINEML+ objects"
         print cmd_line

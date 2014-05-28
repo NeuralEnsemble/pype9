@@ -11,7 +11,7 @@ _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 class Network(object):
 
     def __init__(self, filename, network_name=None, build_mode='lazy', verbose=False, timestep=None,
-                 min_delay=None, max_delay=None, temperature=None, silent_build=False, flags=[], 
+                 min_delay=None, max_delay=None, temperature=None, silent_build=False, flags=[],
                  rng=None, solver_name='cvode'):
         parsed_nineml = nineml.user_layer.parse(filename)
         if network_name:
@@ -33,7 +33,7 @@ class Network(object):
         self._populations = {}
         PopulationClass = self._PopulationClass
         for name, model in self.nineml_model.populations.iteritems():
-            self._populations[name] = PopulationClass(model, self._rng, build_mode, silent_build, 
+            self._populations[name] = PopulationClass(model, self._rng, build_mode, silent_build,
                                                       solver_name=solver_name)
         if build_mode not in ('build_only', 'compile_only'):
             self._projections = {}
@@ -49,14 +49,14 @@ class Network(object):
                 except nineline.pyNN.common.projections.ProjectionToCloneNotCreatedYetException as e:
                     if e.orig_proj_id in self.nineml_model.projections.keys():
                         projection_models.append(model)
-                        # I think this is the theoretical limit for the number of iterations this 
+                        # I think this is the theoretical limit for the number of iterations this
                         # loop will have to make for the worst ordering of cloned projections
-                        if len(projection_models) - num_projections > (num_projections * 
-                                                                       (num_projections + 1) / 2):  
+                        if len(projection_models) - num_projections > (num_projections *
+                                                                       (num_projections + 1) / 2):
                             raise Exception("Projections using 'Clone' pattern form a circular "
                                             "reference")
                     else:
-                        raise Exception("Projection '{}' attempted to clone connectivity patterns " 
+                        raise Exception("Projection '{}' attempted to clone connectivity patterns "
                                         "from '{}', which was not found in network."
                                         .format(name, e.orig_proj_id))
             self._finalise_construction()
@@ -70,7 +70,7 @@ class Network(object):
     @property
     def populations(self):
         return self._populations
-    
+
     @property
     def projections(self):
         return self._projections
@@ -114,7 +114,7 @@ class Network(object):
         Record variable from complete network
         """
         for pop in self.populations.itervalues():
-            pop.record(variable)                   
+            pop.record(variable)
 
     def write_data(self, file_prefix, **kwargs):
         """
@@ -129,29 +129,29 @@ class Network(object):
                 and not file_prefix.endswith(os.path.sep)):
             file_prefix += '.'
         for pop in self.populations.itervalues():
-            pop.write_data(file_prefix + pop.label + '.pkl', **kwargs) #@UndefinedVariable
+            pop.write_data(file_prefix + pop.label + '.pkl', **kwargs)  # @UndefinedVariable
 
     def _get_simulation_params(self, **params):
-        sim_params = dict([(p.name, pq.Quantity(p.value, p.unit)) 
+        sim_params = dict([(p.name, pq.Quantity(p.value, p.unit))
                            for p in self.nineml_model.parameters.values()])
         for key in _REQUIRED_SIM_PARAMS:
             if params.has_key(key) and params[key]:
                 sim_params[key] = params[key]
             elif not sim_params.has_key(key) or not sim_params[key]:
-                raise Exception ("'{}' parameter was not specified either in Network " 
+                raise Exception ("'{}' parameter was not specified either in Network "
                                  "initialisation or NetworkML specification".format(key))
         return sim_params
- 
+
 
 #     def _convert_units(self, value_str, units=None):
-#         raise NotImplementedError("_convert_units needs to be implemented by simulator specific " 
+#         raise NotImplementedError("_convert_units needs to be implemented by simulator specific "
 #                                   "Network class")
-# 
+#
 #     def _convert_all_units(self, values_dict):
 #         for key, val in values_dict.items():
 #             values_dict[key] = self._convert_units(val)
 #         return values_dict
-            
+
 
 #     def set_flags(self, flags):
 #         if self.nineml_model.parameters.has_key('flags'):
@@ -169,7 +169,7 @@ class Network(object):
 #                 if len(flag) == 2:
 #                     name, value = flag
 #                 else:
-#                     raise Exception("Incorrect number of elements ({}) in flag tuple '{}', " 
+#                     raise Exception("Incorrect number of elements ({}) in flag tuple '{}', "
 #                                     "should be 2 (name or name and value)".format(len(flag), flag))
 #                 assert(type(name) == str)
 #                 assert(type(value) == bool)
@@ -177,11 +177,11 @@ class Network(object):
 #                 raise Exception ("Did not find the passed flag '{}' in the Network ML description "
 #                                  "({})".format(name, self.flags))
 #             self.flags[name] = value
-# 
+#
 #     def check_flags(self, p):
 #         try:
 #             return (all([self.flags[flag] for flag in p.flags]) and
 #                     all([not self.flags[flag] for flag in p.not_flags]))
 #         except KeyError as e:
 #                 raise Exception ("Did not find flag '{flag}' used in '{id}' in freeParameters "
-#                                  "block of NetworkML description".format(flag=e, id=p.id))            
+#                                  "block of NetworkML description".format(flag=e, id=p.id))
