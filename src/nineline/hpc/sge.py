@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
-Wraps a executable to enable that script to be submitted to an SGE cluster engine
+Wraps a executable to enable that script to be submitted to an SGE cluster
+engine
 """
 import sys
 import os.path
@@ -9,20 +10,24 @@ from copy import copy
 import time
 import subprocess
 import shutil
+from ..cells.build import path_to_exec
 
 
 class SGESubmitter(object):
+
     """
-    This class automates the submission of MPI jobs on a SGE-powered high-performance computing 
-    cluster
+    This class automates the submission of MPI jobs on a SGE-powered high-
+    performance computing cluster
     """
 
     MEAN_MEMORY_RATIO_DEFAULT = 0.8
 
-    def __init__(self, script_path, num_processes=8, que_name='shortP', max_memory='4800m',
-                 mean_memory=None, python_install_dir=None, mpi_install_dir=None,
-                 neuron_install_dir=None, nest_install_dir=None, sundials_install_dir=None,
-                 work_dir_parent=None, output_dir_parent=None, logging_dir=None):
+    def __init__(
+            self, script_path, num_processes=8, que_name='shortP',
+            max_memory='4800m', mean_memory=None, python_install_dir=None,
+            mpi_install_dir=None, neuron_install_dir=None,
+            nest_install_dir=None, sundials_install_dir=None,
+            work_dir_parent=None, output_dir_parent=None, logging_dir=None):
         self.script_path = os.path.abspath(script_path)
         self.num_processes = num_processes
         self.que_name = que_name
@@ -32,8 +37,10 @@ class SGESubmitter(object):
             if max_memory[-1] in ('g', 'G'):
                 max_mem_in_mb *= 1000
             elif max_memory[-1] not in ('m', 'M'):
-                raise Exception("Unrecognised memory unit '{}'".format(max_memory[-1]))
-            mean_memory = str(int(round(max_mem_in_mb * self.MEAN_MEMORY_RATIO_DEFAULT))) + 'm'
+                raise Exception(
+                    "Unrecognised memory unit '{}'".format(max_memory[-1]))
+            mean_memory = str(int(round(max_mem_in_mb *
+                                        self.MEAN_MEMORY_RATIO_DEFAULT))) + 'm'
         self.mean_memory = mean_memory
         if python_install_dir:
             self.py_dir = python_install_dir
@@ -62,7 +69,8 @@ class SGESubmitter(object):
         exec("import {} as script".format(self.script_name))
         sys.path.pop(0)
         self.script = script  # @UndefinedVariable
-        # Place empty versions of parser and prepare_work_dir if they are not provided by script
+        # Place empty versions of parser and prepare_work_dir if they are not
+        # provided by script
         if not hasattr(self.script, 'parser'):
             self.script.parser = argparse.ArgumentParser()
         self.script_args = copy(self.script.parser._actions)
@@ -78,14 +86,17 @@ class SGESubmitter(object):
                          logging_dir=None, required_dirs=[],
                          dependencies=[]):
         """
-        Generates unique paths for the work and output directories, creating the work directory in the 
-        process.
+        Generates unique paths for the work and output directories, creating
+        the work directory in the process.
 
-        `script_name`       -- The name of the script, used to name the directories appropriately
-        `work_dir`          -- The name of the 
-        `output_dir_parent` -- The name of the parent directory in which the output directory
+        `script_name`       -- The name of the script, used to name the
+                               directories appropriately
+        `work_dir`          -- The name of the
+        `output_dir_parent` -- The name of the parent directory in which the
+                               output directory
                                "will be created (defaults to $HOME/Output).
-        `required_dirs`    -- The sub-directories that need to be copied into the work directory
+        `required_dirs`    -- The sub-directories that need to be copied into
+                              the work directory
         """
         if output_dir_parent is None:
             output_dir_parent = os.path.join(os.environ['HOME'], 'output')
@@ -96,19 +107,23 @@ class SGESubmitter(object):
             logging_dir = os.path.realpath(os.path.join(os.environ['HOME'],
                                                         'running'))
         if not os.path.exists(work_dir_parent):
-            raise Exception("Symbolic link to work directory is missing from your home directory "
-                            "(i.e. $HOME/work). A symbolic link should be created that points to "
-                            "an appropriate directory in your units sub-directory of '/work' "
-                            "(i.e. ln -s /work/<unit-name>/<user-name> $HOME/work)")
+            raise Exception(
+                "Symbolic link to work directory is missing from your home "
+                "directory (i.e. $HOME/work). A symbolic link should be "
+                "created that points to an appropriate directory in your "
+                "units sub-directory of '/work' "
+                "(i.e. ln -s /work/<unit-name>/<user-name> $HOME/work)")
         if not work_dir_parent.startswith('/work'):
-            raise Exception("$HOME/work be a symbolic link to a sub-directory of the "
-                            "high-performance filesystem mounted at '/work' (typically "
-                            "/work/<unit-name>/<user-name>).")
+            raise Exception(
+                "$HOME/work be a symbolic link to a sub-directory of the "
+                "high-performance filesystem mounted at '/work' (typically "
+                "/work/<unit-name>/<user-name>).")
         # Automatically generate paths
         # Unique time for distinguishing runs
         time_str = time.strftime('%Y-%m-%d-%A_%H-%M-%S', time.localtime())
         # Working directory path
-        self.work_dir = os.path.join(work_dir_parent, self.script_name + "." + time_str + ".1")
+        self.work_dir = os.path.join(
+            work_dir_parent, self.script_name + "." + time_str + ".1")
         # Ensure that working directory is unique
         created_work_dir = False
         count = 1
@@ -118,33 +133,40 @@ class SGESubmitter(object):
             except IOError as e:
                 count += 1
                 if count > 1000:
-                    print "Something has gone wrong, can't create directory '{}' after 1000 " \
-                          "attempts".format(self.work_dir)
+                    print ("Something has gone wrong, can't create directory "
+                           "'{}' after 1000 attempts".format(self.work_dir))
                     raise e
                 # Replace old count at the end of work directory with new count
-                self.work_dir = '.'.join(self.work_dir.split('.')[:-1] + [str(count)])
+                self.work_dir = '.'.join(
+                    self.work_dir.split('.')[:-1] + [str(count)])
         self.logging_path = os.path.join(logging_dir,
                                          os.path.basename(self.work_dir))
         # Make output directory for the generated files
         os.mkdir(os.path.join(self.work_dir, 'output'))
         # Write time string to file for future reference
-        with open(os.path.join(self.work_dir, 'output', 'time_stamp'), 'w') as f:
+        with open(os.path.join(self.work_dir,
+                               'output', 'time_stamp'), 'w') as f:
             f.write(time_str + '\n')
-        # Determine the path for the output directory when it is copied to the output directory destination
-        self.output_dir = os.path.join(output_dir_parent, os.path.split(self.work_dir)[1])
-        #os.mkdir(self.output_dir)
+        # Determine the path for the output directory when it is copied to the
+        # output directory destination
+        self.output_dir = os.path.join(
+            output_dir_parent, os.path.split(self.work_dir)[1])
+        # os.mkdir(self.output_dir)
         # Copy snapshot of selected subdirectories to working directory
         for directory in required_dirs:
-            print "Copying '{}' sub-directory to work directory".format(directory)
-            shutil.copytree(directory, os.path.join(self.work_dir, directory), symlinks=True)
+            print ("Copying '{}' sub-directory to work directory"
+                   .format(directory))
+            shutil.copytree(
+                directory, os.path.join(self.work_dir, directory),
+                symlinks=True)
         if dependencies:
             dependency_dir = os.path.join(self.work_dir, 'depend')
             os.mkdir(dependency_dir)
             for from_, to_ in dependencies:
                 shutil.copytree(from_, os.path.join(dependency_dir, to_))
 
-    def parse_arguments(self, argv=None, output_args=['output', 
-                                                      'save_recordings'],
+    def parse_arguments(self, argv=None,
+                        output_args=['output', 'save_recordings'],
                         args_to_remove=['plot', 'plot_saved']):
         if argv is None:
             argv = sys.argv[1:]
@@ -157,32 +179,42 @@ class SGESubmitter(object):
                 parser._remove_action(action)
             except StopIteration:
                 pass
-        parser.add_argument('--np', type=int, default=self.num_processes,
-                        help="The the number of processes to use for the simulation "
-                             "(default: %(default)s)")
-        parser.add_argument('--que_name', type=str, default=self.que_name,
-                            help="The the que to submit the job to (default: '%(default)s')")
-        parser.add_argument('--output_dir', default=None, type=str,
-                            help="The parent directory in which the output directory will be "
-                                 "created  (default: $HOME/Output)")
-        parser.add_argument('--max_memory', type=str, default=self.max_memory,
-                            help="The maximum memory allocated to run the network "
-                                 "(default: '%(default)s')")
-        parser.add_argument('--mean_memory', type=str, default=self.mean_memory,
-                            help="The average memory usage required by the program, decides when "
-                                  "the scheduler is able to run the job (default: '%(default)s')")
-        parser.add_argument('--time_limit', type=float, default=None,
-                            help="The time limit after which the job will be terminated")
-        parser.add_argument('--jobname', type=str, default=None,
-                            help="Saves a file within the output directory with the descriptive name"
-                                 " for easy renaming of the output directory after it is copied to "
-                                 "its final destination, via the command "
-                                 "'mv <output_dir> `cat <output_dir>/name`'")
-        parser.add_argument('--dry_run', action='store_true',
-                            help="Performs a dry run without trying to  submit the job to the "
-                                 "cluster for testing")
-        parser.add_argument('--work_dir', type=str, default=None,
-                            help="The work directory in which to run the simulation")
+        parser.add_argument(
+            '--np', type=int, default=self.num_processes,
+            help="The the number of processes to use for the simulation "
+            "(default: %(default)s)")
+        parser.add_argument(
+            '--que_name', type=str, default=self.que_name,
+            help="The the que to submit the job to (default: '%(default)s')")
+        parser.add_argument(
+            '--output_dir', default=None, type=str,
+            help="The parent directory in which the output directory will be "
+            "created  (default: $HOME/Output)")
+        parser.add_argument(
+            '--max_memory', type=str, default=self.max_memory,
+            help="The maximum memory allocated to run the network "
+            "(default: '%(default)s')")
+        parser.add_argument(
+            '--mean_memory', type=str, default=self.mean_memory,
+            help="The average memory usage required by the program, decides "
+                 "when the scheduler is able to run the job "
+                 "(default: '%(default)s')")
+        parser.add_argument(
+            '--time_limit', type=float, default=None,
+            help="The time limit after which the job will be terminated")
+        parser.add_argument(
+            '--jobname', type=str, default=None,
+            help="Saves a file within the output directory with the "
+                 "descriptive name for easy renaming of the output directory "
+                 "after it is copied to its final destination, via the "
+                 "command 'mv <output_dir> `cat <output_dir>/name`'")
+        parser.add_argument(
+            '--dry_run', action='store_true',
+            help="Performs a dry run without trying to  submit the job to the "
+            "cluster for testing")
+        parser.add_argument(
+            '--work_dir', type=str, default=None,
+            help="The work directory in which to run the simulation")
         args = parser.parse_args(argv)
         self.num_processes = args.np
         self.que_name = args.que_name
@@ -190,20 +222,22 @@ class SGESubmitter(object):
         self.mean_memory = args.mean_memory
         for out_arg in output_args:
             try:
-                new_path = self.work_dir + '/output/' + os.path.basename(getattr(args, out_arg))
+                new_path = (self.work_dir + '/output/' +
+                            os.path.basename(getattr(args, out_arg)))
                 setattr(args, out_arg, new_path)
             except AttributeError:
-                raise Exception("Output path argument proved to parse_arguments '{}' does not "
-                                "appear in script arguments".format(out_arg))
+                raise Exception("Output path argument proved to "
+                                "parse_arguments '{}' does not appear in "
+                                "script arguments".format(out_arg))
         for name, default_val in removed_args:
             setattr(args, name, default_val)
         return args
 
-    def submit(self, args, env=None, copy_to_output=[], strip_9build_from_copy=True,
-               name=None):
+    def submit(self, args, env=None, copy_to_output=[],
+               strip_9build_from_copy=True, name=None):
         """
         Create a jobscript in the work directory and then submit it to the tombo que
-        
+
         `override_args`  -- Override existing arguments parsed from command line
         `env`            -- The required environment variables (defaults to those generated by '_create_env(work_dir)')    
         `copy_to_output` -- Directories to copy into the output directory
@@ -222,23 +256,26 @@ class SGESubmitter(object):
         for to_copy in copy_to_output:
             origin = self.work_dir + os.path.sep + to_copy
             if strip_9build_from_copy:
-                copy_cmd += 'find {origin} -name .9build -exec rm -r {{}} \; 2>/dev/null\n'.\
-                          format(origin=origin)
+                copy_cmd += ('find {origin} -name .9build -exec rm -r {{}} \;'
+                             ' 2>/dev/null\n'
+                             .format(origin=origin))
             destination = self.output_dir + os.path.sep + to_copy
-            base_dir = os.path.dirname(destination[:-1] if destination.endswith('/') else destination)
-            copy_cmd += (
-"""
+            base_dir = os.path.dirname(
+                destination[:-1]
+                if destination.endswith('/') else destination)
+            copy_cmd += ("""
 mkdir -p {base_dir}
 cp -r {origin} {destination}
-"""
-                         .format(base_dir=base_dir, origin=origin, destination=destination))
+""" .format(base_dir=base_dir, origin=origin,
+                destination=destination))
         # Create jobscript
         if args.time_limit:
-            if type(args.time_limit) != str or len(args.time_limit.split(':')) != 3:
-                raise Exception("Poorly formatted time limit string '{}' passed to submit job"
-                                .format(args.time_limit))
-            time_limit_option = ("\n# Set the maximum run time\n#$ -l h_rt {}\n"
-                                 .format(args.time_limit))
+            if (type(args.time_limit) != str or
+                len(args.time_limit.split(':')) != 3):
+                raise Exception("Poorly formatted time limit string '{}' "
+                                "passed to submit job".format(args.time_limit))
+            time_limit_option = ("\n# Set the maximum run time\n#$ -l h_rt "
+                                 "{}\n" .format(args.time_limit))
         else:
             time_limit_option = ''
         if name:
@@ -248,7 +285,7 @@ cp -r {origin} {destination}
         jobscript_path = os.path.join(self.work_dir, self.script_name + '.job')
         with open(jobscript_path, 'w') as f:
             f.write(
-"""#!/usr/bin/env sh
+                """#!/usr/bin/env sh
 
 # Parse the job script using this shell
 #$ -S /bin/bash
@@ -310,33 +347,40 @@ mv {logging_path} {output_dir}/log
 
 echo "============== Done ==============="
 """
-            .format(work_dir=self.work_dir, args=args, path=env.get('PATH', ''),
-                    np=self.num_processes, que_name=self.que_name, max_memory=self.max_memory,
-                    mean_memory=self.mean_memory, pythonpath=env.get('PYTHONPATH', ''),
-                    ld_library_path=env.get('LD_LIBRARY_PATH', ''), cmdline=cmdline,
-                    output_dir=self.output_dir, name_cmd=name_cmd, copy_cmd=copy_cmd,
-                    jobscript_path=jobscript_path, time_limit=time_limit_option,
-                    email=('#$ -M ' + os.environ['EMAIL']
-                           if 'EMAIL' in os.environ else ''),
-                    logging_path=self.logging_path))
-        # Submit job
-        print "\nSubmitting job {} to que {}".format(jobscript_path, self.que_name)
+.format(work_dir=self.work_dir, args=args, path=env.get('PATH', ''),
+        np=self.num_processes, que_name=self.que_name,
+        max_memory=self.max_memory, mean_memory=self.mean_memory,
+        pythonpath=env.get('PYTHONPATH', ''),
+        ld_library_path=env.get('LD_LIBRARY_PATH', ''), cmdline=cmdline,
+        output_dir=self.output_dir, name_cmd=name_cmd, copy_cmd=copy_cmd,
+        jobscript_path=jobscript_path, time_limit=time_limit_option,
+        email=('#$ -M ' + os.environ['EMAIL']
+               if 'EMAIL' in os.environ else ''),
+        logging_path=self.logging_path))
+# Submit job
+        print ("\nSubmitting job {} to que {}"
+               .format(jobscript_path, self.que_name))
         if args.dry_run:
-            print ("Would normally call 'qsub {}' here but '--dry_run' option was provided"
-                   .format(jobscript_path))
+            print ("Would normally call 'qsub {}' here but '--dry_run' option "
+                   "was provided" .format(jobscript_path))
         else:
-            sub_text = subprocess.check_output('qsub {}'.format(jobscript_path), shell=True)
+            sub_text = subprocess.check_output(
+                'qsub {}'.format(jobscript_path),
+                shell=True)
             print sub_text
             # Save jobID to file inside output directory
-            with open(os.path.join(self.work_dir, 'output', 'jobID'), 'w') as f:
+            with open(os.path.join(self.work_dir,
+                                   'output', 'jobID'), 'w') as f:
                 f.write(sub_text.split()[2])
-        print "\nA working directory has been created at {}".format(self.work_dir)
-        print "Once completed the output files will be copied to {}\n".format(self.output_dir)
+        print ("\nA working directory has been created at {}"
+               .format(self.work_dir))
+        print ("Once completed the output files will be copied to {}\n"
+               .format(self.output_dir))
         print ("While the job is running the output stream can be viewed by "
                "the following command:\n")
         print "less {}\n".format(self.logging_path)
         print ("After it is finished the job it can be viewed at "
-       "the following command:\n")
+               "the following command:\n")
         print "less {}\n".format(os.path.join(self.output_dir, 'log'))
 
     def _create_cmdline(self, args):
@@ -376,13 +420,15 @@ echo "============== Done ==============="
         `work_dir` -- The work directory to set the envinroment variables for
         """
         env = os.environ.copy()
-        new_path = ''  # os.path.abspath(os.path.dirname(self.script_path)) + os.pathsep
+        # os.path.abspath(os.path.dirname(self.script_path)) + os.pathsep
+        new_path = ''
         if self.py_dir:
             new_path += os.path.join(self.py_dir, 'bin') + os.pathsep
         if self.mpi_dir:
             new_path += os.path.join(self.mpi_dir, 'bin') + os.pathsep
         if self.nrn_dir:
-            new_path += os.path.join(self.nrn_dir, 'x86_64', 'bin') + os.pathsep
+            new_path += os.path.join(self.nrn_dir,
+                                     'x86_64', 'bin') + os.pathsep
         if self.nest_dir:
             new_path += os.path.join(self.nest_dir, 'bin') + os.pathsep
         if self.sdials_dir:
@@ -390,15 +436,48 @@ echo "============== Done ==============="
         env['PATH'] = new_path + env['PATH']
         new_pythonpath = os.path.join(work_dir, 'depend') + os.pathsep
         if self.nest_dir:
-            new_pythonpath += (os.path.join(self.nest_dir, 'lib', 'python2.7', 'dist-packages') +
-                               os.pathsep)
+            new_pythonpath += (os.path.join(self.nest_dir,
+                                            'lib', 'python2.7',
+                                            'dist-packages') + os.pathsep)
         env['PYTHONPATH'] = new_pythonpath + os.pathsep.join(sys.path)
         new_library_path = ''
         if self.mpi_dir:
             new_library_path += os.path.join(self.mpi_dir, 'lib') + os.pathsep
         if self.nest_dir:
-            new_library_path += os.path.join(self.nest_dir, 'lib', 'nest') + os.pathsep
+            new_library_path += os.path.join(self.nest_dir,
+                                             'lib', 'nest') + os.pathsep
         if self.sdials_dir:
             new_library_path += os.path.join(self.sdials_dir, 'lib')
         env['NINEML_SRC_PATH'] = os.path.join(work_dir, 'src')
         return env
+
+    def compile(self, args):
+        """
+        Compiles objects in the work directory that are required by the NINEML+
+        network
+
+        @param script_name: Name of the script in the 'simulate' directory
+        @param work_dir: The work directory in which the network is compiled
+        @param env: The required environment variables (defaults to those
+                    generated by 'create_env(work_dir)')
+        @param script_dir: The directory that the script is stored in
+                           (default: 'simulate')
+        """
+        env = self._create_env(self.work_dir)
+        env['NINEMLP_MPI'] = '1'
+        # Remove NMODL build directory for pyNN neuron so it can be recompiled
+        # in script
+        if args.simulator == 'neuron':
+            pynn_nmodl_path = os.path.join(self.work_dir, 'depend', 'pyNN',
+                                           'neuron', 'nmodl')
+            if os.path.exists(os.path.join(pynn_nmodl_path, 'x86_64')):
+                shutil.rmtree(os.path.join(pynn_nmodl_path, 'x86_64'))
+            subprocess.check_call('cd {}; {}'
+                                  .format(pynn_nmodl_path,
+                                          path_to_exec('nrnivmodl')),
+                                  shell=True)
+        cmd_line = self._create_cmdline(args)
+        cmd_line += ' --build build_only'
+        print "Compiling required NINEML+ objects"
+        print cmd_line
+        subprocess.check_call(cmd_line, shell=True, env=env)
