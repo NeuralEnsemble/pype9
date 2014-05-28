@@ -11,14 +11,14 @@ import time
 import subprocess
 import shutil
 from ..cells.build import path_to_exec
-# try:
-#     from mpy4py import MPI
-#     comm = MPI.COMM_WORLD  # The MPI communicator object
-#     rank = comm.Get_rank()  # The ID of the current process
-#     num_processes = comm.Get_size()
-# except ImportError:
-num_processes = 1
-rank = 0
+try:
+    from mpy4py import MPI
+    comm = MPI.COMM_WORLD  # The MPI communicator object
+    rank = comm.Get_rank()  # The ID of the current process
+    num_processes = comm.Get_size()
+except ImportError:
+    num_processes = 1
+    rank = 0
 
 
 def outputpath(arg):
