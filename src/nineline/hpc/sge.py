@@ -11,7 +11,7 @@ import time
 import subprocess
 import shutil
 from ..cells.build import path_to_exec
-from arguments import inputpath, outputpath, randomseed
+from nineline.arguments import inputpath, outputpath
 
 
 def create_seeds(specified_seeds, sim_state=None):
