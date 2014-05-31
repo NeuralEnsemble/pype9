@@ -1,4 +1,6 @@
 import time
+import os.path
+import shutil
 
 try:
     from mpy4py import MPI
@@ -10,8 +12,18 @@ except ImportError:
     rank = 0
 
 
-def inputpath(arg):
-    return str(arg)
+class inputpath(str):
+
+    def __new__(cls, arg):
+        path = cls(arg)
+        path.references = []
+        if path.endswith('.9ml'):
+            #TODO: find dependents
+            pass
+        return path
+
+    def copy_to(self, dest_dir):
+        shutil.copy2(self, os.path.join(dest_dir, os.path.basename(self)))
 
 
 def outputpath(arg):
@@ -19,7 +31,10 @@ def outputpath(arg):
 
 
 class randomseed(int):
-
+    """
+    Automatically generates unique random seeds if none are provided, as well
+    as ensuring that unique seeds are passed to each MPI process
+    """
     counter = 0
 
     def __new__(cls, arg=None, mirror_mpi=False):

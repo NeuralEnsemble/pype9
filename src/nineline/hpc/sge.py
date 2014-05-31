@@ -13,45 +13,45 @@ import shutil
 from ..cells.build import path_to_exec
 from nineline.arguments import inputpath, outputpath
 
-
-def create_seeds(specified_seeds, sim_state=None):
-    """
-    If sim_state (pyNN.*simulator_name*.simulator.state) is provided the number
-    of processes and the process rank is taken into account so that each
-    process is provided a different seed. If wanting to use PyNN's
-    "parallel_safe" option then it shouldn't be provided.
-    """
-    try:
-        num_seeds = len(specified_seeds)
-    except TypeError:
-        specified_seeds = [specified_seeds]
-        num_seeds = 1
-    if sim_state:
-        process_rank = sim_state.mpi_rank  # @UndefinedVariable
-        num_processes = sim_state.num_processes  # @UndefinedVariable
-        if num_processes != 1:
-            transformed_seeds = []
-            for seed in specified_seeds:
-                transformed_seeds.append(seed * num_processes + process_rank)
-            specified_seeds = transformed_seeds
-    else:
-        process_rank = 0
-        num_processes = 1
-    generated_seed = int(time.time() * 256)
-    out_seeds = []
-    for seed in specified_seeds:
-        if seed is not None:
-            out_seeds.append(int(seed))
-        else:
-            proposed_seed = generated_seed + process_rank
-            # Ensure the proposed seed isn't the same as one of the specified
-            # seeds (not sure if this is necessary but it could theoretically
-            # be a problem if they were the same)
-            while proposed_seed in specified_seeds:
-                proposed_seed += num_seeds * num_processes
-            out_seeds.append(proposed_seed)
-            generated_seed += num_processes
-    return out_seeds if num_seeds != 1 else out_seeds[0]
+# 
+# def create_seeds(specified_seeds, sim_state=None):
+#     """
+#     If sim_state (pyNN.*simulator_name*.simulator.state) is provided the number
+#     of processes and the process rank is taken into account so that each
+#     process is provided a different seed. If wanting to use PyNN's
+#     "parallel_safe" option then it shouldn't be provided.
+#     """
+#     try:
+#         num_seeds = len(specified_seeds)
+#     except TypeError:
+#         specified_seeds = [specified_seeds]
+#         num_seeds = 1
+#     if sim_state:
+#         process_rank = sim_state.mpi_rank  # @UndefinedVariable
+#         num_processes = sim_state.num_processes  # @UndefinedVariable
+#         if num_processes != 1:
+#             transformed_seeds = []
+#             for seed in specified_seeds:
+#                 transformed_seeds.append(seed * num_processes + process_rank)
+#             specified_seeds = transformed_seeds
+#     else:
+#         process_rank = 0
+#         num_processes = 1
+#     generated_seed = int(time.time() * 256)
+#     out_seeds = []
+#     for seed in specified_seeds:
+#         if seed is not None:
+#             out_seeds.append(int(seed))
+#         else:
+#             proposed_seed = generated_seed + process_rank
+#             # Ensure the proposed seed isn't the same as one of the specified
+#             # seeds (not sure if this is necessary but it could theoretically
+#             # be a problem if they were the same)
+#             while proposed_seed in specified_seeds:
+#                 proposed_seed += num_seeds * num_processes
+#             out_seeds.append(proposed_seed)
+#             generated_seed += num_processes
+#     return out_seeds if num_seeds != 1 else out_seeds[0]
 
 
 class SGESubmitter(object):
