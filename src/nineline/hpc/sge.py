@@ -262,9 +262,11 @@ class SGESubmitter(object):
         self.mean_memory = args.mean_memory
         for arg in self.script_args:
             if arg.type is outputpath:
-                basename = os.path.basename(getattr(args, arg.dest))
-                new_path = self.work_dir + '/output/' + basename
-                setattr(args, arg.dest, new_path)
+                path = getattr(args, arg.dest)
+                if path:
+                    basename = os.path.basename(path)
+                    new_path = self.work_dir + '/output/' + basename
+                    setattr(args, arg.dest, new_path)
         for name, default_val in removed_args:
             setattr(args, name, default_val)
         return args
