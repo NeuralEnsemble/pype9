@@ -5,16 +5,11 @@
   will need to be made in the pyNN package itself (although as of 13/6/2012
   this hasn't been necessary).
 
-  @file ncml.py
-  @author Tom Close
-
+  Author: Thomas G. Close (tclose@oist.jp)
+  Copyright: 2012-2014 Thomas G. Close.
+  License: This file is part of the "NineLine" package, which is released under
+           the GPL v2, see LICENSE for details.
 """
-
-##########################################################################
-#
-#    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
-#
-##########################################################################
 import os
 import xml.sax
 import time

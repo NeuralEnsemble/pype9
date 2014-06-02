@@ -1,3 +1,12 @@
+"""
+
+  Deprecated 9ML readers (now uses lib9ml package)
+
+  Author: Thomas G. Close (tclose@oist.jp)
+  Copyright: 2012-2014 Thomas G. Close.
+  License: This file is part of the "NineLine" package, which is released under
+           the GPL v2, see LICENSE for details.
+"""
 from __future__ import absolute_import
 import xml.sax
 import collections
@@ -7,15 +16,16 @@ from nineline import XMLHandler
 class MorphMLHandler(XMLHandler):
 
     """
-    A XML handler to extract morphology specifications from MorphML (version 2), storing them
-    within the handler object to be read when neuron model objects are initialised from a generated
-    NCML class.
+    A XML handler to extract morphology specifications from MorphML (version
+    2), storing them within the handler object to be read when neuron model
+    objects are initialised from a generated NCML class.
     """
 
-    # Create named tuples (sort of light-weight classes with no methods, like a struct in C/C++) to
-    # store the extracted MorphML data.
-    Morphology = collections.namedtuple('Morphology', 'morph_id celltype_id segments groups '
-                                                      'default_group')
+    # Create named tuples (sort of light-weight classes with no methods, like a
+    # struct in C/C++) to store the extracted MorphML data.
+    Morphology = collections.namedtuple('Morphology', 
+                                        'morph_id celltype_id segments groups '
+                                        'default_group')
 
     # The basic data required to create a segment. 'proximal' and 'distal' are
     # 'Point3D' tuples specifying the location and diameter of the segment,
@@ -36,8 +46,8 @@ class MorphMLHandler(XMLHandler):
 
     def __init__(self, celltype_id=None, morph_id=None):
         """
-        Initialises the handler, saving the cell name and creating the lists to hold the segments
-        and segment groups.
+        Initialises the handler, saving the cell name and creating the lists to
+        hold the segments and segment groups.
         """
         XMLHandler.__init__(self)
         self.celltype_id = celltype_id
@@ -46,16 +56,18 @@ class MorphMLHandler(XMLHandler):
 
     def startElement(self, tag_name, attrs):
         """
-        Overrides function in xml.sax.handler to parse all MorphML tag openings. Creates
-        corresponding segment and segment-group tuples in the handler object.
+        Overrides function in xml.sax.handler to parse all MorphML tag
+        openings. Creates corresponding segment and segment-group tuples in the
+        handler object.
         """
-        if self._opening(tag_name, attrs, 'cell', required_attrs=[('id', self.celltype_id)]):
+        if self._opening(tag_name, attrs, 'cell', 
+                         required_attrs=[('id', self.celltype_id)]):
             self.found_cell_id = True
             # Get the default morph_id from the cell attributes
             self.default_morph_id = attrs.get('defaultMorphology', None)
-            # If the morph_id wasn't explicitly specified in the Handler constructor use the
-            # default value if it has been specified in the cell tag (otherwise there should only
-            # be one morphology present
+            # If the morph_id wasn't explicitly specified in the Handler
+            # constructor use the default value if it has been specified in the
+            # cell tag (otherwise there should only be one morphology present
             if not self.morph_id and self.default_morph_id:
                 self.morph_id = self.default_morph_id
         elif self._opening(tag_name, attrs, 'morphology', parents=['cell'],

@@ -3,9 +3,10 @@
   This module defines classes to be passed pyNN Connectors to connect
   populations based on simple point-to-point geometric connectivity rules
 
-  @author Tom Close
-
-
+  Author: Thomas G. Close (tclose@oist.jp)
+  Copyright: 2012-2014 Thomas G. Close.
+  License: This file is part of the "NineLine" package, which is released under
+           the GPL v2, see LICENSE for details.
 """
 ##########################################################################
 #

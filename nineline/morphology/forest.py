@@ -1,3 +1,12 @@
+"""
+  This package reads a "forest" of dendritic (or axonal) trees and generates
+  connectivity patterns from them
+
+  Author: Thomas G. Close (tclose@oist.jp)
+  Copyright: 2012-2014 Thomas G. Close.
+  License: This file is part of the "NineLine" package, which is released under
+           the GPL v2, see LICENSE for details.
+"""
 from __future__ import absolute_import
 import numpy
 from numpy.linalg import norm
@@ -5,15 +14,12 @@ from . import tree
 from copy import deepcopy
 from . import mask
 from .io.neurolucida import read_NeurolucidaTreeXML, read_NeurolucidaSomaXML
-
 try:
     import matplotlib.pyplot as plt
 except:
     # If pyplot is not installed, ignore it and only throw an error if a
     # plotting function is called
     plt = None
-
-#  Objects to store the morphologies -------------------------------------
 
 
 class Forest(object):

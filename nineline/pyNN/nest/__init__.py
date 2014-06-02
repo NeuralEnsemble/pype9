@@ -2,16 +2,11 @@
 
   This package mirrors the one in pyNN
 
-  @file __init__.py
-  @author Tom Close
-
+  Author: Thomas G. Close (tclose@oist.jp)
+  Copyright: 2012-2014 Thomas G. Close.
+  License: This file is part of the "NineLine" package, which is released under
+           the GPL v2, see LICENSE for details.
 """
-
-##########################################################################
-#
-#  Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
-#
-##########################################################################
 from __future__ import absolute_import
 import sys
 # Remove any system arguments that may conflict with

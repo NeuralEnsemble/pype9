@@ -1,3 +1,11 @@
+"""
+  This package reads a creates a array mask from a dendritic tree
+
+  Author: Thomas G. Close (tclose@oist.jp)
+  Copyright: 2012-2014 Thomas G. Close.
+  License: This file is part of the "NineLine" package, which is released under
+           the GPL v2, see LICENSE for details.
+"""
 from __future__ import absolute_import
 from abc import ABCMeta  # Metaclass for abstract base classes
 import math

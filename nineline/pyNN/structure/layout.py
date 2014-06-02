@@ -2,15 +2,11 @@
 
   This module contains extensions to the pyNN.space module
 
-  @author Tom Close
-
+  Author: Thomas G. Close (tclose@oist.jp)
+  Copyright: 2012-2014 Thomas G. Close.
+  License: This file is part of the "NineLine" package, which is released under
+           the GPL v2, see LICENSE for details.
 """
-
-##########################################################################
-#
-#    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
-#
-##########################################################################
 from __future__ import absolute_import
 from abc import ABCMeta
 import nineml.user_layer

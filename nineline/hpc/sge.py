@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 """
-Wraps a executable to enable that script to be submitted to an SGE cluster
-engine
+  Wraps a executable to enable that script to be submitted to an SGE cluster
+  engine
+
+  Author: Thomas G. Close (tclose@oist.jp)
+  Copyright: 2012-2014 Thomas G. Close.
+  License: This file is part of the "NineLine" package, which is released under
+           the GPL v2, see LICENSE for details.
 """
 import sys
 import os.path
@@ -10,8 +15,7 @@ from copy import copy
 import time
 import subprocess
 import shutil
-from ..cells.build import path_to_exec
-from nineline.arguments import inputpath, outputpath
+from nineline.arguments import outputpath
 
 
 class SGESubmitter(object):

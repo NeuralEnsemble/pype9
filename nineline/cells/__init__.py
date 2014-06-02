@@ -6,16 +6,11 @@
   'Purkinje' class for an NCML containing a declaration of a Purkinje cell),
   and the base class for each of the generated cell classes.
 
-  @file ncml.py
-  @author Tom Close
-
+  Author: Thomas G. Close (tclose@oist.jp)
+  Copyright: 2012-2014 Thomas G. Close.
+  License: This file is part of the "NineLine" package, which is released under
+           the GPL v2, see LICENSE for details.
 """
-
-##########################################################################
-#
-#    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
-#
-##########################################################################
 from __future__ import absolute_import
 import collections
 import math
