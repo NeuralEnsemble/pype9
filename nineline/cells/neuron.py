@@ -7,11 +7,11 @@
 
 """
 
-#######################################################################################
+##########################################################################
 #
 #    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
-#######################################################################################
+##########################################################################
 from __future__ import absolute_import
 from datetime import datetime
 import weakref
@@ -30,7 +30,7 @@ from nineline.cells.build.neuron import build_celltype_files
 import nineline.cells
 from .. import create_unit_conversions, convert_units
 
-basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length':'L'}
+basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
 
 import logging
 
@@ -47,9 +47,11 @@ _basic_SI_to_neuron_conversions = (('s', 'ms'),
                                    ('M', 'mM'))
 
 _compound_SI_to_neuron_conversions = (((('A', 1), ('m', -2)), (('mA', 1), ('cm', -2))),
-                                    ((('F', 1), ('m', -2)), (('uF', 1), ('cm', -2))),
-                                    ((('S', 1), ('m', -2)), (('S', 1), ('cm', -2))),
-                                    ((('Ohm', 1), ('m', 1)), (('Ohm', 1), ('cm', 1))))
+                                      ((('F', 1), ('m', -2)),
+                                       (('uF', 1), ('cm', -2))),
+                                      ((('S', 1), ('m', -2)),
+                                       (('S', 1), ('cm', -2))),
+                                      ((('Ohm', 1), ('m', 1)), (('Ohm', 1), ('cm', 1))))
 
 
 _basic_unit_dict, _compound_unit_dict = create_unit_conversions(_basic_SI_to_neuron_conversions,
@@ -57,44 +59,49 @@ _basic_unit_dict, _compound_unit_dict = create_unit_conversions(_basic_SI_to_neu
 
 
 def convert_to_neuron_units(value, unit_str):
-    return convert_units(value, unit_str, _basic_unit_dict, _compound_unit_dict)
+    return convert_units(
+        value, unit_str, _basic_unit_dict, _compound_unit_dict)
 
 
 class _BaseNineCell(nineline.cells.NineCell):
 
     class Segment(nrn.Section):  # @UndefinedVariable
+
         """
         Wraps the basic NEURON section to allow non-NEURON attributes to be added to the segment.
         Additional functionality could be added as needed
         """
 
         class ComponentTranslator(object):
+
             """
-            Acts as a proxy for the true component that was inserted using NEURON's in built 'insert' 
-            method. Used as a way to avoid the unique-identifier prefix that is prepended to NeMo 
-            parameters, while allowing the cellname prefix to be dropped from the component, thus 
+            Acts as a proxy for the true component that was inserted using NEURON's in built 'insert'
+            method. Used as a way to avoid the unique-identifier prefix that is prepended to NeMo
+            parameters, while allowing the cellname prefix to be dropped from the component, thus
             providing a cleaner interface
             """
+
             def __init__(self, component, translations):
-                # # The true component object that was created by the pyNEURON 'insert' method
+                # The true component object that was created by the pyNEURON
+                # 'insert' method
                 super(_BaseNineCell.Segment.ComponentTranslator, self).__setattr__('_component',
                                                                                    component)
-                # # The translation of the parameter names
+                # The translation of the parameter names
                 super(_BaseNineCell.Segment.ComponentTranslator, self).__setattr__('_translations',
-                                                                                  translations)
+                                                                                   translations)
 
             def __setattr__(self, var, value):
                 try:
                     setattr(self._component, self._translations[var], value)
                 except KeyError as e:
-                    raise AttributeError("Component does not have translation for parameter {}"\
+                    raise AttributeError("Component does not have translation for parameter {}"
                                          .format(e))
 
             def __getattr__(self, var):
                 try:
                     return getattr(self._component, self._translations[var])
                 except KeyError as e:
-                    raise AttributeError("Component does not have translation for parameter {}"\
+                    raise AttributeError("Component does not have translation for parameter {}"
                                          .format(e))
 
             def __dir__(self):
@@ -103,9 +110,9 @@ class _BaseNineCell(nineline.cells.NineCell):
 
         def __init__(self, nineml_model):
             """
-            Initialises the Segment including its proximal and distal sections for connecting child 
+            Initialises the Segment including its proximal and distal sections for connecting child
             segments
-            
+
             @param seg [common.ncml.MorphMLHandler.Segment]: Segment tuple loaded from MorphML \
                                                              (see common.ncml.MorphMLHandler)
             """
@@ -129,9 +136,9 @@ class _BaseNineCell(nineline.cells.NineCell):
 
         def __getattr__(self, var):
             """
-            Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup. This 
+            Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup. This
             is done to allow pyNN's population.tset method to set attributes of cell components.
-            
+
             @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
                               attribute vars
             """
@@ -145,7 +152,7 @@ class _BaseNineCell(nineline.cells.NineCell):
             """
             Any '.'s in the attribute var are treated as delimeters of a nested varspace lookup.
             This is done to allow pyNN's population.tset method to set attributes of cell components.
-            
+
             @param var [str]: var of the attribute or '.' delimeted string of segment, component and \
                               attribute vars
             @param val [*]: val of the attribute
@@ -159,17 +166,18 @@ class _BaseNineCell(nineline.cells.NineCell):
         def _set_proximal(self, proximal):
             """
             Sets the proximal position and calculates the length of the segment
-            
+
             @param proximal [float(3)]: The 3D position of the start of the segment
             """
             self._proximal = numpy.asarray(proximal)
-            h.pt3dadd(proximal[0], proximal[1], proximal[2], self.diam, sec=self)
+            h.pt3dadd(
+                proximal[0], proximal[1], proximal[2], self.diam, sec=self)
 
         def _connect(self, parent_seg, fraction_along):
             """
             Connects the segment with its parent, setting its proximal position and calculating its
             length if it needs to.
-            
+
             @param parent_seg [Segment]: The parent segment to connect to
             @param fraction_along [float]: The fraction along the parent segment to connect to
             """
@@ -181,12 +189,13 @@ class _BaseNineCell(nineline.cells.NineCell):
             self._fraction_along = fraction_along
             parent_seg._children.append(self)
 
-        def insert(self, component_name, biophysics_name=None, translations=None):
+        def insert(self, component_name, biophysics_name=None,
+                   translations=None):
             """
-            Inserts a mechanism using the in-built NEURON 'insert' method and then constructs a 
-            'Component' class to point to the variable parameters of the component using meaningful 
+            Inserts a mechanism using the in-built NEURON 'insert' method and then constructs a
+            'Component' class to point to the variable parameters of the component using meaningful
             names
-            
+
             @param component_name [str]: The name of the component to be inserted
             @param biophysics_name [str]: If the biophysics_name is provided, then it is used as a prefix to the \
                                   component (eg. if biophysics_name='Granule' and component_name='CaHVA', the \
@@ -206,7 +215,7 @@ class _BaseNineCell(nineline.cells.NineCell):
             # translated values.
             if translations:
                 super(_BaseNineCell.Segment, self).__setattr__(component_name,
-                            self.ComponentTranslator(getattr(self(0.5), mech_name), translations))
+                                                               self.ComponentTranslator(getattr(self(0.5), mech_name), translations))
             else:
                 super(_BaseNineCell.Segment, self).__setattr__(component_name, getattr(self(0.5),
                                                                                        mech_name))
@@ -221,13 +230,14 @@ class _BaseNineCell(nineline.cells.NineCell):
     def _construct_morphology(self, nineml_model):
         """
         Reads morphology from a MorphML 2 file and creates the appropriate segments in neuron
-        
+
         @param barebones_only [bool]: If set, extra helper fields will be deleted after the are \
                                       required, leaving the "barebones" pyNEURON structure for \
                                       each nrn.Section
         """
         if not len(nineml_model.segments):
-            raise Exception("The loaded morphology does not contain any segments")
+            raise Exception(
+                "The loaded morphology does not contain any segments")
         # Initialise all segments
         self.segments = {}
         self.source_section = None
@@ -265,7 +275,8 @@ class _BaseNineCell(nineline.cells.NineCell):
         self.classifications = {}
         for model in nineml_model.classifications.values():
             classification = {}
-            for name, cls_model in model.classes.iteritems():  # @UnusedVariable
+            # @UnusedVariable
+            for name, cls_model in model.classes.iteritems():
                 seg_class = []
                 for member in cls_model:
                     try:
@@ -300,13 +311,14 @@ class _BaseNineCell(nineline.cells.NineCell):
                     if hoc_name in dir(h):
                         SynapseType = getattr(h, hoc_name)
                     else:
-                        raise Exception("Did not find '{}' synapse type".format(hoc_name))
+                        raise Exception(
+                            "Did not find '{}' synapse type".format(hoc_name))
                     for seg_class in mapping.segments:
                         for seg in self.classifications[mapping.segments.classification][seg_class]:
                             receptor = SynapseType(0.5, sec=seg)
                             setattr(seg, comp_name, receptor)
                 else:
-                    if self.component_translations.has_key(comp_name):
+                    if comp_name in self.component_translations:
                         translations = dict([(key, val[0]) for key, val in
                                              self.component_translations[comp_name].iteritems()])
                     else:
@@ -323,7 +335,7 @@ class _BaseNineCell(nineline.cells.NineCell):
                                                                    clss=seg_class))
         try:
             ra_param = nineml_model.biophysics.components['__NO_COMPONENT__'].\
-                                                               parameters['Ra']
+                parameters['Ra']
         except KeyError:
             raise Exception("Axial resistance was not set for celltype '{}'"
                             .format(nineml_model.name))
@@ -331,7 +343,7 @@ class _BaseNineCell(nineline.cells.NineCell):
                                                    ra_param.unit)[0]
         try:
             cm_param = nineml_model.biophysics.components['__NO_COMPONENT__'].\
-                                                              parameters['C_m']
+                parameters['C_m']
         except KeyError:
             raise Exception("Membrane capacitance was not set for celltype '{}'"
                             .format(nineml_model.name))
@@ -342,7 +354,7 @@ class _BaseNineCell(nineline.cells.NineCell):
 
     def get_threshold(self):
         return self.nineml_model.biophysics.components['__NO_COMPONENT__'].\
-                                                        parameters['V_t'].value
+            parameters['V_t'].value
 
     def memb_init(self):
         if 'initial_v' in self.parameters:
@@ -438,7 +450,7 @@ class NineCell(_BaseNineCell):
                 varname = p.reference
             components = []
             for seg_class in p.segments:
-                segments = self.classifications[p.segments.\
+                segments = self.classifications[p.segments.
                                                 classification][seg_class]
                 if p.component:
                     class_components = [getattr(seg, p.component)
@@ -447,7 +459,7 @@ class NineCell(_BaseNineCell):
                     class_components = segments
             components.extend(class_components)
             ParamClass = (self.InitialState if p.type == 'initialState'
-                                            else self.Parameter)
+                          else self.Parameter)
             self._parameters[p.name] = ParamClass(p.name, varname, components)
         self.__class__._param_links_tested = True
 
@@ -534,7 +546,7 @@ class NineCell(_BaseNineCell):
             # TODO: Need to work out if I want this to throw an error or not.
             super(NineCell, self).__setattr__(varname, val)
 #             raise Exception("Cannot add new attribute '{}' to cell {} class".format(varname,
-#                                                                                     type(self)))
+# type(self)))
 
     def __dir__(self):
         return dir(super(_BaseNineCell, self)) + self._parameters.keys()
@@ -633,10 +645,10 @@ class NineCellStandAlone(_BaseNineCell):
         Gets a recording or recordings of previously recorded variable
 
         `variables`  -- the name of the variable or a list of names of variables to return [str | list(str)]
-        `segnames`   -- the segment name the variable is located or a list of segment names 
+        `segnames`   -- the segment name the variable is located or a list of segment names
                        (in which case length must match number of variables) [str | list(str)].
                        "None" variables will be translated to the 'source_section' segment
-        `components` -- the component name the variable is part of or a list of components names 
+        `components` -- the component name the variable is part of or a list of components names
                        (in which case length must match number of variables) [str | list(str)].
                        "None" variables will be translated as segment variables (i.e. no component)
         `in_block`  -- returns a neo.Block object instead of a neo.SpikeTrain | neo.AnalogSignal
@@ -683,7 +695,7 @@ class NineCellStandAlone(_BaseNineCell):
                                                  sampling_period=h.dt * pq.ms,
                                                  t_start=0.0 * pq.ms,
                                                  name='.'.join([x for x in key
-                                                            if x is not None]),
+                                                                if x is not None]),
                                                  units=units)
                 if in_block:
                     segment.analogsignals.append(analog_signal)
@@ -716,6 +728,7 @@ class NineCellStandAlone(_BaseNineCell):
 
 
 class NineCellMetaClass(nineline.cells.NineCellMetaClass):
+
     """
     Metaclass for building NineMLNineCellType subclasses Called by
     nineml_celltype_from_model
@@ -731,7 +744,7 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
         """
         if isinstance(nineml_model, str):
             loaded_models = nineml.extensions.biophysical_cells.\
-                                                            parse(nineml_model)
+                parse(nineml_model)
             if celltype_name is not None:
                 nineml_model = loaded_models[celltype_name]
             elif len(loaded_models) == 1:
@@ -751,15 +764,15 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
         except KeyError:
             dct = {'nineml_model': nineml_model}
             build_options = nineml_model.biophysics.\
-                                                  build_hints['nemo']['neuron']
+                build_hints['nemo']['neuron']
             install_dir, dct['component_translations'] = \
-                    build_celltype_files(nineml_model.biophysics.name,
-                                         nineml_model.url,
-                                         build_mode=build_mode,
-                                         method=build_options.method,
-                                         kinetics=build_options.\
-                                                  kinetic_components,
-                                         silent_build=silent)
+                build_celltype_files(nineml_model.biophysics.name,
+                                     nineml_model.url,
+                                     build_mode=build_mode,
+                                     method=build_options.method,
+                                     kinetics=build_options.
+                                     kinetic_components,
+                                     silent_build=silent)
             load_mechanisms(install_dir)
             dct['mech_path'] = install_dir
             dct['_param_links_tested'] = False
@@ -768,8 +781,8 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
             else:
                 BaseClass = NineCell
             celltype = super(NineCellMetaClass, cls).\
-                            __new__(cls, nineml_model, celltype_name,
-                                    (BaseClass,), dct)
+                __new__(cls, nineml_model, celltype_name,
+                        (BaseClass,), dct)
             # Save cell type in case it needs to be used again
             cls.loaded_celltypes[(celltype_name,
                                   nineml_model.url, opt_args)] = celltype
@@ -803,7 +816,8 @@ class _SimulationController(object):
             self.reset()
         # Convert simulation time to float value in ms
         simulation_time = float(pq.Quantity(simulation_time, 'ms'))
-        for t in numpy.arange(h.dt, simulation_time + h.dt, h.dt):  # @UnusedVariable t @IgnorePep8
+        # @UnusedVariable t @IgnorePep8
+        for t in numpy.arange(h.dt, simulation_time + h.dt, h.dt):
             h.fadvance()
         self.tstop += simulation_time
 

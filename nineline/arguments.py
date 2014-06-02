@@ -18,7 +18,7 @@ class inputpath(str):
         path = cls(arg)
         path.references = []
         if path.endswith('.9ml'):
-            #TODO: find dependents
+            # TODO: find dependents
             pass
         return path
 
@@ -31,6 +31,7 @@ def outputpath(arg):
 
 
 class randomseed(int):
+
     """
     Automatically generates unique random seeds if none are provided, as well
     as ensuring that unique seeds are passed to each MPI process

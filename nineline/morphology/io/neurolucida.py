@@ -3,7 +3,9 @@ import collections
 import xml.sax
 from ...__init__ import XMLHandler
 
+
 class NeurolucidaTreeXMLHandler(XMLHandler):
+
     """
     An XML handler to extract dendrite locates from Neurolucida XML format
     """
@@ -14,7 +16,7 @@ class NeurolucidaTreeXMLHandler(XMLHandler):
 
     def __init__(self):
         """
-        Initialises the handler, saving the cell name and creating the lists to hold the _point_data 
+        Initialises the handler, saving the cell name and creating the lists to hold the _point_data
         and segment groups.
         """
         XMLHandler.__init__(self)
@@ -23,7 +25,7 @@ class NeurolucidaTreeXMLHandler(XMLHandler):
 
     def startElement(self, tag_name, attrs):
         """
-        Overrides function in xml.sax.handler to parse all MorphML tag openings. Creates 
+        Overrides function in xml.sax.handler to parse all MorphML tag openings. Creates
         corresponding segment and segment-group tuples in the handler object.
         """
         if self._opening(tag_name, attrs, 'tree', required_attrs=[('type', 'Dendrite')]):
@@ -46,6 +48,7 @@ class NeurolucidaTreeXMLHandler(XMLHandler):
 
 
 class NeurolucidaSomaXMLHandler(XMLHandler):
+
     """
     An XML handler to extract dendrite locates from Neurolucida XML format
     """
@@ -57,7 +60,7 @@ class NeurolucidaSomaXMLHandler(XMLHandler):
 
     def __init__(self):
         """
-        Initialises the handler, saving the cell name and creating the lists to hold the _point_data 
+        Initialises the handler, saving the cell name and creating the lists to hold the _point_data
         and segment groups.
         """
         XMLHandler.__init__(self)
@@ -66,12 +69,12 @@ class NeurolucidaSomaXMLHandler(XMLHandler):
 
     def startElement(self, tag_name, attrs):
         """
-        Overrides function in xml.sax.handler to parse all MorphML tag openings. Creates 
+        Overrides function in xml.sax.handler to parse all MorphML tag openings. Creates
         corresponding segment and segment-group tuples in the handler object.
         """
         if self._opening(tag_name, attrs, 'contour'):
             contour_name = attrs['name']
-            if not self.somas.has_key(contour_name):
+            if contour_name not in self.somas:
                 self.somas[contour_name] = self.Soma(self.soma_count, [])
                 self.soma_count += 1
             self.current_contour = self.Contour([])
@@ -88,11 +91,10 @@ def read_NeurolucidaTreeXML(filename):
     parser.parse(filename)
     return handler.roots
 
+
 def read_NeurolucidaSomaXML(filename):
     parser = xml.sax.make_parser()
     handler = NeurolucidaSomaXMLHandler()
     parser.setContentHandler(handler)
     parser.parse(filename)
     return handler.somas
-
-

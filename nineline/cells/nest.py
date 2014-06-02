@@ -7,11 +7,11 @@
 
 """
 
-#######################################################################################
+##########################################################################
 #
 #    Copyright 2012 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
 #
-#######################################################################################
+##########################################################################
 
 from __future__ import absolute_import
 import sys
@@ -20,20 +20,23 @@ import nest
 from .build.nest import build_celltype_files
 import nineline.cells
 
-basic_nineml_translations = {'Voltage': 'V_m', 'Diameter': 'diam', 'Length':'L'}
+basic_nineml_translations = {
+    'Voltage': 'V_m', 'Diameter': 'diam', 'Length': 'L'}
+
 
 class NineCell(nineline.cells.NineCell):
     pass
 
+
 class NineCellMetaClass(nineline.cells.NineCellMetaClass):
-    
+
     loaded_celltypes = {}
-    
-    def __new__(cls, nineml_model, celltype_name=None, morph_id=None, build_mode='lazy', #@UnusedVariable 
+
+    def __new__(cls, nineml_model, celltype_name=None, morph_id=None, build_mode='lazy',  # @UnusedVariable
                 silent=False, solver_name='cvode', standalone=False):
         """
         Loads a PyNN cell type for NEST from an XML description, compiling the necessary module files
-        
+
         @param nineml_model [str]: The parsed 9ML biophysical cell model
         @param celltype_name [str]: Name of the cell class to extract from the xml file
         @param morph_id [str]: Currently unused but kept for consistency with NEURON version of this function
@@ -44,7 +47,8 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
             celltype_name = nineml_model.name
         opt_args = (solver_name, standalone)
         try:
-            celltype = cls.loaded_celltypes[(celltype_name, nineml_model.url, opt_args)]
+            celltype = cls.loaded_celltypes[
+                (celltype_name, nineml_model.url, opt_args)]
         except KeyError:
             dct = {}
             install_dir, dct['component_translations'] = build_celltype_files(celltype_name,
@@ -54,28 +58,28 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
                                                                               method=solver_name)
             lib_dir = os.path.join(install_dir, 'lib', 'nest')
             if sys.platform.startswith('linux') or \
-                                        sys.platform in ['os2', 'os2emx', 'cygwin', 'atheos', 'ricos']:
+                    sys.platform in ['os2', 'os2emx', 'cygwin', 'atheos', 'ricos']:
                 lib_path_key = 'LD_LIBRARY_PATH'
             elif sys.platform == 'darwin':
                 lib_path_key = 'DYLD_LIBRARY_PATH'
             elif sys.platform == 'win32':
                 lib_path_key = 'PATH'
-            if os.environ.has_key(lib_path_key):
+            if lib_path_key in os.environ:
                 os.environ[lib_path_key] += os.pathsep + lib_dir
             else:
                 os.environ[lib_path_key] = lib_dir
             # Add module install directory to NEST path
-            nest.sli_run('({}) addpath'.format(os.path.join(install_dir, 'share', 'nest')))
+            nest.sli_run(
+                '({}) addpath'.format(os.path.join(install_dir, 'share', 'nest')))
             # Install nest module
             nest.Install(celltype_name + 'Loader')
             dct['nineml_model'] = nineml_model
-            # Add the loaded cell type to the list of cell types that have been loaded
+            # Add the loaded cell type to the list of cell types that have been
+            # loaded
             celltype = super(NineCellMetaClass, cls).__new__(cls, nineml_model, celltype_name,
                                                              (NineCell,), dct)
-            # Added the loaded celltype to the dictionary of previously loaded cell types
-            cls.loaded_celltypes[(celltype_name, nineml_model.url, opt_args)] = celltype
+            # Added the loaded celltype to the dictionary of previously loaded
+            # cell types
+            cls.loaded_celltypes[
+                (celltype_name, nineml_model.url, opt_args)] = celltype
         return celltype
-    
-    
-    
-    

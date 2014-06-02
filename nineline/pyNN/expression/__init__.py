@@ -4,9 +4,10 @@ import numpy
 import nineml.user_layer
 from nineline.pyNN import convert_to_pyNN_units
 
-_numpy_constants_functions = set(['pi', 'exp', 'sin', 'cos', 'log', 'log10', 'pow', 'sinh', 'cosh', 
-                                  'tanh', 'sqrt', 'mod', 'sum', 'atan', 'asin', 'acos', 'asinh', 
+_numpy_constants_functions = set(['pi', 'exp', 'sin', 'cos', 'log', 'log10', 'pow', 'sinh', 'cosh',
+                                  'tanh', 'sqrt', 'mod', 'sum', 'atan', 'asin', 'acos', 'asinh',
                                   'acosh', 'atanh', 'atan2'])
+
 
 def create_anonymous_function(nineml_model):
     assert isinstance(nineml_model, nineml.user_layer.AnonymousFunction)
@@ -26,7 +27,8 @@ def create_anonymous_function(nineml_model):
         if p.unit == 'dimensionless':
             value = p.value
         else:
-            value, units = convert_to_pyNN_units(p.value, p.unit) #@UnusedVariable
+            value, units = convert_to_pyNN_units(
+                p.value, p.unit)  # @UnusedVariable
         expression_str = expression_str.replace(name, str(value))
     # Replace escape sequences that would otherwise interfere with xml parsing
     expression_str = expression_str.replace('&lt;', '<')
@@ -36,7 +38,9 @@ def create_anonymous_function(nineml_model):
     for sym in _numpy_constants_functions:
         expression_str = expression_str.replace(sym, 'numpy.' + sym)
     # Create the lambda function of the expression
-    func = eval('lambda {args}: {expr}'.format(args=', '.join(args), expr=expression_str))
+    func = eval('lambda {args}: {expr}'.format(
+        args=', '.join(args), expr=expression_str))
     # Save the expression in the lambda function for pretty display
-    func.str = 'f({args}) -> {expr}'.format(args=', '.join(args), expr=expression_str)
+    func.str = 'f({args}) -> {expr}'.format(args=', '.join(args),
+                                            expr=expression_str)
     return func

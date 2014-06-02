@@ -5,6 +5,7 @@ import nineml.user_layer
 import pyNN.connectors
 from . import create_anonymous_function
 
+
 class StructureExpression(object):
 
     __metaclass__ = ABCMeta
@@ -12,7 +13,7 @@ class StructureExpression(object):
     @classmethod
     def _convert_params(cls, nineml_params):
         """
-        Converts parameters from lib9ml objects into values with 'quantities' units and or 
+        Converts parameters from lib9ml objects into values with 'quantities' units and or
         random distributions
         """
         assert isinstance(nineml_params, nineml.user_layer.ParameterSet)
@@ -32,7 +33,8 @@ class StructureExpression(object):
 
     def __init__(self, nineml_params):
         # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class in
-        # the MRO), I thought of a few ways to do this but none were completely satisfactory.
+        # the MRO), I thought of a few ways to do this but none were completely
+        # satisfactory.
         PyNNClass = self.__class__.__mro__[2]
 #         assert (PyNNClass.__module__.startswith('pyNN') and
 #                 PyNNClass.__module__.endswith('connectors'))
@@ -41,9 +43,10 @@ class StructureExpression(object):
 
 
 class _PositionBasedExpression(pyNN.connectors.IndexBasedExpression):
+
     """
     This provides the guts of the PositionBasedExpression class and will hopefully be included
-    in PyNN in the future, but for now it needs to be separated from the 9ML wrapper so that it 
+    in PyNN in the future, but for now it needs to be separated from the 9ML wrapper so that it
     can also be used in the PositionBasedProbabiliityConnector
     """
 
@@ -58,8 +61,10 @@ class _PositionBasedExpression(pyNN.connectors.IndexBasedExpression):
         pyNN.connectors.IndexBasedExpression.__init__(self)
 
     def __call__(self, i, j):
-        source_positions = self.projection.pre.structures[self.source_structure].positions[:, i]
-        target_positions = self.projection.post.structures[self.target_structure].positions[:, j]
+        source_positions = self.projection.pre.structures[
+            self.source_structure].positions[:, i]
+        target_positions = self.projection.post.structures[
+            self.target_structure].positions[:, j]
         values = self.expression(sourceX=source_positions[0],
                                  sourceY=source_positions[1],
                                  sourceZ=source_positions[2],
@@ -72,13 +77,13 @@ class _PositionBasedExpression(pyNN.connectors.IndexBasedExpression):
     def __str__(self):
         return str(self.expression.str)
 
+
 class PositionBasedExpression(StructureExpression, _PositionBasedExpression):
+
     """
     A displacement based prob_expression function used to determine the connection probability
-    and the value of variable connection parameters of a projection 
+    and the value of variable connection parameters of a projection
     """
 
-    nineml_translations = {'expression': 'expression', 'sourceStructure':'source_structure',
-                          'targetStructure':'target_structure'}
-
-
+    nineml_translations = {'expression': 'expression', 'sourceStructure': 'source_structure',
+                           'targetStructure': 'target_structure'}

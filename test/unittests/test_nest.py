@@ -12,16 +12,17 @@ from numpy.testing import assert_array_equal, assert_array_almost_equal
 import nine.cells.nest
 import nine.cells.neuron
 
+
 class TestCell(unittest.TestCase):
-    
+
     def _test_load_describe(self, loader):
-        CellType = loader('Granule_DeSouza10', 
+        CellType = loader('Granule_DeSouza10',
                           '/home/tclose/git/kbrain/xml/cerebellum/ncml/Granule_DeSouza10.xml')
         cell = CellType()
         cell.describe()
-        
+
     def test_neuron_load_describe(self):
         self._test_load_describe(nine.cells.neuron.load_celltype)
-        
+
     def test_nest_load_describe(self):
         self._test_load_describe(nine.cells.nest.load_celltype)

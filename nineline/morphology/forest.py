@@ -9,10 +9,12 @@ from .io.neurolucida import read_NeurolucidaTreeXML, read_NeurolucidaSomaXML
 try:
     import matplotlib.pyplot as plt
 except:
-    # If pyplot is not installed, ignore it and only throw an error if a plotting function is called
+    # If pyplot is not installed, ignore it and only throw an error if a
+    # plotting function is called
     plt = None
 
-#  Objects to store the morphologies ---------------------------------------------------------------
+#  Objects to store the morphologies -------------------------------------
+
 
 class Forest(object):
 
@@ -28,9 +30,9 @@ class Forest(object):
         for tree in self.trees:
             self.centroid += tree.centroid
             self.min_bounds = numpy.select([self.min_bounds <= tree.min_bounds, True],
-                                        [self.min_bounds, tree.min_bounds])
+                                           [self.min_bounds, tree.min_bounds])
             self.max_bounds = numpy.select([self.max_bounds >= tree.max_bounds, True],
-                                        [self.max_bounds, tree.max_bounds])
+                                           [self.max_bounds, tree.max_bounds])
         self.centroid /= len(roots)
         # Load somas
         self.somas = {}
@@ -43,7 +45,8 @@ class Forest(object):
                     raise Exception("Number of loaded somas ({}) and trees do not match ({}) "
                                     .format(len(soma_dict), len(self.trees)))
                 for label, soma in soma_dict.items():
-                    self.trees[soma.index].add_soma(tree.Soma(label, soma.contours))
+                    self.trees[soma.index].add_soma(
+                        tree.Soma(label, soma.contours))
                 self.has_somas = True
         else:
             self.has_somas = False
@@ -61,7 +64,7 @@ class Forest(object):
     def transform(self, transform):
         """
         Transforms the forest by the given transformation matrix
-        
+
         @param transform [numpy.array(3,3)]: The transformation matrix by which to rotate the forest
         """
         for tree in self:
@@ -69,8 +72,8 @@ class Forest(object):
 
     def rotate(self, theta, axis=2):
         """
-        Rotates the forest about the chosen axis by theta 
-        
+        Rotates the forest about the chosen axis by theta
+
         @param theta [float]: The degree of clockwise rotation (in degrees)
         @param axis [str/int]: The axis about which to rotate the tree (either 'x'-'z' or 0-2, default 'z'/2)
         """
@@ -83,22 +86,23 @@ class Forest(object):
 
     def get_volume_mask(self, vox_size, dtype=bool):
         mask = mask.VolumeMask(vox_size, numpy.vstack([tree.points for tree in self.trees]),
-                          numpy.hstack([tree.diams for tree in self.trees]), dtype)
+                               numpy.hstack([tree.diams for tree in self.trees]), dtype)
         if dtype == bool:
-            for i, tree in enumerate(self): #@UnusedVariable
+            for i, tree in enumerate(self):  # @UnusedVariable
                 mask.add_tree(tree)
 #         print "Added {} tree to volume mask".format(i)
         else:
             bool_mask = mask.VolumeMask(vox_size, numpy.vstack([tree.points for tree in self.trees]),
-                                   numpy.hstack([tree.diams for tree in self.trees]), bool)
-            for i, tree in enumerate(self):  #@UnusedVariable
+                                        numpy.hstack([tree.diams for tree in self.trees]), bool)
+            for i, tree in enumerate(self):  # @UnusedVariable
                 tree_mask = deepcopy(bool_mask)
                 tree_mask.add_tree(tree)
                 mask += tree_mask
         #        print "Added {} tree to volume mask".format(i)
         return mask
 
-    def plot_volume_mask(self, vox_size, show=True, dtype=bool, colour_map=None):
+    def plot_volume_mask(
+            self, vox_size, show=True, dtype=bool, colour_map=None):
         mask = self.get_volume_mask(vox_size, dtype)
         if not colour_map:
             if dtype == bool:
@@ -114,12 +118,17 @@ class Forest(object):
         self.offset((0.0, 0.0, mask.DEEP_Z_VOX_SIZE / 2.0))
         mask = self.get_volume_mask(vox_size + (mask.DEEP_Z_VOX_SIZE,))
         if mask.dim[2] != 1:
-            raise Exception("Not all voxels where contained with the \"deep\" z voxel dimension")
+            raise Exception(
+                "Not all voxels where contained with the \"deep\" z voxel dimension")
         trimmed_frac = (1.0 - numpy.array(central_frac)) / 2.0
-        start = numpy.array(numpy.floor(mask.dim[:2] * trimmed_frac), dtype=int)
-        end = numpy.array(numpy.ceil(mask.dim[:2] * (1.0 - trimmed_frac)), dtype=int)
-        central_mask = mask._mask_array[start[0]:end[0], start[1]:end[1], 0].squeeze()
-        coverage = float(numpy.count_nonzero(central_mask)) / float(numpy.prod(central_mask.shape))
+        start = numpy.array(
+            numpy.floor(mask.dim[:2] * trimmed_frac), dtype=int)
+        end = numpy.array(
+            numpy.ceil(mask.dim[:2] * (1.0 - trimmed_frac)), dtype=int)
+        central_mask = mask._mask_array[
+            start[0]:end[0], start[1]:end[1], 0].squeeze()
+        coverage = float(numpy.count_nonzero(central_mask)) / \
+            float(numpy.prod(central_mask.shape))
         self.offset((0.0, 0.0, -mask.DEEP_Z_VOX_SIZE / 2.0))
         return coverage, central_mask
 
@@ -132,11 +141,13 @@ class Forest(object):
 
     def normal_to_soma_plane(self):
         if not self.has_somas:
-            raise Exception("Forest does not include somas, so their normal is not defined")
+            raise Exception(
+                "Forest does not include somas, so their normal is not defined")
         soma_centres = []
         for tree in self:
             soma_centres.append(tree.soma.centre())
-        eig_vals, eig_vecs = numpy.linalg.eig(numpy.cov(soma_centres, rowvar=0)) #@UnusedVariable
+        eig_vals, eig_vecs = numpy.linalg.eig(
+            numpy.cov(soma_centres, rowvar=0))  # @UnusedVariable
         normal = eig_vecs[:, numpy.argmin(eig_vals)]
         if normal.sum() < 0:
             normal *= -1.0
@@ -146,11 +157,12 @@ class Forest(object):
         soma_axis = self.normal_to_soma_plane()
         dendrite_axis = self.normal_to_dendrites()
         third_axis = numpy.cross(dendrite_axis, soma_axis)
-        third_axis /= norm(third_axis) # Just to clean up any numerical errors
+        third_axis /= norm(third_axis)  # Just to clean up any numerical errors
         re_dendrite_axis = numpy.cross(third_axis, soma_axis)
         align = numpy.vstack((soma_axis, third_axis, re_dendrite_axis))
-        # As the align matrix is unitary its inverse is equivalent to its transpose
-        inv_align = align.transpose();
+        # As the align matrix is unitary its inverse is equivalent to its
+        # transpose
+        inv_align = align.transpose()
         for tree in self:
             tree.transform(inv_align)
         return align
@@ -168,4 +180,3 @@ class Forest(object):
     def perturb(self, mag):
         for tree in self:
             tree.pertub(mag)
-
