@@ -1,7 +1,7 @@
 """
 
-  This module defines classes to be passed pyNN Connectors to connect populations based on
-  simple point-to-point geometric connectivity rules
+  This module defines classes to be passed pyNN Connectors to connect
+  populations based on simple point-to-point geometric connectivity rules
 
   @author Tom Close
 
@@ -117,8 +117,8 @@ class MaskBased(object):
     def __init__(self, probability=None, number=None):
 
         if (probability is not None and number is not None):
-            raise Exception(
-                "Only one of probability ({}) and number can be supplied to Mask object")
+            raise Exception("Only one of probability ({}) and number can be "
+                            "supplied to Mask object")
         self.prob = probability
         self.number = number
 
@@ -137,8 +137,9 @@ class MaskBased(object):
                     prob = float('inf')
             # If probability exceeds 1 cap it at 1 as the best that can be done
             if prob > 1.0:
-                warn("The number of requested connections ({}) could not be satisfied given "
-                     "size of mask ({})".format(int(self.number), num_nz),
+                warn("The number of requested connections ({}) could not be "
+                     "satisfied given size of mask ({})"
+                     .format(int(self.number), num_nz),
                      InsufficientTargetsWarning)
                 prob = 1.0
         probs = np.zeros(mask.shape)
@@ -149,15 +150,17 @@ class MaskBased(object):
 class CylinderMask(MaskBased):
 
     """
-    A class designed to be passed to the pyNN.DisplacementBasedProbabilityConnector to determine the
-    probability of connection within an elliptical region
+    A class designed to be passed to the
+    pyNN.DisplacementBasedProbabilityConnector to determine the probability of
+    connection within an elliptical region
     """
 
     def __init__(self, radius, probability=None, axisX=0.0,
                  axisY=0.0, axisZ=1.0, number=None):
         """
         @param radius: radius of the circle
-        @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
+        @param number: the mean number of connections to be generated.
+                       If None, all cells within the mask will be connected
         """
         super(CylinderMask, self).__init__(probability, number)
         self.radius = radius
@@ -169,22 +172,24 @@ class CylinderMask(MaskBased):
         self.axis /= norm
 
     def __call__(self, d):
-        mask = np.sqrt(
-            np.sum(np.square(np.cross(self.axis, d, axis=0)), axis=0)) < self.radius
+        mask = np.sqrt(np.sum(np.square(np.cross(self.axis, d, axis=0)),
+                              axis=0)) < self.radius
         return self._probs_from_mask(mask)
 
 
 class SphereMask(MaskBased):
 
     """
-    A class designed to be passed to the pyNN.DisplacmentBasedProbabilityConnector to determine the
-    probability of connection within an elliptical region
+    A class designed to be passed to the
+    pyNN.DisplacmentBasedProbabilityConnector to determine the probability of
+    connection within an elliptical region
     """
 
     def __init__(self, radius, probability=None, number=None):
         """
         @param radius: radius of the sphere
-        @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
+        @param number: the mean number of connections to be generated.
+                       If None, all cells within the mask will be connected
         """
         super(SphereMask, self).__init__(probability, number)
         self.radius = radius
@@ -201,15 +206,17 @@ class SphereMask(MaskBased):
 class EllipseMask(MaskBased):
 
     """
-    A class designed to be passed to the pyNN.DisplacementBasedProbabilityConnector to determine the
-    probability of connection within an elliptical region
+    A class designed to be passed to the
+    pyNN.DisplacementBasedProbabilityConnector to determine the probability of
+    connection within an elliptical region
     """
 
     def __init__(self, x_scale, y_scale, probability=None, number=None):
         """
         @param x: scale of the x axis of the ellipse
         @param y: scale of the y axis of the ellipse
-        @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
+        @param number: the mean number of connections to be generated.
+                       If None, all cells within the mask will be connected
         """
         super(EllipseMask, self).__init__(probability, number)
         self.x_scale = x_scale
@@ -224,8 +231,9 @@ class EllipseMask(MaskBased):
 class EllipsoidMask(MaskBased):
 
     """
-    A class designed to be passed to the pyNN.DisplacementBasedProbabilityConnector to determine the
-    probability of connection within an elliptical region
+    A class designed to be passed to the
+    pyNN.DisplacementBasedProbabilityConnector to determine the probability of
+    connection within an elliptical region
     """
 
     def __init__(
@@ -233,7 +241,8 @@ class EllipsoidMask(MaskBased):
         """
         @param x: scale of the x axis of the ellipse
         @param y: scale of the y axis of the ellipse
-        @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
+        @param number: the mean number of connections to be generated.
+                       If None, all cells within the mask will be connected
         """
         super(EllipsoidMask, self).__init__(probability, number)
         self.x_scale = x_scale
@@ -249,8 +258,9 @@ class EllipsoidMask(MaskBased):
 class NewEllipsoidMask(MaskBased):
 
     """
-    A class designed to be passed to the pyNN.DisplacementBasedProbabilityConnector to determine the
-    probability of connection within an elliptical region
+    A class designed to be passed to the
+    pyNN.DisplacementBasedProbabilityConnector to determine the probability of
+    connection within an elliptical region
     """
 
     def __init__(self, scale, orient_x, orient_y, orient_z,
@@ -259,7 +269,8 @@ class NewEllipsoidMask(MaskBased):
         @param x: scale of the x axis of the ellipsoid
         @param y: scale of the y axis of the ellipsoid
         @param z: scale of the z axis of the ellipsoid
-        @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
+        @param number: the mean number of connections to be generated. 
+                       If None, all cells within the mask will be connected
         """
         super(NewEllipsoidMask, self).__init__(probability, number)
         self.scale = scale
@@ -272,8 +283,9 @@ class NewEllipsoidMask(MaskBased):
             self.scale, self.orient, self.isotropy)
         working_matrix_inverse = np.linalg.inv(working_matrix)
         transformed_matrix = np.dot(working_matrix_inverse, displacement)
-        distance = np.sqrt(transformed_matrix[
-                           0] ** 2 + transformed_matrix[1] ** 2 + transformed_matrix[2] ** 2)
+        distance = np.sqrt(transformed_matrix[0] ** 2 +
+                           transformed_matrix[1] ** 2 +
+                           transformed_matrix[2] ** 2)
         mask = distance < 1.0
         return self._probs_from_mask(mask)
 
@@ -281,15 +293,17 @@ class NewEllipsoidMask(MaskBased):
 class RectangleMask(MaskBased):
 
     """
-    A class designed to be passed to the pyNN.DisplacementBasedProbabilityConnector to determine the
-    probability of connection within an elliptical region
+    A class designed to be passed to the
+    pyNN.DisplacementBasedProbabilityConnector to determine the probability of
+    connection within an elliptical region
     """
 
     def __init__(self, x_scale, y_scale, probability=None, number=None):
         """
         @param x: scale of the x axis side of the rectangle
         @param y: scale of the y axis side of the rectangle
-        @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
+        @param number: the mean number of connections to be generated.
+                       If None, all cells within the mask will be connected
         """
         super(RectangleMask, self).__init__(probability, number)
         self.x_scale = x_scale
@@ -303,8 +317,9 @@ class RectangleMask(MaskBased):
 class BoxMask(MaskBased):
 
     """
-    A class designed to be passed to the pyNN.DisplacementBasedProbabilityConnector to determine the
-    probability of connection within an elliptical region
+    A class designed to be passed to the
+    pyNN.DisplacementBasedProbabilityConnector to determine the probability of
+    connection within an elliptical region
     """
 
     def __init__(
@@ -312,7 +327,8 @@ class BoxMask(MaskBased):
         """
         @param x: scale of the x axis side of the rectangle
         @param y: scale of the y axis side of the rectangle
-        @param number: the mean number of connections to be generated. If None, all cells within the mask will be connected
+        @param number: the mean number of connections to be generated. 
+                       If None, all cells within the mask will be connected
         """
         super(RectangleMask, self).__init__(probability, number)
         self.x_scale = x_scale
@@ -320,8 +336,9 @@ class BoxMask(MaskBased):
         self.z_scale = z_scale
 
     def __call__(self, d):
-        mask = (np.abs(d[0]) < self.x_scale) * (np.abs(d[1]) <
-                                                self.y_scale) * (np.abs(d[2]) < self.z_scale)
+        mask = ((np.abs(d[0]) < self.x_scale) *
+                (np.abs(d[1]) < self.y_scale) *
+                (np.abs(d[2]) < self.z_scale))
         return self._probs_from_mask(mask)
 
 

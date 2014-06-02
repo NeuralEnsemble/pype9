@@ -22,22 +22,26 @@ class Projection(object):
         except ProjectionToCloneNotCreatedYetException:
             raise ProjectionToCloneNotCreatedYetException(nineml_model.name)
         SynapseClass = getattr(self._synapses_module,
-                               nineml_model.connection_type.definition.component.name)
+                               nineml_model.connection_type.definition.\
+                                                                component.name)
         synapse = SynapseClass(
             nineml_model.connection_type.parameters, self.get_min_delay(), rng)
         receptor = ('{' + nineml_model.target.segment + '}' +
-                    nineml_model.synaptic_response.parameters['responseName'].value)
-        # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being the third class in
-        # the MRO), I thought of a few ways to do this but none were completely
-        # satisfactory.
+                    nineml_model.synaptic_response.parameters['responseName'].\
+                                                                         value)
+        # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being
+        # the third class in the MRO), I thought of a few ways to do this but
+        # none were completely satisfactory.
         PyNNClass = self.__class__.__mro__[2]
         assert (PyNNClass.__module__.startswith('pyNN') and
                 PyNNClass.__module__.endswith('projections'))
-        PyNNClass.__init__(self, source, target, connector, synapse_type=synapse,
-                           source=nineml_model.source.segment, receptor_type=receptor,
+        PyNNClass.__init__(self, source, target, connector,
+                           synapse_type=synapse,
+                           source=nineml_model.source.segment,
+                           receptor_type=receptor,
                            label=nineml_model.name)
-        # This is used in the clone connectors, there should be a better way than this though
-        # I reckon
+        # This is used in the clone connectors, there should be a better way
+        # than this though I reckon
         self.created_projections[nineml_model.name] = self
 
     @classmethod
@@ -60,19 +64,23 @@ class Projection(object):
                 GeometricExpression = getattr(
                     nineline.morphology.point2point, expr_name)
                 try:
-                    param_expr = pyNN.connectors.DisplacementDependentProbabilityConnector.\
-                        DisplacementExpression(GeometricExpression(min_value=min_value,
-                                                                   **cls._convert_all_units(param.args)))
+                    param_expr = pyNN.connectors.\
+                                    DisplacementDependentProbabilityConnector.\
+                                    DisplacementExpression(
+                                       GeometricExpression(
+                                         min_value=min_value,
+                                         **cls._convert_all_units(param.args)))
                 except TypeError as e:
-                    raise Exception("Could not initialise distance expression class '{}' from "
-                                    "given arguments '{}' for projection '{}'\n('{}')"
+                    raise Exception("Could not initialise distance expression "
+                                    "class '{}' from given arguments '{}' for "
+                                    "projection '{}'\n('{}')"
                                     .format(expr_name, param.args, label, e))
             else:
-                raise Exception("Invalid parameter pattern ('{}') for projection '{}'".
-                                format(param.pattern, label))
+                raise Exception("Invalid parameter pattern ('{}') for "
+                                "projection '{}'".format(param.pattern, label))
         else:
-            raise Exception("Could not parse parameter specification '{}' for projection '{}'"
-                            .format(param, label))
+            raise Exception("Could not parse parameter specification '{}' for "
+                            "projection '{}'".format(param, label))
         return param_expr
 
     @classmethod
@@ -85,8 +93,8 @@ class Projection(object):
 
     @classmethod
     def _convert_units(cls, value_str, units=None):
-        raise NotImplementedError("_convert_units needs to be implemented by simulator specific "
-                                  "Network class")
+        raise NotImplementedError("_convert_units needs to be implemented by "
+                                  "simulator specific Network class")
 
     @classmethod
     def _convert_all_units(cls, values_dict):

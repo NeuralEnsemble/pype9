@@ -4,9 +4,10 @@ import numpy
 import nineml.user_layer
 from nineline.pyNN import convert_to_pyNN_units
 
-_numpy_constants_functions = set(['pi', 'exp', 'sin', 'cos', 'log', 'log10', 'pow', 'sinh', 'cosh',
-                                  'tanh', 'sqrt', 'mod', 'sum', 'atan', 'asin', 'acos', 'asinh',
-                                  'acosh', 'atanh', 'atan2'])
+_numpy_constants_functions = set(['pi', 'exp', 'sin', 'cos', 'log', 'log10',
+                                  'pow', 'sinh', 'cosh', 'tanh', 'sqrt',
+                                  'mod', 'sum', 'atan', 'asin', 'acos',
+                                  'asinh', 'acosh', 'atanh', 'atan2'])
 
 
 def create_anonymous_function(nineml_model):

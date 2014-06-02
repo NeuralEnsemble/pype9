@@ -17,14 +17,15 @@ class NinePyNNCell(nineline.pyNN.common.cells.NinePyNNCell,
 
     def memb_init(self):
         # Initialisation of member states goes here
-        print "WARNING, membrane initialization function has not been implemented"
-        pass
+        print ("WARNING, membrane initialization function has not been "
+               "implemented")
 
     def translate(self, parameters):
         """
-        Translate standardized model parameters to simulator-specific parameters. Overrides the
-        the method in StandardModelType to provide a simpler translation that avoids the evaluation
-        of the 'dots' in the standard name
+        Translate standardized model parameters to simulator-specific
+        parameters. Overrides the the method in StandardModelType to provide a
+        simpler translation that avoids the evaluation of the 'dots' in the
+        standard name
         """
         native_parameters = {}
         for name in parameters.keys():
@@ -42,29 +43,32 @@ class NinePyNNCell(nineline.pyNN.common.cells.NinePyNNCell,
 class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
 
     """
-    Metaclass for compiling NineMLCellType subclases
-    Called by nineml_celltype_from_model
+    Metaclass for compiling NineMLCellType subclases Called by
+    nineml_celltype_from_model
     """
 
     _basic_nineml_translations = basic_nineml_translations
     loaded_celltypes = {}
 
     def __new__(cls, nineml_model, name, build_mode='lazy', silent=False,
-                solver_name='cvode'):  # @NoSelf
+                solver_name='cvode'):  # @UnusedVariable
         try:
             celltype = cls.loaded_celltypes[
                 (nineml_model.name, nineml_model.url)]
         except KeyError:
-            dct = {'model': NineCellMetaClass(nineml_model, name, build_mode=build_mode,
-                                              silent=silent, solver_name='cvode')}
+            dct = {'model': NineCellMetaClass(nineml_model, name,
+                                              build_mode=build_mode,
+                                              silent=silent,
+                                              solver_name='cvode')}
             dct['nest_name'] = {"on_grid": name, "off_grid": name}
             dct['nest_model'] = name
-            dct['translations'] = cls._construct_translations(dct['model'].nineml_model,
-                                                              dct['model'].component_translations)
+            dct['translations'] = cls._construct_translations(
+                                          dct['model'].nineml_model,
+                                          dct['model'].component_translations)
             celltype = super(NinePyNNCellMetaClass, cls).__new__(
                 cls, name, (NinePyNNCell,), dct)
-            # If the url where the celltype is defined is specified save the celltype to be retried
-            # later
+            # If the url where the celltype is defined is specified save the
+            # celltype to be retried later
             if nineml_model.url is not None:
                 cls.loaded_celltypes[(name, nineml_model.url)] = celltype
         return celltype

@@ -4,7 +4,6 @@ try:
 except:
     pass
 import nineline.pyNN.common
-from neuron import h
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
 import pyNN.models
@@ -32,21 +31,24 @@ class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
     loaded_celltypes = {}
 
     def __new__(cls, nineml_model, name, build_mode='lazy', silent=False,
-                solver_name=None, standalone=False):
+                solver_name=None, standalone=False):  # @UnusedVariable
         try:
             celltype = cls.loaded_celltypes[
                 (nineml_model.name, nineml_model.url)]
         except KeyError:
-            model = NineCellMetaClass(nineml_model, name, build_mode=build_mode, silent=silent,
-                                      solver_name=solver_name, standalone=False)
+            model = NineCellMetaClass(nineml_model, name,
+                                      build_mode=build_mode, silent=silent,
+                                      solver_name=solver_name,
+                                      standalone=False)
             dct = {'model': model}
             celltype = super(NinePyNNCellMetaClass, cls).__new__(
                 cls, name, (NinePyNNCell,), dct)
-            assert sorted(celltype.recordable) == sorted(model().recordable.keys()), \
-                ("Mismatch of recordable keys between NineCellPyNN and NineCell class '{}'"
-                 .format(name))
-            # If the url where the celltype is defined is specified save the celltype to be retried
-            # later
+            assert (sorted(celltype.recordable) ==
+                    sorted(model().recordable.keys()), \
+                   ("Mismatch of recordable keys between NineCellPyNN and "
+                    "NineCell class '{}'".format(name)))
+            # If the url where the celltype is defined is specified save the
+            # celltype to be retried later
             if nineml_model.url is not None:
                 cls.loaded_celltypes[(name, nineml_model.url)] = celltype
         return celltype

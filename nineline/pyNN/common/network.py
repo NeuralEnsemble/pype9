@@ -11,23 +11,25 @@ _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
 class Network(object):
 
-    def __init__(self, filename, network_name=None, build_mode='lazy', 
-                 verbose=False, timestep=None, min_delay=None, max_delay=None, temperature=None, silent_build=False, flags=[],
+    def __init__(self, filename, network_name=None, build_mode='lazy',
+                 verbose=False, timestep=None, min_delay=None, max_delay=None,   # @UnusedVariable @IgnorePep8
+                 temperature=None, silent_build=False, flags=[],  # @UnusedVariable @IgnorePep8
                  rng=None, solver_name='cvode'):
         parsed_nineml = nineml.user_layer.parse(filename)
         if network_name:
             try:
                 self.nineml_model = parsed_nineml.groups[network_name]
             except KeyError:
-                raise Exception("Nineml file '{}' does not contain network named '{}'"
-                                .format(filename, network_name))
+                raise Exception("Nineml file '{}' does not contain network "
+                                "named '{}'" .format(filename, network_name))
         else:
             try:
                 self.nineml_model = parsed_nineml.groups.values()[0]
             except IndexError:
-                raise Exception(
-                    "No network objects loaded from NineMl file '{}'".format(filename))
-        self._set_simulation_params(timestep=timestep, min_delay=min_delay, max_delay=max_delay,
+                raise Exception("No network objects loaded from NineMl file "
+                                 "'{}'".format(filename))
+        self._set_simulation_params(timestep=timestep, min_delay=min_delay,
+                                    max_delay=max_delay,
                                     temperature=temperature)
         self.dirname = os.path.dirname(filename)
         self.label = self.nineml_model.name
@@ -35,7 +37,8 @@ class Network(object):
         self._populations = {}
         PopulationClass = self._PopulationClass
         for name, model in self.nineml_model.populations.iteritems():
-            self._populations[name] = PopulationClass(model, self._rng, build_mode, silent_build,
+            self._populations[name] = PopulationClass(model, self._rng,
+                                                      build_mode, silent_build,
                                                       solver_name=solver_name)
         if build_mode not in ('build_only', 'compile_only'):
             self._projections = {}
@@ -48,25 +51,28 @@ class Network(object):
                         self._populations[model.source.population.name],
                         self._populations[model.target.population.name],
                         model, rng=self._rng)
-                except nineline.pyNN.common.projections.ProjectionToCloneNotCreatedYetException as e:
+                except nineline.pyNN.common.projections.\
+                                  ProjectionToCloneNotCreatedYetException as e:
                     if e.orig_proj_id in self.nineml_model.projections.keys():
                         projection_models.append(model)
-                        # I think this is the theoretical limit for the number of iterations this
-                        # loop will have to make for the worst ordering of
-                        # cloned projections
-                        if len(projection_models) - num_projections > (num_projections *
-                                                                       (num_projections + 1) / 2):
-                            raise Exception("Projections using 'Clone' pattern form a circular "
-                                            "reference")
+                        # I think this is the theoretical limit for the number
+                        # of iterations this loop will have to make for the
+                        # worst ordering of cloned projections
+                        if ((len(projection_models) - num_projections) >
+                            (num_projections * (num_projections + 1) / 2)):
+                            raise Exception("Projections using 'Clone' pattern"
+                                            "form a circular reference")
                     else:
-                        raise Exception("Projection '{}' attempted to clone connectivity patterns "
-                                        "from '{}', which was not found in network."
+                        raise Exception("Projection '{}' attempted to clone "
+                                        "connectivity patterns from '{}', "
+                                        "which was not found in network."
                                         .format(name, e.orig_proj_id))
             self._finalise_construction()
 
     def _finalise_construction(self):
         """
-        Can be overriden by deriving classes to do any simulator-specific finalisation that is required
+        Can be overriden by deriving classes to do any simulator-specific
+        finalisation that is required
         """
         pass
 
@@ -97,7 +103,8 @@ class Network(object):
         @param output_dir:
         """
         for proj in self.projections.itervalues():
-            if isinstance(proj.synapse_type, pyNN.standardmodels.synapses.ElectricalSynapse):
+            if isinstance(proj.synapse_type,
+                          pyNN.standardmodels.synapses.ElectricalSynapse):
                 attributes = 'weight'
             else:
                 attributes = 'all'
@@ -124,11 +131,12 @@ class Network(object):
         """
         Record all spikes generated in the network
 
-        @param filename: The prefix for every population files before the popluation name. The \
-                         suffix '.spikes' will be appended to the filenames as well.
+        @param filename: The prefix for every population files before the
+                         popluation name. The suffix '.spikes' will be
+                         appended to the filenames as well.
         """
-        # Add a dot to separate the prefix from the population label if it doesn't already have one
-        # and isn't a directory
+        # Add a dot to separate the prefix from the population label if it
+        # doesn't already have one and isn't a directory
         if (not os.path.isdir(file_prefix) and not file_prefix.endswith('.')
                 and not file_prefix.endswith(os.path.sep)):
             file_prefix += '.'
@@ -143,50 +151,7 @@ class Network(object):
             if key in params and params[key]:
                 sim_params[key] = params[key]
             elif key not in sim_params or not sim_params[key]:
-                raise Exception("'{}' parameter was not specified either in Network "
-                                "initialisation or NetworkML specification".format(key))
+                raise Exception("'{}' parameter was not specified either in "
+                                "Network initialisation or NetworkML "
+                                "specification".format(key))
         return sim_params
-
-
-#     def _convert_units(self, value_str, units=None):
-#         raise NotImplementedError("_convert_units needs to be implemented by simulator specific "
-#                                   "Network class")
-#
-#     def _convert_all_units(self, values_dict):
-#         for key, val in values_dict.items():
-#             values_dict[key] = self._convert_units(val)
-#         return values_dict
-
-
-#     def set_flags(self, flags):
-#         if self.nineml_model.parameters.has_key('flags'):
-#             try:
-#                 self.flags = dict([(f.name, bool(f.value)) for f in self.nineml_model.parameters['flags']])
-#             except ValueError as e:
-#                 raise Exception("Could not convert flag to boolean: {}".format(e))
-#         else:
-#             self.flags = {}
-#         for flag in flags:
-#             if type(flag) == str:
-#                 name = flag
-#                 value = True
-#             elif type(flag) == tuple:
-#                 if len(flag) == 2:
-#                     name, value = flag
-#                 else:
-#                     raise Exception("Incorrect number of elements ({}) in flag tuple '{}', "
-#                                     "should be 2 (name or name and value)".format(len(flag), flag))
-#                 assert(type(name) == str)
-#                 assert(type(value) == bool)
-#             if name not in self.flags:
-#                 raise Exception ("Did not find the passed flag '{}' in the Network ML description "
-#                                  "({})".format(name, self.flags))
-#             self.flags[name] = value
-#
-#     def check_flags(self, p):
-#         try:
-#             return (all([self.flags[flag] for flag in p.flags]) and
-#                     all([not self.flags[flag] for flag in p.not_flags]))
-#         except KeyError as e:
-#                 raise Exception ("Did not find flag '{flag}' used in '{id}' in freeParameters "
-#                                  "block of NetworkML description".format(flag=e, id=p.id))

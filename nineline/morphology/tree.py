@@ -1,7 +1,7 @@
 """
 
-  This module defines classes to be passed pyNN Connectors to connect populations based on
-  simple point-to-point geometric connectivity rules
+  This module defines classes to be passed pyNN Connectors to connect
+  populations based on simple point-to-point geometric connectivity rules
 
   @author Tom Close
 
@@ -25,59 +25,6 @@ except:
     # plotting function is called
     plt = None
 
-# try:
-#     from pyface.qt import QtGui, QtCore
-#     from PyQt4 import uic
-#
-#     from traits.api import HasTraits, Instance, on_trait_change, \
-#         Int, Dict
-#     from traitsui.api import View, Item
-#     from mayavi.core.ui.api import MayaviScene, MlabSceneModel, \
-#             SceneEditor
-#     from mayavi import mlab
-#
-#     ################################################################################
-# The actual visualization
-#     class Visualization(HasTraits):
-#         scene = Instance(MlabSceneModel, ())
-#
-#         @on_trait_change('scene.activated')
-#         def update_plot(self):
-# This function is called when the view is opened. We don't
-# populate the scene when the view is not yet open, as some
-# VTK features require a GLContext.
-#
-# We can do normal mlab calls on the embedded scene.
-# self.scene.mlab.test_points3d()
-#             pass
-#
-# the layout of the dialog screated
-#         view = View(Item('scene', editor=SceneEditor(scene_class=MayaviScene),
-#                          height=400, width=500, show_label=False),
-# resizable=True # We need this to resize with the parent widget
-#                     )
-#
-# The QWidget containing the visualization, this is pure PyQt4 code.
-#     class MayaviQWidget(QtGui.QWidget):
-#         def __init__(self, parent=None):
-#             QtGui.QWidget.__init__(self, parent)
-#             layout = QtGui.QVBoxLayout(self)
-#             layout.setContentsMargins(0,0,0,0)
-#             layout.setSpacing(0)
-#             self.visualization = Visualization()
-#
-# If you want to debug, beware that you need to remove the Qt
-# input hook.
-# QtCore.pyqtRemoveInputHook()
-# import pdb ; pdb.set_trace()
-# QtCore.pyqtRestoreInputHook()
-#
-# The edit_traits call will generate the widget to embed.
-#             self.ui = self.visualization.edit_traits(parent=self,
-#                                                      kind='subpanel').control
-#             layout.addWidget(self.ui)
-#             self.ui.setParent(self)
-# except:
 mlab = None
 
 
@@ -89,8 +36,10 @@ class Tree(object):
         """
         Initialised the Tree object
 
-        @param root [NeurolucidaTreeXMLHandler.Branch]: The root branch of a tree loaded from a Neurolucida XML tree description
-        @param point_count [int]: The number of tree points that were loaded from the XML description
+        @param root [NeurolucidaTreeXMLHandler.Branch]: The root branch of a
+                     tree loaded from a Neurolucida XML tree description
+        @param point_count [int]: The number of tree points that were loaded
+                     from the XML description
         """
         # Recursively flatten all branches stemming from the root
         self._points = []
@@ -120,12 +69,14 @@ class Tree(object):
 
     def _flatten(self, branch, prev_index=-1):
         """
-        A recursive algorithm to flatten the loaded tree into a numpy array of _points used in the
-        tree constructor.
+        A recursive algorithm to flatten the loaded tree into a numpy array of
+        _points used in the tree constructor.
 
         @param branch[NeurolucidaTreeXMLHandler.Branch]: The loaded branch
         @param point_index [int]: the index (point count) of the current point
-        @param prev_index [int]: the index of the previous point (-1 signifies no previous point, i.e the segment is a root node)
+        @param prev_index [int]: the index of the previous point (-1 signifies
+                                 no previous point, i.e the segment is a root
+                                 node)
         """
         connected = []
         for point in branch.points:
@@ -165,7 +116,8 @@ class Tree(object):
         for i, diam in enumerate(self.diams):
             prev_index = self._prev_indices[i]
             if prev_index != -1:
-                yield self.Segment(self._points[prev_index, :], self.points[i,:], diam)
+                yield self.Segment(self._points[prev_index, :],
+                                   self.points[i, :], diam)
 
     @property
     def num_segments(self):
@@ -175,11 +127,13 @@ class Tree(object):
         """
         Transforms the tree by the given transformation matrix
 
-        @param transform [numpy.array(3,3)]: The transformation matrix by which to rotate the tree
+        @param transform [numpy.array(3,3)]: The transformation matrix by
+                                             which to rotate the tree
         """
         if transform.shape != (3, 3):
-            raise Exception("Rotation matrix needs to be a 3 x 3 matrix (found {shape[0]} x "
-                            "{shape[1]})".format(shape=transform.shape))
+            raise Exception("Rotation matrix needs to be a 3 x 3 matrix "
+                            "(found {shape[0]} x {shape[1]})"
+                            .format(shape=transform.shape))
         # Rotate all the points in the tree
         self._points = numpy.dot(self._points, transform)
         # Clear masks, which will no longer match the rotated points
@@ -190,7 +144,8 @@ class Tree(object):
         Rotates the tree about the chosen axis by theta
 
         @param theta [float]: The degree of clockwise rotation (in degrees)
-        @param axis [str/int]: The axis about which to rotate the tree (either 'x'-'z' or 0-2, default 'z'/2)
+        @param axis [str/int]: The axis about which to rotate the tree
+                               (either 'x'-'z' or 0-2, default 'z'/2)
         """
         # Convert theta to radians
         theta_rad = theta * 2 * numpy.pi / 360.0
@@ -211,8 +166,8 @@ class Tree(object):
                                            [sin_theta, cos_theta, 0],
                                            [0, 0, 1]])
         else:
-            raise Exception(
-                "'axis' argument must be either 0-2 or 'x'-'y' (found {})".format(axis))
+            raise Exception("'axis' argument must be either 0-2 or 'x'-'y' "
+                            "(found {})".format(axis))
         # Rotate all the points in the tree
         self._points = numpy.dot(self._points, rotation_matrix)
         # Clear masks, which will no longer match the rotated points
@@ -225,7 +180,9 @@ class Tree(object):
         """
         Creates a mask for the given voxel sizes and saves it in self._masks
 
-        @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
+        @param vox_size [tuple(float)]: A 3-d list/tuple/array where each
+                                        element is the voxel dimension or a
+                                        single float for isotropic voxels
         """
         vox_size = mask.Mask.parse_vox_size(vox_size)
         if vox_size not in self._masks:
@@ -237,7 +194,9 @@ class Tree(object):
         """
         Creates a mask for the given voxel sizes and saves it in self._masks
 
-        @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
+        @param vox_size [tuple(float)]: A 3-d list/tuple/array where each
+                                        element is the voxel dimension or a
+                                        single float for isotropic voxels
 
         """
         if kernel not in self._masks:
@@ -246,7 +205,8 @@ class Tree(object):
 
     def displaced_tree(self, displacement):
         """
-        Return displaced version of tree (a lightweight copy that borrows this tree's masks)
+        Return displaced version of tree (a lightweight copy that borrows this
+        tree's masks)
 
         @param displace [tuple(float)]: Displace to apply to the tree
         """
@@ -254,14 +214,14 @@ class Tree(object):
 
     def offset(self, offset):
         """
-        Unlike displaced tree, offset_tree moves all the points of the tree by the given offset
-        (invalidating all masks)
+        Unlike displaced tree, offset_tree moves all the points of the tree by
+        the given offset (invalidating all masks)
 
         @param displace [tuple(float)]: Displace to apply to the tree
         """
         if len(offset) != 3:
-            raise Exception(
-                "Offset needs to be of length 3 (found {})".format(len(offset)))
+            raise Exception("Offset needs to be of length 3 (found {})"
+                            .format(len(offset)))
         self._points += offset
         self._masks.clear()
 
@@ -270,7 +230,8 @@ class Tree(object):
         Calculate the number of overlapping voxels between two trees
 
         @param tree [Tree]: The second tree to calculate the overlap with
-        @param vox_size [tuple(float)]: The voxel sizes to use when calculating the overlap
+        @param vox_size [tuple(float)]: The voxel sizes to use when
+                                        calculating the overlap
         """
         overlap_mask = self.get_volume_mask(
             vox_size).overlap(tree.get_volume_mask(vox_size))
@@ -278,7 +239,8 @@ class Tree(object):
 
     def connection_prob(self, tree, kernel1, kernel2):
         """
-        Calculate the probability of there being any connection (there may be multiple)
+        Calculate the probability of there being any connection (there may be
+        multiple)
 
         @param tree [Tree]: The second tree to calculate the overlap with
         @param kernel [Kernel]: The kernel used to define the probability masks
@@ -289,8 +251,8 @@ class Tree(object):
     def plot_volume_mask(
             self, vox_size, show=True, colour_map=None, dtype=bool):
         if not plt:
-            raise Exception("Matplotlib could not be imported and therefore plotting functions "
-                            "have been disabled")
+            raise Exception("Matplotlib could not be imported and therefore "
+                            "plotting functions have been disabled")
         if not colour_map:
             if dtype == bool:
                 colour_map = 'gray'
@@ -299,18 +261,20 @@ class Tree(object):
         mask = self.get_volume_mask(vox_size, dtype=dtype)
         mask.plot(show=show, colour_map=colour_map)
 
-    def plot_prob_mask(self, vox_size, scale=1.0, orient=(1.0, 0.0, 0.0), decay_rate=0.1,
-                       isotropy=1.0, threshold=mask.GAUSS_THRESHOLD_DEFAULT,
-                       sample_freq=mask.GAUSS_SAMPLE_FREQ_DEFAULT, show=True, colour_map='jet'):
-        mask = self.get_prob_mask(vox_size, scale, orient, decay_rate=decay_rate,
-                                  isotropy=isotropy, threshold=threshold,
-                                  sample_freq=sample_freq)
+    def plot_prob_mask(self, vox_size, scale=1.0, orient=(1.0, 0.0, 0.0),
+                       decay_rate=0.1, isotropy=1.0,
+                       threshold=mask.GAUSS_THRESHOLD_DEFAULT,
+                       sample_freq=mask.GAUSS_SAMPLE_FREQ_DEFAULT,
+                       show=True, colour_map='jet'):
+        mask = self.get_prob_mask(vox_size, scale, orient,
+                                  decay_rate=decay_rate, isotropy=isotropy,
+                                  threshold=threshold, sample_freq=sample_freq)
         mask.plot(show=show, colour_map=colour_map)
 
     def normal_to_dendrites(self, diam_threshold=1.5):
         """
-        Calculate the normal to the plan for points on the dendritic tree that are above the
-        diameter threshold
+        Calculate the normal to the plan for points on the dendritic tree that
+        are above the diameter threshold
         """
         # Select points with diameters below a certain threshold
         selected_points = self._points[self.diams < diam_threshold, :]
@@ -331,19 +295,25 @@ class Tree(object):
 #         for tube_indices in self.connected_segments:
 #             points = self.points[tube_indices,:]
 #             diam = numpy.average(self.diams[tube_indices])
-#             surface = mlab.plot3d(points[:,0], points[:,1], points[:,2], tube_radius=diam,
+#             surface = mlab.plot3d(points[:,0], points[:,1], points[:,2],
+#                                   tube_radius=diam,
 #                                   colormap='Greys')
 #         return f
         # rendering disabled
         mayavi.visualization.scene.disable_render = True
 
-        points = mlab.pipeline.scalar_scatter(self.points[:, 0], self.points[:, 1], self.points[:, 2],
+        points = mlab.pipeline.scalar_scatter(self.points[:, 0],
+                                              self.points[:, 1],
+                                              self.points[:, 2],
                                               self.diams / 2.0)
 
         dataset = points.mlab_source.dataset
         dataset.point_data.get_array(0).name = 'diameter'
-        dataset.lines = numpy.hstack((numpy.reshape(numpy.arange(self.num_points - 1), (1, -1)),
-                                      numpy.reshape(self._prev_indices[2:], (1, -1))))
+        dataset.lines = numpy.hstack((numpy.reshape(
+                                            numpy.arange(self.num_points - 1),
+                                            (1, -1)),
+                                      numpy.reshape(self._prev_indices[2:],
+                                                    (1, -1))))
         dataset.point_data.update()
 
         # The tube
@@ -371,20 +341,22 @@ class DisplacedTree(Tree):
 
     def __init__(self, tree, displacement):
         """
-        A lightweight, displaced copy of the original tree, which avoids the regeneration of new
-        masks if the displacement is an even multiple of the voxel dimensions of the mask by simply
-        offsetting the origin of the mask. Note that because it is a lightweight copy, changes to
-        the original tree will be reflected in its displaced copies.
+        A lightweight, displaced copy of the original tree, which avoids the
+        regeneration of new masks if the displacement is an even multiple of
+        the voxel dimensions of the mask by simply offsetting the origin of the
+        mask. Note that because it is a lightweight copy, changes to the
+        original tree will be reflected in its displaced copies.
 
         @param tree [Tree]: The original tree
         @param displace [tuple(float)]: The displace from the original tree
         """
         if len(displacement) != 3:
-            raise Exception("The 'displacement' argument needs to be of length 3 "
-                            "(x, y & z coordinates), (found length {})".format(len(displacement)))
+            raise Exception("The 'displacement' argument needs to be of length"
+                            "3 (x, y & z coordinates), (found length {})"
+                            .format(len(displacement)))
         self.displacement = numpy.array(displacement)
-        # The reference to the undisplaced tree is used to store undisplaced masks to be
-        # accessed by all displaced copies
+        # The reference to the undisplaced tree is used to store undisplaced
+        # masks to be accessed by all displaced copies
         self._undisplaced_tree = tree
         # Displace the bounds and the centroid of the tree
         self.centroid = tree.centroid + self.displacement
@@ -393,34 +365,38 @@ class DisplacedTree(Tree):
 
     def get_volume_mask(self, *mask_args):
         """
-        Gets the volume mask for the given voxel size and sample diameter ratio. To avoid
-        duplications the mask is accessed from the original (undisplaced) tree, being created and
-        saved there if required.
+        Gets the volume mask for the given voxel size and sample diameter
+        ratio. To avoid duplications the mask is accessed from the original
+        (undisplaced) tree, being created and saved there if required.
 
-        @param args: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
+        @param args: A 3-d list/tuple/array where each element is the voxel
+                     dimension or a single float for isotropic voxels
         """
         try:
             return self._undisplaced_tree.get_volume_mask(*mask_args).\
-                displaced_mask(self.displacement)
+                                              displaced_mask(self.displacement)
         except mask.DisplacedVoxelSizeMismatchException as e:
-            raise Exception("Cannot get volume mask of displaced tree because its displacement {} "
-                            "is not a multiple of the mask voxel sizes. {}"
-                            .format(self.displacement, e))
+            raise Exception("Cannot get volume mask of displaced tree because "
+                            "its displacement {} is not a multiple of the mask"
+                            "voxel sizes. {}".format(self.displacement, e))
 
     def get_mask(self, *mask_args):
         """
-        Gets the convolved mask for the given voxel size and sample diameter ratio.
-        To avoid duplications the mask is accessed from the original (undisplaced) tree, being
-        created and saved there if required.
+        Gets the convolved mask for the given voxel size and sample diameter
+        ratio. To avoid duplications the mask is accessed from the original
+        (undisplaced) tree, being created and saved there if required.
 
-        @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
+        @param vox_size [tuple(float)]: A 3-d list/tuple/array where each
+                                        element is the voxel dimension or a
+                                        single float for isotropic voxels
         """
         try:
             return self._undisplaced_tree.get_mask(
                 *mask_args).displaced_mask(self.displacement)
         except mask.DisplacedVoxelSizeMismatchException as e:
-            raise Exception("Cannot get mask of displaced tree because its displacement {} is not a"
-                            " multiple of the mask voxel sizes. {}".format(self.displacement, e))
+            raise Exception("Cannot get mask of displaced tree because its "
+                            "displacement {} is not a multiple of the mask "
+                            "voxel sizes. {}".format(self.displacement, e))
 
     @property
     def points(self):
@@ -429,7 +405,8 @@ class DisplacedTree(Tree):
     @property
     def segments(self):
         for seg in self._undisplaced_tree.segments:
-            yield Tree.Segment(seg.begin + self.displacement, seg.end + self.displacement, seg.diam)
+            yield Tree.Segment(seg.begin + self.displacement,
+                               seg.end + self.displacement, seg.diam)
 
 
 class Soma(object):
@@ -438,7 +415,8 @@ class Soma(object):
         """
         Initialises the Soma object
 
-        @param contours [list(NeurolucidaSomaXMLHandler.Contour)]: A list of contour objects
+        @param contours [list(NeurolucidaSomaXMLHandler.Contour)]: A list of
+                                                               contour objects
         """
         self.label = label
         # Recursively flatten all branches stemming from the root
@@ -457,4 +435,4 @@ class Soma(object):
     @property
     def centre(self):
         avg = numpy.sum(self._points[:, :3], axis=0)
-        return avg / numpy.norm(avg)
+        return avg / numpy.linalg.norm(avg)

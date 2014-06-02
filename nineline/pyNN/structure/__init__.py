@@ -1,7 +1,7 @@
 """
 
   This module contains extensions to the pyNN.space module
-  
+
   @author Tom Close
 
 """
@@ -18,7 +18,7 @@ import nineml.user_layer
 import pyNN.space
 from pyNN.random import NumpyRNG, RandomDistribution
 import nineline.pyNN.random
-import nineline.pyNN.structure.layout
+from . import layout
 
 
 class Structure(object):
@@ -27,7 +27,7 @@ class Structure(object):
         self.name = name
         self.size = size
         self._positions = None
-        LayoutClass = getattr(nineline.pyNN.structure.layout,
+        LayoutClass = getattr(layout,
                               nineml_model.layout.definition.component.name)
         self.layout = LayoutClass(size, nineml_model.layout.parameters, rng)
 

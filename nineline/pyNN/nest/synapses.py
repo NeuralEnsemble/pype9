@@ -7,4 +7,6 @@ class StaticSynapse(
         StaticSynapse, pyNN.nest.standardmodels.synapses.StaticSynapse):
     pass
 
-# class ElectricalSynapse(Synapse, pyNN.nest.standardmodels.synapses.ElectricalSynapse): pass
+# class ElectricalSynapse(Synapse, 
+#                    pyNN.nest.standardmodels.synapses.ElectricalSynapse):
+#     pass

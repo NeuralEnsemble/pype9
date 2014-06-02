@@ -1,9 +1,10 @@
 """
 
-  This package contains the XML handlers to read the NCML files and related functions/classes,
-  the NCML base meta-class (a meta-class is a factory that generates classes) to generate a class
-  for each NCML cell description (eg. a 'Purkinje' class for an NCML containing a declaration of
-  a Purkinje cell), and the base class for each of the generated cell classes.
+  This package contains the XML handlers to read the NCML files and related
+  functions/classes, the NCML base meta-class (a meta-class is a factory that
+  generates classes) to generate a class for each NCML cell description (eg. a
+  'Purkinje' class for an NCML containing a declaration of a Purkinje cell),
+  and the base class for each of the generated cell classes.
 
   @file ncml.py
   @author Tom Close
@@ -35,12 +36,13 @@ class NineCellMetaClass(type):
         return super(NineCellMetaClass, cls).__new__(
             cls, celltype_name, bases, dct)
 
-    def __init__(cls, nineml_model, celltype_name=None, morph_id=None, build_mode=None,  # @NoSelf
-                 silent=None, solver_name=None, standalone=False):
+    def __init__(cls, nineml_model, celltype_name=None, morph_id=None,
+                 build_mode=None, silent=None, solver_name=None,
+                 standalone=False):
         """
-        This initialiser is empty, but since I have changed the signature of the __new__ method in
-        the deriving metaclasses it complains otherwise (not sure if there is a more elegant way
-        to do this).
+        This initialiser is empty, but since I have changed the signature of
+        the __new__ method in the deriving metaclasses it complains otherwise
+        (not sure if there is a more elegant way to do this).
         """
         pass
 

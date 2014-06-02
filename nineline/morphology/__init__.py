@@ -73,14 +73,15 @@ class MorphologyBasedProbabilityConnector(
     class KernelOverlapExpression(pyNN.connectors.IndexBasedExpression):
 
         """
-        The kernel used to determine the connection probability between an axonal and dendritic
-        tree.
+        The kernel used to determine the connection probability between an
+        axonal and dendritic tree.
         """
 
         def __init__(self, pre_kernel, post_kernel):
             """
-            `disp_function`: a function that takes a 3xN numpy position matrix and maps each row
-                             (displacement) to a probability between 0 and 1
+            `disp_function`: a function that takes a 3xN numpy position matrix
+                             and maps each row (displacement) to a probability
+                             between 0 and 1
             """
             self._pre_kernel = pre_kernel
             self._post_kernel = post_kernel
@@ -90,7 +91,8 @@ class MorphologyBasedProbabilityConnector(
                 post_morph = self.projection.post.morphologies[post_index]
                 pre_morphs = self.projection.pre.morphologies[pre_indices]
             except AttributeError:
-                raise pyNN.errors.ConnectionError("Pre and/or post-synaptic projections do not have"
+                raise pyNN.errors.ConnectionError("Pre and/or post-synaptic "
+                                                  "projections do not have "
                                                   " cell morphologies")
             probs = numpy.empty(len(pre_indices))
             for i, pre_morph in enumerate(pre_morphs):
@@ -102,7 +104,8 @@ class MorphologyBasedProbabilityConnector(
                  rng=None, safe=True, callback=None):
         super(MorphologyBasedProbabilityConnector, self).__init__(
             self.KernelOverlapExpression(pre_kernel, post_kernel),
-            allow_self_connections=allow_self_connections, safe=safe, rng=rng, callback=callback)
+            allow_self_connections=allow_self_connections, safe=safe, rng=rng,
+            callback=callback)
 
 
 #  Testing functions -----------------------------------------------------

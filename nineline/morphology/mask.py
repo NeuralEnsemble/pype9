@@ -42,16 +42,17 @@ class Mask(object):
         """
         Initialises the mask from a given Neurolucida tree and voxel size
 
-        @param vox_size [float]: The requested voxel sizes with which to divide up the mask with
+        @param vox_size [float]: The requested voxel sizes with which to 
+                                 divide up the mask with
         """
         try:
             self.vox_size = numpy.asarray(vox_size).reshape(3)
         except:
-            raise Exception(
-                "Could not convert vox_size ({}) to a 3-d vector".format(vox_size))
-        # If point extents are not explicitly provided use the segment radius for each dimension
-        # Get the start and finish indices of the mask, as determined by the
-        # bounds of the tree
+            raise Exception("Could not convert vox_size ({}) to a 3-d vector"
+                            .format(vox_size))
+        # If point extents are not explicitly provided use the segment radius
+        # for each dimension Get the start and finish indices of the mask, as
+        # determined by the bounds of the tree
         min_bounds = numpy.squeeze(numpy.min(points - point_extents, axis=0))
         max_bounds = numpy.squeeze(numpy.max(points + point_extents, axis=0))
         self.start_index = numpy.array(
@@ -64,30 +65,34 @@ class Mask(object):
         self.limit = self.finish_index * self.vox_size
         # Initialise the actual numpy array to hold the values
         self.dim = self.finish_index - self.start_index
-        # print self.offset,self.limit
-        # Create an grid of the voxel centres for convenient (and more efficient)
-        # calculation of the distance from voxel centres to the tree _points. Regarding the
-        # slightly odd notation of the numpy.mgrid function, the complex numbers ('1j') are used
-        # to specify that the sequences are to be interpreted as N=self.dim[i] steps between
-        # the endpoints, grid_start[i] and grid_finish[i], instead of a typical slice sequence.
-        # (see http://docs.scipy.org/doc/numpy/reference/generated/numpy.mgrid.html)
+        # print self.offset,self.limit Create an grid of the voxel centres for
+        # convenient (and more efficient) calculation of the distance from
+        # voxel centres to the tree _points. Regarding the slightly odd
+        # notation of the numpy.mgrid function, the complex numbers ('1j') are
+        # used to specify that the sequences are to be interpreted as
+        # N=self.dim[i] steps between the endpoints, grid_start[i] and
+        # grid_finish[i], instead of a typical slice sequence. (see
+        # http://docs.scipy.org/doc/numpy/reference/generated/numpy.mgrid.html)
         grid_start = self.offset + self.vox_size / 2.0
         grid_finish = self.limit - self.vox_size / 2.0
-        self.X, self.Y, self.Z = numpy.mgrid[grid_start[0]:grid_finish[0]:(self.dim[0] * 1j),
-                                             grid_start[1]:grid_finish[1]:(self.dim[1] * 1j),
-                                             grid_start[2]:grid_finish[2]:(self.dim[2] * 1j)]
+        (self.X, self.Y,
+         self.Z) = numpy.mgrid[grid_start[0]:grid_finish[0]:(self.dim[0] * 1j),
+                               grid_start[1]:grid_finish[1]:(self.dim[1] * 1j),
+                               grid_start[2]:grid_finish[2]:(self.dim[2] * 1j)]
         # Initialise the mask_array with the appropriate data type
         self._mask_array = numpy.zeros(self.dim, dtype=dtype)
 
     def overlap(self, mask):
         if numpy.any(mask.vox_size != self.vox_size):
-            raise Exception("Voxel sizes do not match ({} and {})".format(self.vox_size,
-                                                                          mask.vox_size))
+            raise Exception("Voxel sizes do not match ({} and {})"
+                            .format(self.vox_size, mask.vox_size))
         # Get the minimum finish and maximum start indices between the two
         # masks
-        start_index = numpy.select([self.start_index >= mask.start_index, True],
+        start_index = numpy.select([self.start_index >= mask.start_index, 
+                                    True],
                                    [self.start_index, mask.start_index])
-        finish_index = numpy.select([self.finish_index <= mask.finish_index, True],
+        finish_index = numpy.select([self.finish_index <= mask.finish_index, 
+                                     True],
                                     [self.finish_index, mask.finish_index])
         if numpy.all(finish_index > start_index):
             self_start_index = start_index - self.start_index
@@ -96,12 +101,14 @@ class Mask(object):
             mask_finish_index = finish_index - mask.start_index
             # Multiply the overlapping portions of the mask arrays together to
             # get the overlap
-            overlap_mask = self._mask_array[self_start_index[0]:self_finish_index[0],
-                                            self_start_index[1]:self_finish_index[1],
-                                            self_start_index[2]:self_finish_index[2]] * \
-                mask._mask_array[mask_start_index[0]:mask_finish_index[0],
+            overlap_mask = (self._mask_array[
+                                 self_start_index[0]:self_finish_index[0],
+                                 self_start_index[1]:self_finish_index[1],
+                                 self_start_index[2]:self_finish_index[2]] *
+                            mask._mask_array[
+                                 mask_start_index[0]:mask_finish_index[0],
                                  mask_start_index[1]:mask_finish_index[1],
-                                 mask_start_index[2]:mask_finish_index[2]]
+                                 mask_start_index[2]:mask_finish_index[2]])
         else:
             overlap_mask = numpy.array([])
         return overlap_mask
@@ -118,8 +125,9 @@ class Mask(object):
             cmap.set_under('k', alpha=0)
         for i in xrange(0, self.dim[slice_dim], skip):
             if not plt:
-                raise Exception("Matplotlib could not be imported and therefore plotting functions "
-                                "have been disabled")
+                raise Exception("Matplotlib could not be imported and "
+                                "therefore plotting functions have been "
+                                "disabled")
             if alpha == 1:
                 plt.figure()
             mask_shape = self._mask_array.shape
@@ -139,8 +147,8 @@ class Mask(object):
                 extent = [self.min_bounds[0], self.max_bounds[0],
                           self.min_bounds[1], self.max_bounds[1]]
             else:
-                raise Exception(
-                    "Slice dimension can only be 0-2 ({} provided)".format(slice_dim))
+                raise Exception("Slice dimension can only be 0-2 ({} provided)"
+                                .format(slice_dim))
 
             img = plt.imshow(numpy.squeeze(self._mask_array[slice_indices]),
                              cmap=cmap, alpha=alpha, clim=[
@@ -159,21 +167,25 @@ class Mask(object):
         """
         Converts (if necessary) the vox_size param to a 3-d tuple
 
-        @param vox_size [tuple(float)]: A 3-d list/tuple/array where each element is the voxel dimension or a single float for isotropic voxels
+        @param vox_size [tuple(float)]: A 3-d list/tuple/array where each 
+                                        element is the voxel dimension or a 
+                                        single float for isotropic voxels
         """
         # Ensure that vox_size is a 3-d vector (one for each dimension)
         try:
             vox_size = tuple(vox_size)
             if len(vox_size) != 3:
-                raise Exception("Incorrect number of dimensions ('{}') for vox_size "
-                                "parameter, requires 3.".format(len(vox_size)))
+                raise Exception("Incorrect number of dimensions ('{}') for "
+                                "vox_size parameter, requires 3."
+                                .format(len(vox_size)))
         except TypeError:
             try:
                 vox_size = float(vox_size)
                 vox_size = (vox_size, vox_size, vox_size)
             except TypeError:
-                raise Exception("'vox_size' parameter ('{}') needs to be able to be "
-                                "converted to a tuple or a float ".format(vox_size))
+                raise Exception("'vox_size' parameter ('{}') needs to be able "
+                                "to be converted to a tuple or a float "
+                                .format(vox_size))
         return vox_size
 
     @classmethod
@@ -182,18 +194,21 @@ class Mask(object):
             tree = tree_or_points
             points = tree.points
             if diams:
-                raise Exception("Diameters should only be provided if the 'tree_or_points' is an "
-                                "array of points")
+                raise Exception("Diameters should only be provided if the "
+                                "'tree_or_points' is an array of points")
             diams = tree.diams
-        elif isinstance(tree_or_points, numpy.ndarray) and tree_or_points.shape[1] == 3:
+        elif (isinstance(tree_or_points, numpy.ndarray) and
+              tree_or_points.shape[1] == 3):
             tree = None
             points = tree_or_points
             if points.shape[0] != len(diams):
-                raise Exception("Number of points ({}) and length of diams ({}) do not match."
+                raise Exception("Number of points ({}) and length of diams "
+                                "({}) do not match."
                                 .format(points.shape[0], len(diams)))
         else:
-            raise Exception("Incorrect type for 'tree_or_points' parameter ({}), must be either "
-                            "'Tree' or numpy.array(N x 3)".format(type(tree_or_points)))
+            raise Exception("Incorrect type for 'tree_or_points' parameter "
+                            "({}), must be either 'Tree' or numpy.array(N x 3)"
+                            .format(type(tree_or_points)))
         point_extents = numpy.tile(numpy.reshape(diams / 2.0, (-1, 1)), (1, 3))
         return tree, points, point_extents
 
@@ -225,8 +240,8 @@ class Mask(object):
 class DisplacedMask(Mask):
 
     """
-    A displaced version of the Mask, that reuses the same mask array only with updated
-    start and finish indices (also updated offset and limits)
+    A displaced version of the Mask, that reuses the same mask array only with
+    updated start and finish indices (also updated offset and limits)
     """
 
     def __init__(self, mask, displacement):
@@ -234,13 +249,17 @@ class DisplacedMask(Mask):
         Initialises the displaced mask
 
         @param mask [Mask]: The original mask
-        @param displacement [tuple(float)]: The displacement of the "displaced mask"
+        @param displacement [tuple(float)]: The displacement of the 
+                                            "displaced mask"
         """
         self.displacement = numpy.asarray(displacement)
         if numpy.any(numpy.mod(self.displacement, mask.vox_size)):
-            raise DisplacedVoxelSizeMismatchException(
-                "Displacements ({}) need to be multiples of respective voxel sizes ({})"
-                .format(displacement, mask.vox_size))
+            raise DisplacedVoxelSizeMismatchException("Displacements ({}) need"
+                                                      " to be multiples of "
+                                                      "respective voxel sizes "
+                                                      "({})"
+                                                      .format(displacement,
+                                                              mask.vox_size))
         # Copy invariant parameters
         self.dim = mask.dim
         self.vox_size = mask.vox_size
@@ -253,17 +272,17 @@ class DisplacedMask(Mask):
         # indices
         self.offset = mask.offset + self.displacement
         self.limit = mask.limit + self.displacement
-        # The actual mask array is the same as that of the original mask i.e. not a copy. \
-        # This is the whole point of the DisplacedTree and DisplacedMasks, to avoid making \
-        # unnecessary copies of this array.
+        # The actual mask array is the same as that of the original mask i.e.
+        # not a copy. This is the whole point of the DisplacedTree and
+        # DisplacedMasks, to avoid making unnecessary copies of this array.
         self._mask_array = mask._mask_array
 
 
 class VolumeMask(Mask):
 
     def __init__(self, vox_size, tree_or_points, diams=None, dtype=bool):
-        # Get tree (if provided instead of list of points), points and point extents from provided
-        # parameters
+        # Get tree (if provided instead of list of points), points and point
+        # extents from provided parameters
         tree, points, point_extents = Mask._parse_tree_points(
             tree_or_points, diams)
         # Call the base 'Mask' class constructor
@@ -282,17 +301,18 @@ class VolumeMask(Mask):
             # Calculate the number of samples required for the current segment
             num_samples = numpy.ceil(norm(seg.end - seg.begin) *
                                      (SAMPLE_DIAM_RATIO / seg.diam))
-            # Loop through the samples for the given segment and add their "point_mask" to the
-            # overall mask
+            # Loop through the samples for the given segment and add their
+            # "point_mask" to the overall mask
             for frac in numpy.linspace(1, 0, num_samples, endpoint=False):
-                # Set the point extent to be the segment diameter unless it is below the minimum along
-                # that dimension
+                # Set the point extent to be the segment diameter unless it is
+                # below the minimum along that dimension
                 point = (1.0 - frac) * seg.begin + frac * seg.end
                 # Get the point in the reference frame of the mask
                 offset_point = point - self.offset
-                # Get an extent guaranteed to at least reach one voxel (but not extend into
-                # two unless its radius is big enough) and set the extent about the current point
-                # to that or the segment radius depending on which is greater.
+                # Get an extent guaranteed to at least reach one voxel (but not
+                # extend into two unless its radius is big enough) and set the
+                # extent about the current point to that or the segment radius
+                # depending on which is greater.
                 point_extent = (offset_point + self.half_vox) % self.vox_size
                 over_half = point_extent > self.half_vox
                 point_extent[over_half] = self.vox_size[
@@ -305,17 +325,21 @@ class VolumeMask(Mask):
                     (offset_point - seg_radius) / self.vox_size)
                 extent_finish = numpy.ceil(
                     (offset_point + seg_radius) / self.vox_size)
-                # Get an "open" grid (uses less memory if it is open) of voxel indices to apply
-                # the distance function to.
-                # (see http://docs.scipy.org/doc/numpy/reference/generated/numpy.ogrid.html)
-                extent_indices = numpy.ogrid[int(extent_start[0]):int(extent_finish[0]),
-                                             int(extent_start[1]):int(extent_finish[1]),
-                                             int(extent_start[2]):int(extent_finish[2])]
+                # Get an "open" grid (uses less memory if it is open) of voxel
+                # indices to apply the distance function to. (see http://docs.s
+                # cipy.org/doc/numpy/reference/generated/numpy.ogrid.html)
+                extent_indices = numpy.ogrid[
+                                    int(extent_start[0]):int(extent_finish[0]),
+                                    int(extent_start[1]):int(extent_finish[1]),
+                                    int(extent_start[2]):int(extent_finish[2])]
                 # Calculate the distances from each of the voxel centres to the
                 # given point
-                dist = numpy.sqrt(((self.X[extent_indices] - point[0]) / point_extent[0]) ** 2 +
-                                  ((self.Y[extent_indices] - point[1]) / point_extent[1]) ** 2 +
-                                  ((self.Z[extent_indices] - point[2]) / point_extent[2]) ** 2)
+                dist = numpy.sqrt(((self.X[extent_indices] - point[0]) /
+                                   point_extent[0]) ** 2 +
+                                  ((self.Y[extent_indices] - point[1]) /
+                                   point_extent[1]) ** 2 +
+                                  ((self.Z[extent_indices] - point[2]) /
+                                   point_extent[2]) ** 2)
                 # Mask all _points that that are closer than the point diameter
                 point_mask = dist < 1.0
                 self._mask_array[extent_indices] += point_mask
@@ -332,8 +356,8 @@ class ConvolvedMask(Mask):
         # The extent around each point that will be > threshold
         self._kernel = kernel
         # Call the base 'Mask' class constructor to set up the
-        Mask.__init__(self, kernel.vox_size, points, numpy.tile(kernel.extent,
-                                                                (tree.num_points, 1)), float)
+        Mask.__init__(self, kernel.vox_size, points,
+                      numpy.tile(kernel.extent, (tree.num_points, 1)), float)
         # Add the tree to the mask if it was provided
         if tree:
             self.add_tree(tree)
@@ -344,7 +368,8 @@ class ConvolvedMask(Mask):
 
         @param tree [tree.Tree]: The tree to draw the mask for
         @param vox_size [numpy.array(3)]: The size of the voxels
-        @param kernel [method]: A method that takes a displacement vector and returns a value
+        @param kernel [method]: A method that takes a displacement vector and
+                                returns a value
         """
         print "Generating mask..."
         # Loop through all of the tree _point_data and "paint" the mask
@@ -355,28 +380,33 @@ class ConvolvedMask(Mask):
             # Calculate how much to scale the
             if num_samples:
                 length_scale = norm(seg.end - seg.begin) / num_samples
-            # Loop through the samples for the given segment and add their "point_mask" to the
-            # overal mask
+            # Loop through the samples for the given segment and add their
+            # "point_mask" to the overal mask
             for frac in numpy.linspace(1, 0, num_samples, endpoint=False):
                 point = (1.0 - frac) * seg.begin + frac * seg.end
                 # Determine the extent of the mask indices that could be
                 # affected by the point
-                extent_start = numpy.floor(
-                    (point - self.offset - self._kernel.extent) / self.vox_size)
-                extent_finish = numpy.array(numpy.ceil((point - self.offset + self._kernel.extent)
-                                                       / self.vox_size), dtype=int)
-                # Get an "open" grid (uses less memory if it is open) of voxel indices to apply
-                # the distance function to.
-                # (see http://docs.scipy.org/doc/numpy/reference/generated/numpy.ogrid.html)
-                extent_indices = numpy.ogrid[int(extent_start[0]):int(extent_finish[0]),
-                                             int(extent_start[1]):int(extent_finish[1]),
-                                             int(extent_start[2]):int(extent_finish[2])]
-                # Get the displacements from the point to the voxel centres within the
-                # bounds of the extent.
+                extent_start = numpy.floor((point - self.offset -
+                                            self._kernel.extent) /
+                                           self.vox_size)
+                extent_finish = numpy.array(numpy.ceil((point - self.offset +
+                                                        self._kernel.extent)
+                                                       / self.vox_size),
+                                            dtype=int)
+                # Get an "open" grid (uses less memory if it is open) of voxel
+                # indices to apply the distance function to. (see http://docs.s
+                # cipy.org/doc/numpy/reference/generated/numpy.ogrid.html)
+                extent_indices = numpy.ogrid[
+                                    int(extent_start[0]):int(extent_finish[0]),
+                                    int(extent_start[1]):int(extent_finish[1]),
+                                    int(extent_start[2]):int(extent_finish[2])]
+                # Get the displacements from the point to the voxel centres
+                # within the bounds of the extent.
                 X = self.X[extent_indices]
                 Y = self.Y[extent_indices]
                 Z = self.Z[extent_indices]
-                disps = numpy.vstack((X.ravel() - point[0], Y.ravel() - point[1],
+                disps = numpy.vstack((X.ravel() - point[0],
+                                      Y.ravel() - point[1],
                                       Z.ravel() - point[2])).transpose()
                 # Get the values of the point-spread function at each of the
                 # voxel centres
@@ -385,8 +415,9 @@ class ConvolvedMask(Mask):
                 self._mask_array[
                     extent_indices] += length_scale * values.reshape(X.shape)
             if count % (tree.num_segments // 10) == 0 and count != 0:
-                print "Generating mask - {}% complete" \
-                    .format(round(float(count) / float(tree.num_segments) * 100.0))
+                print ("Generating mask - {}% complete"
+                       .format(round(float(count) / float(tree.num_segments)
+                                     * 100.0)))
 
 
 #  Kernels to use in convolved masks -------------------------------------
@@ -417,11 +448,13 @@ class Kernel(object):
 
 class GaussianKernel(Kernel):
 
-    def __init__(self, vox_x, vox_y, vox_z, scale, decay_rate, threshold=GAUSS_THRESHOLD_DEFAULT,
-                 isotropy=1.0, orient=(1.0, 0.0, 0.0), sample_freq=GAUSS_SAMPLE_FREQ_DEFAULT):
+    def __init__(self, vox_x, vox_y, vox_z, scale, decay_rate,
+                 threshold=GAUSS_THRESHOLD_DEFAULT, isotropy=1.0,
+                 orient=(1.0, 0.0, 0.0),
+                 sample_freq=GAUSS_SAMPLE_FREQ_DEFAULT):
         if threshold >= 1.0:
-            raise Exception(
-                "Extent threshold must be < 1.0 (found '{}')".format(threshold))
+            raise Exception("Extent threshold must be < 1.0 (found '{}')"
+                            .format(threshold))
         self._vox_size = numpy.array((vox_x, vox_y, vox_z))
         self._threshold = threshold
         self._scale = scale
@@ -429,8 +462,9 @@ class GaussianKernel(Kernel):
         self.sample_freq = sample_freq
         # Calculate the extent of the kernel along the x,y, and z axes
         eig_vals, eig_vecs = numpy.linalg.eig(self._tensor)
-        # Get the extent along each of the Eigen-vectors where the point-spread function reaches the
-        # threshold, the extent along the "internal" axes of the kernel
+        # Get the extent along each of the Eigen-vectors where the point-spread
+        # function reaches the threshold, the extent along the "internal" axes
+        # of the kernel
         internal_extents = numpy.sqrt(-2.0 *
                                       math.log(self._threshold) / eig_vals)
         # Calculate the extent of the kernel along the x-y-z axes, the
@@ -439,16 +473,16 @@ class GaussianKernel(Kernel):
             numpy.sum((eig_vecs * internal_extents) ** 2, axis=1))
 
     def __call__(self, disps):
-        # Calculate the Gaussian point spread function f = k * exp[-0.5 * d^t . W . d] for each
-        # displacement, where 'W' is the weights matrix and 'd' is a
-        # displacement vector
+        # Calculate the Gaussian point spread function f = k * exp[-0.5 * d^t .
+        # W . d] for each displacement, where 'W' is the weights matrix and 'd'
+        # is a displacement vector
         values = self._scale * \
             numpy.exp(-0.5 *
                       numpy.sum(disps.dot(self._tensor) * disps, axis=1))
-        # Threshold out all values that fall beneath the threshold used to determine the
-        # extent of the required block of voxels. This removes the dependence on the orientation
-        # relative to the mask axes, where the kernels would otherwise be
-        # trimmed to
+        # Threshold out all values that fall beneath the threshold used to
+        # determine the extent of the required block of voxels. This removes
+        # the dependence on the orientation relative to the mask axes, where
+        # the kernels would otherwise be trimmed to
         values[values < self._threshold] = 0.0
         return values
 
