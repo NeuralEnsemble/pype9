@@ -1,4 +1,6 @@
 NineLine
 ========
 
-A software package to read an simulate networks of detailed neuronal models described in 9ml
+A NINEml software pipeLINE that reads and simulates networks of detailed neuronal models described in 9ml
+
+Authors: Thomas G. Close, Ivan Raikov
