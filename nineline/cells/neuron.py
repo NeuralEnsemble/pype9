@@ -20,7 +20,7 @@ import numpy
 # MPI so I am doing it here just to be safe (and to save me headaches in the
 # future)
 try:
-    from mpi4py import MPI  # @UnusedImport
+    from mpi4py import MPI  # @UnusedImport @IgnorePep8 This is imported before NEURON to avoid a bug in NEURON
 except ImportError:
     pass
 from neuron import h, nrn, load_mechanisms
@@ -70,7 +70,7 @@ def convert_to_neuron_units(value, unit_str):
 
 class _BaseNineCell(nineline.cells.NineCell):
 
-    class Segment(nrn.Section):  # @UndefinedVariable
+    class Segment(nrn.Section):
 
         """
         Wraps the basic NEURON section to allow non-NEURON attributes to be
@@ -209,7 +209,8 @@ class _BaseNineCell(nineline.cells.NineCell):
             then constructs a 'Component' class to point to the variable
             parameters of the component using meaningful names
 
-            @param component_name [str]: The name of the component to be inserted
+            @param component_name [str]: The name of the component to be
+                                         inserted
             @param biophysics_name [str]: If the biophysics_name is provided,
                                           then it is used as a prefix to the
                                           component (eg. if
@@ -306,8 +307,7 @@ class _BaseNineCell(nineline.cells.NineCell):
         self.classifications = {}
         for model in nineml_model.classifications.values():
             classification = {}
-            # @UnusedVariable
-            for name, cls_model in model.classes.iteritems():
+            for _, cls_model in model.classes.iteritems():
                 seg_class = []
                 for member in cls_model:
                     try:
@@ -870,8 +870,7 @@ class _SimulationController(object):
             self.reset()
         # Convert simulation time to float value in ms
         simulation_time = float(pq.Quantity(simulation_time, 'ms'))
-        # @UnusedVariable t @IgnorePep8
-        for t in numpy.arange(h.dt, simulation_time + h.dt, h.dt):
+        for _ in numpy.arange(h.dt, simulation_time + h.dt, h.dt):
             h.fadvance()
         self.tstop += simulation_time
 
