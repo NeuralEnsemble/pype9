@@ -70,19 +70,22 @@ class SWCTree:
                     line_count = line_count + 1
                     contents = line.split()
                     if len(contents) != 7:
-                        raise Exception('Incorrect number of values (%d) on line %d' %
-                                        (len(contents), line_count))
+                        raise Exception("Incorrect number of values (%d) on "
+                                        "line {}".format(len(contents),
+                                                         line_count))
                     section_id = int(contents[0])
                     section_type = int(contents[1])
                     coord = numpy.array(contents[2:5], dtype=float)
                     radius = float(contents[5])
                     parent_id = int(contents[6])
                     if section_type == 1:
-                        # If section is part of soma add it to list so that the dendritic sections
-                        # can Note that the "radius" of soma sections is not relevant as it does not
-                        # correspond to the radius of the actual soma
-                        self.soma_sections[section_id] = SWCTree.Section(section_id, coord,
-                                                                         float('NaN'), None)
+                        # If section is part of soma add it to list so that the
+                        # dendritic sections can Note that the "radius" of soma
+                        # sections is not relevant as it does not correspond to
+                        # the radius of the actual soma
+                        self.soma_sections[section_id] = SWCTree.Section(
+                                                            section_id, coord,
+                                                            float('NaN'), None)
                     elif section_type == 2 or section_type == 3:
                         if skip_axon and section_type == 2:
                             if verbose:
@@ -108,13 +111,16 @@ class SWCTree:
                                 parent = self.start
                             else:
                                 parent = section_dict[parent_id]
-                            section_dict[section_id] = SWCTree.Section(section_id, coord, radius,
-                                                                       parent)
+                            section_dict[section_id] = SWCTree.Section(
+                                                                    section_id,
+                                                                    coord,
+                                                                    radius,
+                                                                    parent)
                     else:
-                        raise Exception(
-                            'Unrecognised section type (%d)' % section_type)
-            print 'Loaded %d sections (%d) from file: %s' % (line_count,
-                                                             len(self.dendrite_sections), filename)
+                        raise Exception("Unrecognised section type ({})"
+                                        .format(section_type))
+            print ("Loaded {} sections ({}) from file: {}"
+                   .format(line_count, len(self.dendrite_sections), filename))
 
     def save_NeurolucidaXML(self, filename):
         """
@@ -130,7 +136,8 @@ class SWCTree:
                 diam = branch.children[0].radius * 2.0
             else:
                 diam = branch.radius * 2.0
-            f.write('{indent}<point x="{coord[0]}" y="{coord[1]}" z="{coord[2]}" d="{diam}" />\n'
+            f.write('{indent}<point x="{coord[0]}" y="{coord[1]}" '
+                    'z="{coord[2]}" d="{diam}" />\n'
                     .format(indent=indent, coord=branch.coord, diam=diam))
             if branch.is_fork():
                 f.write('{indent}<branch>\n'.format(indent=indent))
@@ -142,11 +149,12 @@ class SWCTree:
         # Open up the file and write all the branches
         with open(filename, 'w') as f:
             f.write('<?xml version="1.0" encoding="ISO-8859-1"?>\n'
-                    '<mbf version="4.0" xmlns="http://www.mbfbioscience.com/2007/neurolucida" '
-                    'xmlns:nl="http://www.mbfbioscience.com/2007/neurolucida" appname="Neurolucida" '
-                    'appversion="10.40 (64-bit)">\n')
-            f.write(
-                "<!-- Generated xml file from '{}' SWC file -->\n".format(filename))
+                    '<mbf version="4.0" '
+                    'xmlns="http://www.mbfbioscience.com/2007/neurolucida" '
+                    'xmlns:nl="http://www.mbfbioscience.com/2007/neurolucida" '
+                    'appname="Neurolucida" appversion="10.40 (64-bit)">\n')
+            f.write("<!-- Generated xml file from '{}' SWC file -->\n"
+                    .format(filename))
             f.write('<tree  type="Dendrite" leaf="Normal">\n')
             write_branch_xml(f, self.start, '    ')
             f.write("</tree>\n</mbf>\n")
@@ -159,9 +167,10 @@ if __name__ == '__main__':
     parser.add_argument(
         'input_file', type=str, help="Input filename (swc format)")
     parser.add_argument(
-        'output_file', type=str, help="Output filename (neurolucida XML format)")
+        'output_file', type=str,
+        help="Output filename (neurolucida XML format)")
     args = parser.parse_args()
     tree = SWCTree(args.input_file, skip_axon=False)
     tree.save_NeurolucidaXML(args.output_file)
-    print "Converted '{}' from SWC format to '{}' in NeurolucidaXML format".format(args.input_file,
-                                                                                   args.output_file)
+    print ("Converted '{}' from SWC format to '{}' in NeurolucidaXML format"
+           .format(args.input_file, args.output_file))
