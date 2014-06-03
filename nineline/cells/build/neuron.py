@@ -96,8 +96,8 @@ def build_celltype_files(biophysics_name, nineml_path, install_dir=None,
     if ((ncml_mtime != prev_install_mtime
          or ncml_mtime != prev_params_mtime) and
         build_mode != 'compile_only'):
-        nemo_cmd = ("{nemo_path} {nineml_path} -p --pyparams={params}"
-                    "--nmodl={output} --nmodl-method={method}"
+        nemo_cmd = ("{nemo_path} {nineml_path} -p --pyparams={params} "
+                    "--nmodl={output} --nmodl-method={method} "
                     "--nmodl-kinetic={kinetics}"
                     .format(nemo_path=path_to_exec('nemo'),
                             nineml_path=os.path.normpath(nineml_path),
