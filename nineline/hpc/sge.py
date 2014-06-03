@@ -27,12 +27,12 @@ class SGESubmitter(object):
 
     MEAN_MEMORY_RATIO_DEFAULT = 0.8
 
-    def __init__(
-            self, script_path, num_processes=8, que_name='shortP',
-            max_memory='4800m', mean_memory=None, python_install_dir=None,
-            mpi_install_dir=None, neuron_install_dir=None,
-            nest_install_dir=None, sundials_install_dir=None,
-            work_dir_parent=None, output_dir_parent=None, logging_dir=None):
+    def __init__(self, script_path, num_processes=8, que_name='shortP',
+                 max_memory='4800m', mean_memory=None, python_install_dir=None,
+                 mpi_install_dir=None, neuron_install_dir=None,
+                 nest_install_dir=None, sundials_install_dir=None,
+                 work_dir_parent=None, output_dir_parent=None,
+                 logging_dir=None):
         self.script_path = os.path.abspath(script_path)
         self.num_processes = num_processes
         self.que_name = que_name
