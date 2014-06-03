@@ -50,7 +50,7 @@ class Mask(object):
         """
         Initialises the mask from a given Neurolucida tree and voxel size
 
-        @param vox_size [float]: The requested voxel sizes with which to 
+        @param vox_size [float]: The requested voxel sizes with which to
                                  divide up the mask with
         """
         try:
@@ -96,10 +96,10 @@ class Mask(object):
                             .format(self.vox_size, mask.vox_size))
         # Get the minimum finish and maximum start indices between the two
         # masks
-        start_index = numpy.select([self.start_index >= mask.start_index, 
+        start_index = numpy.select([self.start_index >= mask.start_index,
                                     True],
                                    [self.start_index, mask.start_index])
-        finish_index = numpy.select([self.finish_index <= mask.finish_index, 
+        finish_index = numpy.select([self.finish_index <= mask.finish_index,
                                      True],
                                     [self.finish_index, mask.finish_index])
         if numpy.all(finish_index > start_index):
@@ -175,8 +175,8 @@ class Mask(object):
         """
         Converts (if necessary) the vox_size param to a 3-d tuple
 
-        @param vox_size [tuple(float)]: A 3-d list/tuple/array where each 
-                                        element is the voxel dimension or a 
+        @param vox_size [tuple(float)]: A 3-d list/tuple/array where each
+                                        element is the voxel dimension or a
                                         single float for isotropic voxels
         """
         # Ensure that vox_size is a 3-d vector (one for each dimension)
@@ -241,9 +241,6 @@ class Mask(object):
         new_mask += mask._mask_array
         return new_mask
 
-    def plot3D(self):
-        mlab.pipeline.volume(mlab.pipeline.scalar_field(self._mask_array))
-
 
 class DisplacedMask(Mask):
 
@@ -257,7 +254,7 @@ class DisplacedMask(Mask):
         Initialises the displaced mask
 
         @param mask [Mask]: The original mask
-        @param displacement [tuple(float)]: The displacement of the 
+        @param displacement [tuple(float)]: The displacement of the
                                             "displaced mask"
         """
         self.displacement = numpy.asarray(displacement)
@@ -359,8 +356,7 @@ class ConvolvedMask(Mask):
     __metaclass__ = ABCMeta
 
     def __init__(self, tree_or_points, kernel):
-        tree, points, point_extents = Mask._parse_tree_points(
-            tree_or_points)  # @UnusedVariable
+        tree, points, _ = Mask._parse_tree_points(tree_or_points)
         # The extent around each point that will be > threshold
         self._kernel = kernel
         # Call the base 'Mask' class constructor to set up the
