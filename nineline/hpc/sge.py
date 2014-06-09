@@ -350,11 +350,12 @@ echo "============== Mpirun has ended =============="
 echo "Copying files to output directory '{output_dir}'"
 cp -r {work_dir}/output {output_dir}
 cp {jobscript_path} {output_dir}/job
-mv {logging_path} {output_dir}/log
 {name_cmd}
 {copy_cmd}
 
 echo "============== Done ==============="
+
+mv {logging_path} {output_dir}/log
 """
 .format(work_dir=self.work_dir, args=args, path=env.get('PATH', ''),
         np=self.num_processes, que_name=self.que_name,
