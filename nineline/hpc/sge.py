@@ -180,7 +180,7 @@ class SGESubmitter(object):
                 action = next(a for a in parser._actions if a.dest == opt)
                 removed_args.append((action.dest, action.default))
                 parser._remove_action(action)
-            except StopIteration:
+            except StopIteration:  # Don't worry if the action isn't present
                 pass
         parser.add_argument(
             '--np', type=int, default=self.num_processes,
