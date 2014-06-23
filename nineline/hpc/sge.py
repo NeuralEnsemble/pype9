@@ -355,7 +355,7 @@ cp {jobscript_path} {output_dir}/job
 
 echo "============== Done ==============="
 
-mv {logging_path} {output_dir}/log
+cp {logging_path} {output_dir}/log
 """
 .format(work_dir=self.work_dir, args=args, path=env.get('PATH', ''),
         np=self.num_processes, que_name=self.que_name,
