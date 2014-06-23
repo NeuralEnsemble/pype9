@@ -29,7 +29,7 @@ else:
         if os.environ['HOME'] == '/home/tclose':
             # I apologise for this little hack (this is the path on my machine,
             # to save me having to set the environment variable in eclipse)
-            os.environ['PATH'] += os.pathsep + '/opt/NEURON-7.2/x86_64/bin'
+            os.environ['PATH'] += os.pathsep + '/opt/NEURON/nrn-7.3/x86_64/bin'
     except KeyError:
         pass
 
