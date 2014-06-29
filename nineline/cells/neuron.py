@@ -239,6 +239,34 @@ class _BaseNineCell(nineline.cells.NineCell):
                       self).__setattr__(component_name, getattr(self(0.5),
                                                                 mech_name))
 
+        def inject_current(self, current):
+            """
+            Injects current into the segment
+
+            `current` -- a vector containing the current [neo.AnalogSignal]
+            """
+            self.iclamp = h.IClamp(0.5, sec=self)
+            self.iclamp.delay = 0.0
+            self.iclamp.dur = 1e12
+            self.iclamp.amp = 0.0
+            self.iclamp_amps = h.Vector(pq.Quantity(current, 'nA'))
+            self.iclamp_times = h.Vector(pq.Quantity(current.times, 'ms'))
+            self.iclamp_amps.play(self.iclamp._ref_amp, self.iclamp_times)
+
+        def voltage_clamp(self, voltages, series_resistance=1e-3):
+            """
+            Clamps the voltage of a segment
+
+            `voltage` -- a vector containing the voltages to clamp the segment
+                         to [neo.AnalogSignal]
+            """
+            self.seclamp = h.SEClamp(0.5, sec=self)
+            self.seclamp.rs = series_resistance
+            self.seclamp.dur1 = 1e12
+            self.seclamp_amps = h.Vector(pq.Quantity(voltages, 'mV'))
+            self.seclamp_times = h.Vector(pq.Quantity(voltages.times, 'ms'))
+            self.seclamp_amps.play(self.seclamp._ref_amp, self.seclamp_times)
+
     def __init__(self, **parameters):
         self._construct_morphology(self.nineml_model.morphology)
         self._map_biophysics_to_morphology(self.nineml_model)
