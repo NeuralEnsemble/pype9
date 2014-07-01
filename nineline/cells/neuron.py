@@ -310,9 +310,9 @@ class _BaseNineCell(nineline.cells.NineCell):
         # Connect the segments together
         for model in nineml_model.segments:
             if model.parent:
-                self.segments[model.name]._connect(self.segments[model.parent.\
-                                                                 segment_name],
-                                                   model.parent.fraction_along)
+                self.segments[model.name]._connect(
+                                            self.segments[model.parent.name],
+                                            model.parent_ref.fraction_along)
         # Work out the segment lengths properly accounting for the
         # "fraction_along". This is performed via a tree traversal to ensure
         # that the parents 'proximal' field has already been calculated
@@ -334,7 +334,7 @@ class _BaseNineCell(nineline.cells.NineCell):
                 seg_class = []
                 for member in cls_model:
                     try:
-                        seg_class.append(self.segments[member.segment_name])
+                        seg_class.append(self.segments[member.name])
                     except KeyError:
                         raise Exception("Member '{}' (referenced in group "
                                         "'{}') was not found in loaded "
