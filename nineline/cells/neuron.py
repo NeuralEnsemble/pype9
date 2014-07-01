@@ -126,7 +126,7 @@ class _BaseNineCell(nineline.cells.NineCell):
             h.pt3dadd(nineml_model.distal.x, nineml_model.distal.y,
                       nineml_model.distal.z, nineml_model.distal.diameter,
                       sec=self)
-            if nineml_model.proximal:
+            if not nineml_model.parent:
                 self._set_proximal((nineml_model.proximal.x,
                                     nineml_model.proximal.y,
                                     nineml_model.proximal.z))
@@ -284,13 +284,13 @@ class _BaseNineCell(nineline.cells.NineCell):
                                       the "barebones" pyNEURON structure for
                                       each nrn.Section
         """
-        if not len(nineml_model.segments):
+        if not len(list(nineml_model.segments)):
             raise Exception(
                 "The loaded morphology does not contain any segments")
         # Initialise all segments
         self.segments = {}
         self.source_section = None
-        for model in nineml_model.segments.values():
+        for model in nineml_model.segments:
             seg = _BaseNineCell.Segment(model)
             self.segments[model.name] = seg
             # TODO This should really be part of the 9ML package
@@ -308,7 +308,7 @@ class _BaseNineCell(nineline.cells.NineCell):
                             "meaning it is connected in a circle (I assume"
                             "this is not intended)")
         # Connect the segments together
-        for model in nineml_model.segments.values():
+        for model in nineml_model.segments:
             if model.parent:
                 self.segments[model.name]._connect(self.segments[model.parent.\
                                                                  segment_name],
