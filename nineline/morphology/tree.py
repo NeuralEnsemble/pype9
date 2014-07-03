@@ -29,13 +29,13 @@ except:
 mlab = None
 
 
-class Tree(object):
+class FlattenedTree(object):
 
     Segment = collections.namedtuple('Segment', 'begin end diam')
 
     def __init__(self, root):
         """
-        Initialised the Tree object
+        Initialised the FlattenedTree object
 
         @param root [NeurolucidaTreeXMLHandler.Branch]: The root branch of a
                      tree loaded from a Neurolucida XML tree description
@@ -230,7 +230,7 @@ class Tree(object):
         """
         Calculate the number of overlapping voxels between two trees
 
-        @param tree [Tree]: The second tree to calculate the overlap with
+        @param tree [FlattenedTree]: The second tree to calculate the overlap with
         @param vox_size [tuple(float)]: The voxel sizes to use when
                                         calculating the overlap
         """
@@ -243,7 +243,7 @@ class Tree(object):
         Calculate the probability of there being any connection (there may be
         multiple)
 
-        @param tree [Tree]: The second tree to calculate the overlap with
+        @param tree [FlattenedTree]: The second tree to calculate the overlap with
         @param kernel [Kernel]: The kernel used to define the probability masks
         """
         prob_mask = self.get_mask(kernel1).overlap(tree.get_mask(kernel2))
@@ -338,7 +338,7 @@ class Tree(object):
         return (tube, dataset)
 
 
-class DisplacedTree(Tree):
+class DisplacedTree(FlattenedTree):
 
     def __init__(self, tree, displacement):
         """
@@ -348,7 +348,7 @@ class DisplacedTree(Tree):
         mask. Note that because it is a lightweight copy, changes to the
         original tree will be reflected in its displaced copies.
 
-        @param tree [Tree]: The original tree
+        @param tree [FlattenedTree]: The original tree
         @param displace [tuple(float)]: The displace from the original tree
         """
         if len(displacement) != 3:
@@ -406,7 +406,7 @@ class DisplacedTree(Tree):
     @property
     def segments(self):
         for seg in self._undisplaced_tree.segments:
-            yield Tree.Segment(seg.begin + self.displacement,
+            yield FlattenedTree.Segment(seg.begin + self.displacement,
                                seg.end + self.displacement, seg.diam)
 
 
