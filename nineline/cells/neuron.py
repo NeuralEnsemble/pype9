@@ -66,7 +66,6 @@ def convert_to_neuron_units(value, unit_str):
 class _BaseNineCell(nineline.cells.NineCell):
 
     class Segment(nrn.Section):
-
         """
         Wraps the basic NEURON section to allow non-NEURON attributes to be
         added to the segment. Additional functionality could be added as needed
@@ -119,17 +118,17 @@ class _BaseNineCell(nineline.cells.NineCell):
             """
             nrn.Section.__init__(self)  # @UndefinedVariable
             h.pt3dclear(sec=self)
-            self.diam = float(nineml_model.distal.diameter)
-            self._distal = numpy.array((nineml_model.distal.x,
-                                        nineml_model.distal.y,
-                                        nineml_model.distal.z))
-            h.pt3dadd(nineml_model.distal.x, nineml_model.distal.y,
-                      nineml_model.distal.z, nineml_model.distal.diameter,
+            self.diam = float(nineml_model.diameter())
+            self._distal = numpy.array((nineml_model.distal[0],
+                                        nineml_model.distal[1],
+                                        nineml_model.distal[2]))
+            h.pt3dadd(nineml_model.distal[0], nineml_model.distal[1],
+                      nineml_model.distal[2], nineml_model.diameter(),
                       sec=self)
             if not nineml_model.parent:
-                self._set_proximal((nineml_model.proximal.x,
-                                    nineml_model.proximal.y,
-                                    nineml_model.proximal.z))
+                self._set_proximal((nineml_model.proximal[0],
+                                    nineml_model.proximal[1],
+                                    nineml_model.proximal[2]))
             # A list to store any gap junctions in
             self._gap_junctions = []
             # Local information, though not sure if I need this here
@@ -673,15 +672,30 @@ class NineCellStandAlone(_BaseNineCell):
         """
         if '.' in varname:
             parts = varname.split('.')
+            #FIXME: Drop the classifications in favour of top-level groups
+            seg_groups = next(self.classifications.itervalues())
+            try:
+                segments = seg_groups[parts[0]]
+            except KeyError:
+                try:
+                    segments = [self.segments[parts[0]]]
+                except KeyError:
+                    raise AttributeError("Segment group or segment '{}' is "
+                                         "not present in cell morphology"
+                                         .format(parts[0]))
             if len(parts) == 3:
-                seg, comp, var = parts
-                setattr(getattr(self.segments[seg], comp), var, value)
+                _, comp, var = parts
+                for seg in segments:
+                    setattr(getattr(seg, comp), var, value)
             elif len(parts) == 2:
-                seg, var = parts
-                setattr(self.segments[seg], var, value)
+                _, var = parts
+                for seg in segments:
+                    setattr(seg, var, value)
             else:
-                raise AttributeError('Invalid number of components ({})'
-                                     .format(len(parts)))
+                raise AttributeError("Invalid number of components ({}), "
+                                     "can be either 2 (segment group or name, "
+                                     "variable) or 3 (segment group or name, "
+                                     "component, variable)".format(len(parts)))
         else:
             super(NineCellStandAlone, self).__setattr__(varname, value)
 
