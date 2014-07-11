@@ -11,3 +11,4 @@ x86_64
 *.spikes
 *.v
 .DS_Store
+.9build
