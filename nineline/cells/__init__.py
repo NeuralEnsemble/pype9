@@ -491,7 +491,7 @@ class Tree(STree2):
                                                  " further{}. without merging "
                                                  "segment_classes")
         sibling_seg_classes = groupby(candidates,
-                                 key=lambda b: (b[0].parent, b[0].classes))
+                                     key=lambda b: (b[0].parent, b[0].classes))
         for (parent, seg_classes), siblings_iter in sibling_seg_classes:
             siblings = list(siblings_iter)
             if len(siblings) > 1:
@@ -507,6 +507,9 @@ class Tree(STree2):
                     name += '_' + sorted_names[-1]
                 # Extend the new get_segment in the same direction as the
                 # parent get_segment
+                #
+                # If the classes are the same between parent and the new
+                # segment treat them as one
                 disp = parent.disp * (average_length / parent.length)
                 segment = Segment(name, parent.distal + disp, diameter,
                                   classes=seg_classes)
@@ -609,6 +612,29 @@ class Tree(STree2):
 #                                          in_units(Ra, 'ohm.cm') *
 #                                          in_units(cm, 'uF/cm^2')))
         return int((total_length / (d_lambda * lambda_f) + 0.9) / 2) * 2 + 1
+# 
+#         # Calculate the wavelength for the segment
+#         if isinstance(length, collections.Iterable):
+#             # FIXME: This (variable diameter d_lambda) is not tested yet
+#             total_length = numpy.sum(in_units(l, 'um') for l in length)
+#             lam = 0
+#             for i, lngth in enumerate(length):
+#                 lam += (in_units(lngth, 'um') /
+#                         numpy.sqrt(in_units(diameter[i], 'um') +
+#                                    in_units(diameter[i + 1], 'um')))
+#             lam *= numpy.sqrt(2) * 1e-5 * numpy.sqrt(4 * numpy.pi *
+#                                                      in_units(freq, 'Hz') *
+#                                                      in_units(Ra, 'ohm.cm') *
+#                                                      in_units(cm, 'uF/cm^2'))
+#             lambda_f = total_length / lam
+#         else:
+#             total_length = in_units(length, 'um')
+#             lambda_f = 1e5 * numpy.sqrt(in_units(diameter, 'um') /
+#                                         (4 * numpy.pi * in_units(freq, 'Hz') *
+#                                          in_units(Ra, 'ohm.cm') *
+#                                          in_units(cm, 'uF/cm^2')))
+#         return int((length / (d_lambda * lambda_f) + 0.9) / 2) * 2 + 1
+
 
     def merge_morphology_seg_classes(self, from_class, into_class):
         raise NotImplementedError
