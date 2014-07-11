@@ -33,7 +33,6 @@ from btmorph.btstructs2 import STree2, SNode2, P3D2
 
 
 class NineCell(object):
-
     pass
 
 
@@ -66,6 +65,8 @@ class Segment(SNode2):
                   numpy.array((nineml.distal.x, nineml.distal.y,
                                nineml.distal.z)),
                   nineml.distal.diameter)
+        if nineml.parent and nineml.parent.fraction_along != 1.0:
+            seg.get_content()['fraction_along'] = nineml.parent.fraction_along
         return seg
 
     def __init__(self, name, point, diameter, classes=None):
@@ -161,7 +162,12 @@ class Segment(SNode2):
 
     @property
     def proximal(self):
-        return self.get_parent_node().get_content()['p3d'].xyz
+        parent_distal = self.get_parent_node().get_content()['p3d'].xyz
+        if 'fraction_along' in self.get_content():
+            return (self.get_parent_node().proximal +
+                    self.get_content()['fraction_along'] * parent_distal)
+        else:
+            return parent_distal
 
     @property
     def disp(self):
@@ -524,47 +530,54 @@ class Tree(STree2):
         """
         Regrids the spatial sampling of the segments in the tree via NEURON's
         d'lambda rule
+
+        `freq`       -- frequency at which AC length constant will be computed
+                        (Hz)
+        `d_lambda`   -- fraction of the wavelength
         """
-        to_replace = []
-        for branch in self.branches:
+        for branch in list(self.branches):
             parent = branch[0].parent
             if parent:
-                branch_length = numpy.sum(seg.length for seg in branch) * pq.um
-                diameter = (numpy.sum(seg.diameter for seg in branch) /
-                            len(branch) * pq.um)
-                num_segments = self.d_lambda_rule(branch, **d_lambda_kwargs)
+                branch_length = numpy.sum(seg.length for seg in branch)
+                # Get weighted average of diameter Ra and cm by segment length
+                diameter = 0.0
+                Ra = 0.0 * pq.ohm * pq.cm
+                cm = 0.0 * pq.uF / (pq.cm ** 2)
+                for seg in branch:
+                    diameter += seg.diameter * seg.length
+                    Ra += seg.get_property('Ra') * seg.length
+                    cm += seg.get_property('cm') * seg.length
+                diameter /= branch_length
+                Ra /= branch_length
+                cm /= branch_length
+                num_segments = self.d_lambda_rule(branch_length,
+                                                  diameter * pq.um,
+                                                  Ra, cm, **d_lambda_kwargs)
                 base_name = branch[0].name
                 if len(branch) > 1:
                     base_name += '_' + branch[-1].name
                 # Get the direction of the branch
                 seg_classes = branch[0].classes
                 direction = branch[-1].distal - branch[0].proximal
-                direction *= (branch_length /
-                              numpy.sqrt(numpy.sum(direction ** 2)))
+                disp = direction * (branch_length /
+                                    numpy.sqrt(numpy.sum(direction ** 2)))
                 # Temporarily add the parent to the new_branch to allow it to
                 # be linked to the new segments
-                first_segment = None
-                previous_segment = None
-                for i, seg_length in enumerate(
-                                        numpy.linspace(0.0,
-                                                       float(branch_length),
-                                                       num_segments)):
+                seg_disp = disp / float(num_segments)
+                previous_segment = parent
+                for i in xrange(num_segments):
                     name = base_name + '_' + str(i)
-                    distal = branch[0].proximal + direction * seg_length
+                    distal = branch[0].proximal + seg_disp * (i + 1)
                     segment = Segment(name, distal, diameter,
-                                      seg_classes=seg_classes)
-                    if not first_segment:
-                        first_segment = segment
-                    else:
-                        previous_segment.add_child(segment)
+                                      classes=seg_classes)
+                    previous_segment.add_child(segment)
+                    segment.set_parent_node(previous_segment)
                     previous_segment = segment
-                to_replace.append((parent, branch[0], first_segment))
-        for parent, orig_branch_start, new_branch_start in to_replace:
-            self.remove_node(orig_branch_start)
-            self.add_node_with_parent(new_branch_start, parent)
+                parent.remove_child(branch[0])
 
     @classmethod
-    def d_lambda_rule(cls, segments, freq=(100.0 * pq.Hz), d_lambda=0.1):
+    def d_lambda_rule(cls, length, diameter, Ra, cm,
+                      freq=(100.0 * pq.Hz), d_lambda=0.1):
         """
         Calculates the number of segments required for a straight branch
         section so that its segments are no longer than d_lambda x the AC
@@ -587,54 +600,11 @@ class Tree(STree2):
             the wavelength
         """
         # Calculate the wavelength for the get_segment
-        freq = in_units(freq, 'Hz')
-        total_length = 0.0
-        total_lam = 0.0
-        for seg in segments:
-            seg_length = in_units(seg.length, 'um')
-            try:
-                Ra = in_units(seg.get_property('Ra'), 'ohm.cm')
-                cm = in_units(seg.get_property('cm'), 'uF/cm^2')
-            except AttributeError as e:
-                raise Exception("Cannot calculate d'lambda rule as segments "
-                                "dont have a required property:\n{}".format(e))
-            diameter = in_units(seg.diameter, 'um')
-            lam = (seg_length / numpy.sqrt(2 * diameter))
-            lam *= numpy.sqrt(2) * 1e-5 * numpy.sqrt(4 * numpy.pi * freq *
-                                                     Ra * cm)
-            total_length += seg_length
-            total_lam += lam
-        lambda_f = total_length / total_lam
-#         else:
-#             total_length = in_units(length, 'um')
-#             lambda_f = 1e5 * numpy.sqrt(in_units(diameter, 'um') /
-#                                        (4 * numpy.pi * in_units(freq, 'Hz') *
-#                                          in_units(Ra, 'ohm.cm') *
-#                                          in_units(cm, 'uF/cm^2')))
-        return int((total_length / (d_lambda * lambda_f) + 0.9) / 2) * 2 + 1
-# 
-#         # Calculate the wavelength for the segment
-#         if isinstance(length, collections.Iterable):
-#             # FIXME: This (variable diameter d_lambda) is not tested yet
-#             total_length = numpy.sum(in_units(l, 'um') for l in length)
-#             lam = 0
-#             for i, lngth in enumerate(length):
-#                 lam += (in_units(lngth, 'um') /
-#                         numpy.sqrt(in_units(diameter[i], 'um') +
-#                                    in_units(diameter[i + 1], 'um')))
-#             lam *= numpy.sqrt(2) * 1e-5 * numpy.sqrt(4 * numpy.pi *
-#                                                      in_units(freq, 'Hz') *
-#                                                      in_units(Ra, 'ohm.cm') *
-#                                                      in_units(cm, 'uF/cm^2'))
-#             lambda_f = total_length / lam
-#         else:
-#             total_length = in_units(length, 'um')
-#             lambda_f = 1e5 * numpy.sqrt(in_units(diameter, 'um') /
-#                                         (4 * numpy.pi * in_units(freq, 'Hz') *
-#                                          in_units(Ra, 'ohm.cm') *
-#                                          in_units(cm, 'uF/cm^2')))
-#         return int((length / (d_lambda * lambda_f) + 0.9) / 2) * 2 + 1
-
+        lambda_f = 1e5 * numpy.sqrt(in_units(diameter, 'um') /
+                                    (4 * numpy.pi * in_units(freq, 'Hz') *
+                                     in_units(Ra, 'ohm.cm') *
+                                     in_units(cm, 'uF/cm^2')))
+        return int((length / (d_lambda * lambda_f) + 0.9) / 2) * 2 + 1
 
     def merge_morphology_seg_classes(self, from_class, into_class):
         raise NotImplementedError
