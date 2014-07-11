@@ -103,6 +103,12 @@ class Segment(SNode2):
     def classes(self):
         return self.get_content()['classes']
 
+    def add_class(self, segment_class):
+        seg_classes = self.get_content()['classes']
+        seg_classes.add(segment_class)
+        # Also add the default class for the given class, bit of a hack
+        seg_classes.add(segment_class._tree.segment_classes[None])
+
     def get_property(self, name):
         prop = None
         for seg_cls in self.classes:
@@ -112,10 +118,10 @@ class Segment(SNode2):
                 pass
         if prop is None:
             raise AttributeError("Property '{}' is not defined in any of "
-                                 " the segment's classes ('{}')"
-                                 .format(name,
-                                         ', '.join([str(c)
-                                                    for c in self.classes])))
+                                 " the get_segment's classes ('{}')"
+                                 .format(name, ', '.join([str(c)
+                                                      for c in self.classes])))
+        return prop
 
     @property
     def distal(self):
@@ -124,11 +130,11 @@ class Segment(SNode2):
     @distal.setter
     def distal(self, distal):
         """
-        Sets the distal point of the segment shifting all child
+        Sets the distal point of the get_segment shifting all child
         segments by the same displacement (to keep their lengths constant)
 
         `distal`         -- the point to update the distal endpoint of the
-                            segment to [numpy.array(3)]
+                            get_segment to [numpy.array(3)]
         """
         disp = distal - self.distal
         for child in self.all_children:
@@ -137,11 +143,11 @@ class Segment(SNode2):
 
     def raw_set_distal(self, distal):
         """
-        Sets the distal point of the segment without shifting child
+        Sets the distal point of the get_segment without shifting child
         segments
 
         `distal`         -- the point to update the distal endpoint of the
-                            segment to [numpy.array(3)]
+                            get_segment to [numpy.array(3)]
         """
         self.get_content()['p3d'].xyz = distal
 
@@ -168,10 +174,10 @@ class Segment(SNode2):
     @length.setter
     def length(self, length):
         """
-        Sets the length of the segment, shifting the positions of all child
+        Sets the length of the get_segment, shifting the positions of all child
         nodes so that their lengths stay constant
 
-        `length` -- the new length to set the segment to
+        `length` -- the new length to set the get_segment to
         """
         seg_disp = self.distal - self.proximal
         orig_length = numpy.sqrt(numpy.sum(seg_disp ** 2))
@@ -182,7 +188,7 @@ class Segment(SNode2):
     def parent(self):
         parent = self.get_parent_node()
         # Check to see whether the parent of this node is the root node in
-        # which case return None or whether it is another segment
+        # which case return None or whether it is another get_segment
         return parent if isinstance(parent, Segment) else None
 
     @parent.setter
@@ -216,14 +222,14 @@ class Segment(SNode2):
         while seg.parent_ref:
             if seg.siblings:
                 branch_count += 1
-            seg = seg.parent_ref.segment
+            seg = seg.parent_ref.get_segment
         return branch_count
 
     @property
     def sub_branches(self):
         """
-        Iterates through all sub-branches of the current segment, starting at
-        the current segment
+        Iterates through all sub-branches of the current get_segment, starting
+        at the current get_segment
         """
         seg = self
         branch = [self]
@@ -238,7 +244,7 @@ class Segment(SNode2):
     def branch_start(self):
         """
         Gets the start of the branch (a section of tree without any sub
-        branches the current segment lies on
+        branches the current get_segment lies on
         """
         seg = self
         while seg.parent and not seg.siblings:
@@ -260,8 +266,9 @@ class SegmentClass(object):
         self.remove_members(self.members)
 
     def __repr__(self):
-        return ("Segment Class: '{}' with {} members"
-                .format(self.name, len(list(self.members))))
+        return ("Segment Class: '{}' with {} properties and {} members"
+                .format(self.name, len(self._properties),
+                        len(list(self.members))))
 
     @property
     def members(self):
@@ -286,7 +293,7 @@ class SegmentClass(object):
         # This check is done to protect the 'get_property' in the Segment class
         if prop is None:
             raise Exception("Cannot add properties with value 'None'")
-        self._properties[prop.name] = prop
+        self._properties[name] = prop
         self._check_for_duplicate_properties()
 
     def set_property(self, name, prop):
@@ -300,6 +307,10 @@ class SegmentClass(object):
 
     def remove_property(self, name):
         del self._properties[name]
+
+    @property
+    def property_names(self):
+        return self._properties.iterkeys()
 
     def add_members(self, segments):
         """
@@ -317,35 +328,38 @@ class SegmentClass(object):
 
     def _check_for_duplicate_properties(self):
         """
-        Checks whether any attributes are duplicated in any segment in the
+        Checks whether any attributes are duplicated in any get_segment in the
         tree
         """
         # Get the list of classes that overlap with the current class
         overlapping_classes = reduce(set.union,
                                      [seg.classes for seg in self.members])
-        for class1 in overlapping_classes:
-            for class2 in overlapping_classes:
-                dups = class1._properties.keys() & class2._properties.keys()
-                if class1 != class2 and dups:
-                    segments = [seg for seg in self._tree.segments
-                                if (class1 in seg.classes and
-                                    class2 in seg.classes)]
-                    raise Exception("'{}' attributes clash in segments '{}'{} "
-                                    "because of dual membership of classes "
-                                    "{} and {}"
-                                    .format(dups, segments[:10],
-                                            (',...' if len(segments) > 10
-                                                    else ''),
-                                            class1.name, class2.name))
+        for seg_cls in overlapping_classes - set([self]):
+            if any(k in self.property_names
+                   for k in seg_cls.property_names):
+                segments = [seg for seg in self._tree.segments
+                            if (seg_cls in seg.classes and
+                                self in seg.classes)]
+                raise Exception("'{}' attributes clash in segments '{}'{} "
+                                "because of dual membership of classes "
+                                "{} and {}"
+                                .format((set(self.property_names) &
+                                         set(seg_cls.property_names)),
+                                        segments[:10],
+                                        (',...' if len(segments) > 10
+                                                else ''),
+                                        self.name, seg_cls.name))
 
 
 class Tree(STree2):
 
     @classmethod
-    def from_9ml(cls, nineml):
-        morph9ml = nineml.morphology
+    def from_9ml(cls, model9ml):
+        morph9ml = model9ml.morphology
+        bio9ml = model9ml.biophysics
         tree = cls(morph9ml.name)
-        # Add the proximal point of the root segment as the root of the tree
+        # Add the proximal point of the root get_segment as the root of the
+        # tree
         root_point = P3D2(xyz=numpy.array((morph9ml.root_segment.proximal.x,
                                            morph9ml.root_segment.proximal.y,
                                            morph9ml.root_segment.proximal.z)),
@@ -353,7 +367,7 @@ class Tree(STree2):
         root = SNode2('__ROOT__')
         root.set_content({'p3d': root_point})
         tree.set_root(root)
-        # Add the root segment and link with root node
+        # Add the root get_segment and link with root node
         tree.root_segment = Segment.from_9ml(morph9ml.root_segment)
         tree.add_node_with_parent(tree.root_segment, tree.get_root())
         seg_lookup = {tree.root_segment.name: tree.root_segment}
@@ -367,15 +381,38 @@ class Tree(STree2):
                 parent = seg_lookup[seg_9ml.parent.segment_name]
                 segment = seg_lookup[seg_9ml.name]
                 tree.add_node_with_parent(segment, parent)
-        # Add the default segment class to which all segments belong
+        # Add the default get_segment class to which all segments belong
         tree.segment_classes = {None: SegmentClass(None, tree)}
         for classification in morph9ml.classifications.itervalues():
             for class_9ml in classification.classes.itervalues():
                 seg_class = tree.add_segment_class(class_9ml.name)
                 for member in class_9ml.members:
-                    seg_lookup[member.segment_name].get_content()['classes'].\
-                                                                 add(seg_class)
+                    seg_lookup[member.segment_name].add_class(seg_class)
                 tree.segment_classes[seg_class.name] = seg_class
+        tree.biophysics = {}
+        # Add biophysical components
+        for name, comp in bio9ml.components.iteritems():
+            parameters = {}
+            for key, val in comp.parameters.iteritems():
+                conv_unit = val.unit
+                if conv_unit is None:
+                    conv_unit = 'dimensionless'
+                elif conv_unit.startswith('/'):
+                        conv_unit = '1' + conv_unit
+                conv_unit = conv_unit.replace('2', '^2')
+                conv_unit = conv_unit.replace('uf', 'uF')
+                conv_unit = conv_unit.replace('**', '^')
+                parameters[key] = pq.Quantity(val.value, conv_unit)
+            tree.biophysics[name] = parameters
+        # Add mappings to biophysical components
+        for mapping in model9ml.mappings:
+            for seg_cls in mapping.segments:
+                for comp in mapping.components:
+                    tree.segment_classes[seg_cls].add_property(comp,
+                                                         tree.biophysics[comp])
+        elec_props = tree.biophysics['__NO_COMPONENT__']
+        tree.segment_classes[None].add_property('cm', elec_props['C_m'])
+        tree.segment_classes[None].add_property('Ra', elec_props['Ra'])
         return tree
 
     def __init__(self, name):
@@ -392,14 +429,14 @@ class Tree(STree2):
 
     def add_segment_class(self, name):
         """
-        Adds a new segment class
+        Adds a new get_segment class
         """
         self.segment_classes[name] = seg_class = SegmentClass(name, self)
         return seg_class
 
     def remove_segment_class(self, name):
         """
-        Removes segment class from the classes list of all its members
+        Removes get_segment class from the classes list of all its members
         and deletes the class
         """
         if name is None:
@@ -424,7 +461,7 @@ class Tree(STree2):
         """
         return self.root_segment.sub_branches
 
-    def segment(self, name):
+    def get_segment(self, name):
         match = [seg for seg in self.segments if seg.name == name]
         #TODO: Need to check this on initialisation
         assert len(match) <= 1, "Multiple segments with key '{}'".format(name)
@@ -468,8 +505,8 @@ class Tree(STree2):
                 name = sorted_names[0]
                 if len(branch) > 1:
                     name += '_' + sorted_names[-1]
-                # Extend the new segment in the same direction as the parent
-                # segment
+                # Extend the new get_segment in the same direction as the
+                # parent get_segment
                 disp = parent.disp * (average_length / parent.length)
                 segment = Segment(name, parent.distal + disp, diameter,
                                   classes=seg_classes)
@@ -546,7 +583,7 @@ class Tree(STree2):
             The number of segments required for the corresponding fraction of
             the wavelength
         """
-        # Calculate the wavelength for the segment
+        # Calculate the wavelength for the get_segment
         freq = in_units(freq, 'Hz')
         total_length = 0.0
         total_lam = 0.0
@@ -568,7 +605,7 @@ class Tree(STree2):
 #         else:
 #             total_length = in_units(length, 'um')
 #             lambda_f = 1e5 * numpy.sqrt(in_units(diameter, 'um') /
-#                                         (4 * numpy.pi * in_units(freq, 'Hz') *
+#                                        (4 * numpy.pi * in_units(freq, 'Hz') *
 #                                          in_units(Ra, 'ohm.cm') *
 #                                          in_units(cm, 'uF/cm^2')))
         return int((total_length / (d_lambda * lambda_f) + 0.9) / 2) * 2 + 1
