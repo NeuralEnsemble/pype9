@@ -622,16 +622,3 @@ def in_units(quantity, units):
 
 class IrreducibleMorphologyException(Exception):
     pass
-
-
-if __name__ == '__main__':
-    nineml_file = '/home/tclose/git/kbrain/9ml/neurons/Golgi_Solinas08.9ml'
-    models = nineml.extensions.biophysical_cells.parse(nineml_file)
-    model = next(models.itervalues())
-    tree = Tree.from_9ml(model)
-    tree.merge_leaves()
-    etree.ElementTree(tree.to_9ml().to_xml()).write(
-             '/home/tclose/git/kbrain/9ml/neurons/Golgi_Solinas08-reduced.9ml',
-             encoding="UTF-8",
-             pretty_print=True,
-             xml_declaration=True)

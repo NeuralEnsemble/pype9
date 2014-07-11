@@ -1,0 +1,2478 @@
+<nineml xmlns="http://nineml.org/9ML/0.1">
+    <ComponentClass name="Golgi_DeSouza10" xmlns="http://www.nineml.org/BiophysicalCells">
+        <Parameter name="leakReversal">
+            <Component>Lkg</Component>
+            <Reference>e_rev</Reference>
+            <Segments classification="BasicAnatomy">
+                <Class>Soma</Class>
+                <Class>Dendrites</Class>
+                <Class>Axon</Class>
+            </Segments>
+        </Parameter>
+        <Parameter name="somaDiameter">
+            <Reference>Diameter</Reference>
+            <Segments classification="BasicAnatomy">
+                <Class>Soma</Class>
+            </Segments>
+        </Parameter>
+        <Parameter name="initialVoltage" type="initialState">
+            <Reference>Voltage</Reference>
+            <Segments classification="BasicAnatomy">
+                <Class>Soma</Class>
+                <Class>Dendrites</Class>
+                <Class>Axon</Class>
+            </Segments>
+        </Parameter>
+        <Mapping name="ActiveComponents">
+            <Biophysics>
+                <Component>ca</Component>
+                <Component>ca2</Component>
+                <Component>na</Component>
+                <Component>k</Component>
+                <Component>AMPA</Component>
+                <Component>CaLVA</Component>
+                <Component>CaHVA</Component>
+                <Component>HCN1</Component>
+                <Component>HCN2</Component>
+                <Component>KA</Component>
+                <Component>KCa</Component>
+                <Component>KM</Component>
+                <Component>KV</Component>
+                <Component>SK2</Component>
+                <Component>NaBase</Component>
+                <Component>NaP</Component>
+                <Component>NaR</Component>
+            </Biophysics>
+            <Segments classification="BasicAnatomy">
+                <Class>Soma</Class>
+            </Segments>
+        </Mapping>
+        <Mapping name="PassiveComponents">
+            <Biophysics>
+                <Component>Lkg</Component>
+            </Biophysics>
+            <Segments classification="BasicAnatomy">
+                <Class>Soma</Class>
+                <Class>Dendrites</Class>
+                <Class>Axon</Class>
+            </Segments>
+        </Mapping>
+        <M:morphology name="WithAxon" xmlns:M="http://www.nineml.org/Morphology">
+            <M:segment name="soma">
+                <M:proximal x="0" y="0" z="0" diameter="27"/>
+                <M:distal x="0" y="0" z="27" diameter="27"/>
+            </M:segment>
+            <M:segment name="dend_0_0">
+                <M:parent segment="soma" fractionAlong="0.5"/>
+                <M:distal x="11.3" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_0_1">
+                <M:parent segment="dend_0_0"/>
+                <M:distal x="22.6" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_0_2">
+                <M:parent segment="dend_0_1"/>
+                <M:distal x="33.9" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_0_3">
+                <M:parent segment="dend_0_2"/>
+                <M:distal x="45.2" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_0_4">
+                <M:parent segment="dend_0_3"/>
+                <M:distal x="56.5" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_0_5">
+                <M:parent segment="dend_0_4"/>
+                <M:distal x="67.8" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_0_6">
+                <M:parent segment="dend_0_5"/>
+                <M:distal x="79.1" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_0_7">
+                <M:parent segment="dend_0_6"/>
+                <M:distal x="90.4" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_0_8">
+                <M:parent segment="dend_0_7"/>
+                <M:distal x="101.7" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_0_9">
+                <M:parent segment="dend_0_8"/>
+                <M:distal x="113.0" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_1_0">
+                <M:parent segment="soma" fractionAlong="0.5"/>
+                <M:distal x="-11.3" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_1_1">
+                <M:parent segment="dend_1_0"/>
+                <M:distal x="-22.6" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_1_2">
+                <M:parent segment="dend_1_1"/>
+                <M:distal x="-33.9" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_1_3">
+                <M:parent segment="dend_1_2"/>
+                <M:distal x="-45.2" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_1_4">
+                <M:parent segment="dend_1_3"/>
+                <M:distal x="-56.5" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_1_5">
+                <M:parent segment="dend_1_4"/>
+                <M:distal x="-67.8" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_1_6">
+                <M:parent segment="dend_1_5"/>
+                <M:distal x="-79.1" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_1_7">
+                <M:parent segment="dend_1_6"/>
+                <M:distal x="-90.4" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_1_8">
+                <M:parent segment="dend_1_7"/>
+                <M:distal x="-101.7" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_1_9">
+                <M:parent segment="dend_1_8"/>
+                <M:distal x="-113.0" y="0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_2_0">
+                <M:parent segment="soma" fractionAlong="0.5"/>
+                <M:distal x="0" y="11.3" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_2_1">
+                <M:parent segment="dend_2_0"/>
+                <M:distal x="0" y="22.6" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_2_2">
+                <M:parent segment="dend_2_1"/>
+                <M:distal x="0" y="33.9" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_2_3">
+                <M:parent segment="dend_2_2"/>
+                <M:distal x="0" y="45.2" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_2_4">
+                <M:parent segment="dend_2_3"/>
+                <M:distal x="0" y="56.5" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_2_5">
+                <M:parent segment="dend_2_4"/>
+                <M:distal x="0" y="67.8" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_2_6">
+                <M:parent segment="dend_2_5"/>
+                <M:distal x="0" y="79.1" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_2_7">
+                <M:parent segment="dend_2_6"/>
+                <M:distal x="0" y="90.4" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_2_8">
+                <M:parent segment="dend_2_7"/>
+                <M:distal x="0" y="101.7" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="dend_2_9">
+                <M:parent segment="dend_2_8"/>
+                <M:distal x="0" y="113.0" z="13.5" diameter="3"/>
+            </M:segment>
+            <M:segment name="axon_0">
+                <M:parent segment="soma" fractionAlong="0.5"/>
+                <M:distal x="0.0" y="-12.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_1">
+                <M:parent segment="axon_0"/>
+                <M:distal x="0.0" y="-24.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_2">
+                <M:parent segment="axon_1"/>
+                <M:distal x="0.0" y="-36.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_3">
+                <M:parent segment="axon_2"/>
+                <M:distal x="0.0" y="-48.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_4">
+                <M:parent segment="axon_3"/>
+                <M:distal x="0.0" y="-60.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_5">
+                <M:parent segment="axon_4"/>
+                <M:distal x="0.0" y="-72.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_6">
+                <M:parent segment="axon_5"/>
+                <M:distal x="0.0" y="-84.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_7">
+                <M:parent segment="axon_6"/>
+                <M:distal x="0.0" y="-96.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_8">
+                <M:parent segment="axon_7"/>
+                <M:distal x="0.0" y="-108.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_9">
+                <M:parent segment="axon_8"/>
+                <M:distal x="0.0" y="-120.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_10">
+                <M:parent segment="axon_9"/>
+                <M:distal x="0.0" y="-132.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_11">
+                <M:parent segment="axon_10"/>
+                <M:distal x="0.0" y="-144.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_12">
+                <M:parent segment="axon_11"/>
+                <M:distal x="0.0" y="-156.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_13">
+                <M:parent segment="axon_12"/>
+                <M:distal x="0.0" y="-168.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_14">
+                <M:parent segment="axon_13"/>
+                <M:distal x="0.0" y="-180.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_15">
+                <M:parent segment="axon_14"/>
+                <M:distal x="0.0" y="-192.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_16">
+                <M:parent segment="axon_15"/>
+                <M:distal x="0.0" y="-204.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_17">
+                <M:parent segment="axon_16"/>
+                <M:distal x="0.0" y="-216.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_18">
+                <M:parent segment="axon_17"/>
+                <M:distal x="0.0" y="-228.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_19">
+                <M:parent segment="axon_18"/>
+                <M:distal x="0.0" y="-240.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_20">
+                <M:parent segment="axon_19"/>
+                <M:distal x="0.0" y="-252.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_21">
+                <M:parent segment="axon_20"/>
+                <M:distal x="0.0" y="-264.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_22">
+                <M:parent segment="axon_21"/>
+                <M:distal x="0.0" y="-276.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_23">
+                <M:parent segment="axon_22"/>
+                <M:distal x="0.0" y="-288.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_24">
+                <M:parent segment="axon_23"/>
+                <M:distal x="0.0" y="-300.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_25">
+                <M:parent segment="axon_24"/>
+                <M:distal x="0.0" y="-312.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_26">
+                <M:parent segment="axon_25"/>
+                <M:distal x="0.0" y="-324.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_27">
+                <M:parent segment="axon_26"/>
+                <M:distal x="0.0" y="-336.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_28">
+                <M:parent segment="axon_27"/>
+                <M:distal x="0.0" y="-348.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_29">
+                <M:parent segment="axon_28"/>
+                <M:distal x="0.0" y="-360.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_30">
+                <M:parent segment="axon_29"/>
+                <M:distal x="0.0" y="-372.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_31">
+                <M:parent segment="axon_30"/>
+                <M:distal x="0.0" y="-384.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_32">
+                <M:parent segment="axon_31"/>
+                <M:distal x="0.0" y="-396.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_33">
+                <M:parent segment="axon_32"/>
+                <M:distal x="0.0" y="-408.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_34">
+                <M:parent segment="axon_33"/>
+                <M:distal x="0.0" y="-420.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_35">
+                <M:parent segment="axon_34"/>
+                <M:distal x="0.0" y="-432.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_36">
+                <M:parent segment="axon_35"/>
+                <M:distal x="0.0" y="-444.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_37">
+                <M:parent segment="axon_36"/>
+                <M:distal x="0.0" y="-456.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_38">
+                <M:parent segment="axon_37"/>
+                <M:distal x="0.0" y="-468.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_39">
+                <M:parent segment="axon_38"/>
+                <M:distal x="0.0" y="-480.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_40">
+                <M:parent segment="axon_39"/>
+                <M:distal x="0.0" y="-492.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_41">
+                <M:parent segment="axon_40"/>
+                <M:distal x="0.0" y="-504.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_42">
+                <M:parent segment="axon_41"/>
+                <M:distal x="0.0" y="-516.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_43">
+                <M:parent segment="axon_42"/>
+                <M:distal x="0.0" y="-528.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_44">
+                <M:parent segment="axon_43"/>
+                <M:distal x="0.0" y="-540.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_45">
+                <M:parent segment="axon_44"/>
+                <M:distal x="0.0" y="-552.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_46">
+                <M:parent segment="axon_45"/>
+                <M:distal x="0.0" y="-564.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_47">
+                <M:parent segment="axon_46"/>
+                <M:distal x="0.0" y="-576.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_48">
+                <M:parent segment="axon_47"/>
+                <M:distal x="0.0" y="-588.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_49">
+                <M:parent segment="axon_48"/>
+                <M:distal x="0.0" y="-600.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_50">
+                <M:parent segment="axon_49"/>
+                <M:distal x="0.0" y="-612.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_51">
+                <M:parent segment="axon_50"/>
+                <M:distal x="0.0" y="-624.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_52">
+                <M:parent segment="axon_51"/>
+                <M:distal x="0.0" y="-636.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_53">
+                <M:parent segment="axon_52"/>
+                <M:distal x="0.0" y="-648.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_54">
+                <M:parent segment="axon_53"/>
+                <M:distal x="0.0" y="-660.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_55">
+                <M:parent segment="axon_54"/>
+                <M:distal x="0.0" y="-672.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_56">
+                <M:parent segment="axon_55"/>
+                <M:distal x="0.0" y="-684.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_57">
+                <M:parent segment="axon_56"/>
+                <M:distal x="0.0" y="-696.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_58">
+                <M:parent segment="axon_57"/>
+                <M:distal x="0.0" y="-708.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_59">
+                <M:parent segment="axon_58"/>
+                <M:distal x="0.0" y="-720.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_60">
+                <M:parent segment="axon_59"/>
+                <M:distal x="0.0" y="-732.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_61">
+                <M:parent segment="axon_60"/>
+                <M:distal x="0.0" y="-744.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_62">
+                <M:parent segment="axon_61"/>
+                <M:distal x="0.0" y="-756.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_63">
+                <M:parent segment="axon_62"/>
+                <M:distal x="0.0" y="-768.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_64">
+                <M:parent segment="axon_63"/>
+                <M:distal x="0.0" y="-780.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_65">
+                <M:parent segment="axon_64"/>
+                <M:distal x="0.0" y="-792.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_66">
+                <M:parent segment="axon_65"/>
+                <M:distal x="0.0" y="-804.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_67">
+                <M:parent segment="axon_66"/>
+                <M:distal x="0.0" y="-816.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_68">
+                <M:parent segment="axon_67"/>
+                <M:distal x="0.0" y="-828.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_69">
+                <M:parent segment="axon_68"/>
+                <M:distal x="0.0" y="-840.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_70">
+                <M:parent segment="axon_69"/>
+                <M:distal x="0.0" y="-852.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_71">
+                <M:parent segment="axon_70"/>
+                <M:distal x="0.0" y="-864.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_72">
+                <M:parent segment="axon_71"/>
+                <M:distal x="0.0" y="-876.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_73">
+                <M:parent segment="axon_72"/>
+                <M:distal x="0.0" y="-888.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_74">
+                <M:parent segment="axon_73"/>
+                <M:distal x="0.0" y="-900.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_75">
+                <M:parent segment="axon_74"/>
+                <M:distal x="0.0" y="-912.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_76">
+                <M:parent segment="axon_75"/>
+                <M:distal x="0.0" y="-924.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_77">
+                <M:parent segment="axon_76"/>
+                <M:distal x="0.0" y="-936.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_78">
+                <M:parent segment="axon_77"/>
+                <M:distal x="0.0" y="-948.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_79">
+                <M:parent segment="axon_78"/>
+                <M:distal x="0.0" y="-960.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_80">
+                <M:parent segment="axon_79"/>
+                <M:distal x="0.0" y="-972.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_81">
+                <M:parent segment="axon_80"/>
+                <M:distal x="0.0" y="-984.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_82">
+                <M:parent segment="axon_81"/>
+                <M:distal x="0.0" y="-996.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_83">
+                <M:parent segment="axon_82"/>
+                <M:distal x="0.0" y="-1008.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_84">
+                <M:parent segment="axon_83"/>
+                <M:distal x="0.0" y="-1020.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_85">
+                <M:parent segment="axon_84"/>
+                <M:distal x="0.0" y="-1032.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_86">
+                <M:parent segment="axon_85"/>
+                <M:distal x="0.0" y="-1044.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_87">
+                <M:parent segment="axon_86"/>
+                <M:distal x="0.0" y="-1056.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_88">
+                <M:parent segment="axon_87"/>
+                <M:distal x="0.0" y="-1068.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_89">
+                <M:parent segment="axon_88"/>
+                <M:distal x="0.0" y="-1080.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_90">
+                <M:parent segment="axon_89"/>
+                <M:distal x="0.0" y="-1092.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_91">
+                <M:parent segment="axon_90"/>
+                <M:distal x="0.0" y="-1104.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_92">
+                <M:parent segment="axon_91"/>
+                <M:distal x="0.0" y="-1116.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_93">
+                <M:parent segment="axon_92"/>
+                <M:distal x="0.0" y="-1128.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_94">
+                <M:parent segment="axon_93"/>
+                <M:distal x="0.0" y="-1140.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_95">
+                <M:parent segment="axon_94"/>
+                <M:distal x="0.0" y="-1152.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_96">
+                <M:parent segment="axon_95"/>
+                <M:distal x="0.0" y="-1164.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_97">
+                <M:parent segment="axon_96"/>
+                <M:distal x="0.0" y="-1176.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_98">
+                <M:parent segment="axon_97"/>
+                <M:distal x="0.0" y="-1188.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:segment name="axon_99">
+                <M:parent segment="axon_98"/>
+                <M:distal x="0.0" y="-1200.0" z="13.5" diameter="2.4"/>
+            </M:segment>
+            <M:classification name="BasicAnatomy">
+                <M:class name="Soma" default="True">
+                    <M:member>soma</M:member>
+                </M:class>
+                <M:class name="Dendrites">
+                    <M:member>dend_0_0</M:member>
+                    <M:member>dend_0_1</M:member>
+                    <M:member>dend_0_2</M:member>
+                    <M:member>dend_0_3</M:member>
+                    <M:member>dend_0_4</M:member>
+                    <M:member>dend_0_5</M:member>
+                    <M:member>dend_0_6</M:member>
+                    <M:member>dend_0_7</M:member>
+                    <M:member>dend_0_8</M:member>
+                    <M:member>dend_0_9</M:member>
+                    <M:member>dend_1_0</M:member>
+                    <M:member>dend_1_1</M:member>
+                    <M:member>dend_1_2</M:member>
+                    <M:member>dend_1_3</M:member>
+                    <M:member>dend_1_4</M:member>
+                    <M:member>dend_1_5</M:member>
+                    <M:member>dend_1_6</M:member>
+                    <M:member>dend_1_7</M:member>
+                    <M:member>dend_1_8</M:member>
+                    <M:member>dend_1_9</M:member>
+                    <M:member>dend_2_0</M:member>
+                    <M:member>dend_2_1</M:member>
+                    <M:member>dend_2_2</M:member>
+                    <M:member>dend_2_3</M:member>
+                    <M:member>dend_2_4</M:member>
+                    <M:member>dend_2_5</M:member>
+                    <M:member>dend_2_6</M:member>
+                    <M:member>dend_2_7</M:member>
+                    <M:member>dend_2_8</M:member>
+                    <M:member>dend_2_9</M:member>
+                </M:class>
+                <M:class name="Axon">
+                    <M:member>axon_0</M:member>
+                    <M:member>axon_1</M:member>
+                    <M:member>axon_2</M:member>
+                    <M:member>axon_3</M:member>
+                    <M:member>axon_4</M:member>
+                    <M:member>axon_5</M:member>
+                    <M:member>axon_6</M:member>
+                    <M:member>axon_7</M:member>
+                    <M:member>axon_8</M:member>
+                    <M:member>axon_9</M:member>
+                    <M:member>axon_10</M:member>
+                    <M:member>axon_11</M:member>
+                    <M:member>axon_12</M:member>
+                    <M:member>axon_13</M:member>
+                    <M:member>axon_14</M:member>
+                    <M:member>axon_15</M:member>
+                    <M:member>axon_16</M:member>
+                    <M:member>axon_17</M:member>
+                    <M:member>axon_18</M:member>
+                    <M:member>axon_19</M:member>
+                    <M:member>axon_20</M:member>
+                    <M:member>axon_21</M:member>
+                    <M:member>axon_22</M:member>
+                    <M:member>axon_23</M:member>
+                    <M:member>axon_24</M:member>
+                    <M:member>axon_25</M:member>
+                    <M:member>axon_26</M:member>
+                    <M:member>axon_27</M:member>
+                    <M:member>axon_28</M:member>
+                    <M:member>axon_29</M:member>
+                    <M:member>axon_30</M:member>
+                    <M:member>axon_31</M:member>
+                    <M:member>axon_32</M:member>
+                    <M:member>axon_33</M:member>
+                    <M:member>axon_34</M:member>
+                    <M:member>axon_35</M:member>
+                    <M:member>axon_36</M:member>
+                    <M:member>axon_37</M:member>
+                    <M:member>axon_38</M:member>
+                    <M:member>axon_39</M:member>
+                    <M:member>axon_40</M:member>
+                    <M:member>axon_41</M:member>
+                    <M:member>axon_42</M:member>
+                    <M:member>axon_43</M:member>
+                    <M:member>axon_44</M:member>
+                    <M:member>axon_45</M:member>
+                    <M:member>axon_46</M:member>
+                    <M:member>axon_47</M:member>
+                    <M:member>axon_48</M:member>
+                    <M:member>axon_49</M:member>
+                    <M:member>axon_50</M:member>
+                    <M:member>axon_51</M:member>
+                    <M:member>axon_52</M:member>
+                    <M:member>axon_53</M:member>
+                    <M:member>axon_54</M:member>
+                    <M:member>axon_55</M:member>
+                    <M:member>axon_56</M:member>
+                    <M:member>axon_57</M:member>
+                    <M:member>axon_58</M:member>
+                    <M:member>axon_59</M:member>
+                    <M:member>axon_60</M:member>
+                    <M:member>axon_61</M:member>
+                    <M:member>axon_62</M:member>
+                    <M:member>axon_63</M:member>
+                    <M:member>axon_64</M:member>
+                    <M:member>axon_65</M:member>
+                    <M:member>axon_66</M:member>
+                    <M:member>axon_67</M:member>
+                    <M:member>axon_68</M:member>
+                    <M:member>axon_69</M:member>
+                    <M:member>axon_70</M:member>
+                    <M:member>axon_71</M:member>
+                    <M:member>axon_72</M:member>
+                    <M:member>axon_73</M:member>
+                    <M:member>axon_74</M:member>
+                    <M:member>axon_75</M:member>
+                    <M:member>axon_76</M:member>
+                    <M:member>axon_77</M:member>
+                    <M:member>axon_78</M:member>
+                    <M:member>axon_79</M:member>
+                    <M:member>axon_80</M:member>
+                    <M:member>axon_81</M:member>
+                    <M:member>axon_82</M:member>
+                    <M:member>axon_83</M:member>
+                    <M:member>axon_84</M:member>
+                    <M:member>axon_85</M:member>
+                    <M:member>axon_86</M:member>
+                    <M:member>axon_87</M:member>
+                    <M:member>axon_88</M:member>
+                    <M:member>axon_89</M:member>
+                    <M:member>axon_90</M:member>
+                    <M:member>axon_91</M:member>
+                    <M:member>axon_92</M:member>
+                    <M:member>axon_93</M:member>
+                    <M:member>axon_94</M:member>
+                    <M:member>axon_95</M:member>
+                    <M:member>axon_96</M:member>
+                    <M:member>axon_97</M:member>
+                    <M:member>axon_98</M:member>
+                    <M:member>axon_99</M:member>
+                </M:class>
+            </M:classification>
+        </M:morphology>
+        <B:Biophysics name="Golgi_Solinas08" xmlns:B="http://www.nineml.org/Biophysics">
+            <B:AnalogPort mode="receive" name="v" unit="mV"/>
+            <B:AnalogPort mode="receive" name="celsius" unit="degC"/>
+            <B:Parameter name="F">
+                <B:value>96485.309</B:value>
+            </B:Parameter>
+            <B:Parameter name="R">
+                <B:value>8.31342</B:value>
+            </B:Parameter>
+            <B:Alias name="ktf" arguments="celsius">
+                <B:body>(1000.0 * R * (celsius + 273.15) / F)</B:body>
+            </B:Alias>
+            <B:Alias name="nernst" arguments="celsius,ci,co,z">
+                <B:body>(if (ci &lt;= 0) then 1000000.0 else (if (co &lt;= 0) then -1000000.0 else
+                    (ktf (celsius) / z * (ln (co / ci))))) 
+                </B:body>
+            </B:Alias>
+            <B:Component type="defaults">
+                <B:Parameter name="V_t">
+                    <B:unit>mV</B:unit>
+                    <B:value>-35</B:value>
+                </B:Parameter>
+                <B:Parameter name="celsius">
+                    <B:unit>degC</B:unit>
+                    <B:value>23</B:value>
+                </B:Parameter>
+                <B:Parameter name="Ra">
+                    <B:unit>ohm.cm</B:unit>
+                    <B:value>100</B:value>
+                </B:Parameter>
+                <B:Parameter name="C_m">
+                    <B:unit>uf/cm2</B:unit>
+                    <B:value>1</B:value>
+                </B:Parameter>
+                <B:AnalogPort mode="send" name="celsius"/>
+                <B:AnalogPort mode="send" name="V_t"/>
+                <B:AnalogPort mode="send" name="Ra"/>
+                <B:AnalogPort mode="send" name="C_m"/>
+            </B:Component>
+            <B:Component type="geometry" name="soma">
+                <B:Parameter name="L">
+                    <B:unit>um</B:unit>
+                    <B:value>27</B:value>
+                </B:Parameter>
+                <B:Parameter name="diam">
+                    <B:unit>um</B:unit>
+                    <B:value>27</B:value>
+                </B:Parameter>
+                <B:AnalogPort mode="send" name="L"/>
+                <B:AnalogPort mode="send" name="diam"/>
+            </B:Component>
+            <B:ComponentClass type="post-synaptic-conductance" name="AMPAdef">
+                <B:Interface>
+                    <B:Parameter name="tauA"/>
+                    <B:Parameter name="tauB"/>
+                    <B:Parameter name="e"/>
+                </B:Interface>
+                <B:AnalogPort mode="receive" name="w" from="event" unit="uS"/>
+                <B:Parameter name="tau1">
+                    <B:unit>ms</B:unit>
+                    <B:value>(if ((tauA / tauB) &gt; 0.9999) then (0.9999 * tauB) else tauA) 
+                    </B:value>
+                </B:Parameter>
+                <B:Parameter name="tau2">
+                    <B:unit>ms</B:unit>
+                    <B:value>tauB</B:value>
+                </B:Parameter>
+                <B:Parameter name="tp">
+                    <B:value>((tau1 * tau2) / (tau2 - tau1) * ln (tau2 / tau1))</B:value>
+                </B:Parameter>
+                <B:Parameter name="scale_factor">
+                    <B:value>(1 / (neg (exp (neg (tp) / tau1)) + exp (neg (tp) / tau2)))</B:value>
+                </B:Parameter>
+                <B:Transient variable="A">
+                    <B:unit>uS</B:unit>
+                    <B:rhs>(neg (A) / tau1)</B:rhs>
+                    <B:onevent>(A + (w * scale_factor))</B:onevent>
+                    <B:initial>0</B:initial>
+                </B:Transient>
+                <B:Transient variable="B">
+                    <B:unit>uS</B:unit>
+                    <B:rhs>(neg (B) / tau2)</B:rhs>
+                    <B:onevent>(B + (w * scale_factor))</B:onevent>
+                    <B:initial>0</B:initial>
+                </B:Transient>
+                <B:Assignment name="g">
+                    <B:unit>uS</B:unit>
+                    <B:rhs>(B - A)</B:rhs>
+                </B:Assignment>
+                <B:AnalogPort mode="send" name="g"/>
+                <B:AnalogPort mode="send" name="e"/>
+                <B:AnalogPort mode="send" name="scale_factor"/>
+            </B:ComponentClass>
+            <B:ComponentClass type="decaying-pool" name="cadef">
+                <B:Interface>
+                    <B:Parameter name="d"/>
+                    <B:Parameter name="cao"/>
+                    <B:Parameter name="cai0"/>
+                    <B:Parameter name="beta"/>
+                </B:Interface>
+                <B:AnalogPort mode="receive" name="ica" from="ion-currents"/>
+                <B:TimeDerivative variable="ca">
+                    <B:rhs>((neg (ica) / (2 * F * d)) * 10000.0 - (beta * (ca - cai0)))</B:rhs>
+                    <B:initial>cai0</B:initial>
+                </B:TimeDerivative>
+                <B:AnalogPort mode="send" name="ca"/>
+                <B:AnalogPort mode="send" name="cao"/>
+            </B:ComponentClass>
+            <B:ComponentClass type="decaying-pool" name="ca2def">
+                <B:Interface>
+                    <B:Parameter name="d"/>
+                    <B:Parameter name="ca2o"/>
+                    <B:Parameter name="ca2i0"/>
+                    <B:Parameter name="beta"/>
+                </B:Interface>
+                <B:AnalogPort mode="receive" name="ica2" from="ion-currents"/>
+                <B:Parameter name="valence">
+                    <B:value>2</B:value>
+                </B:Parameter>
+                <B:TimeDerivative variable="ca2">
+                    <B:rhs>((neg (ica2) / (2 * F * d)) * 10000.0 - (beta * (ca2 - ca2i0)))</B:rhs>
+                    <B:initial>ca2i0</B:initial>
+                </B:TimeDerivative>
+                <B:AnalogPort mode="send" name="ca2"/>
+                <B:AnalogPort mode="send" name="ca2o"/>
+                <B:AnalogPort mode="send" name="valence"/>
+            </B:ComponentClass>
+            <B:ComponentClass type="decaying-pool" name="nadef">
+                <B:Interface>
+                    <B:Parameter name="d"/>
+                    <B:Parameter name="nao0"/>
+                    <B:Parameter name="nai0"/>
+                    <B:Parameter name="beta"/>
+                </B:Interface>
+                <B:AnalogPort mode="receive" name="ina" from="ion-currents"/>
+                <B:TimeDerivative variable="nai">
+                    <B:unit>mM</B:unit>
+                    <B:rhs>((neg (ina) / (2 * F * d)) * 10000.0 - (beta * (nai - nai0)))</B:rhs>
+                    <B:initial>nai0</B:initial>
+                </B:TimeDerivative>
+                <B:TimeDerivative variable="nao">
+                    <B:unit>mM</B:unit>
+                    <B:rhs>((ina / (2 * F * d)) * 10000.0 - (beta * (nao - nao0)))</B:rhs>
+                    <B:initial>nao0</B:initial>
+                </B:TimeDerivative>
+                <B:AnalogPort mode="send" name="nai"/>
+                <B:AnalogPort mode="send" name="nao"/>
+            </B:ComponentClass>
+            <B:ComponentClass type="decaying-pool" name="kdef">
+                <B:Interface>
+                    <B:Parameter name="d"/>
+                    <B:Parameter name="ko0"/>
+                    <B:Parameter name="ki0"/>
+                    <B:Parameter name="beta"/>
+                </B:Interface>
+                <B:AnalogPort mode="receive" name="ik" from="ion-currents"/>
+                <B:TimeDerivative variable="ki">
+                    <B:unit>mM</B:unit>
+                    <B:rhs>((neg (ik) / (2 * F * d)) * 10000.0 - (beta * (ki - ki0)))</B:rhs>
+                    <B:initial>ki0</B:initial>
+                </B:TimeDerivative>
+                <B:TimeDerivative variable="ko">
+                    <B:unit>mM</B:unit>
+                    <B:rhs>((ik / (2 * F * d)) * 10000.0 - (beta * (ko - ko0)))</B:rhs>
+                    <B:initial>ko0</B:initial>
+                </B:TimeDerivative>
+                <B:AnalogPort mode="send" name="ki"/>
+                <B:AnalogPort mode="send" name="ko"/>
+            </B:ComponentClass>
+            <B:ComponentClass type="ionic-current" name="CaHVAdef">
+                <B:Interface>
+                    <B:Parameter name="Aalpha_s"/>
+                    <B:Parameter name="Kalpha_s"/>
+                    <B:Parameter name="V0alpha_s"/>
+                    <B:Parameter name="Abeta_s"/>
+                    <B:Parameter name="Kbeta_s"/>
+                    <B:Parameter name="V0beta_s"/>
+                    <B:Parameter name="Aalpha_u"/>
+                    <B:Parameter name="Kalpha_u"/>
+                    <B:Parameter name="V0alpha_u"/>
+                    <B:Parameter name="Abeta_u"/>
+                    <B:Parameter name="Kbeta_u"/>
+                    <B:Parameter name="V0beta_u"/>
+                    <B:Parameter name="g"/>
+                </B:Interface>
+                <B:AnalogPort mode="receive" name="cai" from="ion-pools"/>
+                <B:AnalogPort mode="receive" name="cao" from="ion-pools"/>
+                <B:Component type="gate">
+                    <B:Assignment name="Q10">
+                        <B:rhs>(pow (3 ((celsius - 20) / 10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Alias name="alpha_s" arguments="v,Q10">
+                        <B:body>(Q10 * Aalpha_s * exp ((v - V0alpha_s) / Kalpha_s))</B:body>
+                    </B:Alias>
+                    <B:Alias name="beta_s" arguments="v,Q10">
+                        <B:body>(Q10 * Abeta_s * exp ((v - V0beta_s) / Kbeta_s))</B:body>
+                    </B:Alias>
+                    <B:Alias name="alpha_u" arguments="v,Q10">
+                        <B:body>(Q10 * Aalpha_u * exp ((v - V0alpha_u) / Kalpha_u))</B:body>
+                    </B:Alias>
+                    <B:Alias name="beta_u" arguments="v,Q10">
+                        <B:body>(Q10 * Abeta_u * exp ((v - V0beta_u) / Kbeta_u))</B:body>
+                    </B:Alias>
+                    <B:Assignment name="s_inf">
+                        <B:rhs>((alpha_s (v Q10)) / (alpha_s (v Q10) + beta_s (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_s">
+                        <B:rhs>(1 / (alpha_s (v Q10) + beta_s (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="u_inf">
+                        <B:rhs>((alpha_u (v Q10)) / (alpha_u (v Q10) + beta_u (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_u">
+                        <B:rhs>(1 / (alpha_u (v Q10) + beta_u (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:hh_ionic_gate name="CaHVA">
+                        <B:initial_m>s_inf</B:initial_m>
+                        <B:initial_h>u_inf</B:initial_h>
+                        <B:m_power>2</B:m_power>
+                        <B:h_power>1</B:h_power>
+                        <B:m_inf>s_inf</B:m_inf>
+                        <B:m_tau>tau_s</B:m_tau>
+                        <B:h_inf>u_inf</B:h_inf>
+                        <B:h_tau>tau_u</B:h_tau>
+                    </B:hh_ionic_gate>
+                </B:Component>
+                <B:Component type="pore">
+                    <B:Assignment name="gbar">
+                        <B:rhs>g</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="gbar"/>
+                </B:Component>
+                <B:Component type="permeating-ion" name="ca">
+                    <B:Assignment name="e">
+                        <B:unit>mV</B:unit>
+                        <B:rhs>(nernst (celsius cai cao 2))</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="e"/>
+                </B:Component>
+            </B:ComponentClass>
+            <B:ComponentClass type="ionic-current" name="CaLVAdef">
+                <B:Interface>
+                    <B:Parameter name="shift"/>
+                    <B:Parameter name="v0_m_inf"/>
+                    <B:Parameter name="v0_h_inf"/>
+                    <B:Parameter name="k_m_inf"/>
+                    <B:Parameter name="k_h_inf"/>
+                    <B:Parameter name="C_tau_m"/>
+                    <B:Parameter name="A_tau_m"/>
+                    <B:Parameter name="v0_tau_m1"/>
+                    <B:Parameter name="v0_tau_m2"/>
+                    <B:Parameter name="k_tau_m1"/>
+                    <B:Parameter name="k_tau_m2"/>
+                    <B:Parameter name="C_tau_h"/>
+                    <B:Parameter name="A_tau_h"/>
+                    <B:Parameter name="v0_tau_h1"/>
+                    <B:Parameter name="v0_tau_h2"/>
+                    <B:Parameter name="k_tau_h1"/>
+                    <B:Parameter name="k_tau_h2"/>
+                    <B:Parameter name="g"/>
+                </B:Interface>
+                <B:AnalogPort mode="receive" name="ca2i" from="ion-pools"/>
+                <B:AnalogPort mode="receive" name="ca2o" from="ion-pools"/>
+                <B:Component type="gate">
+                    <B:Assignment name="phi_m">
+                        <B:rhs>(pow (5.0 ((celsius - 24) / 10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="phi_h">
+                        <B:rhs>(pow (3.0 ((celsius - 24) / 10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="m_inf">
+                        <B:rhs>(1.0 / (1 + exp ((v + shift - v0_m_inf) / k_m_inf)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="h_inf">
+                        <B:rhs>(1.0 / (1 + exp ((v + shift - v0_h_inf) / k_h_inf)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_m">
+                        <B:rhs>((C_tau_m + A_tau_m / (exp ((v + shift - v0_tau_m1) / k_tau_m1) + exp
+                            ((v + shift - v0_tau_m2) / k_tau_m2))) / phi_m)
+                        </B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_h">
+                        <B:rhs>((C_tau_h + A_tau_h / (exp ((v + shift - v0_tau_h1) / k_tau_h1) + exp
+                            ((v + shift - v0_tau_h2) / k_tau_h2))) / phi_h)
+                        </B:rhs>
+                    </B:Assignment>
+                    <B:hh_ionic_gate name="CaLVA">
+                        <B:initial_m>m_inf</B:initial_m>
+                        <B:initial_h>h_inf</B:initial_h>
+                        <B:m_power>2</B:m_power>
+                        <B:h_power>1</B:h_power>
+                        <B:m_inf>m_inf</B:m_inf>
+                        <B:m_tau>tau_m</B:m_tau>
+                        <B:h_inf>h_inf</B:h_inf>
+                        <B:h_tau>tau_h</B:h_tau>
+                    </B:hh_ionic_gate>
+                </B:Component>
+                <B:Component type="pore">
+                    <B:Assignment name="gbar">
+                        <B:rhs>g</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="gbar"/>
+                </B:Component>
+                <B:Component type="permeating-ion" name="ca2">
+                    <B:Parameter name="valence">
+                        <B:value>2</B:value>
+                    </B:Parameter>
+                    <B:Assignment name="e">
+                        <B:unit>mV</B:unit>
+                        <B:rhs>(nernst (celsius ca2i ca2o valence))</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="e"/>
+                    <B:AnalogPort mode="send" name="valence"/>
+                </B:Component>
+            </B:ComponentClass>
+            <B:ComponentClass type="ionic-current" name="HCN1def">
+                <B:Interface>
+                    <B:Parameter name="Ehalf"/>
+                    <B:Parameter name="c"/>
+                    <B:Parameter name="rA"/>
+                    <B:Parameter name="rB"/>
+                    <B:Parameter name="tCs"/>
+                    <B:Parameter name="tDs"/>
+                    <B:Parameter name="tEs"/>
+                    <B:Parameter name="tCf"/>
+                    <B:Parameter name="tDf"/>
+                    <B:Parameter name="tEf"/>
+                    <B:Parameter name="g"/>
+                    <B:Parameter name="e"/>
+                </B:Interface>
+                <B:Alias name="r" arguments="potential">
+                    <B:body>((rA * potential) + rB)</B:body>
+                </B:Alias>
+                <B:Alias name="tau" arguments="potential,t1,t2,t3">
+                    <B:body>(exp (((t1 * potential) - t2) * t3))</B:body>
+                </B:Alias>
+                <B:Alias name="o_inf" arguments="potential,Ehalf,c">
+                    <B:body>(1 / (1 + exp ((potential - Ehalf) * c)))</B:body>
+                </B:Alias>
+                <B:Component type="gate">
+                    <B:Assignment name="o_slow_inf">
+                        <B:rhs>((1 - r (v)) * o_inf (v Ehalf c))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_s">
+                        <B:rhs>(tau (v tCs tDs tEs))</B:rhs>
+                    </B:Assignment>
+                    <B:TimeDerivative variable="o_slow">
+                        <B:rhs>((o_slow_inf - o_slow) / tau_s)</B:rhs>
+                        <B:initial>o_slow_inf</B:initial>
+                    </B:TimeDerivative>
+                    <B:AnalogPort mode="send" name="o_slow"/>
+                </B:Component>
+                <B:Component type="gate">
+                    <B:Assignment name="o_fast_inf">
+                        <B:rhs>(r (v) * o_inf (v Ehalf c))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_f">
+                        <B:rhs>(tau (v tCf tDf tEf))</B:rhs>
+                    </B:Assignment>
+                    <B:TimeDerivative variable="o_fast">
+                        <B:rhs>((o_fast_inf - o_fast) / tau_f)</B:rhs>
+                        <B:initial>o_fast_inf</B:initial>
+                    </B:TimeDerivative>
+                    <B:AnalogPort mode="send" name="o_fast"/>
+                </B:Component>
+                <B:Component type="pore">
+                    <B:Assignment name="gbar">
+                        <B:rhs>g</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="gbar"/>
+                </B:Component>
+                <B:Component type="permeating-ion" name="non-specific">
+                    <B:Assignment name="erev">
+                        <B:rhs>e</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="erev"/>
+                </B:Component>
+            </B:ComponentClass>
+            <B:ComponentClass type="ionic-current" name="HCN2def">
+                <B:Interface>
+                    <B:Parameter name="Ehalf"/>
+                    <B:Parameter name="c"/>
+                    <B:Parameter name="rA"/>
+                    <B:Parameter name="rB"/>
+                    <B:Parameter name="tCs"/>
+                    <B:Parameter name="tDs"/>
+                    <B:Parameter name="tEs"/>
+                    <B:Parameter name="tCf"/>
+                    <B:Parameter name="tDf"/>
+                    <B:Parameter name="tEf"/>
+                </B:Interface>
+                <B:Alias name="r" arguments="potential,r1,r2">
+                    <B:body>(if (potential &gt;= -64.7) then 0.0 else (if (potential &lt;= -108.7)
+                        then 1.0 else (r1 * potential) + r2)) 
+                    </B:body>
+                </B:Alias>
+                <B:Alias name="o_inf" arguments="potential,Ehalf,c">
+                    <B:body>(1 / (1 + exp ((potential - Ehalf) * c)))</B:body>
+                </B:Alias>
+                <B:Component type="gate">
+                    <B:Alias name="tau_slow" arguments="potential,t1,t2,t3">
+                        <B:body>(exp (t3 * ((t1 * potential) - t2)))</B:body>
+                    </B:Alias>
+                    <B:Assignment name="o_slow_inf">
+                        <B:rhs>((1 - r (v rA rB)) * o_inf (v Ehalf c))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_s">
+                        <B:rhs>(tau_slow (v tCs tDs tEs))</B:rhs>
+                    </B:Assignment>
+                    <B:TimeDerivative variable="o_slow">
+                        <B:rhs>((o_slow_inf - o_slow) / tau_s)</B:rhs>
+                        <B:initial>o_slow_inf</B:initial>
+                    </B:TimeDerivative>
+                    <B:AnalogPort mode="send" name="o_slow"/>
+                </B:Component>
+                <B:Component type="gate">
+                    <B:Alias name="tau_fast" arguments="potential,t1,t2,t3">
+                        <B:body>(exp (t3 * ((t1 * potential) - t2)))</B:body>
+                    </B:Alias>
+                    <B:Assignment name="o_fast_inf">
+                        <B:rhs>(r (v rA rB) * o_inf (v Ehalf c))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_f">
+                        <B:rhs>(tau_fast (v tCf tDf tEf))</B:rhs>
+                    </B:Assignment>
+                    <B:TimeDerivative variable="o_fast">
+                        <B:rhs>((o_fast_inf - o_fast) / tau_f)</B:rhs>
+                        <B:initial>o_fast_inf</B:initial>
+                    </B:TimeDerivative>
+                    <B:AnalogPort mode="send" name="o_fast"/>
+                </B:Component>
+                <B:Component type="pore">
+                    <B:Assignment name="gbar">
+                        <B:rhs>g</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="gbar"/>
+                </B:Component>
+                <B:Component type="permeating-ion" name="non-specific">
+                    <B:Parameter name="erev">
+                        <B:value>e</B:value>
+                    </B:Parameter>
+                    <B:AnalogPort mode="send" name="erev"/>
+                </B:Component>
+            </B:ComponentClass>
+            <B:ComponentClass type="ionic-current" name="KAdef">
+                <B:Interface>
+                    <B:Parameter name="Aalpha_a"/>
+                    <B:Parameter name="Kalpha_a"/>
+                    <B:Parameter name="V0alpha_a"/>
+                    <B:Parameter name="Abeta_a"/>
+                    <B:Parameter name="Kbeta_a"/>
+                    <B:Parameter name="V0beta_a"/>
+                    <B:Parameter name="Aalpha_b"/>
+                    <B:Parameter name="Kalpha_b"/>
+                    <B:Parameter name="V0alpha_b"/>
+                    <B:Parameter name="Abeta_b"/>
+                    <B:Parameter name="Kbeta_b"/>
+                    <B:Parameter name="V0beta_b"/>
+                    <B:Parameter name="V0_ainf"/>
+                    <B:Parameter name="K_ainf"/>
+                    <B:Parameter name="V0_binf"/>
+                    <B:Parameter name="K_binf"/>
+                    <B:Parameter name="g"/>
+                </B:Interface>
+                <B:AnalogPort mode="receive" name="ki" from="ion-pools"/>
+                <B:AnalogPort mode="receive" name="ko" from="ion-pools"/>
+                <B:Alias name="sigm" arguments="x,y">
+                    <B:body>(1 / (exp (x / y) + 1))</B:body>
+                </B:Alias>
+                <B:Component type="gate">
+                    <B:Assignment name="Q10">
+                        <B:rhs>(pow (3 ((celsius - 25.5) / 10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Alias name="alpha_a" arguments="v,Q10">
+                        <B:body>(Q10 * Aalpha_a * sigm ((v - V0alpha_a) Kalpha_a))</B:body>
+                    </B:Alias>
+                    <B:Alias name="beta_a" arguments="v,Q10">
+                        <B:body>(Q10 * (Abeta_a / exp ((v - V0beta_a) / Kbeta_a)))</B:body>
+                    </B:Alias>
+                    <B:Alias name="alpha_b" arguments="v,Q10">
+                        <B:body>(Q10 * Aalpha_b * sigm ((v - V0alpha_b) Kalpha_b))</B:body>
+                    </B:Alias>
+                    <B:Alias name="beta_b" arguments="v,Q10">
+                        <B:body>(Q10 * Abeta_b * sigm ((v - V0beta_b) Kbeta_b))</B:body>
+                    </B:Alias>
+                    <B:Assignment name="a_inf">
+                        <B:rhs>(1 / (1 + exp ((v - V0_ainf) / K_ainf)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_a">
+                        <B:rhs>(1 / (alpha_a (v Q10) + beta_a (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="b_inf">
+                        <B:rhs>(1 / (1 + exp ((v - V0_binf) / K_binf)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_b">
+                        <B:rhs>(1 / (alpha_b (v Q10) + beta_b (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:hh_ionic_gate name="KA">
+                        <B:initial_m>(a_inf)</B:initial_m>
+                        <B:initial_h>(b_inf)</B:initial_h>
+                        <B:m_power>3</B:m_power>
+                        <B:h_power>1</B:h_power>
+                        <B:m_inf>a_inf</B:m_inf>
+                        <B:m_tau>tau_a</B:m_tau>
+                        <B:h_inf>b_inf</B:h_inf>
+                        <B:h_tau>tau_b</B:h_tau>
+                    </B:hh_ionic_gate>
+                </B:Component>
+                <B:Component type="pore">
+                    <B:Assignment name="gbar">
+                        <B:rhs>g</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="gbar"/>
+                </B:Component>
+                <B:Component type="permeating-ion" name="k">
+                    <B:Assignment name="e">
+                        <B:unit>mV</B:unit>
+                        <B:rhs>(nernst (celsius ki ko 1))</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="e"/>
+                </B:Component>
+            </B:ComponentClass>
+            <B:ComponentClass type="ionic-current" name="KCadef">
+                <B:Interface>
+                    <B:Parameter name="Aalpha_c"/>
+                    <B:Parameter name="Balpha_c"/>
+                    <B:Parameter name="Kalpha_c"/>
+                    <B:Parameter name="Abeta_c"/>
+                    <B:Parameter name="Bbeta_c"/>
+                    <B:Parameter name="Kbeta_c"/>
+                    <B:Parameter name="g"/>
+                </B:Interface>
+                <B:AnalogPort mode="receive" name="cai" from="ion-pools"/>
+                <B:AnalogPort mode="receive" name="ki" from="ion-pools"/>
+                <B:AnalogPort mode="receive" name="ko" from="ion-pools"/>
+                <B:Component type="gate">
+                    <B:Assignment name="Q10">
+                        <B:rhs>(pow (3 ((celsius - 30) / 10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Alias name="alpha_c" arguments="v,cai,Q10">
+                        <B:body>(Q10 * Aalpha_c / (1 + (Balpha_c * exp (v / Kalpha_c) / cai)))
+                        </B:body>
+                    </B:Alias>
+                    <B:Alias name="beta_c" arguments="v,cai,Q10">
+                        <B:body>(Q10 * Abeta_c / (1 + (cai / (Bbeta_c * exp (v / Kbeta_c)))))
+                        </B:body>
+                    </B:Alias>
+                    <B:Assignment name="c_inf">
+                        <B:rhs>((alpha_c (v cai Q10)) / (alpha_c (v cai Q10) + beta_c (v cai Q10)))
+                        </B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_c">
+                        <B:rhs>(1 / (alpha_c (v cai Q10) + beta_c (v cai Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:hh_ionic_gate name="KCa">
+                        <B:initial_m>c_inf</B:initial_m>
+                        <B:m_power>1</B:m_power>
+                        <B:h_power>0</B:h_power>
+                        <B:m_inf>c_inf</B:m_inf>
+                        <B:m_tau>tau_c</B:m_tau>
+                    </B:hh_ionic_gate>
+                </B:Component>
+                <B:Component type="pore">
+                    <B:Assignment name="gbar">
+                        <B:rhs>g</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="gbar"/>
+                </B:Component>
+                <B:Component type="permeating-ion" name="k">
+                    <B:Assignment name="e">
+                        <B:unit>mV</B:unit>
+                        <B:rhs>(nernst (celsius ki ko 1))</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="e"/>
+                </B:Component>
+                <B:Component type="modulating-ion" name="ca">
+                </B:Component>
+            </B:ComponentClass>
+            <B:ComponentClass type="ionic-current" name="KMdef">
+                <B:Interface>
+                    <B:Parameter name="Aalpha_n"/>
+                    <B:Parameter name="Kalpha_n"/>
+                    <B:Parameter name="V0alpha_n"/>
+                    <B:Parameter name="Abeta_n"/>
+                    <B:Parameter name="Kbeta_n"/>
+                    <B:Parameter name="V0beta_n"/>
+                    <B:Parameter name="V0_ninf"/>
+                    <B:Parameter name="B_ninf"/>
+                    <B:Parameter name="g"/>
+                </B:Interface>
+                <B:AnalogPort mode="receive" name="ki" from="ion-pools"/>
+                <B:AnalogPort mode="receive" name="ko" from="ion-pools"/>
+                <B:Component type="gate">
+                    <B:Assignment name="Q10">
+                        <B:rhs>(pow (3 ((celsius - 22) / 10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Alias name="alpha_n" arguments="v,Q10">
+                        <B:body>(Q10 * Aalpha_n * exp ((v - V0alpha_n) / Kalpha_n))</B:body>
+                    </B:Alias>
+                    <B:Alias name="beta_n" arguments="v,Q10">
+                        <B:body>(Q10 * Abeta_n * exp ((v - V0beta_n) / Kbeta_n))</B:body>
+                    </B:Alias>
+                    <B:hh_ionic_gate name="KM">
+                        <B:initial_m>((1 / (1 + exp ((neg (v - V0_ninf)) / B_ninf))))</B:initial_m>
+                        <B:m_power>1</B:m_power>
+                        <B:h_power>0</B:h_power>
+                        <B:m_inf>((1 / (1 + exp ((neg (v - V0_ninf)) / B_ninf))))</B:m_inf>
+                        <B:m_tau>((1 / (alpha_n (v Q10) + beta_n (v Q10))))</B:m_tau>
+                    </B:hh_ionic_gate>
+                </B:Component>
+                <B:Component type="pore">
+                    <B:Assignment name="gbar">
+                        <B:rhs>g</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="gbar"/>
+                </B:Component>
+                <B:Component type="permeating-ion" name="k">
+                    <B:Assignment name="e">
+                        <B:unit>mV</B:unit>
+                        <B:rhs>(nernst (celsius ki ko 1))</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="e"/>
+                </B:Component>
+            </B:ComponentClass>
+            <B:ComponentClass type="ionic-current" name="KVdef">
+                <B:Interface>
+                    <B:Parameter name="Aalpha_n"/>
+                    <B:Parameter name="Kalpha_n"/>
+                    <B:Parameter name="V0alpha_n"/>
+                    <B:Parameter name="Abeta_n"/>
+                    <B:Parameter name="Kbeta_n"/>
+                    <B:Parameter name="V0beta_n"/>
+                    <B:Parameter name="g"/>
+                </B:Interface>
+                <B:AnalogPort mode="receive" name="ki" from="ion-pools"/>
+                <B:AnalogPort mode="receive" name="ko" from="ion-pools"/>
+                <B:Alias name="linoid" arguments="x,y">
+                    <B:body>(if ((abs (x / y)) &lt; 1e-06) then (y * (1 - ((x / y) / 2))) else (x /
+                        (exp (x / y) - 1))) 
+                    </B:body>
+                </B:Alias>
+                <B:Component type="gate">
+                    <B:Assignment name="Q10">
+                        <B:rhs>(pow (3 ((celsius - 6.3) / 10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Alias name="alpha_n" arguments="v,Q10">
+                        <B:body>(Q10 * Aalpha_n * linoid ((v - V0alpha_n) Kalpha_n))</B:body>
+                    </B:Alias>
+                    <B:Alias name="beta_n" arguments="v,Q10">
+                        <B:body>(Q10 * Abeta_n * exp ((v - V0beta_n) / Kbeta_n))</B:body>
+                    </B:Alias>
+                    <B:Assignment name="n_inf">
+                        <B:rhs>((alpha_n (v Q10)) / (alpha_n (v Q10) + beta_n (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_n">
+                        <B:rhs>(1 / (alpha_n (v Q10) + beta_n (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:hh_ionic_gate name="KV">
+                        <B:initial_m>n_inf</B:initial_m>
+                        <B:m_power>4</B:m_power>
+                        <B:h_power>0</B:h_power>
+                        <B:m_inf>(n_inf)</B:m_inf>
+                        <B:m_tau>(tau_n)</B:m_tau>
+                    </B:hh_ionic_gate>
+                </B:Component>
+                <B:Component type="pore">
+                    <B:Assignment name="gbar">
+                        <B:rhs>g</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="gbar"/>
+                </B:Component>
+                <B:Component type="permeating-ion" name="k">
+                    <B:Assignment name="e">
+                        <B:unit>mV</B:unit>
+                        <B:rhs>(nernst (celsius ki ko 1))</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="e"/>
+                </B:Component>
+            </B:ComponentClass>
+            <B:ComponentClass type="ionic-current" name="SK2def">
+                <B:Interface>
+                    <B:Parameter name="diff"/>
+                    <B:Parameter name="invc1"/>
+                    <B:Parameter name="invc2"/>
+                    <B:Parameter name="invc3"/>
+                    <B:Parameter name="invo1"/>
+                    <B:Parameter name="invo2"/>
+                    <B:Parameter name="diro1"/>
+                    <B:Parameter name="diro2"/>
+                    <B:Parameter name="dirc2"/>
+                    <B:Parameter name="dirc3"/>
+                    <B:Parameter name="dirc4"/>
+                    <B:Parameter name="g"/>
+                </B:Interface>
+                <B:AnalogPort mode="receive" name="cai" from="ion-pools"/>
+                <B:AnalogPort mode="receive" name="ki" from="ion-pools"/>
+                <B:AnalogPort mode="receive" name="ko" from="ion-pools"/>
+                <B:Component type="gate">
+                    <B:Assignment name="Q10">
+                        <B:rhs>(pow (3 ((celsius - 23) / 10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="invc1_t">
+                        <B:unit>/ms</B:unit>
+                        <B:rhs>(invc1 * Q10)</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="invc2_t">
+                        <B:unit>/ms</B:unit>
+                        <B:rhs>(invc2 * Q10)</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="invc3_t">
+                        <B:unit>/ms</B:unit>
+                        <B:rhs>(invc3 * Q10)</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="invo1_t">
+                        <B:unit>/ms</B:unit>
+                        <B:rhs>(invo1 * Q10)</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="invo2_t">
+                        <B:unit>/ms</B:unit>
+                        <B:rhs>(invo2 * Q10)</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="diro1_t">
+                        <B:unit>/ms</B:unit>
+                        <B:rhs>(diro1 * Q10)</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="diro2_t">
+                        <B:unit>/ms</B:unit>
+                        <B:rhs>(diro2 * Q10)</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="dirc2_t">
+                        <B:unit>/ms</B:unit>
+                        <B:rhs>(dirc2 * Q10)</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="dirc3_t">
+                        <B:unit>/ms</B:unit>
+                        <B:rhs>(dirc3 * Q10)</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="dirc4_t">
+                        <B:unit>/ms</B:unit>
+                        <B:rhs>(dirc4 * Q10)</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="dirc2_t_ca">
+                        <B:rhs>(dirc2_t * (cai / diff))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="dirc3_t_ca">
+                        <B:rhs>(dirc3_t * (cai / diff))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="dirc4_t_ca">
+                        <B:rhs>(dirc4_t * (cai / diff))</B:rhs>
+                    </B:Assignment>
+                    <B:Reaction variable="SK2_z">
+                        <B:open>o1,o2</B:open>
+                        <B:power>1</B:power>
+                        <B:conserve val="1"> (c1 + c2 + c3 + c4 + o2 + o1)
+                        </B:conserve>
+                        <B:transitions>
+                            <B:transition src="c1" dst="c2">
+                                <B:rate>dirc2_t_ca</B:rate>
+                            </B:transition>
+                            <B:transition src="c2" dst="c1">
+                                <B:rate>invc1_t</B:rate>
+                            </B:transition>
+                            <B:transition src="c2" dst="c3">
+                                <B:rate>dirc3_t_ca</B:rate>
+                            </B:transition>
+                            <B:transition src="c3" dst="c2">
+                                <B:rate>invc2_t</B:rate>
+                            </B:transition>
+                            <B:transition src="c3" dst="c4">
+                                <B:rate>dirc4_t_ca</B:rate>
+                            </B:transition>
+                            <B:transition src="c4" dst="c3">
+                                <B:rate>invc3_t</B:rate>
+                            </B:transition>
+                            <B:transition src="c3" dst="o1">
+                                <B:rate>diro1_t</B:rate>
+                            </B:transition>
+                            <B:transition src="o1" dst="c3">
+                                <B:rate>invo1_t</B:rate>
+                            </B:transition>
+                            <B:transition src="c4" dst="o2">
+                                <B:rate>diro2_t</B:rate>
+                            </B:transition>
+                            <B:transition src="o2" dst="c4">
+                                <B:rate>invo2_t</B:rate>
+                            </B:transition>
+                        </B:transitions>
+                    </B:Reaction>
+                    <B:AnalogPort mode="send" name="SK2_z"/>
+                </B:Component>
+                <B:Component type="pore">
+                    <B:Assignment name="gbar">
+                        <B:rhs>g</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="gbar"/>
+                </B:Component>
+                <B:Component type="permeating-ion" name="k">
+                    <B:Assignment name="e">
+                        <B:unit>mV</B:unit>
+                        <B:rhs>(nernst (celsius ki ko 1))</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="e"/>
+                </B:Component>
+                <B:Component type="modulating-ion" name="ca">
+                </B:Component>
+            </B:ComponentClass>
+            <B:ComponentClass type="ionic-current" name="NaBasedef">
+                <B:Interface>
+                    <B:Parameter name="Aalpha_u"/>
+                    <B:Parameter name="Kalpha_u"/>
+                    <B:Parameter name="V0alpha_u"/>
+                    <B:Parameter name="Abeta_u"/>
+                    <B:Parameter name="Kbeta_u"/>
+                    <B:Parameter name="V0beta_u"/>
+                    <B:Parameter name="Aalpha_v"/>
+                    <B:Parameter name="Kalpha_v"/>
+                    <B:Parameter name="V0alpha_v"/>
+                    <B:Parameter name="Abeta_v"/>
+                    <B:Parameter name="Kbeta_v"/>
+                    <B:Parameter name="V0beta_v"/>
+                    <B:Parameter name="g"/>
+                </B:Interface>
+                <B:AnalogPort mode="receive" name="nai" from="ion-pools"/>
+                <B:AnalogPort mode="receive" name="nao" from="ion-pools"/>
+                <B:Alias name="linoid" arguments="x,y">
+                    <B:body>(if ((abs (x / y)) &lt; 1e-06) then (y * (1 - ((x / y) / 2))) else (x /
+                        (1 - exp (x / y)))) 
+                    </B:body>
+                </B:Alias>
+                <B:Component type="gate">
+                    <B:Assignment name="Q10">
+                        <B:rhs>(pow (3 ((celsius - 20) / 10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Alias name="alpha_u" arguments="v,Q10">
+                        <B:body>(Q10 * Aalpha_u * linoid ((v - V0alpha_u) Kalpha_u))</B:body>
+                    </B:Alias>
+                    <B:Alias name="beta_u" arguments="v,Q10">
+                        <B:body>(Q10 * Abeta_u * exp ((v - V0beta_u) / Kbeta_u))</B:body>
+                    </B:Alias>
+                    <B:Alias name="alpha_v" arguments="v,Q10">
+                        <B:body>(Q10 * Aalpha_v * exp ((v - V0alpha_v) / Kalpha_v))</B:body>
+                    </B:Alias>
+                    <B:Alias name="beta_v" arguments="v,Q10">
+                        <B:body>(Q10 * Abeta_v / (1 + exp ((v - V0beta_v) / Kbeta_v)))</B:body>
+                    </B:Alias>
+                    <B:Assignment name="u_inf">
+                        <B:rhs>((alpha_u (v Q10)) / (alpha_u (v Q10) + beta_u (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_u">
+                        <B:rhs>(1 / (alpha_u (v Q10) + beta_u (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="v_inf">
+                        <B:rhs>((alpha_v (v Q10)) / (alpha_v (v Q10) + beta_v (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_v">
+                        <B:rhs>(1 / (alpha_v (v Q10) + beta_v (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:hh_ionic_gate name="Na">
+                        <B:initial_m>(u_inf)</B:initial_m>
+                        <B:initial_h>(v_inf)</B:initial_h>
+                        <B:m_power>3</B:m_power>
+                        <B:h_power>1</B:h_power>
+                        <B:m_inf>(u_inf)</B:m_inf>
+                        <B:m_tau>(tau_u)</B:m_tau>
+                        <B:h_inf>(v_inf)</B:h_inf>
+                        <B:h_tau>(tau_v)</B:h_tau>
+                    </B:hh_ionic_gate>
+                </B:Component>
+                <B:Component type="pore">
+                    <B:Assignment name="gbar">
+                        <B:rhs>g</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="gbar"/>
+                </B:Component>
+                <B:Component type="permeating-ion" name="na">
+                    <B:Assignment name="e">
+                        <B:unit>mV</B:unit>
+                        <B:rhs>(nernst (celsius nai nao 1))</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="e"/>
+                </B:Component>
+            </B:ComponentClass>
+            <B:ComponentClass type="ionic-current" name="NaPdef">
+                <B:Interface>
+                    <B:Parameter name="Aalpha_m"/>
+                    <B:Parameter name="Kalpha_m"/>
+                    <B:Parameter name="V0alpha_m"/>
+                    <B:Parameter name="Abeta_m"/>
+                    <B:Parameter name="Kbeta_m"/>
+                    <B:Parameter name="V0beta_m"/>
+                    <B:Parameter name="V0_minf"/>
+                    <B:Parameter name="B_minf"/>
+                    <B:Parameter name="g"/>
+                    <B:Parameter name="e"/>
+                </B:Interface>
+                <B:Alias name="linoid" arguments="x,y">
+                    <B:body>(if ((abs (x / y)) &lt; 1e-06) then (y * (1 - ((x / y) / 2))) else (x /
+                        (exp (x / y) - 1))) 
+                    </B:body>
+                </B:Alias>
+                <B:Component type="gate">
+                    <B:Assignment name="Q10">
+                        <B:rhs>(pow (3 ((celsius - 30) / 10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Alias name="alpha_m" arguments="v,Q10">
+                        <B:body>(Q10 * Aalpha_m * linoid ((v - V0alpha_m) Kalpha_m))</B:body>
+                    </B:Alias>
+                    <B:Alias name="beta_m" arguments="v,Q10">
+                        <B:body>(Q10 * Abeta_m * linoid ((v - V0beta_m) Kbeta_m))</B:body>
+                    </B:Alias>
+                    <B:hh_ionic_gate name="NaP">
+                        <B:initial_m>((1 / (1 + exp ((neg (v - V0_minf)) / B_minf))))</B:initial_m>
+                        <B:m_power>1</B:m_power>
+                        <B:h_power>0</B:h_power>
+                        <B:m_inf>((1 / (1 + exp ((neg (v - V0_minf)) / B_minf))))</B:m_inf>
+                        <B:m_tau>((5 / (alpha_m (v Q10) + beta_m (v Q10))))</B:m_tau>
+                    </B:hh_ionic_gate>
+                </B:Component>
+                <B:Component type="pore">
+                    <B:Assignment name="gbar">
+                        <B:rhs>g</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="gbar"/>
+                </B:Component>
+                <B:Component type="permeating-ion" name="na">
+                    <B:Assignment name="erev">
+                        <B:rhs>e</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="erev"/>
+                </B:Component>
+            </B:ComponentClass>
+            <B:ComponentClass type="ionic-current" name="NaRdef">
+                <B:Interface>
+                    <B:Parameter name="Aalpha_s"/>
+                    <B:Parameter name="V0alpha_s"/>
+                    <B:Parameter name="Kalpha_s"/>
+                    <B:Parameter name="Shiftalpha_s"/>
+                    <B:Parameter name="Abeta_s"/>
+                    <B:Parameter name="V0beta_s"/>
+                    <B:Parameter name="Kbeta_s"/>
+                    <B:Parameter name="Shiftbeta_s"/>
+                    <B:Parameter name="Aalpha_f"/>
+                    <B:Parameter name="V0alpha_f"/>
+                    <B:Parameter name="Kalpha_f"/>
+                    <B:Parameter name="Abeta_f"/>
+                    <B:Parameter name="V0beta_f"/>
+                    <B:Parameter name="Kbeta_f"/>
+                    <B:Parameter name="g"/>
+                </B:Interface>
+                <B:AnalogPort mode="receive" name="nai" from="ion-pools"/>
+                <B:AnalogPort mode="receive" name="nao" from="ion-pools"/>
+                <B:Component type="gate">
+                    <B:Assignment name="Q10">
+                        <B:rhs>(pow (3 ((celsius - 20) / 10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Alias name="alpha_s" arguments="v,Q10">
+                        <B:body>(Q10 * (Shiftalpha_s + ((Aalpha_s * ((v + V0alpha_s))) / (exp ((v +
+                            V0alpha_s) / Kalpha_s) - 1))))
+                        </B:body>
+                    </B:Alias>
+                    <B:Alias name="beta_s" arguments="v,Q10">
+                        <B:body>(let ((x1 ((v + V0beta_s) / Kbeta_s))) (Q10 * (Shiftbeta_s + Abeta_s
+                            * ((v + V0beta_s) / (exp ((if (x1 &gt; 200) then 200 else x1)) - 1))))) 
+                        </B:body>
+                    </B:Alias>
+                    <B:Alias name="alpha_f" arguments="v,Q10">
+                        <B:body>(Q10 * Aalpha_f * exp ((v - V0alpha_f) / Kalpha_f))</B:body>
+                    </B:Alias>
+                    <B:Alias name="beta_f" arguments="v,Q10">
+                        <B:body>(Q10 * Abeta_f * exp ((v - V0beta_f) / Kbeta_f))</B:body>
+                    </B:Alias>
+                    <B:Assignment name="s_inf">
+                        <B:rhs>((alpha_s (v Q10)) / (alpha_s (v Q10) + beta_s (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_s">
+                        <B:rhs>(1 / (alpha_s (v Q10) + beta_s (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="f_inf">
+                        <B:rhs>((alpha_f (v Q10)) / (alpha_f (v Q10) + beta_f (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:Assignment name="tau_f">
+                        <B:rhs>(1 / (alpha_f (v Q10) + beta_f (v Q10)))</B:rhs>
+                    </B:Assignment>
+                    <B:hh_ionic_gate name="NaR">
+                        <B:initial_m>(s_inf)</B:initial_m>
+                        <B:initial_h>(f_inf)</B:initial_h>
+                        <B:m_power>1</B:m_power>
+                        <B:h_power>1</B:h_power>
+                        <B:m_inf>(s_inf)</B:m_inf>
+                        <B:m_tau>(tau_s)</B:m_tau>
+                        <B:h_inf>(f_inf)</B:h_inf>
+                        <B:h_tau>(tau_f)</B:h_tau>
+                    </B:hh_ionic_gate>
+                </B:Component>
+                <B:Component type="pore">
+                    <B:Assignment name="gbar">
+                        <B:rhs>g</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="gbar"/>
+                </B:Component>
+                <B:Component type="permeating-ion" name="na">
+                    <B:Assignment name="e">
+                        <B:unit>mV</B:unit>
+                        <B:rhs>(nernst (celsius nai nao 1))</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="e"/>
+                </B:Component>
+            </B:ComponentClass>
+            <B:ComponentClass type="ionic-current" name="Lkgdef">
+                <B:Interface>
+                    <B:Parameter name="g"/>
+                    <B:Parameter name="e_rev"/>
+                </B:Interface>
+                <B:Component type="pore">
+                    <B:Parameter name="gbar">
+                        <B:value>g</B:value>
+                    </B:Parameter>
+                    <B:AnalogPort mode="send" name="gbar"/>
+                </B:Component>
+                <B:Component type="permeating-ion" name="non-specific">
+                    <B:Assignment name="erev">
+                        <B:rhs>e_rev</B:rhs>
+                    </B:Assignment>
+                    <B:AnalogPort mode="send" name="erev"/>
+                </B:Component>
+            </B:ComponentClass>
+            <B:Component name="ca" definition="cadef">
+                <B:properties>
+                    <B:Parameter name="d">
+                        <B:unit>um</B:unit>
+                        <B:value>0.2</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="cao">
+                        <B:unit>mM</B:unit>
+                        <B:value>2.0</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="cai0">
+                        <B:unit>mM</B:unit>
+                        <B:value>5e-05</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="beta">
+                        <B:unit>/ms</B:unit>
+                        <B:value>1.3</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="ca2" definition="ca2def">
+                <B:properties>
+                    <B:Parameter name="d">
+                        <B:unit>um</B:unit>
+                        <B:value>0.2</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="ca2o">
+                        <B:unit>mM</B:unit>
+                        <B:value>2.0</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="ca2i0">
+                        <B:unit>mM</B:unit>
+                        <B:value>5e-05</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="beta">
+                        <B:unit>/ms</B:unit>
+                        <B:value>1.3</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="na" definition="nadef">
+                <B:properties>
+                    <B:Parameter name="d">
+                        <B:unit>um</B:unit>
+                        <B:value>0.2</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="nao0">
+                        <B:unit>mM</B:unit>
+                        <B:value>140.0</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="nai0">
+                        <B:unit>mM</B:unit>
+                        <B:value>5.0</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="beta">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.075</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="k" definition="kdef">
+                <B:properties>
+                    <B:Parameter name="d">
+                        <B:unit>um</B:unit>
+                        <B:value>0.2</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="ko0">
+                        <B:unit>mM</B:unit>
+                        <B:value>5.0</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="ki0">
+                        <B:unit>mM</B:unit>
+                        <B:value>140.0</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="beta">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.075</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="AMPA" definition="AMPAdef">
+                <B:properties>
+                    <B:Parameter name="tauA">
+                        <B:unit>ms</B:unit>
+                        <B:value>0.03</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="tauB">
+                        <B:unit>ms</B:unit>
+                        <B:value>0.5</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="e">
+                        <B:unit>mV</B:unit>
+                        <B:value>0</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="CaHVA" definition="CaHVAdef">
+                <B:properties>
+                    <B:Parameter name="Aalpha_s">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.04944</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kalpha_s">
+                        <B:unit>mV</B:unit>
+                        <B:value>15.87301587302</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0alpha_s">
+                        <B:unit>mV</B:unit>
+                        <B:value>-29.06</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Abeta_s">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.08298</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kbeta_s">
+                        <B:unit>mV</B:unit>
+                        <B:value>-25.641</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0beta_s">
+                        <B:unit>mV</B:unit>
+                        <B:value>-18.66</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Aalpha_u">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.0013</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kalpha_u">
+                        <B:unit>mV</B:unit>
+                        <B:value>-18.183</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0alpha_u">
+                        <B:unit>mV</B:unit>
+                        <B:value>-48</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Abeta_u">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.0013</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kbeta_u">
+                        <B:unit>mV</B:unit>
+                        <B:value>83.33</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0beta_u">
+                        <B:unit>mV</B:unit>
+                        <B:value>-48</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="g">
+                        <B:unit>S/cm2</B:unit>
+                        <B:value>0.00046</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="CaLVA" definition="CaLVAdef">
+                <B:properties>
+                    <B:Parameter name="shift">
+                        <B:unit>mV</B:unit>
+                        <B:value>2</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="v0_m_inf">
+                        <B:unit>mV</B:unit>
+                        <B:value>-50</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="v0_h_inf">
+                        <B:unit>mV</B:unit>
+                        <B:value>-78</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="k_m_inf">
+                        <B:unit>mV</B:unit>
+                        <B:value>-7.4</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="k_h_inf">
+                        <B:unit>mV</B:unit>
+                        <B:value>5.0</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="C_tau_m">
+                        <B:value>3</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="A_tau_m">
+                        <B:value>1.0</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="v0_tau_m1">
+                        <B:unit>mV</B:unit>
+                        <B:value>-25</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="v0_tau_m2">
+                        <B:unit>mV</B:unit>
+                        <B:value>-100</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="k_tau_m1">
+                        <B:unit>mV</B:unit>
+                        <B:value>10</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="k_tau_m2">
+                        <B:unit>mV</B:unit>
+                        <B:value>-15</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="C_tau_h">
+                        <B:value>85</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="A_tau_h">
+                        <B:unit>mV</B:unit>
+                        <B:value>1.0</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="v0_tau_h1">
+                        <B:unit>mV</B:unit>
+                        <B:value>-46</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="v0_tau_h2">
+                        <B:unit>mV</B:unit>
+                        <B:value>-405</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="k_tau_h1">
+                        <B:unit>mV</B:unit>
+                        <B:value>4</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="k_tau_h2">
+                        <B:unit>mV</B:unit>
+                        <B:value>-50</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="g">
+                        <B:unit>S/cm2</B:unit>
+                        <B:value>0.00025</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="HCN1" definition="HCN1def">
+                <B:properties>
+                    <B:Parameter name="Ehalf">
+                        <B:unit>mV</B:unit>
+                        <B:value>-72.49</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="c">
+                        <B:unit>/mV</B:unit>
+                        <B:value>0.11305</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="rA">
+                        <B:unit>/mV</B:unit>
+                        <B:value>0.002096</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="rB">
+                        <B:value>0.97596</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="tCs">
+                        <B:value>0.01451</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="tDs">
+                        <B:unit>mV</B:unit>
+                        <B:value>-4.056</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="tEs">
+                        <B:unit>/mV</B:unit>
+                        <B:value>2.302585092</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="tCf">
+                        <B:value>0.01371</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="tDf">
+                        <B:unit>mV</B:unit>
+                        <B:value>-3.368</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="tEf">
+                        <B:unit>/mV</B:unit>
+                        <B:value>2.302585092</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="g">
+                        <B:unit>S/cm2</B:unit>
+                        <B:value>5e-05</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="e">
+                        <B:unit>mV</B:unit>
+                        <B:value>-20</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="HCN2" definition="HCN2def">
+                <B:properties>
+                    <B:Parameter name="Ehalf">
+                        <B:unit>mV</B:unit>
+                        <B:value>-81.95</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="c">
+                        <B:unit>/mV</B:unit>
+                        <B:value>0.1661</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="rA">
+                        <B:unit>/mV</B:unit>
+                        <B:value>-0.0227</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="rB">
+                        <B:value>-1.4694</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="tCs">
+                        <B:value>0.0152</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="tDs">
+                        <B:unit>mV</B:unit>
+                        <B:value>-5.2944</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="tEs">
+                        <B:unit>/mV</B:unit>
+                        <B:value>2.3026</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="tCf">
+                        <B:value>0.0269</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="tDf">
+                        <B:unit>mV</B:unit>
+                        <B:value>-5.6111</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="tEf">
+                        <B:unit>/mV</B:unit>
+                        <B:value>2.3026</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="g">
+                        <B:unit>S/cm2</B:unit>
+                        <B:value>8e-05</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="e">
+                        <B:unit>mV</B:unit>
+                        <B:value>-20</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="KA" definition="KAdef">
+                <B:properties>
+                    <B:Parameter name="Aalpha_a">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.8147</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kalpha_a">
+                        <B:unit>mV</B:unit>
+                        <B:value>-23.32708</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0alpha_a">
+                        <B:unit>mV</B:unit>
+                        <B:value>-9.17203</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Abeta_a">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.1655</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kbeta_a">
+                        <B:unit>mV</B:unit>
+                        <B:value>19.47175</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0beta_a">
+                        <B:unit>mV</B:unit>
+                        <B:value>-18.27914</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Aalpha_b">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.0368</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kalpha_b">
+                        <B:unit>mV</B:unit>
+                        <B:value>12.8433</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0alpha_b">
+                        <B:unit>mV</B:unit>
+                        <B:value>-111.33209</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Abeta_b">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.0345</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kbeta_b">
+                        <B:unit>mV</B:unit>
+                        <B:value>-8.90123</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0beta_b">
+                        <B:unit>mV</B:unit>
+                        <B:value>-49.9537</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0_ainf">
+                        <B:unit>mV</B:unit>
+                        <B:value>-38</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="K_ainf">
+                        <B:unit>mV</B:unit>
+                        <B:value>-17</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0_binf">
+                        <B:unit>mV</B:unit>
+                        <B:value>-78.8</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="K_binf">
+                        <B:unit>mV</B:unit>
+                        <B:value>8.4</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="g">
+                        <B:unit>S/cm2</B:unit>
+                        <B:value>0.008</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="KCa" definition="KCadef">
+                <B:properties>
+                    <B:Parameter name="Aalpha_c">
+                        <B:unit>/ms</B:unit>
+                        <B:value>7</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Balpha_c">
+                        <B:unit>mM</B:unit>
+                        <B:value>0.0015</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kalpha_c">
+                        <B:unit>mV</B:unit>
+                        <B:value>-11.765</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Abeta_c">
+                        <B:unit>/ms</B:unit>
+                        <B:value>1.0</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Bbeta_c">
+                        <B:unit>mM</B:unit>
+                        <B:value>0.00015</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kbeta_c">
+                        <B:unit>mV</B:unit>
+                        <B:value>-11.765</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="g">
+                        <B:unit>S/cm2</B:unit>
+                        <B:value>0.003</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="KM" definition="KMdef">
+                <B:properties>
+                    <B:Parameter name="Aalpha_n">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.0033</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kalpha_n">
+                        <B:unit>mV</B:unit>
+                        <B:value>40</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0alpha_n">
+                        <B:unit>mV</B:unit>
+                        <B:value>-30</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Abeta_n">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.0033</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kbeta_n">
+                        <B:unit>mV</B:unit>
+                        <B:value>-20</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0beta_n">
+                        <B:unit>mV</B:unit>
+                        <B:value>-30</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0_ninf">
+                        <B:unit>mV</B:unit>
+                        <B:value>-35</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="B_ninf">
+                        <B:unit>mV</B:unit>
+                        <B:value>6</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="g">
+                        <B:unit>S/cm2</B:unit>
+                        <B:value>0.001</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="KV" definition="KVdef">
+                <B:properties>
+                    <B:Parameter name="Aalpha_n">
+                        <B:unit>/mV-ms</B:unit>
+                        <B:value>-0.01</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kalpha_n">
+                        <B:unit>mV</B:unit>
+                        <B:value>-10</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0alpha_n">
+                        <B:unit>mV</B:unit>
+                        <B:value>-26</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Abeta_n">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.125</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kbeta_n">
+                        <B:unit>mV</B:unit>
+                        <B:value>-80</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0beta_n">
+                        <B:unit>mV</B:unit>
+                        <B:value>-36</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="g">
+                        <B:unit>S/cm2</B:unit>
+                        <B:value>0.032</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="SK2" definition="SK2def">
+                <B:properties>
+                    <B:Parameter name="diff">
+                        <B:value>3</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="invc1">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.08</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="invc2">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.08</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="invc3">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.2</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="invo1">
+                        <B:unit>/ms</B:unit>
+                        <B:value>1</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="invo2">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.1</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="diro1">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.16</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="diro2">
+                        <B:unit>/ms</B:unit>
+                        <B:value>1.2</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="dirc2">
+                        <B:unit>/ms</B:unit>
+                        <B:value>200</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="dirc3">
+                        <B:unit>/ms</B:unit>
+                        <B:value>160</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="dirc4">
+                        <B:unit>/ms</B:unit>
+                        <B:value>80</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="g">
+                        <B:unit>S/cm2</B:unit>
+                        <B:value>0.038</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="NaBase" definition="NaBasedef">
+                <B:properties>
+                    <B:Parameter name="Aalpha_u">
+                        <B:unit>/mV-ms</B:unit>
+                        <B:value>0.3</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kalpha_u">
+                        <B:unit>mV</B:unit>
+                        <B:value>-10</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0alpha_u">
+                        <B:unit>mV</B:unit>
+                        <B:value>-25</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Abeta_u">
+                        <B:unit>/ms</B:unit>
+                        <B:value>12</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kbeta_u">
+                        <B:unit>mV</B:unit>
+                        <B:value>-18.182</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0beta_u">
+                        <B:unit>mV</B:unit>
+                        <B:value>-50</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Aalpha_v">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.21</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kalpha_v">
+                        <B:unit>mV</B:unit>
+                        <B:value>-3.333</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0alpha_v">
+                        <B:unit>mV</B:unit>
+                        <B:value>-50</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Abeta_v">
+                        <B:unit>/ms</B:unit>
+                        <B:value>3</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kbeta_v">
+                        <B:unit>mV</B:unit>
+                        <B:value>-5</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0beta_v">
+                        <B:unit>mV</B:unit>
+                        <B:value>-17</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="g">
+                        <B:unit>S/cm2</B:unit>
+                        <B:value>0.048</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="NaP" definition="NaPdef">
+                <B:properties>
+                    <B:Parameter name="Aalpha_m">
+                        <B:value>-0.91</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kalpha_m">
+                        <B:value>-5</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0alpha_m">
+                        <B:value>-40</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Abeta_m">
+                        <B:value>0.62</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kbeta_m">
+                        <B:value>5</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0beta_m">
+                        <B:value>-40</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0_minf">
+                        <B:value>-43</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="B_minf">
+                        <B:value>5</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="g">
+                        <B:value>0.00019</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="e">
+                        <B:value>87.39</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="NaR" definition="NaRdef">
+                <B:properties>
+                    <B:Parameter name="Aalpha_s">
+                        <B:unit>/ms</B:unit>
+                        <B:value>-0.00493</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0alpha_s">
+                        <B:unit>mV</B:unit>
+                        <B:value>-4.48754</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kalpha_s">
+                        <B:unit>mV</B:unit>
+                        <B:value>-6.81881</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Shiftalpha_s">
+                        <B:unit>/ms</B:unit>
+                        <B:value>8e-05</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Abeta_s">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.01558</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0beta_s">
+                        <B:unit>mV</B:unit>
+                        <B:value>43.97494</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kbeta_s">
+                        <B:unit>mV</B:unit>
+                        <B:value>0.10818</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Shiftbeta_s">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.04752</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Aalpha_f">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.31836</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0alpha_f">
+                        <B:unit>mV</B:unit>
+                        <B:value>-80</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kalpha_f">
+                        <B:unit>mV</B:unit>
+                        <B:value>-62.52621</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Abeta_f">
+                        <B:unit>/ms</B:unit>
+                        <B:value>0.01014</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="V0beta_f">
+                        <B:unit>mV</B:unit>
+                        <B:value>-83.3332</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="Kbeta_f">
+                        <B:unit>mV</B:unit>
+                        <B:value>16.05379</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="g">
+                        <B:unit>S/cm2</B:unit>
+                        <B:value>0.0017</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:Component name="Lkg" definition="Lkgdef">
+                <B:properties>
+                    <B:Parameter name="g">
+                        <B:value>(2.1e-05)</B:value>
+                    </B:Parameter>
+                    <B:Parameter name="e_rev">
+                        <B:value>-55</B:value>
+                    </B:Parameter>
+                </B:properties>
+            </B:Component>
+            <B:BuildHints>
+                <B:Builder name="nemo">
+                    <B:Simulator name="neuron">
+                        <B:Method>derivimplicit</B:Method>
+                        <B:KineticComponent>SK2_z</B:KineticComponent>
+                    </B:Simulator>
+                    <B:Simulator name="nest">
+                        <B:Method>gsl</B:Method>
+                    </B:Simulator>
+                </B:Builder>
+            </B:BuildHints>
+        </B:Biophysics>
+    </ComponentClass>
+</nineml>
