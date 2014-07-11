@@ -3,12 +3,12 @@ try:
 except ImportError:
     import unittest
 import os.path
-from lxml import etree
 import nineml.extensions.biophysical_cells
 from nineline.cells import Tree
 
 nineml = os.path.join(os.path.dirname(__file__), '..', 'data', '9ml',
                          'Golgi_Solinas08.9ml')
+
 
 class Test9mlConversion(unittest.TestCase):
 
