@@ -54,7 +54,7 @@ class NineCellMetaClass(type):
         pass
 
 
-class Segment(SNode2):
+class SegmentModel(SNode2):
 
     @classmethod
     def from_9ml(cls, nineml):
@@ -70,7 +70,7 @@ class Segment(SNode2):
         return seg
 
     def __init__(self, name, point, diameter, classes=None):
-        super(Segment, self).__init__(name)
+        super(SegmentModel, self).__init__(name)
         p3d = P3D2(xyz=point, radius=(diameter / 2.0))
         self.set_content({'p3d': p3d,
                           'classes': classes if classes else set()})
@@ -195,7 +195,7 @@ class Segment(SNode2):
         parent = self.get_parent_node()
         # Check to see whether the parent of this node is the root node in
         # which case return None or whether it is another get_segment
-        return parent if isinstance(parent, Segment) else None
+        return parent if isinstance(parent, SegmentModel) else None
 
     @parent.setter
     def parent(self, parent):
@@ -258,7 +258,7 @@ class Segment(SNode2):
         return seg
 
 
-class SegmentClass(object):
+class SegmentClassModel(object):
     """
     A class of segments
     """
@@ -357,7 +357,7 @@ class SegmentClass(object):
                                         self.name, seg_cls.name))
 
 
-class Tree(STree2):
+class TreeModel(STree2):
 
     @classmethod
     def from_9ml(cls, model9ml):
@@ -374,13 +374,13 @@ class Tree(STree2):
         root.set_content({'p3d': root_point})
         tree.set_root(root)
         # Add the root get_segment and link with root node
-        tree.root_segment = Segment.from_9ml(morph9ml.root_segment)
+        tree.root_segment = SegmentModel.from_9ml(morph9ml.root_segment)
         tree.add_node_with_parent(tree.root_segment, tree.get_root())
         seg_lookup = {tree.root_segment.name: tree.root_segment}
         # Initially create all the segments and add them to a lookup dictionary
         for seg_9ml in morph9ml.segments.itervalues():
             if seg_9ml != morph9ml.root_segment:
-                seg_lookup[seg_9ml.name] = Segment.from_9ml(seg_9ml)
+                seg_lookup[seg_9ml.name] = SegmentModel.from_9ml(seg_9ml)
         # Then link together all the parents and children
         for seg_9ml in morph9ml.segments.itervalues():
             if seg_9ml != morph9ml.root_segment:
@@ -388,7 +388,7 @@ class Tree(STree2):
                 segment = seg_lookup[seg_9ml.name]
                 tree.add_node_with_parent(segment, parent)
         # Add the default get_segment class to which all segments belong
-        tree.segment_classes = {None: SegmentClass(None, tree)}
+        tree.segment_classes = {None: SegmentClassModel(None, tree)}
         for classification in morph9ml.classifications.itervalues():
             for class_9ml in classification.classes.itervalues():
                 seg_class = tree.add_segment_class(class_9ml.name)
@@ -437,7 +437,7 @@ class Tree(STree2):
         """
         Adds a new get_segment class
         """
-        self.segment_classes[name] = seg_class = SegmentClass(name, self)
+        self.segment_classes[name] = seg_class = SegmentClassModel(name, self)
         return seg_class
 
     def remove_segment_class(self, name):
@@ -517,7 +517,7 @@ class Tree(STree2):
                 # If the classes are the same between parent and the new
                 # segment treat them as one
                 disp = parent.disp * (average_length / parent.length)
-                segment = Segment(name, parent.distal + disp, diameter,
+                segment = SegmentModel(name, parent.distal + disp, diameter,
                                   classes=seg_classes)
                 # Remove old branches from list
                 for branch in siblings:
@@ -568,7 +568,7 @@ class Tree(STree2):
                 for i in xrange(num_segments):
                     name = base_name + '_' + str(i)
                     distal = branch[0].proximal + seg_disp * (i + 1)
-                    segment = Segment(name, distal, diameter,
+                    segment = SegmentModel(name, distal, diameter,
                                       classes=seg_classes)
                     previous_segment.add_child(segment)
                     segment.set_parent_node(previous_segment)
