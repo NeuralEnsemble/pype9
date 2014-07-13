@@ -130,7 +130,7 @@ class Model(STree2, ModelBase):
             for class_9ml in classification.classes.itervalues():
                 seg_class = model.add_segment_class(class_9ml.name)
                 for member in class_9ml.members:
-                    seg_lookup[member.segment_name].add_class(seg_class)
+                    seg_lookup[member.segment_name].add_to_class(seg_class)
         model.biophysics = {}
         # Add biophysical components
         for name, comp in bio9ml.components.iteritems():
@@ -295,8 +295,10 @@ class Model(STree2, ModelBase):
                                   len(siblings))
                 total_surface_area = numpy.sum(seg.length * seg.diameter
                                                for seg in chain(*siblings))
-                axial_resistance = 1.0 / numpy.sum(1.0 / seg.Ra
-                                                   for seg in chain(*siblings))
+                axial_cond = 0.0
+                for branch in siblings:
+                    axial_cond += 1.0 / numpy.sum(seg.Ra for seg in branch)
+                axial_resistance = 1.0 / axial_cond
                 diameter = total_surface_area / average_length
                 sorted_names = sorted([s[0].name for s in siblings])
                 name = sorted_names[0]
@@ -309,7 +311,7 @@ class Model(STree2, ModelBase):
                 # segment treat them as one
                 disp = parent.disp * (average_length / parent.length)
                 segment = SegmentModel(name, parent.distal + disp, diameter,
-                                  classes=seg_classes)
+                                       classes=seg_classes)
                 # Remove old branches from list
                 for branch in siblings:
                     self.remove_node(branch[0])
@@ -336,8 +338,8 @@ class Model(STree2, ModelBase):
                 cm = 0.0 * pq.uF / (pq.cm ** 2)
                 for seg in branch:
                     diameter += seg.diameter * seg.length
-                    Ra += seg.get_property('Ra') * seg.length
-                    cm += seg.get_property('cm') * seg.length
+                    Ra += seg.Ra * seg.length
+                    cm += seg.cm * seg.length
                 diameter /= branch_length
                 Ra /= branch_length
                 cm /= branch_length
@@ -452,25 +454,30 @@ class SegmentModel(SNode2, ModelBase):
     def classes(self):
         return self.get_content()['classes']
 
-    def add_class(self, segment_class):
+    def add_to_class(self, segment_class):
         seg_classes = self.get_content()['classes']
         seg_classes.add(segment_class)
         # Also add the default class for the given class, bit of a hack
         seg_classes.add(segment_class._tree.segment_classes[None])
 
     def get_property(self, name):
-        prop = None
-        for seg_cls in self.classes:
-            try:
-                prop = seg_cls._properties[name]
-            except KeyError:
-                pass
-        if prop is None:
-            raise AttributeError("Property '{}' is not defined in any of "
-                                 " the get_segment's classes ('{}')"
-                                 .format(name, ', '.join([str(c)
-                                                      for c in self.classes])))
-        return prop
+        return self.class_that_defines_property(name)[name]
+
+    def class_that_defines_property(self, name):
+        seg_clss = [c for c in self.classes if name in c.properties]
+        assert len(seg_clss) < 2, "Property '{}' occurs in multiple classes "\
+                                  "('{}') of segment '{}'"\
+                                  .format(name,
+                                          "', '".join([str(c)
+                                                       for c in seg_clss]),
+                                          self.name)
+        if not seg_clss:
+            raise Exception("'{}' property was not found in any of the classes"
+                            " ('{}') of segment '{}'"
+                            .format(name, "', '".join([str(c)
+                                                       for c in self.classes]),
+                                    self.name))
+        return seg_clss[0]
 
     @property
     def distal(self):
@@ -652,7 +659,8 @@ class SegmentClassModel(ModelBase):
             raise Exception("Attribute named '{}' is already "
                             "associated with this class"
                             .format(name))
-        # This check is done to protect the 'get_property' in the Segment class
+        # This check is done to protect the 'get_property' in the Segment
+        # class
         if prop is None:
             raise Exception("Cannot add properties with value 'None'")
         self._properties[name] = prop
@@ -662,7 +670,8 @@ class SegmentClassModel(ModelBase):
         if name not in self._properties:
             raise Exception("Segment class does not have property '{}'"
                             .format(name))
-        # This check is done to protect the 'get_property' in the Segment class
+        # This check is done to protect the 'get_property' in the Segment
+        # class
         if prop is None:
             raise Exception("Cannot add properties with value 'None'")
         self._properties[name] = prop
@@ -687,6 +696,20 @@ class SegmentClassModel(ModelBase):
     def remove_members(self, segments):
         for seg in segments:
             seg.get_contents()['classes'].remove(self)
+
+    def split_on_properties(self, properties, new_class_members):
+        if not all(p in self._properties for p in properties):
+            raise Exception("Properties need to be owned by class")
+        if not all(m in self.members for m in new_class_members):
+            raise Exception("New class members need to be part of class")
+        prop_string = '_'.join(p.name for p in properties)
+        new_class1 = SegmentClassModel(self.name + '_' + prop_string + '1',
+                                       self._tree)
+        new_class2 = SegmentClassModel(self.name + '_' + prop_string + '2',
+                                       self._tree)
+        # bipartite members and add to new classes
+        # remove properties from this class
+        # add propertis to new classes
 
     def _check_for_duplicate_properties(self):
         """
