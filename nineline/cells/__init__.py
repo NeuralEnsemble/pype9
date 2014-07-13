@@ -75,26 +75,7 @@ class NineCellMetaClass(type):
         pass
 
 
-class ModelBase(object):
-
-    def __deepcopy__(self, memo):
-        """
-        Override the __deepcopy__ method to avoid copying the source, which
-        should stay constant so it can be compared between copies using the
-        'is' keyword
-        """
-        cls = self.__class__
-        result = cls.__new__(cls)
-        memo[id(self)] = result
-        for k, v in self.__dict__.items():
-            if k == '_source':
-                setattr(result, k, copy(v))
-            else:
-                setattr(result, k, deepcopy(v, memo))
-        return result
-
-
-class Model(STree2, ModelBase):
+class Model(STree2):
 
     @classmethod
     def from_9ml(cls, nineml_model):
@@ -212,6 +193,22 @@ class Model(STree2, ModelBase):
     def __init__(self, name, source=None):
         self.name = name
         self._source = source
+
+    def __deepcopy__(self, memo):
+        """
+        Override the __deepcopy__ method to avoid copying the source, which
+        should stay constant so it can be compared between copies using the
+        'is' keyword
+        """
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            if k == '_source':
+                setattr(result, k, copy(v))
+            else:
+                setattr(result, k, deepcopy(v, memo))
+        return result
 
     def to_9ml(self):
         clsf = Classification9ml('default',
@@ -403,7 +400,7 @@ class Model(STree2, ModelBase):
         raise NotImplementedError
 
 
-class SegmentModel(SNode2, ModelBase):
+class SegmentModel(SNode2):
 
     @classmethod
     def from_9ml(cls, nineml_model):
@@ -621,7 +618,7 @@ class SegmentModel(SNode2, ModelBase):
         return seg
 
 
-class SegmentClassModel(ModelBase):
+class SegmentClassModel(object):
     """
     A class of segments
     """
@@ -736,7 +733,7 @@ class SegmentClassModel(ModelBase):
                                         self.name, seg_cls.name))
 
 
-class BiophysicsModel(ModelBase):
+class BiophysicsModel(object):
 
     @classmethod
     def from_9ml(cls, nineml_model, container_name):
@@ -757,21 +754,57 @@ class BiophysicsModel(ModelBase):
         return biophysics
 
     def __init__(self, name, model_type, parameters, import_prefix=''):
+        """
+        `import_prefix -- If a import_prefix is provided, then it is used
+                          as a prefix to the component (eg. if
+                          biophysics_name='Granule' and component_name='CaHVA',
+                          the insert mechanism would be 'Granule_CaHVA'), used
+                          for NCML mechanisms
+        """
         self.name = name
         self.type = model_type
         self.parameters = parameters
-        self.import_prefix = import_prefix
+        self.import_name = import_prefix + self.name
         self._source = None
 
+    def __deepcopy__(self, memo):
+        """
+        Override the __deepcopy__ method to avoid copying the source, which
+        should stay constant so it can be compared between copies using the
+        'is' keyword
+        """
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            if k == '_source':
+                setattr(result, k, copy(v))
+            else:
+                setattr(result, k, deepcopy(v, memo))
+        return result
+
     @property
-    def import_name(self):
+    def members(self):
+        # Check to see if it is the default class to which all segments belong
+        if self.name is None:
+            for seg in self._tree.segments:
+                yield seg
+        else:
+            for seg in self._tree.segments:
+                if self in seg.get_content()['biophysics']:
+                    yield seg
+
+    def add_members(self, segments):
         """
-        If the biophysics_name is provided, then it is used as a prefix to the
-        component (eg. if biophysics_name='Granule' and
-        component_name='CaHVA', the insert mechanism would be
-        'Granule_CaHVA'), used for NCML mechanisms
+        Adds the segments to class
         """
-        return self.import_prefix + self.name
+        for seg in segments:
+            seg.get_contents()['classes'].add(self)
+        self._check_for_duplicate_properties()
+
+    def remove_members(self, segments):
+        for seg in segments:
+            seg.get_contents()['classes'].remove(self)
 
 
 def in_units(quantity, units):
