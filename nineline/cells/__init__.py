@@ -150,6 +150,65 @@ class Model(STree2, ModelBase):
                                                  elec_props.parameters['Ra'])
         return model
 
+    @classmethod
+    def from_psections(cls, filename):
+        """
+        Reads a neuron morphology from the output of a psection() call in hoc
+        and generates a model tree
+
+        `filename` -- path to a file containing the psection() output
+        """
+        segments = {}
+        in_section = False
+        f = open(filename)
+        for line in f:
+            line = line.strip()
+            if not in_section and line.strip():
+                parts = line.split(' ')
+                name = parts[0]
+                attributes = {}
+                components = {}
+                connections = []
+                for key_val in parts[2:]:
+                    key_val = key_val.strip()
+                    if key_val:
+                        key, val = key_val.split('=')
+                        attributes[key] = float(val)
+                in_section = True
+            elif in_section:
+                if line.startswith('}'):
+                    if len(connections) == 0:
+                        parent = None
+                    elif len(connections) == 1:
+                        parent = connections[0]
+                    else:
+                        raise Exception("Segment '{}' has more than one "
+                                        "connection (expected on one 'parent' "
+                                        "segment)")
+                    section = SegmentModel(name, attributes['L'],
+                                           attributes['Ra'],
+                                           components['morphology']['diam'],
+                                           components['capacitance']['cm'],
+                                           parent)
+                    segments[section.name] = section
+                    in_section = False
+                elif line.startswith('insert'):
+                    component_name, parameters = line[6:].strip().split('{')
+                    component = {}
+                    for key_vals in parameters.strip()[:-1].split(' '):
+                        key, val = key_vals.strip().split('=')
+                        component[key] = float(val)
+                    components[component_name.strip()] = component
+                elif line.find('connect') > 0:
+                    parts = line.strip().split(' ')
+                    connections.append(parts[0])
+        # Convert parent references from names to Section objects
+
+        for s in segments.itervalues():
+            if s.parent is not None:
+                s.parent = segments[s.parent]
+        return segments
+
     def __init__(self, name, source=None):
         self.name = name
         self._source = source
@@ -236,6 +295,8 @@ class Model(STree2, ModelBase):
                                   len(siblings))
                 total_surface_area = numpy.sum(seg.length * seg.diameter
                                                for seg in chain(*siblings))
+                axial_resistance = 1.0 / numpy.sum(1.0 / seg.Ra
+                                                   for seg in chain(*siblings))
                 diameter = total_surface_area / average_length
                 sorted_names = sorted([s[0].name for s in siblings])
                 name = sorted_names[0]
@@ -446,6 +507,14 @@ class SegmentModel(SNode2, ModelBase):
     @diameter.setter
     def diameter(self, diameter):
         self.get_content()['p3d'].radius = diameter / 2.0
+
+    @property
+    def Ra(self):
+        return self.get_property('Ra')
+
+    @property
+    def cm(self):
+        return self.get_property('cm')
 
     @property
     def proximal(self):
