@@ -336,14 +336,7 @@ class _BaseNineCell(nineline.cells.NineCell):
         for mapping in self._model._source.mappings:
             for comp_name in mapping.components:
                 component = self._model.biophysics[comp_name]
-                if component.type == 'membrane-capacitance':
-                    cm = convert_to_neuron_units(
-                                    float(component.parameters['cm'].value),
-                                    component.parameters['cm'].unit)[0]
-                    for seg_class in mapping.segments:
-                        for seg in self.segment_classes[seg_class]:
-                            seg.cm = cm
-                elif component.type == 'defaults':
+                if component.type == 'defaults':
                     if ('Ra' not in component.parameters and
                         'C_m' not in component.parameters):
                         raise Exception("Neither 'Ra' or 'C_m' specified in "
