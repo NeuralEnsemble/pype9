@@ -57,6 +57,14 @@
                 <Class>Axon</Class>
             </Segments>
         </Mapping>
+        <Mapping name="Synapses">
+            <Biophysics>
+                <Component>AMPA</Component>
+            </Biophysics>
+            <Segments classification="BasicAnatomy">
+                <Class>Dendrites</Class>
+            </Segments>
+        </Mapping>
         <M:morphology name="WithAxon" xmlns:M="http://www.nineml.org/Morphology">
             <M:segment name="soma">
                 <M:proximal x="0" y="0" z="0" diameter="27"/>
@@ -2218,7 +2226,7 @@
             <B:Component name="KV" definition="KVdef">
                 <B:properties>
                     <B:Parameter name="Aalpha_n">
-                        <B:unit>/mV-ms</B:unit>
+                        <B:unit>/mV</B:unit>
                         <B:value>-0.01</B:value>
                     </B:Parameter>
                     <B:Parameter name="Kalpha_n">
@@ -2301,7 +2309,7 @@
             <B:Component name="NaBase" definition="NaBasedef">
                 <B:properties>
                     <B:Parameter name="Aalpha_u">
-                        <B:unit>/mV-ms</B:unit>
+                        <B:unit>/mV</B:unit>
                         <B:value>0.3</B:value>
                     </B:Parameter>
                     <B:Parameter name="Kalpha_u">

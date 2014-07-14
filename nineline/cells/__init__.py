@@ -217,13 +217,13 @@ class Model(STree2):
         return result
 
     def to_9ml(self):
-        clsf = Classification9ml('default',
-                                 [c.to_9ml()
-                                  for c in self.segment_classes.itervalues()])
+#         clsf = Classification9ml('default',
+#                                  [c.to_9ml()
+#                                  for c in self.segment_classes.itervalues()])
         return Morphology9ml(self.name,
                              dict([(seg.name, seg.to_9ml())
                                    for seg in self.segments]),
-                             {'default': clsf})
+                             {'default': []})
 
     def add_component(self, component):
         self.components[component.name] = component
@@ -258,6 +258,9 @@ class Model(STree2):
         Reduces a 9ml morphology, starting at the most distal branches and
         merging them with their siblings.
         """
+        def get_non_Ra_comps(seg):
+            return set(c for c in seg.components
+                         if not isinstance(c, AxialResistanceModel))
         # Create a complete copy of the morphology to allow it to be reduced
         if only_most_distal:
             # Get the branches at the maximum depth
@@ -269,27 +272,42 @@ class Model(STree2):
                           if not branch[-1].children]
         # Only include branches that have consistent segment_classes
         candidates = [branch for branch in candidates
-                      if all(b.classes == branch[0].classes for b in branch)]
+                      if all(get_non_Ra_comps(b) ==
+                             get_non_Ra_comps(branch[0]) for b in branch)]
         if not candidates:
             raise IrreducibleMorphologyException("Cannot reduce the morphology"
                                                  " further{}. without merging "
                                                  "segment_classes")
         needs_tuning = []
+        # Group together candidates that are "siblings", i.e. have the same
+        # parent and also the same components (excl. Ra)
         sibling_seg_classes = groupby(candidates,
-                                     key=lambda b: (b[0].parent, b[0].classes))
-        for (parent, seg_classes), siblings_iter in sibling_seg_classes:
+                                      key=lambda b: (b[0].parent,
+                                                     get_non_Ra_comps(b[0])))
+        for (parent, non_Ra_components), siblings_iter in sibling_seg_classes:
             siblings = list(siblings_iter)
             if len(siblings) > 1:
+                # Get the combined properties of the segments to be merged
                 average_length = (numpy.sum(seg.length
                                             for seg in chain(*siblings)) /
                                   len(siblings))
                 total_surface_area = numpy.sum(seg.length * seg.diameter
                                                for seg in chain(*siblings))
+                # Calculate the (in-parallel) axial resistance of the branches
+                # to be merged as a starting point for the subsequent tuning
+                # step (see the returned 'needs_tuning' list)
                 axial_cond = 0.0
                 for branch in siblings:
-                    axial_cond += 1.0 / numpy.sum(seg.Ra for seg in branch)
-                axial_resistance = 1.0 / axial_cond
+                    axial_cond += 1.0 / numpy.array([seg.Ra
+                                                     for seg in branch]).sum()
+                axial_resistance = (1.0 / axial_cond) * branch[0].Ra.units
+                # Get the diameter of the merged segment so as to conserve
+                # total membrane surface area given that the length of the
+                # segment is the average of the candidates to be merged.
                 diameter = total_surface_area / average_length
+                # Get a unique name for the generated segments
+                # FIXME: this is not guaranteed to be unique (but should be in
+                # most cases given a sane naming convention)
                 sorted_names = sorted([s[0].name for s in siblings])
                 name = sorted_names[0]
                 if len(branch) > 1:
@@ -300,16 +318,20 @@ class Model(STree2):
                 # If the classes are the same between parent and the new
                 # segment treat them as one
                 disp = parent.disp * (average_length / parent.length)
-                segment = SegmentModel(name, parent.distal + disp, diameter,
-                                       classes=seg_classes)
+                segment = SegmentModel(name, parent.distal + disp, diameter)
                 # Remove old branches from list
                 for branch in siblings:
                     self.remove_node(branch[0])
                 self.add_node_with_parent(segment, parent)
-                # Create new Ra comp to hold the varied axial resistance
+                # Add dynamic components
+                for comp in non_Ra_components:
+                    segment.set_component(comp)
+                # Create new Ra comp to hold the adjusted axial resistance
                 Ra_comp = AxialResistanceModel(name + '_Ra', axial_resistance)
                 self.add_component(Ra_comp)
-                segment.add_component(Ra_comp)
+                segment.set_component(Ra_comp)
+                # Append the Ra component to the 'needs_tuning' list for
+                # subsequent retuning
                 needs_tuning.append(Ra_comp)
         if normalise_sampling:
             self.normalise_spatial_sampling()
@@ -324,9 +346,10 @@ class Model(STree2):
                         (Hz)
         `d_lambda`   -- fraction of the wavelength
         """
-        for branch in list(self.branches):
+        for branch_index, branch in enumerate(list(self.branches)):
             parent = branch[0].parent
             if parent:
+                # Get the branch length
                 branch_length = numpy.sum(seg.length for seg in branch)
                 # Get weighted average of diameter Ra and cm by segment length
                 diameter = 0.0
@@ -339,14 +362,17 @@ class Model(STree2):
                 diameter /= branch_length
                 Ra /= branch_length
                 cm /= branch_length
+                # Calculate the number of required segments via NEURON's
+                # d'lambda rule
                 num_segments = self.d_lambda_rule(branch_length,
                                                   diameter * pq.um,
                                                   Ra, cm, **d_lambda_kwargs)
                 base_name = branch[0].name
                 if len(branch) > 1:
                     base_name += '_' + branch[-1].name
+                # Save the components of the branch to set the new branch with
+                components = list(branch[0].dynamic_components)
                 # Get the direction of the branch
-                seg_classes = branch[0].classes
                 direction = branch[-1].distal - branch[0].proximal
                 disp = direction * (branch_length /
                                     numpy.sqrt(numpy.sum(direction ** 2)))
@@ -355,12 +381,27 @@ class Model(STree2):
                 seg_disp = disp / float(num_segments)
                 previous_segment = parent
                 for i in xrange(num_segments):
+                    # Get new name for segment
                     name = base_name + '_' + str(i)
+                    # Calculate its distal point
                     distal = branch[0].proximal + seg_disp * (i + 1)
-                    segment = SegmentModel(name, distal, diameter,
-                                      classes=seg_classes)
+                    segment = SegmentModel(name, distal, diameter)
+                    # Copy across components to new segment
+                    for comp in components:
+                        segment.set_component(comp)
+                    # Update Ra if required (if it is inconsistent along the
+                    # branch)
+                    if branch[0].Ra != Ra:
+                        Ra_comp = AxialResistanceModel('branch{}_Ra'
+                                                       .format(branch_index),
+                                                       Ra)
+                        self.add_component(Ra_comp)
+                        segment.set_component(Ra_comp, overwrite=True)
+                    # Append the segment to the chain
                     previous_segment.add_child(segment)
                     segment.set_parent_node(previous_segment)
+                    # Increment the 'previous_segment' reference to the current
+                    # segment
                     previous_segment = segment
                 parent.remove_child(branch[0])
 
@@ -419,8 +460,7 @@ class SegmentModel(SNode2):
         super(SegmentModel, self).__init__(name)
         p3d = P3D2(xyz=point, radius=(diameter / 2.0))
         self.set_content({'p3d': p3d,
-                          'components': {},
-                          'elec_props': {}})
+                          'components': {}})
 
     def __repr__(self):
         return ("Segment: '{}' at point {} with diameter {}"
@@ -478,9 +518,14 @@ class SegmentModel(SNode2):
     def components(self):
         return self.get_content()['components'].itervalues()
 
+    @property
+    def dynamic_components(self):
+        return (c for c in self.components
+                  if isinstance(c, DynamicComponentModel))
+
     def _get_comp_by_simulator_name(self, sim_name):
-        match = [c for c in self.get_content()['components']
-                 if c.simulator_name == sim_name]
+        match = [c for c in self.get_content()['components'].itervalues()
+                   if c.simulator_name == sim_name]
         assert len(match) < 2, "multiple '{}' components found ".\
                                                                format(sim_name)
         if not match:
