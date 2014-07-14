@@ -24,7 +24,8 @@ import neo
 import quantities as pq
 from nineline.cells.build.neuron import build_celltype_files
 import nineline.cells
-from nineline.cells import in_units
+from nineline.cells import (in_units, SynapseModel, AxialResistanceModel,
+                            MembraneCapacitanceModel)
 from .. import create_unit_conversions, convert_units
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
@@ -205,7 +206,7 @@ class _BaseNineCell(nineline.cells.NineCell):
                           [nineline.cells.BiophysicsModel]
             """
             # Insert the mechanism into the segment
-            super(_BaseNineCell.Segment, self).insert(component.import_name)
+            super(_BaseNineCell.Segment, self).insert(component.simulator_name)
             # Map the component (always at position 0.5 as a segment only ever
             # has one "NEURON segment") to an object in the Segment object. If
             # translations are provided, wrap the component in a Component
@@ -217,12 +218,12 @@ class _BaseNineCell(nineline.cells.NineCell):
                                  component.name,
                                  self.ComponentTranslator(
                                                 getattr(self(0.5),
-                                                        component.import_name),
+                                                        component.simulator_name),
                                                 translations))
             else:
                 super(_BaseNineCell.Segment,
                       self).__setattr__(component.name, getattr(self(0.5),
-                                                        component.import_name))
+                                                        component.simulator_name))
 
         def inject_current(self, current):
             """
@@ -275,7 +276,7 @@ class _BaseNineCell(nineline.cells.NineCell):
         self.source_section = None
         # Get the set of all component names
         comp_names = reduce(set.union, [set(c.name
-                                            for c in m.biophysics_components)
+                                            for c in m.components)
                                         for m in self._model.segments])
         # Create a empty list for each comp name to contain the segments in it
         self._comp_segments = dict((name, []) for name in comp_names)
@@ -286,17 +287,24 @@ class _BaseNineCell(nineline.cells.NineCell):
                 assert self.source_section is None
                 self.source_section = seg
             # Insert mechanisms and set electrical properties
-            for comp in seg_model.biophysics_components:
+            required_props = ['Ra', 'cm']
+            for comp in seg_model.components:
                 self._comp_segments[comp.name].append(seg)
-                if comp.type == 'post-synaptic-conductance':
+                if isinstance(comp, SynapseModel):
                     try:
-                        SynapseType = getattr(h, comp.import_name)
+                        SynapseType = getattr(h, comp.simulator_name)
                     except AttributeError:
                         raise Exception("Did not find '{}' synapse type"
-                                        .format(comp.import_name))
+                                        .format(comp.simulator_name))
                     receptor = SynapseType(0.5, sec=seg)
-                    setattr(seg, comp.import_name, receptor)
-                elif comp.type != 'defaults':
+                    setattr(seg, comp.simulator_name, receptor)
+                elif isinstance(comp, AxialResistanceModel):
+                    seg.Ra = in_units(comp.value, 'ohm.cm')
+                    required_props.remove('Ra')
+                elif isinstance(comp, MembraneCapacitanceModel):
+                    seg.cm = in_units(comp.value, 'uF/cm^2')
+                    required_props.remove('cm')
+                else:
                     if comp.name in self.component_translations:
                         translations = dict([(key, val[0])
                                              for key, val in
@@ -310,9 +318,11 @@ class _BaseNineCell(nineline.cells.NineCell):
                         raise Exception("Could not insert {} into segment "
                                         "group {clss} ({error})"
                                         .format(comp.name, error=e))
-            # Set electrical properties of cell
-            seg.Ra = in_units(seg_model.Ra, 'ohm.cm')
-            seg.cm = in_units(seg_model.cm, 'uF/cm^2')
+            if required_props:
+                raise Exception("The following required properties were not "
+                                "set for segment '{}': '{}'"
+                                .format(seg_model.name,
+                                        "', '".join(required_props)))
         # Connect the segments together
         for seg_model in self._model.segments:
             if seg_model.parent:
@@ -377,11 +387,11 @@ class _BaseNineCell(nineline.cells.NineCell):
 #                             except KeyError:
 #                                 pass
 #                 elif component.type == 'post-synaptic-conductance':
-#                     if component.import_name in dir(h):
-#                         SynapseType = getattr(h, component.import_name)
+#                     if component.simulator_name in dir(h):
+#                         SynapseType = getattr(h, component.simulator_name)
 #                     else:
 #                         raise Exception("Did not find '{}' synapse type"
-#                                         .format(component.import_name))
+#                                         .format(component.simulator_name))
 #                     for seg_class in mapping.segments:
 #                         for seg in self.segment_classes[seg_class]:
 #                             receptor = SynapseType(0.5, sec=seg)
@@ -424,8 +434,7 @@ class _BaseNineCell(nineline.cells.NineCell):
 #             seg.cm = capacitance
 
     def get_threshold(self):
-        return self.self._model.biophysics['__NO_COMPONENT__'].\
-                                                        parameters['V_t'].value
+        return in_units(self._model.spike_threshold, 'mV')
 
     def memb_init(self):
         if 'initial_v' in self.parameters:
@@ -682,6 +691,10 @@ class NineCellStandAlone(_BaseNineCell):
                     raise AttributeError("Segment group or segment '{}' is "
                                          "not present in cell morphology"
                                          .format(parts[0]))
+            #TODO: convert this to a loop, with only the last element being
+            #      used for the setattr. Also, add a "Component" class for
+            #      electrical components such as Ra and cm, can be done now by
+            #      using eg. <example cell>.<example Ra component>.Ra = 100
             if len(parts) == 3:
                 _, comp, var = parts
                 for seg in segments:

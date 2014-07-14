@@ -28,6 +28,7 @@ from nineml.extensions.morphology import (Morphology as Morphology9ml,
                                           Classification as Classification9ml,
                                           SegmentClass as SegmentClass9ml,
                                           Member as Member9ml)
+from abc import ABCMeta  # Metaclass for abstract base classes
 from btmorph.btstructs2 import STree2, SNode2, P3D2
 # DEFAULT_V_INIT = -65
 
@@ -105,15 +106,24 @@ class Model(STree2):
                 parent = seg_lookup[seg_9ml.parent.segment_name]
                 segment = seg_lookup[seg_9ml.name]
                 model.add_node_with_parent(segment, parent)
-        # Add the default get_segment class to which all segments belong
-
-        model.biophysics = {}
         # Add biophysical components
+        model.components = {}
         for name, comp in bio9ml.components.iteritems():
-            model.biophysics[name] = BiophysicsModel.from_9ml(comp,
-                                                              bio9ml.name)
+            model.components[name] = DynamicComponentModel.from_9ml(comp,
+                                                                   bio9ml.name)
+        # TODO: This is a hack until I refactor the xml code
+        defaults = model.components.pop('__NO_COMPONENT__')
+        cm = MembraneCapacitanceModel('cm_default', defaults.parameters['C_m'])
+        Ra = AxialResistanceModel('Ra_default', defaults.parameters['Ra'])
+        for seg in seg_lookup.itervalues():
+            seg.set_component(cm)
+            seg.set_component(Ra)
+        model.components.update({'cm_default': cm, 'Ra_default': Ra})
+        # Get the spike threshold
+        model.spike_threshold = defaults.parameters['V_t'] * pq.mV
+        # TODO: Likewise this is temporary until the xml code is refactored
         # Add mappings to biophysical components
-        segment_classes = {} # None: SegmentClassModel(None, model)}
+        segment_classes = {}
         for classification in morph9ml.classifications.itervalues():
             for class_9ml in classification.classes.itervalues():
                 seg_class = segment_classes[class_9ml.name] = []
@@ -123,17 +133,7 @@ class Model(STree2):
             for comp in mapping.components:
                 for seg_cls_name in mapping.segments:
                     for seg in segment_classes[seg_cls_name]:
-                        seg.set_biophysics_component(model.biophysics[comp],
-                                                     allow_overwrite=False)
-        elec_props = model.biophysics['__NO_COMPONENT__']
-        cm = ElectricalPropertyModel('cm_default', 'cm',
-                                     elec_props.parameters['C_m'])
-        Ra = ElectricalPropertyModel('Ra_default', 'Ra',
-                                     elec_props.parameters['Ra'])
-        model.elec_props = {'cm_default': cm, 'Ra_default': Ra}
-        for seg in seg_lookup.itervalues():
-            seg.get_content()['elec_props']['cm'] = cm
-            seg.get_content()['elec_props']['Ra'] = Ra
+                        seg.set_component(model.components[comp])
         return model
 
     @classmethod
@@ -223,24 +223,6 @@ class Model(STree2):
                              dict([(seg.name, seg.to_9ml())
                                    for seg in self.segments]),
                              {'default': clsf})
-
-#     def add_segment_class(self, name):
-#         """
-#         Adds a new get_segment class
-#         """
-#         self.segment_classes[name] = seg_class = SegmentClassModel(name,self)
-#         return seg_class
-#
-#     def remove_segment_class(self, name):
-#         """
-#         Removes get_segment class from the classes list of all its members
-#         and deletes the class
-#         """
-#         if name is None:
-#             raise Exception("Cannot delete the default class ('name' is None)")
-#         seg_class = self.segment_classes[name]
-#         seg_class.remove_members(seg_class.members)
-#         del self.segment_classes[name]
 
     @property
     def segments(self):
@@ -425,7 +407,7 @@ class SegmentModel(SNode2):
         super(SegmentModel, self).__init__(name)
         p3d = P3D2(xyz=point, radius=(diameter / 2.0))
         self.set_content({'p3d': p3d,
-                          'biophysics': {},
+                          'components': {},
                           'elec_props': {}})
 
     def __repr__(self):
@@ -457,41 +439,50 @@ class SegmentModel(SNode2):
 #     def classes(self):
 #         return self.get_content()['classes']
 
-    def set_biophysics_component(self, comp, allow_overwrite=True):
-        bio_dict = self.get_content()['biophysics']
-        if not allow_overwrite and comp.import_name in bio_dict:
-            raise Exception("Trying to set '{}' biophysics property on segment"
-                            " '{}' twice".format(comp.name, self.name))
-        bio_dict[comp.import_name] = comp
+    def set_component(self, comp, overwrite=False):
+        """
+        Sets a components component to the current segment
+
+        `comp`      -- the component to set
+        `overwrite` -- if this flag is set existing components with matching
+                       simulator names will be overwritten
+        """
+        bio_dict = self.get_content()['components']
+        # Check for clashing simulator names (the names the simulator refers to
+        # the components)
+        clash = [c for c in bio_dict.itervalues()
+                   if c.simulator_name == comp.simulator_name]
+        assert len(clash) < 2, "multi. components with the same simulator_name"
+        if clash:
+            if overwrite:
+                del bio_dict[clash[0]]
+            else:
+                raise Exception("Clash of import names in setting biophysic "
+                                "components between '{}' and '{}' in segment "
+                                "'{}".format(comp.name, clash.name, self.name))
+        bio_dict[comp.simulator_name] = comp
 
     @property
-    def biophysics_components(self):
-        return self.get_content()['biophysics'].itervalues()
+    def components(self):
+        return self.get_content()['components'].itervalues()
 
-#     def add_to_class(self, segment_class):
-#         seg_classes = self.get_content()['classes']
-#         seg_classes.add(segment_class)
-#         # Also add the default class for the given class, bit of a hack
-#         seg_classes.add(segment_class._tree.segment_classes[None])
-#
-#     def get_property(self, name):
-#         return self.class_that_defines_property(name)[name]
-#
-#     def class_that_defines_property(self, name):
-#         seg_clss = [c for c in self.classes if name in c.properties]
-#         assert len(seg_clss) < 2, "Property '{}' occurs in multiple classes "\
-#                                   "('{}') of segment '{}'"\
-#                                   .format(name,
-#                                           "', '".join([str(c)
-#                                                        for c in seg_clss]),
-#                                           self.name)
-#         if not seg_clss:
-#             raise Exception("'{}' property was not found in any of the classes"
-#                             " ('{}') of segment '{}'"
-#                             .format(name, "', '".join([str(c)
-#                                                        for c in self.classes]),
-#                                     self.name))
-#         return seg_clss[0]
+    def _get_comp_by_simulator_name(self, sim_name):
+        match = [c for c in self.get_content()['components']
+                 if c.simulator_name == sim_name]
+        assert len(match) < 2, "multiple '{}' components found ".\
+                                                               format(sim_name)
+        if not match:
+            raise AttributeError("'{}' property not set for segment '{}'"
+                                 .format(sim_name, self.name))
+        return match[0]
+
+    @property
+    def Ra(self):
+        return self._get_comp_by_simulator_name('Ra').value
+
+    @property
+    def cm(self):
+        return self._get_comp_by_simulator_name('cm').value
 
     @property
     def distal(self):
@@ -529,13 +520,6 @@ class SegmentModel(SNode2):
     def diameter(self, diameter):
         self.get_content()['p3d'].radius = diameter / 2.0
 
-    @property
-    def Ra(self):
-        return self.get_content()['elec_props']['Ra'].value
-
-    @property
-    def cm(self):
-        return self.get_content()['elec_props']['cm'].value
 
     @property
     def proximal(self):
@@ -634,123 +618,11 @@ class SegmentModel(SNode2):
             seg = seg.parent
         return seg
 
-# 
-# class SegmentClassModel(object):
-#     """
-#     A class of segments
-#     """
-# 
-#     def __init__(self, name, tree):
-#         self._tree = tree
-#         self.name = name
-#         self._properties = {}
-# 
-#     def __del__(self):
-#         self.remove_members(self.members)
-# 
-#     def __repr__(self):
-#         return ("Segment Class: '{}' with {} properties and {} members"
-#                 .format(self.name, len(self._properties),
-#                         len(list(self.members))))
-# 
-#     @property
-#     def members(self):
-#         # Check to see if it is the default class to which all segments belong
-#         if self.name is None:
-#             for seg in self._tree.segments:
-#                 yield seg
-#         else:
-#             for seg in self._tree.segments:
-#                 if self in seg.get_content()['classes']:
-#                     yield seg
-# 
-#     def to_9ml(self):
-#         return SegmentClass9ml(self.name,
-#                                [Member9ml(seg.name) for seg in self.members])
-# 
-#     def add_property(self, name, prop):
-#         if name in self._properties:
-#             raise Exception("Attribute named '{}' is already "
-#                             "associated with this class"
-#                             .format(name))
-#         # This check is done to protect the 'get_property' in the Segment
-#         # class
-#         if prop is None:
-#             raise Exception("Cannot add properties with value 'None'")
-#         self._properties[name] = prop
-#         self._check_for_duplicate_properties()
-# 
-#     def set_property(self, name, prop):
-#         if name not in self._properties:
-#             raise Exception("Segment class does not have property '{}'"
-#                             .format(name))
-#         # This check is done to protect the 'get_property' in the Segment
-#         # class
-#         if prop is None:
-#             raise Exception("Cannot add properties with value 'None'")
-#         self._properties[name] = prop
-# 
-#     def remove_property(self, name):
-#         del self._properties[name]
-# 
-#     @property
-#     def property_names(self):
-#         return self._properties.iterkeys()
-# 
-#     def add_members(self, segments):
-#         """
-#         Adds the segments to class
-#         """
-#         #TODO: should probably check that segments are in the current tree
-#         #all_segments = list(self.segments)
-#         for seg in segments:
-#             seg.get_contents()['classes'].add(self)
-#         self._check_for_duplicate_properties()
-# 
-#     def remove_members(self, segments):
-#         for seg in segments:
-#             seg.get_contents()['classes'].remove(self)
-# 
-#     def split_on_properties(self, properties, new_class_members):
-#         if not all(p in self._properties for p in properties):
-#             raise Exception("Properties need to be owned by class")
-#         if not all(m in self.members for m in new_class_members):
-#             raise Exception("New class members need to be part of class")
-#         prop_string = '_'.join(p.name for p in properties)
-#         new_class1 = SegmentClassModel(self.name + '_' + prop_string + '1',
-#                                        self._tree)
-#         new_class2 = SegmentClassModel(self.name + '_' + prop_string + '2',
-#                                        self._tree)
-#         # bipartite members and add to new classes
-#         # remove properties from this class
-#         # add propertis to new classes
-# 
-#     def _check_for_duplicate_properties(self):
-#         """
-#         Checks whether any attributes are duplicated in any get_segment in the
-#         tree
-#         """
-#         # Get the list of classes that overlap with the current class
-#         overlapping_classes = reduce(set.union,
-#                                      [seg.classes for seg in self.members])
-#         for seg_cls in overlapping_classes - set([self]):
-#             if any(k in self.property_names
-#                    for k in seg_cls.property_names):
-#                 segments = [seg for seg in self._tree.segments
-#                             if (seg_cls in seg.classes and
-#                                 self in seg.classes)]
-#                 raise Exception("'{}' attributes clash in segments '{}'{} "
-#                                 "because of dual membership of classes "
-#                                 "{} and {}"
-#                                 .format((set(self.property_names) &
-#                                          set(seg_cls.property_names)),
-#                                         segments[:10],
-#                                         (',...' if len(segments) > 10
-#                                                 else ''),
-#                                         self.name, seg_cls.name))
 
+class DynamicComponentModel(object):
 
-class BiophysicsModel(object):
+    # Declare this class abstract to avoid accidental construction
+    __metaclass__ = ABCMeta
 
     @classmethod
     def from_9ml(cls, nineml_model, container_name):
@@ -765,24 +637,14 @@ class BiophysicsModel(object):
             conv_unit = conv_unit.replace('uf', 'uF')
             conv_unit = conv_unit.replace('**', '^')
             parameters[key] = pq.Quantity(val.value, conv_unit)
-        biophysics = cls(nineml_model.name, nineml_model.type, parameters,
-                         import_prefix=(container_name + '_'))
-        biophysics._source = nineml_model
-        return biophysics
-
-    def __init__(self, name, model_type, parameters, import_prefix=''):
-        """
-        `import_prefix -- If a import_prefix is provided, then it is used
-                          as a prefix to the component (eg. if
-                          biophysics_name='Granule' and component_name='CaHVA',
-                          the insert mechanism would be 'Granule_CaHVA'), used
-                          for NCML mechanisms
-        """
-        self.name = name
-        self.type = model_type
-        self.parameters = parameters
-        self.import_name = import_prefix + self.name
-        self._source = None
+        if nineml_model.type == 'post-synaptic-conductance':
+            Component = SynapseModel
+        else:
+            Component = IonChannelModel
+        component = Component(nineml_model.name, parameters,
+                              import_prefix=(container_name + '_'))
+        component._source = nineml_model
+        return component
 
     def __deepcopy__(self, memo):
         """
@@ -800,13 +662,43 @@ class BiophysicsModel(object):
                 setattr(result, k, deepcopy(v, memo))
         return result
 
-
-class ElectricalPropertyModel(object):
-
-    def __init__(self, name, prop_type, value):
+    def __init__(self, name, parameters, import_prefix=''):
+        """
+        `import_prefix -- If a import_prefix is provided, then it is used
+                          as a prefix to the component (eg. if
+                          biophysics_name='Granule' and component_name='CaHVA',
+                          the insert mechanism would be 'Granule_CaHVA'), used
+                          for NCML mechanisms
+        """
         self.name = name
-        self.type = prop_type
+        self.parameters = parameters
+        self.simulator_name = import_prefix + self.name
+        self._source = None
+
+
+class IonChannelModel(DynamicComponentModel):
+    pass
+
+
+class SynapseModel(DynamicComponentModel):
+    pass
+
+
+class StaticComponentModel(object):
+
+    def __init__(self, name, value):
+        self.name = name
         self.value = value
+
+
+class AxialResistanceModel(StaticComponentModel):
+
+    simulator_name = 'Ra'
+
+
+class MembraneCapacitanceModel(StaticComponentModel):
+
+    simulator_name = 'cm'
 
 
 def in_units(quantity, units):
