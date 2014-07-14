@@ -309,15 +309,15 @@ class _BaseNineCell(nineline.cells.NineCell):
                         translations = dict([(key, val[0])
                                              for key, val in
                                              self.component_translations[comp]\
-                                             .iteritems()])
+                                                                 .iteritems()])
                     else:
                         translations = None
                     try:
                         seg.insert(comp, translations=translations)
                     except ValueError as e:
-                        raise Exception("Could not insert {} into segment "
-                                        "group {clss} ({error})"
-                                        .format(comp.name, error=e))
+                        raise Exception("Could not insert '{}' into segment "
+                                        "'{}' with error: {}"
+                                        .format(comp.name, seg.name, e))
             if required_props:
                 raise Exception("The following required properties were not "
                                 "set for segment '{}': '{}'"
@@ -346,92 +346,6 @@ class _BaseNineCell(nineline.cells.NineCell):
                             seg._parent_seg._distal * seg._fraction_along)
                 seg._set_proximal(proximal)
             segment_stack += seg._children
-#         # Set up segment classifications for inserting mechanisms
-#         self.segment_classes = {}
-#         for seg_cls_model in self._model.segment_classes.itervalues():
-#             seg_class = []
-#             for member in seg_cls_model.members:
-#                 try:
-#                     seg_class.append(self.segments[member.name])
-#                 except KeyError:
-#                     raise Exception("Member '{}' (referenced in group "
-#                                     "'{}') was not found in loaded "
-#                                     "segments"
-#                                     .format(member, seg_cls_model.name))
-#             self.segment_classes[seg_cls_model.name] = seg_class
-
-#     def _map_biophysics_to_morphology(self):
-#         """
-#         Loop through loaded currents and synapses, and insert them into the
-#         relevant sections.
-#         """
-#         #FIXME: This assumes the source is a 9ml object
-#         for mapping in self._model._source.mappings:
-#             for comp_name in mapping.components:
-#                 component = self._model.biophysics[comp_name]
-#                 if component.type == 'defaults':
-#                     if ('Ra' not in component.parameters and
-#                         'C_m' not in component.parameters):
-#                         raise Exception("Neither 'Ra' or 'C_m' specified in "
-#                                         "default component mapping")
-#                     for seg_class in mapping.segments:
-#                         for seg in self.segment_classes[seg_class]:
-#                             try:
-#                                 seg.Ra = in_units(component.parameters['Ra'],
-#                                                   'ohm.cm')
-#                             except KeyError:
-#                                 pass
-#                             try:
-#                                 seg.cm = in_units(component.parameters['C_m'],
-#                                                   'uF/cm^2')
-#                             except KeyError:
-#                                 pass
-#                 elif component.type == 'post-synaptic-conductance':
-#                     if component.simulator_name in dir(h):
-#                         SynapseType = getattr(h, component.simulator_name)
-#                     else:
-#                         raise Exception("Did not find '{}' synapse type"
-#                                         .format(component.simulator_name))
-#                     for seg_class in mapping.segments:
-#                         for seg in self.segment_classes[seg_class]:
-#                             receptor = SynapseType(0.5, sec=seg)
-#                             setattr(seg, comp_name, receptor)
-#                 else:
-#                     if comp_name in self.component_translations:
-#                         translations = dict([(key, val[0]) for key, val in
-#                                              self.component_translations[\
-#                                                        comp_name].iteritems()])
-#                     else:
-#                         translations = None
-#                     for seg_class in mapping.segments:
-#                         for seg in self.segment_classes[seg_class]:
-#                             try:
-#                                 seg.insert(component,
-#                                            translations=translations)
-#                             except ValueError as e:
-#                                 raise Exception(
-#                                         "Could not insert {mech} into section "
-#                                         "group {clss} ({error})"
-#                                         .format(mech=comp_name, error=e,
-#                                                 clss=seg_class))
-#         try:
-#             ra_param = self._model.biophysics['__NO_COMPONENT__'].\
-#                                                                parameters['Ra']
-#         except KeyError:
-#             raise Exception("Axial resistance was not set for celltype '{}'"
-#                             .format(self._model.name))
-#         axial_resistance = convert_to_neuron_units(ra_param.value,
-#                                                    ra_param.unit)[0]
-#         try:
-#             cm_param = self._model.biophysics['__NO_COMPONENT__'].\
-#                                                               parameters['cm']
-#         except KeyError:
-#             raise Exception("Membrane capacitance was not set for celltype "
-#                             "'{}'".format(self._model.name))
-#         capacitance = convert_to_neuron_units(cm_param.value, cm_param.unit)[0]
-#         for seg in self.segments.values():
-#             seg.Ra = axial_resistance
-#             seg.cm = capacitance
 
     def get_threshold(self):
         return in_units(self._model.spike_threshold, 'mV')

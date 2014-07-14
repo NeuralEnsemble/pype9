@@ -274,7 +274,7 @@ class Model(STree2):
             raise IrreducibleMorphologyException("Cannot reduce the morphology"
                                                  " further{}. without merging "
                                                  "segment_classes")
-        axial_resistances_to_tune = []
+        needs_tuning = []
         sibling_seg_classes = groupby(candidates,
                                      key=lambda b: (b[0].parent, b[0].classes))
         for (parent, seg_classes), siblings_iter in sibling_seg_classes:
@@ -310,10 +310,10 @@ class Model(STree2):
                 Ra_comp = AxialResistanceModel(name + '_Ra', axial_resistance)
                 self.add_component(Ra_comp)
                 segment.add_component(Ra_comp)
-                axial_resistances_to_tune.append(Ra_comp)
+                needs_tuning.append(Ra_comp)
         if normalise_sampling:
             self.normalise_spatial_sampling()
-        return axial_resistances_to_tune
+        return needs_tuning
 
     def normalise_spatial_sampling(self, **d_lambda_kwargs):
         """
