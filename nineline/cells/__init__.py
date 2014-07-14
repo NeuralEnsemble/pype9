@@ -118,7 +118,8 @@ class Model(STree2):
         for seg in seg_lookup.itervalues():
             seg.set_component(cm)
             seg.set_component(Ra)
-        model.components.update({'cm_default': cm, 'Ra_default': Ra})
+        model.add_component(cm)
+        model.add_component(Ra)
         # Get the spike threshold
         model.spike_threshold = defaults.parameters['V_t'] * pq.mV
         # TODO: Likewise this is temporary until the xml code is refactored
@@ -224,6 +225,10 @@ class Model(STree2):
                                    for seg in self.segments]),
                              {'default': clsf})
 
+    def add_component(self, component):
+        self.components[component.name] = component
+        return component
+
     @property
     def segments(self):
         """
@@ -269,6 +274,7 @@ class Model(STree2):
             raise IrreducibleMorphologyException("Cannot reduce the morphology"
                                                  " further{}. without merging "
                                                  "segment_classes")
+        axial_resistances_to_tune = []
         sibling_seg_classes = groupby(candidates,
                                      key=lambda b: (b[0].parent, b[0].classes))
         for (parent, seg_classes), siblings_iter in sibling_seg_classes:
@@ -300,8 +306,14 @@ class Model(STree2):
                 for branch in siblings:
                     self.remove_node(branch[0])
                 self.add_node_with_parent(segment, parent)
+                # Create new Ra comp to hold the varied axial resistance
+                Ra_comp = AxialResistanceModel(name + '_Ra', axial_resistance)
+                self.add_component(Ra_comp)
+                segment.add_component(Ra_comp)
+                axial_resistances_to_tune.append(Ra_comp)
         if normalise_sampling:
             self.normalise_spatial_sampling()
+        return axial_resistances_to_tune
 
     def normalise_spatial_sampling(self, **d_lambda_kwargs):
         """
@@ -519,7 +531,6 @@ class SegmentModel(SNode2):
     @diameter.setter
     def diameter(self, diameter):
         self.get_content()['p3d'].radius = diameter / 2.0
-
 
     @property
     def proximal(self):
