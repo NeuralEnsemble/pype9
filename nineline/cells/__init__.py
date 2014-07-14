@@ -106,25 +106,25 @@ class Model(STree2):
                 segment = seg_lookup[seg_9ml.name]
                 model.add_node_with_parent(segment, parent)
         # Add the default get_segment class to which all segments belong
-#         model.segment_classes = {None: SegmentClassModel(None, model)}
-#         for classification in morph9ml.classifications.itervalues():
-#             for class_9ml in classification.classes.itervalues():
-#                 seg_class = model.add_segment_class(class_9ml.name)
-#                 for member in class_9ml.members:
-#                     seg_lookup[member.segment_name].add_to_class(seg_class)
+
         model.biophysics = {}
         # Add biophysical components
         for name, comp in bio9ml.components.iteritems():
             model.biophysics[name] = BiophysicsModel.from_9ml(comp,
                                                               bio9ml.name)
         # Add mappings to biophysical components
+        segment_classes = {} # None: SegmentClassModel(None, model)}
+        for classification in morph9ml.classifications.itervalues():
+            for class_9ml in classification.classes.itervalues():
+                seg_class = segment_classes[class_9ml.name] = []
+                for member in class_9ml.members:
+                    seg_class.append(seg_lookup[member.segment_name])
         for mapping in nineml_model.mappings:
             for comp in mapping.components:
-                for seg_cls in mapping.segments:
-                    for seg_name in seg_cls.members:
-                        seg_lookup[seg_name].set_biophysics(
-                                                        model.biophysics[comp],
-                                                        allow_overwrite=False)
+                for seg_cls_name in mapping.segments:
+                    for seg in segment_classes[seg_cls_name]:
+                        seg.set_biophysics_component(model.biophysics[comp],
+                                                     allow_overwrite=False)
         elec_props = model.biophysics['__NO_COMPONENT__']
         cm = ElectricalPropertyModel('cm_default', 'cm',
                                      elec_props.parameters['C_m'])
@@ -425,7 +425,8 @@ class SegmentModel(SNode2):
         super(SegmentModel, self).__init__(name)
         p3d = P3D2(xyz=point, radius=(diameter / 2.0))
         self.set_content({'p3d': p3d,
-                          'biophysics': {}})
+                          'biophysics': {},
+                          'elec_props': {}})
 
     def __repr__(self):
         return ("Segment: '{}' at point {} with diameter {}"

@@ -254,13 +254,13 @@ class _BaseNineCell(nineline.cells.NineCell):
 
     def __init__(self, model=None, **parameters):
         super(_BaseNineCell, self).__init__(model=model)
-        self._construct_morphology()
-        self._map_biophysics_to_morphology()
+        # Construct all the NEURON structures
+        self._construct()
         # Setup variables required by pyNN
         self.source = self.source_section(0.5)._ref_v
         self.parameters = parameters
 
-    def _construct_morphology(self):
+    def _construct(self):
         """
         Reads morphology from a MorphML 2 file and creates the appropriate
         segments in neuron
@@ -273,33 +273,56 @@ class _BaseNineCell(nineline.cells.NineCell):
         # Initialise all segments
         self.segments = {}
         self.source_section = None
-        for model in self._model.segments:
-            seg = _BaseNineCell.Segment(model)
-            self.segments[model.name] = seg
-            # TODO This should really be part of the 9ML package
-            if not model.parent:
-                if self.source_section:
-                    raise Exception("Two segments ({0} and {1}) were declared "
-                                    "without parents, meaning the neuronal "
-                                    "tree is disconnected"
-                                    .format(self.source_section.name,
-                                            seg.name))
+        # Get the set of all component names
+        comp_names = reduce(set.union, [set(c.name
+                                            for c in m.biophysics_components)
+                                        for m in self._model.segments])
+        # Create a empty list for each comp name to contain the segments in it
+        self._comp_segments = dict((name, []) for name in comp_names)
+        for seg_model in self._model.segments:
+            seg = _BaseNineCell.Segment(seg_model)
+            self.segments[seg_model.name] = seg
+            if not seg_model.parent:
+                assert self.source_section is None
                 self.source_section = seg
-        # TODO And this check too
-        if not self.source_section:
-            raise Exception("The neuronal tree does not have a root segment,"
-                            "meaning it is connected in a circle (I assume"
-                            "this is not intended)")
+            # Insert mechanisms and set electrical properties
+            for comp in seg_model.biophysics_components:
+                self._comp_segments[comp.name].append(seg)
+                if comp.type == 'post-synaptic-conductance':
+                    try:
+                        SynapseType = getattr(h, comp.import_name)
+                    except AttributeError:
+                        raise Exception("Did not find '{}' synapse type"
+                                        .format(comp.import_name))
+                    receptor = SynapseType(0.5, sec=seg)
+                    setattr(seg, comp.import_name, receptor)
+                elif comp.type != 'defaults':
+                    if comp.name in self.component_translations:
+                        translations = dict([(key, val[0])
+                                             for key, val in
+                                             self.component_translations[comp]\
+                                             .iteritems()])
+                    else:
+                        translations = None
+                    try:
+                        seg.insert(comp, translations=translations)
+                    except ValueError as e:
+                        raise Exception("Could not insert {} into segment "
+                                        "group {clss} ({error})"
+                                        .format(comp.name, error=e))
+            # Set electrical properties of cell
+            seg.Ra = in_units(seg_model.Ra, 'ohm.cm')
+            seg.cm = in_units(seg_model.cm, 'uF/cm^2')
         # Connect the segments together
-        for model in self._model.segments:
-            if model.parent:
+        for seg_model in self._model.segments:
+            if seg_model.parent:
                 try:
-                    fraction_along = model.get_content()['fraction_along']
+                    fraction_along = seg_model.get_content()['fraction_along']
                 except KeyError:
                     fraction_along = 1.0
-                self.segments[model.name]._connect(
-                                            self.segments[model.parent.name],
-                                            fraction_along)
+                self.segments[seg_model.name]._connect(
+                                          self.segments[seg_model.parent.name],
+                                          fraction_along)
         # Work out the segment lengths properly accounting for the
         # "fraction_along". This is performed via a tree traversal to ensure
         # that the parents 'proximal' field has already been calculated
@@ -313,74 +336,74 @@ class _BaseNineCell(nineline.cells.NineCell):
                             seg._parent_seg._distal * seg._fraction_along)
                 seg._set_proximal(proximal)
             segment_stack += seg._children
-        # Set up segment classifications for inserting mechanisms
-        self.segment_classes = {}
-        for seg_cls_model in self._model.segment_classes.itervalues():
-            seg_class = []
-            for member in seg_cls_model.members:
-                try:
-                    seg_class.append(self.segments[member.name])
-                except KeyError:
-                    raise Exception("Member '{}' (referenced in group "
-                                    "'{}') was not found in loaded "
-                                    "segments"
-                                    .format(member, seg_cls_model.name))
-            self.segment_classes[seg_cls_model.name] = seg_class
+#         # Set up segment classifications for inserting mechanisms
+#         self.segment_classes = {}
+#         for seg_cls_model in self._model.segment_classes.itervalues():
+#             seg_class = []
+#             for member in seg_cls_model.members:
+#                 try:
+#                     seg_class.append(self.segments[member.name])
+#                 except KeyError:
+#                     raise Exception("Member '{}' (referenced in group "
+#                                     "'{}') was not found in loaded "
+#                                     "segments"
+#                                     .format(member, seg_cls_model.name))
+#             self.segment_classes[seg_cls_model.name] = seg_class
 
-    def _map_biophysics_to_morphology(self):
-        """
-        Loop through loaded currents and synapses, and insert them into the
-        relevant sections.
-        """
-        #FIXME: This assumes the source is a 9ml object
-        for mapping in self._model._source.mappings:
-            for comp_name in mapping.components:
-                component = self._model.biophysics[comp_name]
-                if component.type == 'defaults':
-                    if ('Ra' not in component.parameters and
-                        'C_m' not in component.parameters):
-                        raise Exception("Neither 'Ra' or 'C_m' specified in "
-                                        "default component mapping")
-                    for seg_class in mapping.segments:
-                        for seg in self.segment_classes[seg_class]:
-                            try:
-                                seg.Ra = in_units(component.parameters['Ra'],
-                                                  'ohm.cm')
-                            except KeyError:
-                                pass
-                            try:
-                                seg.cm = in_units(component.parameters['C_m'],
-                                                  'uF/cm^2')
-                            except KeyError:
-                                pass
-                elif component.type == 'post-synaptic-conductance':
-                    if component.import_name in dir(h):
-                        SynapseType = getattr(h, component.import_name)
-                    else:
-                        raise Exception("Did not find '{}' synapse type"
-                                        .format(component.import_name))
-                    for seg_class in mapping.segments:
-                        for seg in self.segment_classes[seg_class]:
-                            receptor = SynapseType(0.5, sec=seg)
-                            setattr(seg, comp_name, receptor)
-                else:
-                    if comp_name in self.component_translations:
-                        translations = dict([(key, val[0]) for key, val in
-                                             self.component_translations[\
-                                                       comp_name].iteritems()])
-                    else:
-                        translations = None
-                    for seg_class in mapping.segments:
-                        for seg in self.segment_classes[seg_class]:
-                            try:
-                                seg.insert(component,
-                                           translations=translations)
-                            except ValueError as e:
-                                raise Exception(
-                                        "Could not insert {mech} into section "
-                                        "group {clss} ({error})"
-                                        .format(mech=comp_name, error=e,
-                                                clss=seg_class))
+#     def _map_biophysics_to_morphology(self):
+#         """
+#         Loop through loaded currents and synapses, and insert them into the
+#         relevant sections.
+#         """
+#         #FIXME: This assumes the source is a 9ml object
+#         for mapping in self._model._source.mappings:
+#             for comp_name in mapping.components:
+#                 component = self._model.biophysics[comp_name]
+#                 if component.type == 'defaults':
+#                     if ('Ra' not in component.parameters and
+#                         'C_m' not in component.parameters):
+#                         raise Exception("Neither 'Ra' or 'C_m' specified in "
+#                                         "default component mapping")
+#                     for seg_class in mapping.segments:
+#                         for seg in self.segment_classes[seg_class]:
+#                             try:
+#                                 seg.Ra = in_units(component.parameters['Ra'],
+#                                                   'ohm.cm')
+#                             except KeyError:
+#                                 pass
+#                             try:
+#                                 seg.cm = in_units(component.parameters['C_m'],
+#                                                   'uF/cm^2')
+#                             except KeyError:
+#                                 pass
+#                 elif component.type == 'post-synaptic-conductance':
+#                     if component.import_name in dir(h):
+#                         SynapseType = getattr(h, component.import_name)
+#                     else:
+#                         raise Exception("Did not find '{}' synapse type"
+#                                         .format(component.import_name))
+#                     for seg_class in mapping.segments:
+#                         for seg in self.segment_classes[seg_class]:
+#                             receptor = SynapseType(0.5, sec=seg)
+#                             setattr(seg, comp_name, receptor)
+#                 else:
+#                     if comp_name in self.component_translations:
+#                         translations = dict([(key, val[0]) for key, val in
+#                                              self.component_translations[\
+#                                                        comp_name].iteritems()])
+#                     else:
+#                         translations = None
+#                     for seg_class in mapping.segments:
+#                         for seg in self.segment_classes[seg_class]:
+#                             try:
+#                                 seg.insert(component,
+#                                            translations=translations)
+#                             except ValueError as e:
+#                                 raise Exception(
+#                                         "Could not insert {mech} into section "
+#                                         "group {clss} ({error})"
+#                                         .format(mech=comp_name, error=e,
+#                                                 clss=seg_class))
 #         try:
 #             ra_param = self._model.biophysics['__NO_COMPONENT__'].\
 #                                                                parameters['Ra']
@@ -651,7 +674,7 @@ class NineCellStandAlone(_BaseNineCell):
         if '.' in varname:
             parts = varname.split('.')
             try:
-                segments = self.segment_classes[parts[0]]
+                segments = self._comp_segments[parts[0]]
             except KeyError:
                 try:
                     segments = [self.segments[parts[0]]]
