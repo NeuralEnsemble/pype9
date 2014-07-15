@@ -571,12 +571,21 @@ class NineCellStandAlone(_BaseNineCell):
         """
         if '.' in varname:
             parts = varname.split('.')
-            if len(parts) == 3:
-                seg, comp, var = parts
-                return getattr(getattr(self.segments[seg], comp), var)
-            elif len(parts) == 2:
-                seg, var = parts
-                return getattr(self.segments[seg], var)
+            if len(parts) == 2:
+                comp_name, var = parts
+                # TODO: Just looking at the first segment is a dirty hack,
+                #       should have a separate component object that is stored
+                #       at cell level with a value and a list of segments to
+                #       set
+                val = getattr(self._comp_segments[comp_name][0], var)
+                assert all([getattr(seg, var) == val
+                            for seg in self._comp_segments[comp_name]]), \
+                       "Accessing value of component when values have been " \
+                       "set independently"
+                return val
+            elif len(parts) == 3:
+                seg, comp_name, var = parts
+                return getattr(getattr(self.segments[seg], comp_name), var)
             else:
                 raise AttributeError('Invalid number of components ({})'
                                      .format(len(parts)))
@@ -594,34 +603,29 @@ class NineCellStandAlone(_BaseNineCell):
         @param var [str]: var of the attribute, with optional segment segment
                           name enclosed with {} and prepended
         """
+        # Although '.'s will only part of the varname if setattr is called
+        # explicitly. This allows a variables to be accessed at either the
+        # segment specific level or the component level.
         if '.' in varname:
             parts = varname.split('.')
             try:
-                segments = self._comp_segments[parts[0]]
+                if len(parts) == 2:
+                    comp_name, var = parts
+                    for seg in self._comp_segments[comp_name]:
+                        setattr(seg, var, value)
+                elif len(parts) == 3:
+                    segment, comp_name, var = parts
+                    setattr(getattr(segment, comp_name), var, value)
+                else:
+                    raise AttributeError("Invalid number of components ({}), "
+                                         "can be either 2 (segment group or "
+                                         "name, variable) or 3 (segment group "
+                                         "or name, component, variable)"
+                                         .format(len(parts)))
             except KeyError:
-                try:
-                    segments = [self.segments[parts[0]]]
-                except KeyError:
-                    raise AttributeError("Segment group or segment '{}' is "
-                                         "not present in cell morphology"
-                                         .format(parts[0]))
-            #TODO: convert this to a loop, with only the last element being
-            #      used for the setattr. Also, add a "Component" class for
-            #      electrical components such as Ra and cm, can be done now by
-            #      using eg. <example cell>.<example Ra component>.Ra = 100
-            if len(parts) == 3:
-                _, comp, var = parts
-                for seg in segments:
-                    setattr(getattr(seg, comp), var, value)
-            elif len(parts) == 2:
-                _, var = parts
-                for seg in segments:
-                    setattr(seg, var, value)
-            else:
-                raise AttributeError("Invalid number of components ({}), "
-                                     "can be either 2 (segment group or name, "
-                                     "variable) or 3 (segment group or name, "
-                                     "component, variable)".format(len(parts)))
+                raise AttributeError("Segment group or segment '{}' is "
+                                     "not present in cell morphology"
+                                     .format(parts[0]))
         else:
             super(NineCellStandAlone, self).__setattr__(varname, value)
 
