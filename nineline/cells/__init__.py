@@ -319,15 +319,19 @@ class Model(STree2):
                 # segment treat them as one
                 disp = parent.disp * (average_length / parent.length)
                 segment = SegmentModel(name, parent.distal + disp, diameter)
+                # Add new segment to tree
+                self.add_node_with_parent(segment, parent)
                 # Remove old branches from list
                 for branch in siblings:
-                    self.remove_node(branch[0])
-                self.add_node_with_parent(segment, parent)
-                # Add dynamic components
+                    parent.remove_child(branch[0])
+                # Add dynamic components to segment
                 for comp in non_Ra_components:
                     segment.set_component(comp)
                 # Create new Ra comp to hold the adjusted axial resistance
                 Ra_comp = AxialResistanceModel(name + '_Ra', axial_resistance)
+                # TODO: Remove adding of components to trees. Components should
+                #       be able to be reused across multiple trees and
+                #       therefore only stored at segment levels
                 self.add_component(Ra_comp)
                 segment.set_component(Ra_comp)
                 # Append the Ra component to the 'needs_tuning' list for
