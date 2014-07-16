@@ -206,7 +206,7 @@ class _BaseNineCell(nineline.cells.NineCell):
                           [nineline.cells.BiophysicsModel]
             """
             # Insert the mechanism into the segment
-            super(_BaseNineCell.Segment, self).insert(component.simulator_name)
+            super(_BaseNineCell.Segment, self).insert(component.class_name)
             # Map the component (always at position 0.5 as a segment only ever
             # has one "NEURON segment") to an object in the Segment object. If
             # translations are provided, wrap the component in a Component
@@ -218,12 +218,12 @@ class _BaseNineCell(nineline.cells.NineCell):
                                  component.name,
                                  self.ComponentTranslator(
                                                 getattr(self(0.5),
-                                                        component.simulator_name),
+                                                        component.class_name),
                                                 translations))
             else:
                 super(_BaseNineCell.Segment,
                       self).__setattr__(component.name, getattr(self(0.5),
-                                                        component.simulator_name))
+                                                        component.class_name))
 
         def inject_current(self, current):
             """
@@ -292,12 +292,12 @@ class _BaseNineCell(nineline.cells.NineCell):
                 self._comp_segments[comp.name].append(seg)
                 if isinstance(comp, SynapseModel):
                     try:
-                        SynapseType = getattr(h, comp.simulator_name)
+                        SynapseType = getattr(h, comp.class_name)
                     except AttributeError:
                         raise Exception("Did not find '{}' synapse type"
-                                        .format(comp.simulator_name))
+                                        .format(comp.class_name))
                     receptor = SynapseType(0.5, sec=seg)
-                    setattr(seg, comp.simulator_name, receptor)
+                    setattr(seg, comp.class_name, receptor)
                 elif isinstance(comp, AxialResistanceModel):
                     seg.Ra = in_units(comp.value, 'ohm.cm')
                     required_props.remove('Ra')

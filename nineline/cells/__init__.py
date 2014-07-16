@@ -253,103 +253,25 @@ class Model(STree2):
             raise KeyError("Segment '{}' was not found".format(name))
         return match[0]
 
-    def merge_leaves(self, only_most_distal=False, normalise_sampling=True):
-        """
-        Reduces a 9ml morphology, starting at the most distal branches and
-        merging them with their siblings.
-        """
-        def get_non_Ra_comps(seg):
-            return set(c for c in seg.components
-                         if not isinstance(c, AxialResistanceModel))
-        # Create a complete copy of the morphology to allow it to be reduced
-        if only_most_distal:
-            # Get the branches at the maximum depth
-            max_branch_depth = max(seg.branch_depth for seg in self.segments)
-            candidates = [branch for branch in self.branches
-                          if branch[0].branch_depth == max_branch_depth]
-        else:
-            candidates = [branch for branch in self.branches
-                          if not branch[-1].children]
-        # Only include branches that have consistent segment_classes
-        candidates = [branch for branch in candidates
-                      if all(get_non_Ra_comps(b) ==
-                             get_non_Ra_comps(branch[0]) for b in branch)]
-        if not candidates:
-            raise IrreducibleMorphologyException("Cannot reduce the morphology"
-                                                 " further{}. without merging "
-                                                 "segment_classes")
-        needs_tuning = []
-        # Group together candidates that are "siblings", i.e. have the same
-        # parent and also the same components (excl. Ra)
-        sibling_seg_classes = groupby(candidates,
-                                      key=lambda b: (b[0].parent,
-                                                     get_non_Ra_comps(b[0])))
-        for (parent, non_Ra_components), siblings_iter in sibling_seg_classes:
-            siblings = list(siblings_iter)
-            if len(siblings) > 1:
-                # Get the combined properties of the segments to be merged
-                average_length = (numpy.sum(seg.length
-                                            for seg in chain(*siblings)) /
-                                  len(siblings))
-                total_surface_area = numpy.sum(seg.length * seg.diameter
-                                               for seg in chain(*siblings))
-                # Calculate the (in-parallel) axial resistance of the branches
-                # to be merged as a starting point for the subsequent tuning
-                # step (see the returned 'needs_tuning' list)
-                axial_cond = 0.0
-                for branch in siblings:
-                    axial_cond += 1.0 / numpy.array([seg.Ra
-                                                     for seg in branch]).sum()
-                axial_resistance = (1.0 / axial_cond) * branch[0].Ra.units
-                # Get the diameter of the merged segment so as to conserve
-                # total membrane surface area given that the length of the
-                # segment is the average of the candidates to be merged.
-                diameter = total_surface_area / average_length
-                # Get a unique name for the generated segments
-                # FIXME: this is not guaranteed to be unique (but should be in
-                # most cases given a sane naming convention)
-                sorted_names = sorted([s[0].name for s in siblings])
-                name = sorted_names[0]
-                if len(branch) > 1:
-                    name += '_' + sorted_names[-1]
-                # Extend the new get_segment in the same direction as the
-                # parent get_segment
-                #
-                # If the classes are the same between parent and the new
-                # segment treat them as one
-                disp = parent.disp * (average_length / parent.length)
-                segment = SegmentModel(name, parent.distal + disp, diameter)
-                # Add new segment to tree
-                self.add_node_with_parent(segment, parent)
-                # Remove old branches from list
-                for branch in siblings:
-                    parent.remove_child(branch[0])
-                # Add dynamic components to segment
-                for comp in non_Ra_components:
-                    segment.set_component(comp)
-                # Create new Ra comp to hold the adjusted axial resistance
-                Ra_comp = AxialResistanceModel(name + '_Ra', axial_resistance)
-                # TODO: Remove adding of components to trees. Components should
-                #       be able to be reused across multiple trees and
-                #       therefore only stored at segment levels
-                self.add_component(Ra_comp)
-                segment.set_component(Ra_comp)
-                # Append the Ra component to the 'needs_tuning' list for
-                # subsequent retuning
-                needs_tuning.append(Ra_comp)
-        if normalise_sampling:
-            self.normalise_spatial_sampling()
-        return needs_tuning
-
-    def normalise_spatial_sampling(self, **d_lambda_kwargs):
+    def normalise_spatial_sampling(self, ancestry=None, Ra_to_tune=[],
+                                   **d_lambda_kwargs):
         """
         Regrids the spatial sampling of the segments in the tree via NEURON's
         d'lambda rule
 
+        `ancestry`   -- A BranchAncestry object used to track the origins of
+                        merged and normalised branches
+        `Ra_to_tune` -- A set of axial resistance components that require
+                        retuning and therefore need to be replaced if they
+                        get merged with another segment
         `freq`       -- frequency at which AC length constant will be computed
                         (Hz)
         `d_lambda`   -- fraction of the wavelength
         """
+        # Ensure that Ra_to_tune is a set
+        Ra_to_tune = set(Ra_to_tune)
+        # Loop through all branches (chains of segments with only on child
+        # each)
         for branch_index, branch in enumerate(list(self.branches)):
             parent = branch[0].parent
             if parent:
@@ -384,6 +306,25 @@ class Model(STree2):
                 # be linked to the new segments
                 seg_disp = disp / float(num_segments)
                 previous_segment = parent
+                # Get the set of all axial resistance components in the branch
+                Ra_set = set([seg.get_component_by_type(AxialResistanceModel)
+                               for seg in branch])
+                # Update Ra if required (if it is inconsistent along the
+                # branch)
+                if len(Ra_set) > 1:
+                    new_Ra_comp = AxialResistanceModel('branch{}_Ra'
+                                                       .format(branch_index),
+                                                       Ra)
+                    self.add_component(new_Ra_comp)
+                    if any(r in Ra_to_tune for r in Ra_set):
+                        # Remove Ras that are no longer present from Ra_to_tune
+                        # set.
+                        for Ra_comp in Ra_set:
+                            Ra_to_tune.discard(Ra_comp)
+                        # Add the newly added Ra_to_tune to Ra_to_tune set
+                        Ra_to_tune.add(new_Ra_comp)
+                else:
+                    new_Ra_comp = None
                 for i in xrange(num_segments):
                     # Get new name for segment
                     name = base_name + '_' + str(i)
@@ -393,21 +334,18 @@ class Model(STree2):
                     # Copy across components to new segment
                     for comp in components:
                         segment.set_component(comp)
-                    # Update Ra if required (if it is inconsistent along the
-                    # branch)
-                    if branch[0].Ra != Ra:
-                        Ra_comp = AxialResistanceModel('branch{}_Ra'
-                                                       .format(branch_index),
-                                                       Ra)
-                        self.add_component(Ra_comp)
-                        segment.set_component(Ra_comp, overwrite=True)
+                    if new_Ra_comp:
+                        segment.set_component(new_Ra_comp, overwrite=True)
                     # Append the segment to the chain
                     previous_segment.add_child(segment)
                     segment.set_parent_node(previous_segment)
                     # Increment the 'previous_segment' reference to the current
                     # segment
                     previous_segment = segment
+                if ancestry:
+                    ancestry.record_replacement(parent.children[0], branch[0])
                 parent.remove_child(branch[0])
+        return ancestry, Ra_to_tune
 
     @classmethod
     def d_lambda_rule(cls, length, diameter, Ra, cm,
@@ -440,8 +378,21 @@ class Model(STree2):
                                      in_units(cm, 'uF/cm^2')))
         return int((length / (d_lambda * lambda_f) + 0.9) / 2) * 2 + 1
 
-    def merge_morphology_seg_classes(self, from_class, into_class):
-        raise NotImplementedError
+    def passive_model(self, leak_components):
+        """
+        Returns a copy of the cell with all the non-passive components
+        removed
+
+        `leak_components` -- the leak components to retain in the copy of the
+                             model
+        """
+        passive_tree = deepcopy(self)
+        for seg in passive_tree.segments:
+            for comp in seg.components:
+                if (isinstance(comp, DynamicComponentModel) and
+                    comp.class_name not in leak_components):
+                    seg.remove_component(comp)
+        return passive_tree
 
 
 class SegmentModel(SNode2):
@@ -507,8 +458,8 @@ class SegmentModel(SNode2):
         # Check for clashing simulator names (the names the simulator refers to
         # the components)
         clash = [c for c in bio_dict.itervalues()
-                   if c.simulator_name == comp.simulator_name]
-        assert len(clash) < 2, "multi. components with the same simulator_name"
+                   if c.class_name == comp.class_name]
+        assert len(clash) < 2, "multi. components with the same class_name"
         if clash:
             if overwrite:
                 del bio_dict[clash[0]]
@@ -516,7 +467,10 @@ class SegmentModel(SNode2):
                 raise Exception("Clash of import names in setting biophysic "
                                 "components between '{}' and '{}' in segment "
                                 "'{}".format(comp.name, clash.name, self.name))
-        bio_dict[comp.simulator_name] = comp
+        bio_dict[comp.class_name] = comp
+
+    def remove_component(self, comp):
+        del self.get_content()['components'][comp.class_name]
 
     @property
     def components(self):
@@ -527,23 +481,22 @@ class SegmentModel(SNode2):
         return (c for c in self.components
                   if isinstance(c, DynamicComponentModel))
 
-    def _get_comp_by_simulator_name(self, sim_name):
-        match = [c for c in self.get_content()['components'].itervalues()
-                   if c.simulator_name == sim_name]
+    def get_component_by_type(self, comp_type):
+        match = [c for c in self.components if isinstance(c, comp_type)]
         assert len(match) < 2, "multiple '{}' components found ".\
-                                                               format(sim_name)
+                                                     format(comp_type.__name__)
         if not match:
-            raise AttributeError("'{}' property not set for segment '{}'"
-                                 .format(sim_name, self.name))
+            raise AttributeError("'{}' component not present in segment '{}'"
+                                 .format(comp_type.__name__, self.name))
         return match[0]
 
     @property
     def Ra(self):
-        return self._get_comp_by_simulator_name('Ra').value
+        return self.get_component_by_type(AxialResistanceModel).value
 
     @property
     def cm(self):
-        return self._get_comp_by_simulator_name('cm').value
+        return self.get_component_by_type(MembraneCapacitanceModel).value
 
     @property
     def distal(self):
@@ -580,6 +533,10 @@ class SegmentModel(SNode2):
     @diameter.setter
     def diameter(self, diameter):
         self.get_content()['p3d'].radius = diameter / 2.0
+
+    @property
+    def surface_area(self):
+        return self.diameter * numpy.pi * self.length
 
     @property
     def proximal(self):
@@ -678,6 +635,24 @@ class SegmentModel(SNode2):
             seg = seg.parent
         return seg
 
+    def is_leaf(self):
+        return len(self.children) == 0
+
+    def path_to_ancestor(self, ancestor):
+        """
+        A generator of the tree path from the current segment up to the
+        provided ancestor.
+
+        `ancestor` -- a segment which is an ancestor of this segment
+        """
+        next_ancestor = self
+        while next_ancestor.parent is not ancestor:
+            yield next_ancestor
+            next_ancestor = next_ancestor.parent
+            if next_ancestor is None:
+                raise Exception("Segment '{}' is not an ancestor of segment "
+                                "'{}'".format(ancestor.name, self.name))
+
 
 class DynamicComponentModel(object):
 
@@ -701,8 +676,9 @@ class DynamicComponentModel(object):
             Component = SynapseModel
         else:
             Component = IonChannelModel
-        component = Component(nineml_model.name, parameters,
-                              import_prefix=(container_name + '_'))
+        component = Component(nineml_model.name,
+                              (container_name + '_' + nineml_model.name),
+                              parameters)
         component._source = nineml_model
         return component
 
@@ -722,18 +698,23 @@ class DynamicComponentModel(object):
                 setattr(result, k, deepcopy(v, memo))
         return result
 
-    def __init__(self, name, parameters, import_prefix=''):
+    def __init__(self, name, class_name, parameters):
         """
-        `import_prefix -- If a import_prefix is provided, then it is used
-                          as a prefix to the component (eg. if
-                          biophysics_name='Granule' and component_name='CaHVA',
-                          the insert mechanism would be 'Granule_CaHVA'), used
-                          for NCML mechanisms
+        `name`         -- Name used to refer to the component in the model
+                          (eg. 'spiny_dendrite_leak')
+        `class_name`   -- Name of the class of the component. For example in
+                          NEURON, this would be the name used for the imported
+                          NMODL mechanism. Therefore this class name has to be
+                          unique for any given segment and two components, say
+                          for example only one of 'proximal_dendrite_leak' and
+                          'spiny_dendrite_leak' can be set on the same segment
+                          if they both use the 'Lkg' component class.
+        `parameters`   -- The parameters of the model
         """
         self.name = name
+        self.class_name = class_name
         self.parameters = parameters
-        self.simulator_name = import_prefix + self.name
-        self._source = None
+        self._source = None  # Used to store the source file (eg. *.9ml)
 
 
 class IonChannelModel(DynamicComponentModel):
@@ -753,12 +734,12 @@ class StaticComponentModel(object):
 
 class AxialResistanceModel(StaticComponentModel):
 
-    simulator_name = 'Ra'
+    class_name = 'Ra'
 
 
 class MembraneCapacitanceModel(StaticComponentModel):
 
-    simulator_name = 'cm'
+    class_name = 'cm'
 
 
 def in_units(quantity, units):
@@ -769,6 +750,53 @@ def in_units(quantity, units):
     `units`    -- the units to convert to [pq.Quantity]
     """
     return numpy.array(pq.Quantity(quantity, units))
+
+
+class BranchAncestry(object):
+    """
+    Is used to map merged branches back to their original position in the full
+    morphology. This is done by storing a subtree for every merged segment in
+    a dictonary
+    """
+
+    class SubBranch(object):
+
+        def __init__(self, start_segment, end_segment=None):
+            self.start_name = start_segment.name
+            self.end_name = end_segment.name
+
+    def __init__(self, full_tree):
+        self.full_tree = full_tree
+        self.history = {}
+        self.translations = {}
+
+    def record_merger(self, new_segment, merged_branches):
+        # Get the start of the branch containing the new segment
+        branch_start = new_segment.branch_start()
+        key = branch_start.key
+        # If the branch start is the same as the new_segment, which will occur
+        # when the merge has stopped at a component mismatch border
+        if branch_start is new_segment:
+            self.history[key] = [self.SubBranch(b[0]) for b in merged_branches]
+        # If the branch start is before the merger than simply add the name
+        # of the branch_start to the list of translations
+        else:
+            self.history[key] = [self.SubBranch(branch_start)]
+
+    def record_replacement(self, new_branch, old_branch):
+        if old_branch[-1].is_leaf():
+            assert new_branch[-1].is_leaf()
+            sub_branch = self.SubBranch(old_branch[0])
+        else:
+            assert not new_branch[-1].is_leaf()
+            sub_branch = self.SubBranch(old_branch[0], old_branch[-1])
+        self.history[new_branch[0].name] = sub_branch
+
+    def get_original(self, segment):
+        seg_name = segment.name
+        while seg_name in self.history:
+            seg_name = self.history[seg_name].start_name
+        return self.full_tree.get_segment(seg_name)
 
 
 class IrreducibleMorphologyException(Exception):
