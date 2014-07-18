@@ -12,9 +12,11 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+import os.path
 import collections
 import math
 from itertools import groupby, chain
+import re
 from copy import copy, deepcopy
 import numpy
 from lxml import etree
@@ -30,6 +32,7 @@ from nineml.extensions.morphology import (Morphology as Morphology9ml,
                                           Member as Member9ml)
 from abc import ABCMeta  # Metaclass for abstract base classes
 from btmorph.btstructs2 import STree2, SNode2, P3D2
+from ..importer.neuron import import_from_hoc
 # DEFAULT_V_INIT = -65
 
 
@@ -107,7 +110,6 @@ class Model(STree2):
                 segment = seg_lookup[seg_9ml.name]
                 model.add_node_with_parent(segment, parent)
         # Add biophysical components
-        model.components = {}
         for name, comp in bio9ml.components.iteritems():
             model.components[name] = DynamicComponentModel.from_9ml(comp,
                                                                    bio9ml.name)
@@ -138,67 +140,19 @@ class Model(STree2):
         return model
 
     @classmethod
-    def from_psections(cls, filename):
+    def from_psections(cls, psection_file, mech_file):
         """
         Reads a neuron morphology from the output of a psection() call in hoc
         and generates a model tree
 
         `filename` -- path to a file containing the psection() output
         """
-        segments = {}
-        in_section = False
-        f = open(filename)
-        for line in f:
-            line = line.strip()
-            if not in_section and line.strip():
-                parts = line.split(' ')
-                name = parts[0]
-                attributes = {}
-                components = {}
-                connections = []
-                for key_val in parts[2:]:
-                    key_val = key_val.strip()
-                    if key_val:
-                        key, val = key_val.split('=')
-                        attributes[key] = float(val)
-                in_section = True
-            elif in_section:
-                if line.startswith('}'):
-                    if len(connections) == 0:
-                        parent = None
-                    elif len(connections) == 1:
-                        parent = connections[0]
-                    else:
-                        raise Exception("Segment '{}' has more than one "
-                                        "connection (expected on one 'parent' "
-                                        "segment)")
-                    section = SegmentModel(name, attributes['L'],
-                                           attributes['Ra'],
-                                           components['morphology']['diam'],
-                                           components['capacitance']['cm'],
-                                           parent)
-                    segments[section.name] = section
-                    in_section = False
-                elif line.startswith('insert'):
-                    component_name, parameters = line[6:].strip().split('{')
-                    component = {}
-                    for key_vals in parameters.strip()[:-1].split(' '):
-                        key, val = key_vals.strip().split('=')
-                        component[key] = float(val)
-                    components[component_name.strip()] = component
-                elif line.find('connect') > 0:
-                    parts = line.strip().split(' ')
-                    connections.append(parts[0])
-        # Convert parent references from names to Section objects
-
-        for s in segments.itervalues():
-            if s.parent is not None:
-                s.parent = segments[s.parent]
-        return segments
+        return import_from_hoc(psection_file, mech_file)
 
     def __init__(self, name, source=None):
         self.name = name
         self._source = source
+        self.components = {}
 
     def __deepcopy__(self, memo):
         """
@@ -247,7 +201,7 @@ class Model(STree2):
 
     def get_segment(self, name):
         match = [seg for seg in self.segments if seg.name == name]
-        #TODO: Need to check this on initialisation
+        # TODO: Need to check this on initialisation
         assert len(match) <= 1, "Multiple segments with key '{}'".format(name)
         if not len(match):
             raise KeyError("Segment '{}' was not found".format(name))
@@ -725,6 +679,10 @@ class SynapseModel(DynamicComponentModel):
     pass
 
 
+class CurrentClampModel(DynamicComponentModel):
+    pass
+
+
 class StaticComponentModel(object):
 
     def __init__(self, name, value):
@@ -740,6 +698,13 @@ class AxialResistanceModel(StaticComponentModel):
 class MembraneCapacitanceModel(StaticComponentModel):
 
     class_name = 'cm'
+
+
+class ReversalPotentialModel(StaticComponentModel):
+
+    def __init__(self, class_name, value):
+        super(ReversalPotentialModel, self).__init__(class_name, value)
+        self.class_name = class_name
 
 
 def in_units(quantity, units):
@@ -801,3 +766,10 @@ class BranchAncestry(object):
 
 class IrreducibleMorphologyException(Exception):
     pass
+
+
+if __name__ == '__main__':
+    model = Model.from_psections('/home/tclose/git/cerebellarnuclei/'
+                                 'extracted_data/psections.txt',
+                                 '/home/tclose/git/cerebellarnuclei/'
+                                 'extracted_data/mechanisms.txt')
