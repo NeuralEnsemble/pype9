@@ -32,7 +32,6 @@ from nineml.extensions.morphology import (Morphology as Morphology9ml,
                                           Member as Member9ml)
 from abc import ABCMeta  # Metaclass for abstract base classes
 from btmorph.btstructs2 import STree2, SNode2, P3D2
-#from ..importer.neuron import import_from_hoc
 # DEFAULT_V_INIT = -65
 
 
@@ -79,10 +78,21 @@ class NineCellMetaClass(type):
         pass
 
 
+class DummyNinemlModel(object):
+
+    def __init__(self, name, url, model):
+        self.name = name
+        self.url = url
+        self.model = model
+        self.parameters = []
+
+
 class Model(STree2):
 
     @classmethod
     def from_9ml(cls, nineml_model):
+        if isinstance(nineml_model, DummyNinemlModel):
+            return nineml_model.model  # used in DummyNinemlModel
         morph9ml = nineml_model.morphology
         bio9ml = nineml_model.biophysics
         model = cls(morph9ml.name, source=nineml_model)
@@ -147,6 +157,8 @@ class Model(STree2):
 
         `filename` -- path to a file containing the psection() output
         """
+        # this is imported here to avoid recursive import loop
+        from ..importer.neuron import import_from_hoc
         return import_from_hoc(psection_file, mech_file)
 
     def __init__(self, name, source=None):
@@ -608,7 +620,18 @@ class SegmentModel(SNode2):
                                 "'{}'".format(ancestor.name, self.name))
 
 
-class DynamicComponentModel(object):
+class ComponentModel(object):
+
+    def set_global_parameter(self, name, val):
+        try:
+            params = self.global_parameters
+        except AttributeError:
+            # This is set here to avoid sharing it between subclasses
+            params = self.global_params = {}
+        params[name] = val
+
+
+class DynamicComponentModel(ComponentModel):
 
     # Declare this class abstract to avoid accidental construction
     __metaclass__ = ABCMeta
@@ -675,15 +698,19 @@ class IonChannelModel(DynamicComponentModel):
     pass
 
 
-class SynapseModel(DynamicComponentModel):
+class PointProcessModel(DynamicComponentModel):
     pass
 
 
-class CurrentClampModel(DynamicComponentModel):
+class SynapseModel(PointProcessModel):
     pass
 
 
-class StaticComponentModel(object):
+class CurrentClampModel(PointProcessModel):
+    pass
+
+
+class StaticComponentModel(ComponentModel):
 
     def __init__(self, name, value):
         self.name = name
@@ -707,10 +734,10 @@ class MembraneCapacitanceModel(StaticComponentModel):
     param_name = class_name = 'cm'
 
 
-class ReversalPotentialModel(StaticComponentModel):
+class IonConcentrationModel(StaticComponentModel):
 
     def __init__(self, ion_name, value):
-        super(ReversalPotentialModel, self).__init__(ion_name, value)
+        super(IonConcentrationModel, self).__init__(ion_name, value)
         self.class_name = ion_name + '_ion'
         self.param_name = 'e' + ion_name
 

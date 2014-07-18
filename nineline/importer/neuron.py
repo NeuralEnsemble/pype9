@@ -5,11 +5,9 @@ from copy import deepcopy
 import itertools
 import numpy
 from btmorph.btstructs2 import SNode2, P3D2
-import nineline.cells
-print nineline.cells.__file__
-from nineline.cells import (Model, SegmentModel, AxialResistanceModel,
+from ..cells import (Model, SegmentModel, AxialResistanceModel,
                             MembraneCapacitanceModel, IonChannelModel,
-                            ReversalPotentialModel, CurrentClampModel,
+                            IonConcentrationModel, CurrentClampModel,
                             SynapseModel)
 
 
@@ -17,8 +15,7 @@ def import_from_hoc(psection_file, mech_file):
     model = load_morph_from_psections(psection_file)
     add_mechs_to_model(model, mech_file)
     map_segments_to_components(model)
-    for n in sorted(model.components.keys()):
-        print n
+    model.url = None
     return model
 
 
@@ -96,10 +93,13 @@ def load_morph_from_psections(psection_file):
                                              for k, v in d.iteritems()))
                                     for n, d in components.iteritems())
                     del inserted['morphology']
+                    del inserted['capacitance']
                     inserted['Ra'] = {'Ra': Ra}
+                    inserted['cm'] = {'cm': cm}
                     segment.get_content().update({'parent_name': parent_name,
                                                   'Ra': Ra, 'cm': cm,
-                                                  'inserted': inserted})
+                                                  'inserted': inserted,
+                                                  'num_segs': num_segments})
                     segments[segment.name] = segment
                     if parent_name is None:
                         model.root_segment = segment
@@ -135,7 +135,8 @@ def strip_comp(param_name, comp_name):
 
 
 def add_mechs_to_model(model, mech_file):
-    inserted_mechs, mechs_list, point_procs = read_mech_dump_file(mech_file)
+    (inserted_mechs, mechs_list,
+     global_params, point_procs) = read_mech_dump_file(mech_file)
     for name, params in inserted_mechs.iteritems():
         if name == 'Ra':
             if isinstance(params, dict):
@@ -162,7 +163,7 @@ def add_mechs_to_model(model, mech_file):
         # If it gets down this far and it starts with e then I think this is
         # a fairly safe assumption
         elif name.startswith('e'):
-            model.add_component(ReversalPotentialModel(name[1:],
+            model.add_component(IonConcentrationModel(name[1:],
                                                        float(params)))
         # Else it should be single parameter of a mechanism that has a constant
         # value
@@ -182,6 +183,19 @@ def add_mechs_to_model(model, mech_file):
         else:
             for key, vals in iterate_param_components(name, params):
                 model.add_component(SynapseModel(key, name, vals))
+    for name, params in global_params.iteritems():
+        comps = [c for c in model.components.itervalues()
+                 if c.class_name == name]
+        if not comps:
+            raise Exception("Could not find a component with matching class "
+                            "name '{}'".format(name))
+        # Strip component suffix from param name and convert value to float
+        global_parameters = dict((strip_comp(k, name), float(v))
+                                 for k, v in params.iteritems())
+        # Set a reference to the same dictionary in each component so they are
+        # consistent
+        for comp in comps:
+            comp.global_parameters = global_parameters
 
 
 def read_mech_dump_file(mech_file):
@@ -207,7 +221,7 @@ def read_mech_dump_file(mech_file):
                     key_val = strip_line.split('=')
                     if len(key_val) == 2:
                         key, val = key_val
-                        val = key_val[0].strip()
+                        val = val.strip()
                     else:
                         key = '='.join(key_val)
                         val = None
@@ -218,12 +232,22 @@ def read_mech_dump_file(mech_file):
                     key = key.strip()
                     for _ in xrange(depth, len(containers) - 1):
                         containers.pop()
+                    # At the lowest level it is possible for there to be
+                    # multiple values with the same number of segments and
+                    # hence the same 'key'. Since in this case the key is
+                    # actually ignored, if the key already exists generate
+                    # a unique key instead (a bit hackish but should work fine)
+                    if key in containers[-1]:
+                        key = '****{}****'.format(len(containers[-1]))
+                        assert key not in containers[-1]
                     containers[-1][key] = val
     inserted_mechs = contents['real cells']['root soma']['inserted mechanisms']
     mechs_list = contents['Density Mechanisms']['Mechanisms in use']
+    global_params = contents['Density Mechanisms']['Global parameters for '
+                                                   'density mechanisms']
     point_procs = contents['point processes (can receive events) of base '
                            'classes']['Point Processes']
-    return inserted_mechs, mechs_list, point_procs
+    return inserted_mechs, mechs_list, global_params, point_procs
 
 
 def iterate_param_components(name, params):
@@ -264,16 +288,13 @@ def map_segments_to_components(model):
     for seg in model.segments:
         for mech_name, params in seg.get_content()['inserted'].iteritems():
             comp = [c for c in model.components.itervalues()
-                    if c.class_name == mech_name and c.parameters == params]
+                    if c.class_name == mech_name and
+                       all(c.parameters[k] == params[k] or
+                           c.parameters[k] is None
+                           for k in params.iterkeys())]
             assert len(comp) < 2
             if not comp:
                 raise Exception("Could not find matching component for '{}' "
                                 "mechanisms with params:\n    {}"
                                 .format(mech_name, params))
             seg.set_component(comp[0])
-
-if __name__ == '__main__':
-    model = import_from_hoc('/home/tclose/git/cerebellarnuclei/'
-                             'extracted_data/psections.txt',
-                             '/home/tclose/git/cerebellarnuclei/'
-                             'extracted_data/mechanisms.txt')

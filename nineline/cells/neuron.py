@@ -25,7 +25,8 @@ import quantities as pq
 from nineline.cells.build.neuron import build_celltype_files
 import nineline.cells
 from nineline.cells import (in_units, SynapseModel, AxialResistanceModel,
-                            MembraneCapacitanceModel)
+                            MembraneCapacitanceModel, DummyNinemlModel,
+                            PointProcessModel, IonConcentrationModel)
 from .. import create_unit_conversions, convert_units
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
@@ -224,6 +225,11 @@ class _BaseNineCell(nineline.cells.NineCell):
                 super(_BaseNineCell.Segment,
                       self).__setattr__(component.name, getattr(self(0.5),
                                                         component.class_name))
+            if not isinstance(component, IonConcentrationModel):
+                inserted_comp = getattr(self, component.class_name)
+                for param, val in component.parameters.iteritems():
+                    if val is not None:
+                        setattr(inserted_comp, param, val)
 
         def inject_current(self, current):
             """
@@ -290,7 +296,7 @@ class _BaseNineCell(nineline.cells.NineCell):
             required_props = ['Ra', 'cm']
             for comp in seg_model.components:
                 self._comp_segments[comp.name].append(seg)
-                if isinstance(comp, SynapseModel):
+                if isinstance(comp, PointProcessModel):
                     try:
                         SynapseType = getattr(h, comp.class_name)
                     except AttributeError:
@@ -312,12 +318,12 @@ class _BaseNineCell(nineline.cells.NineCell):
                                                                  .iteritems()])
                     else:
                         translations = None
-                    try:
-                        seg.insert(comp, translations=translations)
-                    except ValueError as e:
-                        raise Exception("Could not insert '{}' into segment "
-                                        "'{}' with error: {}"
-                                        .format(comp.name, seg.name, e))
+#                     try:
+                    seg.insert(comp, translations=translations)
+#                     except ValueError as e:
+#                         raise Exception("Could not insert '{}' into segment "
+#                                         "'{}' with error: {}"
+#                                         .format(comp.name, seg.name, e))
             if required_props:
                 raise Exception("The following required properties were not "
                                 "set for segment '{}': '{}'"
@@ -784,16 +790,20 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
                                              opt_args)]
         except KeyError:
             dct = {'nineml_model': nineml_model}
-            build_options = nineml_model.biophysics.\
-                build_hints['nemo']['neuron']
-            install_dir, dct['component_translations'] = \
-                build_celltype_files(nineml_model.biophysics.name,
-                                     nineml_model.url,
-                                     build_mode=build_mode,
-                                     method=build_options.method,
-                                     kinetics=build_options.
-                                     kinetic_components,
-                                     silent_build=silent)
+            if isinstance(nineml_model, DummyNinemlModel):
+                install_dir = nineml_model.url
+                dct['component_translations'] = {}
+            else:
+                build_options = nineml_model.biophysics.\
+                                                  build_hints['nemo']['neuron']
+                install_dir, dct['component_translations'] = \
+                            build_celltype_files(nineml_model.biophysics.name,
+                                                 nineml_model.url,
+                                                 build_mode=build_mode,
+                                                 method=build_options.method,
+                                                 kinetics=build_options.
+                                                 kinetic_components,
+                                                 silent_build=silent)
             load_mechanisms(install_dir)
             dct['mech_path'] = install_dir
             dct['_param_links_tested'] = False
