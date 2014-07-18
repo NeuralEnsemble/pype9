@@ -32,7 +32,7 @@ from nineml.extensions.morphology import (Morphology as Morphology9ml,
                                           Member as Member9ml)
 from abc import ABCMeta  # Metaclass for abstract base classes
 from btmorph.btstructs2 import STree2, SNode2, P3D2
-from ..importer.neuron import import_from_hoc
+#from ..importer.neuron import import_from_hoc
 # DEFAULT_V_INIT = -65
 
 
@@ -689,22 +689,30 @@ class StaticComponentModel(object):
         self.name = name
         self.value = value
 
+    @property
+    def parameters(self):
+        """
+        Provided for compatibility with processing of parameters
+        """
+        return {self.param_name: self.value}
+
 
 class AxialResistanceModel(StaticComponentModel):
 
-    class_name = 'Ra'
+    param_name = class_name = 'Ra'
 
 
 class MembraneCapacitanceModel(StaticComponentModel):
 
-    class_name = 'cm'
+    param_name = class_name = 'cm'
 
 
 class ReversalPotentialModel(StaticComponentModel):
 
-    def __init__(self, class_name, value):
-        super(ReversalPotentialModel, self).__init__(class_name, value)
-        self.class_name = class_name
+    def __init__(self, ion_name, value):
+        super(ReversalPotentialModel, self).__init__(ion_name, value)
+        self.class_name = ion_name + '_ion'
+        self.param_name = 'e' + ion_name
 
 
 def in_units(quantity, units):
@@ -766,10 +774,3 @@ class BranchAncestry(object):
 
 class IrreducibleMorphologyException(Exception):
     pass
-
-
-if __name__ == '__main__':
-    model = Model.from_psections('/home/tclose/git/cerebellarnuclei/'
-                                 'extracted_data/psections.txt',
-                                 '/home/tclose/git/cerebellarnuclei/'
-                                 'extracted_data/mechanisms.txt')

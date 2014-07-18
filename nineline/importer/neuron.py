@@ -2,16 +2,23 @@ from __future__ import absolute_import
 import os.path
 import re
 from copy import deepcopy
+import itertools
 import numpy
 from btmorph.btstructs2 import SNode2, P3D2
+import nineline.cells
+print nineline.cells.__file__
 from nineline.cells import (Model, SegmentModel, AxialResistanceModel,
                             MembraneCapacitanceModel, IonChannelModel,
-                            ReversalPotentialModel, SynapseModel)
+                            ReversalPotentialModel, CurrentClampModel,
+                            SynapseModel)
 
 
-def import_from_hoc(psection_file,  mech_file):
+def import_from_hoc(psection_file, mech_file):
     model = load_morph_from_psections(psection_file)
     add_mechs_to_model(model, mech_file)
+    map_segments_to_components(model)
+    for n in sorted(model.components.keys()):
+        print n
     return model
 
 
@@ -85,10 +92,17 @@ def load_morph_from_psections(psection_file):
                     # in the 'inserted' item in the content dictionary
                     # and are mapped to component objects in the map mechanisms
                     # function
+                    inserted = dict((n, dict((strip_comp(k, n), v)
+                                             for k, v in d.iteritems()))
+                                    for n, d in components.iteritems())
+                    del inserted['morphology']
+                    inserted['Ra'] = {'Ra': Ra}
                     segment.get_content().update({'parent_name': parent_name,
                                                   'Ra': Ra, 'cm': cm,
-                                                  'inserted': components})
+                                                  'inserted': inserted})
                     segments[segment.name] = segment
+                    if parent_name is None:
+                        model.root_segment = segment
                     in_section = False
                 # If line starts with 'insert' read the component and what has
                 # been inserted
@@ -114,50 +128,60 @@ def load_morph_from_psections(psection_file):
     return model
 
 
+def strip_comp(param_name, comp_name):
+    if param_name.endswith(comp_name):
+        param_name = param_name[:-(len(comp_name) + 1)]  # the +1 is for the _
+    return param_name
+
+
 def add_mechs_to_model(model, mech_file):
     inserted_mechs, mechs_list, point_procs = read_mech_dump_file(mech_file)
     for name, params in inserted_mechs.iteritems():
         if name == 'Ra':
             if isinstance(params, dict):
-                for key, val in multiple_components('Ra', params['Ra']):
-                    model.add_component(AxialResistanceModel(key, val))
+                for key, vals in iterate_param_components(name, params):
+                    model.add_component(AxialResistanceModel(key, vals['Ra']))
             else:
                 model.add_component(AxialResistanceModel('Ra', float(params)))
         elif name == 'capacitance':
             if isinstance(params, dict):
-                for key, val in multiple_components('cm', params['cm']):
-                    model.add_component(MembraneCapacitanceModel(key, val))
+                for key, vals in iterate_param_components(name, params):
+                    model.add_component(MembraneCapacitanceModel(key,
+                                                                 vals['cm']))
             else:
                 model.add_component(MembraneCapacitanceModel('cm',
                                                              float(params)))
+        # Otherwise if params is a dict it should be a general density
+        # mechanism with multiple parameter groups
         elif isinstance(params, dict):
-            vdict = dict((n[:-(len(name) + 1)], float(v))
-                         for n, v in params.iteritems() if isinstance(v, str))
-            for param_name_w_suffix, values in params.iteritems():
-                param_name = param_name_w_suffix[:-(len(name) + 1)]
-                if param_name not in vdict:
-                    for key, val in multiple_components(param_name, values,
-                                                        name):
-                        vals = deepcopy(vdict)
-                        vals[param_name] = val
-                        model.add_component(IonChannelModel(key, name, vals))
+            for key, vals in iterate_param_components(name, params):
+                model.add_component(IonChannelModel(key, name, vals))
         elif name in mechs_list:
             assert params is None
             model.add_component(IonChannelModel(name, name, {}))
+        # If it gets down this far and it starts with e then I think this is
+        # a fairly safe assumption
         elif name.startswith('e'):
             model.add_component(ReversalPotentialModel(name[1:],
                                                        float(params)))
+        # Else it should be single parameter of a mechanism that has a constant
+        # value
         else:
             comp_name = [m for m in mechs_list if name.endswith(m)]
             assert len(comp_name) < 2
             if not comp_name:
                 raise Exception("Unrecognised inserted mechanism")
             comp_name = comp_name[0]
-            param_name = name[:-(len(comp_name) + 1)]
+            param_name = strip_comp(name, comp_name)
             model.add_component(IonChannelModel(comp_name, comp_name,
                                                 {param_name: float(params)}))
     for name, params in point_procs.iteritems():
-        pass
+        if name.startswith('I'):  # FIXME: This is a poor assumption, not sure how to improve though @IgnorePep8
+            for key, vals in iterate_param_components(name, params):
+                model.add_component(CurrentClampModel(key, name, vals))
+        else:
+            for key, vals in iterate_param_components(name, params):
+                model.add_component(SynapseModel(key, name, vals))
 
 
 def read_mech_dump_file(mech_file):
@@ -183,7 +207,7 @@ def read_mech_dump_file(mech_file):
                     key_val = strip_line.split('=')
                     if len(key_val) == 2:
                         key, val = key_val
-                        val = val.strip()
+                        val = key_val[0].strip()
                     else:
                         key = '='.join(key_val)
                         val = None
@@ -197,19 +221,59 @@ def read_mech_dump_file(mech_file):
                     containers[-1][key] = val
     inserted_mechs = contents['real cells']['root soma']['inserted mechanisms']
     mechs_list = contents['Density Mechanisms']['Mechanisms in use']
-    point_procs = contents['point processes']['Point Processes']
+    point_procs = contents['point processes (can receive events) of base '
+                           'classes']['Point Processes']
     return inserted_mechs, mechs_list, point_procs
 
 
-def multiple_components(param_name, values, class_name=None):
-    # FIXME: This should really be on level up and take into account
-    #        all the possible permutations of parameters
-    anonymous_count = 0
-    for key, val in values.iteritems():
-        comp_key = class_name + '_' if class_name else ''
-        if '.' in key:
-            comp_key += '{}_{}'.format(key.split('.')[0], param_name)
-        else:
-            comp_key += '{}_{}'.format(param_name, anonymous_count)
-            anonymous_count += 1
-        yield comp_key, float(val) if val is not None else None
+def iterate_param_components(name, params):
+    # For each of the parameters with a 'dict' value, generate a
+    # list of values (zipped with the parameter name for convenience),
+    # stripping the component suffix from the parameter name
+    varying = [[(strip_comp(k, name), w) for w in v.values()]
+               for k, v in params.iteritems() if isinstance(v, dict)]
+    # For each of the parameters with a 'str' value (i.e. not a dict), add to
+    # constant dictionary, stripping the component suffix from the parameter
+    # name and convert the values into floats
+    constant = dict((strip_comp(k, name), float(v) if v is not None else None)
+                    for k, v in params.iteritems() if not isinstance(v, dict))
+    # Loop through all combinations of varying parameters and create a new
+    # component for each combination (although some won't end up being used)
+    # if that combination isn't present in the cell morphology
+    for combination in itertools.product(*varying):
+        # Initialise comb_key which is generated by looping through contstants
+        comp_name = name
+        # Copy constants into vals dictionary
+        vals = deepcopy(constant)
+        # Loop through param-name/value pairs and set value appending the param
+        # index
+        for param_name, val in combination:
+            # Append the param name and value to the comp_name replacing
+            # decimal points and minus signs
+            if val is not None:
+                comp_name += ('__' + param_name +
+                              val.replace('.', '_').replace('-', 'm'))
+                vals[param_name] = float(val)
+            else:
+                vals[param_name] = None
+        # Yield the component name and dictionary for the current combination
+        yield comp_name, vals
+
+
+def map_segments_to_components(model):
+    for seg in model.segments:
+        for mech_name, params in seg.get_content()['inserted'].iteritems():
+            comp = [c for c in model.components.itervalues()
+                    if c.class_name == mech_name and c.parameters == params]
+            assert len(comp) < 2
+            if not comp:
+                raise Exception("Could not find matching component for '{}' "
+                                "mechanisms with params:\n    {}"
+                                .format(mech_name, params))
+            seg.set_component(comp[0])
+
+if __name__ == '__main__':
+    model = import_from_hoc('/home/tclose/git/cerebellarnuclei/'
+                             'extracted_data/psections.txt',
+                             '/home/tclose/git/cerebellarnuclei/'
+                             'extracted_data/mechanisms.txt')
