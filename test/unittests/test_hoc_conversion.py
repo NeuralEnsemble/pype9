@@ -37,16 +37,18 @@ class TestHocConversion(unittest.TestCase):
                                         model)
         CerebellarNuclei = NineCellMetaClass(nineml_model)
         cell = CerebellarNuclei()
-        simulation_controller.run(10)
-        h.load_file('mview.hoc')
-        h("""
-        objref m
-        m = new ModelView(0)
-        m.textp("/home/tclose/git/cerebellarnuclei/extracted_data/regurgitated_mechanisms.txt")
-        m.destroy()
-        objref m
-        """)
-        print cell.name
+#         simulation_controller.run(10)
+#         h.load_file('mview.hoc')
+#         h("""
+#         objref m
+#         m = new ModelView(0)
+#         m.textp("/home/tclose/git/cerebellarnuclei/extracted_data/regurgitated_mechanisms.txt")
+#         m.destroy()
+#         objref m
+#         """)
+        for name, seg in cell.segments.iteritems():
+            print "{} {:.6f}".format(name, seg.L)
+        print cell
 #         model9ml = model.to_9ml()
 #         etree.ElementTree(model9ml.to_xml()).write(out_fn, encoding="UTF-8",
 #                                                    pretty_print=True,

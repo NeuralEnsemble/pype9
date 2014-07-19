@@ -78,13 +78,15 @@ def load_morph_from_psections(psection_file):
                     distal = points[1, :]
                     if len(connections) == 0:
                         parent_name = None
+                        fraction_along = 1.0
                         root_point = P3D2(xyz=proximal,
                                           radius=diam / 2.0)
                         root = SNode2('__ROOT__')
                         root.set_content({'p3d': root_point})
                         model.set_root(root)
                     elif len(connections) == 1:
-                        parent_name = connections[0]
+                        parent_name = connections[0][0]
+                        fraction_along = float(connections[0][1])
                     else:
                         raise Exception("Segment '{}' has more than one "
                                         "connection (expected only one "
@@ -102,10 +104,13 @@ def load_morph_from_psections(psection_file):
                     del inserted['capacitance']
                     inserted['Ra'] = [{'Ra': Ra}]
                     inserted['cm'] = [{'cm': cm}]
-                    segment.get_content().update({'parent_name': parent_name,
-                                                  'Ra': Ra, 'cm': cm,
-                                                  'inserted': inserted,
-                                                  'num_segs': num_segments})
+                    contents = segment.get_content()
+                    contents.update({'parent_name': parent_name, 'Ra': Ra,
+                                     'cm': cm, 'inserted': inserted,
+                                     'num_segs': num_segments,
+                                     'points': points})
+                    if fraction_along != 1.0:
+                        contents['fraction_along'] = fraction_along
                     segments[segment.name] = segment
                     if parent_name is None:
                         model.root_segment = segment
@@ -123,7 +128,7 @@ def load_morph_from_psections(psection_file):
                 # If line starts with 'connect' read the parent connection
                 elif line.find('connect') > 0:
                     parts = line.strip().split(' ')
-                    connections.append(parts[0])
+                    connections.append((parts[0], parts[4]))
     # Convert parent references from names to Section objects
     for s in segments.itervalues():
         if s.get_content()['parent_name'] is None:
