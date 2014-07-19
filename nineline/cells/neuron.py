@@ -347,13 +347,13 @@ class _BaseNineCell(nineline.cells.NineCell):
         # Connect the segments together
         for seg_model in self._model.segments:
             if seg_model.parent:
-                try:
-                    fraction_along = seg_model.get_content()['fraction_along']
-                except KeyError:
-                    fraction_along = 1.0
+#                 try:
+#                     fraction_along = seg_model.get_content()['fraction_along']
+#                 except KeyError:
+#                     fraction_along = 1.0
                 self.segments[seg_model.name]._connect(
-                                          self.segments[seg_model.parent.name],
-                                          fraction_along)
+                                          self.segments[seg_model.parent.name])
+#                                           fraction_along)
         # Work out the segment lengths properly accounting for the
         # "fraction_along". This is performed via a tree traversal to ensure
         # that the parents 'proximal' field has already been calculated

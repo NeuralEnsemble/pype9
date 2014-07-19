@@ -18,6 +18,7 @@ else:
     except ImportError:
         import unittest
 from nineline.cells import Model
+from operator import itemgetter
 # from lxml import etree
 from nineline.cells import DummyNinemlModel
 from nineline.cells.neuron import NineCellMetaClass, simulation_controller
@@ -46,7 +47,7 @@ class TestHocConversion(unittest.TestCase):
 #         m.destroy()
 #         objref m
 #         """)
-        for name, seg in cell.segments.iteritems():
+        for name, seg in sorted(cell.segments.iteritems(), key=itemgetter(0)):
             print "{} {:.6f}".format(name, seg.L)
         print cell
 #         model9ml = model.to_9ml()

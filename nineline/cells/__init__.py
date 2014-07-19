@@ -119,6 +119,12 @@ class Model(STree2):
                 parent = seg_lookup[seg_9ml.parent.segment_name]
                 segment = seg_lookup[seg_9ml.name]
                 model.add_node_with_parent(segment, parent)
+        # Clean up fraction_along tags and switch to proximal_offsets
+        for seg in seg_lookup.itervalues():
+            if 'fraction_along' in seg.get_content():
+                offset = -seg.parent.disp * seg.get_content()['fraction_along']
+                seg.get_content()['proximal_offset'] = offset
+                del seg.get_content()['fraction_along']
         # Add biophysical components
         for name, comp in bio9ml.components.iteritems():
             model.components[name] = DynamicComponentModel.from_9ml(comp,
@@ -522,12 +528,12 @@ class SegmentModel(SNode2):
 
     @property
     def proximal(self):
-        parent_distal = self.get_parent_node().get_content()['p3d'].xyz
-        if 'fraction_along' in self.get_content():
-            return (self.get_parent_node().proximal +
-                    self.get_content()['fraction_along'] * parent_distal)
-        else:
-            return parent_distal
+        p = self.get_parent_node().get_content()['p3d'].xyz
+        try:
+            p += self.get_content()['proximal_offset']
+        except KeyError:
+            pass
+        return p
 
     @property
     def disp(self):

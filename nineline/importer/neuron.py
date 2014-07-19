@@ -78,7 +78,6 @@ def load_morph_from_psections(psection_file):
                     distal = points[1, :]
                     if len(connections) == 0:
                         parent_name = None
-                        fraction_along = 1.0
                         root_point = P3D2(xyz=proximal,
                                           radius=diam / 2.0)
                         root = SNode2('__ROOT__')
@@ -86,7 +85,6 @@ def load_morph_from_psections(psection_file):
                         model.set_root(root)
                     elif len(connections) == 1:
                         parent_name = connections[0][0]
-                        fraction_along = float(connections[0][1])
                     else:
                         raise Exception("Segment '{}' has more than one "
                                         "connection (expected only one "
@@ -109,8 +107,6 @@ def load_morph_from_psections(psection_file):
                                      'cm': cm, 'inserted': inserted,
                                      'num_segs': num_segments,
                                      'points': points})
-                    if fraction_along != 1.0:
-                        contents['fraction_along'] = fraction_along
                     segments[segment.name] = segment
                     if parent_name is None:
                         model.root_segment = segment
@@ -130,12 +126,15 @@ def load_morph_from_psections(psection_file):
                     parts = line.strip().split(' ')
                     connections.append((parts[0], parts[4]))
     # Convert parent references from names to Section objects
-    for s in segments.itervalues():
-        if s.get_content()['parent_name'] is None:
-            model.add_node_with_parent(s, model.get_root())
+    for seg in segments.itervalues():
+        contents = seg.get_content()
+        if contents['parent_name'] is None:
+            model.add_node_with_parent(seg, model.get_root())
         else:
-            model.add_node_with_parent(
-                            s, segments[s.get_content()['parent_name']])
+            model.add_node_with_parent(seg, segments[contents['parent_name']])
+            offset = contents['points'][0] - seg.parent.distal
+            if offset.sum():
+                contents['proximal_offset'] = offset
     return model
 
 
