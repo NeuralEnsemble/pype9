@@ -9,6 +9,7 @@
 """
 from __future__ import absolute_import
 from datetime import datetime
+from copy import deepcopy
 import weakref
 import numpy
 # MPI may not be required but NEURON sometimes needs to be initialised after
@@ -135,7 +136,10 @@ class _BaseNineCell(nineline.cells.NineCell):
             # Local information, though not sure if I need this here
             self.name = model.name
             self._parent_seg = None
-            self._fraction_along = None
+            if 'proximal_offset' in model.get_content():
+                self._proximal_offset = model.get_content()['proximal_offset']
+            else:
+                self._proximal_offset = None
             self._children = []
 
         def __getattr__(self, var):
@@ -352,8 +356,8 @@ class _BaseNineCell(nineline.cells.NineCell):
 #                 except KeyError:
 #                     fraction_along = 1.0
                 self.segments[seg_model.name]._connect(
-                                          self.segments[seg_model.parent.name])
-#                                           fraction_along)
+                                          self.segments[seg_model.parent.name],
+                                          1.0)
         # Work out the segment lengths properly accounting for the
         # "fraction_along". This is performed via a tree traversal to ensure
         # that the parents 'proximal' field has already been calculated
@@ -362,9 +366,9 @@ class _BaseNineCell(nineline.cells.NineCell):
         while segment_stack:
             seg = segment_stack.pop()
             if seg._parent_seg:
-                proximal = (seg._parent_seg._proximal *
-                            (1 - seg._fraction_along) +
-                            seg._parent_seg._distal * seg._fraction_along)
+                proximal = deepcopy(seg._parent_seg._distal)
+                if seg._proximal_offset is not None:
+                    proximal += seg._proximal_offset
                 seg._set_proximal(proximal)
             segment_stack += seg._children
         # Set global variables (if there are multiple components of the same
