@@ -528,7 +528,7 @@ class SegmentModel(SNode2):
 
     @property
     def proximal(self):
-        p = self.get_parent_node().get_content()['p3d'].xyz
+        p = deepcopy(self.get_parent_node().get_content()['p3d'].xyz)
         try:
             p += self.get_content()['proximal_offset']
         except KeyError:
