@@ -225,7 +225,10 @@ class _BaseNineCell(nineline.cells.NineCell):
                 super(_BaseNineCell.Segment,
                       self).__setattr__(component.name, getattr(self(0.5),
                                                         component.class_name))
-            if not isinstance(component, IonConcentrationModel):
+            if isinstance(component, IonConcentrationModel):
+                setattr(self, component.param_name,
+                        component.parameters[component.param_name])
+            else:
                 inserted_comp = getattr(self, component.class_name)
                 for param, val in component.parameters.iteritems():
                     if val is not None:
@@ -318,12 +321,7 @@ class _BaseNineCell(nineline.cells.NineCell):
                                                                  .iteritems()])
                     else:
                         translations = None
-#                     try:
                     seg.insert(comp, translations=translations)
-#                     except ValueError as e:
-#                         raise Exception("Could not insert '{}' into segment "
-#                                         "'{}' with error: {}"
-#                                         .format(comp.name, seg.name, e))
             if required_props:
                 raise Exception("The following required properties were not "
                                 "set for segment '{}': '{}'"
@@ -344,7 +342,7 @@ class _BaseNineCell(nineline.cells.NineCell):
         # that the parents 'proximal' field has already been calculated
         # beforehand
         segment_stack = [self.source_section]
-        while len(segment_stack):
+        while segment_stack:
             seg = segment_stack.pop()
             if seg._parent_seg:
                 proximal = (seg._parent_seg._proximal *
@@ -352,6 +350,10 @@ class _BaseNineCell(nineline.cells.NineCell):
                             seg._parent_seg._distal * seg._fraction_along)
                 seg._set_proximal(proximal)
             segment_stack += seg._children
+        # Set global variables
+        for comp in self._model.components.itervalues():
+            for param, val in comp.global_parameters.iteritems():
+                h('{}_{} = {}'.format(param, comp.class_name, val))
 
     def get_threshold(self):
         return in_units(self._model.spike_threshold, 'mV')

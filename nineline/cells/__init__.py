@@ -622,13 +622,8 @@ class SegmentModel(SNode2):
 
 class ComponentModel(object):
 
-    def set_global_parameter(self, name, val):
-        try:
-            params = self.global_parameters
-        except AttributeError:
-            # This is set here to avoid sharing it between subclasses
-            params = self.global_params = {}
-        params[name] = val
+    def __init__(self):
+        self.global_parameters = {}
 
 
 class DynamicComponentModel(ComponentModel):
@@ -688,6 +683,7 @@ class DynamicComponentModel(ComponentModel):
                           if they both use the 'Lkg' component class.
         `parameters`   -- The parameters of the model
         """
+        super(DynamicComponentModel, self).__init__()
         self.name = name
         self.class_name = class_name
         self.parameters = parameters
@@ -713,6 +709,7 @@ class CurrentClampModel(PointProcessModel):
 class StaticComponentModel(ComponentModel):
 
     def __init__(self, name, value):
+        super(StaticComponentModel, self).__init__()
         self.name = name
         self.value = value
 
