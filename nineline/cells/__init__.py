@@ -488,7 +488,7 @@ class SegmentModel(SNode2):
 
     @property
     def distal(self):
-        return self.get_content()['p3d'].xyz
+        return deepcopy(self.get_content()['p3d'].xyz)
 
     @distal.setter
     def distal(self, distal):
