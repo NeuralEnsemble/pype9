@@ -381,7 +381,7 @@ class SegmentModel(SNode2):
         super(SegmentModel, self).__init__(name)
         p3d = P3D2(xyz=point, radius=(diameter / 2.0))
         self.set_content({'p3d': p3d,
-                          'components': {}})
+                          'components': []})
 
     def __repr__(self):
         return ("Segment: '{}' at point {} with diameter {}"
@@ -420,27 +420,43 @@ class SegmentModel(SNode2):
         `overwrite` -- if this flag is set existing components with matching
                        simulator names will be overwritten
         """
-        bio_dict = self.get_content()['components']
-        # Check for clashing simulator names (the names the simulator refers to
-        # the components)
-        clash = [c for c in bio_dict.itervalues()
-                   if c.class_name == comp.class_name]
-        assert len(clash) < 2, "multi. components with the same class_name"
-        if clash:
-            if overwrite:
-                del bio_dict[clash[0]]
-            else:
-                raise Exception("Clash of import names in setting biophysic "
-                                "components between '{}' and '{}' in segment "
-                                "'{}".format(comp.name, clash.name, self.name))
-        bio_dict[comp.class_name] = comp
+
+        comps_list = self.get_content()['components']
+        if isinstance(comp, PointProcessModel):
+            # No need to check for point process model as multiple components
+            # can be added
+            comps_list.append(comp)
+        else:
+            # Check for clashing simulator names (the names the simulator
+            # refers to the components)
+            clash = [c for c in comps_list if c.class_name == comp.class_name]
+            assert len(clash) < 2, "multi. components with the same class_name"
+            if clash:
+                if overwrite:
+                    comps_list.remove(clash[0])
+                else:
+                    raise Exception("Clash of import names in setting "
+                                    "biophysics components between '{}' and "
+                                    "'{}' in segment '{}"
+                                    .format(comp.name, clash[0].name,
+                                            self.name))
+            comps_list.append(comp)
 
     def remove_component(self, comp):
-        del self.get_content()['components'][comp.class_name]
+        self.get_content()['components'].remove(comp)
 
     @property
     def components(self):
-        return self.get_content()['components'].itervalues()
+        return self.get_content()['components']
+
+    @property
+    def discrete_components(self):
+        return (c for c in self.components if isinstance(c, PointProcessModel))
+
+    @property
+    def distributed_components(self):
+        return (c for c in self.components
+                  if not isinstance(c, PointProcessModel))
 
     @property
     def dynamic_components(self):
@@ -688,6 +704,10 @@ class DynamicComponentModel(ComponentModel):
         self.class_name = class_name
         self.parameters = parameters
         self._source = None  # Used to store the source file (eg. *.9ml)
+
+    def __repr__(self):
+        return ("{} Component '{}', with params: {}"
+                .format(self.class_name, self.name, self.parameters))
 
 
 class IonChannelModel(DynamicComponentModel):

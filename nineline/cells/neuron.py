@@ -197,7 +197,7 @@ class _BaseNineCell(nineline.cells.NineCell):
             self._fraction_along = fraction_along
             parent_seg._children.append(self)
 
-        def insert(self, component, translations=None):
+        def insert_distributed(self, component, translations=None):
             """
             Inserts a mechanism using the in-built NEURON 'insert' method and
             then constructs a 'Component' class to point to the variable
@@ -233,6 +233,29 @@ class _BaseNineCell(nineline.cells.NineCell):
                 for param, val in component.parameters.iteritems():
                     if val is not None:
                         setattr(inserted_comp, param, val)
+
+        def insert_discrete(self, component):
+            """
+            Inserts discrete (point-process) objects like synapses and current
+            clamps
+            """
+            try:
+                HocClass = getattr(h, component.class_name)
+            except AttributeError:
+                raise Exception("Did not find '{}' point-process type"
+                                .format(component.class_name))
+            discrete_comp = HocClass(0.5, sec=self)
+            for param, val in component.parameters.iteritems():
+                if val is not None:
+                    setattr(discrete_comp, param, val)
+            try:
+                getattr(self, component.name).append(discrete_comp)
+                # TypeError if the component.class_name == component.name and
+                # has already inserted a mechanism of the same name and
+                # AttributeError otherwise
+            except (AttributeError, TypeError):
+                comp_list = [discrete_comp]
+                setattr(self, component.name, comp_list)
 
         def inject_current(self, current):
             """
@@ -297,17 +320,9 @@ class _BaseNineCell(nineline.cells.NineCell):
                 self.source_section = seg
             # Insert mechanisms and set electrical properties
             required_props = ['Ra', 'cm']
-            for comp in seg_model.components:
+            for comp in seg_model.distributed_components:
                 self._comp_segments[comp.name].append(seg)
-                if isinstance(comp, PointProcessModel):
-                    try:
-                        SynapseType = getattr(h, comp.class_name)
-                    except AttributeError:
-                        raise Exception("Did not find '{}' synapse type"
-                                        .format(comp.class_name))
-                    receptor = SynapseType(0.5, sec=seg)
-                    setattr(seg, comp.class_name, receptor)
-                elif isinstance(comp, AxialResistanceModel):
+                if isinstance(comp, AxialResistanceModel):
                     seg.Ra = in_units(comp.value, 'ohm.cm')
                     required_props.remove('Ra')
                 elif isinstance(comp, MembraneCapacitanceModel):
@@ -321,7 +336,9 @@ class _BaseNineCell(nineline.cells.NineCell):
                                                                  .iteritems()])
                     else:
                         translations = None
-                    seg.insert(comp, translations=translations)
+                    seg.insert_distributed(comp, translations=translations)
+            for comp in seg_model.discrete_components:
+                seg.insert_discrete(comp)
             if required_props:
                 raise Exception("The following required properties were not "
                                 "set for segment '{}': '{}'"
@@ -350,7 +367,9 @@ class _BaseNineCell(nineline.cells.NineCell):
                             seg._parent_seg._distal * seg._fraction_along)
                 seg._set_proximal(proximal)
             segment_stack += seg._children
-        # Set global variables
+        # Set global variables (if there are multiple components of the same
+        # class these variables will be set multiple times but that shouldn't
+        # hurt
         for comp in self._model.components.itervalues():
             for param, val in comp.global_parameters.iteritems():
                 h('{}_{} = {}'.format(param, comp.class_name, val))

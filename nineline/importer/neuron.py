@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 import os.path
 import re
+from collections import defaultdict
 from copy import deepcopy
 import itertools
 import numpy
@@ -50,7 +51,7 @@ def load_morph_from_psections(psection_file):
                 # Get segment name
                 name = parts[0]
                 # Initialise containers to be populated from subsequent lines
-                components = {}
+                components = defaultdict(list)
                 connections = []
                 # Read the attributes of the segment from this line
                 attributes = {}
@@ -64,9 +65,13 @@ def load_morph_from_psections(psection_file):
                 # If the closing trailing brace is found collect all the read
                 # data into a SegmentModel object
                 if line.startswith('}'):
-                    diam = components['morphology']['diam']
+                    for comp_name in ('morphology', 'capacitance'):
+                        if len(components[comp_name]) != 1:
+                            raise Exception("More than one '{}' component"
+                                            .format(comp_name))
+                    diam = components['morphology'][0]['diam']
                     Ra = attributes['Ra']
-                    cm = components['capacitance']['cm']
+                    cm = components['capacitance'][0]['cm']
                     num_segments = attributes['nseg']
                     assert num_segments == 1, "Only implemented for nseg == 1"
                     proximal = points[0, :]
@@ -89,13 +94,14 @@ def load_morph_from_psections(psection_file):
                     # in the 'inserted' item in the content dictionary
                     # and are mapped to component objects in the map mechanisms
                     # function
-                    inserted = dict((n, dict((strip_comp(k, n), v)
-                                             for k, v in d.iteritems()))
-                                    for n, d in components.iteritems())
+                    inserted = dict((n, [dict((strip_comp(k, n), v)
+                                              for k, v in d.iteritems())
+                                         for d in p])
+                                    for n, p in components.iteritems())
                     del inserted['morphology']
                     del inserted['capacitance']
-                    inserted['Ra'] = {'Ra': Ra}
-                    inserted['cm'] = {'cm': cm}
+                    inserted['Ra'] = [{'Ra': Ra}]
+                    inserted['cm'] = [{'cm': cm}]
                     segment.get_content().update({'parent_name': parent_name,
                                                   'Ra': Ra, 'cm': cm,
                                                   'inserted': inserted,
@@ -113,7 +119,7 @@ def load_morph_from_psections(psection_file):
                         for key_vals in parameters.strip()[:-1].split(' '):
                             key, val = key_vals.strip().split('=')
                             component[key] = float(val)
-                    components[component_name.strip()] = component
+                    components[component_name.strip()].append(component)
                 # If line starts with 'connect' read the parent connection
                 elif line.find('connect') > 0:
                     parts = line.strip().split(' ')
@@ -140,13 +146,13 @@ def add_mechs_to_model(model, mech_file):
     for name, params in inserted_mechs.iteritems():
         if name == 'Ra':
             if isinstance(params, dict):
-                for key, vals in iterate_param_components(name, params):
+                for key, vals in param_combinations(name, params):
                     model.add_component(AxialResistanceModel(key, vals['Ra']))
             else:
                 model.add_component(AxialResistanceModel('Ra', float(params)))
         elif name == 'capacitance':
             if isinstance(params, dict):
-                for key, vals in iterate_param_components(name, params):
+                for key, vals in param_combinations(name, params):
                     model.add_component(MembraneCapacitanceModel(key,
                                                                  vals['cm']))
             else:
@@ -155,18 +161,18 @@ def add_mechs_to_model(model, mech_file):
         # Otherwise if params is a dict it should be a general density
         # mechanism with multiple parameter groups
         elif isinstance(params, dict):
-            for key, vals in iterate_param_components(name, params):
+            for key, vals in param_combinations(name, params):
                 model.add_component(IonChannelModel(key, name, vals))
         elif name in mechs_list:
             assert params is None
             model.add_component(IonChannelModel(name, name, {}))
-        # If it gets down this far and it starts with e then I think this is
-        # a fairly safe assumption
+        # If it gets down this far and it starts with e then I think this
+        # is a fairly safe assumption
         elif name.startswith('e'):
             model.add_component(IonConcentrationModel(name[1:],
                                                        float(params)))
-        # Else it should be single parameter of a mechanism that has a constant
-        # value
+        # Else it should be single parameter of a mechanism that has a
+        # constant value
         else:
             comp_name = [m for m in mechs_list if name.endswith(m)]
             assert len(comp_name) < 2
@@ -175,13 +181,15 @@ def add_mechs_to_model(model, mech_file):
             comp_name = comp_name[0]
             param_name = strip_comp(name, comp_name)
             model.add_component(IonChannelModel(comp_name, comp_name,
-                                                {param_name: float(params)}))
+                                              {param_name: float(params)}))
     for name, params in point_procs.iteritems():
-        if name.startswith('I'):  # FIXME: This is a poor assumption, not sure how to improve though @IgnorePep8
-            for key, vals in iterate_param_components(name, params):
+        if name.startswith('I'):  # FIXME: This is a poor assumption (that point-processes starting with I are current clamps), not sure how to improve though @IgnorePep8
+            if name != 'IClamp':
+                print "Warning: assuming '{}' is a current clamp".format(name)
+            for key, vals in param_combinations(name, params):
                 model.add_component(CurrentClampModel(key, name, vals))
         else:
-            for key, vals in iterate_param_components(name, params):
+            for key, vals in param_combinations(name, params):
                 model.add_component(SynapseModel(key, name, vals))
     for name, params in global_params.iteritems():
         comps = [c for c in model.components.itervalues()
@@ -235,11 +243,12 @@ def read_mech_dump_file(mech_file):
                     # At the lowest level it is possible for there to be
                     # multiple values with the same number of segments and
                     # hence the same 'key'. Since in this case the key is
-                    # actually ignored, if the key already exists generate
-                    # a unique key instead (a bit hackish but should work fine)
+                    # actually ignored, if the key exists just use the value as
+                    # a key. This effectively treati the container as a list,
+                    # which it would ideally be but would require mendokusai
+                    # bookeeping to work out.
                     if key in containers[-1]:
-                        key = '****{}****'.format(len(containers[-1]))
-                        assert key not in containers[-1]
+                        key = val
                     containers[-1][key] = val
     inserted_mechs = contents['real cells']['root soma']['inserted mechanisms']
     mechs_list = contents['Density Mechanisms']['Mechanisms in use']
@@ -250,7 +259,11 @@ def read_mech_dump_file(mech_file):
     return inserted_mechs, mechs_list, global_params, point_procs
 
 
-def iterate_param_components(name, params):
+def param_combinations(name, params):
+    """
+    Iterates through each of the combinations of variable parameters and
+    returns the component name and a parameter dict for it
+    """
     # For each of the parameters with a 'dict' value, generate a
     # list of values (zipped with the parameter name for convenience),
     # stripping the component suffix from the parameter name
@@ -286,15 +299,16 @@ def iterate_param_components(name, params):
 
 def map_segments_to_components(model):
     for seg in model.segments:
-        for mech_name, params in seg.get_content()['inserted'].iteritems():
-            comp = [c for c in model.components.itervalues()
-                    if c.class_name == mech_name and
-                       all(c.parameters[k] == params[k] or
-                           c.parameters[k] is None
-                           for k in params.iterkeys())]
-            assert len(comp) < 2
-            if not comp:
-                raise Exception("Could not find matching component for '{}' "
-                                "mechanisms with params:\n    {}"
-                                .format(mech_name, params))
-            seg.set_component(comp[0])
+        for mech_name, param_sets in seg.get_content()['inserted'].iteritems():
+            for params in param_sets:
+                comp = [c for c in model.components.itervalues()
+                        if c.class_name == mech_name and
+                           all(c.parameters[k] == params[k] or
+                               c.parameters[k] is None
+                               for k in params.iterkeys())]
+                assert len(comp) < 2
+                if not comp:
+                    raise Exception("Could not find matching component for "
+                                    "'{}' mechanisms with params:\n    {}"
+                                    .format(mech_name, params))
+                seg.set_component(comp[0])
