@@ -488,7 +488,13 @@ class SegmentModel(SNode2):
 
     @property
     def distal(self):
-        return deepcopy(self.get_content()['p3d'].xyz)
+        """
+        Care is taken to prevent unintentional writing of this array,
+        you should use the setter instead
+        """
+        p = deepcopy(self.get_content()['p3d'].xyz)
+        p.setflags(write=False)
+        return p
 
     @distal.setter
     def distal(self, distal):
@@ -533,6 +539,7 @@ class SegmentModel(SNode2):
             p += self.get_content()['proximal_offset']
         except KeyError:
             pass
+        p.setflags(write=False)
         return p
 
     @property
