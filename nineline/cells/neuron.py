@@ -123,14 +123,16 @@ class _BaseNineCell(nineline.cells.NineCell):
             nrn.Section.__init__(self)  # @UndefinedVariable
             h.pt3dclear(sec=self)
             self.diam = float(model.diameter)
-            self._distal = model.distal
+            # Save the proximal and distal points for possible future reference
+            self.distal = model.distal
+            self.proximal = model.proximal
+            # Set proximal and distal points in NEURON
             h.pt3dadd(model.distal[0], model.distal[1],
                       model.distal[2], model.diameter,
                       sec=self)
-            if not model.parent:
-                self._set_proximal((model.proximal[0],
-                                    model.proximal[1],
-                                    model.proximal[2]))
+            h.pt3dadd(model.proximal[0], model.proximal[1],
+                      model.proximal[2], model.diameter,
+                      sec=self)
             # A list to store any gap junctions in
             self._gap_junctions = []
             # Local information, though not sure if I need this here
@@ -173,32 +175,17 @@ class _BaseNineCell(nineline.cells.NineCell):
             else:
                 super(_BaseNineCell.Segment, self).__setattr__(var, val)
 
-        def _set_proximal(self, proximal):
-            """
-            Sets the proximal position and calculates the length of the segment
-
-            @param proximal [float(3)]: The 3D position of the start of the
-                                        segment
-            """
-            self._proximal = numpy.asarray(proximal)
-            h.pt3dadd(
-                proximal[0], proximal[1], proximal[2], self.diam, sec=self)
-
-        def _connect(self, parent_seg, fraction_along):
+        def _connect(self, parent_seg):
             """
             Connects the segment with its parent, setting its proximal position
             and calculating its length if it needs to.
 
             @param parent_seg [Segment]: The parent segment to connect to
-            @param fraction_along [float]: The fraction along the parent
-                                           segment to connect to
             """
-            assert(fraction_along >= 0.0 and fraction_along <= 1.0)
             # Connect the segments in NEURON using h.Section's built-in method.
-            self.connect(parent_seg, fraction_along, 0)
+            self.connect(parent_seg, 1.0, 0)
             # Store the segment's parent just in case
             self._parent_seg = parent_seg
-            self._fraction_along = fraction_along
             parent_seg._children.append(self)
 
         def insert_distributed(self, component, translations=None):
@@ -351,26 +338,8 @@ class _BaseNineCell(nineline.cells.NineCell):
         # Connect the segments together
         for seg_model in self._model.segments:
             if seg_model.parent:
-#                 try:
-#                     fraction_along = seg_model.get_content()['fraction_along']
-#                 except KeyError:
-#                     fraction_along = 1.0
                 self.segments[seg_model.name]._connect(
-                                          self.segments[seg_model.parent.name],
-                                          1.0)
-        # Work out the segment lengths properly accounting for the
-        # "fraction_along". This is performed via a tree traversal to ensure
-        # that the parents 'proximal' field has already been calculated
-        # beforehand
-        segment_stack = [self.source_section]
-        while segment_stack:
-            seg = segment_stack.pop()
-            if seg._parent_seg:
-                proximal = deepcopy(seg._parent_seg._distal)
-                if seg._proximal_offset is not None:
-                    proximal += seg._proximal_offset
-                seg._set_proximal(proximal)
-            segment_stack += seg._children
+                                          self.segments[seg_model.parent.name])
         # Set global variables (if there are multiple components of the same
         # class these variables will be set multiple times but that shouldn't
         # hurt
