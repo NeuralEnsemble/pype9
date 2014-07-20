@@ -33,8 +33,9 @@ def load_morph_from_psections(psection_file):
             line = line.strip()
             if line.startswith('points: '):  # Reads pt3 point dumps
                 # Load the 3d points in the section
-                points = numpy.array([float(p) for p in line[8:].split(' ')]).\
-                                                               reshape((-1, 3))
+                points = numpy.array([float(p) for p in line[8:].split(' ')])
+                diam = points[-1]
+                points = points[:-1].reshape((-1, 3))
                 started = True
             elif not started:  # Avoids any leading output lines
                 continue

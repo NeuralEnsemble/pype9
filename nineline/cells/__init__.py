@@ -230,7 +230,7 @@ class Model(STree2):
         # children have a higher index than their parents. Starts from 4 as the
         # first three points are reserved for the 3-point soma
         for i, seg in enumerate(islice(self.segments, 1, None)):
-            seg._index = i + 3
+            seg._index = i + 4
 
     def write_SWC_tree_to_file(self, filename):
         self._normalise_SWC_indices()
@@ -250,7 +250,7 @@ class Model(STree2):
         """
         mid_point = P3D2((point1.xyz + point2.xyz) / 2.0,
                          (point1.radius + point2.radius) / 2.0)
-        return super(Model, self)._3point_SWC_soma(point1, mid_point, point2)
+        return super(Model, self)._3point_SWC_soma(point2, mid_point, point1)
 
     def add_component(self, component):
         self.components[component.name] = component

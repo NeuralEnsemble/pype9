@@ -25,6 +25,8 @@ from nineline.importer.neuron import save_model_view
 # from lxml import etree
 from nineline.cells import DummyNinemlModel, DistributedParameter
 from nineline.cells.neuron import NineCellMetaClass, simulation_controller
+from btmorph.btviz import plot_3D_SWC
+import matplotlib.pyplot as plt
 
 psection_fn = '/home/tclose/git/cerebellarnuclei/extracted_data/psections.txt'
 mechs_fn = '/home/tclose/git/cerebellarnuclei/extracted_data/mechanisms.txt'
@@ -49,21 +51,23 @@ class TestHocConversion(unittest.TestCase):
                 comp.parameters['depth'] = DistributedParameter(
                                     lambda seg: alpha - alpha ** 2 / seg.diam)
         model.write_SWC_tree_to_file('/home/tclose/Desktop/cn.swc')
-        nineml_model = DummyNinemlModel('CerebellarNuclei',
-                                        '/home/tclose/git/cerebellarnuclei',
-                                        model)
-        CerebellarNuclei = NineCellMetaClass(nineml_model)
-        cell = CerebellarNuclei()
-        cell.record('v')
-        print time.time()
-        simulation_controller.run(1000)
-        print time.time()
-        recording = cell.get_recording('v')
-        out = neo.io.PickleIO('/home/tclose/Desktop/cerebellar_nuclei.neo.pkl')
-        out.write(recording)
-        save_model_view('/home/tclose/git/cerebellarnuclei/extracted_data/'
-                        'regurgitated_mechanisms.txt')
-        print cell
+        plot_3D_SWC('/home/tclose/Desktop/cn.swc')
+        plt.show()
+#         nineml_model = DummyNinemlModel('CerebellarNuclei',
+#                                         '/home/tclose/git/cerebellarnuclei',
+#                                         model)
+#         CerebellarNuclei = NineCellMetaClass(nineml_model)
+#         cell = CerebellarNuclei()
+#         cell.record('v')
+#         print time.time()
+#         simulation_controller.run(1000)
+#         print time.time()
+#         recording = cell.get_recording('v')
+#         out = neo.io.PickleIO('/home/tclose/Desktop/cerebellar_nuclei.neo.pkl')
+#         out.write(recording)
+#         save_model_view('/home/tclose/git/cerebellarnuclei/extracted_data/'
+#                         'regurgitated_mechanisms.txt')
+#         print cell
 
 
 if __name__ == '__main__':
