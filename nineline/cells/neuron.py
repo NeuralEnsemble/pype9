@@ -221,9 +221,8 @@ class _BaseNineCell(nineline.cells.NineCell):
                         component.parameters[component.param_name])
             else:
                 inserted_comp = getattr(self, component.class_name)
-                for param, val in component.parameters.iteritems():
-                    if val is not None:
-                        setattr(inserted_comp, param, val)
+                for param, val in component.iterate_parameters(self):
+                    setattr(inserted_comp, param, val)
 
         def insert_discrete(self, component):
             """
@@ -236,9 +235,8 @@ class _BaseNineCell(nineline.cells.NineCell):
                 raise Exception("Did not find '{}' point-process type"
                                 .format(component.class_name))
             discrete_comp = HocClass(0.5, sec=self)
-            for param, val in component.parameters.iteritems():
-                if val is not None:
-                    setattr(discrete_comp, param, val)
+            for param, val in component.iterate_parameters(self):
+                setattr(discrete_comp, param, val)
             try:
                 getattr(self, component.name).append(discrete_comp)
                 # TypeError if the component.class_name == component.name and

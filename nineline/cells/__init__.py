@@ -15,7 +15,7 @@ from __future__ import absolute_import
 import os.path
 import collections
 import math
-from itertools import groupby, chain
+from itertools import groupby, chain, islice
 import re
 from copy import copy, deepcopy
 import numpy
@@ -98,15 +98,15 @@ class Model(STree2):
         model = cls(morph9ml.name, source=nineml_model)
         # Add the proximal point of the root get_segment as the root of the
         # model
-        root_point = P3D2(xyz=numpy.array((morph9ml.root_segment.proximal.x,
-                                           morph9ml.root_segment.proximal.y,
-                                           morph9ml.root_segment.proximal.z)),
-                          radius=morph9ml.root_segment.proximal.diameter / 2.0)
-        root = SNode2('__ROOT__')
-        root.set_content({'p3d': root_point})
-        model.set_root(root)
+        model.set_root(numpy.array((morph9ml.root_segment.proximal.x,
+                                    morph9ml.root_segment.proximal.y,
+                                    morph9ml.root_segment.proximal.z)),
+                       morph9ml.root_segment.proximal.diameter)
         # Add the root get_segment and link with root node
         model.root_segment = SegmentModel.from_9ml(morph9ml.root_segment)
+        model.root_segment.get_content()['p3d']._type = 1
+        # Set the root segments index to be 3 (using a 3 point soma)
+        model.root_segment._index = 3
         model.add_node_with_parent(model.root_segment, model.get_root())
         seg_lookup = {model.root_segment.name: model.root_segment}
         # Initially create all the segments and add them to a lookup dictionary
@@ -172,6 +172,28 @@ class Model(STree2):
         self._source = source
         self.components = {}
 
+    def set_root(self, point, diameter):
+        root_point = P3D2(xyz=point, radius=diameter / 2.0, type=1)
+        root = SNode2(1)
+        root.set_content({'p3d': root_point})
+        super(Model, self).set_root(root)
+
+    def set_root_segment(self, segment):
+        # TODO: This isn't used yet
+        self.set_root(segment.proximal, segment.diameter)
+        # Add the root get_segment and link with root node
+        self.root_segment = segment
+        # Set the SWC type of the root segment to be 1 for soma
+        self.root_segment.get_content()['p3d']._type = 1
+        # Set the root segments index to be 3 (using a 3 point soma)
+        self.root_segment._index = 3
+
+    def __repr__(self):
+        return ("Cell model {} (derived from {}): with {} components and {} "
+                "segments"
+                .format(self.name, self._source, len(self.components),
+                        len(list(self.segments))))
+
     def __deepcopy__(self, memo):
         """
         Override the __deepcopy__ method to avoid copying the source, which
@@ -183,7 +205,7 @@ class Model(STree2):
         memo[id(self)] = result
         for k, v in self.__dict__.items():
             if k == '_source':
-                setattr(result, k, copy(v))
+                setattr(result, k, v)
             else:
                 setattr(result, k, deepcopy(v, memo))
         return result
@@ -197,6 +219,39 @@ class Model(STree2):
                                    for seg in self.segments]),
                              {'default': []})
 
+    def write_9ml(self, filename):
+        xml = etree.ElementTree(self.to_9ml().to_xml())
+        xml.write(filename, encoding="UTF-8", pretty_print=True,
+                  xml_declaration=True)
+
+    def _normalise_SWC_indices(self):
+        # the self.segments generator will traverse the tree in a depth-first
+        # search so the enumerated indices will satisfy SWC's constraint that
+        # children have a higher index than their parents. Starts from 4 as the
+        # first three points are reserved for the 3-point soma
+        for i, seg in enumerate(islice(self.segments, 1, None)):
+            seg._index = i + 3
+
+    def write_SWC_tree_to_file(self, filename):
+        self._normalise_SWC_indices()
+        super(Model, self).write_SWC_tree_to_file(filename)
+
+    def partition_soma_and_other_nodes(self):
+        soma, other = super(Model, self).partition_soma_and_other_nodes()
+        other.insert(0, soma[2])
+        return soma, other
+
+    def _3point_SWC_soma(self, point1, point2, _):
+        """
+        Because the soma (root_segment) is only represented by two segments
+        in this model I need to overwrite this function in order to create the
+        third point in between the two endpoints to match the assumptions in
+        BTmorph
+        """
+        mid_point = P3D2((point1.xyz + point2.xyz) / 2.0,
+                         (point1.radius + point2.radius) / 2.0)
+        return super(Model, self)._3point_SWC_soma(point1, mid_point, point2)
+
     def add_component(self, component):
         self.components[component.name] = component
         return component
@@ -209,6 +264,24 @@ class Model(STree2):
         then used to flatten the list of segments
         """
         return chain([self.root_segment], self.root_segment.all_children)
+
+    def component_segments(self, component):
+        """
+        Returns the segments that use the given component
+
+        `component` -- The component or component name to lookup the
+                       related segments for
+        """
+        if isinstance(component, str):
+            component = self.components[component]
+        return (seg for seg in self.segments if component in seg.components)
+
+    def components_of_class(self, class_name):
+        """
+        Returns a generator for the components of class 'class_name'
+        """
+        return (c for c in self.components.itervalues()
+                if c.class_name == class_name)
 
     @property
     def branches(self):
@@ -234,8 +307,8 @@ class Model(STree2):
         `ancestry`   -- A BranchAncestry object used to track the origins of
                         merged and normalised branches
         `Ra_to_tune` -- A set of axial resistance components that require
-                        retuning and therefore need to be replaced if they
-                        get merged with another segment
+                        retuning (from a previous merge) and therefore need to
+                        be replaced if they get merged with another segment
         `freq`       -- frequency at which AC length constant will be computed
                         (Hz)
         `d_lambda`   -- fraction of the wavelength
@@ -383,15 +456,19 @@ class SegmentModel(SNode2):
                                                                  fraction_along
         return seg
 
-    def __init__(self, name, point, diameter):
-        super(SegmentModel, self).__init__(name)
-        p3d = P3D2(xyz=point, radius=(diameter / 2.0))
+    def __init__(self, name, point, diameter, swc_type=3):
+        super(SegmentModel, self).__init__(None)
+        self.name = name
+        p3d = P3D2(xyz=point, radius=(diameter / 2.0), type=swc_type)
         self.set_content({'p3d': p3d,
                           'components': []})
 
     def __repr__(self):
         return ("Segment: '{}' at point {} with diameter {}"
                 .format(self.name, self.distal, self.diameter))
+
+    def __str__(self):
+        return "Segment: {}".format(self.name)
 
     def to_9ml(self):
         """
@@ -409,14 +486,6 @@ class SegmentModel(SNode2):
                                 self.diameter)
         return Segment9ml(self.get_index(), distal, proximal=proximal,
                           parent=parent)
-
-    @property
-    def name(self):
-        return self._index
-
-#     @property
-#     def classes(self):
-#         return self.get_content()['classes']
 
     def set_component(self, comp, overwrite=False):
         """
@@ -694,7 +763,7 @@ class DynamicComponentModel(ComponentModel):
         memo[id(self)] = result
         for k, v in self.__dict__.items():
             if k == '_source':
-                setattr(result, k, copy(v))
+                setattr(result, k, v)
             else:
                 setattr(result, k, deepcopy(v, memo))
         return result
@@ -721,6 +790,15 @@ class DynamicComponentModel(ComponentModel):
     def __repr__(self):
         return ("{} Component '{}', with params: {}"
                 .format(self.class_name, self.name, self.parameters))
+
+    def iterate_parameters(self, segment):
+        """
+        Iterates through parameters calculating distributions if necessary
+        """
+        for param, val in self.parameters.iteritems():
+            if isinstance(val, DistributedParameter):
+                val = val.value(segment)
+            yield param, val
 
 
 class IonChannelModel(DynamicComponentModel):
@@ -751,6 +829,8 @@ class StaticComponentModel(ComponentModel):
         """
         Provided for compatibility with processing of parameters
         """
+        #FIXME: Probably should make this class have a parameters dict for
+        #       consistency
         return {self.param_name: self.value}
 
 
@@ -770,6 +850,20 @@ class IonConcentrationModel(StaticComponentModel):
         super(IonConcentrationModel, self).__init__(ion_name, value)
         self.class_name = ion_name + '_ion'
         self.param_name = 'e' + ion_name
+
+
+class DistributedParameter(object):
+
+    def __init__(self, expr):
+        self.cached = {}
+        self._expr = expr
+
+    def value(self, segment):
+        try:
+            val = self.cached[segment.name]
+        except KeyError:
+            val = self.cached[segment.name] = self._expr(segment)
+        return val
 
 
 def in_units(quantity, units):

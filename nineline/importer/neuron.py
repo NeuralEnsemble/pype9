@@ -4,12 +4,14 @@ import re
 from collections import defaultdict
 from copy import deepcopy
 import itertools
+from operator import itemgetter
 import numpy
 from btmorph.btstructs2 import SNode2, P3D2
 from ..cells import (Model, SegmentModel, AxialResistanceModel,
                             MembraneCapacitanceModel, IonChannelModel,
                             IonConcentrationModel, CurrentClampModel,
                             SynapseModel)
+from neuron import h
 
 
 def import_from_hoc(psection_file, mech_file):
@@ -78,11 +80,7 @@ def load_morph_from_psections(psection_file):
                     distal = points[1, :]
                     if len(connections) == 0:
                         parent_name = None
-                        root_point = P3D2(xyz=proximal,
-                                          radius=diam / 2.0)
-                        root = SNode2('__ROOT__')
-                        root.set_content({'p3d': root_point})
-                        model.set_root(root)
+                        model.set_root(proximal, diam)
                     elif len(connections) == 1:
                         parent_name = connections[0][0]
                     else:
@@ -110,6 +108,10 @@ def load_morph_from_psections(psection_file):
                     segments[segment.name] = segment
                     if parent_name is None:
                         model.root_segment = segment
+                        model.root_segment.get_content()['p3d']._type = 1
+                        # Set the root segments index to be 3 (using a 3 point
+                        # soma)
+                        model.root_segment._index = 3
                     in_section = False
                 # If line starts with 'insert' read the component and what has
                 # been inserted
@@ -316,3 +318,19 @@ def map_segments_to_components(model):
                                     "'{}' mechanisms with params:\n    {}"
                                     .format(mech_name, params))
                 seg.set_component(comp[0])
+
+
+def save_model_view(filename):
+    h.load_file('mview.hoc')
+    h("""
+    objref m
+    m = new ModelView(0)
+    m.textp("{}")
+    m.destroy()
+    objref m
+    """.format(filename))
+
+
+def print_section_lengths(cell):
+    for name, seg in sorted(cell.segments.iteritems(), key=itemgetter(0)):
+        print "{} {:.6f}".format(name, seg.L)
