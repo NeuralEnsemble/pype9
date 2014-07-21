@@ -16,6 +16,7 @@ import os.path
 import collections
 import math
 from itertools import groupby, chain, islice
+from operator import itemgetter
 import re
 from copy import copy, deepcopy
 import numpy
@@ -434,6 +435,51 @@ class Model(STree2):
                     new_section.append(segment)
                     previous_segment = segment
         return normalised_tree
+
+    @classmethod
+    def create_segment_chain(cls, seg_names, disp, parent, diameter,
+                             distributed_comps=[],
+                             discrete_comps_fracs=[],
+                             proximal_offset=numpy.array([0.0, 0.0, 0.0])):
+        """
+        `discrete_comps_fracs` -- an iterable of tuples containing a discrete
+                                    component and the fraction along the
+                                    segment it should be inserted
+        """
+        num_segments = len(seg_names)
+        # Get the displacement for each segment
+        seg_disp = disp / float(num_segments)
+        # Break the discrete components into groups based on which segment
+        # they should be inserted into
+        discrete_groups = groupby(sorted(discrete_comps_fracs, itemgetter(1)),
+                                  lambda cf: numpy.floor(cf[1] * num_segments))
+        # Loop through and create the segment chain
+        previous_segment = parent
+        new_section = []
+        for i, seg_name, (discrete_comps, _) in enumerate(zip(seg_names,
+                                                             discrete_groups)):
+            # Calculate its distal point
+            distal = parent.distal + proximal_offset + seg_disp * (i + 1)
+            segment = SegmentModel(seg_name, distal, diameter)
+            # Set distributed components on segment
+            for comp in distributed_comps:
+                segment.set_component(comp)
+            # Set discrete components on segment
+            for comp in discrete_comps:
+                segment.set_component(comp)
+            # Append the segment to the chain
+            previous_segment.add_child(segment)
+            segment.set_parent_node(previous_segment)
+            # Set the proximal offset if it is present in the section
+            # start (typically when the section starts from the soma)
+            if (previous_segment is parent and proximal_offset.sum()):
+                segment.proximal_offset = proximal_offset
+            # Increment the 'previous_segment' reference to the current
+            # segment
+            previous_segment = segment
+            # Add the segment to the list for the new section
+            new_section.append(segment)
+        return new_section
 
     @classmethod
     def d_lambda_rule(cls, length, diameter, Ra, cm,
