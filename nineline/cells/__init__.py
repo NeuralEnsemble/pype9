@@ -187,6 +187,8 @@ class Model(STree2):
         self.root_segment.get_content()['p3d']._type = 1
         # Set the root segments index to be 3 (using a 3 point soma)
         self.root_segment._index = 3
+        # Link segment to root_node
+        self.add_node_with_parent(self.root_segment, self.get_root())
 
     def __repr__(self):
         return ("Cell model {} (derived from {}): with {} components and {} "
@@ -298,6 +300,8 @@ class Model(STree2):
             raise KeyError("Segment '{}' was not found".format(name))
         return match[0]
 
+    #TODO: Instead of keeping track of Ra_to_tune in this way, should be stored
+    #as a "viral" tag, which infects any segments derived from it
     def normalise_spatial_sampling(self, ancestry=None, Ra_to_tune=[],
                                    **d_lambda_kwargs):
         """
@@ -313,23 +317,41 @@ class Model(STree2):
                         (Hz)
         `d_lambda`   -- fraction of the wavelength
         """
+        # Make a new copy of the tree, starting from the root segment from
+        # which to build the normalised tree from
+        normalised_tree = Model(self.name, self._source)
+        # FIXME: this will copy whole tree which while safe is a bit
+        # inefficient
+        new_root = deepcopy(self.root_segment)
+        # Clear the children from the new tree (I don't think this is not
+        # strictly necessary but better safe than sorry)
+        new_root.remove_children()
+        # Set the new root to the new tree
+        normalised_tree.set_root_segment(new_root)
         # Ensure that Ra_to_tune is a set
         Ra_to_tune = set(Ra_to_tune)
-        # Loop through all branches (chains of segments with only on child
-        # each)
-        for branch_index, branch in enumerate(list(self.branches)):
+        # Loop through all branches (chains of segments linked together by
+        # siblingless parent-child relationships). A slight warning but this
+        # relies on traversal of the branches in order from parents to children
+        # (either depth-first or breadth-first should be okay though)
+        for branch_index, branch in enumerate(self.branches):
             parent = branch[0].parent
+            # FIXME: Should be able to normalise the soma too (maybe make a
+            # fake parent in this case)
             if parent:
                 # Get the branch length
                 branch_length = numpy.sum(seg.length for seg in branch)
                 # Get weighted average of diameter Ra and cm by segment length
                 diameter = 0.0
-                Ra = 0.0 * pq.ohm * pq.cm
-                cm = 0.0 * pq.uF / (pq.cm ** 2)
+                Ra = 0.0  # FIXME * pq.ohm * pq.cm
+                cm = 0.0  # FIXME * pq.uF / (pq.cm ** 2)
                 for seg in branch:
                     diameter += seg.diameter * seg.length
                     Ra += seg.Ra * seg.length
                     cm += seg.cm * seg.length
+                # TODO: instead of finding the average, I could fit a spline
+                #       to interpolate these values along the newly fitted
+                #       section. Same goes for merged branches
                 diameter /= branch_length
                 Ra /= branch_length
                 cm /= branch_length
@@ -338,30 +360,41 @@ class Model(STree2):
                 num_segments = self.d_lambda_rule(branch_length,
                                                   diameter * pq.um,
                                                   Ra, cm, **d_lambda_kwargs)
-                base_name = branch[0].name
-                if len(branch) > 1:
-                    base_name += '_' + branch[-1].name
+                # Generate the names for the new segments, starting with the
+                # name of the first segment and finishing with the name of the
+                # last segment (important because it will be looked up when
+                # searching for parents of subsequently normalised branches)
+                new_seg_names = []
+                if num_segments > 1:
+                    # If there is only one segment branch[-1] is more important
+                    # because it will be looked up when finding the parent of
+                    # subsequent branches
+                    new_seg_names.append(branch[0].name)
+                for i in xrange(1, num_segments - 1):
+                    new_seg_names.append('{}_{}_{}'.format(branch[0].name,
+                                                           branch[-1].name, i))
+                new_seg_names.append(branch[-1].name)
                 # Save the components of the branch to set the new branch with
                 components = list(branch[0].dynamic_components)
                 # Get the direction of the branch
                 direction = branch[-1].distal - branch[0].proximal
                 disp = direction * (branch_length /
                                     numpy.sqrt(numpy.sum(direction ** 2)))
-                # Temporarily add the parent to the new_branch to allow it to
-                # be linked to the new segments
+                # Get the displacement for each segment
                 seg_disp = disp / float(num_segments)
-                previous_segment = parent
                 # Get the set of all axial resistance components in the branch
                 Ra_set = set([seg.get_component_by_type(AxialResistanceModel)
                                for seg in branch])
                 # Update Ra if required (if it is inconsistent along the
                 # branch)
                 if len(Ra_set) > 1:
-                    new_Ra_comp = AxialResistanceModel('branch{}_Ra'
-                                                       .format(branch_index),
-                                                       Ra)
+                    new_Ra_comp = AxialResistanceModel(
+                                        '{}_{}_Ra'.format(branch[0].name,
+                                                          branch[-1].name), Ra)
+                    new_Ra_comp.needs_tuning = any(ra.needs_tuning
+                                                   for ra in Ra_set)
                     self.add_component(new_Ra_comp)
-                    if any(r in Ra_to_tune for r in Ra_set):
+                    if any(ra.needs_tuning for ra in Ra_set):
                         # Remove Ras that are no longer present from Ra_to_tune
                         # set.
                         for Ra_comp in Ra_set:
@@ -369,28 +402,35 @@ class Model(STree2):
                         # Add the newly added Ra_to_tune to Ra_to_tune set
                         Ra_to_tune.add(new_Ra_comp)
                 else:
-                    new_Ra_comp = None
-                for i in xrange(num_segments):
-                    # Get new name for segment
-                    name = base_name + '_' + str(i)
+                    # There is only one Ra_comp so
+                    new_Ra_comp = next(iter(Ra_set))
+                # Find the equivalent parent in the new normalised tree
+                previous_segment = normalised_tree.get_segment(parent.name)
+                for i, seg_name in enumerate(new_seg_names):
                     # Calculate its distal point
                     distal = branch[0].proximal + seg_disp * (i + 1)
-                    segment = SegmentModel(name, distal, diameter)
+                    segment = SegmentModel(seg_name, distal, diameter)
                     # Copy across components to new segment
                     for comp in components:
                         segment.set_component(comp)
-                    if new_Ra_comp:
-                        segment.set_component(new_Ra_comp, overwrite=True)
+                    segment.set_component(new_Ra_comp, overwrite=True)
                     # Append the segment to the chain
                     previous_segment.add_child(segment)
                     segment.set_parent_node(previous_segment)
+                    # Set the proximal offset if it is present in the branch
+                    # start (typically when the branch starts from the soma)
+                    if (previous_segment is parent and
+                        branch[0].proximal_offset.sum()):
+                        segment.proximal_offset = branch[0].proximal_offset
                     # Increment the 'previous_segment' reference to the current
                     # segment
                     previous_segment = segment
+                # Record normalisation so the new segments can be traced back
+                # to their original ancestors
                 if ancestry:
                     ancestry.record_replacement(parent.children[0], branch[0])
                 parent.remove_child(branch[0])
-        return ancestry, Ra_to_tune
+        return normalised_tree, ancestry, Ra_to_tune
 
     @classmethod
     def d_lambda_rule(cls, length, diameter, Ra, cm,
@@ -556,12 +596,41 @@ class SegmentModel(SNode2):
         return self.get_component_by_type(MembraneCapacitanceModel).value
 
     @property
+    def proximal(self):
+        parent = self.get_parent_node()
+        if parent is None:
+            raise Exception("Proximal not defined as parent is not set")
+        p = parent.get_content()['p3d'].xyz + self.proximal_offset
+        # This is to protect against attempts to set the contents of the
+        # proximal point which won't do anything as it is a copy of the actual
+        # point (which is done because it cannot be updated without affecting
+        # the parent which may or may not be desired)
+        p.setflags(write=False)
+        return p
+
+    @property
+    def proximal_offset(self):
+        try:
+            offset = self.get_content()['proximal_offset']
+        except KeyError:
+            offset = numpy.zeros((3,))
+        return offset
+
+    @proximal_offset.setter
+    def proximal_offset(self, offset):
+        self.get_content()['proximal_offset'] = offset
+
+    @property
     def distal(self):
         """
         Care is taken to prevent unintentional writing of this array,
         you should use the setter instead
         """
         p = deepcopy(self.get_content()['p3d'].xyz)
+        # This is to protect against attempts to set the contents of the distal
+        # point which won't do anything as it is a copy of the actual point
+        # (which is done because when it is set using the following setter the
+        # whole sub-tree is shifted accordingly)
         p.setflags(write=False)
         return p
 
@@ -600,16 +669,6 @@ class SegmentModel(SNode2):
     @property
     def surface_area(self):
         return self.diameter * numpy.pi * self.length
-
-    @property
-    def proximal(self):
-        p = deepcopy(self.get_parent_node().get_content()['p3d'].xyz)
-        try:
-            p += self.get_content()['proximal_offset']
-        except KeyError:
-            pass
-        p.setflags(write=False)
-        return p
 
     @property
     def disp(self):
@@ -662,6 +721,11 @@ class SegmentModel(SNode2):
             yield child
             for childs_child in child.all_children:
                 yield childs_child
+
+    def remove_children(self):
+        for child in self.children:
+            child.set_parent_node(None)
+            self.remove_child(child)
 
     @property
     def branch_depth(self):
@@ -829,7 +893,7 @@ class StaticComponentModel(ComponentModel):
         """
         Provided for compatibility with processing of parameters
         """
-        #FIXME: Probably should make this class have a parameters dict for
+        # FIXME: Probably should make this class have a parameters dict for
         #       consistency
         return {self.param_name: self.value}
 
@@ -837,6 +901,10 @@ class StaticComponentModel(ComponentModel):
 class AxialResistanceModel(StaticComponentModel):
 
     param_name = class_name = 'Ra'
+
+    def __init__(self, *parameters):
+        super(AxialResistanceModel, self).__init__(*parameters)
+        self.needs_tuning = False
 
 
 class MembraneCapacitanceModel(StaticComponentModel):

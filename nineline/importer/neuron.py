@@ -6,6 +6,7 @@ from copy import deepcopy
 import itertools
 from operator import itemgetter
 import numpy
+import quantities as pq
 from btmorph.btstructs2 import SNode2, P3D2
 from ..cells import (Model, SegmentModel, AxialResistanceModel,
                             MembraneCapacitanceModel, IonChannelModel,
@@ -72,7 +73,7 @@ def load_morph_from_psections(psection_file):
                         if len(components[comp_name]) != 1:
                             raise Exception("More than one '{}' component"
                                             .format(comp_name))
-                    diam = components['morphology'][0]['diam']
+                    diam = components['morphology'][0]['diam'] # FIXME: Should be given units
                     Ra = attributes['Ra']
                     cm = components['capacitance'][0]['cm']
                     num_segments = attributes['nseg']

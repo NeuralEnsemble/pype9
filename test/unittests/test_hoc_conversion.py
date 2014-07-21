@@ -27,12 +27,18 @@ from nineline.cells import DummyNinemlModel, DistributedParameter
 from nineline.cells.neuron import NineCellMetaClass, simulation_controller
 from btmorph.btviz import plot_3D_SWC
 import matplotlib.pyplot as plt
+import sys
+sys.path.insert(0, '/home/tclose/git/neurotune/scripts')
+from reduce_morphology import merge_leaves, IrreducibleMorphologyException
+sys.path.pop(0)
 
 psection_fn = '/home/tclose/git/cerebellarnuclei/extracted_data/psections.txt'
 mechs_fn = '/home/tclose/git/cerebellarnuclei/extracted_data/mechanisms.txt'
 out_fn = '/home/tclose/Desktop/cerebellarnuclei.9ml'
 
 alpha = 0.2
+
+merge_step_depth = 1
 
 
 class TestHocConversion(unittest.TestCase):
@@ -50,9 +56,14 @@ class TestHocConversion(unittest.TestCase):
             else:
                 comp.parameters['depth'] = DistributedParameter(
                                     lambda seg: alpha - alpha ** 2 / seg.diam)
-        model.write_SWC_tree_to_file('/home/tclose/Desktop/cn.swc')
-        plot_3D_SWC('/home/tclose/Desktop/cn.swc')
-        plt.show()
+#         for b in model.branches:
+#             b[-1].diameter = 20
+#         model.write_SWC_tree_to_file('/home/tclose/Desktop/'
+#                                      'reduced.swc')
+#         plot_3D_SWC('/home/tclose/Desktop/reduced.swc')
+#         plt.show()
+        reduced, _, _ = merge_leaves(model, normalise=True, num_merges=4)
+        print reduced
 #         nineml_model = DummyNinemlModel('CerebellarNuclei',
 #                                         '/home/tclose/git/cerebellarnuclei',
 #                                         model)
