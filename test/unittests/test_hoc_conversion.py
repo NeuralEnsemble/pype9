@@ -62,9 +62,7 @@ class TestHocConversion(unittest.TestCase):
 #                                      'reduced.swc')
 #         plot_3D_SWC('/home/tclose/Desktop/reduced.swc')
 #         plt.show()
-        ancestry = BranchAncestry(model)
-        reduced, _ = merge_leaves(model, normalise=True, num_merges=4,
-                                  ancestry=ancestry)
+        reduced = merge_leaves(model, normalise=True, num_merges=4)
         print len(list(model.segments))
         print len(list(reduced.segments))
         print reduced

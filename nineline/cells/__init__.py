@@ -302,16 +302,11 @@ class Model(STree2):
             raise KeyError("Segment '{}' was not found".format(name))
         return match[0]
 
-    def normalise_spatial_sampling(self, ancestry=None, **d_lambda_kwargs):
+    def normalise_spatial_sampling(self, **d_lambda_kwargs):
         """
         Regrids the spatial sampling of the segments in the tree via NEURON's
         d'lambda rule
 
-        `ancestry`   -- A BranchAncestry object used to track the origins of
-                        merged and normalised branches
-        `Ra_to_tune` -- A set of axial resistance components that require
-                        retuning (from a previous merge) and therefore need to
-                        be replaced if they get merged with another segment
         `freq`       -- frequency at which AC length constant will be computed
                         (Hz)
         `d_lambda`   -- fraction of the wavelength
@@ -438,11 +433,7 @@ class Model(STree2):
                     # segment
                     new_section.append(segment)
                     previous_segment = segment
-                # Record normalisation so the new segments can be traced back
-                # to their original ancestors
-                if ancestry:
-                    ancestry.record_replacement(new_section, section)
-        return normalised_tree, ancestry
+        return normalised_tree
 
     @classmethod
     def d_lambda_rule(cls, length, diameter, Ra, cm,
