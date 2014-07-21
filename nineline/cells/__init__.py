@@ -302,10 +302,7 @@ class Model(STree2):
             raise KeyError("Segment '{}' was not found".format(name))
         return match[0]
 
-    #TODO: Instead of keeping track of Ra_to_tune in this way, should be stored
-    #as a "viral" tag, which infects any segments derived from it
-    def normalise_spatial_sampling(self, ancestry=None, Ra_to_tune=[],
-                                   **d_lambda_kwargs):
+    def normalise_spatial_sampling(self, ancestry=None, **d_lambda_kwargs):
         """
         Regrids the spatial sampling of the segments in the tree via NEURON's
         d'lambda rule
@@ -330,8 +327,9 @@ class Model(STree2):
         new_root_segment.remove_children()
         # Set the new root to the new tree
         normalised_tree.set_root_segment(new_root_segment)
-        # Ensure that Ra_to_tune is a set
-        Ra_to_tune = set(Ra_to_tune)
+        # A temporary dictionary to assist the linking of segments with
+        # their parents in the normalised tree
+        parent_lookup = {self.root_segment.name: new_root_segment.name}
         # Loop through all branches (chains of segments linked together by
         # siblingless parent-child relationships). A slight warning but this
         # relies on traversal of the branches in order from parents to children
@@ -367,16 +365,23 @@ class Model(STree2):
                 # name of the first segment and finishing with the name of the
                 # last segment (important because it will be looked up when
                 # searching for parents of subsequently normalised sections)
-                new_seg_names = []
+                start_name = section[0].name
                 if num_segments > 1:
-                    # If there is only one segment section[-1] is more
-                    # important because it will be looked up when finding the
-                    # parent of subsequent sections
-                    new_seg_names.append(section[0].name)
+                    if len(section) > 1:
+                        end_name = section[-1].name
+                    else:
+                        end_name = start_name + '_end'
+                else:
+                    end_name = start_name
+                new_seg_names = [start_name]
                 for i in xrange(1, num_segments - 1):
-                    new_seg_names.append('{}_to_{}_{}'.format(section[0].name,
-                                                          section[-1].name, i))
-                new_seg_names.append(section[-1].name)
+                    new_seg_names.append('{}_to_{}_{}'.format(start_name,
+                                                              end_name, i))
+                if num_segments > 1:
+                    new_seg_names.append(end_name)
+                # For looking up the end of the section from the name of the
+                # parent in the original tree
+                parent_lookup[section[-1].name] = end_name
                 # FIXME: Add the components from the section to the new tree
                 # (need to copy these components somehow without breaking the
                 # references)
@@ -402,22 +407,17 @@ class Model(STree2):
                 if len(Ra_set) > 1:
                     new_Ra_comp = AxialResistanceModel(
                                         '{}_{}_Ra'.format(section[0].name,
-                                                         section[-1].name), Ra)
-                    new_Ra_comp.needs_tuning = any(ra.needs_tuning
-                                                   for ra in Ra_set)
+                                                         section[-1].name), Ra,
+                                        needs_tuning=any(ra.needs_tuning
+                                                         for ra in Ra_set))
                     normalised_tree.add_component(new_Ra_comp)
-                    if any(ra.needs_tuning for ra in Ra_set):
-                        # Remove Ras that are no longer present from Ra_to_tune
-                        # set.
-                        for Ra_comp in Ra_set:
-                            Ra_to_tune.discard(Ra_comp)
-                        # Add the newly added Ra_to_tune to Ra_to_tune set
-                        Ra_to_tune.add(new_Ra_comp)
                 else:
                     # There is only one Ra_comp so
                     new_Ra_comp = next(iter(Ra_set))
                 # Find the equivalent parent in the new normalised tree
-                previous_segment = normalised_tree.get_segment(parent.name)
+                previous_segment = normalised_tree.get_segment(
+                                                    parent_lookup[parent.name])
+                new_section = []
                 for i, seg_name in enumerate(new_seg_names):
                     # Calculate its distal point
                     distal = section[0].proximal + seg_disp * (i + 1)
@@ -436,12 +436,13 @@ class Model(STree2):
                         segment.proximal_offset = section[0].proximal_offset
                     # Increment the 'previous_segment' reference to the current
                     # segment
+                    new_section.append(segment)
                     previous_segment = segment
                 # Record normalisation so the new segments can be traced back
                 # to their original ancestors
                 if ancestry:
-                    ancestry.record_replacement(parent.children[0], section[0])
-        return normalised_tree, ancestry, Ra_to_tune
+                    ancestry.record_replacement(new_section, section)
+        return normalised_tree, ancestry
 
     @classmethod
     def d_lambda_rule(cls, length, diameter, Ra, cm,
@@ -489,6 +490,17 @@ class Model(STree2):
                     comp.class_name not in leak_components):
                     seg.remove_component(comp)
         return passive_tree
+
+    def plot(self, highlight=[], show=True):
+        from btmorph.btviz import plot_3D_SWC
+        import matplotlib.pyplot as plt
+        for b in highlight:
+            for seg in b:
+                seg.diameter = 10
+        self.write_SWC_tree_to_file('/tmp/swc_tree.swc')
+        plot_3D_SWC('/tmp/swc_tree.swc')
+        if show:
+            plt.show()
 
 
 class SegmentModel(SNode2):
@@ -913,9 +925,9 @@ class AxialResistanceModel(StaticComponentModel):
 
     param_name = class_name = 'Ra'
 
-    def __init__(self, *parameters):
-        super(AxialResistanceModel, self).__init__(*parameters)
-        self.needs_tuning = False
+    def __init__(self, name, value, needs_tuning=False):
+        super(AxialResistanceModel, self).__init__(name, value)
+        self.needs_tuning = needs_tuning
 
 
 class MembraneCapacitanceModel(StaticComponentModel):
@@ -966,7 +978,7 @@ class BranchAncestry(object):
 
         def __init__(self, start_segment, end_segment=None):
             self.start_name = start_segment.name
-            self.end_name = end_segment.name
+            self.end_name = end_segment.name if end_segment else None
 
     def __init__(self, full_tree):
         self.full_tree = full_tree
@@ -976,24 +988,22 @@ class BranchAncestry(object):
     def record_merger(self, new_segment, merged_branches):
         # Get the start of the branch containing the new segment
         branch_start = new_segment.branch_start()
-        key = branch_start.key
         # If the branch start is the same as the new_segment, which will occur
         # when the merge has stopped at a component mismatch border
         if branch_start is new_segment:
-            self.history[key] = [self.SubBranch(b[0]) for b in merged_branches]
+            self.history[branch_start.name] = [self.SubBranch(b[0])
+                                               for b in merged_branches]
         # If the branch start is before the merger than simply add the name
         # of the branch_start to the list of translations
         else:
-            self.history[key] = [self.SubBranch(branch_start)]
+            self.history[branch_start.name] = [self.SubBranch(branch_start)]
 
-    def record_replacement(self, new_branch, old_branch):
-        if old_branch[-1].is_leaf():
-            assert new_branch[-1].is_leaf()
-            sub_branch = self.SubBranch(old_branch[0])
+    def record_replacement(self, new_section, old_section):
+        if old_section[-1].is_leaf():
+            sub_section = self.SubBranch(old_section[0])
         else:
-            assert not new_branch[-1].is_leaf()
-            sub_branch = self.SubBranch(old_branch[0], old_branch[-1])
-        self.history[new_branch[0].name] = sub_branch
+            sub_section = self.SubBranch(old_section[0], old_section[-1])
+        self.history[new_section[0].name] = sub_section
 
     def get_original(self, segment):
         seg_name = segment.name

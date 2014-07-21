@@ -23,7 +23,7 @@ import time
 import neo.io
 from nineline.importer.neuron import save_model_view
 # from lxml import etree
-from nineline.cells import DummyNinemlModel, DistributedParameter
+from nineline.cells import DummyNinemlModel, DistributedParameter, BranchAncestry
 from nineline.cells.neuron import NineCellMetaClass, simulation_controller
 from btmorph.btviz import plot_3D_SWC
 import matplotlib.pyplot as plt
@@ -62,7 +62,11 @@ class TestHocConversion(unittest.TestCase):
 #                                      'reduced.swc')
 #         plot_3D_SWC('/home/tclose/Desktop/reduced.swc')
 #         plt.show()
-        reduced, _, _ = merge_leaves(model, normalise=True, num_merges=4)
+        ancestry = BranchAncestry(model)
+        reduced, _ = merge_leaves(model, normalise=True, num_merges=4,
+                                  ancestry=ancestry)
+        print len(list(model.segments))
+        print len(list(reduced.segments))
         print reduced
 #         nineml_model = DummyNinemlModel('CerebellarNuclei',
 #                                         '/home/tclose/git/cerebellarnuclei',
