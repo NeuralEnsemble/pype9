@@ -108,6 +108,8 @@ class Model(STree2):
         # Set the root segments index to be 3 (using a 3 point soma)
         model.root_segment._index = 3
         model.add_node_with_parent(model.root_segment, model.get_root())
+        # Create temporary lookup dictionary in order to link segments with
+        # their parents by the name specified in the 9ml morphology file
         seg_lookup = {model.root_segment.name: model.root_segment}
         # Initially create all the segments and add them to a lookup dictionary
         for seg_9ml in morph9ml.segments.itervalues():
@@ -322,78 +324,88 @@ class Model(STree2):
         normalised_tree = Model(self.name, self._source)
         # FIXME: this will copy whole tree which while safe is a bit
         # inefficient
-        new_root = deepcopy(self.root_segment)
+        new_root_segment = deepcopy(self.root_segment)
         # Clear the children from the new tree (I don't think this is not
         # strictly necessary but better safe than sorry)
-        new_root.remove_children()
+        new_root_segment.remove_children()
         # Set the new root to the new tree
-        normalised_tree.set_root_segment(new_root)
+        normalised_tree.set_root_segment(new_root_segment)
         # Ensure that Ra_to_tune is a set
         Ra_to_tune = set(Ra_to_tune)
         # Loop through all branches (chains of segments linked together by
         # siblingless parent-child relationships). A slight warning but this
         # relies on traversal of the branches in order from parents to children
         # (either depth-first or breadth-first should be okay though)
-        for branch_index, branch in enumerate(self.branches):
-            parent = branch[0].parent
+        # FIXME: This should be consistent_sections not branches
+        for section in self.branches:
+            parent = section[0].parent
             # FIXME: Should be able to normalise the soma too (maybe make a
             # fake parent in this case)
             if parent:
-                # Get the branch length
-                branch_length = numpy.sum(seg.length for seg in branch)
+                # Get the section length
+                section_length = numpy.sum(seg.length for seg in section)
                 # Get weighted average of diameter Ra and cm by segment length
                 diameter = 0.0
                 Ra = 0.0  # FIXME * pq.ohm * pq.cm
                 cm = 0.0  # FIXME * pq.uF / (pq.cm ** 2)
-                for seg in branch:
+                for seg in section:
                     diameter += seg.diameter * seg.length
                     Ra += seg.Ra * seg.length
                     cm += seg.cm * seg.length
                 # TODO: instead of finding the average, I could fit a spline
                 #       to interpolate these values along the newly fitted
-                #       section. Same goes for merged branches
-                diameter /= branch_length
-                Ra /= branch_length
-                cm /= branch_length
+                #       section. Same goes for merged sections
+                diameter /= section_length
+                Ra /= section_length
+                cm /= section_length
                 # Calculate the number of required segments via NEURON's
                 # d'lambda rule
-                num_segments = self.d_lambda_rule(branch_length,
+                num_segments = self.d_lambda_rule(section_length,
                                                   diameter * pq.um,
                                                   Ra, cm, **d_lambda_kwargs)
                 # Generate the names for the new segments, starting with the
                 # name of the first segment and finishing with the name of the
                 # last segment (important because it will be looked up when
-                # searching for parents of subsequently normalised branches)
+                # searching for parents of subsequently normalised sections)
                 new_seg_names = []
                 if num_segments > 1:
-                    # If there is only one segment branch[-1] is more important
-                    # because it will be looked up when finding the parent of
-                    # subsequent branches
-                    new_seg_names.append(branch[0].name)
+                    # If there is only one segment section[-1] is more
+                    # important because it will be looked up when finding the
+                    # parent of subsequent sections
+                    new_seg_names.append(section[0].name)
                 for i in xrange(1, num_segments - 1):
-                    new_seg_names.append('{}_{}_{}'.format(branch[0].name,
-                                                           branch[-1].name, i))
-                new_seg_names.append(branch[-1].name)
-                # Save the components of the branch to set the new branch with
-                components = list(branch[0].dynamic_components)
-                # Get the direction of the branch
-                direction = branch[-1].distal - branch[0].proximal
-                disp = direction * (branch_length /
+                    new_seg_names.append('{}_to_{}_{}'.format(section[0].name,
+                                                          section[-1].name, i))
+                new_seg_names.append(section[-1].name)
+                # FIXME: Add the components from the section to the new tree
+                # (need to copy these components somehow without breaking the
+                # references)
+                for seg in section:
+                    for comp in seg.components:
+                        normalised_tree.add_component(comp)
+                # Save the components of the section to set the new section
+                # with
+                distributed_comps = []
+                for comp in section[0].distributed_components:
+                    distributed_comps.append(comp)
+                # Get the direction of the section
+                direction = section[-1].distal - section[0].proximal
+                disp = direction * (section_length /
                                     numpy.sqrt(numpy.sum(direction ** 2)))
                 # Get the displacement for each segment
                 seg_disp = disp / float(num_segments)
-                # Get the set of all axial resistance components in the branch
+                # Get the set of all axial resistance components in the section
                 Ra_set = set([seg.get_component_by_type(AxialResistanceModel)
-                               for seg in branch])
+                               for seg in section])
                 # Update Ra if required (if it is inconsistent along the
-                # branch)
+                # section)
                 if len(Ra_set) > 1:
                     new_Ra_comp = AxialResistanceModel(
-                                        '{}_{}_Ra'.format(branch[0].name,
-                                                          branch[-1].name), Ra)
+                                        '{}_{}_Ra'.format(section[0].name,
+                                                         section[-1].name), Ra)
                     new_Ra_comp.needs_tuning = any(ra.needs_tuning
                                                    for ra in Ra_set)
-                    self.add_component(new_Ra_comp)
+                    normalised_tree.add_component(new_Ra_comp)
                     if any(ra.needs_tuning for ra in Ra_set):
                         # Remove Ras that are no longer present from Ra_to_tune
                         # set.
@@ -408,28 +420,27 @@ class Model(STree2):
                 previous_segment = normalised_tree.get_segment(parent.name)
                 for i, seg_name in enumerate(new_seg_names):
                     # Calculate its distal point
-                    distal = branch[0].proximal + seg_disp * (i + 1)
+                    distal = section[0].proximal + seg_disp * (i + 1)
                     segment = SegmentModel(seg_name, distal, diameter)
                     # Copy across components to new segment
-                    for comp in components:
+                    for comp in distributed_comps:
                         segment.set_component(comp)
                     segment.set_component(new_Ra_comp, overwrite=True)
                     # Append the segment to the chain
                     previous_segment.add_child(segment)
                     segment.set_parent_node(previous_segment)
-                    # Set the proximal offset if it is present in the branch
-                    # start (typically when the branch starts from the soma)
+                    # Set the proximal offset if it is present in the section
+                    # start (typically when the section starts from the soma)
                     if (previous_segment is parent and
-                        branch[0].proximal_offset.sum()):
-                        segment.proximal_offset = branch[0].proximal_offset
+                        section[0].proximal_offset.sum()):
+                        segment.proximal_offset = section[0].proximal_offset
                     # Increment the 'previous_segment' reference to the current
                     # segment
                     previous_segment = segment
                 # Record normalisation so the new segments can be traced back
                 # to their original ancestors
                 if ancestry:
-                    ancestry.record_replacement(parent.children[0], branch[0])
-                parent.remove_child(branch[0])
+                    ancestry.record_replacement(parent.children[0], section[0])
         return normalised_tree, ancestry, Ra_to_tune
 
     @classmethod
@@ -725,7 +736,7 @@ class SegmentModel(SNode2):
     def remove_children(self):
         for child in self.children:
             child.set_parent_node(None)
-            self.remove_child(child)
+        self._child_nodes = []
 
     @property
     def branch_depth(self):
