@@ -268,6 +268,13 @@ class Model(STree2):
         self.components[component.name] = component
         return component
 
+    def clear_current_clamps(self):
+        self.components = dict((n, c) for n, c in self.components.iteritems()
+                               if not isinstance(c, CurrentClampModel))
+        for seg in self.segments:
+            seg.components = [c for c in seg.components
+                              if not isinstance(c, CurrentClampModel)]
+
     @property
     def segments(self):
         """
@@ -480,7 +487,7 @@ class Model(STree2):
                             segment.set_component(comp)
                         # TODO: Need to add discrete components too Create new
                         # Ra comp to hold the adjusted axial resistance
-                        Ra_comp = AxialResistanceModel(name + '_Ra',
+                        Ra_comp = AxialResistanceModel('Ra_' + name,
                                                        axial_resistance,
                                                        needs_tuning=True)
                         merged_tree.add_component(Ra_comp)
@@ -719,13 +726,16 @@ class Model(STree2):
         `leak_components` -- the leak components to retain in the copy of the
                              model
         """
-        passive_tree = deepcopy(self)
-        for seg in passive_tree.segments:
-            for comp in seg.components:
-                if (isinstance(comp, DynamicComponentModel) and
-                    comp.class_name not in leak_components):
-                    seg.remove_component(comp)
-        return passive_tree
+        def is_passive(comp):
+            return (comp.class_name in leak_components or
+                    (not isinstance(comp, IonChannelModel) and
+                     not isinstance(comp, IonConcentrationModel)))
+        passive = deepcopy(self)
+        passive.components = dict((n, c) for n, c in passive.components.items()
+                               if is_passive(c))
+        for seg in passive.segments:
+            seg.components = [c for c in seg.components if is_passive(c)]
+        return passive
 
     def plot(self, highlight=[], show=True):
         from btmorph.btviz import plot_3D_SWC
@@ -846,6 +856,10 @@ class SegmentModel(SNode2):
     @property
     def components(self):
         return self.get_content()['components']
+
+    @components.setter
+    def components(self, components):
+        self.get_content()['components'] = components
 
     @property
     def discrete_components(self):
@@ -1077,6 +1091,8 @@ class SegmentModel(SNode2):
 
 
 class ComponentModel(object):
+
+    needs_tuning = False
 
     def __init__(self):
         self.global_parameters = {}

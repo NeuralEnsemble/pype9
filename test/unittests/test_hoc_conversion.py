@@ -26,6 +26,10 @@ from nineline.importer.neuron import save_model_view
 from nineline.cells import DummyNinemlModel, DistributedParameter, BranchAncestry
 from nineline.cells.neuron import NineCellMetaClass, simulation_controller
 import matplotlib.pyplot as plt
+import sys
+sys.path.insert(0, '/home/tclose/git/neurotune/scripts')
+from reduce_morphology import tune_passive_model
+sys.path.pop(0)
 import numpy
 
 psection_fn = '/home/tclose/git/cerebellarnuclei/extracted_data/psections.txt'
@@ -53,29 +57,33 @@ class TestHocConversion(unittest.TestCase):
             else:
                 comp.parameters['depth'] = DistributedParameter(
                                     lambda seg: alpha - alpha ** 2 / seg.diam)
-        md = dict((frozenset(c.name for c in comps), segs)
-                  for comps, segs in model.get_segment_categories())
+        passive_model = model.passive_model(leak_components=['pasDCN'])
+        passive_model.clear_current_clamps()
+#         md = dict((frozenset(c.name for c in comps), segs)
+#                   for comps, segs in model.get_segment_categories())
+        reduced = model.merge_leaves(num_merges=1, error_if_irreducible=False)
         print len(list(model.segments))
-        reduced = model
-        for i in xrange(1, 9):
-            reduced = reduced.merge_leaves(normalise=True, num_merges=1,
-                                           error_if_irreducible=False)
-            reduced.categorise_segments_for_SWC()
-            print len(list(reduced.segments))
-            rd = dict((frozenset(c.name for c in comps), segs)
-                      for comps, segs in reduced.get_segment_categories())
-            for k in rd:
-                print ', '.join(k) + ':'
-                print "  {} -> {}".format(numpy.sum(s.surface_area
-                                                    for s in rd.get(k, [])),
-                                          numpy.sum(s.surface_area
-                                                    for s in md.get(k, [])))
-#             model.plot(show=False)
-#             reduced.plot(show=True)
-            print "after {} merges".format(i)
+#         reduced = model
+#         for i in xrange(1, 9):
+#             reduced = reduced.merge_leaves(normalise=True, num_merges=1,
+#                                            error_if_irreducible=False)
+#             reduced.categorise_segments_for_SWC()
+#             tune_passive_model(
+#             print len(list(reduced.segments))
+#             rd = dict((frozenset(c.name for c in comps), segs)
+#                       for comps, segs in reduced.get_segment_categories())
+#             for k in rd:
+#                 print ', '.join(k) + ':'
+#                 print "  {} -> {}".format(numpy.sum(s.surface_area
+#                                                     for s in rd.get(k, [])),
+#                                           numpy.sum(s.surface_area
+#                                                     for s in md.get(k, [])))
+# #             model.plot(show=False)
+# #             reduced.plot(show=True)
+#             print "after {} merges".format(i)
 #         nineml_model = DummyNinemlModel('CerebellarNuclei',
 #                                         '/home/tclose/git/cerebellarnuclei',
-#                                         model)
+#                                         reduced)
 #         CerebellarNuclei = NineCellMetaClass(nineml_model)
 #         cell = CerebellarNuclei()
 #         cell.record('v')
@@ -83,8 +91,9 @@ class TestHocConversion(unittest.TestCase):
 #         simulation_controller.run(1000)
 #         print time.time()
 #         recording = cell.get_recording('v')
-#         out = neo.io.PickleIO('/home/tclose/Desktop/cerebellar_nuclei.neo.pkl')
+#         out = neo.io.PickleIO('/home/tclose/Desktop/cerebellar_nuclei-reduced.neo.pkl')
 #         out.write(recording)
+#         plt.plot(recording.times, recording)
 #         save_model_view('/home/tclose/git/cerebellarnuclei/extracted_data/'
 #                         'regurgitated_mechanisms.txt')
 #         print cell
