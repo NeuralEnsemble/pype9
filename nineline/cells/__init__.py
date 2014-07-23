@@ -33,6 +33,7 @@ from nineml.extensions.morphology import (Morphology as Morphology9ml,
                                           Member as Member9ml)
 from abc import ABCMeta  # Metaclass for abstract base classes
 from btmorph.btstructs2 import STree2, SNode2, P3D2
+import inspect
 # DEFAULT_V_INIT = -65
 
 
@@ -1232,9 +1233,13 @@ class IonConcentrationModel(StaticComponentModel):
 
 class DistributedParameter(object):
 
-    def __init__(self, expr):
+    def __init__(self, expr_str):
         self.cached = {}
-        self._expr = expr
+        self._expr_str = expr_str
+        self._expr = eval(expr_str)
+
+    def __reduce__(self):
+        return self.__class__, (self._expr_str,)
 
     def value(self, segment):
         try:
