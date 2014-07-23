@@ -303,6 +303,18 @@ class Model(STree2):
         return (c for c in self.components.itervalues()
                 if c.class_name == class_name)
 
+    def distances_from_soma(self, seg_names=None):
+        if seg_names is None:
+            segments = self.segments
+        else:
+            segments = (self.get_segment(n) for n in seg_names)
+        for seg in segments:
+            dist = numpy.sum(s.length
+                             for s in seg.path_to_ancestor(self.root_segment))
+            # Offset by half the segment's length and the root_segment's length
+            dist += (seg.length - self.root_segment.length) / 2.0
+            yield dist, seg
+
     @property
     def branches(self):
         """
@@ -1083,12 +1095,12 @@ class SegmentModel(SNode2):
         `ancestor` -- a segment which is an ancestor of this segment
         """
         next_ancestor = self
-        while next_ancestor.parent is not ancestor:
-            yield next_ancestor
+        while next_ancestor is not ancestor:
             next_ancestor = next_ancestor.parent
             if next_ancestor is None:
                 raise Exception("Segment '{}' is not an ancestor of segment "
                                 "'{}'".format(ancestor.name, self.name))
+            yield next_ancestor
 
 
 class ComponentModel(object):

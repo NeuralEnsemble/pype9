@@ -691,7 +691,7 @@ class NineCellStandAlone(_BaseNineCell):
             if isinstance(segnames, basestring) or segnames is None:
                 segnames = [segnames] * len(variables)
             if isinstance(components, basestring) or components is None:
-                components = [components] * len(variables)
+                components = [components] * len(segnames)
         if in_block:
             segment = neo.Segment(rec_datetime=datetime.now())
         else:
