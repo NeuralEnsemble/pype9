@@ -31,6 +31,7 @@ import sys
 sys.path.insert(0, '/home/tclose/git/neurotune/scripts')
 from reduce_morphology import merge_leaves, IrreducibleMorphologyException
 sys.path.pop(0)
+import numpy
 
 psection_fn = '/home/tclose/git/cerebellarnuclei/extracted_data/psections.txt'
 mechs_fn = '/home/tclose/git/cerebellarnuclei/extracted_data/mechanisms.txt'
@@ -45,6 +46,7 @@ class TestHocConversion(unittest.TestCase):
 
     def test_hoc_conversion(self):
         model = Model.from_psections(psection_fn, mechs_fn)
+        model.categorise_segments_for_SWC()
         for comp in chain(model.components_of_class('CaConc'),
                           model.components_of_class('CalConc')):
             segments = list(model.component_segments(comp))
@@ -56,16 +58,26 @@ class TestHocConversion(unittest.TestCase):
             else:
                 comp.parameters['depth'] = DistributedParameter(
                                     lambda seg: alpha - alpha ** 2 / seg.diam)
-#         for b in model.branches:
-#             b[-1].diameter = 20
-#         model.write_SWC_tree_to_file('/home/tclose/Desktop/'
-#                                      'reduced.swc')
-#         plot_3D_SWC('/home/tclose/Desktop/reduced.swc')
-#         plt.show()
-        reduced = merge_leaves(model, normalise=True, num_merges=4)
+        md = dict((frozenset(c.name for c in comps), segs)
+                  for comps, segs in model.get_segment_categories())
         print len(list(model.segments))
-        print len(list(reduced.segments))
-        print reduced
+        reduced = model
+        for i in xrange(1, 9):
+            reduced = merge_leaves(reduced, normalise=True, num_merges=1,
+                                   error_if_irreducible=False)
+            reduced.categorise_segments_for_SWC()
+            print len(list(reduced.segments))
+            rd = dict((frozenset(c.name for c in comps), segs)
+                      for comps, segs in reduced.get_segment_categories())
+            for k in rd:
+                print ', '.join(k) + ':'
+                print "  {} -> {}".format(numpy.sum(s.surface_area
+                                                    for s in rd.get(k, [])),
+                                          numpy.sum(s.surface_area
+                                                    for s in md.get(k, [])))
+#             model.plot(show=False)
+#             reduced.plot(show=True)
+            print "after {} merges".format(i)
 #         nineml_model = DummyNinemlModel('CerebellarNuclei',
 #                                         '/home/tclose/git/cerebellarnuclei',
 #                                         model)
@@ -84,6 +96,11 @@ class TestHocConversion(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    test = TestHocConversion()
-    test.test_hoc_conversion()
-    print "done"
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--run', default=False, action='store_true')
+    args = parser.parse_args()
+    if args.run:
+        test = TestHocConversion()
+        test.test_hoc_conversion()
+        print "done"

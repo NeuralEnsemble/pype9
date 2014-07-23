@@ -253,9 +253,16 @@ class Model(STree2):
         third point in between the two endpoints to match the assumptions in
         BTmorph
         """
+        point1, point2 = deepcopy((point1, point2))
         mid_point = P3D2((point1.xyz + point2.xyz) / 2.0,
                          (point1.radius + point2.radius) / 2.0)
-        return super(Model, self)._3point_SWC_soma(point2, mid_point, point1)
+        avg_offset = (numpy.sum(c.proximal_offset
+                                for c in self.root_segment.children) /
+                      len(self.root_segment.children))
+
+        for p in (point1, mid_point, point2):
+            p.xyz = p.xyz + avg_offset
+        return super(Model, self)._3point_SWC_soma(point1, mid_point, point2)
 
     def add_component(self, component):
         self.components[component.name] = component
@@ -295,6 +302,36 @@ class Model(STree2):
         """
         return self.root_segment.sub_branches
 
+    @classmethod
+    def branch_sections_w_comps(cls, branch):
+        for comps, section in groupby(branch, lambda s: s.id_components):
+            yield list(section), comps
+
+    @classmethod
+    def branch_sections(cls, branch):
+        for section, _ in cls.branch_sections_w_comps(branch):
+            yield section
+
+    @property
+    def sections(self):
+        """
+        An iterator over groups of contiguous segments with no branching and
+        consistent ionic components
+        """
+        for branch in self.branches:
+            for section in self.branch_sections(branch):
+                yield section
+
+    @property
+    def sections_w_comps(self):
+        """
+        An iterator over groups of contiguous segments with no branching and
+        consistent ionic components
+        """
+        for branch in self.branches:
+            for section, comps in self.branch_sections_w_comps(branch):
+                yield section, comps
+
     def get_segment(self, name):
         match = [seg for seg in self.segments if seg.name == name]
         # TODO: Need to check this on initialisation
@@ -315,6 +352,8 @@ class Model(STree2):
         # Make a new copy of the tree, starting from the root segment from
         # which to build the normalised tree from
         normalised_tree = Model(self.name, self._source)
+        for comp in self.components.itervalues():
+            normalised_tree.add_component(deepcopy(comp))
         # FIXME: this will copy whole tree which while safe is a bit
         # inefficient
         new_root_segment = deepcopy(self.root_segment)
@@ -331,7 +370,7 @@ class Model(STree2):
         # relies on traversal of the branches in order from parents to children
         # (either depth-first or breadth-first should be okay though)
         # FIXME: This should be consistent_sections not branches
-        for section in self.branches:
+        for section in self.sections:
             parent = section[0].parent
             # FIXME: Should be able to normalise the soma too (maybe make a
             # fake parent in this case)
@@ -378,23 +417,16 @@ class Model(STree2):
                 # For looking up the end of the section from the name of the
                 # parent in the original tree
                 parent_lookup[section[-1].name] = end_name
-                # FIXME: Add the components from the section to the new tree
-                # (need to copy these components somehow without breaking the
-                # references)
-                for seg in section:
-                    for comp in seg.components:
-                        normalised_tree.add_component(comp)
-                # Save the components of the section to set the new section
-                # with
-                distributed_comps = []
-                for comp in section[0].distributed_components:
-                    distributed_comps.append(comp)
+                # Get a list of distributed components to insert into the new
+                # tree
+                distr_comps = [normalised_tree.components[c.name]
+                               for c in section[0].distributed_components]
                 # Get the direction of the section
                 direction = section[-1].distal - section[0].proximal
                 disp = direction * (section_length /
                                     numpy.sqrt(numpy.sum(direction ** 2)))
                 # Get the displacement for each segment
-                seg_disp = disp / float(num_segments)
+#                 seg_disp = disp / float(num_segments)
                 # Get the set of all axial resistance components in the section
                 Ra_set = set([seg.get_component_by_type(AxialResistanceModel)
                                for seg in section])
@@ -411,55 +443,74 @@ class Model(STree2):
                     # There is only one Ra_comp so
                     new_Ra_comp = next(iter(Ra_set))
                 # Find the equivalent parent in the new normalised tree
-                previous_segment = normalised_tree.get_segment(
+                parent = normalised_tree.get_segment(
                                                     parent_lookup[parent.name])
-                new_section = []
-                for i, seg_name in enumerate(new_seg_names):
-                    # Calculate its distal point
-                    distal = section[0].proximal + seg_disp * (i + 1)
-                    segment = SegmentModel(seg_name, distal, diameter)
-                    # Copy across components to new segment
-                    for comp in distributed_comps:
-                        segment.set_component(comp)
-                    segment.set_component(new_Ra_comp, overwrite=True)
-                    # Append the segment to the chain
-                    previous_segment.add_child(segment)
-                    segment.set_parent_node(previous_segment)
-                    # Set the proximal offset if it is present in the section
-                    # start (typically when the section starts from the soma)
-                    if (previous_segment is parent and
-                        section[0].proximal_offset.sum()):
-                        segment.proximal_offset = section[0].proximal_offset
-                    # Increment the 'previous_segment' reference to the current
-                    # segment
-                    new_section.append(segment)
-                    previous_segment = segment
+                self.create_section(new_seg_names, disp, parent, diameter,
+                                    distr_comps,
+                                    proximal_offset=section[0].proximal_offset)
+#                 new_section = []
+#                 for i, seg_name in enumerate(new_seg_names):
+#                     # Calculate its distal point
+#                     distal = section[0].proximal + seg_disp * (i + 1)
+#                     segment = SegmentModel(seg_name, distal, diameter)
+#                     # Copy across components to new segment
+#                     for comp in distr_comps:
+#                         segment.set_component(comp)
+#                     segment.set_component(new_Ra_comp, overwrite=True)
+#                     # Append the segment to the chain
+#                     previous_segment.add_child(segment)
+#                     segment.set_parent_node(previous_segment)
+#                     # Set the proximal offset if it is present in the section
+#                     # start (typically when the section starts from the soma)
+#                     if (previous_segment is parent and
+#                         section[0].proximal_offset.sum()):
+#                         segment.proximal_offset = section[0].proximal_offset
+#                     # Increment the 'previous_segment' reference to the current
+#                     # segment
+#                     new_section.append(segment)
+#                     previous_segment = segment
         return normalised_tree
 
     @classmethod
-    def create_segment_chain(cls, seg_names, disp, parent, diameter,
-                             distributed_comps=[],
-                             discrete_comps_fracs=[],
-                             proximal_offset=numpy.array([0.0, 0.0, 0.0])):
+    def create_section(cls, segment_names, displacement, parent, diameter,
+                       distributed_comps=[], discrete_comps_fracs=[],
+                       proximal_offset=numpy.array([0.0, 0.0, 0.0])):
         """
-        `discrete_comps_fracs` -- an iterable of tuples containing a discrete
-                                    component and the fraction along the
-                                    segment it should be inserted
+        Creates a linear chain of n segments starting from 'parent', with n
+        determined by the number of segment names provided.
+
+        `segment_names`        -- a list of names for the new segments. The
+                                  number of names determines the number of
+                                  segments created
+        `displacement`         -- the direction and length of the created chain
+                                  of segments.
+        `parent`               -- the parent segment from which to grow the
+                                  chain from
+        `diameter`             -- the diameter of the segments in the chain
+        `distributed_comps`    -- the distributed components to insert into
+                                  each segment
+        `discrete_comps_fracs` -- a list (or iterable) of tuples containing a
+                                  discrete component and the fraction along the
+                                  segment it should be inserted
+        `proximal_offset`      -- the offset from the distal point of the
+                                  parent the first segment should start
         """
-        num_segments = len(seg_names)
+        num_segs = len(segment_names)
         # Get the displacement for each segment
-        seg_disp = disp / float(num_segments)
-        # Break the discrete components into groups based on which segment
-        # they should be inserted into
-        discrete_groups = groupby(sorted(discrete_comps_fracs, itemgetter(1)),
-                                  lambda cf: numpy.floor(cf[1] * num_segments))
+        seg_disp = displacement / float(num_segs)
+        # Break the discrete components into groups based on which segment they
+        # should be inserted into
+        grp_by_seg = dict(groupby(sorted(discrete_comps_fracs, itemgetter(1)),
+                                  lambda c_f: numpy.floor(c_f[1] * num_segs)))
+        discrete_comps_by_seg = [(i, grp_by_seg.get(i, []))
+                                 for i in xrange(num_segs)]
         # Loop through and create the segment chain
         previous_segment = parent
         new_section = []
-        for i, seg_name, (discrete_comps, _) in enumerate(zip(seg_names,
-                                                             discrete_groups)):
+        for seg_name, (seg_i, discrete_comps) in zip(segment_names,
+                                                     discrete_comps_by_seg):
             # Calculate its distal point
-            distal = parent.distal + proximal_offset + seg_disp * (i + 1)
+            distal = parent.distal + proximal_offset + seg_disp * (seg_i + 1)
             segment = SegmentModel(seg_name, distal, diameter)
             # Set distributed components on segment
             for comp in distributed_comps:
@@ -470,15 +521,14 @@ class Model(STree2):
             # Append the segment to the chain
             previous_segment.add_child(segment)
             segment.set_parent_node(previous_segment)
-            # Set the proximal offset if it is present in the section
-            # start (typically when the section starts from the soma)
-            if (previous_segment is parent and proximal_offset.sum()):
-                segment.proximal_offset = proximal_offset
-            # Increment the 'previous_segment' reference to the current
-            # segment
+            # Increment the 'previous_segment' reference to the current segment
             previous_segment = segment
             # Add the segment to the list for the new section
             new_section.append(segment)
+        # Set the proximal offset if it is present in the section start
+        # (typically when the section starts from the soma)
+        if proximal_offset.sum():
+            new_section[0].proximal_offset = proximal_offset
         return new_section
 
     @classmethod
@@ -535,9 +585,33 @@ class Model(STree2):
             for seg in b:
                 seg.diameter = 10
         self.write_SWC_tree_to_file('/tmp/swc_tree.swc')
-        plot_3D_SWC('/tmp/swc_tree.swc')
+        plot_3D_SWC('/tmp/swc_tree.swc', filter=range(10),
+                    color_list=['r', 'g', 'b', 'c', 'm', 'y', 'r--', 'b--',
+                                'g--'] * 2)
         if show:
             plt.show()
+
+    def categorise_segments_for_SWC(self, offset=3):
+        comp_classes = set()
+        for section in self.sections:
+            comp_classes.add(section[0].id_components)
+        type_index_dict = dict((c, i)
+                               for i, c in enumerate(sorted(comp_classes,
+                                                        key=lambda x: len(x))))
+        for section in self.sections:
+            type_index = offset + type_index_dict[section[0].id_components]
+            for seg in section:
+                seg.get_content()['p3d'].type = type_index
+
+    def get_segment_categories(self):
+        sortkey = lambda s: sorted(s.id_components)
+        for comp, segments in groupby(sorted(self.segments, key=sortkey),
+                                      key=sortkey):
+            yield frozenset(comp), list(segments)
+
+    def category_surface_areas(self):
+        for comp, segs in self.get_segment_categories():
+            yield comp, numpy.sum(s.surface_area for s in segs)
 
 
 class SegmentModel(SNode2):
@@ -634,9 +708,11 @@ class SegmentModel(SNode2):
                   if not isinstance(c, PointProcessModel))
 
     @property
-    def dynamic_components(self):
-        return (c for c in self.components
-                  if isinstance(c, DynamicComponentModel))
+    def id_components(self):
+        return frozenset((c for c in self.components
+                          if isinstance(c, IonChannelModel) or
+                             isinstance(c, IonConcentrationModel) or
+                             isinstance(c, MembraneCapacitanceModel)))
 
     def get_component_by_type(self, comp_type):
         match = [c for c in self.components if isinstance(c, comp_type)]
@@ -822,6 +898,15 @@ class SegmentModel(SNode2):
         while seg.parent and not seg.siblings:
             seg = seg.parent
         return seg
+
+    def containing_branch(self):
+        seg = self.branch_start()
+        branch = []
+        while len(seg.children) == 1:
+            branch.append(seg)
+            seg = seg.children[0]
+        branch.append(seg)
+        return branch
 
     def is_leaf(self):
         return len(self.children) == 0
