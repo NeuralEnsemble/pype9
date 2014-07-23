@@ -25,12 +25,7 @@ from nineline.importer.neuron import save_model_view
 # from lxml import etree
 from nineline.cells import DummyNinemlModel, DistributedParameter, BranchAncestry
 from nineline.cells.neuron import NineCellMetaClass, simulation_controller
-from btmorph.btviz import plot_3D_SWC
 import matplotlib.pyplot as plt
-import sys
-sys.path.insert(0, '/home/tclose/git/neurotune/scripts')
-from reduce_morphology import merge_leaves, IrreducibleMorphologyException
-sys.path.pop(0)
 import numpy
 
 psection_fn = '/home/tclose/git/cerebellarnuclei/extracted_data/psections.txt'
@@ -63,8 +58,8 @@ class TestHocConversion(unittest.TestCase):
         print len(list(model.segments))
         reduced = model
         for i in xrange(1, 9):
-            reduced = merge_leaves(reduced, normalise=True, num_merges=1,
-                                   error_if_irreducible=False)
+            reduced = reduced.merge_leaves(normalise=True, num_merges=1,
+                                           error_if_irreducible=False)
             reduced.categorise_segments_for_SWC()
             print len(list(reduced.segments))
             rd = dict((frozenset(c.name for c in comps), segs)
