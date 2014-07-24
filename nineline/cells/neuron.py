@@ -606,24 +606,25 @@ class NineCellStandAlone(_BaseNineCell):
         # segment specific level or the component level.
         if '.' in varname:
             parts = varname.split('.')
-            try:
-                if len(parts) == 2:
-                    comp_name, var = parts
+            if len(parts) == 2:
+                comp_name, var = parts
+                try:
                     for seg in self._comp_segments[comp_name]:
                         setattr(seg, var, value)
-                elif len(parts) == 3:
-                    segment, comp_name, var = parts
-                    setattr(getattr(segment, comp_name), var, value)
-                else:
-                    raise AttributeError("Invalid number of components ({}), "
-                                         "can be either 2 (segment group or "
-                                         "name, variable) or 3 (segment group "
-                                         "or name, component, variable)"
-                                         .format(len(parts)))
-            except KeyError:
-                raise AttributeError("Segment group or segment '{}' is "
-                                     "not present in cell morphology"
-                                     .format(parts[0]))
+                except KeyError:
+                    raise AttributeError("Cell derived from model '{}' does "
+                                         "not have component '{}'."
+                                         .format(self._model.name,
+                                                 comp_name))
+            elif len(parts) == 3:
+                segment, comp_name, var = parts
+                setattr(getattr(segment, comp_name), var, value)
+            else:
+                raise AttributeError("Invalid number of components ({}), "
+                                     "can be either 2 (segment group or "
+                                     "name, variable) or 3 (segment group "
+                                     "or name, component, variable)"
+                                     .format(len(parts)))
         else:
             super(NineCellStandAlone, self).__setattr__(varname, value)
 
