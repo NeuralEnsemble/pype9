@@ -269,12 +269,14 @@ class Model(STree2):
         self.components[component.name] = component
         return component
 
-    def clear_current_clamps(self):
+    def clear_current_clamps(self, skip=[]):
         self.components = dict((n, c) for n, c in self.components.iteritems()
-                               if not isinstance(c, CurrentClampModel))
+                               if not isinstance(c, CurrentClampModel) or
+                                  n in skip)
         for seg in self.segments:
             seg.components = [c for c in seg.components
-                              if not isinstance(c, CurrentClampModel)]
+                              if not isinstance(c, CurrentClampModel) or
+                                 c.name in skip]
 
     @property
     def segments(self):
