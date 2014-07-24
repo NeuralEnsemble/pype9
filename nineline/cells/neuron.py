@@ -29,6 +29,7 @@ from nineline.cells import (in_units, SynapseModel, AxialResistanceModel,
                             MembraneCapacitanceModel, DummyNinemlModel,
                             PointProcessModel, IonConcentrationModel)
 from .. import create_unit_conversions, convert_units
+from pyNN.neuron.cells import VectorSpikeSource
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
 
@@ -135,6 +136,7 @@ class _BaseNineCell(nineline.cells.NineCell):
                       sec=self)
             # A list to store any gap junctions in
             self._gap_junctions = []
+            self._syn_input = []
             # Local information, though not sure if I need this here
             self.name = model.name
             self._parent_seg = None
@@ -273,6 +275,12 @@ class _BaseNineCell(nineline.cells.NineCell):
             self.seclamp_amps = h.Vector(pq.Quantity(voltages, 'mV'))
             self.seclamp_times = h.Vector(pq.Quantity(voltages.times, 'ms'))
             self.seclamp_amps.play(self.seclamp._ref_amp, self.seclamp_times)
+
+        def synaptic_stimulation(self, spike_train, synapse_name, index=0):
+            synapse = getattr(self, synapse_name)[index]
+            vecstim = VectorSpikeSource(spike_train)
+            netcon = h.NetCon(vecstim, synapse, sec=self)
+            self._syn_input.append((vecstim, netcon))
 
     def __init__(self, model=None, **parameters):
         super(_BaseNineCell, self).__init__(model=model)
