@@ -610,7 +610,7 @@ class NineCellStandAlone(_BaseNineCell):
                 comp_name, var = parts
                 try:
                     for seg in self._comp_segments[comp_name]:
-                        setattr(seg, var, value)
+                        setattr(getattr(seg, comp_name), var, value)
                 except KeyError:
                     raise AttributeError("Cell derived from model '{}' does "
                                          "not have component '{}'."
