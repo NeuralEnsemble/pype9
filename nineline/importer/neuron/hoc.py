@@ -336,3 +336,4 @@ def save_model_view(filename):
 def print_section_lengths(cell):
     for name, seg in sorted(cell.segments.iteritems(), key=itemgetter(0)):
         print "{} {:.6f}".format(name, seg.L)
+
