@@ -40,8 +40,7 @@ class Importer(object):
         self._read_blocks()
         self.aliases = {}
         self._extract_units_block()
-        self._extract_function_blocks()
-        self._extract_procedures()
+        self._extract_procedure_and_function_blocks()
         self._extract_assigned_block()
         self._extract_parameter_block()
         self._extract_initial_block()
@@ -128,19 +127,27 @@ class Importer(object):
         expr = expr.strip()
         return var, expr
 
-    def _expand_arguments(self, rhs, substitutions={}):
-        pass
+    def _extract_procedure_and_function_blocks(self):
+        # Read functions
+        self.functions = {}
+        for blck_type, dct in (('FUNCTION', self.functions),
+                                ('PROCEDURE', self.procedures)):
+            for signature, block in self.blocks.get(blck_type, {}).iteritems():
+                i = signature.find('(')
+                name = signature[:i].strip()
+                args = list_re.split(signature[i + 1:-1])
+                dct[name] = (args, block)
 
-    @classmethod
-    def _args_suffix(self, arg_vals):
-        return '_' + '_'.join(re.sub(r'\-\.', '_', a) for a in arg_vals)
-
-    def _extract_expr_block(self, line_iterator, subs={}, suffix=''):
+    def _extract_expr_block(self, block, subs={}, suffix=''):
         expressions = {}
-        for line in line_iterator:
+        for line in self.iterate_block(block):
+            if line.startswith('TABLE'):
+                continue  # TODO: Do I need to do something with this?
             parts = assign_re.split(line)
-            if len(parts) == 1:  # Assume to be a procedure
-                match = re.match(r'([a-zA-Z][a-zA-Z0-9]*) *\((.*)\)', parts[0])
+            if len(parts) == 1:
+                expr = parts[0]
+                match = re.match(r'([a-zA-Z][a-zA-Z0-9]*) *\((.*)\)', expr)
+                # If a procedure
                 if match:
                     try:
                         pargs, pbody = self.procedures[match.group(1)]
@@ -155,11 +162,21 @@ class Importer(object):
                                                      suffix=psuffix)
                     expressions.extend(pexprs)
                 else:
-                    raise Exception("Cannot process line '{}' as it only has a"
-                                    " rhs and is not a declared "
-                                    "procedure".format(line))
+                    if re.search(r'[^a-zA-Z0-9]if[^a-zA-Z0-9]', expr):
+                        raise NotImplementedError
+                    elif (re.search(r'[^a-zA-Z0-9]for[^a-zA-Z0-9]', expr) or
+                          re.search(r'[^a-zA-Z0-9]while[^a-zA-Z0-9]', expr)):
+                        raise Exception("Cannot convert 'for' or 'while' "
+                                        "statements ({})".format(line))
+                    else:
+                        raise Exception("Unrecognised statement on line '{}'"
+                                        .format(line))
             elif len(parts) == 2:  # Assume to be an assignment expression
                 lhs, rhs = parts
+                # Replace arguments with their values
+                for old, new in subs:
+                    rhs = re.sub(r'[^a-zA-Z0-9]{}[^a-zA-Z0-9]'.format(old),
+                                 r'\1{}\2'.format(new), rhs)
                 # Expand function definitions, creating extra aliases for all
                 # expressions within the function body
                 for fname, (fargs, fbody) in self.functions.iteritems():
@@ -170,14 +187,17 @@ class Importer(object):
                                                      self.iterate_block(fbody),
                                                      subs=zip(fargs, arg_vals),
                                                      suffix=fsuffix)
-                        return_expr = fexprs.pop(fname + fsuffix)
                         expressions.extend(fexprs)
-                        rhs = rhs.replace(match[0], return_expr)
+                        rhs = rhs.replace(match[0], fname + fsuffix)
                 expressions[lhs + suffix] = rhs
             else:
                 raise Exception("More than one '=' found on line '{}'"
                                 .format(line))
         return expressions
+
+    @classmethod
+    def _args_suffix(self, arg_vals):
+        return '_' + '_'.join(re.sub(r'\-\.', '_', a) for a in arg_vals)
 
     def _extract_units_block(self):
         # Read the unit aliases
@@ -225,12 +245,7 @@ class Importer(object):
 
     def _extract_initial_block(self):
         # Read initial block
-        self.initial_states = {}
-        for line in self.iterate_block(self.blocks['INITIAL']):
-            var, expr = self._extract_expr(line)
-            if var is not None:
-                var = var.strip()
-                self.initial_states[var] = expr
+        self.initial_states = self._extract_expr_block(self.blocks['INITIAL'])
 
     def _extract_state_block(self):
         # Read state variables
@@ -283,67 +298,31 @@ class Importer(object):
                 self.analog_ports.append(AnalogPort(n, mode='send',
                                                  dimension='membrane_current'))
 
-    def _extract_function_blocks(self):
-        # Read functions
-        self.functions = {}
-        for signature, block in self.blocks.get('FUNCTION', []).iteritems():
-            i = signature.find('(')
-            name = signature[:i]
-            args = list_re.split(signature[i + 1:-1])
-            func_aliases = []
-            for line in self.iterate_block(block):
-                if not line.startswith('TABLE'):
-                    var, expr = assign_re.split(line)
-                    if var == name:
-                        out = expr
-                    else:
-                        func_aliases.append((var, expr))
-            self.functions[name] = (args, func_aliases, out)
-
     def _extract_derivative_block(self):
         self.regimes = []
         # Read derivative
         for name, block in self.blocks['DERIVATIVE'].iteritems():
             time_derivatives = []
-            for line in self.iterate_block(block):
-                if '=' in line:
-                    var = assign_re.split(line)[0]
-                    if var.endswith("'"):
-                        var = var[:-1]
-                        if var not in self.state_variables:
-                            raise Exception("Unrecognised variable '{}'"
-                                            .format(var))
-                        _, expr = self._extract_expr(line)
-                        td = TimeDerivative(var, expr)
-                        time_derivatives.append(td)
-                    else:
-                        var, expr = self._extract_expr(line)
-                        self.aliases[var] = Alias(var, expr)
-        self.regimes.append(Regime(name=name,
-                                   time_derivatives=time_derivatives))
+            # Extract aliases and states
+            aliases = self._extract_expr_block(block)
+            # Detect state derivatives
+            for var, expr in aliases:
+                if var.endswith("'"):
+                    if var not in self.state_variables:
+                        raise Exception("Unrecognised variable '{}'"
+                                        .format(var))
+                    time_derivatives.append(TimeDerivative(var[:-1], expr))
+            # Remove time derivatives from aliases and append to aliases dict
+            for td in time_derivatives:
+                del aliases[td.name]
+            self.aliases.update(aliases)
+        regime = Regime(name=name, time_derivatives=time_derivatives)
+        self.regimes.append(regime)
 
     def _extract_breakpoint_block(self):
         # Read Breakpoint
-        for line in self.iterate_block(self.blocks['BREAKPOINT']):
-            if '=' in line:
-                var, expr = self._extract_expr(line)
-                self.aliases[var] = Alias(var, expr)
-
-    def _extract_procedures(self):
-        # Read Procedures
-        self.procedures = []
-        for name, block in self.blocks.get('PROCEDURE', []).iteritems():
-            for line in self.iterate_block(block):
-                if line.startswith('TABLE'):
-                    continue
-                if '=' in line:
-                    var, expr = self._extract_expr(line)
-                    self.aliases[var] = Alias(var, expr)
-                else:
-                    raise Exception("Can only deal with assignments in "
-                                    "procedure block currently ({})"
-                                    .format(line))
-            self.procedures.append(name)
+        bpoint_aliases = self._extract_expr_block(self.blocks['BREAKPOINT'])
+        self.aliases.extend(bpoint_aliases)
 
     @classmethod
     def iterate_block(cls, block):
