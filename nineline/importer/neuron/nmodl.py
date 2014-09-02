@@ -76,11 +76,12 @@ class Importer(object):
 
     def _read_blocks(self):
         self.blocks = defaultdict(dict)
-        for decl, contents, _ in self._matching_braces(iter(self.contents),
+        line_iter = iter(self.contents.splitlines())
+        for decl, contents, _ in self._matching_braces(line_iter,
                                                      multiline_preamble=False):
-            match = re.match(r" *([a-zA-Z_]+)([a-zA-Z_ \(\)0-9]*){(.*?)}",
+            match = re.match(r" *([a-zA-Z_]+)([a-zA-Z_ \(\)0-9]*)",
                              decl)
-            if match.group(2):
+            if match.group(2).strip():
                 self.blocks[match.group(1)][match.group(2)] = contents
             else:
                 self.blocks[match.group(1)] = contents
@@ -102,8 +103,8 @@ class Importer(object):
     @classmethod
     def _matching_braces(cls, line_iter, line='', multiline_preamble=True):
         depth = 0
-        block = []
         preamble = ''
+        block = []
         while True:
             start_index = 0
             for j, c in enumerate(line):
@@ -115,13 +116,16 @@ class Importer(object):
                 elif c == '}':
                     depth -= 1
                     if depth == 0:
-                        block.append(line[:j])
+                        if line[:j].strip():
+                            block.append(line[:j].strip())
                         line = line[j + 1:]
                         yield preamble, block, line
+                        preamble = ''
+                        block = []
                         continue
             if depth:
-                if len(line) > start_index:
-                    block.append(line[start_index:])
+                if line[start_index:].strip():
+                    block.append(line[start_index:].strip())
             elif line and multiline_preamble:
                 preamble += line + '\n'
             try:
@@ -177,16 +181,23 @@ class Importer(object):
                     raise Exception("Unrecognised statement on line '{}'"
                                     .format(line))
                 if match.group(1) == 'if':
-                    test = match.group(2)
-                    subblock, next_line = self._until_matching_brace(line,
-                                                                     line_iter)
-                    while not next_line.strip():
-                        next_line = next(line_iter)
-                    if re.search(r'(^|[^a-zA-Z0-9])else($|[^a-zA-Z0-9])',
-                                 next_line):
-                        match = re.search(r'else +if +\((.*)\)'. next_line)
+                    pieces = []
+                    for pre, sblock, nline in self._matching_braces(line_iter,
+                                                                    line=line):
+                        match = re.match(r'.*\((.*)\)', pre)
                         if match:
-                            pass
+                            test = match.group(1)
+                        else:
+                            test = 'otherwise'
+                        exprs = self._extract_expr_block(sblock, subs, suffix)
+                        pieces.append((test, exprs))
+                        while not nline.strip():
+                            nline = next(line_iter)
+                        if not re.search(r'(^|[^a-zA-Z0-9])else'
+                                         r'($|[^a-zA-Z0-9])', nline):
+                            break
+                    line = nline
+                    continue
                 elif match.group(1) in ('for', 'while'):
                     raise Exception("Cannot represent '{}' statements in 9ML"
                                     .format(match.group(1)))
@@ -233,7 +244,10 @@ class Importer(object):
             else:
                 raise Exception("More than one '=' found on line '{}'"
                                 .format(line))
-            line = next(line_iter)
+            try:
+                line = next(line_iter)
+            except StopIteration:
+                line = None
         return expressions
 
     @classmethod
@@ -384,7 +398,7 @@ class Importer(object):
 
     @classmethod
     def iterate_block(cls, block):
-        for line in newline_re.split(block):
+        for line in block:
             line = line.strip().split(':')[0]
             if line:
                 yield line
