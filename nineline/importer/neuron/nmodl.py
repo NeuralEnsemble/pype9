@@ -7,18 +7,23 @@ from nineml.abstraction_layer.dynamics import Regime, StateVariable
 from nineml.abstraction_layer.dynamics.component.expressions import (Alias,
                                                                 TimeDerivative)
 from nineml.abstraction_layer.dynamics.component.ports import AnalogPort
+from collections import defaultdict
 
 
 newline_re = re.compile(r" *[\n\r]+ *")
 assign_re = re.compile(r" *= *")
 list_re = re.compile(r" *, *")
-celsius_re = re.compile(r'[^a-zA-Z0-9]celsius[^a-zA-Z0-9]')
+celsius_re = re.compile(r'[^a-zA-Z0-9_]celsius[^a-zA-Z0-9_]')
+title_re = re.compile(r"TITLE (.*)")
+comments_re = re.compile(r"COMMENT(.*)ENDCOMMENT")
 
-_SI_to_dimension = {'m/s': 'conductance', None: None,
+_SI_to_dimension = {'m/s': 'conductance',
                     'kg*m**2/(s**3*A)': 'voltage',
                     'mol/m**3': 'concentration',
-                    'A/m**2': 'membrane_current', 's': 'time',
-                    'K': 'absolute_temperature'}
+                    'A/m**2': 'membrane_current',
+                    's': 'time',
+                    'K': 'absolute_temperature',
+                    None: None}
 
 
 def units2dimension(units):
@@ -62,137 +67,173 @@ class Importer(object):
 
     def _read_title(self):
         # Extract title and comments if present
-        match = re.search(r"TITLE (.*)", self.contents, re.MULTILINE)
+        match = title_re.search(self.contents, re.MULTILINE)
         self.title = match.group(1) if match else ''
 
     def _read_comments(self):
-        match = re.search(r"COMMENT(.*)ENDCOMMENT", self.contents, re.DOTALL)
+        match = comments_re.search(self.contents, re.DOTALL)
         self.comments = match.group(1) if match else ''
 
     def _read_blocks(self):
-        self.blocks = {}
-            # Read code blocks
-        match = re.findall(r"([a-zA-Z_]+)([a-zA-Z_ \(\)0-9]*){(.*?)}",
-                           self.contents, re.DOTALL)
-        for btype, bname, bcontents in match:
-            # If block has a name associated with it create a dictionary for
-            # this block type
-            if bname.strip():
-                self.blocks[btype] = self.blocks.get(btype, {})
-                self.blocks[btype][bname.strip()] = bcontents
+        self.blocks = defaultdict(dict)
+        for decl, contents, _ in self._matching_braces(iter(self.contents),
+                                                     multiline_preamble=False):
+            match = re.match(r" *([a-zA-Z_]+)([a-zA-Z_ \(\)0-9]*){(.*?)}",
+                             decl)
+            if match.group(2):
+                self.blocks[match.group(1)][match.group(2)] = contents
             else:
-                self.blocks[btype] = bcontents
-        stripargs_re = re.compile('\(.*')
-        self.procedure_names = [stripargs_re.sub('', s)
-                                for s in self.blocks['PROCEDURE'].keys()]
+                self.blocks[match.group(1)] = contents
+#         # Read code blocks
+#         match = re.findall(r"([a-zA-Z_]+)([a-zA-Z_ \(\)0-9]*){(.*?)}",
+#                            self.contents, re.DOTALL)
+#         for btype, bname, bcontents in match:
+#             # If block has a name associated with it create a dictionary for
+#             # this block type
+#             if bname.strip():
+#                 self.blocks[btype] = self.blocks.get(btype, {})
+#                 self.blocks[btype][bname.strip()] = bcontents
+#             else:
+#                 self.blocks[btype] = bcontents
+#         stripargs_re = re.compile('\(.*')
+#         self.procedure_names = [stripargs_re.sub('', s)
+#                                 for s in self.blocks['PROCEDURE'].keys()]
 
-    def _extract_expr(self, line):
-        parts = assign_re.split(line)
-        if len(parts) == 2:
-            var, expr = parts
-        elif len(parts) == 1:
-            var = None
-            expr = parts[0].strip()
-            match = re.match(r'([a-zA-Z][a-zA-Z0-9]*) *\((.*)\)', expr)
-            if match:
-                if match.group(1) not in self.procedure_names:
-                    raise Exception("Unrecognised procedure '{}'"
-                                    .format(match.group(1)))
+    @classmethod
+    def _matching_braces(cls, line_iter, line='', multiline_preamble=True):
+        depth = 0
+        block = []
+        preamble = ''
+        while True:
+            start_index = 0
+            for j, c in enumerate(line):
+                if c == '{':
+                    if depth == 0:
+                        start_index = j + 1
+                        preamble += line[:j]
+                    depth += 1
+                elif c == '}':
+                    depth -= 1
+                    if depth == 0:
+                        block.append(line[:j])
+                        line = line[j + 1:]
+                        yield preamble, block, line
+                        continue
+            if depth:
+                if len(line) > start_index:
+                    block.append(line[start_index:])
+            elif line and multiline_preamble:
+                preamble += line + '\n'
+            try:
+                line = next(line_iter)
+            except StopIteration:
+                if depth:
+                    raise Exception("Block ended inside enclosing brace: \n{}"
+                                    .format(block))
                 else:
-                    print "need to process args ({})".format(match.group(2))
-            else:
-                raise Exception("Cannot process line '{}'".format(line))
-        else:
-            raise Exception("More than one '=' found on line '{}'"
-                            .format(line))
-        for funcname, (func_args,
-                       func_aliases, out) in self.functions.iteritems():
-            match = re.search("{} *\((.*)\)".format(funcname), expr)
-            if match:
-                arg_vals = list_re.split(match.group(1))
-                for al_var, al_expr in func_aliases:
-                    for arg_var, arg_val in zip(func_args, arg_vals):
-                        al_expr = al_expr.replace(arg_var, arg_val)
-                    self.aliases[al_var] = Alias(al_var, al_expr)
-                self.aliases[funcname] = Alias(funcname, out)
-                expr = expr.replace(match.group(0), funcname)
-        if var and re.search(r'([^a-zA-z0-9]|^){}([^a-zA-z0-9]|$)'.format(var),
-                            expr):
-            if var not in self.aliases:
-                raise Exception("Assignment references itself but hasn't been "
-                                "previously defined '{}' = '{}'"
-                                .format(var, expr))
-            expr = re.sub(r'([^a-zA-z0-9]|^){}([^a-zA-z0-9]|$)'.format(var),
-                          r'\1({})\2'.format(self.aliases[var].rhs), expr)
-        expr = expr.strip()
-        return var, expr
+                    raise StopIteration
 
     def _extract_procedure_and_function_blocks(self):
         # Read functions
         self.functions = {}
+        self.procedures = {}
         for blck_type, dct in (('FUNCTION', self.functions),
                                 ('PROCEDURE', self.procedures)):
             for signature, block in self.blocks.get(blck_type, {}).iteritems():
                 i = signature.find('(')
                 name = signature[:i].strip()
-                args = list_re.split(signature[i + 1:-1])
+                args = [a.split('(')[0]
+                        for a in list_re.split(signature[i + 1:-1])]
                 dct[name] = (args, block)
 
-    def _extract_expr_block(self, block, subs={}, suffix=''):
+    def _subs_variable(self, old, new, expr):
+        # Pad with spaces so as to avoid missed matches due to begin/end of
+        # string
+        expr = ' ' + expr + ' '
+        expr = re.sub(r'(?<=[^a-zA-Z0-9_]){}(?=[^a-zA-Z0-9_])'.format(old),
+                      new, expr)
+        # Update dimensions tracking
+        if old in self.dimensions:
+            self.dimensions[new] = self.dimensions[old]
+        return expr.strip()
+
+    def _extract_expr_block(self, block, subs=[], suffix=''):
         expressions = {}
-        for line in self.iterate_block(block):
+        line_iter = self.iterate_block(block)
+        try:
+            line = next(line_iter)
+        except StopIteration:
+            line = None
+        while line:
             if line.startswith('TABLE'):
+                line = next(line_iter)
                 continue  # TODO: Do I need to do something with this?
             parts = assign_re.split(line)
             if len(parts) == 1:
                 expr = parts[0]
                 match = re.match(r'([a-zA-Z][a-zA-Z0-9]*) *\((.*)\)', expr)
                 # If a procedure
-                if match:
+                if not match:
+                    raise Exception("Unrecognised statement on line '{}'"
+                                    .format(line))
+                if match.group(1) == 'if':
+                    test = match.group(2)
+                    subblock, next_line = self._until_matching_brace(line,
+                                                                     line_iter)
+                    while not next_line.strip():
+                        next_line = next(line_iter)
+                    if re.search(r'(^|[^a-zA-Z0-9])else($|[^a-zA-Z0-9])',
+                                 next_line):
+                        match = re.search(r'else +if +\((.*)\)'. next_line)
+                        if match:
+                            pass
+                elif match.group(1) in ('for', 'while'):
+                    raise Exception("Cannot represent '{}' statements in 9ML"
+                                    .format(match.group(1)))
+                else:
                     try:
                         pargs, pbody = self.procedures[match.group(1)]
                     except KeyError:
                         raise Exception("Unrecognised procedure '{}'"
                                         .format(match.group(1)))
-                    arg_vals = list_re.split(match.group(2))
-                    psuffix = self._args_suffix(arg_vals)
-                    pexprs = self._extract_expr_block(
-                                                     self.iterate_block(pbody),
-                                                     subs=zip(pargs, arg_vals),
-                                                     suffix=psuffix)
-                    expressions.extend(pexprs)
-                else:
-                    if re.search(r'[^a-zA-Z0-9]if[^a-zA-Z0-9]', expr):
-                        raise NotImplementedError
-                    elif (re.search(r'[^a-zA-Z0-9]for[^a-zA-Z0-9]', expr) or
-                          re.search(r'[^a-zA-Z0-9]while[^a-zA-Z0-9]', expr)):
-                        raise Exception("Cannot convert 'for' or 'while' "
-                                        "statements ({})".format(line))
-                    else:
-                        raise Exception("Unrecognised statement on line '{}'"
-                                        .format(line))
+                    argvals = list_re.split(match.group(2))
+                    psuffix = suffix + self._args_suffix(argvals)
+                    pexprs = self._extract_expr_block(pbody,
+                                                      subs=zip(pargs, argvals),
+                                                      suffix=psuffix)
+                    # Add aliases from procedure to list of substitutions in
+                    # order to append the suffixes
+                    subs = subs + [(lhs[:-len(psuffix)], lhs)
+                                   for lhs in pexprs.iterkeys()]
+                    expressions.update(pexprs)
             elif len(parts) == 2:  # Assume to be an assignment expression
                 lhs, rhs = parts
                 # Replace arguments with their values
                 for old, new in subs:
-                    rhs = re.sub(r'[^a-zA-Z0-9]{}[^a-zA-Z0-9]'.format(old),
-                                 r'\1{}\2'.format(new), rhs)
+                    rhs = self._subs_variable(old, new, rhs)
                 # Expand function definitions, creating extra aliases for all
                 # expressions within the function body
                 for fname, (fargs, fbody) in self.functions.iteritems():
-                    for match in re.findall("{} *\((.*)\)".format(fname), rhs):
-                        arg_vals = list_re.split(match[1])
-                        fsuffix = self._args_suffix(arg_vals)
-                        fexprs = self._extract_expr_block(
-                                                     self.iterate_block(fbody),
-                                                     subs=zip(fargs, arg_vals),
-                                                     suffix=fsuffix)
-                        expressions.extend(fexprs)
-                        rhs = rhs.replace(match[0], fname + fsuffix)
+                    for match in re.findall("({} *)\((.*)\)".format(fname),
+                                            rhs):
+                        argvals = list_re.split(match[1])
+                        fsuffix = suffix + self._args_suffix(argvals)
+                        fexprs = self._extract_expr_block(fbody,
+                                                          subs=zip(fargs,
+                                                                   argvals),
+                                                          suffix=fsuffix)
+                        expressions.update(fexprs)
+                        rhs = rhs.replace('{}({})'.format(*match),
+                                          fname + fsuffix)
+                if lhs + suffix in expressions:
+                    rhs = self._subs_variable(lhs, '(' +
+                                              expressions[lhs + suffix] + ')',
+                                              rhs)
                 expressions[lhs + suffix] = rhs
             else:
                 raise Exception("More than one '=' found on line '{}'"
                                 .format(line))
+            line = next(line_iter)
         return expressions
 
     @classmethod
@@ -220,12 +261,20 @@ class Importer(object):
         # Read the assigned block for analog out ports
         self.dimensions = {}
         for line in self.iterate_block(self.blocks['ASSIGNED']):
-            var, units = line.strip().split()
-            units = units[1:-1]  # remove parentheses
-            if units == '1':
+            parts = line.strip().split()
+            if len(parts) == 1:
+                var = parts[0]
                 dimension = None
+            elif len(parts) == 2:
+                var, units = parts
+                units = units[1:-1]  # remove parentheses
+                if units == '1':
+                    dimension = None
+                else:
+                    dimension = units2dimension(units)
             else:
-                dimension = units2dimension(units)
+                raise Exception("Three tokens found on line '{}', was "
+                                "expecting 1 or 2 (var [units])".format(line))
             self.dimensions[var] = dimension
 
     def _extract_parameter_block(self):
@@ -245,24 +294,23 @@ class Importer(object):
 
     def _extract_initial_block(self):
         # Read initial block
-        self.initial_states = self._extract_expr_block(self.blocks['INITIAL'])
+        self._raw_initial = self._extract_expr_block(self.blocks['INITIAL'])
 
     def _extract_state_block(self):
         # Read state variables
         self.state_variables = {}
         for line in self.iterate_block(self.blocks['STATE']):
             var = line.strip()
-            initial = self.initial_states.pop(var)
+            initial = self._raw_initial.pop(var)
             if len(initial.split()) != 1:  # Can't remember why this would be
                 raise Exception("Cannot currently handle expression "
                                 "initialisation of states ({} = {})"
                                 .format(var, initial))
             dimension = self.dimensions[var] = self.dimensions[initial]
-        self.state_variables[var] = StateVariable(var, dimension=dimension,
-                                                  initial=initial)
-        # Treat the rest of the initial block as aliases
-        for var, expr in self.initial_states.iteritems():
-            self.aliases[var] = Alias(var, expr)
+            self.state_variables[var] = StateVariable(var, dimension=dimension,
+                                                      initial=initial)
+        self.aliases.update((lhs, Alias(lhs, rhs))
+                            for lhs, rhs in self._raw_initial.iteritems())
 
     def _extract_neuron_block(self):
         self.used_ions = {}
@@ -304,25 +352,35 @@ class Importer(object):
         for name, block in self.blocks['DERIVATIVE'].iteritems():
             time_derivatives = []
             # Extract aliases and states
-            aliases = self._extract_expr_block(block)
+            expressions = self._extract_expr_block(block)
             # Detect state derivatives
-            for var, expr in aliases:
-                if var.endswith("'"):
-                    if var not in self.state_variables:
+            for lhs, rhs in expressions.iteritems():
+                if lhs.endswith("'"):
+                    if lhs[:-1] not in self.state_variables:
                         raise Exception("Unrecognised variable '{}'"
-                                        .format(var))
-                    time_derivatives.append(TimeDerivative(var[:-1], expr))
-            # Remove time derivatives from aliases and append to aliases dict
-            for td in time_derivatives:
-                del aliases[td.name]
-            self.aliases.update(aliases)
+                                        .format(lhs))
+                    time_derivatives.append(TimeDerivative(lhs[:-1], rhs))
+                else:
+                    self.aliases[lhs] = Alias(lhs, rhs)
         regime = Regime(name=name, time_derivatives=time_derivatives)
         self.regimes.append(regime)
 
     def _extract_breakpoint_block(self):
-        # Read Breakpoint
-        bpoint_aliases = self._extract_expr_block(self.blocks['BREAKPOINT'])
-        self.aliases.extend(bpoint_aliases)
+        self.solve_methods = {}
+        reduced_block = ''
+        for line in self.iterate_block(self.blocks['BREAKPOINT']):
+            if line.startswith('SOLVE'):
+                match = re.match(r'SOLVE ([a-zA-Z0-9_]+) '
+                                 r'METHOD ([a-zA-Z0-9_]+)', line)
+                if not match:
+                    raise Exception("Could not read solve statement '{}'"
+                                    .format(line))
+                self.solve_methods[match.group(1)] = match.group(2)
+            else:
+                reduced_block += line + '\n'
+        expressions = self._extract_expr_block(reduced_block)
+        self.aliases.update((lhs, Alias(lhs, rhs))
+                            for lhs, rhs in expressions.iteritems())
 
     @classmethod
     def iterate_block(cls, block):
@@ -337,10 +395,11 @@ class Importer(object):
         # If 'celsius' or 'v' appears anywhere in the file add them to the
         # receive ports
         for alias in self.aliases.itervalues():
-            if re.search(r'(?:^|[^a-zA-Z0-9])celsius(?:[^a-zA-Z0-9]|$)',
+            if re.search(r'(?:^|[^a-zA-Z0-9_])celsius(?:[^a-zA-Z0-9_]|$)',
                          alias.rhs):
                 uses_celsius = True
-            if re.search(r'(?:^|[^a-zA-Z0-9])v(?:[^a-zA-Z0-9]|$)', alias.rhs):
+            if re.search(r'(?:^|[^a-zA-Z0-9_])v(?:[^a-zA-Z0-9_]|$)',
+                         alias.rhs):
                 uses_voltage = True
         if uses_voltage:
             self.analog_ports.append(AnalogPort('v', mode='recv',
