@@ -23,12 +23,20 @@ _SI_to_dimension = {'m/s': 'conductance',
                     'A/m**2': 'membrane_current',
                     's': 'time',
                     'K': 'absolute_temperature',
+                    'kg/(m**3*s)': 'flux',
+                    '1/(s*A)': 'mass_per_charge',
+                    'm': 'length',
+                    's**3*A**2/(kg*m**4)': 'membrane_conductance',
+                    'A': 'current',
+                    'A/s': 'change_in_current',
                     None: None}
 
 
 def units2dimension(units):
+    if units == '1':
+        return None
     units = re.sub(r'([a-zA-Z])([0-9\.]+)', r'\1^\2', units)
-    si_units = str(pq.Quantity(1, units).simplified).split()[1]
+    si_units = str(pq.Quantity(1, units).simplified._dimensionality)
     return _SI_to_dimension[si_units]
 
 
@@ -37,71 +45,15 @@ class Importer(object):
     Imports NMODL files into lib9ml structures
     """
 
-    def __init__(self, fname):
-        with open(fname) as f:
-            self.contents = f.read()
-        self._read_title()
-        self._read_comments()
-        self._read_blocks()
-        self.aliases = {}
-        self._extract_units_block()
-        self._extract_procedure_and_function_blocks()
-        self._extract_assigned_block()
-        self._extract_parameter_block()
-        self._extract_initial_block()
-        self._extract_state_block()
-        self._extract_neuron_block()
-        self._extract_derivative_block()
-        self._extract_breakpoint_block()
-        self._create_ports_for_reserved_keywords()
-
-    def get_component(self):
-        return ComponentClass(name=self.component_name,
-                              parameters=self.parameters.values(),
-                              analog_ports=self.analog_ports,
-                              regimes=self.regimes,
-                              aliases=self.aliases.values(),
-                              state_variables=self.state_variables)
-        print "Title: {}\nComments: {}\nBlocks: {}".format(self.title,
-                                                           self.comments)
-
-    def _read_title(self):
-        # Extract title and comments if present
-        match = title_re.search(self.contents, re.MULTILINE)
-        self.title = match.group(1) if match else ''
-
-    def _read_comments(self):
-        match = comments_re.search(self.contents, re.DOTALL)
-        self.comments = match.group(1) if match else ''
-
-    def _read_blocks(self):
-        self.blocks = defaultdict(dict)
-        line_iter = iter(self.contents.splitlines())
-        for decl, contents, _ in self._matching_braces(line_iter,
-                                                     multiline_preamble=False):
-            match = re.match(r" *([a-zA-Z_]+)([a-zA-Z_ \(\)0-9]*)",
-                             decl)
-            if match.group(2).strip():
-                self.blocks[match.group(1)][match.group(2)] = contents
-            else:
-                self.blocks[match.group(1)] = contents
-#         # Read code blocks
-#         match = re.findall(r"([a-zA-Z_]+)([a-zA-Z_ \(\)0-9]*){(.*?)}",
-#                            self.contents, re.DOTALL)
-#         for btype, bname, bcontents in match:
-#             # If block has a name associated with it create a dictionary for
-#             # this block type
-#             if bname.strip():
-#                 self.blocks[btype] = self.blocks.get(btype, {})
-#                 self.blocks[btype][bname.strip()] = bcontents
-#             else:
-#                 self.blocks[btype] = bcontents
-#         stripargs_re = re.compile('\(.*')
-#         self.procedure_names = [stripargs_re.sub('', s)
-#                                 for s in self.blocks['PROCEDURE'].keys()]
+    @classmethod
+    def iterate_block(cls, block):
+        for line in block:
+            line = line.strip().split(':')[0]
+            if line:
+                yield line
 
     @classmethod
-    def _matching_braces(cls, line_iter, line='', multiline_preamble=True):
+    def _matching_braces(cls, line_iter, line='', multiline_pre=True):
         depth = 0
         preamble = ''
         block = []
@@ -126,7 +78,7 @@ class Importer(object):
             if depth:
                 if line[start_index:].strip():
                     block.append(line[start_index:].strip())
-            elif line and multiline_preamble:
+            elif line and multiline_pre:
                 preamble += line + '\n'
             try:
                 line = next(line_iter)
@@ -137,32 +89,21 @@ class Importer(object):
                 else:
                     raise StopIteration
 
-    def _extract_procedure_and_function_blocks(self):
-        # Read functions
-        self.functions = {}
-        self.procedures = {}
-        for blck_type, dct in (('FUNCTION', self.functions),
-                                ('PROCEDURE', self.procedures)):
-            for signature, block in self.blocks.get(blck_type, {}).iteritems():
-                i = signature.find('(')
-                name = signature[:i].strip()
-                args = [a.split('(')[0]
-                        for a in list_re.split(signature[i + 1:-1])]
-                dct[name] = (args, block)
+    @classmethod
+    def _args_suffix(self, arg_vals):
+        return '_' + '_'.join(re.sub(r'\-\.', '_', a) for a in arg_vals)
 
-    def _subs_variable(self, old, new, expr):
-        # Pad with spaces so as to avoid missed matches due to begin/end of
-        # string
-        expr = ' ' + expr + ' '
-        expr = re.sub(r'(?<=[^a-zA-Z0-9_]){}(?=[^a-zA-Z0-9_])'.format(old),
-                      new, expr)
-        # Update dimensions tracking
-        if old in self.dimensions:
-            self.dimensions[new] = self.dimensions[old]
-        return expr.strip()
+    def _extract_stmts_block(self, block, subs=[], suffix=''):
+        """
+        A workhorse function that extracts all expressions from a block of
+        statements and returns them in a dictionary
 
-    def _extract_expr_block(self, block, subs=[], suffix=''):
-        expressions = {}
+        `block`  -- a block of text split into lines
+        `subs`   -- substitutions of variables to be made (when flattening
+                    functions into assignments for example)
+        `suffix` -- suffix to append to LHS names
+        """
+        statements = {}
         line_iter = self.iterate_block(block)
         try:
             line = next(line_iter)
@@ -170,7 +111,11 @@ class Importer(object):
             line = None
         while line:
             if line.startswith('TABLE'):
-                line = next(line_iter)
+                try:
+                    line = next(line_iter)
+                except StopIteration:
+                    raise Exception("TABLE statements need to appear at the "
+                                    "start of the statement block")
                 continue  # TODO: Do I need to do something with this?
             parts = assign_re.split(line)
             if len(parts) == 1:
@@ -181,21 +126,62 @@ class Importer(object):
                     raise Exception("Unrecognised statement on line '{}'"
                                     .format(line))
                 if match.group(1) == 'if':
-                    pieces = []
+                    conditional_stmts = []
+                    # Loop through all sub-blocks of the if/else-if/else
+                    # statement
                     for pre, sblock, nline in self._matching_braces(line_iter,
                                                                     line=line):
+                        # Extract the test conditions for if and else if
+                        # blocks
                         match = re.match(r'.*\((.*)\)', pre)
                         if match:
                             test = match.group(1)
                         else:
                             test = 'otherwise'
-                        exprs = self._extract_expr_block(sblock, subs, suffix)
-                        pieces.append((test, exprs))
-                        while not nline.strip():
-                            nline = next(line_iter)
+                        # Extract the statements from the sub-block
+                        stmts = self._extract_stmts_block(sblock, subs, suffix)
+                        # Append the test and statements to a list for
+                        # processing after all blocks are processed.
+                        conditional_stmts.append((test, stmts))
+                        # Peek ahead at the next line and check to see whether
+                        # there is an 'else' on it, and if not stop the
+                        # sub-block iteration
+                        try:
+                            while not nline.strip():
+                                nline = next(line_iter)
+                        except StopIteration:
+                            line = ''
                         if not re.search(r'(^|[^a-zA-Z0-9])else'
                                          r'($|[^a-zA-Z0-9])', nline):
                             break
+                    # Collate all the variables that are assigned in each
+                    # sub-block
+                    common_lhss = reduce(set.intersection,
+                                         (set(s.keys())
+                                          for t, s in conditional_stmts))
+                    # Create numbered versions of the helper statements in the
+                    # sub- blocks (i.e. that don't appear in all sub-blocks)
+                    for i, (test, stmts) in enumerate(conditional_stmts):
+                        statements.update(('{}__{}'.format(lhs, i), rhs)
+                                          for lhs, rhs in stmts.iteritems()
+                                          if lhs not in common_lhss)
+                    # Loop through statements that are common to all conditions
+                    # and create a single piecewise statement for them
+                    for lhs in common_lhss:
+                        pieces = []
+                        for i, (test, stmts) in enumerate(conditional_stmts):
+                            rhs = stmts[lhs]
+                            # Substitute in the numbered versions of the
+                            # helper aliases
+                            for l in stmts.iterkeys():
+                                if l not in common_lhss:
+                                    rhs = self._subs_variable(l,
+                                                         '{}__{}'.format(l, i),
+                                                         expr)
+                            pieces.append((rhs, test))
+                        statements[lhs] = pieces
+                    # Set the line that has been peeked at to the next line and
+                    # continue to iterate through the lines
                     line = nline
                     continue
                 elif match.group(1) in ('for', 'while'):
@@ -209,50 +195,138 @@ class Importer(object):
                                         .format(match.group(1)))
                     argvals = list_re.split(match.group(2))
                     psuffix = suffix + self._args_suffix(argvals)
-                    pexprs = self._extract_expr_block(pbody,
+                    pstmts = self._extract_stmts_block(pbody,
                                                       subs=zip(pargs, argvals),
                                                       suffix=psuffix)
                     # Add aliases from procedure to list of substitutions in
                     # order to append the suffixes
                     subs = subs + [(lhs[:-len(psuffix)], lhs)
-                                   for lhs in pexprs.iterkeys()]
-                    expressions.update(pexprs)
+                                   for lhs in pstmts.iterkeys()]
+                    statements.update(pstmts)
             elif len(parts) == 2:  # Assume to be an assignment expression
                 lhs, rhs = parts
                 # Replace arguments with their values
                 for old, new in subs:
                     rhs = self._subs_variable(old, new, rhs)
                 # Expand function definitions, creating extra aliases for all
-                # expressions within the function body
+                # statements within the function body
                 for fname, (fargs, fbody) in self.functions.iteritems():
                     for match in re.findall("({} *)\((.*)\)".format(fname),
                                             rhs):
                         argvals = list_re.split(match[1])
                         fsuffix = suffix + self._args_suffix(argvals)
-                        fexprs = self._extract_expr_block(fbody,
-                                                          subs=zip(fargs,
-                                                                   argvals),
-                                                          suffix=fsuffix)
-                        expressions.update(fexprs)
+                        fstmts = self._extract_stmts_block(fbody,
+                                                           subs=zip(fargs,
+                                                                    argvals),
+                                                           suffix=fsuffix)
+                        statements.update(fstmts)
                         rhs = rhs.replace('{}({})'.format(*match),
                                           fname + fsuffix)
-                if lhs + suffix in expressions:
-                    rhs = self._subs_variable(lhs, '(' +
-                                              expressions[lhs + suffix] + ')',
-                                              rhs)
-                expressions[lhs + suffix] = rhs
+                # Append the suffix to the left hand side
+                lhs_suff = lhs + suffix
+                # If the same variable has been defined previously we need to
+                # give it a new name so this statement doesn't override it.
+                if lhs_suff in statements:
+                    tmp_lhs = lhs_suff + '__tmp'
+                    count = 0
+                    while tmp_lhs in statements:
+                        count += 1
+                        tmp_lhs = lhs_suff + '__tmp' + str(count)
+                    statements[tmp_lhs] = statements[lhs_suff]
+                    rhs = self._subs_variable(lhs, tmp_lhs, rhs)
+                statements[lhs_suff] = rhs
             else:
                 raise Exception("More than one '=' found on line '{}'"
                                 .format(line))
             try:
                 line = next(line_iter)
             except StopIteration:
-                line = None
-        return expressions
+                line = ''
+        return statements
 
-    @classmethod
-    def _args_suffix(self, arg_vals):
-        return '_' + '_'.join(re.sub(r'\-\.', '_', a) for a in arg_vals)
+    def _subs_variable(self, old, new, expr):
+        # Pad with spaces so as to avoid missed matches due to begin/end of
+        # string
+        expr = ' ' + expr + ' '
+        expr = re.sub(r'(?<=[^a-zA-Z0-9_]){}(?=[^a-zA-Z0-9_])'.format(old),
+                      new, expr)
+        # Update dimensions tracking
+        if old in self.dimensions:
+            self.dimensions[new] = self.dimensions[old]
+        return expr.strip()
+
+    def __init__(self, fname):
+        # Read file
+        with open(fname) as f:
+            self.contents = f.read()
+        # Parse file contents into blocks
+        self._read_title()
+        self._read_comments()
+        self._read_blocks()
+        # Initialise members
+        self.functions = {}
+        self.procedures = {}
+        self.aliases = {}
+        self.parameters = {}
+        self.dimensions = {}
+        self.state_variables = {}
+        self.used_ions = {}
+        self.solve_methods = {}
+        self.analog_ports = []
+        self.regimes = []
+        # Extract declarations and expressions from blocks into members
+        self._extract_units_block()
+        self._extract_procedure_and_function_blocks()
+        self._extract_assigned_block()
+        self._extract_parameter_block()
+        self._extract_initial_block()
+        self._extract_state_block()
+        self._extract_neuron_block()
+        self._extract_derivative_block()
+        self._extract_breakpoint_block()
+        self._create_analog_ports()
+
+    def get_component(self):
+        return ComponentClass(name=self.component_name,
+                              parameters=self.parameters.values(),
+                              analog_ports=self.analog_ports,
+                              regimes=self.regimes,
+                              aliases=self.aliases.values(),
+                              state_variables=self.state_variables)
+        print "Title: {}\nComments: {}\nBlocks: {}".format(self.title,
+                                                           self.comments)
+
+    def _read_title(self):
+        # Extract title and comments if present
+        match = title_re.search(self.contents, re.MULTILINE)
+        self.title = match.group(1) if match else ''
+
+    def _read_comments(self):
+        match = comments_re.search(self.contents, re.DOTALL)
+        self.comments = match.group(1) if match else ''
+
+    def _read_blocks(self):
+        self.blocks = defaultdict(dict)
+        line_iter = iter(self.contents.splitlines())
+        for decl, contents, _ in self._matching_braces(line_iter,
+                                                       multiline_pre=False):
+            match = re.match(r" *([a-zA-Z_]+)([a-zA-Z_ \(\)0-9]*)",
+                             decl)
+            if match.group(2).strip():
+                self.blocks[match.group(1)][match.group(2)] = contents
+            else:
+                self.blocks[match.group(1)] = contents
+
+    def _extract_procedure_and_function_blocks(self):
+        # Read functions
+        for blck_type, dct in (('FUNCTION', self.functions),
+                                ('PROCEDURE', self.procedures)):
+            for signature, block in self.blocks.get(blck_type, {}).iteritems():
+                i = signature.find('(')
+                name = signature[:i].strip()
+                args = [a.split('(')[0]
+                        for a in list_re.split(signature[i + 1:-1])]
+                dct[name] = (args, block)
 
     def _extract_units_block(self):
         # Read the unit aliases
@@ -273,19 +347,16 @@ class Importer(object):
 
     def _extract_assigned_block(self):
         # Read the assigned block for analog out ports
-        self.dimensions = {}
         for line in self.iterate_block(self.blocks['ASSIGNED']):
-            parts = line.strip().split()
+            parts = line.strip().split('(')
             if len(parts) == 1:
                 var = parts[0]
                 dimension = None
             elif len(parts) == 2:
                 var, units = parts
-                units = units[1:-1]  # remove parentheses
-                if units == '1':
-                    dimension = None
-                else:
-                    dimension = units2dimension(units)
+                var = var.strip()
+                units = units[:-1]  # remove parentheses
+                dimension = units2dimension(units)
             else:
                 raise Exception("Three tokens found on line '{}', was "
                                 "expecting 1 or 2 (var [units])".format(line))
@@ -293,7 +364,6 @@ class Importer(object):
 
     def _extract_parameter_block(self):
         # Read parameters
-        self.parameters = {}
         for line in self.iterate_block(self.blocks['PARAMETER']):
             name, val = assign_re.split(line)
             if ' ' in val:
@@ -308,67 +378,67 @@ class Importer(object):
 
     def _extract_initial_block(self):
         # Read initial block
-        self._raw_initial = self._extract_expr_block(self.blocks['INITIAL'])
+        self._raw_initial = self._extract_stmts_block(self.blocks['INITIAL'])
 
     def _extract_state_block(self):
         # Read state variables
-        self.state_variables = {}
         for line in self.iterate_block(self.blocks['STATE']):
             var = line.strip()
-            initial = self._raw_initial.pop(var)
-            if len(initial.split()) != 1:  # Can't remember why this would be
-                raise Exception("Cannot currently handle expression "
-                                "initialisation of states ({} = {})"
-                                .format(var, initial))
-            dimension = self.dimensions[var] = self.dimensions[initial]
+            parts = var.split('(')
+            if len(parts) == 2:
+                var, units = parts
+                var = var.strip()
+                units = units[:-1]  # remove parentheses
+                dimension = self.dimensions[var] = units2dimension(units)
+                initial = self._raw_initial.pop(var)
+            else:
+                initial = self._raw_initial.pop(var)
+                if len(initial.split()) != 1:
+                    raise Exception("Cannot currently handle expression "
+                                    "initialisation of states ({} = {})"
+                                    .format(var, initial))
+                dimension = self.dimensions[var] = self.dimensions[initial]
             self.state_variables[var] = StateVariable(var, dimension=dimension,
                                                       initial=initial)
         self.aliases.update((lhs, Alias(lhs, rhs))
                             for lhs, rhs in self._raw_initial.iteritems())
 
     def _extract_neuron_block(self):
-        self.used_ions = {}
         # Read the NEURON block
         for line in self.iterate_block(self.blocks['NEURON']):
             if line.startswith('SUFFIX'):
                 self.component_name = line.split()[1]
             elif line.startswith('RANGE'):
-                self.analog_ports = [AnalogPort(var, mode='send',
-                                                dimension=self.dimensions[var])
-                                     for var in list_re.split(line[6:])]
+                self.range_vars = list_re.split(line[6:])
             elif line.startswith('USEION'):
-                name = re.match('USEION (.*) READ', line).group(1)
-                match = re.match('.*READ (.*) WRITE.*', line)
+                name = re.match(r'USEION ([a-zA-Z0-9_]+)', line).group(1)
+                match = re.match(r'.*READ ([a-zA-Z0-9_]+)', line)
                 read = list_re.split(match.group(1)) if match else []
-                match = re.match('.*WRITE (.*)', line)
+                match = re.match(r'.*WRITE ([a-zA-Z0-9_]+)', line)
                 write = list_re.split(match.group(1)) if match else []
-                self.used_ions[name] = (read, write)
+                match = re.match(r'.*VALENCE ([0-9]+)', line)
+                valence = match.group(1) if match else None
+                self.used_ions[name] = (read, write, valence)
+                for conc in read:
+                    self.dimensions[conc] = 'concentration'
+                for curr in write:
+                    self.dimensions[curr] = 'membrane_current'
+            elif line.startswith('NONSPECIFIC_CURRENT'):
+                match = re.match(r'NONSPECIFIC_CURRENT ([a-zA-Z0-9_]+)', line)
+                write = match.group(1)
+                self.used_ions['__nonspecific__'] = ([], [write], None)
+                self.dimensions[write] = 'membrane_current'
             elif line.startswith('GLOBAL'):
                 self.globals = [var for var in list_re.split(line[7:])]
-        ion_vars = reduce(operator.add,
-                          [r + w for r, w in self.used_ions.itervalues()])
-        # Filter out not actual range variables
-        self.analog_ports = [p for p in self.analog_ports
-                             if (p.name not in self.parameters and
-                                 p.name not in ion_vars)]
-        # Add used ions to analog ports
-        for read, write in self.used_ions.itervalues():
-            for n in read:
-                self.analog_ports.append(AnalogPort(n, mode='recv',
-                                                    dimension='concentration'))
-            for n in write:
-                self.analog_ports.append(AnalogPort(n, mode='send',
-                                                 dimension='membrane_current'))
 
     def _extract_derivative_block(self):
-        self.regimes = []
         # Read derivative
         for name, block in self.blocks['DERIVATIVE'].iteritems():
             time_derivatives = []
             # Extract aliases and states
-            expressions = self._extract_expr_block(block)
+            stmts = self._extract_stmts_block(block)
             # Detect state derivatives
-            for lhs, rhs in expressions.iteritems():
+            for lhs, rhs in stmts.iteritems():
                 if lhs.endswith("'"):
                     if lhs[:-1] not in self.state_variables:
                         raise Exception("Unrecognised variable '{}'"
@@ -376,12 +446,11 @@ class Importer(object):
                     time_derivatives.append(TimeDerivative(lhs[:-1], rhs))
                 else:
                     self.aliases[lhs] = Alias(lhs, rhs)
-        regime = Regime(name=name, time_derivatives=time_derivatives)
-        self.regimes.append(regime)
+            regime = Regime(name=name, time_derivatives=time_derivatives)
+            self.regimes.append(regime)
 
     def _extract_breakpoint_block(self):
-        self.solve_methods = {}
-        reduced_block = ''
+        reduced_block = []
         for line in self.iterate_block(self.blocks['BREAKPOINT']):
             if line.startswith('SOLVE'):
                 match = re.match(r'SOLVE ([a-zA-Z0-9_]+) '
@@ -391,33 +460,59 @@ class Importer(object):
                                     .format(line))
                 self.solve_methods[match.group(1)] = match.group(2)
             else:
-                reduced_block += line + '\n'
-        expressions = self._extract_expr_block(reduced_block)
+                reduced_block.append(line)
+        stmts = self._extract_stmts_block(reduced_block)
         self.aliases.update((lhs, Alias(lhs, rhs))
-                            for lhs, rhs in expressions.iteritems())
+                            for lhs, rhs in stmts.iteritems())
 
-    @classmethod
-    def iterate_block(cls, block):
-        for line in block:
-            line = line.strip().split(':')[0]
-            if line:
-                yield line
-
-    def _create_ports_for_reserved_keywords(self):
+    def _create_analog_ports(self):
+        # Add range variables to analog ports
+        ion_vars = reduce(operator.add,
+                          [r + w for r, w, _ in self.used_ions.itervalues()])
+        for var in self.range_vars:
+            if var not in self.parameters and var not in ion_vars:
+                if var == 'e' + self.component_name:
+                    mode = 'recv'
+                    dimension = 'voltage'
+                else:
+                    mode = 'send'
+                    dimension = self.dimensions[var]
+                self.analog_ports.append(AnalogPort(var, mode=mode,
+                                                    dimension=dimension))
+        # Add used ions to analog ports
+        for name, (read, write, _) in self.used_ions.iteritems():
+            for n in read:
+                if n == 'e' + name:
+                    dimension = 'voltage'
+                else:
+                    dimension = 'concentration'
+                self.analog_ports.append(AnalogPort(n, mode='recv',
+                                                    dimension=dimension))
+            for n in write:
+                self.analog_ports.append(AnalogPort(n, mode='send',
+                                                 dimension='membrane_current'))
         uses_celsius = False
         uses_voltage = False
         # If 'celsius' or 'v' appears anywhere in the file add them to the
         # receive ports
-        for alias in self.aliases.itervalues():
+        simple_rhs = [a.rhs for a in self.aliases.values()
+                    if isinstance(a.rhs, str)]
+        piecewise_rhs = [[expr for expr, _ in a.rhs]
+                         for a in self.aliases.values()
+                         if isinstance(a.rhs, list)]
+        if piecewise_rhs:
+            piecewise_rhs = reduce(operator.add, piecewise_rhs)
+        all_rhs = simple_rhs + piecewise_rhs
+        for rhs in all_rhs:
             if re.search(r'(?:^|[^a-zA-Z0-9_])celsius(?:[^a-zA-Z0-9_]|$)',
-                         alias.rhs):
+                         rhs):
                 uses_celsius = True
             if re.search(r'(?:^|[^a-zA-Z0-9_])v(?:[^a-zA-Z0-9_]|$)',
-                         alias.rhs):
+                         rhs):
                 uses_voltage = True
         if uses_voltage:
             self.analog_ports.append(AnalogPort('v', mode='recv',
-                                        dimension='concentration'))
+                                        dimension='voltage'))
         if uses_celsius:
             self.analog_ports.append(AnalogPort('celsius', mode='recv',
                                          dimension='absolute_temperature'))
