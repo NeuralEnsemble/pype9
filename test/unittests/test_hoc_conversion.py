@@ -28,7 +28,7 @@ class TestHocImporter(unittest.TestCase):
                                ['DCN_params_axis.hoc', 'DCN_morph.hoc',
                                 'DCN_mechs1.hoc'],
                                ['DCNmechs()'])
-        print importer.psections
+        print importer.model
 # from nineline.cells import Model
 # from itertools import chain
 # import time

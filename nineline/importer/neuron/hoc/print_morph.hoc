@@ -2,8 +2,8 @@
  * the 3d points.
  */
 forall {
-    printf("points: %f %f %f %f %f %f %f\\n", \\
-           x3d(0), y3d(0), z3d(0), x3d(1), y3d(1), z3d(1), \\
+    printf("points: %f %f %f %f %f %f %f\n", \
+           x3d(0), y3d(0), z3d(0), x3d(1), y3d(1), z3d(1), \
            diam)
     psection()
 }

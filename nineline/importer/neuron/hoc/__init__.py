@@ -8,10 +8,10 @@ from copy import deepcopy
 import itertools
 from operator import itemgetter
 import numpy
-from ...cells import (Model, SegmentModel, AxialResistanceModel,
-                      MembraneCapacitanceModel, IonChannelModel,
-                      IonConcentrationModel, CurrentClampModel,
-                      SynapseModel)
+from ....cells import (Model, SegmentModel, AxialResistanceModel,
+                       MembraneCapacitanceModel, IonChannelModel,
+                       IonConcentrationModel, CurrentClampModel,
+                       SynapseModel)
 
 
 class HocImporter(object):
@@ -65,8 +65,8 @@ class HocImporter(object):
             # combination
             yield comp_name, vals
 
-    def __init__(self, hoc_dir, hoc_files, hoc_cmds=[]):
-        self.hoc_dir = hoc_dir
+    def __init__(self, import_dir, hoc_files=['main.hoc'], hoc_cmds=[]):
+        self.import_dir = import_dir
         self.hoc_cmds = hoc_cmds
         if isinstance(hoc_files, str):
             hoc_files = [hoc_files]
@@ -78,65 +78,26 @@ class HocImporter(object):
         self.model.url = None
 
     def _run_model_printouts(self):
-        # The hoc code to print out the required data from the model
-        hoc_code = """
-                forall {
-                    printf("points: %f %f %f %f %f %f %f\\n", \\
-                           x3d(0), y3d(0), z3d(0), x3d(1), y3d(1), z3d(1), \\
-                           diam)
-                    psection()
-                }
-                printf("---BREAK---\\n")
-                forall {
-                    printf("%s %f\\n", secname(), L)
-                }
-                printf("---BREAK---\\n")
-                objref nil
-                proc textout() { local i
-                    printf("%s\\n", $o1.s)
-                    if ($o1.children != nil) {
-                        for i=0, $o1.children.count-1 {
-                            textout($o1.children.object(i))
-                        }
-                    }
-                }
-                load_file("mview.hoc")
-                objref m
-                m = new ModelView(0)
-                for i=0, m.display.top.count-1 {
-                   textout(m.display.top.object(i))
-                }
-                m.destroy()\n"""
-        # Create a temporary file to hold the model hoc code and the print out
-        # code.
-        with tempfile.NamedTemporaryFile(), tempfile.NamedTemporaryFile() \
-                                                                       as f, g:
-            # Write the temporary hoc file
-            f.write('\n'.join('load_file("{}/{}")'.format(self.hoc_dir, hf)
-                              for hf in self.hoc_files) + '\n' +
-                    '\n'.join(self.hoc_cmds) + '\n'
-                    "{hoc_code}".format(hoc_code=hoc_code))
-            f.flush()
-            # Create the python commands to load the hoc files and run the
-            # script
-            this_dir = os.path.dirname(__file__)
-            pycmd = ("from neuron import h, load_mechanisms;" +
-                    "load_mechanisms('{}');".format(self.hoc_dir) +
-                    ';'.join("h.load_file('{}');".format(hf)
-                             for hf in self.hoc_files) +
-                    ';'.join("h('{}')".format(cmd) for cmd in self.hoc_cmds) +
-                    "h.load_file(os.path.join('{dir}', 'print_morph.hoc'));"
-                    .format(this_dir) +
-                    "h.load_file(os.path.join('{dir}', 'print_lengths.hoc'));"
-                    .format(this_dir) +
-                    "h.load_file(os.path.join('{dir}', 'print_modelview.hoc'))"
-                    .format(this_dir))
-            # Run the temporary hoc file and save the output
-            process = sp.Popen(["python", "-c", pycmd], stdout=sp.PIPE)
-            output = process.communicate()[0]
-            # Split the output into the different sections
-            (self.psections,
-             self.lengths, self.modelview) = output.split('---BREAK---')
+        # Create the python commands to load the hoc files and run the
+        # script
+        this_dir = os.path.dirname(__file__)
+        pycmd = ("import os; from neuron import h, load_mechanisms;" +
+                "load_mechanisms('{}');".format(self.import_dir) +
+                ''.join("h.load_file(os.path.join('{}', '{}'));"
+                        .format(self.import_dir, hf)
+                         for hf in self.hoc_files) +
+                ''.join("h('{}');".format(cmd) for cmd in self.hoc_cmds) +
+                "h.load_file(os.path.join('{}', 'print_morph.hoc'));"
+                .format(this_dir) + "print '<BREAK>';"
+                "h.load_file(os.path.join('{}', 'print_lengths.hoc'));"
+                .format(this_dir) + "print '<BREAK>';"
+                "h.load_file(os.path.join('{}', 'print_modelview.hoc'))"
+                .format(this_dir))
+        # Run the temporary hoc file and save the output
+        process = sp.Popen(["python", "-c", pycmd], stdout=sp.PIPE)
+        output = process.communicate()[0]
+        # Split the output into the different sections
+        self.psections, self.lengths, self.modelview = output.split('<BREAK>')
 
     def print_section_lengths(self, cell):
         for name, seg in sorted(cell.segments.iteritems(), key=itemgetter(0)):
@@ -144,7 +105,7 @@ class HocImporter(object):
 
     def _extract_morphology(self):
         self.model = Model('hoc_import',
-                source=os.path.join(self.hoc_dir))
+                source=os.path.join(self.import_dir))
         segments = {}
         in_section = False
         started = False
@@ -337,50 +298,49 @@ class HocImporter(object):
             for comp in comps:
                 comp.global_parameters = global_parameters
 
-    def _parse_mechanisms_dump(self, mech_file):
+    def _parse_mechanisms_dump(self):
         # Load mechanisms model view dump from file into nested dictionaries
         # for convenient access
-        with open(mech_file) as f:
-            contents = {}
-            containers = [contents]
-            for line in f:
-                strip_line = line.strip()
-                if strip_line:
-                    depth = (len(line) - len(line.lstrip())) // 4
-                    if strip_line.startswith('* '):
-                        strip_line = strip_line[2:]  # remove '* '
-                        # remove numbers from the front of item
-                        strip_line = re.sub('[0-9]+ ', '', strip_line)
-                        for _ in xrange(depth, len(containers) - 1):
-                            containers.pop()
-                        container = {}
-                        containers[-1][strip_line] = container
-                        containers.append(container)
+        contents = {}
+        containers = [contents]
+        for line in self.modelview.splitlines():
+            strip_line = line.strip()
+            if strip_line:
+                depth = (len(line) - len(line.lstrip())) // 4
+                if strip_line.startswith('* '):
+                    strip_line = strip_line[2:]  # remove '* '
+                    # remove numbers from the front of item
+                    strip_line = re.sub('[0-9]+ ', '', strip_line)
+                    for _ in xrange(depth, len(containers) - 1):
+                        containers.pop()
+                    container = {}
+                    containers[-1][strip_line] = container
+                    containers.append(container)
+                else:
+                    key_val = strip_line.split('=')
+                    if len(key_val) == 2:
+                        key, val = key_val
+                        val = val.strip()
                     else:
-                        key_val = strip_line.split('=')
-                        if len(key_val) == 2:
-                            key, val = key_val
-                            val = val.strip()
-                        else:
-                            key = '='.join(key_val)
-                            val = None
-                        index = key.find(' (')
-                        if index == -1:
-                            index = len(key)
-                        key = key[:index]
-                        key = key.strip()
-                        for _ in xrange(depth, len(containers) - 1):
-                            containers.pop()
-                        # At the lowest level it is possible for there to be
-                        # multiple values with the same number of segments and
-                        # hence the same 'key'. Since in this case the key is
-                        # actually ignored, if the key exists just use the
-                        # value as a key. This effectively treati the container
-                        # as a list, which it would ideally be but would
-                        # require mendokusai bookeeping to work out.
-                        if key in containers[-1]:
-                            key = val
-                        containers[-1][key] = val
+                        key = '='.join(key_val)
+                        val = None
+                    index = key.find(' (')
+                    if index == -1:
+                        index = len(key)
+                    key = key[:index]
+                    key = key.strip()
+                    for _ in xrange(depth, len(containers) - 1):
+                        containers.pop()
+                    # At the lowest level it is possible for there to be
+                    # multiple values with the same number of segments and
+                    # hence the same 'key'. Since in this case the key is
+                    # actually ignored, if the key exists just use the
+                    # value as a key. This effectively treati the container
+                    # as a list, which it would ideally be but would
+                    # require mendokusai bookeeping to work out.
+                    if key in containers[-1]:
+                        key = val
+                    containers[-1][key] = val
         inserted_mechs = contents['real cells']['root soma']['inserted '
                                                              'mechanisms']
         mechs_list = contents['Density Mechanisms']['Mechanisms in use']
