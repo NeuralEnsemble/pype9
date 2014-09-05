@@ -78,8 +78,8 @@ class HocImporter(object):
         self.model.url = None
 
     def _run_model_printouts(self):
-        # Create the python commands to load the hoc files and run the
-        # script
+        # Create the python commands to load the model and then run the print
+        # out hoc files
         this_dir = os.path.dirname(__file__)
         pycmd = ("import os; from neuron import h, load_mechanisms;" +
                 "load_mechanisms('{}');".format(self.import_dir) +
@@ -93,10 +93,10 @@ class HocImporter(object):
                 .format(this_dir) + "print '<BREAK>';"
                 "h.load_file(os.path.join('{}', 'print_modelview.hoc'))"
                 .format(this_dir))
-        # Run the temporary hoc file and save the output
+        # Run the python command and save the output
         process = sp.Popen(["python", "-c", pycmd], stdout=sp.PIPE)
         output = process.communicate()[0]
-        # Split the output into the different sections
+        # Split the output into the different sections for further processing
         self.psections, self.lengths, self.modelview = output.split('<BREAK>')
 
     def print_section_lengths(self, cell):
