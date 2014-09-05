@@ -22,15 +22,15 @@ from copy import copy, deepcopy
 import numpy
 from lxml import etree
 import quantities as pq
-import nineml.extensions.biophysical_cells
-from nineml.extensions.morphology import (Morphology as Morphology9ml,
-                                          Segment as Segment9ml,
-                                          ProximalPoint as ProximalPoint9ml,
-                                          DistalPoint as DistalPoint9ml,
-                                          ParentSegment as ParentSegment9ml,
-                                          Classification as Classification9ml,
-                                          SegmentClass as SegmentClass9ml,
-                                          Member as Member9ml)
+# import nineml.extensions.biophysical_cells
+# from nineml.extensions.morphology import (Morphology as Morphology9ml,
+#                                           Segment as Segment9ml,
+#                                           ProximalPoint as ProximalPoint9ml,
+#                                           DistalPoint as DistalPoint9ml,
+#                                           ParentSegment as ParentSegment9ml,
+#                                           Classification as Classification9ml,
+#                                           SegmentClass as SegmentClass9ml,
+#                                           Member as Member9ml)
 from abc import ABCMeta  # Metaclass for abstract base classes
 from btmorph.btstructs2 import STree2, SNode2, P3D2
 import inspect
@@ -168,8 +168,8 @@ class Model(STree2):
         `filename` -- path to a file containing the psection() output
         """
         # this is imported here to avoid recursive import loop
-        from ..importer.neuron import import_from_hoc
-        return import_from_hoc(psection_file, mech_file)
+#         from ..importer.neuron import import_from_hoc
+#         return import_from_hoc(psection_file, mech_file)
 
     def __init__(self, name, source=None):
         self.name = name

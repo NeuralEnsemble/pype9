@@ -1,0 +1,4 @@
+/* This file just prints out the lengths of all the sections */
+forall {
+    printf("%s %f\\n", secname(), L)
+}
