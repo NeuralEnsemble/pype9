@@ -89,7 +89,7 @@ class TestNMODLImporter(unittest.TestCase):
         </NineML>""")
 
     def test_nmodl_import(self):
-        importer = NMODLImporter('/home/tclose/git/cerebellarnuclei/NaF.mod')
+        importer = NMODLImporter('/home/tclose/git/cerebellarnuclei/DCNsynGABA.mod')
         componentclass = importer.get_component()
         with tempfile.NamedTemporaryFile(delete=False) as f:
             fname = f.name
