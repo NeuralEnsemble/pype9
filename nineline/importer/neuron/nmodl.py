@@ -103,6 +103,7 @@ class NMODLImporter(object):
         self._create_regimes()
 
     def get_component(self):
+        self.print_members()
         return ComponentClass(name=self.component_name,
                               parameters=self.parameters.values(),
                               analog_ports=self.analog_ports,
@@ -112,6 +113,29 @@ class NMODLImporter(object):
                                         for k, v in self.constants.items()
                                         if k not in self.parameters]),
                               state_variables=self.state_variables)
+
+    def print_members(self):
+        """
+        Prints out a list of the aliases used in the component (primarily for
+        debugging
+        """
+        print "\n\n------------------"
+        print "     {}      ".format(self.component_name)
+        print "------------------"
+        print "\nParameters:"
+        for p in self.parameters.values():
+            print '{}'.format(p.name)
+        print "\nReceive Analog Ports:"
+        for p in self.analog_ports:
+            if p.mode == 'recv':
+                print '{}'.format(p.name)
+        print "\nTime derivatives:"
+        for r in self.regimes:
+            for td in r.time_derivatives:
+                print "{}' = {}".format(td.dependent_variable, td.rhs)
+        print "\nAliases:"
+        for a in self.aliases.itervalues():
+            print '{} = {}'.format(a.lhs, a.rhs)
 
     def _create_regimes(self):
         if self.on_event_parts:
@@ -541,34 +565,41 @@ class NMODLImporter(object):
                     common_lhss = reduce(set.intersection,
                                          (set(s.keys())
                                           for t, s in conditional_stmts))
-                    # Create numbered versions of the helper statements in the
-                    # sub- blocks (i.e. that don't appear in all sub-blocks)
-                    for i, (test, stmts) in enumerate(conditional_stmts):
-                        branch_subs = []
-                        # Get a list of substitutions to perform to unwrap the
-                        # conditional block
+                    if len(conditional_stmts) > 2:
+                        # Create numbered versions of the helper statements in
+                        # the sub- blocks (i.e. that don't appear in all sub-
+                        # blocks)
+                        for i, (test, stmts) in enumerate(conditional_stmts):
+                            branch_subs = []
+                            # Get a list of substitutions to perform to unwrap
+                            # the conditional block
+                            for lhs, rhs in stmts.iteritems():
+                                if lhs not in common_lhss:
+                                    new_lhs = ('{}__branch{}{}'
+                                               .format(lhs[:-len(suffix)], i,
+                                                       suffix))
+                                    branch_subs.append((lhs, new_lhs))
+                            # Perform the substitutions on all the conditional
+                            # statements
+                            for old, new in branch_subs:
+                                i = 1
+                                # Substitute into the right-hand side equation
+                                for lhs, rhs in stmts.iteritems():
+                                    stmts[lhs] = self._subs_variable(old, new,
+                                                                     rhs)
+                                # Substitute the left-hand side
+                                rhs = stmts.pop(old)
+                                stmts[new] = rhs
+                            # Copy all the "non-common lhs" statements, which
+                            # have been escaped into their separate branches to
+                            # the general statement block
+                            for _, new_lhs in branch_subs:
+                                rhs = stmts[new_lhs]
+                                statements[new_lhs] = rhs
+                    else:
                         for lhs, rhs in stmts.iteritems():
                             if lhs not in common_lhss:
-                                new_lhs = ('{}__branch{}{}'
-                                           .format(lhs[:-len(suffix)], i,
-                                                   suffix))
-                                branch_subs.append((lhs, new_lhs))
-                        # Perform the substitutions on all the conditional
-                        # statements
-                        for old, new in branch_subs:
-                            i = 1
-                            # Substitute into the right-hand side equation
-                            for lhs, rhs in stmts.iteritems():
-                                stmts[lhs] = self._subs_variable(old, new, rhs)
-                            # Substitute the left-hand side
-                            rhs = stmts.pop(old)
-                            stmts[new] = rhs
-                        # Copy all the "non-common lhs" statements, which have
-                        # been escaped into their separate branches to the 
-                        # general statement block
-                        for _, new_lhs in branch_subs:
-                            rhs = stmts[new_lhs]
-                            statements[new_lhs] = rhs
+                                statements[lhs] = rhs
                     # Loop through statements that are common to all conditions
                     # and create a single piecewise statement for them
                     for lhs in common_lhss:
@@ -601,6 +632,11 @@ class NMODLImporter(object):
                         else:
                             assert lhs not in statements
                         statements[lhs] = pieces
+                    # Add aliases from procedure to list of substitutions in
+                    # order to append the suffixes
+                    if suffix:
+                        subs = subs + [(lhs[:-len(suffix)], lhs)
+                                       for lhs in common_lhss]
                     # Set the line that has been peeked at to the next line and
                     # continue to iterate through the lines
                     line = nline
@@ -628,8 +664,9 @@ class NMODLImporter(object):
                                                       suffix=psuffix)
                     # Add aliases from procedure to list of substitutions in
                     # order to append the suffixes
-                    subs = subs + [(lhs[:-len(psuffix)], lhs)
-                                   for lhs in pstmts.iterkeys()]
+                    if psuffix:
+                        subs = subs + [(lhs[:-len(psuffix)], lhs)
+                                       for lhs in pstmts.iterkeys()]
                     statements.update(pstmts)
             elif len(parts) == 2:  # Assume to be an assignment expression
                 lhs, rhs = parts
@@ -652,7 +689,8 @@ class NMODLImporter(object):
                                           fname + fsuffix)
                 # Append the suffix to the left hand side
                 lhs_w_suffix = lhs + suffix
-                subs.append((lhs, lhs_w_suffix))
+                if suffix:
+                    subs.append((lhs, lhs_w_suffix))
                 # If the same variable has been defined previously we need to
                 # give it a new name so this statement doesn't override it.
                 if lhs_w_suffix in statements:
@@ -662,7 +700,7 @@ class NMODLImporter(object):
                         count += 1
                         tmp_lhs = lhs_w_suffix + '__tmp' + str(count)
                     statements[tmp_lhs] = statements[lhs_w_suffix]
-                    rhs = self._subs_variable(lhs, tmp_lhs, rhs)
+                    rhs = self._subs_variable(lhs_w_suffix, tmp_lhs, rhs)
                 statements[lhs_w_suffix] = rhs
             else:
                 raise Exception("More than one '=' found on line '{}'"

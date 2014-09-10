@@ -1,6 +1,6 @@
 import os
 import re
-from nineml.exceptions import NineMLMathParseError
+from nineml.exceptions import NineMLMathParseError, NineMLRuntimeError
 from .hoc import HocImporter
 from .nmodl import NMODLImporter
 
@@ -18,8 +18,13 @@ class NeuronImporter(object):
 
     def write_ion_current_files(self, output_dir):
         for imptr in self.nmodl_importers.itervalues():
-            compclass = imptr.get_component()
-            compclass.write(os.path.join(output_dir, compclass.name + '.xml'))
+            try:
+                compclass = imptr.get_component()
+                compclass.write(os.path.join(output_dir,
+                                             compclass.name + '.xml'))
+            except NineMLRuntimeError as e:
+                print ("Could not write '{}' component because of:\n{}"
+                       .format(imptr.component_name, e))
 
     def _scan_dir_for_mod_files(self):
         self.available_mods = {}
