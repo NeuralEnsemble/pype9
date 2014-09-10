@@ -3,6 +3,7 @@ import operator
 import quantities as pq
 import collections
 from copy import copy
+from types import GeneratorType
 from nineml.abstraction_layer.components.interface import Parameter
 from nineml.abstraction_layer.dynamics.component import ComponentClass
 from nineml.abstraction_layer.dynamics import Regime, StateVariable, OnEvent
@@ -56,14 +57,21 @@ class NMODLImporter(object):
         """
 
         def __setitem__(self, key, val):
-            assert key not in self or val.rhs == self[key].rhs, \
-                                               "Attempting to overwrite alias"
+            if key in self and val.rhs != self[key].rhs:
+                print ("WARNING: Overriding alias '{}' from value '{}' to "
+                       "value '{}'".format(key, self[key], val.rhs))
             super(NMODLImporter.NoOverwriteDict, self).__setitem__(key, val)
 
-#         def update(self, d):
-#             assert all(k not in self for k in d.iterkeys()), \
-#                                                 "Attempting to overwrite alias"
-#             super(NMODLImporter.NoOverwriteDict, self).update(d)
+        def update(self, d):
+            if isinstance(d, GeneratorType):
+                d = list(d)
+            elif isinstance(d, dict):
+                d = d.items()
+            for key, val in d:
+                if key in self and val.rhs != self[key].rhs:
+                    print ("WARNING: Overriding alias '{}' from value '{}' to "
+                           "value '{}'".format(key, self[key], val.rhs))
+            super(NMODLImporter.NoOverwriteDict, self).update(d)
 
     def __init__(self, fname):
         # Read file
@@ -103,7 +111,7 @@ class NMODLImporter(object):
         self._create_regimes()
 
     def get_component(self):
-        self.print_members()
+#         self.print_members()
         return ComponentClass(name=self.component_name,
                               parameters=self.parameters.values(),
                               analog_ports=self.analog_ports,
