@@ -1,4 +1,5 @@
 import re
+import regex
 import operator
 import quantities as pq
 import collections
@@ -88,6 +89,7 @@ class NMODLImporter(object):
         self._read_comments()
         self._read_blocks()
         # Initialise members
+        self.used_units = ['degC', 'kelvin']
         self.functions = {}
         self.procedures = {}
         self.aliases = self.NoOverwriteDict()  # This is done for safety
@@ -96,6 +98,7 @@ class NMODLImporter(object):
         self.valid_state_ranges = {}
         self.dimensions = {}
         self.state_variables = {}
+        self.range_vars = []
         self.used_ions = {}
         self.breakpoint_solve_methods = {}
         self.initial_solve_methods = {}
@@ -117,7 +120,8 @@ class NMODLImporter(object):
         self._extract_derivative_block()
         self._extract_breakpoint_block()
         self._extract_netreceive_block()
-        assert not self.blocks
+        self._extract_independent_block()
+        assert not self.blocks  # Check to see all blocks have been extracted
         # Create members from extracted information
         self._create_parameters_and_analog_ports()
         self._create_regimes()
@@ -203,8 +207,7 @@ class NMODLImporter(object):
         line_iter = iter(self.contents.splitlines())
         for decl, contents, _ in self._matching_braces(line_iter,
                                                        multiline_pre=False):
-            match = re.match(r" *(\w+)([a-zA-Z_ \(\)0-9]*)",
-                             decl)
+            match = re.match(r" *(\w+)(.*)", decl)
             block_name = match.group(1).strip()
             if match.group(2).strip():
                 if block_name == 'NET_RECEIVE':
@@ -223,10 +226,19 @@ class NMODLImporter(object):
         for blck_type, dct in (('FUNCTION', self.functions),
                                 ('PROCEDURE', self.procedures)):
             for signature, block in self.blocks.pop(blck_type, {}).iteritems():
-                i = signature.find('(')
-                name = signature[:i].strip()
-                args = [a.split('(')[0]
-                        for a in list_re.split(signature[i + 1:-1])]
+                # Strip units statements (this may need to be handled but
+                # hopefully it should be implicitly by the dimension checking)
+                for units in self.used_units:
+                    signature = signature.replace('({})'.format(units), '')
+                signature = signature.strip()
+                match = re.match(r'(\w+) *\((.*)\)', signature)
+                name = match.group(1)
+                args = [a.split(')')[0].strip()
+                        for a in list_re.split(match.group(2))]
+#                 i = signature.find('(')
+#                 name = signature[:i].strip()
+#                 args = [a.split('(')[0]
+#                         for a in list_re.split(signature[i + 1:-1])]
                 dct[name] = (args, block)
 
     def _extract_units_block(self):
@@ -254,6 +266,7 @@ class NMODLImporter(object):
                     except:
                         raise Exception("Unrecognised unit '{}'"
                                         .format(unitname))
+                self.used_units.append(alias)
 
     def _extract_assigned_block(self):
         # Read the assigned block for analog out ports
@@ -325,11 +338,14 @@ class NMODLImporter(object):
 
     def _extract_state_block(self):
         # Read state variables
-        for line in self._iterate_block(self.blocks.pop('STATE', [])):
+        block = self.blocks.pop('STATE', [])
+        # Sometimes states can be written all on one line
+        if len(block) == 1 and '(' not in block[0] and 'FROM' not in block[0]:
+            block = block[0].split()
+        for line in self._iterate_block(block):
             match = re.match(r'(\w+)(?: *\(([\w \/\*]+)\))?'
                              r'(?: *FROM *([\d\.\-]+) *TO *([\d\.\-]+))?',
                              line)
-            # UP TO HERE!!!!!!!!
             var = match.group(1)
             initial = self._raw_initial.pop(var, None)
             # If Units are provided
@@ -358,7 +374,7 @@ class NMODLImporter(object):
             elif line.startswith('ARTIFICIAL_CELL'):
                 self.component_name = line.split()[1]
             elif line.startswith('RANGE'):
-                self.range_vars = list_re.split(line[6:])
+                self.range_vars.extend(list_re.split(line[6:]))
             elif line.startswith('USEION'):
                 name = re.match(r'USEION (\w+)', line).group(1)
                 match = re.match(r'.*READ ((?:\w+(?: *\, *)?)+)', line)
@@ -378,7 +394,7 @@ class NMODLImporter(object):
                 self.used_ions['__nonspecific__'] = ([], [write], None)
                 self.dimensions[write] = 'membrane_current'
             elif line.startswith('GLOBAL'):
-                self.globals = [var for var in list_re.split(line[7:])]
+                self.globals.extend(var for var in list_re.split(line[7:]))
 
     def _extract_derivative_block(self):
         # Read derivative
@@ -446,6 +462,10 @@ class NMODLImporter(object):
         block = self.blocks.pop('KINETIC', None)
         if block:
             raise NotImplementedError("Haven't written kinetic block parser")
+
+    def _extract_independent_block(self):
+        self.blocks.pop('INDEPENDENT', None)
+        # the Independent block is not actually required as it is always t
 
     def _create_parameters_and_analog_ports(self):
         # Add range variables to analog ports
@@ -607,13 +627,33 @@ class NMODLImporter(object):
         # Expand function definitions, creating extra aliases for all
         # statements within the function body
         for fname, (fargs, fbody) in self.functions.iteritems():
-            for match in re.findall("({} *)\((.*)\)".format(fname),
-                                    rhs):
-                argvals = list_re.split(match[1])
+            for match in regex.findall("({} *)\((.*)\)".format(fname), rhs,
+                                       overlapped=True):
+                # Split arg list into groups based on ',', while respecting
+                # parentheses
+                arglist = match[1]
+                argvals = []
+                depth = 1
+                start_token = 0
+                end_of_arglist = len(arglist)
+                for i, c in enumerate(arglist):
+                    if c == '(':
+                        depth += 1
+                    elif c == ')':
+                        depth -= 1
+                        if depth == 0:
+                            end_of_arglist = i
+                            break
+                    elif c == ',' and depth == 1:
+                        argvals.append(arglist[start_token:i].strip())
+                        start_token = i + 1
+                argvals.append(arglist[start_token:end_of_arglist].strip())
+                assert len(argvals) == len(fargs)
+                # Append a string of escaped argument values as an additional
+                # suffix
                 fsuffix = suffix + self._args_suffix(argvals)
                 fstmts = self._extract_stmts_block(fbody,
-                                                   subs=zip(fargs,
-                                                            argvals),
+                                                   subs=zip(fargs, argvals),
                                                    suffix=fsuffix)
                 statements.update(fstmts)
                 rhs = rhs.replace('{}({})'.format(*match),
@@ -632,6 +672,10 @@ class NMODLImporter(object):
                 tmp_lhs = lhs_w_suffix + '__tmp' + str(count)
             statements[tmp_lhs] = statements[lhs_w_suffix]
             rhs = self._subs_variable(lhs_w_suffix, tmp_lhs, rhs)
+        # Strip units statements (this may need to be handled but hopefully it
+        # should be implicitly by the dimension checking)
+        for units in self.used_units:
+            rhs = rhs.replace('({})'.format(units), '')
         statements[lhs_w_suffix] = rhs
 
     def _extract_conditional_block(self, statements, line, line_iter, subs=[],
@@ -790,8 +834,8 @@ class NMODLImporter(object):
                 elif c == '}':
                     depth -= 1
                     if depth == 0:
-                        if line[:j].strip():
-                            block.append(line[:j].strip())
+                        if line[start_index:j].strip():
+                            block.append(line[start_index:j].strip())
                         line = line[j + 1:]
                         yield preamble, block, line
                         preamble = ''
@@ -815,13 +859,16 @@ class NMODLImporter(object):
     def _args_suffix(self, arg_vals):
         suffix = ''
         for a in arg_vals:
-            a = a.replace('e-', 'e_neg_')
-            a = re.sub(r' *\+ *', '_plus_', a)
-            a = re.sub(r' *\- *', '_minus_', a)
-            a = re.sub(r' *\* *', '_times_', a)
-            a = re.sub(r' *\/ *', '_divide_', a)
-            a = re.sub(r' *\( *', '_oparen_', a)
-            a = re.sub(r' *\) *', '_cparen_', a)
+            a = re.sub(r' *\+ *', '__p__', a)
+            a = re.sub(r' *\- *', '__m__', a)
+            a = re.sub(r' *\* *', '__x__', a)
+            a = re.sub(r' *\/ *', '__d__', a)
+            a = re.sub(r' *\( *', '__o__', a)
+            a = re.sub(r' *\) *', '__c__', a)
             a = re.sub(r'[\. ]', '_', a)
             suffix += '_' + a
         return suffix
+
+if __name__ == '__main__':
+    block = ['phi_m = 5.0 ^ ((celsius-37)/10)', 'phi_h = 3.0 ^ ((celsius-37)/10)', 'T = kelvinfkt (celsius)', 'evaluate_fct(v)', 'm = minf', 'h = hinf', 's = sinf']
+
