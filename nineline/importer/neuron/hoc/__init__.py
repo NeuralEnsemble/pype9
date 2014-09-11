@@ -65,12 +65,13 @@ class HocImporter(object):
             # combination
             yield comp_name, vals
 
-    def __init__(self, import_dir, hoc_files=['main.hoc'], hoc_cmds=[]):
+    def __init__(self, import_dir, model_files=['main.hoc'], hoc_cmds=[]):
         self.import_dir = import_dir
         self.hoc_cmds = hoc_cmds
-        if isinstance(hoc_files, str):
-            hoc_files = [hoc_files]
-        self.hoc_files = hoc_files
+        if isinstance(model_files, str):
+            model_files = [model_files]
+        self.hoc_files = [f for f in model_files if f.endswith('.hoc')]
+        self.python_files = [f[:-3] for f in model_files if f.endswith('.py')]
         self._run_model_printouts()
         self._extract_morphology()
         self._extract_mechanisms()
@@ -81,12 +82,14 @@ class HocImporter(object):
         # Create the python commands to load the model and then run the print
         # out hoc files
         this_dir = os.path.dirname(__file__)
-        pycmd = ("import os; from neuron import h, load_mechanisms;" +
-                "load_mechanisms('{}');".format(self.import_dir) +
+        pycmd = ("import os; os.chdir('{}');".format(self.import_dir) +
+                 "from neuron import h;" +
                 ''.join("h.load_file(os.path.join('{}', '{}'));"
                         .format(self.import_dir, hf)
                          for hf in self.hoc_files) +
+                ''.join("import {};".format(pf) for pf in self.python_files) +
                 ''.join("h('{}');".format(cmd) for cmd in self.hoc_cmds) +
+                "print '<BREAK>';" +
                 "h.load_file(os.path.join('{}', 'print_morph.hoc'));"
                 .format(this_dir) + "print '<BREAK>';"
                 "h.load_file(os.path.join('{}', 'print_lengths.hoc'));"
@@ -97,7 +100,8 @@ class HocImporter(object):
         process = sp.Popen(["python", "-c", pycmd], stdout=sp.PIPE)
         output = process.communicate()[0]
         # Split the output into the different sections for further processing
-        self.psections, self.lengths, self.modelview = output.split('<BREAK>')
+        (_, self.psections,
+         self.lengths, self.modelview) = output.split('<BREAK>')
 
     def print_section_lengths(self, cell):
         for name, seg in sorted(cell.segments.iteritems(), key=itemgetter(0)):
@@ -346,8 +350,15 @@ class HocImporter(object):
         mechs_list = contents['Density Mechanisms']['Mechanisms in use']
         global_params = contents['Density Mechanisms']['Global parameters for '
                                                        'density mechanisms']
-        point_procs = contents['point processes (can receive events) of base '
-                               'classes']['Point Processes']
+        point_procs_group = contents['point processes (can receive events) of '
+                                     'base classes']
+        try:
+            point_procs = point_procs_group['Point Processes']
+        except KeyError:
+            point_procs = dict((k, v) for k, v in point_procs_group.iteritems()
+                               if k not in ('Global parameters for Point '
+                                            'Processes', 'KSChan definitions '
+                                            'for Point Processes'))
         return inserted_mechs, mechs_list, global_params, point_procs
 
     def _map_segments_to_components(self):

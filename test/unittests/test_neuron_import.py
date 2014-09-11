@@ -89,7 +89,8 @@ class TestNMODLImporter(unittest.TestCase):
         </NineML>""")
 
     def test_nmodl_import(self):
-        importer = NMODLImporter('/home/tclose/git/cerebellarnuclei/DCNsynGABA.mod')
+        importer = NMODLImporter('/home/tclose/git/purkinje/model/'
+                                  'Haroon_active_reduced_model/newCaP.mod')
         componentclass = importer.get_component()
         with tempfile.NamedTemporaryFile(delete=False) as f:
             fname = f.name
@@ -102,14 +103,21 @@ class TestNMODLImporter(unittest.TestCase):
 class TestNeuronImporter(unittest.TestCase):
 
     def test_neuron_import(self):
-        importer = NeuronImporter('/home/tclose/git/cerebellarnuclei/',
-                                   ['DCN_params_axis.hoc', 'DCN_morph.hoc',
-                                    'DCN_mechs1.hoc'],
-                                   ['DCNmechs()'])
-        importer.write_ion_current_files('/home/tclose/git/cerebellarnuclei/'
-                                         '9ml/ion_channels')
+#         importer = NeuronImporter('/home/tclose/git/cerebellarnuclei/',
+#                                    ['DCN_params_axis.hoc', 'DCN_morph.hoc',
+#                                     'DCN_mechs1.hoc'],
+#                                    ['DCNmechs()'])
+#         importer.write_ion_current_files('/home/tclose/git/cerebellarnuclei/'
+#                                          '9ml/ion_channels')
+        importer = NeuronImporter('/home/tclose/git/purkinje/model/'
+                                  'Haroon_active_reduced_model',
+                                   ['for_import.py'])
+        importer.write_ion_current_files('/home/tclose/git/purkinje/model/'
+                                         'Haroon_active_reduced_model/9ml')
 
 if __name__ == '__main__':
+#     test = TestNMODLImporter()
+#     test.test_nmodl_import()
     test = TestNeuronImporter()
     test.test_neuron_import()
     print "done"

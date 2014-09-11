@@ -9,9 +9,9 @@ class NeuronImporter(object):
 
     known_components = ['IClamp', 'Ra', 'cm']
 
-    def __init__(self, import_dir, hoc_files=['main.hoc'], hoc_cmds=[]):
+    def __init__(self, import_dir, model_files=['main.hoc'], hoc_cmds=[]):
         self.import_dir = import_dir
-        self.hoc_importer = HocImporter(import_dir, hoc_files=hoc_files,
+        self.hoc_importer = HocImporter(import_dir, model_files=model_files,
                                         hoc_cmds=hoc_cmds)
         self._scan_dir_for_mod_files()
         self._create_nmodl_importers()
@@ -46,19 +46,19 @@ class NeuronImporter(object):
 
     def _create_nmodl_importers(self):
         self.nmodl_importers = {}
+        to_import = set()
         for comp in self.hoc_importer.model.components.itervalues():
             class_name = comp.class_name
             if not class_name.endswith('_ion'):
-                try:
-                    nmodl_file = os.path.join(self.import_dir,
-                                              self.available_mods[class_name])
-                except KeyError:
-                    if class_name not in self.known_components:
-                        print ("Could not find '{}' nmodl file"
-                               .format(class_name))
-                    continue
-#                 try:
-                self.nmodl_importers[comp.name] = NMODLImporter(nmodl_file)
-#                 except NineMLMathParseError as e:
-#                     print ("Could not parse '{}' mod file because of "
-#                            "'{}' maths expression".format(nmodl_file, e))
+                if class_name in self.available_mods:
+                    to_import.add(class_name)
+                elif class_name not in self.known_components:
+                    print "Could not find '{}' nmodl file".format(class_name)
+        for class_name in to_import:
+            nmodl_file = os.path.join(self.import_dir,
+                                      self.available_mods[class_name])
+            try:
+                self.nmodl_importers[class_name] = NMODLImporter(nmodl_file)
+            except (NotImplementedError, NineMLMathParseError) as e:
+                print ("Could not parse '{}' mod file because"
+                       "'{}'".format(nmodl_file, e))
