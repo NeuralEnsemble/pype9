@@ -219,8 +219,8 @@ class NMODLImporter(object):
                     signature = signature.replace('({})'.format(units), '')
                 signature = signature.strip()
                 match = re.match(r'(\w+) *\((.*)\)', signature)
-                name = match.group(1)
-                arglist = match.group(2)
+                name = match.group(1).strip()
+                arglist = match.group(2).strip()
                 if arglist:
                     args = list_re.split(arglist)
                 else:
@@ -595,7 +595,7 @@ class NMODLImporter(object):
                     except KeyError:
                         raise Exception("Unrecognised procedure '{}'"
                                         .format(proc_name))
-                    argvals = self._split_args(match.group(2))
+                    argvals, _ = self._split_args(match.group(2))
                     assert len(argvals) == len(pargs)
                     pstmts = self._extract_stmts_block(pbody,
                                                        subs=dict(zip(pargs,
@@ -626,9 +626,9 @@ class NMODLImporter(object):
         # Expand function definitions, creating extra aliases for all
         # statements within the function body
         for fname, (fargs, fbody) in self.functions.iteritems():
-            for match in regex.findall("\b({} *)\((.*)\)".format(fname), rhs,
+            for match in regex.findall(r"\b({} *)\((.*)\)".format(fname), rhs,
                                        overlapped=True):
-                argvals = self._split_args(match[1])
+                argvals, arglist = self._split_args(match[1])
                 assert len(argvals) == len(fargs)
                 # Append a string of escaped argument values as an additional
                 # suffix
@@ -638,7 +638,7 @@ class NMODLImporter(object):
                                                                  argvals)),
                                                    suffix=fsuffix)
                 statements.update(fstmts)
-                rhs = rhs.replace('{}({})'.format(*match),
+                rhs = rhs.replace('{}({})'.format(match[0], arglist),
                                   fname + fsuffix)
         # Append the suffix to the left hand side
         lhs_w_suffix = lhs + suffix
@@ -770,26 +770,25 @@ class NMODLImporter(object):
         """
         Split arg list into groups based on ',', while respecting parentheses
         """
-        if arglist:
-            argvals = []
-            depth = 1
-            start_token = 0
-            end_of_arglist = len(arglist)
-            for i, c in enumerate(arglist):
-                if c == '(':
-                    depth += 1
-                elif c == ')':
-                    depth -= 1
-                    if depth == 0:
-                        end_of_arglist = i
-                        break
-                elif c == ',' and depth == 1:
-                    argvals.append(arglist[start_token:i].strip())
-                    start_token = i + 1
-            argvals.append(arglist[start_token:end_of_arglist].strip())
-        else:
-            argvals = []
-        return argvals
+        argvals = []
+        depth = 1
+        start_token = 0
+        end_of_arglist = len(arglist)
+        for i, c in enumerate(arglist):
+            if c == '(':
+                depth += 1
+            elif c == ')':
+                depth -= 1
+                if depth == 0:
+                    end_of_arglist = i
+                    break
+            elif c == ',' and depth == 1:
+                argvals.append(arglist[start_token:i].strip())
+                start_token = i + 1
+        arg = arglist[start_token:end_of_arglist].strip()
+        if arg:
+            argvals.append(arg)
+        return argvals, arglist[:end_of_arglist]
 
     @classmethod
     def _units2dimension(cls, units):

@@ -90,7 +90,7 @@ class TestNMODLImporter(unittest.TestCase):
 
     def test_nmodl_import(self):
         importer = NMODLImporter('/home/tclose/git/purkinje/model/'
-                                  'Haroon_active_reduced_model/cdp5.mod')
+                                  'Haroon_active_reduced_model/CaT3_1.mod')
         componentclass = importer.get_component()
         with tempfile.NamedTemporaryFile(delete=False) as f:
             fname = f.name
