@@ -624,22 +624,39 @@ class NMODLImporter(object):
         for old, new in subs.iteritems():
             rhs = self._subs_variable(old, new, rhs)
         # Expand function definitions, creating extra aliases for all
-        # statements within the function body
-        for fname, (fargs, fbody) in self.functions.iteritems():
-            for match in regex.findall(r"\b({} *)\((.*)\)".format(fname), rhs,
-                                       overlapped=True):
-                argvals, arglist = self._split_args(match[1])
-                assert len(argvals) == len(fargs)
-                # Append a string of escaped argument values as an additional
-                # suffix
-                fsuffix = suffix + self._args_suffix(argvals)
-                fstmts = self._extract_stmts_block(fbody,
-                                                   subs=dict(zip(fargs,
-                                                                 argvals)),
-                                                   suffix=fsuffix)
-                statements.update(fstmts)
-                rhs = rhs.replace('{}({})'.format(match[0], arglist),
-                                  fname + fsuffix)
+        # statements within the function body. Loop through all function
+        # calls from right-to-left (so functions nested in argument-lists
+        # are substituted first, updating the rhs as we go.
+        while True:
+            matches = regex.findall(r"\b(\w+ *)\((.*)\)", rhs, overlapped=True)
+            found_user_function = False
+            for match in reversed(matches):
+                fname_match, arglist = match
+                fname = fname_match.strip()
+                try:
+                    fargs, fbody = self.functions[fname]
+                    argvals, arglist = self._split_args(arglist)
+                    # Append a string of escaped argument values as an
+                    # additional suffix
+                    fsuffix = suffix + self._args_suffix(argvals)
+                    fstmts = self._extract_stmts_block(fbody,
+                                                       subs=dict(zip(fargs,
+                                                                     argvals)),
+                                                       suffix=fsuffix)
+                    statements.update(fstmts)
+                    rhs = rhs.replace('{}({})'.format(fname_match, arglist),
+                                      fname + fsuffix)
+                    found_user_function = True
+                    # RHS has been updated so need to break out of the matches
+                    # loop and perform the regex search again
+                    break
+                except KeyError as e:
+                    assert str(e) == "'{}'".format(fname)
+                    continue
+            if not found_user_function:
+                # Stop trying to substitute as none of the matches are
+                # user-defined
+                break
         # Append the suffix to the left hand side
         lhs_w_suffix = lhs + suffix
         if is_builtin_symbol(lhs_w_suffix):
