@@ -5,6 +5,7 @@ import quantities as pq
 import collections
 from copy import copy
 from types import GeneratorType
+from nineml.maths import is_builtin_symbol
 from nineml.abstraction_layer.components.interface import Parameter
 from nineml.abstraction_layer.dynamics.component import ComponentClass
 from nineml.abstraction_layer.dynamics import Regime, StateVariable, OnEvent
@@ -63,6 +64,9 @@ class NMODLImporter(object):
         import process
         """
 
+        class OverwriteException(Exception):
+            pass
+
         def __setitem__(self, key, val):
             if key in self and val.rhs != self[key].rhs:
                 print ("WARNING: Overriding alias '{}' from value '{}' to "
@@ -100,6 +104,7 @@ class NMODLImporter(object):
         self.state_variables = {}
         self.range_vars = []
         self.used_ions = {}
+        self.used_procs = {}
         self.breakpoint_solve_methods = {}
         self.initial_solve_methods = {}
         self.parameters = {}
@@ -152,6 +157,10 @@ class NMODLImporter(object):
         print "\nReceive Analog Ports:"
         for p in self.analog_ports:
             if p.mode == 'recv':
+                print '{}'.format(p.name)
+        print "\nSend Analog Ports:"
+        for p in self.analog_ports:
+            if p.mode == 'send':
                 print '{}'.format(p.name)
         print "\nTime derivatives:"
         for r in self.regimes:
@@ -528,20 +537,19 @@ class NMODLImporter(object):
             self.analog_ports.append(AnalogPort('celsius', mode='recv',
                                              dimension='absolute_temperature'))
 
-    def _extract_stmts_block(self, block, subs=[], suffix=''):
+    def _extract_stmts_block(self, block, subs={}, suffix=''):
         """
         A workhorse function that extracts all expressions from a block of
         statements and returns them in a dictionary
 
         `block`  -- a block of text split into lines
-        `subs`   -- substitutions of variables to be made (when flattening
-                    functions into assignments for example). A list of
-                    (old, new) tuples.
+        `subs`   -- a dict of substitutions of variables to be made (when
+                    flattening functions into assignments for example).
         `suffix` -- suffix to append to LHS names
         """
         statements = {}
         # Get a copy of the substitutions to avoid adding to calling function
-        subs = copy(subs)
+#         subs = copy(subs)
         line_iter = self._iterate_block(block)
         try:
             line = next(line_iter)
@@ -592,21 +600,33 @@ class NMODLImporter(object):
                     expr = next(self._extract_stmts_block([l]).itervalues())
                     statements[self.StateAssignment(state)] = expr
                 else:
+                    proc_name = match.group(1)
                     try:
-                        pargs, pbody = self.procedures[match.group(1)]
+                        pargs, pbody = self.procedures[proc_name]
                     except KeyError:
                         raise Exception("Unrecognised procedure '{}'"
-                                        .format(match.group(1)))
-                    argvals = list_re.split(match.group(2))
-                    psuffix = suffix + self._args_suffix(argvals)
+                                        .format(proc_name))
+                    argvals = self._split_args(match.group(2))
+                    if proc_name in self.used_procs:
+                        if self.used_procs[proc_name] != argvals:
+                            raise Exception("Used procedure '{}' with "
+                                            "different arguments ('{}' & '{}')"
+                                            " in different places, not sure "
+                                            "how to handle this currently"
+                                            .format(proc_name, argvals,
+                                                   self.used_procs[proc_name]))
+                    self.used_procs[proc_name] = argvals
+                    assert len(argvals) == len(pargs)
+#                     psuffix = suffix + self._args_suffix(argvals)
                     pstmts = self._extract_stmts_block(pbody,
-                                                      subs=zip(pargs, argvals),
-                                                      suffix=psuffix)
+                                                       subs=dict(zip(pargs,
+                                                                     argvals)))
+#                                                       , suffix=psuffix)
                     # Add aliases from procedure to list of substitutions in
                     # order to append the suffixes
-                    if psuffix:
-                        subs = subs + [(lhs[:-len(psuffix)], lhs)
-                                       for lhs in pstmts.iterkeys()]
+#                     if psuffix:
+#                         subs = subs + [(lhs[:-len(psuffix)], lhs)
+#                                        for lhs in pstmts.iterkeys()]
                     statements.update(pstmts)
             elif len(parts) == 2:  # An to be an assignment expression
                 self._extract_assignment(statements, line, subs, suffix)
@@ -619,49 +639,34 @@ class NMODLImporter(object):
                 line = ''
         return statements
 
-    def _extract_assignment(self, statements, line, subs=[], suffix=''):
+    def _extract_assignment(self, statements, line, subs={}, suffix=''):
         lhs, rhs = assign_re.split(line)
         # Replace arguments with their values
-        for old, new in subs:
+        for old, new in subs.iteritems():
             rhs = self._subs_variable(old, new, rhs)
         # Expand function definitions, creating extra aliases for all
         # statements within the function body
         for fname, (fargs, fbody) in self.functions.iteritems():
             for match in regex.findall("({} *)\((.*)\)".format(fname), rhs,
                                        overlapped=True):
-                # Split arg list into groups based on ',', while respecting
-                # parentheses
-                arglist = match[1]
-                argvals = []
-                depth = 1
-                start_token = 0
-                end_of_arglist = len(arglist)
-                for i, c in enumerate(arglist):
-                    if c == '(':
-                        depth += 1
-                    elif c == ')':
-                        depth -= 1
-                        if depth == 0:
-                            end_of_arglist = i
-                            break
-                    elif c == ',' and depth == 1:
-                        argvals.append(arglist[start_token:i].strip())
-                        start_token = i + 1
-                argvals.append(arglist[start_token:end_of_arglist].strip())
+                argvals = self._split_args(match[1])
                 assert len(argvals) == len(fargs)
                 # Append a string of escaped argument values as an additional
                 # suffix
                 fsuffix = suffix + self._args_suffix(argvals)
                 fstmts = self._extract_stmts_block(fbody,
-                                                   subs=zip(fargs, argvals),
+                                                   subs=dict(zip(fargs,
+                                                                 argvals)),
                                                    suffix=fsuffix)
                 statements.update(fstmts)
                 rhs = rhs.replace('{}({})'.format(*match),
                                   fname + fsuffix)
         # Append the suffix to the left hand side
         lhs_w_suffix = lhs + suffix
+        if is_builtin_symbol(lhs_w_suffix):
+            lhs_w_suffix += '_'
         if suffix:
-            subs.append((lhs, lhs_w_suffix))
+            subs[lhs] = lhs_w_suffix
         # If the same variable has been defined previously we need to
         # give it a new name so this statement doesn't override it.
         if lhs_w_suffix in statements:
@@ -678,7 +683,7 @@ class NMODLImporter(object):
             rhs = rhs.replace('({})'.format(units), '')
         statements[lhs_w_suffix] = rhs
 
-    def _extract_conditional_block(self, statements, line, line_iter, subs=[],
+    def _extract_conditional_block(self, statements, line, line_iter, subs={},
                                    suffix=''):
         conditional_stmts = []
         # Loop through all sub-blocks of the if/else-if/else statement
@@ -715,7 +720,7 @@ class NMODLImporter(object):
             # Create numbered versions of the helper statements in the sub-
             # blocks (i.e. that don't appear in all sub- blocks)
             for i, (test, stmts) in enumerate(conditional_stmts):
-                branch_subs = []
+                branch_subs = {}
                 # Get a list of substitutions to perform to unwrap the
                 # conditional block
                 for lhs, rhs in stmts.iteritems():
@@ -723,21 +728,20 @@ class NMODLImporter(object):
                         new_lhs = ('{}__branch{}{}'
                                    .format(lhs[:-len(suffix)], i,
                                            suffix))
-                        branch_subs.append((lhs, new_lhs))
+                        branch_subs[lhs] = new_lhs
                 # Perform the substitutions on all the conditional statements
-                for old, new in branch_subs:
+                for old, new in branch_subs.iteritems():
                     i = 1
                     # Substitute into the right-hand side equation
                     for lhs, rhs in stmts.iteritems():
-                        stmts[lhs] = self._subs_variable(old, new,
-                                                         rhs)
+                        stmts[lhs] = self._subs_variable(old, new, rhs)
                     # Substitute the left-hand side
                     rhs = stmts.pop(old)
                     stmts[new] = rhs
                 # Copy all the "non-common lhs" statements, which have been
                 # escaped into their separate branches to the general statement
                 # block
-                for _, new_lhs in branch_subs:
+                for _, new_lhs in branch_subs.iteritems():
                     rhs = stmts[new_lhs]
                     statements[new_lhs] = rhs
         else:
@@ -757,7 +761,7 @@ class NMODLImporter(object):
                 elif lhs in self.constants:
                     rhs = lhs
                     new_lhs = lhs + '_constrained'
-                    subs.append((lhs, new_lhs))
+                    subs[lhs] = new_lhs
                     lhs = new_lhs
                 else:
                     raise Exception("Could not find previous "
@@ -772,7 +776,7 @@ class NMODLImporter(object):
         # Add aliases from procedure to list of substitutions in order to
         # append the suffixes
         if suffix:
-            subs.extend((lhs[:-len(suffix)], lhs) for lhs in common_lhss)
+            subs.update((lhs[:-len(suffix)], lhs) for lhs in common_lhss)
         return line
 
     def _subs_variable(self, old, new, expr):
@@ -784,6 +788,29 @@ class NMODLImporter(object):
         if old in self.dimensions:
             self.dimensions[new] = self.dimensions[old]
         return expr.strip()
+
+    @classmethod
+    def _split_args(cls, arglist):
+        """
+        Split arg list into groups based on ',', while respecting parentheses
+        """
+        argvals = []
+        depth = 1
+        start_token = 0
+        end_of_arglist = len(arglist)
+        for i, c in enumerate(arglist):
+            if c == '(':
+                depth += 1
+            elif c == ')':
+                depth -= 1
+                if depth == 0:
+                    end_of_arglist = i
+                    break
+            elif c == ',' and depth == 1:
+                argvals.append(arglist[start_token:i].strip())
+                start_token = i + 1
+        argvals.append(arglist[start_token:end_of_arglist].strip())
+        return argvals
 
     @classmethod
     def _units2dimension(cls, units):
