@@ -57,33 +57,6 @@ class NMODLImporter(object):
                         'm**3/(s*mol)': 'frequency_from_concentration',
                         None: None}
 
-    class NoOverwriteDict(dict):
-        """
-        A dictionary that doesn't allow overwriting previously written values.
-        Used for aliases dictonary to prevent accidental overwriting during the
-        import process
-        """
-
-        class OverwriteException(Exception):
-            pass
-
-        def __setitem__(self, key, val):
-            if key in self and val.rhs != self[key].rhs:
-                print ("WARNING: Overriding alias '{}' from value '{}' to "
-                       "value '{}'".format(key, self[key], val.rhs))
-            super(NMODLImporter.NoOverwriteDict, self).__setitem__(key, val)
-
-        def update(self, d):
-            if isinstance(d, GeneratorType):
-                d = list(d)
-            elif isinstance(d, dict):
-                d = d.items()
-            for key, val in d:
-                if key in self and val.rhs != self[key].rhs:
-                    print ("WARNING: Overriding alias '{}' from value '{}' to "
-                           "value '{}'".format(key, self[key], val.rhs))
-            super(NMODLImporter.NoOverwriteDict, self).update(d)
-
     def __init__(self, fname):
         # Read file
         with open(fname) as f:
@@ -96,13 +69,15 @@ class NMODLImporter(object):
         self.used_units = ['degC', 'kelvin']
         self.functions = {}
         self.procedures = {}
-        self.aliases = self.NoOverwriteDict()  # This is done for safety
+        self.aliases = {}
         self.constants = {}
         self.valid_parameter_ranges = {}
         self.valid_state_ranges = {}
         self.dimensions = {}
         self.state_variables = {}
+        self.state_variables_initial = {}
         self.range_vars = []
+        self.globals = []
         self.used_ions = {}
         self.used_procs = {}
         self.breakpoint_solve_methods = {}
@@ -113,15 +88,15 @@ class NMODLImporter(object):
         self.regime_parts = []
         self.on_event_parts = None
         # Extract declarations and expressions from blocks into members
+        self._extract_neuron_block()
         self._extract_units_block()
         self._extract_procedure_and_function_blocks()
         self._extract_assigned_block()
         self._extract_parameter_and_constant_block()
+        self._extract_initial_block()  # Done early so aliases can be overwrit.
+        self._extract_state_block()  # Comes after state block to check dims.
         self._extract_linear_block()
         self._extract_kinetic_block()
-        self._extract_initial_block()
-        self._extract_state_block()
-        self._extract_neuron_block()
         self._extract_derivative_block()
         self._extract_breakpoint_block()
         self._extract_netreceive_block()
@@ -137,10 +112,7 @@ class NMODLImporter(object):
                               parameters=self.parameters.values(),
                               analog_ports=self.analog_ports,
                               regimes=self.regimes,
-                              aliases=(self.aliases.values() +
-                                       [Alias(k, v)
-                                        for k, v in self.constants.items()
-                                        if k not in self.parameters]),
+                              aliases=self.aliases.values(),
                               state_variables=self.state_variables)
 
     def print_members(self):
@@ -343,7 +315,7 @@ class NMODLImporter(object):
             else:
                 reduced_block.append(line)
         # Read initial block
-        self._raw_initial = self._extract_stmts_block(reduced_block)
+        self._initial_assign = self._extract_stmts_block(reduced_block)
 
     def _extract_state_block(self):
         # Read state variables
@@ -356,21 +328,26 @@ class NMODLImporter(object):
                              r'(?: *FROM *([\d\.\-]+) *TO *([\d\.\-]+))?',
                              line)
             var = match.group(1)
-            initial = self._raw_initial.pop(var, None)
             # If Units are provided
             if match.group(2):
                 units = match.group(2)
                 dimension = self.dimensions[var] = self._units2dimension(units)
             else:
-                dimension = self.dimensions[initial] if initial else None
+                try:
+                    initial = self._initial_assign.pop(var)
+                    dimension = self.dimensions[initial]
+                except KeyError:
+                    dimension = None
                 self.dimensions[var] = dimension
             # If valid range is provided
             if match.group(3):
                 self.valid_state_ranges[var] = (match.group(3), match.group(4))
-            self.state_variables[var] = StateVariable(var, dimension=dimension,
-                                                      initial=initial)
-        self.aliases.update((lhs, Alias(lhs, rhs))
-                            for lhs, rhs in self._raw_initial.iteritems())
+            self.state_variables[var] = StateVariable(var, dimension=dimension)
+            for lhs, rhs in self._initial_assign.iteritems():
+                if lhs in self.state_variables:
+                    self.state_variables_initial[lhs] = rhs
+                else:
+                    self.aliases[lhs] = Alias(lhs, rhs)
 
     def _extract_neuron_block(self):
         # Read the NEURON block
@@ -481,24 +458,27 @@ class NMODLImporter(object):
         ion_vars = reduce(operator.add,
                           [r + w for r, w, _ in self.used_ions.itervalues()])
         for var in self.range_vars:
-            if var in self.constants:
-                constant = self.constants[var]
-                dimension = self._units2dimension(str(constant.dimensionality))
-                valid_range = self.valid_parameter_ranges.get(var, None)
-                self.parameters[var] = Parameter(var, dimension=dimension,
-                                                 valid_range=valid_range)
-            elif var not in ion_vars:
-                if self.component_name and var == 'e' + self.component_name:
-                    mode = 'recv'
-                    dimension = 'voltage'
-                else:
-                    mode = 'send'
-                try:
-                    dimension = self.dimensions[var]
-                except KeyError:
-                    dimension = None
-                self.analog_ports.append(AnalogPort(var, mode=mode,
-                                                    dimension=dimension))
+            if var not in ion_vars:
+                if var in self.constants:
+                    constant = self.constants[var]
+                    dimension = self._units2dimension(
+                                                  str(constant.dimensionality))
+                    valid_range = self.valid_parameter_ranges.get(var, None)
+                    self.parameters[var] = Parameter(var, dimension=dimension,
+                                                     valid_range=valid_range)
+                elif var in self.aliases:
+                    if (self.component_name and var == 'e' +
+                        self.component_name):
+                        mode = 'recv'
+                        dimension = 'voltage'
+                    else:
+                        mode = 'send'
+                    try:
+                        dimension = self.dimensions[var]
+                    except KeyError:
+                        dimension = None
+                    self.analog_ports.append(AnalogPort(var, mode=mode,
+                                                        dimension=dimension))
         # Add used ions to analog ports
         for name, (read, write, _) in self.used_ions.iteritems():
             for n in read:
@@ -536,6 +516,12 @@ class NMODLImporter(object):
         if uses_celsius:
             self.analog_ports.append(AnalogPort('celsius', mode='recv',
                                              dimension='absolute_temperature'))
+        # Add remaining constants to aliases (may switch to separate tag
+        # 'constants' at some point in the future)
+        ports_n_params = (self.parameters.keys() +
+                          [a.name for a in self.analog_ports])
+        self.aliases.update((k, Alias(k, v)) for k, v in self.constants.items()
+                            if k not in ports_n_params)
 
     def _extract_stmts_block(self, block, subs={}, suffix=''):
         """
@@ -548,8 +534,6 @@ class NMODLImporter(object):
         `suffix` -- suffix to append to LHS names
         """
         statements = {}
-        # Get a copy of the substitutions to avoid adding to calling function
-#         subs = copy(subs)
         line_iter = self._iterate_block(block)
         try:
             line = next(line_iter)
@@ -607,26 +591,16 @@ class NMODLImporter(object):
                         raise Exception("Unrecognised procedure '{}'"
                                         .format(proc_name))
                     argvals = self._split_args(match.group(2))
-                    if proc_name in self.used_procs:
-                        if self.used_procs[proc_name] != argvals:
-                            raise Exception("Used procedure '{}' with "
-                                            "different arguments ('{}' & '{}')"
-                                            " in different places, not sure "
-                                            "how to handle this currently"
-                                            .format(proc_name, argvals,
-                                                   self.used_procs[proc_name]))
-                    self.used_procs[proc_name] = argvals
                     assert len(argvals) == len(pargs)
-#                     psuffix = suffix + self._args_suffix(argvals)
                     pstmts = self._extract_stmts_block(pbody,
                                                        subs=dict(zip(pargs,
-                                                                     argvals)))
-#                                                       , suffix=psuffix)
+                                                                     argvals)),
+                                                       suffix=suffix)
                     # Add aliases from procedure to list of substitutions in
                     # order to append the suffixes
-#                     if psuffix:
-#                         subs = subs + [(lhs[:-len(psuffix)], lhs)
-#                                        for lhs in pstmts.iterkeys()]
+                    if suffix:
+                        subs.update((lhs[:-len(suffix)], lhs)
+                                    for lhs in pstmts.iterkeys())
                     statements.update(pstmts)
             elif len(parts) == 2:  # An to be an assignment expression
                 self._extract_assignment(statements, line, subs, suffix)

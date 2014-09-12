@@ -60,5 +60,5 @@ class NeuronImporter(object):
             try:
                 self.nmodl_importers[class_name] = NMODLImporter(nmodl_file)
             except (NotImplementedError, NineMLMathParseError) as e:
-                print ("Could not parse '{}' mod file because"
-                       "'{}'".format(nmodl_file, e))
+                print ("Could not parse '{}' mod file because of {} error: "
+                       "'{}'".format(nmodl_file, e.__class__.__name__, e))

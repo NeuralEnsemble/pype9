@@ -116,8 +116,8 @@ class TestNeuronImporter(unittest.TestCase):
                                          'Haroon_active_reduced_model/9ml')
 
 if __name__ == '__main__':
-    test = TestNMODLImporter()
-    test.test_nmodl_import()
-#     test = TestNeuronImporter()
-#     test.test_neuron_import()
+#     test = TestNMODLImporter()
+#     test.test_nmodl_import()
+    test = TestNeuronImporter()
+    test.test_neuron_import()
     print "done"
