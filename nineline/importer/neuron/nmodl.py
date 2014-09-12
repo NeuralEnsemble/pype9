@@ -77,6 +77,7 @@ class NMODLImporter(object):
         self.dimensions = {}
         self.state_variables = {}
         self.state_variables_initial = {}
+        self.stead_state_linear_equations = {}
         self.range_vars = []
         self.globals = []
         self.used_ions = {}
@@ -445,9 +446,13 @@ class NMODLImporter(object):
             self.on_event_parts = (port, assignments, aliases)
 
     def _extract_linear_block(self):
-        block = self.blocks.pop('LINEAR', None)
-        if block:
-            raise NotImplementedError("Haven't written linear block parser")
+        named_blocks = self.blocks.pop('LINEAR', {})
+        for name, block in named_blocks.iteritems():
+            equations = []
+            for line in self._iterate_block(block):
+                match = re.match(r' *~ *(.*) *= *(.)', line)
+                equations.append((match.group(1), match.group(2)))
+            self.stead_state_linear_equations[name] = equations
 
     def _extract_kinetic_block(self):
         block = self.blocks.pop('KINETIC', None)
@@ -574,7 +579,7 @@ class NMODLImporter(object):
                 if match.group(1) == 'if':
                     # Set the line that has been peeked at to the next line and
                     # continue to iterate through the lines
-                    line = self._extract_conditional_block(statements, line,
+                    line = self._extract_conditional_block(line, statements,
                                                            line_iter, subs,
                                                            suffix)
                     continue
@@ -596,6 +601,8 @@ class NMODLImporter(object):
                         raise Exception("Unrecognised procedure '{}'"
                                         .format(proc_name))
                     argvals, _ = self._split_args(match.group(2))
+                    argvals = [self._extract_function_calls(a, statements)
+                               for a in argvals]
                     assert len(argvals) == len(pargs)
                     pstmts = self._extract_stmts_block(pbody,
                                                        subs=dict(zip(pargs,
@@ -608,7 +615,7 @@ class NMODLImporter(object):
                                     for lhs in pstmts.iterkeys())
                     statements.update(pstmts)
             elif len(parts) == 2:  # An to be an assignment expression
-                self._extract_assignment(statements, line, subs, suffix)
+                self._extract_assignment(line, statements, subs, suffix)
             else:
                 raise Exception("More than one '=' found on line '{}'"
                                 .format(line))
@@ -618,45 +625,12 @@ class NMODLImporter(object):
                 line = ''
         return statements
 
-    def _extract_assignment(self, statements, line, subs={}, suffix=''):
+    def _extract_assignment(self, line, statements, subs={}, suffix=''):
         lhs, rhs = assign_re.split(line)
         # Replace arguments with their values
         for old, new in subs.iteritems():
             rhs = self._subs_variable(old, new, rhs)
-        # Expand function definitions, creating extra aliases for all
-        # statements within the function body. Loop through all function
-        # calls from right-to-left (so functions nested in argument-lists
-        # are substituted first, updating the rhs as we go.
-        while True:
-            matches = regex.findall(r"\b(\w+ *)\((.*)\)", rhs, overlapped=True)
-            found_user_function = False
-            for match in reversed(matches):
-                fname_match, arglist = match
-                fname = fname_match.strip()
-                try:
-                    fargs, fbody = self.functions[fname]
-                    argvals, arglist = self._split_args(arglist)
-                    # Append a string of escaped argument values as an
-                    # additional suffix
-                    fsuffix = suffix + self._args_suffix(argvals)
-                    fstmts = self._extract_stmts_block(fbody,
-                                                       subs=dict(zip(fargs,
-                                                                     argvals)),
-                                                       suffix=fsuffix)
-                    statements.update(fstmts)
-                    rhs = rhs.replace('{}({})'.format(fname_match, arglist),
-                                      fname + fsuffix)
-                    found_user_function = True
-                    # RHS has been updated so need to break out of the matches
-                    # loop and perform the regex search again
-                    break
-                except KeyError as e:
-                    assert str(e) == "'{}'".format(fname)
-                    continue
-            if not found_user_function:
-                # Stop trying to substitute as none of the matches are
-                # user-defined
-                break
+        rhs = self._extract_function_calls(rhs, statements)
         # Append the suffix to the left hand side
         lhs_w_suffix = lhs + suffix
         if is_builtin_symbol(lhs_w_suffix):
@@ -679,17 +653,61 @@ class NMODLImporter(object):
             rhs = rhs.replace('({})'.format(units), '')
         statements[lhs_w_suffix] = rhs
 
-    def _extract_conditional_block(self, statements, line, line_iter, subs={},
+    def _extract_function_calls(self, expr, statements):
+        # Expand function definitions, creating extra aliases for all
+        # statements within the function body. Loop through all function
+        # calls from right-to-left (so functions nested in argument-lists
+        # are substituted first, updating the rhs as we go.
+        found_user_function = True
+        while found_user_function:
+            # Find all functions in expression string
+            matches = regex.findall(r"\b(\w+ *)\((.*)\)", expr,
+                                    overlapped=True)
+            if not matches:
+                found_user_function = False
+                break
+            for match in matches:
+                raw_name, arglist = match
+                name = raw_name.strip()
+                try:
+                    params, body = self.functions[name]
+                    argvals, raw_arglist = self._split_args(arglist)
+                    argvals = [self._extract_function_calls(a, statements)
+                               for a in argvals]
+                    # Append a string of escaped argument values as an
+                    # additional suffix
+                    suffix = self._args_suffix(argvals)
+                    stmts = self._extract_stmts_block(body, suffix=suffix,
+                                                      subs=dict(zip(params,
+                                                                    argvals)))
+                    statements.update(stmts)
+                    expr = expr.replace('{}({})'.format(raw_name, raw_arglist),
+                                        name + suffix)
+                    found_user_function = True
+                    # The expression has been updated so need to break out of
+                    # the matches loop and perform the regex search again
+                    break
+                except KeyError as e:
+                    assert str(e) == "'{}'".format(name)
+                    found_user_function = False
+        return expr
+
+    def _extract_conditional_block(self, line, statements, line_iter, subs={},
                                    suffix=''):
         conditional_stmts = []
         # Loop through all sub-blocks of the if/else-if/else statement
         for pre, sblock, nline in self._matching_braces(line_iter, line=line):
             # Extract the test conditions for if and else if blocks
-            match = re.match(r'.*\((.*)\)', pre)
+            match = re.search(r'\((.*)\)', pre)
             if match:
                 test = match.group(1)
             else:
                 test = 'otherwise'
+            # Replace arguments with their values into the test condition
+            for old, new in subs.iteritems():
+                test = self._subs_variable(old, new, test)
+            # Substitute in function calls
+            test = self._extract_function_calls(test, statements)
             # Extract the statements from the sub-block
             stmts = self._extract_stmts_block(sblock, subs, suffix)
             # Append the test and statements to a list for processing after all
@@ -760,11 +778,9 @@ class NMODLImporter(object):
                     subs[lhs] = new_lhs
                     lhs = new_lhs
                 else:
-                    raise Exception("Could not find previous "
-                                    "definition of '{}' to form "
-                                    "otherwise condition of "
-                                    "conditional block"
-                                    .format(lhs))
+                    raise Exception("Could not find previous definition of "
+                                    "'{}' to form otherwise condition of "
+                                    "conditional block".format(lhs))
                 pieces.append((rhs, 'otherwise'))
             else:
                 assert lhs not in statements
