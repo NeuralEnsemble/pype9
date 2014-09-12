@@ -90,7 +90,7 @@ class TestNMODLImporter(unittest.TestCase):
 
     def test_nmodl_import(self):
         importer = NMODLImporter('/home/tclose/git/purkinje/model/'
-                                  'Haroon_active_reduced_model/CaT3_1.mod')
+                                  'Haroon_active_reduced_model/cdp5.mod')
         componentclass = importer.get_component()
         with tempfile.NamedTemporaryFile(delete=False) as f:
             fname = f.name
@@ -116,8 +116,8 @@ class TestNeuronImporter(unittest.TestCase):
                                          'Haroon_active_reduced_model/9ml')
 
 if __name__ == '__main__':
-#     test = TestNMODLImporter()
-#     test.test_nmodl_import()
+    test = TestNMODLImporter()
+    test.test_nmodl_import()
     test = TestNeuronImporter()
     test.test_neuron_import()
     print "done"

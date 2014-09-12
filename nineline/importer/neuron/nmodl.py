@@ -55,6 +55,7 @@ class NMODLImporter(object):
                         '1/s': 'frequency',
                         's*A/m**3': 'charge_density',
                         'm**3/(s*mol)': 'frequency_from_concentration',
+                        'mol/m**2': 'two_dimensional_density',
                         None: None}
 
     def __init__(self, fname):
@@ -207,19 +208,23 @@ class NMODLImporter(object):
         for blck_type, dct in (('FUNCTION', self.functions),
                                 ('PROCEDURE', self.procedures)):
             for signature, block in self.blocks.pop(blck_type, {}).iteritems():
-                # Strip units statements (this may need to be handled but
-                # hopefully it should be implicitly by the dimension checking)
+                # Strip function units from signature
+                stripped = self._matching_parentheses(signature)
+                output_units = signature[len(stripped):].strip()[1:-1]  # @UnusedVariable @IgnorePep8
+                signature = stripped
+                # Strip units statements from arguments (this may need to be
+                # handled but hopefully it should be implicitly by the
+                # dimension checking)
                 for units in self.used_units:
                     signature = signature.replace('({})'.format(units), '')
                 signature = signature.strip()
                 match = re.match(r'(\w+) *\((.*)\)', signature)
                 name = match.group(1)
-                args = [a.split(')')[0].strip()
-                        for a in list_re.split(match.group(2))]
-#                 i = signature.find('(')
-#                 name = signature[:i].strip()
-#                 args = [a.split('(')[0]
-#                         for a in list_re.split(signature[i + 1:-1])]
+                arglist = match.group(2)
+                if arglist:
+                    args = list_re.split(arglist)
+                else:
+                    args = []
                 dct[name] = (args, block)
 
     def _extract_units_block(self):
@@ -306,8 +311,8 @@ class NMODLImporter(object):
         reduced_block = []
         for line in self._iterate_block(self.blocks.pop('INITIAL', [])):
             if line.startswith('SOLVE'):
-                match = re.match(r'SOLVE (\w+) '
-                                 r'STEADYSTATE (\w+)', line)
+                match = re.match(r'SOLVE (\w+)'
+                                 r' *(?:STEADYSTATE (\w+))?', line)
                 if not match:
                     raise Exception("Could not read solve statement '{}'"
                                     .format(line))
@@ -343,11 +348,11 @@ class NMODLImporter(object):
             if match.group(3):
                 self.valid_state_ranges[var] = (match.group(3), match.group(4))
             self.state_variables[var] = StateVariable(var, dimension=dimension)
-            for lhs, rhs in self._initial_assign.iteritems():
-                if lhs in self.state_variables:
-                    self.state_variables_initial[lhs] = rhs
-                else:
-                    self.aliases[lhs] = Alias(lhs, rhs)
+        for lhs, rhs in self._initial_assign.iteritems():
+            if lhs in self.state_variables:
+                self.state_variables_initial[lhs] = rhs
+            else:
+                self.aliases[lhs] = Alias(lhs, rhs)
 
     def _extract_neuron_block(self):
         # Read the NEURON block
@@ -621,7 +626,7 @@ class NMODLImporter(object):
         # Expand function definitions, creating extra aliases for all
         # statements within the function body
         for fname, (fargs, fbody) in self.functions.iteritems():
-            for match in regex.findall("({} *)\((.*)\)".format(fname), rhs,
+            for match in regex.findall("\b({} *)\((.*)\)".format(fname), rhs,
                                        overlapped=True):
                 argvals = self._split_args(match[1])
                 assert len(argvals) == len(fargs)
@@ -754,36 +759,36 @@ class NMODLImporter(object):
         return line
 
     def _subs_variable(self, old, new, expr):
-        # Pad with spaces so as to avoid missed matches due to begin/end of
-        # string
-        expr = ' ' + expr + ' '
-        expr = re.sub(r'\b({})\b'.format(old), new, expr)
+        expr = re.sub(r'\b({})\b'.format(re.escape(old)), new, expr)
         # Update dimensions tracking
         if old in self.dimensions:
             self.dimensions[new] = self.dimensions[old]
-        return expr.strip()
+        return expr
 
     @classmethod
     def _split_args(cls, arglist):
         """
         Split arg list into groups based on ',', while respecting parentheses
         """
-        argvals = []
-        depth = 1
-        start_token = 0
-        end_of_arglist = len(arglist)
-        for i, c in enumerate(arglist):
-            if c == '(':
-                depth += 1
-            elif c == ')':
-                depth -= 1
-                if depth == 0:
-                    end_of_arglist = i
-                    break
-            elif c == ',' and depth == 1:
-                argvals.append(arglist[start_token:i].strip())
-                start_token = i + 1
-        argvals.append(arglist[start_token:end_of_arglist].strip())
+        if arglist:
+            argvals = []
+            depth = 1
+            start_token = 0
+            end_of_arglist = len(arglist)
+            for i, c in enumerate(arglist):
+                if c == '(':
+                    depth += 1
+                elif c == ')':
+                    depth -= 1
+                    if depth == 0:
+                        end_of_arglist = i
+                        break
+                elif c == ',' and depth == 1:
+                    argvals.append(arglist[start_token:i].strip())
+                    start_token = i + 1
+            argvals.append(arglist[start_token:end_of_arglist].strip())
+        else:
+            argvals = []
         return argvals
 
     @classmethod
@@ -857,6 +862,20 @@ class NMODLImporter(object):
                     raise StopIteration
 
     @classmethod
+    def _matching_parentheses(cls, string):
+        depth = 0
+        for i, c in enumerate(string):
+            if c == '(':
+                depth += 1
+            elif c == ')':
+                depth -= 1
+                if depth == 0:
+                    output = string[:i + 1]
+                    return output
+        raise Exception("No matching ')' found for opening '(' in string "
+                        "'{}'".format(string))
+
+    @classmethod
     def _args_suffix(self, arg_vals):
         suffix = ''
         for a in arg_vals:
@@ -866,10 +885,7 @@ class NMODLImporter(object):
             a = re.sub(r' *\/ *', '__d__', a)
             a = re.sub(r' *\( *', '__o__', a)
             a = re.sub(r' *\) *', '__c__', a)
+            a = re.sub(r'(?=\w)\[(.*)\]', '__elem\1', a)
             a = re.sub(r'[\. ]', '_', a)
             suffix += '_' + a
         return suffix
-
-if __name__ == '__main__':
-    block = ['phi_m = 5.0 ^ ((celsius-37)/10)', 'phi_h = 3.0 ^ ((celsius-37)/10)', 'T = kelvinfkt (celsius)', 'evaluate_fct(v)', 'm = minf', 'h = hinf', 's = sinf']
-
