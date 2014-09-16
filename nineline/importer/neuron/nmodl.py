@@ -3,8 +3,6 @@ import regex
 import operator
 import quantities as pq
 import collections
-from copy import copy
-from types import GeneratorType
 from nineml.maths import is_builtin_symbol
 from nineml.abstraction_layer.components.interface import Parameter
 from nineml.abstraction_layer.dynamics.component import ComponentClass
@@ -24,6 +22,8 @@ title_re = re.compile(r"TITLE (.*)")
 comments_re = re.compile(r"COMMENT(.*)ENDCOMMENT")
 whitespace_re = re.compile(r'\s')
 getitem_re = re.compile(r'(\w+)\[(\d+)\]')
+logstate_re = re.compile(r' *(\d+)? *(\w+)')
+notword_re = re.compile(r'\W')
 
 
 class NMODLImporter(object):
@@ -88,6 +88,9 @@ class NMODLImporter(object):
         self.analog_ports = []
         self.event_ports = []
         self.regime_parts = []
+        self.kinetics = {}
+        self.kinetics_constraints = defaultdict(list)
+        self.kinetics_compartments = defaultdict(list)
         self.on_event_parts = None
         # Extract declarations and expressions from blocks into members
         self._extract_neuron_block()
@@ -109,7 +112,6 @@ class NMODLImporter(object):
         self._create_regimes()
 
     def get_component(self):
-#         self.print_members()
         return ComponentClass(name=self.component_name,
                               parameters=self.parameters.values(),
                               analog_ports=self.analog_ports,
@@ -144,7 +146,34 @@ class NMODLImporter(object):
         for a in self.aliases.itervalues():
             print '{} = {}'.format(a.lhs, a.rhs)
 
-    def _create_regimes(self):
+    def all_expressions(self):
+        """
+        Create a list of all the expressions used in the NMODL file
+        """
+        td_rhs = []
+        try:
+            for regime in self.regimes.itervalues():
+                td_rhs.extend([td.rhs for td in regime.time_derivatives])
+        except AttributeError:
+            for _, time_derivatives in self.regime_parts:
+                td_rhs.extend(td.rhs for td in time_derivatives)
+        # Get a list of all expressions used in the model
+        simple_rhs = [a.rhs for a in self.aliases.values()
+                      if isinstance(a.rhs, str)]
+        piecewise_rhs = [[expr for expr, _ in a.rhs if isinstance(expr, str)]
+                         for a in self.aliases.values()
+                         if isinstance(a.rhs, list)]
+        if piecewise_rhs:
+            piecewise_rhs = reduce(operator.add, piecewise_rhs)
+        piecewise_test = [[test for _, test in a.rhs if test != 'otherwise']
+                         for a in self.aliases.values()
+                         if isinstance(a.rhs, list)]
+        if piecewise_test:
+            piecewise_test = reduce(operator.add, piecewise_test)
+        return td_rhs + simple_rhs + piecewise_rhs + piecewise_test
+
+    def _create_regimes(self, expand_kinetics=True):
+        self.regimes = []
         if self.on_event_parts:
             assert len(self.regime_parts) == 1
             regime = self.regime_parts[0]
@@ -167,12 +196,56 @@ class NMODLImporter(object):
                                                   .format(a.lhs, a.rhs)
                                                 for a in assignments.values()])
             self.aliases.update(aliases)
-            self.regimes = [Regime(name=regime[0], time_derivatives=regime[1],
-                                   transitions=on_event)]
-        else:
-            self.regimes = []
-            for name, td in self.regime_parts:
-                self.regimes.append(Regime(name=name, time_derivatives=td))
+            self.regimes.append(Regime(name=regime[0],
+                                       time_derivatives=regime[1],
+                                       transitions=on_event))
+        for name, (bidirectional, incoming, outgoing,
+                   constraints, compartments) in self.kinetics.iteritems():
+            if expand_kinetics:
+                time_derivatives = self._expand_kinetics(bidirectional,
+                                                         incoming, outgoing,
+                                                         constraints,
+                                                         compartments)
+                self.regimes.append(Regime(name=name,
+                                           time_derivatives=time_derivatives))
+            else:
+                # TODO: Haven't implemented explicit kinetics
+                raise NotImplementedError("Haven't implemented explicit "
+                                          "kinetics schemes")
+        # Create Regimes from explicit time derivatives
+        for name, time_derivatives in self.regime_parts:
+            self.regimes.append(Regime(name=name,
+                                       time_derivatives=time_derivatives))
+
+    @classmethod
+    def _expand_kinetics_term(cls, states):
+        return '*'.join('{}^{}'.format(s, p) if p else s for s, p in states)
+
+    @classmethod
+    def _expand_kinetics(cls, bidirectional, incoming, outgoing,
+                         constraints, compartments):  # @UnusedVariable
+        equations = defaultdict(str)
+        # Sort terms into lhs variables
+        for lhs_states, rhs_states, f_rate, b_rate in bidirectional:
+            lhs_term = f_rate + '*' + cls._expand_kinetics_term(lhs_states)
+            rhs_term = b_rate + '*' + cls._expand_kinetics_term(rhs_states)
+            for s, p in lhs_states:
+                pstr = p + '*' if p else ''
+                equations[s] += ' - ' + pstr + lhs_term
+                equations[s] += ' + ' + pstr + rhs_term
+            for s, p in rhs_states:
+                pstr = p + '*' if p else ''
+                equations[s] += ' - ' + pstr + rhs_term
+                equations[s] += ' + ' + pstr + lhs_term
+        time_derivatives = []
+        for state, rhs in equations.iteritems():
+            rhs += ''.join(' + ' + str(r) for s, r in incoming if s == state)
+            rhs += ''.join(' - ' + str(r) for s, r in outgoing if s == state)
+            # Strip leading '+' if present
+            if rhs.startswith(' + '):
+                rhs = rhs[2:]
+            time_derivatives.append(TimeDerivative(state, rhs))
+        return time_derivatives
 
     def _read_title(self):
         # Extract title and comments if present
@@ -455,9 +528,82 @@ class NMODLImporter(object):
             self.stead_state_linear_equations[name] = equations
 
     def _extract_kinetic_block(self):
-        block = self.blocks.pop('KINETIC', None)
-        if block:
-            raise NotImplementedError("Haven't written kinetic block parser")
+        def split_states(statestr):
+            return [tuple(reversed(logstate_re.match(s).groups()))
+                    for s in statestr.split('+')]
+        def process_rate(ratestr):  # @IgnorePep8
+            return ratestr.strip()
+            if notword_re.search(ratestr):
+                ratestr = '(' + ratestr + ')'
+        named_blocks = self.blocks.pop('KINETIC', {})
+        for name, block in named_blocks.iteritems():
+            bidirectional = []
+            incoming = []
+            outgoing = []
+            constraints = []
+            compartments = []
+            line_iter = self._iterate_block(block)
+            try:
+                line = next(line_iter)
+            except StopIteration:
+                continue
+            while True:
+                # Match the statement with the syntax variations
+                match = re.match(r' *~ *([\w\d _\+\-]+) *\<\-\> '
+                                 r'*([\w\d _\+\-]+) *'
+                                 r'\( *([^,]+) *, *([^,]+) *\)', line)
+                if match:
+                    is_bidirectional = True
+                else:
+                    is_bidirectional = False
+                    match = re.match(r' *~ *(.+) *\<\< *(.+)', line)
+                    if match:
+                        is_incoming = True
+                    else:
+                        is_incoming = False
+                        match = re.match(r' *~ *(.+) *\-\> *(.+)', line)
+                        if match:
+                            is_outgoing = True
+                        else:
+                            is_outgoing = False
+                if is_bidirectional:
+                    s1, s2, r1, r2 = match.groups()
+                    bidirectional.append((split_states(s1), split_states(s2),
+                                        process_rate(r1), process_rate(r2)))
+                elif is_incoming:
+                    s, r = match.groups()
+                    incoming.append((s, process_rate(r)))
+                elif is_outgoing:
+                    s, r = match.groups()
+                    outgoing.append((s, process_rate(r)))
+                elif line.strip().startswith('CONSERVE'):
+                    constraints.append(re.match(r' *CONSERVE (.+) *= *(.+)',
+                                                line).groups())
+                elif line.strip().startswith('COMPARTMENT'):
+                    (pre, states, line) = next(self._matching_braces(
+                                                         line_iter, line=line))
+                    constraints.append((pre.split(), ' '.join(states).split()))
+                    continue
+                elif line:
+                    stmts = self._extract_stmts_block([line])
+                    # Get the index of last bidirectional equation in order to
+                    # map the appropriate flux equation on to it.
+                    try:
+                        s1, s2, _, _ = bidirectional[-1]
+                        subs = [('f_flux', self._expand_kinetics_term(s1)),
+                                ('b_flux', self._expand_kinetics_term(s2))]
+                    except IndexError:
+                        subs = []
+                    for lhs, rhs in stmts.iteritems():
+                        for old, new in subs:
+                            rhs = self._subs_variable(old, new, rhs)
+                        self.aliases[lhs] = Alias(lhs, rhs)
+                try:
+                    line = next(line_iter)
+                except StopIteration:
+                    break
+            self.kinetics[name] = (bidirectional, incoming, outgoing,
+                                   constraints, compartments)
 
     def _extract_independent_block(self):
         self.blocks.pop('INDEPENDENT', None)
@@ -501,31 +647,23 @@ class NMODLImporter(object):
             for n in write:
                 self.analog_ports.append(AnalogPort(n, mode='send',
                                                  dimension='membrane_current'))
-        uses_celsius = False
-        uses_voltage = False
-        # If 'celsius' or 'v' appears anywhere in the file add them to the
-        # receive ports
-        simple_rhs = [a.rhs for a in self.aliases.values()
-                      if isinstance(a.rhs, str)]
-        piecewise_rhs = [[expr for expr, _ in a.rhs if isinstance(expr, str)]
-                         for a in self.aliases.values()
-                         if isinstance(a.rhs, list)]
-        if piecewise_rhs:
-            piecewise_rhs = reduce(operator.add, piecewise_rhs)
-        all_rhs = simple_rhs + piecewise_rhs
-        for rhs in all_rhs:
-            if re.search(r'(\b)celsius(\b)',
-                         rhs):
+        # Add ports/parameters for reserved NMODL keywords
+        uses_celsius = uses_voltage = uses_diam = False
+        for expr in self.all_expressions():
+            if re.search(r'(\b)celsius(\b)', expr):
                 uses_celsius = True
-            if re.search(r'(\b)v(\b)',
-                         rhs):
+            if re.search(r'(\b)v(\b)', expr):
                 uses_voltage = True
+            if re.search(r'(\b)diam(\b)', expr):
+                uses_diam = True
         if uses_voltage:
             self.analog_ports.append(AnalogPort('v', mode='recv',
                                                 dimension='voltage'))
         if uses_celsius:
             self.analog_ports.append(AnalogPort('celsius', mode='recv',
                                              dimension='absolute_temperature'))
+        if uses_diam:
+            self.parameters['diam'] = Parameter('diam', dimension='length')
         # Add remaining constants to aliases (may switch to separate tag
         # 'constants' at some point in the future)
         ports_n_params = (self.parameters.keys() +
@@ -646,7 +784,22 @@ class NMODLImporter(object):
                 count += 1
                 tmp_lhs = lhs_w_suffix + '__tmp' + str(count)
             statements[tmp_lhs] = statements[lhs_w_suffix]
+            # Substitute the temporary lhs name into the rhs
             rhs = self._subs_variable(lhs_w_suffix, tmp_lhs, rhs)
+            # Substitute the temporary lhs name into all previous rhss
+            for l, r in statements.iteritems():
+                if isinstance(r, list):
+                    new_r = []
+                    for expr, test in r:
+                        new_expr = self._subs_variable(lhs_w_suffix, tmp_lhs,
+                                                       expr)
+                        new_test = self._subs_variable(lhs_w_suffix, tmp_lhs,
+                                                       test)
+                        new_r.append((new_expr, new_test))
+                    statements[l] = new_r
+                else:
+                    statements[l] = self._subs_variable(lhs_w_suffix, tmp_lhs,
+                                                        r)
         # Strip units statements (this may need to be handled but hopefully it
         # should be implicitly by the dimension checking)
         for units in self.used_units:
