@@ -72,8 +72,9 @@ class HocImporter(object):
         self.hoc_files = [f for f in model_files if f.endswith('.hoc')]
         self.python_files = [f[:-3] for f in model_files if f.endswith('.py')]
         self._run_model_printouts()
-        self._extract_morphology()
-        self._extract_mechanisms()
+        self._extract_psections()
+        self._extract_morph_print()
+        self._extract_modelview()
         self._map_segments_to_components()
         self.model.url = None
 
@@ -89,11 +90,10 @@ class HocImporter(object):
                          for hf in self.hoc_files) +
                 ''.join("import {};".format(pf) for pf in self.python_files) +
                 ''.join("h('{}');".format(cmd) for cmd in self.hoc_cmds) +
-                'sys.path.append({});'.format(printer_dir) +
+                "sys.path.insert(0, '{}');".format(printer_dir) +
                 "print '<BREAK>';" +
-                "h.load_file(os.path.join('{}', 'print_morph.hoc'));"
-                .format(printer_dir) + "print '<BREAK>';"
-                "h.load_file(os.path.join('{}', 'print_lengths.hoc'));"
+                "import print_morph;" + "print '<BREAK>';"
+                "h.load_file(os.path.join('{}', 'print_sections.hoc'));"
                 .format(printer_dir) + "print '<BREAK>';"
                 "h.load_file(os.path.join('{}', 'print_modelview.hoc'))"
                 .format(printer_dir))
@@ -101,14 +101,23 @@ class HocImporter(object):
         process = sp.Popen(["python", "-c", pycmd], stdout=sp.PIPE)
         output = process.communicate()[0]
         # Split the output into the different sections for further processing
-        (_, self.psections,
-         self.lengths, self.modelview) = output.split('<BREAK>')
+        (self.morph_printout,
+         self.psections, self.modelview) = output.split('<BREAK>')[1:]
 
     def print_section_lengths(self, cell):
         for name, seg in sorted(cell.segments.iteritems(), key=itemgetter(0)):
             print "{} {:.6f}".format(name, seg.L)
 
-    def _extract_morphology(self):
+    def _extract_morph_print(self):
+        self.section_morphs = {}
+        for line in self.morph_printout.splitlines():
+            base, points = line.split(':')
+            name, length = base.split()
+            length = float(length)
+            points = [[float(f) for f in p.split()] for p in points.split(',')]
+            self.section_morphs[name] = (length, points)
+
+    def _extract_psections(self):
         self.model = Model('hoc_import',
                 source=os.path.join(self.import_dir))
         segments = {}
@@ -116,12 +125,7 @@ class HocImporter(object):
         started = False
         for line in self.psections.splitlines():
             line = line.strip()
-            if line.startswith('points: '):  # Reads pt3 point dumps
-                # Load the 3d points in the section
-                points = numpy.array([float(p)
-                                      for p in line[8:].split(' ')])
-                diam = points[-1]
-                points = points[:-1].reshape((-1, 3))
+            if line.startswith('__newsection__'):
                 started = True
             elif not started:  # Avoids any leading output lines
                 continue
@@ -164,8 +168,7 @@ class HocImporter(object):
                     Ra = attributes['Ra']
                     cm = components['capacitance'][0]['cm']
                     num_segments = attributes['nseg']
-                    assert num_segments == 1, "Only implemented for "\
-                                                                "nseg == 1"
+                    length, points = self.section_morphs[name]
                     proximal = points[0, :]
                     distal = points[1, :]
                     if len(connections) == 0:
@@ -231,9 +234,9 @@ class HocImporter(object):
                     contents['proximal_offset'] = offset
         return self.model
 
-    def _extract_mechanisms(self):
+    def _extract_modelview(self):
         (inserted_mechs, mechs_list,
-         global_params, point_procs) = self._parse_mechanisms_dump()
+         global_params, point_procs) = self._parse_modelview()
         for name, params in inserted_mechs.iteritems():
             if name == 'Ra':
                 if isinstance(params, dict):
@@ -303,7 +306,7 @@ class HocImporter(object):
             for comp in comps:
                 comp.global_parameters = global_parameters
 
-    def _parse_mechanisms_dump(self):
+    def _parse_modelview(self):
         # Load mechanisms model view dump from file into nested dictionaries
         # for convenient access
         contents = {}
