@@ -116,7 +116,7 @@ class TestNeuronImporter(unittest.TestCase):
 #                                          'Haroon_active_reduced_model/9ml')
         importer = NeuronImporter('/home/tclose/git/kbrain/external/'
                                   'fabios_network',
-                                   ['load_fabios_granule.hoc'])
+                                   ['load_sergios_golgi.hoc'])
         importer.write_ion_current_files('/home/tclose/git/kbrain/external/'
                                          'fabios_network/9ml')
 if __name__ == '__main__':
