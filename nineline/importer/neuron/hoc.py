@@ -72,8 +72,8 @@ class HocImporter(object):
         self.hoc_files = [f for f in model_files if f.endswith('.hoc')]
         self.python_files = [f[:-3] for f in model_files if f.endswith('.py')]
         self._run_model_printouts()
-        self._extract_psections()
         self._extract_morph_print()
+        self._extract_psections()
         self._extract_modelview()
         self._map_segments_to_components()
         self.model.url = None
@@ -111,11 +111,13 @@ class HocImporter(object):
     def _extract_morph_print(self):
         self.section_morphs = {}
         for line in self.morph_printout.splitlines():
-            base, points = line.split(':')
-            name, length = base.split()
-            length = float(length)
-            points = [[float(f) for f in p.split()] for p in points.split(',')]
-            self.section_morphs[name] = (length, points)
+            if line:
+                base, points = line.split(':')
+                name, length = base.split()
+                length = float(length)
+                points = [[float(f) for f in p.split()]
+                          for p in points.split(',')]
+                self.section_morphs[name] = (length, points)
 
     def _extract_psections(self):
         self.model = Model('hoc_import',
@@ -156,9 +158,22 @@ class HocImporter(object):
                         attributes[key] = float(val)
                 in_section = True
             elif in_section:
+                if line.startswith('insert'):
+                    (component_name,
+                         parameters) = line[6:].strip().split('{')
+                    component = {}
+                    if parameters != '}':
+                        for key_vals in parameters.strip()[:-1].split(' '):
+                            key, val = key_vals.strip().split('=')
+                            component[key] = float(val)
+                    components[component_name.strip()].append(component)
+                # If line starts with 'connect' read the parent connection
+                elif line.find('connect') > 0:
+                    parts = line.strip().split(' ')
+                    connections.append((parts[0], parts[4]))
                 # If the closing trailing brace is found collect all the
                 # read data into a SegmentModel object
-                if line.startswith('}'):
+                elif line.startswith('}'):
                     for comp_name in ('morphology', 'capacitance'):
                         if len(components[comp_name]) != 1:
                             raise Exception("More than one '{}' component"
@@ -169,8 +184,8 @@ class HocImporter(object):
                     cm = components['capacitance'][0]['cm']
                     num_segments = attributes['nseg']
                     length, points = self.section_morphs[name]
-                    proximal = points[0, :]
-                    distal = points[1, :]
+                    proximal = points[0][:-1]
+                    distal = points[-1][:-1]
                     if len(connections) == 0:
                         parent_name = None
                         self.model.set_root(proximal, diam)
@@ -208,19 +223,6 @@ class HocImporter(object):
                     in_section = False
                 # If line starts with 'insert' read the component and what
                 # has been inserted
-                elif line.startswith('insert'):
-                    (component_name,
-                         parameters) = line[6:].strip().split('{')
-                    component = {}
-                    if parameters != '}':
-                        for key_vals in parameters.strip()[:-1].split(' '):
-                            key, val = key_vals.strip().split('=')
-                            component[key] = float(val)
-                    components[component_name.strip()].append(component)
-                # If line starts with 'connect' read the parent connection
-                elif line.find('connect') > 0:
-                    parts = line.strip().split(' ')
-                    connections.append((parts[0], parts[4]))
         # Convert parent references from names to Section objects
         for seg in segments.itervalues():
             contents = seg.get_content()

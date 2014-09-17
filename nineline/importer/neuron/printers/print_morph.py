@@ -22,7 +22,7 @@ for root in roots:
     allsecs.wholetree()
 
 # Plot all names, lengths diameters and 3d points
-out = '<START>\n'
+out = ''
 for sec in allsecs:
     sec.push()
     out += '{} {}:'.format(sec.name(), sec.L)
@@ -36,5 +36,4 @@ for sec in allsecs:
         out = out[:-1]
     out += '\n'
     h.pop_section()
-out += '<END>'
 print out
