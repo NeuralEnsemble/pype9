@@ -598,13 +598,15 @@ class NMODLImporter(object):
             self.stead_state_linear_equations[name] = equations
 
     def _extract_kinetic_block(self):
-        def split_states(statestr):
+        def split_states(states):
             return [tuple(reversed(logstate_re.match(s).groups()))
-                    for s in statestr.split('+')]
-        def process_rate(ratestr):  # @IgnorePep8
-            return ratestr.strip()
-            if notword_re.search(ratestr):
-                ratestr = '(' + ratestr + ')'
+                    for s in states.split('+')]
+        def process_rate(rate):  # @IgnorePep8
+            rate = rate.strip()
+            rate = self._extract_function_calls(rate, statements)
+            if notword_re.search(rate):
+                rate = '(' + rate + ')'
+            return rate
         named_blocks = self.blocks.pop('KINETIC', {})
         for name, block in named_blocks.iteritems():
             bidirectional = []
@@ -612,6 +614,7 @@ class NMODLImporter(object):
             outgoing = []
             constraints = []
             compartments = []
+            statements = {}
             line_iter = self._iterate_block(block)
             try:
                 line = next(line_iter)
@@ -677,13 +680,15 @@ class NMODLImporter(object):
                     for lhs, rhs in stmts.iteritems():
                         for old, new in subs:
                             rhs = self._subs_variable(old, new, rhs)
-                        self.aliases[lhs] = Alias(lhs, rhs)
+                    statements.update(stmts)
                 try:
                     line = next(line_iter)
                 except StopIteration:
                     break
             self.kinetics[name] = (bidirectional, incoming, outgoing,
                                    constraints, compartments)
+            for lhs, rhs in statements.iteritems():
+                self.aliases[lhs] = Alias(lhs, rhs)
 
     def _extract_independent_block(self):
         self.blocks.pop('INDEPENDENT', None)
