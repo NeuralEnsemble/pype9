@@ -115,8 +115,8 @@ class HocImporter(object):
                 base, points = line.split(':')
                 name, length = base.split()
                 length = float(length)
-                points = [[float(f) for f in p.split()]
-                          for p in points.split(',')]
+                points = [numpy.array([float(f) for f in p.split()])
+                          for p in points.split(',') if p]
                 self.section_morphs[name] = (length, points)
 
     def _extract_psections(self):
@@ -184,8 +184,11 @@ class HocImporter(object):
                     cm = components['capacitance'][0]['cm']
                     num_segments = attributes['nseg']
                     length, points = self.section_morphs[name]
-                    proximal = points[0][:-1]
-                    distal = points[-1][:-1]
+                    if points:
+                        proximal = points[0][:-1]
+                        distal = points[-1][:-1]
+                    else:
+                        distal = numpy.zeros(3) * numpy.nan
                     if len(connections) == 0:
                         parent_name = None
                         self.model.set_root(proximal, diam)
@@ -212,7 +215,8 @@ class HocImporter(object):
                     contents.update({'parent_name': parent_name, 'Ra': Ra,
                                      'cm': cm, 'inserted': inserted,
                                      'num_segs': num_segments,
-                                     'points': points})
+                                     'points': points,
+                                     'length': length})
                     segments[segment.name] = segment
                     if parent_name is None:
                         self.model.root_segment = segment
@@ -231,7 +235,21 @@ class HocImporter(object):
             else:
                 self.model.add_node_with_parent(seg,
                                            segments[contents['parent_name']])
-                offset = contents['points'][0] - seg.parent.distal
+        # Loop through all segments (depth-first search from root) and set
+        # proximal offsets and missing 3d points
+        for seg in self.model.segments:
+            contents = seg.get_content()
+            points = contents['points']
+            if seg.parent:
+                if len(points):
+                    offset = points[0][:-1] - seg.parent.distal
+                else:
+                    # If no 3d points were assigned to the segment then use the
+                    # length parameter to create a distal segment
+                    offset = numpy.zeros(3)
+                    seg.distal = (seg.parent.distal +
+                                  seg.parent.disp *
+                                  (contents['length'] / seg.parent.length))
                 if offset.sum():
                     contents['proximal_offset'] = offset
         return self.model

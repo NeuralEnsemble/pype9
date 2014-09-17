@@ -959,7 +959,7 @@ class SegmentModel(SNode2):
         """
         disp = distal - self.distal
         for child in self.all_children:
-            child.distal += disp
+            child.distal = child.distal + disp
         self.raw_set_distal(distal)
 
     def raw_set_distal(self, distal):
