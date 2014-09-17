@@ -188,6 +188,7 @@ class HocImporter(object):
                         proximal = points[0][:-1]
                         distal = points[-1][:-1]
                     else:
+                        proximal = numpy.zeros(3)
                         distal = numpy.zeros(3) * numpy.nan
                     if len(connections) == 0:
                         parent_name = None
@@ -371,20 +372,32 @@ class HocImporter(object):
                     if key in containers[-1]:
                         key = val
                     containers[-1][key] = val
+        if len(contents['real cells']) == 0:
+            raise Exception("No cells found to import")
+        elif len(contents['real cells']) > 1:
+            raise Exception("Multiple cells ('{}') found, can only import one"
+                            .format(', '.join(c[5:]
+                                              for c in contents['real cells'].\
+                                                                      keys())))
         inserted_mechs = contents['real cells']['root soma']['inserted '
                                                              'mechanisms']
         mechs_list = contents['Density Mechanisms']['Mechanisms in use']
         global_params = contents['Density Mechanisms']['Global parameters for '
                                                        'density mechanisms']
-        point_procs_group = contents['point processes (can receive events) of '
-                                     'base classes']
         try:
-            point_procs = point_procs_group['Point Processes']
+            point_procs_group = contents['point processes (can receive events)'
+                                         'of base classes']
+            try:
+                point_procs = point_procs_group['Point Processes']
+            except KeyError:
+                point_procs = dict((k, v)
+                                   for k, v in point_procs_group.iteritems()
+                                   if k not in ('Global parameters for Point '
+                                                'Processes',
+                                                'KSChan definitions '
+                                                'for Point Processes'))
         except KeyError:
-            point_procs = dict((k, v) for k, v in point_procs_group.iteritems()
-                               if k not in ('Global parameters for Point '
-                                            'Processes', 'KSChan definitions '
-                                            'for Point Processes'))
+            point_procs = {}
         return inserted_mechs, mechs_list, global_params, point_procs
 
     def _map_segments_to_components(self):
