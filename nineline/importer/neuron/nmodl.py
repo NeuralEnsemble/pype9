@@ -80,7 +80,7 @@ class NMODLImporter(object):
         self.state_variables = {}
         self.state_variables_initial = {}
         self.stead_state_linear_equations = {}
-        self.range_vars = []
+        self.range_vars = set()
         self.globals = []  # Unused currently
         self.used_ions = {}
         self.breakpoint_solve_methods = {}
@@ -509,7 +509,7 @@ class NMODLImporter(object):
             elif line.startswith('ARTIFICIAL_CELL'):
                 self.component_name = line.split()[1]
             elif line.startswith('RANGE'):
-                self.range_vars.extend(list_re.split(line[6:]))
+                self.range_vars.update(list_re.split(line[6:]))
             elif line.startswith('USEION'):
                 name = re.match(r'USEION (\w+)', line).group(1)
                 match = re.match(r'.*READ ((?:\w+(?: *\, *)?)+)', line)
@@ -743,7 +743,8 @@ class NMODLImporter(object):
             line = getitem_re.sub(r'\1__elem\2', line)
             # Split line into lhs and rhs (if '=' is present)
             parts = assign_re.split(line)
-            if len(parts) == 1:  # Either a conditional block or a procedure
+            # Either a conditional block or a procedure
+            if len(parts) == 1 or '{' in line:
                 expr = parts[0]
                 match = re.match(r'(\w+) *\((.*)\)', expr)
                 # If a procedure
@@ -1035,6 +1036,8 @@ class NMODLImporter(object):
     def _sanitize_units(cls, units):
         if units == '1' or units == 1:
             return 'dimensionless'
+        if units == 'mv':
+            units = 'mV'
         units = units.strip()
         if units.startswith('/'):
             units = '1' + units
