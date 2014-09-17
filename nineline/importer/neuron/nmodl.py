@@ -400,7 +400,7 @@ class NMODLImporter(object):
 
     def _extract_assigned_block(self):
         # Read the assigned block for analog out ports
-        for line in self._iterate_block(self.blocks.pop('ASSIGNED')):
+        for line in self._iterate_block(self.blocks.pop('ASSIGNED', [])):
             parts = line.strip().split('(')
             if len(parts) == 1:
                 var = parts[0]
@@ -710,13 +710,22 @@ class NMODLImporter(object):
         except StopIteration:
             line = None
         while line:
-            if (line.startswith('TABLE') or line.startswith('LOCAL') or
-                line in ('UNITSON', 'UNITSOFF')):
+            if line.startswith('TABLE'):
+                while not re.match(r'TABLE\s+[\w\s\,_]+\s+FROM\s+[e\-\d\.]+\s+'
+                                   r'TO\s+[e\-\d\.]+\s+WITH\s+[e\-\d\.]+',
+                                   line):
+                    try:
+                        line += ' ' + next(line_iter)
+                    except StopIteration:
+                        raise Exception("EOF while parsing table statement")
+                line = next(line_iter)
+                continue
+            elif (line.startswith('LOCAL') or line in ('UNITSON', 'UNITSOFF')):
                 try:
                     line = next(line_iter)
                 except StopIteration:
-                    if line.startswith('TABLE') or line.startswith('LOCAL'):
-                        raise Exception("TABLE and LOCAL statements need to "
+                    if line.startswith('LOCAL'):
+                        raise Exception("LOCAL statements need to "
                                         "appear at the start of the statement "
                                         "block")
                     else:

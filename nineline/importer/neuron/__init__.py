@@ -7,7 +7,7 @@ from .nmodl import NMODLImporter
 
 class NeuronImporter(object):
 
-    known_components = ['IClamp', 'Ra', 'cm']
+    known_components = ['IClamp', 'Ra', 'cm', 'Exp2Syn']
 
     def __init__(self, import_dir, model_files=['main.hoc'], hoc_cmds=[]):
         self.import_dir = import_dir

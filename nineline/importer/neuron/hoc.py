@@ -266,7 +266,9 @@ class HocImporter(object):
                 else:
                     self.model.add_component(AxialResistanceModel('Ra',
                                                              float(params)))
-            elif name == 'capacitance':
+            elif name == 'capacitance' or name == 'cm':
+                if name == 'cm':
+                    name = 'capacitance'
                 if isinstance(params, dict):
                     for key, vals in self.param_combinations(name, params):
                         self.model.add_component(

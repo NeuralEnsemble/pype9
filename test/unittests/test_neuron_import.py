@@ -109,12 +109,16 @@ class TestNeuronImporter(unittest.TestCase):
 #                                    ['DCNmechs()'])
 #         importer.write_ion_current_files('/home/tclose/git/cerebellarnuclei/'
 #                                          '9ml/ion_channels')
-        importer = NeuronImporter('/home/tclose/git/purkinje/model/'
-                                  'Haroon_active_reduced_model',
-                                   ['for_import.py'])
-        importer.write_ion_current_files('/home/tclose/git/purkinje/model/'
-                                         'Haroon_active_reduced_model/9ml')
-
+#         importer = NeuronImporter('/home/tclose/git/purkinje/model/'
+#                                   'Haroon_active_reduced_model',
+#                                    ['for_import.py'])
+#         importer.write_ion_current_files('/home/tclose/git/purkinje/model/'
+#                                          'Haroon_active_reduced_model/9ml')
+        importer = NeuronImporter('/home/tclose/git/kbrain/external/'
+                                  'fabios_network',
+                                   ['load_fabios_granule.hoc'])
+        importer.write_ion_current_files('/home/tclose/git/kbrain/external/'
+                                         'fabios_network/9ml')
 if __name__ == '__main__':
     test = TestNMODLImporter()
     test.test_nmodl_import()
