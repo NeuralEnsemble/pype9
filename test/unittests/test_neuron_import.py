@@ -1,8 +1,8 @@
 import tempfile
+from lxml import etree
 from nineline.importer.neuron import NeuronImporter
 from nineline.importer.neuron.hoc import HocImporter
 from nineline.importer.neuron.nmodl import NMODLImporter
-from lxml import etree
 
 if __name__ == '__main__':
 

@@ -1,14 +1,13 @@
 from __future__ import absolute_import
 import os.path
 import re
-import tempfile
 import subprocess as sp
 from collections import defaultdict
 from copy import deepcopy
 import itertools
 from operator import itemgetter
 import numpy
-from ....cells import (Model, SegmentModel, AxialResistanceModel,
+from ...cells import (Model, SegmentModel, AxialResistanceModel,
                        MembraneCapacitanceModel, IonChannelModel,
                        IonConcentrationModel, CurrentClampModel,
                        SynapseModel)
@@ -81,21 +80,23 @@ class HocImporter(object):
     def _run_model_printouts(self):
         # Create the python commands to load the model and then run the print
         # out hoc files
-        this_dir = os.path.dirname(__file__)
-        pycmd = ("import os; os.chdir('{}');".format(self.import_dir) +
+        printer_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                   'printers'))
+        pycmd = ("import os, sys; os.chdir('{}');".format(self.import_dir) +
                  "from neuron import h;" +
                 ''.join("h.load_file(os.path.join('{}', '{}'));"
                         .format(self.import_dir, hf)
                          for hf in self.hoc_files) +
                 ''.join("import {};".format(pf) for pf in self.python_files) +
                 ''.join("h('{}');".format(cmd) for cmd in self.hoc_cmds) +
+                'sys.path.append({});'.format(printer_dir) +
                 "print '<BREAK>';" +
                 "h.load_file(os.path.join('{}', 'print_morph.hoc'));"
-                .format(this_dir) + "print '<BREAK>';"
+                .format(printer_dir) + "print '<BREAK>';"
                 "h.load_file(os.path.join('{}', 'print_lengths.hoc'));"
-                .format(this_dir) + "print '<BREAK>';"
+                .format(printer_dir) + "print '<BREAK>';"
                 "h.load_file(os.path.join('{}', 'print_modelview.hoc'))"
-                .format(this_dir))
+                .format(printer_dir))
         # Run the python command and save the output
         process = sp.Popen(["python", "-c", pycmd], stdout=sp.PIPE)
         output = process.communicate()[0]
