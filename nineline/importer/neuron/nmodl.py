@@ -14,15 +14,16 @@ from nineml.abstraction_layer.dynamics.component.ports import (AnalogPort,
 from collections import defaultdict
 
 
+# Compiled regular expressions
 newline_re = re.compile(r" *[\n\r]+ *")
-assign_re = re.compile(r"(?<![\>\<]) *= *")  # an assignment not proceded by a greater or equals sign @IgnorePep8
+# An assignment not proceded by a greater or equals sign @IgnorePep8
+assign_re = re.compile(r"(?<![\>\<]) *= *")
 list_re = re.compile(r" *, *")
-celsius_re = re.compile(r'(\W|^)celsius(\W|$)')
 title_re = re.compile(r"TITLE (.*)")
 comments_re = re.compile(r"COMMENT(.*)ENDCOMMENT")
 whitespace_re = re.compile(r'\s')
 getitem_re = re.compile(r'(\w+)\[(\d+)\]')
-logstate_re = re.compile(r' *(\d+)? *(\w+)')
+logstate_re = re.compile(r' *(\d+)? *(\w+)')  # For kinetics terms
 notword_re = re.compile(r'\W')
 
 
@@ -172,6 +173,68 @@ class NMODLImporter(object):
             piecewise_test = reduce(operator.add, piecewise_test)
         return td_rhs + simple_rhs + piecewise_rhs + piecewise_test
 
+    def _create_parameters_and_analog_ports(self):
+        # Add range variables to analog ports
+        ion_vars = reduce(operator.add,
+                          [r + w for r, w, _ in self.used_ions.itervalues()])
+        for var in self.range_vars:
+            if var not in ion_vars:
+                if var in self.constants:
+                    constant = self.constants[var]
+                    dimension = self._units2dimension(
+                                                  str(constant.dimensionality))
+                    valid_range = self.valid_parameter_ranges.get(var, None)
+                    self.parameters[var] = Parameter(var, dimension=dimension,
+                                                     valid_range=valid_range)
+                elif var in self.aliases:
+                    if (self.component_name and var == 'e' +
+                        self.component_name):
+                        mode = 'recv'
+                        dimension = 'voltage'
+                    else:
+                        mode = 'send'
+                    try:
+                        dimension = self.dimensions[var]
+                    except KeyError:
+                        dimension = None
+                    self.analog_ports.append(AnalogPort(var, mode=mode,
+                                                        dimension=dimension))
+        # Add used ions to analog ports
+        for name, (read, write, _) in self.used_ions.iteritems():
+            for n in read:
+                if n == 'e' + name:
+                    dimension = 'voltage'
+                else:
+                    dimension = 'concentration'
+                self.analog_ports.append(AnalogPort(n, mode='recv',
+                                                    dimension=dimension))
+            for n in write:
+                self.analog_ports.append(AnalogPort(n, mode='send',
+                                                 dimension='membrane_current'))
+        # Add ports/parameters for reserved NMODL keywords
+        uses_celsius = uses_voltage = uses_diam = False
+        for expr in self.all_expressions():
+            if re.search(r'(\b)celsius(\b)', expr):
+                uses_celsius = True
+            if re.search(r'(\b)v(\b)', expr):
+                uses_voltage = True
+            if re.search(r'(\b)diam(\b)', expr):
+                uses_diam = True
+        if uses_voltage:
+            self.analog_ports.append(AnalogPort('v', mode='recv',
+                                                dimension='voltage'))
+        if uses_celsius:
+            self.analog_ports.append(AnalogPort('celsius', mode='recv',
+                                             dimension='absolute_temperature'))
+        if uses_diam:
+            self.parameters['diam'] = Parameter('diam', dimension='length')
+        # Add remaining constants to aliases (may switch to separate tag
+        # 'constants' at some point in the future)
+        ports_n_params = (self.parameters.keys() +
+                          [a.name for a in self.analog_ports])
+        self.aliases.update((k, Alias(k, v)) for k, v in self.constants.items()
+                            if k not in ports_n_params)
+
     def _create_regimes(self, expand_kinetics=True):
         self.regimes = []
         if self.on_event_parts:
@@ -218,23 +281,19 @@ class NMODLImporter(object):
                                        time_derivatives=time_derivatives))
 
     @classmethod
-    def _expand_kinetics_term(cls, states):
-        return '*'.join('{}^{}'.format(s, p) if p else s for s, p in states)
-
-    @classmethod
     def _expand_kinetics(cls, bidirectional, incoming, outgoing,
                          constraints, compartments):  # @UnusedVariable
         equations = defaultdict(str)
-        # Sort terms into lhs variables
+        # Sort terms into lhs variables multiplying by stoichiometric number
         for lhs_states, rhs_states, f_rate, b_rate in bidirectional:
             lhs_term = f_rate + '*' + cls._expand_kinetics_term(lhs_states)
             rhs_term = b_rate + '*' + cls._expand_kinetics_term(rhs_states)
             for s, p in lhs_states:
-                pstr = p + '*' if p else ''
+                pstr = (p + '*') if p else ''
                 equations[s] += ' - ' + pstr + lhs_term
                 equations[s] += ' + ' + pstr + rhs_term
             for s, p in rhs_states:
-                pstr = p + '*' if p else ''
+                pstr = (p + '*') if p else ''
                 equations[s] += ' - ' + pstr + rhs_term
                 equations[s] += ' + ' + pstr + lhs_term
         time_derivatives = []
@@ -246,6 +305,14 @@ class NMODLImporter(object):
                 rhs = rhs[2:]
             time_derivatives.append(TimeDerivative(state, rhs))
         return time_derivatives
+
+    @classmethod
+    def _expand_kinetics_term(cls, states):
+        return '*'.join('{}^{}'.format(s, p) if p else s for s, p in states)
+
+    # ----------------- #
+    #  Content readers  #
+    # ----------------- #
 
     def _read_title(self):
         # Extract title and comments if present
@@ -276,6 +343,10 @@ class NMODLImporter(object):
                     self.blocks[block_name] = ('', contents)
                 else:
                     self.blocks[block_name] = contents
+
+    # ------------------ #
+    #  Block extractors  #
+    # ------------------ #
 
     def _extract_procedure_and_function_blocks(self):
         # Read functions
@@ -609,67 +680,9 @@ class NMODLImporter(object):
         self.blocks.pop('INDEPENDENT', None)
         # the Independent block is not actually required as it is always t
 
-    def _create_parameters_and_analog_ports(self):
-        # Add range variables to analog ports
-        ion_vars = reduce(operator.add,
-                          [r + w for r, w, _ in self.used_ions.itervalues()])
-        for var in self.range_vars:
-            if var not in ion_vars:
-                if var in self.constants:
-                    constant = self.constants[var]
-                    dimension = self._units2dimension(
-                                                  str(constant.dimensionality))
-                    valid_range = self.valid_parameter_ranges.get(var, None)
-                    self.parameters[var] = Parameter(var, dimension=dimension,
-                                                     valid_range=valid_range)
-                elif var in self.aliases:
-                    if (self.component_name and var == 'e' +
-                        self.component_name):
-                        mode = 'recv'
-                        dimension = 'voltage'
-                    else:
-                        mode = 'send'
-                    try:
-                        dimension = self.dimensions[var]
-                    except KeyError:
-                        dimension = None
-                    self.analog_ports.append(AnalogPort(var, mode=mode,
-                                                        dimension=dimension))
-        # Add used ions to analog ports
-        for name, (read, write, _) in self.used_ions.iteritems():
-            for n in read:
-                if n == 'e' + name:
-                    dimension = 'voltage'
-                else:
-                    dimension = 'concentration'
-                self.analog_ports.append(AnalogPort(n, mode='recv',
-                                                    dimension=dimension))
-            for n in write:
-                self.analog_ports.append(AnalogPort(n, mode='send',
-                                                 dimension='membrane_current'))
-        # Add ports/parameters for reserved NMODL keywords
-        uses_celsius = uses_voltage = uses_diam = False
-        for expr in self.all_expressions():
-            if re.search(r'(\b)celsius(\b)', expr):
-                uses_celsius = True
-            if re.search(r'(\b)v(\b)', expr):
-                uses_voltage = True
-            if re.search(r'(\b)diam(\b)', expr):
-                uses_diam = True
-        if uses_voltage:
-            self.analog_ports.append(AnalogPort('v', mode='recv',
-                                                dimension='voltage'))
-        if uses_celsius:
-            self.analog_ports.append(AnalogPort('celsius', mode='recv',
-                                             dimension='absolute_temperature'))
-        if uses_diam:
-            self.parameters['diam'] = Parameter('diam', dimension='length')
-        # Add remaining constants to aliases (may switch to separate tag
-        # 'constants' at some point in the future)
-        ports_n_params = (self.parameters.keys() +
-                          [a.name for a in self.analog_ports])
-        self.aliases.update((k, Alias(k, v)) for k, v in self.constants.items()
-                            if k not in ports_n_params)
+    # ---------------------------- #
+    #  General extraction methods  #
+    # ---------------------------- #
 
     def _extract_stmts_block(self, block, subs={}, suffix=''):
         """
@@ -878,7 +891,7 @@ class NMODLImporter(object):
                 break
         # If the final block isn't an 'else' statement, the aliases should be
         # defined previously.
-        defined_previously = test != 'otherwise'
+        defined_previously = (test != 'otherwise')
         # Collate all the variables that are assigned in each sub-block
         common_lhss = reduce(set.intersection,
                              (set(s.keys())
@@ -943,6 +956,10 @@ class NMODLImporter(object):
         if suffix:
             subs.update((lhs[:-len(suffix)], lhs) for lhs in common_lhss)
         return line
+
+    #----------------------------#
+    #  General Helper functions  #
+    #----------------------------#
 
     def _subs_variable(self, old, new, expr):
         expr = re.sub(r'\b({})\b'.format(re.escape(old)), new, expr)
