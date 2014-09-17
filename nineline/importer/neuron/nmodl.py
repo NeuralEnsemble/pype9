@@ -971,6 +971,10 @@ class NMODLImporter(object):
     #----------------------------#
 
     def _subs_variable(self, old, new, expr):
+        # If the new expression contains more than one "word" enclose it
+        # in parentheses
+        if notword_re.search(new):
+            new = '(' + new + ')'
         expr = re.sub(r'\b({})\b'.format(re.escape(old)), new, expr)
         # Update dimensions tracking
         if old in self.dimensions:
