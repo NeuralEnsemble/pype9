@@ -1,3 +1,4 @@
+from math import isnan
 import re
 import regex
 import operator
@@ -80,9 +81,8 @@ class NMODLImporter(object):
         self.state_variables_initial = {}
         self.stead_state_linear_equations = {}
         self.range_vars = []
-        self.globals = []
+        self.globals = []  # Unused currently
         self.used_ions = {}
-        self.used_procs = {}
         self.breakpoint_solve_methods = {}
         self.initial_solve_methods = {}
         self.parameters = {}
@@ -90,8 +90,6 @@ class NMODLImporter(object):
         self.event_ports = []
         self.regime_parts = []
         self.kinetics = {}
-        self.kinetics_constraints = defaultdict(list)
-        self.kinetics_compartments = defaultdict(list)
         self.on_event_parts = None
         # Extract declarations and expressions from blocks into members
         self._extract_neuron_block()
@@ -233,7 +231,7 @@ class NMODLImporter(object):
         ports_n_params = (self.parameters.keys() +
                           [a.name for a in self.analog_ports])
         self.aliases.update((k, Alias(k, v)) for k, v in self.constants.items()
-                            if k not in ports_n_params)
+                            if k not in ports_n_params and not isnan(float(v)))
 
     def _create_regimes(self, expand_kinetics=True):
         self.regimes = []
@@ -308,7 +306,8 @@ class NMODLImporter(object):
 
     @classmethod
     def _expand_kinetics_term(cls, states):
-        return '*'.join('{}^{}'.format(s, p) if p else s for s, p in states)
+        return '*'.join('{}^{}'.format(s, p) if p else s
+                        for s, p in states)
 
     # ----------------- #
     #  Content readers  #
@@ -428,7 +427,7 @@ class NMODLImporter(object):
                 # This is a bit of a hack to specify that this parameter
                 # doesn't have a default value FIXME
                 units = self._sanitize_units(units)
-                self.constants[name] = pq.Quantity(float('inf'), units)
+                self.constants[name] = pq.Quantity(float('nan'), units)
             elif len(parts) == 2:
                 name, rest = parts
                 match = re.match(r'([\d\.e-]+)\s*(\([\d\w\.\*/]+\))?\s*'
@@ -660,9 +659,19 @@ class NMODLImporter(object):
                     # Get the index of last bidirectional equation in order to
                     # map the appropriate flux equation on to it.
                     try:
-                        s1, s2, _, _ = bidirectional[-1]
-                        subs = [('f_flux', self._expand_kinetics_term(s1)),
-                                ('b_flux', self._expand_kinetics_term(s2))]
+                        states1, states2, rate1, rate2 = bidirectional[-1]
+                        # Create unique suffix
+                        suffix = '_to_'.join('_'.join(''.join(s, p) if p else s
+                                                      for s, p in states)
+                                             for states in (states1, states2))
+                        f_flux = 'f_flux_{}'.format(suffix)
+                        b_flux = 'b_flux_{}'.format(suffix)
+                        # Create aliases for the last-used flux terms
+                        stmts[f_flux] = (rate1 + '*' +
+                                         self._expand_kinetics_term(states1))
+                        stmts[b_flux] = (rate2 + '*' +
+                                         self._expand_kinetics_term(states2))
+                        subs = [('f_flux', f_flux), ('b_flux', b_flux)]
                     except IndexError:
                         subs = []
                     for lhs, rhs in stmts.iteritems():
