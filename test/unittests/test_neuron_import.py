@@ -89,9 +89,9 @@ class TestNMODLImporter(unittest.TestCase):
         </NineML>""")
 
     def test_nmodl_import(self):
-        importer = NMODLImporter('/home/tclose/git/purkinje/model/'
-                                  'Haroon_active_reduced_model/CaT3_1.mod')
-        componentclass = importer.get_component()
+        importer = NMODLImporter('/home/tclose/git/kbrain/external/'
+                                 'fabios_network/Golgi_hcn2.mod')
+        component, componentclass = importer.get_component_and_class()
         with tempfile.NamedTemporaryFile(delete=False) as f:
             fname = f.name
             componentclass.write(f)

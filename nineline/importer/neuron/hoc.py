@@ -412,10 +412,12 @@ class HocImporter(object):
                                    for k in params.iterkeys())]
                     assert len(comp) < 2
                     if not comp:
-                        raise Exception("Could not find matching component "
-                                        " for '{}' mechanisms with params:\n"
-                                        "    {}"
-                                        .format(mech_name, params))
+                        if mech_name in ('Exp2Syn', 'APCount'):
+                            continue  #FIXME: Skipping Exp2Syn
+                        else:
+                            raise Exception("Could not find matching component"
+                                            "for '{}' mechs with params:\n{}"
+                                            .format(mech_name, params))
                     seg.set_component(comp[0])
 
 if __name__ == '__main__':

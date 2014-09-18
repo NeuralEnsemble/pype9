@@ -28,6 +28,22 @@ logstate_re = re.compile(r' *(\d+)? *(\w+)')  # For kinetics terms
 notword_re = re.compile(r'\W')
 
 
+class _Otherwise(object):
+    """
+    An object used to represent the "else/otherwise" condition of a piecewise
+    function
+    """
+
+    def __init__(self, not_tests=[]):
+        self.not_tests = not_tests
+
+    def full_condition(self):
+        return ' & '.join('!({})'.format(test) for test in self.not_tests)
+
+    def __str__(self):
+        return 'otherwise'
+
+
 class NMODLImporter(object):
     """
     Imports NMODL files into lib9ml structures
@@ -58,6 +74,8 @@ class NMODLImporter(object):
                         's*A/m**3': 'charge_density',
                         'm**3/(s*mol)': 'frequency_from_concentration',
                         'mol/m**2': 'two_dimensional_density',
+                        's*A': 'charge',
+                        's**3*A/(kg*m**2)': 'inverse_voltage',
                         None: None}
 
     def __init__(self, fname):
@@ -110,13 +128,13 @@ class NMODLImporter(object):
         self._create_parameters_and_analog_ports()
         self._create_regimes()
 
-    def get_component(self):
-        return ComponentClass(name=self.component_name,
-                              parameters=self.parameters.values(),
-                              analog_ports=self.analog_ports,
-                              regimes=self.regimes,
-                              aliases=self.aliases.values(),
-                              state_variables=self.state_variables)
+    def get_component_and_class(self):
+        return None, ComponentClass(name=self.component_name,
+                                    parameters=self.parameters.values(),
+                                    analog_ports=self.analog_ports,
+                                    regimes=self.regimes,
+                                    aliases=self.aliases.values(),
+                                    state_variables=self.state_variables)
 
     def print_members(self):
         """
@@ -164,7 +182,8 @@ class NMODLImporter(object):
                          if isinstance(a.rhs, list)]
         if piecewise_rhs:
             piecewise_rhs = reduce(operator.add, piecewise_rhs)
-        piecewise_test = [[test for _, test in a.rhs if test != 'otherwise']
+        piecewise_test = [[test for _, test in a.rhs
+                           if not isinstance(test, _Otherwise)]
                          for a in self.aliases.values()
                          if isinstance(a.rhs, list)]
         if piecewise_test:
@@ -226,12 +245,26 @@ class NMODLImporter(object):
                                              dimension='absolute_temperature'))
         if uses_diam:
             self.parameters['diam'] = Parameter('diam', dimension='length')
-        # Add remaining constants to aliases (may switch to separate tag
-        # 'constants' at some point in the future)
+        # Add remaining constants to parameters or aliases (may switch to
+        # separate tag 'constants' at some point in the future)
         ports_n_params = (self.parameters.keys() +
                           [a.name for a in self.analog_ports])
-        self.aliases.update((k, Alias(k, v)) for k, v in self.constants.items()
-                            if k not in ports_n_params and not isnan(float(v)))
+        for name, val in self.constants.iteritems():
+            if name not in ports_n_params:
+                is_constant = False
+                for const in self._inbuilt_constants.itervalues():
+                    try:
+                        frac = (val - const) / const
+                        if frac > 0.9999 or frac < 1.0001:
+                            is_constant = True
+                    except ValueError:
+                        pass
+                if is_constant:
+                    self.aliases[name] = Alias(name, val)
+                elif name != 'celsius':
+                    dimension = self._units2dimension(str(val.units)[4:])
+                    self.parameters[name] = Parameter(name,
+                                                      dimension=dimension)
 
     def _create_regimes(self, expand_kinetics=True):
         self.regimes = []
@@ -886,18 +919,23 @@ class NMODLImporter(object):
                                    suffix=''):
         conditional_stmts = []
         # Loop through all sub-blocks of the if/else-if/else statement
+        previous_tests = []
         for pre, sblock, nline in self._matching_braces(line_iter, line=line):
             # Extract the test conditions for if and else if blocks
             match = re.search(r'\((.*)\)', pre)
             if match:
                 test = match.group(1)
+                # Replace arguments with their values into the test condition
+                for old, new in subs.iteritems():
+                    test = self._subs_variable(old, new, test)
+                # Substitute in function calls
+                test = self._extract_function_calls(test, statements)
+                # Append any previous tests
+                for prev_test in previous_tests:
+                    test += ' & !({})'.format(prev_test)
+                previous_tests.append(test)
             else:
-                test = 'otherwise'
-            # Replace arguments with their values into the test condition
-            for old, new in subs.iteritems():
-                test = self._subs_variable(old, new, test)
-            # Substitute in function calls
-            test = self._extract_function_calls(test, statements)
+                test = _Otherwise(previous_tests)
             # Extract the statements from the sub-block
             stmts = self._extract_stmts_block(sblock, subs, suffix)
             # Append the test and statements to a list for processing after all
@@ -915,7 +953,7 @@ class NMODLImporter(object):
                 break
         # If the final block isn't an 'else' statement, the aliases should be
         # defined previously.
-        defined_previously = (test != 'otherwise')
+        no_otherwise_condition = not isinstance(test, _Otherwise)
         # Collate all the variables that are assigned in each sub-block
         common_lhss = reduce(set.intersection,
                              (set(s.keys())
@@ -957,9 +995,8 @@ class NMODLImporter(object):
         for lhs in common_lhss:
             pieces = []
             for i, (test, stmts) in enumerate(conditional_stmts):
-                rhs = stmts[lhs]
-                pieces.append((rhs, test))
-            if defined_previously:
+                self._unwrap_piecewise_stmt(stmts[lhs], test, pieces)
+            if no_otherwise_condition:
                 if lhs in statements:
                     rhs = statements[lhs]
                 elif lhs in self.constants:
@@ -971,7 +1008,9 @@ class NMODLImporter(object):
                     raise Exception("Could not find previous definition of "
                                     "'{}' to form otherwise condition of "
                                     "conditional block".format(lhs))
-                pieces.append((rhs, 'otherwise'))
+                self._unwrap_piecewise_stmt(rhs,
+                                            _Otherwise([t for _, t in pieces]),
+                                            pieces)
             else:
                 assert lhs not in statements
             statements[lhs] = pieces
@@ -980,6 +1019,25 @@ class NMODLImporter(object):
         if suffix:
             subs.update((lhs[:-len(suffix)], lhs) for lhs in common_lhss)
         return line
+
+    @classmethod
+    def _unwrap_piecewise_stmt(cls, stmt, test, pieces):
+        """
+        Unwraps nested piecewise statements into a single piecewise statement
+        """
+        if isinstance(stmt, list):
+            for s, t in stmt:
+                if t == 'otherwise':
+                    combined_test = test
+                else:
+                    if isinstance(test, _Otherwise):
+                        combined_test = ('{} & ({})'
+                                         .format(test.full_condition(), t))
+                    else:
+                        combined_test = '({}) & ({})'.format(test, t)
+                cls._unwrap_piecewise_stmt(s, combined_test, pieces)
+        else:
+            pieces.append((stmt, str(test)))
 
     #----------------------------#
     #  General Helper functions  #

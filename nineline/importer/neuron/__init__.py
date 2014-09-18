@@ -19,7 +19,7 @@ class NeuronImporter(object):
     def write_ion_current_files(self, output_dir):
         for imptr in self.nmodl_importers.itervalues():
             try:
-                compclass = imptr.get_component()
+                _, compclass = imptr.get_component_and_class()
                 compclass.write(os.path.join(output_dir,
                                              compclass.name + '.xml'))
             except NineMLRuntimeError as e:
