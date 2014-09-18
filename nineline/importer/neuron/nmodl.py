@@ -255,7 +255,7 @@ class NMODLImporter(object):
                 for const in self._inbuilt_constants.itervalues():
                     try:
                         frac = (val - const) / const
-                        if frac > 0.9999 or frac < 1.0001:
+                        if abs(frac) < 1e-4:
                             is_constant = True
                     except ValueError:
                         pass
