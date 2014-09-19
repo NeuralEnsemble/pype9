@@ -1,10 +1,14 @@
 from math import isnan
+import os.path
 import re
 import regex
 import operator
+from lxml import etree
+from lxml.builder import E
 import quantities as pq
 import collections
 from nineml.maths import is_builtin_symbol
+from nineml.abstraction_layer.xmlns import NINEML
 from nineml.abstraction_layer.components.interface import Parameter
 from nineml.abstraction_layer.dynamics.component import ComponentClass
 from nineml.abstraction_layer.dynamics import Regime, StateVariable, OnEvent
@@ -12,6 +16,7 @@ from nineml.abstraction_layer.dynamics.component.expressions import (
                                         Alias, TimeDerivative, StateAssignment)
 from nineml.abstraction_layer.dynamics.component.ports import (AnalogPort,
                                                                EventPort)
+from nineml.user_layer.dynamics import IonDynamics
 from collections import defaultdict
 
 
@@ -78,6 +83,14 @@ class NMODLImporter(object):
                         's**3*A/(kg*m**2)': 'inverse_voltage',
                         None: None}
 
+    def __repr__(self):
+        return ("NMODLImporter({}): {} parameters, {} ports, {} states,"
+                " {} aliases").format(self.component_name,
+                                      len(self.parameters),
+                                      len(self.analog_ports),
+                                      len(self.state_variables),
+                                      len(self.aliases))
+
     def __init__(self, fname):
         # Read file
         with open(fname) as f:
@@ -92,6 +105,7 @@ class NMODLImporter(object):
         self.procedures = {}
         self.aliases = {}
         self.constants = {}
+        self.properties = {}
         self.valid_parameter_ranges = {}
         self.valid_state_ranges = {}
         self.dimensions = {}
@@ -104,8 +118,9 @@ class NMODLImporter(object):
         self.breakpoint_solve_methods = {}
         self.initial_solve_methods = {}
         self.parameters = {}
-        self.analog_ports = []
-        self.event_ports = []
+        self.properties = {}
+        self.analog_ports = {}
+        self.event_ports = {}
         self.regime_parts = []
         self.kinetics = {}
         self.on_event_parts = None
@@ -128,13 +143,29 @@ class NMODLImporter(object):
         self._create_parameters_and_analog_ports()
         self._create_regimes()
 
-    def get_component_and_class(self):
-        return None, ComponentClass(name=self.component_name,
+    def write_component_and_class(self, comp_dir=os.getcwd(),
+                                  class_dir=None):
+        comp_dir = os.path.abspath(comp_dir)
+        if not class_dir:
+            class_dir = comp_dir
+        aliases = self.aliases.values() + [Alias(n, v)
+                                           for n, v in self.constants.items()]
+        comp_class = ComponentClass(name=self.component_name + 'Class',
                                     parameters=self.parameters.values(),
-                                    analog_ports=self.analog_ports,
-                                    regimes=self.regimes,
-                                    aliases=self.aliases.values(),
+                                    analog_ports=self.analog_ports.values(),
+                                    event_ports=self.event_ports.values(),
+                                    regimes=self.regimes, aliases=aliases,
                                     state_variables=self.state_variables)
+        class_path = os.path.join(class_dir, comp_class.name + '.xml')
+        comp_class.write(class_path)
+        comp = IonDynamics(self.component_name, definition=class_path,
+                          parameters=self.properties)
+        comp_xml = comp.to_xml()
+        comp_path = os.path.join(comp_dir, comp.name + '.xml')
+        doc = E.NineML(comp_xml)
+        etree.ElementTree(doc).write(comp_path, encoding="UTF-8",
+                                     pretty_print=True, xml_declaration=True)
+        return comp, comp_class
 
     def print_members(self):
         """
@@ -191,43 +222,33 @@ class NMODLImporter(object):
         return td_rhs + simple_rhs + piecewise_rhs + piecewise_test
 
     def _create_parameters_and_analog_ports(self):
-        # Add range variables to analog ports
-        ion_vars = reduce(operator.add,
-                          [r + w for r, w, _ in self.used_ions.itervalues()])
-        for var in self.range_vars:
-            if var not in ion_vars:
-                if var in self.constants:
-                    constant = self.constants[var]
-                    dimension = self._units2dimension(
-                                                  str(constant.dimensionality))
-                    valid_range = self.valid_parameter_ranges.get(var, None)
-                    self.parameters[var] = Parameter(var, dimension=dimension,
-                                                     valid_range=valid_range)
-                elif var in self.aliases:
-                    if (self.component_name and var == 'e' +
-                        self.component_name):
-                        mode = 'recv'
-                        dimension = 'voltage'
-                    else:
-                        mode = 'send'
-                    try:
-                        dimension = self.dimensions[var]
-                    except KeyError:
-                        dimension = None
-                    self.analog_ports.append(AnalogPort(var, mode=mode,
-                                                        dimension=dimension))
         # Add used ions to analog ports
         for name, (read, write, _) in self.used_ions.iteritems():
             for n in read:
-                if n == 'e' + name:
-                    dimension = 'voltage'
-                else:
-                    dimension = 'concentration'
-                self.analog_ports.append(AnalogPort(n, mode='recv',
-                                                    dimension=dimension))
+                # Check to see if ion property isn't specified as fixed in
+                # mod file parameters
+                if n not in self.properties or isnan(self.properties[n][0]):
+                    if n == 'e' + name:
+                        dimension = 'voltage'
+                    elif n == 'i' + name:
+                        dimension = 'membrane_current'
+                    else:
+                        dimension = 'concentration'
+                    self.analog_ports[n] = AnalogPort(n, mode='recv',
+                                                      dimension=dimension)
             for n in write:
-                self.analog_ports.append(AnalogPort(n, mode='send',
-                                                 dimension='membrane_current'))
+                self.analog_ports[n] = AnalogPort(n, mode='send',
+                                                  dimension='membrane_current')
+        # Create parameters for each property
+        for name, (_, units) in self.properties.iteritems():
+            if name not in self.analog_ports:
+                dimension = self._units2dimension(units)
+                self.parameters[name] = Parameter(name, dimension=dimension)
+        # Remove unused unspecified properties (ones that are specified at hoc
+        # level), for which a NaN place holder has been inserted
+        self.properties = dict((n, (v, u))
+                               for n, (v, u) in self.properties.iteritems()
+                               if not isnan(v))
         # Add ports/parameters for reserved NMODL keywords
         uses_celsius = uses_voltage = uses_diam = False
         for expr in self.all_expressions():
@@ -238,33 +259,13 @@ class NMODLImporter(object):
             if re.search(r'(\b)diam(\b)', expr):
                 uses_diam = True
         if uses_voltage:
-            self.analog_ports.append(AnalogPort('v', mode='recv',
-                                                dimension='voltage'))
-        if uses_celsius:
-            self.analog_ports.append(AnalogPort('celsius', mode='recv',
-                                             dimension='absolute_temperature'))
+            self.analog_ports['v'] = AnalogPort('v', mode='recv',
+                                                dimension='voltage')
+        if uses_celsius and 'celsius' not in self.parameters:
+            self.analog_ports['celsius'] = AnalogPort('celsius', mode='recv',
+                                              dimension='absolute_temperature')
         if uses_diam:
             self.parameters['diam'] = Parameter('diam', dimension='length')
-        # Add remaining constants to parameters or aliases (may switch to
-        # separate tag 'constants' at some point in the future)
-        ports_n_params = (self.parameters.keys() +
-                          [a.name for a in self.analog_ports])
-        for name, val in self.constants.iteritems():
-            if name not in ports_n_params:
-                is_constant = False
-                for const in self._inbuilt_constants.itervalues():
-                    try:
-                        frac = (val - const) / const
-                        if abs(frac) < 1e-4:
-                            is_constant = True
-                    except ValueError:
-                        pass
-                if is_constant:
-                    self.aliases[name] = Alias(name, val)
-                elif name != 'celsius':
-                    dimension = self._units2dimension(str(val.units)[4:])
-                    self.parameters[name] = Parameter(name,
-                                                      dimension=dimension)
 
     def _create_regimes(self, expand_kinetics=True):
         self.regimes = []
@@ -283,8 +284,8 @@ class NMODLImporter(object):
                                                     dimension=dimension))
             else:
                 event_port_name = port_name
-            self.event_ports.append(EventPort(name=event_port_name,
-                                              mode='recv'))
+            self.event_ports[event_port_name] = EventPort(name=event_port_name,
+                                                          mode='recv')
             on_event = OnEvent(event_port_name,
                                state_assignments=['{}={}'
                                                   .format(a.lhs, a.rhs)
@@ -449,7 +450,7 @@ class NMODLImporter(object):
             self.dimensions[var] = dimension
 
     def _extract_parameter_and_constant_block(self):
-        # Read constants
+        # Read properties
         block = self.blocks.pop('PARAMETER') + self.blocks.pop('CONSTANT', [])
         for line in self._iterate_block(block):
             parts = assign_re.split(line)
@@ -460,7 +461,8 @@ class NMODLImporter(object):
                 # This is a bit of a hack to specify that this parameter
                 # doesn't have a default value FIXME
                 units = self._sanitize_units(units)
-                self.constants[name] = pq.Quantity(float('nan'), units)
+                if name not in ('celsius', 'v'):
+                    self.properties[name] = (float('nan'), units)
             elif len(parts) == 2:
                 name, rest = parts
                 match = re.match(r'([\d\.e-]+)\s*(\([\d\w\.\*/]+\))?\s*'
@@ -471,15 +473,28 @@ class NMODLImporter(object):
                 if units:
                     units = units[1:-1]
                     units = self._sanitize_units(units)
-                    quantity = pq.Quantity(value, units)
                 else:
-                    quantity = pq.Quantity(value, 'dimensionless')
-                self.constants[name] = quantity
-                valid_range_str = match.group(3)
-                if valid_range_str:
-                    vrange = [float(v)
-                              for v in valid_range_str[1:-1].split(',')]
-                    self.valid_parameter_ranges[name] = vrange
+                    units = 'dimensionless'
+                # Check to see if quantity is really an inbuilt constant and
+                # therefore shouldn't be a parameter
+                quantity = pq.Quantity(value, units)
+                is_constant = False
+                for const in self._inbuilt_constants.itervalues():
+                    try:
+                        frac = (quantity - const) / const
+                        if abs(frac) < 1e-4:
+                            is_constant = True
+                    except ValueError:
+                        pass
+                if is_constant:
+                    self.constants[name] = quantity
+                else:
+                    self.properties[name] = (value, units)
+                    valid_range_str = match.group(3)
+                    if valid_range_str:
+                        vrange = [float(v)
+                                  for v in valid_range_str[1:-1].split(',')]
+                        self.valid_parameter_ranges[name] = vrange
             else:
                 raise Exception("More than one '=' found on parameter block "
                                 "line '{}'".format(line))
@@ -999,7 +1014,7 @@ class NMODLImporter(object):
             if no_otherwise_condition:
                 if lhs in statements:
                     rhs = statements[lhs]
-                elif lhs in self.constants:
+                elif lhs in self.properties:
                     rhs = lhs
                     new_lhs = lhs + '_constrained'
                     subs[lhs] = new_lhs
