@@ -1,0 +1,63 @@
+{#
+   NMODL template for INITIAL block
+
+   This template defines the NMODL INITIAL block which is used to compute
+   the initial values of the system.
+
+   Template variables are:
+
+   - indent: the current indentation level
+   - initEqLocals: a list with the names of all local variables that appear in the initial value expressions of the system
+   - initEqDefs: a list of strings with the initial value equations in NMODL syntax
+   - assignedEqDefs: a list of strings with the assignment equations in NMODL syntax 
+                 (this is used to determine if procedure "asgns" should be called)
+   - kineticEqDefs: a list of strings with the rate equations in NMODL syntax 
+                 (this is used to determine if a "SOLVE _ METHOD sparse" statement should be generated)
+   - reversalPotentialEqDefs: a list of strings with the reversal potential equations
+                     (this is used to set initial reversal potentials for all currents in the system)
+   - poolIons: a list of strings with the pool ions defined in the system
+                     (this is used to determine if procedure "pools" should be called)
+#}
+
+{% if (not (initEqDefs == [])) %}
+
+INITIAL {
+{% if (not (initEqLocals == [])) %}
+  LOCAL {{initEqLocals | join (", ")}}
+{% endif %}
+
+{% for externalEqDef in externalEqDefs %}
+  {{externalEqDef}}
+
+{% endfor %}
+
+{% if (not (assignedEqDefs == [])) %}
+  asgns()
+
+{% endif %}
+	  
+{% for initEqDef in initEqDefs %}
+  {{initEqDef}}
+
+{% endfor %}
+
+{% if (not (kineticEqDefs == [])) %}
+  SOLVE kstates STEADYSTATE sparse
+  reactions()
+
+{% endif %}
+	  
+{% for eq in reversalPotentialEqDefs %}
+  {{eq}}
+
+{% endfor %}
+
+
+{% if (not (poolIons == [])) %}
+  pools()
+
+{% endif %}
+	  
+}
+
+{% endif %}

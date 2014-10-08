@@ -1,0 +1,74 @@
+
+void {{modelName}}::Parameters_::get (DictionaryDatum &d) const
+{
+
+{% for parameterDef in parameters.parameterDefs %}
+   def<double_t>(d, "{{parameterDef.name}}", {{parameterDef.name}});
+{% endfor %}    
+
+{% for defaultDef in parameters.defaultDefs %}
+   def<double_t>(d, "{{defaultDef.name}}", {{defaultDef.name}});
+{% endfor %}    
+    
+}
+
+void {{modelName}}::Parameters_::set (const DictionaryDatum &d)
+{
+
+{% for parameterDef in parameters.parameterDefs %}
+   updateValue<double_t>(d, "{{parameterDef.name}}", {{parameterDef.name}});
+
+{% if parameterDef.scale %}
+   {{parameterDef.name}} = {{parameterDef.scale}} * {{parameterDef.name}};
+
+{% endif %}    
+{% endfor %}    
+
+
+{% for defaultDef in parameters.defaultDefs %}
+   updateValue<double_t>(d, "{{defaultDef.name}}", {{defaultDef.name}});
+
+{% if defaultDef.scale %}
+   {{defaultDef.name}} = {{defaultDef.scale}} * {{defaultDef.name}};
+
+{% endif %}    
+{% endfor %}    
+
+
+{% for eq in defaultEqDefs %}
+   {{eq}}
+
+{% endfor %}    
+
+}
+
+
+void {{modelName}}::State_::get (DictionaryDatum &d) const
+{
+
+{% for stateDef in stateDefs %}
+   def<double_t>(d, "{{stateDef.name}}", y_[{{attr(stateIndexMap,stateDef.name)}}]);
+
+{% endfor %}    
+    
+{% if haskey(stateIndexMap,"v") %}
+   def<double_t>(d, names::V_m, y_[{{attr(stateIndexMap,"v")}}]);
+
+{% endif %}    
+    
+}
+    
+void {{modelName}}::State_::set (const DictionaryDatum &d, const Parameters_&)
+{
+
+{% for stateDef in stateDefs %}
+   updateValue<double_t>(d, "{{stateDef.name}}", y_[{{attr(stateIndexMap,stateDef.name)}}]);
+
+{% endfor %}    
+
+{% if haskey(stateIndexMap,"v") %}
+   updateValue<double_t>(d, names::V_m, y_[{{attr(stateIndexMap,"v")}}]);
+
+{% endif %}    
+    
+}

@@ -1,0 +1,48 @@
+{#
+   NMODL template for BREAKPOINT block
+
+   This template defines the NMODL BREAKPOINT block which is used to compute
+   the currents defined in the system.   
+
+   Template variables are:
+
+   - indent: the current indentation level
+   - currentEqLocals: a list with the names of all local variables that appear in the rate expressions of the system
+   - currentEqDefs: a list of strings with the kinetic equations in NMODL syntax
+   - rateEqDefs: a list of strings with the rate equations in NMODL syntax 
+                 (this is used to determine if a SOLVE statement should be generated)
+   - kineticEqDefs: a list of strings with the rate equations in NMODL syntax 
+                 (this is used to determine if a "SOLVE _ METHOD sparse" statement should be generated)
+   - poolIons: a list of strings with the external pool ion definitions 
+                     (this is used to determine if procedure "pools" should be called)
+   - reactionEqDefs: a list of strings with the reaction quantities
+                     (this is used to determine if procedure "reactions" should be called)
+#}
+
+BREAKPOINT {
+{% if (not (currentEqLocals == [])) %}
+  LOCAL {{currentEqLocals | join (", ")}}
+{% endif %}
+
+{% if (not (rateEqDefs == [])) %}
+  SOLVE states METHOD {{ODEmethod}}
+{% endif %}
+
+{% if (not (kineticEqDefs == [])) %}
+  SOLVE kstates METHOD sparse
+{% endif %}
+
+{% if (not (poolIons == [])) %}
+   pools()
+{% endif %}
+
+{% if (not (reactionEqDefs == [])) %}
+   reactions()
+{% endif %}
+
+{% for eq in currentEqDefs %}
+  {{eq}}
+
+{% endfor %}
+
+}

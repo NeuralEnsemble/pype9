@@ -1,0 +1,34 @@
+
+  /**
+   * Exception to be thrown if a CVode solver does not return CV_SUCCESS
+   * @ingroup KernelExceptions
+   */
+  class CVodeSolverFailure: public KernelException
+  {
+  public:
+    /**
+    * @note model should be passed from get_name() to ensure that
+    *             names of copied models are reported correctly. 
+    * @param model name of model causing problem
+    * @param status exit status of the CVode solver
+    */
+    CVodeSolverFailure(const std::string& model,
+                     const int status)
+      : KernelException("CVodeSolverFailure"),
+        model_(model),
+        status_(status)
+      {}
+    ~CVodeSolverFailure() throw() {}
+    
+    std::string message()
+    {
+      std::ostringstream msg;
+      msg << "In model " << model_ << ", the CVODE solver "
+          << "returned with exit status " << status_ << ".\n";
+      return msg.str();
+    }
+
+    private:
+      const std::string model_;
+      const int status_;
+  };

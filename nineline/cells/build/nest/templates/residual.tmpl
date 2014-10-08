@@ -1,0 +1,25 @@
+
+{% if (ODEmethod == "ida") %}
+
+extern "C" int {{modelName}}_residual (double t, N_Vector y, N_Vector yp, N_Vector f, void* pnode)
+{
+   int status; 
+
+   // cast the node ptr to an object of the proper type
+   assert(pnode);
+   const {{modelName}} & node =  *(reinterpret_cast<{{modelName}}*>(pnode));
+   {{modelName}} & vnode =  *(reinterpret_cast<{{modelName}}*>(pnode));
+
+   N_Vector y1 = vnode.B_.y1;
+             
+   status = {{modelName}}_dynamics (t, y, y1, pnode);
+
+   {% for eq in residualRateEqDefs %}
+   {{eq}}
+
+   {% endfor %}
+
+   return status;
+}
+
+{% endif %}

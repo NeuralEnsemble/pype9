@@ -1,0 +1,35 @@
+
+// Diagonal Jacobian approximation: (f(s+.01) - f(s))/.001 
+
+// GSL:
+// int (* jacobian) (double t, const double y[], double * dfdy, double dfdt[], void * params);
+
+{% if (ODEmethod == "gsl") %}
+
+extern "C" int {{modelName}}_jacobian (double t, const double y[], double *dfdy, double dfdt[], void* pnode)
+{
+   // cast the node ptr to an object of the proper type
+   assert(pnode);
+   const {{modelName}} & node = *(reinterpret_cast<{{modelName}}*>(pnode));
+   {{modelName}} & vnode =  *(reinterpret_cast<{{modelName}}*>(pnode));
+
+   // state is a reference to the model state
+   struct {{modelName}}::Buffers_ *b;
+   b = &(vnode.B_);
+
+   for (int i = 0; i < b->N; i++) 
+   {
+       b->u[i] = y[i] + 0.01;
+   }
+
+   {{modelName}}_dynamics(t, b->u, b->jac, pnode);
+   for (int i = 0; i < b->N; i++) 
+   {
+       dfdt[i*b->N + i] = (b->jac[i] - dfdy[i]) / .001;
+   }
+   return 0;
+
+}
+
+{% endif %}
+

@@ -1,0 +1,127 @@
+{{modelName}}::State_::State_ (const Parameters_& p)
+{
+
+{% if (not (init.localVars == [])) %}
+   double {{init.localVars | join(", ")}};
+{% endif %}
+
+   const Parameters_ *params = &p;
+
+{% if (ODEmethod == "gsl") %}
+   r_ = 0;
+{% endif %}
+
+   memset(y_,0,{{stateSize}}*sizeof(double));
+
+{% for parameterDef in init.parameterDefs %}
+   {{parameterDef}}
+
+{% endfor %}
+
+{% for eq in init.initOrder %}
+   {{eq}}
+
+{% endfor %}
+    
+{% for eq in init.initEqDefs %}
+   {{eq}}
+
+{% endfor %}
+
+{% for ceq in constraintEqDefs %}
+   if (!(({{ceq.left}}) {{ceq.op}} ({{ceq.right}}))) 
+      { throw BadProperty ("Constraint {{ceq.str}} is not satisfied."); }; 
+
+{% endfor %}
+
+{% if (steadyStateSize > 0) %}
+
+{% if (SSmethod  == "kinsol") %}
+
+  N_Vector {{SSvector}};
+  ssvect = N_VNew_Serial({{steadyStateSize}});
+
+  fsolve ({{modelName}}_steadystate, {{steadyStateSize}}, {{SSvector}},
+          (void *)&p,  "{{modelName}}");
+    
+{% for name in rateEqStates %}
+{% if (haskey(steadyStateIndexMap,name)) %}
+   y_[{{attr(stateIndexMap,name)}}] = Ith({{SSvector}}, {{attr(steadyStateIndexMap,name)}});
+
+{% else %}
+   y_[{{attr(stateIndexMap,name)}}] = {{name}};
+
+{% endif %}
+{% endfor %}
+             
+   N_VDestroy_Serial ({{SSvector}});
+
+{% else %}
+
+   gsl_vector *{{SSvector}};
+   {{SSvector}} = gsl_vector_alloc ({{steadyStateSize}});
+   fsolve ({{modelName}}_steadystate, {{steadyStateSize}}, {{SSvector}},
+           (void *)&p, "{{modelName}}");
+             
+{% for name in init.rateEqStates %}
+{% if (haskey(steadyStateIndexMap,name)) %}
+   y_[{{attr(stateIndexMap,name)}}] = gsl_vector_get({{SSvector}}, {{attr(steadyStateIndexMap,name)}});
+
+{% else %}
+   y_[{{attr(stateIndexMap,name)}}] = {{name}};
+
+{% endif %}
+{% endfor %}
+
+   gsl_vector_free ({{SSvector}});
+
+{% for eq in init.reactionEqDefs %}
+   {{eq}}
+
+{% endfor %}
+    
+{% for eq in currentEqDefs %}
+   {{eq}}
+
+{% endfor %}
+
+{% if (haskey(steadyStateIndexMap,"v")) %}
+   y_[{{attr(steadyStateIndexMap,"v")}}] =  v;
+
+{% endif %}
+{% endif %}
+{% endif %}
+
+}
+
+
+{{modelName}}::State_::State_ (const State_& s)  
+{
+
+{% if (ODEmethod == "gsl") %}
+  r_ = s.r_;
+{% endif %}
+        
+  for ( int i = 0 ; i < {{stateSize}} ; ++i ) 
+  {
+      y_[i] = s.y_[i];
+  }
+
+}
+
+
+{{modelName}}::State_& {{modelName}}::State_::operator=(const State_& s)
+{
+
+{% if (ODEmethod == "gsl") %}
+  r_ = s.r_;
+{% endif %}
+        
+  assert(this != &s);  
+  for ( size_t i = 0 ; i < {{stateSize}} ; ++i )
+       y_[i] = s.y_[i];
+
+  return *this;
+
+}
+

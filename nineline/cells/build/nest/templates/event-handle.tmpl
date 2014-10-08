@@ -1,0 +1,35 @@
+  
+void {{modelName}}::handle(SpikeEvent & e)
+  {
+    int flag;
+    assert(e.get_delay() > 0);
+    flag = 0;
+
+{% for synapticEvent in synapticEventDefs %}
+    if ((flag==0) && (e.get_rport() == {{synapticEvent.pscName}}_SPIKE_RECEPTOR ) && 
+        (e.get_weight() > {% if synapticEvent.wthreshold %}P_.{{synapticEvent.wthreshold}}{% else %}0.0{% endif %}))
+      {
+	B_.spike_{{synapticEvent.pscId}}.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
+			                           fabs(e.get_weight()) * e.get_multiplicity());
+        flag = 1;
+      }
+{% endfor %}
+
+  }
+
+
+void {{modelName}}::handle(CurrentEvent& e)
+  {
+    assert(e.get_delay() > 0);
+
+    const double_t c = e.get_current();
+    const double_t w = e.get_weight();
+
+    B_.currents_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()), w * c);
+  }
+
+
+void {{modelName}}::handle(DataLoggingRequest& e)
+  {
+    B_.logger_.handle(e);
+  }

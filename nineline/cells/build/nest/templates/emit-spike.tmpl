@@ -1,0 +1,28 @@
+
+{% if ((ODEmethod == "cvode") or (ODEmethod == "ida")) %}
+   {
+      set_spiketime(Time::ms(tt));
+      SpikeEvent se;
+      for (int i = 0; i < N; i++)
+      {
+          S_.y_[i] = Ith(B_.y,i);
+      }
+      network()->send(*this, se, lag);
+      adjust_zero_crossings(B_.y, {% if abstol %}{{abstol}}{% else %}1e-7{% endif %});
+      continue;
+   }
+
+{% elif ((ODEmethod == "gsl") and ("V_t" in defaultDefs)) %}
+
+         if ( S_.r_ > 0 )
+	    S_.r_--;
+         else
+	    if (S_.y_[{{attr(stateIndexMap,"v")}}] >= P_.V_t && V_.U_old_ > S_.y_[{{attr(stateIndexMap,"v")}}])
+	      {
+                S_.r_ = V_.RefractoryCounts_;
+		set_spiketime(Time::step(origin.get_steps()+lag+1));
+		SpikeEvent se;
+		network()->send(*this, se, lag);
+	      };
+
+{% endif %}

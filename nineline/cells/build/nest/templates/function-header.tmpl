@@ -1,0 +1,15 @@
+
+{#
+   NEST function header template 
+
+   Template variables are:
+
+   - name: string with the name of the function
+   - vars: list of strings with the name of the arguments
+   - localVars: list of strings with the name of any local variables
+   - returnVar: the name of the return variable
+   - exprString: string with expression body converted to NMODL syntax
+   
+#}
+
+{{functionDef.returnType}} {{functionDef.name}} ({{ functionDef.vars | join (", ") }});

@@ -1,0 +1,53 @@
+
+{% if ((ODEmethod == "cvode") or (ODEmethod == "ida")) %}
+
+{{modelName}}::Buffers_::Buffers_({{modelName}}& n)
+    : logger_(n),
+      sys_(0)
+{
+    // Initialization of the remaining members is deferred to
+    // init_buffers_().
+}
+
+
+{{modelName}}::Buffers_::Buffers_(const Buffers_&, {{modelName}}& n)
+    : logger_(n),
+      sys_(0)
+{
+    // Initialization of the remaining members is deferred to
+    // init_buffers_().
+}
+
+
+{% elif (ODEmethod == "gsl") %}
+
+
+{{modelName}}::Buffers_::Buffers_({{modelName}}& n)
+    : logger_(n),
+      s_(0),
+      c_(0),
+      e_(0),
+      N(0),
+      u(0),
+      jac(0)
+{
+    // Initialization of the remaining members is deferred to
+    // init_buffers_().
+}
+
+
+{{modelName}}::Buffers_::Buffers_(const Buffers_&, {{modelName}}& n)
+    : logger_(n),
+      s_(0),
+      c_(0),
+      e_(0),
+      N(0),
+      u(0),
+      jac(0)
+{
+    // Initialization of the remaining members is deferred to
+    // init_buffers_().
+}
+
+
+{% endif %}

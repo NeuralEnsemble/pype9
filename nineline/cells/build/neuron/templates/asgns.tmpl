@@ -1,0 +1,29 @@
+{#
+   NMODL template for assignment equations
+
+   This template defines an NMODL procedure called "asgns" which is
+   invoked in the DERIVATIVE and the INITIAL blocks to set the values of
+   the assigned quantities.
+
+   Template variables are:
+
+   - indent: the current indentation level
+   - assignedEqLocals: a list with the names of all local variables that appear 
+                       in the right-hand side of the assignment equations
+   - assignedEqDefs: a list of strings with the assignment equations in NMODL syntax
+#}
+
+{% if (not (assignedEqDefs == [])) %}
+
+PROCEDURE asgns () {
+{% if (not (assignedEqLocals == [])) %}
+  LOCAL {{assignedEqLocals | join (", ")}}
+{% endif %}
+{% for assignedEqDef in assignedEqDefs %}
+  {{assignedEqDef}}
+
+{% endfor %}
+
+}
+
+{% endif %}

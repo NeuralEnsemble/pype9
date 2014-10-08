@@ -1,0 +1,97 @@
+    
+  void {{modelName}}::update(Time const & origin, const long_t from, const long_t to)
+  {
+
+    assert(to >= 0 && (delay) from < Scheduler::get_min_delay());
+    assert(from < to);
+
+    double tout;
+    long_t current_steps = origin.get_steps();
+
+    for ( long_t lag = from ; lag < to ; ++lag )
+      {
+        double h = B_.step_;    
+	double tt = 0.0 ; 
+
+{% if (ODEmethod == "cvode") %}
+
+        int N = NV_LENGTH_S (B_.y);
+        tout = (current_steps+lag)*h;
+
+	// adaptive step integration
+	while (tt < tout)
+	{
+	  const int status = CVode (B_.sys_, tout, B_.y, &tt, CV_NORMAL);
+
+          switch (status)
+            {
+                case CV_SUCCESS:      continue;
+                case CV_ROOT_RETURN:  {% include "NEST-emit-spike.tmpl" %};
+                default:              throw CVodeSolverFailure (get_name(), 0);
+            }
+   	}
+
+        for (int i = 0; i < N; i++)
+        {
+           S_.y_[i] = Ith(B_.y,i);
+        }
+
+        {% include "NEST-solver-events.tmpl" %}
+
+{% elif (ODEmethod == "ida") %}
+
+        int N = NV_LENGTH_S (B_.y);
+        tout = (current_steps+lag)*h;
+
+	// adaptive step integration
+	while (tt < tout)
+	{
+	  const int status = IDASolve (B_.sys_, tout, &tt, B_.y, B_.yp, IDA_NORMAL);
+
+          switch (status)
+            {
+                case IDA_SUCCESS:      continue;
+                case IDA_ROOT_RETURN:  {% include "NEST-emit-spike.tmpl" %};
+                case IDA_TSTOP_RETURN: break;
+                default:               throw IDASolverFailure (get_name(), 0);
+            }
+   	}
+
+        for (int i = 0; i < N; i++)
+        {
+           S_.y_[i] = Ith(B_.y,i);
+        }
+
+        {% include "NEST-solver-events.tmpl" %}
+
+{% elif (ODEmethod == "gsl") %}
+
+        V_.U_old_ = S_.y_[{{attr(stateIndexMap,"v")}}];
+
+        while (tt < h)
+        {
+
+           const int status = 
+             gsl_odeiv2_evolve_apply
+             (B_.e_, B_.c_, B_.s_, 
+              &B_.sys_, // system of ODE
+              &tt, // from t...
+              h, // ...to t=t+h
+              &B_.IntegrationStep_, // integration window (written on!)
+              S_.y_); // neuron state
+
+           if ( status != GSL_SUCCESS )
+             throw GSLSolverFailure(get_name(), status);
+
+        }
+        
+        {% include "NEST-emit-spike.tmpl" %}
+
+        {% include "NEST-solver-events.tmpl" %}
+
+{% endif %}
+        B_.I_stim_ = B_.currents_.get_value(lag);
+        B_.logger_.record_data(current_steps + lag);
+      }
+  }
+
