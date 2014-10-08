@@ -92,7 +92,7 @@ class TestNMODLImporter(unittest.TestCase):
     def test_nmodl_import(self):
         importer = NMODLImporter('/home/tclose/git/kbrain/external/'
                                  'fabios_network/Golgi_hcn2.mod')
-        component, componentclass = importer.write_component_and_class('/tmp')
+        component, componentclass = importer.get_component_class('/tmp')
 #         imported_tree = etree.parse(fname)
 #         reference_tree = etree.fromstring(self.ref_xml)
 #         self.assertEqual(imported_tree, reference_tree)
@@ -114,12 +114,16 @@ class TestNeuronImporter(unittest.TestCase):
 #                                          'Haroon_active_reduced_model/9ml')
         importer = NeuronImporter('/home/tclose/git/kbrain/external/'
                                   'fabios_network',
-                                   ['load_fabios_granule.hoc'])
-        importer.write_ion_current_files('/home/tclose/git/kbrain/external/'
-                                         'fabios_network/9ml')
+                                   ['load_sergios_golgi.hoc'])
+        importer.write_ion_current_files(class_dir=('/home/tclose/git/kbrain/'
+                                                    'external/fabios_network/'
+                                                    '9ml/classes'),
+                                         comp_dir=('/home/tclose/git/kbrain/'
+                                                   'external/fabios_network/'
+                                                   '9ml/components'))
 if __name__ == '__main__':
-    test = TestNMODLImporter()
-    test.test_nmodl_import()
+#     test = TestNMODLImporter()
+#     test.test_nmodl_import()
     test = TestNeuronImporter()
     test.test_neuron_import()
     print "done"

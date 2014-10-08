@@ -1,5 +1,7 @@
 import os
 import re
+from lxml import etree
+from lxml.builder import E
 from nineml.exceptions import NineMLMathParseError, NineMLRuntimeError
 from .hoc import HocImporter
 from .nmodl import NMODLImporter
@@ -16,14 +18,37 @@ class NeuronImporter(object):
         self._scan_dir_for_mod_files()
         self._create_nmodl_importers()
 
-    def write_ion_current_files(self, output_dir):
-        for imptr in self.nmodl_importers.itervalues():
-            try:
-                imptr.write_component_and_class(output_dir)
-            except NineMLRuntimeError as e:
-                imptr.print_members()
-                print ("\nCould not write '{}' component because of:\n{}"
-                       .format(imptr.component_name, e))
+    def write_ion_current_files(self, class_dir, comp_dir):
+        class_dir = os.path.abspath(class_dir)
+        comp_dir = os.path.abspath(comp_dir)
+        class_paths = {}
+        for component in self.hoc_importer.model.components.itervalues():
+            class_name = component.class_name
+            if (class_name in self.known_components or
+                class_name.endswith('_ion')):
+                continue
+            nmodl_imptr = self.nmodl_importers[class_name]
+            if class_name not in class_paths:
+                try:
+                    class9ml = nmodl_imptr.get_component_class()
+                    class_path = os.path.join(class_dir,
+                                              nmodl_imptr.component_name +
+                                              '_Class.xml')
+                    class9ml.write(class_path)
+                    class_paths[class_name] = class_path
+                except NineMLRuntimeError as e:
+                    nmodl_imptr.print_members()
+                    print ("\nCould not write '{}' component because of:\n{}"
+                           .format(nmodl_imptr.component_name, e))
+                    continue
+            comp9ml = nmodl_imptr.get_component(class_paths[class_name],
+                                           hoc_properties=component.parameters)
+            comp_xml = comp9ml.to_xml()
+            comp_path = os.path.join(comp_dir, component.name + '.xml')
+            doc = E.NineML(comp_xml)
+            etree.ElementTree(doc).write(comp_path, encoding="UTF-8",
+                                         pretty_print=True,
+                                         xml_declaration=True)
 
     def _scan_dir_for_mod_files(self):
         self.available_mods = {}

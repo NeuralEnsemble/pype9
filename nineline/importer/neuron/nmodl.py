@@ -1,14 +1,11 @@
 from math import isnan
-import os.path
 import re
 import regex
 import operator
-from lxml import etree
-from lxml.builder import E
+from copy import copy
 import quantities as pq
 import collections
 from nineml.maths import is_builtin_symbol
-from nineml.abstraction_layer.xmlns import NINEML
 from nineml.abstraction_layer.components.interface import Parameter
 from nineml.abstraction_layer.dynamics.component import ComponentClass
 from nineml.abstraction_layer.dynamics import Regime, StateVariable, OnEvent
@@ -143,11 +140,7 @@ class NMODLImporter(object):
         self._create_parameters_and_analog_ports()
         self._create_regimes()
 
-    def write_component_and_class(self, comp_dir=os.getcwd(),
-                                  class_dir=None):
-        comp_dir = os.path.abspath(comp_dir)
-        if not class_dir:
-            class_dir = comp_dir
+    def get_component_class(self):
         aliases = self.aliases.values() + [Alias(n, v)
                                            for n, v in self.constants.items()]
         comp_class = ComponentClass(name=self.component_name + 'Class',
@@ -156,16 +149,21 @@ class NMODLImporter(object):
                                     event_ports=self.event_ports.values(),
                                     regimes=self.regimes, aliases=aliases,
                                     state_variables=self.state_variables)
-        class_path = os.path.join(class_dir, comp_class.name + '.xml')
-        comp_class.write(class_path)
+        return comp_class
+
+    def get_component(self, class_path, hoc_properties={}):
+        # Copy properties removing all properties that were added to the analog
+        # ports
+        properties = dict((n, (v, u))
+                          for n, (v, u) in self.properties.iteritems()
+                          if n not in self.analog_ports)
+        # Update the parameters of the properties using the hoc set parameters
+        # and the units specified in the NMODL file
+        properties.update((n, (v, self.properties[n][1]))
+                          for n, v in hoc_properties.iteritems())
         comp = IonDynamics(self.component_name, definition=class_path,
-                          parameters=self.properties)
-        comp_xml = comp.to_xml()
-        comp_path = os.path.join(comp_dir, comp.name + '.xml')
-        doc = E.NineML(comp_xml)
-        etree.ElementTree(doc).write(comp_path, encoding="UTF-8",
-                                     pretty_print=True, xml_declaration=True)
-        return comp, comp_class
+                          parameters=properties)
+        return comp
 
     def print_members(self):
         """
@@ -176,14 +174,14 @@ class NMODLImporter(object):
         print "     {}      ".format(self.component_name)
         print "------------------"
         print "\nParameters:"
-        for p in self.parameters.values():
+        for p in self.parameters.itervalues():
             print '{}'.format(p.name)
         print "\nReceive Analog Ports:"
-        for p in self.analog_ports:
+        for p in self.analog_ports.itervalues():
             if p.mode == 'recv':
                 print '{}'.format(p.name)
         print "\nSend Analog Ports:"
-        for p in self.analog_ports:
+        for p in self.analog_ports.itervalues():
             if p.mode == 'send':
                 print '{}'.format(p.name)
         print "\nTime derivatives:"
@@ -244,11 +242,6 @@ class NMODLImporter(object):
             if name not in self.analog_ports:
                 dimension = self._units2dimension(units)
                 self.parameters[name] = Parameter(name, dimension=dimension)
-        # Remove unused unspecified properties (ones that are specified at hoc
-        # level), for which a NaN place holder has been inserted
-        self.properties = dict((n, (v, u))
-                               for n, (v, u) in self.properties.iteritems()
-                               if not isnan(v))
         # Add ports/parameters for reserved NMODL keywords
         uses_celsius = uses_voltage = uses_diam = False
         for expr in self.all_expressions():
