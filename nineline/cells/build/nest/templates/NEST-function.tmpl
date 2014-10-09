@@ -16,10 +16,10 @@
 
   double {{functionDef.returnVar}};
 
-{% if (!(functionDef.localVars == [])) %}
+{% if (not (functionDef.localVars == [])) %}
   double {{functionDef.localVars | join(", ")}};
 {% endif %}
-{% if (!(functionDef.consts == [])) %}
+{% if (not (functionDef.consts == [])) %}
   double {{functionDef.consts | join(", ")}};
   const {{modelName}}::Parameters_ & p = *(reinterpret_cast< const {{modelName}}::Parameters_ *>(params));
 

@@ -66,7 +66,7 @@
 
 {% elif (ODEmethod == "gsl") %}
 
-        V_.U_old_ = S_.y_[{{attr(stateIndexMap,"v")}}];
+        V_.U_old_ = S_.y_[{{stateIndexMap | attr("v")}}];
 
         while (tt < h)
         {

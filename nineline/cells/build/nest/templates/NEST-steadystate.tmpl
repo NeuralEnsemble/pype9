@@ -64,7 +64,7 @@ extern "C" int {{modelName}}_steadystate (const gsl_vector *u, void *pnode, gsl_
 {% endfor %}
 
 {% for x in steadystate.SSsetStateDefsLbs %}
-{% if (!(x.lbs == [])) %}
+{% if (not (x.lbs == [])) %}
    double {{x.lbs | join(", ")}};
 
 {% endif %}
