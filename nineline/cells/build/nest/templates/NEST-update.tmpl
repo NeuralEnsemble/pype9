@@ -1,6 +1,5 @@
-    
-  void {{modelName}}::update(Time const & origin, const long_t from, const long_t to)
-  {
+  void {{modelName}}::update(Time const & origin, const long_t from,
+                             const long_t to) {
 
     assert(to >= 0 && (delay) from < Scheduler::get_min_delay());
     assert(from < to);
@@ -26,7 +25,7 @@
           switch (status)
             {
                 case CV_SUCCESS:      continue;
-                case CV_ROOT_RETURN:  {% include "NEST-emit-spike.tmpl" %};
+                case CV_ROOT_RETURN:  {% include "NEST-emit-spike-cvode.tmpl" %};
                 default:              throw CVodeSolverFailure (get_name(), 0);
             }
    	}
@@ -51,7 +50,7 @@
           switch (status)
             {
                 case IDA_SUCCESS:      continue;
-                case IDA_ROOT_RETURN:  {% include "NEST-emit-spike.tmpl" %};
+                case IDA_ROOT_RETURN:  {% include "NEST-emit-spike-cvode.tmpl" %};
                 case IDA_TSTOP_RETURN: break;
                 default:               throw IDASolverFailure (get_name(), 0);
             }
@@ -85,7 +84,7 @@
 
         }
         
-        {% include "NEST-emit-spike.tmpl" %}
+        {% include "NEST-emit-spike-gsl.tmpl" %}
 
         {% include "NEST-solver-events.tmpl" %}
 

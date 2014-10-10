@@ -24,8 +24,7 @@
                       time step and assign them to local variables
    - eqOrderDefs - topologically sorted list of strings with
                    external, assignment, reaction, pool equations in C++ syntax
-   - rateOrderDefs - list of strings with the rate equatins in C++ syntax
-
+   - rateOrderDefs - list of strings with the rate equatins in C++ syntaxa
 #}
 
 {% if ((ODEmethod == "cvode") or (ODEmethod == "ida") ) %}
@@ -60,22 +59,18 @@ extern "C" int {{modelName}}_dynamics (double t, const double y[], double f[], v
 
 {% for parameterDef in dynamics.parameterDefs %}
    {{parameterDef}}
-
 {% endfor %}
 
 {% for eq in dynamics.ratePrevEqDefs %}
    {{eq}}
-
 {% endfor %}
 
 {% for eq in dynamics.eqOrderDefs %}
    {{eq}}
-
 {% endfor %}
 
 {% for eq in dynamics.rateEqDefs %}
    {{eq}}
-
 {% endfor %}
 
 {% if ((ODEmethod == "cvode") or (ODEmethod == "ida") ) %}

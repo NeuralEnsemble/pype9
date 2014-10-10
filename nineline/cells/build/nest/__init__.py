@@ -13,7 +13,7 @@ import os.path
 import subprocess as sp
 import shutil
 
-from .__init__ import (path_to_exec, get_build_paths,
+from ..__init__ import (path_to_exec, get_build_paths,
                        load_component_translations)
 
 _SIMULATOR_BUILD_NAME = 'nest'

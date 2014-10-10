@@ -20,44 +20,29 @@
 #}
 
 {% if (not (initEqDefs == [])) %}
-
 INITIAL {
 {% if (not (initEqLocals == [])) %}
   LOCAL {{initEqLocals | join (", ")}}
 {% endif %}
-
 {% for externalEqDef in externalEqDefs %}
   {{externalEqDef}}
-
 {% endfor %}
-
 {% if (not (assignedEqDefs == [])) %}
   asgns()
-
 {% endif %}
-	  
 {% for initEqDef in initEqDefs %}
   {{initEqDef}}
-
 {% endfor %}
-
 {% if (not (kineticEqDefs == [])) %}
   SOLVE kstates STEADYSTATE sparse
   reactions()
-
 {% endif %}
 	  
 {% for eq in reversalPotentialEqDefs %}
   {{eq}}
-
 {% endfor %}
-
-
 {% if (not (poolIons == [])) %}
   pools()
-
-{% endif %}
-	  
+{% endif %} 
 }
-
 {% endif %}
