@@ -1,3 +1,23 @@
+{#
+   NEST spike emission 
+
+   This template generates code that handles detection of spiking
+   threshold and generation of corresponding spike events.
+
+   Template variables are:
+
+   - ODEmethod: the current used solver method; can be "cvode" "ida" or "gsl"
+   - modelName: the name of the current system
+   - abstol: the absolute error tolerance, if given
+   - stateIndexMap: a dictionary mapping state names to state vector indices
+                     (state "v" is always at index 0)
+   - defaultDefs: a dictionary of "default" parameters. 
+
+    When the GSL method is chosen, defaultDefs is used to obtain the
+    value of the V_t parameter, which if present determines the
+    spiking threshold.
+
+#}
 
 {% if ((ODEmethod == "cvode") or (ODEmethod == "ida")) %}
    {
