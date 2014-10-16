@@ -1,8 +1,16 @@
 import os
 from jinja2 import Environment, FileSystemLoader
+from nineline.cells.build.nest import (run_bootstrap, create_configure_ac,
+                                       create_makefile,
+                                       create_boilerplate_cpp,
+                                       create_sli_initialiser)
+import subprocess as sp
 
-env = Environment(loader=FileSystemLoader(os.getenv("HOME") + "/git/nineline/nineline/cells/build/neuron/templates/"),
+env = Environment(loader=FileSystemLoader(os.getenv("HOME") + "/git/nineline/nineline/cells/build/nest/templates/"),
                   trim_blocks=True)
+
+build_dir = '/home/tclose/Desktop/hodgkin_huxley_test'
+biophysics_name = 'hodgkin_huxley'
 
 cpp_template = env.get_template('NEST.tmpl')
 header_template = env.get_template('NEST-header.tmpl')
@@ -22,28 +30,28 @@ Ith(f,3)  =  -(K_m48O * comp29_bnf(v, params)) + (1.0 - v54) * (comp29_anf(v, pa
                  'functionDefs' : [{'consts' : [], 'returnVar' : '''rv56''', 'returnType' : '''double''', 'exprString' : '''rv56  =  0.1 * (v + 40.0) / (1.0 + -(exp(-(v + 40.0) / 10.0)));''', 'localVars' : [], 'vars' : ['''double v''', '''const void* params'''], 'name' : '''comp21_amf'''}, 
                                  {'consts' : [], 'returnVar' : '''rv57''', 'returnType' : '''double''', 'exprString' : '''rv57  =  0.125 * exp(-(v + 65.0) / 80.0);''', 'localVars' : [], 'vars' : ['''double v''', '''const void* params'''], 'name' : '''comp29_bnf'''}, 
                                  {'consts' : [], 'returnVar' : '''rv58''', 'returnType' : '''double''', 'exprString' : '''rv58  =  0.07 * exp(-(v + 65.0) / 20.0);''', 'localVars' : [], 'vars' : ['''double v''', '''const void* params'''], 'name' : '''comp21_ahf'''}, {'consts' : [], 'returnVar' : '''rv59''', 'returnType' : '''double''', 'exprString' : '''rv59  =  4.0 * exp(-(v + 65.0) / 18.0);''', 'localVars' : [], 'vars' : ['''double v''', '''const void* params'''], 'name' : '''comp21_bmf'''}, {'consts' : [], 'returnVar' : '''rv60''', 'returnType' : '''double''', 'exprString' : '''rv60  =  1.0 / (1.0 + exp(-(v + 35.0) / 10.0));''', 'localVars' : [], 'vars' : ['''double v''', '''const void* params'''], 'name' : '''comp21_bhf'''}, {'consts' : [], 'returnVar' : '''rv61''', 'returnType' : '''double''', 'exprString' : '''rv61  =  0.01 * (v + 55.0) / (1.0 + -(exp(-(v + 55.0) / 10.0)));''', 'localVars' : [], 'vars' : ['''double v''', '''const void* params'''], 'name' : '''comp29_anf'''}],
-                 
+
                  'exports' : ['''comp19_Vrest''', '''comp19_V_t''', '''comp20_C''', '''comp21_e_Na''', '''comp21_gbar_Na''', '''comp29_gbar_K''', '''comp29_e_K''', '''comp35_e_Leak''', '''comp35_gbar_Leak''', '''Na_m42''', '''Na_h43''', '''K_m48'''],
-                 
+
                  'hasEvents' : False,
-                 
+
                  'defaultDefs' : ['''Vrest''', '''V_t'''],
-                 
+
                  'stateDefs' : [{'name' : '''K_m48O''', 'scale' : False}, {'name' : '''Na_h43O''', 'scale' : False}, {'name' : '''Na_m42O''', 'scale' : False}, {'name' : '''v''', 'scale' : False}],
-                 
+
                  'steadyStateIndexMap' : {},
-                 
+
                  'stateIndexMap' : {'K_m48O' : 3, 'Na_h43O' : 2, 'Na_m42O' : 1, 'v' : 0},
-                 
+
                  'steadyStateSize' : 0,
                  'stateSize' : 4,
-                 
+
                  'SSvector' : '''ssvect55''',
                  'SSmethod' : False,
                  'ODEmethod' : '''gsl''',
                  'reltol' : False,
                  'abstol' : False,
-                 
+
                  'modelName' : '''hodgkin_huxley''',
                  'nemoVersionString' : '''NEMO (http://wiki.call-cc.org/nemo) version 9.0''',
                  'currentTimestamp' : '''Thu Oct  9 10:28:01 2014'''}
@@ -52,10 +60,27 @@ output_cpp = cpp_template.render(**template_args)
 output_header = header_template.render(**template_args)
 
 
-with open('hodgkin_huxley.cpp', 'w') as f:
+with open(os.path.join(build_dir, 'hodgkin_huxley.cpp'), 'w') as f:
     f.write(output_cpp)
 
-with open('hodgkin_huxley.h', 'w') as f:
+with open(os.path.join(build_dir, biophysics_name + '.h'), 'w') as f:
     f.write(output_header)
 
-
+if not os.path.exists(os.path.join(build_dir, 'Makefile')):
+    # Generate configure.ac and Makefile
+    create_configure_ac(biophysics_name, build_dir)
+    create_makefile(biophysics_name, biophysics_name, build_dir)
+    create_boilerplate_cpp(biophysics_name, build_dir)
+    create_sli_initialiser(biophysics_name, build_dir)
+    # Run bootstrapping
+    run_bootstrap(build_dir)
+    # Run configure script
+    os.chdir(build_dir)
+    sp.check_call('{src_dir}/configure --prefix={install_dir}'
+                  .format(src_dir=build_dir,
+                          install_dir=os.path.join(build_dir, 'bin')),
+                  shell=True)
+# Run make
+sp.check_call('make', shell=True)
+# Run install
+sp.check_call('make install', shell=True)

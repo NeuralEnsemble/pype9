@@ -1,7 +1,7 @@
 	if ( S_.r_ > 0 )
 	   S_.r_--;
-	else if (S_.y_[{{attr(stateIndexMap,"v")}}] >= P_.V_t &&
-	    V_.U_old_ > S_.y_[{{attr(stateIndexMap,"v")}}]) {
+	else if (S_.y_[{{stateIndexMap["v"]}}] >= P_.V_t &&
+	    V_.U_old_ > S_.y_[{{stateIndexMap["v"]}}]) {
 	    S_.r_ = V_.RefractoryCounts_;
 		set_spiketime(Time::step(origin.get_steps()+lag+1));
 	   	SpikeEvent se;

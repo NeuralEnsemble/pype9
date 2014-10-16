@@ -47,12 +47,12 @@ void {{modelName}}::State_::get (DictionaryDatum &d) const
 {
 
 {% for stateDef in stateDefs %}
-   def<double_t>(d, "{{stateDef.name}}", y_[{{stateIndexMap | attr(stateDef.name)}}]);
+   def<double_t>(d, "{{stateDef.name}}", y_[{{stateIndexMap[stateDef.name]}}]);
 
 {% endfor %}    
     
 {% if ("v" in stateIndexMap) %}
-   def<double_t>(d, names::V_m, y_[{{stateIndexMap | attr("v")}}]);
+   def<double_t>(d, names::V_m, y_[{{stateIndexMap["v"]}}]);
 
 {% endif %}    
     
