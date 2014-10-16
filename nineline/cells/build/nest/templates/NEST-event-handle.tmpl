@@ -1,3 +1,26 @@
+{#
+   NEST event handlers template 
+
+   This template defines three C++ methods of the form:
+
+   int modelName::handle (SpikeEvent &e)
+   int modelName::handle (CurrentEvent &e)
+   int modelName::handle (DataLoggingRequest& e)
+
+   These methods handle receiving spike events, current injection
+   events, and data logging requests, respectively.
+
+   Template variables are:
+
+   - modelName: the name of the current system
+   - synapticEventDefs - a list of synaptic event objects that have the following fields:
+
+     - pscName - descriptive name (label) of the post-synaptic conductance component
+     - pscId - unique identifier of the post-synaptic conductance component
+     - wthreshold - threshold for synaptic event weights - 
+       if defined, events with weight below wthreshold are discarded
+
+#}
   
 void {{modelName}}::handle(SpikeEvent & e)
   {

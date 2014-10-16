@@ -45,11 +45,11 @@
           (void *)&p,  "{{modelName}}");
     
 {% for name in rateEqStates %}
-{% if (haskey(steadyStateIndexMap,name)) %}
-   y_[{{attr(stateIndexMap,name)}}] = Ith({{SSvector}}, {{attr(steadyStateIndexMap,name)}});
+{% if (name in steadyStateIndexMap) %}
+   y_[{{stateIndexMap | attr(name)}}] = Ith({{SSvector}}, {{steadyStateIndexMap | attr(name)}});
 
 {% else %}
-   y_[{{attr(stateIndexMap,name)}}] = {{name}};
+   y_[{{stateIndexMap | attr(name)}}] = {{name}};
 
 {% endif %}
 {% endfor %}
@@ -64,11 +64,11 @@
            (void *)&p, "{{modelName}}");
              
 {% for name in init.rateEqStates %}
-{% if (haskey(steadyStateIndexMap,name)) %}
-   y_[{{attr(stateIndexMap,name)}}] = gsl_vector_get({{SSvector}}, {{attr(steadyStateIndexMap,name)}});
+{% if (name in steadyStateIndexMap) %}
+   y_[{{stateIndexMap | attr(name)}}] = gsl_vector_get({{SSvector}}, {{steadyStateIndexMap | attr(name)}});
 
 {% else %}
-   y_[{{attr(stateIndexMap,name)}}] = {{name}};
+   y_[{{stateIndexMap | attr(name)}}] = {{name}};
 
 {% endif %}
 {% endfor %}
@@ -85,8 +85,8 @@
 
 {% endfor %}
 
-{% if (haskey(steadyStateIndexMap,"v")) %}
-   y_[{{attr(steadyStateIndexMap,"v")}}] =  v;
+{% if ("v" in steadyStateIndexMap) %}
+   y_[{{steadyStateIndexMap | attr("v")}}] =  v;
 
 {% endif %}
 {% endif %}

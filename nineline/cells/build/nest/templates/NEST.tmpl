@@ -4,11 +4,14 @@
 namespace nest {
 {% include "NEST-sundials-prelude.tmpl" %}
 {% include "NEST-fsolve-prelude.tmpl" %}
+{% from "NEST-function.tmpl" import nest_function %}
+{% from "NEST-function-header.tmpl" import nest_function_header %}
+
 {% for functionDef in functionDefs %}
-    {% include "NEST-function-header.tmpl" %} 
+{{nest_function_header(functionDef.name,functionDef.returnType,functionDef.returnVar,functionDef.vars,functionDef.localVars,functionDef.consts,functionDef.exprString)}}
 {% endfor %}
 {% for functionDef in functionDefs %}
-    {% include "NEST-function.tmpl" %} 
+{{nest_function(functionDef.name,functionDef.returnType,functionDef.returnVar,functionDef.vars,functionDef.localVars,functionDef.consts,functionDef.exprString)}}
 {% endfor %}
 {# derivative function #}
 {% include "NEST-dynamics.tmpl" %}

@@ -11,21 +11,25 @@
    
 #}
 
-{{functionDef.returnType}} {{functionDef.name}} ({{ functionDef.vars | join (", ") }}) {
+{% macro nest_function(name,returnType,returnVar,vars,localVars,consts,exprString) %}
 
-  double {{functionDef.returnVar}};
+{{returnType}} {{name}} ({{ vars | join (", ") }}) {
 
-{% if (!(functionDef.localVars == [])) %}
-  double {{functionDef.localVars | join(", ")}};
+  double {{returnVar}};
+
+{% if (not (localVars == [])) %}
+  double {{localVars | join(", ")}};
 {% endif %}
-{% if (!(functionDef.consts == [])) %}
-  double {{functionDef.consts | join(", ")}};
+{% if (not (consts == [])) %}
+  double {{consts | join(", ")}};
   const {{modelName}}::Parameters_ & p = *(reinterpret_cast< const {{modelName}}::Parameters_ *>(params));
 
-{% for const in functionDef.consts %}
+{% for const in consts %}
   {{const}} =  p.{{const}};
 {% endfor %}
 {% endif %}
-  {{functionDef.exprString}}
-  return {{functionDef.returnVar}};
+  {{exprString}}
+  return {{returnVar}};
 }
+
+{% endmacro %}
