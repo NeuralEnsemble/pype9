@@ -1,0 +1,126 @@
+<Component name="HodgkinHuxley">
+  <Definition url="/home/tclose/git/nineline/examples/HodgkinHuxleyClass.xml">HodgkinHuxley</Definition>
+  <Property name="Na_A_alpha_m">
+    <Quantity units="per_ms">
+      <Value>0.1</Value>
+    </Quantity>
+  </Property>
+  <Property name="Na_B_alpha_m">
+    <Quantity units="mV">
+      <Value>-40.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="Na_C_alpha_m">
+    <Quantity units="mV">
+      <Value>10.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="Na_A_beta_m">
+    <Quantity units="per_ms">
+      <Value>4.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="Na_B_beta_m">
+    <Quantity units="mV">
+      <Value>-65.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="Na_C_beta_m">
+    <Quantity units="mV">
+      <Value>18.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="Na_A_alpha_h">
+    <Quantity units="per_ms">
+      <Value>0.07</Value>
+    </Quantity>
+  </Property>
+  <Property name="Na_B_alpha_h">
+    <Quantity units="mV">
+      <Value>-65.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="Na_C_alpha_h">
+    <Quantity units="mV">
+      <Value>20.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="Na_A_beta_h">
+    <Quantity units="per_ms">
+      <Value>1.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="Na_B_beta_h">
+    <Quantity units="mV">
+      <Value>-35.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="Na_C_beta_h">
+    <Quantity units="mV">
+      <Value>10.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="K_A_alpha_n">
+    <Quantity units="per_ms">
+      <Value>0.01</Value>
+    </Quantity>
+  </Property>
+  <Property name="K_B_alpha_n">
+    <Quantity units="mV">
+      <Value>-55.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="K_C_alpha_n">
+    <Quantity units="mV">
+      <Value>10.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="K_A_beta_n">
+    <Quantity units="per_ms">
+      <Value>0.125</Value>
+    </Quantity>
+  </Property>
+  <Property name="K_B_beta_n">
+    <Quantity units="mV">
+      <Value>-65.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="K_C_beta_n">
+    <Quantity units="mV">
+      <Value>80.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="gbarNa">
+    <Quantity units="S_per_cm2">
+      <Value>0.12</Value>
+    </Quantity>
+  </Property>  
+  <Property name="gbarK">
+    <Quantity units="S_per_cm2">
+      <Value>0.036</Value>
+    </Quantity>
+  </Property>
+  <Property name="gLeak">
+    <Quantity units="S_per_cm2">
+      <Value>0.0003</Value>
+    </Quantity>
+  </Property>
+  <Property name="eNa">
+    <Quantity units="mV">
+      <Value>50.0</Value>
+    </Quantity>
+  </Property>
+  <Property name="eK">
+    <Quantity units="mV">
+      <Value>-77.0</Value>
+    </Quantity>
+  </Property>  
+  <Property name="eLeak">
+    <Quantity units="mV">
+      <Value>-54.4</Value>
+    </Quantity>
+  </Property>
+  <Property name="C">
+    <Quantity units="uF_per_cm2">1.0</Quantity>
+  </Property>
+</Component>

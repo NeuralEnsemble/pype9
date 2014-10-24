@@ -1,0 +1,85 @@
+<NineML xmlns="http://nineml.org/9ML/1.0">
+  <ComponentClass name="hodgkin_huxley">
+    <Parameter name="Na_A_alpha_m"/>
+    <Parameter name="Na_B_alpha_m"/>
+    <Parameter name="Na_C_alpha_m"/>
+    <Parameter name="Na_A_beta_m"/>
+    <Parameter name="Na_B_beta_m"/>
+    <Parameter name="Na_C_beta_m"/>
+    <Parameter name="Na_A_alpha_h"/>
+    <Parameter name="Na_B_alpha_h"/>
+    <Parameter name="Na_C_alpha_h"/>
+    <Parameter name="Na_A_beta_h"/>
+    <Parameter name="Na_B_beta_h"/>
+    <Parameter name="Na_C_beta_h"/>
+    <Parameter name="K_A_alpha_n"/>
+    <Parameter name="K_B_alpha_n"/>
+    <Parameter name="K_C_alpha_n"/>
+    <Parameter name="K_A_beta_n"/>
+    <Parameter name="K_B_beta_n"/>
+    <Parameter name="K_C_beta_n"/>
+    <Parameter name="gbarNa"/>
+    <Parameter name="gbarK"/>
+    <Parameter name="gLeak"/>
+    <Parameter name="eLeak"/>
+    <Parameter name="eK"/>
+    <Parameter name="eNa"/>
+    <Parameter name="C" dimension="membrane_capacitance"/>
+    <Dynamics>
+      <StateVariable name="Na_amf" dimension=""/>
+      <StateVariable name="Na_bmf" dimension=""/>
+      <StateVariable name="Na_ahf" dimension=""/>
+      <StateVariable name="Na_bhf" dimension=""/>
+      <StateVariable name="K_anf" dimension=""/>
+      <StateVariable name="K_bhf" dimension=""/>
+      <StateVariable name="n"/>
+      <Regime name="single">
+        <TimeDerivative variable="v">
+          <MathInline>(iNa + iK + iLeak) / C</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="m">
+          <MathInline>(m_inf - m) / m_tau</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="h">
+          <MathInline>(h_inf - h) / h_tau</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="n">
+          <MathInline>(n_inf - n) / n_tau</MathInline>
+        </TimeDerivative>
+      </Regime>
+      <Alias name="iK">
+        <MathInline>gbarK * n * n * n * n * (v - eK)</MathInline>
+      </Alias>
+      <Alias name="iNa">
+        <MathInline>gbarNa * m * m * m * h * (v - eNa)</MathInline>
+      </Alias>
+      <Alias name="iLeak">
+        <MathInline>gLeak * (v - eLeak)</MathInline>
+      </Alias>
+      <Alias name="m_inf">
+        <MathInline>Na_A_alpha_m * (v - Na_B_alpha_m) / (1.0 - exp (-(v -
+          Na_B_alpha_m) / Na_C_alpha_m))</MathInline>
+      </Alias>
+      <Alias name="m_tau">
+        <MathInline>Na_A_beta_m * exp (-(v - Na_B_beta_m) /
+          Na_C_beta_m)</MathInline>
+      </Alias>
+      <Alias name="h_inf">
+        <MathInline>Na_A_alpha_h * exp (-(v - Na_B_alpha_h) /
+          Na_C_alpha_h)</MathInline>
+      </Alias>
+      <Alias name="h_tau">
+        <MathInline>Na_A_beta_h / (1.0 + exp (-(v - Na_B_beta_h) /
+          Na_C_beta_h))</MathInline>
+      </Alias>
+      <Alias name="n_inf">
+        <MathInline>K_A_alpha_n * (v - K_B_alpha_n) / (1 - exp(-(v -
+          K_B_alpha_n) / K_C_alpha_n))</MathInline>
+      </Alias>
+      <Alias name="n_tau">
+        <MathInline>K_A_beta_n * exp(-(v - K_B_beta_n) /
+          K_C_beta_n)</MathInline>
+      </Alias>
+    </Dynamics>
+  </ComponentClass>
+</NineML>
