@@ -62,12 +62,12 @@ void {{modelName}}::State_::set (const DictionaryDatum &d, const Parameters_&)
 {
 
 {% for stateDef in stateDefs %}
-   updateValue<double_t>(d, "{{stateDef.name}}", y_[{{stateIndexMap | attr(stateDef.name)}}]);
+   updateValue<double_t>(d, "{{stateDef.name}}", y_[{{stateIndexMap[stateDef.name]}}]);
 
 {% endfor %}    
 
 {% if ("v" in stateIndexMap) %}
-   updateValue<double_t>(d, names::V_m, y_[{{stateIndexMap | attr("v")}}]);
+   updateValue<double_t>(d, names::V_m, y_[{{stateIndexMap["v"]}}]);
 
 {% endif %}    
     

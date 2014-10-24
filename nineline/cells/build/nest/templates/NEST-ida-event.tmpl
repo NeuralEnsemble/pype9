@@ -19,7 +19,7 @@ extern "C" int {{modelName}}_event (double t, N_Vector y, N_Vector yp, double *g
   state = &(node.S_);
 
 {% if (("v" in stateIndexMap) and ("V_t" in defaultDefs)) %}      
-  v = Ith (y, {{stateIndexMap | attr("v")}});
+  v = Ith (y, {{stateIndexMap["v"]}});
   vt = params->V_t;
   g[0] = v - vt;
 {% else %}

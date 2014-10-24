@@ -66,6 +66,7 @@ with open(os.path.join(build_dir, 'hodgkin_huxley.cpp'), 'w') as f:
 with open(os.path.join(build_dir, biophysics_name + '.h'), 'w') as f:
     f.write(output_header)
 
+os.chdir(build_dir)
 if not os.path.exists(os.path.join(build_dir, 'Makefile')):
     # Generate configure.ac and Makefile
     create_configure_ac(biophysics_name, build_dir)
@@ -75,7 +76,6 @@ if not os.path.exists(os.path.join(build_dir, 'Makefile')):
     # Run bootstrapping
     run_bootstrap(build_dir)
     # Run configure script
-    os.chdir(build_dir)
     sp.check_call('{src_dir}/configure --prefix={install_dir}'
                   .format(src_dir=build_dir,
                           install_dir=os.path.join(build_dir, 'bin')),
