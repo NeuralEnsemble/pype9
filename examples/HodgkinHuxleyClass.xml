@@ -1,23 +1,23 @@
 <NineML xmlns="http://nineml.org/9ML/1.0">
-  <ComponentClass name="hodgkin_huxley">
-    <Parameter name="Na_A_alpha_m" dimension="per_time"/>
-    <Parameter name="Na_B_alpha_m" dimension="voltage"/>
-    <Parameter name="Na_C_alpha_m" dimension="voltage"/>
-    <Parameter name="Na_A_beta_m" dimension="per_time"/>
-    <Parameter name="Na_B_beta_m" dimension="voltage"/>
-    <Parameter name="Na_C_beta_m" dimension="voltage"/>
-    <Parameter name="Na_A_alpha_h" dimension="per_time"/>
-    <Parameter name="Na_B_alpha_h" dimension="voltage"/>
-    <Parameter name="Na_C_alpha_h" dimension="voltage"/>
-    <Parameter name="Na_A_beta_h" dimension="per_time"/>
-    <Parameter name="Na_B_beta_h" dimension="voltage"/>
-    <Parameter name="Na_C_beta_h" dimension="voltage"/>
-    <Parameter name="K_A_alpha_n" dimension="per_time"/>
-    <Parameter name="K_B_alpha_n" dimension="voltage"/>
-    <Parameter name="K_C_alpha_n" dimension="voltage"/>
-    <Parameter name="K_A_beta_n" dimension="per_time"/>
-    <Parameter name="K_B_beta_n" dimension="voltage"/>
-    <Parameter name="K_C_beta_n" dimension="voltage"/>
+  <ComponentClass name="HodgkinHuxleyClass">
+    <Parameter name="m_alpha_A" dimension="per_time"/>
+    <Parameter name="m_alpha_V0" dimension="voltage"/>
+    <Parameter name="m_alpha_K" dimension="voltage"/>
+    <Parameter name="m_beta_A" dimension="per_time"/>
+    <Parameter name="m_beta_V0" dimension="voltage"/>
+    <Parameter name="m_beta_K" dimension="voltage"/>
+    <Parameter name="h_alpha_A" dimension="per_time"/>
+    <Parameter name="h_alpha_V0" dimension="voltage"/>
+    <Parameter name="h_alpha_K" dimension="voltage"/>
+    <Parameter name="h_beta_A" dimension="per_time"/>
+    <Parameter name="h_beta_V0" dimension="voltage"/>
+    <Parameter name="h_beta_K" dimension="voltage"/>
+    <Parameter name="n_alpha_A" dimension="per_time"/>
+    <Parameter name="n_alpha_V0" dimension="voltage"/>
+    <Parameter name="n_alpha_K" dimension="voltage"/>
+    <Parameter name="n_beta_A" dimension="per_time"/>
+    <Parameter name="n_beta_V0" dimension="voltage"/>
+    <Parameter name="n_beta_K" dimension="voltage"/>
     <Parameter name="gbarNa" dimension="membrane_conductance"/>
     <Parameter name="gbarK" dimension="membrane_conductance"/>
     <Parameter name="gLeak" dimension="membrane_conductance"/>
@@ -55,22 +55,40 @@
         <MathInline>gLeak * (v - eLeak)</MathInline>
       </Alias>
       <Alias name="m_inf">
-        <MathInline>Na_A_alpha_m * (v - Na_B_alpha_m) / (1.0 - exp(-(v - Na_B_alpha_m) / Na_C_alpha_m)) </MathInline>
+        <MathInline>m_alpha / (m_alpha + m_beta)</MathInline>
       </Alias>
       <Alias name="m_tau">
-        <MathInline>Na_A_beta_m * exp(-(v - Na_B_beta_m) / Na_C_beta_m)</MathInline>
+        <MathInline>1.0 / (m_alpha + m_beta)</MathInline>
       </Alias>
       <Alias name="h_inf">
-        <MathInline>Na_A_alpha_h * exp(-(v - Na_B_alpha_h) / Na_C_alpha_h)</MathInline>
+        <MathInline>h_alpha / (h_alpha + h_beta)</MathInline>
       </Alias>
       <Alias name="h_tau">
-        <MathInline>Na_A_beta_h / (1.0 + exp (-(v - Na_B_beta_h) / Na_C_beta_h)) </MathInline>
+        <MathInline>1.0 / (h_alpha + h_beta)</MathInline>
       </Alias>
       <Alias name="n_inf">
-        <MathInline>K_A_alpha_n * (v - K_B_alpha_n) / (1 - exp(-(v - K_B_alpha_n) / K_C_alpha_n)) </MathInline>
+        <MathInline>n_alpha / (n_alpha + n_beta)</MathInline>
       </Alias>
       <Alias name="n_tau">
-        <MathInline>K_A_beta_n * exp(-(v - K_B_beta_n) / K_C_beta_n)</MathInline>
+        <MathInline>1.0 / (n_alpha + n_beta)</MathInline>
+      </Alias>      
+      <Alias name="m_alpha">
+        <MathInline>m_alpha_A * (v - m_alpha_V0) / (1.0 - exp(-(v - m_alpha_V0) / m_alpha_K))</MathInline>
+      </Alias>
+      <Alias name="m_beta">
+        <MathInline>m_beta_A * exp(-(v - m_beta_V0) / m_beta_K)</MathInline>
+      </Alias>
+      <Alias name="h_alpha">
+        <MathInline>h_alpha_A * exp(-(v - h_alpha_V0) / h_alpha_K)</MathInline>
+      </Alias>
+      <Alias name="h_beta">
+        <MathInline>h_beta_A / (1.0 + exp (-(v - h_beta_V0) / h_beta_K))</MathInline>
+      </Alias>
+      <Alias name="m_alpha">
+        <MathInline>n_alpha_A * (v - n_alpha_V0) / (1 - exp(-(v - n_alpha_V0) / n_alpha_K))</MathInline>
+      </Alias>
+      <Alias name="m_beta">
+        <MathInline>n_beta_A * exp(-(v - n_beta_V0) / n_beta_K)</MathInline>
       </Alias>
     </Dynamics>
   </ComponentClass>
