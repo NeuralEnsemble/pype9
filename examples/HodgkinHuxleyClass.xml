@@ -1,4 +1,4 @@
-<NineML xmlns="http://nineml.org/9ML/1.0">
+<NineML xmlns="http://nineml.net/9ML/1.0">
   <ComponentClass name="HodgkinHuxleyClass">
     <Parameter name="m_alpha_A" dimension="per_time"/>
     <Parameter name="m_alpha_V0" dimension="voltage"/>
