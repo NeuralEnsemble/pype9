@@ -84,10 +84,10 @@
       <Alias name="h_beta">
         <MathInline>h_beta_A / (1.0 + exp (-(v - h_beta_V0) / h_beta_K))</MathInline>
       </Alias>
-      <Alias name="m_alpha">
+      <Alias name="n_alpha">
         <MathInline>n_alpha_A * (v - n_alpha_V0) / (1 - exp(-(v - n_alpha_V0) / n_alpha_K))</MathInline>
       </Alias>
-      <Alias name="m_beta">
+      <Alias name="n_beta">
         <MathInline>n_beta_A * exp(-(v - n_beta_V0) / n_beta_K)</MathInline>
       </Alias>
     </Dynamics>
