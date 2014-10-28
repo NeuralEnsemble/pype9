@@ -7,19 +7,15 @@ env = Environment(loader=FileSystemLoader(os.getenv("HOME") + "/git/nineline/nin
 template = env.get_template('NMODL.tmpl')
 
 output_Na = template.render (functionDefs = [{'indent' : 2, 'name' : '''Na_bmf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_bmf  =  Na_A_beta_m * exp(-(v + -(Na_B_beta_m)) / Na_C_beta_m)'''}, 
-                                             {'indent' : 2, 'name' : '''Na_amf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_amf  =  
-  Na_A_alpha_m * 
-    (v + -(Na_B_alpha_m)) / (1.0 + -(exp(-(v + -(Na_B_alpha_m)) / Na_C_alpha_m)))'''}, 
-                                             {'indent' : 2, 'name' : '''Na_bhf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_bhf  =  
-  Na_A_beta_h / (1.0 + exp(-(v + -(Na_B_beta_h)) / Na_C_beta_h))'''}, 
+                                             {'indent' : 2, 'name' : '''Na_amf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_amf  =  Na_A_alpha_m *  (v + -(Na_B_alpha_m)) / (1.0 + -(exp(-(v + -(Na_B_alpha_m)) / Na_C_alpha_m)))'''}, 
+                                             {'indent' : 2, 'name' : '''Na_bhf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_bhf  =    Na_A_beta_h / (1.0 + exp(-(v + -(Na_B_beta_h)) / Na_C_beta_h))'''}, 
                                              {'indent' : 2, 'name' : '''Na_ahf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_ahf  =  Na_A_alpha_h * exp(-(v + -(Na_B_alpha_h)) / Na_C_alpha_h)'''}],
                              transientEventEqDefs = [],
                              externalEventEqDefs = [],
                              eventVars = [],
                              eventLocals = [],
-                             initEqDefs = ['''Na_m45  =  
-                             (Na_amf(comp19_Vrest)) / (Na_amf(comp19_Vrest) + Na_bmf(comp19_Vrest))''', '''Na_m45O  =  Na_m45''', '''Na_h46  =  
-                             (Na_ahf(comp19_Vrest)) / (Na_ahf(comp19_Vrest) + Na_bhf(comp19_Vrest))''', '''Na_h46O  =  Na_h46'''],
+                             initEqDefs = ['''Na_m45  =  (Na_amf(comp19_Vrest)) / (Na_amf(comp19_Vrest) + Na_bmf(comp19_Vrest))''',
+                                           '''Na_m45O  =  Na_m45''', '''Na_h46  =  (Na_ahf(comp19_Vrest)) / (Na_ahf(comp19_Vrest) + Na_bhf(comp19_Vrest))''', '''Na_h46O  =  Na_h46'''],
                              initEqLocals = [],
                              reversalPotentialEqDefs = [],
                              kineticEqDefs = [],
