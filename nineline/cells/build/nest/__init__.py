@@ -42,116 +42,121 @@ def ensure_camel_case(name):
     return name
 
 
-def build_celltype_files(celltype_name, biophysics_name, nineml_path,
-                         install_dir=None, build_parent_dir=None,
-                         method='gsl', build_mode='lazy', silent_build=False):  # @UnusedVariable @IgnorePep8
-    """
-    Generates the cpp code corresponding to the NCML file, then configures, and
-    compiles and installs the corresponding module into nest
+class Builder(object):
 
-    @param biophysics_name [str]: Name of the celltype to be built
-    @param nineml_path [str]: Path to the NCML file from which the NMODL files
-                              will be compiled and built
-    @param install_dir [str]: Path to the directory where the NMODL files will
-                              be generated and compiled
-    @param build_parent_dir [str]: Used to set the path for the default
-                              install_dir', and the 'src' and 'build' dirs path
-    @param method [str]: The method option to be passed to the NeMo
-                              interpreter command
-    """
-    # Save original working directory to reinstate it afterwards (just to be
-    # polite)
-    orig_dir = os.getcwd()
-    # Determine the paths for the src, build and install directories
-    (default_install_dir, params_dir,
-     src_dir, compile_dir) = get_build_paths(nineml_path, biophysics_name,
-                                             _SIMULATOR_BUILD_NAME,
+    def build_celltype_files(self, celltype_name, biophysics_name, nineml_path,
+                             install_dir=None, build_parent_dir=None,
+                             method='gsl', build_mode='lazy',  # @UnusedVariable @IgnorePep8
+                             silent_build=False):  # @UnusedVariable @IgnorePep8
+        """
+        Generates the cpp code corresponding to the NCML file, then configures,
+        and compiles and installs the corresponding module into nest
+
+        @param biophysics_name [str]: Name of the celltype to be built
+        @param nineml_path [str]: Path to the NCML file from which the NMODL
+                                  files will be compiled and built
+        @param install_dir [str]: Path to the directory where the NMODL files
+                                  will be generated and compiled
+        @param build_parent_dir [str]: Used to set the path for the default
+                                  install_dir', and the 'src' and 'build' dirs
+                                  path
+        @param method [str]: The method option to be passed to the NeMo
+                                  interpreter command
+        """
+        # Save original working directory to reinstate it afterwards (just to
+        # be polite)
+        orig_dir = os.getcwd()
+        # Determine the paths for the src, build and install directories
+        (default_install_dir, params_dir,
+         src_dir, compile_dir) = get_build_paths(
+                                            nineml_path, biophysics_name,
+                                            _SIMULATOR_BUILD_NAME,
                                              build_parent_dir=build_parent_dir)
-    if not install_dir:
-        install_dir = default_install_dir
-    # Determine whether the installation needs rebuilding or whether there is
-    # an existing library module to use
-    install_mtime_path = os.path.join(install_dir, _MODIFICATION_TIME_FILE)
-    if os.path.exists(install_mtime_path):
-        with open(install_mtime_path) as f:
-            prev_install_mtime = f.readline()
-    else:
-        prev_install_mtime = ''
-    ncml_mtime = time.ctime(os.path.getmtime(nineml_path))
-    if build_mode == 'compile_only' and (not os.path.exists(compile_dir) or
-                                         not os.path.exists(src_dir)):
-        raise Exception("Source ('{}') and/or compilation ('{}') directories "
-                        "no longer exist. Cannot use 'compile_only' argument "
-                        "for '--build' option"
-                        .format(src_dir, compile_dir))
-    # Create C++ and configuration files required for the build
-    if ((ncml_mtime != prev_install_mtime and
-         build_mode not in ('require', 'complile_only'))
-            or build_mode in ('force', 'build_only')):
-        # Clean existing directories from previous builds.
-        shutil.rmtree(src_dir, ignore_errors=True)
-        shutil.rmtree(params_dir, ignore_errors=True)
-        shutil.rmtree(compile_dir, ignore_errors=True)
-        shutil.rmtree(install_dir, ignore_errors=True)
-        # Create fresh directories
-        os.makedirs(src_dir)
-        os.makedirs(params_dir)
-        os.makedirs(compile_dir)
-        os.makedirs(install_dir)
-        # Compile the NCML file into NEST cpp code using NeMo
-        nemo_cmd = ("{nemo_path} {nineml_path} --pyparams={params}"
-                    "--nest={output} --nest-method={method}"
-                    .format(nemo_path=path_to_exec('nemo'), method=method,
-                            nineml_path=nineml_path, output=src_dir,
-                            params=params_dir))
-        try:
-            sp.check_call(nemo_cmd, shell=True)
-        except sp.CalledProcessError:
-            raise Exception("Translation of NineML to '{}' NEST C++ module "
-                            "failed.".format(biophysics_name))
-        # Generate configure.ac and Makefile
-        create_configure_ac(biophysics_name, src_dir)
-        create_makefile(celltype_name, biophysics_name, src_dir)
-        create_boilerplate_cpp(biophysics_name, src_dir)
-        create_sli_initialiser(biophysics_name, src_dir)
-    # Compile the generated C++ files, using generated makefile configurtion
-    if ((ncml_mtime != prev_install_mtime and build_mode != 'require')
-            or build_mode in ('force', 'build_only', 'compile_only')):
-        # Run the required shell commands to bootstrap the build configuration
-        run_bootstrap(src_dir)
-        # Run configure script, make and make install
-        os.chdir(compile_dir)
-        try:
-            sp.check_call('{src_dir}/configure --prefix={install_dir}'
-                          .format(src_dir=src_dir, install_dir=install_dir),
-                          shell=True)
-        except sp.CalledProcessError:
-            raise Exception("Configuration of '{}' NEST module failed."
-                            .format(biophysics_name))
-        try:
-            sp.check_call('make', shell=True)
-        except sp.CalledProcessError:
-            raise Exception("Compilation of '{}' NEST module failed."
-                            .format(biophysics_name))
-        try:
-            sp.check_call('make install', shell=True)
-        except sp.CalledProcessError:
-            raise Exception("Installation of '{}' NEST module failed."
-                            .format(biophysics_name))
-        # Save the last modification time of the NCML file for future runs.
-        with open(install_mtime_path, 'w') as f:
-            f.write(ncml_mtime)
-    # Switch back to original dir
-    os.chdir(orig_dir)
-    # Load component parameters for use in python interface
-    component_translations = load_component_translations(
-        biophysics_name, params_dir)
-    # Return installation directory
-    return install_dir, component_translations
+        if not install_dir:
+            install_dir = default_install_dir
+        # Determine whether the installation needs rebuilding or whether there
+        # is an existing library module to use
+        install_mtime_path = os.path.join(install_dir, _MODIFICATION_TIME_FILE)
+        if os.path.exists(install_mtime_path):
+            with open(install_mtime_path) as f:
+                prev_install_mtime = f.readline()
+        else:
+            prev_install_mtime = ''
+        ncml_mtime = time.ctime(os.path.getmtime(nineml_path))
+        if build_mode == 'compile_only' and (not os.path.exists(compile_dir) or
+                                             not os.path.exists(src_dir)):
+            raise Exception("Source ('{}') and/or compilation ('{}') directories "
+                            "no longer exist. Cannot use 'compile_only' argument "
+                            "for '--build' option"
+                            .format(src_dir, compile_dir))
+        # Create C++ and configuration files required for the build
+        if ((ncml_mtime != prev_install_mtime and
+             build_mode not in ('require', 'complile_only'))
+                or build_mode in ('force', 'build_only')):
+            # Clean existing directories from previous builds.
+            shutil.rmtree(src_dir, ignore_errors=True)
+            shutil.rmtree(params_dir, ignore_errors=True)
+            shutil.rmtree(compile_dir, ignore_errors=True)
+            shutil.rmtree(install_dir, ignore_errors=True)
+            # Create fresh directories
+            os.makedirs(src_dir)
+            os.makedirs(params_dir)
+            os.makedirs(compile_dir)
+            os.makedirs(install_dir)
+    #         # Compile the NCML file into NEST cpp code using NeMo
+    #         nemo_cmd = ("{nemo_path} {nineml_path} --pyparams={params}"
+    #                     "--nest={output} --nest-method={method}"
+    #                     .format(nemo_path=path_to_exec('nemo'), method=method,
+    #                             nineml_path=nineml_path, output=src_dir,
+    #                             params=params_dir))
+    #         try:
+    #             sp.check_call(nemo_cmd, shell=True)
+    #         except sp.CalledProcessError:
+    #             raise Exception("Translation of NineML to '{}' NEST C++ module "
+    #                             "failed.".format(biophysics_name))
 
+            # Generate configure.ac and Makefile
+            self.create_configure_ac(biophysics_name, src_dir)
+            self.create_makefile(celltype_name, biophysics_name, src_dir)
+            self.create_boilerplate_cpp(biophysics_name, src_dir)
+            self.create_sli_initialiser(biophysics_name, src_dir)
+        # Compile the generated C++ files, using generated makefile configurtion
+        if ((ncml_mtime != prev_install_mtime and build_mode != 'require')
+                or build_mode in ('force', 'build_only', 'compile_only')):
+            # Run the required shell commands to bootstrap the build configuration
+            self.run_bootstrap(src_dir)
+            # Run configure script, make and make install
+            os.chdir(compile_dir)
+            try:
+                sp.check_call('{src_dir}/configure --prefix={install_dir}'
+                              .format(src_dir=src_dir, install_dir=install_dir),
+                              shell=True)
+            except sp.CalledProcessError:
+                raise Exception("Configuration of '{}' NEST module failed."
+                                .format(biophysics_name))
+            try:
+                sp.check_call('make', shell=True)
+            except sp.CalledProcessError:
+                raise Exception("Compilation of '{}' NEST module failed."
+                                .format(biophysics_name))
+            try:
+                sp.check_call('make install', shell=True)
+            except sp.CalledProcessError:
+                raise Exception("Installation of '{}' NEST module failed."
+                                .format(biophysics_name))
+            # Save the last modification time of the NCML file for future runs.
+            with open(install_mtime_path, 'w') as f:
+                f.write(ncml_mtime)
+        # Switch back to original dir
+        os.chdir(orig_dir)
+        # Load component parameters for use in python interface
+        component_translations = load_component_translations(
+            biophysics_name, params_dir)
+        # Return installation directory
+        return install_dir, component_translations
 
-def create_configure_ac(celltype_name, src_dir):
-    configure_ac = """
+    def create_configure_ac(self, celltype_name, src_dir):
+        configure_ac = """
 AC_PREREQ(2.52)3
 
 AC_INIT({celltype_name}, 1.0, nest_user@nest-initiative.org)
@@ -379,14 +384,13 @@ echo "{celltype_name} will be installed to:"
 echo -n "  "; eval eval echo "$libdir"
 echo""".format(celltype_name=celltype_name,
                celltype_name_upper=celltype_name.upper())
-    # Write configure.ac with module names to file
-    with open(os.path.join(src_dir, 'configure.ac'), 'w') as f:
-        f.write(configure_ac)
+        # Write configure.ac with module names to file
+        with open(os.path.join(src_dir, 'configure.ac'), 'w') as f:
+            f.write(configure_ac)
 
-
-def create_makefile(celltype_name, biophysics_name, src_dir):
-    # Generate makefile
-    makefile = """
+    def create_makefile(self, celltype_name, biophysics_name, src_dir):
+        # Generate makefile
+        makefile = """
 libdir= @libdir@/nest
 
 lib_LTLIBRARIES=      {celltype_name}Loader.la lib{celltype_name}Loader.la
@@ -422,13 +426,12 @@ install-data-hook: install-exec install-slidoc
 
 EXTRA_DIST= sli
 """.format(celltype_name=celltype_name, biophysics_name=biophysics_name)
-    # Write configure.ac with module names to file
-    with open(os.path.join(src_dir, 'Makefile.am'), 'w') as f:
-        f.write(makefile)
+        # Write configure.ac with module names to file
+        with open(os.path.join(src_dir, 'Makefile.am'), 'w') as f:
+            f.write(makefile)
 
-
-def run_bootstrap(src_dir):
-    bootstrap_cmd = """
+    def run_bootstrap(self, src_dir):
+        bootstrap_cmd = """
 #!/bin/sh
 
 echo "Bootstrapping {src_dir}"
@@ -474,16 +477,15 @@ automake --foreign --add-missing --force-missing --copy
 
 echo "Done."
 """.format(src_dir=src_dir)
-    # Run bootstrap command to create configure script
-    orig_dir = os.getcwd()
-    os.chdir(src_dir)
-    sp.check_call(bootstrap_cmd, shell=True)
-    os.chdir(orig_dir)
+        # Run bootstrap command to create configure script
+        orig_dir = os.getcwd()
+        os.chdir(src_dir)
+        sp.check_call(bootstrap_cmd, shell=True)
+        os.chdir(orig_dir)
 
+    def create_boilerplate_cpp(self, celltype_name, src_dir):
 
-def create_boilerplate_cpp(celltype_name, src_dir):
-
-    header_code = """
+        header_code = """
 /*
  *  {celltype_name}Loader.h
  *
@@ -513,7 +515,7 @@ namespace nest
 
 // Put your stuff into your own namespace.
 namespace ncml {{
-  
+
 /**
  * Class defining your model.
  * @note For each model, you must define one such class, with a unique name.
@@ -523,13 +525,13 @@ class {celltype_name}Loader : public DynModule
 public:
 
   // Interface functions ------------------------------------------
-  
+
   /**
    * @note The constructor registers the module with the dynamic loader.
    *       Initialization proper is performed by the init() method.
    */
   {celltype_name}Loader();
-  
+
   /**
    * @note The destructor does not do much in modules. Proper "downrigging"
    *       is the responsibility of the unregister() method.
@@ -549,18 +551,18 @@ public:
    * Return the name of your model.
    */
   const std::string name(void) const;
-  
+
   /**
    * Return the name of a sli file to execute when {celltype_name}Loader is loaded.
    * This mechanism can be used to define SLI commands associated with your
    * module, in particular, set up type tries for functions you have defined.
    */
   const std::string commandstring(void) const;
-     
+
 public:
-  
+
   // Classes implementing your functions -----------------------------
-  
+
   /**
    * Implement a function for a step-pattern-based connection.
    * @note What this function does is described in the SLI documentation
@@ -585,11 +587,11 @@ public:
 #endif
 """.format(celltype_name=celltype_name,
            celltype_name_upper=celltype_name.upper())
-    # Write configure.ac with module names to file
-    with open(os.path.join(src_dir, celltype_name + 'Loader.h'), 'w') as f:
-        f.write(header_code)
-    # Create the C++ file
-    cpp_code = """
+        # Write configure.ac with module names to file
+        with open(os.path.join(src_dir, celltype_name + 'Loader.h'), 'w') as f:
+            f.write(header_code)
+        # Create the C++ file
+        cpp_code = """
  /*
  *  {celltype_name}Loader.cpp
  *  This file is part of NEST.
@@ -674,10 +676,10 @@ ncml::{celltype_name}Loader::~{celltype_name}Loader()
 
    /* BeginDocumentation
       Name: StepPatternConnect - Connect sources and targets with a stepping pattern
-      
+
       Synopsis:
       [sources] source_step [targets] target_step synmod StepPatternConnect -> n_connections
-      
+
       Parameters:
       [sources]     - Array containing GIDs of potential source neurons
       source_step   - Make connection from every source_step'th neuron
@@ -685,21 +687,21 @@ ncml::{celltype_name}Loader::~{celltype_name}Loader()
       target_step   - Make connection to every target_step'th neuron
       synmod        - The synapse model to use (literal, must be key in synapsedict)
       n_connections - Number of connections made
-      
+
       Description:
       This function subsamples the source and target arrays given with steps
       source_step and target_step, beginning with the first element in each array,
       and connects the selected nodes.
-      
+
       Example:
       /first_src 0 /network_size get def
       /last_src /iaf_neuron 20 Create def  % nodes  1 .. 20
       /src [first_src last_src] Range def
       /last_tgt /iaf_neuron 10 Create def  % nodes 21 .. 30
       /tgt [last_src 1 add last_tgt] Range def
-      
+
       src 6 tgt 4 /drop_odd_spike StepPatternConnect
-  
+
       This connects nodes [1, 7, 13, 19] as sources to nodes [21, 25,
       29] as targets using synapses of type drop_odd_spike, and
       returning 12 as the number of connections.  The following
@@ -711,14 +713,14 @@ ncml::{celltype_name}Loader::~{celltype_name}Loader()
       7 -> [21 25 29]
       13 -> [21 25 29]
       19 -> [21 25 29]
-      
+
       Remark:
       This function is only provided as an example for how to write your own
       interface function.
-      
+
       Author:
       Hans Ekkehard Plesser
-      
+
       SeeAlso:
       Connect, ConvergentConnect, DivergentConnect
    */
@@ -733,7 +735,7 @@ ncml::{celltype_name}Loader::~{celltype_name}Loader()
      const TokenArray targets = getValue<TokenArray> (i->OStack.pick(2));
      const long tgt_step      = getValue<long>       (i->OStack.pick(1));
      const Name synmodel_name = getValue<std::string>(i->OStack.pick(0)); // top
-     
+
      // Obtain synapse model index
      const Token synmodel
        = nest::NestModule::get_network().get_synapsedict().lookup(synmodel_name);
@@ -745,7 +747,7 @@ ncml::{celltype_name}Loader::~{celltype_name}Loader()
      TokenArray selected_targets;
      for ( size_t t = 0 ; t < targets.size() ; t += tgt_step )
        selected_targets.push_back(targets[t]);
-     
+
      // Now connect all appropriate sources to this list of targets
      size_t Nconn = 0;  // counts connections
      for ( size_t s = 0 ; s < sources.size() ; s += src_step )
@@ -766,7 +768,7 @@ ncml::{celltype_name}Loader::~{celltype_name}Loader()
      // as our result.
      i->OStack.pop(5);
      i->OStack.push(Nconn);
-     
+
      // Finally, we pop the call to this functions from the execution stack.
      i->EStack.pop();
    }}
@@ -802,16 +804,15 @@ ncml::{celltype_name}Loader::~{celltype_name}Loader()
                      &stepPatternConnect_Vi_i_Vi_i_lFunction);
 
   }}  // {celltype_name}Loader::init()
-    
+
 """.format(celltype_name=celltype_name)
-    # Write configure.ac with module names to file
-    with open(os.path.join(src_dir, celltype_name + 'Loader.cpp'), 'w') as f:
-        f.write(cpp_code)
+        # Write configure.ac with module names to file
+        with open(os.path.join(src_dir, celltype_name + 'Loader.cpp'), 'w') as f:
+            f.write(cpp_code)
 
+    def create_sli_initialiser(self, celltype_name, src_dir):
 
-def create_sli_initialiser(celltype_name, src_dir):
-
-    sli_code = """
+        sli_code = """
 /*
  * Initialization file for {celltype_name}.
  * Run automatically when {celltype_name} is loaded.
@@ -827,14 +828,14 @@ M_DEBUG ({celltype_name}Loader.sli) (Initializing SLI support for {celltype_name
   StepPatternConnect_Vi_i_Vi_i_l
 }} def
 """.format(celltype_name=celltype_name)
-    # Write configure.ac with module names to file
-    with open(os.path.join(src_dir, celltype_name + 'Loader.sli'), 'w') as f:
-        f.write(sli_code)
+        # Write configure.ac with module names to file
+        with open(os.path.join(src_dir, celltype_name + 'Loader.sli'), 'w') as f:
+            f.write(sli_code)
 
-if __name__ == '__main__':
-    install_dir, params = build_celltype_files('Granule_DeSouza10',
-                                               '/home/tclose/kbrain/xml/'
-                                               'cerebellum/ncml/'
-                                               'Granule_DeSouza10.xml')
-    print install_dir
-    print params
+    if __name__ == '__main__':
+        install_dir, params = build_celltype_files('Granule_DeSouza10',
+                                                   '/home/tclose/kbrain/xml/'
+                                                   'cerebellum/ncml/'
+                                                   'Granule_DeSouza10.xml')
+        print install_dir
+        print params

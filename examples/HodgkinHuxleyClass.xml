@@ -26,6 +26,11 @@
     <Parameter name="eNa" dimension="voltage"/>
     <Parameter name="C" dimension="membrane_capacitance"/>
     <AnalogSendPort name="v" dimension="voltage"/>
+    <AnalogSendPort name="iK" dimension="current"/>
+    <AnalogReceivePort name="T" dimension="temperature"/>
+    <AnalogReducePort name="injectedCurrent" dimension="current" reduce_op="+"/>
+    <EventReceivePort name="incomingSpike"/>
+    <EventSendPort name="outgoingSpike"/>
     <Dynamics>
       <StateVariable name="v" dimension="voltage"/>
       <StateVariable name="m"/>
@@ -33,7 +38,7 @@
       <StateVariable name="n"/>
       <Regime name="single">
         <TimeDerivative variable="v">
-          <MathInline>(iNa + iK + iLeak) / C</MathInline>
+          <MathInline>(iNa + iK + iLeak + injectedCurrent) / C</MathInline>
         </TimeDerivative>
         <TimeDerivative variable="m">
           <MathInline>(m_inf - m) / m_tau</MathInline>
@@ -44,6 +49,17 @@
         <TimeDerivative variable="n">
           <MathInline>(n_inf - n) / n_tau</MathInline>
         </TimeDerivative>
+        <OnEvent port="incomingSpike">
+          <StateAssignment variable="v">
+            <MathInline>v + 5</MathInline>
+          </StateAssignment>
+        </OnEvent>
+        <OnCondition>
+          <Trigger>
+            <MathInline>v &gt; -20</MathInline>
+          </Trigger>
+          <EventOut port="outgoingSpike"/>
+        </OnCondition>
       </Regime>
       <Alias name="iK">
         <MathInline>gbarK * n * n * n * n * (v - eK)</MathInline>
@@ -64,7 +80,7 @@
         <MathInline>h_alpha / (h_alpha + h_beta)</MathInline>
       </Alias>
       <Alias name="h_tau">
-        <MathInline>1.0 / (h_alpha + h_beta)</MathInline>
+        <MathInline>1.0 / (h_alpha + h_beta) * T / 300</MathInline>
       </Alias>
       <Alias name="n_inf">
         <MathInline>n_alpha / (n_alpha + n_beta)</MathInline>

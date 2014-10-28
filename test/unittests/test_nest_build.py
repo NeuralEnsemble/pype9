@@ -1,10 +1,7 @@
 import os
 from jinja2 import Environment, FileSystemLoader
 from nineml.abstraction_layer.dynamics.readers import XMLReader as NineMLReader
-from nineline.cells.build.nest import (run_bootstrap, create_configure_ac,
-                                       create_makefile,
-                                       create_boilerplate_cpp,
-                                       create_sli_initialiser)
+from nineline.cells.build.nest import Builder
 import subprocess as sp
 
 env = Environment(loader=FileSystemLoader(
@@ -170,13 +167,14 @@ with open(os.path.join(build_dir, biophysics_name + '.h'), 'w') as f:
 
 os.chdir(build_dir)
 if not os.path.exists(os.path.join(build_dir, 'Makefile')):
+    builder = Builder()
     # Generate configure.ac and Makefile
-    create_configure_ac(biophysics_name, build_dir)
-    create_makefile(biophysics_name, biophysics_name, build_dir)
-    create_boilerplate_cpp(biophysics_name, build_dir)
-    create_sli_initialiser(biophysics_name, build_dir)
+    builder.create_configure_ac(biophysics_name, build_dir)
+    builder.create_makefile(biophysics_name, biophysics_name, build_dir)
+    builder.create_boilerplate_cpp(biophysics_name, build_dir)
+    builder.create_sli_initialiser(biophysics_name, build_dir)
     # Run bootstrapping
-    run_bootstrap(build_dir)
+    builder.run_bootstrap(build_dir)
     # Run configure script
     sp.check_call('{src_dir}/configure --prefix={install_dir}'
                   .format(src_dir=build_dir,
