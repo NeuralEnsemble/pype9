@@ -103,3 +103,7 @@ def load_component_translations(biophysics_name, params_dir):
             for (comp_name, var_name), mapped_var in loaded_props.iteritems():
                 component_translations[comp_name][var_name] = mapped_var
     return component_translations
+
+
+class Builder(object):
+    pass

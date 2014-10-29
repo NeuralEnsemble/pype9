@@ -11,11 +11,13 @@ from __future__ import absolute_import
 import time
 import os.path
 import subprocess as sp
+import re
 import shutil
 from itertools import izip
 from jinja2 import Environment, FileSystemLoader
 from nineml.abstraction_layer.dynamics.readers import XMLReader as NineMLReader
-
+from .. import Builder as BaseBuilder
+from nineline import __version__
 
 components = NineMLReader.read_components(os.getenv("HOME") +
                                "/git/nineline/examples/HodgkinHuxleyClass.xml")
@@ -24,7 +26,7 @@ from ..__init__ import (path_to_exec, get_build_paths,
                        load_component_translations)
 
 _SIMULATOR_BUILD_NAME = 'nest'
-_MODIFICATION_TIME_FILE = 'modification_time'
+_TIME_OF_EDIT_FILE = 'modification_time'
 
 if 'NEST_INSTALL_DIR' in os.environ:
     os.environ['PATH'] += os.pathsep + \
@@ -49,7 +51,7 @@ def ensure_camel_case(name):
     return name
 
 
-class Builder(object):
+class Builder(BaseBuilder):
 
     # Instantiate Jinja2 environment
     jinja_env = Environment(loader=FileSystemLoader(
@@ -93,13 +95,13 @@ class Builder(object):
             install_dir = default_install_dir
         # Determine whether the installation needs rebuilding or whether there
         # is an existing library module to use
-        install_mtime_path = os.path.join(install_dir, _MODIFICATION_TIME_FILE)
-        if os.path.exists(install_mtime_path):
-            with open(install_mtime_path) as f:
-                prev_install_mtime = f.readline()
+        time_of_edit_path = os.path.join(install_dir, _TIME_OF_EDIT_FILE)
+        if os.path.exists(time_of_edit_path):
+            with open(time_of_edit_path) as f:
+                prev_time_of_edit = f.readline()
         else:
-            prev_install_mtime = ''
-        ncml_mtime = time.ctime(os.path.getmtime(nineml_path))
+            prev_time_of_edit = ''
+        time_of_edit = time.ctime(os.path.getmtime(nineml_path))
         if build_mode == 'compile_only' and (not os.path.exists(compile_dir) or
                                              not os.path.exists(src_dir)):
             raise Exception("Source ('{}') and/or compilation ('{}') directories "
@@ -107,7 +109,7 @@ class Builder(object):
                             "for '--build' option"
                             .format(src_dir, compile_dir))
         # Create C++ and configuration files required for the build
-        if ((ncml_mtime != prev_install_mtime and
+        if ((time_of_edit != prev_time_of_edit and
              build_mode not in ('require', 'complile_only'))
                 or build_mode in ('force', 'build_only')):
             # Clean existing directories from previous builds.
@@ -138,8 +140,8 @@ class Builder(object):
             self.create_boilerplate_cpp(biophysics_name, src_dir)
             self.create_sli_initialiser(biophysics_name, src_dir)
         # Compile the generated C++ files, using generated makefile
-        # configurtion
-        if ((ncml_mtime != prev_install_mtime and build_mode != 'require')
+        # configuration
+        if ((time_of_edit != prev_time_of_edit and build_mode != 'require')
                 or build_mode in ('force', 'build_only', 'compile_only')):
             # Run the required shell commands to bootstrap the build
             # configuration
@@ -164,8 +166,8 @@ class Builder(object):
                 raise Exception("Installation of '{}' NEST module failed."
                                 .format(biophysics_name))
             # Save the last modification time of the NCML file for future runs.
-            with open(install_mtime_path, 'w') as f:
-                f.write(ncml_mtime)
+            with open(time_of_edit_path, 'w') as f:
+                f.write(time_of_edit)
         # Switch back to original dir
         os.chdir(orig_dir)
         # Load component parameters for use in python interface
@@ -207,10 +209,11 @@ class Builder(object):
         state_names = [v.name for v in model.dynamics.state_variables]
         args['num_states'] = len(state_names)
         args['state_variables'] = state_names
-        args['state_variables_init'] = ((i, 0.0, s)
-                                        for i, s in enumerate(state_names))  #TODO: Come up with initialisations
+        args['state_variables_init'] = [0.0] * len(state_names)  #TODO: Come up with initialisations
         args['parameter_constraints'] = [] #TODO: Add parameter constraints to model
         args['steady_state'] = False  # This needs to be implemented (difficult without "state layer")
+        args['timestamp'] = time.strftime('%X %a %d %b %Y')
+        args['version'] = __version__
         volt_index = [i for i, s in enumerate(model.dynamics.state_variables)
                        if s.dimension == 'voltage']
         if not volt_index:

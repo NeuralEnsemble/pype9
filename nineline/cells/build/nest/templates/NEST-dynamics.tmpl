@@ -25,16 +25,20 @@
    - eqOrderDefs - topologically sorted list of strings with
                    external, assignment, reaction, pool equations in C++ syntax
    - rateOrderDefs - list of strings with the rate equatins in C++ syntaxa
+   
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014   
 #}
 
-{% if ((ODEmethod == "cvode") or (ODEmethod == "ida") ) %}
-extern "C" int {{modelName}}_dynamics (double t, N_Vector y, N_Vector f, void* pnode)
+{% if ODEmethod in ('cvode', 'ida') %}
+extern "C" int {{modelName}}_dynamics (double t, N_Vector y, N_Vector f,
+                                       void* pnode) {
 {% else %}
-extern "C" int {{modelName}}_dynamics (double t, const double y[], double f[], void* pnode)
+extern "C" int {{modelName}}_dynamics (double t, const double y[], double f[],
+                                       void* pnode) {
 {% endif %}
-{
 
-{% if (not (dynamics.localVars == [])) %}
+{% if dynamics.localVars %}
    double {{dynamics.localVars | join(", ")}};
 {% endif %}
 
@@ -73,7 +77,7 @@ extern "C" int {{modelName}}_dynamics (double t, const double y[], double f[], v
    {{eq}}
 {% endfor %}
 
-{% if ((ODEmethod == "cvode") or (ODEmethod == "ida") ) %}
+{% if ODEmethod in ('cvode', 'ida') %}
    return 0;
 {% else %}
    return GSL_SUCCESS;

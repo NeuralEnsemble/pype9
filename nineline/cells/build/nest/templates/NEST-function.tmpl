@@ -8,26 +8,33 @@
    - localVars: list of strings with the name of any local variables
    - returnVar: the name of the return variable
    - exprString: string with expression body converted to NMODL syntax
-   
+
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
-{% macro nest_function(name,returnType,returnVar,vars,localVars,consts,exprString) %}
+
+//---------------------------------//
+// From NEST-function.tmpl //
+//---------------------------------//
+
+{% macro nest_function(name, returnType, returnVar, vars, localVars, consts, exprString) %}
 
 {{returnType}} {{name}} ({{ vars | join (", ") }}) {
 
   double {{returnVar}};
 
-{% if (not (localVars == [])) %}
+    {% if localVars %}
   double {{localVars | join(", ")}};
-{% endif %}
-{% if (not (consts == [])) %}
+    {% endif %}
+    {% if consts %}
   double {{consts | join(", ")}};
   const {{modelName}}::Parameters_ & p = *(reinterpret_cast< const {{modelName}}::Parameters_ *>(params));
 
-{% for const in consts %}
+        {% for const in consts %}
   {{const}} =  p.{{const}};
-{% endfor %}
-{% endif %}
+        {% endfor %}
+    {% endif %}
   {{exprString}}
   return {{returnVar}};
 }

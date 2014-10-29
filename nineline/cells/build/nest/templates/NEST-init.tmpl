@@ -25,26 +25,9 @@
     r_ = 0;
 {% endif %}
 
-    memset(y_, 0, {{num_states}} * sizeof(double));
-{# Old template code that is no longer required
-{% for parameterDef in init.parameterDefs %}
-   {{parameterDef}}
-{% endfor %}
-{% for eq in init.initOrder %}
-   {{eq}}
-{% endfor %}
-{% for eq in init.initEqDefs %}
-   {{eq}}
-{% endfor %}
-{% for ceq in constraintEqDefs %}
-   if (!(({{ceq.left}}) {{ceq.op}} ({{ceq.right}}))) 
-      { throw BadProperty ("Constraint {{ceq.str}} is not satisfied."); };
-{% endfor %}
-#}
-
 {# Initialise the state #}
-{% for i, val, state in state_variables_init %}
-    y_[{{i}}] = {{val}}; // {{state}} init
+{% for state, val in izip(state_variables, state_variables_init) %}
+    y_[{{state}}_i] = {{val}};
 {% endfor %}
 {# Check constraints on parameters, does this belongs here? #}
 {% for constraint in parameter_constraints %}

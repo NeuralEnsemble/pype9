@@ -1,4 +1,13 @@
+{# This template provides the prelude to the fsolve
 
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
+#}
+
+
+//---------------------------------//
+// From NEST-fsolve-prelude.tmpl //
+//---------------------------------//
 {% if (SSMethod == "kinsol") %}
 
   int fsolve (KINSysFn f, int N, N_Vector fval, void *user_data, std::string name)
