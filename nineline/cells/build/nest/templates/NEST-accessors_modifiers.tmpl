@@ -1,74 +1,65 @@
+{# This template adds a accessors and modifiers for the Parameter and State 
+   classes
 
-void {{modelName}}::Parameters_::get (DictionaryDatum &d) const
-{
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
+#}
 
-{% for parameterDef in parameters.parameterDefs %}
-   def<double_t>(d, "{{parameterDef.name}}", {{parameterDef.name}});
-{% endfor %}    
 
-{% for defaultDef in parameters.defaultDefs %}
-   def<double_t>(d, "{{defaultDef.name}}", {{defaultDef.name}});
-{% endfor %}    
-    
+//------------------------------------//
+// From NEST-accessors_modifiers.tmpl //
+//------------------------------------//
+
+void {{modelName}}::Parameters_::get (DictionaryDatum &d) const {
+
+{# TODO: Should change this to names::{{name}}, {{name}} once I work out where
+         to put the "names" declarations (probably in the header#}
+    // Update dictionary from internal parameters, scaling if required.
+{% for name in parameter_names %}
+    def<double_t>(d, "{{name}}", {{name}}{% if name in parameter_scales %} / {{parameter_scales[name]}}{% endif %});
+{% endfor %}
+
 }
 
-void {{modelName}}::Parameters_::set (const DictionaryDatum &d)
-{
+void {{modelName}}::Parameters_::set (const DictionaryDatum &d) {
 
-{% for parameterDef in parameters.parameterDefs %}
-   updateValue<double_t>(d, "{{parameterDef.name}}", {{parameterDef.name}});
+    // Update internal parameters from dictionary
+{% for name in parameter_names %}
+    updateValue<double_t>(d, "{{name}}", {{name}});
+{% endfor %}
 
-{% if parameterDef.scale %}
-   {{parameterDef.name}} = {{parameterDef.scale}} * {{parameterDef.name}};
-
-{% endif %}    
-{% endfor %}    
-
-
-{% for defaultDef in parameters.defaultDefs %}
-   updateValue<double_t>(d, "{{defaultDef.name}}", {{defaultDef.name}});
-
-{% if defaultDef.scale %}
-   {{defaultDef.name}} = {{defaultDef.scale}} * {{defaultDef.name}};
-
-{% endif %}    
-{% endfor %}    
-
-
-{% for eq in defaultEqDefs %}
-   {{eq}}
-
-{% endfor %}    
+    // Scale parameters as required
+{% for name, scale in parameter_scales.iteritems() %}
+    {{name}} *= {{scale}}
+{% endfor %}
 
 }
 
 
-void {{modelName}}::State_::get (DictionaryDatum &d) const
-{
+void {{modelName}}::State_::get (DictionaryDatum &d) const {
 
-{% for stateDef in stateDefs %}
-   def<double_t>(d, "{{stateDef.name}}", y_[{{stateIndexMap[stateDef.name]}}]);
-
-{% endfor %}    
-    
+    // Get states from internal variables
+{% for i, name in enumerate(state_variables) %}
+    def<double_t>(d, "{{name}}", y_[{{i}}]);
+{% endfor %}
+{# FIXME: Need to include special handling of v->V_m
 {% if ("v" in stateIndexMap) %}
-   def<double_t>(d, names::V_m, y_[{{stateIndexMap["v"]}}]);
-
-{% endif %}    
-    
+    def<double_t>(d, names::V_m, y_[{{stateIndexMap["v"]}}]);
+{% endif %}
+#}
+ 
 }
     
-void {{modelName}}::State_::set (const DictionaryDatum &d, const Parameters_&)
-{
+void {{modelName}}::State_::set (const DictionaryDatum &d, const Parameters_&) {
 
-{% for stateDef in stateDefs %}
-   updateValue<double_t>(d, "{{stateDef.name}}", y_[{{stateIndexMap[stateDef.name]}}]);
-
-{% endfor %}    
-
+    // Set internal state variables from dictionary values
+{% for i, name in enumerate(state_variables) %}
+    updateValue<double_t>(d, "{{name}}", y_[{{i}}]);
+{% endfor %}
+{# FIXME: Need to include special handling of v->V_m
 {% if ("v" in stateIndexMap) %}
    updateValue<double_t>(d, names::V_m, y_[{{stateIndexMap["v"]}}]);
-
-{% endif %}    
+{% endif %}
+#}
     
 }

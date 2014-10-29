@@ -1,4 +1,14 @@
+{# This template adds Buffers
+   classes
 
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
+#}
+
+
+//------------------------//
+// From NEST-buffers.tmpl //
+//------------------------//
 {% if ((ODEmethod == "cvode") or (ODEmethod == "ida")) %}
 
 {{modelName}}::Buffers_::Buffers_({{modelName}}& n)
@@ -8,7 +18,6 @@
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
-
 
 {{modelName}}::Buffers_::Buffers_(const Buffers_&, {{modelName}}& n)
     : logger_(n),
@@ -21,7 +30,6 @@
 
 {% elif (ODEmethod == "gsl") %}
 
-
 {{modelName}}::Buffers_::Buffers_({{modelName}}& n)
     : logger_(n),
       s_(0),
@@ -48,6 +56,5 @@
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
-
 
 {% endif %}

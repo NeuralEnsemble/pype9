@@ -1,9 +1,19 @@
-  /**
-   * Exception to be thrown if a CVode solver does not return CV_SUCCESS
-   * @ingroup KernelExceptions
-   */
-  class CVodeSolverFailure: public KernelException
-  {
+{# This template provides a CVODE exception class
+
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
+#}
+
+
+//------------------------------//
+// From NEST-cvode-prelude.tmpl //
+//------------------------------//
+
+/**
+* Exception to be thrown if a CVode solver does not return CV_SUCCESS
+* @ingroup KernelExceptions
+*/
+class CVodeSolverFailure: public KernelException {
   public:
     /**
     * @note model should be passed from get_name() to ensure that
@@ -11,23 +21,20 @@
     * @param model name of model causing problem
     * @param status exit status of the CVode solver
     */
-    CVodeSolverFailure(const std::string& model,
-                     const int status)
+    CVodeSolverFailure(const std::string& model, const int status)
       : KernelException("CVodeSolverFailure"),
         model_(model),
-        status_(status)
-      {}
+        status_(status) {}
     ~CVodeSolverFailure() throw() {}
     
-    std::string message()
-    {
+    std::string message() {
       std::ostringstream msg;
       msg << "In model " << model_ << ", the CVODE solver "
           << "returned with exit status " << status_ << ".\n";
       return msg.str();
     }
 
-    private:
-      const std::string model_;
-      const int status_;
-  };
+  private:
+    const std::string model_;
+    const int status_;
+};

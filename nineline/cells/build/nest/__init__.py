@@ -12,6 +12,7 @@ import time
 import os.path
 import subprocess as sp
 import shutil
+from itertools import izip
 from jinja2 import Environment, FileSystemLoader
 from nineml.abstraction_layer.dynamics.readers import XMLReader as NineMLReader
 
@@ -50,9 +51,12 @@ def ensure_camel_case(name):
 
 class Builder(object):
 
+    # Instantiate Jinja2 environment
     jinja_env = Environment(loader=FileSystemLoader(
                                    os.path.join(os.path.dirname(__file__),
                                                'templates')), trim_blocks=True)
+    # Add some globals used by the template code
+    jinja_env.globals.update(izip=izip, enumerate=enumerate)
 
     def __init__(self, build_dir=None):
         pass
@@ -191,11 +195,15 @@ class Builder(object):
         with open(os.path.join(src_dir, biophysics_name + '.cpp'), 'w') as f:
             f.write(cpp)
 
-    def flatten_nineml(self, biophysics_name, model, ode_method='gsl'):
+    def flatten_nineml(self, biophysics_name, model, ode_method='gsl',
+                       v_threshold=None):
         args = {}
         args['modelName'] = biophysics_name
         args['ODEmethod'] = ode_method
-        args['parameter_names'] = [p.name for p in model.parameters]
+        parameter_names = [p.name for p in model.parameters]
+        args['parameter_names'] = parameter_names
+        args['parameter_init'] = ['NAN'] * len(parameter_names)  # TODO: Need to provide default values
+        args['parameter_scales'] = {}  #TODO: Need to ask Ivan out why scaling is required in some cases
         state_names = [v.name for v in model.dynamics.state_variables]
         args['num_states'] = len(state_names)
         args['state_variables'] = state_names
@@ -203,6 +211,20 @@ class Builder(object):
                                         for i, s in enumerate(state_names))  #TODO: Come up with initialisations
         args['parameter_constraints'] = [] #TODO: Add parameter constraints to model
         args['steady_state'] = False  # This needs to be implemented (difficult without "state layer")
+        volt_index = [i for i, s in enumerate(model.dynamics.state_variables)
+                       if s.dimension == 'voltage']
+        if not volt_index:
+            raise Exception("Did not find a state with dimension 'voltage' in "
+                            "the list of state names so couldn't "
+                            "determine the membrane voltage")
+        elif len(volt_index) > 2:
+            raise Exception("Found multiple states with dimension 'voltage' "
+                            "({}) in the list of state names so couldn't "
+                            "determine the membrane voltage"
+                            .format(', '.join(volt_index)))
+        else:
+            args['v_index'] = volt_index[0]
+        args['v_threshold'] = v_threshold
         args['parameters'] = {'localVars' : [],
                                 'parameterEqDefs' : ['''K_erev  (-77.0)''', '''Na_C_alpha_h  (20.0)''', '''Na_C_alpha_m  (10.0)''', '''Na_A_alpha_h  (0.07)''', '''Na_gbar  (0.12)''', '''Na_A_alpha_m  (0.1)''', '''K_gbar  (0.036)''', '''K_B_alpha_n  (-55.0)''', '''K_e  (-77.0)''', '''Leak_erev  (-54.4)''', '''comp19_V_t  (-35.0)''', '''K_g  (0.036)''', '''K_A_alpha_n  (0.01)''', '''Na_erev  (50.0)''', '''comp20_C  (1.0)''', '''Na_C_beta_h  (10.0)''', '''K_C_beta_n  (80.0)''', '''Na_C_beta_m  (18.0)''', '''Na_A_beta_m  (4.0)''', '''comp19_Vrest  (-65.0)''', '''K_B_beta_n  (-65.0)''', '''Leak_gbar  (0.0003)''', '''Na_B_alpha_m  (-40.0)''', '''Na_A_beta_h  (1.0)''', '''Na_e  (50.0)''', '''Na_B_alpha_h  (-65.0)''', '''Na_g  (0.12)''', '''Na_B_beta_m  (-65.0)''', '''K_C_alpha_n  (10.0)''', '''Leak_g  (0.0003)''', '''K_A_beta_n  (0.125)''', '''Leak_e  (-54.4)''', '''Na_B_beta_h  (-35.0)'''],
                                 'parameterDefs' : [{'name' : '''K_erev''', 'scale' : False},
