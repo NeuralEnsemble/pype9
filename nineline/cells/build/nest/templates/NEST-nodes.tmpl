@@ -1,3 +1,13 @@
+{# This template provides the code to generate and access nodes
+
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
+#}
+
+
+//-------------------------------------------------//
+// This section was generated from NEST-nodes.tmpl //
+//-------------------------------------------------//
 
 {% if (ODEmethod == "cvode") %}
 
@@ -5,8 +15,7 @@
     : Archiving_Node(), 
       P_(), 
       S_(P_),
-      B_(*this)
-{
+      B_(*this) {
     recordablesMap_.create();
 }
 
@@ -14,22 +23,16 @@
     : Archiving_Node(n), 
       P_(n.P_), 
       S_(n.S_),
-      B_(n.B_, *this)
-{
-}
+      B_(n.B_, *this) {}
 
 
-{{ModelName}}::~{{ModelName}}()
-{
-
-  if ( B_.sys_ )
-  {
+{{ModelName}}::~{{ModelName}}() {
+  if ( B_.sys_ ) {
     /* Free y vector */
     N_VDestroy_Serial(B_.y);
 
     /* Free integrator memory */
-    if (B_.sys_ != NULL)
-    {
+    if (B_.sys_ != NULL) {
       CVodeFree(&B_.sys_);
       B_.sys_ = NULL;
     }
@@ -37,26 +40,23 @@
 }
 
 
-void {{ModelName}}::init_node_(const Node& proto)
-{
+void {{ModelName}}::init_node_(const Node& proto) {
     const {{ModelName}}& pr = downcast<{{ModelName}}>(proto);
     P_ = pr.P_;
     S_ = State_(P_);
 }
 
 
-void {{ModelName}}::init_state_(const Node& proto)
-{
+void {{ModelName}}::init_state_(const Node& proto) {
     const {{ModelName}}& pr = downcast<{{ModelName}}>(proto);
     S_ = State_(pr.P_);
 }
 
 
-void {{ModelName}}::init_buffers_()
-{
+void {{ModelName}}::init_buffers_() {
 
-   {% for synapticEvent in synapticEventDefs %}
-   B_.spike_{{synapticEvent.pscId}}.clear();
+   {% for id in synaptic_event_pscIDs %}
+   B_.spike_{{id}}.clear();
    {% endfor %}
 
    B_.currents_.clear();           
@@ -80,9 +80,7 @@ void {{ModelName}}::init_buffers_()
    if (check_flag((void *)B_.y, "N_VNew_Serial", 0)) throw CVodeSolverFailure (get_name(), 0);
 
    for (int i = 0; i < N; i++)
-   {
-      Ith(B_.y,i) = S_.y_[i];
-   }
+      GET_ITEM(B_.y,i) = S_.y_[i];
  
    /* Calls CVodeCreate to create the solver memory and specify the 
     * Backward Differentiation Formula and the use of a Newton iteration */
@@ -90,7 +88,7 @@ void {{ModelName}}::init_buffers_()
    if (check_flag((void *)B_.sys_, "CVodeCreate", 0)) throw CVodeSolverFailure (get_name(), 0);
 
    /* Calls CVodeInit to initialize the integrator memory and specifies the
-    * right hand side function in y'=f(t,y), the initial time, and
+    * right hand side function in y''=f(t,y), the initial time, and
     * the initial values. */
    status = CVodeInit (B_.sys_, {{ModelName}}_dynamics, 0.0, B_.y);
    if (check_flag(&status, "CVodeInit", 1)) throw CVodeSolverFailure (get_name(), status);
@@ -147,8 +145,7 @@ void {{ModelName}}::calibrate()
     : Archiving_Node(), 
       P_(), 
       S_(P_),
-      B_(*this)
-{
+      B_(*this) {
     recordablesMap_.create();
 }
 
@@ -157,67 +154,57 @@ void {{ModelName}}::calibrate()
     : Archiving_Node(n), 
       P_(n.P_), 
       S_(n.S_),
-      B_(n.B_, *this)
-{
-}
+      B_(n.B_, *this) {}
 
 
 {{ModelName}}::~{{ModelName}}()
 {
-
-  if ( B_.sys_ )
-  {
+  if ( B_.sys_ ) {
     /* Free y vector */
     N_VDestroy_Serial(B_.y);
     N_VDestroy_Serial(B_.yp);
 
     /* Free integrator memory */
-    if (B_.sys_ != NULL)
-    {
+    if (B_.sys_ != NULL) {
       IDAFree(&B_.sys_);
       B_.sys_ = NULL;
     }
-
   }
 }
 
 
-void {{ModelName}}::init_node_(const Node& proto)
-{
+void {{ModelName}}::init_node_(const Node& proto) {
     const {{ModelName}}& pr = downcast<{{ModelName}}>(proto);
     P_ = pr.P_;
     S_ = State_(P_);
 }
 
 
-void {{ModelName}}::init_state_(const Node& proto)
-{
+void {{ModelName}}::init_state_(const Node& proto) {
     const {{ModelName}}& pr = downcast<{{ModelName}}>(proto);
     S_ = State_(pr.P_);
 }
 
 
-void {{ModelName}}::init_buffers_()
-{
+void {{ModelName}}::init_buffers_() {
 
-   {% for synapticEvent in synapticEventDefs %}
-   B_.spike_{{synapticEvent.pscId}}.clear();
-   {% endfor %}
+    {% for id in synaptic_event_pscIDs %}
+  B_.spike_{{id}}.clear();
+    {% endfor %}
 
-   B_.currents_.clear();           
-   Archiving_Node::clear_history();
+  B_.currents_.clear();           
+  Archiving_Node::clear_history();
 
-   B_.logger_.reset();
+  B_.logger_.reset();
 
-   B_.step_ = Time::get_resolution().get_ms();
-   B_.IntegrationStep_ = B_.step_;
+  B_.step_ = Time::get_resolution().get_ms();
+  B_.IntegrationStep_ = B_.step_;
 
-   B_.I_stim_ = 0.0;
-
+  B_.I_stim_ = 0.0;
 
    int status, N, rootdir;
 
-   N = {{stateSize}};
+   N = {{num_states}};
 
    // only positive direction (rising edge) of spike events will be detected
    rootdir = 1;
@@ -230,7 +217,7 @@ void {{ModelName}}::init_buffers_()
 
    for (int i = 0; i < N; i++)
    {
-      Ith(B_.y,i) = S_.y_[i];
+      GET_ITEM(B_.y,i) = S_.y_[i];
    }
  
    {{ModelName}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
@@ -339,8 +326,8 @@ void {{ModelName}}::init_state_(const Node& proto)
 
 void {{ModelName}}::init_buffers_()
 {
-   {% for synapticEvent in synapticEventDefs %}
-   B_.spike_{{synapticEvent.pscId}}.clear();
+   {% for id in synaptic_event_pscIDs %}
+   B_.spike_{{id}}.clear();
    {% endfor %}
 
    B_.currents_.clear();           
@@ -355,7 +342,7 @@ void {{ModelName}}::init_buffers_()
 
 
    static const gsl_odeiv2_step_type* T1 = gsl_odeiv2_step_rk2;
-   B_.N = {{stateSize}};
+   B_.N = {{num_states}};
   
    if ( B_.s_ == 0 )
      B_.s_ = gsl_odeiv2_step_alloc (T1, B_.N);
@@ -389,13 +376,15 @@ void {{ModelName}}::init_buffers_()
 
 void {{ModelName}}::calibrate()
 {
-    B_.logger_.init();  
-    {% if ("v" in stateIndexMap) %}V_.U_old_ = S_.y_[{{stateIndexMap["v"]}}];{% endif %}
-{% if ("t_ref" in defaultDefs) %}
-    V_.RefractoryCounts_ = Time(Time::ms(P_.t_ref)).get_steps();
-{% else %}
-    V_.RefractoryCounts_ = 0;
-{% endif %}
+  B_.logger_.init();  
+    {% if ("v" in stateIndexMap) %}
+  V_.U_old_ = S_.y_[{{stateIndexMap["v"]}}];
+    {% endif %}
+    {% if ("t_ref" in defaultDefs) %}
+  V_.RefractoryCounts_ = Time(Time::ms(P_.t_ref)).get_steps();
+    {% else %}
+  V_.RefractoryCounts_ = 0;
+    {% endif %}
 }
 
 

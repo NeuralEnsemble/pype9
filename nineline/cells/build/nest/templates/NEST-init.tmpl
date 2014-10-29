@@ -5,9 +5,9 @@
 #}
 
 
-//------------------------------------//
-// From NEST-init.tmpl //
-//------------------------------------//
+//------------------------------------------------//
+// This section was generated from NEST-init.tmpl //
+//------------------------------------------------//
 
 /**
  * Construct state from parameters.
@@ -44,7 +44,7 @@
           (void *)&p,  "{{ModelName}}");
         {% for name in rateEqStates %}
             {% if (name in steadyStateIndexMap) %}
-   y_[{{stateIndexMap[name]}}] = Ith({{SSvector}}, {{steadyStateIndexMap[name]}});
+   y_[{{stateIndexMap[name]}}] = GET_ITEM({{SSvector}}, {{steadyStateIndexMap[name]}});
             {% else %}
    y_[{{stateIndexMap[name]}}] = {{name}};
             {% endif %}

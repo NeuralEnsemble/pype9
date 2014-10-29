@@ -216,19 +216,19 @@ class Builder(BaseBuilder):
         args['version'] = __version__
         args['synaptic_events'] = [p.name for p in model.event_receive_ports]
         args['synaptic_event_pscIDs'] = ['UNKNOWN' for p in model.event_receive_ports]
-        volt_index = [i for i, s in enumerate(model.dynamics.state_variables)
+        volt_states = [s.name for s in model.dynamics.state_variables
                        if s.dimension == 'voltage']
-        if not volt_index:
+        if not volt_states:
             raise Exception("Did not find a state with dimension 'voltage' in "
                             "the list of state names so couldn't "
                             "determine the membrane voltage")
-        elif len(volt_index) > 2:
+        elif len(volt_states) > 2:
             raise Exception("Found multiple states with dimension 'voltage' "
                             "({}) in the list of state names so couldn't "
                             "determine the membrane voltage"
-                            .format(', '.join(volt_index)))
+                            .format(', '.join(volt_states)))
         else:
-            args['v_index'] = volt_index[0]
+            args['membrane_voltage'] = volt_states[0]
         args['v_threshold'] = v_threshold
         args['parameters'] = {'localVars' : [],
                                 'parameterEqDefs' : ['''K_erev  (-77.0)''', '''Na_C_alpha_h  (20.0)''', '''Na_C_alpha_m  (10.0)''', '''Na_A_alpha_h  (0.07)''', '''Na_gbar  (0.12)''', '''Na_A_alpha_m  (0.1)''', '''K_gbar  (0.036)''', '''K_B_alpha_n  (-55.0)''', '''K_e  (-77.0)''', '''Leak_erev  (-54.4)''', '''comp19_V_t  (-35.0)''', '''K_g  (0.036)''', '''K_A_alpha_n  (0.01)''', '''Na_erev  (50.0)''', '''comp20_C  (1.0)''', '''Na_C_beta_h  (10.0)''', '''K_C_beta_n  (80.0)''', '''Na_C_beta_m  (18.0)''', '''Na_A_beta_m  (4.0)''', '''comp19_Vrest  (-65.0)''', '''K_B_beta_n  (-65.0)''', '''Leak_gbar  (0.0003)''', '''Na_B_alpha_m  (-40.0)''', '''Na_A_beta_h  (1.0)''', '''Na_e  (50.0)''', '''Na_B_alpha_h  (-65.0)''', '''Na_g  (0.12)''', '''Na_B_beta_m  (-65.0)''', '''K_C_alpha_n  (10.0)''', '''Leak_g  (0.0003)''', '''K_A_beta_n  (0.125)''', '''Leak_e  (-54.4)''', '''Na_B_beta_h  (-35.0)'''],

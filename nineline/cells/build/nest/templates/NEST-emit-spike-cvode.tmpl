@@ -6,14 +6,14 @@
 
 
 //---------------------------------//
-// From NEST-emit-spike-cvode.tmpl //
+// This section was generated from NEST-emit-spike-cvode.tmpl //
 //---------------------------------//
 
    {
       set_spiketime(Time::ms(tt));
       SpikeEvent se;
       for (int i = 0; i < N; i++) {
-          S_.y_[i] = Ith(B_.y,i);
+          S_.y_[i] = GET_ITEM(B_.y,i);
       }
       network()->send(*this, se, lag);
       adjust_zero_crossings(B_.y, {% if abstol %}{{abstol}}{% else %}1e-7{% endif %});

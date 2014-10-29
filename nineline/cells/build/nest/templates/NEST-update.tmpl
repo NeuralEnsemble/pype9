@@ -54,7 +54,7 @@
 
         for (int i = 0; i < N; i++)
         {
-           S_.y_[i] = Ith(B_.y,i);
+           S_.y_[i] = GET_ITEM(B_.y,i);
         }
 
         {% include "NEST-solver-events.tmpl" %}
@@ -80,7 +80,7 @@
 
         for (int i = 0; i < N; i++)
         {
-           S_.y_[i] = Ith(B_.y,i);
+           S_.y_[i] = GET_ITEM(B_.y,i);
         }
 
         {% include "NEST-solver-events.tmpl" %}
