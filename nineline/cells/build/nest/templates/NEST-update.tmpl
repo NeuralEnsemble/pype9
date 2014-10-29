@@ -18,10 +18,16 @@
    to generate code that handles detection of spiking threshold and
    generation of corresponding spike events.
 
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
+
+//-------------------------------------------- -----//
+// This section was generated from NEST-update.tmpl //
+//--------------------------------------------------//
+
     
-  void {{ModelName}}::update(Time const & origin, const long_t from, const long_t to)
-  {
+  void {{ModelName}}::update(Time const & origin, const long_t from, const long_t to) {
 
     assert(to >= 0 && (delay) from < Scheduler::get_min_delay());
     assert(from < to);
@@ -29,90 +35,79 @@
     double tout;
     long_t current_steps = origin.get_steps();
 
-    for ( long_t lag = from ; lag < to ; ++lag )
-      {
-        double h = B_.step_;    
+    for ( long_t lag = from ; lag < to ; ++lag ) {
+      double h = B_.step_;    
 	double tt = 0.0 ; 
 
 {% if (ODEmethod == "cvode") %}
 
-        int N = NV_LENGTH_S (B_.y);
-        tout = (current_steps+lag)*h;
+    int N = NV_LENGTH_S (B_.y);
+    tout = (current_steps+lag)*h;
 
 	// adaptive step integration
-	while (tt < tout)
-	{
+	while (tt < tout) {
 	  const int status = CVode (B_.sys_, tout, B_.y, &tt, CV_NORMAL);
 
-          switch (status)
-            {
-                case CV_SUCCESS:      continue;
-                case CV_ROOT_RETURN:  {% include "NEST-emit-spike-cvode.tmpl" %};
-                default:              throw CVodeSolverFailure (get_name(), 0);
-            }
+        switch (status) {
+          case CV_SUCCESS:      continue;
+          case CV_ROOT_RETURN:  {% include "NEST-emit-spike-cvode.tmpl" %};
+          default:              throw CVodeSolverFailure (get_name(), 0);
+        }
    	}
 
-        for (int i = 0; i < N; i++)
-        {
-           S_.y_[i] = GET_ITEM(B_.y,i);
-        }
+    for (int i = 0; i < N; i++) {
+       S_.y_[i] = GET_ITEM(B_.y,i);
+    }
 
-        {% include "NEST-solver-events.tmpl" %}
+    {% include "NEST-solver-events.tmpl" %}
 
 {% elif (ODEmethod == "ida") %}
 
-        int N = NV_LENGTH_S (B_.y);
-        tout = (current_steps+lag)*h;
+    int N = NV_LENGTH_S (B_.y);
+    tout = (current_steps+lag)*h;
 
 	// adaptive step integration
-	while (tt < tout)
-	{
+	while (tt < tout) {
 	  const int status = IDASolve (B_.sys_, tout, &tt, B_.y, B_.yp, IDA_NORMAL);
 
-          switch (status)
-            {
-                case IDA_SUCCESS:      continue;
-                case IDA_ROOT_RETURN:  {% include "NEST-emit-spike-cvode.tmpl" %};
-                case IDA_TSTOP_RETURN: break;
-                default:               throw IDASolverFailure (get_name(), 0);
-            }
+      switch (status) {
+        case IDA_SUCCESS:      continue;
+        case IDA_ROOT_RETURN:  {% include "NEST-emit-spike-cvode.tmpl" %};
+        case IDA_TSTOP_RETURN: break;
+        default:               throw IDASolverFailure (get_name(), 0);
+      }
    	}
 
-        for (int i = 0; i < N; i++)
-        {
-           S_.y_[i] = GET_ITEM(B_.y,i);
-        }
+    for (int i = 0; i < N; i++) {
+     S_.y_[i] = GET_ITEM(B_.y,i);
+    }
 
-        {% include "NEST-solver-events.tmpl" %}
+    {% include "NEST-solver-events.tmpl" %}
 
 {% elif (ODEmethod == "gsl") %}
 
-        V_.U_old_ = S_.y_[{{stateIndexMap["v"]}}];
+    V_.U_old_ = S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_i];
 
-        while (tt < h)
-        {
+    while (tt < h) {
+      const int status =  gsl_odeiv2_evolve_apply(B_.e_, B_.c_, B_.s_, 
+                                                  &B_.sys_, // system of ODE
+                                                  &tt, // from t...
+                                                  h, // ...to t=t+h
+                                                  &B_.IntegrationStep_, // integration window (written on!)
+                                                  S_.y_); // neuron state
 
-           const int status = 
-             gsl_odeiv2_evolve_apply
-             (B_.e_, B_.c_, B_.s_, 
-              &B_.sys_, // system of ODE
-              &tt, // from t...
-              h, // ...to t=t+h
-              &B_.IntegrationStep_, // integration window (written on!)
-              S_.y_); // neuron state
+      if ( status != GSL_SUCCESS )
+        throw GSLSolverFailure(get_name(), status);
+    }
+    
+    {% include "NEST-emit-spike-gsl.tmpl" %}
 
-           if ( status != GSL_SUCCESS )
-             throw GSLSolverFailure(get_name(), status);
-
-        }
-        
-        {% include "NEST-emit-spike-gsl.tmpl" %}
-
-        {% include "NEST-solver-events.tmpl" %}
+    {% include "NEST-solver-events.tmpl" %}
 
 {% endif %}
-        B_.I_stim_ = B_.currents_.get_value(lag);
-        B_.logger_.record_data(current_steps + lag);
-      }
+    B_.I_stim_ = B_.currents_.get_value(lag);
+    B_.logger_.record_data(current_steps + lag);
   }
+}
 
+//---------------- NEST-update.tmpl -------------//

@@ -9,12 +9,18 @@
      - pscName - descriptive name (label) of the post-synaptic conductance component
      - pscId - unique identifier of the post-synaptic conductance component
 
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
+
+//---------------------------------------------------------//
+// This section was generated from NEST-solver-events.tmpl //
+//---------------------------------------------------------//
 
   int events = 0;
 
-{% for synapticEvent in synapticEventDefs %}
-  events = events + {{synapticEvent.pscName}}_transients (lag);
+{% for name in synaptic_events %}
+  events = events + {{name}}_transients (lag);
 {% endfor %}
 
 {% if (ODEmethod == "cvode") %}
@@ -44,3 +50,5 @@
   }
 
 {% endif %}
+
+//------------  NEST-solver-events.tmpl ---------------------//

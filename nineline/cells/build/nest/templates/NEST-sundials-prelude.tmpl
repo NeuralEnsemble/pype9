@@ -1,4 +1,15 @@
-{% if ((ODEmethod == "cvode") or (ODEmethod == "ida")) %}
+{# This template sets up required functions for sundials which is used by the
+   IDA and CVODE solvers
+   
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
+#}
+
+//------------------------------------------------------------//
+// This section was generated from NEST-sundials-prelude.tmpl //
+//------------------------------------------------------------//
+
+{% if ODEmethod == "cvode" or ODEmethod == "ida" %}
 
   /* 
    * Check function return value.
@@ -58,3 +69,4 @@
   }
 
 {% endif %}
+//---------------------- NEST-sundials-prelude.tmpl ------------------//

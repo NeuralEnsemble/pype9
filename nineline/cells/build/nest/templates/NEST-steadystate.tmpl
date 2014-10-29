@@ -26,55 +26,56 @@
                            - lbs - local variables used in steady state expressions
                            - defs - list of equations of the form "f[i] = rhs" where "i" is the index of a state,
                              and "rhs" is the corresponding derivative expr for that state
-
+   
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
-{% if (SSmethod == "kinsol") %}
-extern "C" int {{ModelName}}_steadystate (N_Vector u, N_Vector f, void* pnode)
+//-------------------------------------------------------//
+// This section was generated from NEST-steadystate.tmpl //
+//-------------------------------------------------------//
+
+{% if SSmethod == "kinsol" %}
+extern "C" int {{ModelName}}_steadystate (N_Vector u, N_Vector f, void* pnode) {
 {% else %}
-extern "C" int {{ModelName}}_steadystate (const gsl_vector *u, void *pnode, gsl_vector *f)
-{% endif %}
-{
-{% if (not (steadystate.localVars == [])) %}
-   double {{steadystate.localVars | join(", ")}};
+extern "C" int {{ModelName}}_steadystate (const gsl_vector *u, void *pnode, gsl_vector *f) {
 {% endif %}
 
-   // params is a reference to the model parameters
-   const struct {{ModelName}}::Parameters_ *params = (struct {{ModelName}}::Parameters_ *)pnode;
+{% if steadystate.localVars %}
+  double {{steadystate.localVars | join(", ")}};
+{% endif %}
+
+  // params is a reference to the model parameters
+  const struct {{ModelName}}::Parameters_ *params = (struct {{ModelName}}::Parameters_ *)pnode;
 
 {% for parameterDef in steadystate.parameterDefs %}
-   {{parameterDef}}
-
+  {{parameterDef}}
 {% endfor %}
 
-
 {% for eq in steadystate.SSgetStateDefs %}
-   {{eq}}
-
+  {{eq}}
 {% endfor %}
 
 {% for eq in steadystate.SScurrentEqDefs %}
-   {{eq}}
-
+  {{eq}}
 {% endfor %}
 
 {% for eq in init.initOrder %}
-   {{eq}}
-
+  {{eq}}
 {% endfor %}
 
 {% for x in steadystate.SSsetStateDefsLbs %}
-{% if (not (x.lbs == [])) %}
-   double {{x.lbs | join(", ")}};
+    {% if x.lbs %}
+  double {{x.lbs | join(", ")}};
+    {% endif %}
 
-{% endif %}
-
-{% for eq in x.defs %}
-   {{eq}}
-
-{% endfor %}
+    {% for eq in x.defs %}
+  {{eq}}
+    {% endfor %}
 
 {% endfor %}
 
    return 0;
 }
+
+//---------------------- NEST-steadystate.tmpl ---------------//

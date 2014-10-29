@@ -22,11 +22,19 @@
      - eventVar - the name of the variable the receives the event argument (e.g. weight)
      - externalEventEqDef - the equations that assigns values to any imported quantities, e.g. voltage
      - transientEventEqDefs - the equations that update the synaptic states
+   
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
-{% for synapticEvent in synapticEventDefs %}
+//---------------------------------------------------------------//
+// This section was generated from NEST-synaptic-transients.tmpl //
+//---------------------------------------------------------------//
 
-inline int {{ModelName}}::{{synapticEvent.pscName}}_transients (long_t lag)
+{# FIXME: This section needs to have code to insert the synaptic transients #}
+{% for name in synaptic_events %}
+
+inline int {{ModelName}}::{{name}}_transients (long_t lag)
 {
 {% if (not (synapticEvent.localVars == [])) %}
    double {{synapticEvent.localVars | join(", ")}};
@@ -49,3 +57,5 @@ inline int {{ModelName}}::{{synapticEvent.pscName}}_transients (long_t lag)
 }
 
 {% endfor %}
+
+//------------------- NEST-synaptic-transients.tmpl -----------------//

@@ -1,3 +1,12 @@
+{# This template sets up residual method required by the IDA solver
+
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
+#}
+
+//----------------------------------------------------//
+// This section was generated from NEST-residual.tmpl //
+//----------------------------------------------------//
 
 {% if (ODEmethod == "ida") %}
 
@@ -14,12 +23,13 @@ extern "C" int {{ModelName}}_residual (double t, N_Vector y, N_Vector yp, N_Vect
              
    status = {{ModelName}}_dynamics (t, y, y1, pnode);
 
-   {% for eq in residualRateEqDefs %}
-   {{eq}}
-
+   {% for i in xrange(num_states) %}
+   GET_ITEM(f, {{i}}) = GET_ITEM(y1, {{i}}) - GET_ITEM(yp, {{i}})
    {% endfor %}
 
    return status;
 }
 
 {% endif %}
+
+//-------------- NEST-residual.tmpl ------------------//
