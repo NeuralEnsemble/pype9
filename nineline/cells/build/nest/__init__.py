@@ -200,7 +200,7 @@ class Builder(BaseBuilder):
     def flatten_nineml(self, biophysics_name, model, ode_method='gsl',
                        v_threshold=None):
         args = {}
-        args['modelName'] = biophysics_name
+        args['ModelName'] = biophysics_name
         args['ODEmethod'] = ode_method
         parameter_names = [p.name for p in model.parameters]
         args['parameter_names'] = parameter_names
@@ -214,6 +214,8 @@ class Builder(BaseBuilder):
         args['steady_state'] = False  # This needs to be implemented (difficult without "state layer")
         args['timestamp'] = time.strftime('%X %a %d %b %Y')
         args['version'] = __version__
+        args['synaptic_events'] = [p.name for p in model.event_receive_ports]
+        args['synaptic_event_pscIDs'] = ['UNKNOWN' for p in model.event_receive_ports]
         volt_index = [i for i, s in enumerate(model.dynamics.state_variables)
                        if s.dimension == 'voltage']
         if not volt_index:
