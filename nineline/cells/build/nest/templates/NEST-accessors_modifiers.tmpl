@@ -10,7 +10,7 @@
 // From NEST-accessors_modifiers.tmpl //
 //------------------------------------//
 
-void {{modelName}}::Parameters_::get (DictionaryDatum &d) const {
+void {{ModelName}}::Parameters_::get (DictionaryDatum &d) const {
 
 {# TODO: Should change this to names::{{name}}, {{name}} once I work out where
          to put the "names" declarations (probably in the header#}
@@ -21,7 +21,7 @@ void {{modelName}}::Parameters_::get (DictionaryDatum &d) const {
 
 }
 
-void {{modelName}}::Parameters_::set (const DictionaryDatum &d) {
+void {{ModelName}}::Parameters_::set (const DictionaryDatum &d) {
 
     // Update internal parameters from dictionary
 {% for name in parameter_names %}
@@ -36,7 +36,7 @@ void {{modelName}}::Parameters_::set (const DictionaryDatum &d) {
 }
 
 
-void {{modelName}}::State_::get (DictionaryDatum &d) const {
+void {{ModelName}}::State_::get (DictionaryDatum &d) const {
 
     // Get states from internal variables
 {% for i, name in enumerate(state_variables) %}
@@ -50,7 +50,7 @@ void {{modelName}}::State_::get (DictionaryDatum &d) const {
  
 }
     
-void {{modelName}}::State_::set (const DictionaryDatum &d, const Parameters_&) {
+void {{ModelName}}::State_::set (const DictionaryDatum &d, const Parameters_&) {
 
     // Set internal state variables from dictionary values
 {% for i, name in enumerate(state_variables) %}

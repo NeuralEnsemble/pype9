@@ -3,14 +3,14 @@
 
    This template defines a C++ function of the form:
 
-   int modelName_update (Time const & origin, const long_t from, const long_t to)
+   int ModelName_update (Time const & origin, const long_t from, const long_t to)
 
    This is the model state update function invoked by the NEST simulator.
 
    Template variables are:
 
    - ODEmethod: the current used solver method; can be "cvode" "ida" or "gsl"
-   - modelName: the name of the current system
+   - ModelName: the name of the current system
    - stateIndexMap - a dictionary mapping state names to state vector indices
                      (state "v" is always at index 0)
 
@@ -20,7 +20,7 @@
 
 #}
     
-  void {{modelName}}::update(Time const & origin, const long_t from, const long_t to)
+  void {{ModelName}}::update(Time const & origin, const long_t from, const long_t to)
   {
 
     assert(to >= 0 && (delay) from < Scheduler::get_min_delay());

@@ -3,16 +3,16 @@
 
    This template defines three C++ methods of the form:
 
-   int modelName::handle (SpikeEvent &e)
-   int modelName::handle (CurrentEvent &e)
-   int modelName::handle (DataLoggingRequest& e)
+   int ModelName::handle (SpikeEvent &e)
+   int ModelName::handle (CurrentEvent &e)
+   int ModelName::handle (DataLoggingRequest& e)
 
    These methods handle receiving spike events, current injection
    events, and data logging requests, respectively.
 
    Template variables are:
 
-   - modelName: the name of the current system
+   - ModelName: the name of the current system
    - synapticEventDefs - a list of synaptic event objects that have the following fields:
 
      - pscName - descriptive name (label) of the post-synaptic conductance component
@@ -29,7 +29,7 @@
 // From NEST-event-handle.tmpl //
 //---------------------------------//
   
-void {{modelName}}::handle(SpikeEvent & e)
+void {{ModelName}}::handle(SpikeEvent & e)
   {
     int flag;
     assert(e.get_delay() > 0);
@@ -48,7 +48,7 @@ void {{modelName}}::handle(SpikeEvent & e)
   }
 
 
-void {{modelName}}::handle(CurrentEvent& e)
+void {{ModelName}}::handle(CurrentEvent& e)
   {
     assert(e.get_delay() > 0);
 
@@ -59,7 +59,7 @@ void {{modelName}}::handle(CurrentEvent& e)
   }
 
 
-void {{modelName}}::handle(DataLoggingRequest& e)
+void {{ModelName}}::handle(DataLoggingRequest& e)
   {
     B_.logger_.handle(e);
   }

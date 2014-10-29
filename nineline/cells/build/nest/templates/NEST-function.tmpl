@@ -29,7 +29,7 @@
     {% endif %}
     {% if consts %}
   double {{consts | join(", ")}};
-  const {{modelName}}::Parameters_ & p = *(reinterpret_cast< const {{modelName}}::Parameters_ *>(params));
+  const {{ModelName}}::Parameters_ & p = *(reinterpret_cast< const {{ModelName}}::Parameters_ *>(params));
 
         {% for const in consts %}
   {{const}} =  p.{{const}};

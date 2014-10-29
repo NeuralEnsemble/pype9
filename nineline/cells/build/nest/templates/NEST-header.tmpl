@@ -61,30 +61,30 @@ namespace nest {
     {% include "NEST-kinsol-prelude.tmpl" %}
 {% endif %}
 {% if (ODEmethod == "cvode") %}
-  extern "C" int {{modelName}}_dynamics (double, const N_Vector, N_Vector, void*);
-  extern "C" int {{modelName}}_event (double, N_Vector, double *, void*);
+  extern "C" int {{ModelName}}_dynamics (double, const N_Vector, N_Vector, void*);
+  extern "C" int {{ModelName}}_event (double, N_Vector, double *, void*);
 {% elif (ODEmethod == "ida") %}
-  extern "C" int {{modelName}}_residual (double, N_Vector, N_Vector, N_Vector, void*);
-  extern "C" int {{modelName}}_event (double, N_Vector, N_Vector, double *, void*);
+  extern "C" int {{ModelName}}_residual (double, N_Vector, N_Vector, N_Vector, void*);
+  extern "C" int {{ModelName}}_event (double, N_Vector, N_Vector, double *, void*);
 {% else %}
-  extern "C" int {{modelName}}_dynamics (double, const double*, double*, void*);
+  extern "C" int {{ModelName}}_dynamics (double, const double*, double*, void*);
 {% endif %}
 {% if (steadyStateSize > 0) %}
     {% if (SSmethod == "kinsol") %}
-  extern "C" int {{modelName}}_steadystate (N_Vector, N_Vector, void*);
+  extern "C" int {{ModelName}}_steadystate (N_Vector, N_Vector, void*);
     {% else %}
-  extern "C" int {{modelName}}_steadystate (const gsl_vector *, void *, gsl_vector *);
+  extern "C" int {{ModelName}}_steadystate (const gsl_vector *, void *, gsl_vector *);
     {% endif %}
 
 {% endif %}
 
-  class {{modelName}} : public Archiving_Node { 
+  class {{ModelName}} : public Archiving_Node { 
 
     public:
 
-    ~{{modelName}} ();
-    {{modelName}} (const {{modelName}} &);
-    {{modelName}} ();
+    ~{{ModelName}} ();
+    {{ModelName}} (const {{ModelName}} &);
+    {{ModelName}} ();
 
     using Node::connect_sender;
     using Node::handle;
@@ -132,19 +132,19 @@ namespace nest {
   
     // Set dynamics methods (the ones that actually model the dynamics) as friends
 {% if (ODEmethod == "cvode") %}
-    friend int {{modelName}}_dynamics (double, const N_Vector, N_Vector, void*);
-    friend int {{modelName}}_event (double, N_Vector, double *, void*);
+    friend int {{ModelName}}_dynamics (double, const N_Vector, N_Vector, void*);
+    friend int {{ModelName}}_event (double, N_Vector, double *, void*);
 {% elif (ODEmethod == "ida") %}
-    friend int {{modelName}}_residual (double, N_Vector, N_Vector, N_Vector, void*);
-    friend int {{modelName}}_event (double, N_Vector, N_Vector, double *, void*);
+    friend int {{ModelName}}_residual (double, N_Vector, N_Vector, N_Vector, void*);
+    friend int {{ModelName}}_event (double, N_Vector, N_Vector, double *, void*);
 {% elif (ODEmethod == "gsl") %}
-    friend int {{modelName}}_dynamics (double, const double*, double*, void*);
+    friend int {{ModelName}}_dynamics (double, const double*, double*, void*);
 {% endif %} 
 {% if (steadyStateSize > 0) %}
     {% if (SSmethod == "kinsol") %}
-    friend  int {{modelName}}_steadystate (N_Vector, N_Vector, void*);
+    friend  int {{ModelName}}_steadystate (N_Vector, N_Vector, void*);
     {% else %}
-    friend  int {{modelName}}_steadystate (const gsl_vector *, void *, gsl_vector *);
+    friend  int {{ModelName}}_steadystate (const gsl_vector *, void *, gsl_vector *);
     {% endif %}
 {% endif %}
     // Synaptic Events
@@ -152,8 +152,8 @@ namespace nest {
     int {{synapticEvent.pscName}}_transients (long_t lag);
 {% endfor %}
     // The next two classes need to be friends to access the State_ class/member
-    friend class RecordablesMap<{{modelName}}>;
-    friend class UniversalDataLogger<{{modelName}}>;
+    friend class RecordablesMap<{{ModelName}}>;
+    friend class UniversalDataLogger<{{ModelName}}>;
 
     struct Parameters_ { 
 {% for p in parameters.parameterDefs %}
@@ -198,9 +198,9 @@ namespace nest {
 
     struct Buffers_ {
 
-      Buffers_({{modelName}}&);
-      Buffers_(const Buffers_&, {{modelName}}&);
-      UniversalDataLogger<{{modelName}}> logger_;
+      Buffers_({{ModelName}}&);
+      Buffers_(const Buffers_&, {{ModelName}}&);
+      UniversalDataLogger<{{ModelName}}> logger_;
 	
 {% if (ODEmethod == "cvode") %}
       N_Vector y;  //!< current state vector used by CVode
@@ -247,12 +247,12 @@ namespace nest {
 	Buffers_  B_;
 	
     //! Mapping of recordables names to access functions	
-	static RecordablesMap<{{modelName}}> recordablesMap_;
+	static RecordablesMap<{{ModelName}}> recordablesMap_;
 
-  }; // end class {{modelName}}
+  }; // end class {{ModelName}}
 
 
-  inline port {{modelName}}::check_connection(Connection& c, port receptor_type) {
+  inline port {{ModelName}}::check_connection(Connection& c, port receptor_type) {
 	  SpikeEvent e;
 	  e.set_sender(*this);
 	  c.check_event(e);
@@ -260,7 +260,7 @@ namespace nest {
   }
 
 
-  inline port {{modelName}}::connect_sender(SpikeEvent&, port receptor_type) {
+  inline port {{ModelName}}::connect_sender(SpikeEvent&, port receptor_type) {
     if ( receptor_type < MIN_SPIKE_RECEPTOR || receptor_type >= SUP_SPIKE_RECEPTOR ) {
     if ( receptor_type < 0 || receptor_type >= SUP_SPIKE_RECEPTOR )
       throw UnknownReceptorType(receptor_type, get_name());
@@ -271,21 +271,21 @@ namespace nest {
   }
  
 
-  inline port {{modelName}}::connect_sender(CurrentEvent&, port receptor_type) {
+  inline port {{ModelName}}::connect_sender(CurrentEvent&, port receptor_type) {
     if (receptor_type != 0)
       throw UnknownReceptorType(receptor_type, get_name());
     return 0;
   }
 
 
-  inline port {{modelName}}::connect_sender(DataLoggingRequest& dlr, port receptor_type) {
+  inline port {{ModelName}}::connect_sender(DataLoggingRequest& dlr, port receptor_type) {
     if (receptor_type != 0)
       throw UnknownReceptorType(receptor_type, get_name());
     return B_.logger_.connect_logging_device(dlr, recordablesMap_);
   }
 
 
-  inline void {{modelName}}::get_status(DictionaryDatum &d) const {
+  inline void {{ModelName}}::get_status(DictionaryDatum &d) const {
     P_.get(d);
     S_.get(d);
     Archiving_Node::get_status(d);
@@ -300,7 +300,7 @@ namespace nest {
   }
 
 
-  inline void {{modelName}}::set_status(const DictionaryDatum &d) {
+  inline void {{ModelName}}::set_status(const DictionaryDatum &d) {
     Parameters_ ptmp = P_;  // temporary copy in case of errors
     ptmp.set(d);             // throws if BadProperty
     State_    stmp = S_;  // temporary copy in case of errors

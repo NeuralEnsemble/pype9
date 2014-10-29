@@ -3,7 +3,7 @@
 
    This template defines C++ methods of the form:
 
-   int modelName::synapticEvent_transients (long_t lag)
+   int ModelName::synapticEvent_transients (long_t lag)
 
    These methods update the synaptic states when a spike is received.
    They are invoked by the event handling portion of the update method,
@@ -11,7 +11,7 @@
 
    Template variables are:
 
-   - modelName: the name of the current system
+   - ModelName: the name of the current system
    - synapticEventDefs - a list of synaptic event objects that have the following fields:
 
      - pscName - descriptive name (label) of the post-synaptic conductance component
@@ -26,7 +26,7 @@
 
 {% for synapticEvent in synapticEventDefs %}
 
-inline int {{modelName}}::{{synapticEvent.pscName}}_transients (long_t lag)
+inline int {{ModelName}}::{{synapticEvent.pscName}}_transients (long_t lag)
 {
 {% if (not (synapticEvent.localVars == [])) %}
    double {{synapticEvent.localVars | join(", ")}};

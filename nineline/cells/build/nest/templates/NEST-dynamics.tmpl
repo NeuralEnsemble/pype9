@@ -3,11 +3,11 @@
 
    This template defines a C++ function of the form:
 
-   int modelName_dynamics (double t, N_Vector y, N_Vector f, void* pnode)
+   int ModelName_dynamics (double t, N_Vector y, N_Vector f, void* pnode)
 
    if using the CVODE/IDA solvers, or 
 
-   int modelName_dynamics (double t, const double y[], double f[], void* pnode)
+   int ModelName_dynamics (double t, const double y[], double f[], void* pnode)
 
    if using the GSL ODE solvers.
    The function computes the derivatives of all states defined in the system.
@@ -15,7 +15,7 @@
    Template variables are:
 
    - ODEmethod: the current used solver method; can be "cvode" "ida" or "gsl"
-   - modelName: the name of the current system
+   - ModelName: the name of the current system
    - localVars: list of strings with the name of all local variables appearing in the system
    - parameterDefs - the parameter equations of the form "name = params->name"
                      which retrieve parameter values from the params structure and assign it
@@ -31,10 +31,10 @@
 #}
 
 {% if ODEmethod in ('cvode', 'ida') %}
-extern "C" int {{modelName}}_dynamics (double t, N_Vector y, N_Vector f,
+extern "C" int {{ModelName}}_dynamics (double t, N_Vector y, N_Vector f,
                                        void* pnode) {
 {% else %}
-extern "C" int {{modelName}}_dynamics (double t, const double y[], double f[],
+extern "C" int {{ModelName}}_dynamics (double t, const double y[], double f[],
                                        void* pnode) {
 {% endif %}
 
@@ -43,19 +43,19 @@ extern "C" int {{modelName}}_dynamics (double t, const double y[], double f[],
 {% endif %}
 
    // S is shorthand for the type that describes the model state
-   typedef {{modelName}}::State_ S;
+   typedef {{ModelName}}::State_ S;
 	
    // cast the node ptr to an object of the proper type
    assert(pnode);
-   const {{modelName}} & node =  *(reinterpret_cast<{{modelName}}*>(pnode));
-   {{modelName}} & vnode =  *(reinterpret_cast<{{modelName}}*>(pnode));
+   const {{ModelName}} & node =  *(reinterpret_cast<{{ModelName}}*>(pnode));
+   {{ModelName}} & vnode =  *(reinterpret_cast<{{ModelName}}*>(pnode));
 
    // params is a reference to the model parameters
-   const struct {{modelName}}::Parameters_ *params;
+   const struct {{ModelName}}::Parameters_ *params;
    params = &(node.P_);
 
    // state is a reference to the model state
-   struct {{modelName}}::State_ *state;
+   struct {{ModelName}}::State_ *state;
    state = &(vnode.S_);
 	
    // y[] must be the state vector supplied by the integrator,

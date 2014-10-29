@@ -8,7 +8,7 @@
 // From NEST-parameters.tmpl //
 //------------------------------------//
 
-{{modelName}}::Parameters_::Parameters_():
+{{ModelName}}::Parameters_::Parameters_():
 {% for name, default in izip(parameter_names, parameter_init) %}
     {{name}} ({{default}})
 {% endfor %}    {}

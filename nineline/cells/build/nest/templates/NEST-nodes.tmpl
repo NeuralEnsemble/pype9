@@ -1,7 +1,7 @@
 
 {% if (ODEmethod == "cvode") %}
 
-{{modelName}}::{{modelName}}()
+{{ModelName}}::{{ModelName}}()
     : Archiving_Node(), 
       P_(), 
       S_(P_),
@@ -10,7 +10,7 @@
     recordablesMap_.create();
 }
 
-{{modelName}}::{{modelName}}(const {{modelName}}& n)
+{{ModelName}}::{{ModelName}}(const {{ModelName}}& n)
     : Archiving_Node(n), 
       P_(n.P_), 
       S_(n.S_),
@@ -19,7 +19,7 @@
 }
 
 
-{{modelName}}::~{{modelName}}()
+{{ModelName}}::~{{ModelName}}()
 {
 
   if ( B_.sys_ )
@@ -37,22 +37,22 @@
 }
 
 
-void {{modelName}}::init_node_(const Node& proto)
+void {{ModelName}}::init_node_(const Node& proto)
 {
-    const {{modelName}}& pr = downcast<{{modelName}}>(proto);
+    const {{ModelName}}& pr = downcast<{{ModelName}}>(proto);
     P_ = pr.P_;
     S_ = State_(P_);
 }
 
 
-void {{modelName}}::init_state_(const Node& proto)
+void {{ModelName}}::init_state_(const Node& proto)
 {
-    const {{modelName}}& pr = downcast<{{modelName}}>(proto);
+    const {{ModelName}}& pr = downcast<{{ModelName}}>(proto);
     S_ = State_(pr.P_);
 }
 
 
-void {{modelName}}::init_buffers_()
+void {{ModelName}}::init_buffers_()
 {
 
    {% for synapticEvent in synapticEventDefs %}
@@ -92,13 +92,13 @@ void {{modelName}}::init_buffers_()
    /* Calls CVodeInit to initialize the integrator memory and specifies the
     * right hand side function in y'=f(t,y), the initial time, and
     * the initial values. */
-   status = CVodeInit (B_.sys_, {{modelName}}_dynamics, 0.0, B_.y);
+   status = CVodeInit (B_.sys_, {{ModelName}}_dynamics, 0.0, B_.y);
    if (check_flag(&status, "CVodeInit", 1)) throw CVodeSolverFailure (get_name(), status);
 
 {% if ("V_t" in defaultDefs) %}
 
    /* Spike event handler (detects zero-crossing of V-V_t) */
-   status = CVodeRootInit(B_.sys_, 1, (CVRootFn){{modelName}}_event);
+   status = CVodeRootInit(B_.sys_, 1, (CVRootFn){{ModelName}}_event);
    if (check_flag(&status, "CVodeRootInit", 1)) throw CVodeSolverFailure (get_name(), status);
 
    /* Detect only the rising edge of spikes */
@@ -135,7 +135,7 @@ void {{modelName}}::init_buffers_()
   }
 
 
-void {{modelName}}::calibrate()
+void {{ModelName}}::calibrate()
 {
     B_.logger_.init();  
 }
@@ -143,7 +143,7 @@ void {{modelName}}::calibrate()
 
 {% elif (ODEmethod == "ida") %}
 
-{{modelName}}::{{modelName}}()
+{{ModelName}}::{{ModelName}}()
     : Archiving_Node(), 
       P_(), 
       S_(P_),
@@ -153,7 +153,7 @@ void {{modelName}}::calibrate()
 }
 
 
-{{modelName}}::{{modelName}}(const {{modelName}}& n)
+{{ModelName}}::{{ModelName}}(const {{ModelName}}& n)
     : Archiving_Node(n), 
       P_(n.P_), 
       S_(n.S_),
@@ -162,7 +162,7 @@ void {{modelName}}::calibrate()
 }
 
 
-{{modelName}}::~{{modelName}}()
+{{ModelName}}::~{{ModelName}}()
 {
 
   if ( B_.sys_ )
@@ -182,22 +182,22 @@ void {{modelName}}::calibrate()
 }
 
 
-void {{modelName}}::init_node_(const Node& proto)
+void {{ModelName}}::init_node_(const Node& proto)
 {
-    const {{modelName}}& pr = downcast<{{modelName}}>(proto);
+    const {{ModelName}}& pr = downcast<{{ModelName}}>(proto);
     P_ = pr.P_;
     S_ = State_(P_);
 }
 
 
-void {{modelName}}::init_state_(const Node& proto)
+void {{ModelName}}::init_state_(const Node& proto)
 {
-    const {{modelName}}& pr = downcast<{{modelName}}>(proto);
+    const {{ModelName}}& pr = downcast<{{ModelName}}>(proto);
     S_ = State_(pr.P_);
 }
 
 
-void {{modelName}}::init_buffers_()
+void {{ModelName}}::init_buffers_()
 {
 
    {% for synapticEvent in synapticEventDefs %}
@@ -233,7 +233,7 @@ void {{modelName}}::init_buffers_()
       Ith(B_.y,i) = S_.y_[i];
    }
  
-   {{modelName}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
+   {{ModelName}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
 
    /* Calls IDACreate to create the solver memory */ 
    B_.sys_ = IDACreate();
@@ -241,14 +241,14 @@ void {{modelName}}::init_buffers_()
 
   /* Calls IDAInit to initialize the integrator memory and specify the
    * resdual function, the initial time, and the initial values. */
-   status = IDAInit (B_.sys_, {{modelName}}_residual, 0.0, B_.y, B_.yp);
+   status = IDAInit (B_.sys_, {{ModelName}}_residual, 0.0, B_.y, B_.yp);
 
    if (check_flag(&status, "IDAInit", 1)) throw IDASolverFailure (get_name(), status);
 
 {% if ("V_t" in defaultDefs) %}
 
    /* Spike event handler (detects zero-crossing of V-V_t) */
-   status = IDARootInit(B_.sys_, 1, (IDARootFn){{modelName}}_event);
+   status = IDARootInit(B_.sys_, 1, (IDARootFn){{ModelName}}_event);
    if (check_flag(&status, "IDARootInit", 1)) throw IDASolverFailure (get_name(), status);
 
    /* Detect only the rising edge of spikes */
@@ -285,14 +285,14 @@ void {{modelName}}::init_buffers_()
 
 }
 
-void {{modelName}}::calibrate()
+void {{ModelName}}::calibrate()
 {
    B_.logger_.init();  
 }
 
 {% elif (ODEmethod == "gsl") %}
 
-{{modelName}}::{{modelName}}()
+{{ModelName}}::{{ModelName}}()
     : Archiving_Node(), 
       P_(), 
       S_(P_),
@@ -302,7 +302,7 @@ void {{modelName}}::calibrate()
 }
 
 
-{{modelName}}::{{modelName}}(const {{modelName}}& n)
+{{ModelName}}::{{ModelName}}(const {{ModelName}}& n)
     : Archiving_Node(n), 
       P_(n.P_), 
       S_(n.S_),
@@ -311,7 +311,7 @@ void {{modelName}}::calibrate()
 }
 
 
-{{modelName}}::~{{modelName}} ()
+{{ModelName}}::~{{ModelName}} ()
 {
     // GSL structs only allocated by init_nodes_(), so we need to protect destruction
     if ( B_.s_ != NULL) gsl_odeiv2_step_free (B_.s_);
@@ -322,22 +322,22 @@ void {{modelName}}::calibrate()
 }
 
 
-void {{modelName}}::init_node_(const Node& proto)
+void {{ModelName}}::init_node_(const Node& proto)
 {
-    const {{modelName}}& pr = downcast<{{modelName}}>(proto);
+    const {{ModelName}}& pr = downcast<{{ModelName}}>(proto);
     P_ = pr.P_;
     S_ = State_(P_);
 }
 
 
-void {{modelName}}::init_state_(const Node& proto)
+void {{ModelName}}::init_state_(const Node& proto)
 {
-    const {{modelName}}& pr = downcast<{{modelName}}>(proto);
+    const {{ModelName}}& pr = downcast<{{ModelName}}>(proto);
     S_ = State_(pr.P_);
 }
 
 
-void {{modelName}}::init_buffers_()
+void {{ModelName}}::init_buffers_()
 {
    {% for synapticEvent in synapticEventDefs %}
    B_.spike_{{synapticEvent.pscId}}.clear();
@@ -374,8 +374,8 @@ void {{modelName}}::init_buffers_()
    else 
      gsl_odeiv2_evolve_reset(B_.e_);
    
-   B_.sys_.function  = {{modelName}}_dynamics; 
-   B_.sys_.jacobian  = {{modelName}}_jacobian;
+   B_.sys_.function  = {{ModelName}}_dynamics; 
+   B_.sys_.jacobian  = {{ModelName}}_jacobian;
    B_.sys_.dimension = B_.N;
    B_.sys_.params    = reinterpret_cast<void*>(this);
 
@@ -387,7 +387,7 @@ void {{modelName}}::init_buffers_()
 }
 
 
-void {{modelName}}::calibrate()
+void {{ModelName}}::calibrate()
 {
     B_.logger_.init();  
     {% if ("v" in stateIndexMap) %}V_.U_old_ = S_.y_[{{stateIndexMap["v"]}}];{% endif %}

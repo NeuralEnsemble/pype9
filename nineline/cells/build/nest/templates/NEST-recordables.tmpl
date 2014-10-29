@@ -1,16 +1,16 @@
 
-RecordablesMap<{{modelName}}> {{modelName}}::recordablesMap_;
+RecordablesMap<{{ModelName}}> {{ModelName}}::recordablesMap_;
 
-template <> void RecordablesMap<{{modelName}}>::create()
+template <> void RecordablesMap<{{ModelName}}>::create()
 {
 
 {% for state in stateDefs %}
-   insert_("{{state.name}}", &{{modelName}}::get_y_elem_<{{modelName}}::State_::{{state.name | upper}}>);
+   insert_("{{state.name}}", &{{ModelName}}::get_y_elem_<{{ModelName}}::State_::{{state.name | upper}}>);
 
 {% endfor %}
 
 {% if ("v" in stateIndexMap) %}
-   insert_(names::V_m, &{{modelName}}::get_y_elem_<{{modelName}}::State_::V>);
+   insert_(names::V_m, &{{ModelName}}::get_y_elem_<{{ModelName}}::State_::V>);
 
 {% endif %}
 
