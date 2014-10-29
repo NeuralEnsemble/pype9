@@ -52,13 +52,13 @@
 namespace nest {
 
 {% if (ODEmethod == "cvode") %}
-{% include "NEST-cvode-prelude.tmpl" %}
+    {% include "NEST-cvode-prelude.tmpl" %}
 {% elif (ODEmethod == "ida") %}
-{% include "NEST-ida-prelude.tmpl" %}
+    {% include "NEST-ida-prelude.tmpl" %}
 {% endif %}
 
 {% if (SSmethod == "kinsol") %}
-{% include "NEST-kinsol-prelude.tmpl" %}
+    {% include "NEST-kinsol-prelude.tmpl" %}
 {% endif %}
 
 {% if (ODEmethod == "cvode") %}
@@ -73,13 +73,13 @@ namespace nest {
 
 
 {% if (steadyStateSize > 0) %}
-{% if (SSmethod == "kinsol") %}
+    {% if (SSmethod == "kinsol") %}
   extern "C" int {{modelName}}_steadystate (N_Vector, N_Vector, void*);
 
-{% else %}
+    {% else %}
   extern "C" int {{modelName}}_steadystate (const gsl_vector *, void *, gsl_vector *);
 
-{% endif %}
+    {% endif %}
 {% endif %}
 
   class {{modelName}} : public Archiving_Node { 
@@ -126,13 +126,13 @@ namespace nest {
     enum SpikeSynapseTypes { 
 
 {% for synapticEvent in synapticEventDefs %}
-{% if (loop.first) %}
+    {% if (loop.first) %}
          {{synapticEvent.pscName}}_SPIKE_RECEPTOR=MIN_SPIKE_RECEPTOR,
 
-{% else %}
+    {% else %}
          {{synapticEvent.pscName}}_SPIKE_RECEPTOR,
 
-{% endif %}
+    {% endif %}
 {% endfor %}
       SUP_SPIKE_RECEPTOR
 
@@ -150,11 +150,11 @@ namespace nest {
 
   
 {% if (steadyStateSize > 0) %}
-{% if (SSmethod == "kinsol") %}
+    {% if (SSmethod == "kinsol") %}
    friend  int {{modelName}}_steadystate (N_Vector, N_Vector, void*);
-{% else %}
+    {% else %}
    friend  int {{modelName}}_steadystate (const gsl_vector *, void *, gsl_vector *);
-{% endif %}
+    {% endif %}
 {% endif %}
 
 {% for synapticEvent in synapticEventDefs %}
@@ -166,18 +166,17 @@ namespace nest {
    friend class UniversalDataLogger<{{modelName}}>;
 
   
-   struct Parameters_ { 
+    struct Parameters_ { 
 
-{% if (not (parameters.parameterDefs == [])) %}
-    double {% for p in parameters.parameterDefs %}{{p.name}}{% if (loop.last) %};{% else %},{% endif %}{% endfor %}
-{% endif %}
-{% if (not (parameters.defaultDefs == [])) %}
-    double {% for p in parameters.defaultDefs %}{{p.name}}{% if (loop.last) %};{% else %},{% endif %}{% endfor %}
-{% endif %}
-
-    Parameters_();
-    void get(DictionaryDatum&) const;
-    void set(const DictionaryDatum&);
+{% for p in parameters.parameterDefs %}
+        double {{p.name}};
+{% endfor %}
+{% for p in parameters.defaultDefs %}
+        double {{p.name}}
+{% endfor %}
+        Parameters_();
+        void get(DictionaryDatum&) const;
+        void set(const DictionaryDatum&);
 
   }; // end struct Parameters_
 
@@ -187,7 +186,6 @@ namespace nest {
       enum StateVecElems {
 {% for k in stateDefs %}
       {{k.name | upper}} = {{stateIndexMap[k.name]}}{% if (not (loop.last)) %},{% endif %}
-
 {% endfor %}
       };
 
@@ -220,12 +218,10 @@ namespace nest {
 {% if (ODEmethod == "cvode") %}
     N_Vector y;    //!< current state vector used by CVode
     void *   sys_;  //!< CVode control structure
-
 {% elif (ODEmethod == "ida") %}
     N_Vector y, y1;    //!< current state vector used by IDA
     N_Vector yp;    //!< derivatives vector used by IDA
     void *   sys_;  //!< IDA control structure
-
 {% elif (ODEmethod == "gsl") %}
     gsl_odeiv2_step*    s_;    //!< stepping function
     gsl_odeiv2_control* c_;    //!< adaptive stepsize control function
@@ -233,7 +229,6 @@ namespace nest {
     gsl_odeiv2_system   sys_;  //!< struct describing system
     unsigned int N;  // size of state vector used by Jacobian
     double *u, *jac;  // intermediate state vectors used for Jacobian approximation
-
 {% endif %}
 
 {% for synapticEvent in synapticEventDefs %}
