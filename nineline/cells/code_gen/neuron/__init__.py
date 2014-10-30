@@ -1,0 +1,203 @@
+"""
+
+  This module contains functions for building and loading NMODL mechanisms
+
+  Author: Thomas G. Close (tclose@oist.jp)
+  Copyright: 2012-2014 Thomas G. Close.
+  License: This file is part of the "NineLine" package, which is released under
+           the MIT Licence, see LICENSE for details.
+"""
+from __future__ import absolute_import
+import os.path
+import shutil
+import time
+import platform
+import subprocess as sp
+from .. import BaseCodeGenerator
+
+if 'NRNHOME' in os.environ:
+    os.environ['PATH'] += os.pathsep + \
+        os.path.join(os.environ['NRNHOME'], platform.machine(), 'bin')
+else:
+    try:
+        if os.environ['HOME'] == '/home/tclose':
+            # I apologise for this little hack (this is the path on my machine,
+            # to save me having to set the environment variable in eclipse)
+            os.environ['PATH'] += os.pathsep + '/opt/NEURON/nrn-7.3/x86_64/bin'
+    except KeyError:
+        pass
+
+
+class CodeGenerator(BaseCodeGenerator):
+
+    BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
+    SIMULATOR_NAME = 'neuron'
+
+    def generate(self, biophysics_name, nineml_path, install_dir=None,
+                 build_parent_dir=None, method='derivimplicit',
+                 build_mode='lazy', silent_build=False, kinetics=[]):
+        """
+        Generates and builds the required NMODL files for a given NCML cell
+        class
+
+        @param biophysics_name [str]: Name of the celltype to be built
+        @param nineml_path [str]: Path to the NCML file from which the NMODL
+                                  files will be compiled and built
+        @param install_dir [str]: Path to the directory where the NMODL files
+                                  will be generated and compiled
+        @param build_parent_dir [str]: Used to set the default 'install_dir'
+                                       path
+        @param method [str]: The method option to be passed to the NeMo
+                             interpreter command
+        @param kinetics [list(str)]: A list of ionic components to be generated
+                                     using the kinetics option
+        """
+        (default_install_dir,
+         params_dir, _, _) = self.get_build_paths(nineml_path, biophysics_name,
+                                                  self._SIMULATOR_BUILD_NAME,
+                                                  build_parent_dir)
+        if not install_dir:
+            install_dir = default_install_dir
+        if build_mode in ('force', 'build_only'):
+            shutil.rmtree(install_dir, ignore_errors=True)
+            shutil.rmtree(params_dir, ignore_errors=True)
+        elif build_mode in ('compile_only', 'require'):
+            if (not os.path.exists(install_dir) or
+                not os.path.exists(params_dir)):
+                raise Exception("Prebuilt installation directory '{install}'"
+                                "and/or python parameters directory '{params}'"
+                                "are not present, which are required for "
+                                "'require' or 'compile_only' build options"
+                                .format(install=install_dir,
+                                        params=params_dir))
+        try:
+            if not os.path.exists(install_dir):
+                os.makedirs(install_dir)
+            if not os.path.exists(params_dir):
+                os.makedirs(params_dir)
+        except IOError as e:
+            raise Exception("Could not create a required neuron build "
+                            "directory, check the required permissions or "
+                            "specify a different  parent build directory -> {}"
+                            .format(e))
+        # Get the stored modification time of the previous build if it exists
+        install_mtime_path = os.path.join(install_dir, self._TIME_OF_EDIT_FILE)
+        params_mtime_path = os.path.join(params_dir, self._TIME_OF_EDIT_FILE)
+        if os.path.exists(install_mtime_path):
+            with open(install_mtime_path) as f:
+                prev_install_mtime = f.readline()
+        else:
+            prev_install_mtime = ''
+        if os.path.exists(params_mtime_path):
+            with open(params_mtime_path) as f:
+                prev_params_mtime = f.readline()
+        else:
+            prev_params_mtime = ''
+        # Get the modification time of the source NCML file for comparison with
+        # the build directory
+        ncml_mtime = time.ctime(os.path.getmtime(nineml_path))
+        rebuilt = False
+        if ((ncml_mtime != prev_install_mtime
+             or ncml_mtime != prev_params_mtime) and
+            build_mode != 'compile_only'):
+            nemo_cmd = ("{nemo_path} {nineml_path} -p --pyparams={params} "
+                        "--nmodl={output} --nmodl-method={method} "
+                        "--nmodl-kinetic={kinetics}"
+                        .format(nemo_path=self._path_to_exec('nemo'),
+                                nineml_path=os.path.normpath(nineml_path),
+                                output=os.path.normpath(install_dir),
+                                params=params_dir, kinetics=','.join(kinetics),
+                                method=method))
+            try:
+                sp.check_call(nemo_cmd, shell=True)
+            except sp.CalledProcessError as e:
+                raise Exception("Error while compiling NCML description into "
+                                "NMODL code -> {}".format(e))
+            # Build mode is set to 'force' because the mod files have been
+            # regenerated
+            with open(install_mtime_path, 'w') as f:
+                f.write(ncml_mtime)
+            with open(params_mtime_path, 'w') as f:
+                f.write(ncml_mtime)
+            rebuilt = True
+        if rebuilt or build_mode == 'compile_only':
+            self.compile_nmodl(install_dir, build_mode='force',
+                               silent=silent_build)
+        # Load the parameter name translations from the params dir
+        component_translations = self.load_component_translations(
+                                                   biophysics_name, params_dir)
+        return install_dir, component_translations
+
+    def compile_nmodl(self, model_dir, build_mode='lazy', silent=False):
+        """
+        Builds all NMODL files in a directory
+        @param model_dir: The path of the directory to build
+        @param build_mode: Can be one of either, 'lazy', 'super_lazy',
+                           'require', 'force', or 'build_only'. 'lazy' doesn't
+                           run nrnivmodl if the library is found, 'require',
+                           requires that the library is found otherwise throws
+                           an exception (useful on clusters that require
+                           precompilation before parallelisation where the
+                           error message could otherwise be confusing), 'force'
+                           removes existing library if found and recompiles,
+                           and 'build_only' removes existing library if found,
+                           recompile and then exit
+        @param verbose: Prints out verbose debugging messages
+        """
+        # Change working directory to model directory
+        orig_dir = os.getcwd()
+        try:
+            os.chdir(model_dir)
+        except OSError:
+            raise Exception(
+                "Could not find NMODL directory '{}'".format(model_dir))
+        # Clean up old build directories if present
+        found_required_lib = False
+        for arch in self.BUILD_ARCHS:
+            path = os.path.join(model_dir, arch)
+            if os.path.exists(path):
+                if build_mode in ('lazy', 'require'):
+                    # If the library is found, set the 'found_required_lib'
+                    # flag.
+                    found_required_lib = True
+                elif build_mode in ('force', 'build_only'):
+                    # Instead of flagging 'found_required_lib', the library is
+                    # removed to allow fresh compilation
+                    shutil.rmtree(path, ignore_errors=True)
+        if not found_required_lib:
+            if build_mode == 'require':
+                raise Exception("The required NMODL binaries were not found in"
+                                "directory '{}' (change the build mode from"
+                                "'require' any of 'lazy', 'build_only', or"
+                                "'force' in order to compile them)."
+                                .format(model_dir))
+            # Get platform specific command name
+            if platform.system() == 'Windows':
+                cmd_name = 'nrnivmodl.exe'
+            else:
+                cmd_name = 'nrnivmodl'
+            # Check the system path for the 'nrnivmodl' command
+            cmd_path = None
+            for dr in os.environ['PATH'].split(os.pathsep):
+                path = os.path.join(dr, cmd_name)
+                if os.path.exists(path):
+                    cmd_path = path
+                    break
+            if not cmd_path:
+                raise Exception("Could not find nrnivmodl on the system path "
+                                "'{}'".format(os.environ['PATH']))
+            print "Building mechanisms in '%s' directory." % model_dir
+            if silent:
+                with open(os.devnull, "w") as fnull:
+                    build_error = sp.call(cmd_path, stdout=fnull, stderr=fnull)
+            else:
+                # Run nrnivmodl command on directory
+                build_error = sp.call(cmd_path)
+            if build_error:
+                raise Exception("Could not compile NMODL files in directory "
+                                "'{}' - ".format(model_dir))
+        elif not silent:
+            print ("Found existing mechanisms in '{}' directory, compile "
+                   "skipped (set 'build_mode' argument to 'force' enforce "
+                   "recompilation them).".format(model_dir))
+        os.chdir(orig_dir)

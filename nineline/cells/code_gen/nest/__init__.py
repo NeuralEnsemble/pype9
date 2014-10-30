@@ -13,21 +13,11 @@ import os.path
 import subprocess as sp
 import re
 import shutil
-from itertools import izip
-from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from nineml.abstraction_layer.dynamics.readers import XMLReader as NineMLReader
-from .. import Builder as BaseBuilder
+from .. import BaseCodeGenerator
 from nineline import __version__
 
-components = NineMLReader.read_components(os.getenv("HOME") +
-                               "/git/nineline/examples/HodgkinHuxleyClass.xml")
-
-from ..__init__ import (path_to_exec, get_build_paths,
-                       load_component_translations)
-
-_SIMULATOR_BUILD_NAME = 'nest'
-_TIME_OF_EDIT_FILE = 'modification_time'
-
+# Add Nest installation directory to the system path
 if 'NEST_INSTALL_DIR' in os.environ:
     os.environ['PATH'] += os.pathsep + \
         os.path.join(os.environ['NEST_INSTALL_DIR'], 'bin')
@@ -41,36 +31,20 @@ else:
         pass
 
 
-def ensure_camel_case(name):
-    if len(name) < 2:
-        raise Exception("The name ('{}') needs to be at least 2 letters long"
-                        "to enable the capitalized version to be different "
-                        "from upper case version".format(name))
-    if name == name.lower() or name == name.upper():
-        name = name.title()
-    return name
+class CodeGenerator(BaseCodeGenerator):
 
-
-class Builder(BaseBuilder):
+    _SIMULATOR_NAME = 'nest'
 
     templates_path = os.path.join(os.path.dirname(__file__), 'templates')
 
-    def __init__(self, build_dir=None):
-        # Instantiate Jinja2 environment
-        jinja_env = Environment(loader=FileSystemLoader(self.templates_path),
-                                trim_blocks=True,
-                                undefined=StrictUndefined)
-        # Add some globals used by the template code
-        jinja_env.globals.update(izip=izip, enumerate=enumerate)
-
-    def build_celltype_files(self, celltype_name, biophysics_name, nineml_path,
-                             install_dir=None, build_parent_dir=None,
-                             method='gsl', build_mode='lazy',  # @UnusedVariable @IgnorePep8
-                             silent_build=False):  # @UnusedVariable @IgnorePep8
+    def generate(self, celltype_name, biophysics_name, nineml_path,
+                 install_dir=None, build_parent_dir=None, method='gsl',
+                 build_mode='lazy', silent_build=False):  # @UnusedVariable
         """
         Generates the cpp code corresponding to the NCML file, then configures,
         and compiles and installs the corresponding module into nest
 
+        @param celltype_name [str]: the name of the celltype
         @param biophysics_name [str]: Name of the celltype to be built
         @param nineml_path [str]: Path to the NCML file from which the NMODL
                                   files will be compiled and built
@@ -87,15 +61,15 @@ class Builder(BaseBuilder):
         orig_dir = os.getcwd()
         # Determine the paths for the src, build and install directories
         (default_install_dir, params_dir,
-         src_dir, compile_dir) = get_build_paths(
-                                            nineml_path, biophysics_name,
-                                            _SIMULATOR_BUILD_NAME,
-                                             build_parent_dir=build_parent_dir)
+         src_dir, compile_dir) = self._get_build_paths(nineml_path,
+                                                       biophysics_name,
+                                                       self._SIMULATOR_NAME,
+                                                       build_parent_dir)
         if not install_dir:
             install_dir = default_install_dir
         # Determine whether the installation needs rebuilding or whether there
         # is an existing library module to use
-        time_of_edit_path = os.path.join(install_dir, _TIME_OF_EDIT_FILE)
+        time_of_edit_path = os.path.join(install_dir, self._TIME_OF_EDIT_FILE)
         if os.path.exists(time_of_edit_path):
             with open(time_of_edit_path) as f:
                 prev_time_of_edit = f.readline()
@@ -104,9 +78,9 @@ class Builder(BaseBuilder):
         time_of_edit = time.ctime(os.path.getmtime(nineml_path))
         if build_mode == 'compile_only' and (not os.path.exists(compile_dir) or
                                              not os.path.exists(src_dir)):
-            raise Exception("Source ('{}') and/or compilation ('{}') directories "
-                            "no longer exist. Cannot use 'compile_only' argument "
-                            "for '--build' option"
+            raise Exception("Source ('{}') and/or compilation ('{}') "
+                            "directories no longer exist. Cannot use "
+                            "'compile_only' argument for '--build' option"
                             .format(src_dir, compile_dir))
         # Create C++ and configuration files required for the build
         if ((time_of_edit != prev_time_of_edit and
@@ -122,7 +96,7 @@ class Builder(BaseBuilder):
             os.makedirs(params_dir)
             os.makedirs(compile_dir)
             os.makedirs(install_dir)
-            self.create_model_files(nineml_path, src_dir)
+            self.create_model_files(nineml_path, src_dir, ode_method=method)
             # Generate configure.ac and Makefile
             self.create_configure_ac(biophysics_name, src_dir)
             self.create_makefile(celltype_name, biophysics_name, src_dir)
@@ -160,8 +134,8 @@ class Builder(BaseBuilder):
         # Switch back to original dir
         os.chdir(orig_dir)
         # Load component parameters for use in python interface
-        component_translations = load_component_translations(
-            biophysics_name, params_dir)
+        component_translations = self._load_component_translations(
+                                                   biophysics_name, params_dir)
         # Return installation directory
         return install_dir, component_translations
 
@@ -998,9 +972,18 @@ M_DEBUG ({celltype_name}Loader.sli) (Initializing SLI support for {celltype_name
             f.write(sli_code)
 
     if __name__ == '__main__':
-        install_dir, params = build_celltype_files('Granule_DeSouza10',
+        install_dir, params = generate('Granule_DeSouza10',
                                                    '/home/tclose/kbrain/xml/'
                                                    'cerebellum/ncml/'
                                                    'Granule_DeSouza10.xml')
         print install_dir
         print params
+
+# def ensure_camel_case(name):
+#     if len(name) < 2:
+#         raise Exception("The name ('{}') needs to be at least 2 letters long"
+#                         "to enable the capitalized version to be different "
+#                         "from upper case version".format(name))
+#     if name == name.lower() or name == name.upper():
+#         name = name.title()
+#     return name
