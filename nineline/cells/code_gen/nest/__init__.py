@@ -33,9 +33,8 @@ else:
 
 class CodeGenerator(BaseCodeGenerator):
 
-    _SIMULATOR_NAME = 'nest'
-
-    templates_path = os.path.join(os.path.dirname(__file__), 'templates')
+    SIMULATOR_NAME = 'nest'
+    _TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
     def generate(self, celltype_name, biophysics_name, nineml_path,
                  install_dir=None, build_parent_dir=None, method='gsl',
@@ -63,7 +62,7 @@ class CodeGenerator(BaseCodeGenerator):
         (default_install_dir, params_dir,
          src_dir, compile_dir) = self._get_build_paths(nineml_path,
                                                        biophysics_name,
-                                                       self._SIMULATOR_NAME,
+                                                       self.SIMULATOR_NAME,
                                                        build_parent_dir)
         if not install_dir:
             install_dir = default_install_dir

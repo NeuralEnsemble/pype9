@@ -32,6 +32,7 @@ class CodeGenerator(BaseCodeGenerator):
 
     BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
     SIMULATOR_NAME = 'neuron'
+    _TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
     def generate(self, biophysics_name, nineml_path, install_dir=None,
                  build_parent_dir=None, method='derivimplicit',
