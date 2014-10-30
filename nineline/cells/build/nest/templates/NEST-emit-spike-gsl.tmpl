@@ -1,3 +1,14 @@
+{# This template provides code to emit spikes in GSL
+
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
+#}
+
+
+//----------------------------------------------------------//
+// This section was generated from NEST-emit-spike-gsl.tmpl //
+//----------------------------------------------------------//
+
 	if ( S_.r_ > 0 )
 	   S_.r_--;
 	else if (S_.y_[{{stateIndexMap["v"]}}] >= P_.V_t &&
@@ -7,3 +18,6 @@
 	   	SpikeEvent se;
 		network()->send(*this, se, lag);
 	}
+
+// ------------------- NEST-emit-spike-gsl.tmpl ------------------------//
+	

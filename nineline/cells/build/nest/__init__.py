@@ -14,7 +14,7 @@ import subprocess as sp
 import re
 import shutil
 from itertools import izip
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from nineml.abstraction_layer.dynamics.readers import XMLReader as NineMLReader
 from .. import Builder as BaseBuilder
 from nineline import __version__
@@ -53,15 +53,15 @@ def ensure_camel_case(name):
 
 class Builder(BaseBuilder):
 
-    # Instantiate Jinja2 environment
-    jinja_env = Environment(loader=FileSystemLoader(
-                                   os.path.join(os.path.dirname(__file__),
-                                               'templates')), trim_blocks=True)
-    # Add some globals used by the template code
-    jinja_env.globals.update(izip=izip, enumerate=enumerate)
+    templates_path = os.path.join(os.path.dirname(__file__), 'templates')
 
     def __init__(self, build_dir=None):
-        pass
+        # Instantiate Jinja2 environment
+        jinja_env = Environment(loader=FileSystemLoader(self.templates_path),
+                                trim_blocks=True,
+                                undefined=StrictUndefined)
+        # Add some globals used by the template code
+        jinja_env.globals.update(izip=izip, enumerate=enumerate)
 
     def build_celltype_files(self, celltype_name, biophysics_name, nineml_path,
                              install_dir=None, build_parent_dir=None,
@@ -122,17 +122,6 @@ class Builder(BaseBuilder):
             os.makedirs(params_dir)
             os.makedirs(compile_dir)
             os.makedirs(install_dir)
-    #         # Compile the NCML file into NEST cpp code using NeMo
-    #         nemo_cmd = ("{nemo_path} {nineml_path} --pyparams={params}"
-    #                     "--nest={output} --nest-method={method}"
-    #                     .format(nemo_path=path_to_exec('nemo'), method=method,
-    #                             nineml_path=nineml_path, output=src_dir,
-    #                             params=params_dir))
-    #         try:
-    #             sp.check_call(nemo_cmd, shell=True)
-    #         except sp.CalledProcessError:
-    #             raise Exception("Translation of NineML to '{}' NEST C++ module "
-    #                             "failed.".format(biophysics_name))
             self.create_model_files(nineml_path, src_dir)
             # Generate configure.ac and Makefile
             self.create_configure_ac(biophysics_name, src_dir)

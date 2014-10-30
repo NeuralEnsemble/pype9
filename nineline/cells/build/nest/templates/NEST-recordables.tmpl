@@ -10,8 +10,7 @@
 
 RecordablesMap<{{ModelName}}> {{ModelName}}::recordablesMap_;
 
-template <> void RecordablesMap<{{ModelName}}>::create()
-{
+template <> void RecordablesMap<{{ModelName}}>::create() {
 
 {% for name in state_variables %}
    insert_("{{name}}", &{{ModelName}}::get_y_elem_<{{ModelName}}::State_::{{state}}_i>);
@@ -23,3 +22,5 @@ template <> void RecordablesMap<{{ModelName}}>::create()
 {% endif %}
 #}
 }
+
+// ------------------- NEST-recordables.tmpl ------------------------//
