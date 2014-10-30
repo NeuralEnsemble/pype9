@@ -35,14 +35,14 @@ class CodeGenerator(BaseCodeGenerator):
     _DEFAULT_SOLVER = 'derivimplicit'
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
-    def generate(self, biophysics_name, nineml_path, install_dir=None,
+    def generate(self, celltype_name, nineml_path, install_dir=None,
                  build_parent_dir=None, method='derivimplicit',
                  build_mode='lazy', silent_build=False, kinetics=[]):
         """
         Generates and builds the required NMODL files for a given NCML cell
         class
 
-        @param biophysics_name [str]: Name of the celltype to be built
+        @param celltype_name [str]: Name of the celltype to be built
         @param nineml_path [str]: Path to the NCML file from which the NMODL
                                   files will be compiled and built
         @param install_dir [str]: Path to the directory where the NMODL files
@@ -59,7 +59,7 @@ class CodeGenerator(BaseCodeGenerator):
         orig_dir = os.getcwd()
         # Determine the paths for the src, build and install directories
         (default_install_dir,
-         params_dir, _, _) = self.get_build_paths(nineml_path, biophysics_name,
+         params_dir, _, _) = self.get_build_paths(nineml_path, celltype_name,
                                                   self._SIMULATOR_BUILD_NAME,
                                                   build_parent_dir)
         if not install_dir:
@@ -133,7 +133,7 @@ class CodeGenerator(BaseCodeGenerator):
         os.chdir(orig_dir)
         # Load the parameter name translations from the params dir
         component_translations = self.load_component_translations(
-                                                   biophysics_name, params_dir)
+                                                   celltype_name, params_dir)
         return install_dir, component_translations
 
     def compile_nmodl(self, model_dir, build_mode='lazy', silent=False):

@@ -43,14 +43,14 @@ class BaseCodeGenerator(object):
         # Add some globals used by the template code
         self.jinja_env.globals.update(izip=izip, enumerate=enumerate)
 
-    def generate(self, biophysics_name, nineml_path, install_dir=None,
+    def generate(self, celltype_name, nineml_path, install_dir=None,
                  build_parent_dir=None, method=None,
                  build_mode='lazy', silent_build=False):
         """
         Generates and builds the required NMODL files for a given NCML cell
         class
 
-        @param biophysics_name [str]: Name of the celltype to be built
+        @param celltype_name [str]: Name of the celltype to be built
         @param nineml_path [str]: Path to the NCML file from which the NMODL
                                   files will be compiled and built
         @param install_dir [str]: Path to the directory where the NMODL files
@@ -77,7 +77,7 @@ class BaseCodeGenerator(object):
         # Determine the paths for the src, build and install directories
         (default_install_dir, params_dir,
          src_dir, compile_dir) = self._get_build_paths(nineml_path,
-                                                       biophysics_name,
+                                                       celltype_name,
                                                        self.SIMULATOR_NAME,
                                                        build_parent_dir)
         if not install_dir:
@@ -131,6 +131,10 @@ class BaseCodeGenerator(object):
                                 "('parent_build_dir') -> {}".format(e))
             # Generate source files
             self.generate_source_files(nineml_path, src_dir, ode_method=method)
+            # Write the timestamp of the 9ML file used to generate the source
+            # files
+            with open(nineml_mod_time_path, 'w') as f:
+                f.write(nineml_mod_time)
         if compile_source:
             # Clean existing compile & install directories from previous builds
             shutil.rmtree(compile_dir, ignore_errors=True)
@@ -146,11 +150,14 @@ class BaseCodeGenerator(object):
             # Compile source files
             self.compile_source_files(src_dir, install_dir, compile_dir,
                                       silent=silent_build)
-        with open(nineml_mod_time_path, 'w') as f:
-            f.write(nineml_mod_time)
         # Switch back to original dir
         os.chdir(orig_dir)
         return install_dir
+
+    def _render_to_file(self, template, args, filename, directory):
+        contents = self.jinja_env.get_template(template).render(**args)
+        with open(os.path.join(directory, filename), 'w') as f:
+            f.write(contents)
 
     def _get_build_paths(self, nineml_path, celltype_name,
                          build_parent_dir=None):
