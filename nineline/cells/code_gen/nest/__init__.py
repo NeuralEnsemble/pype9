@@ -34,7 +34,8 @@ else:
 class CodeGenerator(BaseCodeGenerator):
 
     SIMULATOR_NAME = 'nest'
-    _TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
+    _DEFAULT_SOLVER = 'gsl'
+    _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
     def generate(self, celltype_name, biophysics_name, nineml_path,
                  install_dir=None, build_parent_dir=None, method='gsl',

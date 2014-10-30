@@ -32,7 +32,8 @@ class CodeGenerator(BaseCodeGenerator):
 
     BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
     SIMULATOR_NAME = 'neuron'
-    _TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
+    _DEFAULT_SOLVER = 'derivimplicit'
+    _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
     def generate(self, biophysics_name, nineml_path, install_dir=None,
                  build_parent_dir=None, method='derivimplicit',
@@ -53,6 +54,10 @@ class CodeGenerator(BaseCodeGenerator):
         @param kinetics [list(str)]: A list of ionic components to be generated
                                      using the kinetics option
         """
+        # Save original working directory to reinstate it afterwards (just to
+        # be polite)
+        orig_dir = os.getcwd()
+        # Determine the paths for the src, build and install directories
         (default_install_dir,
          params_dir, _, _) = self.get_build_paths(nineml_path, biophysics_name,
                                                   self._SIMULATOR_BUILD_NAME,
@@ -124,6 +129,8 @@ class CodeGenerator(BaseCodeGenerator):
         if rebuilt or build_mode == 'compile_only':
             self.compile_nmodl(install_dir, build_mode='force',
                                silent=silent_build)
+        # Switch back to original dir
+        os.chdir(orig_dir)
         # Load the parameter name translations from the params dir
         component_translations = self.load_component_translations(
                                                    biophysics_name, params_dir)
