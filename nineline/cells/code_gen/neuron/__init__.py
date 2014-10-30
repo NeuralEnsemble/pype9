@@ -12,6 +12,8 @@ import os.path
 import shutil
 import time
 import platform
+import tempfile
+import uuid
 import subprocess as sp
 from .. import BaseCodeGenerator
 
@@ -30,13 +32,43 @@ else:
 
 class CodeGenerator(BaseCodeGenerator):
 
-    BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
+    #BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
     SIMULATOR_NAME = 'neuron'
     _DEFAULT_SOLVER = 'derivimplicit'
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
+    def __init__(self):
+        super(CodeGenerator, self).__init__()
+        # Find the path to nrnivmodl
+        self.nrnivmodl_path = self._path_to_exec('nrnivmodl')
+        # Work out the name of the installation directory for the compiled
+        # mode files on the current platform
+        # Create a temporary directory to run nrnivmodl in
+        tmp_dir_path = os.path.join(tempfile.gettempdir(), uuid.uuid4())
+        try:
+            os.mkdir(tmp_dir_path)
+        except IOError:
+            raise Exception("Error creating temporary directory '{}'"
+                            .format(tmp_dir_path))
+        orig_dir = os.getcwd()
+        os.chdir(tmp_dir_path)
+        # Run nrnivmodl to see what build directory is created
+        try:
+            with open(os.devnull, "w") as fnull:
+                sp.check_call(self.nrnivmodl_path, stdout=fnull, stderr=fnull)
+        except sp.CalledProcessError as e:
+            raise Exception("Error test running nrnivmodl".format(e))
+        # Get the name of the build directory and save it in the builder
+        try:
+            self.install_dir = os.listdir(tmp_dir_path)[0]
+        except IndexError:
+            raise Exception("Error test running nrnivmodl no build directory "
+                            "created".format(e))
+        # Return back to the original directory
+        os.chdir(orig_dir)
+
     def generate(self, celltype_name, nineml_path, install_dir=None,
-                 build_parent_dir=None, method='derivimplicit',
+                 build_dir=None, method='derivimplicit',
                  build_mode='lazy', silent_build=False, kinetics=[]):
         """
         Generates and builds the required NMODL files for a given NCML cell
@@ -47,7 +79,7 @@ class CodeGenerator(BaseCodeGenerator):
                                   files will be compiled and built
         @param install_dir [str]: Path to the directory where the NMODL files
                                   will be generated and compiled
-        @param build_parent_dir [str]: Used to set the default 'install_dir'
+        @param build_dir [str]: Used to set the default 'install_dir'
                                        path
         @param method [str]: The method option to be passed to the NeMo
                              interpreter command
@@ -61,7 +93,7 @@ class CodeGenerator(BaseCodeGenerator):
         (default_install_dir,
          params_dir, _, _) = self.get_build_paths(nineml_path, celltype_name,
                                                   self._SIMULATOR_BUILD_NAME,
-                                                  build_parent_dir)
+                                                  build_dir)
         if not install_dir:
             install_dir = default_install_dir
         if build_mode in ('force', 'build_only'):
@@ -136,10 +168,26 @@ class CodeGenerator(BaseCodeGenerator):
                                                    celltype_name, params_dir)
         return install_dir, component_translations
 
-    def compile_nmodl(self, model_dir, build_mode='lazy', silent=False):
+    def _get_install_dir(self, build_dir, install_dir):
+        if install_dir:
+            raise Exception("Cannot specify custom installation directory "
+                            "('{}') for NEURON simulator as it needs to be "
+                            "located as a specifically named directory of the "
+                            "src directory"
+                            .format(install_dir))
+        # return the platform-specific location of the nrnivmodl output files
+        return os.path.abspath(os.path.join(build_dir, self._SRC_DIR,
+                                            self.install_dir))
+
+    def generate_source_files(self, src_dir, compile_dir, install_dir,
+                              celltype_name=None, silent=False):
+        raise NotImplementedError
+
+    def compile_source_files(self, src_dir, compile_dir, install_dir, #@UnusedVariable @IgnorePep8
+                             celltype_name, silent=False):
         """
         Builds all NMODL files in a directory
-        @param model_dir: The path of the directory to build
+        @param src_dir: The path of the directory to build
         @param build_mode: Can be one of either, 'lazy', 'super_lazy',
                            'require', 'force', or 'build_only'. 'lazy' doesn't
                            run nrnivmodl if the library is found, 'require',
@@ -153,59 +201,17 @@ class CodeGenerator(BaseCodeGenerator):
         @param verbose: Prints out verbose debugging messages
         """
         # Change working directory to model directory
-        orig_dir = os.getcwd()
+        os.chdir(src_dir)
+        print "Building mechanisms in '{}' directory.".format(src_dir)
+        # Run nrnivmodl command in src directory
         try:
-            os.chdir(model_dir)
-        except OSError:
-            raise Exception(
-                "Could not find NMODL directory '{}'".format(model_dir))
-        # Clean up old build directories if present
-        found_required_lib = False
-        for arch in self.BUILD_ARCHS:
-            path = os.path.join(model_dir, arch)
-            if os.path.exists(path):
-                if build_mode in ('lazy', 'require'):
-                    # If the library is found, set the 'found_required_lib'
-                    # flag.
-                    found_required_lib = True
-                elif build_mode in ('force', 'build_only'):
-                    # Instead of flagging 'found_required_lib', the library is
-                    # removed to allow fresh compilation
-                    shutil.rmtree(path, ignore_errors=True)
-        if not found_required_lib:
-            if build_mode == 'require':
-                raise Exception("The required NMODL binaries were not found in"
-                                "directory '{}' (change the build mode from"
-                                "'require' any of 'lazy', 'build_only', or"
-                                "'force' in order to compile them)."
-                                .format(model_dir))
-            # Get platform specific command name
-            if platform.system() == 'Windows':
-                cmd_name = 'nrnivmodl.exe'
-            else:
-                cmd_name = 'nrnivmodl'
-            # Check the system path for the 'nrnivmodl' command
-            cmd_path = None
-            for dr in os.environ['PATH'].split(os.pathsep):
-                path = os.path.join(dr, cmd_name)
-                if os.path.exists(path):
-                    cmd_path = path
-                    break
-            if not cmd_path:
-                raise Exception("Could not find nrnivmodl on the system path "
-                                "'{}'".format(os.environ['PATH']))
-            print "Building mechanisms in '%s' directory." % model_dir
             if silent:
                 with open(os.devnull, "w") as fnull:
-                    build_error = sp.call(cmd_path, stdout=fnull, stderr=fnull)
+                    sp.check_call(self.nrnivmodl_path, stdout=fnull,
+                                  stderr=fnull)
             else:
-                # Run nrnivmodl command on directory
-                build_error = sp.call(cmd_path)
-            if build_error:
-                raise Exception("Could not compile NMODL files in directory "
-                                "'{}' - ".format(model_dir))
-        elif not silent:
-            print ("Found existing mechanisms in '{}' directory, compile "
-                   "skipped (set 'build_mode' argument to 'force' enforce "
-                   "recompilation them).".format(model_dir))
-        os.chdir(orig_dir)
+                sp.check_call(self.nrnivmodl_path)
+        except sp.CalledProcessError as e:
+            raise Exception("Compilation of NMODL files for '{}' model failed."
+                            " See src directory '{}':\n "
+                            .format(celltype_name, src_dir, e))

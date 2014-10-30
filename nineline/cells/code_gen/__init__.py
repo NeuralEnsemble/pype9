@@ -19,7 +19,7 @@ from collections import defaultdict
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from itertools import izip
 from runpy import run_path
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 
 
 class BaseCodeGenerator(object):
@@ -28,11 +28,11 @@ class BaseCodeGenerator(object):
 
     BUILD_MODE_OPTIONS = ['lazy', 'force', 'build_only', 'require',
                           'compile_only']
-    _RELATIVE_BUILD_DIR = '.9build'
+    _DEFAULT_BUILD_DIR = '.9build'
     _PARAMS_DIR = 'params'
     _SRC_DIR = 'src'
-    _INSTALL_DIR = 'install'
-    _COMPILE_DIR = 'compile'  # Ignored for NEURON but used for NEST
+    _INSTL_DIR = 'install'
+    _CMPL_DIR = 'compile'  # Ignored for NEURON but used for NEST
     _9ML_MOD_TIME_FILE = 'source_modification_time'
 
     def __init__(self):
@@ -44,7 +44,7 @@ class BaseCodeGenerator(object):
         self.jinja_env.globals.update(izip=izip, enumerate=enumerate)
 
     def generate(self, celltype_name, nineml_path, install_dir=None,
-                 build_parent_dir=None, method=None,
+                 build_dir=None, method=None,
                  build_mode='lazy', silent_build=False):
         """
         Generates and builds the required NMODL files for a given NCML cell
@@ -55,7 +55,7 @@ class BaseCodeGenerator(object):
                                   files will be compiled and built
         @param install_dir [str]: Path to the directory where the NMODL files
                                   will be generated and compiled
-        @param build_parent_dir [str]: Used to set the default 'install_dir'
+        @param build_dir [str]: Used to set the default 'install_dir'
                                        path
         @param method [str]: The method option to be passed to the NeMo
                              interpreter command
@@ -68,20 +68,26 @@ class BaseCodeGenerator(object):
         @param kinetics [list(str)]: A list of ionic components to be generated
                                      using the kinetics option
         """
-        # Set default solver if not provided with default for simulator target.
-        if not method:
-            method = self._DEFAULT_SOLVER
         # Save original working directory to reinstate it afterwards (just to
         # be polite)
         orig_dir = os.getcwd()
-        # Determine the paths for the src, build and install directories
-        (default_install_dir, params_dir,
-         src_dir, compile_dir) = self._get_build_paths(nineml_path,
-                                                       celltype_name,
-                                                       self.SIMULATOR_NAME,
-                                                       build_parent_dir)
-        if not install_dir:
-            install_dir = default_install_dir
+        # Set default solver if not provided with default for simulator target.
+        if not method:
+            method = self._DEFAULT_SOLVER
+        # Set build dir if not provided
+        if not build_dir:
+            build_dir = os.path.abspath(os.path.join(
+                                             os.path.dirname(nineml_path),
+                                             self._DEFAULT_BUILD_DIR,
+                                             self.SIMULATOR_NAME,
+                                             celltype_name))
+        # Calculate src directory path within build directory
+        src_dir = os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
+        # Calculate compile directory path within build directory
+        compile_dir = os.path.abspath(os.path.join(build_dir, self._CMPL_DIR))
+        # Calculate install directory path within build directory if not
+        # provided
+        install_dir = self._get_install_dir(build_dir, install_dir)
         # Get the timestamp of the source file
         nineml_mod_time = time.ctime(os.path.getmtime(nineml_path))
         # Path of the file which contains the source modification timestamp
@@ -101,18 +107,20 @@ class BaseCodeGenerator(object):
                     prev_mod_time = f.readline()
                     # If the time of modification matches the time of the
                     # previous build we don't need to rebuild
-                    matching_time = (nineml_mod_time == prev_mod_time)
-                    generate_source = compile_source = not matching_time
+                    if nineml_mod_time == prev_mod_time:
+                        generate_source = compile_source = False
+                        if not silent_build:
+                            print ("Found existing build in '{}' directory, "
+                                   "code generation skipped (set 'build_mode' "
+                                   "argument to 'force' or 'build_only' to "
+                                   "enforce regeneration".format(build_dir))
         # Check if required directories are present depending on build_mode
         if build_mode == 'require':
-            if (not os.path.exists(install_dir) or
-                not os.path.exists(params_dir)):
+            if not os.path.exists(install_dir):
                 raise Exception("Prebuilt installation directory '{install}'"
-                                "and/or python parameters directory '{params}'"
-                                "are not present, which are required for "
+                                "is not present, and is required for "
                                 "'require' build option"
-                                .format(install=install_dir,
-                                        params=params_dir))
+                                .format(install=install_dir))
         elif build_mode == 'complile_only':
             if not os.path.exists(src_dir):
                 raise Exception("Source directory '{src}' is not present, "
@@ -120,15 +128,7 @@ class BaseCodeGenerator(object):
                                 "option".format(src=src_dir))
         # Generate source files from NineML code
         if generate_source:
-            # Clean existing src directories from previous builds.
-            shutil.rmtree(src_dir, ignore_errors=True)
-            try:
-                os.makedirs(src_dir)
-            except IOError as e:
-                raise Exception("Could not create build directory ({}), please"
-                                " check the required permissions or specify a "
-                                "different \"parent build directory\" "
-                                "('parent_build_dir') -> {}".format(e))
+            self._clean_src_dir(src_dir)
             # Generate source files
             self.generate_source_files(nineml_path, src_dir, ode_method=method)
             # Write the timestamp of the 9ML file used to generate the source
@@ -137,16 +137,7 @@ class BaseCodeGenerator(object):
                 f.write(nineml_mod_time)
         if compile_source:
             # Clean existing compile & install directories from previous builds
-            shutil.rmtree(compile_dir, ignore_errors=True)
-            shutil.rmtree(install_dir, ignore_errors=True)
-            try:
-                os.makedirs(compile_dir)
-                os.makedirs(install_dir)
-            except IOError as e:
-                raise Exception("Could not create build directory ({}), please"
-                                " check the required permissions or specify a "
-                                "different \"parent build directory\" "
-                                "('parent_build_dir') -> {}".format(e))
+            self._clean_compile_and_install_dirs(compile_dir, install_dir)
             # Compile source files
             self.compile_source_files(src_dir, install_dir, compile_dir,
                                       silent=silent_build)
@@ -154,48 +145,60 @@ class BaseCodeGenerator(object):
         os.chdir(orig_dir)
         return install_dir
 
+    @abstractmethod
+    def generate_source_files(self, celltype_name, nineml_path, src_dir,
+                              ode_method):
+        pass
+
+    @abstractmethod
+    def compile_source_files(self, src_dir, compile_dir, install_dir,
+                             celltype_name=None, silent=False):
+        pass
+
+    def _get_install_dir(self, build_dir, install_dir):
+        """
+        The install dir is determined within a method so that derrived classes
+        (namely neuron.CodeGenerator) can override the provided install
+        directory if provided if it needs to be in a special place.
+        """
+        if not install_dir:
+            install_dir = os.path.abspath(os.path.join(build_dir,
+                                                       self._INSTL_DIR))
+        return install_dir
+
     def _render_to_file(self, template, args, filename, directory):
         contents = self.jinja_env.get_template(template).render(**args)
         with open(os.path.join(directory, filename), 'w') as f:
             f.write(contents)
 
-    def _get_build_paths(self, nineml_path, celltype_name,
-                         build_parent_dir=None):
-        """
-        return the respective source, install and optional compile directory
-        paths for a given cell type
+    def _clean_src_dir(self, src_dir):
+        # Clean existing src directories from previous builds.
+        shutil.rmtree(src_dir, ignore_errors=True)
+        try:
+            os.makedirs(src_dir)
+        except IOError as e:
+            raise Exception("Could not create build directory ({}), please"
+                            " check the required permissions or specify a "
+                            "different \"parent build directory\" "
+                            "('parent_build_dir') -> {}".format(e))
 
-        @param nineml_path [str]: The path to the NCML file (used in the
-                                  default build directories)
-        @param celltype_name [str]: The name of the cell type (used in the
-                                    default build directories)
-        @param simulator_name [str] The name of the simulator, i.e. neuron or
-                                    nest (used in the default build
-                                    directories)
-        @param module_build_dir [str]: The path of the parent directory of the
-                                       build directories (defaults to 'build'
-                                       in the directory where the ncml path is
-                                       located)
-
-        @return [str]: (<default-install_directory>, <source-directory>,
-                        <compile-directory>)
-        """
-        if not build_parent_dir:
-            build_parent_dir = abspath(join(dirname(nineml_path),
-                                            self._RELATIVE_BUILD_DIR,
-                                            self.SIMULATOR_NAME,
-                                            celltype_name))
-        src_dir = str(abspath(join(build_parent_dir, self._SRC_DIR)))
-        default_install_dir = str(abspath(join(build_parent_dir,
-                                               self._INSTALL_DIR)))
-        compile_dir = str(abspath(join(build_parent_dir, self._COMPILE_DIR)))
-        params_dir = str(abspath(join(build_parent_dir, self._PARAMS_DIR)))
-        return (default_install_dir, params_dir, src_dir, compile_dir)
+    def _clean_compile_and_install_dirs(self, compile_dir, install_dir):
+        # Clean existing compile & install directories from previous builds
+        shutil.rmtree(compile_dir, ignore_errors=True)
+        shutil.rmtree(install_dir, ignore_errors=True)
+        try:
+            os.makedirs(compile_dir)
+            os.makedirs(install_dir)
+        except IOError as e:
+            raise Exception("Could not create build directory ({}), please"
+                            " check the required permissions or specify a "
+                            "different \"parent build directory\" "
+                            "('parent_build_dir') -> {}".format(e))
 
     @classmethod
     def _path_to_exec(cls, exec_name):
         """
-        Returns the full path to an executable by searching the $PATH
+        Returns the full path to an executable by searching the "PATH"
         environment variable
 
         @param exec_name[str]: Name of executable to search the execution path

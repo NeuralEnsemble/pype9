@@ -37,7 +37,8 @@ class CodeGenerator(BaseCodeGenerator):
     _DEFAULT_SOLVER = 'gsl'
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
-    def generate_source_files(self, celltype_name, nineml_path, src_dir):
+    def generate_source_files(self, celltype_name, nineml_path, src_dir,
+                              ode_method='gsl'):
         # Read NineML description
         component_classes = NineMLReader.read_components(nineml_path)
         # Select ComponentClass matching biophysics_name
@@ -48,7 +49,8 @@ class CodeGenerator(BaseCodeGenerator):
             raise Exception("Component class matching '{}' was not loaded from"
                             " model path '{}'".format(celltype_name,
                                                       nineml_path))
-        model_args = self._flatten_nineml(celltype_name, nineml_model)
+        model_args = self._flatten_nineml(celltype_name, nineml_model,
+                                          ode_method=ode_method)
         # Render C++ header file
         self._render_to_file('NEST-header.tmpl', model_args,
                              celltype_name + '.h', src_dir)
@@ -81,7 +83,7 @@ class CodeGenerator(BaseCodeGenerator):
                                 .format(celltype_name or src_dir))
 
     def compile_source_files(self, src_dir, compile_dir, install_dir,
-                             celltype_name=None):
+                             celltype_name):
         # Run the required shell commands to bootstrap the build
         # configuration
         self.run_bootstrap(src_dir)
@@ -92,18 +94,21 @@ class CodeGenerator(BaseCodeGenerator):
                           .format(src_dir=src_dir,
                                   install_dir=install_dir), shell=True)
         except sp.CalledProcessError:
-            raise Exception("Configuration of '{}' NEST module failed."
-                            .format(celltype_name or src_dir))
+            raise Exception("Configuration of '{}' NEST module failed. "
+                            "See src directory '{}':\n "
+                            .format(celltype_name, src_dir))
         try:
             sp.check_call('make', shell=True)
         except sp.CalledProcessError:
-            raise Exception("Compilation of '{}' NEST module failed."
-                            .format(celltype_name or src_dir))
+            raise Exception("Compilation of '{}' NEST module failed. "
+                            "See src directory '{}':\n "
+                            .format(celltype_name, src_dir))
         try:
             sp.check_call('make install', shell=True)
         except sp.CalledProcessError:
-            raise Exception("Installation of '{}' NEST module failed."
-                            .format(celltype_name or src_dir))
+            raise Exception("Installation of '{}' NEST module failed. "
+                            "See src directory '{}':\n "
+                            .format(celltype_name, src_dir))
 
     def _flatten_nineml(self, celltype_name, model, ode_method='gsl',
                        v_threshold=None):
