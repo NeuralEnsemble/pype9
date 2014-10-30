@@ -82,34 +82,6 @@ class CodeGenerator(BaseCodeGenerator):
                 raise Exception("Bootstrapping of '{}' NEST module failed."
                                 .format(celltype_name or src_dir))
 
-    def compile_source_files(self, src_dir, compile_dir, install_dir,
-                             celltype_name):
-        # Run the required shell commands to bootstrap the build
-        # configuration
-        self.run_bootstrap(src_dir)
-        # Run configure script, make and make install
-        os.chdir(compile_dir)
-        try:
-            sp.check_call('{src_dir}/configure --prefix={install_dir}'
-                          .format(src_dir=src_dir,
-                                  install_dir=install_dir), shell=True)
-        except sp.CalledProcessError:
-            raise Exception("Configuration of '{}' NEST module failed. "
-                            "See src directory '{}':\n "
-                            .format(celltype_name, src_dir))
-        try:
-            sp.check_call('make', shell=True)
-        except sp.CalledProcessError:
-            raise Exception("Compilation of '{}' NEST module failed. "
-                            "See src directory '{}':\n "
-                            .format(celltype_name, src_dir))
-        try:
-            sp.check_call('make install', shell=True)
-        except sp.CalledProcessError:
-            raise Exception("Installation of '{}' NEST module failed. "
-                            "See src directory '{}':\n "
-                            .format(celltype_name, src_dir))
-
     def _flatten_nineml(self, celltype_name, model, ode_method='gsl',
                        v_threshold=None):
         args = {}
@@ -244,6 +216,37 @@ class CodeGenerator(BaseCodeGenerator):
         args['currentTimestamp'] = '''Thu Oct 23 23:30:27 2014'''
         return args
 
+    def compile_source_files(self, src_dir, compile_dir, install_dir,
+                             celltype_name):
+        # Run the required shell commands to bootstrap the build
+        # configuration
+        self.run_bootstrap(src_dir)
+        # Run configure script, make and make install
+        os.chdir(compile_dir)
+        try:
+            sp.check_call('{src_dir}/configure --prefix={install_dir}'
+                          .format(src_dir=src_dir,
+                                  install_dir=install_dir), shell=True)
+        except sp.CalledProcessError:
+            raise Exception("Configuration of '{}' NEST module failed. "
+                            "See src directory '{}':\n "
+                            .format(celltype_name, src_dir))
+        try:
+            sp.check_call('make', shell=True)
+        except sp.CalledProcessError:
+            raise Exception("Compilation of '{}' NEST module failed. "
+                            "See src directory '{}':\n "
+                            .format(celltype_name, src_dir))
+        try:
+            sp.check_call('make install', shell=True)
+        except sp.CalledProcessError:
+            raise Exception("Installation of '{}' NEST module failed. "
+                            "See src directory '{}':\n "
+                            .format(celltype_name, src_dir))
+
+# TODO:    def _clean_src_dir(self, src_dir):
+#              Should implement to avoid having to reconfigure after each 
+#              alteration
 
 # def ensure_camel_case(name):
 #     if len(name) < 2:
