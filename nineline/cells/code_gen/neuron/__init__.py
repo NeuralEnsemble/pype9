@@ -18,8 +18,9 @@ import subprocess as sp
 from .. import BaseCodeGenerator
 
 if 'NRNHOME' in os.environ:
-    os.environ['PATH'] += os.pathsep + \
-        os.path.join(os.environ['NRNHOME'], platform.machine(), 'bin')
+    os.environ['PATH'] += (os.pathsep +
+                           os.path.join(os.environ['NRNHOME'],
+                                        platform.machine(), 'bin'))
 else:
     try:
         if os.environ['HOME'] == '/home/tclose':
@@ -45,12 +46,17 @@ class CodeGenerator(BaseCodeGenerator):
         # NMODL files on the current platform
         self.specials_dir = self._get_specials_dir()
 
-    def generate_source_files(self, celltype_name, nineml_path, src_dir,
-                              ode_method):
+    def _extract_template_args(self, args, component, initial_state,
+                               ode_method='gsl', v_threshold=None):
         raise NotImplementedError
 
-    def compile_source_files(self, src_dir, compile_dir, install_dir, #@UnusedVariable @IgnorePep8
-                             celltype_name, silent=False):
+    def _render_source_files(self, component, initial_state, src_dir,
+                              install_dir, ode_method='derivimplicit',
+                              verbose=True):
+        raise NotImplementedError
+
+    def compile_source_files(self, src_dir, compile_dir, install_dir,  #@UnusedVariable @IgnorePep8
+                             component_name, silent):
         """
         Builds all NMODL files in a directory
         @param src_dir: The path of the directory to build
@@ -68,7 +74,8 @@ class CodeGenerator(BaseCodeGenerator):
         """
         # Change working directory to model directory
         os.chdir(src_dir)
-        print "Building mechanisms in '{}' directory.".format(src_dir)
+        if not silent:
+            print "Building mechanisms in '{}' directory.".format(src_dir)
         # Run nrnivmodl command in src directory
         try:
             if silent:
@@ -80,7 +87,7 @@ class CodeGenerator(BaseCodeGenerator):
         except sp.CalledProcessError as e:
             raise Exception("Compilation of NMODL files for '{}' model failed."
                             " See src directory '{}':\n "
-                            .format(celltype_name, src_dir, e))
+                            .format(component_name, src_dir, e))
 
     def _get_install_dir(self, build_dir, install_dir):
         if install_dir:
@@ -92,6 +99,12 @@ class CodeGenerator(BaseCodeGenerator):
         # return the platform-specific location of the nrnivmodl output files
         return os.path.abspath(os.path.join(build_dir, self._SRC_DIR,
                                             self.specials_dir))
+
+    def _get_compile_dir(self, build_dir):
+        """
+        The compile dir is the same as the src dir for NEURON compile
+        """
+        return os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
 
     def _get_specials_dir(self):
         # Create a temporary directory to run nrnivmodl in

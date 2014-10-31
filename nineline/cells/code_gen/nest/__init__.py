@@ -13,14 +13,14 @@ import os.path
 import subprocess as sp
 import re
 import shutil
-from nineml.abstraction_layer.dynamics.readers import XMLReader as NineMLReader
 from .. import BaseCodeGenerator
 from nineline import __version__
+from nineline.utils import remove_ignore_missing
 
 # Add Nest installation directory to the system path
 if 'NEST_INSTALL_DIR' in os.environ:
-    os.environ['PATH'] += os.pathsep + \
-        os.path.join(os.environ['NEST_INSTALL_DIR'], 'bin')
+    os.environ['PATH'] += (os.pathsep +
+                           os.path.join(os.environ['NEST_INSTALL_DIR'], 'bin'))
 else:
     try:
         if os.environ['HOME'] == '/home/tclose':
@@ -37,55 +37,10 @@ class CodeGenerator(BaseCodeGenerator):
     _DEFAULT_SOLVER = 'gsl'
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
-    def generate_source_files(self, celltype_name, nineml_path, src_dir,
-                              ode_method='gsl'):
-        # Read NineML description
-        component_classes = NineMLReader.read_components(nineml_path)
-        # Select ComponentClass matching biophysics_name
-        try:
-            nineml_model = next(c for c in component_classes
-                                if c.name == celltype_name)
-        except StopIteration:
-            raise Exception("Component class matching '{}' was not loaded from"
-                            " model path '{}'".format(celltype_name,
-                                                      nineml_path))
-        model_args = self._flatten_nineml(celltype_name, nineml_model,
-                                          ode_method=ode_method)
-        # Render C++ header file
-        self._render_to_file('NEST-header.tmpl', model_args,
-                             celltype_name + '.h', src_dir)
-        # Render C++ class file
-        self._render_to_file('NEST.tmpl', model_args, celltype_name + '.cpp',
-                             src_dir)
-        build_args = {'celltype_name': celltype_name, 'src_dir': src_dir}
-        # Render Loader header file
-        self._render_to_file('loader-header.tmpl', build_args,
-                             celltype_name + 'Loader.h', src_dir)
-        # Render Loader C++ class
-        self._render_to_file('loader-cpp.tmpl', build_args,
-                             celltype_name + 'Loader.cpp', src_dir)
-        # Render SLI initialiser
-        self._render_to_file('sli_initialiser.tmpl', build_args,
-                             celltype_name + 'Loader.sli', src_dir)
-        # Generate Makefile if it is not present
-        if not os.path.exists(os.path.join(src_dir, 'Makefile')):
-            self._render_to_file('configure-ac.tmpl', build_args,
-                                 'configure.ac', src_dir)
-            self._render_to_file('Makefile-am.tmpl', build_args,
-                                 'Makefile.am', src_dir)
-            self._render_to_file('bootstrap-sh.tmpl', build_args,
-                                 'bootstrap.sh', src_dir)
-            os.chdir(src_dir)
-            try:
-                sp.check_call('./bootstrap.sh', shell=True)
-            except sp.CalledProcessError:
-                raise Exception("Bootstrapping of '{}' NEST module failed."
-                                .format(celltype_name or src_dir))
-
-    def _flatten_nineml(self, celltype_name, model, ode_method='gsl',
-                       v_threshold=None):
-        args = {}
-        args['ModelName'] = celltype_name
+    def _extract_template_args(self, args, component, initial_state,
+                               ode_method='gsl', v_threshold=None):
+        model = component.component_class
+        args['ModelName'] = model.name
         args['ODEmethod'] = ode_method
         parameter_names = [p.name for p in model.parameters]
         args['parameter_names'] = parameter_names
@@ -216,43 +171,66 @@ class CodeGenerator(BaseCodeGenerator):
         args['currentTimestamp'] = '''Thu Oct 23 23:30:27 2014'''
         return args
 
-    def compile_source_files(self, src_dir, compile_dir, install_dir,
-                             celltype_name):
-        # Run the required shell commands to bootstrap the build
-        # configuration
-        self.run_bootstrap(src_dir)
+    def _render_source_files(self, template_args, src_dir, install_dir):
+        model_name = template_args['ModelName']
+        # Render C++ header file
+        self._render_to_file('NEST-header.tmpl', template_args,
+                             model_name + '.h', src_dir)
+        # Render C++ class file
+        self._render_to_file('NEST.tmpl', template_args, model_name + '.cpp',
+                             src_dir)
+        build_args = {'celltype_name': model_name, 'src_dir': src_dir}
+        # Render Loader header file
+        self._render_to_file('loader-header.tmpl', build_args,
+                             model_name + 'Loader.h', src_dir)
+        # Render Loader C++ class
+        self._render_to_file('loader-cpp.tmpl', build_args,
+                             model_name + 'Loader.cpp', src_dir)
+        # Render SLI initialiser
+        self._render_to_file('sli_initialiser.tmpl', build_args,
+                             model_name + 'Loader.sli', src_dir)
+        # Generate Makefile if it is not present
+        if not os.path.exists(os.path.join(src_dir, 'Makefile')):
+            self._render_to_file('configure-ac.tmpl', build_args,
+                                 'configure.ac', src_dir)
+            self._render_to_file('Makefile-am.tmpl', build_args,
+                                 'Makefile.am', src_dir)
+            self._render_to_file('bootstrap-sh.tmpl', build_args,
+                                 'bootstrap.sh', src_dir)
+            os.chdir(src_dir)
+            try:
+                sp.check_call('./bootstrap.sh', shell=True)
+            except sp.CalledProcessError:
+                raise Exception("Bootstrapping of '{}' NEST module failed."
+                                .format(model_name or src_dir))
+            try:
+                sp.check_call('{src_dir}/configure --prefix={install_dir}'
+                              .format(src_dir=src_dir,
+                                      install_dir=install_dir), shell=True)
+            except sp.CalledProcessError:
+                raise Exception("Configuration of '{}' NEST module failed. "
+                                "See src directory '{}':\n "
+                                .format(model_name, src_dir))
+
+    def compile_source_files(self, compile_dir, _, component_name, _):
         # Run configure script, make and make install
         os.chdir(compile_dir)
-        try:
-            sp.check_call('{src_dir}/configure --prefix={install_dir}'
-                          .format(src_dir=src_dir,
-                                  install_dir=install_dir), shell=True)
-        except sp.CalledProcessError:
-            raise Exception("Configuration of '{}' NEST module failed. "
-                            "See src directory '{}':\n "
-                            .format(celltype_name, src_dir))
         try:
             sp.check_call('make', shell=True)
         except sp.CalledProcessError:
             raise Exception("Compilation of '{}' NEST module failed. "
-                            "See src directory '{}':\n "
-                            .format(celltype_name, src_dir))
+                            .format(component_name))
         try:
             sp.check_call('make install', shell=True)
         except sp.CalledProcessError:
             raise Exception("Installation of '{}' NEST module failed. "
-                            "See src directory '{}':\n "
-                            .format(celltype_name, src_dir))
+                            .format(component_name))
 
-# TODO:    def _clean_src_dir(self, src_dir):
-#              Should implement to avoid having to reconfigure after each 
-#              alteration
-
-# def ensure_camel_case(name):
-#     if len(name) < 2:
-#         raise Exception("The name ('{}') needs to be at least 2 letters long"
-#                         "to enable the capitalized version to be different "
-#                         "from upper case version".format(name))
-#     if name == name.lower() or name == name.upper():
-#         name = name.title()
-#     return name
+    def _clean_src_dir(self, src_dir, component_name):
+        # Clean existing src directories from previous builds.
+        prefix = os.path.join(src_dir, component_name)
+        remove_ignore_missing(prefix + '.h')
+        remove_ignore_missing(prefix + '.cpp')
+        remove_ignore_missing(prefix + 'Loader.h')
+        remove_ignore_missing(prefix + 'Loader.cpp')
+        remove_ignore_missing(prefix + 'Loader.sli')
