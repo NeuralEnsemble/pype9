@@ -50,13 +50,10 @@ class CodeGenerator(BaseCodeGenerator):
                                ode_method='gsl', v_threshold=None):
         raise NotImplementedError
 
-    def _render_source_files(self, component, initial_state, src_dir,
-                              install_dir, ode_method='derivimplicit',
-                              verbose=True):
+    def _render_source_files(self, template_args, src_dir, _):
         raise NotImplementedError
 
-    def compile_source_files(self, src_dir, compile_dir, install_dir,  #@UnusedVariable @IgnorePep8
-                             component_name, silent):
+    def compile_source_files(self, compile_dir, component_name, verbose):
         """
         Builds all NMODL files in a directory
         @param src_dir: The path of the directory to build
@@ -73,12 +70,13 @@ class CodeGenerator(BaseCodeGenerator):
         @param verbose: Prints out verbose debugging messages
         """
         # Change working directory to model directory
-        os.chdir(src_dir)
-        if not silent:
-            print "Building mechanisms in '{}' directory.".format(src_dir)
+        os.chdir(compile_dir)
+        if verbose:
+            print ("Building NEURON mechanisms in '{}' directory."
+                   .format(compile_dir))
         # Run nrnivmodl command in src directory
         try:
-            if silent:
+            if not verbose:
                 with open(os.devnull, "w") as fnull:
                     sp.check_call(self.nrnivmodl_path, stdout=fnull,
                                   stderr=fnull)
@@ -87,7 +85,7 @@ class CodeGenerator(BaseCodeGenerator):
         except sp.CalledProcessError as e:
             raise Exception("Compilation of NMODL files for '{}' model failed."
                             " See src directory '{}':\n "
-                            .format(component_name, src_dir, e))
+                            .format(component_name, compile_dir, e))
 
     def _get_install_dir(self, build_dir, install_dir):
         if install_dir:

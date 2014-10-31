@@ -51,8 +51,7 @@ class BaseCodeGenerator(object):
         pass
 
     @abstractmethod
-    def compile_source_files(self, src_dir, compile_dir, install_dir,
-                             component_name, verbose):
+    def compile_source_files(self, compile_dir, component_name, verbose):
         pass
 
     def __init__(self):

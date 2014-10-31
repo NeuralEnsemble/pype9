@@ -212,9 +212,12 @@ class CodeGenerator(BaseCodeGenerator):
                                 "See src directory '{}':\n "
                                 .format(model_name, src_dir))
 
-    def compile_source_files(self, compile_dir, _, component_name, _):
+    def compile_source_files(self, compile_dir, component_name, verbose):
         # Run configure script, make and make install
         os.chdir(compile_dir)
+        if verbose:
+            print ("Compiling NEST model class in '{}' directory."
+                  .format(compile_dir))
         try:
             sp.check_call('make', shell=True)
         except sp.CalledProcessError:
