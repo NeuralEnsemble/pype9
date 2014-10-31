@@ -20,15 +20,16 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from itertools import izip
 from runpy import run_path
 from abc import ABCMeta, abstractmethod
-from nineml.abstraction_layer.dynamics.readers import XMLReader as NineMLReader
+from nineml.user_layer import parse as parse_9ml
+#..abstraction_layer.dynamics.readers import XMLReader as NineMLReader
 
 
 class BaseCodeGenerator(object):
 
     __metaclass__ = ABCMeta
 
-    BUILD_MODE_OPTIONS = ['lazy', 'force', 'build_only', 'require',
-                          'compile_only']
+    BUILD_MODE_OPTIONS = ['lazy', 'force', 'require', 'build_only',
+                          'generate_only', 'compile_only']
     _DEFAULT_BUILD_DIR = '.9build'
     _PARAMS_DIR = 'params'
     _SRC_DIR = 'src'
@@ -74,15 +75,15 @@ class BaseCodeGenerator(object):
                                   files will be compiled and built
         @param install_dir [str]: Path to the directory where the NMODL files
                                   will be generated and compiled
-        @param build_dir [str]: Used to set the default 'install_dir'
-                                       path
+        @param build_dir [str]: Used to set the default 'install_dir' path
         @param ode_method [str]: The ode_method option to be passed to the NeMo
                              interpreter command
         @param build_mode [str]: Available build options:
                                   lazy - only build if files are modified
                                   force - always build from scratch
-                                  build_only - build and then quit
                                   require - require built binaries are present
+                                  build_only - build and then quit
+                                  generate_only - generate src and then quit
                                   compile_only - don't generate src but compile
         @param kinetics [list(str)]: A list of ionic components to be generated
                                      using the kinetics option
@@ -95,18 +96,17 @@ class BaseCodeGenerator(object):
             #Interpret the given component as a URL of a NineML component
             component_src_path = component
             # Read NineML description
-            components = NineMLReader.read_components(component_src_path)
-            if not components:
+            nineml_model = parse_9ml(component_src_path)
+            if not nineml_model.components:
                 raise Exception("No components loaded from nineml path '{}'"
                                 .format(component_src_path))
-            elif len(components) > 1:
+            elif len(nineml_model.components) > 1:
                 raise Exception("Multiple components ('{}') loaded from nineml"
-                                " path '{}'"
-                                .format("', '".join(c.name
-                                                    for c in components),
-                                        component_src_path))
-            else:
-                component = component[0]
+                                " path '{}'".format(
+                                 "', '".join(c.name
+                                             for c in nineml_model.components),
+                                 component_src_path))
+            component = nineml_model.components[0]
         else:
             component_src_path = None
         # Get initial_state from file if passed as a string
@@ -114,7 +114,8 @@ class BaseCodeGenerator(object):
             #Interpret the given component as a URL of a NineML component
             state_src_path = component
             # Read NineML description
-            initial_states = NineMLReader.read_components(state_src_path)
+            #initial_states = parse_9ml(state_src_path)
+            initial_states = [0.0]  #TODO: Write nineml library for state layer
             if not initial_states:
                 raise Exception("No initial_states loaded from nineml path "
                                 "'{}'".format(state_src_path))
@@ -156,14 +157,17 @@ class BaseCodeGenerator(object):
         nineml_mod_time_path = os.path.join(src_dir, self._9ML_MOD_TIME_FILE)
         # Determine whether the installation needs rebuilding or whether there
         # is an existing library module to use.
-        if build_mode == 'require':
+        if build_mode in ('force', 'build_only'):  # Force build
+            generate_source = compile_source = True
+        elif build_mode == 'require':  # Just check that prebuild is present
             generate_source = compile_source = False
-        elif build_mode == 'compile_only':
+        elif build_mode == 'compile_only':  # Don't regenerate, just compile
             generate_source = False
             compile_source = True
-        elif build_mode in ('force', 'build_only'):
-            generate_source = compile_source = True
-        elif build_mode == 'lazy':
+        elif build_mode == 'generate_only':  # Only generate
+            generate_source = True
+            compile_source = False
+        elif build_mode == 'lazy':  # Generate if source has been modified
             if os.path.exists(nineml_mod_time_path):
                 with open(nineml_mod_time_path) as f:
                     prev_mod_time = f.readline()

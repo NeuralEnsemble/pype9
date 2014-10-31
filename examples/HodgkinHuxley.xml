@@ -1,6 +1,6 @@
-<NineML xmlns="http://nineml.org/9ML/1.0">
+<NineML xmlns="http://nineml.net/9ML/1.0">
   <Component name="HodgkinHuxley">
-    <Definition url="/home/tclose/git/nineline/examples/HodgkinHuxleyClass.xml">HodgkinHuxley</Definition>
+    <Definition url="/home/tclose/git/nineline/examples/HodgkinHuxleyClass.xml">HodgkinHuxleyClass</Definition>
     <Property name="Na_A_alpha_m">
       <Quantity units="per_ms">
         <Value>0.1</Value>
@@ -122,7 +122,9 @@
       </Quantity>
     </Property>
     <Property name="C">
-      <Quantity units="uF_per_cm2">1.0</Quantity>
+      <Quantity units="uF_per_cm2">
+        <Value>1.0</Value>
+      </Quantity>
     </Property>
   </Component>
 </NineML>

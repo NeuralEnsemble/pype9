@@ -44,18 +44,25 @@ class CodeGenerator(BaseCodeGenerator):
         args['ODEmethod'] = ode_method
         parameter_names = [p.name for p in model.parameters]
         args['parameter_names'] = parameter_names
-        args['parameter_init'] = ['NAN'] * len(parameter_names)  # TODO: Need to provide default values
-        args['parameter_scales'] = {}  #TODO: Need to ask Ivan out why scaling is required in some cases
+        args['parameter_init'] = [next(pr for pr in component.properties
+                                       if pr.name == p.name)
+                                  for p in parameter_names]
+        args['parameter_scales'] = {}  #TODO: Need to ask Ivan out why scaling is required in some cases @IgnorePep8
         state_names = [v.name for v in model.dynamics.state_variables]
-        args['num_states'] = len(state_names)
+        num_states = len(state_names)
+        args['num_states'] = num_states
         args['state_variables'] = state_names
-        args['state_variables_init'] = [0.0] * len(state_names)  #TODO: Come up with initialisations
-        args['parameter_constraints'] = [] #TODO: Add parameter constraints to model
-        args['steady_state'] = False  # This needs to be implemented (difficult without "state layer")
+        args['state_variables_init'] = ([s.value for s in initial_state]
+                                        if not isinstance(initial_state,
+                                                          float)
+                                        else [initial_state] * num_states)
+        args['parameter_constraints'] = [] #TODO: Add parameter constraints to model @IgnorePep8
+        args['steady_state'] = False  # This needs to be implemented
         args['timestamp'] = time.strftime('%X %a %d %b %Y')
         args['version'] = __version__
         args['synaptic_events'] = [p.name for p in model.event_receive_ports]
-        args['synaptic_event_pscIDs'] = ['UNKNOWN' for p in model.event_receive_ports]
+        args['synaptic_event_pscIDs'] = ['UNKNOWN'
+                                         for p in model.event_receive_ports]
         volt_states = [s.name for s in model.dynamics.state_variables
                        if s.dimension == 'voltage']
         if not volt_states:

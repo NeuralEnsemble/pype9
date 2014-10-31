@@ -1,8 +1,6 @@
 import os
-from jinja2 import Environment, FileSystemLoader
-from nineml.abstraction_layer.dynamics.readers import XMLReader as NineMLReader
-from nineline.cells.build.nest import Builder
-import subprocess as sp
+from nineline.cells.code_gen.nest import CodeGenerator
+
 # 
 # env = Environment(loader=FileSystemLoader(
 #                          os.getenv("HOME") +
@@ -161,28 +159,33 @@ import subprocess as sp
 # with open(os.path.join(build_dir, 'hodgkin_huxley.cpp'), 'w') as f:
 #     f.write(output_cpp)
 build_dir = os.path.join(os.path.dirname(__file__), 'build')
-test_file = os.path.join(os.path.dirname(__file__), '..', '..', 'examples',
-                         'HodgkinHuxleyClass.xml')
-builder = Builder(build_dir)
-biophysics_name = 'HodgkinHuxleyClass'
-builder.create_model_files(biophysics_name, test_file, build_dir)
-os.chdir(build_dir)
-if not os.path.exists(os.path.join(build_dir, 'Makefile')):
+component_file = os.path.join(os.path.dirname(__file__), '..', '..',
+                              'examples', 'HodgkinHuxley.xml')
+initial_state_file = os.path.join(os.path.dirname(__file__), '..', '..',
+                                  'examples', 'HodgkinHuxleyInitialState.xml')
+code_generator = CodeGenerator()
+code_generator.generate(component_file, initial_state_file,
+                        build_mode='generate_only')
 
-    # Generate configure.ac and Makefile
-    builder.create_configure_ac(biophysics_name, build_dir)
-    builder.create_makefile(biophysics_name, biophysics_name, build_dir)
-    builder.create_boilerplate_cpp(biophysics_name, build_dir)
-    builder.create_sli_initialiser(biophysics_name, build_dir)
-    # Run bootstrapping
-    builder.run_bootstrap(build_dir)
-    # Run configure script
-    sp.check_call('{src_dir}/configure --prefix={install_dir}'
-                  .format(src_dir=build_dir,
-                          install_dir=os.path.join(build_dir, 'bin')),
-                  shell=True)
-if False:
-    # Run make
-    sp.check_call('make', shell=True)
-    # Run install
-    sp.check_call('make install', shell=True)
+# biophysics_name = 'HodgkinHuxleyClass'
+# builder.create_model_files(biophysics_name, test_file, build_dir)
+# os.chdir(build_dir)
+# if not os.path.exists(os.path.join(build_dir, 'Makefile')):
+# 
+#     # Generate configure.ac and Makefile
+#     builder.create_configure_ac(biophysics_name, build_dir)
+#     builder.create_makefile(biophysics_name, biophysics_name, build_dir)
+#     builder.create_boilerplate_cpp(biophysics_name, build_dir)
+#     builder.create_sli_initialiser(biophysics_name, build_dir)
+#     # Run bootstrapping
+#     builder.run_bootstrap(build_dir)
+#     # Run configure script
+#     sp.check_call('{src_dir}/configure --prefix={install_dir}'
+#                   .format(src_dir=build_dir,
+#                           install_dir=os.path.join(build_dir, 'bin')),
+#                   shell=True)
+# if False:
+#     # Run make
+#     sp.check_call('make', shell=True)
+#     # Run install
+#     sp.check_call('make install', shell=True)
