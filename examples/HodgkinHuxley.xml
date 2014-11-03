@@ -1,92 +1,92 @@
 <NineML xmlns="http://nineml.net/9ML/1.0">
   <Component name="HodgkinHuxley">
     <Definition url="/home/tclose/git/nineline/examples/HodgkinHuxleyClass.xml">HodgkinHuxleyClass</Definition>
-    <Property name="Na_A_alpha_m">
+    <Property name="m_alpha_A">
       <Quantity units="per_ms">
         <Value>0.1</Value>
       </Quantity>
     </Property>
-    <Property name="Na_B_alpha_m">
+    <Property name="m_alpha_V0">
       <Quantity units="mV">
         <Value>-40.0</Value>
       </Quantity>
     </Property>
-    <Property name="Na_C_alpha_m">
+    <Property name="m_alpha_K">
       <Quantity units="mV">
         <Value>10.0</Value>
       </Quantity>
     </Property>
-    <Property name="Na_A_beta_m">
+    <Property name="m_beta_A">
       <Quantity units="per_ms">
         <Value>4.0</Value>
       </Quantity>
     </Property>
-    <Property name="Na_B_beta_m">
+    <Property name="m_beta_V0">
       <Quantity units="mV">
         <Value>-65.0</Value>
       </Quantity>
     </Property>
-    <Property name="Na_C_beta_m">
+    <Property name="m_beta_K">
       <Quantity units="mV">
         <Value>18.0</Value>
       </Quantity>
     </Property>
-    <Property name="Na_A_alpha_h">
+    <Property name="h_alpha_A">
       <Quantity units="per_ms">
         <Value>0.07</Value>
       </Quantity>
     </Property>
-    <Property name="Na_B_alpha_h">
+    <Property name="h_alpha_V0">
       <Quantity units="mV">
         <Value>-65.0</Value>
       </Quantity>
     </Property>
-    <Property name="Na_C_alpha_h">
+    <Property name="h_alpha_K">
       <Quantity units="mV">
         <Value>20.0</Value>
       </Quantity>
     </Property>
-    <Property name="Na_A_beta_h">
+    <Property name="h_beta_A">
       <Quantity units="per_ms">
         <Value>1.0</Value>
       </Quantity>
     </Property>
-    <Property name="Na_B_beta_h">
+    <Property name="h_beta_V0">
       <Quantity units="mV">
         <Value>-35.0</Value>
       </Quantity>
     </Property>
-    <Property name="Na_C_beta_h">
+    <Property name="h_beta_K">
       <Quantity units="mV">
         <Value>10.0</Value>
       </Quantity>
     </Property>
-    <Property name="K_A_alpha_n">
+    <Property name="n_alpha_A">
       <Quantity units="per_ms">
         <Value>0.01</Value>
       </Quantity>
     </Property>
-    <Property name="K_B_alpha_n">
+    <Property name="n_alpha_V0">
       <Quantity units="mV">
         <Value>-55.0</Value>
       </Quantity>
     </Property>
-    <Property name="K_C_alpha_n">
+    <Property name="n_alpha_K">
       <Quantity units="mV">
         <Value>10.0</Value>
       </Quantity>
     </Property>
-    <Property name="K_A_beta_n">
+    <Property name="n_beta_A">
       <Quantity units="per_ms">
         <Value>0.125</Value>
       </Quantity>
     </Property>
-    <Property name="K_B_beta_n">
+    <Property name="n_beta_V0">
       <Quantity units="mV">
         <Value>-65.0</Value>
       </Quantity>
     </Property>
-    <Property name="K_C_beta_n">
+    <Property name="n_beta_K">
       <Quantity units="mV">
         <Value>80.0</Value>
       </Quantity>
