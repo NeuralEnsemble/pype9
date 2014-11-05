@@ -37,15 +37,15 @@ class CodeGenerator(BaseCodeGenerator):
     _DEFAULT_SOLVER = 'gsl'
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
-    def _extract_template_args(self, args, component, initial_state,
+    def _extract_template_args(self, component, initial_state,
                                ode_method='gsl', v_threshold=None):
-        model = component.component_class
+        model = component.definition.component_class
+        args = {}
         args['ModelName'] = model.name
         args['ODEmethod'] = ode_method
         parameter_names = [p.name for p in model.parameters]
         args['parameter_names'] = parameter_names
-        args['parameter_init'] = [next(pr for pr in component.properties
-                                       if pr.name == p.name)
+        args['parameter_init'] = [component.properties[p]
                                   for p in parameter_names]
         args['parameter_scales'] = {}  #TODO: Need to ask Ivan out why scaling is required in some cases @IgnorePep8
         state_names = [v.name for v in model.dynamics.state_variables]

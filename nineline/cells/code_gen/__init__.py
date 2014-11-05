@@ -20,7 +20,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from itertools import izip
 from runpy import run_path
 from abc import ABCMeta, abstractmethod
-from nineml.user_layer import parse as parse_9ml
+import nineml
 #..abstraction_layer.dynamics.readers import XMLReader as NineMLReader
 
 
@@ -96,17 +96,18 @@ class BaseCodeGenerator(object):
             #Interpret the given component as a URL of a NineML component
             component_src_path = component
             # Read NineML description
-            nineml_model = parse_9ml(component_src_path)
-            if not nineml_model.components:
+            context = nineml.read(component_src_path)
+            components = list(context.components)
+            if not components:
                 raise Exception("No components loaded from nineml path '{}'"
                                 .format(component_src_path))
-            elif len(nineml_model.components) > 1:
+            elif len(components) > 1:
                 raise Exception("Multiple components ('{}') loaded from nineml"
                                 " path '{}'".format(
                                  "', '".join(c.name
-                                             for c in nineml_model.components),
+                                             for c in context.components),
                                  component_src_path))
-            component = nineml_model.components[0]
+            component = components[0]
         else:
             component_src_path = None
         # Get initial_state from file if passed as a string
@@ -194,7 +195,7 @@ class BaseCodeGenerator(object):
                                 "option".format(src=src_dir))
         # Generate source files from NineML code
         if generate_source:
-            self._clean_src_dir(src_dir)
+            self._clean_src_dir(src_dir, component.name)
             self.generate_source_files(component, initial_state, src_dir,
                                        install_dir, ode_method, verbose)
             # Write the timestamp of the 9ML file used to generate the source

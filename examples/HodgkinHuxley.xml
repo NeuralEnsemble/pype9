@@ -3,127 +3,127 @@
     <Definition url="/home/tclose/git/nineline/examples/HodgkinHuxleyClass.xml">HodgkinHuxleyClass</Definition>
     <Property name="m_alpha_A">
       <Quantity units="per_ms">
-        <Value>0.1</Value>
+        <SingleValue>0.1</SingleValue>
       </Quantity>
     </Property>
     <Property name="m_alpha_V0">
       <Quantity units="mV">
-        <Value>-40.0</Value>
+        <SingleValue>-40.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="m_alpha_K">
       <Quantity units="mV">
-        <Value>10.0</Value>
+        <SingleValue>10.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="m_beta_A">
       <Quantity units="per_ms">
-        <Value>4.0</Value>
+        <SingleValue>4.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="m_beta_V0">
       <Quantity units="mV">
-        <Value>-65.0</Value>
+        <SingleValue>-65.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="m_beta_K">
       <Quantity units="mV">
-        <Value>18.0</Value>
+        <SingleValue>18.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="h_alpha_A">
       <Quantity units="per_ms">
-        <Value>0.07</Value>
+        <SingleValue>0.07</SingleValue>
       </Quantity>
     </Property>
     <Property name="h_alpha_V0">
       <Quantity units="mV">
-        <Value>-65.0</Value>
+        <SingleValue>-65.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="h_alpha_K">
       <Quantity units="mV">
-        <Value>20.0</Value>
+        <SingleValue>20.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="h_beta_A">
       <Quantity units="per_ms">
-        <Value>1.0</Value>
+        <SingleValue>1.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="h_beta_V0">
       <Quantity units="mV">
-        <Value>-35.0</Value>
+        <SingleValue>-35.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="h_beta_K">
       <Quantity units="mV">
-        <Value>10.0</Value>
+        <SingleValue>10.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="n_alpha_A">
       <Quantity units="per_ms">
-        <Value>0.01</Value>
+        <SingleValue>0.01</SingleValue>
       </Quantity>
     </Property>
     <Property name="n_alpha_V0">
       <Quantity units="mV">
-        <Value>-55.0</Value>
+        <SingleValue>-55.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="n_alpha_K">
       <Quantity units="mV">
-        <Value>10.0</Value>
+        <SingleValue>10.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="n_beta_A">
       <Quantity units="per_ms">
-        <Value>0.125</Value>
+        <SingleValue>0.125</SingleValue>
       </Quantity>
     </Property>
     <Property name="n_beta_V0">
       <Quantity units="mV">
-        <Value>-65.0</Value>
+        <SingleValue>-65.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="n_beta_K">
       <Quantity units="mV">
-        <Value>80.0</Value>
+        <SingleValue>80.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="gbarNa">
       <Quantity units="S_per_cm2">
-        <Value>0.12</Value>
+        <SingleValue>0.12</SingleValue>
       </Quantity>
     </Property>  
     <Property name="gbarK">
       <Quantity units="S_per_cm2">
-        <Value>0.036</Value>
+        <SingleValue>0.036</SingleValue>
       </Quantity>
     </Property>
     <Property name="gLeak">
       <Quantity units="S_per_cm2">
-        <Value>0.0003</Value>
+        <SingleValue>0.0003</SingleValue>
       </Quantity>
     </Property>
     <Property name="eNa">
       <Quantity units="mV">
-        <Value>50.0</Value>
+        <SingleValue>50.0</SingleValue>
       </Quantity>
     </Property>
     <Property name="eK">
       <Quantity units="mV">
-        <Value>-77.0</Value>
+        <SingleValue>-77.0</SingleValue>
       </Quantity>
     </Property>  
     <Property name="eLeak">
       <Quantity units="mV">
-        <Value>-54.4</Value>
+        <SingleValue>-54.4</SingleValue>
       </Quantity>
     </Property>
     <Property name="C">
       <Quantity units="uF_per_cm2">
-        <Value>1.0</Value>
+        <SingleValue>1.0</SingleValue>
       </Quantity>
     </Property>
   </Component>
