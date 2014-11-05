@@ -50,7 +50,7 @@ class CodeGenerator(BaseCodeGenerator):
                                ode_method='gsl', v_threshold=None):
         raise NotImplementedError
 
-    def _render_source_files(self, template_args, src_dir, _):
+    def _render_source_files(self, template_args, src_dir, _, verbose):
         raise NotImplementedError
 
     def compile_source_files(self, compile_dir, component_name, verbose):

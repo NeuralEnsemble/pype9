@@ -164,8 +164,8 @@ component_file = os.path.join(os.path.dirname(__file__), '..', '..',
 initial_state_file = os.path.join(os.path.dirname(__file__), '..', '..',
                                   'examples', 'HodgkinHuxleyInitialState.xml')
 code_generator = CodeGenerator()
-code_generator.generate(component_file, initial_state_file,
-                        build_mode='generate_only')
+code_generator.generate(component_file, 0.0,  # initial_state_file,
+                        build_mode='compile_only')
 
 # biophysics_name = 'HodgkinHuxleyClass'
 # builder.create_model_files(biophysics_name, test_file, build_dir)

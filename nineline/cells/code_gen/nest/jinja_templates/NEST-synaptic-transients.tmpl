@@ -32,11 +32,11 @@
 //---------------------------------------------------------------//
 
 {# FIXME: This section needs to have code to insert the synaptic transients #}
-{% for name in synaptic_events %}
+{% for name in synaptic_event_funcs %}
 
 inline int {{ModelName}}::{{name}}_transients (long_t lag)
 {
-{% if (not (synapticEvent.localVars == [])) %}
+{% if synapticEvent.localVars %}
    double {{synapticEvent.localVars | join(", ")}};
 {% endif %}
 

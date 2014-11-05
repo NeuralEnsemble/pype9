@@ -63,6 +63,7 @@ class CodeGenerator(BaseCodeGenerator):
         args['synaptic_events'] = [p.name for p in model.event_receive_ports]
         args['synaptic_event_pscIDs'] = ['UNKNOWN'
                                          for p in model.event_receive_ports]
+        args['synaptic_event_funcs'] = []  # TODO: Need to connect this up to NEST-synaptic-transients
         volt_states = [s.name for s in model.dynamics.state_variables
                        if s.dimension == 'voltage']
         if not volt_states:
@@ -178,7 +179,8 @@ class CodeGenerator(BaseCodeGenerator):
         args['currentTimestamp'] = '''Thu Oct 23 23:30:27 2014'''
         return args
 
-    def _render_source_files(self, template_args, src_dir, install_dir):
+    def _render_source_files(self, template_args, src_dir, install_dir,
+                             verbose):
         model_name = template_args['ModelName']
         # Render C++ header file
         self._render_to_file('NEST-header.tmpl', template_args,
@@ -206,12 +208,12 @@ class CodeGenerator(BaseCodeGenerator):
                                  'bootstrap.sh', src_dir)
             os.chdir(src_dir)
             try:
-                sp.check_call('./bootstrap.sh', shell=True)
+                sp.check_call('sh bootstrap.sh', shell=True)
             except sp.CalledProcessError:
                 raise Exception("Bootstrapping of '{}' NEST module failed."
                                 .format(model_name or src_dir))
             try:
-                sp.check_call('{src_dir}/configure --prefix={install_dir}'
+                sp.check_call('sh {src_dir}/configure --prefix={install_dir}'
                               .format(src_dir=src_dir,
                                       install_dir=install_dir), shell=True)
             except sp.CalledProcessError:
@@ -239,8 +241,11 @@ class CodeGenerator(BaseCodeGenerator):
     def _clean_src_dir(self, src_dir, component_name):
         # Clean existing src directories from previous builds.
         prefix = os.path.join(src_dir, component_name)
-        remove_ignore_missing(prefix + '.h')
-        remove_ignore_missing(prefix + '.cpp')
-        remove_ignore_missing(prefix + 'Loader.h')
-        remove_ignore_missing(prefix + 'Loader.cpp')
-        remove_ignore_missing(prefix + 'Loader.sli')
+        if not os.path.exists(src_dir):
+            os.makedirs(src_dir)
+        else:
+            remove_ignore_missing(prefix + '.h')
+            remove_ignore_missing(prefix + '.cpp')
+            remove_ignore_missing(prefix + 'Loader.h')
+            remove_ignore_missing(prefix + 'Loader.cpp')
+            remove_ignore_missing(prefix + 'Loader.sli')

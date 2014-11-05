@@ -18,7 +18,7 @@
 // This section was generated from NEST-function.tmpl //
 //----------------------------------------------------//
 
-{% macro nest_function(name, returnType, returnVar, vars, localVars, consts, exprString) %}
+{% macro nest_function(ModelName, name, returnType, returnVar, vars, localVars, consts, exprString) %}
 
 {{returnType}} {{name}} ({{ vars | join (", ") }}) {
 

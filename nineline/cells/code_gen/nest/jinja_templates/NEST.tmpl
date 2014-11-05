@@ -18,10 +18,15 @@ namespace nest {
 {% from "NEST-function-header.tmpl" import nest_function_header %}
 
 {% for functionDef in functionDefs %}
-{{nest_function_header(functionDef.name,functionDef.returnType,functionDef.returnVar,functionDef.vars,functionDef.localVars,functionDef.consts,functionDef.exprString)}}
+{{nest_function_header(ModelName, functionDef.name, functionDef.returnType,
+                       functionDef.returnVar,functionDef.vars,
+                       functionDef.localVars,functionDef.consts,
+                       functionDef.exprString)}}
 {% endfor %}
 {% for functionDef in functionDefs %}
-{{nest_function(functionDef.name,functionDef.returnType,functionDef.returnVar,functionDef.vars,functionDef.localVars,functionDef.consts,functionDef.exprString)}}
+{{nest_function(ModelName, functionDef.name, functionDef.returnType,
+                functionDef.returnVar,functionDef.vars,functionDef.localVars,
+                functionDef.consts,functionDef.exprString)}}
 {% endfor %}
 {# derivative function #}
 {% include "NEST-dynamics.tmpl" %}

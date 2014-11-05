@@ -48,7 +48,8 @@ class BaseCodeGenerator(object):
         pass
 
     @abstractmethod
-    def _render_source_files(self, template_args, src_dir, install_dir):
+    def _render_source_files(self, template_args, src_dir, install_dir,
+                             verbose):
         pass
 
     @abstractmethod
@@ -206,7 +207,7 @@ class BaseCodeGenerator(object):
             # Clean existing compile & install directories from previous builds
             self._clean_compile_and_install_dirs(compile_dir, install_dir)
             # Compile source files
-            self.compile_source_files(src_dir, install_dir, compile_dir,
+            self.compile_source_files(compile_dir, component.name,
                                       verbose=verbose)
         # Switch back to original dir
         os.chdir(orig_dir)
