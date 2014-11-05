@@ -1,0 +1,20 @@
+<NineML xmlns="http://nineml.net/9ML/1.0">
+  <Component name="HodgkinHuxleyMod">
+    <Prototype url="/home/tclose/git/nineline/examples/HodgkinHuxley.xml">HodgkinHuxley</Prototype>
+    <Property name="m_alpha_A">
+      <Quantity units="per_ms">
+        <SingleValue>0.5</SingleValue>
+      </Quantity>
+    </Property>
+    <Property name="m_alpha_V0">
+      <Quantity units="mV">
+        <SingleValue>-20.0</SingleValue>
+      </Quantity>
+    </Property>
+    <Property name="m_alpha_K">
+      <Quantity units="mV">
+        <SingleValue>5.0</SingleValue>
+      </Quantity>
+    </Property>
+  </Component>
+</NineML>

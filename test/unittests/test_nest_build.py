@@ -160,7 +160,9 @@ from nineline.cells.code_gen.nest import CodeGenerator
 #     f.write(output_cpp)
 build_dir = os.path.join(os.path.dirname(__file__), 'build')
 component_file = os.path.join(os.path.dirname(__file__), '..', '..',
-                              'examples', 'HodgkinHuxley.xml')
+                              'examples', 'HodgkinHuxleyMod.xml')
+from nineml import read
+comp = read(component_file)['HodgkinHuxleyMod']
 initial_state_file = os.path.join(os.path.dirname(__file__), '..', '..',
                                   'examples', 'HodgkinHuxleyInitialState.xml')
 code_generator = CodeGenerator()

@@ -39,7 +39,7 @@ class CodeGenerator(BaseCodeGenerator):
 
     def _extract_template_args(self, component, initial_state,
                                ode_method='gsl', v_threshold=None):
-        model = component.definition.component_class
+        model = component.component_class
         args = {}
         args['ModelName'] = model.name
         args['ODEmethod'] = ode_method
