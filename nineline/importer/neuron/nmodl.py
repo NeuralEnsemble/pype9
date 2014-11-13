@@ -15,6 +15,7 @@ from nineml.abstraction_layer.dynamics.component.ports import (AnalogPort,
                                                                EventPort)
 from nineml.user_layer.dynamics import IonDynamics
 from collections import defaultdict
+from nineml.abstraction_layer import units
 
 
 # Compiled regular expressions
@@ -55,29 +56,29 @@ class NMODLImporter(object):
     # from a regular alias
     StateAssignment = collections.namedtuple("StateAssignment", "variable")
 
-    _inbuilt_constants = {'faraday': pq.Quantity(96485.3365, 'coulombs'),
-                          'k-mole': pq.Quantity(8.3144621, 'J/K'),
-                          'pi': pq.Quantity(3.14159265359, 'dimensionless')}
+    _inbuilt_constants = {'faraday': pq.Quantity(96485.3365, units.C),
+                          'k-mole': pq.Quantity(8.3144621, units.J_per_K),
+                          'pi': pq.Quantity(3.14159265359)}
 
-    _SI_to_dimension = {'m/s': 'conductance',
-                        'kg*m**2/(s**3*A)': 'voltage',
-                        'mol/m**3': 'concentration',
-                        'A/m**2': 'membrane_current',
-                        's': 'time',
-                        'K': 'absolute_temperature',
-                        'kg/(m**3*s)': 'flux',
-                        '1/(s*A)': 'mass_per_charge',
-                        'm': 'length',
-                        's**3*A**2/(kg*m**4)': 'membrane_conductance',
-                        'A': 'current',
-                        'A/s': 'change_in_current',
-                        's**3*A**2/(kg*m**2)': 'conductance',
-                        '1/s': 'frequency',
-                        's*A/m**3': 'charge_density',
-                        'm**3/(s*mol)': 'frequency_from_concentration',
-                        'mol/m**2': 'two_dimensional_density',
-                        's*A': 'charge',
-                        's**3*A/(kg*m**2)': 'inverse_voltage',
+    _SI_to_dimension = {'m/s': units.conductance,
+                        'kg*m**2/(s**3*A)': units.voltage,
+                        'mol/m**3': units.concentration,
+                        'A/m**2': units.currentDensity,
+                        's': units.time,
+                        'K': units.temperature,
+                        'kg/(m**3*s)': units.flux,
+                        '1/(s*A)': units.mass_per_charge,
+                        'm': units.length,
+                        's**3*A**2/(kg*m**4)': units.conductanceDensity,
+                        'A': units.current,
+                        'A/s': units.current_per_time,
+                        's**3*A**2/(kg*m**2)': units.conductance,
+                        '1/s': units.per_time,
+                        's*A/m**3': units.chargeDensity,
+                        'm**3/(s*mol)': units.per_time_concentration,
+                        'mol/m**2': units.mass_per_length2,
+                        's*A': units.charge,
+                        's**3*A/(kg*m**2)': units.per_voltage,
                         None: None}
 
     def __repr__(self):
