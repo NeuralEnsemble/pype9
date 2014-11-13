@@ -3,6 +3,9 @@
 	<name>NineLine</name>
 	<comment>A software pipeline to generate multi-simulator implementations of neural networks from NineML descriptions</comment>
 	<projects>
+		<project>BTMorph</project>
+		<project>NineML</project>
+		<project>PyNN</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
