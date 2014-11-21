@@ -23,14 +23,17 @@ import numpy
 from lxml import etree
 import quantities as pq
 # import nineml.extensions.biophysical_cells
-# from nineml.extensions.morphology import (Morphology as Morphology9ml,
-#                                           Segment as Segment9ml,
-#                                           ProximalPoint as ProximalPoint9ml,
-#                                           DistalPoint as DistalPoint9ml,
-#                                           ParentSegment as ParentSegment9ml,
-#                                           Classification as Classification9ml,
-#                                           SegmentClass as SegmentClass9ml,
-#                                           Member as Member9ml)
+try:
+    from nineml.extensions.morphology import (Morphology as Morphology9ml,
+                                              Segment as Segment9ml,
+                                              ProximalPoint as ProximalPoint9ml,
+                                              DistalPoint as DistalPoint9ml,
+                                              ParentSegment as ParentSegment9ml,
+                                              Classification as Classification9ml,
+                                              SegmentClass as SegmentClass9ml,
+                                              Member as Member9ml)
+except ImportError:
+    pass  # This is dependent on the version of the 9ml library used
 from abc import ABCMeta  # Metaclass for abstract base classes
 from btmorph.btstructs2 import STree2, SNode2, P3D2
 import inspect
@@ -572,8 +575,8 @@ class Model(STree2):
                 section_length = numpy.sum(seg.length for seg in section)
                 # Get weighted average of diameter Ra and cm by segment length
                 diameter = 0.0
-                Ra = 0.0  # FIXME * pq.ohm * pq.cm
-                cm = 0.0  # FIXME * pq.uF / (pq.cm ** 2)
+                Ra = 0.0 #* pq.ohm * pq.cm
+                cm = 0.0 * pq.uF / (pq.cm ** 2)
                 for seg in section:
                     diameter += seg.diameter * seg.length
                     Ra += seg.Ra * seg.length

@@ -56,9 +56,9 @@ class NMODLImporter(object):
     # from a regular alias
     StateAssignment = collections.namedtuple("StateAssignment", "variable")
 
-    _inbuilt_constants = {'faraday': pq.Quantity(96485.3365, units.C),
-                          'k-mole': pq.Quantity(8.3144621, units.J_per_K),
-                          'pi': pq.Quantity(3.14159265359)}
+    _inbuilt_constants = {'faraday': pq.Quantity(96485.3365, 'C'),
+                          'k-mole': pq.Quantity(8.3144621, 'J/K'),
+                          'pi': pq.Quantity(3.14159265359, 'dimensionless')}
 
     _SI_to_dimension = {'m/s': units.conductance,
                         'kg*m**2/(s**3*A)': units.voltage,

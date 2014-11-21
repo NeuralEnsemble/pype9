@@ -4,8 +4,11 @@
 	<comment>A software pipeline to generate multi-simulator implementations of neural networks from NineML descriptions</comment>
 	<projects>
 		<project>BTMorph</project>
+		<project>Neo</project>
+		<project>NestGap</project>
 		<project>NineML</project>
 		<project>PyNN</project>
+		<project>Quantities</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

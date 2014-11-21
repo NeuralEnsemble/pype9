@@ -6,4 +6,7 @@
 <path>/NineLine/test</path>
 <path>/NineLine</path>
 </pydev_pathproperty>
+<pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH">
+<path>/Users/tclose/hg/lazyarray</path>
+</pydev_pathproperty>
 </pydev_project>

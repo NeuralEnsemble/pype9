@@ -25,11 +25,16 @@ else:
     except ImportError:
         import unittest
 
+test_cn_dir = os.path.join(os.path.dirname(__file__) , '..', '..', '..',
+                        'cerebellarnuclei')
+
+test_gr_dir = os.path.join(os.path.dirname(__file__) , '..', '..', '..',
+                        'kbrain', 'external', 'fabios_network')
 
 class TestHocImporter(unittest.TestCase):
 
     def test_hoc_import(self):
-        importer = HocImporter('/home/tclose/git/cerebellarnuclei/',
+        importer = HocImporter(test_cn_dir,
                                ['DCN_params_axis.hoc', 'DCN_morph.hoc',
                                 'DCN_mechs1.hoc'],
                                ['DCNmechs()'])
@@ -90,8 +95,7 @@ class TestNMODLImporter(unittest.TestCase):
         </NineML>""")
 
     def test_nmodl_import(self):
-        importer = NMODLImporter('/home/tclose/git/kbrain/external/'
-                                 'fabios_network/Golgi_hcn2.mod')
+        importer = NMODLImporter(os.path.join(test_gr_dir, 'Golgi_hcn2.mod'))
         component, componentclass = importer.get_component_class('/tmp')
 #         imported_tree = etree.parse(fname)
 #         reference_tree = etree.fromstring(self.ref_xml)
@@ -112,15 +116,12 @@ class TestNeuronImporter(unittest.TestCase):
 #                                    ['for_import.py'])
 #         importer.write_ion_current_files('/home/tclose/git/purkinje/model/'
 #                                          'Haroon_active_reduced_model/9ml')
-        importer = NeuronImporter('/home/tclose/git/kbrain/external/'
-                                  'fabios_network',
+        importer = NeuronImporter(test_gr_dir,
                                    ['load_sergios_golgi.hoc'])
-        importer.write_ion_current_files(class_dir=('/home/tclose/git/kbrain/'
-                                                    'external/fabios_network/'
-                                                    '9ml/classes'),
-                                         comp_dir=('/home/tclose/git/kbrain/'
-                                                   'external/fabios_network/'
-                                                   '9ml/components'))
+        importer.write_ion_current_files(class_dir=(os.path.join(test_gr_dir,
+                                                    '9ml/classes')),
+                                         comp_dir=(os.path.join(test_gr_dir,
+                                                   '9ml/components')))
 if __name__ == '__main__':
 #     test = TestNMODLImporter()
 #     test.test_nmodl_import()

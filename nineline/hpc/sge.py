@@ -356,17 +356,16 @@ cp {jobscript_path} {output_dir}/job
 echo "============== Done ==============="
 
 cp {logging_path} {output_dir}/log
-"""
-.format(work_dir=self.work_dir, args=args, path=env.get('PATH', ''),
-        np=self.num_processes, que_name=self.que_name,
-        max_memory=self.max_memory, mean_memory=self.mean_memory,
-        pythonpath=env.get('PYTHONPATH', ''),
-        ld_library_path=env.get('LD_LIBRARY_PATH', ''), cmdline=cmdline,
-        output_dir=self.output_dir, name_cmd=name_cmd, copy_cmd=copy_cmd,
-        jobscript_path=jobscript_path, time_limit=time_limit_option,
-        email=('#$ -M ' + os.environ['EMAIL']
-               if 'EMAIL' in os.environ else ''),
-        logging_path=self.logging_path))
+""".format(work_dir=self.work_dir, args=args, path=env.get('PATH', ''),
+           np=self.num_processes, que_name=self.que_name,
+           max_memory=self.max_memory, mean_memory=self.mean_memory,
+           pythonpath=env.get('PYTHONPATH', ''),
+           ld_library_path=env.get('LD_LIBRARY_PATH', ''), cmdline=cmdline,
+           output_dir=self.output_dir, name_cmd=name_cmd, copy_cmd=copy_cmd,
+           jobscript_path=jobscript_path, time_limit=time_limit_option,
+           email=('#$ -M ' + os.environ['EMAIL']
+                  if 'EMAIL' in os.environ else ''),
+           logging_path=self.logging_path))
         # Submit job
         print ("\nSubmitting job {} to que {}"
                .format(jobscript_path, self.que_name))
