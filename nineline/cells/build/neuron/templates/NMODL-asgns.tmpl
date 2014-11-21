@@ -13,17 +13,13 @@
    - assignedEqDefs: a list of strings with the assignment equations in NMODL syntax
 #}
 
-{% if (not (assignedEqDefs == [])) %}
-
+{% if assignedEqDefs %}
 PROCEDURE asgns () {
-{% if (not (assignedEqLocals == [])) %}
+{% if assignedEqLocals %}
   LOCAL {{assignedEqLocals | join (", ")}}
 {% endif %}
 {% for assignedEqDef in assignedEqDefs %}
   {{assignedEqDef}}
-
 {% endfor %}
-
 }
-
 {% endif %}

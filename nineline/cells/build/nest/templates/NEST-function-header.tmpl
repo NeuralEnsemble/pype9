@@ -12,4 +12,8 @@
    
 #}
 
-{{functionDef.returnType}} {{functionDef.name}} ({{ functionDef.vars | join (", ") }});
+{% macro nest_function_header(name,returnType,returnVar,vars,localVars,consts,exprString) %}
+
+{{returnType}} {{name}} ({{ vars | join (", ") }});
+
+{% endmacro %}

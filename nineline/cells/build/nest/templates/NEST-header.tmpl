@@ -185,8 +185,8 @@ namespace nest {
   struct State_ { 
 
       enum StateVecElems {
-{% for k in keys(stateIndexMap) %}
-      {{k | upper}} = {{attr(stateIndexMap,k)}}{% if (not (loop.last)) %},{% endif %}
+{% for k in stateDefs %}
+      {{k.name | upper}} = {{stateIndexMap[k.name]}}{% if (not (loop.last)) %},{% endif %}
 
 {% endfor %}
       };

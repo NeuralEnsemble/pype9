@@ -390,7 +390,7 @@ void {{modelName}}::init_buffers_()
 void {{modelName}}::calibrate()
 {
     B_.logger_.init();  
-    {% if haskey(stateIndexMap,"v") %}V_.U_old_ = S_.y_[{{attr(stateIndexMap,"v")}}];{% endif %}
+    {% if ("v" in stateIndexMap) %}V_.U_old_ = S_.y_[{{stateIndexMap["v"]}}];{% endif %}
 {% if ("t_ref" in defaultDefs) %}
     V_.RefractoryCounts_ = Time(Time::ms(P_.t_ref)).get_steps();
 {% else %}

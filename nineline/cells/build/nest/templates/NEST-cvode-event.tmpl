@@ -18,8 +18,8 @@ extern "C" int {{modelName}}_event (double t, N_Vector y, double *g, void* pnode
   const struct {{modelName}}::State_ *state;
   state = &(node.S_);
 
-{% if (haskey(stateIndexMap,"v") and ("V_t" in defaultDefs)) %}
-  v = Ith (y, {{attr(stateIndexMap,"v")}});
+{% if (("v" in stateIndexMap) and ("V_t" in defaultDefs)) %}
+  v = Ith (y, {{stateIndexMap["v"]}});
   vt = params->V_t;
   g[0] = v - vt;
 {% else %}

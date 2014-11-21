@@ -20,29 +20,22 @@
 #}
 
 BREAKPOINT {
-{% if (not (currentEqLocals == [])) %}
+{% if currentEqLocals %}
   LOCAL {{currentEqLocals | join (", ")}}
 {% endif %}
-
-{% if (not (rateEqDefs == [])) %}
+{% if rateEqDefs %}
   SOLVE states METHOD {{ODEmethod}}
 {% endif %}
-
-{% if (not (kineticEqDefs == [])) %}
+{% if kineticEqDefs %}
   SOLVE kstates METHOD sparse
 {% endif %}
-
-{% if (not (poolIons == [])) %}
+{% if poolIons %}
    pools()
 {% endif %}
-
-{% if (not (reactionEqDefs == [])) %}
+{% if reactionEqDefs %}
    reactions()
 {% endif %}
-
 {% for eq in currentEqDefs %}
   {{eq}}
-
 {% endfor %}
-
 }

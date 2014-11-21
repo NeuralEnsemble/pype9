@@ -1,4 +1,15 @@
+{#
+   This template generates the solver event portion of the update loop.
 
+   Template variables are:
+
+   - modelName: the name of the current system
+   - synapticEventDefs - a list of synaptic event objects that have the following fields:
+
+     - pscName - descriptive name (label) of the post-synaptic conductance component
+     - pscId - unique identifier of the post-synaptic conductance component
+
+#}
 
   int events = 0;
 

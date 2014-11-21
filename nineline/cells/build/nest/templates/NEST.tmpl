@@ -1,55 +1,36 @@
-
 {# include files and other prelude definitions #}
-
 {% include "NEST-prelude.tmpl" %}
 
 namespace nest {
-
 {% include "NEST-sundials-prelude.tmpl" %}
-
 {% include "NEST-fsolve-prelude.tmpl" %}
+{% from "NEST-function.tmpl" import nest_function %}
+{% from "NEST-function-header.tmpl" import nest_function_header %}
 
 {% for functionDef in functionDefs %}
-{% include "NEST-function-header.tmpl" %} 
+{{nest_function_header(functionDef.name,functionDef.returnType,functionDef.returnVar,functionDef.vars,functionDef.localVars,functionDef.consts,functionDef.exprString)}}
 {% endfor %}
-
 {% for functionDef in functionDefs %}
-{% include "NEST-function.tmpl" %} 
+{{nest_function(functionDef.name,functionDef.returnType,functionDef.returnVar,functionDef.vars,functionDef.localVars,functionDef.consts,functionDef.exprString)}}
 {% endfor %}
-
 {# derivative function #}
 {% include "NEST-dynamics.tmpl" %}
-
 {# residual function (used by IDA solver only) #}
 {% include "NEST-residual.tmpl" %}
-
 {% include "NEST-steadystate.tmpl" %}
-
 {% include "NEST-jacobian.tmpl" %}
-
 {% include "NEST-parameters.tmpl" %}
-
 {% include "NEST-init.tmpl" %}
-
 {% include "NEST-accessors_modifiers.tmpl" %}
-
 {% include "NEST-buffers.tmpl" %}
-
 {% include "NEST-recordables.tmpl" %}
-
 {% include "NEST-nodes.tmpl" %}
-
 {% if (ODEmethod == "cvode") %}
-{% include "NEST-cvode-event.tmpl" %}
-
+    {% include "NEST-cvode-event.tmpl" %}
 {% elif (ODEmethod == "ida") %}
-{% include "NEST-ida-event.tmpl" %}
-
+    {% include "NEST-ida-event.tmpl" %}
 {% endif %}
-
 {% include "NEST-synaptic-transients.tmpl" %}
-
 {% include "NEST-update.tmpl" %}
-
 {% include "NEST-event-handle.tmpl" %}
 }

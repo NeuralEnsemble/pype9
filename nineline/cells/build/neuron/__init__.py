@@ -13,8 +13,8 @@ import shutil
 import time
 import platform
 import subprocess as sp
-
 from .. import (path_to_exec, get_build_paths, load_component_translations)
+
 
 BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
 _SIMULATOR_BUILD_NAME = 'neuron'

@@ -1,3 +1,24 @@
+{#
+   NEST update template 
+
+   This template defines a C++ function of the form:
+
+   int modelName_update (Time const & origin, const long_t from, const long_t to)
+
+   This is the model state update function invoked by the NEST simulator.
+
+   Template variables are:
+
+   - ODEmethod: the current used solver method; can be "cvode" "ida" or "gsl"
+   - modelName: the name of the current system
+   - stateIndexMap - a dictionary mapping state names to state vector indices
+                     (state "v" is always at index 0)
+
+   This template invokes the "NEST-emit-spike.tmpl" template in order
+   to generate code that handles detection of spiking threshold and
+   generation of corresponding spike events.
+
+#}
     
   void {{modelName}}::update(Time const & origin, const long_t from, const long_t to)
   {
@@ -26,7 +47,7 @@
           switch (status)
             {
                 case CV_SUCCESS:      continue;
-                case CV_ROOT_RETURN:  {% include "NEST-emit-spike.tmpl" %};
+                case CV_ROOT_RETURN:  {% include "NEST-emit-spike-cvode.tmpl" %};
                 default:              throw CVodeSolverFailure (get_name(), 0);
             }
    	}
@@ -51,7 +72,7 @@
           switch (status)
             {
                 case IDA_SUCCESS:      continue;
-                case IDA_ROOT_RETURN:  {% include "NEST-emit-spike.tmpl" %};
+                case IDA_ROOT_RETURN:  {% include "NEST-emit-spike-cvode.tmpl" %};
                 case IDA_TSTOP_RETURN: break;
                 default:               throw IDASolverFailure (get_name(), 0);
             }
@@ -66,7 +87,7 @@
 
 {% elif (ODEmethod == "gsl") %}
 
-        V_.U_old_ = S_.y_[{{attr(stateIndexMap,"v")}}];
+        V_.U_old_ = S_.y_[{{stateIndexMap["v"]}}];
 
         while (tt < h)
         {
@@ -85,7 +106,7 @@
 
         }
         
-        {% include "NEST-emit-spike.tmpl" %}
+        {% include "NEST-emit-spike-gsl.tmpl" %}
 
         {% include "NEST-solver-events.tmpl" %}
 

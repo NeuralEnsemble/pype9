@@ -9,7 +9,7 @@ template <> void RecordablesMap<{{modelName}}>::create()
 
 {% endfor %}
 
-{% if haskey(stateIndexMap,"v") %}
+{% if ("v" in stateIndexMap) %}
    insert_(names::V_m, &{{modelName}}::get_y_elem_<{{modelName}}::State_::V>);
 
 {% endif %}
