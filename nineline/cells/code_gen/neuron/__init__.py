@@ -33,7 +33,7 @@ else:
 
 class CodeGenerator(BaseCodeGenerator):
 
-    #BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
+    # BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
     SIMULATOR_NAME = 'neuron'
     _DEFAULT_SOLVER = 'derivimplicit'
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')

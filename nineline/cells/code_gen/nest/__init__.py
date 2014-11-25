@@ -16,6 +16,7 @@ import shutil
 from .. import BaseCodeGenerator
 from nineline import __version__
 from nineline.utils import remove_ignore_missing
+from nineml import Dimension
 
 # Add Nest installation directory to the system path
 if 'NEST_INSTALL_DIR' in os.environ:
@@ -29,6 +30,8 @@ else:
             os.environ['PATH'] += os.pathsep + '/opt/NEST/2.2.1/bin'
     except KeyError:
         pass
+
+volt_dimension = Dimension(name='voltage', i=-1, m=1, t=-3, l=2)
 
 
 class CodeGenerator(BaseCodeGenerator):
@@ -65,7 +68,7 @@ class CodeGenerator(BaseCodeGenerator):
                                          for p in model.event_receive_ports]
         args['synaptic_event_funcs'] = []  # TODO: Need to connect this up to NEST-synaptic-transients
         volt_states = [s.name for s in model.dynamics.state_variables
-                       if s.dimension == 'voltage']
+                       if s.dimension == volt_dimension]
         if not volt_states:
             raise Exception("Did not find a state with dimension 'voltage' in "
                             "the list of state names so couldn't "
@@ -179,7 +182,8 @@ class CodeGenerator(BaseCodeGenerator):
         args['currentTimestamp'] = '''Thu Oct 23 23:30:27 2014'''
         return args
 
-    def _render_source_files(self, template_args, src_dir, install_dir,
+    def _render_source_files(self, template_args, src_dir, compile_dir,
+                             install_dir,
                              verbose):
         model_name = template_args['ModelName']
         # Render C++ header file
@@ -200,6 +204,7 @@ class CodeGenerator(BaseCodeGenerator):
                              model_name + 'Loader.sli', src_dir)
         # Generate Makefile if it is not present
         if not os.path.exists(os.path.join(src_dir, 'Makefile')):
+            orig_dir = os.getcwd()
             self._render_to_file('configure-ac.tmpl', build_args,
                                  'configure.ac', src_dir)
             self._render_to_file('Makefile-am.tmpl', build_args,
@@ -212,6 +217,7 @@ class CodeGenerator(BaseCodeGenerator):
             except sp.CalledProcessError:
                 raise Exception("Bootstrapping of '{}' NEST module failed."
                                 .format(model_name or src_dir))
+            os.chdir(compile_dir)
             try:
                 sp.check_call('sh {src_dir}/configure --prefix={install_dir}'
                               .format(src_dir=src_dir,
@@ -220,13 +226,14 @@ class CodeGenerator(BaseCodeGenerator):
                 raise Exception("Configuration of '{}' NEST module failed. "
                                 "See src directory '{}':\n "
                                 .format(model_name, src_dir))
+            os.chdir(orig_dir)
 
     def compile_source_files(self, compile_dir, component_name, verbose):
         # Run configure script, make and make install
         os.chdir(compile_dir)
         if verbose:
             print ("Compiling NEST model class in '{}' directory."
-                  .format(compile_dir))
+                   .format(compile_dir))
         try:
             sp.check_call('make', shell=True)
         except sp.CalledProcessError:

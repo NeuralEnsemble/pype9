@@ -94,7 +94,7 @@ class BaseCodeGenerator(object):
         orig_dir = os.getcwd()
         # Get component from file if passed as a string
         if isinstance(component, str):
-            #Interpret the given component as a URL of a NineML component
+            # Interpret the given component as a URL of a NineML component
             component_src_path = component
             # Read NineML description
             context = nineml.read(component_src_path)
@@ -113,11 +113,11 @@ class BaseCodeGenerator(object):
             component_src_path = None
         # Get initial_state from file if passed as a string
         if isinstance(component, str):
-            #Interpret the given component as a URL of a NineML component
+            # Interpret the given component as a URL of a NineML component
             state_src_path = component
             # Read NineML description
-            #initial_states = parse_9ml(state_src_path)
-            initial_states = [0.0]  #TODO: Write nineml library for state layer
+            # initial_states = parse_9ml(state_src_path)
+            initial_states = [0.0]  # TODO: Write nineml library for state layer
             if not initial_states:
                 raise Exception("No initial_states loaded from nineml path "
                                 "'{}'".format(state_src_path))
@@ -198,7 +198,8 @@ class BaseCodeGenerator(object):
         if generate_source:
             self._clean_src_dir(src_dir, component.name)
             self.generate_source_files(component, initial_state, src_dir,
-                                       install_dir, ode_method, verbose)
+                                       compile_dir, install_dir, ode_method,
+                                       verbose)
             # Write the timestamp of the 9ML file used to generate the source
             # files
             with open(nineml_mod_time_path, 'w') as f:
@@ -214,7 +215,8 @@ class BaseCodeGenerator(object):
         return install_dir
 
     def generate_source_files(self, component, initial_state, src_dir,
-                              install_dir, ode_method=None, verbose=True):
+                              compile_dir, install_dir, ode_method=None,
+                              verbose=True):
         """
         Generates the source files for the relevant simulator
         """
@@ -226,7 +228,8 @@ class BaseCodeGenerator(object):
         template_args = self._extract_template_args(component, initial_state,
                                                     ode_method)
         # Render source files
-        self._render_source_files(template_args, src_dir, install_dir, verbose)
+        self._render_source_files(template_args, src_dir, compile_dir,
+                                  install_dir, verbose)
 
     def _get_install_dir(self, build_dir, install_dir):
         """

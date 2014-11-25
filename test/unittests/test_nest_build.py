@@ -152,18 +152,20 @@ from nineline.cells.code_gen.nest import CodeGenerator
 # 
 # # Generate and write header to file
 # output_header = header_template.render(**template_args)
-# with open(os.path.join(build_dir, biophysics_name + '.h'), 'w') as f:
+# with open(join(build_dir, biophysics_name + '.h'), 'w') as f:
 #     f.write(output_header)
 # # Generate and write C++ to file
 # output_cpp = cpp_template.render(**template_args)
-# with open(os.path.join(build_dir, 'hodgkin_huxley.cpp'), 'w') as f:
+# with open(join(build_dir, 'hodgkin_huxley.cpp'), 'w') as f:
 #     f.write(output_cpp)
-build_dir = os.path.join(os.path.dirname(__file__), 'build')
-component_file = os.path.join(os.path.dirname(__file__), '..', '..',
-                              'examples', 'HodgkinHuxleyMod.xml')
-from nineml import read
-comp = read(component_file)['HodgkinHuxleyMod']
-initial_state_file = os.path.join(os.path.dirname(__file__), '..', '..',
+import nineml
+from os.path import dirname, join, abspath, realpath
+build_dir = join(dirname(__file__), 'build')
+test_dir = abspath(join(dirname(realpath(nineml.__file__)), '..', 'test',
+                        'xml'))
+component_file = join(test_dir, 'neurons', 'HodgkinHuxleyModified.xml')
+comp = nineml.read(component_file)['HodgkinHuxleyModified']
+initial_state_file = join(dirname(__file__), '..', '..',
                                   'examples', 'HodgkinHuxleyInitialState.xml')
 code_generator = CodeGenerator()
 code_generator.generate(component_file, 0.0,  # initial_state_file,
@@ -172,7 +174,7 @@ code_generator.generate(component_file, 0.0,  # initial_state_file,
 # biophysics_name = 'HodgkinHuxleyClass'
 # builder.create_model_files(biophysics_name, test_file, build_dir)
 # os.chdir(build_dir)
-# if not os.path.exists(os.path.join(build_dir, 'Makefile')):
+# if not exists(join(build_dir, 'Makefile')):
 # 
 #     # Generate configure.ac and Makefile
 #     builder.create_configure_ac(biophysics_name, build_dir)
@@ -184,7 +186,7 @@ code_generator.generate(component_file, 0.0,  # initial_state_file,
 #     # Run configure script
 #     sp.check_call('{src_dir}/configure --prefix={install_dir}'
 #                   .format(src_dir=build_dir,
-#                           install_dir=os.path.join(build_dir, 'bin')),
+#                           install_dir=join(build_dir, 'bin')),
 #                   shell=True)
 # if False:
 #     # Run make
