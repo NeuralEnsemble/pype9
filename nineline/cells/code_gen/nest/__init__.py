@@ -40,6 +40,10 @@ class CodeGenerator(BaseCodeGenerator):
     _DEFAULT_SOLVER = 'gsl'
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
+    def __init__(self, build_cores=1):
+        super(CodeGenerator, self).__init__()
+        self._build_cores = build_cores
+
     def _extract_template_args(self, component, initial_state,
                                ode_method='gsl', v_threshold=None):
         model = component.component_class
@@ -183,8 +187,7 @@ class CodeGenerator(BaseCodeGenerator):
         return args
 
     def _render_source_files(self, template_args, src_dir, compile_dir,
-                             install_dir,
-                             verbose):
+                             install_dir, verbose):
         model_name = template_args['ModelName']
         # Render C++ header file
         self._render_to_file('NEST-header.tmpl', template_args,
@@ -203,7 +206,7 @@ class CodeGenerator(BaseCodeGenerator):
         self._render_to_file('sli_initialiser.tmpl', build_args,
                              model_name + 'Loader.sli', src_dir)
         # Generate Makefile if it is not present
-        if not os.path.exists(os.path.join(src_dir, 'Makefile')):
+        if not os.path.exists(os.path.join(compile_dir, 'Makefile')):
             orig_dir = os.getcwd()
             self._render_to_file('configure-ac.tmpl', build_args,
                                  'configure.ac', src_dir)
@@ -217,6 +220,8 @@ class CodeGenerator(BaseCodeGenerator):
             except sp.CalledProcessError:
                 raise Exception("Bootstrapping of '{}' NEST module failed."
                                 .format(model_name or src_dir))
+            if not os.path.exists(compile_dir):
+                os.mkdir(compile_dir)
             os.chdir(compile_dir)
             try:
                 sp.check_call('sh {src_dir}/configure --prefix={install_dir}'
@@ -235,7 +240,7 @@ class CodeGenerator(BaseCodeGenerator):
             print ("Compiling NEST model class in '{}' directory."
                    .format(compile_dir))
         try:
-            sp.check_call('make', shell=True)
+            sp.check_call('make -j{}'.format(self._build_cores), shell=True)
         except sp.CalledProcessError:
             raise Exception("Compilation of '{}' NEST module failed. "
                             .format(component_name))
