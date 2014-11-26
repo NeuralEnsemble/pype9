@@ -1,5 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <NineML xmlns="http://nineml.net/9ML/1.0">
+  <Dimension name="per_time" t="-1"/>
+  <Dimension name="voltage" m="1" l="2" t="-3" i="-1"/>
+  <Dimension name="conductanceDensity" m="-1" l="-4" t="3" i="2"/>
+  <Dimension name="specificCapacitance" m="-1" l="-4" t="4" i="2"/>
+  <Dimension name="current" i="1"/>
+  <Dimension name="temperature" k="1"/>
   <ComponentClass name="HodgkinHuxleyClass">
+    <Annotations>
+      <Description>This class is a </Description></Annotations>
     <Parameter name="m_alpha_A" dimension="per_time"/>
     <Parameter name="m_alpha_V0" dimension="voltage"/>
     <Parameter name="m_alpha_K" dimension="voltage"/>
@@ -18,27 +27,28 @@
     <Parameter name="n_beta_A" dimension="per_time"/>
     <Parameter name="n_beta_V0" dimension="voltage"/>
     <Parameter name="n_beta_K" dimension="voltage"/>
-    <Parameter name="gbarNa" dimension="membrane_conductance"/>
-    <Parameter name="gbarK" dimension="membrane_conductance"/>
-    <Parameter name="gLeak" dimension="membrane_conductance"/>
+    <Parameter name="gbarNa" dimension="conductanceDensity"/>
+    <Parameter name="gbarK" dimension="conductanceDensity"/>
+    <Parameter name="gLeak" dimension="conductanceDensity"/>
     <Parameter name="eLeak" dimension="voltage"/>
     <Parameter name="eK" dimension="voltage"/>
     <Parameter name="eNa" dimension="voltage"/>
-    <Parameter name="C" dimension="membrane_capacitance"/>
+    <Parameter name="C" dimension="specificCapacitance"/>
     <AnalogSendPort name="v" dimension="voltage"/>
     <AnalogSendPort name="iK" dimension="current"/>
     <AnalogReceivePort name="T" dimension="temperature"/>
-    <AnalogReducePort name="injectedCurrent" dimension="current" reduce_op="+"/>
+    <AnalogReducePort name="iSynapse" dimension="current" operator="+"/>
     <EventReceivePort name="incomingSpike"/>
     <EventSendPort name="outgoingSpike"/>
     <Dynamics>
+      <Annotations><Description>Dynamics are used to describe components that are added to the differential equation solver</Description></Annotations>
       <StateVariable name="v" dimension="voltage"/>
       <StateVariable name="m"/>
       <StateVariable name="h"/>
       <StateVariable name="n"/>
       <Regime name="single">
         <TimeDerivative variable="v">
-          <MathInline>(iNa + iK + iLeak + injectedCurrent) / C</MathInline>
+          <MathInline>(iNa + iK + iLeak + iSynapse) / C</MathInline>
         </TimeDerivative>
         <TimeDerivative variable="m">
           <MathInline>(m_inf - m) / m_tau</MathInline>
@@ -48,9 +58,11 @@
         </TimeDerivative>
         <TimeDerivative variable="n">
           <MathInline>(n_inf - n) / n_tau</MathInline>
+          <Annotations><Description>And time-derivatives too</Description></Annotations>
         </TimeDerivative>
         <OnEvent port="incomingSpike">
           <StateAssignment variable="v">
+            <Annotations><Description>Even State assignments can be annotated</Description></Annotations>
             <MathInline>v + 5</MathInline>
           </StateAssignment>
         </OnEvent>
