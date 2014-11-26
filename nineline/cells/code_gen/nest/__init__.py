@@ -40,9 +40,11 @@ class CodeGenerator(BaseCodeGenerator):
     _DEFAULT_SOLVER = 'gsl'
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
-    def __init__(self, build_cores=1):
+    def __init__(self):
         super(CodeGenerator, self).__init__()
-        self._build_cores = build_cores
+        nest_home = os.environ.get('NEST_INSTALL_HOME', '')
+        self._compiler = sp.check_output('{}nest-config --compiler'
+                                         .format(nest_home), shell=True)
 
     def _extract_template_args(self, component, initial_state,
                                ode_method='gsl', v_threshold=None):
@@ -223,10 +225,13 @@ class CodeGenerator(BaseCodeGenerator):
             if not os.path.exists(compile_dir):
                 os.mkdir(compile_dir)
             os.chdir(compile_dir)
+            env = os.environ.copy()
+            env['CXX'] = self._compiler
             try:
                 sp.check_call('sh {src_dir}/configure --prefix={install_dir}'
                               .format(src_dir=src_dir,
-                                      install_dir=install_dir), shell=True)
+                                      install_dir=install_dir),
+                              shell=True, env=env)
             except sp.CalledProcessError:
                 raise Exception("Configuration of '{}' NEST module failed. "
                                 "See src directory '{}':\n "
@@ -240,7 +245,7 @@ class CodeGenerator(BaseCodeGenerator):
             print ("Compiling NEST model class in '{}' directory."
                    .format(compile_dir))
         try:
-            sp.check_call('make -j{}'.format(self._build_cores), shell=True)
+            sp.check_call('make', shell=True)
         except sp.CalledProcessError:
             raise Exception("Compilation of '{}' NEST module failed. "
                             .format(component_name))
