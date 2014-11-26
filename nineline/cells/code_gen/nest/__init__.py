@@ -43,8 +43,9 @@ class CodeGenerator(BaseCodeGenerator):
     def __init__(self):
         super(CodeGenerator, self).__init__()
         nest_home = os.environ.get('NEST_INSTALL_HOME', '')
-        self._compiler = sp.check_output('{}nest-config --compiler'
-                                         .format(nest_home), shell=True)
+        compiler = sp.check_output('{}nest-config --compiler'
+                                   .format(nest_home), shell=True)
+        self._compiler = compiler[:-1]  # strip trailing \n
 
     def _extract_template_args(self, component, initial_state,
                                ode_method='gsl', v_threshold=None):
