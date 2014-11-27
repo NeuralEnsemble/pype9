@@ -14,6 +14,8 @@ import platform
 import os
 import time
 import shutil
+import sympy
+from copy import copy
 from os.path import abspath, dirname, join
 from collections import defaultdict
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
@@ -21,6 +23,7 @@ from itertools import izip
 from runpy import run_path
 from abc import ABCMeta, abstractmethod
 import nineml
+from __builtin__ import classmethod
 
 
 class BaseCodeGenerator(object):
@@ -37,6 +40,14 @@ class BaseCodeGenerator(object):
     _9ML_MOD_TIME_FILE = 'source_modification_time'
 
     # Abstract methods that are required in the derived classes
+
+    def __init__(self):
+        # Initialise the Jinja2 environment
+        self.jinja_env = Environment(loader=FileSystemLoader(self._TMPL_PATH),
+                                     trim_blocks=True,
+                                     undefined=StrictUndefined)
+        # Add some globals used by the template code
+        self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate)
 
     @abstractmethod
     def _extract_template_args(self, component, initial_state, ode_method,
@@ -56,14 +67,6 @@ class BaseCodeGenerator(object):
     @abstractmethod
     def compile_source_files(self, compile_dir, component_name, verbose):
         pass
-
-    def __init__(self):
-        # Initialise the Jinja2 environment
-        self.jinja_env = Environment(loader=FileSystemLoader(self._TMPL_PATH),
-                                     trim_blocks=True,
-                                     undefined=StrictUndefined)
-        # Add some globals used by the template code
-        self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate)
 
     def generate(self, component, initial_state, install_dir=None,
                  build_dir=None, ode_method=None,
@@ -105,10 +108,11 @@ class BaseCodeGenerator(object):
                                 .format(component_src_path))
             elif len(components) > 1:
                 raise Exception("Multiple components ('{}') loaded from nineml"
-                                " path '{}'".format(
-                                 "', '".join(c.name
-                                             for c in context.components),
-                                 component_src_path))
+                                " path '{}'"
+                                .format("', '".join(c.name
+                                                    for c in
+                                                    context.components),
+                                        component_src_path))
             component = components[0]
         else:
             component_src_path = None
@@ -118,7 +122,7 @@ class BaseCodeGenerator(object):
             state_src_path = component
             # Read NineML description
             # initial_states = parse_9ml(state_src_path)
-            initial_states = [0.0]  # TODO: Write nineml library for state layer
+            initial_states = [0.0]  # TODO: Write nineml lib for state layer
             if not initial_states:
                 raise Exception("No initial_states loaded from nineml path "
                                 "'{}'".format(state_src_path))
@@ -278,6 +282,40 @@ class BaseCodeGenerator(object):
                             " check the required permissions or specify a "
                             "different \"parent build directory\" "
                             "('parent_build_dir') -> {}".format(e))
+
+    def _resolve_dependencies(self, expr, parameters, receive_ports,
+                              aliases):
+        # Initialise containers
+        depend_params = set()
+        depend_ports = set()
+        depend_aliases = []
+        # Extract atoms from expression using sympy
+        atoms = sympy.sympify(expr).atoms()
+        atoms -= set(a for a in atoms if not str.isnumeric(a))
+        atoms -= nineml.maths._functions
+        atoms -= nineml.maths._constants
+        # Add corresponding param, port, alias for each atom and atom-
+        # dependencies
+        for atom in atoms:
+            if atom in parameters:
+                depend_params.add(parameters[atom])
+            elif atom in receive_ports:
+                depend_ports.add(receive_ports[atom])
+            elif atom in aliases:
+                alias = aliases[atom]
+                parms, prts, alss = self._resolve_dependencies(alias.rhs,
+                                                               parameters,
+                                                               receive_ports,
+                                                               aliases)
+                depend_params += parms
+                depend_ports += prts
+                depend_aliases.extend(a for a in alss
+                                      if a not in depend_aliases)
+                depend_aliases.append(alias)
+            else:
+                assert(False), ("Unrecognised atom '{}' in expression '{}'"
+                                .format(atom, expr))
+        return depend_params, depend_ports, depend_aliases
 
     def _path_to_exec(self, exec_name):
         """
