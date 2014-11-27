@@ -9,7 +9,7 @@
 //------------------------------------------------------//
 
 {{ModelName}}::Parameters_::Parameters_():
-{% for i, (name, default) in enumerate(izip(parameter_names, parameter_init)) %}
+{% for i, (name, default) in enumerate(izip(parameter_names, parameter_default)) %}
     {{name}} ({{default}}){% if not loop.last %},
 {% endif %}{% endfor %} {}
 

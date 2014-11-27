@@ -13,6 +13,7 @@ from datetime import datetime
 import os.path
 import subprocess as sp
 import re
+from itertools import chain
 import shutil
 from .. import BaseCodeGenerator
 from nineline import __version__
@@ -54,33 +55,37 @@ class CodeGenerator(BaseCodeGenerator):
                                v_threshold):
         model = component.component_class
         args = {}
-        args['ModelName'] = model.name
+        # Set model name and general information ------------------------------
+        args['ModelName'] = component.name
+        args['timestamp'] = datetime.now().strftime('%a %d %b %y %I:%M:%S%p')
+        args['version'] = __version__
+        # Set solver methods --------------------------------------------------
         args['ode_method'] = ode_method
+        args['steady_state_method'] = ss_method
+        # Set tolerances ------------------------------------------------------
+        args['abs_tolerance'] = abs_tolerance
+        args['rel_tolerance'] = rel_tolerance
+        # Set parameters and default values -----------------------------------
         parameter_names = [p.name for p in model.parameters]
         args['parameter_names'] = parameter_names + ['V_t']
-        args['parameter_init'] = [component.properties[p].value
-                                  for p in parameter_names]
+        args['parameter_default'] = [component.properties[p].value
+                                     for p in parameter_names]
         # TODO: Need to ask Ivan out why scaling is required in some cases
         args['parameter_scales'] = {}
+        # TODO: Add parameter constraints to model
+        args['parameter_constraints'] = []
+        # Set states and initial values ---------------------------------------
         state_names = [v.name for v in model.dynamics.state_variables]
         num_states = len(state_names)
         args['num_states'] = num_states
         args['state_variables'] = state_names
+        # TODO: Need to add state layer
         args['state_variables_init'] = ([s.value for s in initial_state]
                                         if not isinstance(initial_state,
                                                           float)
                                         else [initial_state] * num_states)
-        # TODO: Add parameter constraints to model
-        args['parameter_constraints'] = []
-        # TODO: This needs to be implemented
-        args['steady_state'] = False
-        args['timestamp'] = datetime.now().strftime('%a %d %b %y %I:%M:%S%p')
-        args['version'] = __version__
-        args['synaptic_events'] = [p.name for p in model.event_receive_ports]
-        args['synaptic_event_pscIDs'] = ['UNKNOWN'
-                                         for p in model.event_receive_ports]
-        # TODO: Need to connect this up to NEST-synaptic-transients
-        args['synaptic_event_funcs'] = []
+        # Guess membrane voltage variable -------------------------------------
+        # FIXME: This isn't a fail-safe way of determining this.
         volt_states = [s.name for s in model.dynamics.state_variables
                        if s.dimension == volt_dimension]
         if not volt_states:
@@ -94,10 +99,44 @@ class CodeGenerator(BaseCodeGenerator):
                             .format(', '.join(volt_states)))
         else:
             args['membrane_voltage'] = volt_states[0]
+        # Set dynamics --------------------------------------------------------
+        dynamics = []
+        port_map = dict((p.name, p) for p in chain(model.analog_receive_ports,
+                                                   model.analog_reduce_ports))
+        for regime in model.dynamics.regimes:
+            name_parts = [component.name, 'dynamics']
+            if regime.name is not None:
+                name_parts.insert(1, regime.name)
+            func_name = '_'.join(name_parts)
+            dyn_params = []
+            dyn_ports = []
+            dyn_states = []
+            dyn_aliases = []
+            for td in regime.time_derivatives:
+                params, ports, states, aliases = self._resolve_depends(
+                                            td, model.parameter_map, port_map,
+                                            model.state_variables_map,
+                                            model.dynamics.aliases_map)
+                dyn_params.extend(p for p in params if p not in dyn_params)
+                dyn_ports.extend(p for p in ports if p not in dyn_ports)
+                dyn_states.extend(s for s in states if s not in dyn_states)
+                dyn_aliases.extend(a for a in aliases if a not in dyn_aliases)
+            dynamics.append((func_name, regime.time_derivatives, dyn_states,
+                             [p.name for p in dyn_params], dyn_aliases))
+            # TODO: What to do with analog receive ports? Probably need to
+            # treat as gap junctions.
+        args['dynamics'] = dynamics
+        # Set steady state ----------------------------------------------------
+        # TODO: This needs to be implemented
+        args['steady_state'] = False
+        # Set synaptic events -------------------------------------------------
+        args['synaptic_events'] = [p.name for p in model.event_receive_ports]
+        args['synaptic_event_pscIDs'] = ['UNKNOWN'
+                                         for p in model.event_receive_ports]
+        # TODO: Need to connect this up to NEST-synaptic-transients
+        args['synaptic_event_funcs'] = []
+        # Set some standard parameters ----------------------------------------
         args['v_threshold'] = v_threshold
-        args['steady_state_method'] = ss_method
-        args['abs_tolerance'] = abs_tolerance
-        args['rel_tolerance'] = rel_tolerance
         # FIXME: Need to work out where this comes from.
         args['refractory_period'] = None
         return args

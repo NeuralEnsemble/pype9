@@ -27,7 +27,7 @@
 //--------------------------------------------------//
 
     
-  void {{ModelName}}::update(Time const & origin, const long_t from, const long_t to) {
+void {{ModelName}}::update(Time const & origin, const long_t from, const long_t to) {
 
     assert(to >= 0 && (delay) from < Scheduler::get_min_delay());
     assert(from < to);
@@ -39,7 +39,7 @@
       double h = B_.step_;    
 	double tt = 0.0 ; 
 
-{% if (ode_method == "cvode") %}
+{% if ode_method == "cvode" %}
 
     int N = NV_LENGTH_S (B_.y);
     tout = (current_steps+lag)*h;
@@ -60,7 +60,7 @@
     }
     {% include "NEST-solver-events.tmpl" %}
 
-{% elif (ode_method == "ida") %}
+{% elif ode_method == "ida" %}
 
     int N = NV_LENGTH_S (B_.y);
     tout = (current_steps+lag)*h;
@@ -82,7 +82,7 @@
     }
     {% include "NEST-solver-events.tmpl" %}
 
-{% elif (ode_method == "gsl") %}
+{% elif ode_method == "gsl" %}
 
     V_.U_old_ = S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_i];
 

@@ -35,54 +35,42 @@
 //----------------------------------------------------//
 
 
-{% if ode_method in ('cvode', 'ida') %}
-extern "C" int {{ModelName}}_dynamics (double t, N_Vector y, N_Vector f,
-                                       void* pnode) {
-{% else %}
-extern "C" int {{ModelName}}_dynamics (double t, const double y[], double f[],
-                                       void* pnode) {
-{% endif %}
+{% for func_name, time_derivatives, states, parameters, aliases in dynamics %} 
+    {% if ode_method in ('cvode', 'ida') %}
+extern "C" int {{func_name}} (double t, N_Vector y, N_Vector f, void* pnode) {
+    {% else %}
+extern "C" int {{func_name}} (double t, const double y[], double f[], void* pnode) {
+    {% endif %}
 
+    // Get a pointer to the model parameters
+    assert(pnode);    
+    const struct {{ModelName}}::Parameters_* params;
+    params = &(reinterpret_cast<{{ModelName}}*>(pnode)->P_);
+   
+    {% for param in parameters %}
+    const double_t {{param}} = params->{{param}};
+    {% endfor %}
+   
+    {% for alias in aliases %}
+    const double_t {{alias.lhs}} = {{alias.rhs}};
+    {% endfor %}
+    
+    {% for state in states %}
+    const double_t {{state.name}} = y[{{ModelName}}::State_::{{state.name}}_i];
+    {% endfor %}
 
-   // S is shorthand for the type that describes the model state
-   typedef {{ModelName}}::State_ S;
-	
-   // cast the node ptr to an object of the proper type
-   assert(pnode);
-   const {{ModelName}} & node =  *(reinterpret_cast<{{ModelName}}*>(pnode));
-   {{ModelName}} & vnode =  *(reinterpret_cast<{{ModelName}}*>(pnode));
+    {% for td in time_derivatives %}
+    f[{{ModelName}}::State_::{{td.dependent_variable}}_i] = {{td.rhs}};
+    {% endfor %}
 
-   // params is a reference to the model parameters
-   const struct {{ModelName}}::Parameters_ *params;
-   params = &(node.P_);
-
-   // state is a reference to the model state
-   struct {{ModelName}}::State_ *state;
-   state = &(vnode.S_);
-	
-   // y[] must be the state vector supplied by the integrator,
-   // not the state vector in the node, node.S_.y[].
-
-{#
-{% for eq in dynamics.ratePrevEqDefs %}
-   {{eq}}
+    {% if ode_method in ('cvode', 'ida') %}
+    return 0;
+    {% else %}
+    return GSL_SUCCESS;
+    {% endif %}
+}    
 {% endfor %}
 
-{% for eq in dynamics.eqOrderDefs %}
-   {{eq}}
-{% endfor %}
 
-{% for eq in dynamics.rateEqDefs %}
-   {{eq}}
-{% endfor %}
-#}
-
-{% if ode_method in ('cvode', 'ida') %}
-   return 0;
-{% else %}
-   return GSL_SUCCESS;
-{% endif %}
-
-}
 
 // ------------------- NEST-dynamics.tmpl ------------------------//

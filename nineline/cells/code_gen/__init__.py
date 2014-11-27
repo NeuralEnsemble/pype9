@@ -14,7 +14,6 @@ import platform
 import os
 import time
 import shutil
-import sympy
 from copy import copy
 from os.path import abspath, dirname, join
 from collections import defaultdict
@@ -283,39 +282,39 @@ class BaseCodeGenerator(object):
                             "different \"parent build directory\" "
                             "('parent_build_dir') -> {}".format(e))
 
-    def _resolve_dependencies(self, expr, parameters, receive_ports,
-                              aliases):
+    def _resolve_depends(self, expr, parameters, receive_ports, states,
+                         aliases):
         # Initialise containers
         depend_params = set()
         depend_ports = set()
+        depend_states = set()
         depend_aliases = []
-        # Extract atoms from expression using sympy
-        atoms = sympy.sympify(expr).atoms()
-        atoms -= set(a for a in atoms if not str.isnumeric(a))
-        atoms -= nineml.maths._functions
-        atoms -= nineml.maths._constants
         # Add corresponding param, port, alias for each atom and atom-
         # dependencies
-        for atom in atoms:
+        for atom in expr.rhs_names:
             if atom in parameters:
                 depend_params.add(parameters[atom])
             elif atom in receive_ports:
                 depend_ports.add(receive_ports[atom])
+            elif atom in states:
+                depend_states.add(states[atom])
             elif atom in aliases:
                 alias = aliases[atom]
-                parms, prts, alss = self._resolve_dependencies(alias.rhs,
+                parms, prts, sts, alss = self._resolve_depends(alias,
                                                                parameters,
                                                                receive_ports,
+                                                               states,
                                                                aliases)
-                depend_params += parms
-                depend_ports += prts
+                depend_params.update(parms)
+                depend_ports.update(prts)
+                depend_states.update(sts)
                 depend_aliases.extend(a for a in alss
                                       if a not in depend_aliases)
                 depend_aliases.append(alias)
             else:
                 assert(False), ("Unrecognised atom '{}' in expression '{}'"
                                 .format(atom, expr))
-        return depend_params, depend_ports, depend_aliases
+        return depend_params, depend_ports, depend_states, depend_aliases
 
     def _path_to_exec(self, exec_name):
         """
