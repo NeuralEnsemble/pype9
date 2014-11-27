@@ -14,8 +14,8 @@
  *
  */
 
-#ifndef {celltype_name_upper}MODULE_H
-#define {celltype_name_upper}MODULE_H
+#ifndef {{celltype_name | upper}}_MODULE_H
+#define {{celltype_name | upper}}_MODULE_H
 
 #include "dynmodule.h"
 #include "slifunction.h"
@@ -94,4 +94,4 @@ class {{celltype_name}}Loader : public DynModule {
   };
 }  // nineml namespace
 
-#endif
+#endif  // {{celltype_name | upper}}_MODULE_H

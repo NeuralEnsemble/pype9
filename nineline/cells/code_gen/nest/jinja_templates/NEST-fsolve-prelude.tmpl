@@ -9,7 +9,7 @@
 // This section was generated from NEST-fsolve-prelude.tmpl //
 //----------------------------------------------------------//
 
-{% if (SSmethod == "kinsol") %}
+{% if (steady_state_method == "kinsol") %}
 
   int fsolve (KINSysFn f, int N, N_Vector fval, void *user_data,
               std::string name) {

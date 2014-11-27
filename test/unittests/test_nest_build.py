@@ -142,7 +142,7 @@ from nineline.cells.code_gen.nest import CodeGenerator
 #                   'steadyStateSize' : 0,
 #                   'stateSize' : 4,
 #                   'SSvector' : '''ssvect73''',
-#                   'SSmethod' : False,
+#                   'steady_state_method' : False,
 #                   'ODEmethod' : '''gsl''',
 #                   'reltol' : False,
 #                   'abstol' : False,

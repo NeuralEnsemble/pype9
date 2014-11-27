@@ -35,6 +35,7 @@ void {{ModelName}}::handle(SpikeEvent & e)
     assert(e.get_delay() > 0);
     flag = 0;
 
+{#
 {% for synapticEvent in synapticEventDefs %}
     if ((flag==0) && (e.get_rport() == {{synapticEvent.pscName}}_SPIKE_RECEPTOR ) && 
         (e.get_weight() > {% if synapticEvent.wthreshold %}P_.{{synapticEvent.wthreshold}}{% else %}0.0{% endif %}))
@@ -44,6 +45,7 @@ void {{ModelName}}::handle(SpikeEvent & e)
         flag = 1;
       }
 {% endfor %}
+#}
 
   }
 

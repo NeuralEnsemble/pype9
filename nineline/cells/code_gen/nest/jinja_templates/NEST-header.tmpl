@@ -12,33 +12,34 @@
 
 #include "nest.h"
 #include "event.h"
+#include "node.h"
 #include "archiving_node.h"
 #include "ring_buffer.h"
 #include "connection.h"
 #include "universal_data_logger.h"
 #include "recordables_map.h"
 
-{% if (ODEmethod == "cvode") %}
+{% if (ode_method == "cvode") %}
 #include <sundials/sundials_types.h> /* definition of type realtype */
 #include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., macros */
 #include <cvode/cvode.h>       /* prototypes for CVODE fcts., consts. */
 #include <cvode/cvode_diag.h>    /* prototype for CVDiag */
-#define GET_ITEM(v,i)  NV_Ith_S(v,i)  /* Ith component in a vector */
-{% elif (ODEmethod == "ida") %}
+#define ITEM(v,i)  NV_Ith_S(v,i)  /* Ith component in a vector */
+{% elif (ode_method == "ida") %}
 #include <sundials/sundials_types.h> /* definition of type realtype */
 #include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., macros */
 #include <ida/ida.h>         /* prototypes for IDA fcts., consts. */
 #include <ida/ida_dense.h>
-#define GET_ITEM(v,i)  NV_Ith_S(v,i)  /* Ith component in a vector */
-{% elif (ODEmethod == "gsl") %}
+#define ITEM(v,i)  NV_Ith_S(v,i)  /* Ith component in a vector */
+{% elif (ode_method == "gsl") %}
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_sf_exp.h>
 #include <gsl/gsl_odeiv2.h>
-#define Ith(v,i)  (v[i])
+#define ITEM(v,i)  (v[i])
 {% endif %}
 
-{% if (SSmethod == "kinsol") %}
+{% if (steady_state_method == "kinsol") %}
 #include <sundials/sundials_types.h> /* definition of type realtype */
 #include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., macros */
 #include <kinsol/kinsol.h>       /* prototypes for KINSOL fcts. */
@@ -51,30 +52,27 @@
 
 namespace nest {
 
-{% if (ODEmethod == "cvode") %}
+{% if (ode_method == "cvode") %}
     {% include "NEST-cvode-prelude.tmpl" %}
-{% elif (ODEmethod == "ida") %}
+{% elif (ode_method == "ida") %}
     {% include "NEST-ida-prelude.tmpl" %}
 {% endif %}
-{% if (SSmethod == "kinsol") %}
+{% if (steady_state_method == "kinsol") %}
     {% include "NEST-kinsol-prelude.tmpl" %}
 {% endif %}
-{% if (ODEmethod == "cvode") %}
+{% if (ode_method == "cvode") %}
   extern "C" int {{ModelName}}_dynamics (double, const N_Vector, N_Vector, void*);
   extern "C" int {{ModelName}}_event (double, N_Vector, double *, void*);
-{% elif (ODEmethod == "ida") %}
+{% elif (ode_method == "ida") %}
   extern "C" int {{ModelName}}_residual (double, N_Vector, N_Vector, N_Vector, void*);
   extern "C" int {{ModelName}}_event (double, N_Vector, N_Vector, double *, void*);
 {% else %}
   extern "C" int {{ModelName}}_dynamics (double, const double*, double*, void*);
 {% endif %}
-{% if (steadyStateSize > 0) %}
-    {% if (SSmethod == "kinsol") %}
+{% if (steady_state_method == "kinsol") %}
   extern "C" int {{ModelName}}_steadystate (N_Vector, N_Vector, void*);
-    {% else %}
+{% elif steady_state_method %}
   extern "C" int {{ModelName}}_steadystate (const gsl_vector *, void *, gsl_vector *);
-    {% endif %}
-
 {% endif %}
 
   class {{ModelName}} : public Archiving_Node { 
@@ -85,6 +83,11 @@ namespace nest {
     {{ModelName}}(const {{ModelName}} &);
     {{ModelName}}();
 
+    /**
+     * Import sets of overloaded virtual functions.
+     * This is necessary to ensure proper overload and overriding resolution.
+     * @see http://www.gotw.ca/gotw/005.htm.
+     */
     using Node::connect_sender;
     using Node::handle;
 
@@ -129,21 +132,19 @@ namespace nest {
     };
   
     // Set dynamics methods (the ones that actually model the dynamics) as friends
-{% if (ODEmethod == "cvode") %}
+{% if (ode_method == "cvode") %}
     friend int {{ModelName}}_dynamics (double, const N_Vector, N_Vector, void*);
     friend int {{ModelName}}_event (double, N_Vector, double *, void*);
-{% elif (ODEmethod == "ida") %}
+{% elif (ode_method == "ida") %}
     friend int {{ModelName}}_residual (double, N_Vector, N_Vector, N_Vector, void*);
     friend int {{ModelName}}_event (double, N_Vector, N_Vector, double *, void*);
-{% elif (ODEmethod == "gsl") %}
+{% elif (ode_method == "gsl") %}
     friend int {{ModelName}}_dynamics (double, const double*, double*, void*);
 {% endif %} 
-{% if (steadyStateSize > 0) %}
-    {% if (SSmethod == "kinsol") %}
+{% if steady_state_method == "kinsol" %}
     friend  int {{ModelName}}_steadystate (N_Vector, N_Vector, void*);
-    {% else %}
+{% elif steady_state_method %}
     friend  int {{ModelName}}_steadystate (const gsl_vector *, void *, gsl_vector *);
-    {% endif %}
 {% endif %}
     // Synaptic Events
 {% for name in synaptic_events %}
@@ -182,16 +183,16 @@ namespace nest {
       State_& operator=(const State_& s);
       void get(DictionaryDatum&) const;
       void set(const DictionaryDatum&, const Parameters_&);
-{% if (ODEmethod == "gsl") %}
+{% if (ode_method == "gsl") %}
       int_t r_; /* refractory counter */
 {% endif %}
 
     }; // end struct State_
 
 
-{% if ((ODEmethod == "cvode") or (ODEmethod == "ida"))  %}
+{% if ((ode_method == "cvode") or (ode_method == "ida"))  %}
     struct Variables_ {};
-{% elif (ODEmethod == "gsl")  %}
+{% elif (ode_method == "gsl")  %}
     struct Variables_ { int_t RefractoryCounts_; double U_old_; /* for spike-detection */ };
 {% endif %}
 
@@ -202,14 +203,14 @@ namespace nest {
       Buffers_(const Buffers_&, {{ModelName}}&);
       UniversalDataLogger<{{ModelName}}> logger_;
 	
-{% if (ODEmethod == "cvode") %}
+{% if (ode_method == "cvode") %}
       N_Vector y;  //!< current state vector used by CVode
       void *   sys_;  //!< CVode control structure
-{% elif (ODEmethod == "ida") %}
+{% elif (ode_method == "ida") %}
       N_Vector y, y1;  //!< current state vector used by IDA
       N_Vector yp;  //!< derivatives vector used by IDA
       void *   sys_;  //!< IDA control structure
-{% elif (ODEmethod == "gsl") %}
+{% elif (ode_method == "gsl") %}
       gsl_odeiv2_step*  s_;  //!< stepping function
       gsl_odeiv2_control* c_;  //!< adaptive stepsize control function
       gsl_odeiv2_evolve*  e_;  //!< evolution function

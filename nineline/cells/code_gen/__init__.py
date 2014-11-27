@@ -21,7 +21,6 @@ from itertools import izip
 from runpy import run_path
 from abc import ABCMeta, abstractmethod
 import nineml
-#..abstraction_layer.dynamics.readers import XMLReader as NineMLReader
 
 
 class BaseCodeGenerator(object):
@@ -30,7 +29,7 @@ class BaseCodeGenerator(object):
 
     BUILD_MODE_OPTIONS = ['lazy', 'force', 'require', 'build_only',
                           'generate_only', 'compile_only']
-    _DEFAULT_BUILD_DIR = '.9build'
+    _DEFAULT_BUILD_DIR = '9build'
     _PARAMS_DIR = 'params'
     _SRC_DIR = 'src'
     _INSTL_DIR = 'install'
@@ -40,7 +39,9 @@ class BaseCodeGenerator(object):
     # Abstract methods that are required in the derived classes
 
     @abstractmethod
-    def _extract_template_args(self, component, initial_state, ode_method):
+    def _extract_template_args(self, component, initial_state, ode_method,
+                               ss_method, abs_tolerance, rel_tolerance,
+                               v_threshold):
         """
         Extracts the required information from the 9ML model into a dictionary
         containing the relevant arguments for the Jinja2 templates.
@@ -62,7 +63,7 @@ class BaseCodeGenerator(object):
                                      trim_blocks=True,
                                      undefined=StrictUndefined)
         # Add some globals used by the template code
-        self.jinja_env.globals.update(izip=izip, enumerate=enumerate)
+        self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate)
 
     def generate(self, component, initial_state, install_dir=None,
                  build_dir=None, ode_method=None,
@@ -215,7 +216,9 @@ class BaseCodeGenerator(object):
         return install_dir
 
     def generate_source_files(self, component, initial_state, src_dir,
-                              compile_dir, install_dir, ode_method=None,
+                              compile_dir, install_dir, ode_method='gsl',
+                              ss_method=False, abs_tolerance=1e-7,
+                              rel_tolerance=1e-7, v_threshold=None,
                               verbose=True):
         """
         Generates the source files for the relevant simulator
@@ -226,7 +229,9 @@ class BaseCodeGenerator(object):
         # Extract relevant information from 9ml
         # component/class/initial_state
         template_args = self._extract_template_args(component, initial_state,
-                                                    ode_method)
+                                                    ode_method, ss_method,
+                                                    abs_tolerance,
+                                                    rel_tolerance, v_threshold)
         # Render source files
         self._render_source_files(template_args, src_dir, compile_dir,
                                   install_dir, verbose)
@@ -274,8 +279,7 @@ class BaseCodeGenerator(object):
                             "different \"parent build directory\" "
                             "('parent_build_dir') -> {}".format(e))
 
-    @classmethod
-    def _path_to_exec(cls, exec_name):
+    def _path_to_exec(self, exec_name):
         """
         Returns the full path to an executable by searching the "PATH"
         environment variable
@@ -285,17 +289,24 @@ class BaseCodeGenerator(object):
         """
         if platform.system() == 'Windows':
             exec_name += '.exe'
-        # Check the system path for the 'nrnivmodl' command
+        # Get the system path
+        system_path = os.environ['PATH'].split(os.pathsep)
+        # Append NEST_INSTALL_DIR/NRNHOME if present
+        system_path.extend(self._simulator_specific_paths())
+        # Check the system path for the command
         exec_path = None
-        for dr in os.environ['PATH'].split(os.pathsep):
+        for dr in system_path:
             path = join(dr, exec_name)
             if os.path.exists(path):
                 exec_path = path
                 break
         if not exec_path:
             raise Exception("Could not find executable '{}' on the system path"
-                            "'{}'".format(exec_name, os.environ['PATH']))
+                            "'{}'".format(exec_name, system_path))
         return exec_path
+
+    def _simulator_specific_paths(self):
+        return []
 
     def _load_component_translations(self, biophysics_name, params_dir):
         """

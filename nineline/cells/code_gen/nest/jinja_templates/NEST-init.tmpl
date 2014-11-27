@@ -21,7 +21,7 @@
 
     const Parameters_ *params = &p;
 
-{% if (ODEmethod == "gsl") %}
+{% if (ode_method == "gsl") %}
     r_ = 0;
 {% endif %}
 
@@ -37,14 +37,14 @@
 {# Solve steady-state if required #}
 {# This needs some thinking out
 {% if steady_state %}
-    {% if (SSmethod  == "kinsol") %}
+    {% if (steady_state_method  == "kinsol") %}
   N_Vector {{SSvector}};
   ssvect = N_VNew_Serial({{steadyStateSize}});
   fsolve ({{ModelName}}_steadystate, {{steadyStateSize}}, {{SSvector}},
           (void *)&p,  "{{ModelName}}");
         {% for name in rateEqStates %}
             {% if (name in steadyStateIndexMap) %}
-   y_[{{stateIndexMap[name]}}] = GET_ITEM({{SSvector}}, {{steadyStateIndexMap[name]}});
+   y_[{{stateIndexMap[name]}}] = ITEM({{SSvector}}, {{steadyStateIndexMap[name]}});
             {% else %}
    y_[{{stateIndexMap[name]}}] = {{name}};
             {% endif %}
@@ -82,7 +82,7 @@
  */
 {{ModelName}}::State_::State_(const State_& s) {
 
-{% if (ODEmethod == "gsl") %}
+{% if (ode_method == "gsl") %}
   r_ = s.r_;
 {% endif %}
         
@@ -96,7 +96,7 @@
  */
 {{ModelName}}::State_& {{ModelName}}::State_::operator=(const State_& s) {
 
-{% if (ODEmethod == "gsl") %}
+{% if (ode_method == "gsl") %}
   r_ = s.r_;
 {% endif %}
         

@@ -5,6 +5,7 @@
 	<projects>
 		<project>BTMorph</project>
 		<project>Neo</project>
+		<project>Nest</project>
 		<project>NineML</project>
 		<project>PyNN</project>
 		<project>Quantities</project>

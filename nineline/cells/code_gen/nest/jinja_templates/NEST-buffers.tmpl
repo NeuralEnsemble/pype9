@@ -10,7 +10,7 @@
 // This section was generated from NEST-buffers.tmpl //
 //---------------------------------------------------//
 
-{% if ((ODEmethod == "cvode") or (ODEmethod == "ida")) %}
+{% if ((ode_method == "cvode") or (ode_method == "ida")) %}
 
 {{ModelName}}::Buffers_::Buffers_({{ModelName}}& n)
     : logger_(n),
@@ -29,7 +29,7 @@
 }
 
 
-{% elif (ODEmethod == "gsl") %}
+{% elif (ode_method == "gsl") %}
 
 {{ModelName}}::Buffers_::Buffers_({{ModelName}}& n)
     : logger_(n),

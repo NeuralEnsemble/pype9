@@ -8,7 +8,7 @@
 // This section was generated from NEST-residual.tmpl //
 //----------------------------------------------------//
 
-{% if (ODEmethod == "ida") %}
+{% if (ode_method == "ida") %}
 
 extern "C" int {{ModelName}}_residual (double t, N_Vector y, N_Vector yp, N_Vector f, void* pnode)
 {
@@ -24,7 +24,7 @@ extern "C" int {{ModelName}}_residual (double t, N_Vector y, N_Vector yp, N_Vect
    status = {{ModelName}}_dynamics (t, y, y1, pnode);
 
    {% for i in xrange(num_states) %}
-   GET_ITEM(f, {{i}}) = GET_ITEM(y1, {{i}}) - GET_ITEM(yp, {{i}})
+   ITEM(f, {{i}}) = ITEM(y1, {{i}}) - ITEM(yp, {{i}})
    {% endfor %}
 
    return status;

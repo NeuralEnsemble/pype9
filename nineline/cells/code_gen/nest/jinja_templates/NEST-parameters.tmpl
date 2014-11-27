@@ -9,8 +9,8 @@
 //------------------------------------------------------//
 
 {{ModelName}}::Parameters_::Parameters_():
-{% for name, default in izip(parameter_names, parameter_init) %}
-    {{name}} ({{default}})
-{% endfor %}    {}
+{% for i, (name, default) in enumerate(izip(parameter_names, parameter_init)) %}
+    {{name}} ({{default}}){% if not loop.last %},
+{% endif %}{% endfor %} {}
 
 // ------------------- NEST-parameters.tmpl ------------------------//

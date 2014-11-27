@@ -9,7 +9,7 @@
 // This section was generated from NEST-nodes.tmpl //
 //-------------------------------------------------//
 
-{% if (ODEmethod == "cvode") %}
+{% if (ode_method == "cvode") %}
 
 {{ModelName}}::{{ModelName}}()
     : Archiving_Node(), 
@@ -80,7 +80,7 @@ void {{ModelName}}::init_buffers_() {
    if (check_flag((void *)B_.y, "N_VNew_Serial", 0)) throw CVodeSolverFailure (get_name(), 0);
 
    for (int i = 0; i < N; i++)
-      GET_ITEM(B_.y,i) = S_.y_[i];
+      ITEM(B_.y,i) = S_.y_[i];
  
    /* Calls CVodeCreate to create the solver memory and specify the 
     * Backward Differentiation Formula and the use of a Newton iteration */
@@ -139,7 +139,7 @@ void {{ModelName}}::calibrate()
 }
 
 
-{% elif (ODEmethod == "ida") %}
+{% elif (ode_method == "ida") %}
 
 {{ModelName}}::{{ModelName}}()
     : Archiving_Node(), 
@@ -217,7 +217,7 @@ void {{ModelName}}::init_buffers_() {
 
    for (int i = 0; i < N; i++)
    {
-      GET_ITEM(B_.y,i) = S_.y_[i];
+      ITEM(B_.y,i) = S_.y_[i];
    }
  
    {{ModelName}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
@@ -277,7 +277,7 @@ void {{ModelName}}::calibrate()
    B_.logger_.init();  
 }
 
-{% elif (ODEmethod == "gsl") %}
+{% elif (ode_method == "gsl") %}
 
 {{ModelName}}::{{ModelName}}()
     : Archiving_Node(), 
@@ -350,11 +350,9 @@ void {{ModelName}}::init_buffers_()
      gsl_odeiv2_step_reset(B_.s_);
     
    if ( B_.c_ == 0 )  
-     B_.c_ = gsl_odeiv2_control_standard_new ({% if abstol %}{{abstol}}{% else %}1e-7{% endif %}, 
-                                              {% if reltol %}{{reltol}}{% else %}1e-7{% endif %}, 1.0, 0.0);
+     B_.c_ = gsl_odeiv2_control_standard_new ({{abs_tolerance}}, {{rel_tolerance}}, 1.0, 0.0);
    else
-     gsl_odeiv2_control_init(B_.c_, {% if abstol %}{{abstol}}{% else %}1e-7{% endif %}, 
-                             {% if reltol %}{{reltol}}{% else %}1e-7{% endif %}, 1.0, 0.0);
+     gsl_odeiv2_control_init(B_.c_, {{abs_tolerance}}, {{rel_tolerance}}, 1.0, 0.0);
     
    if ( B_.e_ == 0 )  
      B_.e_ = gsl_odeiv2_evolve_alloc(B_.N);
@@ -377,10 +375,8 @@ void {{ModelName}}::init_buffers_()
 void {{ModelName}}::calibrate()
 {
   B_.logger_.init();  
-    {% if ("v" in stateIndexMap) %}
-  V_.U_old_ = S_.y_[{{stateIndexMap["v"]}}];
-    {% endif %}
-    {% if ("t_ref" in defaultDefs) %}
+  V_.U_old_ = S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_i];
+    {% if refractory_period %}
   V_.RefractoryCounts_ = Time(Time::ms(P_.t_ref)).get_steps();
     {% else %}
   V_.RefractoryCounts_ = 0;

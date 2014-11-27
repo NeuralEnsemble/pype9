@@ -14,7 +14,7 @@
 
    Template variables are:
 
-   - ODEmethod: the current used solver method; can be "cvode" "ida" or "gsl"
+   - ode_method: the current used solver method; can be "cvode" "ida" or "gsl"
    - ModelName: the name of the current system
    - vars: list of strings with the name of all local variables appearing in the system
    - SSgetStateDefs - equations of the form "n = u[i]"  where "n" is the name of a state,
@@ -35,12 +35,13 @@
 // This section was generated from NEST-steadystate.tmpl //
 //-------------------------------------------------------//
 
-{% if SSmethod == "kinsol" %}
+{% if steady_state_method == "kinsol" %}
 extern "C" int {{ModelName}}_steadystate (N_Vector u, N_Vector f, void* pnode) {
 {% else %}
 extern "C" int {{ModelName}}_steadystate (const gsl_vector *u, void *pnode, gsl_vector *f) {
 {% endif %}
 
+{#
 {% if steadystate.localVars %}
   double {{steadystate.localVars | join(", ")}};
 {% endif %}
@@ -74,7 +75,7 @@ extern "C" int {{ModelName}}_steadystate (const gsl_vector *u, void *pnode, gsl_
     {% endfor %}
 
 {% endfor %}
-
+#}
    return 0;
 }
 

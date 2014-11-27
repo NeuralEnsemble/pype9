@@ -9,7 +9,7 @@
 
    Template variables are:
 
-   - ODEmethod: the current used solver method; can be "cvode" "ida" or "gsl"
+   - ode_method: the current used solver method; can be "cvode" "ida" or "gsl"
    - ModelName: the name of the current system
    - stateIndexMap - a dictionary mapping state names to state vector indices
                      (state "v" is always at index 0)
@@ -39,7 +39,7 @@
       double h = B_.step_;    
 	double tt = 0.0 ; 
 
-{% if (ODEmethod == "cvode") %}
+{% if (ode_method == "cvode") %}
 
     int N = NV_LENGTH_S (B_.y);
     tout = (current_steps+lag)*h;
@@ -56,11 +56,11 @@
    	}
 
     for (int i = 0; i < N; i++) {
-       S_.y_[i] = GET_ITEM(B_.y,i);
+       S_.y_[i] = ITEM(B_.y,i);
     }
     {% include "NEST-solver-events.tmpl" %}
 
-{% elif (ODEmethod == "ida") %}
+{% elif (ode_method == "ida") %}
 
     int N = NV_LENGTH_S (B_.y);
     tout = (current_steps+lag)*h;
@@ -78,11 +78,11 @@
    	}
 
     for (int i = 0; i < N; i++) {
-     S_.y_[i] = GET_ITEM(B_.y,i);
+     S_.y_[i] = ITEM(B_.y,i);
     }
     {% include "NEST-solver-events.tmpl" %}
 
-{% elif (ODEmethod == "gsl") %}
+{% elif (ode_method == "gsl") %}
 
     V_.U_old_ = S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_i];
 

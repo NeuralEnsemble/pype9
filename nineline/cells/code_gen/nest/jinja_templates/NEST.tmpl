@@ -16,7 +16,7 @@ namespace nest {
 {% include "NEST-fsolve-prelude.tmpl" %}
 {% from "NEST-function.tmpl" import nest_function %}
 {% from "NEST-function-header.tmpl" import nest_function_header %}
-
+{#
 {% for functionDef in functionDefs %}
 {{nest_function_header(ModelName, functionDef.name, functionDef.returnType,
                        functionDef.returnVar,functionDef.vars,
@@ -28,6 +28,7 @@ namespace nest {
                 functionDef.returnVar,functionDef.vars,functionDef.localVars,
                 functionDef.consts,functionDef.exprString)}}
 {% endfor %}
+#}
 {# derivative function #}
 {% include "NEST-dynamics.tmpl" %}
 
@@ -50,9 +51,9 @@ namespace nest {
 
 {% include "NEST-nodes.tmpl" %}
 
-{% if (ODEmethod == "cvode") %}
+{% if (ode_method == "cvode") %}
     {% include "NEST-cvode-event.tmpl" %}
-{% elif (ODEmethod == "ida") %}
+{% elif (ode_method == "ida") %}
     {% include "NEST-ida-event.tmpl" %}
 {% endif %}
 

@@ -23,7 +23,7 @@
   events = events + {{name}}_transients (lag);
 {% endfor %}
 
-{% if (ODEmethod == "cvode") %}
+{% if (ode_method == "cvode") %}
 
   /* Reinitializes CVode state if any synaptic events have occurred */
   if (events > 0)
@@ -32,7 +32,7 @@
     if (check_flag(&status, "CVodeReInit", 1)) throw CVodeSolverFailure (get_name(), status);
   }
 
-{% elif (ODEmethod == "ida") %}
+{% elif (ode_method == "ida") %}
 
   /* Reinitializes IDA state if any synaptic events have occurred */
   if (events > 0)
@@ -41,7 +41,7 @@
      if (check_flag(&status, "IDAReInit", 1)) throw IDASolverFailure (get_name(), status);
   }
 
-{% elif (ODEmethod == "gsl") %}
+{% elif (ode_method == "gsl") %}
 
   /* Resets the GSL stepping function if any synaptic events have occurred */
   if (events > 0)

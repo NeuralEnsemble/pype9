@@ -14,7 +14,7 @@
 // GSL:
 // int (* jacobian) (double t, const double y[], double * dfdy, double dfdt[], void * params);
 
-{% if (ODEmethod == "gsl") %}
+{% if (ode_method == "gsl") %}
 
 extern "C" int {{ModelName}}_jacobian (double t, const double y[], double *dfdy, double dfdt[], void* pnode)
 {

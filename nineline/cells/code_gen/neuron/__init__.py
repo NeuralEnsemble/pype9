@@ -46,8 +46,9 @@ class CodeGenerator(BaseCodeGenerator):
         # NMODL files on the current platform
         self.specials_dir = self._get_specials_dir()
 
-    def _extract_template_args(self, args, component, initial_state,
-                               ode_method='gsl', v_threshold=None):
+    def _extract_template_args(self, component, initial_state, ode_method,
+                               ss_method, abs_tolerance, rel_tolerance,
+                               v_threshold):
         raise NotImplementedError
 
     def _render_source_files(self, template_args, src_dir, _, verbose):
@@ -129,3 +130,10 @@ class CodeGenerator(BaseCodeGenerator):
         # Return back to the original directory
         os.chdir(orig_dir)
         return specials_dir
+
+    def _simulator_specific_paths(self):
+        path = []
+        if 'NRNHOME' in os.environ:
+            path.append(os.path.join(os.environ['NRNHOME'], self.specials_dir,
+                                     'bin'))
+        return path
