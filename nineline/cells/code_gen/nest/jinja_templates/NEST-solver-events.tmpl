@@ -18,7 +18,7 @@
 	//---------------------------------------------------------//
     int events = 0;
 {% for name in event_port_names %}
-    events += {{name}}_responses(lag);
+    events += {{name}}_response(lag);
 {% endfor %}
 
 {% if (ode_method == "cvode") %}

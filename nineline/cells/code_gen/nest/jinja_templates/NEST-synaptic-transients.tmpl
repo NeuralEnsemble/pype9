@@ -31,9 +31,10 @@
 // This section was generated from NEST-synaptic-transients.tmpl //
 //---------------------------------------------------------------//
 {# FIXME: This section needs to have code to insert the synaptic transients #}
-{% for name in synaptic_event_funcs %}
+{% for name in event_port_names %}
 
-inline int {{ModelName}}::{{name}}_transients (long_t lag) {
+inline int {{ModelName}}::{{name}}_response(long_t lag) {
+{#
 {% if synapticEvent.localVars %}
    double {{synapticEvent.localVars | join(", ")}};
 {% endif %}
@@ -46,6 +47,7 @@ inline int {{ModelName}}::{{name}}_transients (long_t lag) {
 {% endfor %}
      return 1;
   }
+#}
   return 0;
 }
 {% endfor %}

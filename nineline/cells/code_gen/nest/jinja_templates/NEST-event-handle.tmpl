@@ -32,17 +32,11 @@ void {{ModelName}}::handle(SpikeEvent & e) {
     int flag;
     assert(e.get_delay() > 0);
     flag = 0;
-{#
-{% for synapticEvent in synapticEventDefs %}
-    if ((flag==0) && (e.get_rport() == {{synapticEvent.pscName}}_EVENT_PORT ) && 
-        (e.get_weight() > {% if synapticEvent.wthreshold %}P_.{{synapticEvent.wthreshold}}{% else %}0.0{% endif %}))
-      {
-	B_.spike_{{synapticEvent.pscId}}.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
-			                           fabs(e.get_weight()) * e.get_multiplicity());
-        flag = 1;
-      }
+{% for name in event_port_names %}
+    {% if not loop.first %}else{% endif %} if (e.get_rport() == {{name}}_EVENT_PORT)
+        B_.{{name}}_event_port.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
+                                         fabs(e.get_weight()) * e.get_multiplicity());
 {% endfor %}
-#}
 }
 
 void {{ModelName}}::handle(CurrentEvent& e) {
@@ -51,7 +45,10 @@ void {{ModelName}}::handle(CurrentEvent& e) {
     const double_t c = e.get_current();
     const double_t w = e.get_weight();
 
-    B_.currents_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()), w * c);
+{% for name in analog_port_names %}
+    {% if not loop.first %}else{% endif %} if (e.get_rport() == {{name}}_ANALOG_PORT) 
+        B_.{{name}}_analog_port.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()), w * c);
+{% endfor %}
 }
 
 void {{ModelName}}::handle(DataLoggingRequest& e) {

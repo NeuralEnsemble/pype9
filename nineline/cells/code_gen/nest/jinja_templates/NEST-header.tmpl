@@ -110,29 +110,6 @@ namespace nest {
     void calibrate();
   
     void update(Time const &, const long_t, const long_t);
-
-{% if event_port_names %}
-    /**
-     * Minimal event port type.
-     * @note Start with 1 so we can forbid port 0 to avoid accidental
-     *     creation of connections with no receptor type set.
-     */
-    static const port MIN_EVENT_PORT = 1;
-
-    /** 
-     * Spike receptors.
-     */
-    enum EventPorts {
-    {% for name in event_port_names %}
-        {% if loop.first %}
-        {{event_port_names[0]}}_EVENT_PORT = MIN_EVENT_PORT,
-        {% else %}
-        {{name}}_EVENT_PORT,
-        {% endif %}
-      SUP_EVENT_PORT
-    };
-    {% endfor %}
-{% endif %}
   
     // Set dynamics methods (the ones that actually model the dynamics) as friends
 {% if (ode_method == "cvode") %}
@@ -148,6 +125,53 @@ namespace nest {
     friend  int {{ModelName}}_steadystate (N_Vector, N_Vector, void*);
 {% elif steady_state_method %}
     friend  int {{ModelName}}_steadystate (const gsl_vector *, void *, gsl_vector *);
+{% endif %}
+
+
+{% if event_port_names %}
+    /**
+     * Minimal event port type.
+     * @note Start with 1 so we can forbid port 0 to avoid accidental
+     *     creation of connections with no receptor type set.
+     */
+    static const port MIN_EVENT_PORT = 1;
+
+    /** 
+     * Event port ids
+     */
+    enum EventPorts {
+    {% for name in event_port_names %}
+        {% if loop.first %}
+        {{name}}_EVENT_PORT = MIN_EVENT_PORT,
+        {% else %}
+        {{name}}_EVENT_PORT,
+        {% endif %}
+    {% endfor %}
+        SUP_EVENT_PORT
+    };
+{% endif %}
+
+{% if analog_port_names %}
+    /**
+     * Minimal analog port type.
+     * @note Start with 1 so we can forbid port 0 to avoid accidental
+     *     creation of connections with no receptor type set.
+     */
+    static const port MIN_ANALOG_PORT = SUP_EVENT_PORT;
+
+    /** 
+     * Analog port ids
+     */
+    enum AnalogPorts {
+    {% for name in analog_port_names %}
+        {% if loop.first %}
+        {{name}}_ANALOG_PORT = MIN_ANALOG_PORT,
+        {% else %}
+        {{name}}_ANALOG_PORT,
+        {% endif %}
+    {% endfor %}
+        SUP_ANALOG_PORT
+    };
 {% endif %}
 
     // Synaptic Events
