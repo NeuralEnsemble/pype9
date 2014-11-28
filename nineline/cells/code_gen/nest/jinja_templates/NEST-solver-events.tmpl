@@ -17,8 +17,8 @@
 	// This section was generated from NEST-solver-events.tmpl //
 	//---------------------------------------------------------//
     int events = 0;
-{% for name in synaptic_events %}
-    events += {{name}}_transients(lag);
+{% for name in event_port_names %}
+    events += {{name}}_responses(lag);
 {% endfor %}
 
 {% if (ode_method == "cvode") %}
