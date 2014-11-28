@@ -4,12 +4,12 @@
    Authors: Ivan Raikov and Thomas G. Close
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
+{% if ode_method == "cvode" or ode_method == "ida" %}
 
 //------------------------------------------------------------//
 // This section was generated from NEST-sundials-prelude.tmpl //
 //------------------------------------------------------------//
 
-{% if ode_method == "cvode" or ode_method == "ida" %}
 
   /* 
    * Check function return value.
@@ -67,6 +67,5 @@
     }
     return;
   }
-
-{% endif %}
 //----------------- NEST-sundials-prelude.tmpl ------------------//
+{% endif %}

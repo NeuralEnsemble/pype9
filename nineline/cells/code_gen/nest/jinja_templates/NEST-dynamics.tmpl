@@ -33,32 +33,42 @@
 //----------------------------------------------------//
 // This section was generated from NEST-dynamics.tmpl //
 //----------------------------------------------------//
-
-
-{% for func_name, time_derivatives, states, parameters, aliases in dynamics %} 
-    {% if ode_method in ('cvode', 'ida') %}
+{% for func_name, parameters, states, ports, aliases, time_derivatives in dynamics %} 
+    {%- if ode_method in ('cvode', 'ida') -%}
 extern "C" int {{func_name}} (double t, N_Vector y, N_Vector f, void* pnode) {
     {% else %}
 extern "C" int {{func_name}} (double t, const double y[], double f[], void* pnode) {
     {% endif %}
 
-    // Get a pointer to the model parameters
-    assert(pnode);    
-    const struct {{ModelName}}::Parameters_* params;
-    params = &(reinterpret_cast<{{ModelName}}*>(pnode)->P_);
+    // Get a pointer to the model
+    assert(pnode);
+    {{ModelName}}* node = reinterpret_cast<{{ModelName}}*>(pnode);
+    
+    //Get a reference to the parameters
+    const struct {{ModelName}}::Parameters_& params = node->P_;
+    const struct {{ModelName}}::Buffers_& buffers = node->B_;
    
+    // Map parameters used in dynamics to current namespace
     {% for param in parameters %}
-    const double_t {{param}} = params->{{param}};
-    {% endfor %}
-   
-    {% for alias in aliases %}
-    const double_t {{alias.lhs}} = {{alias.rhs}};
+    const double_t {{param.name}} = params.{{param.name}};
     {% endfor %}
     
+    // Map states used in dynamics to current namespace
     {% for state in states %}
     const double_t {{state.name}} = y[{{ModelName}}::State_::{{state.name}}_i];
     {% endfor %}
+    
+    // Map port buffers to current namespace
+    {% for port in ports %}
+    const double_t {{port.name}} = buffers.{{port.name}};
+    {% endfor %}
+   
+    // Evaluate aliases used in differential equations
+    {% for alias in aliases %}
+    const double_t {{alias.lhs}} = {{alias.rhs}};
+    {% endfor %}
 
+    // Evaluate differential equations
     {% for td in time_derivatives %}
     f[{{ModelName}}::State_::{{td.dependent_variable}}_i] = {{td.rhs}};
     {% endfor %}
@@ -70,7 +80,4 @@ extern "C" int {{func_name}} (double t, const double y[], double f[], void* pnod
     {% endif %}
 }    
 {% endfor %}
-
-
-
 // ------------------- NEST-dynamics.tmpl ------------------------//

@@ -101,28 +101,32 @@ class CodeGenerator(BaseCodeGenerator):
             args['membrane_voltage'] = volt_states[0]
         # Set dynamics --------------------------------------------------------
         dynamics = []
-        port_map = dict((p.name, p) for p in chain(model.analog_receive_ports,
-                                                   model.analog_reduce_ports))
+        ports_map = dict((p.name, p) for p in chain(model.analog_receive_ports,
+                                                    model.analog_reduce_ports))
         for regime in model.dynamics.regimes:
+            # Get name for regime dynamics function ---------------------------
             name_parts = [component.name, 'dynamics']
             if regime.name is not None:
                 name_parts.insert(1, regime.name)
             func_name = '_'.join(name_parts)
-            dyn_params = []
-            dyn_ports = []
-            dyn_states = []
+            # Initialise lists ------------------------------------------------
+            dyn_params = set()
+            dyn_ports = set()
+            dyn_states = set()
             dyn_aliases = []
+            # Loop through and append time derivative dependencies ------------
             for td in regime.time_derivatives:
                 params, ports, states, aliases = self._resolve_depends(
-                                            td, model.parameter_map, port_map,
-                                            model.state_variables_map,
-                                            model.dynamics.aliases_map)
-                dyn_params.extend(p for p in params if p not in dyn_params)
-                dyn_ports.extend(p for p in ports if p not in dyn_ports)
-                dyn_states.extend(s for s in states if s not in dyn_states)
+                    td, model.parameter_map, ports_map,
+                    model.state_variables_map, model.dynamics.aliases_map)
+                dyn_params.update(params)
+                dyn_ports.update(ports)
+                dyn_states.update(states)
+                # The order of the aliases is important, hence it is a list
                 dyn_aliases.extend(a for a in aliases if a not in dyn_aliases)
-            dynamics.append((func_name, regime.time_derivatives, dyn_states,
-                             [p.name for p in dyn_params], dyn_aliases))
+            # Append all dependencies to dynamics list ------------------------
+            dynamics.append((func_name, dyn_params, dyn_states, dyn_ports,
+                             dyn_aliases, regime.time_derivatives))
             # TODO: What to do with analog receive ports? Probably need to
             # treat as gap junctions.
         args['dynamics'] = dynamics

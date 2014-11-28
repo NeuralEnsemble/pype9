@@ -3,13 +3,11 @@
    Authors: Ivan Raikov and Thomas G. Close
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
+{% if (ode_method == "ida") %}
 
 //----------------------------------------------------//
 // This section was generated from NEST-residual.tmpl //
 //----------------------------------------------------//
-
-{% if (ode_method == "ida") %}
-
 extern "C" int {{ModelName}}_residual (double t, N_Vector y, N_Vector yp, N_Vector f, void* pnode)
 {
    int status; 
@@ -29,7 +27,5 @@ extern "C" int {{ModelName}}_residual (double t, N_Vector y, N_Vector yp, N_Vect
 
    return status;
 }
-
-{% endif %}
-
 //-------------- NEST-residual.tmpl ------------------//
+{% endif %}

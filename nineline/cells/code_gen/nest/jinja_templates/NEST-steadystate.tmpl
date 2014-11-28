@@ -34,13 +34,11 @@
 //-------------------------------------------------------//
 // This section was generated from NEST-steadystate.tmpl //
 //-------------------------------------------------------//
-
 {% if steady_state_method == "kinsol" %}
 extern "C" int {{ModelName}}_steadystate (N_Vector u, N_Vector f, void* pnode) {
 {% else %}
 extern "C" int {{ModelName}}_steadystate (const gsl_vector *u, void *pnode, gsl_vector *f) {
 {% endif %}
-
 {#
 {% if steadystate.localVars %}
   double {{steadystate.localVars | join(", ")}};
@@ -78,5 +76,4 @@ extern "C" int {{ModelName}}_steadystate (const gsl_vector *u, void *pnode, gsl_
 #}
    return 0;
 }
-
 //---------------- NEST-steadystate.tmpl ---------------//

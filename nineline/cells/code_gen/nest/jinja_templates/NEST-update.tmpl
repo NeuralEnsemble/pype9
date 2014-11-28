@@ -25,8 +25,6 @@
 //-------------------------------------------- -----//
 // This section was generated from NEST-update.tmpl //
 //--------------------------------------------------//
-
-    
 void {{ModelName}}::update(Time const & origin, const long_t from, const long_t to) {
 
     assert(to >= 0 && (delay) from < Scheduler::get_min_delay());
@@ -40,7 +38,6 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
 	double tt = 0.0 ; 
 
 {% if ode_method == "cvode" %}
-
     int N = NV_LENGTH_S (B_.y);
     tout = (current_steps+lag)*h;
 
@@ -58,10 +55,10 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
     for (int i = 0; i < N; i++) {
        S_.y_[i] = ITEM(B_.y,i);
     }
+    
     {% include "NEST-solver-events.tmpl" %}
 
 {% elif ode_method == "ida" %}
-
     int N = NV_LENGTH_S (B_.y);
     tout = (current_steps+lag)*h;
 
@@ -80,10 +77,10 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
     for (int i = 0; i < N; i++) {
      S_.y_[i] = ITEM(B_.y,i);
     }
+    
     {% include "NEST-solver-events.tmpl" %}
 
 {% elif ode_method == "gsl" %}
-
     V_.U_old_ = S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_i];
 
     while (tt < h) {
@@ -97,13 +94,15 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
       if ( status != GSL_SUCCESS )
         throw GSLSolverFailure(get_name(), status);
     }
+    
     {% include "NEST-emit-spike-gsl.tmpl" %}
+    
     {% include "NEST-solver-events.tmpl" %}
 
 {% endif %}
+
     B_.I_stim_ = B_.currents_.get_value(lag);
     B_.logger_.record_data(current_steps + lag);
   }
 }
-
 //------------- NEST-update.tmpl -------------//

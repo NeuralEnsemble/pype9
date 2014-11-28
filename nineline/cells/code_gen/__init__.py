@@ -43,7 +43,7 @@ class BaseCodeGenerator(object):
     def __init__(self):
         # Initialise the Jinja2 environment
         self.jinja_env = Environment(loader=FileSystemLoader(self._TMPL_PATH),
-                                     trim_blocks=True,
+                                     trim_blocks=True, lstrip_blocks=True,
                                      undefined=StrictUndefined)
         # Add some globals used by the template code
         self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate)
@@ -142,10 +142,10 @@ class BaseCodeGenerator(object):
                                 "('build_dir') when using 9ml component "
                                 "already in memory")
             build_dir = os.path.abspath(os.path.join(
-                                           os.path.dirname(component_src_path),
-                                           self._DEFAULT_BUILD_DIR,
-                                           self.SIMULATOR_NAME,
-                                           component.name))
+                os.path.dirname(component_src_path),
+                self._DEFAULT_BUILD_DIR,
+                self.SIMULATOR_NAME,
+                component.name))
         # Calculate src directory path within build directory
         src_dir = os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
         # Calculate compile directory path within build directory
@@ -282,8 +282,7 @@ class BaseCodeGenerator(object):
                             "different \"parent build directory\" "
                             "('parent_build_dir') -> {}".format(e))
 
-    def _resolve_depends(self, expr, parameters, receive_ports, states,
-                         aliases):
+    def _resolve_depends(self, expr, parameters, ports, states, aliases):
         # Initialise containers
         depend_params = set()
         depend_ports = set()
@@ -294,17 +293,14 @@ class BaseCodeGenerator(object):
         for atom in expr.rhs_names:
             if atom in parameters:
                 depend_params.add(parameters[atom])
-            elif atom in receive_ports:
-                depend_ports.add(receive_ports[atom])
+            elif atom in ports:
+                depend_ports.add(ports[atom])
             elif atom in states:
                 depend_states.add(states[atom])
             elif atom in aliases:
                 alias = aliases[atom]
-                parms, prts, sts, alss = self._resolve_depends(alias,
-                                                               parameters,
-                                                               receive_ports,
-                                                               states,
-                                                               aliases)
+                parms, prts, sts, alss = self._resolve_depends(
+                    alias, parameters, ports, states, aliases)
                 depend_params.update(parms)
                 depend_ports.update(prts)
                 depend_states.update(sts)
@@ -314,7 +310,7 @@ class BaseCodeGenerator(object):
             else:
                 assert(False), ("Unrecognised atom '{}' in expression '{}'"
                                 .format(atom, expr))
-        return depend_params, depend_ports, depend_states, depend_aliases
+        return (depend_params, depend_ports, depend_states, depend_aliases)
 
     def _path_to_exec(self, exec_name):
         """

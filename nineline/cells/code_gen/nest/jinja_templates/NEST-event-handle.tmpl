@@ -28,13 +28,10 @@
 //--------------------------------------------------------//
 // This section was generated from NEST-event-handle.tmpl //
 //--------------------------------------------------------//
-  
-void {{ModelName}}::handle(SpikeEvent & e)
-  {
+void {{ModelName}}::handle(SpikeEvent & e) {
     int flag;
     assert(e.get_delay() > 0);
     flag = 0;
-
 {#
 {% for synapticEvent in synapticEventDefs %}
     if ((flag==0) && (e.get_rport() == {{synapticEvent.pscName}}_SPIKE_RECEPTOR ) && 
@@ -46,25 +43,18 @@ void {{ModelName}}::handle(SpikeEvent & e)
       }
 {% endfor %}
 #}
+}
 
-  }
-
-
-void {{ModelName}}::handle(CurrentEvent& e)
-  {
+void {{ModelName}}::handle(CurrentEvent& e) {
     assert(e.get_delay() > 0);
 
     const double_t c = e.get_current();
     const double_t w = e.get_weight();
 
     B_.currents_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()), w * c);
-  }
+}
 
-
-void {{ModelName}}::handle(DataLoggingRequest& e)
-  {
+void {{ModelName}}::handle(DataLoggingRequest& e) {
     B_.logger_.handle(e);
-  }
-
+}
 // ------------------- NEST-event-handle.tmpl ------------------------//
-  

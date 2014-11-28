@@ -5,32 +5,25 @@
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
-
 //---------------------------------------------------//
 // This section was generated from NEST-buffers.tmpl //
 //---------------------------------------------------//
-
 {% if ((ode_method == "cvode") or (ode_method == "ida")) %}
-
 {{ModelName}}::Buffers_::Buffers_({{ModelName}}& n)
     : logger_(n),
-      sys_(0)
-{
+      sys_(0) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
+
 
 {{ModelName}}::Buffers_::Buffers_(const Buffers_&, {{ModelName}}& n)
     : logger_(n),
-      sys_(0)
-{
+      sys_(0) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
-
-
 {% elif (ode_method == "gsl") %}
-
 {{ModelName}}::Buffers_::Buffers_({{ModelName}}& n)
     : logger_(n),
       s_(0),
@@ -38,8 +31,7 @@
       e_(0),
       N(0),
       u(0),
-      jac(0)
-{
+      jac(0) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
@@ -52,12 +44,9 @@
       e_(0),
       N(0),
       u(0),
-      jac(0)
-{
+      jac(0) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
-
 {% endif %}
-
 // ------------------- NEST-buffers.tmpl ------------------------//
