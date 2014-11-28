@@ -34,7 +34,7 @@ void {{ModelName}}::handle(SpikeEvent & e) {
     flag = 0;
 {#
 {% for synapticEvent in synapticEventDefs %}
-    if ((flag==0) && (e.get_rport() == {{synapticEvent.pscName}}_SPIKE_RECEPTOR ) && 
+    if ((flag==0) && (e.get_rport() == {{synapticEvent.pscName}}_EVENT_PORT ) && 
         (e.get_weight() > {% if synapticEvent.wthreshold %}P_.{{synapticEvent.wthreshold}}{% else %}0.0{% endif %}))
       {
 	B_.spike_{{synapticEvent.pscId}}.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),

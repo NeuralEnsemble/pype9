@@ -111,25 +111,28 @@ namespace nest {
   
     void update(Time const &, const long_t, const long_t);
 
+{% if event_port_names %}
     /**
-     * Minimal spike receptor type.
+     * Minimal event port type.
      * @note Start with 1 so we can forbid port 0 to avoid accidental
      *     creation of connections with no receptor type set.
      */
-    static const port MIN_SPIKE_RECEPTOR = 1;
+    static const port MIN_EVENT_PORT = 1;
 
     /** 
      * Spike receptors.
      */
-    enum SpikeSynapseTypes {
-{% if synaptic_events %}
-      {{synaptic_events[0]}}_SPIKE_RECEPTOR = MIN_SPIKE_RECEPTOR,
-{% endif %}
-{% for name in synaptic_events[1:] %}
-      {{name}}_SPIKE_RECEPTOR,
-{% endfor %}
-      SUP_SPIKE_RECEPTOR
+    enum EventPorts {
+    {% for name in event_port_names %}
+        {% if loop.first %}
+        {{event_port_names[0]}}_EVENT_PORT = MIN_EVENT_PORT,
+        {% else %}
+        {{name}}_EVENT_PORT,
+        {% endif %}
+      SUP_EVENT_PORT
     };
+    {% endfor %}
+{% endif %}
   
     // Set dynamics methods (the ones that actually model the dynamics) as friends
 {% if (ode_method == "cvode") %}
@@ -146,25 +149,24 @@ namespace nest {
 {% elif steady_state_method %}
     friend  int {{ModelName}}_steadystate (const gsl_vector *, void *, gsl_vector *);
 {% endif %}
+
     // Synaptic Events
-{% for name in synaptic_events %}
-    int {{name}}_transients (long_t lag);
+{% for name in event_port_names %}
+    int {{name}}_response (long_t lag);
 {% endfor %}
 
     // The next two classes need to be friends to access the State_ class/member
     friend class RecordablesMap<{{ModelName}}>;
     friend class UniversalDataLogger<{{ModelName}}>;
 
-
     struct Parameters_ { 
 {% for name in parameter_names %}
-      double {{name}};
+        double {{name}};
 {% endfor %}
-      Parameters_();
-      void get(DictionaryDatum&) const;
-      void set(const DictionaryDatum&);
+        Parameters_();
+        void get(DictionaryDatum&) const;
+        void set(const DictionaryDatum&);
     }; // end struct Parameters_
-
 
     struct State_ { 
 
@@ -177,16 +179,15 @@ namespace nest {
       };
 	
       double y_[STATE_VEC_SIZE_]; 
+{% if (ode_method == "gsl") %}
+      int_t r_; /* refractory counter */
+{% endif %}
 		
       State_(const Parameters_& p); 
       State_(const State_& s);
       State_& operator=(const State_& s);
       void get(DictionaryDatum&) const;
       void set(const DictionaryDatum&, const Parameters_&);
-{% if (ode_method == "gsl") %}
-      int_t r_; /* refractory counter */
-{% endif %}
-
     }; // end struct State_
 
 
@@ -196,45 +197,47 @@ namespace nest {
     struct Variables_ { int_t RefractoryCounts_; double U_old_; /* for spike-detection */ };
 {% endif %}
 
-
     struct Buffers_ {
 
-      Buffers_({{ModelName}}&);
-      Buffers_(const Buffers_&, {{ModelName}}&);
-      UniversalDataLogger<{{ModelName}}> logger_;
-	
+        Buffers_({{ModelName}}&);
+        Buffers_(const Buffers_&, {{ModelName}}&);
+        UniversalDataLogger<{{ModelName}}> logger_;
+
+        // Structures required by the solver
 {% if (ode_method == "cvode") %}
-      N_Vector y;  //!< current state vector used by CVode
-      void *   sys_;  //!< CVode control structure
+        N_Vector y;  //!< current state vector used by CVode
+        void *   sys_;  //!< CVode control structure
 {% elif (ode_method == "ida") %}
-      N_Vector y, y1;  //!< current state vector used by IDA
-      N_Vector yp;  //!< derivatives vector used by IDA
-      void *   sys_;  //!< IDA control structure
+        N_Vector y, y1;  //!< current state vector used by IDA
+        N_Vector yp;  //!< derivatives vector used by IDA
+        void *   sys_;  //!< IDA control structure
 {% elif (ode_method == "gsl") %}
-      gsl_odeiv2_step*  s_;  //!< stepping function
-      gsl_odeiv2_control* c_;  //!< adaptive stepsize control function
-      gsl_odeiv2_evolve*  e_;  //!< evolution function
-      gsl_odeiv2_system   sys_;  //!< struct describing system
-      unsigned int N;  // size of state vector used by Jacobian
-      double *u, *jac;  // intermediate state vectors used for Jacobian approximation
+		gsl_odeiv2_step*  s_;  //!< stepping function
+		gsl_odeiv2_control* c_;  //!< adaptive stepsize control function
+		gsl_odeiv2_evolve*  e_;  //!< evolution function
+		gsl_odeiv2_system   sys_;  //!< struct describing system
+		unsigned int N;  // size of state vector used by Jacobian
+		double *u, *jac;  // intermediate state vectors used for Jacobian approximation
 {% endif %}
-{% for id in synaptic_event_pscIDs %}
-      RingBuffer spike_{{id}};
+
+        // Timesteps
+        double_t step_;       //!< step size in ms
+        double   IntegrationStep_;//!< current integration time step, updated by solver
+    
+        // Event receive port buffers
+{% for name in event_port_names %}
+        RingBuffer {{name}}_event_port;
 {% endfor %}
 
-	  RingBuffer currents_;
-	
-	  double_t step_;       //!< step size in ms
-	  double   IntegrationStep_;//!< current integration time step, updated by solver
-	
-	  /** 
-	   * Input current injected by CurrentEvent.
-	   * This variable is used to transport the current applied into the
-	   * _dynamics function computing the derivative of the state vector.
-	   * It must be a part of Buffers_, since it is initialized once before
-	   * the first simulation, but not modified before later Simulate calls.
-	  */
-	  double_t I_stim_;
+        // Analog receive port buffers
+{% for name in analog_port_names %}
+        RingBuffer {{name}}_analog_port;
+{% endfor %}
+
+        // Variables to hold the last value of the analog receive port buffers        
+{% for name in analog_port_names %}
+        double_t {{name}}_value;
+{% endfor %}
 	
 	}; // end struct Buffers_
 
@@ -262,9 +265,9 @@ namespace nest {
 
 
   inline port {{ModelName}}::connect_sender(SpikeEvent&, port receptor_type) {
-    if (receptor_type < 0 || receptor_type >= SUP_SPIKE_RECEPTOR)
+    if (receptor_type < 0 || receptor_type >= SUP_EVENT_PORT)
       throw UnknownReceptorType(receptor_type, get_name());
-    else if (receptor_type < MIN_SPIKE_RECEPTOR)
+    else if (receptor_type < MIN_EVENT_PORT)
       throw IncompatibleReceptorType(receptor_type, get_name(), "SpikeEvent");
     return receptor_type;
   }
@@ -292,8 +295,8 @@ namespace nest {
     def<double_t>(d, names::t_spike, get_spiketime_ms());
     DictionaryDatum receptor_dict_ = new Dictionary();
     // Synaptic event dictionary
-{% for name in synaptic_events %}
-    (*receptor_dict_)[Name("{{name}}")]  = {{name}}_SPIKE_RECEPTOR;
+{% for name in event_port_names %}
+    (*receptor_dict_)[Name("{{name}}")]  = {{name}}_EVENT_PORT;
 {% endfor %}
     (*d)[names::receptor_types] = receptor_dict_;
   }

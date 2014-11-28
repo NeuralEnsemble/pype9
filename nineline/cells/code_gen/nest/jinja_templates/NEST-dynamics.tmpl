@@ -60,7 +60,7 @@ extern "C" int {{func_name}} (double t, const double y[], double f[], void* pnod
     
     // Map port buffers to current namespace
     {% for port in ports %}
-    const double_t {{port.name}} = buffers.{{port.name}};
+    const double_t {{port.name}} = buffers.{{port.name}}_value;
     {% endfor %}
    
     // Evaluate aliases used in differential equations

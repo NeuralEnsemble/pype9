@@ -51,6 +51,8 @@ namespace nest {
 
 {% include "NEST-nodes.tmpl" %}
 
+{% include "NEST-destructor.tmpl" %}
+
 {% if (ode_method == "cvode") %}
     {% include "NEST-cvode-event.tmpl" %}
 {% elif (ode_method == "ida") %}

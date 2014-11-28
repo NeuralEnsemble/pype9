@@ -53,7 +53,7 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
    	}
 
     for (int i = 0; i < N; i++) {
-       S_.y_[i] = ITEM(B_.y,i);
+       S_.y_[i] = ITEM(B_.y, i);
     }
     
     {% include "NEST-solver-events.tmpl" %}
@@ -75,7 +75,7 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
    	}
 
     for (int i = 0; i < N; i++) {
-     S_.y_[i] = ITEM(B_.y,i);
+     S_.y_[i] = ITEM(B_.y, i);
     }
     
     {% include "NEST-solver-events.tmpl" %}
@@ -101,7 +101,9 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
 
 {% endif %}
 
-    B_.I_stim_ = B_.currents_.get_value(lag);
+{% for name in analog_port_names %}
+    B_.{{name}}_value = B_.{{name}}_analog_port.get_value(lag);
+{% endfor %}    
     B_.logger_.record_data(current_steps + lag);
   }
 }

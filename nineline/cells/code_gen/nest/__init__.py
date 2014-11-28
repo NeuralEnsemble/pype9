@@ -134,9 +134,10 @@ class CodeGenerator(BaseCodeGenerator):
         # TODO: This needs to be implemented
         args['steady_state'] = False
         # Set synaptic events -------------------------------------------------
-        args['synaptic_events'] = [p.name for p in model.event_receive_ports]
-        args['synaptic_event_pscIDs'] = ['UNKNOWN'
-                                         for p in model.event_receive_ports]
+        args['event_port_names'] = [p.name for p in model.event_receive_ports]
+        args['analog_port_names'] = [p.name
+                                     for p in chain(model.analog_receive_ports,
+                                                    model.analog_reduce_ports)]
         # TODO: Need to connect this up to NEST-synaptic-transients
         args['synaptic_event_funcs'] = []
         # Set some standard parameters ----------------------------------------
