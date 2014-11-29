@@ -139,7 +139,7 @@ namespace nest {
         {% endfor %}
         SUP_REGIME_
     };
-
+    
 {% if event_port_names %}
     /* Event port ids
      * @note Start with 1 so we can forbid port 0 to avoid accidental
@@ -168,7 +168,7 @@ namespace nest {
 {% if analog_port_names %}
 
     //Analog port ids
-    static const port MIN_ANALOG_PORT_ = SUP_EVENT_PORT_;
+    static const port MIN_ANALOG_PORT_ = {% if event_port_names %}SUP_EVENT_PORT_{% else %}1{% endif %};
     enum AnalogPorts {
     {% for name in analog_port_names %}
         {% if loop.first %}

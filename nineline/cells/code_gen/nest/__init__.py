@@ -19,6 +19,7 @@ from .. import BaseCodeGenerator
 from nineline import __version__
 from nineline.utils import remove_ignore_missing
 from nineml import Dimension
+from nineml.abstraction_layer.units import voltage as voltage_unit_dim
 
 # Add Nest installation directory to the system path
 if 'NEST_INSTALL_DIR' in os.environ:
@@ -114,9 +115,20 @@ class CodeGenerator(BaseCodeGenerator):
         # TODO: This needs to be implemented
         args['steady_state'] = False
         # Port names ----------------------------------------------------------
+        # FIXME: Need a more fool proof way of distinguishing between voltage
+        #        stims or not (tricky as they are not defined in 9ml).
+        #        Stimulating voltages are treated differently as they don't
+        #        need the gap junction framework.
         args['analog_port_names'] = [p.name
-                                     for p in chain(model.analog_receive_ports,
-                                                    model.analog_reduce_ports)]
+                                     for p in model.analog_receive_ports]
+        args['gap_junction_names'] = [p.name
+                                      for p in model.analog_receive_ports
+                                      if p.dimension == voltage_unit_dim]
+        args['current_stim_names'] = [p.name
+                                      for p in model.analog_receive_ports
+                                      if p.dimension != voltage_unit_dim]
+        # TODO: These are currently not handled anywhere
+        args['reduce_port_names'] = [p.name for p in model.analog_reduce_ports]
         args['event_port_names'] = [p.name for p in model.event_receive_ports]
         # Event handling ------------------------------------------------------
         regimes = list(model.dynamics.regimes)

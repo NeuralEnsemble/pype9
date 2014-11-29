@@ -45,7 +45,7 @@ extern "C" int {{ModelName}}_steadystate (const gsl_vector *u, void *pnode, gsl_
 {% endif %}
 
   // params is a reference to the model parameters
-  const struct {{ModelName}}::Parameters_ *params = (struct {{ModelName}}::Parameters_ *)pnode;
+  const struct {{ModelName}}::Parameters_* params = (struct {{ModelName}}::Parameters_ *)pnode;
 
 {% for parameterDef in steadystate.parameterDefs %}
   {{parameterDef}}

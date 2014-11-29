@@ -32,7 +32,7 @@
 //---------------------------------------------------------------//
 
 {% for func_name, state_assignments, req_defs in transients %}
-inline int {{ModelName}}::{{func_name}}(long_t lag) {
+inline void {{ModelName}}::{{func_name}}(long_t lag) {
     
     // Map parameters used in dynamics to current namespace
     {% for param in req_defs.parameters %}

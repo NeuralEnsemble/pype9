@@ -101,6 +101,7 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
 
 {% endif %}
 
+{# Event handling #}
     // Event handling (still needs to handle events that arrive in the same
     // timestep.
 {% if len(regimes) > 1 %}

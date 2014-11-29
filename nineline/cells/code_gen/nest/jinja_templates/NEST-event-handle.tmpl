@@ -44,7 +44,7 @@ void {{ModelName}}::handle(CurrentEvent& e) {
     const double_t c = e.get_current();
     const double_t w = e.get_weight();
 
-{% for name in analog_port_names %}
+{% for name in current_stim_names %}
     {%+ if not loop.first %}else {% endif %}if (e.get_rport() == {{name}}_ANALOG_PORT) 
         B_.{{name}}_analog_port.add_value(
             e.get_rel_delivery_steps(network()->get_slice_origin()), w * c);

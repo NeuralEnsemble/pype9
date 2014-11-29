@@ -7,7 +7,7 @@
 //----------------------------------------------------------//
 // This section was generated from NEST-fsolve-prelude.tmpl //
 //----------------------------------------------------------//
-{% if (steady_state_method == "kinsol") %}
+{% if steady_state_method == "kinsol" %}
   int fsolve (KINSysFn f, int N, N_Vector fval, void *user_data,
               std::string name) {
       int status;
@@ -46,7 +46,7 @@
 
       return 0;
   }
-{% else %}
+{% elif steady_state_method == "gsl" %}
   int fsolve (int (*fss)(const gsl_vector *, void *user_data, gsl_vector *),
               int N, gsl_vector *fval, void *user_data, std::string name) {
       
