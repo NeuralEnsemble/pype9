@@ -128,11 +128,16 @@ namespace nest {
 {% endif %}
 
     // Regime ids
+    static const int DEFAULT_REGIME_ = 1;    
     enum Regimes {
         {% for name in regime_names %}
-        {{name}}_REGIME,  
+            {% if loop.first %}
+        {{name}}_REGIME = DEFAULT_REGIME_,
+            {% else %}
+        {{name}}_REGIME,
+            {% endif %}  
         {% endfor %}
-        SUP_REGIME
+        SUP_REGIME_
     };
 
 {% if event_port_names %}
@@ -140,16 +145,16 @@ namespace nest {
      * @note Start with 1 so we can forbid port 0 to avoid accidental
      *     creation of connections with no receptor type set.
      */
-    static const port MIN_EVENT_PORT = 1;
+    static const port MIN_EVENT_PORT_ = 1;
     enum EventPorts {
     {% for name in event_port_names %}
         {% if loop.first %}
-        {{name}}_EVENT_PORT = MIN_EVENT_PORT,
+        {{name}}_EVENT_PORT = MIN_EVENT_PORT_,
         {% else %}
         {{name}}_EVENT_PORT,
         {% endif %}
     {% endfor %}
-        SUP_EVENT_PORT
+        SUP_EVENT_PORT_
     };
 
     // On event ids
@@ -157,26 +162,30 @@ namespace nest {
         {% for name in on_event_names %}
         {{name}}_ON_EVENT,
         {% endfor %}
-        SUP_ON_EVENT 
+        SUP_ON_EVENT_
     };
 {% endif %}
 {% if analog_port_names %}
 
     //Analog port ids
-    static const port MIN_ANALOG_PORT = SUP_EVENT_PORT;
+    static const port MIN_ANALOG_PORT_ = SUP_EVENT_PORT_;
     enum AnalogPorts {
     {% for name in analog_port_names %}
         {% if loop.first %}
-        {{name}}_ANALOG_PORT = MIN_ANALOG_PORT,
+        {{name}}_ANALOG_PORT = MIN_ANALOG_PORT_,
         {% else %}
         {{name}}_ANALOG_PORT,
         {% endif %}
     {% endfor %}
-        SUP_ANALOG_PORT
+        SUP_ANALOG_PORT_
     };
 {% endif %}
 
-    // Synaptic event functions (FIXME: don't think this is required)
+    // Synaptic event function definitions
+{% for func_name, _, _ in transients %}
+    inline int {{func_name}}(long_t lag);
+{% endfor %}
+    
 {% for name in event_port_names %}
     int {{name}}_response (long_t lag);
 {% endfor %}
@@ -297,9 +306,9 @@ namespace nest {
 
 
   inline port {{ModelName}}::connect_sender(SpikeEvent&, port receptor_type) {
-    if (receptor_type < 0 || receptor_type >= SUP_EVENT_PORT)
+    if (receptor_type < 0 || receptor_type >= SUP_EVENT_PORT_)
       throw UnknownReceptorType(receptor_type, get_name());
-    else if (receptor_type < MIN_EVENT_PORT)
+    else if (receptor_type < MIN_EVENT_PORT_)
       throw IncompatibleReceptorType(receptor_type, get_name(), "SpikeEvent");
     return receptor_type;
   }

@@ -40,27 +40,23 @@ extern "C" int {{func_name}} (double t_, N_Vector y_, N_Vector f_, void* pnode_)
 extern "C" int {{func_name}} (double t_, const double y_[], double f_[], void* pnode_) {
     {% endif %}
 
-    // Get a pointer to the model
+    // Get a reference to the model
     assert(pnode_);
     const {{ModelName}}& node_ = *(reinterpret_cast<{{ModelName}}*>(pnode_));
-    
-    //Get a reference to the parameters
-    const struct {{ModelName}}::Parameters_& params_ = node_.P_;
-    const struct {{ModelName}}::Buffers_& buffers_ = node_.B_;
    
     // Map parameters used in dynamics to current namespace
     {% for param in req_defs.parameters %}
-    const double_t {{param.name}} = params_.{{param.name}};
+    const double_t {{param.name}} = node_.P_.{{param.name}};
+    {% endfor %}
+
+    // Map port buffers to current namespace
+    {% for port in req_defs.ports %}
+    const double_t {{port.name}} = node_.B_.{{port.name}}_value;
     {% endfor %}
     
     // Map states used in dynamics to current namespace
     {% for state in req_defs.states %}
     const double_t {{state.name}} = y_[{{ModelName}}::State_::{{state.name}}_INDEX];
-    {% endfor %}
-    
-    // Map port buffers to current namespace
-    {% for port in req_defs.ports %}
-    const double_t {{port.name}} = buffers_.{{port.name}}_value;
     {% endfor %}
    
     // Evaluate aliases used in differential equations

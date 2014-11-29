@@ -103,10 +103,8 @@ class CodeGenerator(BaseCodeGenerator):
         dynamics = []
         for regime in model.dynamics.regimes:
             # Get name for regime dynamics function ---------------------------
-            name_parts = [component.name, 'dynamics']
-            if regime.name is not None:
-                name_parts.insert(1, regime.name)
-            func_name = '_'.join(name_parts)
+            func_name = '_'.join([component.name, regime.name or 'default',
+                                  'dynamics'])
             req_defs = self._required_defs(regime.time_derivatives, model)
             dynamics.append((func_name, regime.time_derivatives, req_defs))
             # TODO: What to do with analog receive ports? Probably need to
@@ -121,14 +119,22 @@ class CodeGenerator(BaseCodeGenerator):
                                                     model.analog_reduce_ports)]
         args['event_port_names'] = [p.name for p in model.event_receive_ports]
         # Event handling ------------------------------------------------------
-        regimes = model.dynamics.regimes
+        regimes = list(model.dynamics.regimes)
         args['regime_names'] = [r.name for r in regimes]
-        args['on_event_names'] = list(chain((oe.name for oe in r.on_events)
-                                            for r in regimes))
+        args['on_event_names'] = list(chain(*((e.src_port_name
+                                               for e in r.on_events)
+                                              for r in regimes)))
         # Get all state assignement expressions to deteriming required defs.
-        state_assigns = list(chain(chain(oe.state_assignments for oe in r)
-                                   for r in regimes))
-        args['event_required_defs'] = self._required_defs(state_assigns, model)
+        transients = []
+        for regime in regimes:
+            for on_event in regime.on_events:
+                func_name = '_'.join([on_event.src_port_name, 'transient_in',
+                                      regime.name or 'default'])
+                req_defs = self._required_defs(on_event.state_assignments,
+                                               model)
+                transients.append((func_name, on_event.state_assignments,
+                                   req_defs))
+        args['transients'] = transients
         args['regimes'] = regimes
         # Set some standard parameters ----------------------------------------
         args['v_threshold'] = v_threshold

@@ -30,12 +30,12 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
     assert(to >= 0 && (delay) from < Scheduler::get_min_delay());
     assert(from < to);
 
-    double tout;
+    double tout; // FIXME: What is this? it not set anywhere...
     long_t current_steps = origin.get_steps();
 
     for ( long_t lag = from ; lag < to ; ++lag ) {
       double h = B_.step_;    
-	double tt = 0.0 ; 
+	double tt = 0.0;
 
 {% if ode_method == "cvode" %}
     int N = NV_LENGTH_S (B_.y);
@@ -100,6 +100,30 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
     {% include "NEST-solver-events.tmpl" %}
 
 {% endif %}
+
+    // Event handling (still needs to handle events that arrive in the same
+    // timestep.
+{% if len(regimes) > 1 %}
+    int transition = 0;
+{% endif %}
+{% for regime in regimes %}
+    {%+ if not loop.first %}} else {% endif %}if (B_.current_regime == {{regime.name}}_REGIME) {
+    {% for on_event in regime.on_events %}
+        {%+ if not loop.first %}} else {% endif %}if (B_.{{on_event.src_port_name}}_event_port.get_value(lag)) {
+        {% if on_event.target_regime != regime %}
+            if (transition)
+                std::cout << "Warning!: multiple transitions in the same time step. Transition " << transition << " was ignored in favour of transition " << {{on_event.target_regime.name}}_REGIME << "." << std::endl;  
+            transition = {{on_event.target_regime.name}}_REGIME;
+        {% endif %}
+            {{on_event.src_port_name}}_transient_in_{{regime.name or 'default'}}(lag);
+        {% if loop.last %}
+        }
+        {% endif %}
+    {% endfor %}
+    {% if loop.last %}
+    }    
+    {% endif %}    
+{% endfor %}
 
 {% for name in analog_port_names %}
     B_.{{name}}_value = B_.{{name}}_analog_port.get_value(lag);

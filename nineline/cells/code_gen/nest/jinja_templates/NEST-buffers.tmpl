@@ -8,48 +8,40 @@
 //---------------------------------------------------//
 // This section was generated from NEST-buffers.tmpl //
 //---------------------------------------------------//
-{% if ((ode_method == "cvode") or (ode_method == "ida")) %}
+
 {{ModelName}}::Buffers_::Buffers_({{ModelName}}& n)
     : logger_(n),
-      sys_(0) {
-    // Initialization of the remaining members is deferred to
-    // init_buffers_().
-}
-
-
-{{ModelName}}::Buffers_::Buffers_(const Buffers_&, {{ModelName}}& n)
-    : logger_(n),
-      sys_(0) {
-    // Initialization of the remaining members is deferred to
-    // init_buffers_().
-}
-{% elif (ode_method == "gsl") %}
-{{ModelName}}::Buffers_::Buffers_({{ModelName}}& n)
-    : logger_(n),
+{% if ode_method in ("cvode", "ida") %}    
+      sys_(0),
+{% elif ode_method == "gsl" %}
       s_(0),
       c_(0),
       e_(0),
       N(0),
       u(0),
-      jac(0) {
+      jac(0),
+{%- endif %}
+      current_regime(DEFAULT_REGIME_) { 
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
 
-
 {{ModelName}}::Buffers_::Buffers_(const Buffers_&, {{ModelName}}& n)
     : logger_(n),
+{% if ode_method in ("cvode", "ida") %}    
+      sys_(0),
+{% elif ode_method == "gsl" %}
       s_(0),
       c_(0),
       e_(0),
       N(0),
       u(0),
-      jac(0) {
+      jac(0),
+{%- endif %}    
+      current_regime(DEFAULT_REGIME_) { 
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
-{% endif %}
-
 
 void {{ModelName}}::init_buffers_() {
 
