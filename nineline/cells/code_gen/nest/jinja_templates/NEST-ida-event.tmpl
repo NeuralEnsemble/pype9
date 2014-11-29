@@ -28,7 +28,7 @@ extern "C" int {{ModelName}}_event (double t, N_Vector y, N_Vector yp, double *g
   state = &(node.S_);
 
 {% if v_threshold %}      
-  v = ITEM(y, {{ModelName}}::State_::{{membrane_voltage}}_i);
+  v = ITEM(y, {{ModelName}}::State_::{{membrane_voltage}}_INDEX);
   g[0] = v - params->{{v_threshold}};
 {% else %}
   g[0] = -1.0;

@@ -101,45 +101,35 @@ class CodeGenerator(BaseCodeGenerator):
             args['membrane_voltage'] = volt_states[0]
         # Set dynamics --------------------------------------------------------
         dynamics = []
-        ports_map = dict((p.name, p) for p in chain(model.analog_receive_ports,
-                                                    model.analog_reduce_ports))
         for regime in model.dynamics.regimes:
             # Get name for regime dynamics function ---------------------------
             name_parts = [component.name, 'dynamics']
             if regime.name is not None:
                 name_parts.insert(1, regime.name)
             func_name = '_'.join(name_parts)
-            # Initialise lists ------------------------------------------------
-            dyn_params = set()
-            dyn_ports = set()
-            dyn_states = set()
-            dyn_aliases = []
-            # Loop through and append time derivative dependencies ------------
-            for td in regime.time_derivatives:
-                params, ports, states, aliases = self._resolve_depends(
-                    td, model.parameter_map, ports_map,
-                    model.state_variables_map, model.dynamics.aliases_map)
-                dyn_params.update(params)
-                dyn_ports.update(ports)
-                dyn_states.update(states)
-                # The order of the aliases is important, hence it is a list
-                dyn_aliases.extend(a for a in aliases if a not in dyn_aliases)
-            # Append all dependencies to dynamics list ------------------------
-            dynamics.append((func_name, dyn_params, dyn_states, dyn_ports,
-                             dyn_aliases, regime.time_derivatives))
+            req_defs = self._required_defs(regime.time_derivatives, model)
+            dynamics.append((func_name, regime.time_derivatives, req_defs))
             # TODO: What to do with analog receive ports? Probably need to
             # treat as gap junctions.
         args['dynamics'] = dynamics
         # Set steady state ----------------------------------------------------
         # TODO: This needs to be implemented
         args['steady_state'] = False
-        # Set synaptic events -------------------------------------------------
-        args['event_port_names'] = [p.name for p in model.event_receive_ports]
+        # Port names ----------------------------------------------------------
         args['analog_port_names'] = [p.name
                                      for p in chain(model.analog_receive_ports,
                                                     model.analog_reduce_ports)]
-        # TODO: Need to connect this up to NEST-synaptic-transients
-        args['synaptic_event_funcs'] = []
+        args['event_port_names'] = [p.name for p in model.event_receive_ports]
+        # Event handling ------------------------------------------------------
+        regimes = model.dynamics.regimes
+        args['regime_names'] = [r.name for r in regimes]
+        args['on_event_names'] = list(chain((oe.name for oe in r.on_events)
+                                            for r in regimes))
+        # Get all state assignement expressions to deteriming required defs.
+        state_assigns = list(chain(chain(oe.state_assignments for oe in r)
+                                   for r in regimes))
+        args['event_required_defs'] = self._required_defs(state_assigns, model)
+        args['regimes'] = regimes
         # Set some standard parameters ----------------------------------------
         args['v_threshold'] = v_threshold
         # FIXME: Need to work out where this comes from.

@@ -12,65 +12,53 @@
  * Construct state from parameters.
  */
 {{ModelName}}::State_::State_(const Parameters_& p) {
-{# Don't think this is needed as well
-{% if init.localVars %}
-   double {{init.localVars | join(", ")}};
-{% endif %}
-#}
 
     const Parameters_ *params = &p;
-
 {% if (ode_method == "gsl") %}
     r_ = 0;
 {% endif %}
 
 {# Initialise the state #}
 {% for state, val in izip(state_variables, state_variables_init) %}
-    y_[{{state}}_i] = {{val}};
-{% endfor %}
-{# Check constraints on parameters, does this belongs here? #}
-{% for constraint in parameter_constraints %}
-    {{constraint}}
+    y_[{{state}}_INDEX] = {{val}};
 {% endfor %}
 
 {# Solve steady-state if required #}
 {# This needs some thinking out
-{% if steady_state %}
-    {% if (steady_state_method  == "kinsol") %}
-  N_Vector {{SSvector}};
-  ssvect = N_VNew_Serial({{steadyStateSize}});
-  fsolve ({{ModelName}}_steadystate, {{steadyStateSize}}, {{SSvector}},
+{% if (steady_state_method  == "kinsol") %}
+    N_Vector {{SSvector}};
+    ssvect = N_VNew_Serial({{steadyStateSize}});
+    fsolve ({{ModelName}}_steadystate, {{steadyStateSize}}, {{SSvector}},
           (void *)&p,  "{{ModelName}}");
-        {% for name in rateEqStates %}
-            {% if (name in steadyStateIndexMap) %}
-   y_[{{stateIndexMap[name]}}] = ITEM({{SSvector}}, {{steadyStateIndexMap[name]}});
-            {% else %}
-   y_[{{stateIndexMap[name]}}] = {{name}};
-            {% endif %}
-        {% endfor %}
-   N_VDestroy_Serial ({{SSvector}});
-    {% else %}
-   gsl_vector *{{SSvector}};
-   {{SSvector}} = gsl_vector_alloc ({{steadyStateSize}});
-   fsolve ({{ModelName}}_steadystate, {{steadyStateSize}}, {{SSvector}},
-           (void *)&p, "{{ModelName}}");             
-        {% for name in init.rateEqStates %}
-            {% if (name in steadyStateIndexMap) %}
-   y_[{{stateIndexMap[name]}}] = gsl_vector_get({{SSvector}}, {{steadyStateIndexMap[name]}});
-            {% else %}
-   y_[{{stateIndexMap[name]}}] = {{name}};
-            {% endif %}
-        {% endfor %}
-   gsl_vector_free ({{SSvector}});
-        {% for eq in init.reactionEqDefs %}
-   {{eq}}
-        {% endfor %}
-        {% for eq in currentEqDefs %}
-   {{eq}}
-        {% endfor %}
-        {% if ("v" in steadyStateIndexMap) %}
-   y_[{{steadyStateIndexMap["v"]}}] =  v;
+    {% for name in rateEqStates %}
+        {% if (name in steadyStateIndexMap) %}
+    y_[{{stateIndexMap[name]}}] = ITEM({{SSvector}}, {{steadyStateIndexMap[name]}});
+        {% else %}
+    y_[{{stateIndexMap[name]}}] = {{name}};
         {% endif %}
+    {% endfor %}
+    N_VDestroy_Serial ({{SSvector}});
+{% elif stead_state %}
+    gsl_vector *{{SSvector}};
+    {{SSvector}} = gsl_vector_alloc ({{steadyStateSize}});
+    fsolve ({{ModelName}}_steadystate, {{steadyStateSize}}, {{SSvector}},
+           (void *)&p, "{{ModelName}}");             
+    {% for name in init.rateEqStates %}
+        {% if (name in steadyStateIndexMap) %}
+    y_[{{stateIndexMap[name]}}] = gsl_vector_get({{SSvector}}, {{steadyStateIndexMap[name]}});
+        {% else %}
+    y_[{{stateIndexMap[name]}}] = {{name}};
+        {% endif %}
+    {% endfor %}
+    gsl_vector_free ({{SSvector}});
+    {% for eq in init.reactionEqDefs %}
+    {{eq}}
+    {% endfor %}
+    {% for eq in currentEqDefs %}
+    {{eq}}
+    {% endfor %}
+    {% if ("v" in steadyStateIndexMap) %}
+    y_[{{steadyStateIndexMap["v"]}}] =  v;
     {% endif %}
 {% endif %}
 #}
@@ -103,5 +91,17 @@
        y_[i] = s.y_[i];
 
   return *this;
+}
+
+void {{ModelName}}::calibrate() {
+    B_.logger_.init();  
+{% if (ode_method == "gsl") %}
+    V_.U_old_ = S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX];
+    {% if refractory_period %}
+    V_.RefractoryCounts_ = Time(Time::ms(P_.t_ref)).get_steps();
+    {% else %}
+    V_.RefractoryCounts_ = 0;
+    {% endif %}
+{% endif %}
 }
 // ------------------- NEST-init.tmpl ------------------------//

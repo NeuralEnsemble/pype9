@@ -49,4 +49,32 @@
     // init_buffers_().
 }
 {% endif %}
+
+
+void {{ModelName}}::init_buffers_() {
+
+    // Clear event buffers
+    {% for name in event_port_names %}
+    B_.{{name}}_event_port.clear();
+    {% endfor %}
+    
+    // Clear analog buffers
+    {% for name in analog_port_names %}
+    B_.{{name}}_analog_port.clear();
+    {% endfor %}
+    
+    Archiving_Node::clear_history();
+    
+    B_.logger_.reset();
+    
+    B_.step_ = Time::get_resolution().get_ms();
+    B_.IntegrationStep_ = B_.step_;
+    
+    {% for name in analog_port_names %}
+    B_.{{name}}_value = 0.0;
+    {% endfor %}
+
+    {% include "NEST-init-solver.tmpl" %}    
+}
+
 // ------------------- NEST-buffers.tmpl ------------------------//

@@ -81,7 +81,7 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
     {% include "NEST-solver-events.tmpl" %}
 
 {% elif ode_method == "gsl" %}
-    V_.U_old_ = S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_i];
+    V_.U_old_ = S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX];
 
     while (tt < h) {
       const int status =  gsl_odeiv2_evolve_apply(B_.e_, B_.c_, B_.s_, 

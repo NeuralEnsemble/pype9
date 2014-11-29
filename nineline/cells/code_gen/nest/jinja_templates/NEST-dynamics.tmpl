@@ -33,7 +33,7 @@
 //----------------------------------------------------//
 // This section was generated from NEST-dynamics.tmpl //
 //----------------------------------------------------//
-{% for func_name, parameters, states, ports, aliases, time_derivatives in dynamics %} 
+{% for func_name, time_derivatives, req_defs in dynamics %} 
     {%- if ode_method in ('cvode', 'ida') -%}
 extern "C" int {{func_name}} (double t_, N_Vector y_, N_Vector f_, void* pnode_) {
     {% else %}
@@ -49,28 +49,28 @@ extern "C" int {{func_name}} (double t_, const double y_[], double f_[], void* p
     const struct {{ModelName}}::Buffers_& buffers_ = node_.B_;
    
     // Map parameters used in dynamics to current namespace
-    {% for param in parameters %}
+    {% for param in req_defs.parameters %}
     const double_t {{param.name}} = params_.{{param.name}};
     {% endfor %}
     
     // Map states used in dynamics to current namespace
-    {% for state in states %}
-    const double_t {{state.name}} = y_[{{ModelName}}::State_::{{state.name}}_i];
+    {% for state in req_defs.states %}
+    const double_t {{state.name}} = y_[{{ModelName}}::State_::{{state.name}}_INDEX];
     {% endfor %}
     
     // Map port buffers to current namespace
-    {% for port in ports %}
+    {% for port in req_defs.ports %}
     const double_t {{port.name}} = buffers_.{{port.name}}_value;
     {% endfor %}
    
     // Evaluate aliases used in differential equations
-    {% for alias in aliases %}
+    {% for alias in req_defs.aliases %}
     const double_t {{alias.lhs}} = {{alias.rhs}};
     {% endfor %}
 
     // Evaluate differential equations
     {% for td in time_derivatives %}
-    f_[{{ModelName}}::State_::{{td.dependent_variable}}_i] = {{td.rhs}};
+    f_[{{ModelName}}::State_::{{td.dependent_variable}}_INDEX] = {{td.rhs}};
     {% endfor %}
 
     {% if ode_method in ('cvode', 'ida') %}

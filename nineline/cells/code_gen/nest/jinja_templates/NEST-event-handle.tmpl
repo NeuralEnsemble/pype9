@@ -29,13 +29,15 @@
 // This section was generated from NEST-event-handle.tmpl //
 //--------------------------------------------------------//
 void {{ModelName}}::handle(SpikeEvent & e) {
-    int flag;
     assert(e.get_delay() > 0);
-    flag = 0;
-{% for name in event_port_names %}
-    {% if not loop.first %}else{% endif %} if (e.get_rport() == {{name}}_EVENT_PORT)
-        B_.{{name}}_event_port.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
-                                         fabs(e.get_weight()) * e.get_multiplicity());
+{% for regime in regimes %}
+    {% if not loop.first %}else{% endif %} if (B_.in_regime == {{regime.name}}_REGIME) {
+    if (e.get_rport() == {{name}}_EVENT_PORT)
+        B_.{{name}}_event_port.add_value(
+            e.get_rel_delivery_steps(network()->get_slice_origin()),
+            fabs(e.get_weight()) * e.get_multiplicity());
+    } else
+        assert(0);            
 {% endfor %}
 }
 
@@ -47,7 +49,8 @@ void {{ModelName}}::handle(CurrentEvent& e) {
 
 {% for name in analog_port_names %}
     {% if not loop.first %}else{% endif %} if (e.get_rport() == {{name}}_ANALOG_PORT) 
-        B_.{{name}}_analog_port.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()), w * c);
+        B_.{{name}}_analog_port.add_value(
+            e.get_rel_delivery_steps(network()->get_slice_origin()), w * c);
 {% endfor %}
 }
 

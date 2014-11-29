@@ -13,6 +13,7 @@ from __future__ import absolute_import
 import platform
 import os
 import time
+from collections import namedtuple
 import shutil
 from copy import copy
 from os.path import abspath, dirname, join
@@ -23,6 +24,7 @@ from runpy import run_path
 from abc import ABCMeta, abstractmethod
 import nineml
 from __builtin__ import classmethod
+from nineml.abstraction_layer.dynamics.component import expressions
 
 
 class BaseCodeGenerator(object):
@@ -37,6 +39,9 @@ class BaseCodeGenerator(object):
     _INSTL_DIR = 'install'
     _CMPL_DIR = 'compile'  # Ignored for NEURON but used for NEST
     _9ML_MOD_TIME_FILE = 'source_modification_time'
+
+    RequiredDefs = namedtuple('RequiredDefs',
+                              'parameters ports states aliases')
 
     # Abstract methods that are required in the derived classes
 
@@ -282,35 +287,42 @@ class BaseCodeGenerator(object):
                             "different \"parent build directory\" "
                             "('parent_build_dir') -> {}".format(e))
 
-    def _resolve_depends(self, expr, parameters, ports, states, aliases):
+    def _required_defs(self, expressions, model):
+        """
+        Gets lists of required parameters, states, ports and aliases
+        (in resolved order of execution).
+        """
         # Initialise containers
-        depend_params = set()
-        depend_ports = set()
-        depend_states = set()
-        depend_aliases = []
+        required_params = set()
+        required_ports = set()
+        required_states = set()
+        required_aliases = []  # the order of the aliases is critical
         # Add corresponding param, port, alias for each atom and atom-
-        # dependencies
-        for atom in expr.rhs_names:
-            if atom in parameters:
-                depend_params.add(parameters[atom])
-            elif atom in ports:
-                depend_ports.add(ports[atom])
-            elif atom in states:
-                depend_states.add(states[atom])
-            elif atom in aliases:
-                alias = aliases[atom]
-                parms, prts, sts, alss = self._resolve_depends(
-                    alias, parameters, ports, states, aliases)
-                depend_params.update(parms)
-                depend_ports.update(prts)
-                depend_states.update(sts)
-                depend_aliases.extend(a for a in alss
-                                      if a not in depend_aliases)
-                depend_aliases.append(alias)
-            else:
-                assert(False), ("Unrecognised atom '{}' in expression '{}'"
-                                .format(atom, expr))
-        return (depend_params, depend_ports, depend_states, depend_aliases)
+        # reqencies
+        for expr in expressions:
+            for atom in expr.rhs_names:
+                if atom in model.parameter_map:
+                    required_params.add(model.parameter_map[atom])
+                elif atom in model.analog_receive_ports_map:
+                    required_ports.add(model.analog_receive_ports_map[atom])
+                elif atom in model.analog_reduce_ports_map:
+                    required_ports.add(model.analog_reduce_ports_map[atom])
+                elif atom in model.state_variables_map:
+                    required_states.add(model.state_variables_map[atom])
+                elif atom in model.aliases_map:
+                    alias = model.aliases_map[atom]
+                    req = self._required_defs([alias], model)
+                    required_params.update(req.parameters)
+                    required_ports.update(req.ports)
+                    required_states.update(req.states)
+                    required_aliases.extend(a for a in req.aliases
+                                            if a not in required_aliases)
+                    required_aliases.append(alias)
+                else:
+                    assert(False), ("Unrecognised atom '{}' in expression '{}'"
+                                    .format(atom, expr))
+        return self.RequiredDefs(required_params, required_ports,
+                                 required_states, required_aliases)
 
     def _path_to_exec(self, exec_name):
         """
@@ -335,7 +347,7 @@ class BaseCodeGenerator(object):
                 break
         if not exec_path:
             raise Exception("Could not find executable '{}' on the system path"
-                            "'{}'".format(exec_name, system_path))
+                            " '{}'".format(exec_name, ':'.join(system_path)))
         return exec_path
 
     def _simulator_specific_paths(self):
@@ -366,3 +378,5 @@ class BaseCodeGenerator(object):
                      var_name), mapped_var in loaded_props.iteritems():
                     component_translations[comp_name][var_name] = mapped_var
         return component_translations
+    
+

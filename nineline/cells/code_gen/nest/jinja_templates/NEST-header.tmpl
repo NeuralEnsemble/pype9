@@ -52,24 +52,24 @@
 
 namespace nest {
 
-{% if (ode_method == "cvode") %}
+{% if ode_method == "cvode" %}
     {% include "NEST-cvode-prelude.tmpl" %}
-{% elif (ode_method == "ida") %}
+{% elif ode_method == "ida" %}
     {% include "NEST-ida-prelude.tmpl" %}
 {% endif %}
-{% if (steady_state_method == "kinsol") %}
+{% if steady_state_method == "kinsol" %}
     {% include "NEST-kinsol-prelude.tmpl" %}
 {% endif %}
-{% if (ode_method == "cvode") %}
+{% if ode_method == "cvode" %}
   extern "C" int {{ModelName}}_dynamics (double, const N_Vector, N_Vector, void*);
   extern "C" int {{ModelName}}_event (double, N_Vector, double *, void*);
-{% elif (ode_method == "ida") %}
+{% elif ode_method == "ida" %}
   extern "C" int {{ModelName}}_residual (double, N_Vector, N_Vector, N_Vector, void*);
   extern "C" int {{ModelName}}_event (double, N_Vector, N_Vector, double *, void*);
 {% else %}
   extern "C" int {{ModelName}}_dynamics (double, const double*, double*, void*);
 {% endif %}
-{% if (steady_state_method == "kinsol") %}
+{% if steady_state_method == "kinsol" %}
   extern "C" int {{ModelName}}_steadystate (N_Vector, N_Vector, void*);
 {% elif steady_state_method %}
   extern "C" int {{ModelName}}_steadystate (const gsl_vector *, void *, gsl_vector *);
@@ -127,18 +127,20 @@ namespace nest {
     friend  int {{ModelName}}_steadystate (const gsl_vector *, void *, gsl_vector *);
 {% endif %}
 
+    // Regime ids
+    enum Regimes {
+        {% for name in regime_names %}
+        {{name}}_REGIME,  
+        {% endfor %}
+        SUP_REGIME
+    };
 
 {% if event_port_names %}
-    /**
-     * Minimal event port type.
+    /* Event port ids
      * @note Start with 1 so we can forbid port 0 to avoid accidental
      *     creation of connections with no receptor type set.
      */
     static const port MIN_EVENT_PORT = 1;
-
-    /** 
-     * Event port ids
-     */
     enum EventPorts {
     {% for name in event_port_names %}
         {% if loop.first %}
@@ -149,19 +151,19 @@ namespace nest {
     {% endfor %}
         SUP_EVENT_PORT
     };
+
+    // On event ids
+    enum OnEvents {
+        {% for name in on_event_names %}
+        {{name}}_ON_EVENT,
+        {% endfor %}
+        SUP_ON_EVENT 
+    };
 {% endif %}
-
 {% if analog_port_names %}
-    /**
-     * Minimal analog port type.
-     * @note Start with 1 so we can forbid port 0 to avoid accidental
-     *     creation of connections with no receptor type set.
-     */
-    static const port MIN_ANALOG_PORT = SUP_EVENT_PORT;
 
-    /** 
-     * Analog port ids
-     */
+    //Analog port ids
+    static const port MIN_ANALOG_PORT = SUP_EVENT_PORT;
     enum AnalogPorts {
     {% for name in analog_port_names %}
         {% if loop.first %}
@@ -174,7 +176,7 @@ namespace nest {
     };
 {% endif %}
 
-    // Synaptic Events
+    // Synaptic event functions (FIXME: don't think this is required)
 {% for name in event_port_names %}
     int {{name}}_response (long_t lag);
 {% endfor %}
@@ -195,14 +197,17 @@ namespace nest {
     struct State_ { 
 
       enum StateVecElems {
-        {{state_variables[0]}}_i = 0,
-{% for i, state in enumerate(state_variables[1:]) %}
-        {{state}}_i, // {{i + 1}}
+{% for name in state_variables %}
+    {% if loop.first %}
+        {{name}}_INDEX = 0,
+    {% else %}
+        {{name}}_INDEX,
+    {% endif %}
 {% endfor %}
         STATE_VEC_SIZE_
       };
 	
-      double y_[STATE_VEC_SIZE_]; 
+      double y_[STATE_VEC_SIZE_];
 {% if (ode_method == "gsl") %}
       int_t r_; /* refractory counter */
 {% endif %}
@@ -262,6 +267,9 @@ namespace nest {
 {% for name in analog_port_names %}
         double_t {{name}}_value;
 {% endfor %}
+        
+        // Holds the id of the current regime
+        int current_regime;
 	
 	}; // end struct Buffers_
 

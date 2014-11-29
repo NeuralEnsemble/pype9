@@ -32,42 +32,4 @@ void {{ModelName}}::init_state_(const Node& proto) {
     S_ = State_(pr.P_);
 }
 
-void {{ModelName}}::init_buffers_() {
-
-    // Clear event buffers
-    {% for name in event_port_names %}
-    B_.{{name}}_event_port.clear();
-    {% endfor %}
-    
-    // Clear analog buffers
-    {% for name in analog_port_names %}
-    B_.{{name}}_analog_port.clear();
-    {% endfor %}
-    
-    Archiving_Node::clear_history();
-    
-    B_.logger_.reset();
-    
-    B_.step_ = Time::get_resolution().get_ms();
-    B_.IntegrationStep_ = B_.step_;
-    
-    {% for name in analog_port_names %}
-    B_.{{name}}_value = 0.0;
-    {% endfor %}
-
-    {% include "NEST-init-solver.tmpl" %}    
-}
-
-
-void {{ModelName}}::calibrate() {
-    B_.logger_.init();  
-{% if (ode_method == "gsl") %}
-    V_.U_old_ = S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_i];
-    {% if refractory_period %}
-    V_.RefractoryCounts_ = Time(Time::ms(P_.t_ref)).get_steps();
-    {% else %}
-    V_.RefractoryCounts_ = 0;
-    {% endif %}
-{% endif %}
-}
 // ------------------- NEST-nodes.tmpl ------------------------//

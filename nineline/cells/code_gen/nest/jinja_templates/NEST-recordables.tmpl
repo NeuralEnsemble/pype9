@@ -13,7 +13,7 @@ RecordablesMap<{{ModelName}}> {{ModelName}}::recordablesMap_;
 template <> void RecordablesMap<{{ModelName}}>::create() {
 
 {% for state in state_variables %}
-   insert_("{{state}}", &{{ModelName}}::get_y_elem_<{{ModelName}}::State_::{{state}}_i>);
+   insert_("{{state}}", &{{ModelName}}::get_y_elem_<{{ModelName}}::State_::{{state}}_INDEX>);
 {% endfor %}
 
 {# FIXME: Need to translate v->V_m

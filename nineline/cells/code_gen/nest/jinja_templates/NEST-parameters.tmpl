@@ -11,5 +11,10 @@
 {% for i, (name, default) in enumerate(izip(parameter_names, parameter_default)) %}
     {{name}} ({{default}}){% if not loop.last %},
 {% endif %}
-{% endfor %} {}
+{% endfor %} {
+{# Check constraints on parameters #}
+{% for constraint in parameter_constraints %}
+    {{constraint}}
+{% endfor %}
+}
 // ------------------- NEST-parameters.tmpl ------------------------//
