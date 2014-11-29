@@ -10,7 +10,8 @@
     
     /* Creates serial vector of length N */
     B_.y = N_VNew_Serial(N);
-    if (check_flag((void *)B_.y, "N_VNew_Serial", 0)) throw CVodeSolverFailure (get_name(), 0);
+    if (check_flag((void *)B_.y, "N_VNew_Serial", 0))
+        throw CVodeSolverFailure (get_name(), 0);
     
     for (int i = 0; i < N; i++)
        ITEM(B_.y,i) = S_.y_[i];
@@ -18,7 +19,8 @@
     /* Calls CVodeCreate to create the solver memory and specify the 
      * Backward Differentiation Formula and the use of a Newton iteration */
     B_.sys_ = CVodeCreate(CV_BDF, CV_NEWTON);
-    if (check_flag((void *)B_.sys_, "CVodeCreate", 0)) throw CVodeSolverFailure (get_name(), 0);
+    if (check_flag((void *)B_.sys_, "CVodeCreate", 0))
+        throw CVodeSolverFailure (get_name(), 0);
     
     /* Calls CVodeInit to initialize the integrator memory and specifies the
      * right hand side function in y''=f(t,y), the initial time, and
@@ -79,7 +81,8 @@
     B_.y = N_VNew_Serial(N);
     B_.y1 = N_VNew_Serial(N);
     B_.yp = N_VNew_Serial(N);
-    if (check_flag((void *)B_.y, "N_VNew_Serial", 0)) throw IDASolverFailure (get_name(), 0);
+    if (check_flag((void *)B_.y, "N_VNew_Serial", 0))
+        throw IDASolverFailure (get_name(), 0);
     
     for (int i = 0; i < N; i++)
        ITEM(B_.y,i) = S_.y_[i];
@@ -88,7 +91,8 @@
     
     /* Calls IDACreate to create the solver memory */ 
     B_.sys_ = IDACreate();
-    if (check_flag((void *)B_.sys_, "IDACreate", 0)) throw IDASolverFailure (get_name(), 0);
+    if (check_flag((void *)B_.sys_, "IDACreate", 0))
+        throw IDASolverFailure (get_name(), 0);
     
     /* Calls IDAInit to initialize the integrator memory and specify the
     * resdual function, the initial time, and the initial values. */
