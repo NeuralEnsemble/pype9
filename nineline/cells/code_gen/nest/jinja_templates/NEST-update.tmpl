@@ -55,8 +55,6 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
     for (int i = 0; i < N; i++) {
        S_.y_[i] = ITEM(B_.y, i);
     }
-    
-    {% include "NEST-solver-events.tmpl" %}
 
 {% elif ode_method == "ida" %}
     int N = NV_LENGTH_S (B_.y);
@@ -77,8 +75,6 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
     for (int i = 0; i < N; i++) {
      S_.y_[i] = ITEM(B_.y, i);
     }
-    
-    {% include "NEST-solver-events.tmpl" %}
 
 {% elif ode_method == "gsl" %}
     V_.U_old_ = S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX];
@@ -96,14 +92,13 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
     }
     
     {% include "NEST-emit-spike-gsl.tmpl" %}
-    
-    {% include "NEST-solver-events.tmpl" %}
 
 {% endif %}
 
 {# Event handling #}
     // Event handling (still needs to handle events that arrive in the same
     // timestep.
+    int num_events = 0;
 {% if len(regimes) > 1 %}
     int transition = 0;
 {% endif %}
@@ -117,6 +112,7 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
             transition = {{on_event.target_regime.name}}_REGIME;
         {% endif %}
             {{on_event.src_port_name}}_transient_in_{{regime.name or 'default'}}(lag);
+            ++num_events;
         {% if loop.last %}
         }
         {% endif %}
@@ -125,6 +121,28 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
     }    
     {% endif %}    
 {% endfor %}
+    /* 
+     * FIXME:
+     * Not sure if this is necessary, Ivan thought it was but I haven't seen it
+     * in NEST examples
+     */
+    if (num_events > 0) {
+{% if (ode_method == "cvode") %}
+        /* Reinitializes CVode state if any synaptic events have occurred */
+        int status = CVodeReInit(B_.sys_, tt, B_.y);
+        if (check_flag(&status, "CVodeReInit", 1))
+            throw CVodeSolverFailure(get_name(), status);
+{% elif (ode_method == "ida") %}
+        /* Reinitializes IDA state if any synaptic events have occurred */
+        int status = IDAReInit(B_.sys_, tt, B_.y, B_.yp);
+        if (check_flag(&status, "IDAReInit", 1))
+            throw IDASolverFailure(get_name(), status);
+{% elif (ode_method == "gsl") %}
+        /* Resets the GSL stepping function if any synaptic events have occurred */
+        gsl_odeiv2_step_reset(B_.s_);
+{% endif %}
+    }
+
 
 {% for name in analog_port_names %}
     B_.{{name}}_value = B_.{{name}}_analog_port.get_value(lag);

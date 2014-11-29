@@ -128,14 +128,14 @@ namespace nest {
 {% endif %}
 
     // Regime ids
-    static const int DEFAULT_REGIME_ = 1;    
+    static const int DEFAULT_REGIME_ = 0;    
     enum Regimes {
         {% for name in regime_names %}
             {% if loop.first %}
         {{name}}_REGIME = DEFAULT_REGIME_,
             {% else %}
         {{name}}_REGIME,
-            {% endif %}  
+            {% endif -%}  
         {% endfor %}
         SUP_REGIME_
     };
@@ -183,11 +183,7 @@ namespace nest {
 
     // Synaptic event function definitions
 {% for func_name, _, _ in transients %}
-    inline int {{func_name}}(long_t lag);
-{% endfor %}
-    
-{% for name in event_port_names %}
-    int {{name}}_response (long_t lag);
+    inline void {{func_name}}(long_t lag);
 {% endfor %}
 
     // The next two classes need to be friends to access the State_ class/member

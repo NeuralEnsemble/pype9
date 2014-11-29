@@ -19,7 +19,7 @@ from .. import BaseCodeGenerator
 from nineline import __version__
 from nineline.utils import remove_ignore_missing
 from nineml import Dimension
-from nineml.abstraction_layer.units import voltage as voltage_unit_dim
+from nineml.abstraction_layer.units import current as current_unit_dim
 
 # Add Nest installation directory to the system path
 if 'NEST_INSTALL_DIR' in os.environ:
@@ -121,12 +121,12 @@ class CodeGenerator(BaseCodeGenerator):
         #        need the gap junction framework.
         args['analog_port_names'] = [p.name
                                      for p in model.analog_receive_ports]
-        args['gap_junction_names'] = [p.name
-                                      for p in model.analog_receive_ports
-                                      if p.dimension == voltage_unit_dim]
         args['current_stim_names'] = [p.name
                                       for p in model.analog_receive_ports
-                                      if p.dimension != voltage_unit_dim]
+                                      if p.dimension == current_unit_dim]
+        args['gap_junction_names'] = [p.name
+                                      for p in model.analog_receive_ports
+                                      if p.dimension != current_unit_dim]
         # TODO: These are currently not handled anywhere
         args['reduce_port_names'] = [p.name for p in model.analog_reduce_ports]
         args['event_port_names'] = [p.name for p in model.event_receive_ports]
