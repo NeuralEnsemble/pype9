@@ -234,8 +234,8 @@ class HocImporter(object):
             if contents['parent_name'] is None:
                 self.model.add_node_with_parent(seg, self.model.get_root())
             else:
-                self.model.add_node_with_parent(seg,
-                                           segments[contents['parent_name']])
+                self.model.add_node_with_parent(
+                    seg, segments[contents['parent_name']])
         # Loop through all segments (depth-first search from root) and set
         # proximal offsets and missing 3d points
         for seg in self.model.segments:
@@ -262,21 +262,21 @@ class HocImporter(object):
             if name == 'Ra':
                 if isinstance(params, dict):
                     for key, vals in self.param_combinations(name, params):
-                        self.model.add_component(AxialResistanceModel(key,
-                                                                 vals['Ra']))
+                        self.model.add_component(
+                            AxialResistanceModel(key, vals['Ra']))
                 else:
-                    self.model.add_component(AxialResistanceModel('Ra',
-                                                             float(params)))
+                    self.model.add_component(
+                        AxialResistanceModel('Ra', float(params)))
             elif name == 'capacitance' or name == 'cm':
                 if name == 'cm':
                     name = 'capacitance'
                 if isinstance(params, dict):
                     for key, vals in self.param_combinations(name, params):
                         self.model.add_component(
-                                     MembraneCapacitanceModel(key, vals['cm']))
+                            MembraneCapacitanceModel(key, vals['cm']))
                 else:
                     self.model.add_component(
-                                 MembraneCapacitanceModel('cm', float(params)))
+                        MembraneCapacitanceModel('cm', float(params)))
             # Otherwise if params is a dict it should be a general density
             # mechanism with multiple parameter groups
             elif isinstance(params, dict):
@@ -289,7 +289,7 @@ class HocImporter(object):
             # is a fairly safe assumption
             elif name.startswith('e'):
                 self.model.add_component(IonConcentrationModel(name[1:],
-                                                           float(params)))
+                                                               float(params)))
             # Else it should be single parameter of a mechanism that has a
             # constant value
             else:
@@ -299,12 +299,12 @@ class HocImporter(object):
                     raise Exception("Unrecognised inserted mechanism")
                 comp_name = comp_name[0]
                 param_name = self.strip_comp(name, comp_name)
-                self.model.add_component(IonChannelModel(comp_name, comp_name,
-                                                  {param_name: float(params)}))
+                self.model.add_component(
+                    IonChannelModel(comp_name, comp_name,
+                                    {param_name: float(params)}))
         for name, params in point_procs.iteritems():
             # FIXME: This is a poor assumption (that point-processes starting
             # with I are current clamps), not sure how to improve though
-            # @IgnorePep8
             if name.startswith('I'):
                 if name != 'IClamp':
                     print ("Warning: assuming '{}' is a current clamp"
@@ -375,10 +375,9 @@ class HocImporter(object):
         if len(contents['real cells']) == 0:
             raise Exception("No cells found to import")
         elif len(contents['real cells']) > 1:
+            keys = ','.join(c[5:] for c in contents['real cells'].keys())
             raise Exception("Multiple cells ('{}') found, can only import one"
-                            .format(', '.join(c[5:]
-                                              for c in contents['real cells'].\
-                                                                      keys())))
+                            .format(keys))
         inserted_mechs = contents['real cells']['root soma']['inserted '
                                                              'mechanisms']
         mechs_list = contents['Density Mechanisms']['Mechanisms in use']
@@ -402,8 +401,8 @@ class HocImporter(object):
 
     def _map_segments_to_components(self):
         for seg in self.model.segments:
-            for mech_name, param_sets in seg.get_content()['inserted'].\
-                                                                   iteritems():
+            for (mech_name,
+                 param_sets) in seg.get_content()['inserted'].iteritems():
                 for params in param_sets:
                     comp = [c for c in self.model.components.itervalues()
                             if c.class_name == mech_name and
@@ -413,7 +412,7 @@ class HocImporter(object):
                     assert len(comp) < 2
                     if not comp:
                         if mech_name in ('Exp2Syn', 'APCount'):
-                            continue  #FIXME: Skipping Exp2Syn
+                            continue  # FIXME: Skipping Exp2Syn
                         else:
                             raise Exception("Could not find matching component"
                                             "for '{}' mechs with params:\n{}"
