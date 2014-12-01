@@ -42,7 +42,7 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
 	
 		// adaptive step integration
         while (tt < tout) {
-            const int status = {{solver_name}} (B_.sys_, tout, &tt, B_.y, B_.yp, {{solver_abbrev}}_NORMAL);
+            const int status = {{solver_name}} (B_.sys_, tout, &tt, B_.y{% if ode_solver == 'ida' %}, B_.yp{% endif %}, {{solver_abbrev}}_NORMAL);
             switch (status) {
                 case {{solver_abbrev}}_SUCCESS:      continue;
                 case {{solver_abbrev}}_ROOT_RETURN: {

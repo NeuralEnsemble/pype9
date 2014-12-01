@@ -106,12 +106,17 @@
   }
 {% endif %}
 
-{% if ss_solver == "kinsol" %}
+{% if ss_solver %}
+    {% if ss_solver == "kinsol" %}
 extern "C" int {{ModelName}}_steadystate (N_Vector u, N_Vector f, void* pnode) {
-{% else %}
+    {% elif ss_solver == 'gsl' %}
 extern "C" int {{ModelName}}_steadystate (const gsl_vector *u, void *pnode, gsl_vector *f) {
+    {% endif %}
+   return 0;
+}
 {% endif %}
-{#
+{# Old steady state implementation
+
 {% if steadystate.localVars %}
   double {{steadystate.localVars | join(", ")}};
 {% endif %}
@@ -146,6 +151,4 @@ extern "C" int {{ModelName}}_steadystate (const gsl_vector *u, void *pnode, gsl_
 
 {% endfor %}
 #}
-   return 0;
-}
 //---------------- steadystate.tmpl ---------------//

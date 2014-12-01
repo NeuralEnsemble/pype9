@@ -56,7 +56,7 @@ extern "C" int {{func_name}} (double t_, const double y_[], double f_[], void* p
     
     // Map states used in dynamics to current namespace
     {% for state in req_defs.states %}
-    const double_t {{state.name}} = y_[{{ModelName}}::State_::{{state.name}}_INDEX];
+    const double_t {{state.name}} = ITEM(y_, {{ModelName}}::State_::{{state.name}}_INDEX);
     {% endfor %}
    
     // Evaluate aliases used in differential equations
@@ -66,7 +66,7 @@ extern "C" int {{func_name}} (double t_, const double y_[], double f_[], void* p
 
     // Evaluate differential equations
     {% for td in time_derivatives %}
-    f_[{{ModelName}}::State_::{{td.dependent_variable}}_INDEX] = {{td.rhs}};
+    ITEM(f_, {{ModelName}}::State_::{{td.dependent_variable}}_INDEX) = {{td.rhs}};
     {% endfor %}
 
     {% if ode_solver in ('cvode', 'ida') %}
