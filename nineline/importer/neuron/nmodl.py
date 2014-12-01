@@ -229,16 +229,16 @@ class NMODLImporter(object):
                 # mod file parameters
                 if n not in self.properties or isnan(self.properties[n][0]):
                     if n == 'e' + name:
-                        dimension = 'voltage'
+                        dimension = un.voltage
                     elif n == 'i' + name:
-                        dimension = 'membrane_current'
+                        dimension = un.currentDensity
                     else:
-                        dimension = 'concentration'
+                        dimension = un.concentration
                     self.analog_ports[n] = AnalogReceivePort(
                         n, dimension=dimension)
             for n in write:
                 self.analog_ports[n] = AnalogSendPort(
-                    n, dimension='membrane_current')
+                    n, dimension=un.currentDensity)
         # Create parameters for each property
         for name, (_, units) in self.properties.iteritems():
             if name not in self.analog_ports:
@@ -255,12 +255,12 @@ class NMODLImporter(object):
                 uses_diam = True
         if uses_voltage:
             self.analog_ports['v'] = AnalogReceivePort(
-                'v', dimension='voltage')
+                'v', dimension=un.voltage)
         if uses_celsius and 'celsius' not in self.parameters:
             self.analog_ports['celsius'] = AnalogReceivePort(
-                'celsius', dimension='absolute_temperature')
+                'celsius', dimension=un.temperature)
         if uses_diam:
-            self.parameters['diam'] = Parameter('diam', dimension='length')
+            self.parameters['diam'] = Parameter('diam', dimension=un.length)
 
     def _create_regimes(self, expand_kinetics=True):
         self.regimes = []
