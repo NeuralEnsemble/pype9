@@ -4,9 +4,9 @@
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
-//-----------------------------------------//
+//----------------------------------------------//
 // This section was generated from trigger.tmpl //
-//-----------------------------------------//
+//----------------------------------------------//
 {% if ode_solver in ('cvode', 'ida') %}
 extern "C" int {{ModelName}}_trigger (double t, N_Vector y,{% if ode_solver == 'ida' %} N_Vector yp,{% endif %}
                                     double *g, void* pnode) {

@@ -47,7 +47,7 @@ class CodeGenerator(BaseCodeGenerator):
         self.specials_dir = self._get_specials_dir()
 
     def _extract_template_args(self, component, initial_state, ode_solver,
-                               ss_method, abs_tolerance, rel_tolerance,
+                               ss_solver, abs_tolerance, rel_tolerance,
                                v_threshold):
         raise NotImplementedError
 

@@ -159,7 +159,7 @@ from nineline.cells.code_gen.nest import CodeGenerator
 # with open(join(build_dir, 'hodgkin_huxley.cpp'), 'w') as f:
 #     f.write(output_cpp)
 import nineml
-from os.path import dirname, join, abspath, realpath
+from os.path import dirname, join, abspath
 build_dir = join(dirname(__file__), 'build')
 test_dir = abspath(join(dirname(__file__), '..', 'data',
                         'xml'))
@@ -169,7 +169,8 @@ comp = nineml.read(component_file)['HodgkinHuxleyModified']
 #                                   'examples', 'HodgkinHuxleyInitialState.xml')
 code_generator = CodeGenerator()
 code_generator.generate(component_file, 0.0,  # initial_state_file,
-                        build_mode='generate_only')
+                        build_mode='generate_only',
+                        ode_solver='cvode', v_threshold=None)
 
 # biophysics_name = 'HodgkinHuxleyClass'
 # builder.create_model_files(biophysics_name, test_file, build_dir)

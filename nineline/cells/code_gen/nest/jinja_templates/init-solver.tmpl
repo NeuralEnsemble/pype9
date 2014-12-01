@@ -51,7 +51,7 @@
     if (check_flag(&status, "{{solver_prefix}}Init", 1))
         throw {{solver_prefix}}SolverFailure (get_name(), status);
     
-    {% if ("V_t" in defaultDefs) %}
+    {% if v_threshold %}
     /* Spike event handler (detects zero-crossing of V-V_t) */
     status = {{solver_prefix}}RootInit(B_.sys_, 1, ({{solver_abbrev}}RootFn){{ModelName}}_event);
     if (check_flag(&status, "{{solver_prefix}}RootInit", 1))
@@ -81,7 +81,7 @@
         throw {{solver_prefix}}SolverFailure (get_name(), status);
     
     /* Sets maximum step size. */
-    status = {{solver_prefix}}SetMaxStep (B_.sys_,{% if maxstep %}{{maxstep}}{% else %}B_.step_{% endif %});
+    status = {{solver_prefix}}SetMaxStep (B_.sys_,{% if max_step_size %}{{max_step_size}}{% else %}B_.step_{% endif %});
     if (check_flag(&status, "{{solver_prefix}}SetMaxStep", 1))
         throw {{solver_prefix}}SolverFailure (get_name(), status);
     

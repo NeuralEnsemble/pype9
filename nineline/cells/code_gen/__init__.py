@@ -54,9 +54,9 @@ class BaseCodeGenerator(object):
         self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate)
 
     @abstractmethod
-    def _extract_template_args(self, component, initial_state, ode_solver,
-                               ss_method, abs_tolerance, rel_tolerance,
-                               v_threshold):
+    def _extract_template_args(self, component, initial_state, v_threshold,
+                               ode_solver, ss_solver, abs_tolerance,
+                               rel_tolerance, max_step_size):  # FIXME: These should be optional kwargs because they will differ between simulators @IgnorePep8
         """
         Extracts the required information from the 9ML model into a dictionary
         containing the relevant arguments for the Jinja2 templates.
@@ -73,8 +73,9 @@ class BaseCodeGenerator(object):
         pass
 
     def generate(self, component, initial_state, install_dir=None,
-                 build_dir=None, ode_solver=None,
-                 build_mode='lazy', verbose=True):
+                 build_dir=None, ode_solver=None, build_mode='lazy',
+                 v_threshold=None, abs_tolerance=1e-7, rel_tolerance=1e-7,
+                 max_step_size=None, verbose=True):
         """
         Generates and builds the required NMODL files for a given NCML cell
         class
@@ -206,9 +207,17 @@ class BaseCodeGenerator(object):
         # Generate source files from NineML code
         if generate_source:
             self._clean_src_dir(src_dir, component.name)
-            self.generate_source_files(component, initial_state, src_dir,
-                                       compile_dir, install_dir, ode_solver,
-                                       verbose)
+            self.generate_source_files(component=component,
+                                       initial_state=initial_state,
+                                       src_dir=src_dir,
+                                       compile_dir=compile_dir,
+                                       install_dir=install_dir,
+                                       v_threshold=v_threshold,
+                                       ode_solver=ode_solver,
+                                       abs_tolerance=abs_tolerance,
+                                       rel_tolerance=rel_tolerance,
+                                       max_step_size=max_step_size,
+                                       verbose=verbose)
             # Write the timestamp of the 9ML file used to generate the source
             # files
             with open(nineml_mod_time_path, 'w') as f:
@@ -224,10 +233,10 @@ class BaseCodeGenerator(object):
         return install_dir
 
     def generate_source_files(self, component, initial_state, src_dir,
-                              compile_dir, install_dir, ode_solver='gsl',
-                              ss_method=False, abs_tolerance=1e-7,
-                              rel_tolerance=1e-7, v_threshold=None,
-                              verbose=True):
+                              compile_dir, install_dir, v_threshold=None,
+                              ode_solver='gsl', ss_solver=False,
+                              abs_tolerance=1e-7, rel_tolerance=1e-7,
+                              max_step_size=None, verbose=True):
         """
         Generates the source files for the relevant simulator
         """
@@ -236,10 +245,11 @@ class BaseCodeGenerator(object):
             ode_solver = self._DEFAULT_SOLVER
         # Extract relevant information from 9ml
         # component/class/initial_state
-        template_args = self._extract_template_args(component, initial_state,
-                                                    ode_solver, ss_method,
-                                                    abs_tolerance,
-                                                    rel_tolerance, v_threshold)
+        template_args = self._extract_template_args(
+            component, initial_state, v_threshold=v_threshold,
+            ode_solver=ode_solver, ss_solver=ss_solver,
+            abs_tolerance=abs_tolerance, rel_tolerance=rel_tolerance,
+            max_step_size=max_step_size)
         # Render source files
         self._render_source_files(template_args, src_dir, compile_dir,
                                   install_dir, verbose)

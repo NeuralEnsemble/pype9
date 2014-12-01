@@ -51,9 +51,9 @@ class CodeGenerator(BaseCodeGenerator):
                                    shell=True)
         self._compiler = compiler[:-1]  # strip trailing \n
 
-    def _extract_template_args(self, component, initial_state, ode_solver,
-                               ss_method, abs_tolerance, rel_tolerance,
-                               v_threshold):
+    def _extract_template_args(self, component, initial_state, v_threshold,
+                               ode_solver, ss_solver, abs_tolerance,
+                               rel_tolerance, max_step_size):
         model = component.component_class
         args = {}
         # Set model name and general information ------------------------------
@@ -70,13 +70,14 @@ class CodeGenerator(BaseCodeGenerator):
             args['solver_abbrev'] = 'IDA'
             args['solver_prefix'] = 'IDA'
             args['solver_name'] = 'IDASolve'
-        args['ss_solver'] = ss_method
+        args['ss_solver'] = ss_solver
         # Set tolerances ------------------------------------------------------
         args['abs_tolerance'] = abs_tolerance
         args['rel_tolerance'] = rel_tolerance
+        args['max_step_size'] = max_step_size
         # Set parameters and default values -----------------------------------
         parameter_names = [p.name for p in model.parameters]
-        args['parameter_names'] = parameter_names + ['V_t']
+        args['parameter_names'] = parameter_names + ['V_t']  # FIXME: This voltage threshold shouldn't be hard-coded here @IgnorePep8
         args['parameter_default'] = [component.properties[p].value
                                      for p in parameter_names]
         # TODO: Need to ask Ivan out why scaling is required in some cases

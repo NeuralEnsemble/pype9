@@ -52,7 +52,7 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
 	                for (int i = 0; i < N; i++)
 	                    S_.y_[i] = ITEM(B_.y,i);
 	                network()->send(*this, se, lag);
-	                adjust_zero_crossings(B_.y, {% if abstol %}{{abstol}}{% else %}1e-7{% endif %});
+	                adjust_zero_crossings(B_.y, {{abs_tolerance}});
                     continue;
                 }
                 case {{solver_abbrev}}_TSTOP_RETURN: break;
@@ -78,16 +78,16 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
 	        throw GSLSolverFailure(get_name(), status);
 	    }
 	    
-	// Check threshold if not refractory and emit spike if crossed
-    if ( S_.r_ > 0 )
-       S_.r_--;
-    else if (S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX] >= P_.V_t &&
-             V_.U_old_ > S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX]) {
-        S_.r_ = V_.RefractoryCounts_;
-        set_spiketime(Time::step(origin.get_steps()+lag+1));
-        SpikeEvent se;
-        network()->send(*this, se, lag);
-    }
+		// Check threshold if not refractory and emit spike if crossed
+	    if ( S_.r_ > 0 )
+	       S_.r_--;
+	    else if (S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX] >= P_.V_t &&
+	             V_.U_old_ > S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX]) {
+	        S_.r_ = V_.RefractoryCounts_;
+	        set_spiketime(Time::step(origin.get_steps()+lag+1));
+	        SpikeEvent se;
+	        network()->send(*this, se, lag);
+	    }
 {% endif %}
 
 {# Event handling #}
