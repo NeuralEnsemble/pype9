@@ -37,6 +37,6 @@ extern "C" int {{ModelName}}_trigger (double t, N_Vector y,{% if ode_solver == '
     return 0;
 }
 {% elif ode_solver == 'gsl' %}
-
+    // Trigger is hard coded as V_m > V_t if V_t is present at the moment.
 {% endif %}
 // ------------------- NEST-trigger.tmpl ------------------------//
