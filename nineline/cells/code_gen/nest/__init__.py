@@ -169,7 +169,7 @@ class CodeGenerator(BaseCodeGenerator):
         self._render_to_file('NEST-header.tmpl', template_args,
                              model_name + '.h', src_dir)
         # Render C++ class file
-        self._render_to_file('NEST.tmpl', template_args, model_name + '.cpp',
+        self._render_to_file('NEST-main.tmpl', template_args, model_name + '.cpp',
                              src_dir)
         build_args = {'celltype_name': model_name, 'src_dir': src_dir}
         # Render Loader header file

@@ -1,16 +1,15 @@
-{# This template provides a function to handle CVODE events
+{# This template provides a function to trigger CVODE/IDA events
 
    Authors: Ivan Raikov and Thomas G. Close
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
-
-//-------------------------------------------------------//
-// This section was generated from NEST-cvode-event.tmpl //
-//-------------------------------------------------------//
-
-extern "C" int {{ModelName}}_event (double t, N_Vector y, double *g,
-                                    void* pnode) {
+//---------------------------------------------------//
+// This section was generated from NEST-trigger.tmpl //
+//---------------------------------------------------//
+{% if ode_solver in ('cvode', 'ida') %}
+extern "C" int {{ModelName}}_trigger (double t, N_Vector y,{% if ode_solver == 'ida' %} N_Vector yp,{% endif %}
+                                    double *g, void* pnode) {
     double v, vt; v = -1.0; vt = 0.0;
 
     // S is shorthand for the type that describes the model state
@@ -28,14 +27,16 @@ extern "C" int {{ModelName}}_event (double t, N_Vector y, double *g,
     const struct {{ModelName}}::State_ *state;
     state = &(node.S_);
 
-{% if v_threshold %}
-    v = ITEM (y, {{v_index}});
+    {% if v_threshold %}
+    v = ITEM(y, {{ModelName}}::State_::{{membrane_voltage}}_INDEX);
     g[0] = v - params->{{v_threshold}};
-{% else %}
+    {% else %}
     g[0] = -1.0;
-{% endif %}
+    {% endif %}
 
     return 0;
 }
+{% elif ode_solver == 'gsl' %}
 
-// ------------------- NEST-cvode-event.tmpl ------------------------//
+{% endif %}
+// ------------------- NEST-trigger.tmpl ------------------------//
