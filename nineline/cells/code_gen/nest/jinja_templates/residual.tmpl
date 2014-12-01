@@ -5,9 +5,9 @@
 #}
 {% if (ode_solver == "ida") %}
 
-//----------------------------------------------------//
+//-----------------------------------------------//
 // This section was generated from residual.tmpl //
-//----------------------------------------------------//
+//-----------------------------------------------//
 extern "C" int {{ModelName}}_residual (double t, N_Vector y, N_Vector yp, N_Vector f, void* pnode)
 {
    int status; 

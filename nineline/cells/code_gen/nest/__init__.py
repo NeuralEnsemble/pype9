@@ -171,7 +171,10 @@ class CodeGenerator(BaseCodeGenerator):
         # Render C++ class file
         self._render_to_file('main.tmpl', template_args, model_name + '.cpp',
                              src_dir)
-        build_args = {'celltype_name': model_name, 'src_dir': src_dir}
+        build_args = {'celltype_name': model_name, 'src_dir': src_dir,
+                      'version': __version__,
+                      'timestamp': datetime.now().strftime('%a %d %b %y '
+                                                           '%I:%M:%S%p')}
         # Render Loader header file
         self._render_to_file('loader-header.tmpl', build_args,
                              model_name + 'Loader.h', src_dir)

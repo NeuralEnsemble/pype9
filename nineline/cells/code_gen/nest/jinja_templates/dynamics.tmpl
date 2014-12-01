@@ -30,9 +30,9 @@
    Copyright Okinawa Institute of Science and Technology Graudate University 2014   
 #}
 
-//----------------------------------------------------//
+//-----------------------------------------------//
 // This section was generated from dynamics.tmpl //
-//----------------------------------------------------//
+//-----------------------------------------------//
 {% for func_name, time_derivatives, req_defs in dynamics %} 
     {%- if ode_solver in ('cvode', 'ida') -%}
 extern "C" int {{func_name}} (double t_, N_Vector y_, N_Vector f_, void* pnode_) {

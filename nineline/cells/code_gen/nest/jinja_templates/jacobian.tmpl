@@ -5,9 +5,9 @@
 #}
 {% if (ode_solver == "gsl") %}
 
-//----------------------------------------------------//
+//-----------------------------------------------//
 // This section was generated from jacobian.tmpl //
-//----------------------------------------------------//
+//-----------------------------------------------//
 
 /** Diagonal Jacobian approximation (for GSL): (f(s+.01) - f(s))/.001 */
 extern "C" int {{ModelName}}_jacobian (double t, const double y[], double *dfdy, double dfdt[], void* pnode) {
