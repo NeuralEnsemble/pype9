@@ -4,8 +4,8 @@ from os.path import dirname, join, abspath
 build_dir = join(dirname(__file__), 'build')
 test_dir = abspath(join(dirname(__file__), '..', 'data',
                         'xml'))
-component_file = join(test_dir, 'HodgkinHuxleyModified.xml')
-comp = nineml.read(component_file)['HodgkinHuxleyModified']
+component_file = join(test_dir, 'Golgi_hcn2.xml')
+comp = nineml.read(component_file)['Golgi_hcn2Class']
 # initial_state_file = join(
 #     dirname(__file__), '..', '..', 'examples',
 #     'HodgkinHuxleyInitialState.xml')
