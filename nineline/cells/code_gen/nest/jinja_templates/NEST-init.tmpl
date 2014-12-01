@@ -14,7 +14,7 @@
 {{ModelName}}::State_::State_(const Parameters_& p) {
 
     const Parameters_ *params = &p;
-{% if (ode_method == "gsl") %}
+{% if (ode_solver == "gsl") %}
     r_ = 0;
 {% endif %}
 
@@ -69,7 +69,7 @@
  */
 {{ModelName}}::State_::State_(const State_& s) {
 
-{% if (ode_method == "gsl") %}
+{% if (ode_solver == "gsl") %}
   r_ = s.r_;
 {% endif %}
         
@@ -82,7 +82,7 @@
  */
 {{ModelName}}::State_& {{ModelName}}::State_::operator=(const State_& s) {
 
-{% if (ode_method == "gsl") %}
+{% if (ode_solver == "gsl") %}
   r_ = s.r_;
 {% endif %}
         
@@ -95,7 +95,7 @@
 
 void {{ModelName}}::calibrate() {
     B_.logger_.init();  
-{% if (ode_method == "gsl") %}
+{% if (ode_solver == "gsl") %}
     V_.U_old_ = S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX];
     {% if refractory_period %}
     V_.RefractoryCounts_ = Time(Time::ms(P_.t_ref)).get_steps();

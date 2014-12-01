@@ -19,19 +19,19 @@
 #include "universal_data_logger.h"
 #include "recordables_map.h"
 
-{% if (ode_method == "cvode") %}
+{% if (ode_solver == "cvode") %}
 #include <sundials/sundials_types.h> /* definition of type realtype */
 #include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., macros */
 #include <cvode/cvode.h>       /* prototypes for CVODE fcts., consts. */
 #include <cvode/cvode_diag.h>    /* prototype for CVDiag */
 #define ITEM(v,i)  NV_Ith_S(v,i)  /* Ith component in a vector */
-{% elif (ode_method == "ida") %}
+{% elif (ode_solver == "ida") %}
 #include <sundials/sundials_types.h> /* definition of type realtype */
 #include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., macros */
 #include <ida/ida.h>         /* prototypes for IDA fcts., consts. */
 #include <ida/ida_dense.h>
 #define ITEM(v,i)  NV_Ith_S(v,i)  /* Ith component in a vector */
-{% elif (ode_method == "gsl") %}
+{% elif (ode_solver == "gsl") %}
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_sf_exp.h>
@@ -52,18 +52,18 @@
 
 namespace nest {
 
-{% if ode_method == "cvode" %}
+{% if ode_solver == "cvode" %}
     {% include "NEST-cvode-prelude.tmpl" %}
-{% elif ode_method == "ida" %}
+{% elif ode_solver == "ida" %}
     {% include "NEST-ida-prelude.tmpl" %}
 {% endif %}
 {% if steady_state_method == "kinsol" %}
     {% include "NEST-kinsol-prelude.tmpl" %}
 {% endif %}
-{% if ode_method == "cvode" %}
+{% if ode_solver == "cvode" %}
   extern "C" int {{ModelName}}_dynamics (double, const N_Vector, N_Vector, void*);
   extern "C" int {{ModelName}}_event (double, N_Vector, double *, void*);
-{% elif ode_method == "ida" %}
+{% elif ode_solver == "ida" %}
   extern "C" int {{ModelName}}_residual (double, N_Vector, N_Vector, N_Vector, void*);
   extern "C" int {{ModelName}}_event (double, N_Vector, N_Vector, double *, void*);
 {% else %}
@@ -112,13 +112,13 @@ namespace nest {
     void update(Time const &, const long_t, const long_t);
   
     // Set dynamics methods (the ones that actually model the dynamics) as friends
-{% if (ode_method == "cvode") %}
+{% if (ode_solver == "cvode") %}
     friend int {{ModelName}}_dynamics (double, const N_Vector, N_Vector, void*);
     friend int {{ModelName}}_event (double, N_Vector, double *, void*);
-{% elif (ode_method == "ida") %}
+{% elif (ode_solver == "ida") %}
     friend int {{ModelName}}_residual (double, N_Vector, N_Vector, N_Vector, void*);
     friend int {{ModelName}}_event (double, N_Vector, N_Vector, double *, void*);
-{% elif (ode_method == "gsl") %}
+{% elif (ode_solver == "gsl") %}
     friend int {{ModelName}}_dynamics (double, const double*, double*, void*);
 {% endif %} 
 {% if steady_state_method == "kinsol" %}
@@ -213,7 +213,7 @@ namespace nest {
       };
 	
       double y_[STATE_VEC_SIZE_];
-{% if (ode_method == "gsl") %}
+{% if (ode_solver == "gsl") %}
       int_t r_; /* refractory counter */
 {% endif %}
 		
@@ -225,9 +225,9 @@ namespace nest {
     }; // end struct State_
 
 
-{% if ((ode_method == "cvode") or (ode_method == "ida"))  %}
+{% if ((ode_solver == "cvode") or (ode_solver == "ida"))  %}
     struct Variables_ {};
-{% elif (ode_method == "gsl")  %}
+{% elif (ode_solver == "gsl")  %}
     struct Variables_ { int_t RefractoryCounts_; double U_old_; /* for spike-detection */ };
 {% endif %}
 
@@ -238,14 +238,14 @@ namespace nest {
         UniversalDataLogger<{{ModelName}}> logger_;
 
         // Structures required by the solver
-{% if (ode_method == "cvode") %}
+{% if (ode_solver == "cvode") %}
         N_Vector y;  //!< current state vector used by CVode
         void *   sys_;  //!< CVode control structure
-{% elif (ode_method == "ida") %}
+{% elif (ode_solver == "ida") %}
         N_Vector y, y1;  //!< current state vector used by IDA
         N_Vector yp;  //!< derivatives vector used by IDA
         void *   sys_;  //!< IDA control structure
-{% elif (ode_method == "gsl") %}
+{% elif (ode_solver == "gsl") %}
 		gsl_odeiv2_step*  s_;  //!< stepping function
 		gsl_odeiv2_control* c_;  //!< adaptive stepsize control function
 		gsl_odeiv2_evolve*  e_;  //!< evolution function

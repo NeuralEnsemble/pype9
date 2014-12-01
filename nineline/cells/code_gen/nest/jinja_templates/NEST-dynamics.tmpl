@@ -14,7 +14,7 @@
 
    Template variables are:
 
-   - ode_method: the current used solver method; can be "cvode" "ida" or "gsl"
+   - ode_solver: the current used solver method; can be "cvode" "ida" or "gsl"
    - ModelName: the name of the current system
    - localVars: list of strings with the name of all local variables appearing in the system
    - parameterDefs - the parameter equations of the form "name = params->name"
@@ -34,7 +34,7 @@
 // This section was generated from NEST-dynamics.tmpl //
 //----------------------------------------------------//
 {% for func_name, time_derivatives, req_defs in dynamics %} 
-    {%- if ode_method in ('cvode', 'ida') -%}
+    {%- if ode_solver in ('cvode', 'ida') -%}
 extern "C" int {{func_name}} (double t_, N_Vector y_, N_Vector f_, void* pnode_) {
     {% else %}
 extern "C" int {{func_name}} (double t_, const double y_[], double f_[], void* pnode_) {
@@ -69,7 +69,7 @@ extern "C" int {{func_name}} (double t_, const double y_[], double f_[], void* p
     f_[{{ModelName}}::State_::{{td.dependent_variable}}_INDEX] = {{td.rhs}};
     {% endfor %}
 
-    {% if ode_method in ('cvode', 'ida') %}
+    {% if ode_solver in ('cvode', 'ida') %}
     return 0;
     {% else %}
     return GSL_SUCCESS;

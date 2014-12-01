@@ -51,7 +51,7 @@ class CodeGenerator(BaseCodeGenerator):
                                    shell=True)
         self._compiler = compiler[:-1]  # strip trailing \n
 
-    def _extract_template_args(self, component, initial_state, ode_method,
+    def _extract_template_args(self, component, initial_state, ode_solver,
                                ss_method, abs_tolerance, rel_tolerance,
                                v_threshold):
         model = component.component_class
@@ -61,7 +61,15 @@ class CodeGenerator(BaseCodeGenerator):
         args['timestamp'] = datetime.now().strftime('%a %d %b %y %I:%M:%S%p')
         args['version'] = __version__
         # Set solver methods --------------------------------------------------
-        args['ode_method'] = ode_method
+        args['ode_solver'] = ode_solver
+        if ode_solver == 'cvode':
+            args['solver_abbrev'] = 'CV'
+            args['solver_prefix'] = 'CVode'
+            args['solver_name'] = 'CVode'
+        elif ode_solver == 'ida':
+            args['solver_abbrev'] = 'IDA'
+            args['solver_prefix'] = 'IDA'
+            args['solver_name'] = 'IDASolve'
         args['steady_state_method'] = ss_method
         # Set tolerances ------------------------------------------------------
         args['abs_tolerance'] = abs_tolerance

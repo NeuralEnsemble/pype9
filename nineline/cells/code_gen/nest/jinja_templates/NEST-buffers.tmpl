@@ -11,9 +11,9 @@
 
 {{ModelName}}::Buffers_::Buffers_({{ModelName}}& n)
     : logger_(n),
-{% if ode_method in ("cvode", "ida") %}    
+{% if ode_solver in ("cvode", "ida") %}    
       sys_(0),
-{% elif ode_method == "gsl" %}
+{% elif ode_solver == "gsl" %}
       s_(0),
       c_(0),
       e_(0),
@@ -28,9 +28,9 @@
 
 {{ModelName}}::Buffers_::Buffers_(const Buffers_&, {{ModelName}}& n)
     : logger_(n),
-{% if ode_method in ("cvode", "ida") %}    
+{% if ode_solver in ("cvode", "ida") %}    
       sys_(0),
-{% elif ode_method == "gsl" %}
+{% elif ode_solver == "gsl" %}
       s_(0),
       c_(0),
       e_(0),

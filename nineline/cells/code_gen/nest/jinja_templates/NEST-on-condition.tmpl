@@ -8,7 +8,7 @@
 //-------------------------------------------------------//
 // This section was generated from NEST-cvode-event.tmpl //
 //-------------------------------------------------------//
-{% if ode_method in ("cvode", "ida") %}
+{% if ode_solver in ("cvode", "ida") %}
 extern "C" int {{ModelName}}_on_condition (double t, N_Vector y, double *g,
                                            void* pnode) {
     double v, vt; v = -1.0; vt = 0.0;
@@ -37,7 +37,7 @@ extern "C" int {{ModelName}}_on_condition (double t, N_Vector y, double *g,
 
     return 0;
 }
-{% elif ode_method == "gsl" %}
+{% elif ode_solver == "gsl" %}
 inline {{ModelName}}::on_condition() {
 
 }

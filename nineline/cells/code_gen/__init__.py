@@ -54,7 +54,7 @@ class BaseCodeGenerator(object):
         self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate)
 
     @abstractmethod
-    def _extract_template_args(self, component, initial_state, ode_method,
+    def _extract_template_args(self, component, initial_state, ode_solver,
                                ss_method, abs_tolerance, rel_tolerance,
                                v_threshold):
         """
@@ -73,7 +73,7 @@ class BaseCodeGenerator(object):
         pass
 
     def generate(self, component, initial_state, install_dir=None,
-                 build_dir=None, ode_method=None,
+                 build_dir=None, ode_solver=None,
                  build_mode='lazy', verbose=True):
         """
         Generates and builds the required NMODL files for a given NCML cell
@@ -85,7 +85,7 @@ class BaseCodeGenerator(object):
         @param install_dir [str]: Path to the directory where the NMODL files
                                   will be generated and compiled
         @param build_dir [str]: Used to set the default 'install_dir' path
-        @param ode_method [str]: The ode_method option to be passed to the NeMo
+        @param ode_solver [str]: The ode_solver option to be passed to the NeMo
                              interpreter command
         @param build_mode [str]: Available build options:
                                   lazy - only build if files are modified
@@ -207,7 +207,7 @@ class BaseCodeGenerator(object):
         if generate_source:
             self._clean_src_dir(src_dir, component.name)
             self.generate_source_files(component, initial_state, src_dir,
-                                       compile_dir, install_dir, ode_method,
+                                       compile_dir, install_dir, ode_solver,
                                        verbose)
             # Write the timestamp of the 9ML file used to generate the source
             # files
@@ -224,7 +224,7 @@ class BaseCodeGenerator(object):
         return install_dir
 
     def generate_source_files(self, component, initial_state, src_dir,
-                              compile_dir, install_dir, ode_method='gsl',
+                              compile_dir, install_dir, ode_solver='gsl',
                               ss_method=False, abs_tolerance=1e-7,
                               rel_tolerance=1e-7, v_threshold=None,
                               verbose=True):
@@ -232,12 +232,12 @@ class BaseCodeGenerator(object):
         Generates the source files for the relevant simulator
         """
         # Set default solver if not provided with default for simulator target.
-        if not ode_method:
-            ode_method = self._DEFAULT_SOLVER
+        if not ode_solver:
+            ode_solver = self._DEFAULT_SOLVER
         # Extract relevant information from 9ml
         # component/class/initial_state
         template_args = self._extract_template_args(component, initial_state,
-                                                    ode_method, ss_method,
+                                                    ode_solver, ss_method,
                                                     abs_tolerance,
                                                     rel_tolerance, v_threshold)
         # Render source files

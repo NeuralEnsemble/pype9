@@ -1,0 +1,69 @@
+    int status, N, rootdir;
+    N = {{num_states}};
+
+    // only positive direction (rising edge) of spike events will be detected
+    rootdir = 1;
+    
+    /* Creates serial vector of length N */
+    B_.y = N_VNew_Serial(N);
+    if (check_flag((void *)B_.y, "N_VNew_Serial", 0))
+        throw {{solver_prefix}}SolverFailure (get_name(), 0);
+    
+    for (int i = 0; i < N; i++)
+       ITEM(B_.y,i) = S_.y_[i];
+    
+    /* Calls {{solver_prefix}}Create to create the solver memory and specify the 
+     * Backward Differentiation Formula and the use of a Newton iteration */
+    B_.sys_ = {{solver_prefix}}Create({{solver_abbrev}}_BDF, {{solver_abbrev}}_NEWTON);
+    if (check_flag((void *)B_.sys_, "{{solver_prefix}}Create", 0))
+        throw {{solver_prefix}}SolverFailure (get_name(), 0);
+    
+    /* Calls {{solver_prefix}}Init to initialize the integrator memory and specifies the
+     * right hand side function in y''=f(t,y), the initial time, and
+     * the initial values. */
+    status = {{solver_prefix}}Init (B_.sys_, {{ModelName}}_dynamics, 0.0, B_.y);
+    if (check_flag(&status, "{{solver_prefix}}Init", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+    {% if ("V_t" in defaultDefs) %}
+    
+    /* Spike event handler (detects zero-crossing of V-V_t) */
+    status = {{solver_prefix}}RootInit(B_.sys_, 1, ({{solver_abbrev}}RootFn){{ModelName}}_event);
+    if (check_flag(&status, "{{solver_prefix}}RootInit", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+    
+    /* Detect only the rising edge of spikes */
+    status = {{solver_prefix}}SetRootDirection(B_.sys_, &rootdir);
+    if (check_flag(&status, "{{solver_prefix}}SetRootDirection", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+    
+    {% endif %}
+    /* Sets the relative and absolute error tolerances of {{solver_prefix}}  */
+    status = {{solver_prefix}}SStolerances (B_.sys_, {{abs_tolerance}}, {{rel_tolerance}});
+    if (check_flag(&status, "{{solver_prefix}}SStolerances", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+    
+    /* Turns on {{solver_prefix}} stability limit detection (only applicable for order 3 and greater) */
+    status = {{solver_prefix}}SetStabLimDet (B_.sys_,true);
+    if (check_flag(&status, "{{solver_prefix}}SetStabLimDet", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+    
+    /* Sets the maximum order of {{solver_prefix}}  */
+    status = {{solver_prefix}}SetMaxOrd (B_.sys_,5);
+    if (check_flag(&status, "{{solver_prefix}}SetMaxOrd", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+    
+    /* Sets maximum step size. */
+    status = {{solver_prefix}}SetMaxStep (B_.sys_,{% if maxstep %}{{maxstep}}{% else %}B_.step_{% endif %});
+    if (check_flag(&status, "{{solver_prefix}}SetMaxStep", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+    
+    /* Calls {{solver_prefix}}SetUserData to configure the integrator to pass the 
+     * params structure to the right-hand function */
+    status = {{solver_prefix}}SetUserData(B_.sys_, reinterpret_cast<void*>(this));
+    if (check_flag(&status, "{{solver_prefix}}SetUserData", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+    
+    /* Initializes diagonal linear solver. */
+    status = CVDiag (B_.sys_);
+    if (check_flag(&status, "CVDiag", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
