@@ -53,12 +53,12 @@
 namespace nest {
 
 {% if ode_solver == "cvode" %}
-    {% include "NEST-cvode-prelude.tmpl" %}
+    {% include "cvode-prelude.tmpl" %}
 {% elif ode_solver == "ida" %}
-    {% include "NEST-ida-prelude.tmpl" %}
+    {% include "ida-prelude.tmpl" %}
 {% endif %}
 {% if steady_state_method == "kinsol" %}
-    {% include "NEST-kinsol-prelude.tmpl" %}
+    {% include "kinsol-prelude.tmpl" %}
 {% endif %}
 {% if ode_solver == "cvode" %}
     extern "C" int {{ModelName}}_dynamics (double, const N_Vector, N_Vector, void*);

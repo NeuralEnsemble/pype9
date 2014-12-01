@@ -66,7 +66,7 @@ void {{ModelName}}::init_buffers_() {
     B_.{{name}}_value = 0.0;
     {% endfor %}
 
-    {% include "NEST-init-solver.tmpl" %}    
+    {% include "init-solver.tmpl" %}    
 }
 
 // ------------------- NEST-buffers.tmpl ------------------------//

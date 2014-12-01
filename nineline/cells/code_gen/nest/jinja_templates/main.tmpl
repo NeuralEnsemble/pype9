@@ -1,0 +1,49 @@
+{# include files and other prelude definitions
+
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
+#}
+
+
+//---------------------------------------------------------------//
+// This section was generated from NEST.tmpl //
+//---------------------------------------------------------------//
+
+{% include "includes.tmpl" %}
+
+namespace nest {
+{% include "sundials-prelude.tmpl" %}
+
+{% include "fsolve-prelude.tmpl" %}
+
+{% include "dynamics.tmpl" %}
+
+{% include "residual.tmpl" %} {# used by IDA solver only #}
+
+{% include "steadystate.tmpl" %}
+
+{% include "jacobian.tmpl" %}
+
+{% include "parameters.tmpl" %}
+
+{% include "init-state.tmpl" %}
+
+{% include "accessors_modifiers.tmpl" %}
+
+{% include "buffers.tmpl" %}
+
+{% include "recordables.tmpl" %}
+
+{% include "constructors.tmpl" %}
+
+{% include "destructor.tmpl" %}
+
+{% include "trigger.tmpl" %}
+
+{% include "synaptic-transients.tmpl" %}
+
+{% include "update.tmpl" %}
+
+{% include "event-handle.tmpl" %}
+}
+// ------------------- NEST.tmpl ------------------------//
