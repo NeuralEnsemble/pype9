@@ -5,9 +5,9 @@
 #}
 
 
-//------------------------------------------------//
-// This section was generated from init.tmpl //
-//------------------------------------------------//
+//-------------------------------------------------//
+// This section was generated from init-state.tmpl //
+//-------------------------------------------------//
 /**
  * Construct state from parameters.
  */
@@ -24,7 +24,7 @@
 {% endfor %}
 
 {# Solve steady-state if required #}
-{# This needs some thinking out
+{# This needs some thinking out, not implemented yet
 {% if (ss_solver  == "kinsol") %}
     N_Vector {{SSvector}};
     ssvect = N_VNew_Serial({{steadyStateSize}});
@@ -104,4 +104,4 @@ void {{ModelName}}::calibrate() {
     {% endif %}
 {% endif %}
 }
-// ------------------- init.tmpl ------------------------//
+// ------------------- init-state.tmpl ------------------------//
