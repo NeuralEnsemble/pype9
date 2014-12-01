@@ -2,11 +2,13 @@
     // This section was generated from NEST-init-solver.tmpl //
     //-------------------------------------------------------//
 {% if ode_solver in ('cvode', 'ida') %}
-    int status, N, rootdir;
-    N = {{num_states}};
-
+    // Holds the return status values of the CVODE/IDA initialisations
+    int status;
+    
+    // Vector length (number of states)
+    int N = {{num_states}};
     // only positive direction (rising edge) of spike events will be detected
-    rootdir = 1;
+    int rootdir = 1;
     
     /* Creates serial vectors of length N */
     B_.y = N_VNew_Serial(N);

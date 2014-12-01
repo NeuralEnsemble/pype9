@@ -41,20 +41,29 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
 	    double tout = (current_steps+lag) * dt;
 	
 		// adaptive step integration
-		while (tt < tout) {
-		  const int status = {{solver_name}} (B_.sys_, tout, &tt, B_.y, B_.yp, {{solver_abbrev}}_NORMAL);
-	      switch (status) {
-	        case {{solver_abbrev}}_SUCCESS:      continue;
-	        case {{solver_abbrev}}_ROOT_RETURN:  {% include "NEST-emit-spike-cvode.tmpl" %};
-	        case {{solver_abbrev}}_TSTOP_RETURN: break;
-	        default:               throw {{solver_prefix}}SolverFailure (get_name(), 0);
-	      }
+        while (tt < tout) {
+            const int status = {{solver_name}} (B_.sys_, tout, &tt, B_.y, B_.yp, {{solver_abbrev}}_NORMAL);
+            switch (status) {
+                case {{solver_abbrev}}_SUCCESS:      continue;
+                case {{solver_abbrev}}_ROOT_RETURN: {
+                    set_spiketime(Time::ms(tt));
+	                SpikeEvent se;
+	                // Copy solver state to NEST state
+	                for (int i = 0; i < N; i++)
+	                    S_.y_[i] = ITEM(B_.y,i);
+	                network()->send(*this, se, lag);
+	                adjust_zero_crossings(B_.y, {% if abstol %}{{abstol}}{% else %}1e-7{% endif %});
+                    continue;
+                }
+                case {{solver_abbrev}}_TSTOP_RETURN: break;
+                default:
+                    throw {{solver_prefix}}SolverFailure (get_name(), 0);
+            }
 	   	}
 	
         // Copy items from CVODE/IDA vector to NEST state array.
 	    for (int i = 0; i < N; i++)
 	       S_.y_[i] = ITEM(B_.y, i);
-
 {% elif ode_solver == "gsl" %}
 	    V_.U_old_ = S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX];
 	
@@ -68,9 +77,17 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
 	      if (status != GSL_SUCCESS)
 	        throw GSLSolverFailure(get_name(), status);
 	    }
-    
-    {% include "NEST-emit-spike-gsl.tmpl" %}
-
+	    
+	// Check threshold if not refractory and emit spike if crossed
+    if ( S_.r_ > 0 )
+       S_.r_--;
+    else if (S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX] >= P_.V_t &&
+             V_.U_old_ > S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX]) {
+        S_.r_ = V_.RefractoryCounts_;
+        set_spiketime(Time::step(origin.get_steps()+lag+1));
+        SpikeEvent se;
+        network()->send(*this, se, lag);
+    }
 {% endif %}
 
 {# Event handling #}
