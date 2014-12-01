@@ -9,7 +9,6 @@
 """
 from __future__ import absolute_import
 from datetime import datetime
-from copy import deepcopy
 import weakref
 import numpy
 # MPI may not be required but NEURON sometimes needs to be initialised after
@@ -25,9 +24,9 @@ import neo
 import quantities as pq
 from nineline.cells.build.neuron import build_celltype_files
 import nineline.cells
-from nineline.cells import (in_units, SynapseModel, AxialResistanceModel,
+from nineline.cells import (in_units, AxialResistanceModel,
                             MembraneCapacitanceModel, DummyNinemlModel,
-                            PointProcessModel, IonConcentrationModel)
+                            IonConcentrationModel)
 from .. import create_unit_conversions, convert_units
 from pyNN.neuron.cells import VectorSpikeSource
 
@@ -57,10 +56,8 @@ _compound_SI_to_neuron_conversions = (((('A', 1), ('m', -2)),
                                        (('Ohm', 1), ('cm', 1))))
 
 
-(_basic_unit_dict,
- _compound_unit_dict) = create_unit_conversions(
-                                            _basic_SI_to_neuron_conversions,
-                                            _compound_SI_to_neuron_conversions)
+_basic_unit_dict, _compound_unit_dict = create_unit_conversions(
+    _basic_SI_to_neuron_conversions, _compound_SI_to_neuron_conversions)
 
 
 def convert_to_neuron_units(value, unit_str):
@@ -70,7 +67,7 @@ def convert_to_neuron_units(value, unit_str):
 
 class _BaseNineCell(nineline.cells.NineCell):
 
-    class Segment(nrn.Section):
+    class Segment(h.Section):
         """
         Wraps the basic NEURON section to allow non-NEURON attributes to be
         added to the segment. Additional functionality could be added as needed
@@ -207,17 +204,13 @@ class _BaseNineCell(nineline.cells.NineCell):
             # translator that intercepts getters and setters and redirects them
             # to the translated values.
             if translations:
-                super(_BaseNineCell.Segment,
-                      self).__setattr__(
-                                 component.name,
-                                 self.ComponentTranslator(
-                                                getattr(self(0.5),
-                                                        component.class_name),
-                                                translations))
+                super(_BaseNineCell.Segment, self).__setattr__(
+                    component.name, self.ComponentTranslator(
+                        getattr(self(0.5), component.class_name),
+                        translations))
             else:
-                super(_BaseNineCell.Segment,
-                      self).__setattr__(component.name, getattr(self(0.5),
-                                                        component.class_name))
+                super(_BaseNineCell.Segment, self).__setattr__(
+                    component.name, getattr(self(0.5), component.class_name))
             if isinstance(component, IonConcentrationModel):
                 setattr(self, component.param_name,
                         component.parameters[component.param_name])
@@ -327,10 +320,9 @@ class _BaseNineCell(nineline.cells.NineCell):
                     required_props.remove('cm')
                 else:
                     if comp.name in self.component_translations:
-                        translations = dict([(key, val[0])
-                                             for key, val in
-                                             self.component_translations[comp]\
-                                                                 .iteritems()])
+                        translations = dict(
+                            [(key, val[0]) for key, val in
+                             self.component_translations[comp].iteritems()])
                     else:
                         translations = None
                     seg.insert_distributed(comp, translations=translations)
@@ -345,7 +337,7 @@ class _BaseNineCell(nineline.cells.NineCell):
         for seg_model in self._model.segments:
             if seg_model.parent:
                 self.segments[seg_model.name]._connect(
-                                          self.segments[seg_model.parent.name])
+                    self.segments[seg_model.parent.name])
         # Set global variables (if there are multiple components of the same
         # class these variables will be set multiple times but that shouldn't
         # hurt
@@ -722,8 +714,9 @@ class NineCellStandAlone(_BaseNineCell):
                 analog_signal = neo.AnalogSignal(self._recordings[key],
                                                  sampling_period=h.dt * pq.ms,
                                                  t_start=0.0 * pq.ms,
-                                                 name='.'.join([x for x in key
-                                                            if x is not None]),
+                                                 name='.'.join(
+                                                     [x for x in key
+                                                      if x is not None]),
                                                  units=units)
                 if in_block:
                     segment.analogsignals.append(analog_signal)
@@ -796,7 +789,7 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
                 dct['component_translations'] = {}
             else:
                 build_options = nineml_model.biophysics.\
-                                                  build_hints['nemo']['neuron']
+                    build_hints['nemo']['neuron']
                 install_dir, dct['component_translations'] = \
                             build_celltype_files(nineml_model.biophysics.name,
                                                  nineml_model.url,

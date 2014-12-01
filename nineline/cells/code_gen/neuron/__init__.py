@@ -51,8 +51,11 @@ class CodeGenerator(BaseCodeGenerator):
                                v_threshold):
         raise NotImplementedError
 
-    def _render_source_files(self, template_args, src_dir, _, verbose):
-        raise NotImplementedError
+    def _render_source_files(self, template_args, src_dir, _, _):
+        model_name = template_args['ModelName']
+        # Render mod file
+        self._render_to_file('main.tmpl', template_args, model_name + '.mod',
+                             src_dir)
 
     def compile_source_files(self, compile_dir, component_name, verbose):
         """

@@ -389,5 +389,3 @@ class BaseCodeGenerator(object):
                      var_name), mapped_var in loaded_props.iteritems():
                     component_translations[comp_name][var_name] = mapped_var
         return component_translations
-    
-
