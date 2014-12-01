@@ -90,12 +90,13 @@ class TestNMODLImporter(unittest.TestCase):
         </NineML>""")
 
     def test_nmodl_import(self):
-        importer = NMODLImporter('/home/tclose/git/kbrain/external/'
-                                 'fabios_network/Golgi_hcn2.mod')
-        component, componentclass = importer.get_component_class('/tmp')
-#         imported_tree = etree.parse(fname)
-#         reference_tree = etree.fromstring(self.ref_xml)
-#         self.assertEqual(imported_tree, reference_tree)
+        importer = NMODLImporter(os.path.join(os.environ['HOME'],
+                                              'git/kbrain/external/',
+                                 'fabios_network/Golgi_hcn2.mod'))
+        componentclass = importer.get_component_class()
+        imported_tree = componentclass.to_xml()
+        reference_tree = etree.fromstring(self.ref_xml)
+        self.assertEqual(imported_tree, reference_tree)
 
 
 class TestNeuronImporter(unittest.TestCase):
@@ -122,8 +123,8 @@ class TestNeuronImporter(unittest.TestCase):
                                                    'external/fabios_network/'
                                                    '9ml/components'))
 if __name__ == '__main__':
-#     test = TestNMODLImporter()
-#     test.test_nmodl_import()
-    test = TestNeuronImporter()
-    test.test_neuron_import()
+    test = TestNMODLImporter()
+    test.test_nmodl_import()
+#     test = TestNeuronImporter()
+#     test.test_neuron_import()
     print "done"

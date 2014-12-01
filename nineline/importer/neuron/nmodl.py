@@ -11,9 +11,11 @@ from nineml.abstraction_layer.dynamics.component import ComponentClass
 from nineml.abstraction_layer.dynamics import Regime, StateVariable, OnEvent
 from nineml.abstraction_layer.dynamics.component.expressions import (
     Alias, TimeDerivative, StateAssignment)
-from nineml.abstraction_layer.dynamics.component.ports import (AnalogPort,
-                                                               EventPort)
-from nineml.user_layer.dynamics import IonDynamics
+from nineml.abstraction_layer.dynamics.component.ports import (
+    AnalogReceivePort, AnalogSendPort, EventReceivePort, EventSendPort)
+import nineml.abstraction_layer.units as un
+
+# from nineml.user_layer.dynamics import IonDynamics
 from collections import defaultdict
 
 
@@ -55,29 +57,29 @@ class NMODLImporter(object):
     # from a regular alias
     StateAssignment = collections.namedtuple("StateAssignment", "variable")
 
-    _inbuilt_constants = {'faraday': pq.Quantity(96485.3365, 'coulombs'),
+    _inbuilt_constants = {'faraday': pq.Quantity(96485.3365, 'coulomb'),
                           'k-mole': pq.Quantity(8.3144621, 'J/K'),
                           'pi': pq.Quantity(3.14159265359, 'dimensionless')}
 
-    _SI_to_dimension = {'m/s': 'conductance',
-                        'kg*m**2/(s**3*A)': 'voltage',
-                        'mol/m**3': 'concentration',
-                        'A/m**2': 'membrane_current',
-                        's': 'time',
-                        'K': 'absolute_temperature',
-                        'kg/(m**3*s)': 'flux',
-                        '1/(s*A)': 'mass_per_charge',
-                        'm': 'length',
-                        's**3*A**2/(kg*m**4)': 'membrane_conductance',
-                        'A': 'current',
-                        'A/s': 'change_in_current',
-                        's**3*A**2/(kg*m**2)': 'conductance',
-                        '1/s': 'frequency',
-                        's*A/m**3': 'charge_density',
-                        'm**3/(s*mol)': 'frequency_from_concentration',
-                        'mol/m**2': 'two_dimensional_density',
-                        's*A': 'charge',
-                        's**3*A/(kg*m**2)': 'inverse_voltage',
+    _SI_to_dimension = {'m/s': un.conductance,
+                        'kg*m**2/(s**3*A)': un.voltage,
+                        'mol/m**3': un.concentration,
+                        'A/m**2': un.currentDensity,
+                        's': un.time,
+                        'K': un.temperature,
+                        'kg/(m**3*s)': un.flux,
+                        '1/(s*A)': un.mass_per_charge,
+                        'm': un.length,
+                        's**3*A**2/(kg*m**4)': un.conductanceDensity,
+                        'A': un.current,
+                        'A/s': un.current_per_time,
+                        's**3*A**2/(kg*m**2)': un.conductance,
+                        '1/s': un.per_time,
+                        's*A/m**3': un.charge_density,
+                        'm**3/(s*mol)': un.per_time_per_concentration,
+                        'mol/m**2': un.substance_per_area,
+                        's*A': un.charge,
+                        's**3*A/(kg*m**2)': un.per_voltage,
                         None: None}
 
     def __repr__(self):
@@ -232,11 +234,11 @@ class NMODLImporter(object):
                         dimension = 'membrane_current'
                     else:
                         dimension = 'concentration'
-                    self.analog_ports[n] = AnalogPort(n, mode='recv',
-                                                      dimension=dimension)
+                    self.analog_ports[n] = AnalogReceivePort(
+                        n, dimension=dimension)
             for n in write:
-                self.analog_ports[n] = AnalogPort(n, mode='send',
-                                                  dimension='membrane_current')
+                self.analog_ports[n] = AnalogSendPort(
+                    n, dimension='membrane_current')
         # Create parameters for each property
         for name, (_, units) in self.properties.iteritems():
             if name not in self.analog_ports:
@@ -252,11 +254,11 @@ class NMODLImporter(object):
             if re.search(r'(\b)diam(\b)', expr):
                 uses_diam = True
         if uses_voltage:
-            self.analog_ports['v'] = AnalogPort('v', mode='recv',
-                                                dimension='voltage')
+            self.analog_ports['v'] = AnalogReceivePort(
+                'v', dimension='voltage')
         if uses_celsius and 'celsius' not in self.parameters:
-            self.analog_ports['celsius'] = AnalogPort(
-                'celsius', mode='recv', dimension='absolute_temperature')
+            self.analog_ports['celsius'] = AnalogReceivePort(
+                'celsius', dimension='absolute_temperature')
         if uses_diam:
             self.parameters['diam'] = Parameter('diam', dimension='length')
 
@@ -272,13 +274,12 @@ class NMODLImporter(object):
                 # Create an analog port from which to read the event weight
                 # from. NB: this is just a hack for now until EventPorts
                 # support parameters
-                self.analog_ports.append(AnalogPort(name=port_name,
-                                                    mode='recv',
-                                                    dimension=dimension))
+                self.analog_ports.append(AnalogReceivePort(
+                    name=port_name, dimension=dimension))
             else:
                 event_port_name = port_name
-            self.event_ports[event_port_name] = EventPort(name=event_port_name,
-                                                          mode='recv')
+            self.event_ports[event_port_name] = EventReceivePort(
+                name=event_port_name)
             on_event = OnEvent(event_port_name,
                                state_assignments=[
                                    '{}={}'.format(a.lhs, a.rhs)
@@ -1048,9 +1049,9 @@ class NMODLImporter(object):
         else:
             pieces.append((stmt, str(test)))
 
-    #============================#
-    #  General Helper functions  #
-    #============================#
+    #==========================================================================
+    # General Helper functions
+    #==========================================================================
 
     def _subs_variable(self, old, new, expr):
         # If the new expression contains more than one "word" enclose it
