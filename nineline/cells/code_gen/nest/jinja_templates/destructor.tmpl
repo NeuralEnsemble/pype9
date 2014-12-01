@@ -1,5 +1,5 @@
 //------------------------------------------------------//
-// This section was generated from NEST-destructor.tmpl //
+// This section was generated from destructor.tmpl //
 //------------------------------------------------------//
 {{ModelName}}::~{{ModelName}} () {
 {% if ode_solver == "cvode" %}
@@ -40,4 +40,4 @@
         free (B_.jac);
 {% endif %}
 }
-// ------------------- NEST-destructor.tmpl ------------------------//
+// ------------------- destructor.tmpl ------------------------//

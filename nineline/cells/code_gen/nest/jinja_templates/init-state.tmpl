@@ -6,7 +6,7 @@
 
 
 //------------------------------------------------//
-// This section was generated from NEST-init.tmpl //
+// This section was generated from init.tmpl //
 //------------------------------------------------//
 /**
  * Construct state from parameters.
@@ -25,7 +25,7 @@
 
 {# Solve steady-state if required #}
 {# This needs some thinking out
-{% if (steady_state_method  == "kinsol") %}
+{% if (ss_solver  == "kinsol") %}
     N_Vector {{SSvector}};
     ssvect = N_VNew_Serial({{steadyStateSize}});
     fsolve ({{ModelName}}_steadystate, {{steadyStateSize}}, {{SSvector}},
@@ -104,4 +104,4 @@ void {{ModelName}}::calibrate() {
     {% endif %}
 {% endif %}
 }
-// ------------------- NEST-init.tmpl ------------------------//
+// ------------------- init.tmpl ------------------------//

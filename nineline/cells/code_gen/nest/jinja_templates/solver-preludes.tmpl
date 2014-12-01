@@ -6,7 +6,7 @@
 
 
 //-----------------------------------------------------------//
-// This section was generated from NEST-solver-preludes.tmpl //
+// This section was generated from solver-preludes.tmpl //
 //-----------------------------------------------------------//
 {% if ode_solver in ('cvode', 'ida') %}
 	/**
@@ -82,7 +82,7 @@
         return;
     }
 {% endif %}
-{% if stead_state_solver == 'kinsol' %}
+{% if ss_solver == 'kinsol' %}
     /**
      * Exception to be thrown if a KinSol solver does not return KIN_SUCCESS
      * @ingroup KernelExceptions
@@ -116,4 +116,4 @@
         const int status_;
     };
 {% endif %}
-// ------------------- NEST-solver-preludes.tmpl ------------------------//
+// ------------------- solver-preludes.tmpl ------------------------//

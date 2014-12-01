@@ -6,7 +6,7 @@
 {% if (ode_solver == "gsl") %}
 
 //----------------------------------------------------//
-// This section was generated from NEST-jacobian.tmpl //
+// This section was generated from jacobian.tmpl //
 //----------------------------------------------------//
 
 /** Diagonal Jacobian approximation (for GSL): (f(s+.01) - f(s))/.001 */
@@ -28,5 +28,5 @@ extern "C" int {{ModelName}}_jacobian (double t, const double y[], double *dfdy,
        dfdt[i*b->N + i] = (b->jac[i] - dfdy[i]) / .001;
    return 0;
 }
-// ------------------- NEST-jacobian.tmpl ------------------------//
+// ------------------- jacobian.tmpl ------------------------//
 {% endif %}

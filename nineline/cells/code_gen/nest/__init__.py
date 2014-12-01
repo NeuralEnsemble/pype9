@@ -70,7 +70,7 @@ class CodeGenerator(BaseCodeGenerator):
             args['solver_abbrev'] = 'IDA'
             args['solver_prefix'] = 'IDA'
             args['solver_name'] = 'IDASolve'
-        args['steady_state_method'] = ss_method
+        args['ss_solver'] = ss_method
         # Set tolerances ------------------------------------------------------
         args['abs_tolerance'] = abs_tolerance
         args['rel_tolerance'] = rel_tolerance

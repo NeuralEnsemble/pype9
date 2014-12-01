@@ -1,5 +1,5 @@
     //-------------------------------------------------------//
-    // This section was generated from NEST-init-solver.tmpl //
+    // This section was generated from init-solver.tmpl //
     //-------------------------------------------------------//
 {% if ode_solver in ('cvode', 'ida') %}
     // Holds the return status values of the CVODE/IDA initialisations
@@ -135,7 +135,7 @@
     B_.jac = (double *)malloc(sizeof(double) * B_.N);
     assert (B_.jac);
 {% endif %}
-    // ------------------- NEST-init-solver.tmpl ------------------------//
+    // ------------------- init-solver.tmpl ------------------------//
 {# Old implementation  
     
   {% if ode_solver == "cvode" %}

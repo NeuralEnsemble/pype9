@@ -32,9 +32,9 @@
 #}
 
 //-------------------------------------------------------//
-// This section was generated from NEST-steadystate.tmpl //
+// This section was generated from steadystate.tmpl //
 //-------------------------------------------------------//
-{% if steady_state_method == "kinsol" %}
+{% if ss_solver == "kinsol" %}
   int fsolve (KINSysFn f, int N, N_Vector fval, void *user_data,
               std::string name) {
       int status;
@@ -73,7 +73,7 @@
 
       return 0;
   }
-{% elif steady_state_method == "gsl" %}
+{% elif ss_solver == "gsl" %}
   int fsolve (int (*fss)(const gsl_vector *, void *user_data, gsl_vector *),
               int N, gsl_vector *fval, void *user_data, std::string name) {
       
@@ -106,7 +106,7 @@
   }
 {% endif %}
 
-{% if steady_state_method == "kinsol" %}
+{% if ss_solver == "kinsol" %}
 extern "C" int {{ModelName}}_steadystate (N_Vector u, N_Vector f, void* pnode) {
 {% else %}
 extern "C" int {{ModelName}}_steadystate (const gsl_vector *u, void *pnode, gsl_vector *f) {
@@ -148,4 +148,4 @@ extern "C" int {{ModelName}}_steadystate (const gsl_vector *u, void *pnode, gsl_
 #}
    return 0;
 }
-//---------------- NEST-steadystate.tmpl ---------------//
+//---------------- steadystate.tmpl ---------------//

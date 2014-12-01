@@ -5,7 +5,7 @@
 #}
 
 //---------------------------------------------------//
-// This section was generated from NEST-trigger.tmpl //
+// This section was generated from trigger.tmpl //
 //---------------------------------------------------//
 {% if ode_solver in ('cvode', 'ida') %}
 extern "C" int {{ModelName}}_trigger (double t, N_Vector y,{% if ode_solver == 'ida' %} N_Vector yp,{% endif %}
@@ -39,4 +39,4 @@ extern "C" int {{ModelName}}_trigger (double t, N_Vector y,{% if ode_solver == '
 {% elif ode_solver == 'gsl' %}
     // Trigger is hard coded as V_m > V_t if V_t is present at the moment.
 {% endif %}
-// ------------------- NEST-trigger.tmpl ------------------------//
+// ------------------- trigger.tmpl ------------------------//

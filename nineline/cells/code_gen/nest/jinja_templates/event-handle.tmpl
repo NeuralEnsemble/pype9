@@ -26,7 +26,7 @@
 
 
 //--------------------------------------------------------//
-// This section was generated from NEST-event-handle.tmpl //
+// This section was generated from event-handle.tmpl //
 //--------------------------------------------------------//
 void {{ModelName}}::handle(SpikeEvent & e) {
     assert(e.get_delay() > 0);
@@ -54,4 +54,4 @@ void {{ModelName}}::handle(CurrentEvent& e) {
 void {{ModelName}}::handle(DataLoggingRequest& e) {
     B_.logger_.handle(e);
 }
-// ------------------- NEST-event-handle.tmpl ------------------------//
+// ------------------- event-handle.tmpl ------------------------//

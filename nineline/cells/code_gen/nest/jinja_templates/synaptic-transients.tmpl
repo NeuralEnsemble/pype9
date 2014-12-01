@@ -28,7 +28,7 @@
 #}
 
 //---------------------------------------------------------------//
-// This section was generated from NEST-synaptic-transients.tmpl //
+// This section was generated from synaptic-transients.tmpl //
 //---------------------------------------------------------------//
 
 {% for func_name, state_assignments, req_defs in transients %}
@@ -60,4 +60,4 @@ inline void {{ModelName}}::{{func_name}}(long_t lag) {
     {% endfor %}
 }
 {% endfor %}
-//-------------- NEST-synaptic-transients.tmpl --------------//
+//-------------- synaptic-transients.tmpl --------------//

@@ -5,7 +5,7 @@
 #}
 
 //------------------------------------------------------//
-// This section was generated from NEST-parameters.tmpl //
+// This section was generated from parameters.tmpl //
 //------------------------------------------------------//
 {{ModelName}}::Parameters_::Parameters_():
 {% for i, (name, default) in enumerate(izip(parameter_names, parameter_default)) %}
@@ -17,4 +17,4 @@
     {{constraint}}
 {% endfor %}
 }
-// ------------------- NEST-parameters.tmpl ------------------------//
+// ------------------- parameters.tmpl ------------------------//

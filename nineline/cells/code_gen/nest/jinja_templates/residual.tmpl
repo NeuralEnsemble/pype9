@@ -6,7 +6,7 @@
 {% if (ode_solver == "ida") %}
 
 //----------------------------------------------------//
-// This section was generated from NEST-residual.tmpl //
+// This section was generated from residual.tmpl //
 //----------------------------------------------------//
 extern "C" int {{ModelName}}_residual (double t, N_Vector y, N_Vector yp, N_Vector f, void* pnode)
 {
@@ -27,5 +27,5 @@ extern "C" int {{ModelName}}_residual (double t, N_Vector y, N_Vector yp, N_Vect
 
    return status;
 }
-//-------------- NEST-residual.tmpl ------------------//
+//-------------- residual.tmpl ------------------//
 {% endif %}

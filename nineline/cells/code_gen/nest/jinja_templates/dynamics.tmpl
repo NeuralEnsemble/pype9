@@ -31,7 +31,7 @@
 #}
 
 //----------------------------------------------------//
-// This section was generated from NEST-dynamics.tmpl //
+// This section was generated from dynamics.tmpl //
 //----------------------------------------------------//
 {% for func_name, time_derivatives, req_defs in dynamics %} 
     {%- if ode_solver in ('cvode', 'ida') -%}
@@ -76,4 +76,4 @@ extern "C" int {{func_name}} (double t_, const double y_[], double f_[], void* p
     {% endif %}
 }    
 {% endfor %}
-// ------------------- NEST-dynamics.tmpl ------------------------//
+// ------------------- dynamics.tmpl ------------------------//
