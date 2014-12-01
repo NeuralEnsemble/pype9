@@ -9,14 +9,12 @@
 """
 from __future__ import absolute_import
 import time
-from datetime import datetime
 import os.path
 import subprocess as sp
 import re
 from itertools import chain
 import shutil
 from .. import BaseCodeGenerator
-from nineline import __version__
 from nineline.utils import remove_ignore_missing
 from nineml import Dimension
 from nineml.abstraction_layer.units import current as current_unit_dim
@@ -54,12 +52,8 @@ class CodeGenerator(BaseCodeGenerator):
     def _extract_template_args(self, component, initial_state, v_threshold,
                                ode_solver, ss_solver, abs_tolerance,
                                rel_tolerance, max_step_size):
+        args = super(CodeGenerator, self)._extract_template_args(component)
         model = component.component_class
-        args = {}
-        # Set model name and general information ------------------------------
-        args['ModelName'] = component.name
-        args['timestamp'] = datetime.now().strftime('%a %d %b %y %I:%M:%S%p')
-        args['version'] = __version__
         # Set solver methods --------------------------------------------------
         args['ode_solver'] = ode_solver
         if ode_solver == 'cvode':
@@ -172,9 +166,8 @@ class CodeGenerator(BaseCodeGenerator):
         self._render_to_file('main.tmpl', template_args, model_name + '.cpp',
                              src_dir)
         build_args = {'celltype_name': model_name, 'src_dir': src_dir,
-                      'version': __version__,
-                      'timestamp': datetime.now().strftime('%a %d %b %y '
-                                                           '%I:%M:%S%p')}
+                      'version': template_args['version'],
+                      'timestamp': template_args['timestamp']}
         # Render Loader header file
         self._render_to_file('loader-header.tmpl', build_args,
                              model_name + 'Loader.h', src_dir)

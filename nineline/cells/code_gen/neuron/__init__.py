@@ -33,7 +33,6 @@ else:
 
 class CodeGenerator(BaseCodeGenerator):
 
-    # BUILD_ARCHS = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
     SIMULATOR_NAME = 'neuron'
     _DEFAULT_SOLVER = 'derivimplicit'
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
@@ -49,7 +48,9 @@ class CodeGenerator(BaseCodeGenerator):
     def _extract_template_args(self, component, initial_state, ode_solver,
                                ss_solver, abs_tolerance, rel_tolerance,
                                v_threshold):
-        raise NotImplementedError
+        args = super(CodeGenerator, self)._extract_template_args(component)
+        
+        return args
 
     def _render_source_files(self, template_args, src_dir, _, _):
         model_name = template_args['ModelName']

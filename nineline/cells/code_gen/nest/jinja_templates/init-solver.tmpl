@@ -53,8 +53,8 @@
         throw {{solver_prefix}}SolverFailure (get_name(), status);
 
     {% if v_threshold %}
-    /* Spike event handler (detects zero-crossing of V-V_t) */
-    status = {{solver_prefix}}RootInit(B_.sys_, 1, ({{solver_abbrev}}RootFn){{ModelName}}_event);
+    /* Event trigger handler (detects event triggers) */
+    status = {{solver_prefix}}RootInit(B_.sys_, 1, ({{solver_abbrev}}RootFn){{ModelName}}_trigger);
     if (check_flag(&status, "{{solver_prefix}}RootInit", 1))
         throw {{solver_prefix}}SolverFailure (get_name(), status);
 

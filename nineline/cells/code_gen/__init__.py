@@ -17,6 +17,7 @@ from collections import namedtuple
 import shutil
 from copy import copy
 from os.path import abspath, dirname, join
+from datetime import datetime
 from collections import defaultdict
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from itertools import izip
@@ -24,6 +25,7 @@ from runpy import run_path
 from abc import ABCMeta, abstractmethod
 import nineml
 from __builtin__ import classmethod
+from nineline import __version__
 from nineml.abstraction_layer.dynamics.component import expressions
 
 
@@ -54,15 +56,19 @@ class BaseCodeGenerator(object):
         self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
                                       xrange=xrange)
 
-    @abstractmethod
-    def _extract_template_args(self, component, initial_state, v_threshold,
-                               ode_solver, ss_solver, abs_tolerance,
-                               rel_tolerance, max_step_size):  # FIXME: These should be optional kwargs because they will differ between simulators @IgnorePep8
+    def _extract_template_args(self, component):  # FIXME: These should be optional kwargs because they will differ between simulators @IgnorePep8
         """
         Extracts the required information from the 9ML model into a dictionary
-        containing the relevant arguments for the Jinja2 templates.
+        containing the relevant arguments for the Jinja2 templates. This should
+        be override by the derived classes to fill out the remaining arguments
+        required by the templates.
         """
-        pass
+        args = {}
+        # Set model name and general information ------------------------------
+        args['ModelName'] = component.name
+        args['timestamp'] = datetime.now().strftime('%a %d %b %y %I:%M:%S%p')
+        args['version'] = __version__
+        return args
 
     @abstractmethod
     def _render_source_files(self, template_args, src_dir, install_dir,
