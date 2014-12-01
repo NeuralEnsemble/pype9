@@ -8,24 +8,24 @@
 //-----------------------------------------------//
 // This section was generated from residual.tmpl //
 //-----------------------------------------------//
-extern "C" int {{ModelName}}_residual (double t, N_Vector y, N_Vector yp, N_Vector f, void* pnode)
-{
-   int status; 
+    {% for func_name, _, _ in dynamics %}
+extern "C" int {{func_name}}_residual (double t, N_Vector y, N_Vector yp, N_Vector f, void* pnode) {
+    int status; 
 
-   // cast the node ptr to an object of the proper type
-   assert(pnode);
-   const {{ModelName}} & node =  *(reinterpret_cast<{{ModelName}}*>(pnode));
-   {{ModelName}} & vnode =  *(reinterpret_cast<{{ModelName}}*>(pnode));
+    // cast the node ptr to an object of the proper type
+    assert(pnode);
+    {{ModelName}} & vnode =  *(reinterpret_cast<{{ModelName}}*>(pnode));
 
-   N_Vector y1 = vnode.B_.y1;
+    N_Vector y1 = vnode.B_.y1;
              
-   status = {{ModelName}}_dynamics (t, y, y1, pnode);
+    status = {{func_name}}_dynamics (t, y, y1, pnode);
 
-   {% for i in xrange(num_states) %}
-   ITEM(f, {{i}}) = ITEM(y1, {{i}}) - ITEM(yp, {{i}})
-   {% endfor %}
+        {% for i in xrange(num_states) %}
+    ITEM(f, {{i}}) = ITEM(y1, {{i}}) - ITEM(yp, {{i}});
+        {% endfor %}
 
-   return status;
+    return status;
+    {% endfor %}
 }
 //-------------- residual.tmpl ------------------//
 {% endif %}

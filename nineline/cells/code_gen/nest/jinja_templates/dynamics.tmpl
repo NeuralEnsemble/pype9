@@ -35,9 +35,9 @@
 //-----------------------------------------------//
 {% for func_name, time_derivatives, req_defs in dynamics %} 
     {%- if ode_solver in ('cvode', 'ida') -%}
-extern "C" int {{func_name}} (double t_, N_Vector y_, N_Vector f_, void* pnode_) {
+extern "C" int {{func_name}}_dynamics(double t_, N_Vector y_, N_Vector f_, void* pnode_) {
     {% else %}
-extern "C" int {{func_name}} (double t_, const double y_[], double f_[], void* pnode_) {
+extern "C" int {{func_name}}_dynamics(double t_, const double y_[], double f_[], void* pnode_) {
     {% endif %}
 
     // Get a reference to the model
@@ -74,6 +74,6 @@ extern "C" int {{func_name}} (double t_, const double y_[], double f_[], void* p
     {% else %}
     return GSL_SUCCESS;
     {% endif %}
-}    
+}
 {% endfor %}
 // ------------------- dynamics.tmpl ------------------------//

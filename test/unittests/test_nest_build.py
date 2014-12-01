@@ -170,7 +170,7 @@ comp = nineml.read(component_file)['HodgkinHuxleyModified']
 code_generator = CodeGenerator()
 code_generator.generate(component_file, 0.0,  # initial_state_file,
                         build_mode='generate_only',
-                        ode_solver='cvode', v_threshold=None)
+                        ode_solver='ida', v_threshold=None)
 
 # biophysics_name = 'HodgkinHuxleyClass'
 # builder.create_model_files(biophysics_name, test_file, build_dir)

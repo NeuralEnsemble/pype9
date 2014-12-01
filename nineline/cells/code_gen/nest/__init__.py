@@ -113,8 +113,7 @@ class CodeGenerator(BaseCodeGenerator):
         dynamics = []
         for regime in model.dynamics.regimes:
             # Get name for regime dynamics function ---------------------------
-            func_name = '_'.join([component.name, regime.name or 'default',
-                                  'dynamics'])
+            func_name = '_'.join([component.name, regime.name or 'default'])
             req_defs = self._required_defs(regime.time_derivatives, model)
             dynamics.append((func_name, regime.time_derivatives, req_defs))
             # TODO: What to do with analog receive ports? Probably need to

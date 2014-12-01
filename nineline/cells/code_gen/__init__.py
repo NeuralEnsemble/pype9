@@ -51,7 +51,8 @@ class BaseCodeGenerator(object):
                                      trim_blocks=True, lstrip_blocks=True,
                                      undefined=StrictUndefined)
         # Add some globals used by the template code
-        self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate)
+        self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
+                                      xrange=xrange)
 
     @abstractmethod
     def _extract_template_args(self, component, initial_state, v_threshold,

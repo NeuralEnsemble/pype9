@@ -48,7 +48,7 @@
      *    opt == 2 means function allocates memory so check if returned
      *             NULL pointer 
      */
-    static int check_flag(void *flagvalue, const char *funcname, int opt) {
+    inline static int check_flag(void *flagvalue, const char *funcname, int opt) {
         int *errflag;
         if (opt == 0 && flagvalue == NULL) {
             /* Check if CVode/IDA function returned NULL pointer - no memory allocated */
@@ -75,7 +75,7 @@
         return(0);
     }
 
-    void adjust_zero_crossings (N_Vector v, double abstol) {
+    inline void adjust_zero_crossings (N_Vector v, double abstol) {
         for (int i = 0; i < NV_LENGTH_S(v); i++)
             if (fabs(ITEM(v,i)) < abstol)
                 ITEM(v,i) = 0;

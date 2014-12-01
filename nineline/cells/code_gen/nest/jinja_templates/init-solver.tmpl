@@ -4,12 +4,12 @@
 {% if ode_solver in ('cvode', 'ida') %}
     // Holds the return status values of the CVODE/IDA initialisations
     int status;
-    
+
     // Vector length (number of states)
     int N = {{num_states}};
     // only positive direction (rising edge) of spike events will be detected
     int rootdir = 1;
-    
+
     /* Creates serial vectors of length N */
     B_.y = N_VNew_Serial(N);
     {% if ode_solver == 'ida' %}
@@ -18,15 +18,16 @@
     {% endif %}
     if (check_flag((void *)B_.y, "N_VNew_Serial", 0))
         throw {{solver_prefix}}SolverFailure (get_name(), 0);
-    
+
     // Copy NEST state to CVODE/IDA vector
     for (int i = 0; i < N; i++)
        ITEM(B_.y,i) = S_.y_[i];
-       
+
     {% if ode_solver == 'ida' %}
     // Run the dynamics function to initialise B._yp
-    {{ModelName}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
-    
+        {# Get the func_name from the default regime (the first in the list #}
+    {{dynamics[0][0]}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
+
     {% endif %}
     // Calls {{solver_prefix}}Create to create the solver memory
     {% if ode_solver == 'cvode' %} 
@@ -38,7 +39,7 @@
     {% endif %}
     if (check_flag((void *)B_.sys_, "{{solver_prefix}}Create", 0))
         throw {{solver_prefix}}SolverFailure (get_name(), 0);
-    
+
     // Calls {{solver_prefix}}Init to initialize the integrator memory and specify the
     {% if ode_solver == 'cvode' %}
     // right hand side function in y''=f(t,y), the initial time, and
@@ -50,47 +51,47 @@
     {% endif %}
     if (check_flag(&status, "{{solver_prefix}}Init", 1))
         throw {{solver_prefix}}SolverFailure (get_name(), status);
-    
+
     {% if v_threshold %}
     /* Spike event handler (detects zero-crossing of V-V_t) */
     status = {{solver_prefix}}RootInit(B_.sys_, 1, ({{solver_abbrev}}RootFn){{ModelName}}_event);
     if (check_flag(&status, "{{solver_prefix}}RootInit", 1))
         throw {{solver_prefix}}SolverFailure (get_name(), status);
-    
+
     /* Detect only the rising edge of spikes */
     status = {{solver_prefix}}SetRootDirection(B_.sys_, &rootdir);
     if (check_flag(&status, "{{solver_prefix}}SetRootDirection", 1))
         throw {{solver_prefix}}SolverFailure (get_name(), status);
-    
+
     {% endif %}
     /* Sets the relative and absolute error tolerances of {{solver_prefix}}  */
     status = {{solver_prefix}}SStolerances (B_.sys_, {{abs_tolerance}}, {{rel_tolerance}});
     if (check_flag(&status, "{{solver_prefix}}SStolerances", 1))
         throw {{solver_prefix}}SolverFailure (get_name(), status);
-    
+
     {% if ode_solver == 'cvode' %}
     /* Turns on {{solver_prefix}} stability limit detection (only applicable for order 3 and greater) */
     status = {{solver_prefix}}SetStabLimDet (B_.sys_,true);
     if (check_flag(&status, "{{solver_prefix}}SetStabLimDet", 1))
         throw {{solver_prefix}}SolverFailure (get_name(), status);
-        
+
     {% endif %}
     /* Sets the maximum order of {{solver_prefix}}  */
     status = {{solver_prefix}}SetMaxOrd (B_.sys_,5);
     if (check_flag(&status, "{{solver_prefix}}SetMaxOrd", 1))
         throw {{solver_prefix}}SolverFailure (get_name(), status);
-    
+
     /* Sets maximum step size. */
     status = {{solver_prefix}}SetMaxStep (B_.sys_,{% if max_step_size %}{{max_step_size}}{% else %}B_.step_{% endif %});
     if (check_flag(&status, "{{solver_prefix}}SetMaxStep", 1))
         throw {{solver_prefix}}SolverFailure (get_name(), status);
-    
+
     /* Calls {{solver_prefix}}SetUserData to configure the integrator to pass the 
      * params structure to the right-hand function */
     status = {{solver_prefix}}SetUserData(B_.sys_, reinterpret_cast<void*>(this));
     if (check_flag(&status, "{{solver_prefix}}SetUserData", 1))
         throw {{solver_prefix}}SolverFailure (get_name(), status);
-    
+
     {% if ode_solver == 'cvode' %}
     /* Initializes diagonal linear solver. */
     status = CVDiag (B_.sys_);
@@ -101,7 +102,7 @@
     status = {{solver_prefix}}Dense (B_.sys_, N);
     if (check_flag(&status, "{{solver_prefix}}Dense", 1))
         throw {{solver_prefix}}SolverFailure (get_name(), status);
-    
+
     status = {{solver_prefix}}CalcIC(B_.sys_, {{solver_abbrev}}_Y_INIT, 0.0);
     if (check_flag(&status, "{{solver_prefix}}CalcIC", 1))
         throw {{solver_prefix}}SolverFailure (get_name(), status);
@@ -109,17 +110,17 @@
 {% elif ode_solver == "gsl" %}
     static const gsl_odeiv2_step_type* T1 = gsl_odeiv2_step_rk2;
     B_.N = {{num_states}};
-  
+
     if ( B_.s_ == 0 )
         B_.s_ = gsl_odeiv2_step_alloc (T1, B_.N);
     else 
         gsl_odeiv2_step_reset(B_.s_);
-    
+
     if ( B_.c_ == 0 )  
         B_.c_ = gsl_odeiv2_control_standard_new ({{abs_tolerance}}, {{rel_tolerance}}, 1.0, 0.0);
     else
         gsl_odeiv2_control_init(B_.c_, {{abs_tolerance}}, {{rel_tolerance}}, 1.0, 0.0);
-    
+
     if ( B_.e_ == 0 )  
         B_.e_ = gsl_odeiv2_evolve_alloc(B_.N);
     else 
