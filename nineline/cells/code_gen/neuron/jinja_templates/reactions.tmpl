@@ -20,17 +20,14 @@
                        in the right-hand side of the reaction equations
    - reactionEqDefs: a list of strings with the reaction equations in NMODL syntax
 #}
-{% if (not (reactionEqDefs == [])) %}
-
+{% if reactionEqDefs %}
 PROCEDURE reactions () {
-{% if (not (reactionEqLocals == [])) %}
+    {% if (not (reactionEqLocals == [])) %}
   LOCAL {{reactionEqLocals | join (", ")}}
-{% endif %}
-{% for reactionEqDef in reactionEqDefs %}
+    {% endif %}
+    {% for reactionEqDef in reactionEqDefs %}
   {{reactionEqDef}}
-
-{% endfor %}
-
+    {% endfor %}
 }
 
 {% endif %}

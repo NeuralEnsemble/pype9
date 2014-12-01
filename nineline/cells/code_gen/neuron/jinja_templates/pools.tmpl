@@ -15,16 +15,12 @@
                - inq, outq - the names of the quantities that are actually used to compute the concentrations
                  (in some cases, they can be the same as in and out)
 #}
-{% if (not (poolIons == [])) %}
-
+{% if poolIons %}
 PROCEDURE pools () {
-{% for poolIon in poolIons %}
+    {% for poolIon in poolIons %}
   {{poolIon.in}} = {{poolIon.inq}}
-
   {{poolIon.out}} = {{poolIon.outq}}
-
-{% endfor %}
-
+    {% endfor %}
 }
 
 {% endif %}

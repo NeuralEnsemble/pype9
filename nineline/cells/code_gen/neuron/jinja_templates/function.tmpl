@@ -11,10 +11,8 @@
 #}
 
 FUNCTION {{functionDef.name}} ({{functionDef.vars | join (", ")}}) {
-{% if (not (functionDef.localVars == [])) %}
-LOCAL {{functionDef.localVars | join (", ")}}
+{% if functionDef.localVars %}
+    LOCAL {{functionDef.localVars | join (", ")}}
 {% endif %}
-
-  {{functionDef.exprString}}
-
+    {{functionDef.exprString}}
 } 

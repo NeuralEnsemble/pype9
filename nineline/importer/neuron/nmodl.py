@@ -10,7 +10,7 @@ from nineml.abstraction_layer.components.interface import Parameter
 from nineml.abstraction_layer.dynamics.component import ComponentClass
 from nineml.abstraction_layer.dynamics import Regime, StateVariable, OnEvent
 from nineml.abstraction_layer.dynamics.component.expressions import (
-                                        Alias, TimeDerivative, StateAssignment)
+    Alias, TimeDerivative, StateAssignment)
 from nineml.abstraction_layer.dynamics.component.ports import (AnalogPort,
                                                                EventPort)
 from nineml.user_layer.dynamics import IonDynamics
@@ -162,7 +162,7 @@ class NMODLImporter(object):
         properties.update((n, (v, self.properties[n][1]))
                           for n, v in hoc_properties.iteritems())
         comp = IonDynamics(self.component_name, definition=class_path,
-                          parameters=properties)
+                           parameters=properties)
         return comp
 
     def print_members(self):
@@ -213,8 +213,8 @@ class NMODLImporter(object):
             piecewise_rhs = reduce(operator.add, piecewise_rhs)
         piecewise_test = [[test for _, test in a.rhs
                            if not isinstance(test, _Otherwise)]
-                         for a in self.aliases.values()
-                         if isinstance(a.rhs, list)]
+                          for a in self.aliases.values()
+                          if isinstance(a.rhs, list)]
         if piecewise_test:
             piecewise_test = reduce(operator.add, piecewise_test)
         return td_rhs + simple_rhs + piecewise_rhs + piecewise_test
@@ -255,8 +255,8 @@ class NMODLImporter(object):
             self.analog_ports['v'] = AnalogPort('v', mode='recv',
                                                 dimension='voltage')
         if uses_celsius and 'celsius' not in self.parameters:
-            self.analog_ports['celsius'] = AnalogPort('celsius', mode='recv',
-                                              dimension='absolute_temperature')
+            self.analog_ports['celsius'] = AnalogPort(
+                'celsius', mode='recv', dimension='absolute_temperature')
         if uses_diam:
             self.parameters['diam'] = Parameter('diam', dimension='length')
 
@@ -280,9 +280,9 @@ class NMODLImporter(object):
             self.event_ports[event_port_name] = EventPort(name=event_port_name,
                                                           mode='recv')
             on_event = OnEvent(event_port_name,
-                               state_assignments=['{}={}'
-                                                  .format(a.lhs, a.rhs)
-                                                for a in assignments.values()])
+                               state_assignments=[
+                                   '{}={}'.format(a.lhs, a.rhs)
+                                   for a in assignments.values()])
             self.aliases.update(aliases)
             self.regimes.append(Regime(name=regime[0],
                                        time_derivatives=regime[1],
@@ -682,8 +682,9 @@ class NMODLImporter(object):
                             is_outgoing = False
                 if is_bidirectional:
                     s1, s2, r1, r2 = match.groups()
-                    bidirectional.append((split_states(s1), split_states(s2),
-                                        process_rate(r1), process_rate(r2)))
+                    bidirectional.append(
+                        (split_states(s1), split_states(s2), process_rate(r1),
+                         process_rate(r2)))
                 elif is_incoming:
                     s, r = match.groups()
                     incoming.append((s, process_rate(r)))
@@ -695,7 +696,7 @@ class NMODLImporter(object):
                                                 line).groups())
                 elif line.strip().startswith('COMPARTMENT'):
                     (pre, states, line) = next(self._matching_braces(
-                                                         line_iter, line=line))
+                        line_iter, line=line))
                     constraints.append((pre.split(), ' '.join(states).split()))
                     continue
                 elif line:
@@ -1047,9 +1048,9 @@ class NMODLImporter(object):
         else:
             pieces.append((stmt, str(test)))
 
-    #----------------------------#
+    #============================#
     #  General Helper functions  #
-    #----------------------------#
+    #============================#
 
     def _subs_variable(self, old, new, expr):
         # If the new expression contains more than one "word" enclose it

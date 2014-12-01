@@ -32,23 +32,17 @@
                - valence - the valence of the species
 #}
 
-
 NEURON {
-
 {% if (hasEvents) %}
-  POINT_PROCESS {{modelName}}
-
+    POINT_PROCESS {{modelName}}
 {% endif %}
 {# NMODL has a line character limit, so we limit the number of entries in each RANGE stmt to 10 #}
 {% for export in exports %}
-{% if ((loop.index0 % 10) == 0) %}
-
-  RANGE {{export}}{% else %}, {{export}}{% endif %}
+    {% if ((loop.index0 % 10) == 0) %}
+    RANGE {{export}}{% else %}, {{export}}{% endif %}
 {% endfor %}
-
 {% if (not (currents == [])) %}
-  RANGE {{currents | join(", ")}}
-
+    RANGE {{currents | join(", ")}}
 {% endif %}
 {#
    if rev potential is defined for this ion, declare the ionic current
@@ -56,61 +50,45 @@ NEURON {
    the ionic current as a range variable
 #}
 {% for p in permeatingIons %}
-{% if (p.species == "non-specific") %}
-  RANGE {{p.e}}
-
-{% elif (p.erev) %}
-  RANGE {{p.i}}, {{p.e}}
-
-{% else %}
-  RANGE {{p.i}}
-
-{% endif %}
+    {% if (p.species == "non-specific") %}
+    RANGE {{p.e}}
+    {% elif (p.erev) %}
+    RANGE {{p.i}}, {{p.e}}
+    {% else %}
+    RANGE {{p.i}}
+    {% endif %}
 {% endfor %}
 {% for p in poolIons %}
-  RANGE {{p.in}}, {{p.out}}
-
+    RANGE {{p.in}}, {{p.out}}
 {% endfor %}
 {% if (accumulatingIons == []) %}
-{% for p in poolIons %}
-  RANGE {{p.in}}, {{p.out}}
-
-{% endfor %}
-{% for m in modulatingIons %}
-  RANGE {{m.in}}, {{m.out}}
-
-{% endfor %}
+    {% for p in poolIons %}
+    RANGE {{p.in}}, {{p.out}}
+    {% endfor %}
+    {% for m in modulatingIons %}
+    RANGE {{m.in}}, {{m.out}}
+    {% endfor %}
 {% else %}
-{% for a in accumulatingIons %}
-  RANGE {{a.i}}
-
-{% endfor %}
+    {% for a in accumulatingIons %}
+    RANGE {{a.i}}
+    {% endfor %}
 {% endif %}
-
 {% for parameter in rangeParameters %}
-{% if ((loop.index0 % 10) == 0) %}
-
-  RANGE {{parameter}}
-{% else %}, {{parameter}}{% endif %}
+    {% if ((loop.index0 % 10) == 0) %}
+    RANGE {{parameter}}
+    {% else %}, {{parameter}}{% endif %}
 {% endfor %}
-
 {% for useIon in useIons %}
-{% if (useIon.nonSpecific) %}
-  NONSPECIFIC_CURRENT {{useIon.name}}
-
-{% elif (useIon.valence and (not (useIon.write == [])) and (not (useIon.read == [])) ) %}
-  USEION {{useIon.name}} READ {{useIon.read | join (", ")}} WRITE {{useIon.write | join (", ")}} VALENCE {{useIon.valence}}
-
-{% elif (useIon.valence and (useIon.write == []) and (not (useIon.read == [])) ) %}
-  USEION {{useIon.name}} READ {{useIon.read | join (", ")}} VALENCE {{useIon.valence}}
-
-{% elif ((not (useIon.write == [])) and (not (useIon.read == [])) ) %}
-  USEION {{useIon.name}} READ {{useIon.read | join (", ")}} WRITE {{useIon.write | join (", ")}} 
-
-{% elif ((useIon.write == []) and (not (useIon.read == [])) ) %}
-  USEION {{useIon.name}} READ {{useIon.read | join (", ")}} 
-
-{% endif %}
+    {% if (useIon.nonSpecific) %}
+    NONSPECIFIC_CURRENT {{useIon.name}}
+    {% elif (useIon.valence and (not (useIon.write == [])) and (not (useIon.read == [])) ) %}
+    USEION {{useIon.name}} READ {{useIon.read | join (", ")}} WRITE {{useIon.write | join (", ")}} VALENCE {{useIon.valence}}
+    {% elif (useIon.valence and (useIon.write == []) and (not (useIon.read == [])) ) %}
+    USEION {{useIon.name}} READ {{useIon.read | join (", ")}} VALENCE {{useIon.valence}}
+    {% elif ((not (useIon.write == [])) and (not (useIon.read == [])) ) %}
+    USEION {{useIon.name}} READ {{useIon.read | join (", ")}} WRITE {{useIon.write | join (", ")}} 
+    {% elif ((useIon.write == []) and (not (useIon.read == [])) ) %}
+    USEION {{useIon.name}} READ {{useIon.read | join (", ")}} 
+    {% endif %}
 {% endfor %}
-
 }

@@ -18,31 +18,30 @@
    - poolIons: a list of strings with the pool ions defined in the system
                      (this is used to determine if procedure "pools" should be called)
 #}
-
-{% if (not (initEqDefs == [])) %}
+{% if initEqDefs %}
 INITIAL {
-{% if (not (initEqLocals == [])) %}
-  LOCAL {{initEqLocals | join (", ")}}
-{% endif %}
-{% for externalEqDef in externalEqDefs %}
-  {{externalEqDef}}
-{% endfor %}
-{% if (not (assignedEqDefs == [])) %}
-  asgns()
-{% endif %}
-{% for initEqDef in initEqDefs %}
-  {{initEqDef}}
-{% endfor %}
-{% if (not (kineticEqDefs == [])) %}
-  SOLVE kstates STEADYSTATE sparse
-  reactions()
-{% endif %}
-	  
-{% for eq in reversalPotentialEqDefs %}
-  {{eq}}
-{% endfor %}
-{% if (not (poolIons == [])) %}
-  pools()
-{% endif %} 
+    {% if initEqLocals %}
+    LOCAL {{initEqLocals | join (", ")}}
+    {% endif %}
+    {% for externalEqDef in externalEqDefs %}
+    {{externalEqDef}}
+    {% endfor %}
+    {% if assignedEqDefs %}
+    asgns()
+    {% endif %}
+    {% for initEqDef in initEqDefs %}
+    {{initEqDef}}
+    {% endfor %}
+    {% if kineticEqDefs %}
+    SOLVE kstates STEADYSTATE sparse
+    reactions()
+    {% endif %}  
+    {% for eq in reversalPotentialEqDefs %}
+    {{eq}}
+    {% endfor %}
+    {% if poolIons %}
+    pools()
+    {% endif %} 
 }
+
 {% endif %}

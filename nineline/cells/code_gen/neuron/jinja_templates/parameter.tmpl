@@ -9,14 +9,11 @@
                       in the right-hand side of the parameter equations
    - parameterDefs: a list of strings with the parameter equations in NMODL syntax
 #}
-
 PARAMETER {
-{% if (not (parameterLocals == [])) %}
+{% if parameterLocals %}
   LOCAL {{parameterLocals | join(", ")}}
 {% endif %}
 {% for parameterDef in parameterDefs %}
   {{parameterDef}}
-
 {% endfor %}
-
 }

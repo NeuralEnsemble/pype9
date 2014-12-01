@@ -68,6 +68,7 @@ class BaseCodeGenerator(object):
         args['ModelName'] = component.name
         args['timestamp'] = datetime.now().strftime('%a %d %b %y %I:%M:%S%p')
         args['version'] = __version__
+        args['source_file'] = component.url if component.url else '<generated>'
         return args
 
     @abstractmethod

@@ -14,31 +14,25 @@
    - assignedEqDefs: a list of strings with the assigned equations in NMODL syntax 
                      (this is only used to determine if the "asgns" procedure should be called)
 #}
-
-{% if (not (kineticEqDefs == [])) %}
+{% if kineticEqDefs %}
 KINETIC kstates {
-{% if (not (kineticEqLocals == [])) %}
+    {% if kineticEqLocals %}
   LOCAL {{kineticEqLocals | join (", ")}}
-{% endif %}
+    {% endif %}
 
-{% for externalEqDef in externalEqDefs %}
+    {% for externalEqDef in externalEqDefs %}
   {{externalEqDef}}
+    {% endfor %}
 
-{% endfor %}
-
-{% if (not (assignedEqDefs == [])) %}
+    {% if assignedEqDefs %}
   asgns()
+    {% endif %}
 
-{% endif %}
-
-{% for kineticEqDef in kineticEqDefs %}
-{% for eq in kineticEqDef %}
+    {% for kineticEqDef in kineticEqDefs %}
+        {% for eq in kineticEqDef %}
   {{eq}}
-
-{% endfor %}
-{% endfor %}
-
+        {% endfor %}
+    {% endfor %}
 }
 
 {% endif %}
-

@@ -21,21 +21,21 @@
 
 BREAKPOINT {
 {% if currentEqLocals %}
-  LOCAL {{currentEqLocals | join (", ")}}
+    LOCAL {{currentEqLocals | join (", ")}}
 {% endif %}
 {% if rateEqDefs %}
-  SOLVE states METHOD {{ode_solver}}
+    SOLVE states METHOD {{ode_solver}}
 {% endif %}
 {% if kineticEqDefs %}
-  SOLVE kstates METHOD sparse
+    SOLVE kstates METHOD sparse
 {% endif %}
 {% if poolIons %}
-   pools()
+    pools()
 {% endif %}
 {% if reactionEqDefs %}
    reactions()
 {% endif %}
 {% for eq in currentEqDefs %}
-  {{eq}}
+    {{eq}}
 {% endfor %}
 }

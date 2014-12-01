@@ -12,14 +12,14 @@
                        in the right-hand side of the assignment equations
    - assignedEqDefs: a list of strings with the assignment equations in NMODL syntax
 #}
-
 {% if assignedEqDefs %}
 PROCEDURE asgns () {
-{% if assignedEqLocals %}
+    {% if assignedEqLocals %}
   LOCAL {{assignedEqLocals | join (", ")}}
-{% endif %}
-{% for assignedEqDef in assignedEqDefs %}
+    {% endif %}
+    {% for assignedEqDef in assignedEqDefs %}
   {{assignedEqDef}}
-{% endfor %}
+    {% endfor %}
 }
+
 {% endif %}

@@ -1,4 +1,3 @@
-
 {#
    STATE section template
 
@@ -7,15 +6,11 @@
    - indent: the current indentation level
    - stateDefs: a list with the names of all state variables that appear in the current system
 #}
-
-{% if (not (stateDefs == [])) %}
-
+{% if stateDefs %}
 STATE {
-{% for def in stateDefs %}
+    {% for def in stateDefs %}
   {{def}}
-
-{% endfor %}
-
+    {% endfor %}
 }
 
 {% endif %}

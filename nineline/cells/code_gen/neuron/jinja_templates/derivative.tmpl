@@ -14,27 +14,19 @@
    - assignedEqDefs: a list of strings with the assigned equations in NMODL syntax 
                      (this is only used to determine if the "asgns" procedure should be called)
 #}
-{% if (not (rateEqDefs == [])) %}
+{% if rateEqDefs %}
 DERIVATIVE states {
-{% if (not (rateEqLocals == [])) %}
-  LOCAL {{rateEqLocals | join (", ")}}
-{% endif %}
-
-{% for externalEqDef in externalEqDefs %}
-  {{externalEqDef}}
-
-{% endfor %}
-
-{% if (not (assignedEqDefs == [])) %}
-  asgns()
-
-{% endif %}
-
-{% for rateEqDef in rateEqDefs %}
-  {{rateEqDef}}
-
-{% endfor %}
-
+    {% if rateEqLocals %}
+    LOCAL {{rateEqLocals | join (", ")}}
+    {% endif %}
+    {% for externalEqDef in externalEqDefs %}
+    {{externalEqDef}}
+    {% endfor %}
+    {% if assignedEqDefs %}
+    asgns()
+    {% endif %}
+    {% for rateEqDef in rateEqDefs %}
+    {{rateEqDef}}
+    {% endfor %}
 }
-
 {% endif %}
