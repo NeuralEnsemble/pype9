@@ -1,4 +1,4 @@
-import tempfile
+from lxml import etree
 import os.path
 from lxml import etree
 from nineline.importer.neuron import NeuronImporter
@@ -90,12 +90,15 @@ class TestNMODLImporter(unittest.TestCase):
         </NineML>""")
 
     def test_nmodl_import(self):
+        output_path = os.path.join(os.path.dirname(__file__), '..', 'data',
+                                   'xml', 'Golgi_hcn2')
         importer = NMODLImporter(os.path.join(os.path.dirname(__file__), '..',
                                               'data', 'nmodl',
-                                              'Golgi_hcn2.mod'))
+                                              'Golgi_KM.mod'))
         componentclass = importer.get_component_class()
-        componentclass.write(os.path.join(os.path.dirname(__file__), '..',
-                                          'data', 'xml', 'Golgi_hcn2.xml'))
+        componentclass.write(output_path + 'Class.xml')
+        component = importer.get_component(output_path + 'Class.xml')
+        component.write(output_path + '.xml')
 #         reference_tree = etree.fromstring(self.ref_xml)
 #         self.assertEqual(etree.tostring(imported_tree),
 #                          etree.tostring(reference_tree))

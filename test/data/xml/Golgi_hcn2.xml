@@ -1,78 +1,60 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<NineML xmlns="http://nineml.net/9ML/1.0">
-  <ComponentClass name="Golgi_hcn2Class">
-    <AnalogSendPort dimension="currentDensity" name="ih"/>
-    <AnalogReceivePort dimension="temperature" name="celsius"/>
-    <AnalogReceivePort dimension="voltage" name="v"/>
-    <Parameter dimension="per_voltage" name="c"/>
-    <Parameter dimension="dimensionless" name="q_10"/>
-    <Parameter dimension="voltage" name="tDf"/>
-    <Parameter dimension="per_voltage" name="tEf"/>
-    <Parameter dimension="dimensionless" name="tCs"/>
-    <Parameter dimension="voltage" name="tDs"/>
-    <Parameter dimension="voltage" name="ehcn2"/>
-    <Parameter dimension="per_voltage" name="rA"/>
-    <Parameter dimension="dimensionless" name="rB"/>
-    <Parameter dimension="dimensionless" name="tCf"/>
-    <Parameter dimension="conductanceDensity" name="gbar"/>
-    <Parameter dimension="per_voltage" name="tEs"/>
-    <Parameter dimension="voltage" name="Ehalf"/>
-    <Dynamics>
-      <Regime name="state">
-        <TimeDerivative variable="o_fast">
-          <MathInline>(o_fast_inf - o_fast) / tau_f</MathInline>
-        </TimeDerivative>
-        <TimeDerivative variable="o_slow">
-          <MathInline>(o_slow_inf - o_slow) / tau_s</MathInline>
-        </TimeDerivative>
-      </Regime>
-      <Alias name="o_slow_inf">
-        <MathInline>(1 - r_v_rA_rB) * o_inf_v_Ehalf_c</MathInline>
-      </Alias>
-      <Alias name="o_fast_inf">
-        <MathInline>r_v_rA_rB * o_inf_v_Ehalf_c</MathInline>
-      </Alias>
-      <Alias name="o_inf_v_Ehalf_c">
-        <MathInline>1 / (1 + exp((v - Ehalf) * c))</MathInline>
-      </Alias>
-      <Alias name="r_v_rA_rB">
-        <Piecewise>
-          <Piece>
-            <MathInline>0</MathInline>
-            <MathInline>v &gt;= -64.70</MathInline>
-          </Piece>
-          <Piece>
-            <MathInline>1</MathInline>
-            <MathInline>!(v &gt;= -64.70) &amp; (v &lt;= -108.70)</MathInline>
-          </Piece>
-          <Otherwise>
-            <MathInline>(rA * v) + rB</MathInline>
-          </Otherwise>
-        </Piecewise>
-      </Alias>
-      <Alias name="tau_f">
-        <MathInline>tau_fast_v_tCf_tDf_tEf</MathInline>
-      </Alias>
-      <Alias name="tau_slow_v_tCs_tDs_tEs">
-        <MathInline>exp(tEs * ((tCs * v) - tDs))</MathInline>
-      </Alias>
-      <Alias name="q">
-        <MathInline>q_10^((celsius -33) / 10)</MathInline>
-      </Alias>
-      <Alias name="ih">
-        <MathInline>g * (v - ehcn2)</MathInline>
-      </Alias>
-      <Alias name="g">
-        <MathInline>gbar * (o_fast + o_slow)</MathInline>
-      </Alias>
-      <Alias name="tau_s">
-        <MathInline>tau_slow_v_tCs_tDs_tEs</MathInline>
-      </Alias>
-      <Alias name="tau_fast_v_tCf_tDf_tEf">
-        <MathInline>exp(tEf * ((tCf * v) - tDf))</MathInline>
-      </Alias>
-      <StateVariable dimension="dimensionless" name="o_fast"/>
-      <StateVariable dimension="dimensionless" name="o_slow"/>
-    </Dynamics>
-  </ComponentClass>
-</NineML>
+<nineml:Component xmlns:nineml="http://nineml.net/9ML/1.0" name="Golgi_KM">
+  <nineml:Definition url="/Users/tclose/git/nineline/test/data/xml/Golgi_hcn2Class.xml">Golgi_KMClass</nineml:Definition>
+  <nineml:Property name="Aalpha_n">
+    <nineml:Quantity units="per_ms">
+      <nineml:SingleValue>0.0033</nineml:SingleValue>
+    </nineml:Quantity>
+  </nineml:Property>
+  <nineml:Property name="Abeta_n">
+    <nineml:Quantity units="per_ms">
+      <nineml:SingleValue>0.0033</nineml:SingleValue>
+    </nineml:Quantity>
+  </nineml:Property>
+  <nineml:Property name="B_ninf">
+    <nineml:Quantity units="mV">
+      <nineml:SingleValue>6.0</nineml:SingleValue>
+    </nineml:Quantity>
+  </nineml:Property>
+  <nineml:Property name="Kalpha_n">
+    <nineml:Quantity units="mV">
+      <nineml:SingleValue>40.0</nineml:SingleValue>
+    </nineml:Quantity>
+  </nineml:Property>
+  <nineml:Property name="Kbeta_n">
+    <nineml:Quantity units="mV">
+      <nineml:SingleValue>-20.0</nineml:SingleValue>
+    </nineml:Quantity>
+  </nineml:Property>
+  <nineml:Property name="Q10">
+    <nineml:Quantity>
+      <nineml:SingleValue>3.0</nineml:SingleValue>
+    </nineml:Quantity>
+  </nineml:Property>
+  <nineml:Property name="V0_ninf">
+    <nineml:Quantity units="mV">
+      <nineml:SingleValue>-35.0</nineml:SingleValue>
+    </nineml:Quantity>
+  </nineml:Property>
+  <nineml:Property name="V0alpha_n">
+    <nineml:Quantity units="mV">
+      <nineml:SingleValue>-30.0</nineml:SingleValue>
+    </nineml:Quantity>
+  </nineml:Property>
+  <nineml:Property name="V0beta_n">
+    <nineml:Quantity units="mV">
+      <nineml:SingleValue>-30.0</nineml:SingleValue>
+    </nineml:Quantity>
+  </nineml:Property>
+  <nineml:Property name="gkbar">
+    <nineml:Quantity units="S_per_cm2">
+      <nineml:SingleValue>0.001</nineml:SingleValue>
+    </nineml:Quantity>
+  </nineml:Property>
+  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
+  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
+  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <nineml:Unit symbol="per_ms" dimension="per_time" power="3"/>
+  <nineml:Dimension name="per_time" t="-1"/>
+</nineml:Component>

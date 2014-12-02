@@ -1,9 +1,9 @@
-from math import isnan
+from math import isnan, log10
 import re
 import regex
 import operator
-from copy import copy
 import quantities as pq
+import os.path
 import collections
 from nineml.maths import is_builtin_symbol
 from nineml.abstraction_layer.components.interface import Parameter
@@ -12,8 +12,11 @@ from nineml.abstraction_layer.dynamics import Regime, StateVariable, OnEvent
 from nineml.abstraction_layer.dynamics.component.expressions import (
     Alias, TimeDerivative, StateAssignment)
 from nineml.abstraction_layer.dynamics.component.ports import (
-    AnalogReceivePort, AnalogSendPort, EventReceivePort, EventSendPort)
+    AnalogReceivePort, AnalogSendPort, EventReceivePort)
 import nineml.abstraction_layer.units as un
+from nineml.user_layer import Definition, IonDynamicsType
+from nineml.context import Context
+import nineml.abstraction_layer.units as nineml_units
 
 # from nineml.user_layer.dynamics import IonDynamics
 from collections import defaultdict
@@ -48,6 +51,12 @@ class _Otherwise(object):
         return 'otherwise'
 
 
+_SI_to_nineml_units = dict(((u.dimension, u.power), u) for u in
+                           (getattr(nineml_units, uname)
+                            for uname in dir(nineml_units))
+                           if isinstance(u, nineml_units.Unit))
+
+
 class NMODLImporter(object):
     """
     Imports NMODL files into lib9ml structures
@@ -80,7 +89,34 @@ class NMODLImporter(object):
                         'mol/m**2': un.substance_per_area,
                         's*A': un.charge,
                         's**3*A/(kg*m**2)': un.per_voltage,
-                        None: None}
+                        None: un.dimensionless}
+
+#     _SI_to_nineml_units = {(un.conductance, 0): un.conductance,
+#                            (un.voltage, -3): un.mV,
+#                            (un.concentration, 0): un.concentration,
+#                            (un.currentDensity, 0): un.currentDensity,
+#                            (un.time, 0): un.time,
+#                            (un.temperature, 0): un.temperature,
+#                            (un.flux, 0): un.flux,
+#                            (un.mass_per_charge, 0): un.mass_per_charge,
+#                            (un.length, 0): un.length,
+#                            (un.conductanceDensity, 4): un.S_per_cm2,
+#                            (un.current, 0): un.current,
+#                            (un.current_per_time, 0): un.current_per_time,
+#                            (un.conductance, 0): un.conductance,
+#                            (un.per_time, 0): un.per_time,
+#                            (un.charge_density, 0): un.charge_density,
+#                            (un.per_time_per_concentration, 0): un.per_time_per_concentration,
+#                            (un.substance_per_area, 0): un.substance_per_area,
+#                            (un.charge, 0): un.charge,
+#                            (un.per_voltage, 0): un.per_voltage,
+#                            (un.dimensionless, 0): un.unitless}
+
+    @classmethod
+    def _units2nineml_units(cls, units):
+        dim_str, power = cls._units2SI(units)
+        dim = cls._SI_to_dimension[dim_str]
+        return _SI_to_nineml_units[(dim, power)]
 
     def __repr__(self):
         return ("NMODLImporter({}): {} parameters, {} ports, {} states,"
@@ -117,7 +153,6 @@ class NMODLImporter(object):
         self.breakpoint_solve_methods = {}
         self.initial_solve_methods = {}
         self.parameters = {}
-        self.properties = {}
         self.analog_ports = {}
         self.event_ports = {}
         self.regime_parts = []
@@ -153,7 +188,7 @@ class NMODLImporter(object):
                                     state_variables=self.state_variables)
         return comp_class
 
-    def get_component(self, class_path, hoc_properties={}):
+    def get_component(self, class_path=None, hoc_properties={}):
         # Copy properties removing all properties that were added to the analog
         # ports
         properties = dict((n, (v, u))
@@ -163,8 +198,13 @@ class NMODLImporter(object):
         # and the units specified in the NMODL file
         properties.update((n, (v, self.properties[n][1]))
                           for n, v in hoc_properties.iteritems())
-        comp = IonDynamics(self.component_name, definition=class_path,
-                           parameters=properties)
+        properties.update((n, (v, self._units2nineml_units(u)))
+                          for n, (v, u) in properties.iteritems())
+        context = Context()
+        definition = Definition(self.component_name + 'Class', context,
+                                url=os.path.normpath(class_path))
+        comp = IonDynamicsType(self.component_name, definition=definition,
+                               properties=properties)
         return comp
 
     def print_members(self):
@@ -1090,15 +1130,22 @@ class NMODLImporter(object):
         return argvals, arglist[:end_of_arglist]
 
     @classmethod
-    def _units2dimension(cls, units):
+    def _units2SI(cls, units):
         units = units.strip()
         if units == '1' or units is None or units == 'dimensionless':
-            return None
+            return None, 0
         if units.startswith('/'):
             units = '1.0' + units
         units = cls._sanitize_units(units)
-        si_units = str(pq.Quantity(1, units).simplified._dimensionality)
-        return cls._SI_to_dimension[si_units]
+        si_units = pq.Quantity(1, units).simplified
+        dimension = pq.Quantity(1, si_units._dimensionality)
+        power = int(log10(si_units / dimension))
+        return str(si_units._dimensionality), power
+
+    @classmethod
+    def _units2dimension(cls, units):
+        dim_str, _ = cls._units2SI(units)
+        return cls._SI_to_dimension[dim_str]
 
     @classmethod
     def _sanitize_units(cls, units):
