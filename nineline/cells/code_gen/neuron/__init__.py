@@ -60,24 +60,43 @@ class CodeGenerator(BaseCodeGenerator):
         args['parameters'] = list(model.parameters)
         args['aliases'] = list(model.aliases)
         args['state_variables'] = list(model.state_variables)
-        # Sort ports into types -----------------------------------------------
-        current_in = []
-        voltage_in = []
-        other_in = []
+        # Sort ports by dimension ---------------------------------------------
+        current_in = {}
+        voltage_in = {}
+        concentration_in = {}
+        other_in_ports = []
         for p in chain(model.analog_receive_ports, model.analog_reduce_ports):
-            if p.dimension == un.currentDensity:
-                current_in.append(p)
-            elif p.dimension == un.voltage:
-                voltage_in.append(p)
+            if p.dimension == un.currentDensity and p.name.startswith('i'):
+                current_in[p.name[1:]] = p
+            elif p.dimension == un.voltage and p.name.startswith('e'):
+                voltage_in[p.name[1:]] = p
+            elif p.dimension == un.concentration and (p.name.endswith('i') or
+                                                      p.name.endswith('o')):
+                concentration_in[p.name[:-1]] = p
             else:
-                other_in.append(p)
-        current_out = []
-        other_out = []
+                other_in_ports.append(p)
+        current_out = {}
+        concentration_out = {}
+        other_out_ports = []
         for p in model.analog_send_ports:
-            if p.dimension == un.currentDensity:
-                current_out.append(p)
+            if p.dimension == un.currentDensity and p.name.startswith('i'):
+                current_out[p.name[1:]] = p
+            elif p.dimension == un.concentration and (p.name.endswith('i') or
+                                                      p.name.endswith('o')):
+                concentration_out[p.name[:-1]] = p
             else:
-                other_out.append(p)
+                other_out_ports.append(p)
+        used_ions = set(chain(current_in.iterkeys(),
+                              voltage_in.iterkeys(),
+                              concentration_in.iterkeys(),
+                              current_out.iterkeys(),
+                              concentration_out.iterkeys()))
+        ion_read_writes = []
+        for ion in used_ions:
+            read
+            ion_read_writes.append(
+        args['incoming_analog_ports'] = other_in_ports
+        
         
         
         args['range_vars'] = [p.name for p in chain(model.parameters,

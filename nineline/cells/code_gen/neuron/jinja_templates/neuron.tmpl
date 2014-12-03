@@ -42,9 +42,7 @@ NEURON {
     : Implicit states
     RANGE regime
 
-{# NMODL has a line character limit, so we limit the number of entries in each
-   RANGE stmt to 10 
-#}
+{# NMODL has a line character limit, so we limit the number of entries in each RANGE stmt to 10 #}
     : Parameters
 {% for param in parameters %}
     {% if loop.index0 % 10 == 0 %}
@@ -73,11 +71,16 @@ NEURON {
 {% endfor %}
 
     : Ion concentrations
-{% for name, read, write, valence in ion_concentrations %}
+{% for name, read, write, valence in ion_read_writes %}
     USEION {{alias.lhs}}
 {% endfor %}
 
-
+    : Misc. Analog ports
+{% for port in incoming_analog_ports %}
+    {% if loop.index0 % 10 == 0 %}
+    RANGE
+    {%- else %},{% endif %} {{port.name}}
+{% endfor %}
 
 
 {#
