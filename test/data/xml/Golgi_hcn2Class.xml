@@ -1,68 +1,83 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <NineML xmlns="http://nineml.net/9ML/1.0">
-  <ComponentClass name="Golgi_KMClass">
-    <AnalogSendPort dimension="currentDensity" name="ik"/>
+  <ComponentClass name="Golgi_hcn2Class">
+    <AnalogSendPort dimension="currentDensity" name="ih"/>
     <AnalogReceivePort dimension="temperature" name="celsius"/>
-    <AnalogReceivePort dimension="voltage" name="ek"/>
     <AnalogReceivePort dimension="voltage" name="v"/>
-    <Parameter dimension="voltage" name="V0_ninf"/>
-    <Parameter dimension="voltage" name="V0beta_n"/>
-    <Parameter dimension="conductanceDensity" name="gkbar"/>
-    <Parameter dimension="voltage" name="Kbeta_n"/>
-    <Parameter dimension="voltage" name="V0alpha_n"/>
-    <Parameter name="Q10"/>
-    <Parameter dimension="per_time" name="Aalpha_n"/>
-    <Parameter dimension="voltage" name="B_ninf"/>
-    <Parameter dimension="per_time" name="Abeta_n"/>
-    <Parameter dimension="voltage" name="Kalpha_n"/>
+    <Parameter dimension="per_voltage" name="c"/>
+    <Parameter name="q_10"/>
+    <Parameter dimension="voltage" name="tDf"/>
+    <Parameter dimension="per_voltage" name="tEf"/>
+    <Parameter name="tCs"/>
+    <Parameter dimension="voltage" name="tDs"/>
+    <Parameter dimension="voltage" name="ehcn2"/>
+    <Parameter dimension="per_voltage" name="rA"/>
+    <Parameter name="rB"/>
+    <Parameter name="tCf"/>
+    <Parameter dimension="conductanceDensity" name="gbar"/>
+    <Parameter dimension="per_voltage" name="tEs"/>
+    <Parameter dimension="voltage" name="Ehalf"/>
     <Dynamics>
-      <Regime name="states">
-        <TimeDerivative variable="n">
-          <MathInline>(n_inf - n)/tau_n</MathInline>
+      <Regime name="state">
+        <TimeDerivative variable="o_fast">
+          <MathInline>(o_fast_inf - o_fast) / tau_f</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="o_slow">
+          <MathInline>(o_slow_inf - o_slow) / tau_s</MathInline>
         </TimeDerivative>
       </Regime>
-      <Alias name="tau_n">
-        <MathInline>1/s_n</MathInline>
+      <Alias name="o_slow_inf">
+        <MathInline>(1 - r_v_rA_rB) * o_inf_v_Ehalf_c</MathInline>
       </Alias>
-      <Alias name="b_n">
-        <MathInline>bet_n_v</MathInline>
+      <Alias name="o_fast_inf">
+        <MathInline>r_v_rA_rB * o_inf_v_Ehalf_c</MathInline>
       </Alias>
-      <Alias name="bet_n_v">
-        <MathInline>Abeta_n*exp((v-V0beta_n)/Kbeta_n)</MathInline>
+      <Alias name="o_inf_v_Ehalf_c">
+        <MathInline>1 / (1 + exp((v - Ehalf) * c))</MathInline>
       </Alias>
-      <Alias name="alp_n_v">
-        <MathInline>Aalpha_n*exp((v-V0alpha_n)/Kalpha_n)</MathInline>
+      <Alias name="r_v_rA_rB">
+        <Piecewise>
+          <Piece>
+            <MathInline>0</MathInline>
+            <MathInline>v &gt;= -64.70</MathInline>
+          </Piece>
+          <Piece>
+            <MathInline>1</MathInline>
+            <MathInline>!(v &gt;= -64.70) &amp; (v &lt;= -108.70)</MathInline>
+          </Piece>
+          <Otherwise>
+            <MathInline>(rA * v) + rB</MathInline>
+          </Otherwise>
+        </Piecewise>
       </Alias>
-      <Alias name="n_inf">
-        <MathInline>1/(1+exp(-(v-V0_ninf)/B_ninf))</MathInline>
+      <Alias name="tau_f">
+        <MathInline>tau_fast_v_tCf_tDf_tEf</MathInline>
       </Alias>
-      <Alias name="alpha_n">
-        <MathInline>alp_n_v</MathInline>
+      <Alias name="tau_slow_v_tCs_tDs_tEs">
+        <MathInline>exp(tEs * ((tCs * v) - tDs))</MathInline>
+      </Alias>
+      <Alias name="q">
+        <MathInline>q_10^((celsius -33) / 10)</MathInline>
+      </Alias>
+      <Alias name="ih">
+        <MathInline>g * (v - ehcn2)</MathInline>
       </Alias>
       <Alias name="g">
-        <MathInline>gkbar*n</MathInline>
+        <MathInline>gbar * (o_fast + o_slow)</MathInline>
       </Alias>
-      <Alias name="ik">
-        <MathInline>g*(v - ek)</MathInline>
+      <Alias name="tau_s">
+        <MathInline>tau_slow_v_tCs_tDs_tEs</MathInline>
       </Alias>
-      <Alias name="a_n">
-        <MathInline>alp_n_v</MathInline>
+      <Alias name="tau_fast_v_tCf_tDf_tEf">
+        <MathInline>exp(tEf * ((tCf * v) - tDf))</MathInline>
       </Alias>
-      <Alias name="tcorr">
-        <MathInline>Q10^((celsius - 22)/10)</MathInline>
-      </Alias>
-      <Alias name="s_n">
-        <MathInline>tcorr*(a_n + b_n)</MathInline>
-      </Alias>
-      <Alias name="beta_n">
-        <MathInline>bet_n_v</MathInline>
-      </Alias>
-      <StateVariable name="n"/>
+      <StateVariable name="o_fast"/>
+      <StateVariable name="o_slow"/>
     </Dynamics>
   </ComponentClass>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" name="per_time" t="-1"/>
   <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="-1" t="-3" m="1" l="2" name="voltage"/>
   <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" k="1" name="temperature"/>
   <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" t="3" m="-1" l="-2" name="per_voltage"/>
   <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" name="currentDensity" l="-2"/>
 </NineML>

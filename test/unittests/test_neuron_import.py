@@ -94,7 +94,7 @@ class TestNMODLImporter(unittest.TestCase):
                                    'xml', 'Golgi_hcn2')
         importer = NMODLImporter(os.path.join(os.path.dirname(__file__), '..',
                                               'data', 'nmodl',
-                                              'Golgi_KM.mod'))
+                                              'Golgi_hcn2.mod'))
         componentclass = importer.get_component_class()
         componentclass.write(output_path + 'Class.xml')
         component = importer.get_component(output_path + 'Class.xml')

@@ -49,9 +49,16 @@ class CodeGenerator(BaseCodeGenerator):
                                    shell=True)
         self._compiler = compiler[:-1]  # strip trailing \n
 
-    def _extract_template_args(self, component, initial_state, v_threshold,
-                               ode_solver, ss_solver, abs_tolerance,
-                               rel_tolerance, max_step_size):
+    def _extract_template_args(self, component, initial_state,
+                               **template_args):
+        # Get optional template_args
+        ode_solver = template_args.get('ode_solver', 'gsl')
+        ss_solver = template_args.get('ss_solver', None)
+        abs_tolerance = template_args.get('abs_tolerance', 1e-7)
+        rel_tolerance = template_args.get('rel_tolerance', 1e-7)
+        max_step_size = template_args.get('max_step_size', None)
+        v_threshold = template_args.get('v_threshold', None)
+        # Call method from base class
         args = super(CodeGenerator, self)._extract_template_args(component)
         model = component.component_class
         # Set solver methods --------------------------------------------------

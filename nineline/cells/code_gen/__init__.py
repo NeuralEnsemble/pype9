@@ -56,7 +56,7 @@ class BaseCodeGenerator(object):
         self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
                                       xrange=xrange)
 
-    def _extract_template_args(self, component):  # FIXME: These should be optional kwargs because they will differ between simulators @IgnorePep8
+    def _extract_template_args(self, component):
         """
         Extracts the required information from the 9ML model into a dictionary
         containing the relevant arguments for the Jinja2 templates. This should
@@ -81,9 +81,8 @@ class BaseCodeGenerator(object):
         pass
 
     def generate(self, component, initial_state, install_dir=None,
-                 build_dir=None, ode_solver=None, build_mode='lazy',
-                 v_threshold=None, abs_tolerance=1e-7, rel_tolerance=1e-7,
-                 max_step_size=None, verbose=True):
+                 build_dir=None, build_mode='lazy', verbose=True,
+                 **template_args):
         """
         Generates and builds the required NMODL files for a given NCML cell
         class
@@ -220,12 +219,8 @@ class BaseCodeGenerator(object):
                                        src_dir=src_dir,
                                        compile_dir=compile_dir,
                                        install_dir=install_dir,
-                                       v_threshold=v_threshold,
-                                       ode_solver=ode_solver,
-                                       abs_tolerance=abs_tolerance,
-                                       rel_tolerance=rel_tolerance,
-                                       max_step_size=max_step_size,
-                                       verbose=verbose)
+                                       verbose=verbose,
+                                       **template_args)
             # Write the timestamp of the 9ML file used to generate the source
             # files
             with open(nineml_mod_time_path, 'w') as f:
@@ -241,26 +236,18 @@ class BaseCodeGenerator(object):
         return install_dir
 
     def generate_source_files(self, component, initial_state, src_dir,
-                              compile_dir, install_dir, v_threshold=None,
-                              ode_solver='gsl', ss_solver=False,
-                              abs_tolerance=1e-7, rel_tolerance=1e-7,
-                              max_step_size=None, verbose=True):
+                              compile_dir, install_dir, verbose=False,
+                              **template_args):
         """
         Generates the source files for the relevant simulator
         """
-        # Set default solver if not provided with default for simulator target.
-        if not ode_solver:
-            ode_solver = self._DEFAULT_SOLVER
         # Extract relevant information from 9ml
         # component/class/initial_state
-        template_args = self._extract_template_args(
-            component, initial_state, v_threshold=v_threshold,
-            ode_solver=ode_solver, ss_solver=ss_solver,
-            abs_tolerance=abs_tolerance, rel_tolerance=rel_tolerance,
-            max_step_size=max_step_size)
+        template_args = self._extract_template_args(component, initial_state,
+                                                    **template_args)
         # Render source files
         self._render_source_files(template_args, src_dir, compile_dir,
-                                  install_dir, verbose)
+                                  install_dir, verbose=verbose)
 
     def _get_install_dir(self, build_dir, install_dir):
         """

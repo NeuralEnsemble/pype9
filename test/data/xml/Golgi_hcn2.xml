@@ -1,60 +1,77 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<nineml:Component xmlns:nineml="http://nineml.net/9ML/1.0" name="Golgi_KM">
-  <nineml:Definition url="/Users/tclose/git/nineline/test/data/xml/Golgi_hcn2Class.xml">Golgi_KMClass</nineml:Definition>
-  <nineml:Property name="Aalpha_n">
-    <nineml:Quantity units="per_ms">
-      <nineml:SingleValue>0.0033</nineml:SingleValue>
-    </nineml:Quantity>
-  </nineml:Property>
-  <nineml:Property name="Abeta_n">
-    <nineml:Quantity units="per_ms">
-      <nineml:SingleValue>0.0033</nineml:SingleValue>
-    </nineml:Quantity>
-  </nineml:Property>
-  <nineml:Property name="B_ninf">
-    <nineml:Quantity units="mV">
-      <nineml:SingleValue>6.0</nineml:SingleValue>
-    </nineml:Quantity>
-  </nineml:Property>
-  <nineml:Property name="Kalpha_n">
-    <nineml:Quantity units="mV">
-      <nineml:SingleValue>40.0</nineml:SingleValue>
-    </nineml:Quantity>
-  </nineml:Property>
-  <nineml:Property name="Kbeta_n">
-    <nineml:Quantity units="mV">
-      <nineml:SingleValue>-20.0</nineml:SingleValue>
-    </nineml:Quantity>
-  </nineml:Property>
-  <nineml:Property name="Q10">
-    <nineml:Quantity>
-      <nineml:SingleValue>3.0</nineml:SingleValue>
-    </nineml:Quantity>
-  </nineml:Property>
-  <nineml:Property name="V0_ninf">
-    <nineml:Quantity units="mV">
-      <nineml:SingleValue>-35.0</nineml:SingleValue>
-    </nineml:Quantity>
-  </nineml:Property>
-  <nineml:Property name="V0alpha_n">
-    <nineml:Quantity units="mV">
-      <nineml:SingleValue>-30.0</nineml:SingleValue>
-    </nineml:Quantity>
-  </nineml:Property>
-  <nineml:Property name="V0beta_n">
-    <nineml:Quantity units="mV">
-      <nineml:SingleValue>-30.0</nineml:SingleValue>
-    </nineml:Quantity>
-  </nineml:Property>
-  <nineml:Property name="gkbar">
-    <nineml:Quantity units="S_per_cm2">
-      <nineml:SingleValue>0.001</nineml:SingleValue>
-    </nineml:Quantity>
-  </nineml:Property>
-  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
-  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
+  <nineml:Component name="Golgi_hcn2">
+    <nineml:Definition url="/Users/tclose/git/nineline/test/data/xml/Golgi_hcn2Class.xml">Golgi_hcn2Class</nineml:Definition>
+    <nineml:Property name="Ehalf">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-81.95</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="c">
+      <nineml:Quantity units="per_mV">
+        <nineml:SingleValue>0.1661</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="ehcn2">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-20.0</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="gbar">
+      <nineml:Quantity units="S_per_cm2">
+        <nineml:SingleValue>8e-05</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="q_10">
+      <nineml:Quantity>
+        <nineml:SingleValue>3.0</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="rA">
+      <nineml:Quantity units="per_mV">
+        <nineml:SingleValue>-0.0227</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="rB">
+      <nineml:Quantity>
+        <nineml:SingleValue>-1.4694</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="tCf">
+      <nineml:Quantity>
+        <nineml:SingleValue>0.0269</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="tCs">
+      <nineml:Quantity>
+        <nineml:SingleValue>0.0152</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="tDf">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-5.6111</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="tDs">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-5.2944</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="tEf">
+      <nineml:Quantity units="per_mV">
+        <nineml:SingleValue>2.3026</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="tEs">
+      <nineml:Quantity units="per_mV">
+        <nineml:SingleValue>2.3026</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+  </nineml:Component>
+  <nineml:Unit symbol="per_mV" dimension="per_voltage" power="3"/>
+  <nineml:Dimension i="1" t="3" m="-1" l="-2" name="per_voltage"/>
   <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
   <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-  <nineml:Unit symbol="per_ms" dimension="per_time" power="3"/>
-  <nineml:Dimension name="per_time" t="-1"/>
-</nineml:Component>
+  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
+  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+</nineml:NineML>

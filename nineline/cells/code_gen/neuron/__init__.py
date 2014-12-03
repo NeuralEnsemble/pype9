@@ -45,10 +45,10 @@ class CodeGenerator(BaseCodeGenerator):
         # NMODL files on the current platform
         self.specials_dir = self._get_specials_dir()
 
-    def _extract_template_args(self, component, initial_state, ode_solver,
-                               ss_solver, abs_tolerance, rel_tolerance,
-                               v_threshold):
+    def _extract_template_args(self, component, initial_state,  # @UnusedVariable @IgnorePep8
+                               **template_args):
         args = super(CodeGenerator, self)._extract_template_args(component)
+        args['ode_solver'] = template_args.get('ode_solver', 'derivimplicit')
         
         return args
 
@@ -238,7 +238,7 @@ class CodeGenerator(BaseCodeGenerator):
 
     def _get_specials_dir(self):
         # Create a temporary directory to run nrnivmodl in
-        tmp_dir_path = os.path.join(tempfile.gettempdir(), uuid.uuid4())
+        tmp_dir_path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
         try:
             os.mkdir(tmp_dir_path)
         except IOError:
