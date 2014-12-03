@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
+  <nineml:Component name="GRC_LKG1">
+    <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/GRC_LKG1Class.xml">GRC_LKG1Class</nineml:Definition>
+    <nineml:Property name="el">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-16.5</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="gl">
+      <nineml:Quantity units="S_per_cm2">
+        <nineml:SingleValue>5.68e-05</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+  </nineml:Component>
+  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
+  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
+  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+</nineml:NineML>

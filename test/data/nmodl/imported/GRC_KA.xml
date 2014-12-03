@@ -1,0 +1,109 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
+  <nineml:Component name="GRC_KA">
+    <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/GRC_KAClass.xml">GRC_KAClass</nineml:Definition>
+    <nineml:Property name="Aalpha_a">
+      <nineml:Quantity units="per_ms">
+        <nineml:SingleValue>0.8147</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="Aalpha_b">
+      <nineml:Quantity units="per_ms">
+        <nineml:SingleValue>0.0368</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="Abeta_a">
+      <nineml:Quantity units="per_ms">
+        <nineml:SingleValue>0.1655</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="Abeta_b">
+      <nineml:Quantity units="per_ms">
+        <nineml:SingleValue>0.0345</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="K_ainf">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-17.0</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="K_binf">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>8.4</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="Kalpha_a">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-23.32708</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="Kalpha_b">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>12.8433</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="Kbeta_a">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>19.47175</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="Kbeta_b">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-8.90123</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="V0_ainf">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-38.0</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="V0_binf">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-78.8</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="V0alpha_a">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-9.17203</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="V0alpha_b">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-111.33209</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="V0beta_a">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-18.27914</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="V0beta_b">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-49.9537</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="celsius">
+      <nineml:Quantity units="degC">
+        <nineml:SingleValue>30.0</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="ek">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-84.69</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="gkbar">
+      <nineml:Quantity units="S_per_cm2">
+        <nineml:SingleValue>0.0032</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+  </nineml:Component>
+  <nineml:Unit symbol="degC" dimension="temperature" power="0" offset="273.15"/>
+  <nineml:Dimension k="1" name="temperature"/>
+  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
+  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
+  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <nineml:Unit symbol="per_ms" dimension="per_time" power="3"/>
+  <nineml:Dimension name="per_time" t="-1"/>
+</nineml:NineML>

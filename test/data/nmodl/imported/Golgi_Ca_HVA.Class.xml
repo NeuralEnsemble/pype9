@@ -1,0 +1,97 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<NineML xmlns="http://nineml.net/9ML/1.0">
+  <ComponentClass name="Golgi_Ca_HVAClass">
+    <AnalogSendPort dimension="currentDensity" name="ica"/>
+    <AnalogReceivePort dimension="temperature" name="celsius"/>
+    <AnalogReceivePort dimension="voltage" name="eca"/>
+    <AnalogReceivePort dimension="voltage" name="v"/>
+    <Parameter dimension="per_time" name="Abeta_u"/>
+    <Parameter dimension="voltage" name="Kalpha_s"/>
+    <Parameter dimension="per_time" name="Aalpha_s"/>
+    <Parameter dimension="per_time" name="Abeta_s"/>
+    <Parameter dimension="voltage" name="V0alpha_s"/>
+    <Parameter dimension="voltage" name="V0alpha_u"/>
+    <Parameter dimension="voltage" name="Kbeta_s"/>
+    <Parameter dimension="per_time" name="Aalpha_u"/>
+    <Parameter dimension="conductanceDensity" name="gcabar"/>
+    <Parameter name="Q10"/>
+    <Parameter dimension="voltage" name="Kbeta_u"/>
+    <Parameter dimension="voltage" name="V0beta_s"/>
+    <Parameter dimension="voltage" name="V0beta_u"/>
+    <Parameter dimension="voltage" name="Kalpha_u"/>
+    <Dynamics>
+      <Regime name="states">
+        <TimeDerivative variable="s">
+          <MathInline>(s_inf - s)/tau_s</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="u">
+          <MathInline>(u_inf - u)/tau_u</MathInline>
+        </TimeDerivative>
+      </Regime>
+      <Alias name="alp_u_v">
+        <MathInline>tcorr_v*Aalpha_u*exp((v-V0alpha_u)/Kalpha_u)</MathInline>
+      </Alias>
+      <Alias name="a_u">
+        <MathInline>alp_u_v</MathInline>
+      </Alias>
+      <Alias name="bet_s_v">
+        <MathInline>tcorr_v*Abeta_s*exp((v-V0beta_s)/Kbeta_s)</MathInline>
+      </Alias>
+      <Alias name="beta_u">
+        <MathInline>bet_u_v</MathInline>
+      </Alias>
+      <Alias name="g">
+        <MathInline>gcabar*s*s*u</MathInline>
+      </Alias>
+      <Alias name="ica">
+        <MathInline>g*(v - eca)</MathInline>
+      </Alias>
+      <Alias name="alp_s_v">
+        <MathInline>tcorr_v*Aalpha_s*exp((v-V0alpha_s)/Kalpha_s)</MathInline>
+      </Alias>
+      <Alias name="beta_s">
+        <MathInline>bet_s_v</MathInline>
+      </Alias>
+      <Alias name="tau_s">
+        <MathInline>1/(a_s + b_s)</MathInline>
+      </Alias>
+      <Alias name="tau_u">
+        <MathInline>1/(a_u + b_u)</MathInline>
+      </Alias>
+      <Alias name="alpha_u">
+        <MathInline>alp_u_v</MathInline>
+      </Alias>
+      <Alias name="s_inf">
+        <MathInline>a_s/(a_s + b_s)</MathInline>
+      </Alias>
+      <Alias name="bet_u_v">
+        <MathInline>tcorr_v*Abeta_u*exp((v-V0beta_u)/Kbeta_u)</MathInline>
+      </Alias>
+      <Alias name="a_s">
+        <MathInline>alp_s_v</MathInline>
+      </Alias>
+      <Alias name="b_s">
+        <MathInline>bet_s_v</MathInline>
+      </Alias>
+      <Alias name="u_inf">
+        <MathInline>a_u/(a_u + b_u)</MathInline>
+      </Alias>
+      <Alias name="b_u">
+        <MathInline>bet_u_v</MathInline>
+      </Alias>
+      <Alias name="tcorr_v">
+        <MathInline>Q10^((celsius-20)/10)</MathInline>
+      </Alias>
+      <Alias name="alpha_s">
+        <MathInline>alp_s_v</MathInline>
+      </Alias>
+      <StateVariable name="s"/>
+      <StateVariable name="u"/>
+    </Dynamics>
+  </ComponentClass>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" name="per_time" t="-1"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" k="1" name="temperature"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" name="currentDensity" l="-2"/>
+</NineML>

@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<NineML xmlns="http://nineml.net/9ML/1.0">
+  <ComponentClass name="Golgi_BKClass">
+    <AnalogSendPort dimension="currentDensity" name="ik"/>
+    <AnalogReceivePort dimension="concentration" name="cai"/>
+    <AnalogReceivePort dimension="temperature" name="celsius"/>
+    <AnalogReceivePort dimension="voltage" name="ek"/>
+    <AnalogReceivePort dimension="voltage" name="v"/>
+    <Parameter dimension="voltage" name="Kbeta_c"/>
+    <Parameter dimension="concentration" name="Balpha_c"/>
+    <Parameter dimension="conductanceDensity" name="gkbar"/>
+    <Parameter dimension="voltage" name="Kalpha_c"/>
+    <Parameter dimension="concentration" name="Bbeta_c"/>
+    <Parameter dimension="per_time" name="Abeta_c"/>
+    <Parameter name="Q10"/>
+    <Parameter dimension="per_time" name="Aalpha_c"/>
+    <Dynamics>
+      <Regime name="states">
+        <TimeDerivative variable="c">
+          <MathInline>(c_inf - c)/tau_c</MathInline>
+        </TimeDerivative>
+      </Regime>
+      <Alias name="alp_c_v">
+        <MathInline>tcorr_v*Aalpha_c/(1+(Balpha_c*exp(v/Kalpha_c)/cai))</MathInline>
+      </Alias>
+      <Alias name="alpha_c">
+        <MathInline>alp_c_v</MathInline>
+      </Alias>
+      <Alias name="g">
+        <MathInline>gkbar*c</MathInline>
+      </Alias>
+      <Alias name="b_c">
+        <MathInline>bet_c_v</MathInline>
+      </Alias>
+      <Alias name="tau_c">
+        <MathInline>1/(a_c + b_c)</MathInline>
+      </Alias>
+      <Alias name="c_inf">
+        <MathInline>a_c/(a_c + b_c)</MathInline>
+      </Alias>
+      <Alias name="beta_c">
+        <MathInline>bet_c_v</MathInline>
+      </Alias>
+      <Alias name="a_c">
+        <MathInline>alp_c_v</MathInline>
+      </Alias>
+      <Alias name="ik">
+        <MathInline>g*(v - ek)</MathInline>
+      </Alias>
+      <Alias name="bet_c_v">
+        <MathInline>tcorr_v*Abeta_c/(1+cai/(Bbeta_c*exp(v/Kbeta_c)))</MathInline>
+      </Alias>
+      <Alias name="tcorr_v">
+        <MathInline>Q10^((celsius-30)/10)</MathInline>
+      </Alias>
+      <StateVariable name="c"/>
+    </Dynamics>
+  </ComponentClass>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" name="per_time" t="-1"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" k="1" name="temperature"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" l="-3" name="concentration" n="1"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" name="currentDensity" l="-2"/>
+</NineML>

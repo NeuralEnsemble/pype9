@@ -51,6 +51,27 @@ class _Otherwise(object):
         return 'otherwise'
 
 
+_SI_to_dimension = {'m/s': un.conductance,
+                    'kg*m**2/(s**3*A)': un.voltage,
+                    'mol/m**3': un.concentration,
+                    'A/m**2': un.currentDensity,
+                    's': un.time,
+                    'K': un.temperature,
+                    'kg/(m**3*s)': un.flux,
+                    '1/(s*A)': un.mass_per_charge,
+                    'm': un.length,
+                    's**3*A**2/(kg*m**4)': un.conductanceDensity,
+                    'A': un.current,
+                    'A/s': un.current_per_time,
+                    's**3*A**2/(kg*m**2)': un.conductance,
+                    '1/s': un.per_time,
+                    's*A/m**3': un.charge_density,
+                    'm**3/(s*mol)': un.per_time_per_concentration,
+                    'mol/m**2': un.substance_per_area,
+                    's*A': un.charge,
+                    's**3*A/(kg*m**2)': un.per_voltage,
+                    None: un.dimensionless}
+
 _SI_to_nineml_units = dict(((u.dimension, u.power), u) for u in
                            (getattr(nineml_units, uname)
                             for uname in dir(nineml_units))
@@ -69,54 +90,6 @@ class NMODLImporter(object):
     _inbuilt_constants = {'faraday': pq.Quantity(96485.3365, 'coulomb'),
                           'k-mole': pq.Quantity(8.3144621, 'J/K'),
                           'pi': pq.Quantity(3.14159265359, 'dimensionless')}
-
-    _SI_to_dimension = {'m/s': un.conductance,
-                        'kg*m**2/(s**3*A)': un.voltage,
-                        'mol/m**3': un.concentration,
-                        'A/m**2': un.currentDensity,
-                        's': un.time,
-                        'K': un.temperature,
-                        'kg/(m**3*s)': un.flux,
-                        '1/(s*A)': un.mass_per_charge,
-                        'm': un.length,
-                        's**3*A**2/(kg*m**4)': un.conductanceDensity,
-                        'A': un.current,
-                        'A/s': un.current_per_time,
-                        's**3*A**2/(kg*m**2)': un.conductance,
-                        '1/s': un.per_time,
-                        's*A/m**3': un.charge_density,
-                        'm**3/(s*mol)': un.per_time_per_concentration,
-                        'mol/m**2': un.substance_per_area,
-                        's*A': un.charge,
-                        's**3*A/(kg*m**2)': un.per_voltage,
-                        None: un.dimensionless}
-
-#     _SI_to_nineml_units = {(un.conductance, 0): un.conductance,
-#                            (un.voltage, -3): un.mV,
-#                            (un.concentration, 0): un.concentration,
-#                            (un.currentDensity, 0): un.currentDensity,
-#                            (un.time, 0): un.time,
-#                            (un.temperature, 0): un.temperature,
-#                            (un.flux, 0): un.flux,
-#                            (un.mass_per_charge, 0): un.mass_per_charge,
-#                            (un.length, 0): un.length,
-#                            (un.conductanceDensity, 4): un.S_per_cm2,
-#                            (un.current, 0): un.current,
-#                            (un.current_per_time, 0): un.current_per_time,
-#                            (un.conductance, 0): un.conductance,
-#                            (un.per_time, 0): un.per_time,
-#                            (un.charge_density, 0): un.charge_density,
-#                            (un.per_time_per_concentration, 0): un.per_time_per_concentration,
-#                            (un.substance_per_area, 0): un.substance_per_area,
-#                            (un.charge, 0): un.charge,
-#                            (un.per_voltage, 0): un.per_voltage,
-#                            (un.dimensionless, 0): un.unitless}
-
-    @classmethod
-    def _units2nineml_units(cls, units):
-        dim_str, power = cls._units2SI(units)
-        dim = cls._SI_to_dimension[dim_str]
-        return _SI_to_nineml_units[(dim, power)]
 
     def __repr__(self):
         return ("NMODLImporter({}): {} parameters, {} ports, {} states,"
@@ -377,9 +350,9 @@ class NMODLImporter(object):
         return '*'.join('{}^{}'.format(s, p) if p else s
                         for s, p in states)
 
-    # ----------------- #
-    #  Content readers  #
-    # ----------------- #
+    # =========================================================================
+    # Content readers
+    # =========================================================================
 
     def _read_title(self):
         # Extract title and comments if present
@@ -411,9 +384,9 @@ class NMODLImporter(object):
                 else:
                     self.blocks[block_name] = contents
 
-    # ------------------ #
-    #  Block extractors  #
-    # ------------------ #
+    # =========================================================================
+    # Block extractors
+    # =========================================================================
 
     def _extract_procedure_and_function_blocks(self):
         # Read functions
@@ -1089,9 +1062,9 @@ class NMODLImporter(object):
         else:
             pieces.append((stmt, str(test)))
 
-    #==========================================================================
-    # General Helper functions
-    #==========================================================================
+    # =========================================================================
+    # Helper methods
+    # =========================================================================
 
     def _subs_variable(self, old, new, expr):
         # If the new expression contains more than one "word" enclose it
@@ -1143,9 +1116,15 @@ class NMODLImporter(object):
         return str(si_units._dimensionality), power
 
     @classmethod
+    def _units2nineml_units(cls, units):
+        dim_str, power = cls._units2SI(units)
+        dim = _SI_to_dimension[dim_str]
+        return _SI_to_nineml_units[(dim, power)]
+
+    @classmethod
     def _units2dimension(cls, units):
         dim_str, _ = cls._units2SI(units)
-        return cls._SI_to_dimension[dim_str]
+        return _SI_to_dimension[dim_str]
 
     @classmethod
     def _sanitize_units(cls, units):

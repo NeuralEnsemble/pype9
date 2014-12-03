@@ -1,0 +1,60 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
+  <nineml:Component name="Golgi_NaP">
+    <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/Golgi_NaPClass.xml">Golgi_NaPClass</nineml:Definition>
+    <nineml:Property name="Aalpha_m">
+      <nineml:Quantity>
+        <nineml:SingleValue>-0.91</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="Abeta_m">
+      <nineml:Quantity>
+        <nineml:SingleValue>0.62</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="B_minf">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>5.0</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="Kalpha_m">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-5.0</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="Kbeta_m">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>5.0</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="Q10">
+      <nineml:Quantity>
+        <nineml:SingleValue>3.0</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="V0_minf">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-43.0</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="V0alpha_m">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-40.0</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="V0beta_m">
+      <nineml:Quantity units="mV">
+        <nineml:SingleValue>-40.0</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="gbar">
+      <nineml:Quantity units="S_per_cm2">
+        <nineml:SingleValue>0.00019</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+  </nineml:Component>
+  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
+  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
+  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+</nineml:NineML>

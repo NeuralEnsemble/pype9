@@ -11,11 +11,13 @@ from __future__ import absolute_import
 import os.path
 import shutil
 import time
+from itertools import chain
 import platform
 import tempfile
 import uuid
 import subprocess as sp
 from .. import BaseCodeGenerator
+import nineml.abstraction_layer.units as un
 
 if 'NRNHOME' in os.environ:
     os.environ['PATH'] += (os.pathsep +
@@ -37,6 +39,8 @@ class CodeGenerator(BaseCodeGenerator):
     _DEFAULT_SOLVER = 'derivimplicit'
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
+    _neuron_units = {un.mV, 'millivolt'}
+
     def __init__(self):
         super(CodeGenerator, self).__init__()
         # Find the path to nrnivmodl
@@ -47,8 +51,22 @@ class CodeGenerator(BaseCodeGenerator):
 
     def _extract_template_args(self, component, initial_state,  # @UnusedVariable @IgnorePep8
                                **template_args):
+        model = component.component_class
         args = super(CodeGenerator, self)._extract_template_args(component)
         args['ode_solver'] = template_args.get('ode_solver', 'derivimplicit')
+        args['point_process'] = False
+        args['parameters'] = list(model.parameters)
+        args['aliases'] = list(model.aliases)
+        args['state_variables'] = list(model.state_variables)
+        incoming_analog_ports = list(chain(model.analog_receive_ports,
+                                     model.analog_reduce_ports))
+        current_in_ports = [p.name for p in incoming_analog_ports
+                            if p.dimension == un.currentDensity]
+        current_out_ports = 
+        
+        args['range_vars'] = [p.name for p in chain(model.parameters,
+                                                    model.analog_receive_ports,
+                                                    model.analog_reduce_ports)]
         
         return args
 

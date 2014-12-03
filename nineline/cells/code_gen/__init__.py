@@ -84,26 +84,23 @@ class BaseCodeGenerator(object):
                  build_dir=None, build_mode='lazy', verbose=True,
                  **template_args):
         """
-        Generates and builds the required NMODL files for a given NCML cell
-        class
+        Generates and builds the required simulator-specific files for a given
+        NCML cell class
 
-        @param celltype_name [str]: Name of the celltype to be built
-        @param nineml_path [str]: Path to the NCML file from which the NMODL
-                                  files will be compiled and built
-        @param install_dir [str]: Path to the directory where the NMODL files
-                                  will be generated and compiled
-        @param build_dir [str]: Used to set the default 'install_dir' path
-        @param ode_solver [str]: The ode_solver option to be passed to the NeMo
-                             interpreter command
-        @param build_mode [str]: Available build options:
-                                  lazy - only build if files are modified
-                                  force - always build from scratch
-                                  require - require built binaries are present
-                                  build_only - build and then quit
-                                  generate_only - generate src and then quit
-                                  compile_only - don't generate src but compile
-        @param kinetics [list(str)]: A list of ionic components to be generated
-                                     using the kinetics option
+        `component` [nineml.user_layer.Component]: 9ML component
+        `install_dir` [str]: Path to the directory where the NMODL files
+                             will be generated and compiled
+        `build_dir` [str]: Used to set the default 'install_dir' path
+        `build_mode` [str]: Available build options:
+                            lazy - only build if files are modified
+                            force - always build from scratch
+                            require - require built binaries are present
+                            build_only - build and then quit
+                            generate_only - generate src and then quit
+                            compile_only - don't generate src but compile
+        `verbose` [bool]: Whether the build output is shown or not
+        `template_args` [dict]: A dictionary of (potentially simulator-
+                                specific) template arguments
         """
         # Save original working directory to reinstate it afterwards (just to
         # be polite)

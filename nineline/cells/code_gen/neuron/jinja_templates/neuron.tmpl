@@ -33,51 +33,58 @@
 #}
 
 NEURON {
-{% if (hasEvents) %}
+{% if point_process %}
     POINT_PROCESS {{modelName}}
+{% else %}
+    SUFFIX {{ModelName}}
 {% endif %}
-{# NMODL has a line character limit, so we limit the number of entries in each RANGE stmt to 10 #}
-{% for export in exports %}
-    {% if ((loop.index0 % 10) == 0) %}
-    RANGE {{export}}{% else %}, {{export}}{% endif %}
+   
+    : Implicit states
+    RANGE regime
+
+{# NMODL has a line character limit, so we limit the number of entries in each
+   RANGE stmt to 10 
+#}
+    : Parameters
+{% for param in parameters %}
+    {% if loop.index0 % 10 == 0 %}
+    RANGE {{param.name}}
+    {%- else -%}
+    , {{param.name}}
+    {%- endif %}
 {% endfor %}
-{% if (not (currents == [])) %}
-    RANGE {{currents | join(", ")}}
-{% endif %}
+
+    : State variables
+{% for state in state_variables %}
+    {% if loop.index0 % 10 == 0 %}
+    RANGE {{state.name}}
+    {%- else -%}
+    , {{state.name}}
+    {%- endif %}
+{% endfor %}
+
+    : Aliases
+{% for alias in aliases %}
+    {% if loop.index0 % 10 == 0 %}
+    RANGE {{alias.lhs}}
+    {%- else -%}
+    , {{alias.lhs}}
+    {%- endif %}
+{% endfor %}
+
+    : Ion concentrations
+{% for name, read, write, valence in ion_concentrations %}
+    USEION {{alias.lhs}}
+{% endfor %}
+
+
+
+
 {#
    if rev potential is defined for this ion, declare the ionic current
    and reversal potential as range variables, otherwise declare only
    the ionic current as a range variable
 #}
-{% for p in permeatingIons %}
-    {% if (p.species == "non-specific") %}
-    RANGE {{p.e}}
-    {% elif (p.erev) %}
-    RANGE {{p.i}}, {{p.e}}
-    {% else %}
-    RANGE {{p.i}}
-    {% endif %}
-{% endfor %}
-{% for p in poolIons %}
-    RANGE {{p.in}}, {{p.out}}
-{% endfor %}
-{% if (accumulatingIons == []) %}
-    {% for p in poolIons %}
-    RANGE {{p.in}}, {{p.out}}
-    {% endfor %}
-    {% for m in modulatingIons %}
-    RANGE {{m.in}}, {{m.out}}
-    {% endfor %}
-{% else %}
-    {% for a in accumulatingIons %}
-    RANGE {{a.i}}
-    {% endfor %}
-{% endif %}
-{% for parameter in rangeParameters %}
-    {% if ((loop.index0 % 10) == 0) %}
-    RANGE {{parameter}}
-    {% else %}, {{parameter}}{% endif %}
-{% endfor %}
 {% for useIon in useIons %}
     {% if (useIon.nonSpecific) %}
     NONSPECIFIC_CURRENT {{useIon.name}}

@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
+  <nineml:Component name="na_conc">
+    <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/Na_concClass.xml">na_concClass</nineml:Definition>
+    <nineml:Property name="beta">
+      <nineml:Quantity units="per_ms">
+        <nineml:SingleValue>1.3</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="d">
+      <nineml:Quantity units="um">
+        <nineml:SingleValue>0.2</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="nai0">
+      <nineml:Quantity units="mol_per_m3">
+        <nineml:SingleValue>5.0</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+    <nineml:Property name="nao0">
+      <nineml:Quantity units="mol_per_m3">
+        <nineml:SingleValue>145.0</nineml:SingleValue>
+      </nineml:Quantity>
+    </nineml:Property>
+  </nineml:Component>
+  <nineml:Unit symbol="mol_per_m3" dimension="concentration" power="0"/>
+  <nineml:Dimension l="-3" name="concentration" n="1"/>
+  <nineml:Unit symbol="per_ms" dimension="per_time" power="3"/>
+  <nineml:Dimension name="per_time" t="-1"/>
+  <nineml:Unit symbol="um" dimension="length" power="-6"/>
+  <nineml:Dimension name="length" l="1"/>
+</nineml:NineML>
