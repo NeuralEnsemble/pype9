@@ -41,6 +41,8 @@ class CodeGenerator(BaseCodeGenerator):
 
     _neuron_units = {un.mV, 'millivolt'}
 
+    _inbuilt_ions = ['na', 'k', 'ca']
+
     def __init__(self):
         super(CodeGenerator, self).__init__()
         # Find the path to nrnivmodl
@@ -58,11 +60,25 @@ class CodeGenerator(BaseCodeGenerator):
         args['parameters'] = list(model.parameters)
         args['aliases'] = list(model.aliases)
         args['state_variables'] = list(model.state_variables)
-        incoming_analog_ports = list(chain(model.analog_receive_ports,
-                                     model.analog_reduce_ports))
-        current_in_ports = [p.name for p in incoming_analog_ports
-                            if p.dimension == un.currentDensity]
-        current_out_ports = 
+        # Sort ports into types -----------------------------------------------
+        current_in = []
+        voltage_in = []
+        other_in = []
+        for p in chain(model.analog_receive_ports, model.analog_reduce_ports):
+            if p.dimension == un.currentDensity:
+                current_in.append(p)
+            elif p.dimension == un.voltage:
+                voltage_in.append(p)
+            else:
+                other_in.append(p)
+        current_out = []
+        other_out = []
+        for p in model.analog_send_ports:
+            if p.dimension == un.currentDensity:
+                current_out.append(p)
+            else:
+                other_out.append(p)
+        
         
         args['range_vars'] = [p.name for p in chain(model.parameters,
                                                     model.analog_receive_ports,

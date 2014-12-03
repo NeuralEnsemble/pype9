@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <NineML xmlns="http://nineml.net/9ML/1.0">
   <ComponentClass name="GRC_CALCClass">
-    <AnalogSendPort dimension="currentDensity" name="cai"/>
+    <AnalogSendPort dimension="concentration" name="cai"/>
     <AnalogReceivePort dimension="currentDensity" name="ica"/>
     <AnalogReceivePort dimension="concentration" name="cao"/>
     <Parameter dimension="per_time" name="beta"/>
@@ -14,7 +14,7 @@
         </TimeDerivative>
       </Regime>
       <Alias name="F">
-        <Value units="C">96485.3365</Value>
+        <Constant units="C">96485.3365</Constant>
       </Alias>
       <StateVariable name="cai"/>
     </Dynamics>

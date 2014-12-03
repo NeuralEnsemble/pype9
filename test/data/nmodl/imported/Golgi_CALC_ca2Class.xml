@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <NineML xmlns="http://nineml.net/9ML/1.0">
   <ComponentClass name="Golgi_CALC_ca2Class">
-    <AnalogSendPort dimension="currentDensity" name="ca2i"/>
+    <AnalogSendPort dimension="concentration" name="ca2i"/>
     <AnalogReceivePort dimension="currentDensity" name="ica2"/>
     <AnalogReceivePort dimension="concentration" name="ca2o"/>
     <Parameter dimension="concentration" name="ca2i0"/>
@@ -17,7 +17,7 @@
         <MathInline>2*beta*(ca2i-ca2i0)</MathInline>
       </Alias>
       <Alias name="F">
-        <Value units="C">96485.3365</Value>
+        <Constant units="C">96485.3365</Constant>
       </Alias>
       <StateVariable name="ca2i"/>
     </Dynamics>

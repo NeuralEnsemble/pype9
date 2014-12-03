@@ -5,6 +5,7 @@ import operator
 import quantities as pq
 import os.path
 import collections
+from itertools import chain
 from nineml.maths import is_builtin_symbol
 from nineml.abstraction_layer.components.interface import Parameter
 from nineml.abstraction_layer.dynamics.component import ComponentClass
@@ -16,7 +17,6 @@ from nineml.abstraction_layer.dynamics.component.ports import (
 import nineml.abstraction_layer.units as un
 from nineml.user_layer import Definition, IonDynamicsType
 from nineml.context import Context
-import nineml.abstraction_layer.units as nineml_units
 
 # from nineml.user_layer.dynamics import IonDynamics
 from collections import defaultdict
@@ -72,10 +72,10 @@ _SI_to_dimension = {'m/s': un.conductance,
                     's**3*A/(kg*m**2)': un.per_voltage,
                     None: un.dimensionless}
 
-_SI_to_nineml_units = dict(((u.dimension, u.power), u) for u in
-                           (getattr(nineml_units, uname)
-                            for uname in dir(nineml_units))
-                           if isinstance(u, nineml_units.Unit))
+# Create dict mapping nineml.Dimension and power to nineml.Unit
+_SI_to_nineml_units = dict(((u.dimension, u.power), u)
+                           for u in (getattr(un, uname) for uname in dir(un))
+                           if isinstance(u, un.Unit))
 
 
 class NMODLImporter(object):
@@ -241,17 +241,27 @@ class NMODLImporter(object):
                 # Check to see if ion property isn't specified as fixed in
                 # mod file parameters
                 if n not in self.properties or isnan(self.properties[n][0]):
-                    if n == 'e' + name:
+                    if n.startswith('e'):
                         dimension = un.voltage
-                    elif n == 'i' + name:
+                    elif n.startswith('i'):
                         dimension = un.currentDensity
-                    else:
+                    elif n.endswith('o') or n.endswith('i'):
                         dimension = un.concentration
+                    else:
+                        assert False, ("Unrecognised used ion element '{}'"
+                                       .format(n))
                     self.analog_ports[n] = AnalogReceivePort(
                         n, dimension=dimension)
             for n in write:
+                if n.startswith('i'):
+                    dimension = un.currentDensity
+                elif n.endswith('o') or n.endswith('i'):
+                    dimension = un.concentration
+                else:
+                    assert False, ("Unrecognised used ion element '{}'"
+                                   .format(n))
                 self.analog_ports[n] = AnalogSendPort(
-                    n, dimension=un.currentDensity)
+                    n, dimension=dimension)
         # Create parameters for each property
         for name, (_, units) in self.properties.iteritems():
             if name not in self.analog_ports:
@@ -574,10 +584,17 @@ class NMODLImporter(object):
                 match = re.match(r'.*VALENCE (\d+)', line)
                 valence = match.group(1) if match else None
                 self.used_ions[name] = (read, write, valence)
-                for conc in read:
-                    self.dimensions[conc] = 'concentration'
-                for curr in write:
-                    self.dimensions[curr] = 'membrane_current'
+                for c in chain(read, write):
+                    if c.startswith('i'):
+                        if c.endswith('i') or c.endswith('o'):
+                            raise Exception(
+                                "Amiguous usion element '{}' (elements "
+                                "starting with 'i' are assumed to be currents "
+                                "and elements ending with 'i' or 'o' are "
+                                "assumed to be concentrations)".format(c))
+                        self.dimensions[c] = 'membrane_current'
+                    elif c.endswith('i') or c.endswith('o'):
+                        self.dimensions[c] = 'concentration'
             elif line.startswith('NONSPECIFIC_CURRENT'):
                 match = re.match(r'NONSPECIFIC_CURRENT (\w+)', line)
                 write = match.group(1)

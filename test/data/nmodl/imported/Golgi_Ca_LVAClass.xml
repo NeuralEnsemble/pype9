@@ -55,13 +55,13 @@
         <MathInline>(1e3) * (R*(celsius+273.15))/(2*FARADAY) * log (ca2o/ca2i)</MathInline>
       </Alias>
       <Alias name="FARADAY">
-        <Value units="C">96485.3365</Value>
+        <Constant units="C">96485.3365</Constant>
       </Alias>
       <Alias name="phi_h">
         <MathInline>3.0 ^ ((celsius-24)/10)</MathInline>
       </Alias>
       <Alias name="R">
-        <Value units="J/degC">8.3144621</Value>
+        <Constant units="J/degC">8.3144621</Constant>
       </Alias>
       <Alias name="phi_m">
         <MathInline>5.0 ^ ((celsius-24)/10)</MathInline>

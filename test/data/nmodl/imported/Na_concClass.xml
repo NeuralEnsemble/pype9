@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <NineML xmlns="http://nineml.net/9ML/1.0">
   <ComponentClass name="na_concClass">
-    <AnalogSendPort dimension="currentDensity" name="nai"/>
-    <AnalogSendPort dimension="currentDensity" name="nao"/>
+    <AnalogSendPort dimension="concentration" name="nai"/>
+    <AnalogSendPort dimension="concentration" name="nao"/>
     <AnalogReceivePort dimension="currentDensity" name="ina"/>
     <Parameter dimension="per_time" name="beta"/>
     <Parameter dimension="concentration" name="nai0"/>
@@ -18,7 +18,7 @@
         </TimeDerivative>
       </Regime>
       <Alias name="FARADAY">
-        <Value units="C">96485.3365</Value>
+        <Constant units="C">96485.3365</Constant>
       </Alias>
       <StateVariable name="nai"/>
       <StateVariable name="nao"/>
