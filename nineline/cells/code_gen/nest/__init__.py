@@ -51,14 +51,14 @@ class CodeGenerator(BaseCodeGenerator):
 
     def _extract_template_args(self, component, initial_state,
                                **template_args):
-        # Get optional template_args
+        # Get optional template_args ------------------------------------------
         ode_solver = template_args.get('ode_solver', 'gsl')
         ss_solver = template_args.get('ss_solver', None)
         abs_tolerance = template_args.get('abs_tolerance', 1e-7)
         rel_tolerance = template_args.get('rel_tolerance', 1e-7)
         max_step_size = template_args.get('max_step_size', None)
         v_threshold = template_args.get('v_threshold', None)
-        # Call method from base class
+        # Call method from base class -----------------------------------------
         args = super(CodeGenerator, self)._extract_template_args(component)
         model = component.component_class
         # Set solver methods --------------------------------------------------
