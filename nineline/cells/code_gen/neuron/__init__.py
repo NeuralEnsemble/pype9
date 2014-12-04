@@ -39,7 +39,9 @@ class CodeGenerator(BaseCodeGenerator):
     _DEFAULT_SOLVER = 'derivimplicit'
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
-    _neuron_units = {un.mV, 'millivolt'}
+    _neuron_units = {un.mV, 'millivolt',
+                     un.S, 'siemens',
+                     un.mA, 'milliamp'}
 
     _inbuilt_ions = ['na', 'k', 'ca']
 
@@ -54,17 +56,23 @@ class CodeGenerator(BaseCodeGenerator):
     def _extract_template_args(self, component, initial_state,  # @UnusedVariable @IgnorePep8
                                **template_args):
         model = component.component_class
-        args = super(CodeGenerator, self)._extract_template_args(component)
+        args = super(CodeGenerator, self)._extract_template_args(
+            component, **template_args)
         args['ode_solver'] = template_args.get('ode_solver', 'derivimplicit')
         args['point_process'] = False
-        args['parameters'] = list(model.parameters)
-        args['aliases'] = list(model.aliases)
-        args['state_variables'] = list(model.state_variables)
+        args['parameter_names'] = list(p.name for p in model.parameters)
+        args['alias_names'] = list(a.lhs for a in model.aliases)
+        args['state_variable_names'] = list(s.name for s in model.state_variables)
+        args['used_units'] = list((u.name, self._neuron_units[u])
+                                  for u in component.used_units)
         # Sort ports by dimension ---------------------------------------------
         current_in = {}
         voltage_in = {}
         concentration_in = {}
         other_in_ports = []
+        # FIXME: Guesses ion species from name (assuming Hoc syntax), this
+        # should be done from annotations inserted on import or from the cell
+        # class.
         for p in chain(model.analog_receive_ports, model.analog_reduce_ports):
             if p.dimension == un.currentDensity and p.name.startswith('i'):
                 current_in[p.name[1:]] = p
@@ -93,16 +101,22 @@ class CodeGenerator(BaseCodeGenerator):
                               concentration_out.iterkeys()))
         ion_read_writes = []
         for ion in used_ions:
-            read
-            ion_read_writes.append(
-        args['incoming_analog_ports'] = other_in_ports
-        
-        
-        
-        args['range_vars'] = [p.name for p in chain(model.parameters,
-                                                    model.analog_receive_ports,
-                                                    model.analog_reduce_ports)]
-        
+            read = []
+            if ion in current_in:
+                read.append(current_in[ion].name)
+            if ion in voltage_in:
+                read.append(voltage_in[ion].name)
+            if ion in concentration_in:
+                read.append(concentration_in[ion].name)
+            write = []
+            if ion in current_out:
+                write.append(current_out[ion].name)
+            if ion in concentration_out:
+                write.append(concentration_out[ion].name)
+            ion_read_writes.append((ion, read, write, None))
+        args['ion_read_writes'] = ion_read_writes
+        args['incoming_analog_ports'] = list(p.name for p in other_in_ports
+                                             if p.name not in ('celsius', 'v'))
         return args
 
 # output_Na = template.render (functionDefs = [{'indent' : 2, 'name' : '''Na_bmf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_bmf  =  Na_A_beta_m * exp(-(v + -(Na_B_beta_m)) / Na_C_beta_m)'''}, 
@@ -232,10 +246,11 @@ class CodeGenerator(BaseCodeGenerator):
 #                                ODEmethod = '''cnexp''',
 #                                indent = 2)
 
-    def _render_source_files(self, template_args, src_dir, _, verbose):  # @UnusedVariable @IgnorePep8
+    def _render_source_files(self, template_args, src_dir, _, install_dir,  # @UnusedVariable @IgnorePep8
+                             verbose):
         model_name = template_args['ModelName']
         # Render mod file
-        self._render_to_file('main.tmpl', template_args, model_name + '.mod',
+        self._render_to_file('parameter.tmpl', template_args, model_name + '.mod',
                              src_dir)
 
     def compile_source_files(self, compile_dir, component_name, verbose):
