@@ -38,56 +38,41 @@ NEURON {
 {% else %}
     SUFFIX {{ModelName}}
 {% endif %}
-   
-    : Implicit states
-    RANGE regime
 
 {# NMODL has a line character limit, so we limit the number of entries in each RANGE stmt to 10 #}
     : Parameters
-{% for param in parameters %}
-    {% if loop.index0 % 10 == 0 %}
-    RANGE {{param.name}}
-    {%- else -%}
-    , {{param.name}}
-    {%- endif %}
+{% for i in xrange(0, len(parameter_names), 10) %}
+    RANGE {{parameter_names[i: i + 10] | join(', ')}}
 {% endfor %}
 
     : State variables
-{% for state in state_variables %}
-    {% if loop.index0 % 10 == 0 %}
-    RANGE {{state.name}}
-    {%- else -%}
-    , {{state.name}}
-    {%- endif %}
+{% for i in xrange(0, len(state_variable_names), 10) %}
+    RANGE {{state_variable_names[i: i + 10] | join(', ')}}
 {% endfor %}
 
     : Aliases
-{% for alias in aliases %}
-    {% if loop.index0 % 10 == 0 %}
-    RANGE {{alias.lhs}}
-    {%- else -%}
-    , {{alias.lhs}}
-    {%- endif %}
+{% for i in xrange(0, len(alias_names), 10) %}
+    RANGE {{alias_names[i: i + 10] | join(', ')}}
 {% endfor %}
 
-    : Ion concentrations
+    : Read/write ion currents/rev-potential/concentrations
 {% for name, read, write, valence in ion_read_writes %}
-    USEION {{alias.lhs}}
+    USEION {{name}}{% if read %} READ {% endif %}{{read | join(', ')}}{% if write %} WRITE {% endif %}{{write | join(', ')}}{% if valence %} VALENCE {{valence}}{% endif %}
+
 {% endfor %}
 
     : Misc. Analog ports
-{% for port in incoming_analog_ports %}
-    {% if loop.index0 % 10 == 0 %}
-    RANGE
-    {%- else %},{% endif %} {{port.name}}
+{% for i in xrange(0, len(incoming_analog_ports), 10) %}
+    RANGE {{incoming_analog_ports[i: i + 10] | join(', ')}}
 {% endfor %}
 
-
+    : Implicit states
+    RANGE regime
 {#
    if rev potential is defined for this ion, declare the ionic current
    and reversal potential as range variables, otherwise declare only
    the ionic current as a range variable
-#}
+
 {% for useIon in useIons %}
     {% if (useIon.nonSpecific) %}
     NONSPECIFIC_CURRENT {{useIon.name}}
@@ -101,4 +86,5 @@ NEURON {
     USEION {{useIon.name}} READ {{useIon.read | join (", ")}} 
     {% endif %}
 {% endfor %}
+#}
 }
