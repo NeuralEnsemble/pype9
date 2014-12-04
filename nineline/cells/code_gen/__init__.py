@@ -56,7 +56,7 @@ class BaseCodeGenerator(object):
         self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
                                       xrange=xrange)
 
-    def _extract_template_args(self, component):
+    def _extract_template_args(self, component, **template_args):
         """
         Extracts the required information from the 9ML model into a dictionary
         containing the relevant arguments for the Jinja2 templates. This should
@@ -68,12 +68,12 @@ class BaseCodeGenerator(object):
         args['ModelName'] = component.name
         args['timestamp'] = datetime.now().strftime('%a %d %b %y %I:%M:%S%p')
         args['version'] = __version__
-        args['source_file'] = component.url if component.url else '<generated>'
+        args['source_file'] = template_args.get('source_file', '<generated>')
         return args
 
     @abstractmethod
-    def _render_source_files(self, template_args, src_dir, install_dir,
-                             verbose):
+    def _render_source_files(self, template_args, src_dir, _,
+                             install_dir, verbose):
         pass
 
     @abstractmethod
@@ -234,14 +234,14 @@ class BaseCodeGenerator(object):
 
     def generate_source_files(self, component, initial_state, src_dir,
                               compile_dir, install_dir, verbose=False,
-                              **template_args):
+                              **optional_template_args):
         """
         Generates the source files for the relevant simulator
         """
         # Extract relevant information from 9ml
         # component/class/initial_state
         template_args = self._extract_template_args(component, initial_state,
-                                                    **template_args)
+                                                    **optional_template_args)
         # Render source files
         self._render_source_files(template_args, src_dir, compile_dir,
                                   install_dir, verbose=verbose)
