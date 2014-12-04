@@ -236,7 +236,9 @@ class NMODLImporter(object):
 
     def _create_parameters_and_analog_ports(self):
         # Add used ions to analog ports
-        for name, (read, write, _) in self.used_ions.iteritems():
+        for name, (read, write, valence) in self.used_ions.iteritems():
+            if valence:
+                pass  # FIXME: Need to add aliases to scale up the current out.
             for n in read:
                 # Check to see if ion property isn't specified as fixed in
                 # mod file parameters
