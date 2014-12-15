@@ -32,7 +32,7 @@
                - valence - the valence of the species
 #}     
 UNITS {
-{% for symbol, neuron_name in units %}      
+{% for symbol, neuron_name in used_units %}      
     ({{symbol}}) = ({{neuron_name}})
 {% endfor %}
 }

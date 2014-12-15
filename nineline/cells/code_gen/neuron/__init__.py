@@ -16,6 +16,7 @@ import platform
 import tempfile
 import uuid
 import subprocess as sp
+import quantities as pq
 from .. import BaseCodeGenerator
 import nineml.abstraction_layer.units as un
 
@@ -39,9 +40,9 @@ class CodeGenerator(BaseCodeGenerator):
     _DEFAULT_SOLVER = 'derivimplicit'
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
-    _neuron_units = {un.mV, 'millivolt',
-                     un.S, 'siemens',
-                     un.mA, 'milliamp'}
+    _neuron_units = {un.mV: 'millivolt',
+                     un.S: 'siemens',
+                     un.mA: 'milliamp'}
 
     _inbuilt_ions = ['na', 'k', 'ca']
 
@@ -62,9 +63,17 @@ class CodeGenerator(BaseCodeGenerator):
         args['point_process'] = False
         args['parameter_names'] = list(p.name for p in model.parameters)
         args['alias_names'] = list(a.lhs for a in model.aliases)
-        args['state_variable_names'] = list(s.name for s in model.state_variables)
+        args['state_variable_names'] = list(s.name
+                                            for s in model.state_variables)
+        used_neuron_units = []
+        for ref_unit, ref_name in self._neuron_units.iteritems():
+            divides = False
+            ref_quantity = pq.Quantity(1, ref_unit.symbol)
+            for unit in component.used_units:
+                
         args['used_units'] = list((u.name, self._neuron_units[u])
-                                  for u in component.used_units)
+                                  for u in component.used_units
+                                  if u in self._neuron_units)
         # Sort ports by dimension ---------------------------------------------
         current_in = {}
         voltage_in = {}
@@ -119,6 +128,99 @@ class CodeGenerator(BaseCodeGenerator):
                                              if p.name not in ('celsius', 'v'))
         return args
 
+
+
+    def _render_source_files(self, template_args, src_dir, _, install_dir,  # @UnusedVariable @IgnorePep8
+                             verbose):
+        model_name = template_args['ModelName']
+        # Render mod file
+        self._render_to_file('parameter.tmpl', template_args, model_name + '.mod',
+                             src_dir)
+
+    def compile_source_files(self, compile_dir, component_name, verbose):
+        """
+        Builds all NMODL files in a directory
+        @param src_dir: The path of the directory to build
+        @param build_mode: Can be one of either, 'lazy', 'super_lazy',
+                           'require', 'force', or 'build_only'. 'lazy' doesn't
+                           run nrnivmodl if the library is found, 'require',
+                           requires that the library is found otherwise throws
+                           an exception (useful on clusters that require
+                           precompilation before parallelisation where the
+                           error message could otherwise be confusing), 'force'
+                           removes existing library if found and recompiles,
+                           and 'build_only' removes existing library if found,
+                           recompile and then exit
+        @param verbose: Prints out verbose debugging messages
+        """
+        # Change working directory to model directory
+        os.chdir(compile_dir)
+        if verbose:
+            print ("Building NEURON mechanisms in '{}' directory."
+                   .format(compile_dir))
+        # Run nrnivmodl command in src directory
+        try:
+            if not verbose:
+                with open(os.devnull, "w") as fnull:
+                    sp.check_call(self.nrnivmodl_path, stdout=fnull,
+                                  stderr=fnull)
+            else:
+                sp.check_call(self.nrnivmodl_path)
+        except sp.CalledProcessError as e:
+            raise Exception("Compilation of NMODL files for '{}' model failed."
+                            " See src directory '{}':\n "
+                            .format(component_name, compile_dir, e))
+
+    def _get_install_dir(self, build_dir, install_dir):
+        if install_dir:
+            raise Exception("Cannot specify custom installation directory "
+                            "('{}') for NEURON simulator as it needs to be "
+                            "located as a specifically named directory of the "
+                            "src directory (e.g. x86_64 for 64b unix/linux)"
+                            .format(install_dir))
+        # return the platform-specific location of the nrnivmodl output files
+        return os.path.abspath(os.path.join(build_dir, self._SRC_DIR,
+                                            self.specials_dir))
+
+    def _get_compile_dir(self, build_dir):
+        """
+        The compile dir is the same as the src dir for NEURON compile
+        """
+        return os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
+
+    def _get_specials_dir(self):
+        # Create a temporary directory to run nrnivmodl in
+        tmp_dir_path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
+        try:
+            os.mkdir(tmp_dir_path)
+        except IOError:
+            raise Exception("Error creating temporary directory '{}'"
+                            .format(tmp_dir_path))
+        orig_dir = os.getcwd()
+        os.chdir(tmp_dir_path)
+        # Run nrnivmodl to see what build directory is created
+        try:
+            with open(os.devnull, "w") as fnull:
+                sp.check_call(self.nrnivmodl_path, stdout=fnull, stderr=fnull)
+        except sp.CalledProcessError as e:
+            raise Exception("Error test running nrnivmodl".format(e))
+        # Get the name of the specials directory
+        try:
+            specials_dir = os.listdir(tmp_dir_path)[0]
+        except IndexError:
+            raise Exception("Error test running nrnivmodl no build directory "
+                            "created".format(e))
+        # Return back to the original directory
+        os.chdir(orig_dir)
+        return specials_dir
+
+    def _simulator_specific_paths(self):
+        path = []
+        if 'NRNHOME' in os.environ:
+            path.append(os.path.join(os.environ['NRNHOME'], self.specials_dir,
+                                     'bin'))
+        return path
+    
 # output_Na = template.render (functionDefs = [{'indent' : 2, 'name' : '''Na_bmf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_bmf  =  Na_A_beta_m * exp(-(v + -(Na_B_beta_m)) / Na_C_beta_m)'''}, 
 #                                              {'indent' : 2, 'name' : '''Na_amf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_amf  =  Na_A_alpha_m *  (v + -(Na_B_alpha_m)) / (1.0 + -(exp(-(v + -(Na_B_alpha_m)) / Na_C_alpha_m)))'''}, 
 #                                              {'indent' : 2, 'name' : '''Na_bhf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_bhf  =    Na_A_beta_h / (1.0 + exp(-(v + -(Na_B_beta_h)) / Na_C_beta_h))'''}, 
@@ -245,94 +347,3 @@ class CodeGenerator(BaseCodeGenerator):
 #                                modelName = '''hodgkin_huxley_Leak''',
 #                                ODEmethod = '''cnexp''',
 #                                indent = 2)
-
-    def _render_source_files(self, template_args, src_dir, _, install_dir,  # @UnusedVariable @IgnorePep8
-                             verbose):
-        model_name = template_args['ModelName']
-        # Render mod file
-        self._render_to_file('parameter.tmpl', template_args, model_name + '.mod',
-                             src_dir)
-
-    def compile_source_files(self, compile_dir, component_name, verbose):
-        """
-        Builds all NMODL files in a directory
-        @param src_dir: The path of the directory to build
-        @param build_mode: Can be one of either, 'lazy', 'super_lazy',
-                           'require', 'force', or 'build_only'. 'lazy' doesn't
-                           run nrnivmodl if the library is found, 'require',
-                           requires that the library is found otherwise throws
-                           an exception (useful on clusters that require
-                           precompilation before parallelisation where the
-                           error message could otherwise be confusing), 'force'
-                           removes existing library if found and recompiles,
-                           and 'build_only' removes existing library if found,
-                           recompile and then exit
-        @param verbose: Prints out verbose debugging messages
-        """
-        # Change working directory to model directory
-        os.chdir(compile_dir)
-        if verbose:
-            print ("Building NEURON mechanisms in '{}' directory."
-                   .format(compile_dir))
-        # Run nrnivmodl command in src directory
-        try:
-            if not verbose:
-                with open(os.devnull, "w") as fnull:
-                    sp.check_call(self.nrnivmodl_path, stdout=fnull,
-                                  stderr=fnull)
-            else:
-                sp.check_call(self.nrnivmodl_path)
-        except sp.CalledProcessError as e:
-            raise Exception("Compilation of NMODL files for '{}' model failed."
-                            " See src directory '{}':\n "
-                            .format(component_name, compile_dir, e))
-
-    def _get_install_dir(self, build_dir, install_dir):
-        if install_dir:
-            raise Exception("Cannot specify custom installation directory "
-                            "('{}') for NEURON simulator as it needs to be "
-                            "located as a specifically named directory of the "
-                            "src directory (e.g. x86_64 for 64b unix/linux)"
-                            .format(install_dir))
-        # return the platform-specific location of the nrnivmodl output files
-        return os.path.abspath(os.path.join(build_dir, self._SRC_DIR,
-                                            self.specials_dir))
-
-    def _get_compile_dir(self, build_dir):
-        """
-        The compile dir is the same as the src dir for NEURON compile
-        """
-        return os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
-
-    def _get_specials_dir(self):
-        # Create a temporary directory to run nrnivmodl in
-        tmp_dir_path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
-        try:
-            os.mkdir(tmp_dir_path)
-        except IOError:
-            raise Exception("Error creating temporary directory '{}'"
-                            .format(tmp_dir_path))
-        orig_dir = os.getcwd()
-        os.chdir(tmp_dir_path)
-        # Run nrnivmodl to see what build directory is created
-        try:
-            with open(os.devnull, "w") as fnull:
-                sp.check_call(self.nrnivmodl_path, stdout=fnull, stderr=fnull)
-        except sp.CalledProcessError as e:
-            raise Exception("Error test running nrnivmodl".format(e))
-        # Get the name of the specials directory
-        try:
-            specials_dir = os.listdir(tmp_dir_path)[0]
-        except IndexError:
-            raise Exception("Error test running nrnivmodl no build directory "
-                            "created".format(e))
-        # Return back to the original directory
-        os.chdir(orig_dir)
-        return specials_dir
-
-    def _simulator_specific_paths(self):
-        path = []
-        if 'NRNHOME' in os.environ:
-            path.append(os.path.join(os.environ['NRNHOME'], self.specials_dir,
-                                     'bin'))
-        return path
