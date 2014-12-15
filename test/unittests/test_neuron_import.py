@@ -1,4 +1,4 @@
-import tempfile
+from lxml import etree
 import os.path
 from lxml import etree
 from nineline.importer.neuron import NeuronImporter
@@ -95,11 +95,22 @@ class TestNMODLImporter(unittest.TestCase):
         </NineML>""")
 
     def test_nmodl_import(self):
-        importer = NMODLImporter(os.path.join(test_gr_dir, 'Golgi_hcn2.mod'))
-        component, componentclass = importer.get_component_class('/tmp')
-#         imported_tree = etree.parse(fname)
+        in_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'nmodl')
+        out_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'nmodl',
+                                'imported')
+        for fname in os.listdir(in_path):
+            if fname.endswith('.mod'):
+                importer = NMODLImporter(os.path.join(in_path, fname))
+                class_fname = out_path + '/' + fname[:-4] + 'Class.xml'
+                comp_fname = out_path + '/' + fname[:-4] + '.xml'
+                componentclass = importer.get_component_class()
+                componentclass.write(class_fname)
+                component = importer.get_component(class_fname)
+                component.write(comp_fname)
+                print "Converted '{}' to '{}'".format(fname, comp_fname)
 #         reference_tree = etree.fromstring(self.ref_xml)
-#         self.assertEqual(imported_tree, reference_tree)
+#         self.assertEqual(etree.tostring(imported_tree),
+#                          etree.tostring(reference_tree))
 
 
 class TestNeuronImporter(unittest.TestCase):
@@ -123,8 +134,8 @@ class TestNeuronImporter(unittest.TestCase):
                                          comp_dir=(os.path.join(test_gr_dir,
                                                    '9ml/components')))
 if __name__ == '__main__':
-#     test = TestNMODLImporter()
-#     test.test_nmodl_import()
-    test = TestNeuronImporter()
-    test.test_neuron_import()
+    test = TestNMODLImporter()
+    test.test_nmodl_import()
+#     test = TestNeuronImporter()
+#     test.test_neuron_import()
     print "done"

@@ -1,0 +1,34 @@
+libdir= @libdir@/nest
+
+lib_LTLIBRARIES=      {{celltype_name}}Loader.la lib{{celltype_name}}Loader.la
+
+{{celltype_name}}Loader_la_CXXFLAGS= @AM_CXXFLAGS@
+{{celltype_name}}Loader_la_SOURCES=  {{celltype_name}}.cpp {{celltype_name}}.h \
+                                     {{celltype_name}}Loader.cpp {{celltype_name}}Loader.h
+
+
+{{celltype_name}}Loader_la_LDFLAGS=  -module @SUNDIALS_LDFLAGS@
+
+lib{{celltype_name}}Loader_la_CXXFLAGS= $({{celltype_name}}Loader_la_CXXFLAGS) -DLINKED_MODULE
+lib{{celltype_name}}Loader_la_SOURCES=  $({{celltype_name}}Loader_la_SOURCES)
+
+MAKEFLAGS= @MAKE_FLAGS@
+
+AM_CPPFLAGS= @NEST_CPPFLAGS@ \
+             @SUNDIALS_CPPFLAGS@ \
+             @INCLTDL@
+
+AM_LDFLAGS = @SUNDIALS_LDFLAGS@
+
+.PHONY: install-slidoc
+
+nobase_pkgdata_DATA=\
+	{{celltype_name}}Loader.sli
+
+install-slidoc:
+	NESTRCFILENAME=/dev/null $(DESTDIR)$(NEST_PREFIX)/bin/sli --userargs="@HELPDIRS@" \
+	$(NEST_PREFIX)/share/nest/sli/install-help.sli
+
+install-data-hook: install-exec install-slidoc
+
+EXTRA_DIST= sli

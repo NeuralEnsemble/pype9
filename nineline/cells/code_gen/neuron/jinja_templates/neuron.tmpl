@@ -1,0 +1,90 @@
+{#
+    NEURON section template
+
+    Template varables are:
+    
+    - modelName: string with the name of the current system
+    - hasEvents: boolean flag indicating if there any discrete events defined in the current system
+    - exports: list of strings with the names of exported quantities of the current system
+    - currents: list of strings with the names of the currents defined in the current system
+    - permeatingIons: the permeating ions defined in the current system; 
+                      a list where each entry is an object with the following fields:
+                       - species - name of the species (or "non-specific")
+                       - e - name of the reversal potential quantity
+                       - i - name of the current quantity
+    - poolIons: the pool ions defined in the current system:
+                a list where each entry is an object with the following fields:
+                    - in - internal concentration
+                    - out - external concentration
+    - modulatingIons: the modulating ions defined in the current system:
+                      a list where each entry is an object with the following fields:
+                    - in - internal concentration
+                    - out - external concentration
+    - accumulatingIons: obsolete, do not use
+    - rangeParameters: list with the names of parameters that appear on the right-hand side of 
+                       assignments, rate equations, reactions, and functions
+    - useIons: the roles of all ionic species that appear in the current system
+               a list where each entry is an object with the following fields:
+               - nonSpecific - true is the ion is non-specific, false otherwise
+               - name - the name of the ionic species
+               - read - the name(s) of the variable(s) being read
+               - write - the name of the variable being written to
+               - valence - the valence of the species
+#}
+
+NEURON {
+{% if point_process %}
+    POINT_PROCESS {{modelName}}
+{% else %}
+    SUFFIX {{ModelName}}
+{% endif %}
+
+{# NMODL has a line character limit, so we limit the number of entries in each RANGE stmt to 10 #}
+    : Parameters
+{% for i in xrange(0, len(parameter_names), 10) %}
+    RANGE {{parameter_names[i: i + 10] | join(', ')}}
+{% endfor %}
+
+    : State variables
+{% for i in xrange(0, len(state_variable_names), 10) %}
+    RANGE {{state_variable_names[i: i + 10] | join(', ')}}
+{% endfor %}
+
+    : Aliases
+{% for i in xrange(0, len(alias_names), 10) %}
+    RANGE {{alias_names[i: i + 10] | join(', ')}}
+{% endfor %}
+
+    : Read/write ion currents/rev-potential/concentrations
+{% for name, read, write, valence in ion_read_writes %}
+    USEION {{name}}{% if read %} READ {% endif %}{{read | join(', ')}}{% if write %} WRITE {% endif %}{{write | join(', ')}}{% if valence %} VALENCE {{valence}}{% endif %}
+
+{% endfor %}
+
+    : Misc. Analog ports
+{% for i in xrange(0, len(incoming_analog_ports), 10) %}
+    RANGE {{incoming_analog_ports[i: i + 10] | join(', ')}}
+{% endfor %}
+
+    : Implicit states
+    RANGE regime
+{#
+   if rev potential is defined for this ion, declare the ionic current
+   and reversal potential as range variables, otherwise declare only
+   the ionic current as a range variable
+
+{% for useIon in useIons %}
+    {% if (useIon.nonSpecific) %}
+    NONSPECIFIC_CURRENT {{useIon.name}}
+    {% elif (useIon.valence and (not (useIon.write == [])) and (not (useIon.read == [])) ) %}
+    USEION {{useIon.name}} READ {{useIon.read | join (", ")}} WRITE {{useIon.write | join (", ")}} VALENCE {{useIon.valence}}
+    {% elif (useIon.valence and (useIon.write == []) and (not (useIon.read == [])) ) %}
+    USEION {{useIon.name}} READ {{useIon.read | join (", ")}} VALENCE {{useIon.valence}}
+    {% elif ((not (useIon.write == [])) and (not (useIon.read == [])) ) %}
+    USEION {{useIon.name}} READ {{useIon.read | join (", ")}} WRITE {{useIon.write | join (", ")}} 
+    {% elif ((useIon.write == []) and (not (useIon.read == [])) ) %}
+    USEION {{useIon.name}} READ {{useIon.read | join (", ")}} 
+    {% endif %}
+{% endfor %}
+#}
+}

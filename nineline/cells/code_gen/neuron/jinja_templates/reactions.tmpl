@@ -1,0 +1,33 @@
+{#
+   NMODL template for reactions equations
+
+   This template defines an NMODL procedure alled "reactions" which is
+   invoked in the BREAKPOINT  the INITIAL blocks to set the values of
+   the reaction states, e.g.:
+
+   m_CaBK = mO_CaBK
+
+   will set the reaction state 'm_CaBK' to the value of the open state
+   defined for that reaction, 'mO_CaBK'. If there are more than one open
+   state, then the sum of open states will be used:
+
+   m_CaBK = mO1_CaBK + mO2_CaBK
+ 
+   Template variables are:
+
+   - indent: the current indentation level
+   - reactionEqLocals: a list with the names of all local variables that appear 
+                       in the right-hand side of the reaction equations
+   - reactionEqDefs: a list of strings with the reaction equations in NMODL syntax
+#}
+{% if reactionEqDefs %}
+PROCEDURE reactions () {
+    {% if (not (reactionEqLocals == [])) %}
+  LOCAL {{reactionEqLocals | join (", ")}}
+    {% endif %}
+    {% for reactionEqDef in reactionEqDefs %}
+  {{reactionEqDef}}
+    {% endfor %}
+}
+
+{% endif %}

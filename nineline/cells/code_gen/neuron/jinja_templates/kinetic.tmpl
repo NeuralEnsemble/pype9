@@ -1,0 +1,38 @@
+{#
+   NMODL template for kinetic equations 
+
+   This template defines the NMODL KINETIC block which is used to compute
+   the state values of all Markov chain reactions defined in the current system.
+
+   Template variables are:
+
+   - indent: the current indentation level
+   - kineticEqLocals: a list with the names of all local variables that appear in the rate expressions of the system
+   - kineticEqDefs: a list of strings with the kinetic equations in NMODL syntax
+   - externalEqDefs: a list of strings with the external quantity equations in NMODL syntax 
+                     (this is used for ionic concentrations and v)
+   - assignedEqDefs: a list of strings with the assigned equations in NMODL syntax 
+                     (this is only used to determine if the "asgns" procedure should be called)
+#}
+{% if kineticEqDefs %}
+KINETIC kstates {
+    {% if kineticEqLocals %}
+  LOCAL {{kineticEqLocals | join (", ")}}
+    {% endif %}
+
+    {% for externalEqDef in externalEqDefs %}
+  {{externalEqDef}}
+    {% endfor %}
+
+    {% if assignedEqDefs %}
+  asgns()
+    {% endif %}
+
+    {% for kineticEqDef in kineticEqDefs %}
+        {% for eq in kineticEqDef %}
+  {{eq}}
+        {% endfor %}
+    {% endfor %}
+}
+
+{% endif %}

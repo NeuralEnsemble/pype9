@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<NineML xmlns="http://nineml.net/9ML/1.0">
+  <ComponentClass name="GRC_LKG2Class">
+    <AnalogSendPort dimension="currentDensity" name="il"/>
+    <AnalogReceivePort dimension="voltage" name="v"/>
+    <Parameter dimension="conductanceDensity" name="ggaba"/>
+    <Parameter dimension="voltage" name="egaba"/>
+    <Dynamics>
+      <Alias name="i">
+        <MathInline>il</MathInline>
+      </Alias>
+      <Alias name="il">
+        <MathInline>ggaba*(v - egaba)</MathInline>
+      </Alias>
+    </Dynamics>
+  </ComponentClass>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" name="currentDensity" l="-2"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="-1" t="-3" m="1" l="2" name="voltage"/>
+</NineML>

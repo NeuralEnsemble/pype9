@@ -1,0 +1,67 @@
+{# This template adds a accessors and modifiers for the Parameter and State 
+   classes
+
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
+#}
+
+
+//----------------------------------------------------------//
+// This section was generated from accessors_modifiers.tmpl //
+//----------------------------------------------------------//
+
+void {{ModelName}}::Parameters_::get (DictionaryDatum &d) const {
+
+{# TODO: Should change this to names::{{name}}, {{name}} once I work out where
+         to put the "names" declarations (probably in the header#}
+    // Update dictionary from internal parameters, scaling if required.
+{% for name in parameter_names %}
+    def<double_t>(d, "{{name}}", {{name}}{% if name in parameter_scales %} / {{parameter_scales[name]}}{% endif %});
+{% endfor %}
+
+}
+
+void {{ModelName}}::Parameters_::set (const DictionaryDatum &d) {
+
+    // Update internal parameters from dictionary
+{% for name in parameter_names %}
+    updateValue<double_t>(d, "{{name}}", {{name}});
+{% endfor %}
+
+    // Scale parameters as required
+{% for name, scale in parameter_scales.iteritems() %}
+    {{name}} *= {{scale}}
+{% endfor %}
+
+}
+
+
+void {{ModelName}}::State_::get (DictionaryDatum &d) const {
+
+    // Get states from internal variables
+{% for i, name in enumerate(state_variables) %}
+    def<double_t>(d, "{{name}}", y_[{{i}}]);
+{% endfor %}
+{# FIXME: Need to include special handling of v->V_m
+{% if ("v" in stateIndexMap) %}
+    def<double_t>(d, names::V_m, y_[{{stateIndexMap["v"]}}]);
+{% endif %}
+#}
+ 
+}
+    
+void {{ModelName}}::State_::set (const DictionaryDatum &d, const Parameters_&) {
+
+    // Set internal state variables from dictionary values
+{% for i, name in enumerate(state_variables) %}
+    updateValue<double_t>(d, "{{name}}", y_[{{i}}]);
+{% endfor %}
+{# FIXME: Need to include special handling of v->V_m
+{% if ("v" in stateIndexMap) %}
+   updateValue<double_t>(d, names::V_m, y_[{{stateIndexMap["v"]}}]);
+{% endif %}
+#}
+    
+}
+
+// ------------------- accessors_modifiers.tmpl ------------------------//

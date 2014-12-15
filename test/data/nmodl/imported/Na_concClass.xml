@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<NineML xmlns="http://nineml.net/9ML/1.0">
+  <ComponentClass name="na_concClass">
+    <AnalogSendPort dimension="concentration" name="nai"/>
+    <AnalogSendPort dimension="concentration" name="nao"/>
+    <AnalogReceivePort dimension="currentDensity" name="ina"/>
+    <Parameter dimension="per_time" name="beta"/>
+    <Parameter dimension="concentration" name="nai0"/>
+    <Parameter dimension="length" name="d"/>
+    <Parameter dimension="concentration" name="nao0"/>
+    <Dynamics>
+      <Regime name="conc">
+        <TimeDerivative variable="nai">
+          <MathInline>-(ina)/(2*FARADAY*d)*(1e4) - beta*(nai-nai0)</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="nao">
+          <MathInline>(ina)/(2*FARADAY*d)*(1e4) - beta*(nao-nao0)</MathInline>
+        </TimeDerivative>
+      </Regime>
+      <Alias name="FARADAY">
+        <Constant units="C">96485.3365</Constant>
+      </Alias>
+      <StateVariable name="nai"/>
+      <StateVariable name="nao"/>
+    </Dynamics>
+  </ComponentClass>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" name="per_time" t="-1"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" name="length" l="1"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" l="-3" name="concentration" n="1"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" name="currentDensity" l="-2"/>
+</NineML>

@@ -1,19 +1,24 @@
-from math import isnan
+from math import isnan, log10
 import re
 import regex
 import operator
-from copy import copy
 import quantities as pq
+import os.path
 import collections
+from itertools import chain
 from nineml.maths import is_builtin_symbol
 from nineml.abstraction_layer.components.interface import Parameter
 from nineml.abstraction_layer.dynamics.component import ComponentClass
 from nineml.abstraction_layer.dynamics import Regime, StateVariable, OnEvent
 from nineml.abstraction_layer.dynamics.component.expressions import (
-                                        Alias, TimeDerivative, StateAssignment)
-from nineml.abstraction_layer.dynamics.component.ports import (AnalogPort,
-                                                               EventPort)
-from nineml.user_layer.dynamics import IonDynamics
+    Alias, TimeDerivative, StateAssignment)
+from nineml.abstraction_layer.dynamics.component.ports import (
+    AnalogReceivePort, AnalogSendPort, EventReceivePort)
+import nineml.abstraction_layer.units as un
+from nineml.user_layer import Definition, IonDynamicsType
+from nineml.context import Context
+
+# from nineml.user_layer.dynamics import IonDynamics
 from collections import defaultdict
 from nineml.abstraction_layer import units
 
@@ -47,6 +52,33 @@ class _Otherwise(object):
         return 'otherwise'
 
 
+_SI_to_dimension = {'m/s': un.conductance,
+                    'kg*m**2/(s**3*A)': un.voltage,
+                    'mol/m**3': un.concentration,
+                    'A/m**2': un.currentDensity,
+                    's': un.time,
+                    'K': un.temperature,
+                    'kg/(m**3*s)': un.flux,
+                    '1/(s*A)': un.mass_per_charge,
+                    'm': un.length,
+                    's**3*A**2/(kg*m**4)': un.conductanceDensity,
+                    'A': un.current,
+                    'A/s': un.current_per_time,
+                    's**3*A**2/(kg*m**2)': un.conductance,
+                    '1/s': un.per_time,
+                    's*A/m**3': un.charge_density,
+                    'm**3/(s*mol)': un.per_time_per_concentration,
+                    'mol/m**2': un.substance_per_area,
+                    's*A': un.charge,
+                    's**3*A/(kg*m**2)': un.per_voltage,
+                    None: un.dimensionless}
+
+# Create dict mapping nineml.Dimension and power to nineml.Unit
+_SI_to_nineml_units = dict(((u.dimension, u.power), u)
+                           for u in (getattr(un, uname) for uname in dir(un))
+                           if isinstance(u, un.Unit))
+
+
 class NMODLImporter(object):
     """
     Imports NMODL files into lib9ml structures
@@ -56,30 +88,9 @@ class NMODLImporter(object):
     # from a regular alias
     StateAssignment = collections.namedtuple("StateAssignment", "variable")
 
-    _inbuilt_constants = {'faraday': pq.Quantity(96485.3365, 'C'),
+    _inbuilt_constants = {'faraday': pq.Quantity(96485.3365, 'coulomb'),
                           'k-mole': pq.Quantity(8.3144621, 'J/K'),
                           'pi': pq.Quantity(3.14159265359, 'dimensionless')}
-
-    _SI_to_dimension = {'m/s': units.conductance,
-                        'kg*m**2/(s**3*A)': units.voltage,
-                        'mol/m**3': units.concentration,
-                        'A/m**2': units.currentDensity,
-                        's': units.time,
-                        'K': units.temperature,
-                        'kg/(m**3*s)': units.flux,
-                        '1/(s*A)': units.mass_per_charge,
-                        'm': units.length,
-                        's**3*A**2/(kg*m**4)': units.conductanceDensity,
-                        'A': units.current,
-                        'A/s': units.current_per_time,
-                        's**3*A**2/(kg*m**2)': units.conductance,
-                        '1/s': units.per_time,
-                        's*A/m**3': units.chargeDensity,
-                        'm**3/(s*mol)': units.per_time_concentration,
-                        'mol/m**2': units.mass_per_length2,
-                        's*A': units.charge,
-                        's**3*A/(kg*m**2)': units.per_voltage,
-                        None: None}
 
     def __repr__(self):
         return ("NMODLImporter({}): {} parameters, {} ports, {} states,"
@@ -116,7 +127,6 @@ class NMODLImporter(object):
         self.breakpoint_solve_methods = {}
         self.initial_solve_methods = {}
         self.parameters = {}
-        self.properties = {}
         self.analog_ports = {}
         self.event_ports = {}
         self.regime_parts = []
@@ -152,7 +162,7 @@ class NMODLImporter(object):
                                     state_variables=self.state_variables)
         return comp_class
 
-    def get_component(self, class_path, hoc_properties={}):
+    def get_component(self, class_path=None, hoc_properties={}):
         # Copy properties removing all properties that were added to the analog
         # ports
         properties = dict((n, (v, u))
@@ -162,8 +172,13 @@ class NMODLImporter(object):
         # and the units specified in the NMODL file
         properties.update((n, (v, self.properties[n][1]))
                           for n, v in hoc_properties.iteritems())
-        comp = IonDynamics(self.component_name, definition=class_path,
-                          parameters=properties)
+        properties.update((n, (v, self._units2nineml_units(u)))
+                          for n, (v, u) in properties.iteritems())
+        context = Context()
+        definition = Definition(self.component_name + 'Class', context,
+                                url=os.path.normpath(class_path))
+        comp = IonDynamicsType(self.component_name, definition=definition,
+                               properties=properties)
         return comp
 
     def print_members(self):
@@ -214,30 +229,42 @@ class NMODLImporter(object):
             piecewise_rhs = reduce(operator.add, piecewise_rhs)
         piecewise_test = [[test for _, test in a.rhs
                            if not isinstance(test, _Otherwise)]
-                         for a in self.aliases.values()
-                         if isinstance(a.rhs, list)]
+                          for a in self.aliases.values()
+                          if isinstance(a.rhs, list)]
         if piecewise_test:
             piecewise_test = reduce(operator.add, piecewise_test)
         return td_rhs + simple_rhs + piecewise_rhs + piecewise_test
 
     def _create_parameters_and_analog_ports(self):
         # Add used ions to analog ports
-        for name, (read, write, _) in self.used_ions.iteritems():
+        for name, (read, write, valence) in self.used_ions.iteritems():
+            if valence:
+                pass  # FIXME: Need to add aliases to scale up the current out.
             for n in read:
                 # Check to see if ion property isn't specified as fixed in
                 # mod file parameters
                 if n not in self.properties or isnan(self.properties[n][0]):
-                    if n == 'e' + name:
-                        dimension = 'voltage'
-                    elif n == 'i' + name:
-                        dimension = 'membrane_current'
+                    if n.startswith('e'):
+                        dimension = un.voltage
+                    elif n.startswith('i'):
+                        dimension = un.currentDensity
+                    elif n.endswith('o') or n.endswith('i'):
+                        dimension = un.concentration
                     else:
-                        dimension = 'concentration'
-                    self.analog_ports[n] = AnalogPort(n, mode='recv',
-                                                      dimension=dimension)
+                        assert False, ("Unrecognised used ion element '{}'"
+                                       .format(n))
+                    self.analog_ports[n] = AnalogReceivePort(
+                        n, dimension=dimension)
             for n in write:
-                self.analog_ports[n] = AnalogPort(n, mode='send',
-                                                  dimension='membrane_current')
+                if n.startswith('i'):
+                    dimension = un.currentDensity
+                elif n.endswith('o') or n.endswith('i'):
+                    dimension = un.concentration
+                else:
+                    assert False, ("Unrecognised used ion element '{}'"
+                                   .format(n))
+                self.analog_ports[n] = AnalogSendPort(
+                    n, dimension=dimension)
         # Create parameters for each property
         for name, (_, units) in self.properties.iteritems():
             if name not in self.analog_ports:
@@ -253,13 +280,13 @@ class NMODLImporter(object):
             if re.search(r'(\b)diam(\b)', expr):
                 uses_diam = True
         if uses_voltage:
-            self.analog_ports['v'] = AnalogPort('v', mode='recv',
-                                                dimension='voltage')
+            self.analog_ports['v'] = AnalogReceivePort(
+                'v', dimension=un.voltage)
         if uses_celsius and 'celsius' not in self.parameters:
-            self.analog_ports['celsius'] = AnalogPort('celsius', mode='recv',
-                                              dimension='absolute_temperature')
+            self.analog_ports['celsius'] = AnalogReceivePort(
+                'celsius', dimension=un.temperature)
         if uses_diam:
-            self.parameters['diam'] = Parameter('diam', dimension='length')
+            self.parameters['diam'] = Parameter('diam', dimension=un.length)
 
     def _create_regimes(self, expand_kinetics=True):
         self.regimes = []
@@ -273,17 +300,16 @@ class NMODLImporter(object):
                 # Create an analog port from which to read the event weight
                 # from. NB: this is just a hack for now until EventPorts
                 # support parameters
-                self.analog_ports.append(AnalogPort(name=port_name,
-                                                    mode='recv',
-                                                    dimension=dimension))
+                self.analog_ports.append(AnalogReceivePort(
+                    name=port_name, dimension=dimension))
             else:
                 event_port_name = port_name
-            self.event_ports[event_port_name] = EventPort(name=event_port_name,
-                                                          mode='recv')
+            self.event_ports[event_port_name] = EventReceivePort(
+                name=event_port_name)
             on_event = OnEvent(event_port_name,
-                               state_assignments=['{}={}'
-                                                  .format(a.lhs, a.rhs)
-                                                for a in assignments.values()])
+                               state_assignments=[
+                                   '{}={}'.format(a.lhs, a.rhs)
+                                   for a in assignments.values()])
             self.aliases.update(aliases)
             self.regimes.append(Regime(name=regime[0],
                                        time_derivatives=regime[1],
@@ -337,9 +363,9 @@ class NMODLImporter(object):
         return '*'.join('{}^{}'.format(s, p) if p else s
                         for s, p in states)
 
-    # ----------------- #
-    #  Content readers  #
-    # ----------------- #
+    # =========================================================================
+    # Content readers
+    # =========================================================================
 
     def _read_title(self):
         # Extract title and comments if present
@@ -371,9 +397,9 @@ class NMODLImporter(object):
                 else:
                     self.blocks[block_name] = contents
 
-    # ------------------ #
-    #  Block extractors  #
-    # ------------------ #
+    # =========================================================================
+    # Block extractors
+    # =========================================================================
 
     def _extract_procedure_and_function_blocks(self):
         # Read functions
@@ -561,10 +587,17 @@ class NMODLImporter(object):
                 match = re.match(r'.*VALENCE (\d+)', line)
                 valence = match.group(1) if match else None
                 self.used_ions[name] = (read, write, valence)
-                for conc in read:
-                    self.dimensions[conc] = 'concentration'
-                for curr in write:
-                    self.dimensions[curr] = 'membrane_current'
+                for c in chain(read, write):
+                    if c.startswith('i'):
+                        if c.endswith('i') or c.endswith('o'):
+                            raise Exception(
+                                "Amiguous usion element '{}' (elements "
+                                "starting with 'i' are assumed to be currents "
+                                "and elements ending with 'i' or 'o' are "
+                                "assumed to be concentrations)".format(c))
+                        self.dimensions[c] = 'membrane_current'
+                    elif c.endswith('i') or c.endswith('o'):
+                        self.dimensions[c] = 'concentration'
             elif line.startswith('NONSPECIFIC_CURRENT'):
                 match = re.match(r'NONSPECIFIC_CURRENT (\w+)', line)
                 write = match.group(1)
@@ -683,8 +716,9 @@ class NMODLImporter(object):
                             is_outgoing = False
                 if is_bidirectional:
                     s1, s2, r1, r2 = match.groups()
-                    bidirectional.append((split_states(s1), split_states(s2),
-                                        process_rate(r1), process_rate(r2)))
+                    bidirectional.append(
+                        (split_states(s1), split_states(s2), process_rate(r1),
+                         process_rate(r2)))
                 elif is_incoming:
                     s, r = match.groups()
                     incoming.append((s, process_rate(r)))
@@ -696,7 +730,7 @@ class NMODLImporter(object):
                                                 line).groups())
                 elif line.strip().startswith('COMPARTMENT'):
                     (pre, states, line) = next(self._matching_braces(
-                                                         line_iter, line=line))
+                        line_iter, line=line))
                     constraints.append((pre.split(), ' '.join(states).split()))
                     continue
                 elif line:
@@ -1048,9 +1082,9 @@ class NMODLImporter(object):
         else:
             pieces.append((stmt, str(test)))
 
-    #----------------------------#
-    #  General Helper functions  #
-    #----------------------------#
+    # =========================================================================
+    # Helper methods
+    # =========================================================================
 
     def _subs_variable(self, old, new, expr):
         # If the new expression contains more than one "word" enclose it
@@ -1089,15 +1123,28 @@ class NMODLImporter(object):
         return argvals, arglist[:end_of_arglist]
 
     @classmethod
-    def _units2dimension(cls, units):
+    def _units2SI(cls, units):
         units = units.strip()
         if units == '1' or units is None or units == 'dimensionless':
-            return None
+            return None, 0
         if units.startswith('/'):
             units = '1.0' + units
         units = cls._sanitize_units(units)
-        si_units = str(pq.Quantity(1, units).simplified._dimensionality)
-        return cls._SI_to_dimension[si_units]
+        si_units = pq.Quantity(1, units).simplified
+        dimension = pq.Quantity(1, si_units._dimensionality)
+        power = int(log10(si_units / dimension))
+        return str(si_units._dimensionality), power
+
+    @classmethod
+    def _units2nineml_units(cls, units):
+        dim_str, power = cls._units2SI(units)
+        dim = _SI_to_dimension[dim_str]
+        return _SI_to_nineml_units[(dim, power)]
+
+    @classmethod
+    def _units2dimension(cls, units):
+        dim_str, _ = cls._units2SI(units)
+        return _SI_to_dimension[dim_str]
 
     @classmethod
     def _sanitize_units(cls, units):

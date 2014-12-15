@@ -1,0 +1,72 @@
+{# This template adds Buffers
+   classes
+
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
+#}
+
+//----------------------------------------------//
+// This section was generated from buffers.tmpl //
+//----------------------------------------------//
+
+{{ModelName}}::Buffers_::Buffers_({{ModelName}}& n)
+    : logger_(n),
+{% if ode_solver in ("cvode", "ida") %}    
+      sys_(0),
+{% elif ode_solver == "gsl" %}
+      s_(0),
+      c_(0),
+      e_(0),
+      N(0),
+      u(0),
+      jac(0),
+{%- endif %}
+      current_regime(DEFAULT_REGIME_) { 
+    // Initialization of the remaining members is deferred to
+    // init_buffers_().
+}
+
+{{ModelName}}::Buffers_::Buffers_(const Buffers_&, {{ModelName}}& n)
+    : logger_(n),
+{% if ode_solver in ("cvode", "ida") %}    
+      sys_(0),
+{% elif ode_solver == "gsl" %}
+      s_(0),
+      c_(0),
+      e_(0),
+      N(0),
+      u(0),
+      jac(0),
+{%- endif %}    
+      current_regime(DEFAULT_REGIME_) { 
+    // Initialization of the remaining members is deferred to
+    // init_buffers_().
+}
+
+void {{ModelName}}::init_buffers_() {
+
+    // Clear event buffers
+    {% for name in event_port_names %}
+    B_.{{name}}_event_port.clear();
+    {% endfor %}
+    
+    // Clear analog buffers
+    {% for name in analog_port_names %}
+    B_.{{name}}_analog_port.clear();
+    {% endfor %}
+    
+    Archiving_Node::clear_history();
+    
+    B_.logger_.reset();
+    
+    B_.step_ = Time::get_resolution().get_ms();
+    B_.IntegrationStep_ = B_.step_;
+    
+    {% for name in analog_port_names %}
+    B_.{{name}}_value = 0.0;
+    {% endfor %}
+
+    {% include "init-solver.tmpl" %}    
+}
+
+// ------------------- buffers.tmpl ------------------------//

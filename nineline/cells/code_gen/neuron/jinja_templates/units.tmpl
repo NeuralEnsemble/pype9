@@ -1,0 +1,38 @@
+{#
+    NEURON section template
+
+    Template varables are:
+    
+    - modelName: string with the name of the current system
+    - hasEvents: boolean flag indicating if there any discrete events defined in the current system
+    - exports: list of strings with the names of exported quantities of the current system
+    - currents: list of strings with the names of the currents defined in the current system
+    - permeatingIons: the permeating ions defined in the current system; 
+                      a list where each entry is an object with the following fields:
+                       - species - name of the species (or "non-specific")
+                       - e - name of the reversal potential quantity
+                       - i - name of the current quantity
+    - poolIons: the pool ions defined in the current system:
+                a list where each entry is an object with the following fields:
+                    - in - internal concentration
+                    - out - external concentration
+    - modulatingIons: the modulating ions defined in the current system:
+                      a list where each entry is an object with the following fields:
+                    - in - internal concentration
+                    - out - external concentration
+    - accumulatingIons: obsolete, do not use
+    - rangeParameters: list with the names of parameters that appear on the right-hand side of 
+                       assignments, rate equations, reactions, and functions
+    - useIons: the roles of all ionic species that appear in the current system
+               a list where each entry is an object with the following fields:
+               - nonSpecific - true is the ion is non-specific, false otherwise
+               - name - the name of the ionic species
+               - read - the name(s) of the variable(s) being read
+               - write - the name of the variable being written to
+               - valence - the valence of the species
+#}     
+UNITS {
+{% for symbol, neuron_name in used_units %}      
+    ({{symbol}}) = ({{neuron_name}})
+{% endfor %}
+}

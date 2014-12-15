@@ -1,0 +1,35 @@
+{# This template provides the code to generate and access nodes
+
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
+#}
+
+//---------------------------------------------------//
+// This section was generated from constructors.tmpl //
+//---------------------------------------------------//
+{{ModelName}}::{{ModelName}}()
+    : Archiving_Node(), 
+      P_(), 
+      S_(P_),
+      B_(*this) {
+    recordablesMap_.create();
+}
+
+{{ModelName}}::{{ModelName}}(const {{ModelName}}& n)
+    : Archiving_Node(n), 
+      P_(n.P_), 
+      S_(n.S_),
+      B_(n.B_, *this) {}
+
+void {{ModelName}}::init_node_(const Node& proto) {
+    const {{ModelName}}& pr = downcast<{{ModelName}}>(proto);
+    P_ = pr.P_;
+    S_ = State_(P_);
+}
+
+void {{ModelName}}::init_state_(const Node& proto) {
+    const {{ModelName}}& pr = downcast<{{ModelName}}>(proto);
+    S_ = State_(pr.P_);
+}
+
+// ------------------- constructors.tmpl ------------------------//

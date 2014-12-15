@@ -1,0 +1,26 @@
+{# This template sets up the Recordables map
+
+   Authors: Ivan Raikov and Thomas G. Close
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
+#}
+
+//--------------------------------------------------//
+// This section was generated from recordables.tmpl //
+//--------------------------------------------------//
+
+RecordablesMap<{{ModelName}}> {{ModelName}}::recordablesMap_;
+
+template <> void RecordablesMap<{{ModelName}}>::create() {
+
+{% for state in state_variables %}
+   insert_("{{state}}", &{{ModelName}}::get_y_elem_<{{ModelName}}::State_::{{state}}_INDEX>);
+{% endfor %}
+
+{# FIXME: Need to translate v->V_m
+{% if ("v" in stateIndexMap) %}
+   insert_(names::V_m, &{{ModelName}}::get_y_elem_<{{ModelName}}::State_::V>);
+{% endif %}
+#}
+}
+
+// ------------------- recordables.tmpl ------------------------//

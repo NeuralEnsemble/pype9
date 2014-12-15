@@ -1,0 +1,14 @@
+/*
+ * Initialization file for {{celltype_name}}.
+ * Run automatically when {{celltype_name}} is loaded.
+ */
+
+M_DEBUG ({{celltype_name}}Loader.sli) (Initializing SLI support for {{celltype_name}}.) message
+
+/{{celltype_name}}Loader /SLI ($Revision: 7918 $) provide-component
+/{{celltype_name}}Loader /C++ (7165) require-component
+
+/StepPatternConnect [ /arraytype /integertype /arraytype /integertype /literaltype ]
+{
+  StepPatternConnect_Vi_i_Vi_i_l
+} def

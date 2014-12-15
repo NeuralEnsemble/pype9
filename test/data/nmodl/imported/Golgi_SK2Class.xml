@@ -1,0 +1,107 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<NineML xmlns="http://nineml.net/9ML/1.0">
+  <ComponentClass name="Golgi_SK2Class">
+    <AnalogSendPort dimension="currentDensity" name="ik"/>
+    <AnalogReceivePort dimension="concentration" name="cai"/>
+    <AnalogReceivePort dimension="temperature" name="celsius"/>
+    <AnalogReceivePort dimension="voltage" name="ek"/>
+    <AnalogReceivePort dimension="voltage" name="v"/>
+    <Parameter name="dirc2"/>
+    <Parameter name="invo1"/>
+    <Parameter name="diro1"/>
+    <Parameter name="dirc3"/>
+    <Parameter name="invo2"/>
+    <Parameter dimension="conductanceDensity" name="gkbar"/>
+    <Parameter name="dirc4"/>
+    <Parameter name="Q10"/>
+    <Parameter name="diff"/>
+    <Parameter name="diro2"/>
+    <Parameter name="invc1"/>
+    <Parameter name="invc3"/>
+    <Parameter name="invc2"/>
+    <Dynamics>
+      <Regime name="kin">
+        <TimeDerivative variable="c3">
+          <MathInline>- invc2_t*c3 + dirc3_t_ca*c2 - dirc4_t_ca*c3 + invc3_t*c4 - diro1_t*c3 + invo1_t*o1</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="c2">
+          <MathInline>- invc1_t*c2 + dirc2_t_ca*c1 - dirc3_t_ca*c2 + invc2_t*c3</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="c1">
+          <MathInline>- dirc2_t_ca*c1 + invc1_t*c2</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="o2">
+          <MathInline>- invo2_t*o2 + diro2_t*c4</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="o1">
+          <MathInline>- invo1_t*o1 + diro1_t*c3</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="c4">
+          <MathInline>- invc3_t*c4 + dirc4_t_ca*c3 - diro2_t*c4 + invo2_t*o2</MathInline>
+        </TimeDerivative>
+      </Regime>
+      <Alias name="invc2_t">
+        <MathInline>invc2*tcorr</MathInline>
+      </Alias>
+      <Alias name="diro2_t">
+        <MathInline>diro2*tcorr</MathInline>
+      </Alias>
+      <Alias name="invo1_t">
+        <MathInline>invo1*tcorr</MathInline>
+      </Alias>
+      <Alias name="dirc3_t">
+        <MathInline>dirc3*tcorr</MathInline>
+      </Alias>
+      <Alias name="dirc4_t">
+        <MathInline>dirc4*tcorr</MathInline>
+      </Alias>
+      <Alias name="invo2_t">
+        <MathInline>invo2*tcorr</MathInline>
+      </Alias>
+      <Alias name="dirc2_t">
+        <MathInline>dirc2*tcorr</MathInline>
+      </Alias>
+      <Alias name="dirc4_t_ca">
+        <MathInline>dirc4_t*(cai/diff)</MathInline>
+      </Alias>
+      <Alias name="invc1_t">
+        <MathInline>invc1*tcorr</MathInline>
+      </Alias>
+      <Alias name="g">
+        <MathInline>gkbar*(o1+o2)</MathInline>
+      </Alias>
+      <Alias name="ik">
+        <MathInline>g*(v-ek)</MathInline>
+      </Alias>
+      <Alias name="dirc3_t_ca">
+        <MathInline>dirc3_t*(cai/diff)</MathInline>
+      </Alias>
+      <Alias name="diro1_t">
+        <MathInline>diro1*tcorr</MathInline>
+      </Alias>
+      <Alias name="invc3_t">
+        <MathInline>invc3*tcorr</MathInline>
+      </Alias>
+      <Alias name="temper_Q10_celsius">
+        <MathInline>Q10^((celsius -23) / 10)</MathInline>
+      </Alias>
+      <Alias name="dirc2_t_ca">
+        <MathInline>dirc2_t*(cai/diff)</MathInline>
+      </Alias>
+      <Alias name="tcorr">
+        <MathInline>temper_Q10_celsius</MathInline>
+      </Alias>
+      <StateVariable name="c3"/>
+      <StateVariable name="c2"/>
+      <StateVariable name="c1"/>
+      <StateVariable name="o2"/>
+      <StateVariable name="o1"/>
+      <StateVariable name="c4"/>
+    </Dynamics>
+  </ComponentClass>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" k="1" name="temperature"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" l="-3" name="concentration" n="1"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" name="currentDensity" l="-2"/>
+</NineML>

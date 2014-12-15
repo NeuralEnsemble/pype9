@@ -1,0 +1,19 @@
+
+{#
+   PARAMETER section template
+
+   Template variables are:
+
+   - indent: the current indentation level
+   - parameterLocals: a list with the names of all local variables that appear 
+                      in the right-hand side of the parameter equations
+   - parameterDefs: a list of strings with the parameter equations in NMODL syntax
+#}
+PARAMETER {
+{% if parameterLocals %}
+  LOCAL {{parameterLocals | join(", ")}}
+{% endif %}
+{% for parameterDef in parameterDefs %}
+  {{parameterDef}}
+{% endfor %}
+}

@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<NineML xmlns="http://nineml.net/9ML/1.0">
+  <ComponentClass name="Golgi_CALCClass">
+    <AnalogSendPort dimension="concentration" name="cai"/>
+    <AnalogReceivePort dimension="currentDensity" name="ica"/>
+    <AnalogReceivePort dimension="concentration" name="cao"/>
+    <Parameter dimension="per_time" name="beta"/>
+    <Parameter dimension="length" name="d"/>
+    <Parameter dimension="concentration" name="cai0"/>
+    <Dynamics>
+      <Regime name="conc">
+        <TimeDerivative variable="cai">
+          <MathInline>-ica/(2*F*d)*(1e4) - beta*(cai-cai0)</MathInline>
+        </TimeDerivative>
+      </Regime>
+      <Alias name="ca_pump_i">
+        <MathInline>2*beta*(cai-cai0)</MathInline>
+      </Alias>
+      <Alias name="F">
+        <Constant units="C">96485.3365</Constant>
+      </Alias>
+      <StateVariable name="cai"/>
+    </Dynamics>
+  </ComponentClass>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" name="per_time" t="-1"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" name="length" l="1"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" l="-3" name="concentration" n="1"/>
+  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" name="currentDensity" l="-2"/>
+</NineML>

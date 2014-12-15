@@ -1,0 +1,286 @@
+    //--------------------------------------------------//
+    // This section was generated from init-solver.tmpl //
+    //--------------------------------------------------//
+{% if ode_solver in ('cvode', 'ida') %}
+    // Holds the return status values of the CVODE/IDA initialisations
+    int status;
+
+    // Vector length (number of states)
+    int N = {{num_states}};
+    // only positive direction (rising edge) of spike events will be detected
+    int rootdir = 1;
+
+    /* Creates serial vectors of length N */
+    B_.y = N_VNew_Serial(N);
+    {% if ode_solver == 'ida' %}
+    B_.y1 = N_VNew_Serial(N);
+    B_.yp = N_VNew_Serial(N);
+    {% endif %}
+    if (check_flag((void *)B_.y, "N_VNew_Serial", 0))
+        throw {{solver_prefix}}SolverFailure (get_name(), 0);
+
+    // Copy NEST state to CVODE/IDA vector
+    for (int i = 0; i < N; i++)
+       ITEM(B_.y,i) = S_.y_[i];
+
+    {% if ode_solver == 'ida' %}
+    // Run the dynamics function to initialise B._yp
+        {# Get the func_name from the default regime (the first in the list #}
+    {{dynamics[0][0]}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
+
+    {% endif %}
+    // Calls {{solver_prefix}}Create to create the solver memory
+    {% if ode_solver == 'cvode' %} 
+    // and specify the Backward Differentiation Formula and the use of a 
+    // Newton iteration
+    B_.sys_ = {{solver_prefix}}Create({{solver_abbrev}}_BDF, {{solver_abbrev}}_NEWTON);
+    {% elif ode_solver == 'ida' %}
+    B_.sys_ = {{solver_prefix}}Create();
+    {% endif %}
+    if (check_flag((void *)B_.sys_, "{{solver_prefix}}Create", 0))
+        throw {{solver_prefix}}SolverFailure (get_name(), 0);
+
+    // Calls {{solver_prefix}}Init to initialize the integrator memory and specify the
+    {% if ode_solver == 'cvode' %}
+    // right hand side function in y''=f(t,y), the initial time, and
+    // the initial values.
+    status = {{solver_prefix}}Init (B_.sys_, {{ModelName}}_dynamics, 0.0, B_.y);
+    {% elif ode_solver == 'ida' %}
+    // resdual function, the initial time, and the initial values. 
+    status = {{solver_prefix}}Init (B_.sys_, {{ModelName}}_residual, 0.0, B_.y, B_.yp);
+    {% endif %}
+    if (check_flag(&status, "{{solver_prefix}}Init", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+
+    {% if v_threshold %}
+    /* Event trigger handler (detects event triggers) */
+    status = {{solver_prefix}}RootInit(B_.sys_, 1, ({{solver_abbrev}}RootFn){{ModelName}}_trigger);
+    if (check_flag(&status, "{{solver_prefix}}RootInit", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+
+    /* Detect only the rising edge of spikes */
+    status = {{solver_prefix}}SetRootDirection(B_.sys_, &rootdir);
+    if (check_flag(&status, "{{solver_prefix}}SetRootDirection", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+
+    {% endif %}
+    /* Sets the relative and absolute error tolerances of {{solver_prefix}}  */
+    status = {{solver_prefix}}SStolerances (B_.sys_, {{abs_tolerance}}, {{rel_tolerance}});
+    if (check_flag(&status, "{{solver_prefix}}SStolerances", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+
+    {% if ode_solver == 'cvode' %}
+    /* Turns on {{solver_prefix}} stability limit detection (only applicable for order 3 and greater) */
+    status = {{solver_prefix}}SetStabLimDet (B_.sys_,true);
+    if (check_flag(&status, "{{solver_prefix}}SetStabLimDet", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+
+    {% endif %}
+    /* Sets the maximum order of {{solver_prefix}}  */
+    status = {{solver_prefix}}SetMaxOrd (B_.sys_,5);
+    if (check_flag(&status, "{{solver_prefix}}SetMaxOrd", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+
+    /* Sets maximum step size. */
+    status = {{solver_prefix}}SetMaxStep (B_.sys_,{% if max_step_size %}{{max_step_size}}{% else %}B_.step_{% endif %});
+    if (check_flag(&status, "{{solver_prefix}}SetMaxStep", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+
+    /* Calls {{solver_prefix}}SetUserData to configure the integrator to pass the 
+     * params structure to the right-hand function */
+    status = {{solver_prefix}}SetUserData(B_.sys_, reinterpret_cast<void*>(this));
+    if (check_flag(&status, "{{solver_prefix}}SetUserData", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+
+    {% if ode_solver == 'cvode' %}
+    /* Initializes diagonal linear solver. */
+    status = CVDiag (B_.sys_);
+    if (check_flag(&status, "CVDiag", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+    {% elif ode_solver == 'ida' %}
+    /* Initializes dense linear solver. */
+    status = {{solver_prefix}}Dense (B_.sys_, N);
+    if (check_flag(&status, "{{solver_prefix}}Dense", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+
+    status = {{solver_prefix}}CalcIC(B_.sys_, {{solver_abbrev}}_Y_INIT, 0.0);
+    if (check_flag(&status, "{{solver_prefix}}CalcIC", 1))
+        throw {{solver_prefix}}SolverFailure (get_name(), status);
+    {% endif %}
+{% elif ode_solver == "gsl" %}
+    static const gsl_odeiv2_step_type* T1 = gsl_odeiv2_step_rk2;
+    B_.N = {{num_states}};
+
+    if ( B_.s_ == 0 )
+        B_.s_ = gsl_odeiv2_step_alloc (T1, B_.N);
+    else 
+        gsl_odeiv2_step_reset(B_.s_);
+
+    if ( B_.c_ == 0 )  
+        B_.c_ = gsl_odeiv2_control_standard_new ({{abs_tolerance}}, {{rel_tolerance}}, 1.0, 0.0);
+    else
+        gsl_odeiv2_control_init(B_.c_, {{abs_tolerance}}, {{rel_tolerance}}, 1.0, 0.0);
+
+    if ( B_.e_ == 0 )  
+        B_.e_ = gsl_odeiv2_evolve_alloc(B_.N);
+    else 
+        gsl_odeiv2_evolve_reset(B_.e_);
+   
+    B_.sys_.function  = {{ModelName}}_dynamics; 
+    B_.sys_.jacobian  = {{ModelName}}_jacobian;
+    B_.sys_.dimension = B_.N;
+    B_.sys_.params    = reinterpret_cast<void*>(this);
+
+    B_.u = (double *)malloc(sizeof(double) * B_.N);
+    assert (B_.u);
+    B_.jac = (double *)malloc(sizeof(double) * B_.N);
+    assert (B_.jac);
+{% endif %}
+    // ------------------- init-solver.tmpl ------------------------//
+{# Old implementation  
+    
+  {% if ode_solver == "cvode" %}
+    int status, N, rootdir;
+    
+    N = {{num_states}};
+    // only positive direction (rising edge) of spike events will be detected
+    rootdir = 1;
+    
+    /* Creates serial vector of length N */
+    B_.y = N_VNew_Serial(N);
+    if (check_flag((void *)B_.y, "N_VNew_Serial", 0))
+        throw CVodeSolverFailure (get_name(), 0);
+    
+    for (int i = 0; i < N; i++)
+       ITEM(B_.y,i) = S_.y_[i];
+    
+    /* Calls CVodeCreate to create the solver memory and specify the 
+     * Backward Differentiation Formula and the use of a Newton iteration */
+    B_.sys_ = CVodeCreate(CV_BDF, CV_NEWTON);
+    if (check_flag((void *)B_.sys_, "CVodeCreate", 0))
+        throw CVodeSolverFailure (get_name(), 0);
+    
+    /* Calls CVodeInit to initialize the integrator memory and specifies the
+     * right hand side function in y''=f(t,y), the initial time, and
+     * the initial values. */
+    status = CVodeInit (B_.sys_, {{ModelName}}_dynamics, 0.0, B_.y);
+    if (check_flag(&status, "CVodeInit", 1))
+        throw CVodeSolverFailure (get_name(), status);
+    {% if ("V_t" in defaultDefs) %}
+    
+    /* Spike event handler (detects zero-crossing of V-V_t) */
+    status = CVodeRootInit(B_.sys_, 1, (CVRootFn){{ModelName}}_event);
+    if (check_flag(&status, "CVodeRootInit", 1))
+        throw CVodeSolverFailure (get_name(), status);
+    
+    /* Detect only the rising edge of spikes */
+    status = CVodeSetRootDirection(B_.sys_, &rootdir);
+    if (check_flag(&status, "CVodeSetRootDirection", 1))
+        throw CVodeSolverFailure (get_name(), status);
+    
+    {% endif %}
+    /* Sets the relative and absolute error tolerances of CVode  */
+    status = CVodeSStolerances (B_.sys_, {{abs_tolerance}}, {{rel_tolerance}});
+    if (check_flag(&status, "CVodeSStolerances", 1))
+        throw CVodeSolverFailure (get_name(), status);
+    
+    /* Turns on CVode stability limit detection (only applicable for order 3 and greater) */
+    status = CVodeSetStabLimDet (B_.sys_,true);
+    if (check_flag(&status, "CVodeSetStabLimDet", 1))
+        throw CVodeSolverFailure (get_name(), status);
+    
+    /* Sets the maximum order of CVode  */
+    status = CVodeSetMaxOrd (B_.sys_,5);
+    if (check_flag(&status, "CVodeSetMaxOrd", 1))
+        throw CVodeSolverFailure (get_name(), status);
+    
+    /* Sets maximum step size. */
+    status = CVodeSetMaxStep (B_.sys_,{% if maxstep %}{{maxstep}}{% else %}B_.step_{% endif %});
+    if (check_flag(&status, "CVodeSetMaxStep", 1))
+        throw CVodeSolverFailure (get_name(), status);
+    
+    /* Configures the integrator to pass the params structure to the right-hand function */
+    status = CVodeSetUserData(B_.sys_, reinterpret_cast<void*>(this));
+    if (check_flag(&status, "CVodeSetUserData", 1))
+        throw CVodeSolverFailure (get_name(), status);
+    
+    /* Initializes diagonal linear solver. */
+    status = CVDiag (B_.sys_);
+    if (check_flag(&status, "CVDiag", 1))
+        throw CVodeSolverFailure (get_name(), status);
+{% elif ode_solver == "ida" %}
+    int status, N, rootdir;
+    N = {{num_states}};
+    
+    // only positive direction (rising edge) of spike events will be detected
+    rootdir = 1;
+    
+    /* Creates serial vectors of length N */
+    B_.y = N_VNew_Serial(N);
+    B_.y1 = N_VNew_Serial(N);
+    B_.yp = N_VNew_Serial(N);
+    if (check_flag((void *)B_.y, "N_VNew_Serial", 0))
+        throw IDASolverFailure (get_name(), 0);
+    
+    for (int i = 0; i < N; i++)
+       ITEM(B_.y,i) = S_.y_[i];
+    
+    {{ModelName}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
+    
+    /* Calls IDACreate to create the solver memory */ 
+    B_.sys_ = IDACreate();
+    if (check_flag((void *)B_.sys_, "IDACreate", 0))
+        throw IDASolverFailure (get_name(), 0);
+    
+    /* Calls IDAInit to initialize the integrator memory and specify the
+    * resdual function, the initial time, and the initial values. */
+    status = IDAInit (B_.sys_, {{ModelName}}_residual, 0.0, B_.y, B_.yp);
+    
+    if (check_flag(&status, "IDAInit", 1))
+        throw IDASolverFailure (get_name(), status);
+    {% if ("V_t" in defaultDefs) %}
+    
+    /* Spike event handler (detects zero-crossing of V-V_t) */
+    status = IDARootInit(B_.sys_, 1, (IDARootFn){{ModelName}}_event);
+    if (check_flag(&status, "IDARootInit", 1))
+        throw IDASolverFailure (get_name(), status);
+    
+    /* Detect only the rising edge of spikes */
+    status = IDASetRootDirection(B_.sys_, &rootdir);
+    if (check_flag(&status, "IDASetRootDirection", 1))
+        throw IDASolverFailure (get_name(), status);
+    
+    {% endif %}
+    /* Sets the relative and absolute error tolerances of IDA  */
+    status = IDASStolerances (B_.sys_, {{abs_tolerance}}, {{rel_tolerance}});
+    if (check_flag(&status, "IDASStolerances", 1))
+        throw IDASolverFailure (get_name(), status);
+    
+    /* Sets the maximum order of IDA  */
+    status = IDASetMaxOrd (B_.sys_,5);
+    if (check_flag(&status, "IDASetMaxOrd", 1))
+        throw IDASolverFailure (get_name(), status);
+    
+    /* Sets maximum step size. */
+    status = IDASetMaxStep (B_.sys_,{% if maxstep %}{{maxstep}}{% else %}B_.step_{% endif %});
+    if (check_flag(&status, "IDASetMaxStep", 1))
+        throw IDASolverFailure (get_name(), status);
+    
+    /* Calls IDASetUserData to configure the integrator to pass the 
+     * params structure to the right-hand function */
+    status = IDASetUserData(B_.sys_, reinterpret_cast<void*>(this));
+    if (check_flag(&status, "IDASetUserData", 1))
+        throw IDASolverFailure (get_name(), status);
+    
+    /* Initializes dense linear solver. */
+    status = IDADense (B_.sys_, N);
+    if (check_flag(&status, "IDADense", 1))
+        throw IDASolverFailure (get_name(), status);
+    
+    status = IDACalcIC(B_.sys_, IDA_Y_INIT, 0.0);
+    if (check_flag(&status, "IDACalcIC", 1))
+        throw IDASolverFailure (get_name(), status);
+        
+#}
+    
+    
