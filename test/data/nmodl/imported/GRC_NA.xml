@@ -2,105 +2,65 @@
 <nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
   <nineml:Component name="GRC_NA">
     <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/GRC_NAClass.xml">GRC_NAClass</nineml:Definition>
-    <nineml:Property name="ACoff">
-      <nineml:Quantity>
-        <nineml:SingleValue>0.5</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>0.5</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="ACon">
-      <nineml:Quantity>
-        <nineml:SingleValue>0.005</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>0.005</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="AOoff">
-      <nineml:Quantity>
-        <nineml:SingleValue>0.005</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>0.005</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="AOon">
-      <nineml:Quantity>
-        <nineml:SingleValue>0.75</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>0.75</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Aalfa">
-      <nineml:Quantity>
-        <nineml:SingleValue>353.91</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>353.91</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Abeta">
-      <nineml:Quantity>
-        <nineml:SingleValue>1.272</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>1.272</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Adelta">
-      <nineml:Quantity>
-        <nineml:SingleValue>40.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>40.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Aepsilon">
-      <nineml:Quantity>
-        <nineml:SingleValue>1.75</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>1.75</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Agamma">
-      <nineml:Quantity>
-        <nineml:SingleValue>150.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>150.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Ateta">
-      <nineml:Quantity>
-        <nineml:SingleValue>0.0201</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>0.0201</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Valfa">
-      <nineml:Quantity>
-        <nineml:SingleValue>13.99</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>13.99</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Vbeta">
-      <nineml:Quantity>
-        <nineml:SingleValue>13.99</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>13.99</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Vteta">
-      <nineml:Quantity>
-        <nineml:SingleValue>25.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>25.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="celsius">
-      <nineml:Quantity units="degC">
-        <nineml:SingleValue>20.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="degC">
+      <nineml:SingleValue>20.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="ena">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>87.39</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>87.39</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="gnabar">
-      <nineml:Quantity units="S_per_cm2">
-        <nineml:SingleValue>0.013</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="S_per_cm2">
+      <nineml:SingleValue>0.013</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="n1">
-      <nineml:Quantity>
-        <nineml:SingleValue>5.422</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>5.422</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="n2">
-      <nineml:Quantity>
-        <nineml:SingleValue>3.279</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>3.279</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="n3">
-      <nineml:Quantity>
-        <nineml:SingleValue>1.83</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>1.83</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="n4">
-      <nineml:Quantity>
-        <nineml:SingleValue>0.738</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>0.738</nineml:SingleValue>
     </nineml:Property>
   </nineml:Component>
   <nineml:Unit symbol="degC" dimension="temperature" power="0" offset="273.15"/>

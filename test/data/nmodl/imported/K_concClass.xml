@@ -18,7 +18,7 @@
         </TimeDerivative>
       </Regime>
       <Alias name="FARADAY">
-        <Constant units="C">96485.3365</Constant>
+        <Value units="C">96485.3365</Value>
       </Alias>
       <StateVariable name="ki"/>
       <StateVariable name="ko"/>

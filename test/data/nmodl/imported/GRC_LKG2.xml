@@ -2,15 +2,11 @@
 <nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
   <nineml:Component name="GRC_LKG2">
     <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/GRC_LKG2Class.xml">GRC_LKG2Class</nineml:Definition>
-    <nineml:Property name="egaba">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-65.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-65.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="ggaba">
-      <nineml:Quantity units="S_per_cm2">
-        <nineml:SingleValue>3e-05</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="S_per_cm2">
+      <nineml:SingleValue>3e-05</nineml:SingleValue>
     </nineml:Property>
   </nineml:Component>
   <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>

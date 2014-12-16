@@ -17,7 +17,7 @@
         <MathInline>2*beta*(cai-cai0)</MathInline>
       </Alias>
       <Alias name="F">
-        <Constant units="C">96485.3365</Constant>
+        <Value units="C">96485.3365</Value>
       </Alias>
       <StateVariable name="cai"/>
     </Dynamics>

@@ -2,50 +2,32 @@
 <nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
   <nineml:Component name="GRC_KCA">
     <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/GRC_KCAClass.xml">GRC_KCAClass</nineml:Definition>
-    <nineml:Property name="Aalpha_c">
-      <nineml:Quantity units="per_ms">
-        <nineml:SingleValue>2.5</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="per_ms">
+      <nineml:SingleValue>2.5</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Abeta_c">
-      <nineml:Quantity units="per_ms">
-        <nineml:SingleValue>1.5</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="per_ms">
+      <nineml:SingleValue>1.5</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Balpha_c">
-      <nineml:Quantity units="mol_per_m3">
-        <nineml:SingleValue>0.0015</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mol_per_m3">
+      <nineml:SingleValue>0.0015</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Bbeta_c">
-      <nineml:Quantity units="mol_per_m3">
-        <nineml:SingleValue>0.00015</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mol_per_m3">
+      <nineml:SingleValue>0.00015</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Kalpha_c">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-11.765</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-11.765</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Kbeta_c">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-11.765</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-11.765</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="celsius">
-      <nineml:Quantity units="degC">
-        <nineml:SingleValue>30.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="degC">
+      <nineml:SingleValue>30.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="ek">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-84.69</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-84.69</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="gkbar">
-      <nineml:Quantity units="S_per_cm2">
-        <nineml:SingleValue>0.003</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="S_per_cm2">
+      <nineml:SingleValue>0.003</nineml:SingleValue>
     </nineml:Property>
   </nineml:Component>
   <nineml:Unit symbol="mol_per_m3" dimension="concentration" power="0"/>

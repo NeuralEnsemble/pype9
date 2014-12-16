@@ -2,75 +2,47 @@
 <nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
   <nineml:Component name="Golgi_Na">
     <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/Golgi_NaClass.xml">Golgi_NaClass</nineml:Definition>
-    <nineml:Property name="Aalpha_h">
-      <nineml:Quantity units="per_ms">
-        <nineml:SingleValue>0.21</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="per_ms">
+      <nineml:SingleValue>0.21</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Aalpha_m">
-      <nineml:Quantity>
-        <nineml:SingleValue>0.3</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>0.3</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Abeta_h">
-      <nineml:Quantity units="per_ms">
-        <nineml:SingleValue>3.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="per_ms">
+      <nineml:SingleValue>3.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Abeta_m">
-      <nineml:Quantity units="per_ms">
-        <nineml:SingleValue>12.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="per_ms">
+      <nineml:SingleValue>12.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Kalpha_h">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-3.333</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-3.333</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Kalpha_m">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-10.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-10.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Kbeta_h">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-5.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-5.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Kbeta_m">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-18.182</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-18.182</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Q10">
-      <nineml:Quantity>
-        <nineml:SingleValue>3.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>3.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="V0alpha_h">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-50.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-50.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="V0alpha_m">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-25.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-25.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="V0beta_h">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-17.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-17.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="V0beta_m">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-50.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-50.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="gnabar">
-      <nineml:Quantity units="S_per_cm2">
-        <nineml:SingleValue>0.048</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="S_per_cm2">
+      <nineml:SingleValue>0.048</nineml:SingleValue>
     </nineml:Property>
   </nineml:Component>
   <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>

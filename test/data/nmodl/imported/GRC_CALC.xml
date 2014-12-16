@@ -2,20 +2,14 @@
 <nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
   <nineml:Component name="GRC_CALC">
     <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/GRC_CALCClass.xml">GRC_CALCClass</nineml:Definition>
-    <nineml:Property name="beta">
-      <nineml:Quantity units="per_ms">
-        <nineml:SingleValue>1.5</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="per_ms">
+      <nineml:SingleValue>1.5</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="cai0">
-      <nineml:Quantity units="mol_per_m3">
-        <nineml:SingleValue>0.0001</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mol_per_m3">
+      <nineml:SingleValue>0.0001</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="d">
-      <nineml:Quantity units="um">
-        <nineml:SingleValue>0.2</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="um">
+      <nineml:SingleValue>0.2</nineml:SingleValue>
     </nineml:Property>
   </nineml:Component>
   <nineml:Unit symbol="mol_per_m3" dimension="concentration" power="0"/>

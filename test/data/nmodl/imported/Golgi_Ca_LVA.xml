@@ -2,95 +2,59 @@
 <nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
   <nineml:Component name="Golgi_Ca_LVA">
     <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/Golgi_Ca_LVAClass.xml">Golgi_Ca_LVAClass</nineml:Definition>
-    <nineml:Property name="A_tau_h">
-      <nineml:Quantity>
-        <nineml:SingleValue>1.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>1.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="A_tau_m">
-      <nineml:Quantity>
-        <nineml:SingleValue>1.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>1.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="C_tau_h">
-      <nineml:Quantity>
-        <nineml:SingleValue>85.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>85.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="C_tau_m">
-      <nineml:Quantity>
-        <nineml:SingleValue>3.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property>
+      <nineml:SingleValue>3.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="gca2bar">
-      <nineml:Quantity units="S_per_cm2">
-        <nineml:SingleValue>0.00025</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="S_per_cm2">
+      <nineml:SingleValue>0.00025</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="k_h_inf">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>5.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>5.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="k_m_inf">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-7.4</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-7.4</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="k_tau_h1">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>4.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>4.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="k_tau_h2">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-50.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-50.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="k_tau_m1">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>10.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>10.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="k_tau_m2">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-15.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-15.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="shift">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>2.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>2.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="v0_h_inf">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-78.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-78.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="v0_m_inf">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-50.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-50.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="v0_tau_h1">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-46.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-46.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="v0_tau_h2">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-405.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-405.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="v0_tau_m1">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-25.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-25.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="v0_tau_m2">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-100.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-100.0</nineml:SingleValue>
     </nineml:Property>
   </nineml:Component>
   <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>

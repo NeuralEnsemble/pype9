@@ -65,15 +65,16 @@ class CodeGenerator(BaseCodeGenerator):
         args['alias_names'] = list(a.lhs for a in model.aliases)
         args['state_variable_names'] = list(s.name
                                             for s in model.state_variables)
-        used_neuron_units = []
-        for ref_unit, ref_name in self._neuron_units.iteritems():
-            divides = False
-            ref_quantity = pq.Quantity(1, ref_unit.symbol)
-            for unit in component.used_units:
-                
-        args['used_units'] = list((u.name, self._neuron_units[u])
-                                  for u in component.used_units
-                                  if u in self._neuron_units)
+        args['properties'] = component.properties.values()
+#         used_neuron_units = []
+#         for ref_unit, ref_name in self._neuron_units.iteritems():
+#             divides = False
+#             ref_quantity = pq.Quantity(1, ref_unit.symbol)
+#             for unit in component.used_units:
+#                 
+#         args['used_units'] = list((u.name, self._neuron_units[u])
+#                                   for u in component.used_units
+#                                   if u in self._neuron_units)
         # Sort ports by dimension ---------------------------------------------
         current_in = {}
         voltage_in = {}
@@ -134,7 +135,7 @@ class CodeGenerator(BaseCodeGenerator):
                              verbose):
         model_name = template_args['ModelName']
         # Render mod file
-        self._render_to_file('parameter.tmpl', template_args, model_name + '.mod',
+        self._render_to_file('main.tmpl', template_args, model_name + '.mod',
                              src_dir)
 
     def compile_source_files(self, compile_dir, component_name, verbose):

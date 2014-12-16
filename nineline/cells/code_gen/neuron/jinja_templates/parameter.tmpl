@@ -10,10 +10,11 @@
    - parameterDefs: a list of strings with the parameter equations in NMODL syntax
 #}
 PARAMETER {
-{% if parameterLocals %}
-  LOCAL {{parameterLocals | join(", ")}}
-{% endif %}
-{% for parameterDef in parameterDefs %}
-  {{parameterDef}}
+
+{% for prop in properties %}
+  {% if prop.is_single() %}
+  {{prop.name}} = {{prop.value}}
+  {% endif %} 
 {% endfor %}
+
 }

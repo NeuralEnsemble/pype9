@@ -2,50 +2,32 @@
 <nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
   <nineml:Component name="GRC_KIR">
     <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/GRC_KIRClass.xml">GRC_KIRClass</nineml:Definition>
-    <nineml:Property name="Aalpha_d">
-      <nineml:Quantity units="per_ms">
-        <nineml:SingleValue>0.13289</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="per_ms">
+      <nineml:SingleValue>0.13289</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Abeta_d">
-      <nineml:Quantity units="per_ms">
-        <nineml:SingleValue>0.16994</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="per_ms">
+      <nineml:SingleValue>0.16994</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Kalpha_d">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-24.3902</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-24.3902</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="Kbeta_d">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>35.714</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>35.714</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="V0alpha_d">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-83.94</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-83.94</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="V0beta_d">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-83.94</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-83.94</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="celsius">
-      <nineml:Quantity units="degC">
-        <nineml:SingleValue>30.0</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="degC">
+      <nineml:SingleValue>30.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="ek">
-      <nineml:Quantity units="mV">
-        <nineml:SingleValue>-84.69</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="mV">
+      <nineml:SingleValue>-84.69</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property name="gkbar">
-      <nineml:Quantity units="S_per_cm2">
-        <nineml:SingleValue>0.0009</nineml:SingleValue>
-      </nineml:Quantity>
+    <nineml:Property units="S_per_cm2">
+      <nineml:SingleValue>0.0009</nineml:SingleValue>
     </nineml:Property>
   </nineml:Component>
   <nineml:Unit symbol="degC" dimension="temperature" power="0" offset="273.15"/>
