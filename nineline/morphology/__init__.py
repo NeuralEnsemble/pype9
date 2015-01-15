@@ -22,7 +22,7 @@ import pyNN.connectors
 from nineline import XMLHandler
 from .utils import axially_symmetric_tensor
 from .forest import Forest
-from .tree import Tree
+from .tree import FlattenedTree
 
 try:
     import matplotlib.pyplot as plt
