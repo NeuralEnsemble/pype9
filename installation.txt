@@ -32,14 +32,23 @@ $cd /usr/local/
 The following will clone the remote directory and provide a local copy at the path /usr/local/btmorph 
 $sudo git clone https://bitbucket.org/btorb/btmorph
 
-btmorph does not have a setup.py file, therefore btmorph needs to be added to pythons load path in order to be visible to the python interpretator. The following command achieves this:
+If you are using Eclipse it is recomended to use setup_tools in order to make a python egg. A setup.py is provided in this directory.
+cd /NineLine/btmorph_setup
+sudo python setup.py install
 
-$export PYTHONPATH=$PYTHONPATH:/usr/local/btmorph
+## If not using Eclipse.
+#btmorph does not have a setup.py file, therefore btmorph needs to be added to p#ythons load path in order to be visible to the python interpretator. The follow#ing command achieves this:
+#$export PYTHONPATH=$PYTHONPATH:/usr/local/btmorph
+
 
 
 
 Install quantities:
 ============
+The pip package of quantities does not contain the required units namely: mho/cm**2
+so install quantities using the git repo
+
+tclose/quantities.
 
 $sudo pip install quantities
 
