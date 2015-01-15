@@ -71,9 +71,9 @@ class CodeGenerator(BaseCodeGenerator):
             ref_quantity = pq.Quantity(1, ref_unit.symbol)
             for unit in component.used_units:
                 
-        args['used_units'] = list((u.name, self._neuron_units[u])
-                                  for u in component.used_units
-                                  if u in self._neuron_units)
+                args['used_units'] = list((u.name, self._neuron_units[u])
+                                          for u in component.used_units
+                                          if u in self._neuron_units)
         # Sort ports by dimension ---------------------------------------------
         current_in = {}
         voltage_in = {}
