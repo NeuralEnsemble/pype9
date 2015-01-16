@@ -80,7 +80,7 @@ class BaseCodeGenerator(object):
     def compile_source_files(self, compile_dir, component_name, verbose):
         pass
 
-    def generate(self, component, initial_state, install_dir=None,
+    def generate(self, component, initial_state=None, install_dir=None,
                  build_dir=None, build_mode='lazy', verbose=True,
                  **template_args):
         """
@@ -303,8 +303,8 @@ class BaseCodeGenerator(object):
         # reqencies
         for expr in expressions:
             for atom in expr.rhs_names:
-                if atom in model.parameter_map:
-                    required_params.add(model.parameter_map[atom])
+                if atom in model.parameters_map:
+                    required_params.add(model.parameters_map[atom])
                 elif atom in model.analog_receive_ports_map:
                     required_ports.add(model.analog_receive_ports_map[atom])
                 elif atom in model.analog_reduce_ports_map:

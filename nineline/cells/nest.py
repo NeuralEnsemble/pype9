@@ -11,7 +11,7 @@ from __future__ import absolute_import
 import sys
 import os.path
 import nest
-from .build.nest import build_celltype_files
+from .code_gen.nest import CodeGenerator
 import nineline.cells
 
 basic_nineml_translations = {
@@ -33,14 +33,14 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
         Loads a PyNN cell type for NEST from an XML description, compiling the
         necessary module files
 
-        @param nineml_model [str]: The parsed 9ML biophysical cell model
-        @param celltype_name [str]: Name of the cell class to extract from the
+        `nineml_model` [str]: The parsed 9ML biophysical cell model
+        `celltype_name` [str]: Name of the cell class to extract from the
                                     xml file
-        @param morph_id [str]: Currently unused but kept for consistency with
+        `morph_id` [str]: Currently unused but kept for consistency with
                                NEURON version of this function
-        @param build_mode [str]: Control the automatic building of required
+        `build_mode` [str]: Control the automatic building of required
                                  modules
-        @param silent [bool]: Whether or not to suppress build output
+        `silent` [bool]: Whether or not to suppress build output
         """
         if celltype_name is None:
             celltype_name = nineml_model.name
@@ -50,13 +50,9 @@ class NineCellMetaClass(nineline.cells.NineCellMetaClass):
                 (celltype_name, nineml_model.url, opt_args)]
         except KeyError:
             dct = {}
-            (install_dir,
-             dct['component_translations']) = build_celltype_files(
-                                                 celltype_name,
-                                                 nineml_model.biophysics.name,
-                                                 nineml_model.url,
-                                                 build_mode=build_mode,
-                                                 method=solver_name)
+            code_generator = CodeGenerator()
+            install_dir = code_generator.generate(nineml_model,
+                                                  build_mode=build_mode)
             lib_dir = os.path.join(install_dir, 'lib', 'nest')
             if (sys.platform.startswith('linux') or
                 sys.platform in ['os2', 'os2emx', 'cygwin', 'atheos',
