@@ -66,6 +66,14 @@ class CodeGenerator(BaseCodeGenerator):
         args['state_variable_names'] = list(s.name
                                             for s in model.state_variables)
         args['properties'] = component.properties.values()
+        args['analog_send_ports'] = [p.name for p in model.analog_send_ports]
+          # Set dynamics --------------------------------------------------------
+        dynamics = []
+        for regime in model.dynamics.regimes:
+            # Get name for regime dynamics function ---------------------------
+            regime_name = regime.name or 'default'
+            req_defs = self._required_defs(regime.time_derivatives, model)
+            dynamics.append((regime_name, regime.time_derivatives, req_defs))
 #         used_neuron_units = []
 #         for ref_unit, ref_name in self._neuron_units.iteritems():
 #             divides = False
