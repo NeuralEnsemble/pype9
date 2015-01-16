@@ -8,10 +8,12 @@
 <Dimension name="dimensionless"/>
 <Dimension name="length" l="1"/>
 
-<Comment>I suspect I need the following line..</Comment>
-
+<Comment>I suspect I need one or more of the following line(s), in order to make the code work.
 <Unit symbol="um" dimension="length" power="-3"/>
-    
+<Property name="length" units="um">
+ 
+</Comment>
+   
 <ComponentClass>
     <Comment>p is a probability so it does not have a physical dimension.</Comment>
 
