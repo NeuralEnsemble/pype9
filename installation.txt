@@ -1,0 +1,127 @@
+============
+Install Instructions 
+============
+
+These instructions are for Linux and OSX systems only.
+
+Install the prerequisites regexp, numpy, ply, quantities, nineml, jinha2, and btmorph, and all of their dependencies. 
+
+Also nineml dependends on lxml, ply, Python Nose, Cheetah.
+
+Instructions for installing http://software.incf.org/software/nineml/documentation/python-api/installation/at_download/file
+
+
+Install git, and pip if you have not already. 
+============
+On Linux:
+$sudo apt-get install git
+On OSX:
+$sudo port install git 
+
+Run analogous commands for installing pip.
+
+
+
+
+Install btmorph
+============
+
+Change directory to a suitable destination for package installation.
+$cd /usr/local/
+
+The following will clone the remote directory and provide a local copy at the path /usr/local/btmorph 
+$sudo git clone https://bitbucket.org/btorb/btmorph
+
+btmorph does not have a setup.py file, therefore btmorph needs to be added to pythons load path in order to be visible to the python interpretator. The following command achieves this:
+
+$export PYTHONPATH=$PYTHONPATH:/usr/local/btmorph
+
+
+
+Install quantities:
+============
+
+$sudo pip install quantities
+
+Install ply:
+============
+
+$sudo pip install ply
+
+Install jinja2:
+============
+
+$sudo pip install jinja2
+
+Install lxml:
+============
+
+$sudo pip install lxml
+
+Install nineml
+============
+
+It is possible to install a stable version of nineml as a pip package. There is also a nineml repository at https://github.com/tclose/nineml
+However at the time of writing the INCF nineml package was seen to be working.
+
+$sudo git clone https://github.com/INCF/nineml
+$cd /usr/local/nineml/lib9ml/python	
+$sudo python setup.py install
+
+
+Install NineLine
+============
+$cd /usr/local/
+
+There are two development branches: template_build (https://github.com/CNS-OIST/NineLine/tree/template_build) and master. At the time of writing only the master branch was seen to be working.
+
+$sudo git clone https://github.com/CNS-OIST/NineLine
+
+This is currently a private repository so you will be asked to enter your github credentials.
+
+A setup.py file is being developed for nineline, however before that time it is necessary to export the python path for NineLine as was done for btmorph above. If the setup file exists ignore case A. and follow case B. instead.
+	
+A.
+	$export PYTHONPATH=$PYTHONPATH:/usr/local/NineLine/
+
+B. 
+	#$cd /usr/local/NineLine/nineline
+	$python setup.py install
+	
+	$cd ~
+	
+test.
+$python
+>>import btmorph
+>>import nineml
+>>import nineline
+>>import nineline.cells
+>>import nineline.hpc
+>>import nineline.importer
+>>import nineline.arguments
+
+Uninstall
+============
+
+#To uninstall if case A. sudo rm -rf /usr/local/NineLine, and modify PYTHONPATH such that it no longer refers to /usr/local/NineLine.
+#If case B. sudo pip uninstall 9Line, and sudo rm -rf /usr/local/NineLine 
+
+
+TODO
+============
+
+#Currently nineline morphology will not import. However previously morphology did import.
+
+#>>import nineline.morphology as morph
+#----> 1 import nineline.morphology
+
+#/usr/local/NineLine/nineline/morphology/__init__.py in <module>()
+#     23 from .utils import axially_symmetric_tensor
+#     24 from .forest import Forest
+#---> 25 from .tree import Tree
+#     26 
+#     27 try:
+
+#ImportError: cannot import name Tree
+
+
