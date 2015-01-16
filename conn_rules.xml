@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<NineML>
+<Comment>I suspect I substitute in the most recent development version of nineml.</Comment>
+
+<NineML xmlns="http://nineml.net/9ML/2.0">
+<Annotations>
+</Annotations>
+<Dimension name="dimensionless"/>
+<Dimension name="length" l="1"/>
+
+<Comment>I suspect I need the following line..</Comment>
+
+<Unit symbol="um" dimension="length" power="-3"/>
+    
+<ComponentClass>
+    <Comment>p is a probability so it does not have a physical dimension.</Comment>
+
+    <Parameter name="p", dimension="dimensionless"/>
+    <Comment>cut_off is a constant distance.</Comment>
+
+    <Parameter name="cutoff" dimension="length"/>
+    <PropertyRecievePort name="x_source" dimension="length"/>
+    <PropertyRecievePort name="x_destination" dimension="length"/>
+    <PropertyRecievePort name="y_source" dimension="length"/>
+    <PropertyRecievePort name="y_destination" dimension="length"/>
+    <PropertyRecievePort name="z_source" dimension="length"/>
+    <PropertyRecievePort name="z_destination" dimension="length"/>
+    
+    
+    <connectionRule>
+        <RandomVariable name="rand">
+        <Comment> http://www.uncertml.org/distributions/uniform </Comment>
+        <un:UniformDistribution xmlns:un="http://www.uncertml.org/2.0">
+        <un:minimum>0</un:minimum>
+        <un:maximum>5</un:maximum>   
+        </un:UniformDistribution>
+
+        </RandomVariable>
+            <Comment>The following lines effectively mean assigning the Mathinline expression below to the variable s.
+            This should make the s the euclidian distance between the source and the destination in x,y and z.
+            </Comment>
+
+        <Alias name="s">
+            <MathInline>sqrt((x_source-x_dest)^2+(y_source-y_dest)^2+(z_source-z_dest)^2)</MathInline>       
+        </Alias>
+    
+        <ConnectCondition>
+            <Comment>The following line describes a decaying exponential distribution, this is used to 
+            in certain circumstances to make the probability of connection a negative exponential function of distance.  
+            In other circumstnaces the connection condition will be uniform across all distances within a certain range.        
+            </Comment>
+            
+            
+            <MathInline> (1/s^2)<rand </MathInline>       
+        </ConnectCondition>
+    
+        
+        <ConnectCondition>
+            <Comment>The following line describes a decaying exponential distribution, this is used to 
+            in certain circumstances to make the probability of connection a negative exponential function of distance.  
+            In other circumstnaces the connection condition will be uniform across all distances within a certain range.        
+            </Comment>
+            
+            
+            <MathInline> ()<rand </MathInline>       
+        </ConnectCondition>
+        
