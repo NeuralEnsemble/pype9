@@ -2,28 +2,28 @@
 <nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
   <nineml:Component name="Golgi_BK">
     <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/Golgi_BKClass.xml">Golgi_BKClass</nineml:Definition>
-    <nineml:Property units="per_ms">
+    <nineml:Property units="per_ms" name="Aalpha_c">
       <nineml:SingleValue>7.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="per_ms">
+    <nineml:Property units="per_ms" name="Abeta_c">
       <nineml:SingleValue>1.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mol_per_m3">
+    <nineml:Property units="mol_per_m3" name="Balpha_c">
       <nineml:SingleValue>0.0015</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mol_per_m3">
+    <nineml:Property units="mol_per_m3" name="Bbeta_c">
       <nineml:SingleValue>0.00015</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mV">
+    <nineml:Property units="mV" name="Kalpha_c">
       <nineml:SingleValue>-11.765</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mV">
+    <nineml:Property units="mV" name="Kbeta_c">
       <nineml:SingleValue>-11.765</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property>
+    <nineml:Property units="unitless" name="Q10">
       <nineml:SingleValue>3.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="S_per_cm2">
+    <nineml:Property units="S_per_cm2" name="gkbar">
       <nineml:SingleValue>0.003</nineml:SingleValue>
     </nineml:Property>
   </nineml:Component>

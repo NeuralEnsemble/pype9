@@ -152,13 +152,12 @@ class NMODLImporter(object):
         self._create_regimes()
 
     def get_component_class(self):
-        aliases = self.aliases.values() + [Alias(n, v)
-                                           for n, v in self.constants.items()]
         comp_class = ComponentClass(name=self.component_name + 'Class',
                                     parameters=self.parameters.values(),
                                     analog_ports=self.analog_ports.values(),
                                     event_ports=self.event_ports.values(),
-                                    regimes=self.regimes, aliases=aliases,
+                                    regimes=self.regimes,
+                                    aliases=self.aliases.values(),
                                     state_variables=self.state_variables)
         return comp_class
 

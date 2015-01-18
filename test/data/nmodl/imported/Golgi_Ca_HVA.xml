@@ -2,46 +2,46 @@
 <nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
   <nineml:Component name="Golgi_Ca_HVA">
     <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/Golgi_Ca_HVAClass.xml">Golgi_Ca_HVAClass</nineml:Definition>
-    <nineml:Property units="per_ms">
+    <nineml:Property units="per_ms" name="Aalpha_s">
       <nineml:SingleValue>0.04944</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="per_ms">
+    <nineml:Property units="per_ms" name="Aalpha_u">
       <nineml:SingleValue>0.0013</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="per_ms">
+    <nineml:Property units="per_ms" name="Abeta_s">
       <nineml:SingleValue>0.08298</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="per_ms">
+    <nineml:Property units="per_ms" name="Abeta_u">
       <nineml:SingleValue>0.0013</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mV">
+    <nineml:Property units="mV" name="Kalpha_s">
       <nineml:SingleValue>15.873015873</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mV">
+    <nineml:Property units="mV" name="Kalpha_u">
       <nineml:SingleValue>-18.183</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mV">
+    <nineml:Property units="mV" name="Kbeta_s">
       <nineml:SingleValue>-25.641</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mV">
+    <nineml:Property units="mV" name="Kbeta_u">
       <nineml:SingleValue>83.33</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property>
+    <nineml:Property units="unitless" name="Q10">
       <nineml:SingleValue>3.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mV">
+    <nineml:Property units="mV" name="V0alpha_s">
       <nineml:SingleValue>-29.06</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mV">
+    <nineml:Property units="mV" name="V0alpha_u">
       <nineml:SingleValue>-48.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mV">
+    <nineml:Property units="mV" name="V0beta_s">
       <nineml:SingleValue>-18.66</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mV">
+    <nineml:Property units="mV" name="V0beta_u">
       <nineml:SingleValue>-48.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="S_per_cm2">
+    <nineml:Property units="S_per_cm2" name="gcabar">
       <nineml:SingleValue>0.00046</nineml:SingleValue>
     </nineml:Property>
   </nineml:Component>

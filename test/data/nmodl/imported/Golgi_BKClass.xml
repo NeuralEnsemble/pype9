@@ -4,9 +4,9 @@
   <Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
   <Dimension k="1" name="temperature"/>
   <Dimension name="dimensionless"/>
-  <Dimension i="1" name="currentDensity" l="-2"/>
-  <Dimension l="-3" name="concentration" n="1"/>
   <Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <Dimension l="-3" name="concentration" n="1"/>
+  <Dimension i="1" name="currentDensity" l="-2"/>
   <ComponentClass name="Golgi_BKClass">
     <AnalogSendPort dimension="currentDensity" name="ik"/>
     <AnalogReceivePort dimension="concentration" name="cai"/>
@@ -63,10 +63,4 @@
       <StateVariable name="c"/>
     </Dynamics>
   </ComponentClass>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" name="per_time" t="-1"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="-1" t="-3" m="1" l="2" name="voltage"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" k="1" name="temperature"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" l="-3" name="concentration" n="1"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" name="currentDensity" l="-2"/>
 </NineML>
