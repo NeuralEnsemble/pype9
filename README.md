@@ -1,6 +1,6 @@
-NineLine
+NineMLPypeLine
 ========
 
-A NINEml software pipeLINE that reads and simulates networks of detailed neuronal models described in 9ml
+NINEML PYthon PipE-Line (NineMLPypeLine) is a software pipeline written in Python to read and simulate networks of detailed neuronal models described in NineML.
 
 Authors: Thomas G. Close (tclose@oist.jp), Ivan Raikov (raikov@oist.jp)
