@@ -1,16 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <NineML>
-<Annotations>
-<Comment>I suspect I substitute in the most recent development version of nineml.</Comment>
-</Annotations>
-
 <NineML xmlns="http://nineml.net/9ML/2.0">
 
-<Annotations>
-<Comment>I suspect I need one or more of the following line(s), in order to make the code work.
-Is it a mistake that the power of micro metres is -3, as opposed to -6
-</Comment>
-</Annotations>
 
 <Dimension name="dimensionless"/>
 <Dimension name="length" l="1"/>
@@ -21,43 +12,41 @@ Is it a mistake that the power of micro metres is -3, as opposed to -6
 
 
 <ComponentClass name="DecayingPolySphere">
-    <Annotations>
+  <Annotations>
     <Comment>p is a probability so it does not have a physical dimension.</Comment>
-    </Annotations>
+  </Annotations>
 
-    <Parameter name="p", dimension="dimensionless"/>
+  <Parameter name="p", dimension="dimensionless"/>
 
-    <Annotations>
+  <Annotations>
     <Comment>cut_off is a constant distance. In Shyam's code this value is 
     referred to as the radius. This radius takes the value of 100um for a standard 
     dend radius and also a Golgi Cell Apical Dendrite. 
     A MFBundle radius is 70um however.
     A Goc Basolateral dend radius is 60um.
     to summarise cut_off can take the values:
-    100,
-    70,
-    60,
+    100
+    70
+    60
     These three values shall be supplied as a parameter after object instantiation.
     </Comment>
-    </Annotations>
-    
-    <Parameter name="cutoff" dimension="length"/>
-    <PropertyRecievePort name="x_src" dimension="length"/>
-    <PropertyRecievePort name="x_dst" dimension="length"/>
-    <PropertyRecievePort name="y_src" dimension="length"/>
-    <PropertyRecievePort name="y_dst" dimension="length"/>
-    <PropertyRecievePort name="z_src" dimension="length"/>
-    <PropertyRecievePort name="z_dst" dimension="length"/>
-    
-    
-    <ConnectionRule>
-        <RandomVariable name="rand" units="um">
-
-        <Annotations>
+  </Annotations>
+  
+  <Parameter name="cutoff" dimension="length"/>
+  <PropertyRecievePort name="x_src" dimension="length"/>
+  <PropertyRecievePort name="x_dst" dimension="length"/>
+  <PropertyRecievePort name="y_src" dimension="length"/>
+  <PropertyRecievePort name="y_dst" dimension="length"/>
+  <PropertyRecievePort name="z_src" dimension="length"/>
+  <PropertyRecievePort name="z_dst" dimension="length"/>
+  
+  
+  <ConnectionRule>
+    <RandomVariable name="rand" units="um">
+      <Annotations>
         <Comment>
-         Cleft distances, a radius whose origin is presynaptic.
-         
-         http://www.uncertml.org/distributions/uniform 
+        Cleft distances a radius whose origin is presynaptic.         
+        http://www.uncertml.org/distributions/uniform 
     
         <un:UniformDistribution xmlns:un="http://www.uncertml.org/2.0">
         <un:minimum>0</un:minimum>
@@ -65,51 +54,51 @@ Is it a mistake that the power of micro metres is -3, as opposed to -6
         </un:UniformDistribution>
 
         </Comment>
-        </Annotations>
-
-
-        </RandomVariable>
-            <Annotations>
-            <Comment>The following lines effectively mean assigning the Mathinline expression below to the variable s.
-            This should make the s the euclidian distance between the source and the destination in x,y and z.
-            </Comment>
-            <Annotations>
+      </Annotations>
+    </RandomVariable>
     
+    
+    <Annotations>
+      <Comment>The following lines effectively mean assigning the Mathinline expression below to the variable s.
+          This should make the s the euclidian distance between the source and the destination in x,y and z.
+      </Comment>
+    <Annotations>
+    
+    
+    <Alias name="s">
+      <MathInline>sqrt((x_source-x_dest)^2+(y_source-y_dest)^2+(z_source-z_dest)^2)</MathInline>       
+    </Alias>
+    
+    <ConnectCondition>
+      <MathInline> (1/s^2) &lt; rand </MathInline> 
+   
+      <Annotations>
+        <Comment>The following line describes a decaying negative exponential used as a distribution to draw 
+        random numbers from this is used to in certain circumstances to make the probability of connection a 
+        negative exponential function of distance. In other circumstnaces the connection condition will be uniform across 
+        all distances within a certain range.        
 
-        <Alias name="s">
-            <MathInline>sqrt((x_source-x_dest)^2+(y_source-y_dest)^2+(z_source-z_dest)^2)</MathInline>       
-        </Alias>
-    
-        <ConnectCondition>
-            <Annotations>
-            <Comment>The following line describes the left hand side of an asymptote used as a distribution to draw 
-            random numbers from, this is used to in certain circumstances to make the probability of connection a 
-            negative exponential function of distance. In other circumstnaces the connection condition will be uniform across all distances within a certain range.        
-            
-            
+        Is the distance (radius) smaller than a random number? The smaller distances need to be more likely, and larger distances
+        need to trail off exponentially.
         
-        
-            Is the distance (radius) smaller than a random number? The smaller distances need to be more likely, and larger distances
-            need to trail off exponentially.
-        
-            </Comment>
-            <Annotations>
+        </Comment>
+      <Annotations>
     
             
-            <MathInline> (1/s^2) &lt; < rand </MathInline>       
-        </ConnectCondition>
-    </ConnectionRule>
+              
+    </ConnectCondition>
+  </ConnectionRule>
 </ComponentClass>
 
 
 <ComponentClass name="Uniform_within_sphere">
-    <Annotations>
+  <Annotations>
     <Comment>p is a probability so it does not have a physical dimension.</Comment>
-    </Annotations>
+  </Annotations>
 
-    <Parameter name="p", dimension="dimensionless"/>
+  <Parameter name="p", dimension="dimensionless"/>
 
-    <Annotations>
+  <Annotations>
     <Comment>cut_off is a constant distance. In Shyam's code this value is 
     referred to as the radius. This radius takes the value of 100um for a standard 
     dend radius and also a Golgi Cell Apical Dendrite. 
@@ -121,88 +110,87 @@ Is it a mistake that the power of micro metres is -3, as opposed to -6
     60,
     These three values shall be supplied as a parameter after object instantiation.
     </Comment>
-    </Annotations>
+  </Annotations>
     
-    <Parameter name="cutoff" dimension="length"/>
-    <PropertyRecievePort name="x_src" dimension="length"/>
-    <PropertyRecievePort name="x_dst" dimension="length"/>
-    <PropertyRecievePort name="y_src" dimension="length"/>
-    <PropertyRecievePort name="y_dst" dimension="length"/>
-    <PropertyRecievePort name="z_src" dimension="length"/>
-    <PropertyRecievePort name="z_dst" dimension="length"/>
+  <Parameter name="cutoff" dimension="length"/>
+  <PropertyRecievePort name="x_src" dimension="length"/>
+  <PropertyRecievePort name="x_dst" dimension="length"/>
+  <PropertyRecievePort name="y_src" dimension="length"/>
+  <PropertyRecievePort name="y_dst" dimension="length"/>
+  <PropertyRecievePort name="z_src" dimension="length"/>
+  <PropertyRecievePort name="z_dst" dimension="length"/>
     
     
-    <ConnectionRule>
-        <RandomVariable name="rand" units="um">
+  <ConnectionRule>
+    <RandomVariable name="rand" units="um">
 
-        <Annotations>
+      <Annotations>
         <Comment>
-         Cleft distances, a radius whose origin is presynaptic.
-         
-         http://www.uncertml.org/distributions/uniform 
-        
-        
+        Cleft distances, a radius whose origin is presynaptic.
+        http://www.uncertml.org/distributions/uniform 
         This componentclass has two methods for generating a uniform distribution. Choose the one that works.
 
-         </Comment>
-         </Annotations>
+        </Comment>
+      </Annotations>
     
-        <un:UniformDistribution xmlns:un="http://www.uncertml.org/2.0">
-        <un:minimum>0</un:minimum>
-        <un:maximum>cutoff</un:maximum>   
-        </un:UniformDistribution>
+      <un:UniformDistribution xmlns:un="http://www.uncertml.org/2.0">
+      <un:minimum>0</un:minimum>
+      <un:maximum>1.0</un:maximum>   
+      </un:UniformDistribution>
 
-        </RandomVariable>
-            <Annotations>
-            <Comment>The following lines effectively mean assigning the Mathinline expression below to the variable s.
-            This should make the s the euclidian distance between the source and the destination in x,y and z.
-            </Comment>
-            <Annotations>
+    </RandomVariable>
+    <Annotations>
+      <Comment>The following lines effectively mean assigning the Mathinline expression below to the variable s.
+                 This should make the s the euclidian distance between the source and the destination in x,y and z.
+      </Comment>
+    <Annotations>
     
 
-        <Alias name="s">
-            <MathInline>sqrt((x_source-x_dest)^2+(y_source-y_dest)^2+(z_source-z_dest)^2)</MathInline>       
-        </Alias>
+    <Alias name="s">
+      <MathInline>sqrt((x_source-x_dest)^2+(y_source-y_dest)^2+(z_source-z_dest)^2)</MathInline>       
+    </Alias>
     
-        <ConnectCondition>
-            <Annotations>
-            <Comment>The following line describes the left hand side of an asymptote used as a distribution to draw 
-            random numbers from, this is used to in certain circumstances to make the probability of connection a 
-            negative exponential function of distance. In other circumstnaces the connection condition will be uniform across all distances within a certain range.        
-
-
-
-            Note should the mathInline be assigned to something below?
-            </Comment>
-            <Annotations>
+    <ConnectCondition>
+      <Annotations>
+        <Comment>The following line describes a decaying exponential used as a distribution to draw 
+        random numbers from this is used to in certain circumstances to make the probability of connection a 
+        negative exponential function of distance. In other circumstnaces the connection condition will be uniform across all distances within a certain range.        
+        Note should the mathInline be assigned to something below?
+            
+        <MathInline> ( s &lt; cutoff ) &amp;&amp; ( p &lt; rand )  </MathInline>       
+        <MathInline> ( s &lt; cutoff ) &amp;&amp; ( p &lt; rand )   </MathInline>       
+        below uf, refers to uniform distribution in interval [0,1.0]
+        </Comment>
+      <Annotations>
     
             
-            <MathInline> ( s < cutoff ) &lt; && ( p < rand ) &lt;  </MathInline>       
-        </ConnectCondition>
-    </ConnectionRule>
+      <MathInline> ( s &lt; uf ) &amp;&amp; ( p &lt; rand )   </MathInline>       
+    </ConnectCondition>
+  </ConnectionRule>
 </ComponentClass>
 
 
 
 
 <ComponentClass name="Uniform_for_generating_cell_positions">
-    <Annotations>
+  <Annotations>
     <Comment>p is a probability so it does not have a physical dimension.</Comment>
-    </Annotations>
+  </Annotations>
 
-    <Parameter name="p", dimension="dimensionless"/>
+  <Parameter name="p", dimension="dimensionless"/>
 
-    <Annotations>
-    <Comment>plane type sagitall, axial, dorsal. The plane type specifies which dimension below (x,y or z) 
-    that needs to be eliminated in order to convert the considered volume into a considered plane.</Comment>
-    </Annotations>
+  <Annotations>
+    <Comment>Plane orientation is axial (x,y). Its volume is given by x=(0,1500um) y=(0,700um) z=(0,1200um)
+    There is only one orientation of 
+    </Comment>
+  </Annotations>
 
 
 
-    <Annotations>
+  <Annotations>
     <Comment>
     
-    The random number generating for generating _Cell Centre Positions_ should be uniformly distibuted, within the volume
+    The random number generating for generating _Cell Centre Positions_ should be uniformly distibuted within the volume
     
     Ie the distribution has constant mean and variance (not centered with any particular mean or variance).
     However the each cell soma root section is first situated on a grid point before it is randomly perturbed, 
@@ -213,161 +201,158 @@ Is it a mistake that the power of micro metres is -3, as opposed to -6
     (only the area of a circle is considered not a radius of a sphere).
     
     </Comment>
-    </Annotations>
+  </Annotations>
     
-    <Parameter name="gridstep" dimension="length"/>
-    <PropertyRecievePort name="x_src" dimension="length"/>
-    <PropertyRecievePort name="x_dst" dimension="length"/>
-    <PropertyRecievePort name="y_src" dimension="length"/>
-    <PropertyRecievePort name="y_dst" dimension="length"/>
-    <PropertyRecievePort name="z_src" dimension="length"/>
-    <PropertyRecievePort name="z_dst" dimension="length"/>
+  <Parameter name="gridstep" dimension="length"/>
+  <PropertyRecievePort name="x_src" dimension="length"/>
+  <PropertyRecievePort name="x_dst" dimension="length"/>
+  <PropertyRecievePort name="y_src" dimension="length"/>
+  <PropertyRecievePort name="y_dst" dimension="length"/>
+  <PropertyRecievePort name="z_src" dimension="length"/>
+  <PropertyRecievePort name="z_dst" dimension="length"/>
     
     
-    <ConnectionRule>
-        <RandomVariable name="rand" units="um">
+  <ConnectionRule>
+    <RandomVariable name="rand" units="um">
 
-        <Annotations>
-        <Comment>
+    <Annotations>
+      <Comment>
          Cleft distances, a radius whose origin is presynaptic.
-         
          http://www.uncertml.org/distributions/uniform 
-        
-        
          This componentclass has two methods for generating a uniform distribution. Choose the one that works.
 
-         </Comment>
-         </Annotations>
+      </Comment>
+    </Annotations>
     
-        <un:UniformDistribution xmlns:un="http://www.uncertml.org/2.0">
-        <un:minimum>0</un:minimum>
-        <un:maximum>gridstep</un:maximum>   
-        </un:UniformDistribution>
+    <un:UniformDistribution xmlns:un="http://www.uncertml.org/2.0">
+    <un:minimum>0</un:minimum>
+    <un:maximum>gridstep</un:maximum>   
+    </un:UniformDistribution>
 
-        </RandomVariable>
-            <Annotations>
-            <Comment>The following lines effectively mean assigning the Mathinline expression below to the variable s.
-            This should make the s the euclidian distance between the source and the destination in x,y and z.
-            </Comment>
-            </Annotations>
+    </RandomVariable>
+      <Annotations>
+        <Comment>The following lines effectively mean assigning the Mathinline expression below to the variable s.
+                 This should make the s the euclidian distance between the source and the destination in x,y and z.
+        </Comment>
+     </Annotations>
     
 
-        <Alias name="s">
-            <MathInline>sqrt((x_source-x_dest)^2+(y_source-y_dest)^2+(z_source-z_dest)^2</MathInline>       
-        </Alias>
+     <Alias name="s">
+        <MathInline>sqrt((x_source-x_dest)^2+(y_source-y_dest)^2+(z_source-z_dest)^2</MathInline>       
+     </Alias>
 
     
-        <ConnectCondition>
-            <Annotations>
-            <Comment>The equation below is assigned to the connection condition, not to a variable.
-            </Comment>
-            </Annotations>
+     <ConnectCondition>
+        <Annotations>
+          <Comment>The equation below is assigned to the connection condition not to a variable.
+                   Still unsure of the html/xml escaping of logical AND below is this logical and or bitwise?
+          </Comment>
+        </Annotations>
     
             
-            <MathInline> ( s < gridstep ) &lt; && ( p < rand ) &lt;  </MathInline>       
-        </ConnectCondition>
-    </ConnectionRule>
+        <MathInline> ( s &lt; gridstep ) &amp; &amp; ( p &lt; rand )   </MathInline>       
+     </ConnectCondition>
+  </ConnectionRule>
 </ComponentClass>
 
 
 
 
 <ComponentClass name="Boltzmann">
-    <Annotations>
-    <Comment>Used to determine GoC2GoC connectivity.    
-             Boltzmann distribution PDF - fits a sigmoidal curve. 
-             A1 = initial value, A2 = final value, x0 = center, dx = time constant
+  <Annotations>
+  <Comment>Used to determine GoC2GoC connectivity.    
+           Boltzmann distribution PDF - fits a sigmoidal curve. 
+           A1 = initial value, A2 = final value, x0 = center, dx = time constant
                     
             
-    </Comment>
-    </Annotations>
+  </Comment>
+  </Annotations>
     
     
-    <Parameter name="p", dimension="dimensionless"/>
-    <Parameter name="A1", dimension="dimensionless"/>
-    <Parameter name="A2", dimension="dimensionless"/>
-    <Parameter name="x0", dimension="length"/>
-    <Parameter name="dx", dimension="time_step"/>
+  <Parameter name="p", dimension="dimensionless"/>
+  <Parameter name="A1", dimension="dimensionless"/>
+  <Parameter name="A2", dimension="dimensionless"/>
+  <Parameter name="x0", dimension="length"/>
+  <Parameter name="dx", dimension="time_step"/>
 
-    <Annotations>
+  <Annotations>
     <Comment>cut_off is a constant distance. In Shyam's code this value is 
     referred to as the radius. This radius takes the value of 100um for a standard 
     dend radius and also a Golgi Cell Apical Dendrite. 
     A MFBundle radius is 70um however.
     </Comment>
+  </Annotations>
+    
+  <Parameter name="cutoff" dimension="length"/>
+  <PropertyRecievePort name="x_src" dimension="length"/>
+  <PropertyRecievePort name="x_dst" dimension="length"/>
+  <PropertyRecievePort name="y_src" dimension="length"/>
+  <PropertyRecievePort name="y_dst" dimension="length"/>
+  <PropertyRecievePort name="z_src" dimension="length"/>
+  <PropertyRecievePort name="z_dst" dimension="length"/>
+    
+    
+  <ConnectionRule>
+    <RandomVariable name="rand" units="um">
+
+    <Annotations>
+      <Comment>
+      Cleft distances, a radius whose origin is presynaptic.
+      http://www.uncertml.org/distributions/uniform 
+    
+      <un:UniformDistribution xmlns:un="http://www.uncertml.org/2.0">
+      <un:minimum>0</un:minimum>
+      <un:maximum>cutoff</un:maximum>   
+      </un:UniformDistribution>
+
+      </Comment>
     </Annotations>
-    
-    <Parameter name="cutoff" dimension="length"/>
-    <PropertyRecievePort name="x_src" dimension="length"/>
-    <PropertyRecievePort name="x_dst" dimension="length"/>
-    <PropertyRecievePort name="y_src" dimension="length"/>
-    <PropertyRecievePort name="y_dst" dimension="length"/>
-    <PropertyRecievePort name="z_src" dimension="length"/>
-    <PropertyRecievePort name="z_dst" dimension="length"/>
-    
-    
-    <ConnectionRule>
-        <RandomVariable name="rand" units="um">
-
-        <Annotations>
-        <Comment>
-         Cleft distances, a radius whose origin is presynaptic.
-         
-         http://www.uncertml.org/distributions/uniform 
-    
-        <un:UniformDistribution xmlns:un="http://www.uncertml.org/2.0">
-        <un:minimum>0</un:minimum>
-        <un:maximum>cutoff</un:maximum>   
-        </un:UniformDistribution>
-
-        </Comment>
-        </Annotations>
 
 
-        </RandomVariable>
-            <Annotations>
-            <Comment>The following lines effectively mean assigning the Mathinline expression below to the variable s.
-            This should make the s the euclidian distance between the source and the destination in x,y and z.
-            </Comment>
-            <Annotations>
+    </RandomVariable>
+      <Annotations>
+        <Comment>The following lines effectively mean assigning the Mathinline expression below to the variable s.
+        This should make the s the euclidian distance between the source and the destination in x,y and z.
+         </Comment>
+         <Annotations>
     
 
-        <Alias name="s">
-            <MathInline>sqrt((x_source-x_dest)^2+(y_source-y_dest)^2+(z_source-z_dest)^2)</MathInline>       
-        </Alias>
+      <Alias name="s">
+        <MathInline>sqrt((x_source-x_dest)^2+(y_source-y_dest)^2+(z_source-z_dest)^2)</MathInline>       
+      </Alias>
     
                
     
-        <ConnectCondition>
-            <Annotations>
-            <Comment>
-                From utilities.hoc available at: https://github.com/CNS-OIST/CerebellarCortex
-                s = sqrt((xsource-xtarget)^2+(ysource-ytarget)^2+(zsource-ztarget)^2)
+    <ConnectCondition>
+      <Annotations>
+        <Comment>
+          From utilities.hoc available at: https://github.com/CNS-OIST/CerebellarCortex
+          s = sqrt((xsource-xtarget)^2+(ysource-ytarget)^2+(zsource-ztarget)^2)
  
-                ProbGoCtoGoC = ProbGoCtoGoCbase - GoCtoGoCdecayrate * vGoCtoGoCdistances.x[i]
-                ProbGoCtoGoC = BoltzmannPDF(s, 171,-1945,267,84) / 100
+          ProbGoCtoGoC = ProbGoCtoGoCbase - GoCtoGoCdecayrate * vGoCtoGoCdistances.x[i]
+          ProbGoCtoGoC = BoltzmannPDF(s, 171,-1945,267,84) / 100
  
 
-                BoltzmannPDF (x,A1,A2,x0,dx0
-                Parameters:
-                A1 = initial value, A2 = final value, x0 = center, dx = time constant
-                x = $1
-                A1 = $2
-                A2 = $3
-                x0 = $4
-                dx = $5
+          BoltzmannPDF (x,A1,A2,x0,dx0
+          Parameters:
+          A1 = initial value, A2 = final value, x0 = center, dx = time constant
+          x = $1
+          A1 = $2
+          A2 = $3
+          x0 = $4
+          dx = $5
             
  
 
  
-            </Comment>
-            <Annotations>
+        </Comment>
+      <Annotations>
     
                 
             
-            <MathInline> (A1 - A2)&lt; / (1 + exp ((x - x0)&lt; / dx)&lt;)&lt; + A2< rand </MathInline>       
-        </ConnectCondition>
-    </ConnectionRule>
+      <MathInline> (A1 - A2) / (1 + exp ((x - x0) / dx)) + A2 &lt; rand </MathInline>       
+    </ConnectCondition>
+  </ConnectionRule>
 </ComponentClass>
 
     
