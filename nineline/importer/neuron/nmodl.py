@@ -6,13 +6,13 @@ import quantities as pq
 import os.path
 import collections
 from itertools import chain
-from nineml.maths import is_builtin_symbol
+from nineml.abstraction_layer.maths.__init__.__init__ import is_builtin_symbol
 from nineml.abstraction_layer.components.interface import Parameter
 from nineml.abstraction_layer.dynamics.component import ComponentClass
 from nineml.abstraction_layer.dynamics import Regime, StateVariable, OnEvent
-from nineml.abstraction_layer.dynamics.component.expressions import (
+from nineml.abstraction_layer.maths.base import (
     Alias, TimeDerivative, StateAssignment)
-from nineml.abstraction_layer.dynamics.component.ports import (
+from nineml.abstraction_layer.ports import (
     AnalogReceivePort, AnalogSendPort, EventReceivePort)
 import nineml.abstraction_layer.units as un
 from nineml.user_layer import Definition, IonDynamicsType
