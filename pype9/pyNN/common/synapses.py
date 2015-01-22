@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 from abc import ABCMeta
 import nineml.user_layer
-import nineline.pyNN.random
-import nineline.pyNN.expression.structure
+import pype9.pyNN.random
+import pype9.pyNN.expression.structure
 from nineline.pyNN import convert_to_pyNN_units
 
 
@@ -35,13 +35,13 @@ class Synapse(object):
                 conv_param = p.value
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
                 RandomDistributionClass = getattr(
-                                             nineline.pyNN.random,
+                                             pype9.pyNN.random,
                                              p.value.definition.component.name)
                 conv_param = RandomDistributionClass(
                     p.value.parameters, rng, use_units=False)
             elif isinstance(p.value, nineml.user_layer.StructureExpression):
                 StructureExpressionClass = getattr(
-                                            nineline.pyNN.expression.structure,
+                                            pype9.pyNN.expression.structure,
                                             p.value.definition.component.name)
                 conv_param = StructureExpressionClass(p.value.parameters)
             else:
@@ -60,7 +60,7 @@ class Synapse(object):
         params = self._convert_params(nineml_params, rng)
         if ('delay' in params and
                 isinstance(params['delay'],
-                           nineline.pyNN.expression.structure.\
+                           pype9.pyNN.expression.structure.\
                                                          StructureExpression)):
             params['delay'].set_min_value(min_delay)
         super(PyNNClass, self).__init__(**params)

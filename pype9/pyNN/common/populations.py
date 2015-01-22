@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import numpy
 import pyNN.parameters
 from nineline.pyNN.structure import Structure
-import nineline.pyNN.random
+import pype9.pyNN.random
 from pyNN.random import RandomDistribution
 from nineml.abstraction_layer.component import BaseComponentClass
 import nineml.extensions.biophysical_cells
@@ -60,7 +60,7 @@ class Population(object):
                 if isinstance(p.value, float):
                     param = p.value
                 elif isinstance(p.value, nineml.user_layer.RandomDistribution):
-                    RandomDistributionClass = getattr(nineline.pyNN.random,
+                    RandomDistributionClass = getattr(pype9.pyNN.random,
                                                       p.value.definition.\
                                                                 component.name)
                     param = RandomDistributionClass(

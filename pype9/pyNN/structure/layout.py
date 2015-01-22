@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from abc import ABCMeta
 import nineml.user_layer
 import pyNN.space
-import nineline.pyNN.random
+import pype9.pyNN.random
 from nineline.pyNN import convert_to_pyNN_units
 
 
@@ -34,7 +34,7 @@ class Layout(object):
             elif isinstance(p.value, str):
                 conv_param = p.value
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
-                RandomDistributionClass = getattr(nineline.pyNN.random,
+                RandomDistributionClass = getattr(pype9.pyNN.random,
                                                   p.value.definition.\
                                                                 component.name)
                 conv_param = RandomDistributionClass(p.value.parameters, rng)

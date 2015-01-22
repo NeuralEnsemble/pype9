@@ -9,7 +9,7 @@ try:
     from mpi4py import MPI  # @UnresolvedImport @UnusedImport
 except:
     pass
-import nineline.pyNN.common
+import pype9.pyNN.common
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
 import pyNN.models
@@ -23,7 +23,7 @@ get_current_time, get_time_step, get_min_delay, \
 
 
 class NinePyNNCell(
-        pyNN.models.BaseCellType, nineline.pyNN.common.cells.NinePyNNCell):
+        pyNN.models.BaseCellType, pype9.pyNN.common.cells.NinePyNNCell):
 
     """
     Extends the vanilla NineCell to include all the PyNN requirements
@@ -31,7 +31,7 @@ class NinePyNNCell(
     pass
 
 
-class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
+class NinePyNNCellMetaClass(pype9.pyNN.common.cells.NinePyNNCellMetaClass):
 
     _basic_nineml_translations = basic_nineml_translations
     loaded_celltypes = {}

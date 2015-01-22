@@ -15,7 +15,7 @@ from copy import copy
 import time
 import subprocess
 import shutil
-from nineline.arguments import outputpath
+from pype9.arguments import outputpath
 
 
 class SGESubmitter(object):

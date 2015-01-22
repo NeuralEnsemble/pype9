@@ -13,8 +13,7 @@ import os.path
 import subprocess as sp
 import re
 from itertools import chain
-import shutil
-from .. import BaseCodeGenerator
+import shutipype9from .. import BaseCodeGenerator
 from nineline.utils import remove_ignore_missing
 from nineml import Dimension
 from nineml.abstraction_layer.units import current as current_unit_dim

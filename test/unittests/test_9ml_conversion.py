@@ -20,7 +20,7 @@ else:
 import os.path
 from copy import deepcopy
 import nineml.extensions.biophysical_cells
-from nineline.cells import Model
+from pype9.cells import Model
 
 nineml_file = os.path.join(os.path.dirname(__file__), '..', 'data', '9ml',
                            'Golgi_Solinas08.9ml')

@@ -1,9 +1,9 @@
 from lxml import etree
 import os.path
 from lxml import etree
-from nineline.importer.neuron import NeuronImporter
-from nineline.importer.neuron.hoc import HocImporter
-from nineline.importer.neuron.nmodl import NMODLImporter
+from pype9.importer.neuron import NeuronImporter
+from pype9.importer.neuron.hoc import HocImporter
+from pype9.importer.neuron.nmodl import NMODLImporter
 
 if __name__ == '__main__':
 

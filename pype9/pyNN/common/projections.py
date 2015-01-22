@@ -6,8 +6,8 @@
 """
 from __future__ import absolute_import
 import pyNN.connectors
-import nineline.pyNN.connectors
-import nineline.morphology.point2point
+import pype9.pyNN.connectors
+import pype9.morphology.point2point
 
 
 class ProjectionToCloneNotCreatedYetException(Exception):
@@ -21,7 +21,7 @@ class Projection(object):
     created_projections = {}
 
     def __init__(self, source, target, nineml_model, rng=None):
-        ConnectorClass = getattr(nineline.pyNN.connectors,
+        ConnectorClass = getattr(pype9.pyNN.connectors,
                                  nineml_model.rule.definition.component.name)
         try:
             connector = ConnectorClass(nineml_model.rule.parameters, rng)
@@ -68,7 +68,7 @@ class Projection(object):
             elif param.pattern == 'DisplacementBased':
                 expr_name = param.args.pop('geometry')
                 GeometricExpression = getattr(
-                    nineline.morphology.point2point, expr_name)
+                    pype9.morphology.point2point, expr_name)
                 try:
                     param_expr = pyNN.connectors.\
                                     DisplacementDependentProbabilityConnector.\

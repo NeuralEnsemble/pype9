@@ -23,11 +23,10 @@ import nineml.extensions.biophysical_cells
 import neo
 import quantities as pq
 from nineline.cells.build.neuron import build_celltype_files
-import nineline.cells
+import pype9.cells
 from nineline.cells import (in_units, AxialResistanceModel,
                             MembraneCapacitanceModel, DummyNinemlModel,
-                            IonConcentrationModel)
-from .. import create_unit_conversions, convert_units
+                            IonConcentrationModelpype9from .. import create_unit_conversions, convert_units
 from pyNN.neuron.cells import VectorSpikeSource
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
@@ -65,7 +64,7 @@ def convert_to_neuron_units(value, unit_str):
         value, unit_str, _basic_unit_dict, _compound_unit_dict)
 
 
-class _BaseNineCell(nineline.cells.NineCell):
+class _BaseNineCell(pype9.cells.NineCell):
 
     class Segment(h.Section):
         """
@@ -194,7 +193,7 @@ class _BaseNineCell(nineline.cells.NineCell):
             parameters of the component using meaningful names
 
             `component` -- The component to be inserted
-                          [nineline.cells.BiophysicsModel]
+                          [pype9.BiophysicsModel]
             """
             # Insert the mechanism into the segment
             super(_BaseNineCell.Segment, self).insert(component.class_name)
@@ -748,7 +747,7 @@ class NineCellStandAlone(_BaseNineCell):
         self._recordings = {}
 
 
-class NineCellMetaClass(nineline.cells.NineCellMetaClass):
+class NineCellMetaClass(pype9.cells.NineCellMetaClass):
 
     """
     Metaclass for building NineMLNineCellType subclasses Called by

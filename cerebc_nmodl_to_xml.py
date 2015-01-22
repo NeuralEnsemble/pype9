@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 import btmorph
 import nineml
-import nineline
-import nineline.cells
-import nineline.hpc
-import nineline.importer
-import nineline.arguments
-import nineline.cells.build
-import nineline.cells.code_gen
-#import nineline.test
+import pype9
+import pype9.cells
+import pype9.hpc
+import pype9.importer
+import pype9.arguments
+import pype9.cells.build
+import pype9.cells.code_gen
+#import pype9.test
 import os
 os.chdir(os.getcwd()+'/test/unittests/')
 

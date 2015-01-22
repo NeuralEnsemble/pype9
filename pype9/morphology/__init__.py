@@ -20,9 +20,9 @@ import collections
 import xml.sax
 import pyNN.connectors
 from nineline import XMLHandler
-from .utils import axially_symmetric_tensor
-from .forest import Forest
-from .tree import FlattenedTree
+from pype9 import axially_symmetric_tensor
+from pype9 import Forest
+from pype9 import FlattenedTree
 
 try:
     import matplotlib.pyplot as plt

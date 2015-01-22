@@ -5,20 +5,20 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-import nineline.pyNN.common.cells
+import pype9.pyNN.common.cells
 from pyNN.parameters import ParameterSpace
 import pyNN.standardmodels
 import nest
 from nineline.cells.nest import NineCellMetaClass, basic_nineml_translations
 
 
-class NinePyNNCell(nineline.pyNN.common.cells.NinePyNNCell,
+class NinePyNNCell(pype9.pyNN.common.cells.NinePyNNCell,
                    pyNN.standardmodels.StandardCellType):
 
     standard_receptor_type = None
 
     def __init__(self, **parameters):
-        nineline.pyNN.common.cells.NinePyNNCell.__init__(self)
+        pype9.pyNN.common.cells.NinePyNNCell.__init__(self)
         pyNN.standardmodels.StandardCellType.__init__(self, **parameters)
 
     def memb_init(self):
@@ -46,7 +46,7 @@ class NinePyNNCell(nineline.pyNN.common.cells.NinePyNNCell,
         return nest.GetDefaults(self.nest_model)["receptor_types"][name]
 
 
-class NinePyNNCellMetaClass(nineline.pyNN.common.cells.NinePyNNCellMetaClass):
+class NinePyNNCellMetaClass(pype9.pyNN.common.cells.NinePyNNCellMetaClass):
 
     """
     Metaclass for compiling NineMLCellType subclases Called by

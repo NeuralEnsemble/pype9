@@ -11,18 +11,18 @@ from __future__ import absolute_import
 import sys
 import os.path
 import nest
-from .code_gen.nest import CodeGenerator
-import nineline.cells
+from pype9 import CodeGenerator
+import pype9.cells
 
 basic_nineml_translations = {
     'Voltage': 'V_m', 'Diameter': 'diam', 'Length': 'L'}
 
 
-class NineCell(nineline.cells.NineCell):
+class NineCell(pype9.cells.NineCell):
     pass
 
 
-class NineCellMetaClass(nineline.cells.NineCellMetaClass):
+class NineCellMetaClass(pype9.cells.NineCellMetaClass):
 
     loaded_celltypes = {}
 

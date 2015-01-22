@@ -3,8 +3,8 @@
     <pydev_property name="org.python.pydev.PYTHON_PROJECT_INTERPRETER">Default</pydev_property>
     <pydev_property name="org.python.pydev.PYTHON_PROJECT_VERSION">python 2.7</pydev_property>
     <pydev_pathproperty name="org.python.pydev.PROJECT_SOURCE_PATH">
-<path>/NineLine/test</path>
-<path>/NineLine</path>
+<path>/PyPe9/test</path>
+<path>/PyPe9</path>
 </pydev_pathproperty>
 <pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH">
 <path>/Users/tclose/hg/lazyarray</path>

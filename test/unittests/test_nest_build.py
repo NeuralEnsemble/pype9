@@ -1,4 +1,4 @@
-from nineline.cells.code_gen.nest import CodeGenerator
+from pype9.cells.code_gen.nest import CodeGenerator
 import nineml
 from os.path import dirname, join, abspath
 build_dir = join(dirname(__file__), 'build')

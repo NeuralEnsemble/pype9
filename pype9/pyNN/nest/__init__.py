@@ -24,8 +24,7 @@ from pyNN.common.control import build_state_queries
 import pyNN.nest.simulator as simulator
 import nest
 from nest.hl_api import NESTError
-import nineline.pyNN.common
-from . import synapses as synapses_module
+import pype9.pyNN.commonpype9from . import synapses as synapses_module
 from pyNN.random import NumpyRNG
 from nineline.pyNN.nest.cells import NinePyNNCellMetaClass
 from nineline.cells.nest import NineCell
@@ -37,7 +36,7 @@ from nineline.cells.nest import NineCell
 RELATIVE_BREP_BUILD_DIR = './build'
 
 
-class Population(nineline.pyNN.common.Population, pyNN.nest.Population):
+class Population(pype9.pyNN.common.Population, pyNN.nest.Population):
 
     _pyNN_standard_celltypes = dict([(cellname,
                                       getattr(pyNN.nest.standardmodels.cells,
@@ -94,7 +93,7 @@ class Population(nineline.pyNN.common.Population, pyNN.nest.Population):
         super(Population, self).initialize(**translated_initial_values)
 
 
-class Projection(nineline.pyNN.common.Projection, pyNN.nest.Projection):
+class Projection(pype9.pyNN.common.Projection, pyNN.nest.Projection):
 
     _synapses_module = synapses_module
 
@@ -148,7 +147,7 @@ class Projection(nineline.pyNN.common.Projection, pyNN.nest.Projection):
         raise Exception("Unrecognised units '%s'" % units)
 
 
-class Network(nineline.pyNN.common.Network):
+class Network(pype9.pyNN.common.Network):
 
     _PopulationClass = Population
     _ProjectionClass = Projection
@@ -159,7 +158,7 @@ class Network(nineline.pyNN.common.Network):
         # Sets the 'get_min_delay' function for use in the network init
         self.get_min_delay = get_min_delay
         self.temperature = None
-        nineline.pyNN.common.Network.__init__(self, filename,
+        pype9.pyNN.common.Network.__init__(self, filename,
                                               build_mode=build_mode,
                                               timestep=timestep,
                                               min_delay=min_delay,
@@ -191,7 +190,7 @@ class Network(nineline.pyNN.common.Network):
 
 def create_singleton_population(prototype_path, parameters, build_mode='lazy',
                                 silent_build=False, solver_name='cvode'):
-    pop_9ml = nineline.pyNN.common.populations.create_singleton_9ml(
+    pop_9ml = pype9.pyNN.common.populations.create_singleton_9ml(
         prototype_path, parameters)
     pop = Population(pop_9ml, NumpyRNG(), build_mode,
                      silent_build=silent_build,

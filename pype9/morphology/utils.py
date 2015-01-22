@@ -1,6 +1,6 @@
 """
   This module contains some utilities functions to be used in the
-  nineline.morphology package
+  pype9.morphology package
 
   Author: Thomas G. Close (tclose@oist.jp)
   Copyright: 2012-2014 Thomas G. Close.

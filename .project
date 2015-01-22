@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>NineLine</name>
-	<comment>A software pipeline to generate multi-simulator implementations of neural networks from NineML descriptions</comment>
+	<name>PyPe9</name>
+	<comment>A Python pipeline to generate multi-simulator implementations of neural networks from NineML descriptions</comment>
 	<projects>
 		<project>BTMorph</project>
 		<project>Neo</project>

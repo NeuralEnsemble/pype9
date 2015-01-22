@@ -5,11 +5,11 @@ from setuptools import setup, find_packages
 setup(
     name="9Line",
     version="0.1dev",
-    package_data={'nineline': ['nineline', 'nineline/*.py', 'nineline/cells',
-                               'nineline/cells/code_gen','nineline/cells/build',
-                               'nineline/importer','nineline/pyNN','nineline/hpc',
-                               'nineline/test','nineline/test/unittests',
-                               'nineline/morphology']},
+    package_data={'pype9': ['pype9', 'pype9/*.py', 'pype9/cells',
+                               'pype9/cells/code_gen','pype9/cells/build',
+                               'pype9/importer','pype9/pyNN','pype9/hpc',
+                               'pype9/test','pype9/test/unittests',
+                               'pype9/morphology']},
     packages = find_packages(),
     author="Thomas G. Close (tclose@oist.jp), Ivan Raikov (raikov@oist.jp)",
     # add your name here if you contribute to the code

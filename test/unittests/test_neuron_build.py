@@ -1,4 +1,4 @@
-from nineline.cells.code_gen.neuron import CodeGenerator
+from pype9.cells.code_gen.neuron import CodeGenerator
 import nineml
 from os.path import dirname, join, abspath
 build_dir = join(dirname(__file__), 'build')
@@ -14,7 +14,7 @@ code_generator.generate(component_file, 0.0,  # initial_state_file,
                         build_mode='generate_only',
                         ode_solver='derivimplicit', v_threshold=None)
 
-# env = Environment(loader=FileSystemLoader(os.getenv("HOME") + "/git/nineline/nineline/cells/build/neuron/templates/"),
+# env = Environment(loader=FileSystemLoader(os.getenv("HOME") + "/git/pype9/pype9/cells/build/neuron/templates/"),
 #                   trim_blocks=True)
 # 
 # template = env.get_template('NMODL.tmpl')

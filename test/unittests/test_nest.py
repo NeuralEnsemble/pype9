@@ -9,8 +9,8 @@ except ImportError:
 import os
 from mock import Mock
 from numpy.testing import assert_array_equal, assert_array_almost_equal
-import nineline.cells.nest
-import nineline.cells.neuron
+import pype9.cells.nest
+import pype9.cells.neuron
 
 
 class TestCell(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestCell(unittest.TestCase):
         cell.describe()
 
     def test_neuron_load_describe(self):
-        self._test_load_describe(nineline.cells.neuron.load_celltype)
+        self._test_load_describe(pype9.cells.neuron.load_celltype)
 
     def test_nest_load_describe(self):
-        self._test_load_describe(nineline.cells.nest.load_celltype)
+        self._test_load_describe(pype9.cells.nest.load_celltype)
