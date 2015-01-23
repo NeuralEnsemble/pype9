@@ -1,9 +1,9 @@
-from lxml import etree
 import os.path
-from lxml import etree
 from pype9.importer.neuron import NeuronImporter
 from pype9.importer.neuron.hoc import HocImporter
 from pype9.importer.neuron.nmodl import NMODLImporter
+import nineml
+
 
 if __name__ == '__main__':
 
@@ -25,11 +25,12 @@ else:
     except ImportError:
         import unittest
 
-test_cn_dir = os.path.join(os.path.dirname(__file__) , '..', '..', '..',
-                        'cerebellarnuclei')
+test_cn_dir = os.path.join(os.path.dirname(__file__), '..', '..', '..',
+                           'cerebellarnuclei')
 
-test_gr_dir = os.path.join(os.path.dirname(__file__) , '..', '..', '..',
-                        'kbrain', 'external', 'fabios_network')
+test_gr_dir = os.path.join(os.path.dirname(__file__), '..', '..', '..',
+                           'kbrain', 'external', 'fabios_network')
+
 
 class TestHocImporter(unittest.TestCase):
 
@@ -95,18 +96,19 @@ class TestNMODLImporter(unittest.TestCase):
         </NineML>""")
 
     def test_nmodl_import(self):
-        in_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'nmodl')
-        out_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'nmodl',
-                                'imported')
+        in_path = os.path.join(os.path.dirname(__file__), '..', 'data',
+                               'nmodl')
+        out_path = os.path.join(os.path.dirname(__file__), '..', 'data',
+                                'nmodl', 'imported')
         for fname in os.listdir(in_path):
             if fname.endswith('.mod'):
                 importer = NMODLImporter(os.path.join(in_path, fname))
                 class_fname = out_path + '/' + fname[:-4] + 'Class.xml'
                 comp_fname = out_path + '/' + fname[:-4] + '.xml'
                 componentclass = importer.get_component_class()
-                componentclass.write(class_fname)
+                nineml.write(componentclass, class_fname)
                 component = importer.get_component(class_fname)
-                component.write(comp_fname)
+                nineml.write(component, comp_fname)
                 print "Converted '{}' to '{}'".format(fname, comp_fname)
 #         reference_tree = etree.fromstring(self.ref_xml)
 #         self.assertEqual(etree.tostring(imported_tree),

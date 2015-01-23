@@ -383,6 +383,8 @@ class HocImporter(object):
         mechs_list = contents['Density Mechanisms']['Mechanisms in use']
         global_params = contents['Density Mechanisms']['Global parameters for '
                                                        'density mechanisms']
+        if global_params is None:
+            global_params = {}
         try:
             point_procs_group = contents['point processes (can receive events)'
                                          'of base classes']

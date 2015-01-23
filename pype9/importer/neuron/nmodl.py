@@ -6,17 +6,18 @@ import quantities as pq
 import os.path
 import collections
 from itertools import chain
-from nineml.abstraction_layer.maths.__init__.__init__ import is_builtin_symbol
-from nineml.abstraction_layer.components.interface import Parameter
-from nineml.abstraction_layer.dynamics.component import ComponentClass
+from nineml.abstraction_layer.expressions.utils import is_builtin_symbol
+from nineml.abstraction_layer.componentclass import Parameter
+from nineml.abstraction_layer.dynamics import (
+    TimeDerivative, StateAssignment, DynamicsClass)
 from nineml.abstraction_layer.dynamics import Regime, StateVariable, OnEvent
-from nineml.abstraction_layer.maths.base import (
-    Alias, TimeDerivative, StateAssignment)
+from nineml.abstraction_layer.expressions import Alias
 from nineml.abstraction_layer.ports import (
     AnalogReceivePort, AnalogSendPort, EventReceivePort)
 import nineml.abstraction_layer.units as un
-from nineml.user_layer import Definition, IonDynamicsType
-from nineml.context import Context
+from nineml.user_layer import Definition
+from nineml.document import Document
+from nineml.user_layer import DynamicsComponent
 
 # from nineml.user_layer.dynamics import IonDynamics
 from collections import defaultdict
@@ -152,13 +153,13 @@ class NMODLImporter(object):
         self._create_regimes()
 
     def get_component_class(self):
-        comp_class = ComponentClass(name=self.component_name + 'Class',
-                                    parameters=self.parameters.values(),
-                                    analog_ports=self.analog_ports.values(),
-                                    event_ports=self.event_ports.values(),
-                                    regimes=self.regimes,
-                                    aliases=self.aliases.values(),
-                                    state_variables=self.state_variables)
+        comp_class = DynamicsClass(name=self.component_name + 'Class',
+                                   parameters=self.parameters.values(),
+                                   analog_ports=self.analog_ports.values(),
+                                   event_ports=self.event_ports.values(),
+                                   regimes=self.regimes,
+                                   aliases=self.aliases.values(),
+                                   state_variables=self.state_variables)
         return comp_class
 
     def get_component(self, class_path=None, hoc_properties={}):
@@ -173,11 +174,11 @@ class NMODLImporter(object):
                           for n, v in hoc_properties.iteritems())
         properties.update((n, (v, self._units2nineml_units(u)))
                           for n, (v, u) in properties.iteritems())
-        context = Context()
+        context = Document()
         definition = Definition(self.component_name + 'Class', context,
                                 url=os.path.normpath(class_path))
-        comp = IonDynamicsType(self.component_name, definition=definition,
-                               properties=properties)
+        comp = DynamicsComponent(self.component_name, definition=definition,
+                                 properties=properties)
         return comp
 
     def print_members(self):
