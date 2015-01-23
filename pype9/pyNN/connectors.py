@@ -45,7 +45,7 @@ class Connector(object):
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
                 RandomDistributionClass = getattr(pype9.pyNN.random,
                                                   p.value.definition.\
-                                                                component.name)
+                                                                componentclass.name)
                 conv_param = RandomDistributionClass(p.value.parameters, rng)
             elif isinstance(p.value, nineml.user_layer.AnonymousFunction):
                 conv_param = create_anonymous_function(p.value)

@@ -36,13 +36,13 @@ class Synapse(object):
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
                 RandomDistributionClass = getattr(
                                              pype9.pyNN.random,
-                                             p.value.definition.component.name)
+                                             p.value.definition.componentclass.name)
                 conv_param = RandomDistributionClass(
                     p.value.parameters, rng, use_units=False)
             elif isinstance(p.value, nineml.user_layer.StructureExpression):
                 StructureExpressionClass = getattr(
                                             pype9.pyNN.expression.structure,
-                                            p.value.definition.component.name)
+                                            p.value.definition.componentclass.name)
                 conv_param = StructureExpressionClass(p.value.parameters)
             else:
                 raise Exception("Parameter '{}' is of unrecognised type '{}'"

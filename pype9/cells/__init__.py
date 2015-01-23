@@ -1162,15 +1162,15 @@ class DynamicComponentModel(ComponentModel):
 
     def __init__(self, name, class_name, parameters):
         """
-        `name`         -- Name used to refer to the component in the model
+        `name`         -- Name used to refer to the componentclass in the model
                           (eg. 'spiny_dendrite_leak')
-        `class_name`   -- Name of the class of the component. For example in
+        `class_name`   -- Name of the class of the componentclass. For example in
                           NEURON, this would be the name used for the imported
                           NMODL mechanism. Therefore this class name has to be
                           unique for any given segment and two components, say
                           for example only one of 'proximal_dendrite_leak' and
                           'spiny_dendrite_leak' can be set on the same segment
-                          if they both use the 'Lkg' component class.
+                          if they both use the 'Lkg' componentclass class.
         `parameters`   -- The parameters of the model
         """
         super(DynamicComponentModel, self).__init__()

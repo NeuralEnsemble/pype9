@@ -66,8 +66,8 @@ class NinePyNNCellMetaClass(type):
         default_params = {}
         initial_values = {}
         for p in nineml_model.parameters:
-            if p.component:
-                component = nineml_model.biophysics.components[p.component]
+            if p.componentclass:
+                component = nineml_model.biophysics.components[p.componentclass]
             else:
                 component = nineml_model.biophysics.components[
                     '__NO_COMPONENT__']
@@ -107,7 +107,7 @@ class NinePyNNCellMetaClass(type):
         """
         Constructs the dictionary of recordable parameters from the NCML model
         """
-        # TODO: Make selected component variables also recordable
+        # TODO: Make selected componentclass variables also recordable
         return ['spikes', 'v'] + \
             ['{' +
              seg +

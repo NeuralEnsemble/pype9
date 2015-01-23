@@ -22,7 +22,7 @@ class Population(object):
 
     def __init__(self, nineml_model, rng, build_mode='lazy',
                  silent_build=False, solver_name='cvode'):
-        celltype_model = nineml_model.prototype.definition.component
+        celltype_model = nineml_model.prototype.definition.componentclass
         celltype_name = (nineml_model.prototype.name
                          if nineml_model.prototype.name else
                          celltype_model.name)
@@ -39,7 +39,7 @@ class Population(object):
                                                silent=silent_build,
                                                solver_name=solver_name)
         else:
-            raise Exception("'{}' component type is not supported yet"
+            raise Exception("'{}' componentclass type is not supported yet"
                             .format(type(celltype_model)))
         if build_mode not in ('build_only', 'compile_only'):
             # Set default for populations without morphologies
@@ -55,14 +55,14 @@ class Population(object):
             cellparams = {}
             initial_values = {}
             for param_definition in nineml_model.prototype.definition.\
-                                                          component.parameters:
+                                                          componentclass.parameters:
                 p = nineml_model.prototype.parameters[param_definition.name]
                 if isinstance(p.value, float):
                     param = p.value
                 elif isinstance(p.value, nineml.user_layer.RandomDistribution):
                     RandomDistributionClass = getattr(pype9.pyNN.random,
                                                       p.value.definition.\
-                                                                component.name)
+                                                                componentclass.name)
                     param = RandomDistributionClass(
                         p.value.parameters, rng, use_units=False)
                 elif isinstance(p.value, nineml.user_layer.Sequence):

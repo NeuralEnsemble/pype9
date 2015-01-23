@@ -36,7 +36,7 @@ class Layout(object):
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
                 RandomDistributionClass = getattr(pype9.pyNN.random,
                                                   p.value.definition.\
-                                                                component.name)
+                                                                componentclass.name)
                 conv_param = RandomDistributionClass(p.value.parameters, rng)
             converted_params[cls.nineml_translations[name]] = conv_param
         return converted_params

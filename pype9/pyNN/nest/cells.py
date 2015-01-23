@@ -89,7 +89,7 @@ class NinePyNNCellMetaClass(pype9.pyNN.common.cells.NinePyNNCellMetaClass):
                 if p.reference in ('Diameter', 'Length'):
                     component = 'Geometry'
                 else:
-                    component = p.component
+                    component = p.componentclass
                 try:
                     varname = cls._basic_nineml_translations[p.reference]
                 except KeyError:

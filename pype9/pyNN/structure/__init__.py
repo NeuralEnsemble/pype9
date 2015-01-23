@@ -23,7 +23,7 @@ class Structure(object):
         self.size = size
         self._positions = None
         LayoutClass = getattr(layout,
-                              nineml_model.layout.definition.component.name)
+                              nineml_model.layout.definition.componentclass.name)
         self.layout = LayoutClass(size, nineml_model.layout.parameters, rng)
 
     @property

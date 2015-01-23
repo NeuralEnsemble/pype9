@@ -66,7 +66,7 @@ class CodeGenerator(BaseCodeGenerator):
         args['state_variable_names'] = list(s.name
                                             for s in model.state_variables)
 #<<<<<<< HEAD
-        args['properties'] = component.properties.values()
+        args['properties'] = componentclass.properties.values()
         args['analog_send_ports'] = [p.name for p in model.analog_send_ports]
           # Set dynamics --------------------------------------------------------
         dynamics = []
@@ -79,20 +79,20 @@ class CodeGenerator(BaseCodeGenerator):
 #         for ref_unit, ref_name in self._neuron_units.iteritems():
 #             divides = False
 #             ref_quantity = pq.Quantity(1, ref_unit.symbol)
-#             for unit in component.used_units:
+#             for unit in componentclass.used_units:
 #                 
 #         args['used_units'] = list((u.name, self._neuron_units[u])
-#                                   for u in component.used_units
+#                                   for u in componentclass.used_units
 #                                   if u in self._neuron_units)
 # =======
 #         used_neuron_units = []
 #         for ref_unit, ref_name in self._neuron_units.iteritems():
 #             divides = False
 #             ref_quantity = pq.Quantity(1, ref_unit.symbol)
-#             for unit in component.used_units:
+#             for unit in componentclass.used_units:
 #                 
 #                 args['used_units'] = list((u.name, self._neuron_units[u])
-#                                           for u in component.used_units
+#                                           for u in componentclass.used_units
 #                                           if u in self._neuron_units)
 # >>>>>>> 8fbf6059bb26792785d4b22d7eadf1c5a6070cb9
         # Sort ports by dimension ---------------------------------------------
