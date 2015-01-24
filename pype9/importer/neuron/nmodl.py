@@ -18,6 +18,7 @@ import nineml.abstraction_layer.units as un
 from nineml.user_layer import Definition
 from nineml.document import Document
 from nineml.user_layer import DynamicsComponent
+from nineml.abstraction_layer.expressions import Constant
 
 # from nineml.user_layer.dynamics import IonDynamics
 from collections import defaultdict
@@ -72,6 +73,7 @@ _SI_to_dimension = {'m/s': un.conductance,
                     'mol/m**2': un.substance_per_area,
                     's*A': un.charge,
                     's**3*A/(kg*m**2)': un.per_voltage,
+                    'kg*m**2/(s**2*K)': un.energy_per_temperature,
                     None: un.dimensionless}
 
 # Create dict mapping nineml.Dimension and power to nineml.Unit
@@ -89,9 +91,9 @@ class NMODLImporter(object):
     # from a regular alias
     StateAssignment = collections.namedtuple("StateAssignment", "variable")
 
-    _inbuilt_constants = {'faraday': pq.Quantity(96485.3365, 'coulomb'),
-                          'k-mole': pq.Quantity(8.3144621, 'J/K'),
-                          'pi': pq.Quantity(3.14159265359, 'dimensionless')}
+    _inbuilt_constants = {'faraday': (96485.3365, 'coulomb'),
+                          'k-mole': (8.3144621, 'J/K'),
+                          'pi': (3.14159265359, 'dimensionless')}
 
     def __repr__(self):
         return ("NMODLImporter({}): {} parameters, {} ports, {} states,"
@@ -159,6 +161,7 @@ class NMODLImporter(object):
                                    event_ports=self.event_ports.values(),
                                    regimes=self.regimes,
                                    aliases=self.aliases.values(),
+                                   constants=self.constants.values(),
                                    state_variables=self.state_variables)
         return comp_class
 
@@ -434,9 +437,12 @@ class NMODLImporter(object):
             if match.group(3):
                 name = match.group(1)
                 inbuilt = match.group(2)
-                unitname = self._sanitize_units(match.group(3))
-                self.constants[name] = self._inbuilt_constants[inbuilt]
-                self.constants[name].units = unitname
+                declared_units = self._sanitize_units(match.group(3))
+                value, units = self._inbuilt_constants[inbuilt]
+                value *= float(pq.Quantity(1.0, units) /
+                               pq.Quantity(1.0, declared_units))
+                self.constants[name] = Constant(
+                    name, value, units=self._units2nineml_units(units))
             else:
                 alias = match.group(1)
                 unitname = match.group(2)
@@ -500,14 +506,15 @@ class NMODLImporter(object):
                 quantity = pq.Quantity(value, units)
                 is_constant = False
                 for const in self._inbuilt_constants.itervalues():
+                    const_quantity = pq.Quantity(*const)
                     try:
-                        frac = (quantity - const) / const
+                        frac = (quantity - const_quantity) / const_quantity
                         if abs(frac) < 1e-4:
                             is_constant = True
                     except ValueError:
                         pass
                 if is_constant:
-                    self.constants[name] = quantity
+                    self.constants[name] = Constant(name, value, units)
                 else:
                     self.properties[name] = (value, units)
                     valid_range_str = match.group(3)
@@ -1124,6 +1131,8 @@ class NMODLImporter(object):
 
     @classmethod
     def _units2SI(cls, units):
+        if isinstance(units, pq.Quantity):
+            units = units.units[4:]  # Strip leading '1.0 ' from units string
         units = units.strip()
         if units == '1' or units is None or units == 'dimensionless':
             return None, 0
@@ -1138,7 +1147,11 @@ class NMODLImporter(object):
     @classmethod
     def _units2nineml_units(cls, units):
         dim_str, power = cls._units2SI(units)
-        dim = _SI_to_dimension[dim_str]
+        try:
+            dim = _SI_to_dimension[dim_str]
+        except KeyError:
+            raise Exception("Unrecognised dimension from units '{}'('{}')"
+                            .format(units, dim_str))
         return _SI_to_nineml_units[(dim, power)]
 
     @classmethod

@@ -10,7 +10,7 @@ ENDCOMMENT
 NEURON {
         SUFFIX GRC_CALC
         USEION ca READ ica, cao WRITE cai
-        RANGE d, beta, cai0
+        RANGE d, beta, cai0, cao
 }
 
 UNITS {
@@ -26,7 +26,7 @@ PARAMETER {
         ica             (mA/cm2)
 :        celsius = 30    (degC)
         d = .2          (um)
-:        cao = 2.        (mM)         
+        cao = 2.        (mM)         
         cai0 = 1e-4     (mM)         
         beta = 1.5        (/ms)
 }

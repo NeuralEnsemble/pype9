@@ -417,7 +417,7 @@ class HocImporter(object):
                             continue  # FIXME: Skipping Exp2Syn
                         else:
                             raise Exception("Could not find matching component"
-                                            "for '{}' mechs with params:\n{}"
+                                            " for '{}' mechs with params:\n{}"
                                             .format(mech_name, params))
                     seg.set_component(comp[0])
 

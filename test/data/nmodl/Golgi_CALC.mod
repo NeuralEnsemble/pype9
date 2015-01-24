@@ -26,7 +26,7 @@ PARAMETER {
         ica             (mA/cm2)
         celsius    (degC)
         d = .2          (um)
-:        cao = 2.        (mM)         
+        cao = 2.        (mM)         
         cai0 = 1e-4     (mM)         
         beta = 1.3        (/ms)
 }

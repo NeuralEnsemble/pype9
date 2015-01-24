@@ -1,78 +1,75 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<NineML xmlns="http://nineml.net/9ML/1.0">
-  <ComponentClass name="Golgi_Ca_LVAClass">
-    <AnalogSendPort dimension="currentDensity" name="ica2"/>
-    <AnalogReceivePort dimension="concentration" name="ca2i"/>
-    <AnalogReceivePort dimension="temperature" name="celsius"/>
-    <AnalogReceivePort dimension="concentration" name="ca2o"/>
-    <AnalogReceivePort dimension="voltage" name="v"/>
-    <Parameter dimension="voltage" name="v0_tau_m2"/>
-    <Parameter dimension="voltage" name="v0_tau_m1"/>
-    <Parameter dimension="voltage" name="shift"/>
-    <Parameter name="C_tau_m"/>
-    <Parameter name="C_tau_h"/>
-    <Parameter name="A_tau_m"/>
-    <Parameter dimension="voltage" name="k_m_inf"/>
-    <Parameter dimension="voltage" name="v0_m_inf"/>
-    <Parameter dimension="voltage" name="v0_h_inf"/>
-    <Parameter dimension="voltage" name="k_tau_m1"/>
-    <Parameter dimension="voltage" name="k_tau_m2"/>
-    <Parameter dimension="voltage" name="k_h_inf"/>
-    <Parameter name="A_tau_h"/>
-    <Parameter dimension="voltage" name="k_tau_h2"/>
-    <Parameter dimension="voltage" name="k_tau_h1"/>
-    <Parameter dimension="voltage" name="v0_tau_h1"/>
-    <Parameter dimension="conductanceDensity" name="gca2bar"/>
-    <Parameter dimension="voltage" name="v0_tau_h2"/>
-    <Dynamics>
-      <Regime name="ca2state">
-        <TimeDerivative variable="h">
-          <MathInline>(h_inf - h) / tau_h</MathInline>
-        </TimeDerivative>
-        <TimeDerivative variable="m">
-          <MathInline>(m_inf - m) / tau_m</MathInline>
-        </TimeDerivative>
-      </Regime>
-      <Alias name="tau_m">
-        <MathInline>( C_tau_m + A_tau_m / ( exp((v+shift - v0_tau_m1)/ k_tau_m1) + exp((v+shift - v0_tau_m2)/k_tau_m2) ) ) / phi_m</MathInline>
-      </Alias>
-      <Alias name="m_inf">
-        <MathInline>1.0 / ( 1 + exp((v + shift - v0_m_inf)/k_m_inf) )</MathInline>
-      </Alias>
-      <Alias name="g">
-        <MathInline>gca2bar * m*m*h</MathInline>
-      </Alias>
-      <Alias name="tau_h">
-        <MathInline>( C_tau_h + A_tau_h / ( exp((v+shift - v0_tau_h1)/k_tau_h1) + exp((v+shift - v0_tau_h2)/k_tau_h2) ) ) / phi_h</MathInline>
-      </Alias>
-      <Alias name="ica2">
-        <MathInline>gca2bar * m*m*h * (v-ca2rev)</MathInline>
-      </Alias>
-      <Alias name="h_inf">
-        <MathInline>1.0 / ( 1 + exp((v + shift - v0_h_inf)/k_h_inf) )</MathInline>
-      </Alias>
-      <Alias name="ca2rev">
-        <MathInline>(1e3) * (R*(celsius+273.15))/(2*FARADAY) * log (ca2o/ca2i)</MathInline>
-      </Alias>
-      <Alias name="FARADAY">
-        <Value units="C">96485.3365</Value>
-      </Alias>
-      <Alias name="phi_h">
-        <MathInline>3.0 ^ ((celsius-24)/10)</MathInline>
-      </Alias>
-      <Alias name="R">
-        <Value units="J/degC">8.3144621</Value>
-      </Alias>
-      <Alias name="phi_m">
-        <MathInline>5.0 ^ ((celsius-24)/10)</MathInline>
-      </Alias>
-      <StateVariable name="h"/>
-      <StateVariable name="m"/>
-    </Dynamics>
-  </ComponentClass>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="-1" t="-3" m="1" l="2" name="voltage"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" k="1" name="temperature"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" l="-3" name="concentration" n="1"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" name="currentDensity" l="-2"/>
-</NineML>
+<ns0:NineML xmlns:ns0="http://nineml.net/9ML/1.0">
+  <ns0:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <ns0:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <ns0:Dimension i="1" name="currentDensity" l="-2"/>
+  <ns0:ComponentClass name="Golgi_Ca_LVAClass">
+    <ns0:AnalogSendPort dimension="currentDensity" name="ica2"/>
+    <ns0:AnalogReceivePort dimension="concentration" name="ca2i"/>
+    <ns0:AnalogReceivePort dimension="temperature" name="celsius"/>
+    <ns0:AnalogReceivePort dimension="concentration" name="ca2o"/>
+    <ns0:AnalogReceivePort dimension="voltage" name="v"/>
+    <ns0:Parameter dimension="voltage" name="v0_tau_m2"/>
+    <ns0:Parameter dimension="voltage" name="v0_tau_m1"/>
+    <ns0:Parameter dimension="voltage" name="shift"/>
+    <ns0:Parameter dimension="dimensionless" name="C_tau_m"/>
+    <ns0:Parameter dimension="dimensionless" name="C_tau_h"/>
+    <ns0:Parameter dimension="dimensionless" name="A_tau_m"/>
+    <ns0:Parameter dimension="voltage" name="k_m_inf"/>
+    <ns0:Parameter dimension="voltage" name="v0_m_inf"/>
+    <ns0:Parameter dimension="voltage" name="v0_h_inf"/>
+    <ns0:Parameter dimension="voltage" name="k_tau_m1"/>
+    <ns0:Parameter dimension="voltage" name="k_tau_m2"/>
+    <ns0:Parameter dimension="voltage" name="k_h_inf"/>
+    <ns0:Parameter dimension="dimensionless" name="A_tau_h"/>
+    <ns0:Parameter dimension="voltage" name="k_tau_h2"/>
+    <ns0:Parameter dimension="voltage" name="k_tau_h1"/>
+    <ns0:Parameter dimension="voltage" name="v0_tau_h1"/>
+    <ns0:Parameter dimension="conductanceDensity" name="gca2bar"/>
+    <ns0:Parameter dimension="voltage" name="v0_tau_h2"/>
+    <ns0:Dynamics>
+      <ns0:Regime name="ca2state">
+        <ns0:TimeDerivative variable="h">
+          <ns0:MathInline>(h_inf - h) / tau_h</ns0:MathInline>
+        </ns0:TimeDerivative>
+        <ns0:TimeDerivative variable="m">
+          <ns0:MathInline>(m_inf - m) / tau_m</ns0:MathInline>
+        </ns0:TimeDerivative>
+      </ns0:Regime>
+      <ns0:Alias name="tau_m">
+        <ns0:MathInline>( C_tau_m + A_tau_m / ( exp((v+shift - v0_tau_m1)/ k_tau_m1) + exp((v+shift - v0_tau_m2)/k_tau_m2) ) ) / phi_m</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="m_inf">
+        <ns0:MathInline>1.0 / ( 1 + exp((v + shift - v0_m_inf)/k_m_inf) )</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="g">
+        <ns0:MathInline>gca2bar * m*m*h</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="tau_h">
+        <ns0:MathInline>( C_tau_h + A_tau_h / ( exp((v+shift - v0_tau_h1)/k_tau_h1) + exp((v+shift - v0_tau_h2)/k_tau_h2) ) ) / phi_h</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="ica2">
+        <ns0:MathInline>gca2bar * m*m*h * (v-ca2rev)</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="h_inf">
+        <ns0:MathInline>1.0 / ( 1 + exp((v + shift - v0_h_inf)/k_h_inf) )</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="ca2rev">
+        <ns0:MathInline>(1e3) * (R*(celsius+273.15))/(2*FARADAY) * log (ca2o/ca2i)</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="phi_h">
+        <ns0:MathInline>3.0 ^ ((celsius-24)/10)</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="phi_m">
+        <ns0:MathInline>5.0 ^ ((celsius-24)/10)</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Constant units="C" name="FARADAY">96485.3365</ns0:Constant>
+      <ns0:Constant units="J_per_K" name="R">8.3144621</ns0:Constant>
+      <ns0:StateVariable dimension="dimensionless" name="h"/>
+      <ns0:StateVariable dimension="dimensionless" name="m"/>
+    </ns0:Dynamics>
+  </ns0:ComponentClass>
+  <ns0:Dimension name="dimensionless"/>
+  <ns0:Dimension l="-3" name="concentration" n="1"/>
+  <ns0:Dimension k="1" name="temperature"/>
+</ns0:NineML>
