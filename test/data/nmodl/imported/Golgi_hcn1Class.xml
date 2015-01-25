@@ -1,71 +1,72 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<NineML xmlns="http://nineml.net/9ML/1.0">
-  <ComponentClass name="Golgi_hcn1Class">
-    <AnalogSendPort dimension="currentDensity" name="ih"/>
-    <AnalogReceivePort dimension="temperature" name="celsius"/>
-    <AnalogReceivePort dimension="voltage" name="v"/>
-    <Parameter dimension="per_voltage" name="c"/>
-    <Parameter dimension="voltage" name="Erev"/>
-    <Parameter name="q_10"/>
-    <Parameter dimension="voltage" name="tDf"/>
-    <Parameter dimension="per_voltage" name="tEf"/>
-    <Parameter name="tCs"/>
-    <Parameter dimension="voltage" name="tDs"/>
-    <Parameter dimension="voltage" name="Ehalf"/>
-    <Parameter dimension="per_voltage" name="rA"/>
-    <Parameter name="rB"/>
-    <Parameter name="tCf"/>
-    <Parameter dimension="conductanceDensity" name="gbar"/>
-    <Parameter dimension="per_voltage" name="tEs"/>
-    <Dynamics>
-      <Regime name="state">
-        <TimeDerivative variable="o_fast">
-          <MathInline>(o_fast_inf - o_fast) / tau_f</MathInline>
-        </TimeDerivative>
-        <TimeDerivative variable="o_slow">
-          <MathInline>(o_slow_inf - o_slow) / tau_s</MathInline>
-        </TimeDerivative>
-      </Regime>
-      <Alias name="o_slow_inf">
-        <MathInline>(1 - r_v) * o_inf_v_Ehalf_c</MathInline>
-      </Alias>
-      <Alias name="tau_v_tCs_tDs_tEs">
-        <MathInline>exp(((tCs * v) - tDs)*tEs)</MathInline>
-      </Alias>
-      <Alias name="o_fast_inf">
-        <MathInline>r_v * o_inf_v_Ehalf_c</MathInline>
-      </Alias>
-      <Alias name="o_inf_v_Ehalf_c">
-        <MathInline>1 / (1 + exp((v - Ehalf) * c))</MathInline>
-      </Alias>
-      <Alias name="tau_v_tCf_tDf_tEf">
-        <MathInline>exp(((tCf * v) - tDf)*tEf)</MathInline>
-      </Alias>
-      <Alias name="tau_f">
-        <MathInline>tau_v_tCf_tDf_tEf</MathInline>
-      </Alias>
-      <Alias name="r_v">
-        <MathInline>rA * v + rB</MathInline>
-      </Alias>
-      <Alias name="q">
-        <MathInline>q_10^((celsius -33) / 10)</MathInline>
-      </Alias>
-      <Alias name="ih">
-        <MathInline>g * (v - Erev)</MathInline>
-      </Alias>
-      <Alias name="g">
-        <MathInline>gbar * (o_fast + o_slow)</MathInline>
-      </Alias>
-      <Alias name="tau_s">
-        <MathInline>tau_v_tCs_tDs_tEs</MathInline>
-      </Alias>
-      <StateVariable name="o_fast"/>
-      <StateVariable name="o_slow"/>
-    </Dynamics>
-  </ComponentClass>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="-1" t="-3" m="1" l="2" name="voltage"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" k="1" name="temperature"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" t="3" m="-1" l="-2" name="per_voltage"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" name="currentDensity" l="-2"/>
-</NineML>
+<ns0:NineML xmlns:ns0="http://nineml.net/9ML/1.0">
+  <ns0:ComponentClass name="Golgi_hcn1Class">
+    <ns0:AnalogSendPort dimension="currentDensity" name="ih"/>
+    <ns0:AnalogReceivePort dimension="temperature" name="celsius"/>
+    <ns0:AnalogReceivePort dimension="voltage" name="v"/>
+    <ns0:Parameter dimension="per_voltage" name="c"/>
+    <ns0:Parameter dimension="voltage" name="Erev"/>
+    <ns0:Parameter dimension="dimensionless" name="q_10"/>
+    <ns0:Parameter dimension="voltage" name="tDf"/>
+    <ns0:Parameter dimension="per_voltage" name="tEf"/>
+    <ns0:Parameter dimension="dimensionless" name="tCs"/>
+    <ns0:Parameter dimension="voltage" name="tDs"/>
+    <ns0:Parameter dimension="voltage" name="Ehalf"/>
+    <ns0:Parameter dimension="per_voltage" name="rA"/>
+    <ns0:Parameter dimension="dimensionless" name="rB"/>
+    <ns0:Parameter dimension="dimensionless" name="tCf"/>
+    <ns0:Parameter dimension="conductanceDensity" name="gbar"/>
+    <ns0:Parameter dimension="per_voltage" name="tEs"/>
+    <ns0:Dynamics>
+      <ns0:Regime name="state">
+        <ns0:TimeDerivative variable="o_fast">
+          <ns0:MathInline>(o_fast_inf - o_fast) / tau_f</ns0:MathInline>
+        </ns0:TimeDerivative>
+        <ns0:TimeDerivative variable="o_slow">
+          <ns0:MathInline>(o_slow_inf - o_slow) / tau_s</ns0:MathInline>
+        </ns0:TimeDerivative>
+      </ns0:Regime>
+      <ns0:Alias name="o_slow_inf">
+        <ns0:MathInline>(1 - r_v) * o_inf_v_Ehalf_c</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="tau_v_tCs_tDs_tEs">
+        <ns0:MathInline>exp(((tCs * v) - tDs)*tEs)</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="o_fast_inf">
+        <ns0:MathInline>r_v * o_inf_v_Ehalf_c</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="o_inf_v_Ehalf_c">
+        <ns0:MathInline>1 / (1 + exp((v - Ehalf) * c))</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="tau_v_tCf_tDf_tEf">
+        <ns0:MathInline>exp(((tCf * v) - tDf)*tEf)</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="tau_f">
+        <ns0:MathInline>tau_v_tCf_tDf_tEf</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="r_v">
+        <ns0:MathInline>rA * v + rB</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="q">
+        <ns0:MathInline>q_10^((celsius -33) / 10)</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="ih">
+        <ns0:MathInline>g * (v - Erev)</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="g">
+        <ns0:MathInline>gbar * (o_fast + o_slow)</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:Alias name="tau_s">
+        <ns0:MathInline>tau_v_tCs_tDs_tEs</ns0:MathInline>
+      </ns0:Alias>
+      <ns0:StateVariable dimension="dimensionless" name="o_fast"/>
+      <ns0:StateVariable dimension="dimensionless" name="o_slow"/>
+    </ns0:Dynamics>
+  </ns0:ComponentClass>
+  <ns0:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <ns0:Dimension i="1" t="3" m="-1" l="-2" name="per_voltage"/>
+  <ns0:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <ns0:Dimension i="1" name="currentDensity" l="-2"/>
+  <ns0:Dimension name="dimensionless"/>
+  <ns0:Dimension k="1" name="temperature"/>
+</ns0:NineML>

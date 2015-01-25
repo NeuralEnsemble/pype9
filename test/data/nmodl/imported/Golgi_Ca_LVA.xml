@@ -1,64 +1,66 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
-  <nineml:Component name="Golgi_Ca_LVA">
-    <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/Golgi_Ca_LVAClass.xml">Golgi_Ca_LVAClass</nineml:Definition>
-    <nineml:Property>
-      <nineml:SingleValue>1.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property>
-      <nineml:SingleValue>1.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property>
-      <nineml:SingleValue>85.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property>
-      <nineml:SingleValue>3.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="S_per_cm2">
-      <nineml:SingleValue>0.00025</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV">
-      <nineml:SingleValue>5.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV">
-      <nineml:SingleValue>-7.4</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV">
-      <nineml:SingleValue>4.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV">
-      <nineml:SingleValue>-50.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV">
-      <nineml:SingleValue>10.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV">
-      <nineml:SingleValue>-15.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV">
-      <nineml:SingleValue>2.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV">
-      <nineml:SingleValue>-78.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV">
-      <nineml:SingleValue>-50.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV">
-      <nineml:SingleValue>-46.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV">
-      <nineml:SingleValue>-405.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV">
-      <nineml:SingleValue>-25.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV">
-      <nineml:SingleValue>-100.0</nineml:SingleValue>
-    </nineml:Property>
-  </nineml:Component>
-  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
-  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
-  <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
-  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-</nineml:NineML>
+<ns0:NineML xmlns:ns0="http://nineml.net/9ML/1.0">
+  <ns0:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <ns0:Unit symbol="mV" dimension="voltage" power="-3"/>
+  <ns0:Unit symbol="unitless" dimension="dimensionless" power="0"/>
+  <ns0:Component name="Golgi_Ca_LVA">
+    <ns0:Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_Ca_LVAClass.xml">Golgi_Ca_LVAClass</ns0:Definition>
+    <ns0:Property units="unitless" name="A_tau_h">
+      <ns0:SingleValue>1.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="unitless" name="A_tau_m">
+      <ns0:SingleValue>1.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="unitless" name="C_tau_h">
+      <ns0:SingleValue>85.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="unitless" name="C_tau_m">
+      <ns0:SingleValue>3.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="S_per_cm2" name="gca2bar">
+      <ns0:SingleValue>0.00025</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="mV" name="k_h_inf">
+      <ns0:SingleValue>5.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="mV" name="k_m_inf">
+      <ns0:SingleValue>-7.4</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="mV" name="k_tau_h1">
+      <ns0:SingleValue>4.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="mV" name="k_tau_h2">
+      <ns0:SingleValue>-50.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="mV" name="k_tau_m1">
+      <ns0:SingleValue>10.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="mV" name="k_tau_m2">
+      <ns0:SingleValue>-15.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="mV" name="shift">
+      <ns0:SingleValue>2.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="mV" name="v0_h_inf">
+      <ns0:SingleValue>-78.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="mV" name="v0_m_inf">
+      <ns0:SingleValue>-50.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="mV" name="v0_tau_h1">
+      <ns0:SingleValue>-46.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="mV" name="v0_tau_h2">
+      <ns0:SingleValue>-405.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="mV" name="v0_tau_m1">
+      <ns0:SingleValue>-25.0</ns0:SingleValue>
+    </ns0:Property>
+    <ns0:Property units="mV" name="v0_tau_m2">
+      <ns0:SingleValue>-100.0</ns0:SingleValue>
+    </ns0:Property>
+  </ns0:Component>
+  <ns0:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
+  <ns0:Dimension name="dimensionless"/>
+  <ns0:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+</ns0:NineML>

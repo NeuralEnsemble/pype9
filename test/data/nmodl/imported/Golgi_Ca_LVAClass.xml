@@ -1,6 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <ns0:NineML xmlns:ns0="http://nineml.net/9ML/1.0">
-  <ns0:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <ns0:Unit symbol="C" dimension="charge" power="0"/>
+  <ns0:Dimension k="1" name="temperature"/>
+  <ns0:Unit symbol="J_per_K" dimension="energy_per_temperature" power="0"/>
+  <ns0:Dimension i="1" name="charge" t="1"/>
   <ns0:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
   <ns0:Dimension i="1" name="currentDensity" l="-2"/>
   <ns0:ComponentClass name="Golgi_Ca_LVAClass">
@@ -69,7 +72,8 @@
       <ns0:StateVariable dimension="dimensionless" name="m"/>
     </ns0:Dynamics>
   </ns0:ComponentClass>
+  <ns0:Dimension k="-1" t="-2" m="1" l="2" name="energy_per_temperature"/>
   <ns0:Dimension name="dimensionless"/>
   <ns0:Dimension l="-3" name="concentration" n="1"/>
-  <ns0:Dimension k="1" name="temperature"/>
+  <ns0:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
 </ns0:NineML>
