@@ -8,9 +8,9 @@ import itertools
 from operator import itemgetter
 import numpy
 from ...cells import (Model, SegmentModel, AxialResistanceModel,
-                       MembraneCapacitanceModel, IonChannelModel,
-                       IonConcentrationModel, CurrentClampModel,
-                       SynapseModel)
+                      MembraneCapacitanceModel, IonChannelModel,
+                      IonConcentrationModel, CurrentClampModel,
+                      SynapseModel)
 
 
 class HocImporter(object):
@@ -85,18 +85,18 @@ class HocImporter(object):
                                                    'printers'))
         pycmd = ("import os, sys; os.chdir('{}');".format(self.import_dir) +
                  "from neuron import h;" +
-                ''.join("h.load_file(os.path.join('{}', '{}'));"
-                        .format(self.import_dir, hf)
+                 ''.join("h.load_file(os.path.join('{}', '{}'));"
+                         .format(self.import_dir, hf)
                          for hf in self.hoc_files) +
-                ''.join("import {};".format(pf) for pf in self.python_files) +
-                ''.join("h('{}');".format(cmd) for cmd in self.hoc_cmds) +
-                "sys.path.insert(0, '{}');".format(printer_dir) +
-                "print '<BREAK>';" +
-                "import print_morph;" + "print '<BREAK>';"
-                "h.load_file(os.path.join('{}', 'print_sections.hoc'));"
-                .format(printer_dir) + "print '<BREAK>';"
-                "h.load_file(os.path.join('{}', 'print_modelview.hoc'))"
-                .format(printer_dir))
+                 ''.join("import {};".format(pf) for pf in self.python_files) +
+                 ''.join("h('{}');".format(cmd) for cmd in self.hoc_cmds) +
+                 "sys.path.insert(0, '{}');".format(printer_dir) +
+                 "print '<BREAK>';" +
+                 "import print_morph;" + "print '<BREAK>';"
+                 "h.load_file(os.path.join('{}', 'print_sections.hoc'));"
+                 .format(printer_dir) + "print '<BREAK>';"
+                 "h.load_file(os.path.join('{}', 'print_modelview.hoc'))"
+                 .format(printer_dir))
         # Run the python command and save the output
         process = sp.Popen(["python", "-c", pycmd], stdout=sp.PIPE)
         output = process.communicate()[0]
@@ -121,7 +121,7 @@ class HocImporter(object):
 
     def _extract_psections(self):
         self.model = Model('hoc_import',
-                source=os.path.join(self.import_dir))
+                           source=os.path.join(self.import_dir))
         segments = {}
         in_section = False
         started = False
@@ -383,11 +383,9 @@ class HocImporter(object):
         mechs_list = contents['Density Mechanisms']['Mechanisms in use']
         global_params = contents['Density Mechanisms']['Global parameters for '
                                                        'density mechanisms']
-        if global_params is None:
-            global_params = {}
         try:
             point_procs_group = contents['point processes (can receive events)'
-                                         'of base classes']
+                                         ' of base classes']
             try:
                 point_procs = point_procs_group['Point Processes']
             except KeyError:

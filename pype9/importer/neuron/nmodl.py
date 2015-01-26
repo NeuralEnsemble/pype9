@@ -571,7 +571,6 @@ class NMODLImporter(object):
             if lhs in self.state_variables:
                 self.state_variables_initial[lhs] = rhs
             else:
-                print rhs
                 self.aliases[lhs] = Alias(lhs, rhs)
 
     def _extract_neuron_block(self):
