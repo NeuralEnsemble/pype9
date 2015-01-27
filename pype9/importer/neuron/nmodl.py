@@ -98,6 +98,8 @@ class NMODLImporter(object):
                           'k-mole': (8.3144621, 'J/K'),
                           'pi': (3.14159265359, 'dimensionless')}
 
+    _function_substitutions = [('fabs', 'abs')]
+
     def __repr__(self):
         return ("NMODLImporter({}): {} parameters, {} ports, {} states,"
                 " {} aliases").format(self.component_name,
@@ -165,6 +167,7 @@ class NMODLImporter(object):
                                    event_ports=self.event_ports.values(),
                                    regimes=self.regimes,
                                    aliases=self.aliases.values(),
+                                   piecewises=self.piecewises.values(),
                                    constants=self.constants.values(),
                                    state_variables=self.state_variables)
         return comp_class
@@ -221,8 +224,8 @@ class NMODLImporter(object):
         for p in self.piecewises.itervalues():
             print '{} =:'.format(p.name)
             for pc in p.pieces:
-                print '{},    {}'.format(*pc)
-            print '{},    otherwise'.format(p.otherwise)
+                print '    {},   {}'.format(*pc)
+            print '    {},   otherwise'.format(str(p.otherwise))
 
     def all_expressions(self):
         """
@@ -1128,12 +1131,20 @@ class NMODLImporter(object):
         if isinstance(rhs, list):
             self._set_piecewise(lhs, rhs)
         else:
-            self.aliases[lhs] = Alias(lhs, rhs)
+            self.aliases[lhs] = Alias(lhs, self._substitute_functions(rhs))
 
     def _set_piecewise(self, lhs, rhs):
-        pieces = [Piece(e, t) for e, t in rhs if t != '__otherwise__']
-        otherwise = expect_single(
-            Otherwise(e) for e, t in rhs if t == '__otherwise__')
+        pieces = []
+        otherwise = None
+        for expr, test in rhs:
+            expr = self._substitute_functions(expr)
+            if test == '__otherwise__':
+                assert otherwise is None, "Multiple otherwise statements"
+                otherwise = Otherwise(expr)
+            else:
+                test = self._substitute_functions(test)
+                pieces.append(Piece(expr, test))
+        assert otherwise is not None, "No otherwise statement found"
         self.piecewises[lhs] = Piecewise(name=lhs, pieces=pieces,
                                          otherwise=otherwise)
 
@@ -1148,7 +1159,14 @@ class NMODLImporter(object):
             self._set_piecewise(new_rhs, rhs)
             return new_rhs
         else:
-            return rhs
+            return self._substitute_functions(rhs)
+
+    @classmethod
+    def _substitute_functions(cls, rhs):
+        new_rhs = rhs
+        for old, new in cls._function_substitutions:
+            new_rhs = re.sub(r'(?<!\w){}(?!\w)'.format(old), new, rhs)
+        return new_rhs
 
     @classmethod
     def _split_args(cls, arglist):

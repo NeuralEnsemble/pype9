@@ -1,16 +1,16 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
+  <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
+  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
   <nineml:Component name="Golgi_lkg">
-    <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/Golgi_lkgClass.xml">Golgi_lkgClass</nineml:Definition>
-    <nineml:Property units="mV">
+    <nineml:Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_lkgClass.xml">Golgi_lkgClass</nineml:Definition>
+    <nineml:Property units="mV" name="el">
       <nineml:SingleValue>-55.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="S_per_cm2">
+    <nineml:Property units="S_per_cm2" name="glbar">
       <nineml:SingleValue>2.1e-05</nineml:SingleValue>
     </nineml:Property>
   </nineml:Component>
-  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
-  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
-  <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
   <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
 </nineml:NineML>

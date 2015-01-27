@@ -1,74 +1,75 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<NineML xmlns="http://nineml.net/9ML/1.0">
-  <ComponentClass name="Golgi_KVClass">
-    <AnalogSendPort dimension="currentDensity" name="ik"/>
-    <AnalogReceivePort dimension="temperature" name="celsius"/>
-    <AnalogReceivePort dimension="voltage" name="ek"/>
-    <AnalogReceivePort dimension="voltage" name="v"/>
-    <Parameter dimension="voltage" name="V0beta_n"/>
-    <Parameter dimension="conductanceDensity" name="gkbar"/>
-    <Parameter dimension="voltage" name="Kbeta_n"/>
-    <Parameter dimension="voltage" name="V0alpha_n"/>
-    <Parameter name="Q10"/>
-    <Parameter name="Aalpha_n"/>
-    <Parameter dimension="per_time" name="Abeta_n"/>
-    <Parameter dimension="voltage" name="Kalpha_n"/>
-    <Dynamics>
-      <Regime name="states">
-        <TimeDerivative variable="n">
-          <MathInline>(n_inf - n)/tau_n</MathInline>
-        </TimeDerivative>
-      </Regime>
-      <Alias name="tau_n">
-        <MathInline>1/(a_n + b_n)</MathInline>
-      </Alias>
-      <Alias name="b_n">
-        <MathInline>bet_n_v</MathInline>
-      </Alias>
-      <Alias name="alp_n_v">
-        <MathInline>tcorr_v*Aalpha_n*linoid_v__m__V0alpha_n_Kalpha_n</MathInline>
-      </Alias>
-      <Alias name="g">
-        <MathInline>gkbar*n*n*n*n</MathInline>
-      </Alias>
-      <Alias name="n_inf">
-        <MathInline>a_n/(a_n + b_n)</MathInline>
-      </Alias>
-      <Alias name="linoid_v__m__V0alpha_n_Kalpha_n">
-        <Piecewise>
-          <Piece>
-            <MathInline>Kalpha_n*(1 - (v-V0alpha_n)/Kalpha_n/2)</MathInline>
-            <MathInline>fabs((v-V0alpha_n)/Kalpha_n) &lt; 1e-6</MathInline>
-          </Piece>
-          <Otherwise>
-            <MathInline>(v-V0alpha_n)/(exp((v-V0alpha_n)/Kalpha_n) - 1)</MathInline>
-          </Otherwise>
-        </Piecewise>
-      </Alias>
-      <Alias name="alpha_n">
-        <MathInline>alp_n_v</MathInline>
-      </Alias>
-      <Alias name="ik">
-        <MathInline>g*(v - ek)</MathInline>
-      </Alias>
-      <Alias name="bet_n_v">
-        <MathInline>tcorr_v*Abeta_n*exp((v-V0beta_n)/Kbeta_n)</MathInline>
-      </Alias>
-      <Alias name="a_n">
-        <MathInline>alp_n_v</MathInline>
-      </Alias>
-      <Alias name="tcorr_v">
-        <MathInline>Q10^((celsius-6.3)/10)</MathInline>
-      </Alias>
-      <Alias name="beta_n">
-        <MathInline>bet_n_v</MathInline>
-      </Alias>
-      <StateVariable name="n"/>
-    </Dynamics>
-  </ComponentClass>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" name="per_time" t="-1"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="-1" t="-3" m="1" l="2" name="voltage"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" k="1" name="temperature"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" name="currentDensity" l="-2"/>
-</NineML>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
+  <nineml:ComponentClass name="Golgi_KVClass">
+    <nineml:AnalogSendPort dimension="currentDensity" name="ik"/>
+    <nineml:AnalogReceivePort dimension="temperature" name="celsius"/>
+    <nineml:AnalogReceivePort dimension="voltage" name="ek"/>
+    <nineml:AnalogReceivePort dimension="voltage" name="v"/>
+    <nineml:Parameter dimension="voltage" name="V0beta_n"/>
+    <nineml:Parameter dimension="conductanceDensity" name="gkbar"/>
+    <nineml:Parameter dimension="voltage" name="Kbeta_n"/>
+    <nineml:Parameter dimension="voltage" name="V0alpha_n"/>
+    <nineml:Parameter dimension="dimensionless" name="Q10"/>
+    <nineml:Parameter dimension="dimensionless" name="Aalpha_n"/>
+    <nineml:Parameter dimension="per_time" name="Abeta_n"/>
+    <nineml:Parameter dimension="voltage" name="Kalpha_n"/>
+    <nineml:Dynamics>
+      <nineml:Regime name="states">
+        <nineml:TimeDerivative variable="n">
+          <nineml:MathInline>(n_inf - n)/tau_n</nineml:MathInline>
+        </nineml:TimeDerivative>
+      </nineml:Regime>
+      <nineml:Alias name="tau_n">
+        <nineml:MathInline>1/(a_n + b_n)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="b_n">
+        <nineml:MathInline>bet_n_v</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="alp_n_v">
+        <nineml:MathInline>tcorr_v*Aalpha_n*linoid_v__m__V0alpha_n_Kalpha_n</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="g">
+        <nineml:MathInline>gkbar*n*n*n*n</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="n_inf">
+        <nineml:MathInline>a_n/(a_n + b_n)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="alpha_n">
+        <nineml:MathInline>alp_n_v</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="ik">
+        <nineml:MathInline>g*(v - ek)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="bet_n_v">
+        <nineml:MathInline>tcorr_v*Abeta_n*exp((v-V0beta_n)/Kbeta_n)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="a_n">
+        <nineml:MathInline>alp_n_v</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="tcorr_v">
+        <nineml:MathInline>Q10^((celsius-6.3)/10)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="beta_n">
+        <nineml:MathInline>bet_n_v</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Piecewise name="linoid_v__m__V0alpha_n_Kalpha_n">
+        <nineml:Piece>
+          <nineml:MathInline>Kalpha_n*(1 - (v-V0alpha_n)/Kalpha_n/2)</nineml:MathInline>
+          <nineml:Condition>
+            <nineml:MathInline>abs((v-V0alpha_n)/Kalpha_n) &lt; 1e-6</nineml:MathInline>
+          </nineml:Condition>
+        </nineml:Piece>
+        <nineml:Otherwise>
+          <nineml:MathInline>(v-V0alpha_n)/(exp((v-V0alpha_n)/Kalpha_n) - 1)</nineml:MathInline>
+        </nineml:Otherwise>
+      </nineml:Piecewise>
+      <nineml:StateVariable dimension="dimensionless" name="n"/>
+    </nineml:Dynamics>
+  </nineml:ComponentClass>
+  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <nineml:Dimension name="per_time" t="-1"/>
+  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <nineml:Dimension i="1" name="currentDensity" l="-2"/>
+  <nineml:Dimension name="dimensionless"/>
+  <nineml:Dimension k="1" name="temperature"/>
+</nineml:NineML>

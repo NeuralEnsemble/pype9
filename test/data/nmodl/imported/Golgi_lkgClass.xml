@@ -1,17 +1,17 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<NineML xmlns="http://nineml.net/9ML/1.0">
-  <ComponentClass name="Golgi_lkgClass">
-    <AnalogSendPort dimension="currentDensity" name="i"/>
-    <AnalogReceivePort dimension="voltage" name="v"/>
-    <Parameter dimension="conductanceDensity" name="glbar"/>
-    <Parameter dimension="voltage" name="el"/>
-    <Dynamics>
-      <Alias name="i">
-        <MathInline>glbar * (v - el )</MathInline>
-      </Alias>
-    </Dynamics>
-  </ComponentClass>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" name="currentDensity" l="-2"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="-1" t="-3" m="1" l="2" name="voltage"/>
-</NineML>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
+  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <nineml:ComponentClass name="Golgi_lkgClass">
+    <nineml:AnalogSendPort dimension="currentDensity" name="i"/>
+    <nineml:AnalogReceivePort dimension="voltage" name="v"/>
+    <nineml:Parameter dimension="conductanceDensity" name="glbar"/>
+    <nineml:Parameter dimension="voltage" name="el"/>
+    <nineml:Dynamics>
+      <nineml:Alias name="i">
+        <nineml:MathInline>glbar * (v - el )</nineml:MathInline>
+      </nineml:Alias>
+    </nineml:Dynamics>
+  </nineml:ComponentClass>
+  <nineml:Dimension i="1" name="currentDensity" l="-2"/>
+</nineml:NineML>

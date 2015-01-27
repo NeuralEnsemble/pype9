@@ -1,51 +1,53 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
   <nineml:Component name="Golgi_hcn2">
-    <nineml:Definition url="/Users/tclose/git/nineline/test/data/nmodl/imported/Golgi_hcn2Class.xml">Golgi_hcn2Class</nineml:Definition>
-    <nineml:Property units="mV">
+    <nineml:Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_hcn2Class.xml">Golgi_hcn2Class</nineml:Definition>
+    <nineml:Property units="mV" name="Ehalf">
       <nineml:SingleValue>-81.95</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="per_mV">
+    <nineml:Property units="per_mV" name="c">
       <nineml:SingleValue>0.1661</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mV">
+    <nineml:Property units="mV" name="ehcn2">
       <nineml:SingleValue>-20.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="S_per_cm2">
+    <nineml:Property units="S_per_cm2" name="gbar">
       <nineml:SingleValue>8e-05</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property>
+    <nineml:Property units="unitless" name="q_10">
       <nineml:SingleValue>3.0</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="per_mV">
+    <nineml:Property units="per_mV" name="rA">
       <nineml:SingleValue>-0.0227</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property>
+    <nineml:Property units="unitless" name="rB">
       <nineml:SingleValue>-1.4694</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property>
+    <nineml:Property units="unitless" name="tCf">
       <nineml:SingleValue>0.0269</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property>
+    <nineml:Property units="unitless" name="tCs">
       <nineml:SingleValue>0.0152</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mV">
+    <nineml:Property units="mV" name="tDf">
       <nineml:SingleValue>-5.6111</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="mV">
+    <nineml:Property units="mV" name="tDs">
       <nineml:SingleValue>-5.2944</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="per_mV">
+    <nineml:Property units="per_mV" name="tEf">
       <nineml:SingleValue>2.3026</nineml:SingleValue>
     </nineml:Property>
-    <nineml:Property units="per_mV">
+    <nineml:Property units="per_mV" name="tEs">
       <nineml:SingleValue>2.3026</nineml:SingleValue>
     </nineml:Property>
   </nineml:Component>
-  <nineml:Unit symbol="per_mV" dimension="per_voltage" power="3"/>
-  <nineml:Dimension i="1" t="3" m="-1" l="-2" name="per_voltage"/>
-  <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
   <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
   <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <nineml:Dimension i="1" t="3" m="-1" l="-2" name="per_voltage"/>
+  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
+  <nineml:Unit symbol="unitless" dimension="dimensionless" power="0"/>
+  <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
+  <nineml:Dimension name="dimensionless"/>
+  <nineml:Unit symbol="per_mV" dimension="per_voltage" power="3"/>
 </nineml:NineML>
