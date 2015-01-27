@@ -1,21 +1,21 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<ns0:NineML xmlns:ns0="http://nineml.net/9ML/1.0">
-  <ns0:Unit symbol="mol_per_m3" dimension="concentration" power="0"/>
-  <ns0:Component name="Golgi_CALC_ca2">
-    <ns0:Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_CALC_ca2Class.xml">Golgi_CALC_ca2Class</ns0:Definition>
-    <ns0:Property units="per_ms" name="beta">
-      <ns0:SingleValue>1.3</ns0:SingleValue>
-    </ns0:Property>
-    <ns0:Property units="mol_per_m3" name="ca2i0">
-      <ns0:SingleValue>nan</ns0:SingleValue>
-    </ns0:Property>
-    <ns0:Property units="um" name="d">
-      <ns0:SingleValue>0.2</ns0:SingleValue>
-    </ns0:Property>
-  </ns0:Component>
-  <ns0:Unit symbol="um" dimension="length" power="-6"/>
-  <ns0:Dimension name="length" l="1"/>
-  <ns0:Dimension name="per_time" t="-1"/>
-  <ns0:Unit symbol="per_ms" dimension="per_time" power="3"/>
-  <ns0:Dimension l="-3" name="concentration" n="1"/>
-</ns0:NineML>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
+  <nineml:Unit symbol="mol_per_m3" dimension="concentration" power="0"/>
+  <nineml:Component name="Golgi_CALC_ca2">
+    <nineml:Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_CALC_ca2Class.xml">Golgi_CALC_ca2Class</nineml:Definition>
+    <nineml:Property units="per_ms" name="beta">
+      <nineml:SingleValue>1.3</nineml:SingleValue>
+    </nineml:Property>
+    <nineml:Property units="mol_per_m3" name="ca2i0">
+      <nineml:SingleValue>nan</nineml:SingleValue>
+    </nineml:Property>
+    <nineml:Property units="um" name="d">
+      <nineml:SingleValue>0.2</nineml:SingleValue>
+    </nineml:Property>
+  </nineml:Component>
+  <nineml:Unit symbol="um" dimension="length" power="-6"/>
+  <nineml:Dimension name="length" l="1"/>
+  <nineml:Dimension name="per_time" t="-1"/>
+  <nineml:Unit symbol="per_ms" dimension="per_time" power="3"/>
+  <nineml:Dimension l="-3" name="concentration" n="1"/>
+</nineml:NineML>

@@ -1,30 +1,30 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<ns0:NineML xmlns:ns0="http://nineml.net/9ML/1.0">
-  <ns0:Unit symbol="C" dimension="charge" power="0"/>
-  <ns0:Dimension name="per_time" t="-1"/>
-  <ns0:Dimension i="1" name="charge" t="1"/>
-  <ns0:ComponentClass name="Golgi_CALC_ca2Class">
-    <ns0:AnalogSendPort dimension="concentration" name="ca2i"/>
-    <ns0:AnalogReceivePort dimension="currentDensity" name="ica2"/>
-    <ns0:AnalogReceivePort dimension="concentration" name="ca2o"/>
-    <ns0:Parameter dimension="concentration" name="ca2i0"/>
-    <ns0:Parameter dimension="per_time" name="beta"/>
-    <ns0:Parameter dimension="length" name="d"/>
-    <ns0:Dynamics>
-      <ns0:Regime name="conc">
-        <ns0:TimeDerivative variable="ca2i">
-          <ns0:MathInline>-ica2/(2*F*d)*(1e4) - beta*(ca2i-ca2i0)</ns0:MathInline>
-        </ns0:TimeDerivative>
-      </ns0:Regime>
-      <ns0:Alias name="ca2_pump_i">
-        <ns0:MathInline>2*beta*(ca2i-ca2i0)</ns0:MathInline>
-      </ns0:Alias>
-      <ns0:Constant units="C" name="F">96485.3365</ns0:Constant>
-      <ns0:StateVariable dimension="dimensionless" name="ca2i"/>
-    </ns0:Dynamics>
-  </ns0:ComponentClass>
-  <ns0:Dimension name="length" l="1"/>
-  <ns0:Dimension i="1" name="currentDensity" l="-2"/>
-  <ns0:Dimension name="dimensionless"/>
-  <ns0:Dimension l="-3" name="concentration" n="1"/>
-</ns0:NineML>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
+  <nineml:Unit symbol="C" dimension="charge" power="0"/>
+  <nineml:Dimension name="per_time" t="-1"/>
+  <nineml:Dimension i="1" name="charge" t="1"/>
+  <nineml:ComponentClass name="Golgi_CALC_ca2Class">
+    <nineml:AnalogSendPort dimension="concentration" name="ca2i"/>
+    <nineml:AnalogReceivePort dimension="currentDensity" name="ica2"/>
+    <nineml:AnalogReceivePort dimension="concentration" name="ca2o"/>
+    <nineml:Parameter dimension="concentration" name="ca2i0"/>
+    <nineml:Parameter dimension="per_time" name="beta"/>
+    <nineml:Parameter dimension="length" name="d"/>
+    <nineml:Dynamics>
+      <nineml:Regime name="conc">
+        <nineml:TimeDerivative variable="ca2i">
+          <nineml:MathInline>-ica2/(2*F*d)*(1e4) - beta*(ca2i-ca2i0)</nineml:MathInline>
+        </nineml:TimeDerivative>
+      </nineml:Regime>
+      <nineml:Alias name="ca2_pump_i">
+        <nineml:MathInline>2*beta*(ca2i-ca2i0)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Constant units="C" name="F">96485.3365</nineml:Constant>
+      <nineml:StateVariable dimension="dimensionless" name="ca2i"/>
+    </nineml:Dynamics>
+  </nineml:ComponentClass>
+  <nineml:Dimension name="length" l="1"/>
+  <nineml:Dimension i="1" name="currentDensity" l="-2"/>
+  <nineml:Dimension name="dimensionless"/>
+  <nineml:Dimension l="-3" name="concentration" n="1"/>
+</nineml:NineML>

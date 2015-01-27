@@ -1,66 +1,66 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<ns0:NineML xmlns:ns0="http://nineml.net/9ML/1.0">
-  <ns0:Dimension name="per_time" t="-1"/>
-  <ns0:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-  <ns0:ComponentClass name="Golgi_BKClass">
-    <ns0:AnalogSendPort dimension="currentDensity" name="ik"/>
-    <ns0:AnalogReceivePort dimension="concentration" name="cai"/>
-    <ns0:AnalogReceivePort dimension="temperature" name="celsius"/>
-    <ns0:AnalogReceivePort dimension="voltage" name="ek"/>
-    <ns0:AnalogReceivePort dimension="voltage" name="v"/>
-    <ns0:Parameter dimension="voltage" name="Kbeta_c"/>
-    <ns0:Parameter dimension="concentration" name="Balpha_c"/>
-    <ns0:Parameter dimension="conductanceDensity" name="gkbar"/>
-    <ns0:Parameter dimension="voltage" name="Kalpha_c"/>
-    <ns0:Parameter dimension="concentration" name="Bbeta_c"/>
-    <ns0:Parameter dimension="per_time" name="Abeta_c"/>
-    <ns0:Parameter dimension="dimensionless" name="Q10"/>
-    <ns0:Parameter dimension="per_time" name="Aalpha_c"/>
-    <ns0:Dynamics>
-      <ns0:Regime name="states">
-        <ns0:TimeDerivative variable="c">
-          <ns0:MathInline>(c_inf - c)/tau_c</ns0:MathInline>
-        </ns0:TimeDerivative>
-      </ns0:Regime>
-      <ns0:Alias name="alp_c_v">
-        <ns0:MathInline>tcorr_v*Aalpha_c/(1+(Balpha_c*exp(v/Kalpha_c)/cai))</ns0:MathInline>
-      </ns0:Alias>
-      <ns0:Alias name="alpha_c">
-        <ns0:MathInline>alp_c_v</ns0:MathInline>
-      </ns0:Alias>
-      <ns0:Alias name="g">
-        <ns0:MathInline>gkbar*c</ns0:MathInline>
-      </ns0:Alias>
-      <ns0:Alias name="b_c">
-        <ns0:MathInline>bet_c_v</ns0:MathInline>
-      </ns0:Alias>
-      <ns0:Alias name="tau_c">
-        <ns0:MathInline>1/(a_c + b_c)</ns0:MathInline>
-      </ns0:Alias>
-      <ns0:Alias name="c_inf">
-        <ns0:MathInline>a_c/(a_c + b_c)</ns0:MathInline>
-      </ns0:Alias>
-      <ns0:Alias name="beta_c">
-        <ns0:MathInline>bet_c_v</ns0:MathInline>
-      </ns0:Alias>
-      <ns0:Alias name="a_c">
-        <ns0:MathInline>alp_c_v</ns0:MathInline>
-      </ns0:Alias>
-      <ns0:Alias name="ik">
-        <ns0:MathInline>g*(v - ek)</ns0:MathInline>
-      </ns0:Alias>
-      <ns0:Alias name="bet_c_v">
-        <ns0:MathInline>tcorr_v*Abeta_c/(1+cai/(Bbeta_c*exp(v/Kbeta_c)))</ns0:MathInline>
-      </ns0:Alias>
-      <ns0:Alias name="tcorr_v">
-        <ns0:MathInline>Q10^((celsius-30)/10)</ns0:MathInline>
-      </ns0:Alias>
-      <ns0:StateVariable dimension="dimensionless" name="c"/>
-    </ns0:Dynamics>
-  </ns0:ComponentClass>
-  <ns0:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
-  <ns0:Dimension i="1" name="currentDensity" l="-2"/>
-  <ns0:Dimension name="dimensionless"/>
-  <ns0:Dimension l="-3" name="concentration" n="1"/>
-  <ns0:Dimension k="1" name="temperature"/>
-</ns0:NineML>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
+  <nineml:Dimension name="per_time" t="-1"/>
+  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <nineml:ComponentClass name="Golgi_BKClass">
+    <nineml:AnalogSendPort dimension="currentDensity" name="ik"/>
+    <nineml:AnalogReceivePort dimension="concentration" name="cai"/>
+    <nineml:AnalogReceivePort dimension="temperature" name="celsius"/>
+    <nineml:AnalogReceivePort dimension="voltage" name="ek"/>
+    <nineml:AnalogReceivePort dimension="voltage" name="v"/>
+    <nineml:Parameter dimension="voltage" name="Kbeta_c"/>
+    <nineml:Parameter dimension="concentration" name="Balpha_c"/>
+    <nineml:Parameter dimension="conductanceDensity" name="gkbar"/>
+    <nineml:Parameter dimension="voltage" name="Kalpha_c"/>
+    <nineml:Parameter dimension="concentration" name="Bbeta_c"/>
+    <nineml:Parameter dimension="per_time" name="Abeta_c"/>
+    <nineml:Parameter dimension="dimensionless" name="Q10"/>
+    <nineml:Parameter dimension="per_time" name="Aalpha_c"/>
+    <nineml:Dynamics>
+      <nineml:Regime name="states">
+        <nineml:TimeDerivative variable="c">
+          <nineml:MathInline>(c_inf - c)/tau_c</nineml:MathInline>
+        </nineml:TimeDerivative>
+      </nineml:Regime>
+      <nineml:Alias name="alp_c_v">
+        <nineml:MathInline>tcorr_v*Aalpha_c/(1+(Balpha_c*exp(v/Kalpha_c)/cai))</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="alpha_c">
+        <nineml:MathInline>alp_c_v</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="g">
+        <nineml:MathInline>gkbar*c</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="b_c">
+        <nineml:MathInline>bet_c_v</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="tau_c">
+        <nineml:MathInline>1/(a_c + b_c)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="c_inf">
+        <nineml:MathInline>a_c/(a_c + b_c)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="beta_c">
+        <nineml:MathInline>bet_c_v</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="a_c">
+        <nineml:MathInline>alp_c_v</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="ik">
+        <nineml:MathInline>g*(v - ek)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="bet_c_v">
+        <nineml:MathInline>tcorr_v*Abeta_c/(1+cai/(Bbeta_c*exp(v/Kbeta_c)))</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="tcorr_v">
+        <nineml:MathInline>Q10^((celsius-30)/10)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:StateVariable dimension="dimensionless" name="c"/>
+    </nineml:Dynamics>
+  </nineml:ComponentClass>
+  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <nineml:Dimension i="1" name="currentDensity" l="-2"/>
+  <nineml:Dimension name="dimensionless"/>
+  <nineml:Dimension l="-3" name="concentration" n="1"/>
+  <nineml:Dimension k="1" name="temperature"/>
+</nineml:NineML>

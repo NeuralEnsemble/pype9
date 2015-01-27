@@ -19,10 +19,13 @@ from nineml.user_layer import Definition
 from nineml.document import Document
 from nineml.user_layer import DynamicsComponent
 from nineml.abstraction_layer.expressions import Constant
+from nineml.utils import expect_single
 
 # from nineml.user_layer.dynamics import IonDynamics
 from collections import defaultdict
 from nineml.abstraction_layer import units
+from nineml.abstraction_layer.expressions.piecewise import (Piecewise, Piece,
+                                                            Otherwise)
 
 
 # Compiled regular expressions
@@ -51,7 +54,7 @@ class _Otherwise(object):
         return ' & '.join('!({})'.format(test) for test in self.not_tests)
 
     def __str__(self):
-        return 'otherwise'
+        return '__otherwise__'
 
 
 _SI_to_dimension = {'m/s': un.conductance,
@@ -116,6 +119,7 @@ class NMODLImporter(object):
         self.functions = {}
         self.procedures = {}
         self.aliases = {}
+        self.piecewises = {}
         self.constants = {}
         self.properties = {}
         self.valid_parameter_ranges = {}
@@ -210,6 +214,15 @@ class NMODLImporter(object):
         print "\nAliases:"
         for a in self.aliases.itervalues():
             print '{} = {}'.format(a.lhs, a.rhs)
+        print "\nConstants:"
+        for c in self.constants.itervalues():
+            print '{} = {} ({})'.format(c.name, c.value, c.units.name)
+        print "\nPiecewises:"
+        for p in self.piecewises.itervalues():
+            print '{} =:'.format(p.name)
+            for pc in p.pieces:
+                print '{},    {}'.format(*pc)
+            print '{},    otherwise'.format(p.otherwise)
 
     def all_expressions(self):
         """
@@ -569,9 +582,10 @@ class NMODLImporter(object):
             self.state_variables[var] = StateVariable(var, dimension=dimension)
         for lhs, rhs in self._initial_assign.iteritems():
             if lhs in self.state_variables:
-                self.state_variables_initial[lhs] = rhs
+                self.state_variables_initial[lhs] = self._escape_piecewise(lhs,
+                                                                           rhs)
             else:
-                self.aliases[lhs] = Alias(lhs, rhs)
+                self._set_alias_or_piecewise(lhs, rhs)
 
     def _extract_neuron_block(self):
         # Read the NEURON block
@@ -626,9 +640,11 @@ class NMODLImporter(object):
                     if lhs[:-1] not in self.state_variables:
                         raise Exception("Unrecognised variable '{}'"
                                         .format(lhs))
-                    time_derivatives.append(TimeDerivative(lhs[:-1], rhs))
+                    td = TimeDerivative(lhs[:-1],
+                                        self._escape_piecewise(lhs, rhs))
+                    time_derivatives.append(td)
                 else:
-                    self.aliases[lhs] = Alias(lhs, rhs)
+                    self._set_alias_or_piecewise(lhs, rhs)
             self.regime_parts.append((name, time_derivatives))
 
     def _extract_breakpoint_block(self):
@@ -644,8 +660,8 @@ class NMODLImporter(object):
             else:
                 reduced_block.append(line)
         stmts = self._extract_stmts_block(reduced_block)
-        self.aliases.update((lhs, Alias(lhs, rhs))
-                            for lhs, rhs in stmts.iteritems())
+        for lhs, rhs in stmts.iteritems():
+            self._set_alias_or_piecewise(lhs, rhs)
 
     def _extract_netreceive_block(self):
         arg_block = self.blocks.pop('NET_RECEIVE', None)
@@ -771,7 +787,7 @@ class NMODLImporter(object):
             self.kinetics[name] = (bidirectional, incoming, outgoing,
                                    constraints, compartments)
             for lhs, rhs in statements.iteritems():
-                self.aliases[lhs] = Alias(lhs, rhs)
+                self._set_alias_or_piecewise(lhs, rhs)
 
     def _extract_independent_block(self):
         self.blocks.pop('INDEPENDENT', None)
@@ -1062,6 +1078,10 @@ class NMODLImporter(object):
                                             _Otherwise([t for _, t in pieces]),
                                             pieces)
             else:
+                # If it does have an otherwise condition it shouldn't have been
+                # defined previously
+                # FIXME: possibily could have been though in strange NMODL
+                # files
                 assert lhs not in statements
             statements[lhs] = pieces
         # Add aliases from procedure to list of substitutions in order to
@@ -1077,7 +1097,7 @@ class NMODLImporter(object):
         """
         if isinstance(stmt, list):
             for s, t in stmt:
-                if t == 'otherwise':
+                if t == '__otherwise__':
                     combined_test = test
                 else:
                     if isinstance(test, _Otherwise):
@@ -1103,6 +1123,32 @@ class NMODLImporter(object):
         if old in self.dimensions:
             self.dimensions[new] = self.dimensions[old]
         return expr
+
+    def _set_alias_or_piecewise(self, lhs, rhs):
+        if isinstance(rhs, list):
+            self._set_piecewise(lhs, rhs)
+        else:
+            self.aliases[lhs] = Alias(lhs, rhs)
+
+    def _set_piecewise(self, lhs, rhs):
+        pieces = [Piece(e, t) for e, t in rhs if t != '__otherwise__']
+        otherwise = expect_single(
+            Otherwise(e) for e, t in rhs if t == '__otherwise__')
+        self.piecewises[lhs] = Piecewise(name=lhs, pieces=pieces,
+                                         otherwise=otherwise)
+
+    def _escape_piecewise(self, lhs, rhs):
+        """
+        If state variable initialisation or time derivative is set by a
+        piecewise function create an alias for it and set the state variable
+        initialisation to that
+        """
+        if isinstance(rhs, list):
+            new_rhs = lhs + '__piecewise'
+            self._set_piecewise(new_rhs, rhs)
+            return new_rhs
+        else:
+            return rhs
 
     @classmethod
     def _split_args(cls, arglist):
