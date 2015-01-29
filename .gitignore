@@ -12,3 +12,4 @@ x86_64
 *.v
 .DS_Store
 .9build
+/test/data/nmodl/imported/*
