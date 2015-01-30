@@ -1,5 +1,5 @@
 /*
- *  {{celltype_name}}Loader.cpp
+ *  {{component.name}}Loader.cpp
  *  This file is part of NEST.
  *
  *  Copyright (C) 2008 by
@@ -29,8 +29,8 @@
 #include "nestmodule.h"
 
 // include headers with your own stuff
-#include "{{celltype_name}}Loader.h"
-#include "{{celltype_name}}.h"
+#include "{{component.name}}Loader.h"
+#include "{{component.name}}.h"
 
 // -- Interface to dynamic module loader ---------------------------------------
 
@@ -44,11 +44,11 @@
  * The dynamicloader can then load modulename and search for symbol "mod" in it.
  */
  
-nineml::{{celltype_name}}Loader {{celltype_name}}Loader_LTX_mod;
+nineml::{{component.name}}Loader {{component.name}}Loader_LTX_mod;
 
 // -- DynModule functions ------------------------------------------------------
 
-nineml::{{celltype_name}}Loader::{{celltype_name}}Loader() {
+nineml::{{component.name}}Loader::{{component.name}}Loader() {
 #ifdef LINKED_MODULE
      // register this module at the dynamic loader
      // this is needed to allow for linking in this module at compile time
@@ -57,22 +57,22 @@ nineml::{{celltype_name}}Loader::{{celltype_name}}Loader() {
 #endif
 }
 
-nineml::{{celltype_name}}Loader::~{{celltype_name}}Loader() {}
+nineml::{{component.name}}Loader::~{{component.name}}Loader() {}
 
-const std::string nineml::{{celltype_name}}Loader::name(void) const {
-    return std::string("{{celltype_name}}"); // Return name of the module
+const std::string nineml::{{component.name}}Loader::name(void) const {
+    return std::string("{{component.name}}"); // Return name of the module
 }
 
-const std::string nineml::{{celltype_name}}Loader::commandstring(void) const {
- /* 1. Tell interpreter that we provide the C++ part of {{celltype_name}}Loader with the
+const std::string nineml::{{component.name}}Loader::commandstring(void) const {
+ /* 1. Tell interpreter that we provide the C++ part of {{component.name}}Loader with the
        current revision number.
-    2. Instruct the interpreter to check that {{celltype_name}}Loader-init.sli exists,
-       provides at least version 1.0 of the SLI interface to {{celltype_name}}Loader, and
+    2. Instruct the interpreter to check that {{component.name}}Loader-init.sli exists,
+       provides at least version 1.0 of the SLI interface to {{component.name}}Loader, and
        to load it.
   */
     return std::string(
-            "/{{celltype_name}}Loader /C++ ($Revision: 8512 $) provide-component "
-            "/{{celltype_name}}Loader /SLI (7165) require-component");
+            "/{{component.name}}Loader /C++ ($Revision: 8512 $) provide-component "
+            "/{{component.name}}Loader /SLI (7165) require-component");
 }
 
 /* BeginDocumentation
@@ -125,7 +125,7 @@ const std::string nineml::{{celltype_name}}Loader::commandstring(void) const {
   SeeAlso:
   Connect, ConvergentConnect, DivergentConnect
 */
-void nineml::{{celltype_name}}Loader::StepPatternConnect_Vi_i_Vi_i_lFunction::execute(SLIInterpreter *i) const {
+void nineml::{{component.name}}Loader::StepPatternConnect_Vi_i_Vi_i_lFunction::execute(SLIInterpreter *i) const {
  // Check if we have (at least) five arguments on the stack.
     i->assert_stack_load(5);
     
@@ -173,14 +173,14 @@ void nineml::{{celltype_name}}Loader::StepPatternConnect_Vi_i_Vi_i_lFunction::ex
 
 //-------------------------------------------------------------------------------------
 
-void nineml::{{celltype_name}}Loader::init(SLIInterpreter *i, nest::Network*) {
+void nineml::{{component.name}}Loader::init(SLIInterpreter *i, nest::Network*) {
     /* Register a neuron or device model.
        Give node type as template argument and the name as second argument.
        The first argument is always a reference to the network.
        Return value is a handle for later unregistration.
     */
-   nest::register_model<nest::{{celltype_name}}>(nest::NestModule::get_network(),
-                                                 "{{celltype_name}}");
+   nest::register_model<nest::{{component.name}}>(nest::NestModule::get_network(),
+                                                 "{{component.name}}");
 
     /* Register a synapse type.
        Give synapse type as template argument and the name as second argument.
@@ -195,9 +195,9 @@ void nineml::{{celltype_name}}Loader::init(SLIInterpreter *i, nest::Network*) {
        The first argument is the function name for SLI, the second a pointer to
        the function object. If you do not want to overload the function in SLI,
        you do not need to give the mangled name. If you give a mangled name, you
-       should define a type trie in the {{celltype_name}}Loader-init.sli file.
+       should define a type trie in the {{component.name}}Loader-init.sli file.
     */
-   i->createcommand("{{celltype_name}}StepPatternConnect_Vi_i_Vi_i_l",
+   i->createcommand("{{component.name}}StepPatternConnect_Vi_i_Vi_i_l",
                     &stepPatternConnect_Vi_i_Vi_i_lFunction);
 
-}  // {{celltype_name}}Loader::init()
+}  // {{component.name}}Loader::init()

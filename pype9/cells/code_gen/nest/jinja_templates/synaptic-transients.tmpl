@@ -23,7 +23,7 @@
      - externalEventEqDef - the equations that assigns values to any imported quantities, e.g. voltage
      - transientEventEqDefs - the equations that update the synaptic states
    
-   Authors: Ivan Raikov and Thomas G. Close
+   Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
@@ -32,7 +32,7 @@
 //----------------------------------------------------------//
 
 {% for func_name, state_assignments, req_defs in transients %}
-inline void {{ModelName}}::{{func_name}}(long_t lag) {
+inline void {{component.name}}}}::{{func_name}}(long_t lag) {
     
     // Map parameters used in dynamics to current namespace
     {% for param in req_defs.parameters %}
@@ -46,7 +46,7 @@ inline void {{ModelName}}::{{func_name}}(long_t lag) {
     
     // Map states used in dynamics to current namespace
     {% for state in req_defs.states %}
-    const double_t {{state.name}} = S_.y_[{{ModelName}}::State_::{{state.name}}_INDEX];
+    const double_t {{state.name}} = S_.y_[{{component.name}}}}::State_::{{state.name}}_INDEX];
     {% endfor %}
    
     // Evaluate aliases used in differential equations
@@ -56,7 +56,7 @@ inline void {{ModelName}}::{{func_name}}(long_t lag) {
 
     // Evaluate differential equations
     {% for assign in state_assignments %}
-    S_.y_[{{ModelName}}::State_::{{assign.lhs}}_INDEX] = {{assign.rhs}};
+    S_.y_[{{component.name}}}}::State_::{{assign.lhs}}_INDEX] = {{assign.rhs}};
     {% endfor %}
 }
 {% endfor %}

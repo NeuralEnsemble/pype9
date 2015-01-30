@@ -1,6 +1,6 @@
 {# This template provides the required code to calculate the Jacobin when using GSL
 
-   Authors: Ivan Raikov and Thomas G. Close
+   Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 {% if (ode_solver == "gsl") %}
@@ -10,20 +10,20 @@
 //-----------------------------------------------//
 
 /** Diagonal Jacobian approximation (for GSL): (f(s+.01) - f(s))/.001 */
-extern "C" int {{ModelName}}_jacobian (double t, const double y[], double *dfdy, double dfdt[], void* pnode) {
+extern "C" int {{component.name}}}}_jacobian (double t, const double y[], double *dfdy, double dfdt[], void* pnode) {
    // cast the node ptr to an object of the proper type
    assert(pnode);
-   const {{ModelName}} & node = *(reinterpret_cast<{{ModelName}}*>(pnode));
-   {{ModelName}} & vnode =  *(reinterpret_cast<{{ModelName}}*>(pnode));
+   const {{component.name}}}} & node = *(reinterpret_cast<{{component.name}}}}*>(pnode));
+   {{component.name}}}} & vnode =  *(reinterpret_cast<{{component.name}}}}*>(pnode));
 
    // state is a reference to the model state
-   struct {{ModelName}}::Buffers_ *b;
+   struct {{component.name}}}}::Buffers_ *b;
    b = &(vnode.B_);
 
    for (int i = 0; i < b->N; i++)
        b->u[i] = y[i] + 0.01;
 
-   {{ModelName}}_dynamics(t, b->u, b->jac, pnode);
+   {{component.name}}}}_dynamics(t, b->u, b->jac, pnode);
    for (int i = 0; i < b->N; i++)
        dfdt[i*b->N + i] = (b->jac[i] - dfdy[i]) / .001;
    return 0;

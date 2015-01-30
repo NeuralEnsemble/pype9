@@ -1,6 +1,6 @@
 {# This template adds State class constructors and assignments
 
-   Authors: Ivan Raikov and Thomas G. Close
+   Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
@@ -11,7 +11,7 @@
 /**
  * Construct state from parameters.
  */
-{{ModelName}}::State_::State_(const Parameters_& p) {
+{{component.name}}}}::State_::State_(const Parameters_& p) {
 
     const Parameters_ *params = &p;
 {% if (ode_solver == "gsl") %}
@@ -28,8 +28,8 @@
 {% if (ss_solver  == "kinsol") %}
     N_Vector {{SSvector}};
     ssvect = N_VNew_Serial({{steadyStateSize}});
-    fsolve ({{ModelName}}_steadystate, {{steadyStateSize}}, {{SSvector}},
-          (void *)&p,  "{{ModelName}}");
+    fsolve ({{component.name}}}}_steadystate, {{steadyStateSize}}, {{SSvector}},
+          (void *)&p,  "{{component.name}}}}");
     {% for name in rateEqStates %}
         {% if (name in steadyStateIndexMap) %}
     y_[{{stateIndexMap[name]}}] = ITEM({{SSvector}}, {{steadyStateIndexMap[name]}});
@@ -41,8 +41,8 @@
 {% elif stead_state %}
     gsl_vector *{{SSvector}};
     {{SSvector}} = gsl_vector_alloc ({{steadyStateSize}});
-    fsolve ({{ModelName}}_steadystate, {{steadyStateSize}}, {{SSvector}},
-           (void *)&p, "{{ModelName}}");             
+    fsolve ({{component.name}}}}_steadystate, {{steadyStateSize}}, {{SSvector}},
+           (void *)&p, "{{component.name}}}}");             
     {% for name in init.rateEqStates %}
         {% if (name in steadyStateIndexMap) %}
     y_[{{stateIndexMap[name]}}] = gsl_vector_get({{SSvector}}, {{steadyStateIndexMap[name]}});
@@ -67,36 +67,36 @@
 /**
  * Copy constructor for State class
  */
-{{ModelName}}::State_::State_(const State_& s) {
+{{component.name}}}}::State_::State_(const State_& s) {
 
 {% if (ode_solver == "gsl") %}
   r_ = s.r_;
 {% endif %}
         
-  for ( int i = 0 ; i < {{num_states}} ; ++i )
+  for ( int i = 0 ; i < {{len(componentclass.state_variables)}} ; ++i )
       y_[i] = s.y_[i];
 }
 
 /**
  * Assignment of a State from another State
  */
-{{ModelName}}::State_& {{ModelName}}::State_::operator=(const State_& s) {
+{{component.name}}}}::State_& {{component.name}}}}::State_::operator=(const State_& s) {
 
 {% if (ode_solver == "gsl") %}
   r_ = s.r_;
 {% endif %}
         
   assert(this != &s);  
-  for ( size_t i = 0 ; i < {{num_states}} ; ++i )
+  for ( size_t i = 0 ; i < {{len(componentclass.state_variables)}} ; ++i )
        y_[i] = s.y_[i];
 
   return *this;
 }
 
-void {{ModelName}}::calibrate() {
+void {{component.name}}}}::calibrate() {
     B_.logger_.init();  
 {% if (ode_solver == "gsl") %}
-    V_.U_old_ = S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX];
+    V_.U_old_ = S_.y_[{{component.name}}}}::State_::{{membrane_voltage}}_INDEX];
     {% if refractory_period %}
     V_.RefractoryCounts_ = Time(Time::ms(P_.t_ref)).get_steps();
     {% else %}

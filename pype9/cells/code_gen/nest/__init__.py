@@ -167,6 +167,7 @@ class CodeGenerator(BaseCodeGenerator):
         return args
 
     def _render_source_files(self, template_args, src_dir, verbose):  # @UnusedVariable @IgnorePep8
+        # src_dir, ode_solver, ss_solver, component, componentclass, parameter_scales, version, timestamp, unit_conversion, max_step_size, abs_tolerance, rel_tolerance, defaultDefs??, membrane_voltage??
         model_name = template_args['ModelName']
         # Render C++ header file
         self._render_to_file('header.tmpl', template_args,

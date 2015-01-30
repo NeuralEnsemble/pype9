@@ -1,16 +1,16 @@
 libdir= @libdir@/nest
 
-lib_LTLIBRARIES=      {{celltype_name}}Loader.la lib{{celltype_name}}Loader.la
+lib_LTLIBRARIES=      {{component.name}}Loader.la lib{{component.name}}Loader.la
 
-{{celltype_name}}Loader_la_CXXFLAGS= @AM_CXXFLAGS@
-{{celltype_name}}Loader_la_SOURCES=  {{celltype_name}}.cpp {{celltype_name}}.h \
-                                     {{celltype_name}}Loader.cpp {{celltype_name}}Loader.h
+{{component.name}}Loader_la_CXXFLAGS= @AM_CXXFLAGS@
+{{component.name}}Loader_la_SOURCES=  {{component.name}}.cpp {{component.name}}.h \
+                                     {{component.name}}Loader.cpp {{component.name}}Loader.h
 
 
-{{celltype_name}}Loader_la_LDFLAGS=  -module @SUNDIALS_LDFLAGS@
+{{component.name}}Loader_la_LDFLAGS=  -module @SUNDIALS_LDFLAGS@
 
-lib{{celltype_name}}Loader_la_CXXFLAGS= $({{celltype_name}}Loader_la_CXXFLAGS) -DLINKED_MODULE
-lib{{celltype_name}}Loader_la_SOURCES=  $({{celltype_name}}Loader_la_SOURCES)
+lib{{component.name}}Loader_la_CXXFLAGS= $({{component.name}}Loader_la_CXXFLAGS) -DLINKED_MODULE
+lib{{component.name}}Loader_la_SOURCES=  $({{component.name}}Loader_la_SOURCES)
 
 MAKEFLAGS= @MAKE_FLAGS@
 
@@ -23,7 +23,7 @@ AM_LDFLAGS = @SUNDIALS_LDFLAGS@
 .PHONY: install-slidoc
 
 nobase_pkgdata_DATA=\
-	{{celltype_name}}Loader.sli
+	{{component.name}}Loader.sli
 
 install-slidoc:
 	NESTRCFILENAME=/dev/null $(DESTDIR)$(NEST_PREFIX)/bin/sli --userargs="@HELPDIRS@" \

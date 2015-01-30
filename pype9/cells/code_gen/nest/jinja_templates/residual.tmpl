@@ -1,6 +1,6 @@
 {# This template sets up residual method required by the IDA solver
 
-   Authors: Ivan Raikov and Thomas G. Close
+   Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 {% if (ode_solver == "ida") %}
@@ -8,19 +8,19 @@
 //-----------------------------------------------//
 // This section was generated from residual.tmpl //
 //-----------------------------------------------//
-    {% for func_name, _, _ in dynamics %}
-extern "C" int {{func_name}}_residual (double t, N_Vector y, N_Vector yp, N_Vector f, void* pnode) {
+    {% for regime in componentclass.regimes %}
+extern "C" int {{component.name}}_{{regime.name}}_residual (double t, N_Vector y, N_Vector yp, N_Vector f, void* pnode) {
     int status; 
 
     // cast the node ptr to an object of the proper type
     assert(pnode);
-    {{ModelName}} & vnode =  *(reinterpret_cast<{{ModelName}}*>(pnode));
+    {{component.name}}}} & vnode =  *(reinterpret_cast<{{component.name}}}}*>(pnode));
 
     N_Vector y1 = vnode.B_.y1;
              
-    status = {{func_name}}_dynamics (t, y, y1, pnode);
+    status = {{component.name}}_{{regime.name}}_dynamics (t, y, y1, pnode);
 
-        {% for i in xrange(num_states) %}
+        {% for i in xrange(len(componentclass.state_variables)) %}
     ITEM(f, {{i}}) = ITEM(y1, {{i}}) - ITEM(yp, {{i}});
         {% endfor %}
 

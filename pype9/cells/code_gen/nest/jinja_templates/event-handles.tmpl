@@ -20,7 +20,7 @@
      - wthreshold - threshold for synaptic event weights - 
        if defined, events with weight below wthreshold are discarded
 
-   Authors: Ivan Raikov and Thomas G. Close
+   Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
@@ -28,30 +28,30 @@
 //---------------------------------------------------//
 // This section was generated from event-handle.tmpl //
 //---------------------------------------------------//
-void {{ModelName}}::handle(SpikeEvent & e) {
+void {{component.name}}}}::handle(SpikeEvent & e) {
     assert(e.get_delay() > 0);
-{% for name in event_port_names %}
-    {%+ if not loop.first %} else {% endif %}if (e.get_rport() == {{name}}_EVENT_PORT)
-        B_.{{name}}_event_port.add_value(
+{% for port in componentclass.event_receive_ports %}
+    {%+ if not loop.first %} else {% endif %}if (e.get_rport() == {{port.name}}_EVENT_PORT)
+        B_.{{port.name}}_event_port.add_value(
             e.get_rel_delivery_steps(network()->get_slice_origin()),
             fabs(e.get_weight()) * e.get_multiplicity());
 {% endfor %}
 }
 
-void {{ModelName}}::handle(CurrentEvent& e) {
+void {{component.name}}}}::handle(CurrentEvent& e) {
     assert(e.get_delay() > 0);
 
     const double_t c = e.get_current();
     const double_t w = e.get_weight();
 
-{% for name in current_stim_names %}
-    {%+ if not loop.first %}else {% endif %}if (e.get_rport() == {{name}}_ANALOG_PORT) 
-        B_.{{name}}_analog_port.add_value(
+{% for port in componentclass.analog_receive_ports %}
+    {%+ if not loop.first %}else {% endif %}if (e.get_rport() == {{port.name}}_ANALOG_PORT) 
+        B_.{{port.name}}_analog_port.add_value(
             e.get_rel_delivery_steps(network()->get_slice_origin()), w * c);
 {% endfor %}
 }
 
-void {{ModelName}}::handle(DataLoggingRequest& e) {
+void {{component.name}}}}::handle(DataLoggingRequest& e) {
     B_.logger_.handle(e);
 }
 // ------------------- event-handle.tmpl ------------------------//

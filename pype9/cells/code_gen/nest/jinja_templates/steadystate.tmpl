@@ -27,7 +27,7 @@
                            - defs - list of equations of the form "f[i] = rhs" where "i" is the index of a state,
                              and "rhs" is the corresponding derivative expr for that state
    
-   Authors: Ivan Raikov and Thomas G. Close
+   Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
@@ -108,9 +108,9 @@
 
 {% if ss_solver %}
     {% if ss_solver == "kinsol" %}
-extern "C" int {{ModelName}}_steadystate (N_Vector u, N_Vector f, void* pnode) {
+extern "C" int {{component.name}}}}_steadystate (N_Vector u, N_Vector f, void* pnode) {
     {% elif ss_solver == 'gsl' %}
-extern "C" int {{ModelName}}_steadystate (const gsl_vector *u, void *pnode, gsl_vector *f) {
+extern "C" int {{component.name}}}}_steadystate (const gsl_vector *u, void *pnode, gsl_vector *f) {
     {% endif %}
    return 0;
 }
@@ -122,7 +122,7 @@ extern "C" int {{ModelName}}_steadystate (const gsl_vector *u, void *pnode, gsl_
 {% endif %}
 
   // params is a reference to the model parameters
-  const struct {{ModelName}}::Parameters_* params = (struct {{ModelName}}::Parameters_ *)pnode;
+  const struct {{component.name}}}}::Parameters_* params = (struct {{component.name}}}}::Parameters_ *)pnode;
 
 {% for parameterDef in steadystate.parameterDefs %}
   {{parameterDef}}

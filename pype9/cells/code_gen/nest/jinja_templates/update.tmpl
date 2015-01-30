@@ -18,14 +18,14 @@
    to generate code that handles detection of spiking threshold and
    generation of corresponding spike events.
 
-   Authors: Ivan Raikov and Thomas G. Close
+   Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
 //---------------------------------------------//
 // This section was generated from update.tmpl //
 //---------------------------------------------//
-void {{ModelName}}::update(Time const & origin, const long_t from, const long_t to) {
+void {{component.name}}}}::update(Time const & origin, const long_t from, const long_t to) {
 
     assert(to >= 0 && (delay) from < Scheduler::get_min_delay());
     assert(from < to);
@@ -37,21 +37,30 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
         double tt = 0.0;
 
 {% if ode_solver in ('cvode', 'ida') %}
+    {% if ode_solver == 'cvode' %}
+        {% set abbrev = 'CV' %}
+        {% set prefix = 'CVode' %}
+        {% set solver = 'CVode' %}
+    {% else %}
+        {% set abbrev = 'IDA' %}
+        {% set prefix = 'IDA' %}
+        {% set solver = 'IDASolve' %}
+    {% endif %}
 	    int N = NV_LENGTH_S (B_.y);
 	    double tout = (current_steps+lag) * dt;
 	
 		// adaptive step integration
         while (tt < tout) {
-            const int status = {{solver_name}} (B_.sys_, tout,
+            const int status = {{name}} (B_.sys_, tout,
     {% if ode_solver == 'cvode' %}
                                                 B_.y, &tt, 
     {% elif ode_solver == 'ida' %}
                                                 &tt, B_.y, B_.yp,
     {% endif %}
-                                                {{solver_abbrev}}_NORMAL);
+                                                {{abbrev}}_NORMAL);
             switch (status) {
-                case {{solver_abbrev}}_SUCCESS:      continue;
-                case {{solver_abbrev}}_ROOT_RETURN: {
+                case {{abbrev}}_SUCCESS:      continue;
+                case {{abbrev}}_ROOT_RETURN: {
                     set_spiketime(Time::ms(tt));
 	                SpikeEvent se;
 	                // Copy solver state to NEST state
@@ -61,9 +70,9 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
 	                adjust_zero_crossings(B_.y, {{abs_tolerance}});
                     continue;
                 }
-                case {{solver_abbrev}}_TSTOP_RETURN: break;
+                case {{abbrev}}_TSTOP_RETURN: break;
                 default:
-                    throw {{solver_prefix}}SolverFailure (get_name(), 0);
+                    throw {{prefix}}SolverFailure (get_name(), 0);
             }
 	   	}
 	
@@ -71,7 +80,7 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
 	    for (int i = 0; i < N; i++)
 	       S_.y_[i] = ITEM(B_.y, i);
 {% elif ode_solver == "gsl" %}
-	    V_.U_old_ = S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX];
+	    V_.U_old_ = S_.y_[{{component.name}}}}::State_::{{membrane_voltage}}_INDEX];
 	
 	    while (tt < dt) {
 	      const int status =  gsl_odeiv2_evolve_apply(B_.e_, B_.c_, B_.s_, 
@@ -87,8 +96,8 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
 		// Check threshold if not refractory and emit spike if crossed
 	    if ( S_.r_ > 0 )
 	       S_.r_--;
-	    else if (S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX] >= P_.V_t &&
-	             V_.U_old_ > S_.y_[{{ModelName}}::State_::{{membrane_voltage}}_INDEX]) {
+	    else if (S_.y_[{{component.name}}}}::State_::{{membrane_voltage}}_INDEX] >= P_.V_t &&
+	             V_.U_old_ > S_.y_[{{component.name}}}}::State_::{{membrane_voltage}}_INDEX]) {
 	        S_.r_ = V_.RefractoryCounts_;
 	        set_spiketime(Time::step(origin.get_steps()+lag+1));
 	        SpikeEvent se;
@@ -100,19 +109,19 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
 	    // Event handling (still needs to handle events that arrive in the same
 	    // timestep.
 	    int num_events = 0;
-{% if len(regimes) > 1 %}
+{% if len(componentclass.regimes) > 1 %}
     int transition = 0;
 {% endif %}
-{% for regime in regimes %}
+{% for regime in componentclass.regimes %}
         {%+ if not loop.first %}} else {% endif %}if (B_.current_regime == {{regime.name}}_REGIME) {
-    {% for on_event in regime.on_events %}
-            {%+ if not loop.first %}} else {% endif %}if (B_.{{on_event.src_port_name}}_event_port.get_value(lag)) {
-        {% if on_event.target_regime != regime %}
+    {% for oe in regime.on_events %}
+            {%+ if not loop.first %}} else {% endif %}if (B_.{{oe.src_port_name}}_event_port.get_value(lag)) {
+        {% if oe.target_regime != regime %}
 	            if (transition)
-	                std::cout << "Warning!: multiple transitions in the same time step. Transition " << transition << " was ignored in favour of transition " << {{on_event.target_regime.name}}_REGIME << "." << std::endl;  
-	            transition = {{on_event.target_regime.name}}_REGIME;
+	                std::cout << "Warning!: multiple transitions in the same time step. Transition " << transition << " was ignored in favour of transition " << {{oe.target_regime.name}}_REGIME << "." << std::endl;  
+	            transition = {{oe.target_regime.name}}_REGIME;
         {% endif %}
-	            {{on_event.src_port_name}}_transient_in_{{regime.name or 'default'}}(lag);
+	            {{oe.src_port_name}}_event_in_{{regime.name}}(lag);
 	            ++num_events;
         {% if loop.last %}
             }
@@ -144,8 +153,8 @@ void {{ModelName}}::update(Time const & origin, const long_t from, const long_t 
 {% endif %}
         }
 
-{% for name in analog_port_names %}
-        B_.{{name}}_value = B_.{{name}}_analog_port.get_value(lag);
+{% for port in componentclass.analog_receive_ports %}
+        B_.{{port.name}}_value = B_.{{port.name}}_analog_port.get_value(lag);
 {% endfor %}    
         B_.logger_.record_data(current_steps + lag);
     }

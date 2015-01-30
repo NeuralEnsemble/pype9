@@ -26,47 +26,55 @@
                    external, assignment, reaction, pool equations in C++ syntax
    - rateOrderDefs - list of strings with the rate equatins in C++ syntaxa
    
-   Authors: Ivan Raikov and Thomas G. Close
+   Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014   
 #}
 
 //-----------------------------------------------//
 // This section was generated from dynamics.tmpl //
 //-----------------------------------------------//
-{% for func_name, time_derivatives, req_defs in dynamics %} 
+{% for regime in componentclass.dynamics.regimes %}
     {%- if ode_solver in ('cvode', 'ida') -%}
-extern "C" int {{func_name}}_dynamics(double t_, N_Vector y_, N_Vector f_, void* pnode_) {
+extern "C" int {{component.name}}_{{regime.name}}_dynamics(double t_, N_Vector y_, N_Vector f_, void* pnode_) {
     {% else %}
-extern "C" int {{func_name}}_dynamics(double t_, const double y_[], double f_[], void* pnode_) {
+extern "C" int {{component.name}}_{{regime.name}}_dynamics(double t_, const double y_[], double f_[], void* pnode_) {
     {% endif %}
 
     // Get a reference to the model
     assert(pnode_);
-    const {{ModelName}}& node_ = *(reinterpret_cast<{{ModelName}}*>(pnode_));
+    const {{component.name}}}}& node_ = *(reinterpret_cast<{{component.name}}}}*>(pnode_));
    
     // Map parameters used in dynamics to current namespace
-    {% for param in req_defs.parameters %}
+    {% for param in componentclass.parameters %}
     const double_t {{param.name}} = node_.P_.{{param.name}};
     {% endfor %}
 
     // Map port buffers to current namespace
-    {% for port in req_defs.ports %}
+    {% for port in componentclass.analog_receive_ports %}
     const double_t {{port.name}} = node_.B_.{{port.name}}_value;
     {% endfor %}
     
     // Map states used in dynamics to current namespace
-    {% for state in req_defs.states %}
-    const double_t {{state.name}} = ITEM(y_, {{ModelName}}::State_::{{state.name}}_INDEX);
+    {% for state in componentclass.state_variabless %}
+    const double_t {{state.name}} = ITEM(y_, {{component.name}}}}::State_::{{state.name}}_INDEX);
     {% endfor %}
    
-    // Evaluate aliases used in differential equations
-    {% for alias in req_defs.aliases %}
+    // Add constants
+    {% for const in componentclass.constants %}
+        {% set scaled_value = unit_conversion(const.value, const.units) %}
+    const static double_t {{const.name}} = {{scaled_value}}; // {{const.value}} ({{const.units.name}})
+    {% endfor %}
+   
+    // Evaluate aliases used in differential equations 
+    // (currently we print out all of them but they should be optimised out 
+    // anyway I think FIXME: Need to be printed in order)
+    {% for alias in componentclass.aliases %}
     const double_t {{alias.lhs}} = {{alias.rhs}};
     {% endfor %}
 
     // Evaluate differential equations
-    {% for td in time_derivatives %}
-    ITEM(f_, {{ModelName}}::State_::{{td.dependent_variable}}_INDEX) = {{td.rhs}};
+    {% for td in regime.time_derivatives %}
+    ITEM(f_, {{component.name}}}}::State_::{{td.dependent_variable}}_INDEX) = {{td.rhs}};
     {% endfor %}
 
     {% if ode_solver in ('cvode', 'ida') %}

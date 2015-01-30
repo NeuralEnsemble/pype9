@@ -1,13 +1,13 @@
 {# This template provides the code to generate and access nodes
 
-   Authors: Ivan Raikov and Thomas G. Close
+   Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
 //---------------------------------------------------//
 // This section was generated from constructors.tmpl //
 //---------------------------------------------------//
-{{ModelName}}::{{ModelName}}()
+{{component.name}}}}::{{component.name}}}}()
     : Archiving_Node(), 
       P_(), 
       S_(P_),
@@ -15,20 +15,20 @@
     recordablesMap_.create();
 }
 
-{{ModelName}}::{{ModelName}}(const {{ModelName}}& n)
+{{component.name}}}}::{{component.name}}}}(const {{component.name}}}}& n)
     : Archiving_Node(n), 
       P_(n.P_), 
       S_(n.S_),
       B_(n.B_, *this) {}
 
-void {{ModelName}}::init_node_(const Node& proto) {
-    const {{ModelName}}& pr = downcast<{{ModelName}}>(proto);
+void {{component.name}}}}::init_node_(const Node& proto) {
+    const {{component.name}}}}& pr = downcast<{{component.name}}}}>(proto);
     P_ = pr.P_;
     S_ = State_(P_);
 }
 
-void {{ModelName}}::init_state_(const Node& proto) {
-    const {{ModelName}}& pr = downcast<{{ModelName}}>(proto);
+void {{component.name}}}}::init_state_(const Node& proto) {
+    const {{component.name}}}}& pr = downcast<{{component.name}}}}>(proto);
     S_ = State_(pr.P_);
 }
 

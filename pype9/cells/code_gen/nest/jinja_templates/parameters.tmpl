@@ -1,20 +1,22 @@
 {# This template adds a constructor for the parameters class.
 
-   Authors: Ivan Raikov and Thomas G. Close
+   Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
 //-------------------------------------------------//
 // This section was generated from parameters.tmpl //
 //-------------------------------------------------//
-{{ModelName}}::Parameters_::Parameters_():
-{% for i, (name, default) in enumerate(izip(parameter_names, parameter_default)) %}
-    {{name}} ({{default}}){% if not loop.last %},
+{{component.name}}}}::Parameters_::Parameters_():
+{% for i, param in enumerate(componentclass.parameters) %}
+    {{param.name}} (0.0){% if not loop.last %},
 {% endif %}
 {% endfor %} {
 {# Check constraints on parameters #}
-{% for constraint in parameter_constraints %}
+{% for param in componentclass.parameters %}
+    {% for constraint in param.constraints %}
     {{constraint}}
+    {% endif %}
 {% endfor %}
 }
 // ------------------- parameters.tmpl ------------------------//
