@@ -1,22 +1,7 @@
 if __name__ == '__main__':
-
-    class unittest(object):
-
-        class TestCase(object):
-
-            def __init__(self):
-                try:
-                    self.setUp()
-                except AttributeError:
-                    pass
-
-            def assertEqual(self, first, second):
-                print 'are{} equal'.format(' not' if first != second else '')
+    from . import DummyTestCase as TestCase  # @UnusedImport
 else:
-    try:
-        import unittest2 as unittest
-    except ImportError:
-        import unittest
+    from unittest import TestCase  # @Reimport
 import os.path
 from copy import deepcopy
 import nineml.extensions.biophysical_cells
@@ -26,7 +11,7 @@ nineml_file = os.path.join(os.path.dirname(__file__), '..', 'data', '9ml',
                            'Golgi_Solinas08.9ml')
 
 
-class Test9mlConversion(unittest.TestCase):
+class Test9mlConversion(TestCase):
 
     def test_9ml_conversion(self):
         models = nineml.extensions.biophysical_cells.parse(nineml_file)
