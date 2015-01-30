@@ -21,6 +21,7 @@ from pype9.exceptions import Pype9BuildError
 import pype9
 import warnings
 import shutil
+from datetime import datetime
 
 # Add Nest installation directory to the system path
 if 'NEST_INSTALL_DIR' in os.environ:
@@ -41,7 +42,12 @@ volt_dimension = Dimension(name='voltage', i=-1, m=1, t=-3, l=2)
 class CodeGenerator(BaseCodeGenerator):
 
     SIMULATOR_NAME = 'nest'
-    _DEFAULT_SOLVER = 'gsl'
+    ODE_SOLVER_DEFAULT = 'gsl'
+    SS_SOLVER_DEFAULT = 'gsl'
+    MAX_STEP_SIZE_DEFAULT = 0.01  # FIXME:!!!
+    ABS_TOLERANCE_DEFAULT = 0.01
+    REL_TOLERANCE_DEFAULT = 0.01
+    V_THRESHOLD_DEFAULT = 0.0
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
     def __init__(self, build_cores=1):
@@ -166,36 +172,48 @@ class CodeGenerator(BaseCodeGenerator):
         args['refractory_period'] = None
         return args
 
-    def _render_source_files(self, template_args, src_dir, verbose):  # @UnusedVariable @IgnorePep8
-        # src_dir, ode_solver, ss_solver, component, componentclass, parameter_scales, version, timestamp, unit_conversion, max_step_size, abs_tolerance, rel_tolerance, defaultDefs??, membrane_voltage??
-        model_name = template_args['ModelName']
+    def generate_source_files(self, component, initial_state, src_dir,
+                              **kwargs):
+        tmpl_args = {
+            'component': component,
+            'componentclass': component.component_class,
+            'version': pype9.version, 'src_dir': src_dir,
+            'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
+            'ode_solver': kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT),
+            'ss_solver': kwargs.get('ss_solver', self.SS_SOLVER_DEFAULT),
+            'unit_scalar': self.unit_scalar,
+            'max_step_size': kwargs.get('max_step_size',
+                                        self.MAX_STEP_SIZE_DEFAULT),
+            'abs_tolerance': kwargs.get('max_step_size',
+                                        self.ABS_TOLERANCE_DEFAULT),
+            'rel_tolerance': kwargs.get('max_step_size',
+                                        self.REL_TOLERANCE_DEFAULT),
+            'parameter_scales': [], 'membrane_voltage': 'V_t',
+            'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT)}
         # Render C++ header file
-        self._render_to_file('header.tmpl', template_args,
-                             model_name + '.h', src_dir)
+        self._render_to_file('header.tmpl', tmpl_args,
+                             component.name + '.h', src_dir)
         # Render C++ class file
-        self._render_to_file('main.tmpl', template_args, model_name + '.cpp',
+        self._render_to_file('main.tmpl', tmpl_args, component.name + '.cpp',
                              src_dir)
-        build_args = {'celltype_name': model_name, 'src_dir': src_dir,
-                      'version': pype9.version,
-                      'timestamp': template_args['timestamp']}
         # Render Loader header file
-        self._render_to_file('loader-header.tmpl', build_args,
-                             model_name + 'Loader.h', src_dir)
+        self._render_to_file('loader-header.tmpl', tmpl_args,
+                             component.name + 'Loader.h', src_dir)
         # Render Loader C++ class
-        self._render_to_file('loader-cpp.tmpl', build_args,
-                             model_name + 'Loader.cpp', src_dir)
+        self._render_to_file('loader-cpp.tmpl', tmpl_args,
+                             component.name + 'Loader.cpp', src_dir)
         # Render SLI initialiser
-        self._render_to_file('sli_initialiser.tmpl', build_args,
-                             model_name + 'Loader.sli', src_dir)
+        self._render_to_file('sli_initialiser.tmpl', tmpl_args,
+                             component.name + 'Loader.sli', src_dir)
 
-    def _configure_build_files(self, model_name, src_dir, compile_dir,
+    def _configure_build_files(self, component, src_dir, compile_dir,
                                install_dir):
         # Generate Makefile if it is not present
         if not os.path.exists(os.path.join(compile_dir, 'Makefile')):
             if not os.path.exists(compile_dir):
                 os.mkdir(compile_dir)
             orig_dir = os.getcwd()
-            config_args = {'celltype_name': model_name, 'src_dir': src_dir,
+            config_args = {'component': component, 'src_dir': src_dir,
                            'version': pype9.version}
             self._render_to_file('configure-ac.tmpl', config_args,
                                  'configure.ac', src_dir)
@@ -209,7 +227,7 @@ class CodeGenerator(BaseCodeGenerator):
             except sp.CalledProcessError:
                 raise Pype9BuildError(
                     "Bootstrapping of '{}' NEST module failed."
-                    .format(model_name or src_dir))
+                    .format(component.name or src_dir))
             os.chdir(compile_dir)
             env = os.environ.copy()
             env['CXX'] = self._compiler
@@ -221,8 +239,11 @@ class CodeGenerator(BaseCodeGenerator):
             except sp.CalledProcessError:
                 raise Pype9BuildError(
                     "Configuration of '{}' NEST module failed. See src "
-                    "directory '{}':\n ".format(model_name, src_dir))
+                    "directory '{}':\n ".format(component.name, src_dir))
             os.chdir(orig_dir)
+
+    def unit_scalar(self, units):
+        return 1.0  # FIXME: Need to implement this.
 
     def compile_source_files(self, compile_dir, component_name, verbose):
         # Run configure script, make and make install

@@ -28,7 +28,7 @@
 //---------------------------------------------------//
 // This section was generated from event-handle.tmpl //
 //---------------------------------------------------//
-void {{component.name}}}}::handle(SpikeEvent & e) {
+void {{component.name}}::handle(SpikeEvent & e) {
     assert(e.get_delay() > 0);
 {% for port in componentclass.event_receive_ports %}
     {%+ if not loop.first %} else {% endif %}if (e.get_rport() == {{port.name}}_EVENT_PORT)
@@ -38,7 +38,7 @@ void {{component.name}}}}::handle(SpikeEvent & e) {
 {% endfor %}
 }
 
-void {{component.name}}}}::handle(CurrentEvent& e) {
+void {{component.name}}::handle(CurrentEvent& e) {
     assert(e.get_delay() > 0);
 
     const double_t c = e.get_current();
@@ -51,7 +51,7 @@ void {{component.name}}}}::handle(CurrentEvent& e) {
 {% endfor %}
 }
 
-void {{component.name}}}}::handle(DataLoggingRequest& e) {
+void {{component.name}}::handle(DataLoggingRequest& e) {
     B_.logger_.handle(e);
 }
 // ------------------- event-handle.tmpl ------------------------//

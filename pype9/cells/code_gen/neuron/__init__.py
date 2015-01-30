@@ -39,7 +39,7 @@ else:
 class CodeGenerator(BaseCodeGenerator):
 
     SIMULATOR_NAME = 'neuron'
-    _DEFAULT_SOLVER = 'derivimplicit'
+    ODE_SOLVER_DEFAULT = 'derivimplicit'
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
     _neuron_units = {un.mV: 'millivolt',

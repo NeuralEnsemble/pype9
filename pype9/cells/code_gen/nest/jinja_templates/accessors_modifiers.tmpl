@@ -29,10 +29,11 @@ void {{component.name}}::Parameters_::set (const DictionaryDatum &d) {
 {% endfor %}
 
     // Scale parameters as required
-{% for name, scale in parameter_scales.iteritems() %}
-    {{name}} *= {{scale}};  {# Not sure if this is necessary #}
+{# Not sure if this is necessary     
+{% for name, scale in parameter_scales) %}
+    {{name}} *= {{scale}};  
 {% endfor %}
-
+#}
 }
 
 

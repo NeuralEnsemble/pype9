@@ -31,33 +31,35 @@
 // This section was generated from synaptic-transients.tmpl //
 //----------------------------------------------------------//
 
-{% for func_name, state_assignments, req_defs in transients %}
-inline void {{component.name}}}}::{{func_name}}(long_t lag) {
+{% for regime in componentclass.regimes %}
+    {% for oe in regime.on_events %}
+inline void {{component.name}}::{{oe.src_port_name}}_event_in_{{regime.name}}(long_t lag) {
     
     // Map parameters used in dynamics to current namespace
-    {% for param in req_defs.parameters %}
+        {% for param in componentclass.parameters %}
     const double_t {{param.name}} = P_.{{param.name}};
-    {% endfor %}
+        {% endfor %}
 
     // Map port buffers to current namespace
-    {% for port in req_defs.ports %}
+        {% for port in componentclass.analog_receive_ports %}
     const double_t {{port.name}} = B_.{{port.name}}_value;
-    {% endfor %}
+        {% endfor %}
     
     // Map states used in dynamics to current namespace
-    {% for state in req_defs.states %}
-    const double_t {{state.name}} = S_.y_[{{component.name}}}}::State_::{{state.name}}_INDEX];
-    {% endfor %}
+        {% for sv in componentclass.state_variables %}
+    const double_t {{sv.name}} = S_.y_[{{component.name}}::State_::{{sv.name}}_INDEX];
+        {% endfor %}
    
     // Evaluate aliases used in differential equations
-    {% for alias in req_defs.aliases %}
+        {% for alias in componentclass.aliases %}
     const double_t {{alias.lhs}} = {{alias.rhs}};
-    {% endfor %}
+        {% endfor %}
 
     // Evaluate differential equations
-    {% for assign in state_assignments %}
-    S_.y_[{{component.name}}}}::State_::{{assign.lhs}}_INDEX] = {{assign.rhs}};
-    {% endfor %}
+        {% for assign in oe.state_assignments %}
+    S_.y_[{{component.name}}::State_::{{assign.lhs}}_INDEX] = {{assign.rhs}};
+        {% endfor %}
 }
+    {% endfor %}
 {% endfor %}
 //-------------- synaptic-transients.tmpl --------------//

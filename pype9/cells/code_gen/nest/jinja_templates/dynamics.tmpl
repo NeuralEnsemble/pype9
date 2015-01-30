@@ -42,7 +42,7 @@ extern "C" int {{component.name}}_{{regime.name}}_dynamics(double t_, const doub
 
     // Get a reference to the model
     assert(pnode_);
-    const {{component.name}}}}& node_ = *(reinterpret_cast<{{component.name}}}}*>(pnode_));
+    const {{component.name}}& node_ = *(reinterpret_cast<{{component.name}}*>(pnode_));
    
     // Map parameters used in dynamics to current namespace
     {% for param in componentclass.parameters %}
@@ -55,8 +55,8 @@ extern "C" int {{component.name}}_{{regime.name}}_dynamics(double t_, const doub
     {% endfor %}
     
     // Map states used in dynamics to current namespace
-    {% for state in componentclass.state_variabless %}
-    const double_t {{state.name}} = ITEM(y_, {{component.name}}}}::State_::{{state.name}}_INDEX);
+    {% for state in componentclass.state_variables %}
+    const double_t {{state.name}} = ITEM(y_, {{component.name}}::State_::{{state.name}}_INDEX);
     {% endfor %}
    
     // Add constants
@@ -74,7 +74,7 @@ extern "C" int {{component.name}}_{{regime.name}}_dynamics(double t_, const doub
 
     // Evaluate differential equations
     {% for td in regime.time_derivatives %}
-    ITEM(f_, {{component.name}}}}::State_::{{td.dependent_variable}}_INDEX) = {{td.rhs}};
+    ITEM(f_, {{component.name}}::State_::{{td.dependent_variable}}_INDEX) = {{td.rhs}};
     {% endfor %}
 
     {% if ode_solver in ('cvode', 'ida') %}

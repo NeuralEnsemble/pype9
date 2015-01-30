@@ -55,7 +55,7 @@ class BaseCodeGenerator(object):
                                      undefined=StrictUndefined)
         # Add some globals used by the template code
         self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
-                                      xrange=xrange)
+                                      xrange=xrange, next=next)
 
     def _extract_template_args(self, component, **template_args):
         """
@@ -73,8 +73,18 @@ class BaseCodeGenerator(object):
         return args
 
     @abstractmethod
-    def _render_source_files(self, template_args, src_dir, verbose):
+    def generate_source_files(self, component, initial_state, src_dir,
+                              **kwargs):
+        """
+        Generates the source files for the relevant simulator
+        """
         pass
+#         # Extract relevant information from 9ml
+#         # component/class/initial_state
+#         template_args = self._extract_template_args(component, initial_state,
+#                                                     **optional_template_args)
+#         # Render source files
+#         self._render_source_files(template_args, src_dir, verbose=verbose)
 
     def _configure_build_files(self, model_name, src_dir, compile_dir,
                                install_dir):
@@ -82,6 +92,14 @@ class BaseCodeGenerator(object):
 
     @abstractmethod
     def compile_source_files(self, compile_dir, component_name, verbose):
+        pass
+
+    @abstractmethod
+    def unit_scalar(self, units):
+        """
+        Returns the scalar value required to convert the given units into
+        the native units used by the interpreter.
+        """
         pass
 
     def generate(self, component, initial_state=None, install_dir=None,
@@ -229,7 +247,7 @@ class BaseCodeGenerator(object):
         if compile_source:
             # Clean existing compile & install directories from previous builds
             self._clean_compile_dir(compile_dir)
-            self._configure_build_files(model_name=component.name,
+            self._configure_build_files(component=component.name,
                                         src_dir=src_dir,
                                         compile_dir=compile_dir,
                                         install_dir=install_dir)
@@ -240,18 +258,6 @@ class BaseCodeGenerator(object):
         # Switch back to original dir
         os.chdir(orig_dir)
         return install_dir
-
-    def generate_source_files(self, component, initial_state, src_dir,
-                              verbose=False, **optional_template_args):
-        """
-        Generates the source files for the relevant simulator
-        """
-        # Extract relevant information from 9ml
-        # component/class/initial_state
-        template_args = self._extract_template_args(component, initial_state,
-                                                    **optional_template_args)
-        # Render source files
-        self._render_source_files(template_args, src_dir, verbose=verbose)
 
     def _get_install_dir(self, build_dir, install_dir):
         """

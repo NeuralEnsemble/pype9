@@ -13,7 +13,7 @@
     int status;
 
     // Vector length (number of states)
-    int N = {{len(componentclass.state_variables)}};
+    int N = {{componentclass.num_states}};
     // only positive direction (rising edge) of spike events will be detected
     int rootdir = 1;
 
@@ -33,7 +33,7 @@
     {% if ode_solver == 'ida' %}
     // Run the dynamics function to initialise B._yp
         {# Get the func_name from the default regime (the first in the list #}
-    {{componentclass.regimes[0]}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
+    {{next(componentclass.regimes)}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
 
     {% endif %}
     // Calls {{prefix}}Create to create the solver memory
@@ -51,17 +51,17 @@
     {% if ode_solver == 'cvode' %}
     // right hand side function in y''=f(t,y), the initial time, and
     // the initial values.
-    status = {{prefix}}Init (B_.sys_, {{component.name}}}}_dynamics, 0.0, B_.y);
+    status = {{prefix}}Init (B_.sys_, {{component.name}}_dynamics, 0.0, B_.y);
     {% elif ode_solver == 'ida' %}
     // resdual function, the initial time, and the initial values. 
-    status = {{prefix}}Init (B_.sys_, {{component.name}}}}_residual, 0.0, B_.y, B_.yp);
+    status = {{prefix}}Init (B_.sys_, {{component.name}}_residual, 0.0, B_.y, B_.yp);
     {% endif %}
     if (check_flag(&status, "{{prefix}}Init", 1))
         throw {{prefix}}SolverFailure (get_name(), status);
 
     {% if v_threshold %}
     /* Event trigger handler (detects event triggers) */
-    status = {{prefix}}RootInit(B_.sys_, 1, ({{abbrev}}RootFn){{component.name}}}}_trigger);
+    status = {{prefix}}RootInit(B_.sys_, 1, ({{abbrev}}RootFn){{component.name}}_trigger);
     if (check_flag(&status, "{{prefix}}RootInit", 1))
         throw {{prefix}}SolverFailure (get_name(), status);
 
@@ -116,7 +116,7 @@
     {% endif %}
 {% elif ode_solver == "gsl" %}
     static const gsl_odeiv2_step_type* T1 = gsl_odeiv2_step_rk2;
-    B_.N = {{len(componentclass.state_variables)}};
+    B_.N = {{componentclass.num_states}};
 
     if ( B_.s_ == 0 )
         B_.s_ = gsl_odeiv2_step_alloc (T1, B_.N);
@@ -133,8 +133,8 @@
     else 
         gsl_odeiv2_evolve_reset(B_.e_);
    
-    B_.sys_.function  = {{component.name}}}}_dynamics; 
-    B_.sys_.jacobian  = {{component.name}}}}_jacobian;
+    B_.sys_.function  = {{component.name}}_dynamics; 
+    B_.sys_.jacobian  = {{component.name}}_jacobian;
     B_.sys_.dimension = B_.N;
     B_.sys_.params    = reinterpret_cast<void*>(this);
 
@@ -149,7 +149,7 @@
   {% if ode_solver == "cvode" %}
     int status, N, rootdir;
     
-    N = {{len(componentclass.state_variables)}};
+    N = {{componentclass.num_states}};
     // only positive direction (rising edge) of spike events will be detected
     rootdir = 1;
     
@@ -170,13 +170,13 @@
     /* Calls CVodeInit to initialize the integrator memory and specifies the
      * right hand side function in y''=f(t,y), the initial time, and
      * the initial values. */
-    status = CVodeInit (B_.sys_, {{component.name}}}}_dynamics, 0.0, B_.y);
+    status = CVodeInit (B_.sys_, {{component.name}}_dynamics, 0.0, B_.y);
     if (check_flag(&status, "CVodeInit", 1))
         throw CVodeSolverFailure (get_name(), status);
     {% if ("V_t" in defaultDefs) %}
     
     /* Spike event handler (detects zero-crossing of V-V_t) */
-    status = CVodeRootInit(B_.sys_, 1, (CVRootFn){{component.name}}}}_event);
+    status = CVodeRootInit(B_.sys_, 1, (CVRootFn){{component.name}}_event);
     if (check_flag(&status, "CVodeRootInit", 1))
         throw CVodeSolverFailure (get_name(), status);
     
@@ -217,7 +217,7 @@
         throw CVodeSolverFailure (get_name(), status);
 {% elif ode_solver == "ida" %}
     int status, N, rootdir;
-    N = {{len(componentclass.state_variables)}};
+    N = {{componentclass.num_states}};
     
     // only positive direction (rising edge) of spike events will be detected
     rootdir = 1;
@@ -232,7 +232,7 @@
     for (int i = 0; i < N; i++)
        ITEM(B_.y,i) = S_.y_[i];
     
-    {{component.name}}}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
+    {{component.name}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
     
     /* Calls IDACreate to create the solver memory */ 
     B_.sys_ = IDACreate();
@@ -241,14 +241,14 @@
     
     /* Calls IDAInit to initialize the integrator memory and specify the
     * resdual function, the initial time, and the initial values. */
-    status = IDAInit (B_.sys_, {{component.name}}}}_residual, 0.0, B_.y, B_.yp);
+    status = IDAInit (B_.sys_, {{component.name}}_residual, 0.0, B_.y, B_.yp);
     
     if (check_flag(&status, "IDAInit", 1))
         throw IDASolverFailure (get_name(), status);
     {% if ("V_t" in defaultDefs) %}
     
     /* Spike event handler (detects zero-crossing of V-V_t) */
-    status = IDARootInit(B_.sys_, 1, (IDARootFn){{component.name}}}}_event);
+    status = IDARootInit(B_.sys_, 1, (IDARootFn){{component.name}}_event);
     if (check_flag(&status, "IDARootInit", 1))
         throw IDASolverFailure (get_name(), status);
     
