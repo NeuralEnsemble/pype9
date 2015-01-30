@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
+  <nineml:Dimension i="1" name="currentDensity" l="-2"/>
+  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <nineml:ComponentClass name="GRC_LKG1Class">
+    <nineml:AnalogSendPort dimension="currentDensity" name="il"/>
+    <nineml:AnalogReceivePort dimension="voltage" name="v"/>
+    <nineml:Parameter dimension="voltage" name="el"/>
+    <nineml:Parameter dimension="conductanceDensity" name="gl"/>
+    <nineml:Dynamics>
+      <nineml:Alias name="i">
+        <nineml:MathInline>il</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="il">
+        <nineml:MathInline>gl*(v - el)</nineml:MathInline>
+      </nineml:Alias>
+    </nineml:Dynamics>
+  </nineml:ComponentClass>
+</nineml:NineML>

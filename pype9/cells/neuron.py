@@ -26,7 +26,8 @@ from nineline.cells.build.neuron import build_celltype_files
 import pype9.cells
 from nineline.cells import (in_units, AxialResistanceModel,
                             MembraneCapacitanceModel, DummyNinemlModel,
-                            IonConcentrationModelpype9from .. import create_unit_conversions, convert_units
+                            IonConcentrationModel)
+from .. import create_unit_conversions, convert_units
 from pyNN.neuron.cells import VectorSpikeSource
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}

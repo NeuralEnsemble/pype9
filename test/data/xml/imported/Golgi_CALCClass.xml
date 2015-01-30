@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
+  <nineml:ComponentClass name="Golgi_CALCClass">
+    <nineml:AnalogSendPort dimension="concentration" name="cai"/>
+    <nineml:AnalogReceivePort dimension="currentDensity" name="ica"/>
+    <nineml:AnalogReceivePort dimension="concentration" name="cao"/>
+    <nineml:Parameter dimension="per_time" name="beta"/>
+    <nineml:Parameter dimension="length" name="d"/>
+    <nineml:Parameter dimension="concentration" name="cai0"/>
+    <nineml:Dynamics>
+      <nineml:Regime name="conc">
+        <nineml:TimeDerivative variable="cai">
+          <nineml:MathInline>-ica/(2*F*d)*(1e4) - beta*(cai-cai0)</nineml:MathInline>
+        </nineml:TimeDerivative>
+      </nineml:Regime>
+      <nineml:Alias name="ca_pump_i">
+        <nineml:MathInline>2*beta*(cai-cai0)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Constant units="C" name="F">96485.3365</nineml:Constant>
+      <nineml:StateVariable dimension="dimensionless" name="cai"/>
+    </nineml:Dynamics>
+  </nineml:ComponentClass>
+  <nineml:Unit symbol="C" dimension="charge" power="0"/>
+  <nineml:Dimension name="per_time" t="-1"/>
+  <nineml:Dimension i="1" name="charge" t="1"/>
+  <nineml:Dimension name="length" l="1"/>
+  <nineml:Dimension i="1" name="currentDensity" l="-2"/>
+  <nineml:Dimension name="dimensionless"/>
+  <nineml:Dimension l="-3" name="concentration" n="1"/>
+</nineml:NineML>

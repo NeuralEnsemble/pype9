@@ -1,23 +1,24 @@
 """
     A module contain unit tests for the nine cells package
 """
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
-
-import os
-from mock import Mock
-from numpy.testing import assert_array_equal, assert_array_almost_equal
+if __name__ == '__main__':
+    from . import DummyTestCase as TestCase  # @UnusedImport
+else:
+    from unittest import TestCase  # @Reimport
+import os.path
+from . import test_data_dir
+# import os
+# from mock import Mock
+# from numpy.testing import assert_array_equal, assert_array_almost_equal
 import pype9.cells.nest
 import pype9.cells.neuron
 
 
-class TestCell(unittest.TestCase):
+class TestCell(TestCase):
 
     def _test_load_describe(self, loader):
-        CellType = loader('Granule_DeSouza10',
-                          '/home/tclose/git/kbrain/xml/cerebellum/ncml/Granule_DeSouza10.xml')
+        CellType = loader(os.path.join(test_data_dir, 'xml',
+                                       'HodgkinHuxley.xml'))
         cell = CellType()
         cell.describe()
 

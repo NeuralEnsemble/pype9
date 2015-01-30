@@ -149,10 +149,7 @@ class CodeGenerator(BaseCodeGenerator):
                                              if p.name not in ('celsius', 'v'))
         return args
 
-
-
-    def _render_source_files(self, template_args, src_dir, _, install_dir,  # @UnusedVariable @IgnorePep8
-                             verbose):
+    def _render_source_files(self, template_args, src_dir, _, _, verbose):  # @UnusedVariable @IgnorePep8
         model_name = template_args['ModelName']
         # Render mod file
         self._render_to_file('main.tmpl', template_args, model_name + '.mod',
@@ -241,7 +238,7 @@ class CodeGenerator(BaseCodeGenerator):
             path.append(os.path.join(os.environ['NRNHOME'], self.specials_dir,
                                      'bin'))
         return path
-    
+
 # output_Na = template.render (functionDefs = [{'indent' : 2, 'name' : '''Na_bmf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_bmf  =  Na_A_beta_m * exp(-(v + -(Na_B_beta_m)) / Na_C_beta_m)'''}, 
 #                                              {'indent' : 2, 'name' : '''Na_amf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_amf  =  Na_A_alpha_m *  (v + -(Na_B_alpha_m)) / (1.0 + -(exp(-(v + -(Na_B_alpha_m)) / Na_C_alpha_m)))'''}, 
 #                                              {'indent' : 2, 'name' : '''Na_bhf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_bhf  =    Na_A_beta_h / (1.0 + exp(-(v + -(Na_B_beta_h)) / Na_C_beta_h))'''}, 

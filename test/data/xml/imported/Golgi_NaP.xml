@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
+  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <nineml:Component name="Golgi_NaP">
+    <nineml:Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_NaPClass.xml">Golgi_NaPClass</nineml:Definition>
+    <nineml:Property units="unitless" name="Aalpha_m">
+      <nineml:SingleValue>-0.91</nineml:SingleValue>
+    </nineml:Property>
+    <nineml:Property units="unitless" name="Abeta_m">
+      <nineml:SingleValue>0.62</nineml:SingleValue>
+    </nineml:Property>
+    <nineml:Property units="mV" name="B_minf">
+      <nineml:SingleValue>5.0</nineml:SingleValue>
+    </nineml:Property>
+    <nineml:Property units="mV" name="Kalpha_m">
+      <nineml:SingleValue>-5.0</nineml:SingleValue>
+    </nineml:Property>
+    <nineml:Property units="mV" name="Kbeta_m">
+      <nineml:SingleValue>5.0</nineml:SingleValue>
+    </nineml:Property>
+    <nineml:Property units="unitless" name="Q10">
+      <nineml:SingleValue>3.0</nineml:SingleValue>
+    </nineml:Property>
+    <nineml:Property units="mV" name="V0_minf">
+      <nineml:SingleValue>-43.0</nineml:SingleValue>
+    </nineml:Property>
+    <nineml:Property units="mV" name="V0alpha_m">
+      <nineml:SingleValue>-40.0</nineml:SingleValue>
+    </nineml:Property>
+    <nineml:Property units="mV" name="V0beta_m">
+      <nineml:SingleValue>-40.0</nineml:SingleValue>
+    </nineml:Property>
+    <nineml:Property units="S_per_cm2" name="gbar">
+      <nineml:SingleValue>0.00019</nineml:SingleValue>
+    </nineml:Property>
+  </nineml:Component>
+  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
+  <nineml:Unit symbol="unitless" dimension="dimensionless" power="0"/>
+  <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
+  <nineml:Dimension name="dimensionless"/>
+  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+</nineml:NineML>

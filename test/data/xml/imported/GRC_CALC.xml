@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
+  <nineml:Unit symbol="mol_per_m3" dimension="concentration" power="0"/>
+  <nineml:Dimension name="per_time" t="-1"/>
+  <nineml:Dimension l="-3" name="concentration" n="1"/>
+  <nineml:Unit symbol="um" dimension="length" power="-6"/>
+  <nineml:Dimension name="length" l="1"/>
+  <nineml:Component name="GRC_CALC">
+    <nineml:Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_CALCClass.xml">GRC_CALCClass</nineml:Definition>
+    <nineml:Property units="per_ms" name="beta">
+      <nineml:SingleValue>1.5</nineml:SingleValue>
+    </nineml:Property>
+    <nineml:Property units="mol_per_m3" name="cai0">
+      <nineml:SingleValue>0.0001</nineml:SingleValue>
+    </nineml:Property>
+    <nineml:Property units="um" name="d">
+      <nineml:SingleValue>0.2</nineml:SingleValue>
+    </nineml:Property>
+  </nineml:Component>
+  <nineml:Unit symbol="per_ms" dimension="per_time" power="3"/>
+</nineml:NineML>

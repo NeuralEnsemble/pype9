@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
+  <nineml:ComponentClass name="GRC_KCAClass">
+    <nineml:AnalogSendPort dimension="currentDensity" name="ik"/>
+    <nineml:AnalogReceivePort dimension="concentration" name="cai"/>
+    <nineml:AnalogReceivePort dimension="voltage" name="v"/>
+    <nineml:Parameter dimension="voltage" name="Kbeta_c"/>
+    <nineml:Parameter dimension="voltage" name="ek"/>
+    <nineml:Parameter dimension="concentration" name="Balpha_c"/>
+    <nineml:Parameter dimension="conductanceDensity" name="gkbar"/>
+    <nineml:Parameter dimension="voltage" name="Kalpha_c"/>
+    <nineml:Parameter dimension="per_time" name="Aalpha_c"/>
+    <nineml:Parameter dimension="per_time" name="Abeta_c"/>
+    <nineml:Parameter dimension="temperature" name="celsius"/>
+    <nineml:Parameter dimension="concentration" name="Bbeta_c"/>
+    <nineml:Dynamics>
+      <nineml:Regime name="states">
+        <nineml:TimeDerivative variable="c">
+          <nineml:MathInline>(c_inf - c)/tau_c</nineml:MathInline>
+        </nineml:TimeDerivative>
+      </nineml:Regime>
+      <nineml:Alias name="alp_c_v">
+        <nineml:MathInline>Q10_v*Aalpha_c/(1+(Balpha_c*exp(v/Kalpha_c)/cai))</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="Q10_v">
+        <nineml:MathInline>3^((celsius-30)/10)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="alpha_c">
+        <nineml:MathInline>alp_c_v</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="g">
+        <nineml:MathInline>gkbar*c</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="b_c">
+        <nineml:MathInline>bet_c_v</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="tau_c">
+        <nineml:MathInline>1/(a_c + b_c)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="c_inf">
+        <nineml:MathInline>a_c/(a_c + b_c)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="beta_c">
+        <nineml:MathInline>bet_c_v</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="a_c">
+        <nineml:MathInline>alp_c_v</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="ik">
+        <nineml:MathInline>g*(v - ek)</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:Alias name="bet_c_v">
+        <nineml:MathInline>Q10_v*Abeta_c/(1+cai/(Bbeta_c*exp(v/Kbeta_c)))</nineml:MathInline>
+      </nineml:Alias>
+      <nineml:StateVariable dimension="dimensionless" name="c"/>
+    </nineml:Dynamics>
+  </nineml:ComponentClass>
+  <nineml:Dimension name="per_time" t="-1"/>
+  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <nineml:Dimension i="1" name="currentDensity" l="-2"/>
+  <nineml:Dimension name="dimensionless"/>
+  <nineml:Dimension l="-3" name="concentration" n="1"/>
+  <nineml:Dimension k="1" name="temperature"/>
+</nineml:NineML>
