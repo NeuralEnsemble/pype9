@@ -11,18 +11,8 @@
   License: This file is part of the "NineLine" package, which is released under
            the MIT Licence, see LICENSE for details.
 """
-from __future__ import absolute_import
-import os.path
-import collections
-import math
-from itertools import groupby, chain, islice, izip_longest
-from operator import itemgetter
-import re
-from copy import copy, deepcopy
-import numpy
-from lxml import etree
-import quantities as pq
-from abc import ABCMeta  # Metaclass for abstract base classes
+from copy import deepcopy
+from .tree import Tree
 
 import inspect
 # DEFAULT_V_INIT = -65
@@ -32,7 +22,7 @@ class NineCell(object):
 
     def __init__(self, model=None):
         """
-        `model` -- A "Model" object derived from the same source as the default
+        `model` -- A "Tree" object derived from the same source as the default
                    model used to create the class. This default model can be
                    accessed via the 'copy_of_default_model' method. Providing
                    the model here is provided here to allow the modification of
@@ -56,7 +46,7 @@ class NineCellMetaClass(type):
 
     def __new__(cls, nineml_model, celltype_name, bases, dct):
         dct['parameter_names'] = [p.name for p in nineml_model.parameters]
-        dct['_default_model'] = Model.from_9ml(nineml_model)
+        dct['_default_model'] = Tree.from_9ml(nineml_model)
         return super(NineCellMetaClass, cls).__new__(cls, celltype_name, bases,
                                                      dct)
 

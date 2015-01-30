@@ -7,7 +7,7 @@ from copy import deepcopy
 import itertools
 from operator import itemgetter
 import numpy
-from ...cells import (Model, SegmentModel, AxialResistanceModel,
+from ...cells import (Tree, SegmentModel, AxialResistanceModel,
                       MembraneCapacitanceModel, IonChannelModel,
                       IonConcentrationModel, CurrentClampModel,
                       SynapseModel)
@@ -120,7 +120,7 @@ class HocImporter(object):
                 self.section_morphs[name] = (length, points)
 
     def _extract_psections(self):
-        self.model = Model('hoc_import',
+        self.model = Tree('hoc_import',
                            source=os.path.join(self.import_dir))
         segments = {}
         in_section = False

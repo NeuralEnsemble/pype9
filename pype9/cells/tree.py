@@ -1,32 +1,30 @@
+from __future__ import absolute_import
+from itertools import groupby, chain, islice, izip_longest
+from operator import itemgetter
+from copy import deepcopy
+from lxml import etree
+from pype9.exceptions import IrreducibleMorphologyException
+import quantities as pq
+from abc import ABCMeta  # Metaclass for abstract base classes
 try:
     from btmorph.btstructs2 import STree2, SNode2, P3D2
 except ImportError:
     pass  # This is to be refactored out
 
 try:
-    from nineml.extensions.morphology import (Morphology as Morphology9ml,
-                                              Segment as Segment9ml,
-                                              ProximalPoint as ProximalPoint9ml,
-                                              DistalPoint as DistalPoint9ml,
-                                              ParentSegment as ParentSegment9ml,
-                                              Classification as Classification9ml,
-                                              SegmentClass as SegmentClass9ml,
-                                              Member as Member9ml)
+    from nineml.extensions.morphology import (
+        Morphology as Morphology9ml, Segment as Segment9ml, ProximalPoint as
+        ProximalPoint9ml, DistalPoint as DistalPoint9ml, ParentSegment as
+        ParentSegment9ml)
 except ImportError:
     pass  # This is dependent on the version of the 9ml library used
-
-try:
-    import nineml.extensions.biophysical_cells
-except ImportError:
-    pass
+import numpy
 
 
-class Model(STree2):
+class Tree(STree2):
 
     @classmethod
     def from_9ml(cls, nineml_model):
-        if isinstance(nineml_model, DummyNinemlModel):
-            return nineml_model.model  # used in DummyNinemlModel
         morph9ml = nineml_model.morphology
         bio9ml = nineml_model.biophysics
         model = cls(morph9ml.name, source=nineml_model)
@@ -63,8 +61,8 @@ class Model(STree2):
                 del seg.get_content()['fraction_along']
         # Add biophysical components
         for name, comp in bio9ml.components.iteritems():
-            model.components[name] = DynamicComponentModel.from_9ml(comp,
-                                                                   bio9ml.name)
+            model.components[name] = DynamicComponentModel.from_9ml(
+                comp, bio9ml.name)
         # TODO: This is a hack until I refactor the xml code
         defaults = model.components.pop('__NO_COMPONENT__')
         cm = MembraneCapacitanceModel('cm_default', defaults.parameters['C_m'])
@@ -112,7 +110,7 @@ class Model(STree2):
         root_point = P3D2(xyz=point, radius=diameter / 2.0, type=1)
         root = SNode2(1)
         root.set_content({'p3d': root_point})
-        super(Model, self).set_root(root)
+        super(Tree, self).set_root(root)
 
     def set_root_segment(self, segment):
         # TODO: This isn't used yet
@@ -149,9 +147,9 @@ class Model(STree2):
         return result
 
     def to_9ml(self):
-#         clsf = Classification9ml('default',
-#                                  [c.to_9ml()
-#                                  for c in self.segment_classes.itervalues()])
+        # clsf = Classification9ml('default',
+        #                          [c.to_9ml()
+        #                          for c in self.segment_classes.itervalues()])
         return Morphology9ml(self.name,
                              dict([(seg.name, seg.to_9ml())
                                    for seg in self.segments]),
@@ -172,10 +170,10 @@ class Model(STree2):
 
     def write_SWC_tree_to_file(self, filename):
         self._normalise_SWC_indices()
-        super(Model, self).write_SWC_tree_to_file(filename)
+        super(Tree, self).write_SWC_tree_to_file(filename)
 
     def partition_soma_and_other_nodes(self):
-        soma, other = super(Model, self).partition_soma_and_other_nodes()
+        soma, other = super(Tree, self).partition_soma_and_other_nodes()
         other.insert(0, soma[2])
         return soma, other
 
@@ -195,7 +193,7 @@ class Model(STree2):
 
         for p in (point1, mid_point, point2):
             p.xyz = p.xyz + avg_offset
-        return super(Model, self)._3point_SWC_soma(point1, mid_point, point2)
+        return super(Tree, self)._3point_SWC_soma(point1, mid_point, point2)
 
     def add_component(self, component):
         self.components[component.name] = component
@@ -325,7 +323,7 @@ class Model(STree2):
             for parent, siblings_iter in families:
                 siblings = list(siblings_iter)
                 new_segments = []
-                unmerged = [zip(*Model.branch_sections_w_comps(b))
+                unmerged = [zip(*Tree.branch_sections_w_comps(b))
                             for b in siblings]
                 while len(unmerged) > 1:
                     # Get the "longest" remaining branch, in terms of how many
@@ -397,19 +395,19 @@ class Model(STree2):
                                                     for sib in sec_siblings])
                         else:
                             # Use the average length of the branches to merge
-                            new_length = (numpy.sum(seg.length
-                                             for seg in chain(*sec_siblings)) /
-                                          len(sec_siblings))
-                        surface_area = numpy.sum(seg.surface_area
-                                               for seg in chain(*sec_siblings))
+                            new_length = (numpy.sum(
+                                seg.length for seg in chain(*sec_siblings)) /
+                                len(sec_siblings))
+                        surface_area = numpy.sum(
+                            seg.surface_area for seg in chain(*sec_siblings))
                         # Calculate the (in-parallel) axial resistance of the
                         # branches to be merged as a starting point for the
                         # subsequent tuning step (see the returned
                         # 'needs_tuning' list)
                         axial_cond = 0.0
                         for branch in siblings:
-                            axial_cond += 1.0 / numpy.array([seg.Ra
-                                                      for seg in branch]).sum()
+                            axial_cond += 1.0 / numpy.array(
+                                [seg.Ra for seg in branch]).sum()
                         axial_resistance = (1.0 / axial_cond)
                         # Get the diameter of the merged segment so as to
                         # conserve total membrane surface area given that the
@@ -444,14 +442,14 @@ class Model(STree2):
                                                          section_parent)
                         section_parent = segment
                         new_segments.append(segment)
-    #                 assert ((numpy.sum(s.surface_area for s in to_remove) -
-    #                          numpy.sum(s.surface_area for s in new_segments))
-    #                         < 1e-10), "mismatch in surface areas"
+#                 assert ((numpy.sum(s.surface_area for s in to_remove) -
+#                          numpy.sum(s.surface_area for s in new_segments))
+#                         < 1e-10), "mismatch in surface areas"
                     # Remove old branches from merged_tree
                     for seg in to_remove:
                         parent.remove_child(seg)
-    #                 for comps, surface_area in merged_tree.category_surface_areas(): @IgnorePep8
-    #                     assert inital_surface_areas[comps] - surface_area < 1e-10 @IgnorePep8
+#                 for comps, surface_area in merged_tree.category_surface_areas(): @IgnorePep8
+#                     assert inital_surface_areas[comps] - surface_area < 1e-10 @IgnorePep8
             if not merged:
                 break
         if normalise:
@@ -459,8 +457,8 @@ class Model(STree2):
         if not merged:
             if error_if_irreducible:
                 raise IrreducibleMorphologyException(
-                                "Could not reduce the morphology after {} "
-                                "mergers".format(merge_index))
+                    "Could not reduce the morphology after {} mergers"
+                    .format(merge_index))
             else:
                 print ("Warning: Could not reduce the morphology after {} "
                        "mergers".format(merge_index))
@@ -477,7 +475,7 @@ class Model(STree2):
         """
         # Make a new copy of the tree, starting from the root segment from
         # which to build the normalised tree from
-        normalised_tree = Model(self.name, self._source)
+        normalised_tree = Tree(self.name, self._source)
         for comp in self.components.itervalues():
             normalised_tree.add_component(deepcopy(comp))
         # FIXME: this will copy whole tree which while safe is a bit
@@ -504,8 +502,8 @@ class Model(STree2):
                 section_length = numpy.sum(seg.length for seg in section)
                 # Get weighted average of diameter Ra and cm by segment length
                 diameter = 0.0
-                Ra = 0.0 #* pq.ohm * pq.cm
-                cm = 0.0 * pq.uF / (pq.cm ** 2)
+                Ra = 0.0  # * pq.ohm * pq.cm
+                cm = 0.0 * pq.uF / (pq.cm ** 2)  # @UndefinedVariable
                 for seg in section:
                     diameter += seg.diameter * seg.length
                     Ra += seg.Ra * seg.length
@@ -558,17 +556,15 @@ class Model(STree2):
                 # section)
                 if len(Ra_set) > 1:
                     new_Ra_comp = AxialResistanceModel(
-                                        '{}_{}_Ra'.format(section[0].name,
-                                                         section[-1].name), Ra,
-                                        needs_tuning=any(ra.needs_tuning
-                                                         for ra in Ra_set))
+                        '{}_{}_Ra'.format(section[0].name, section[-1].name),
+                        Ra, needs_tuning=any(ra.needs_tuning for ra in Ra_set))
                     normalised_tree.add_component(new_Ra_comp)
                 else:
                     # There is only one Ra_comp so
                     new_Ra_comp = next(iter(Ra_set))
                 # Find the equivalent parent in the new normalised tree
                 parent = normalised_tree.get_segment(
-                                                    parent_lookup[parent.name])
+                    parent_lookup[parent.name])
                 self.create_section(new_seg_names, disp, parent, diameter,
                                     distr_comps,
                                     proximal_offset=section[0].proximal_offset)
@@ -679,7 +675,7 @@ class Model(STree2):
                      not isinstance(comp, IonConcentrationModel)))
         passive = deepcopy(self)
         passive.components = dict((n, c) for n, c in passive.components.items()
-                               if is_passive(c))
+                                  if is_passive(c))
         for seg in passive.segments:
             seg.components = [c for c in seg.components if is_passive(c)]
         return passive
@@ -701,9 +697,9 @@ class Model(STree2):
         comp_classes = set()
         for section in self.sections:
             comp_classes.add(section[0].id_components)
-        type_index_dict = dict((c, i)
-                               for i, c in enumerate(sorted(comp_classes,
-                                                        key=lambda x: len(x))))
+        type_index_dict = dict(
+            (c, i) for i, c in enumerate(sorted(comp_classes,
+                                                key=lambda x: len(x))))
         for section in self.sections:
             type_index = offset + type_index_dict[section[0].id_components]
             for seg in section:
@@ -732,8 +728,8 @@ class SegmentModel(SNode2):
                                nineml_model.distal.z)),
                   nineml_model.distal.diameter)
         if nineml_model.parent and nineml_model.parent.fraction_along != 1.0:
-            seg.get_content()['fraction_along'] = nineml_model.parent.\
-                                                                 fraction_along
+            seg.get_content()[
+                'fraction_along'] = nineml_model.parent.fraction_along
         return seg
 
     def __init__(self, name, point, diameter, swc_type=3):
@@ -1093,13 +1089,14 @@ class DynamicComponentModel(ComponentModel):
         """
         `name`         -- Name used to refer to the componentclass in the model
                           (eg. 'spiny_dendrite_leak')
-        `class_name`   -- Name of the class of the componentclass. For example in
-                          NEURON, this would be the name used for the imported
-                          NMODL mechanism. Therefore this class name has to be
-                          unique for any given segment and two components, say
-                          for example only one of 'proximal_dendrite_leak' and
-                          'spiny_dendrite_leak' can be set on the same segment
-                          if they both use the 'Lkg' componentclass class.
+        `class_name`   -- Name of the class of the componentclass. For example
+                          in NEURON, this would be the name used for the
+                          imported NMODL mechanism. Therefore this class name
+                          has to be unique for any given segment and two
+                          components, say for example only one of
+                          'proximal_dendrite_leak' and 'spiny_dendrite_leak'
+                          can be set on the same segment if they both use the
+                          'Lkg' componentclass class.
         `parameters`   -- The parameters of the model
         """
         super(DynamicComponentModel, self).__init__()
@@ -1248,7 +1245,3 @@ class BranchAncestry(object):
         while seg_name in self.history:
             seg_name = self.history[seg_name].start_name
         return self.full_tree.get_segment(seg_name)
-
-
-class IrreducibleMorphologyException(Exception):
-    pass

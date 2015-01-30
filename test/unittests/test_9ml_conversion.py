@@ -20,7 +20,7 @@ else:
 import os.path
 from copy import deepcopy
 import nineml.extensions.biophysical_cells
-from pype9.cells import Model
+from pype9.cells import Tree
 
 nineml_file = os.path.join(os.path.dirname(__file__), '..', 'data', '9ml',
                            'Golgi_Solinas08.9ml')
@@ -31,7 +31,7 @@ class Test9mlConversion(unittest.TestCase):
     def test_9ml_conversion(self):
         models = nineml.extensions.biophysical_cells.parse(nineml_file)
         model9ml = next(models.itervalues())
-        tree = Model.from_9ml(model9ml)
+        tree = Tree.from_9ml(model9ml)
         tree2 = deepcopy(tree)
         needs_tuning = tree2.merge_leaves()
         new_model9ml = tree.to_9ml()
