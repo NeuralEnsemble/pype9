@@ -3,24 +3,17 @@ if __name__ == '__main__':
 else:
     from unittest import TestCase  # @Reimport
 from pype9.cells.code_gen.nest import CodeGenerator
-import nineml
-from os.path import dirname, join, abspath
+from os import path
+from . import test_data_dir
 
 
 class TestNestBuild(TestCase):
 
-    test_dir = abspath(join(dirname(__file__), '..', 'data',
-                            'xml'))
-    component_file = join(test_dir, 'HodgkinHuxleyModified.xml')
-    comp = nineml.read(component_file)['HodgkinHuxleyModified']
-
     def test_nest_build(self):
-        # initial_state_file = join(
-        #     dirname(__file__), '..', '..', 'examples',
-        #     'HodgkinHuxleyInitialState.xml')
+        component_file = path.join(test_data_dir, 'xml', 'HodgkinHuxley.xml')
         code_generator = CodeGenerator()
-        code_generator.generate(self.component_file, 0.0,  # initial_state_file
-                                build_mode='generate_only',
+        code_generator.generate(component_file, 0.0,
+                                build_mode='build_only',
                                 ode_solver='ida', v_threshold=None)
 
 if __name__ == '__main__':

@@ -19,7 +19,7 @@ from numpy.linalg import norm
 import collections
 import xml.sax
 import pyNN.connectors
-from nineline import XMLHandler
+from pype9 import XMLHandler
 from pype9 import axially_symmetric_tensor
 from pype9 import Forest
 from pype9 import FlattenedTree

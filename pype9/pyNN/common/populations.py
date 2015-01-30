@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 import numpy
 import pyNN.parameters
-from nineline.pyNN.structure import Structure
+from pype9.pyNN.structure import Structure
 import pype9.pyNN.random
 from pyNN.random import RandomDistribution
 from nineml.abstraction_layer.component import BaseComponentClass

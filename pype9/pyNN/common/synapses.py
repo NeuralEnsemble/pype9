@@ -9,7 +9,7 @@ from abc import ABCMeta
 import nineml.user_layer
 import pype9.pyNN.random
 import pype9.pyNN.expression.structure
-from nineline.pyNN import convert_to_pyNN_units
+from pype9.pyNN import convert_to_pyNN_units
 
 
 class Synapse(object):

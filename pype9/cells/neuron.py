@@ -22,9 +22,9 @@ from neuron import h, nrn, load_mechanisms
 import nineml.extensions.biophysical_cells
 import neo
 import quantities as pq
-from nineline.cells.build.neuron import build_celltype_files
+from pype9.cells.build.neuron import build_celltype_files
 import pype9.cells
-from nineline.cells import (in_units, AxialResistanceModel,
+from pype9.cells import (in_units, AxialResistanceModel,
                             MembraneCapacitanceModel, DummyNinemlModel,
                             IonConcentrationModel)
 from .. import create_unit_conversions, convert_units

@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import os.path
 import collections
 import xml.sax
-from nineline import XMLHandler
+from pype9 import XMLHandler
 
 RANDOM_DISTR_PARAMS = {'uniform': ('low', 'high'),
                        'normal': ('mean', 'stddev')}

@@ -9,7 +9,7 @@ import pype9.pyNN.common.cells
 from pyNN.parameters import ParameterSpace
 import pyNN.standardmodels
 import nest
-from nineline.cells.nest import NineCellMetaClass, basic_nineml_translations
+from pype9.cells.nest import NineCellMetaClass, basic_nineml_translations
 
 
 class NinePyNNCell(pype9.pyNN.common.cells.NinePyNNCell,

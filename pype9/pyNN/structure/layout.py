@@ -12,7 +12,7 @@ from abc import ABCMeta
 import nineml.user_layer
 import pyNN.space
 import pype9.pyNN.random
-from nineline.pyNN import convert_to_pyNN_units
+from pype9.pyNN import convert_to_pyNN_units
 
 
 class Layout(object):

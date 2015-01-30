@@ -13,7 +13,7 @@ import pype9.pyNN.common
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
 import pyNN.models
-from nineline.cells.neuron import NineCellMetaClass, basic_nineml_translations
+from pype9.cells.neuron import NineCellMetaClass, basic_nineml_translations
 import logging
 
 logger = logging.getLogger("PyNN")

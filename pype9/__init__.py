@@ -18,7 +18,7 @@ import nineml.user_layer
 from quantities import Quantity
 from quantities.dimensionality import Dimensionality
 
-__version__ = "0.0.1"
+version = "0.1"
 
 DEFAULT_V_INIT = -65.0
 

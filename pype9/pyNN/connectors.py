@@ -11,8 +11,8 @@ import nineml.user_layer
 import pyNN.connectors
 import pype9.pyNN.random
 import pype9.pyNN.common.projections
-from nineline.pyNN.expression import create_anonymous_function
-from nineline.pyNN.expression.structure import _PositionBasedExpression
+from pype9.pyNN.expression import create_anonymous_function
+from pype9.pyNN.expression.structure import _PositionBasedExpression
 
 
 class Connector(object):

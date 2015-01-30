@@ -19,7 +19,7 @@ from nineml.user_layer import Definition
 from nineml.document import Document
 from nineml.user_layer import DynamicsComponent
 from nineml.abstraction_layer.expressions import Constant
-from pype9.exceptions import PyPe9RuntimeError
+from pype9.exceptions import Pype9RuntimeError
 
 # from nineml.user_layer.dynamics import IonDynamics
 from collections import defaultdict
@@ -470,7 +470,7 @@ class NMODLImporter(object):
                         unit = pq.Quantity(1, unitname)
                         unit.aliases.append(alias)
                     except:
-                        raise PyPe9RuntimeError("Unrecognised unit '{}'"
+                        raise Pype9RuntimeError("Unrecognised unit '{}'"
                                                 .format(unitname))
                 self.used_units.append(alias)
 
@@ -487,7 +487,7 @@ class NMODLImporter(object):
                 units = units[:-1]  # remove parentheses
                 dimension = self._units2dimension(units)
             else:
-                raise PyPe9RuntimeError(
+                raise Pype9RuntimeError(
                     "Three tokens found on line '{}', was expecting 1 or 2 "
                     "(var [units])".format(line))
             self.dimensions[var] = dimension
@@ -540,7 +540,7 @@ class NMODLImporter(object):
                                   for v in valid_range_str[1:-1].split(',')]
                         self.valid_parameter_ranges[name] = vrange
             else:
-                raise PyPe9RuntimeError(
+                raise Pype9RuntimeError(
                     "More than one '=' found on parameter block line '{}'"
                     .format(line))
 
@@ -551,7 +551,7 @@ class NMODLImporter(object):
                 match = re.match(r'SOLVE (\w+)'
                                  r' *(?:STEADYSTATE (\w+))?', line)
                 if not match:
-                    raise PyPe9RuntimeError(
+                    raise Pype9RuntimeError(
                         "Could not read solve statement '{}'".format(line))
                 self.initial_solve_methods[match.group(1)] = match.group(2)
             else:
@@ -616,7 +616,7 @@ class NMODLImporter(object):
                 for c in chain(read, write):
                     if c.startswith('i'):
                         if c.endswith('i') or c.endswith('o'):
-                            raise PyPe9RuntimeError(
+                            raise Pype9RuntimeError(
                                 "Amiguous usion element '{}' (elements "
                                 "starting with 'i' are assumed to be currents "
                                 "and elements ending with 'i' or 'o' are "
@@ -643,7 +643,7 @@ class NMODLImporter(object):
             for lhs, rhs in stmts.iteritems():
                 if lhs.endswith("'"):
                     if lhs[:-1] not in self.state_variables:
-                        raise PyPe9RuntimeError("Unrecognised variable '{}'"
+                        raise Pype9RuntimeError("Unrecognised variable '{}'"
                                                 .format(lhs))
                     td = TimeDerivative(lhs[:-1],
                                         self._escape_piecewise(lhs, rhs))
@@ -659,7 +659,7 @@ class NMODLImporter(object):
                 match = re.match(r'SOLVE (\w+) '
                                  r'METHOD (\w+)', line)
                 if not match:
-                    raise PyPe9RuntimeError(
+                    raise Pype9RuntimeError(
                         "Could not read solve statement '{}'".format(line))
                 self.breakpoint_solve_methods[match.group(1)] = match.group(2)
             else:
@@ -826,7 +826,7 @@ class NMODLImporter(object):
                     try:
                         line += ' ' + next(line_iter)
                     except StopIteration:
-                        raise PyPe9RuntimeError(
+                        raise Pype9RuntimeError(
                             "EOF while parsing table statement")
                 line = next(line_iter)
                 continue
@@ -835,14 +835,14 @@ class NMODLImporter(object):
                     line = next(line_iter)
                 except StopIteration:
                     if line.startswith('LOCAL'):
-                        raise PyPe9RuntimeError(
+                        raise Pype9RuntimeError(
                             "LOCAL statements need to appear at the start of "
                             "the statement block")
                     else:
                         line = ''
                 continue
             elif line.startswith('VERBATIM'):
-                raise PyPe9RuntimeError("Cannot parse VERBATIM block:\n\n{}"
+                raise Pype9RuntimeError("Cannot parse VERBATIM block:\n\n{}"
                                         .format(block))
             # Escape all array indexing
             line = getitem_re.sub(r'\1__elem\2', line)
@@ -854,7 +854,7 @@ class NMODLImporter(object):
                 match = re.match(r'(\w+) *\((.*)\)', expr)
                 # If a procedure
                 if not match:
-                    raise PyPe9RuntimeError(
+                    raise Pype9RuntimeError(
                         "Unrecognised statement on line '{}'".format(line))
                 if match.group(1) == 'if':
                     # Set the line that has been peeked at to the next line and
@@ -864,7 +864,7 @@ class NMODLImporter(object):
                                                            suffix)
                     continue
                 elif match.group(1) in ('for', 'while'):
-                    raise PyPe9RuntimeError(
+                    raise Pype9RuntimeError(
                         "Cannot represent '{}' statements in 9ML"
                         .format(match.group(1)))
                 elif match.group(1) == 'state_discontinuity':
@@ -879,7 +879,7 @@ class NMODLImporter(object):
                     try:
                         pargs, pbody = self.procedures[proc_name]
                     except KeyError:
-                        raise PyPe9RuntimeError("Unrecognised procedure '{}'"
+                        raise Pype9RuntimeError("Unrecognised procedure '{}'"
                                                 .format(proc_name))
                     argvals, _ = self._split_args(match.group(2))
                     argvals = [self._extract_function_calls(a, statements)
@@ -898,7 +898,7 @@ class NMODLImporter(object):
             elif len(parts) == 2:  # An to be an assignment expression
                 self._extract_assignment(line, statements, subs, suffix)
             else:
-                raise PyPe9RuntimeError(
+                raise Pype9RuntimeError(
                     "More than one '=' found on line '{}'".format(line))
             try:
                 line = next(line_iter)
@@ -1078,7 +1078,7 @@ class NMODLImporter(object):
                     subs[lhs] = new_lhs
                     lhs = new_lhs
                 else:
-                    raise PyPe9RuntimeError(
+                    raise Pype9RuntimeError(
                         "Could not find previous definition of '{}' to form "
                         "otherwise condition of conditional block".format(lhs))
                 self._unwrap_piecewise_stmt(rhs,
@@ -1218,7 +1218,7 @@ class NMODLImporter(object):
         try:
             dim = _SI_to_dimension[dim_str]
         except KeyError:
-            raise PyPe9RuntimeError(
+            raise Pype9RuntimeError(
                 "Unrecognised dimension from units '{}'('{}')"
                 .format(units, dim_str))
         return _SI_to_nineml_units[(dim, power)]
@@ -1284,7 +1284,7 @@ class NMODLImporter(object):
                 line = next(line_iter)
             except StopIteration:
                 if depth:
-                    raise PyPe9RuntimeError(
+                    raise Pype9RuntimeError(
                         "Block ended inside enclosing brace: \n{}"
                         .format(block))
                 else:
@@ -1301,7 +1301,7 @@ class NMODLImporter(object):
                 if depth == 0:
                     output = string[:i + 1]
                     return output
-        raise PyPe9RuntimeError(
+        raise Pype9RuntimeError(
             "No matching ')' found for opening '(' in string " "'{}'"
             .format(string))
 

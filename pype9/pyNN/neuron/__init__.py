@@ -23,8 +23,8 @@ from pyNN.common.control import build_state_queries
 import pyNN.neuron.standardmodels
 import pyNN.neuron.simulator as simulator
 import neuron
-from nineline.pyNN.neuron.cells import NinePyNNCellMetaClass
-from nineline.cells.neuron import NineCellpype9from . import synapses as synapses_module  # @UnresolvedImport
+from pype9.pyNN.neuron.cells import NinePyNNCellMetaClass
+from pype9.cells.neuron import NineCellpype9from . import synapses as synapses_module  # @UnresolvedImport
 import logging
 from pyNN.random import NumpyRNG
 

@@ -1,8 +1,12 @@
 
 
-class PyPe9RuntimeError(Exception):
+class Pype9RuntimeError(Exception):
     pass
 
 
-class IrreducibleMorphologyException(Exception):
+class Pype9IrreducibleMorphException(Exception):
+    pass
+
+
+class Pype9BuildError(Exception):
     pass

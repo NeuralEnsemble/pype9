@@ -13,10 +13,14 @@ import os.path
 import subprocess as sp
 import re
 from itertools import chain
-import shutipype9from .. import BaseCodeGenerator
-from nineline.utils import remove_ignore_missing
+from .. import BaseCodeGenerator
+from pype9.utils import remove_ignore_missing
 from nineml import Dimension
 from nineml.abstraction_layer.units import current as current_unit_dim
+from pype9.exceptions import Pype9BuildError
+import pype9
+import warnings
+import shutil
 
 # Add Nest installation directory to the system path
 if 'NEST_INSTALL_DIR' in os.environ:
@@ -99,14 +103,14 @@ class CodeGenerator(BaseCodeGenerator):
         volt_states = [s.name for s in model.dynamics.state_variables
                        if s.dimension == volt_dimension]
         if not volt_states:
-            raise Exception("Did not find a state with dimension 'voltage' in "
-                            "the list of state names so couldn't "
-                            "determine the membrane voltage")
+            raise Pype9BuildError(
+                "Did not find a state with dimension 'voltage' in the list of "
+                "state names so couldn't " "determine the membrane voltage")
         elif len(volt_states) > 2:
-            raise Exception("Found multiple states with dimension 'voltage' "
-                            "({}) in the list of state names so couldn't "
-                            "determine the membrane voltage"
-                            .format(', '.join(volt_states)))
+            raise Pype9BuildError(
+                "Found multiple states with dimension 'voltage' ({}) in the "
+                "list of state names so couldn't determine the membrane "
+                "voltage".format(', '.join(volt_states)))
         else:
             args['membrane_voltage'] = volt_states[0]
         # Set dynamics --------------------------------------------------------
@@ -162,8 +166,7 @@ class CodeGenerator(BaseCodeGenerator):
         args['refractory_period'] = None
         return args
 
-    def _render_source_files(self, template_args, src_dir, compile_dir,
-                             install_dir, verbose):
+    def _render_source_files(self, template_args, src_dir, verbose):  # @UnusedVariable @IgnorePep8
         model_name = template_args['ModelName']
         # Render C++ header file
         self._render_to_file('header.tmpl', template_args,
@@ -172,7 +175,7 @@ class CodeGenerator(BaseCodeGenerator):
         self._render_to_file('main.tmpl', template_args, model_name + '.cpp',
                              src_dir)
         build_args = {'celltype_name': model_name, 'src_dir': src_dir,
-                      'version': template_args['version'],
+                      'version': pype9.version,
                       'timestamp': template_args['timestamp']}
         # Render Loader header file
         self._render_to_file('loader-header.tmpl', build_args,
@@ -183,35 +186,41 @@ class CodeGenerator(BaseCodeGenerator):
         # Render SLI initialiser
         self._render_to_file('sli_initialiser.tmpl', build_args,
                              model_name + 'Loader.sli', src_dir)
+
+    def _configure_build_files(self, model_name, src_dir, compile_dir,
+                               install_dir):
         # Generate Makefile if it is not present
         if not os.path.exists(os.path.join(compile_dir, 'Makefile')):
             if not os.path.exists(compile_dir):
                 os.mkdir(compile_dir)
             orig_dir = os.getcwd()
-            self._render_to_file('configure-ac.tmpl', build_args,
+            config_args = {'celltype_name': model_name, 'src_dir': src_dir,
+                           'version': pype9.version}
+            self._render_to_file('configure-ac.tmpl', config_args,
                                  'configure.ac', src_dir)
-            self._render_to_file('Makefile-am.tmpl', build_args,
+            self._render_to_file('Makefile-am.tmpl', config_args,
                                  'Makefile.am', src_dir)
-            self._render_to_file('bootstrap-sh.tmpl', build_args,
+            self._render_to_file('bootstrap-sh.tmpl', config_args,
                                  'bootstrap.sh', src_dir)
             os.chdir(src_dir)
             try:
                 sp.check_call('sh bootstrap.sh', shell=True)
             except sp.CalledProcessError:
-                raise Exception("Bootstrapping of '{}' NEST module failed."
-                                .format(model_name or src_dir))
+                raise Pype9BuildError(
+                    "Bootstrapping of '{}' NEST module failed."
+                    .format(model_name or src_dir))
             os.chdir(compile_dir)
             env = os.environ.copy()
             env['CXX'] = self._compiler
             try:
-                sp.check_call('sh {src_dir}/configure --prefix={install_dir}'
-                              .format(src_dir=src_dir,
-                                      install_dir=install_dir),
-                              shell=True, env=env)
+                sp.check_call(
+                    'pwd; sh {src_dir}/configure --prefix={install_dir}'
+                    .format(src_dir=src_dir, install_dir=install_dir),
+                    shell=True, env=env)
             except sp.CalledProcessError:
-                raise Exception("Configuration of '{}' NEST module failed. "
-                                "See src directory '{}':\n "
-                                .format(model_name, src_dir))
+                raise Pype9BuildError(
+                    "Configuration of '{}' NEST module failed. See src "
+                    "directory '{}':\n ".format(model_name, src_dir))
             os.chdir(orig_dir)
 
     def compile_source_files(self, compile_dir, component_name, verbose):
@@ -223,13 +232,13 @@ class CodeGenerator(BaseCodeGenerator):
         try:
             sp.check_call('make -j{}'.format(self._build_cores), shell=True)
         except sp.CalledProcessError:
-            raise Exception("Compilation of '{}' NEST module failed. "
-                            .format(component_name))
+            raise Pype9BuildError("Compilation of '{}' NEST module failed. "
+                                  .format(component_name))
         try:
             sp.check_call('make install', shell=True)
         except sp.CalledProcessError:
-            raise Exception("Installation of '{}' NEST module failed. "
-                            .format(component_name))
+            raise Pype9BuildError("Installation of '{}' NEST module failed. "
+                                  .format(component_name))
 
     def _clean_src_dir(self, src_dir, component_name):
         # Clean existing src directories from previous builds.
@@ -242,6 +251,23 @@ class CodeGenerator(BaseCodeGenerator):
             remove_ignore_missing(prefix + 'Loader.h')
             remove_ignore_missing(prefix + 'Loader.cpp')
             remove_ignore_missing(prefix + 'Loader.sli')
+
+    def _clean_compile_dir(self, compile_dir):
+        orig_dir = os.getcwd()
+        try:
+            os.chdir(compile_dir)
+            sp.check_call('make clean', shell=True)
+            os.chdir(orig_dir)
+        except sp.CalledProcessError or IOError:
+            os.chdir(orig_dir)
+            shutil.rmtree(compile_dir, ignore_errors=True)
+            try:
+                os.makedirs(compile_dir)
+            except IOError as e:
+                raise Pype9BuildError(
+                    "Could not create build directory ({}), please check the "
+                    "required permissions or specify a different \"parent "
+                    "build directory\" ('parent_build_dir') -> {}".format(e))
 
     def _simulator_specific_paths(self):
         path = []

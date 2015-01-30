@@ -10,7 +10,7 @@
 from __future__ import absolute_import
 import xml.sax
 import collections
-from nineline import XMLHandler
+from pype9 import XMLHandler
 
 
 class MorphMLHandler(XMLHandler):

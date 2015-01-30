@@ -3,7 +3,7 @@ from itertools import groupby, chain, islice, izip_longest
 from operator import itemgetter
 from copy import deepcopy
 from lxml import etree
-from pype9.exceptions import IrreducibleMorphologyException
+from pype9.exceptions import Pype9IrreducibleMorphException
 import quantities as pq
 from abc import ABCMeta  # Metaclass for abstract base classes
 try:
@@ -456,7 +456,7 @@ class Tree(STree2):
             merged_tree = merged_tree.normalise_spatial_sampling()
         if not merged:
             if error_if_irreducible:
-                raise IrreducibleMorphologyException(
+                raise Pype9IrreducibleMorphException(
                     "Could not reduce the morphology after {} mergers"
                     .format(merge_index))
             else:

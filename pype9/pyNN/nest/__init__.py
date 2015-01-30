@@ -26,8 +26,8 @@ import nest
 from nest.hl_api import NESTError
 import pype9.pyNN.commonpype9from . import synapses as synapses_module
 from pyNN.random import NumpyRNG
-from nineline.pyNN.nest.cells import NinePyNNCellMetaClass
-from nineline.cells.nest import NineCell
+from pype9.pyNN.nest.cells import NinePyNNCellMetaClass
+from pype9.cells.nest import NineCell
 
 (get_current_time, get_time_step,
  get_min_delay, get_max_delay,

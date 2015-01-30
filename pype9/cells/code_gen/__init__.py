@@ -25,8 +25,9 @@ from runpy import run_path
 from abc import ABCMeta, abstractmethod
 import nineml
 from __builtin__ import classmethod
-from nineline import __version__
-from nineml.abstraction_layer.dynamics.component import expressions
+from pype9 import version
+from nineml.abstraction_layer import expressions
+from pype9.exceptions import Pype9BuildError
 
 
 class BaseCodeGenerator(object):
@@ -67,13 +68,16 @@ class BaseCodeGenerator(object):
         # Set model name and general information ------------------------------
         args['ModelName'] = component.name
         args['timestamp'] = datetime.now().strftime('%a %d %b %y %I:%M:%S%p')
-        args['version'] = __version__
+        args['version'] = version
         args['source_file'] = template_args.get('source_file', '<generated>')
         return args
 
     @abstractmethod
-    def _render_source_files(self, template_args, src_dir, _,
-                             install_dir, verbose):
+    def _render_source_files(self, template_args, src_dir, verbose):
+        pass
+
+    def _configure_build_files(self, model_name, src_dir, compile_dir,
+                               install_dir):
         pass
 
     @abstractmethod
@@ -112,7 +116,7 @@ class BaseCodeGenerator(object):
             # Read NineML description
             context = nineml.read(component_src_path)
             components = list(context.components)
-            if not components:
+            if len(components) == 0:
                 raise Exception("No components loaded from nineml path '{}'"
                                 .format(component_src_path))
             elif len(components) > 1:
@@ -224,7 +228,12 @@ class BaseCodeGenerator(object):
                 f.write(nineml_mod_time)
         if compile_source:
             # Clean existing compile & install directories from previous builds
-            self._clean_compile_and_install_dirs(compile_dir, install_dir)
+            self._clean_compile_dir(compile_dir)
+            self._configure_build_files(model_name=component.name,
+                                        src_dir=src_dir,
+                                        compile_dir=compile_dir,
+                                        install_dir=install_dir)
+            self._clean_install_dir(install_dir)
             # Compile source files
             self.compile_source_files(compile_dir, component.name,
                                       verbose=verbose)
@@ -233,8 +242,7 @@ class BaseCodeGenerator(object):
         return install_dir
 
     def generate_source_files(self, component, initial_state, src_dir,
-                              compile_dir, install_dir, verbose=False,
-                              **optional_template_args):
+                              verbose=False, **optional_template_args):
         """
         Generates the source files for the relevant simulator
         """
@@ -243,8 +251,7 @@ class BaseCodeGenerator(object):
         template_args = self._extract_template_args(component, initial_state,
                                                     **optional_template_args)
         # Render source files
-        self._render_source_files(template_args, src_dir, compile_dir,
-                                  install_dir, verbose=verbose)
+        self._render_source_files(template_args, src_dir, verbose=verbose)
 
     def _get_install_dir(self, build_dir, install_dir):
         """
@@ -271,23 +278,32 @@ class BaseCodeGenerator(object):
         try:
             os.makedirs(src_dir)
         except IOError as e:
-            raise Exception("Could not create build directory ({}), please"
-                            " check the required permissions or specify a "
-                            "different \"parent build directory\" "
-                            "('parent_build_dir') -> {}".format(e))
+            raise Pype9BuildError(
+                "Could not create build directory ({}), please check the "
+                "required permissions or specify a different \"parent build "
+                "directory\" ('parent_build_dir') -> {}".format(e))
 
-    def _clean_compile_and_install_dirs(self, compile_dir, install_dir):
+    def _clean_compile_dir(self, compile_dir):
         # Clean existing compile & install directories from previous builds
         shutil.rmtree(compile_dir, ignore_errors=True)
-        shutil.rmtree(install_dir, ignore_errors=True)
         try:
             os.makedirs(compile_dir)
+        except IOError as e:
+            raise Pype9BuildError(
+                "Could not create build directory ({}), please check the "
+                "required permissions or specify a different \"parent build "
+                "directory\" ('parent_build_dir') -> {}".format(e))
+
+    def _clean_install_dir(self, install_dir):
+        # Clean existing compile & install directories from previous builds
+        shutil.rmtree(install_dir, ignore_errors=True)
+        try:
             os.makedirs(install_dir)
         except IOError as e:
-            raise Exception("Could not create build directory ({}), please"
-                            " check the required permissions or specify a "
-                            "different \"parent build directory\" "
-                            "('parent_build_dir') -> {}".format(e))
+            raise Pype9BuildError(
+                "Could not create build directory ({}), please check the "
+                "required permissions or specify a different \"parent build "
+                "directory\" ('parent_build_dir') -> {}".format(e))
 
     def _required_defs(self, expressions, model):
         """

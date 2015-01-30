@@ -5,7 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from nineline.pyNN.common.cells import NinePyNNCell
-from nineline.pyNN.common.network import Network
-from nineline.pyNN.common.populations import Population
-from nineline.pyNN.common.projections import Projection
+from pype9.pyNN.common.cells import NinePyNNCell
+from pype9.pyNN.common.network import Network
+from pype9.pyNN.common.populations import Population
+from pype9.pyNN.common.projections import Projection

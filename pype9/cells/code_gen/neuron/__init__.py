@@ -19,6 +19,8 @@ import subprocess as sp
 import quantities as pq
 from .. import BaseCodeGenerator
 import nineml.abstraction_layer.units as un
+from pype9.exceptions import Pype9BuildError
+
 
 if 'NRNHOME' in os.environ:
     os.environ['PATH'] += (os.pathsep +
@@ -65,10 +67,10 @@ class CodeGenerator(BaseCodeGenerator):
         args['alias_names'] = list(a.lhs for a in model.aliases)
         args['state_variable_names'] = list(s.name
                                             for s in model.state_variables)
-#<<<<<<< HEAD
-        args['properties'] = componentclass.properties.values()
+# <<<<<<< HEAD
+        args['properties'] = component.properties.values()
         args['analog_send_ports'] = [p.name for p in model.analog_send_ports]
-          # Set dynamics --------------------------------------------------------
+        # Set dynamics --------------------------------------------------------
         dynamics = []
         for regime in model.dynamics.regimes:
             # Get name for regime dynamics function ---------------------------
@@ -80,7 +82,7 @@ class CodeGenerator(BaseCodeGenerator):
 #             divides = False
 #             ref_quantity = pq.Quantity(1, ref_unit.symbol)
 #             for unit in componentclass.used_units:
-#                 
+#
 #         args['used_units'] = list((u.name, self._neuron_units[u])
 #                                   for u in componentclass.used_units
 #                                   if u in self._neuron_units)
@@ -90,7 +92,7 @@ class CodeGenerator(BaseCodeGenerator):
 #             divides = False
 #             ref_quantity = pq.Quantity(1, ref_unit.symbol)
 #             for unit in componentclass.used_units:
-#                 
+#
 #                 args['used_units'] = list((u.name, self._neuron_units[u])
 #                                           for u in componentclass.used_units
 #                                           if u in self._neuron_units)
@@ -185,17 +187,17 @@ class CodeGenerator(BaseCodeGenerator):
             else:
                 sp.check_call(self.nrnivmodl_path)
         except sp.CalledProcessError as e:
-            raise Exception("Compilation of NMODL files for '{}' model failed."
-                            " See src directory '{}':\n "
-                            .format(component_name, compile_dir, e))
+            raise Pype9BuildError(
+                "Compilation of NMODL files for '{}' model failed. See src "
+                "directory '{}':\n ".format(component_name, compile_dir, e))
 
     def _get_install_dir(self, build_dir, install_dir):
         if install_dir:
-            raise Exception("Cannot specify custom installation directory "
-                            "('{}') for NEURON simulator as it needs to be "
-                            "located as a specifically named directory of the "
-                            "src directory (e.g. x86_64 for 64b unix/linux)"
-                            .format(install_dir))
+            raise Pype9BuildError(
+                "Cannot specify custom installation directory ('{}') for "
+                "NEURON simulator as it needs to be located as a specifically "
+                "named directory of the src directory (e.g. x86_64 for 64b "
+                "unix/linux)".format(install_dir))
         # return the platform-specific location of the nrnivmodl output files
         return os.path.abspath(os.path.join(build_dir, self._SRC_DIR,
                                             self.specials_dir))
@@ -206,14 +208,17 @@ class CodeGenerator(BaseCodeGenerator):
         """
         return os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
 
+    def _clean_compile_dir(self, compile_dir):
+        pass  # NEURON doesn't use a separate compile dir
+
     def _get_specials_dir(self):
         # Create a temporary directory to run nrnivmodl in
         tmp_dir_path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
         try:
             os.mkdir(tmp_dir_path)
         except IOError:
-            raise Exception("Error creating temporary directory '{}'"
-                            .format(tmp_dir_path))
+            raise Pype9BuildError("Error creating temporary directory '{}'"
+                                  .format(tmp_dir_path))
         orig_dir = os.getcwd()
         os.chdir(tmp_dir_path)
         # Run nrnivmodl to see what build directory is created
@@ -221,13 +226,14 @@ class CodeGenerator(BaseCodeGenerator):
             with open(os.devnull, "w") as fnull:
                 sp.check_call(self.nrnivmodl_path, stdout=fnull, stderr=fnull)
         except sp.CalledProcessError as e:
-            raise Exception("Error test running nrnivmodl".format(e))
+            raise Pype9BuildError("Error test running nrnivmodl".format(e))
         # Get the name of the specials directory
         try:
             specials_dir = os.listdir(tmp_dir_path)[0]
         except IndexError:
-            raise Exception("Error test running nrnivmodl no build directory "
-                            "created".format(e))
+            raise Pype9BuildError(
+                "Error test running nrnivmodl no build directory created"
+                .format(e))
         # Return back to the original directory
         os.chdir(orig_dir)
         return specials_dir

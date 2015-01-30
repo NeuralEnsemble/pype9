@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys
-from nineline.hpc.sge import SGESubmitter
+from pype9.hpc.sge import SGESubmitter
 
 if len(sys.argv) < 2:
     raise Exception("At least one argument (the script name to submit to the "
