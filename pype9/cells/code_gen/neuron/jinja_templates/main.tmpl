@@ -52,12 +52,6 @@ CONSTANT {
     {% endfor %}
 {% endfor %}
 
-
-{% for regime in componentclass.regimes %}
-    {% for oe in regime.on_events %}    
-    {{oe.src_port_name | upper}}_EVENT_IN_{{regime.name | upper}}_ = {{componentclass.index_of(oe)}}
-    {% endfor %}
-{% endfor %}
 }
 
 INITIAL {
@@ -155,7 +149,7 @@ NET_RECEIVE(w, channel) {
         if (regime == {{regime.name | upper}}) {
             printf("Current regime: {{regime.name}} \n")
     {% for oe in regime.on_events %}
-            if (channel == {{oe.src_port_name | upper}}_EVENT_IN_{{regime.name | upper}}) {
+            if (channel == {{oe.src_port_name | upper}}) {
                 printf("  Resolved to channel {{regime.name + '-' + oe.src_port_name}}\n" )
         {% if weight_variables %}
                 {{get_weight_variable}}({{channel}}, {{weight_variables}}) = w
