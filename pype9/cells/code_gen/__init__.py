@@ -57,7 +57,8 @@ class BaseCodeGenerator(object):
                                      undefined=StrictUndefined)
         # Add some globals used by the template code
         self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
-                                      xrange=xrange, next=next, chain=chain)
+                                      xrange=xrange, next=next, chain=chain,
+                                      hash=hash)
 
     @abstractmethod
     def generate_source_files(self, component, initial_state, src_dir,

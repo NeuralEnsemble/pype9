@@ -47,6 +47,8 @@ class CodeGenerator(BaseCodeGenerator):
     ABS_TOLERANCE_DEFAULT = 0.01
     REL_TOLERANCE_DEFAULT = 0.01
     V_THRESHOLD_DEFAULT = 0.0
+    FIRST_REGIME_FLAG = 1001
+    FIRST_TRANSITION_FLAG = 5000
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
     _neuron_units = {un.mV: 'millivolt',
@@ -80,10 +82,28 @@ class CodeGenerator(BaseCodeGenerator):
             'rel_tolerance': kwargs.get('max_step_size',
                                         self.REL_TOLERANCE_DEFAULT),
             'parameter_scales': [], 'membrane_voltage': 'V_t',
-            'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT)}
+            'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT),
+            'deriv_func_args': self.deriv_func_args,
+            'FIRST_REGIME_FLAG': self.FIRST_REGIME_FLAG,
+            'FIRST_TRANSITION_FLAG': self.FIRST_TRANSITION_FLAG}
+        self._assign_flags_to_regimes(component.component_class)
         # Render mod file
         self.render_to_file('main.tmpl', tmpl_args, component.name + '.mod',
                             src_dir)
+
+    def _assign_flags_to_regimes(self, componentclass):
+        for i, regime in enumerate(componentclass.regimes):
+            regime.flag = self.FIRST_REGIME_FLAG + i
+#         if not weight_variables:
+#             weight_variables = {'': guess_weight_variable(componentclass)}
+
+        # THIS IS JUST NASTY.
+        # TODO - PROPERLY WITH A DICTIONARY.
+        FIRST_TRANSITION_FLAG = 5000
+        for i, transition in enumerate(componentclass.transitions):
+            n = FIRST_TRANSITION_FLAG + i
+            transition.label = 'TRANSITION%d'%n
+            transition.flag = n
 
     def configure_build_files(self, component, src_dir, compile_dir,
                                install_dir):
@@ -172,11 +192,28 @@ class CodeGenerator(BaseCodeGenerator):
 
     def simulator_specific_paths(self):
         path = []
-        if 'NRNHOME' in os.environ:
-            path.append(os.path.join(os.environ['NRNHOME'], self.specials_dir,
-                                     'bin'))
+        try:
+            for d in os.listdir(os.environ['NRNHOME']):
+                bin_path = os.path.join(d, 'bin')
+                if os.path.exists(bin_path):
+                    path.append(bin_path)
+        except KeyError:
+            pass
         return path
 
+    @classmethod
+    def deriv_func_args(cls, component, variable):
+        """ """
+        args = set([variable])
+        for r in component.regimes:
+            for time_derivative in (eq for eq in r.time_derivatives
+                                    if eq.dependent_variable == variable):
+                for name in (name for name in time_derivative.rhs_names
+                             if name in [sv.name
+                                         for sv in component.state_variables]):
+                    args.add(name)
+        return ','.join(args)
+        return args
 # output_Na = template.render (functionDefs = [{'indent' : 2, 'name' : '''Na_bmf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_bmf  =  Na_A_beta_m * exp(-(v + -(Na_B_beta_m)) / Na_C_beta_m)'''}, 
 #                                              {'indent' : 2, 'name' : '''Na_amf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_amf  =  Na_A_alpha_m *  (v + -(Na_B_alpha_m)) / (1.0 + -(exp(-(v + -(Na_B_alpha_m)) / Na_C_alpha_m)))'''}, 
 #                                              {'indent' : 2, 'name' : '''Na_bhf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_bhf  =    Na_A_beta_h / (1.0 + exp(-(v + -(Na_B_beta_h)) / Na_C_beta_h))'''}, 
