@@ -58,120 +58,6 @@ class CodeGenerator(BaseCodeGenerator):
                                    shell=True)
         self._compiler = compiler[:-1]  # strip trailing \n
 
-    def _extract_template_args(self, component, initial_state,
-                               **template_args):
-        # Get optional template_args ------------------------------------------
-        ode_solver = template_args.get('ode_solver', 'gsl')
-        ss_solver = template_args.get('ss_solver', None)
-        abs_tolerance = template_args.get('abs_tolerance', 1e-7)
-        rel_tolerance = template_args.get('rel_tolerance', 1e-7)
-        max_step_size = template_args.get('max_step_size', None)
-        v_threshold = template_args.get('v_threshold', None)
-        # Call method from base class -----------------------------------------
-        args = super(CodeGenerator, self)._extract_template_args(component)
-        model = component.component_class
-        # Set solver methods --------------------------------------------------
-        args['ode_solver'] = ode_solver
-        if ode_solver == 'cvode':
-            args['solver_abbrev'] = 'CV'
-            args['solver_prefix'] = 'CVode'
-            args['solver_name'] = 'CVode'
-        elif ode_solver == 'ida':
-            args['solver_abbrev'] = 'IDA'
-            args['solver_prefix'] = 'IDA'
-            args['solver_name'] = 'IDASolve'
-        args['ss_solver'] = ss_solver
-        # Set tolerances ------------------------------------------------------
-        args['abs_tolerance'] = abs_tolerance
-        args['rel_tolerance'] = rel_tolerance
-        args['max_step_size'] = max_step_size
-        # Set parameters and default values -----------------------------------
-        parameter_names = [p.name for p in model.parameters]
-        args['parameter_names'] = parameter_names + ['V_t']  # FIXME: This voltage threshold shouldn't be hard-coded here @IgnorePep8
-        args['parameter_default'] = [component.properties[p].value
-                                     for p in parameter_names]
-        # TODO: Need to ask Ivan out why scaling is required in some cases
-        args['parameter_scales'] = {}
-        # TODO: Add parameter constraints to model
-        args['parameter_constraints'] = []
-        # Set states and initial values ---------------------------------------
-        state_names = [v.name for v in model.dynamics.state_variables]
-        num_states = len(state_names)
-        args['num_states'] = num_states
-        args['state_variables'] = state_names
-        # TODO: Need to add state layer
-        args['state_variables_init'] = ([s.value for s in initial_state]
-                                        if not isinstance(initial_state,
-                                                          float)
-                                        else [initial_state] * num_states)
-        # Guess membrane voltage variable -------------------------------------
-        # FIXME: This isn't a fail-safe way of determining this.
-        volt_states = [s.name for s in model.dynamics.state_variables
-                       if s.dimension == volt_dimension]
-        if not volt_states:
-            raise Pype9BuildError(
-                "Did not find a state with dimension 'voltage' in the list of "
-                "state names so couldn't " "determine the membrane voltage")
-        elif len(volt_states) > 2:
-            raise Pype9BuildError(
-                "Found multiple states with dimension 'voltage' ({}) in the "
-                "list of state names so couldn't determine the membrane "
-                "voltage".format(', '.join(volt_states)))
-        else:
-            args['membrane_voltage'] = volt_states[0]
-        # Set dynamics --------------------------------------------------------
-        dynamics = []
-        for regime in model.dynamics.regimes:
-            # Get name for regime dynamics function ---------------------------
-            func_name = '_'.join([component.name, regime.name or 'default'])
-            req_defs = self._required_defs(regime.time_derivatives, model)
-            dynamics.append((func_name, regime.time_derivatives, req_defs))
-            # TODO: What to do with analog receive ports? Probably need to
-            # treat as gap junctions.
-        args['dynamics'] = dynamics
-        # Set steady state ----------------------------------------------------
-        # TODO: This needs to be implemented
-        args['steady_state'] = False
-        # Port names ----------------------------------------------------------
-        # FIXME: Need a more fool proof way of distinguishing between voltage
-        #        stims or not (tricky as they are not defined in 9ml).
-        #        Stimulating voltages are treated differently as they don't
-        #        need the gap junction framework.
-        args['analog_port_names'] = [p.name
-                                     for p in model.analog_receive_ports]
-        args['current_stim_names'] = [p.name
-                                      for p in model.analog_receive_ports
-                                      if p.dimension == current_unit_dim]
-        args['gap_junction_names'] = [p.name
-                                      for p in model.analog_receive_ports
-                                      if p.dimension != current_unit_dim]
-        # TODO: These are currently not handled anywhere
-        args['reduce_port_names'] = [p.name for p in model.analog_reduce_ports]
-        args['event_port_names'] = [p.name for p in model.event_receive_ports]
-        # Event handling ------------------------------------------------------
-        regimes = list(model.dynamics.regimes)
-        args['regime_names'] = [r.name for r in regimes]
-        args['on_event_names'] = list(chain(*((e.src_port_name
-                                               for e in r.on_events)
-                                              for r in regimes)))
-        # Get all state assignement expressions to deteriming required defs.
-        transients = []
-        for regime in regimes:
-            for on_event in regime.on_events:
-                func_name = '_'.join([on_event.src_port_name, 'transient_in',
-                                      regime.name or 'default'])
-                req_defs = self._required_defs(on_event.state_assignments,
-                                               model)
-                transients.append((func_name, on_event.state_assignments,
-                                   req_defs))
-        args['transients'] = transients
-        args['regimes'] = regimes
-        # Set some standard parameters ----------------------------------------
-        args['v_threshold'] = v_threshold
-        # FIXME: Need to work out where this comes from.
-        args['refractory_period'] = None
-        return args
-
     def generate_source_files(self, component, initial_state, src_dir,
                               **kwargs):
         tmpl_args = {
@@ -388,4 +274,118 @@ class CodeGenerator(BaseCodeGenerator):
 # args['steadyStateSize'] = 0
 # args['stateSize'] = 4
 # args['SSvector'] = '''ssvect73'''
-# args['currentTimestamp'] = '''Thu Oct 23 23:30:27 2014'''            
+# args['currentTimestamp'] = '''Thu Oct 23 23:30:27 2014'''
+
+#     def _extract_template_args(self, component, initial_state,
+#                                **template_args):
+#         # Get optional template_args ------------------------------------------
+#         ode_solver = template_args.get('ode_solver', 'gsl')
+#         ss_solver = template_args.get('ss_solver', None)
+#         abs_tolerance = template_args.get('abs_tolerance', 1e-7)
+#         rel_tolerance = template_args.get('rel_tolerance', 1e-7)
+#         max_step_size = template_args.get('max_step_size', None)
+#         v_threshold = template_args.get('v_threshold', None)
+#         # Call method from base class -----------------------------------------
+#         args = super(CodeGenerator, self)._extract_template_args(component)
+#         model = component.component_class
+#         # Set solver methods --------------------------------------------------
+#         args['ode_solver'] = ode_solver
+#         if ode_solver == 'cvode':
+#             args['solver_abbrev'] = 'CV'
+#             args['solver_prefix'] = 'CVode'
+#             args['solver_name'] = 'CVode'
+#         elif ode_solver == 'ida':
+#             args['solver_abbrev'] = 'IDA'
+#             args['solver_prefix'] = 'IDA'
+#             args['solver_name'] = 'IDASolve'
+#         args['ss_solver'] = ss_solver
+#         # Set tolerances ------------------------------------------------------
+#         args['abs_tolerance'] = abs_tolerance
+#         args['rel_tolerance'] = rel_tolerance
+#         args['max_step_size'] = max_step_size
+#         # Set parameters and default values -----------------------------------
+#         parameter_names = [p.name for p in model.parameters]
+#         args['parameter_names'] = parameter_names + ['V_t']  # FIXME: This voltage threshold shouldn't be hard-coded here @IgnorePep8
+#         args['parameter_default'] = [component.properties[p].value
+#                                      for p in parameter_names]
+#         # TODO: Need to ask Ivan out why scaling is required in some cases
+#         args['parameter_scales'] = {}
+#         # TODO: Add parameter constraints to model
+#         args['parameter_constraints'] = []
+#         # Set states and initial values ---------------------------------------
+#         state_names = [v.name for v in model.dynamics.state_variables]
+#         num_states = len(state_names)
+#         args['num_states'] = num_states
+#         args['state_variables'] = state_names
+#         # TODO: Need to add state layer
+#         args['state_variables_init'] = ([s.value for s in initial_state]
+#                                         if not isinstance(initial_state,
+#                                                           float)
+#                                         else [initial_state] * num_states)
+#         # Guess membrane voltage variable -------------------------------------
+#         # FIXME: This isn't a fail-safe way of determining this.
+#         volt_states = [s.name for s in model.dynamics.state_variables
+#                        if s.dimension == volt_dimension]
+#         if not volt_states:
+#             raise Pype9BuildError(
+#                 "Did not find a state with dimension 'voltage' in the list of "
+#                 "state names so couldn't " "determine the membrane voltage")
+#         elif len(volt_states) > 2:
+#             raise Pype9BuildError(
+#                 "Found multiple states with dimension 'voltage' ({}) in the "
+#                 "list of state names so couldn't determine the membrane "
+#                 "voltage".format(', '.join(volt_states)))
+#         else:
+#             args['membrane_voltage'] = volt_states[0]
+#         # Set dynamics --------------------------------------------------------
+#         dynamics = []
+#         for regime in model.dynamics.regimes:
+#             # Get name for regime dynamics function ---------------------------
+#             func_name = '_'.join([component.name, regime.name or 'default'])
+#             req_defs = self._required_defs(regime.time_derivatives, model)
+#             dynamics.append((func_name, regime.time_derivatives, req_defs))
+#             # TODO: What to do with analog receive ports? Probably need to
+#             # treat as gap junctions.
+#         args['dynamics'] = dynamics
+#         # Set steady state ----------------------------------------------------
+#         # TODO: This needs to be implemented
+#         args['steady_state'] = False
+#         # Port names ----------------------------------------------------------
+#         # FIXME: Need a more fool proof way of distinguishing between voltage
+#         #        stims or not (tricky as they are not defined in 9ml).
+#         #        Stimulating voltages are treated differently as they don't
+#         #        need the gap junction framework.
+#         args['analog_port_names'] = [p.name
+#                                      for p in model.analog_receive_ports]
+#         args['current_stim_names'] = [p.name
+#                                       for p in model.analog_receive_ports
+#                                       if p.dimension == current_unit_dim]
+#         args['gap_junction_names'] = [p.name
+#                                       for p in model.analog_receive_ports
+#                                       if p.dimension != current_unit_dim]
+#         # TODO: These are currently not handled anywhere
+#         args['reduce_port_names'] = [p.name for p in model.analog_reduce_ports]
+#         args['event_port_names'] = [p.name for p in model.event_receive_ports]
+#         # Event handling ------------------------------------------------------
+#         regimes = list(model.dynamics.regimes)
+#         args['regime_names'] = [r.name for r in regimes]
+#         args['on_event_names'] = list(chain(*((e.src_port_name
+#                                                for e in r.on_events)
+#                                               for r in regimes)))
+#         # Get all state assignement expressions to deteriming required defs.
+#         transients = []
+#         for regime in regimes:
+#             for on_event in regime.on_events:
+#                 func_name = '_'.join([on_event.src_port_name, 'transient_in',
+#                                       regime.name or 'default'])
+#                 req_defs = self._required_defs(on_event.state_assignments,
+#                                                model)
+#                 transients.append((func_name, on_event.state_assignments,
+#                                    req_defs))
+#         args['transients'] = transients
+#         args['regimes'] = regimes
+#         # Set some standard parameters ----------------------------------------
+#         args['v_threshold'] = v_threshold
+#         # FIXME: Need to work out where this comes from.
+#         args['refractory_period'] = None
+#         return args

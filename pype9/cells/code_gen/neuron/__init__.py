@@ -20,6 +20,8 @@ import quantities as pq
 from .. import BaseCodeGenerator
 import nineml.abstraction_layer.units as un
 from pype9.exceptions import Pype9BuildError
+import pype9
+from datetime import datetime
 
 
 if 'NRNHOME' in os.environ:
@@ -40,6 +42,11 @@ class CodeGenerator(BaseCodeGenerator):
 
     SIMULATOR_NAME = 'neuron'
     ODE_SOLVER_DEFAULT = 'derivimplicit'
+    SS_SOLVER_DEFAULT = 'gsl'
+    MAX_STEP_SIZE_DEFAULT = 0.01  # FIXME:!!!
+    ABS_TOLERANCE_DEFAULT = 0.01
+    REL_TOLERANCE_DEFAULT = 0.01
+    V_THRESHOLD_DEFAULT = 0.0
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
     _neuron_units = {un.mV: 'millivolt',
@@ -56,106 +63,27 @@ class CodeGenerator(BaseCodeGenerator):
         # NMODL files on the current platform
         self.specials_dir = self._get_specials_dir()
 
-    def _extract_template_args(self, component, initial_state,  # @UnusedVariable @IgnorePep8
-                               **template_args):
-        model = component.component_class
-        args = super(CodeGenerator, self)._extract_template_args(
-            component, **template_args)
-        args['ode_solver'] = template_args.get('ode_solver', 'derivimplicit')
-        args['point_process'] = False
-        args['parameter_names'] = list(p.name for p in model.parameters)
-        args['alias_names'] = list(a.lhs for a in model.aliases)
-        args['state_variable_names'] = list(s.name
-                                            for s in model.state_variables)
-# <<<<<<< HEAD
-        args['properties'] = component.properties.values()
-        args['analog_send_ports'] = [p.name for p in model.analog_send_ports]
-        # Set dynamics --------------------------------------------------------
-        dynamics = []
-        for regime in model.dynamics.regimes:
-            # Get name for regime dynamics function ---------------------------
-            regime_name = regime.name or 'default'
-            req_defs = self._required_defs(regime.time_derivatives, model)
-            dynamics.append((regime_name, regime.time_derivatives, req_defs))
-#         used_neuron_units = []
-#         for ref_unit, ref_name in self._neuron_units.iteritems():
-#             divides = False
-#             ref_quantity = pq.Quantity(1, ref_unit.symbol)
-#             for unit in componentclass.used_units:
-#
-#         args['used_units'] = list((u.name, self._neuron_units[u])
-#                                   for u in componentclass.used_units
-#                                   if u in self._neuron_units)
-# =======
-#         used_neuron_units = []
-#         for ref_unit, ref_name in self._neuron_units.iteritems():
-#             divides = False
-#             ref_quantity = pq.Quantity(1, ref_unit.symbol)
-#             for unit in componentclass.used_units:
-#
-#                 args['used_units'] = list((u.name, self._neuron_units[u])
-#                                           for u in componentclass.used_units
-#                                           if u in self._neuron_units)
-# >>>>>>> 8fbf6059bb26792785d4b22d7eadf1c5a6070cb9
-        # Sort ports by dimension ---------------------------------------------
-        current_in = {}
-        voltage_in = {}
-        concentration_in = {}
-        other_in_ports = []
-        # FIXME: Guesses ion species from name (assuming Hoc syntax), this
-        # should be done from annotations inserted on import or from the cell
-        # class.
-        for p in chain(model.analog_receive_ports, model.analog_reduce_ports):
-            if p.dimension == un.currentDensity and p.name.startswith('i'):
-                current_in[p.name[1:]] = p
-            elif p.dimension == un.voltage and p.name.startswith('e'):
-                voltage_in[p.name[1:]] = p
-            elif p.dimension == un.concentration and (p.name.endswith('i') or
-                                                      p.name.endswith('o')):
-                concentration_in[p.name[:-1]] = p
-            else:
-                other_in_ports.append(p)
-        current_out = {}
-        concentration_out = {}
-        other_out_ports = []
-        for p in model.analog_send_ports:
-            if p.dimension == un.currentDensity and p.name.startswith('i'):
-                current_out[p.name[1:]] = p
-            elif p.dimension == un.concentration and (p.name.endswith('i') or
-                                                      p.name.endswith('o')):
-                concentration_out[p.name[:-1]] = p
-            else:
-                other_out_ports.append(p)
-        used_ions = set(chain(current_in.iterkeys(),
-                              voltage_in.iterkeys(),
-                              concentration_in.iterkeys(),
-                              current_out.iterkeys(),
-                              concentration_out.iterkeys()))
-        ion_read_writes = []
-        for ion in used_ions:
-            read = []
-            if ion in current_in:
-                read.append(current_in[ion].name)
-            if ion in voltage_in:
-                read.append(voltage_in[ion].name)
-            if ion in concentration_in:
-                read.append(concentration_in[ion].name)
-            write = []
-            if ion in current_out:
-                write.append(current_out[ion].name)
-            if ion in concentration_out:
-                write.append(concentration_out[ion].name)
-            ion_read_writes.append((ion, read, write, None))
-        args['ion_read_writes'] = ion_read_writes
-        args['incoming_analog_ports'] = list(p.name for p in other_in_ports
-                                             if p.name not in ('celsius', 'v'))
-        return args
-
-    def _render_source_files(self, template_args, src_dir, _, _, verbose):  # @UnusedVariable @IgnorePep8
-        model_name = template_args['ModelName']
+    def generate_source_files(self, component, initial_state, src_dir,
+                              **kwargs):
+        tmpl_args = {
+            'component': component,
+            'componentclass': component.component_class,
+            'version': pype9.version, 'src_dir': src_dir,
+            'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
+            'ode_solver': kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT),
+            'ss_solver': kwargs.get('ss_solver', self.SS_SOLVER_DEFAULT),
+            'unit_conversion': self.unit_conversion,
+            'max_step_size': kwargs.get('max_step_size',
+                                        self.MAX_STEP_SIZE_DEFAULT),
+            'abs_tolerance': kwargs.get('max_step_size',
+                                        self.ABS_TOLERANCE_DEFAULT),
+            'rel_tolerance': kwargs.get('max_step_size',
+                                        self.REL_TOLERANCE_DEFAULT),
+            'parameter_scales': [], 'membrane_voltage': 'V_t',
+            'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT)}
         # Render mod file
-        self.render_to_file('main.tmpl', template_args, model_name + '.mod',
-                             src_dir)
+        self.render_to_file('main.tmpl', tmpl_args, component.name + '.mod',
+                            src_dir)
 
     def configure_build_files(self, component, src_dir, compile_dir,
                                install_dir):
@@ -375,3 +303,99 @@ class CodeGenerator(BaseCodeGenerator):
 #                                modelName = '''hodgkin_huxley_Leak''',
 #                                ODEmethod = '''cnexp''',
 #                                indent = 2)
+
+# 
+#     def _extract_template_args(self, component, initial_state,  # @UnusedVariable @IgnorePep8
+#                                **template_args):
+#         model = component.component_class
+#         args = super(CodeGenerator, self)._extract_template_args(
+#             component, **template_args)
+#         args['ode_solver'] = template_args.get('ode_solver', 'derivimplicit')
+#         args['point_process'] = False
+#         args['parameter_names'] = list(p.name for p in model.parameters)
+#         args['alias_names'] = list(a.lhs for a in model.aliases)
+#         args['state_variable_names'] = list(s.name
+#                                             for s in model.state_variables)
+# # <<<<<<< HEAD
+#         args['properties'] = component.properties.values()
+#         args['analog_send_ports'] = [p.name for p in model.analog_send_ports]
+#         # Set dynamics --------------------------------------------------------
+#         dynamics = []
+#         for regime in model.dynamics.regimes:
+#             # Get name for regime dynamics function ---------------------------
+#             regime_name = regime.name or 'default'
+#             req_defs = self._required_defs(regime.time_derivatives, model)
+#             dynamics.append((regime_name, regime.time_derivatives, req_defs))
+# #         used_neuron_units = []
+# #         for ref_unit, ref_name in self._neuron_units.iteritems():
+# #             divides = False
+# #             ref_quantity = pq.Quantity(1, ref_unit.symbol)
+# #             for unit in componentclass.used_units:
+# #
+# #         args['used_units'] = list((u.name, self._neuron_units[u])
+# #                                   for u in componentclass.used_units
+# #                                   if u in self._neuron_units)
+# # =======
+# #         used_neuron_units = []
+# #         for ref_unit, ref_name in self._neuron_units.iteritems():
+# #             divides = False
+# #             ref_quantity = pq.Quantity(1, ref_unit.symbol)
+# #             for unit in componentclass.used_units:
+# #
+# #                 args['used_units'] = list((u.name, self._neuron_units[u])
+# #                                           for u in componentclass.used_units
+# #                                           if u in self._neuron_units)
+# # >>>>>>> 8fbf6059bb26792785d4b22d7eadf1c5a6070cb9
+#         # Sort ports by dimension ---------------------------------------------
+#         current_in = {}
+#         voltage_in = {}
+#         concentration_in = {}
+#         other_in_ports = []
+#         # FIXME: Guesses ion species from name (assuming Hoc syntax), this
+#         # should be done from annotations inserted on import or from the cell
+#         # class.
+#         for p in chain(model.analog_receive_ports, model.analog_reduce_ports):
+#             if p.dimension == un.currentDensity and p.name.startswith('i'):
+#                 current_in[p.name[1:]] = p
+#             elif p.dimension == un.voltage and p.name.startswith('e'):
+#                 voltage_in[p.name[1:]] = p
+#             elif p.dimension == un.concentration and (p.name.endswith('i') or
+#                                                       p.name.endswith('o')):
+#                 concentration_in[p.name[:-1]] = p
+#             else:
+#                 other_in_ports.append(p)
+#         current_out = {}
+#         concentration_out = {}
+#         other_out_ports = []
+#         for p in model.analog_send_ports:
+#             if p.dimension == un.currentDensity and p.name.startswith('i'):
+#                 current_out[p.name[1:]] = p
+#             elif p.dimension == un.concentration and (p.name.endswith('i') or
+#                                                       p.name.endswith('o')):
+#                 concentration_out[p.name[:-1]] = p
+#             else:
+#                 other_out_ports.append(p)
+#         used_ions = set(chain(current_in.iterkeys(),
+#                               voltage_in.iterkeys(),
+#                               concentration_in.iterkeys(),
+#                               current_out.iterkeys(),
+#                               concentration_out.iterkeys()))
+#         ion_read_writes = []
+#         for ion in used_ions:
+#             read = []
+#             if ion in current_in:
+#                 read.append(current_in[ion].name)
+#             if ion in voltage_in:
+#                 read.append(voltage_in[ion].name)
+#             if ion in concentration_in:
+#                 read.append(concentration_in[ion].name)
+#             write = []
+#             if ion in current_out:
+#                 write.append(current_out[ion].name)
+#             if ion in concentration_out:
+#                 write.append(concentration_out[ion].name)
+#             ion_read_writes.append((ion, read, write, None))
+#         args['ion_read_writes'] = ion_read_writes
+#         args['incoming_analog_ports'] = list(p.name for p in other_in_ports
+#                                              if p.name not in ('celsius', 'v'))
+#         return args
