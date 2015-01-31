@@ -51,7 +51,7 @@ class CodeGenerator(BaseCodeGenerator):
     def __init__(self):
         super(CodeGenerator, self).__init__()
         # Find the path to nrnivmodl
-        self.nrnivmodl_path = self._path_to_exec('nrnivmodl')
+        self.nrnivmodl_path = self.path_to_exec('nrnivmodl')
         # Work out the name of the installation directory for the compiled
         # NMODL files on the current platform
         self.specials_dir = self._get_specials_dir()
@@ -154,8 +154,12 @@ class CodeGenerator(BaseCodeGenerator):
     def _render_source_files(self, template_args, src_dir, _, _, verbose):  # @UnusedVariable @IgnorePep8
         model_name = template_args['ModelName']
         # Render mod file
-        self._render_to_file('main.tmpl', template_args, model_name + '.mod',
+        self.render_to_file('main.tmpl', template_args, model_name + '.mod',
                              src_dir)
+
+    def configure_build_files(self, component, src_dir, compile_dir,
+                               install_dir):
+        pass
 
     def compile_source_files(self, compile_dir, component_name, verbose):
         """
@@ -191,7 +195,7 @@ class CodeGenerator(BaseCodeGenerator):
                 "Compilation of NMODL files for '{}' model failed. See src "
                 "directory '{}':\n ".format(component_name, compile_dir, e))
 
-    def _get_install_dir(self, build_dir, install_dir):
+    def get_install_dir(self, build_dir, install_dir):
         if install_dir:
             raise Pype9BuildError(
                 "Cannot specify custom installation directory ('{}') for "
@@ -202,13 +206,13 @@ class CodeGenerator(BaseCodeGenerator):
         return os.path.abspath(os.path.join(build_dir, self._SRC_DIR,
                                             self.specials_dir))
 
-    def _get_compile_dir(self, build_dir):
+    def get_compile_dir(self, build_dir):
         """
         The compile dir is the same as the src dir for NEURON compile
         """
         return os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
 
-    def _clean_compile_dir(self, compile_dir):
+    def clean_compile_dir(self, compile_dir):
         pass  # NEURON doesn't use a separate compile dir
 
     def _get_specials_dir(self):
@@ -238,7 +242,7 @@ class CodeGenerator(BaseCodeGenerator):
         os.chdir(orig_dir)
         return specials_dir
 
-    def _simulator_specific_paths(self):
+    def simulator_specific_paths(self):
         path = []
         if 'NRNHOME' in os.environ:
             path.append(os.path.join(os.environ['NRNHOME'], self.specials_dir,

@@ -51,7 +51,7 @@ void {{component.name}}::init_buffers_() {
 {% endfor %}
     
     // Clear analog buffers
-{% for p in componentclass.analog_ports %}
+{% for p in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
     B_.{{p.name}}_analog_port.clear();
 {% endfor %}
     
@@ -62,7 +62,7 @@ void {{component.name}}::init_buffers_() {
     B_.step_ = Time::get_resolution().get_ms();
     B_.IntegrationStep_ = B_.step_;
     
-{% for p in componentclass.analog_ports %}
+{% for p in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
     B_.{{p.name}}_value = 0.0;
 {% endfor %}
 

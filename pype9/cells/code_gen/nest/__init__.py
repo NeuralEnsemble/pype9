@@ -53,7 +53,7 @@ class CodeGenerator(BaseCodeGenerator):
     def __init__(self, build_cores=1):
         super(CodeGenerator, self).__init__()
         self._build_cores = build_cores
-        nest_config = self._path_to_exec('nest-config')
+        nest_config = self.path_to_exec('nest-config')
         compiler = sp.check_output('{} --compiler'.format(nest_config),
                                    shell=True)
         self._compiler = compiler[:-1]  # strip trailing \n
@@ -181,7 +181,7 @@ class CodeGenerator(BaseCodeGenerator):
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'ode_solver': kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT),
             'ss_solver': kwargs.get('ss_solver', self.SS_SOLVER_DEFAULT),
-            'unit_scalar': self.unit_scalar,
+            'unit_conversion': self.unit_conversion,
             'max_step_size': kwargs.get('max_step_size',
                                         self.MAX_STEP_SIZE_DEFAULT),
             'abs_tolerance': kwargs.get('max_step_size',
@@ -191,22 +191,22 @@ class CodeGenerator(BaseCodeGenerator):
             'parameter_scales': [], 'membrane_voltage': 'V_t',
             'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT)}
         # Render C++ header file
-        self._render_to_file('header.tmpl', tmpl_args,
+        self.render_to_file('header.tmpl', tmpl_args,
                              component.name + '.h', src_dir)
         # Render C++ class file
-        self._render_to_file('main.tmpl', tmpl_args, component.name + '.cpp',
+        self.render_to_file('main.tmpl', tmpl_args, component.name + '.cpp',
                              src_dir)
         # Render Loader header file
-        self._render_to_file('loader-header.tmpl', tmpl_args,
+        self.render_to_file('loader-header.tmpl', tmpl_args,
                              component.name + 'Loader.h', src_dir)
         # Render Loader C++ class
-        self._render_to_file('loader-cpp.tmpl', tmpl_args,
+        self.render_to_file('loader-cpp.tmpl', tmpl_args,
                              component.name + 'Loader.cpp', src_dir)
         # Render SLI initialiser
-        self._render_to_file('sli_initialiser.tmpl', tmpl_args,
+        self.render_to_file('sli_initialiser.tmpl', tmpl_args,
                              component.name + 'Loader.sli', src_dir)
 
-    def _configure_build_files(self, component, src_dir, compile_dir,
+    def configure_build_files(self, component, src_dir, compile_dir,
                                install_dir):
         # Generate Makefile if it is not present
         if not os.path.exists(os.path.join(compile_dir, 'Makefile')):
@@ -215,11 +215,11 @@ class CodeGenerator(BaseCodeGenerator):
             orig_dir = os.getcwd()
             config_args = {'component': component, 'src_dir': src_dir,
                            'version': pype9.version}
-            self._render_to_file('configure-ac.tmpl', config_args,
+            self.render_to_file('configure-ac.tmpl', config_args,
                                  'configure.ac', src_dir)
-            self._render_to_file('Makefile-am.tmpl', config_args,
+            self.render_to_file('Makefile-am.tmpl', config_args,
                                  'Makefile.am', src_dir)
-            self._render_to_file('bootstrap-sh.tmpl', config_args,
+            self.render_to_file('bootstrap-sh.tmpl', config_args,
                                  'bootstrap.sh', src_dir)
             os.chdir(src_dir)
             try:
@@ -242,9 +242,6 @@ class CodeGenerator(BaseCodeGenerator):
                     "directory '{}':\n ".format(component.name, src_dir))
             os.chdir(orig_dir)
 
-    def unit_scalar(self, units):
-        return 1.0  # FIXME: Need to implement this.
-
     def compile_source_files(self, compile_dir, component_name, verbose):
         # Run configure script, make and make install
         os.chdir(compile_dir)
@@ -262,7 +259,7 @@ class CodeGenerator(BaseCodeGenerator):
             raise Pype9BuildError("Installation of '{}' NEST module failed. "
                                   .format(component_name))
 
-    def _clean_src_dir(self, src_dir, component_name):
+    def clean_src_dir(self, src_dir, component_name):
         # Clean existing src directories from previous builds.
         prefix = os.path.join(src_dir, component_name)
         if not os.path.exists(src_dir):
@@ -274,7 +271,7 @@ class CodeGenerator(BaseCodeGenerator):
             remove_ignore_missing(prefix + 'Loader.cpp')
             remove_ignore_missing(prefix + 'Loader.sli')
 
-    def _clean_compile_dir(self, compile_dir):
+    def clean_compile_dir(self, compile_dir):
         orig_dir = os.getcwd()
         try:
             os.chdir(compile_dir)
@@ -291,7 +288,7 @@ class CodeGenerator(BaseCodeGenerator):
                     "required permissions or specify a different \"parent "
                     "build directory\" ('parent_build_dir') -> {}".format(e))
 
-    def _simulator_specific_paths(self):
+    def simulator_specific_paths(self):
         path = []
         if 'NEST_INSTALL_DIR' in os.environ:
             path.append(os.path.join(os.environ['NEST_INSTALL_DIR'], 'bin'))

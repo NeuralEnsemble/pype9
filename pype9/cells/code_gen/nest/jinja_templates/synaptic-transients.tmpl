@@ -35,24 +35,49 @@
     {% for oe in regime.on_events %}
 inline void {{component.name}}::{{oe.src_port_name}}_event_in_{{regime.name}}(long_t lag) {
     
-    // Map parameters used in dynamics to current namespace
-        {% for param in componentclass.parameters %}
-    const double_t {{param.name}} = P_.{{param.name}};
-        {% endfor %}
-
-    // Map port buffers to current namespace
-        {% for port in componentclass.analog_receive_ports %}
-    const double_t {{port.name}} = B_.{{port.name}}_value;
-        {% endfor %}
-    
     // Map states used in dynamics to current namespace
         {% for sv in componentclass.state_variables %}
     const double_t {{sv.name}} = S_.y_[{{component.name}}::State_::{{sv.name}}_INDEX];
         {% endfor %}
+        
+    {% set dp = componentclass.get_dependencies(oe.state_assignments) %}
+    
+    // Map parameters used in dynamics to current namespace
+        {% for param in dp.parameters %}
+    const double_t {{param.name}} = P_.{{param.name}};
+        {% endfor %}
+
+    // Map port buffers to current namespace
+        {% for port in dp.ports %}
+    const double_t {{port.name}} = B_.{{port.name}}_value;
+        {% endfor %}
+
+    // Add constants
+    {% for const in dp.constants %}
+        {% set conv = componentclass.unit_conversion_factor(const.units) %}
+        {% set conv_value = conv[0] * const.value + conv[1] %}
+    const static double_t {{const.name}} = {{conv_value}};  // {{const.value}} ({{const.units.name}})
+    {% endfor %}
+    
+    // Add random variables
+    {% for rv in dp.randomvariables %}
+    const double_t {{rv.name}} = {{get_random_function(rv)}}
+    {% endfor %}
    
     // Evaluate aliases used in differential equations
-        {% for alias in componentclass.aliases %}
-    const double_t {{alias.lhs}} = {{alias.rhs}};
+        {% for expr in dp.expressions %}
+            {% if hasasttr(expr, 'pieces') %}  {# Is a Piecewise statement #}
+    const double_t {{expr.name}};
+                {% for piece in expr.pieces %}
+    {% if not loop.first %}else {% endif -%}
+    if ({{expr.condition}})
+        {{expr_name}} = {{expr.rhs}};
+                {%- endfor %}
+    else
+        {{expr_name}} = {{expr.otherwise.rhs}}; 
+            {% else %}
+    const double_t {{expr.lhs}} = {{expr.rhs}};
+            {% endif %}
         {% endfor %}
 
     // Evaluate differential equations

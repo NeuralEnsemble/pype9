@@ -14,6 +14,7 @@ import platform
 import os
 import time
 from collections import namedtuple
+from itertools import chain
 import shutil
 from copy import copy
 from os.path import abspath, dirname, join
@@ -36,15 +37,16 @@ class BaseCodeGenerator(object):
 
     BUILD_MODE_OPTIONS = ['lazy', 'force', 'require', 'build_only',
                           'generate_only', 'compile_only']
-    _DEFAULT_BUILD_DIR = '9build'
+    BUILD_DIR_DEFAULT = '9build'
     _PARAMS_DIR = 'params'
     _SRC_DIR = 'src'
     _INSTL_DIR = 'install'
     _CMPL_DIR = 'compile'  # Ignored for NEURON but used for NEST
     _9ML_MOD_TIME_FILE = 'source_modification_time'
 
-    RequiredDefs = namedtuple('RequiredDefs',
-                              'parameters ports states aliases')
+    # Derived classes should provide mapping from 9ml dimensions to default
+    # units
+    DEFAULT_UNITS = {}
 
     # Abstract methods that are required in the derived classes
 
@@ -55,22 +57,7 @@ class BaseCodeGenerator(object):
                                      undefined=StrictUndefined)
         # Add some globals used by the template code
         self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
-                                      xrange=xrange, next=next)
-
-    def _extract_template_args(self, component, **template_args):
-        """
-        Extracts the required information from the 9ML model into a dictionary
-        containing the relevant arguments for the Jinja2 templates. This should
-        be override by the derived classes to fill out the remaining arguments
-        required by the templates.
-        """
-        args = {}
-        # Set model name and general information ------------------------------
-        args['ModelName'] = component.name
-        args['timestamp'] = datetime.now().strftime('%a %d %b %y %I:%M:%S%p')
-        args['version'] = version
-        args['source_file'] = template_args.get('source_file', '<generated>')
-        return args
+                                      xrange=xrange, next=next, chain=chain)
 
     @abstractmethod
     def generate_source_files(self, component, initial_state, src_dir,
@@ -79,27 +66,17 @@ class BaseCodeGenerator(object):
         Generates the source files for the relevant simulator
         """
         pass
-#         # Extract relevant information from 9ml
-#         # component/class/initial_state
-#         template_args = self._extract_template_args(component, initial_state,
-#                                                     **optional_template_args)
-#         # Render source files
-#         self._render_source_files(template_args, src_dir, verbose=verbose)
 
-    def _configure_build_files(self, model_name, src_dir, compile_dir,
+    @abstractmethod
+    def configure_build_files(self, model_name, src_dir, compile_dir,
                                install_dir):
+        """
+        Configures the build files before compiling
+        """
         pass
 
     @abstractmethod
     def compile_source_files(self, compile_dir, component_name, verbose):
-        pass
-
-    @abstractmethod
-    def unit_scalar(self, units):
-        """
-        Returns the scalar value required to convert the given units into
-        the native units used by the interpreter.
-        """
         pass
 
     def generate(self, component, initial_state=None, install_dir=None,
@@ -175,16 +152,16 @@ class BaseCodeGenerator(object):
                                 "already in memory")
             build_dir = os.path.abspath(os.path.join(
                 os.path.dirname(component_src_path),
-                self._DEFAULT_BUILD_DIR,
+                self.BUILD_DIR_DEFAULT,
                 self.SIMULATOR_NAME,
                 component.name))
         # Calculate src directory path within build directory
         src_dir = os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
         # Calculate compile directory path within build directory
-        compile_dir = self._get_compile_dir(build_dir)
+        compile_dir = self.get_compile_dir(build_dir)
         # Calculate install directory path within build directory if not
         # provided
-        install_dir = self._get_install_dir(build_dir, install_dir)
+        install_dir = self.get_install_dir(build_dir, install_dir)
         # Get the timestamp of the source file
         if component_src_path:
             nineml_mod_time = time.ctime(os.path.getmtime(component_src_path))
@@ -232,7 +209,7 @@ class BaseCodeGenerator(object):
                                 "option".format(src=src_dir))
         # Generate source files from NineML code
         if generate_source:
-            self._clean_src_dir(src_dir, component.name)
+            self.clean_src_dir(src_dir, component.name)
             self.generate_source_files(component=component,
                                        initial_state=initial_state,
                                        src_dir=src_dir,
@@ -246,12 +223,12 @@ class BaseCodeGenerator(object):
                 f.write(nineml_mod_time)
         if compile_source:
             # Clean existing compile & install directories from previous builds
-            self._clean_compile_dir(compile_dir)
-            self._configure_build_files(component=component.name,
+            self.clean_compile_dir(compile_dir)
+            self.configure_build_files(component=component.name,
                                         src_dir=src_dir,
                                         compile_dir=compile_dir,
                                         install_dir=install_dir)
-            self._clean_install_dir(install_dir)
+            self.clean_install_dir(install_dir)
             # Compile source files
             self.compile_source_files(compile_dir, component.name,
                                       verbose=verbose)
@@ -259,7 +236,20 @@ class BaseCodeGenerator(object):
         os.chdir(orig_dir)
         return install_dir
 
-    def _get_install_dir(self, build_dir, install_dir):
+    def unit_conversion(self, units):
+        try:
+            default_units = self.DEFAULT_UNITS[units.dimension]
+            factor = 10 ** (units.power - default_units.power)
+            offset = (default_units.offset - units.offset) * factor
+        except KeyError:
+            # FIXME: In this case we should try to work out a combination of
+            #        equivalent default units (could be a little tricky) or
+            #        convert to SI units if unit is not covered by simulator.
+            factor = 1.0
+            offset = 0.0
+        return (factor, offset)
+
+    def get_install_dir(self, build_dir, install_dir):
         """
         The install dir is determined within a method so that derrived classes
         (namely neuron.CodeGenerator) can override the provided install
@@ -270,15 +260,10 @@ class BaseCodeGenerator(object):
                                                        self._INSTL_DIR))
         return install_dir
 
-    def _get_compile_dir(self, build_dir):
+    def get_compile_dir(self, build_dir):
         return os.path.abspath(os.path.join(build_dir, self._CMPL_DIR))
 
-    def _render_to_file(self, template, args, filename, directory):
-        contents = self.jinja_env.get_template(template).render(**args)
-        with open(os.path.join(directory, filename), 'w') as f:
-            f.write(contents)
-
-    def _clean_src_dir(self, src_dir, component_name):  # @UnusedVariable
+    def clean_src_dir(self, src_dir, component_name):  # @UnusedVariable
         # Clean existing src directories from previous builds.
         shutil.rmtree(src_dir, ignore_errors=True)
         try:
@@ -289,7 +274,7 @@ class BaseCodeGenerator(object):
                 "required permissions or specify a different \"parent build "
                 "directory\" ('parent_build_dir') -> {}".format(e))
 
-    def _clean_compile_dir(self, compile_dir):
+    def clean_compile_dir(self, compile_dir):
         # Clean existing compile & install directories from previous builds
         shutil.rmtree(compile_dir, ignore_errors=True)
         try:
@@ -300,7 +285,7 @@ class BaseCodeGenerator(object):
                 "required permissions or specify a different \"parent build "
                 "directory\" ('parent_build_dir') -> {}".format(e))
 
-    def _clean_install_dir(self, install_dir):
+    def clean_install_dir(self, install_dir):
         # Clean existing compile & install directories from previous builds
         shutil.rmtree(install_dir, ignore_errors=True)
         try:
@@ -311,44 +296,12 @@ class BaseCodeGenerator(object):
                 "required permissions or specify a different \"parent build "
                 "directory\" ('parent_build_dir') -> {}".format(e))
 
-    def _required_defs(self, expressions, model):
-        """
-        Gets lists of required parameters, states, ports and aliases
-        (in resolved order of execution).
-        """
-        # Initialise containers
-        required_params = set()
-        required_ports = set()
-        required_states = set()
-        required_aliases = []  # the order of the aliases is critical
-        # Add corresponding param, port, alias for each atom and atom-
-        # reqencies
-        for expr in expressions:
-            for atom in expr.rhs_names:
-                if atom in model.parameters_map:
-                    required_params.add(model.parameters_map[atom])
-                elif atom in model.analog_receive_ports_map:
-                    required_ports.add(model.analog_receive_ports_map[atom])
-                elif atom in model.analog_reduce_ports_map:
-                    required_ports.add(model.analog_reduce_ports_map[atom])
-                elif atom in model.state_variables_map:
-                    required_states.add(model.state_variables_map[atom])
-                elif atom in model.aliases_map:
-                    alias = model.aliases_map[atom]
-                    req = self._required_defs([alias], model)
-                    required_params.update(req.parameters)
-                    required_ports.update(req.ports)
-                    required_states.update(req.states)
-                    required_aliases.extend(a for a in req.aliases
-                                            if a not in required_aliases)
-                    required_aliases.append(alias)
-                else:
-                    assert(False), ("Unrecognised atom '{}' in expression '{}'"
-                                    .format(atom, expr))
-        return self.RequiredDefs(required_params, required_ports,
-                                 required_states, required_aliases)
+    def render_to_file(self, template, args, filename, directory):
+        contents = self.jinja_env.get_template(template).render(**args)
+        with open(os.path.join(directory, filename), 'w') as f:
+            f.write(contents)
 
-    def _path_to_exec(self, exec_name):
+    def path_to_exec(self, exec_name):
         """
         Returns the full path to an executable by searching the "PATH"
         environment variable
@@ -361,7 +314,7 @@ class BaseCodeGenerator(object):
         # Get the system path
         system_path = os.environ['PATH'].split(os.pathsep)
         # Append NEST_INSTALL_DIR/NRNHOME if present
-        system_path.extend(self._simulator_specific_paths())
+        system_path.extend(self.simulator_specific_paths())
         # Check the system path for the command
         exec_path = None
         for dr in system_path:
@@ -374,7 +327,10 @@ class BaseCodeGenerator(object):
                             " '{}'".format(exec_name, ':'.join(system_path)))
         return exec_path
 
-    def _simulator_specific_paths(self):
+    def simulator_specific_paths(self):
+        """
+        To be overridden by derived classes if required.
+        """
         return []
 
     def _load_component_translations(self, biophysics_name, params_dir):
