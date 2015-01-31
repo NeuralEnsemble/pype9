@@ -6,7 +6,7 @@
 :extern double nineml_gsl_poisson(double);
 :ENDVERBATIM
 
-TITLE Spiking node generated from 9ML using PyPe9 version {{version}}
+TITLE Spiking node generated from 9ML using PyPe9 version {{version}} at "{{timestamp}}"
 
 NEURON {
     POINT_PROCESS {{component.name}}
@@ -23,8 +23,8 @@ NEURON {
 {% endfor %}
 
     :Aliases
-{% for alias in componentclass.aliases %}
-    RANGE {{alias.lhs}}
+{% for expr in chain(componentclass.aliases, componentclass.piecewises) %}
+    RANGE {{expr.lhs}}
 {% endfor %}
 }
 
@@ -48,7 +48,7 @@ CONSTANT {
     : On-condition flags
 {% for regime in componentclass.regimes %}
     {% for oc in regime.on_conditions %}
-    CONDITION_{{componentclass.index_of(oc)}}_ = {{componentclass.index_of(oc)}}
+    {{regime.name | upper}}_CONDITION_{{componentclass.index_of(oc, key=regime)}}_ = {{componentclass.index_of(oc)}}
     {% endfor %}
 {% endfor %}
 
@@ -91,24 +91,21 @@ STATE {
 
 ASSIGNED {
     regime
-
 {% for alias in componentclass.aliases %}
     {{alias.lhs}}
 {% endfor %}
-
 {% if weight_variables %}
-{% for var in weight_variables.values %}
+    {% for var in weight_variables.values %}
     {{var}}
-{% endfor %}
+    {% endfor %}
 {% endif %}
 }
 
 BREAKPOINT {
-    :SOLVE states METHOD derivimplicit
-    SOLVE states METHOD cnexp
-
-{% for alias in componentclass.aliases %}
-    {{alias.lhs}} = {{alias.rhs}}
+    SOLVE states METHOD {{ode_solver}}
+{% set dp = componentclass.get_dependencies(all_time_derivs) %}    
+{% for expr in dp.expressions %}
+    {{expr.lhs}} = {{expr.rhs}}
 {% endfor %}
 }
 
@@ -130,35 +127,44 @@ FUNCTION _deriv_{{sv.name}}({{deriv_func_args(componentclass, sv.name)}})) {
 
 NET_RECEIVE(w, channel) {
 
-    :printf("Received event with weight %f on channel %f at %f\n", w, channel, t)
-    :printf("Received event at %f\n", t)
-
     INITIAL {
       : stop channel being set to 0 by default
     }
 
     if (flag == INIT) {
 {% for regime in componentclass.regimes %}
+        if (regime == {{regime.name | upper}}) {
     {% for oc in regime.on_conditions %}
-        WATCH ({{oc.trigger.rhs}})  CONDITION_{{componentclass.index_of(oc)}}_
+            WATCH ({{oc.trigger.rhs}})  {{regime.name | upper}}_CONDITION_{{componentclass.index_of(oc, key=regime)}}_
     {% endfor %}
+        }
 {% endfor %}
     } else if (flag == SPIKE) {
-        :printf("Received spike with weight %f on channel %f at %f\n", w, channel, t)
 {% for regime in componentclass.regimes %}
         if (regime == {{regime.name | upper}}) {
-            printf("Current regime: {{regime.name}} \n")
     {% for oe in regime.on_events %}
+        {% set dp = componentclass.get_dependencies(oe.state_assignments) %}    
             if (channel == {{oe.src_port_name | upper}}) {
-                printf("  Resolved to channel {{regime.name + '-' + oe.src_port_name}}\n" )
         {% if weight_variables %}
                 {{get_weight_variable}}({{channel}}, {{weight_variables}}) = w
-        {% endif %}
-
-        {% for sa in oe.state_assignments %}
-                {{sa.lhs}}  =  {{sa.rhs}}
+        {% endif %}        
+                : Expressions
+        {% for expr in dp.expressions %}
+            {% if hasasttr(expr, 'pieces') %}  {# Is a Piecewise statement #}
+                {% for piece in expr.pieces %}
+        {% if not loop.first %}else {% endif -%}
+                if ({{expr.condition}})
+                    {{expr_name}} = {{expr.rhs}}
+                {%- endfor %}
+                else
+                    {{expr_name}} = {{expr.otherwise.rhs}} 
+            {% else %}
+                {{expr.lhs}} = {{expr.rhs}}
+            {% endif %}
         {% endfor %}
-
+        {% for sa in oe.state_assignments %}
+                {{sa.lhs}} = {{sa.rhs}}
+        {% endfor %}
         {% for node in oe.event_outputs %}
                 {{as_expr}}(node)
         {% endfor %}
@@ -180,8 +186,7 @@ NET_RECEIVE(w, channel) {
         } else if (regime == {{regime.name | upper}}) {
     {% for oc in regime.on_conditions %}
             if( {{oc.trigger.rhs}} ) {
-                :printf("\nFirst Round Transition Filtering: Forwarding Event: {{componentclass.index_of(oc)}} @ t=%f",t)
-                net_send(0, CONDITION_{{componentclass.index_of(oc)}}_)
+                net_send(0, {{regime.name | upper}}_CONDITION_{{componentclass.index_of(oc, key=regime)}}_)
             }
     {% endfor %}
 {% endfor %}
@@ -194,10 +199,8 @@ NET_RECEIVE(w, channel) {
     : Second Round
 {% for regime in componentclass.regimes %}
     {% for oc in regime.on_conditions %}
-    else if (flag == CONDITION_{{componentclass.index_of(oc)}}_) {
+    else if (flag == {{regime.name | upper}}_CONDITION_{{componentclass.index_of(oc, key=regime)}}_) {
         first_round_fired = 0
-        :printf("\nt=%f In Regime {{regime.name}} Event With Flag: %f", t, flag )
-        :printf("\nt=%f Changing Regime from {{regime.name}} to {{oc.target_regime.name}} via {{componentclass.index_of(oc)}}", t )
         regime = {{oc.target_regime.name | upper}}
 
         {% for node in oc.event_outputs %}

@@ -76,24 +76,13 @@ class CodeGenerator(BaseCodeGenerator):
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'ode_solver': kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT),
-            'ss_solver': kwargs.get('ss_solver', self.SS_SOLVER_DEFAULT),
             'unit_conversion': self.unit_conversion,
-            'max_step_size': kwargs.get('max_step_size',
-                                        self.MAX_STEP_SIZE_DEFAULT),
-            'abs_tolerance': kwargs.get('max_step_size',
-                                        self.ABS_TOLERANCE_DEFAULT),
-            'rel_tolerance': kwargs.get('max_step_size',
-                                        self.REL_TOLERANCE_DEFAULT),
             'parameter_scales': [], 'membrane_voltage': 'V_t',
             'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT),
             'weight_variables': [],
             'deriv_func_args': self.deriv_func_args, 'ode_for': self.ode_for,
-            'FIRST_REGIME_FLAG': self.FIRST_REGIME_FLAG,
-            'FIRST_TRANSITION_FLAG': self.FIRST_TRANSITION_FLAG,
-            'trans_name': (
-                lambda r, t: r.name + '_' +
-                ('{}_event_'.format(t.src_port_name) if isinstance(t, OnEvent)
-                 else 'condition_{}_'.format(componentclass.index_of(t))))}
+            'all_time_derivs': list(chain(*(r.time_derivatives
+                                            for r in componentclass.regimes)))}
         self._assign_flags_to_regimes(component.component_class)
         # Render mod file
         self.render_to_file('main.tmpl', tmpl_args, component.name + '.mod',
