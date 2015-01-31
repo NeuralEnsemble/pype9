@@ -19,9 +19,11 @@ import subprocess as sp
 import quantities as pq
 from .. import BaseCodeGenerator
 import nineml.abstraction_layer.units as un
+from nineml.abstraction_layer.dynamics import OnEvent, TimeDerivative
 from pype9.exceptions import Pype9BuildError
 import pype9
 from datetime import datetime
+from nineml.utils import expect_single
 
 
 if 'NRNHOME' in os.environ:
@@ -67,9 +69,10 @@ class CodeGenerator(BaseCodeGenerator):
 
     def generate_source_files(self, component, initial_state, src_dir,
                               **kwargs):
+        componentclass = component.component_class
         tmpl_args = {
             'component': component,
-            'componentclass': component.component_class,
+            'componentclass': componentclass,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'ode_solver': kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT),
@@ -83,9 +86,14 @@ class CodeGenerator(BaseCodeGenerator):
                                         self.REL_TOLERANCE_DEFAULT),
             'parameter_scales': [], 'membrane_voltage': 'V_t',
             'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT),
-            'deriv_func_args': self.deriv_func_args,
+            'weight_variables': [],
+            'deriv_func_args': self.deriv_func_args, 'ode_for': self.ode_for,
             'FIRST_REGIME_FLAG': self.FIRST_REGIME_FLAG,
-            'FIRST_TRANSITION_FLAG': self.FIRST_TRANSITION_FLAG}
+            'FIRST_TRANSITION_FLAG': self.FIRST_TRANSITION_FLAG,
+            'trans_name': (
+                lambda r, t: r.name + '_' +
+                ('{}_event_'.format(t.src_port_name) if isinstance(t, OnEvent)
+                 else 'condition_{}_'.format(componentclass.index_of(t))))}
         self._assign_flags_to_regimes(component.component_class)
         # Render mod file
         self.render_to_file('main.tmpl', tmpl_args, component.name + '.mod',
@@ -214,6 +222,18 @@ class CodeGenerator(BaseCodeGenerator):
                     args.add(name)
         return ','.join(args)
         return args
+
+    @classmethod
+    def ode_for(cls, regime, variable):
+        """
+        Yields the TimeDerivative for the given variable in the regime
+        """
+        odes = [eq for eq in regime.time_derivatives
+                if eq.dependent_variable == variable.name]
+        if len(odes) == 0:
+            odes.append(TimeDerivative(dependent_variable=variable, rhs="0.0"))
+        return expect_single(odes)
+
 # output_Na = template.render (functionDefs = [{'indent' : 2, 'name' : '''Na_bmf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_bmf  =  Na_A_beta_m * exp(-(v + -(Na_B_beta_m)) / Na_C_beta_m)'''}, 
 #                                              {'indent' : 2, 'name' : '''Na_amf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_amf  =  Na_A_alpha_m *  (v + -(Na_B_alpha_m)) / (1.0 + -(exp(-(v + -(Na_B_alpha_m)) / Na_C_alpha_m)))'''}, 
 #                                              {'indent' : 2, 'name' : '''Na_bhf''', 'vars' : ['''v'''], 'localVars' : [], 'exprString' : '''Na_bhf  =    Na_A_beta_h / (1.0 + exp(-(v + -(Na_B_beta_h)) / Na_C_beta_h))'''}, 

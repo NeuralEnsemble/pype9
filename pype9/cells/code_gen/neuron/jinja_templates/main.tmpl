@@ -29,7 +29,7 @@ NEURON {
 }
 
 CONSTANT {
-    : Hashes for regimes, events and conditions 
+    : IDs for regimes, events and conditions 
 
     : Basic events
     SPIKE = 0
@@ -37,35 +37,38 @@ CONSTANT {
 
     : Regime flags
 {% for regime in componentclass.regimes %}
-    {{regime.name | upper}} = {{hash(regime.name)}}
+    {{regime.name | upper}} = {{componentclass.index_of(regime)}}
 {% endfor %}
 
     : Event port flags
 {% for port in componentclass.event_receive_ports %}
-    {{port.name | upper}} = {{hash(port.name)}}
+    {{port.name | upper}} = {{componentclass.index_of(port)}}
 {% endfor %}
 
-    : Transition flags
+    : On-condition flags
 {% for regime in componentclass.regimes %}
-    {% for oe in regime.on_events %}
-    {{(regime.name + '_' + oe.name + '_EVENT_') | upper}} = {{hash(regime.name + oe.name)}}
+    {% for oc in regime.on_conditions %}
+    CONDITION_{{componentclass.index_of(oc)}}_ = {{componentclass.index_of(oc)}}
     {% endfor %}
-    
-    {% for i, oc in regime.on_conditions %}
-    {{(regime.name + '_' + oc.name + '_CONDITION_') | upper}} = {{hash(regime.name + oc.name)}}
-    {% endfor %} 
+{% endfor %}
+
+
+{% for regime in componentclass.regimes %}
+    {% for oe in regime.on_events %}    
+    {{oe.src_port_name | upper}}_EVENT_IN_{{regime.name | upper}}_ = {{componentclass.index_of(oe)}}
+    {% endfor %}
 {% endfor %}
 }
 
 INITIAL {
     : Initialise State Variables:
-{% for var in componentclass.state_variables %}
-    {{var.name}} = 0
+{% for sv in componentclass.state_variables %}
+    {{sv.name}} = 0
 {% endfor %}
 
     : Initialise Regime:
     {# This should come from the initial state, when we sort out that format #}
-    regime = {{next(componentclass.regimes)).name | upper}}
+    regime = {{next(componentclass.regimes).name | upper}}
 
     : Initialise the NET_RECEIVE block:
     net_send(0, INIT)
@@ -98,9 +101,12 @@ ASSIGNED {
 {% for alias in componentclass.aliases %}
     {{alias.lhs}}
 {% endfor %}
+
+{% if weight_variables %}
 {% for var in weight_variables.values %}
     {{var}}
 {% endfor %}
+{% endif %}
 }
 
 BREAKPOINT {
@@ -114,15 +120,15 @@ BREAKPOINT {
 
 DERIVATIVE states {
 {% for sv in componentclass.state_variables %}
-    {{sv.name}}' = deriv_${var.name}({{deriv_func_args(componentclass, sv.name)}}))
+    {{sv.name}}' = _deriv_{{sv.name}}({{deriv_func_args(componentclass, sv.name)}}))
 {% endfor %}
 }
 
 {% for sv in componentclass.state_variables %}
-FUNCTION deriv_{{var.name}}({{deriv_func_args(componentclass, sv.name)}})) {
+FUNCTION _deriv_{{sv.name}}({{deriv_func_args(componentclass, sv.name)}})) {
     {% for regime in componentclass.regimes %}
-    if (regime == {{regime.name || upper}} ) {
-        deriv_{{sv.name}} = {{ode_for(regime, sv).rhs}}
+    if (regime == {{regime.name | upper}}) {
+        _deriv_{{sv.name}} = {{ode_for(regime, sv).rhs}}
     }
     {% endfor %}
 }
@@ -140,26 +146,26 @@ NET_RECEIVE(w, channel) {
     if (flag == INIT) {
 {% for regime in componentclass.regimes %}
     {% for oc in regime.on_conditions %}
-        WATCH ( {{oc.trigger.rhs}} )  {{(regime.name + '_' + oc.name + '_CONDITION_') | upper}}
+        WATCH ({{oc.trigger.rhs}})  CONDITION_{{componentclass.index_of(oc)}}_
     {% endfor %}
 {% endfor %}
     } else if (flag == SPIKE) {
         :printf("Received spike with weight %f on channel %f at %f\n", w, channel, t)
 {% for regime in componentclass.regimes %}
         if (regime == {{regime.name | upper}}) {
-        printf("Current regime: {{regime.name | upper}} \n")
+            printf("Current regime: {{regime.name}} \n")
     {% for oe in regime.on_events %}
-            if (channel == {{(regime.name + '_' + oe.name + '_EVENT_') | upper}}) {
-                printf("  Resolved to channel {{regime_name + '-' + oe.name}}\n" )
+            if (channel == {{oe.src_port_name | upper}}_EVENT_IN_{{regime.name | upper}}) {
+                printf("  Resolved to channel {{regime.name + '-' + oe.src_port_name}}\n" )
         {% if weight_variables %}
                 {{get_weight_variable}}({{channel}}, {{weight_variables}}) = w
         {% endif %}
 
-        {% for sa in on_event.state_assignments %}
-                {{sa.lhs}}  =  {{sa.neuron_rhs}}
+        {% for sa in oe.state_assignments %}
+                {{sa.lhs}}  =  {{sa.rhs}}
         {% endfor %}
 
-        {% for node in on_event.event_outputs %}
+        {% for node in oe.event_outputs %}
                 {{as_expr}}(node)
         {% endfor %}
             }
@@ -177,11 +183,11 @@ NET_RECEIVE(w, channel) {
         if(first_round_fired == 1) {
 
 {% for regime in componentclass.regimes %}
-        } else if( regime == {{regime.flag}} ) {
-    {% for transition in regime.on_conditions %}
-            if( {{transition.trigger.rhs}} ) {
-                :printf("\nFirst Round Transition Filtering: Forwarding Event: {{transition.flag}} @ t=%f",t)
-                net_send(0, {{transition.flag}} )
+        } else if (regime == {{regime.name | upper}}) {
+    {% for oc in regime.on_conditions %}
+            if( {{oc.trigger.rhs}} ) {
+                :printf("\nFirst Round Transition Filtering: Forwarding Event: {{componentclass.index_of(oc)}} @ t=%f",t)
+                net_send(0, CONDITION_{{componentclass.index_of(oc)}}_)
             }
     {% endfor %}
 {% endfor %}
@@ -193,19 +199,19 @@ NET_RECEIVE(w, channel) {
 
     : Second Round
 {% for regime in componentclass.regimes %}
-    {% for transition in regime.on_conditions %}
-    else if (flag == {{transition.flag}}) {
+    {% for oc in regime.on_conditions %}
+    else if (flag == CONDITION_{{componentclass.index_of(oc)}}_) {
         first_round_fired = 0
         :printf("\nt=%f In Regime {{regime.name}} Event With Flag: %f", t, flag )
-        :printf("\nt=%f Changing Regime from {{regime.name}} to {{transition.target_regime.name}} via {{transition.flag}}", t )
-        regime = {{transition.target_regime.flag}}
+        :printf("\nt=%f Changing Regime from {{regime.name}} to {{oc.target_regime.name}} via {{componentclass.index_of(oc)}}", t )
+        regime = {{oc.target_regime.name | upper}}
 
-        {% for node in transition.event_outputs %}
+        {% for node in oc.event_outputs %}
         net_event(t)
         {% endfor %}
 
-        {% for sa in transition.state_assignments %}
-        {{sa.lhs}}  = {{sa.neuron_rhs}}
+        {% for sa in oc.state_assignments %}
+        {{sa.lhs}}  = {{sa.rhs}}
         {% endfor %}
     }
     {% endfor %}
