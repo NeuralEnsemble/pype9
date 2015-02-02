@@ -10,10 +10,10 @@ from . import test_data_dir
 class TestNeuronBuild(TestCase):
 
     def test_neuron_build(self):
-        component_file = path.join(test_data_dir, 'xml', 'HodgkinHuxley.xml')
+        component_file = path.join(test_data_dir, 'xml', 'Izhikevich.xml')
         code_generator = CodeGenerator()
         code_generator.generate(component_file, 0.0,
-                                build_mode='generate_only',
+                                build_mode='force',
                                 ode_solver='derivimplicit', v_threshold=None)
 
 if __name__ == '__main__':

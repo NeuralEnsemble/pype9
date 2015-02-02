@@ -6,7 +6,7 @@
 :extern double nineml_gsl_poisson(double);
 :ENDVERBATIM
 
-TITLE Spiking node generated from 9ML using PyPe9 version {{version}} at "{{timestamp}}"
+TITLE Spiking node generated from 9ML using PyPe9 version {{version}} at '{{timestamp}}'
 
 NEURON {
     POINT_PROCESS {{component.name}}
@@ -19,6 +19,11 @@ NEURON {
 
     :Parameters
 {% for p in componentclass.parameters %}
+    RANGE {{p.name}}
+{% endfor %}
+
+    :Ports
+{% for p in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
     RANGE {{p.name}}
 {% endfor %}
 
@@ -111,15 +116,15 @@ BREAKPOINT {
 
 DERIVATIVE states {
 {% for sv in componentclass.state_variables %}
-    {{sv.name}}' = _deriv_{{sv.name}}({{deriv_func_args(componentclass, sv.name)}}))
+    {{sv.name}}' = deriv_{{sv.name}}({{deriv_func_args(componentclass, sv.name)}})
 {% endfor %}
 }
 
 {% for sv in componentclass.state_variables %}
-FUNCTION _deriv_{{sv.name}}({{deriv_func_args(componentclass, sv.name)}})) {
+FUNCTION deriv_{{sv.name}}({{deriv_func_args(componentclass, sv.name)}}) {
     {% for regime in componentclass.regimes %}
     if (regime == {{regime.name | upper}}) {
-        _deriv_{{sv.name}} = {{ode_for(regime, sv).rhs}}
+        deriv_{{sv.name}} = {{ode_for(regime, sv).rhs}}
     }
     {% endfor %}
 }
@@ -135,7 +140,7 @@ NET_RECEIVE(w, channel) {
 {% for regime in componentclass.regimes %}
         if (regime == {{regime.name | upper}}) {
     {% for oc in regime.on_conditions %}
-            WATCH ({{oc.trigger.rhs}})  {{regime.name | upper}}_CONDITION_{{componentclass.index_of(oc, key=regime)}}_
+            WATCH ({{oc.trigger.rhs}})  {{componentclass.index_of(oc, key=regime)}}
     {% endfor %}
         }
 {% endfor %}

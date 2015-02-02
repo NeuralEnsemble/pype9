@@ -38,7 +38,7 @@
     <Parameter name="T" dimension="temperature"/>
     <AnalogSendPort name="v" dimension="voltage"/>
     <AnalogSendPort name="iK" dimension="current"/>
-    <AnalogReceivePort name="injectedCurrent" dimension="current"/>
+    <!--<AnalogReceivePort name="injectedCurrent" dimension="current"/>-->
     <EventReceivePort name="incomingSpike"/>
     <EventSendPort name="outgoingSpike"/>
     <Dynamics>
@@ -49,7 +49,7 @@
       <StateVariable name="n"/>
       <Regime name="single">
         <TimeDerivative variable="v">
-          <MathInline>(iNa + iK + iLeak + injectedCurrent) / C</MathInline>
+          <MathInline>(iNa + iK + iLeak ) / C</MathInline> <!-- + injectedCurrent -->
         </TimeDerivative>
         <TimeDerivative variable="m">
           <MathInline>(m_inf - m) / m_tau</MathInline>
