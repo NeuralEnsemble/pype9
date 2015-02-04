@@ -13,7 +13,7 @@ import quantities
 import nineml.user_layer
 import pyNN.space
 from pyNN.random import NumpyRNG, RandomDistribution
-import pype9.pyNN.randompype9from . import layout
+import pype9.network.randompype9from.!<MissingName>!
 
 
 class Structure(object):

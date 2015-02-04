@@ -9,7 +9,7 @@ import os.path
 from pyNN.random import NumpyRNG
 import pyNN.standardmodels
 import nineml.user_layer
-import pype9.pyNN.common
+import pype9.network.common
 import quantities as pq
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
@@ -57,7 +57,7 @@ class Network(object):
                         self._populations[model.source.population.name],
                         self._populations[model.target.population.name],
                         model, rng=self._rng)
-                except pype9.pyNN.common.projections.\
+                except pype9.network.common.projections.\
                                   ProjectionToCloneNotCreatedYetException as e:
                     if e.orig_proj_id in self.nineml_model.projections.keys():
                         projection_models.append(model)

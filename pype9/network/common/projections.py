@@ -6,7 +6,7 @@
 """
 from __future__ import absolute_import
 import pyNN.connectors
-import pype9.pyNN.connectors
+import pype9.network.connectors
 import pype9.morphology.point2point
 
 
@@ -21,20 +21,21 @@ class Projection(object):
     created_projections = {}
 
     def __init__(self, source, target, nineml_model, rng=None):
-        ConnectorClass = getattr(pype9.pyNN.connectors,
-                                 nineml_model.rule.definition.componentclass.name)
+        ConnectorClass = getattr(
+            pype9.network.connectors,
+            nineml_model.rule.definition.componentclass.name)
         try:
             connector = ConnectorClass(nineml_model.rule.parameters, rng)
         except ProjectionToCloneNotCreatedYetException:
             raise ProjectionToCloneNotCreatedYetException(nineml_model.name)
-        SynapseClass = getattr(self._synapses_module,
-                               nineml_model.connection_type.definition.\
-                                                                componentclass.name)
+        SynapseClass = getattr(
+            self._synapses_module,
+            nineml_model.connection_type.definition.componentclass.name)
         synapse = SynapseClass(
             nineml_model.connection_type.parameters, self.get_min_delay(), rng)
-        receptor = ('{' + nineml_model.target.segment + '}' +
-                    nineml_model.synaptic_response.parameters['responseName'].\
-                                                                         value)
+        receptor = (
+            '{' + nineml_model.target.segment + '}' +
+            nineml_model.synaptic_response.parameters['responseName'].value)
         # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being
         # the third class in the MRO), I thought of a few ways to do this but
         # none were completely satisfactory.

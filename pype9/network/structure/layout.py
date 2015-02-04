@@ -11,8 +11,8 @@ from __future__ import absolute_import
 from abc import ABCMeta
 import nineml.user_layer
 import pyNN.space
-import pype9.pyNN.random
-from pype9.pyNN import convert_to_pyNN_units
+import pype9.network.random
+from pype9.network import convert_to_pyNN_units
 
 
 class Layout(object):
@@ -34,9 +34,9 @@ class Layout(object):
             elif isinstance(p.value, str):
                 conv_param = p.value
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
-                RandomDistributionClass = getattr(pype9.pyNN.random,
-                                                  p.value.definition.\
-                                                                componentclass.name)
+                RandomDistributionClass = getattr(
+                    pype9.network.random,
+                    p.value.definition.componentclass.name)
                 conv_param = RandomDistributionClass(p.value.parameters, rng)
             converted_params[cls.nineml_translations[name]] = conv_param
         return converted_params
@@ -106,10 +106,8 @@ class UniformWithinBox(Layout, pyNN.space.RandomStructure):
     def __init__(self, nineml_params, rng=None):
         params = self._convert_params(nineml_params, rng)
         box = pyNN.space.Cuboid(params['x'], params['y'], params['z'])
-        super(UniformWithinBox, self).__init__(box,
-                                               origin=(params['x0'],
-                                                       params['y0'],
-                                                       params['z0']), rng=rng)
+        super(UniformWithinBox, self).__init__(
+            box, origin=(params['x0'], params['y0'], params['z0']), rng=rng)
 
 
 class UniformWithinSphere(Layout, pyNN.space.RandomStructure):
@@ -125,7 +123,5 @@ class UniformWithinSphere(Layout, pyNN.space.RandomStructure):
     def __init__(self, nineml_params, rng=None):
         params = self._convert_params(nineml_params, rng)
         sphere = pyNN.space.Sphere(params['radius'])
-        super(UniformWithinSphere, self).__init__(sphere,
-                                                  origin=(params['x0'],
-                                                  params['y0'], params['z0']),
-                                                  rng=rng)
+        super(UniformWithinSphere, self).__init__(
+            sphere, origin=(params['x0'], params['y0'], params['z0']), rng=rng)

@@ -10,7 +10,7 @@
 # This is required to ensure that the right MPI variables are set before
 # NEURON is initiated
 from __future__ import absolute_import
-import pype9.pyNN.common
+import pype9.network.common
 from pyNN.neuron import (setup, run, reset, end, get_time_step,
                          get_current_time, get_min_delay, get_max_delay, rank,
                          num_processes, record, record_v, record_gsyn,
@@ -23,8 +23,9 @@ from pyNN.common.control import build_state_queries
 import pyNN.neuron.standardmodels
 import pyNN.neuron.simulator as simulator
 import neuron
-from pype9.pyNN.neuron.cells import NinePyNNCellMetaClass
-from pype9.cells.neuron import NineCellpype9from . import synapses as synapses_module  # @UnresolvedImport
+from pype9.network.neuron.cells import NinePyNNCellMetaClass
+from pype9.cells.neuron import NineCell
+from . import synapses as synapses_module  # @UnresolvedImport
 import logging
 from pyNN.random import NumpyRNG
 
@@ -34,17 +35,15 @@ get_current_time, get_time_step, get_min_delay, \
     get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 
-class Population(pype9.pyNN.common.Population, pyNN.neuron.Population):
+class Population(pype9.network.common.Population, pyNN.neuron.Population):
 
-    _pyNN_standard_celltypes = dict([(cellname,
-                                      getattr(pyNN.neuron.standardmodels.cells,
-                                              cellname))
-                                     for cellname in
-                                           pyNN.neuron.list_standard_models()])
+    _pyNN_standard_celltypes = dict(
+        [(cellname, getattr(pyNN.neuron.standardmodels.cells, cellname))
+         for cellname in pyNN.neuron.list_standard_models()])
     _NineCellMetaClass = NinePyNNCellMetaClass
 
 
-class Projection(pype9.pyNN.common.Projection, pyNN.neuron.Projection):
+class Projection(pype9.network.common.Projection, pyNN.neuron.Projection):
 
     _synapses_module = synapses_module
 
@@ -53,7 +52,7 @@ class Projection(pype9.pyNN.common.Projection, pyNN.neuron.Projection):
         return get_min_delay()
 
 
-class Network(pype9.pyNN.common.Network):
+class Network(pype9.network.common.Network):
 
     _PopulationClass = Population
     _ProjectionClass = Projection
@@ -64,7 +63,7 @@ class Network(pype9.pyNN.common.Network):
         # Sets the 'get_min_delay' function for use in the network init
         self.get_min_delay = get_min_delay
         # Call the base function initialisation function.
-        pype9.pyNN.common.Network.__init__(self, filename,
+        pype9.network.common.Network.__init__(self, filename,
                                               build_mode=build_mode,
                                               timestep=timestep,
                                               min_delay=min_delay,
@@ -89,7 +88,7 @@ class Network(pype9.pyNN.common.Network):
 
 def create_singleton_population(prototype_path, parameters, build_mode='lazy',
                                 silent_build=False, solver_name='cvode'):
-    pop_9ml = pype9.pyNN.common.populations.create_singleton_9ml(
+    pop_9ml = pype9.network.common.populations.create_singleton_9ml(
         prototype_path, parameters)
     pop = Population(pop_9ml, NumpyRNG(), build_mode,
                      silent_build=silent_build,

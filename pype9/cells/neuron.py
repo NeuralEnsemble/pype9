@@ -25,8 +25,8 @@ import quantities as pq
 from pype9.cells.build.neuron import build_celltype_files
 import pype9.cells
 from pype9.cells import (in_units, AxialResistanceModel,
-                            MembraneCapacitanceModel, DummyNinemlModel,
-                            IonConcentrationModel)
+                         MembraneCapacitanceModel, DummyNinemlModel,
+                         IonConcentrationModel)
 from .. import create_unit_conversions, convert_units
 from pyNN.neuron.cells import VectorSpikeSource
 

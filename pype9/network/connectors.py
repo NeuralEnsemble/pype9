@@ -9,10 +9,10 @@ from abc import ABCMeta
 import quantities
 import nineml.user_layer
 import pyNN.connectors
-import pype9.pyNN.random
-import pype9.pyNN.common.projections
-from pype9.pyNN.expression import create_anonymous_function
-from pype9.pyNN.expression.structure import _PositionBasedExpression
+import pype9.network.random
+import pype9.network.common.projections
+from pype9.network.expression import create_anonymous_function
+from pype9.network.expression.structure import _PositionBasedExpression
 
 
 class Connector(object):
@@ -37,13 +37,13 @@ class Connector(object):
                 conv_param = p.value
             elif isinstance(p.value, nineml.user_layer.Reference):
                 try:
-                    conv_param = pype9.pyNN.common.projections.Projection.\
+                    conv_param = pype9.network.common.projections.Projection.\
                                               created_projections[p.value.name]
                 except KeyError:
-                    raise pype9.pyNN.common.projections.\
+                    raise pype9.network.common.projections.\
                                         ProjectionToCloneNotCreatedYetException
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
-                RandomDistributionClass = getattr(pype9.pyNN.random,
+                RandomDistributionClass = getattr(pype9.network.random,
                                                   p.value.definition.\
                                                                 componentclass.name)
                 conv_param = RandomDistributionClass(p.value.parameters, rng)

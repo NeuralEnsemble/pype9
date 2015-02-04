@@ -34,8 +34,7 @@ _compound_SI_to_pyNN_conversions = (((('A', 1), ('m', -2)), (('mA', 1),
 
 
 _basic_unit_dict, _compound_unit_dict = create_unit_conversions(
-                                              _basic_SI_to_pyNN_conversions,
-                                              _compound_SI_to_pyNN_conversions)
+    _basic_SI_to_pyNN_conversions, _compound_SI_to_pyNN_conversions)
 
 
 def convert_to_pyNN_units(value, unit_str):

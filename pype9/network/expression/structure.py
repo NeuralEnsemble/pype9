@@ -22,7 +22,7 @@ class StructureExpression(object):
         Converts parameters from lib9ml objects into values with 'quantities'
         units and or random distributions
         """
-        assert isinstance(nineml_params, nineml.user_layer.ParameterSet)
+        assert isinstance(nineml_params, nineml.user_layer.PropertySet)
         converted_params = {}
         for name, p in nineml_params.iteritems():
             # Use the quantities package to convert all the values in SI units

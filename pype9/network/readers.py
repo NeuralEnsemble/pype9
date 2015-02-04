@@ -5,9 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-import os.path
 import collections
-import xml.sax
 from pype9 import XMLHandler
 
 RANDOM_DISTR_PARAMS = {'uniform': ('low', 'high'),
@@ -168,11 +166,10 @@ class NetworkMLHandler(XMLHandler):
             self.proj_synapse_family = attrs.get('synapseFamily', 'Chemical')
             # Split the flags attribute on ',' and remove empty values (the use
             # of filter)
-            self.proj_flags = filter(None, attrs.get('flags', '').\
-                                                   replace(' ', '').split(','))
-            self.proj_not_flags = filter(None,
-                                         attrs.get('not_flags', '').\
-                                                   replace(' ', '').split(','))
+            self.proj_flags = filter(
+                None, attrs.get('flags', '').replace(' ', '').split(','))
+            self.proj_not_flags = filter(
+                None, attrs.get('not_flags', '').replace(' ', '').split(','))
         elif self._opening(tag_name, attrs, 'source', parents=['projection']):
             if self.proj_pre:
                 raise Exception(
@@ -215,24 +212,24 @@ class NetworkMLHandler(XMLHandler):
     def endElement(self, name):
         if self._closing(name, 'population', parents=['network']):
             if (self.pop_size > -1 and self.pop_structure and
-                self.pop_structure.type == 'Extension'):
+                    self.pop_structure.type == 'Extension'):
                 raise Exception("Population 'size' attribute cannot be used "
                                 "in conjunction with the 'Extension' type "
                                 "structures because the size of the population"
                                 "is determined from the extension")
             self.network.populations.append(
-                      self.Population(self.pop_id, self.pop_cell,
-                                      self.pop_morph_id, self.pop_size,
-                                      self.pop_structure, self.pop_cell_params,
-                                      self.pop_initial_conditions,
-                                      self.pop_flags, self.pop_not_flags))
+                self.Population(self.pop_id, self.pop_cell,
+                                self.pop_morph_id, self.pop_size,
+                                self.pop_structure, self.pop_cell_params,
+                                self.pop_initial_conditions,
+                                self.pop_flags, self.pop_not_flags))
         elif self._closing(name, 'projection', parents=['network']):
             self.network.projections.append(
-                      self.Projection(self.proj_id, self.proj_pre,
-                                      self.proj_post, self.proj_connection,
-                                      self.proj_weight, self.proj_delay,
-                                      self.proj_synapse_family,
-                                      self.proj_flags, self.proj_not_flags))
+                self.Projection(self.proj_id, self.proj_pre,
+                                self.proj_post, self.proj_connection,
+                                self.proj_weight, self.proj_delay,
+                                self.proj_synapse_family,
+                                self.proj_flags, self.proj_not_flags))
         elif self._closing(name, 'structure', parents=['population']):
             self.pop_structure = self.Structure(self.pop_structure_type,
                                                 self.pop_structure_somas,

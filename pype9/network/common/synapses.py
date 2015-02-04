@@ -7,9 +7,9 @@
 from __future__ import absolute_import
 from abc import ABCMeta
 import nineml.user_layer
-import pype9.pyNN.random
-import pype9.pyNN.expression.structure
-from pype9.pyNN import convert_to_pyNN_units
+import pype9.network.random
+import pype9.network.expression.structure
+from pype9.network import convert_to_pyNN_units
 
 
 class Synapse(object):
@@ -22,7 +22,7 @@ class Synapse(object):
         Converts parameters from lib9ml objects into values with 'quantities'
         units and or random distributions
         """
-        assert isinstance(nineml_params, nineml.user_layer.ParameterSet)
+        assert isinstance(nineml_params, nineml.user_layer.PropertySet)
         converted_params = {}
         for name, p in nineml_params.iteritems():
             # Use the quantities package to convert all the values in SI units
@@ -35,14 +35,14 @@ class Synapse(object):
                 conv_param = p.value
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
                 RandomDistributionClass = getattr(
-                                             pype9.pyNN.random,
-                                             p.value.definition.componentclass.name)
+                    pype9.network.random,
+                    p.value.definition.componentclass.name)
                 conv_param = RandomDistributionClass(
                     p.value.parameters, rng, use_units=False)
             elif isinstance(p.value, nineml.user_layer.StructureExpression):
                 StructureExpressionClass = getattr(
-                                            pype9.pyNN.expression.structure,
-                                            p.value.definition.componentclass.name)
+                    pype9.network.expression.structure,
+                    p.value.definition.componentclass.name)
                 conv_param = StructureExpressionClass(p.value.parameters)
             else:
                 raise Exception("Parameter '{}' is of unrecognised type '{}'"
@@ -58,10 +58,9 @@ class Synapse(object):
         assert (PyNNClass.__module__.startswith('pyNN') and
                 PyNNClass.__module__.endswith('standardmodels.synapses'))
         params = self._convert_params(nineml_params, rng)
-        if ('delay' in params and
-                isinstance(params['delay'],
-                           pype9.pyNN.expression.structure.\
-                                                         StructureExpression)):
+        if ('delay' in params and isinstance(
+                params['delay'],
+                pype9.network.expression.structure.StructureExpression)):
             params['delay'].set_min_value(min_delay)
         super(PyNNClass, self).__init__(**params)
 

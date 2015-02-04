@@ -38,7 +38,7 @@ class NinePyNNCellMetaClass(type):
         nineml_model = dct['model'].nineml_model
         (dct["default_parameters"],
          dct["default_initial_values"]) = cls._construct_default_parameters(
-                                                                  nineml_model)
+             nineml_model)
         dct["receptor_types"] = cls._construct_receptor_types(nineml_model)
         dct['recordable'] = cls._construct_recordable(nineml_model)
         dct["injectable"] = True

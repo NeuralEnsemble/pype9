@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from abc import ABCMeta
 import nineml.user_layer
 import pyNN.random
-from pype9.pyNN import convert_to_pyNN_units
+from pype9.network import convert_to_pyNN_units
 
 
 class RandomDistribution(pyNN.random.RandomDistribution):
@@ -21,7 +21,7 @@ class RandomDistribution(pyNN.random.RandomDistribution):
         Converts parameters from lib9ml objects into values with 'quantities'
         units and or random distributions
         """
-        assert isinstance(nineml_params, nineml.user_layer.ParameterSet)
+        assert isinstance(nineml_params, nineml.user_layer.PropertySet)
         converted_params = {}
         units = None
         for name, p in nineml_params.iteritems():
