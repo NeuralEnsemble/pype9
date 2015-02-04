@@ -17,7 +17,7 @@ from nineml.abstraction_layer.ports import (
 import nineml.abstraction_layer.units as un
 from nineml.user_layer import Definition
 from nineml.document import Document
-from nineml.user_layer import DynamicsComponent
+from nineml.user_layer import Dynamics
 from nineml.abstraction_layer.expressions import Constant
 from pype9.exceptions import Pype9RuntimeError
 
@@ -187,7 +187,7 @@ class NMODLImporter(object):
         context = Document()
         definition = Definition(self.component_name + 'Class', context,
                                 url=os.path.normpath(class_path))
-        comp = DynamicsComponent(self.component_name, definition=definition,
+        comp = Dynamics(self.component_name, definition=definition,
                                  properties=properties)
         return comp
 
