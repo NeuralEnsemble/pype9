@@ -7,10 +7,10 @@ from copy import deepcopy
 import itertools
 from operator import itemgetter
 import numpy
-from ...cells import (Tree, SegmentModel, AxialResistanceModel,
-                      MembraneCapacitanceModel, IonChannelModel,
-                      IonConcentrationModel, CurrentClampModel,
-                      SynapseModel)
+from pype9.cells.tree import (Tree, SegmentModel, AxialResistanceModel,
+                              MembraneCapacitanceModel, IonChannelModel,
+                              IonConcentrationModel, CurrentClampModel,
+                              SynapseModel)
 
 
 class HocImporter(object):

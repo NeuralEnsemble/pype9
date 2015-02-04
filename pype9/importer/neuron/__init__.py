@@ -25,7 +25,7 @@ class NeuronImporter(object):
         for component in self.hoc_importer.model.components.itervalues():
             class_name = component.class_name
             if (class_name in self.known_components or
-                class_name.endswith('_ion')):
+                    class_name.endswith('_ion')):
                 continue
             nmodl_imptr = self.nmodl_importers[class_name]
             if class_name not in class_paths:
@@ -41,8 +41,8 @@ class NeuronImporter(object):
                     print ("\nCould not write '{}' component because of:\n{}"
                            .format(nmodl_imptr.component_name, e))
                     continue
-            comp9ml = nmodl_imptr.get_component(class_paths[class_name],
-                                           hoc_properties=component.parameters)
+            comp9ml = nmodl_imptr.get_component(
+                class_paths[class_name], hoc_properties=component.parameters)
             comp_xml = comp9ml.to_xml()
             comp_path = os.path.join(comp_dir, component.name + '.xml')
             doc = E.NineML(comp_xml)

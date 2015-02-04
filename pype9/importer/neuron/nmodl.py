@@ -312,7 +312,7 @@ class NMODLImporter(object):
         if self.on_event_parts:
             assert len(self.regime_parts) == 1
             regime = self.regime_parts[0]
-            parameter, assignments, aliases = self.on_event_parts  #TODO: EventPorts may need a dimension attribute(s) for incoming associated variables @IgnorePep8 @UnusedVariable
+            parameter, assignments, aliases = self.on_event_parts
             if parameter:
                 port_name, dimension = parameter
                 event_port_name = port_name + "_event"
