@@ -16,27 +16,12 @@ from itertools import chain
 from .. import BaseCodeGenerator
 from pype9.utils import remove_ignore_missing
 from nineml import Dimension
-from nineml.abstraction_layer.units import current as current_unit_dim
+from nineml.abstraction_layer import units as un
 from pype9.exceptions import Pype9BuildError
 import pype9
 import warnings
 import shutil
 from datetime import datetime
-
-# Add Nest installation directory to the system path
-if 'NEST_INSTALL_DIR' in os.environ:
-    os.environ['PATH'] += (os.pathsep +
-                           os.path.join(os.environ['NEST_INSTALL_DIR'], 'bin'))
-else:
-    try:
-        if os.environ['HOME'] == '/home/tclose':
-            # I apologise for this little hack (this is the path on my machine,
-            # to save me having to set the environment variable in eclipse)
-            os.environ['PATH'] += os.pathsep + '/opt/NEST/2.2.1/bin'
-    except KeyError:
-        pass
-
-volt_dimension = Dimension(name='voltage', i=-1, m=1, t=-3, l=2)
 
 
 class CodeGenerator(BaseCodeGenerator):
@@ -58,7 +43,7 @@ class CodeGenerator(BaseCodeGenerator):
                                    shell=True)
         self._compiler = compiler[:-1]  # strip trailing \n
 
-    def generate_source_files(self, component, initial_state, src_dir,
+    def generate_source_files(self, component, initial_state, src_dir,  # @UnusedVariable @IgnorePep8
                               **kwargs):
         tmpl_args = {
             'component': component,
@@ -179,6 +164,8 @@ class CodeGenerator(BaseCodeGenerator):
         if 'NEST_INSTALL_DIR' in os.environ:
             path.append(os.path.join(os.environ['NEST_INSTALL_DIR'], 'bin'))
         return path
+
+# Old template arguments to Ivan's templates.
 
 # args['parameters'] = {'localVars' : [],
 #                         'parameterEqDefs' : ['''K_erev  (-77.0)''', '''Na_C_alpha_h  (20.0)''', '''Na_C_alpha_m  (10.0)''', '''Na_A_alpha_h  (0.07)''', '''Na_gbar  (0.12)''', '''Na_A_alpha_m  (0.1)''', '''K_gbar  (0.036)''', '''K_B_alpha_n  (-55.0)''', '''K_e  (-77.0)''', '''Leak_erev  (-54.4)''', '''comp19_V_t  (-35.0)''', '''K_g  (0.036)''', '''K_A_alpha_n  (0.01)''', '''Na_erev  (50.0)''', '''comp20_C  (1.0)''', '''Na_C_beta_h  (10.0)''', '''K_C_beta_n  (80.0)''', '''Na_C_beta_m  (18.0)''', '''Na_A_beta_m  (4.0)''', '''comp19_Vrest  (-65.0)''', '''K_B_beta_n  (-65.0)''', '''Leak_gbar  (0.0003)''', '''Na_B_alpha_m  (-40.0)''', '''Na_A_beta_h  (1.0)''', '''Na_e  (50.0)''', '''Na_B_alpha_h  (-65.0)''', '''Na_g  (0.12)''', '''Na_B_beta_m  (-65.0)''', '''K_C_alpha_n  (10.0)''', '''Leak_g  (0.0003)''', '''K_A_beta_n  (0.125)''', '''Leak_e  (-54.4)''', '''Na_B_beta_h  (-35.0)'''],

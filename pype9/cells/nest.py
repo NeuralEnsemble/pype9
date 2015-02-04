@@ -11,7 +11,7 @@ from __future__ import absolute_import
 import sys
 import os.path
 import nest
-from pype9 import CodeGenerator
+from pype9.cells.code_gen.nest import CodeGenerator
 import pype9.cells
 
 basic_nineml_translations = {
@@ -74,9 +74,8 @@ class Pype9CellMetaClass(pype9.cells.Pype9CellMetaClass):
             dct['nineml_model'] = nineml_model
             # Add the loaded cell type to the list of cell types that have been
             # loaded
-            celltype = super(Pype9CellMetaClass, cls).__new__(cls, nineml_model,
-                                                             celltype_name,
-                                                             (Pype9Cell,), dct)
+            celltype = super(Pype9CellMetaClass, cls).__new__(
+                cls, nineml_model, celltype_name, (Pype9Cell,), dct)
             # Added the loaded celltype to the dictionary of previously loaded
             # cell types
             cls.loaded_celltypes[

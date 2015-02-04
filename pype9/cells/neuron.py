@@ -22,11 +22,11 @@ from neuron import h, nrn, load_mechanisms
 import nineml.extensions.biophysical_cells
 import neo
 import quantities as pq
-from pype9.cells.build.neuron import build_celltype_files
+from pype9.cells.code_gen.neuron import CodeGenerator
 import pype9.cells
-from pype9.cells import (in_units, AxialResistanceModel,
-                         MembraneCapacitanceModel, DummyNinemlModel,
-                         IonConcentrationModel)
+from pype9.cells.tree import (
+    in_units, AxialResistanceModel, MembraneCapacitanceModel,
+    IonConcentrationModel)
 from .. import create_unit_conversions, convert_units
 from pyNN.neuron.cells import VectorSpikeSource
 
@@ -788,16 +788,11 @@ class Pype9CellMetaClass(pype9.cells.Pype9CellMetaClass):
                 install_dir = nineml_model.url
                 dct['component_translations'] = {}
             else:
-                build_options = nineml_model.biophysics.\
-                    build_hints['nemo']['neuron']
-                install_dir, dct['component_translations'] = \
-                            build_celltype_files(nineml_model.biophysics.name,
-                                                 nineml_model.url,
-                                                 build_mode=build_mode,
-                                                 method=build_options.method,
-                                                 kinetics=build_options.
-                                                 kinetic_components,
-                                                 silent_build=silent)
+#                 build_options = nineml_model.biophysics.\
+#                     build_hints['nemo']['neuron']
+                code_gen = CodeGenerator()
+                install_dir = code_gen.generate(
+                    nineml_model, build_mode=build_mode, verbose=(not silent))
             load_mechanisms(install_dir)
             dct['mech_path'] = install_dir
             dct['_param_links_tested'] = False
