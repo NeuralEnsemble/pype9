@@ -18,7 +18,7 @@ import inspect
 # DEFAULT_V_INIT = -65
 
 
-class NineCell(object):
+class Pype9Cell(object):
 
     def __init__(self, model=None):
         """
@@ -42,12 +42,12 @@ class NineCell(object):
         return deepcopy(cls._default_model)
 
 
-class NineCellMetaClass(type):
+class Pype9CellMetaClass(type):
 
     def __new__(cls, nineml_model, celltype_name, bases, dct):
         dct['parameter_names'] = [p.name for p in nineml_model.parameters]
         dct['_default_model'] = Tree.from_9ml(nineml_model)
-        return super(NineCellMetaClass, cls).__new__(cls, celltype_name, bases,
+        return super(Pype9CellMetaClass, cls).__new__(cls, celltype_name, bases,
                                                      dct)
 
     def __init__(cls, nineml_model, celltype_name=None, morph_id=None,

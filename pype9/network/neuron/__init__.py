@@ -23,8 +23,8 @@ from pyNN.common.control import build_state_queries
 import pyNN.neuron.standardmodels
 import pyNN.neuron.simulator as simulator
 import neuron
-from pype9.network.neuron.cells import NinePyNNCellMetaClass
-from pype9.cells.neuron import NineCell
+from pype9.network.neuron.cells import Pype9PyNNCellMetaClass
+from pype9.cells.neuron import Pype9Cell
 from . import synapses as synapses_module  # @UnresolvedImport
 import logging
 from pyNN.random import NumpyRNG
@@ -40,7 +40,7 @@ class Population(pype9.network.common.Population, pyNN.neuron.Population):
     _pyNN_standard_celltypes = dict(
         [(cellname, getattr(pyNN.neuron.standardmodels.cells, cellname))
          for cellname in pyNN.neuron.list_standard_models()])
-    _NineCellMetaClass = NinePyNNCellMetaClass
+    _Pype9CellMetaClass = Pype9PyNNCellMetaClass
 
 
 class Projection(pype9.network.common.Projection, pyNN.neuron.Projection):

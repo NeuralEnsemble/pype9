@@ -65,7 +65,7 @@ def convert_to_neuron_units(value, unit_str):
         value, unit_str, _basic_unit_dict, _compound_unit_dict)
 
 
-class _BaseNineCell(pype9.cells.NineCell):
+class _BasePype9Cell(pype9.cells.Pype9Cell):
 
     class Segment(h.Section):
         """
@@ -86,10 +86,10 @@ class _BaseNineCell(pype9.cells.NineCell):
             def __init__(self, component, translations):
                 # The true component object that was created by the pyNEURON
                 # 'insert' method
-                super(_BaseNineCell.Segment.ComponentTranslator,
+                super(_BasePype9Cell.Segment.ComponentTranslator,
                       self).__setattr__('_component', component)
                 # The translation of the parameter names
-                super(_BaseNineCell.Segment.ComponentTranslator,
+                super(_BasePype9Cell.Segment.ComponentTranslator,
                       self).__setattr__('_translations', translations)
 
             def __setattr__(self, var, value):
@@ -107,7 +107,7 @@ class _BaseNineCell(pype9.cells.NineCell):
                                          "for parameter {}".format(e))
 
             def __dir__(self):
-                return (super(_BaseNineCell.Segment.ComponentTranslator,
+                return (super(_BasePype9Cell.Segment.ComponentTranslator,
                               self).__dir__ + self._translations.keys())
 
         def __init__(self, model):
@@ -172,7 +172,7 @@ class _BaseNineCell(pype9.cells.NineCell):
                 components = var.split('.', 1)
                 setattr(getattr(self, components[0]), components[1], val)
             else:
-                super(_BaseNineCell.Segment, self).__setattr__(var, val)
+                super(_BasePype9Cell.Segment, self).__setattr__(var, val)
 
         def _connect(self, parent_seg):
             """
@@ -197,19 +197,19 @@ class _BaseNineCell(pype9.cells.NineCell):
                           [pype9.BiophysicsModel]
             """
             # Insert the mechanism into the segment
-            super(_BaseNineCell.Segment, self).insert(component.class_name)
+            super(_BasePype9Cell.Segment, self).insert(component.class_name)
             # Map the component (always at position 0.5 as a segment only ever
             # has one "NEURON segment") to an object in the Segment object. If
             # translations are provided, wrap the component in a Component
             # translator that intercepts getters and setters and redirects them
             # to the translated values.
             if translations:
-                super(_BaseNineCell.Segment, self).__setattr__(
+                super(_BasePype9Cell.Segment, self).__setattr__(
                     component.name, self.ComponentTranslator(
                         getattr(self(0.5), component.class_name),
                         translations))
             else:
-                super(_BaseNineCell.Segment, self).__setattr__(
+                super(_BasePype9Cell.Segment, self).__setattr__(
                     component.name, getattr(self(0.5), component.class_name))
             if isinstance(component, IonConcentrationModel):
                 setattr(self, component.param_name,
@@ -276,7 +276,7 @@ class _BaseNineCell(pype9.cells.NineCell):
             self._syn_input.append((vecstim, netcon))
 
     def __init__(self, model=None, **parameters):
-        super(_BaseNineCell, self).__init__(model=model)
+        super(_BasePype9Cell, self).__init__(model=model)
         # Construct all the NEURON structures
         self._construct()
         # Setup variables required by pyNN
@@ -303,7 +303,7 @@ class _BaseNineCell(pype9.cells.NineCell):
         # Create a empty list for each comp name to contain the segments in it
         self._comp_segments = dict((name, []) for name in comp_names)
         for seg_model in self._model.segments:
-            seg = _BaseNineCell.Segment(seg_model)
+            seg = _BasePype9Cell.Segment(seg_model)
             self.segments[seg_model.name] = seg
             if not seg_model.parent:
                 assert self.source_section is None
@@ -354,7 +354,7 @@ class _BaseNineCell(pype9.cells.NineCell):
                 seg.v = self.parameters['initial_v']
 
 
-class NineCell(_BaseNineCell):
+class Pype9Cell(_BasePype9Cell):
 
     class Parameter(object):
 
@@ -410,7 +410,7 @@ class NineCell(_BaseNineCell):
             return self.value
 
     def __init__(self, **parameters):
-        super(NineCell, self).__init__(**parameters)
+        super(Pype9Cell, self).__init__(**parameters)
         # for recording Once NEST supports sections, it might be an idea to
         # drop this in favour of a more explicit scheme
         self.recordable = {'spikes': None, 'v': self.source_section._ref_v}
@@ -502,7 +502,7 @@ class NineCell(_BaseNineCell):
         try:
             parameters = self.__getattribute__('_parameters')
         except AttributeError:
-            super(NineCell, self).__setattr__(varname, val)
+            super(Pype9Cell, self).__setattr__(varname, val)
             return
         # If the varname is a parameter
         if varname in parameters:
@@ -537,24 +537,24 @@ class NineCell(_BaseNineCell):
             setattr(self.segments[seg_name], comp_name, val)
         else:
             # TODO: Need to work out if I want this to throw an error or not.
-            super(NineCell, self).__setattr__(varname, val)
+            super(Pype9Cell, self).__setattr__(varname, val)
 #             raise Exception("Cannot add new attribute '{}' to cell {} class"
 #                               .format(varname, type(self)))
 
     def __dir__(self):
-        return dir(super(_BaseNineCell, self)) + self._parameters.keys()
+        return dir(super(_BasePype9Cell, self)) + self._parameters.keys()
 
     def memb_init(self):
-        super(NineCell, self).memb_init()
+        super(Pype9Cell, self).memb_init()
         for param in self._parameters.itervalues():
             if isinstance(param, self.InitialState):
                 param.initialize_state()
 
 
-class NineCellStandAlone(_BaseNineCell):
+class Pype9CellStandAlone(_BasePype9Cell):
 
     def __init__(self, **parameters):
-        super(NineCellStandAlone, self).__init__(**parameters)
+        super(Pype9CellStandAlone, self).__init__(**parameters)
         self._recorders = {}
         self._recordings = {}
         simulation_controller.register_cell(self)
@@ -591,7 +591,7 @@ class NineCellStandAlone(_BaseNineCell):
             try:
                 return self.segments[varname]
             except KeyError:
-                super(NineCellStandAlone, self).__getattribute__(varname)
+                super(Pype9CellStandAlone, self).__getattribute__(varname)
 
     def __setattr__(self, varname, value):
         """
@@ -626,7 +626,7 @@ class NineCellStandAlone(_BaseNineCell):
                                      "or name, component, variable)"
                                      .format(len(parts)))
         else:
-            super(NineCellStandAlone, self).__setattr__(varname, value)
+            super(Pype9CellStandAlone, self).__setattr__(varname, value)
 
     def record(self, variable, segname=None, component=None):
         if segname is None:
@@ -748,10 +748,10 @@ class NineCellStandAlone(_BaseNineCell):
         self._recordings = {}
 
 
-class NineCellMetaClass(pype9.cells.NineCellMetaClass):
+class Pype9CellMetaClass(pype9.cells.Pype9CellMetaClass):
 
     """
-    Metaclass for building NineMLNineCellType subclasses Called by
+    Metaclass for building NineMLPype9CellType subclasses Called by
     nineml_celltype_from_model
     """
 
@@ -802,10 +802,10 @@ class NineCellMetaClass(pype9.cells.NineCellMetaClass):
             dct['mech_path'] = install_dir
             dct['_param_links_tested'] = False
             if standalone:
-                BaseClass = NineCellStandAlone
+                BaseClass = Pype9CellStandAlone
             else:
-                BaseClass = NineCell
-            celltype = super(NineCellMetaClass, cls).\
+                BaseClass = Pype9Cell
+            celltype = super(Pype9CellMetaClass, cls).\
                 __new__(cls, nineml_model, celltype_name,
                         (BaseClass,), dct)
             # Save cell type in case it needs to be used again

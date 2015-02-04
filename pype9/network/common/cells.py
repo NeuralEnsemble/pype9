@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from ... import DEFAULT_V_INIT
 
 
-class NinePyNNCell(object):
+class Pype9PyNNCell(object):
 
     """
     A base cell object for NCML cell classes.
@@ -24,7 +24,7 @@ class NinePyNNCell(object):
         return cls.parameter_names
 
 
-class NinePyNNCellMetaClass(type):
+class Pype9PyNNCellMetaClass(type):
 
     """
     Metaclass for building NineMLCellType subclasses
@@ -46,7 +46,7 @@ class NinePyNNCellMetaClass(type):
         dct["model_name"] = celltype_id
         dct["weight_variables"] = cls._construct_weight_variables()
         dct["parameter_names"] = dct['default_parameters'].keys()
-        return super(NinePyNNCellMetaClass, cls).__new__(
+        return super(Pype9PyNNCellMetaClass, cls).__new__(
             cls, celltype_id + 'PyNN', bases, dct)
 
     def __init__(self, celltype_name, nineml_model, build_mode='lazy',

@@ -18,11 +18,11 @@ basic_nineml_translations = {
     'Voltage': 'V_m', 'Diameter': 'diam', 'Length': 'L'}
 
 
-class NineCell(pype9.cells.NineCell):
+class Pype9Cell(pype9.cells.Pype9Cell):
     pass
 
 
-class NineCellMetaClass(pype9.cells.NineCellMetaClass):
+class Pype9CellMetaClass(pype9.cells.Pype9CellMetaClass):
 
     loaded_celltypes = {}
 
@@ -74,9 +74,9 @@ class NineCellMetaClass(pype9.cells.NineCellMetaClass):
             dct['nineml_model'] = nineml_model
             # Add the loaded cell type to the list of cell types that have been
             # loaded
-            celltype = super(NineCellMetaClass, cls).__new__(cls, nineml_model,
+            celltype = super(Pype9CellMetaClass, cls).__new__(cls, nineml_model,
                                                              celltype_name,
-                                                             (NineCell,), dct)
+                                                             (Pype9Cell,), dct)
             # Added the loaded celltype to the dictionary of previously loaded
             # cell types
             cls.loaded_celltypes[

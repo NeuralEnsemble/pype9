@@ -9,16 +9,16 @@ import pype9.network.common.cells
 from pyNN.parameters import ParameterSpace
 import pyNN.standardmodels
 import nest
-from pype9.cells.nest import NineCellMetaClass, basic_nineml_translations
+from pype9.cells.nest import Pype9CellMetaClass, basic_nineml_translations
 
 
-class NinePyNNCell(pype9.network.common.cells.NinePyNNCell,
+class Pype9PyNNCell(pype9.network.common.cells.Pype9PyNNCell,
                    pyNN.standardmodels.StandardCellType):
 
     standard_receptor_type = None
 
     def __init__(self, **parameters):
-        pype9.network.common.cells.NinePyNNCell.__init__(self)
+        pype9.network.common.cells.Pype9PyNNCell.__init__(self)
         pyNN.standardmodels.StandardCellType.__init__(self, **parameters)
 
     def memb_init(self):
@@ -46,7 +46,7 @@ class NinePyNNCell(pype9.network.common.cells.NinePyNNCell,
         return nest.GetDefaults(self.nest_model)["receptor_types"][name]
 
 
-class NinePyNNCellMetaClass(pype9.network.common.cells.NinePyNNCellMetaClass):
+class Pype9PyNNCellMetaClass(pype9.network.common.cells.Pype9PyNNCellMetaClass):
 
     """
     Metaclass for compiling NineMLCellType subclases Called by
@@ -62,7 +62,7 @@ class NinePyNNCellMetaClass(pype9.network.common.cells.NinePyNNCellMetaClass):
             celltype = cls.loaded_celltypes[
                 (nineml_model.name, nineml_model.url)]
         except KeyError:
-            dct = {'model': NineCellMetaClass(nineml_model, name,
+            dct = {'model': Pype9CellMetaClass(nineml_model, name,
                                               build_mode=build_mode,
                                               silent=silent,
                                               solver_name='cvode')}
@@ -71,8 +71,8 @@ class NinePyNNCellMetaClass(pype9.network.common.cells.NinePyNNCellMetaClass):
             dct['translations'] = cls._construct_translations(
                                           dct['model'].nineml_model,
                                           dct['model'].component_translations)
-            celltype = super(NinePyNNCellMetaClass, cls).__new__(
-                cls, name, (NinePyNNCell,), dct)
+            celltype = super(Pype9PyNNCellMetaClass, cls).__new__(
+                cls, name, (Pype9PyNNCell,), dct)
             # If the url where the celltype is defined is specified save the
             # celltype to be retried later
             if nineml_model.url is not None:

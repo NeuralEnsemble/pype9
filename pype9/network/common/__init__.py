@@ -5,7 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from pype9.network.common.cells import NinePyNNCell
+from pype9.network.common.cells import Pype9PyNNCell
 from pype9.network.common.network import Network
 from pype9.network.common.populations import Population
 from pype9.network.common.projections import Projection
