@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import os.path
 from pyNN.random import NumpyRNG
 import pyNN.standardmodels
-import nineml.user_layer
+import nineml
 import pype9.network.common
 import quantities as pq
 
@@ -21,7 +21,7 @@ class Network(object):
                  verbose=False, timestep=None, min_delay=None, max_delay=None,   # @UnusedVariable @IgnorePep8
                  temperature=None, silent_build=False, flags=[],  # @UnusedVariable @IgnorePep8
                  rng=None, solver_name='cvode'):
-        parsed_nineml = nineml.user_layer.parse(filename)
+        parsed_nineml = nineml.read(filename)
         if network_name:
             try:
                 self.nineml_model = parsed_nineml.groups[network_name]
@@ -65,7 +65,7 @@ class Network(object):
                         # of iterations this loop will have to make for the
                         # worst ordering of cloned projections
                         if ((len(projection_models) - num_projections) >
-                            (num_projections * (num_projections + 1) / 2)):
+                                (num_projections * (num_projections + 1) / 2)):
                             raise Exception("Projections using 'Clone' pattern"
                                             "form a circular reference")
                     else:

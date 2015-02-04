@@ -9,10 +9,10 @@ import pyNN.nest.standardmodels.synapses
 from pype9.network.common.synapses import StaticSynapse
 
 
-class StaticSynapse(
-        StaticSynapse, pyNN.nest.standardmodels.synapses.StaticSynapse):
+class StaticSynapse(StaticSynapse,
+                    pyNN.nest.standardmodels.synapses.StaticSynapse):
     pass
 
-# class ElectricalSynapse(Synapse, 
+# class ElectricalSynapse(Synapse,
 #                    pyNN.nest.standardmodels.synapses.ElectricalSynapse):
 #     pass

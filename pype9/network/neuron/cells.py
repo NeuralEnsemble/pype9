@@ -22,8 +22,9 @@ get_current_time, get_time_step, get_min_delay, \
     get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 
-class Pype9PyNNCell(
-        pyNN.models.BaseCellType, pype9.network.common.cells.Pype9PyNNCell):
+class Pype9CellPyNNWrapper(
+        pyNN.models.BaseCellType,
+        pype9.network.common.cells.Pype9CellPyNNWrapper):
 
     """
     Extends the vanilla Pype9Cell to include all the PyNN requirements
@@ -31,7 +32,8 @@ class Pype9PyNNCell(
     pass
 
 
-class Pype9PyNNCellMetaClass(pype9.network.common.cells.Pype9PyNNCellMetaClass):
+class Pype9CellPyNNWrapperMetaClass(
+        pype9.network.common.cells.Pype9CellPyNNWrapperMetaClass):
 
     _basic_nineml_translations = basic_nineml_translations
     loaded_celltypes = {}
@@ -43,12 +45,12 @@ class Pype9PyNNCellMetaClass(pype9.network.common.cells.Pype9PyNNCellMetaClass):
                 (nineml_model.name, nineml_model.url)]
         except KeyError:
             model = Pype9CellMetaClass(nineml_model, name,
-                                      build_mode=build_mode, silent=silent,
-                                      solver_name=solver_name,
-                                      standalone=False)
+                                       build_mode=build_mode, silent=silent,
+                                       solver_name=solver_name,
+                                       standalone=False)
             dct = {'model': model}
-            celltype = super(Pype9PyNNCellMetaClass, cls).__new__(
-                cls, name, (Pype9PyNNCell,), dct)
+            celltype = super(Pype9CellPyNNWrapperMetaClass, cls).__new__(
+                cls, name, (Pype9CellPyNNWrapper,), dct)
             assert sorted(celltype.recordable) == sorted(
                 model().recordable.keys()), \
                 ("Mismatch of recordable keys between Pype9CellPyNN and "

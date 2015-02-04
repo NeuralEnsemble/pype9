@@ -26,7 +26,7 @@ import nest
 from nest.hl_api import NESTError
 import pype9.network.commonpype9from.!<MissingName>!
 from pyNN.random import NumpyRNG
-from pype9.network.nest.cells import Pype9PyNNCellMetaClass
+from pype9.network.nest.cells import Pype9CellPyNNWrapperMetaClass
 from pype9.cells.nest import Pype9Cell
 
 (get_current_time, get_time_step,
@@ -43,7 +43,7 @@ class Population(pype9.network.common.Population, pyNN.nest.Population):
                                               cellname))
                                      for cellname in
                                              pyNN.nest.list_standard_models()])
-    _Pype9CellMetaClass = Pype9PyNNCellMetaClass
+    _Pype9CellMetaClass = Pype9CellPyNNWrapperMetaClass
 
     @classmethod
     def _translate_variable(cls, variable):

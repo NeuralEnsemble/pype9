@@ -33,11 +33,9 @@ class Population(object):
             celltype = self._pyNN_standard_celltypes[celltype_model.name]
         elif isinstance(celltype_model,
                         nineml.extensions.biophysical_cells.ComponentClass):
-            celltype = self._Pype9CellMetaClass(celltype_model,
-                                               celltype_name,
-                                               build_mode=build_mode,
-                                               silent=silent_build,
-                                               solver_name=solver_name)
+            celltype = self._Pype9CellMetaClass(
+                celltype_model, celltype_name, build_mode=build_mode,
+                silent=silent_build, solver_name=solver_name)
         else:
             raise Exception("'{}' componentclass type is not supported yet"
                             .format(type(celltype_model)))
@@ -55,14 +53,14 @@ class Population(object):
             cellparams = {}
             initial_values = {}
             for param_definition in nineml_model.prototype.definition.\
-                                                          componentclass.parameters:
+                    componentclass.parameters:
                 p = nineml_model.prototype.parameters[param_definition.name]
                 if isinstance(p.value, float):
                     param = p.value
                 elif isinstance(p.value, nineml.user_layer.RandomDistribution):
-                    RandomDistributionClass = getattr(pype9.network.random,
-                                                      p.value.definition.\
-                                                                componentclass.name)
+                    RandomDistributionClass = getattr(
+                        pype9.network.random,
+                        p.value.definition.componentclass.name)
                     param = RandomDistributionClass(
                         p.value.parameters, rng, use_units=False)
                 elif isinstance(p.value, nineml.user_layer.Sequence):
@@ -71,7 +69,7 @@ class Population(object):
                     raise Exception("Unrecognised parameter type '{}'"
                                     .format(type(p.value)))
                 if (hasattr(param_definition, 'type') and
-                    param_definition.type == 'initialState'):
+                        param_definition.type == 'initialState'):
                     initial_values[p.name] = param
                 else:
                     cellparams[p.name] = param
@@ -211,10 +209,9 @@ def create_singleton_9ml(prototype_path, parameters):
                      'y': (0, 'dimensionless'),
                      'z': (0, 'dimensionless')}
     structlist = nineml.user_layer.StructureList(
-                        [nineml.user_layer.Structure('none',
-                                nineml.user_layer.Layout('line',
-                                        definition=layout_def,
-                                        parameters=layout_params), None)])
+        [nineml.user_layer.Structure(
+            'none', nineml.user_layer.Layout('line', definition=layout_def,
+                                             parameters=layout_params), None)])
     definition = nineml.user_layer.Definition(prototype_path, '')
     prototype_name = next(
         nineml.extensions.biophysical_cells.parse(prototype_path).iterkeys())

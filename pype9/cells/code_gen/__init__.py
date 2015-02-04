@@ -85,7 +85,7 @@ class BaseCodeGenerator(object):
                  **template_args):
         """
         Generates and builds the required simulator-specific files for a given
-        NCML cell class
+        NineML cell class
 
         `component` [nineml.user_layer.Component]: 9ML component
         `install_dir` [str]: Path to the directory where the NMODL files

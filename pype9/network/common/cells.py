@@ -8,10 +8,10 @@ from __future__ import absolute_import
 from ... import DEFAULT_V_INIT
 
 
-class Pype9PyNNCell(object):
+class Pype9CellPyNNWrapper(object):
 
     """
-    A base cell object for NCML cell classes.
+    A base cell object for NineML cell classes.
     """
 
     @classmethod
@@ -24,7 +24,7 @@ class Pype9PyNNCell(object):
         return cls.parameter_names
 
 
-class Pype9PyNNCellMetaClass(type):
+class Pype9CellPyNNWrapperMetaClass(type):
 
     """
     Metaclass for building NineMLCellType subclasses
@@ -46,7 +46,7 @@ class Pype9PyNNCellMetaClass(type):
         dct["model_name"] = celltype_id
         dct["weight_variables"] = cls._construct_weight_variables()
         dct["parameter_names"] = dct['default_parameters'].keys()
-        return super(Pype9PyNNCellMetaClass, cls).__new__(
+        return super(Pype9CellPyNNWrapperMetaClass, cls).__new__(
             cls, celltype_id + 'PyNN', bases, dct)
 
     def __init__(self, celltype_name, nineml_model, build_mode='lazy',
@@ -67,7 +67,8 @@ class Pype9PyNNCellMetaClass(type):
         initial_values = {}
         for p in nineml_model.parameters:
             if p.componentclass:
-                component = nineml_model.biophysics.components[p.componentclass]
+                component = nineml_model.biophysics.components[
+                    p.componentclass]
             else:
                 component = nineml_model.biophysics.components[
                     '__NO_COMPONENT__']
@@ -87,7 +88,8 @@ class Pype9PyNNCellMetaClass(type):
     @classmethod
     def _construct_receptor_types(cls, nineml_model):
         """
-        Constructs the dictionary of recordable parameters from the NCML model
+        Constructs the dictionary of recordable parameters from the NineML
+        model
         """
         receptors = []
         for mapping in nineml_model.mappings:
@@ -105,19 +107,19 @@ class Pype9PyNNCellMetaClass(type):
     @classmethod
     def _construct_recordable(cls, nineml_model):
         """
-        Constructs the dictionary of recordable parameters from the NCML model
+        Constructs the dictionary of recordable parameters from the NineML
+        model
         """
         # TODO: Make selected componentclass variables also recordable
         return ['spikes', 'v'] + \
-            ['{' +
-             seg +
-             '}v' for seg in nineml_model.morphology.segments.keys()]
+            ['{' + seg + '}v'
+             for seg in nineml_model.morphology.segments.keys()]
 
     @classmethod
     def _construct_weight_variables(cls):
         """
-        Constructs the dictionary of weight variables from the NCML model
+        Constructs the dictionary of weight variables from the NineML model
         """
-        # TODO: When weights are included into the NCML model, they should be
+        # TODO: When weights are included into the NineML model, they should be
         # added to the list here
         return {}

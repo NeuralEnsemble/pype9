@@ -1,9 +1,9 @@
 """
 
-  This package contains the XML handlers to read the NCML files and related
-  functions/classes, the NCML base meta-class (a meta-class is a factory that
-  generates classes) to generate a class for each NCML cell description (eg. a
-  'Purkinje' class for an NCML containing a declaration of a Purkinje cell),
+  This package contains the XML handlers to read the NineML files and related
+  functions/classes, the NineML base meta-class (a meta-class is a factory that
+  generates classes) to generate a class for each NineML cell description (eg. a
+  'Purkinje' class for an NineML containing a declaration of a Purkinje cell),
   and the base class for each of the generated cell classes.
 
   Author: Thomas G. Close (tclose@oist.jp)

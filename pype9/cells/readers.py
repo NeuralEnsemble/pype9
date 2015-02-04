@@ -18,7 +18,7 @@ class MorphMLHandler(XMLHandler):
     """
     A XML handler to extract morphology specifications from MorphML (version
     2), storing them within the handler object to be read when neuron model
-    objects are initialised from a generated NCML class.
+    objects are initialised from a generated NineML class.
     """
 
     # Create named tuples (sort of light-weight classes with no methods, like a
@@ -74,13 +74,13 @@ class MorphMLHandler(XMLHandler):
                            required_attrs=[('id', self.morph_id)]):
             if hasattr(self, 'morphology'):
                 if self.morph_id:
-                    message = "Multiple morphologies were found in the '{celltype}' NCML file " \
+                    message = "Multiple morphologies were found in the '{celltype}' NineML file " \
                               "matching the ID '{id}'".format(celltype=self.celltype_id,
                                                               id=self.morph_id)
                 else:
                     message = "Multiple morphologies are specified in the given '{celltype}' " \
-                              "NCML file but no morphology was specified either in the " \
-                              "NCMLHandler constructor or in the cell tag".\
+                              "NineML file but no morphology was specified either in the " \
+                              "NineMLHandler constructor or in the cell tag".\
                               format(celltype=self.celltype_id)
                 raise Exception(message)
             self.segments = []
@@ -143,15 +143,15 @@ class MorphMLHandler(XMLHandler):
         XMLHandler.endElement(self, name)
 
 
-class NCMLHandler(XMLHandler):
+class NineMLHandler(XMLHandler):
 
     """
     A XML handler to extract information required to generate python classes for conductanced-based
     neuron models from NINEML-Conductance descriptions. Storing them within the handler object to be
-    read when neuron model objects are initialised from the generated NCML class.
+    read when neuron model objects are initialised from the generated NineML class.
     """
 
-    NCMLDescription = collections.namedtuple('NCMLDescription', 'celltype_id \
+    NineMLDescription = collections.namedtuple('NineMLDescription', 'celltype_id \
                                                                  ncml_id \
                                                                  build_options \
                                                                  mechanisms \
@@ -178,7 +178,7 @@ class NCMLHandler(XMLHandler):
     SpecificCapacitance = collections.namedtuple(
         'SpecificCapacitance', 'value group_id')
     ReversePotential = collections.namedtuple(
-        'NCMLReversePotential', 'species value group_id')
+        'NineMLReversePotential', 'species value group_id')
     ActionPotentialThreshold = collections.namedtuple(
         'ActionPotentialThreshold', 'v')
 
@@ -193,7 +193,7 @@ class NCMLHandler(XMLHandler):
             self.found_cell_id = True
         elif self._opening(tag_name, attrs, 'biophysicalProperties', parents=['cell'],
                            required_attrs=[('id', self.ncml_id)]):
-            self.ncml = self.NCMLDescription(
+            self.ncml = self.NineMLDescription(
                 self.celltype_id, attrs['id'], collections.defaultdict(dict),
                 [], [], [], [], [], [], {})
         elif self._opening(tag_name, attrs, 'defaultBuildOptions',
@@ -273,9 +273,9 @@ def read_MorphML(celltype_id, filename, morph_id=None):
     return handler.morphology
 
 
-def read_NCML(celltype_id, filename):
+def read_NineML(celltype_id, filename):
     parser = xml.sax.make_parser()
-    handler = NCMLHandler(celltype_id)
+    handler = NineMLHandler(celltype_id)
     parser.setContentHandler(handler)
     parser.parse(filename)
     if not handler.found_cell_id:
