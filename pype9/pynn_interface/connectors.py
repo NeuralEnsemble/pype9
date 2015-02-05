@@ -9,10 +9,12 @@ from abc import ABCMeta
 import quantities
 import nineml.user_layer
 import pyNN.connectors
-import pype9.network.random
-import pype9.network.projections
-from pype9.network.expression import create_anonymous_function
-from pype9.network.expression.structure import _PositionBasedExpression
+import pype9.pynn_interface.random
+# import pype9.pynn_interface.projections
+# from pype9.pynn_interface.expression import create_anonymous_function
+# from pype9.pynn_interface.expression.structure import _PositionBasedExpression
+from pype9.exceptions import Pype9ProjToCloneNotCreatedException
+from .projection import Projection
 
 
 class Connector(object):
@@ -37,15 +39,13 @@ class Connector(object):
                 conv_param = p.value
             elif isinstance(p.value, nineml.user_layer.Reference):
                 try:
-                    conv_param = pype9.network.common.projections.Projection.\
-                                              created_projections[p.value.name]
+                    conv_param = Projection.created_projections[p.value.name]
                 except KeyError:
-                    raise pype9.network.common.projections.\
-                                        Pype9ProjToCloneNotCreatedException
+                    raise Pype9ProjToCloneNotCreatedException
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
-                RandomDistributionClass = getattr(pype9.network.random,
-                                                  p.value.definition.\
-                                                                componentclass.name)
+                RandomDistributionClass = getattr(
+                    pype9.pynn_interface.random,
+                    p.value.definition.componentclass.name)
                 conv_param = RandomDistributionClass(p.value.parameters, rng)
             elif isinstance(p.value, nineml.user_layer.AnonymousFunction):
                 conv_param = create_anonymous_function(p.value)
@@ -110,11 +110,11 @@ class PositionBasedProbabilityConnector(
         # expression
         pyNN.connectors.IndexBasedProbabilityConnector.__init__(self,
             _PositionBasedExpression(
-                  expression=conv_params['expression'],
-                  source_structure=conv_params['source_structure'],
-                  target_structure=conv_params['target_structure']),
-                  allow_self_connections=conv_params['allow_self_connections'],
-                  rng=rng)
+                expression=conv_params['expression'],
+                source_structure=conv_params['source_structure'],
+                target_structure=conv_params['target_structure']),
+            allow_self_connections=conv_params['allow_self_connections'],
+            rng=rng)
 
 
 class AllToAllConnector(Connector, pyNN.connectors.AllToAllConnector):

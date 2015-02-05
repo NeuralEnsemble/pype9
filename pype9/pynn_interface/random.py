@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from abc import ABCMeta
 import nineml.user_layer
 import pyNN.random
-from pype9.network import convert_to_pyNN_units
+from pype9.pynn_interface import convert_to_pyNN_units
 
 
 class RandomDistribution(pyNN.random.RandomDistribution):

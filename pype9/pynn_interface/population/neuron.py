@@ -17,7 +17,7 @@ except:
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.standardmodels
 import pyNN.neuron.simulator as simulator
-from pype9.network.cell_wrappers.neuron import PyNNCellWrapperMetaClass
+from pype9.pynn_interface.cell_wrappers.neuron import PyNNCellWrapperMetaClass
 import logging
 from .base import Population as BasePopulation
 

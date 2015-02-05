@@ -6,7 +6,7 @@
 """
 from __future__ import absolute_import
 import pyNN.connectors
-import pype9.network.connectors
+import pype9.pynn_interface.connectors
 import pype9.morphology.point2point
 from pype9.exceptions import Pype9ProjToCloneNotCreatedException
 
@@ -17,7 +17,7 @@ class Projection(object):
 
     def __init__(self, source, target, nineml_model, rng=None):
         ConnectorClass = getattr(
-            pype9.network.connectors,
+            pype9.pynn_interface.connectors,
             nineml_model.rule.definition.componentclass.name)
         try:
             connector = ConnectorClass(nineml_model.rule.parameters, rng)

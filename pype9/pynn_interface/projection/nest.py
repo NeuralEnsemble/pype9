@@ -17,7 +17,7 @@ if '--debug' in sys.argv:
 from pyNN.common.control import build_state_queries
 import pyNN.nest.simulator as simulator
 from .base import Projection as BaseProjection
-from pype9.network.synapses import nest as synapses_module
+from pype9.pynn_interface.synapses import nest as synapses_module
 import pyNN.nest
 
 (_, _, get_min_delay, _, _, _) = build_state_queries(simulator)

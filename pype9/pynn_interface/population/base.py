@@ -7,8 +7,8 @@
 from __future__ import absolute_import
 import numpy
 import pyNN.parameters
-from pype9.network.structure import Structure
-import pype9.network.random
+from pype9.pynn_interface.structure import Structure
+import pype9.pynn_interface.random
 from pyNN.random import RandomDistribution
 from nineml.abstraction_layer.dynamics import DynamicsClass
 import nineml.extensions.biophysical_cells
@@ -58,7 +58,7 @@ class Population(object):
                     param = p.value
                 elif isinstance(p.value, nineml.user_layer.RandomDistribution):
                     RandomDistributionClass = getattr(
-                        pype9.network.random,
+                        pype9.pynn_interface.random,
                         p.value.definition.componentclass.name)
                     param = RandomDistributionClass(
                         p.value.parameters, rng, use_units=False)

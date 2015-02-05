@@ -17,7 +17,7 @@ except:
 import pyNN.neuron
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
-from pype9.network.synapses import neuron as synapses_module
+from pype9.pynn_interface.synapses import neuron as synapses_module
 import logging
 from .base import Projection as BaseProjection
 
