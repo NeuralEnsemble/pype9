@@ -123,7 +123,7 @@ class CodeGenerator(BaseCodeGenerator):
         except sp.CalledProcessError as e:
             raise Pype9BuildError(
                 "Compilation of NMODL files for '{}' model failed. See src "
-                "directory '{}':\n ".format(component_name, compile_dir, e))
+                "directory '{}':\n\n{}".format(component_name, compile_dir, e))
 
     def get_install_dir(self, build_dir, install_dir):
         if install_dir:
@@ -178,7 +178,12 @@ class CodeGenerator(BaseCodeGenerator):
             for d in os.listdir(os.environ['NRNHOME']):
                 bin_path = os.path.join(d, 'bin')
                 if os.path.exists(bin_path):
-                    path.append(bin_path)
+                    # TODO: need to add windows specials dirname here
+                    # NOTE: can't use '_get_specials_dir()' as it uses
+                    #      path_to_exec, to find 'nrnivmodl' which calls this
+                    #      function in turn, creating a recursive loop.
+                    for spc_dir in ('x86_64', 'i386'):
+                        path.append(os.path.join(bin_path, spc_dir))
         except KeyError:
             pass
         return path
