@@ -113,15 +113,14 @@ class BaseCodeGenerator(object):
             context = nineml.read(component_src_path)
             components = list(context.components)
             if len(components) == 0:
-                raise Exception("No components loaded from nineml path '{}'"
-                                .format(component_src_path))
+                raise Pype9BuildError(
+                    "No components loaded from nineml path '{}'"
+                    .format(component_src_path))
             elif len(components) > 1:
-                raise Exception("Multiple components ('{}') loaded from nineml"
-                                " path '{}'"
-                                .format("', '".join(c.name
-                                                    for c in
-                                                    context.components),
-                                        component_src_path))
+                raise Pype9BuildError(
+                    "Multiple components ('{}') loaded from nineml path '{}'"
+                    .format("', '".join(c.name for c in context.components),
+                            component_src_path))
             component = components[0]
         else:
             component_src_path = None
@@ -133,14 +132,14 @@ class BaseCodeGenerator(object):
             # initial_states = parse_9ml(state_src_path)
             initial_states = [0.0]  # TODO: Write nineml lib for state layer
             if not initial_states:
-                raise Exception("No initial_states loaded from nineml path "
-                                "'{}'".format(state_src_path))
+                raise Pype9BuildError(
+                    "No initial_states loaded from nineml path '{}'"
+                    .format(state_src_path))
             elif len(initial_states) > 1:
-                raise Exception("Multiple initial states ('{}') loaded from "
-                                " nineml path '{}'"
-                                .format("', '".join(s.name
-                                                    for s in initial_states),
-                                        state_src_path))
+                raise Pype9BuildError(
+                    "Multiple initial states ('{}') loaded from nineml path "
+                    "'{}'".format("', '".join(s.name for s in initial_states),
+                                  state_src_path))
             else:
                 initial_state = initial_states[0]
         else:
@@ -148,9 +147,9 @@ class BaseCodeGenerator(object):
         # Set build dir if not provided
         if not build_dir:
             if not component_src_path:
-                raise Exception("Build directory must be explicitly provided "
-                                "('build_dir') when using 9ml component "
-                                "already in memory")
+                raise Pype9BuildError(
+                    "Build directory must be explicitly provided ('build_dir')"
+                    " when using 9ml component already in memory")
             build_dir = os.path.abspath(os.path.join(
                 os.path.dirname(component_src_path),
                 self.BUILD_DIR_DEFAULT,
@@ -178,12 +177,18 @@ class BaseCodeGenerator(object):
         elif build_mode == 'require':  # Just check that prebuild is present
             generate_source = compile_source = False
         elif build_mode == 'compile_only':  # Don't regenerate, just compile
+            if not os.path.exists(src_dir):
+                raise Pype9BuildError(
+                    "Source directory '{src}' is not present, which is "
+                    "required for 'compile_only' build " "option"
+                    .format(src=src_dir))
             generate_source = False
             compile_source = True
         elif build_mode == 'generate_only':  # Only generate
             generate_source = True
             compile_source = False
         elif build_mode == 'lazy':  # Generate if source has been modified
+            generate_source = compile_source = True
             if os.path.exists(nineml_mod_time_path):
                 with open(nineml_mod_time_path) as f:
                     prev_mod_time = f.readline()
@@ -191,23 +196,22 @@ class BaseCodeGenerator(object):
                     # previous build we don't need to rebuild
                     if nineml_mod_time == prev_mod_time:
                         generate_source = compile_source = False
-                        if not verbose:
+                        if verbose:
                             print ("Found existing build in '{}' directory, "
                                    "code generation skipped (set 'build_mode' "
                                    "argument to 'force' or 'build_only' to "
                                    "enforce regeneration".format(build_dir))
         # Check if required directories are present depending on build_mode
-        if build_mode == 'require':
+        elif build_mode == 'require':
             if not os.path.exists(install_dir):
-                raise Exception("Prebuilt installation directory '{install}'"
-                                "is not present, and is required for "
-                                "'require' build option"
-                                .format(install=install_dir))
-        elif build_mode == 'complile_only':
-            if not os.path.exists(src_dir):
-                raise Exception("Source directory '{src}' is not present, "
-                                "which is required for 'compile_only' build "
-                                "option".format(src=src_dir))
+                raise Pype9BuildError(
+                    "Prebuilt installation directory '{install}' is not "
+                    "present, and is required for  'require' build option"
+                    .format(install=install_dir))
+        else:
+            raise Pype9BuildError(
+                "Unrecognised build option '{}', must be one of ('{}')"
+                .format(build_mode, "', '".join(self.BUILD_MODE_OPTIONS)))
         # Generate source files from NineML code
         if generate_source:
             self.clean_src_dir(src_dir, component.name)
@@ -307,8 +311,8 @@ class BaseCodeGenerator(object):
         Returns the full path to an executable by searching the "PATH"
         environment variable
 
-        @param exec_name[str]: Name of executable to search the execution path
-        for @return [str]: Full path to executable
+        `exec_name` [str] -- Name of executable to search the execution path
+        return [str] -- Full path to executable
         """
         if platform.system() == 'Windows':
             exec_name += '.exe'
@@ -324,8 +328,9 @@ class BaseCodeGenerator(object):
                 exec_path = path
                 break
         if not exec_path:
-            raise Exception("Could not find executable '{}' on the system path"
-                            " '{}'".format(exec_name, ':'.join(system_path)))
+            raise Pype9BuildError(
+                "Could not find executable '{}' on the system path '{}'"
+                .format(exec_name, ':'.join(system_path)))
         return exec_path
 
     def simulator_specific_paths(self):
@@ -341,9 +346,9 @@ class BaseCodeGenerator(object):
         the params directory with a '.py' extension starting with the
         celltype_name assume that it is a parameters file.
 
-        @param biophysics_name [str]: The name of the cell biophysics to load
+        `biophysics_name` [str] -- The name of the cell biophysics to load
                                       the parameter names for
-        @param params_dir [str]: The path to the directory that contains the
+        `params_dir` [str] -- The path to the directory that contains the
                                  parameters
         """
         component_translations = defaultdict(dict)
