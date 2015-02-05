@@ -32,7 +32,7 @@
 
     {% if ode_solver == 'ida' %}
     // Run the dynamics function to initialise B._yp
-        {# Get the func_name from the default regime (the first in the list #}
+        {# Get the func_name from the default regime (the first in the list) #}
     {{component.name}}_{{next(componentclass.regimes).name}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
 
     {% endif %}

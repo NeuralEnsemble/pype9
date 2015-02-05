@@ -95,22 +95,24 @@ class CodeGenerator(BaseCodeGenerator):
             os.chdir(src_dir)
             try:
                 sp.check_call('sh bootstrap.sh', shell=True)
-            except sp.CalledProcessError:
+            except sp.CalledProcessError as e:
                 raise Pype9BuildError(
-                    "Bootstrapping of '{}' NEST module failed."
-                    .format(component.name or src_dir))
+                    "Bootstrapping of '{}' NEST module failed(see src "
+                    "directory '{}'):\n\n {}".format(component.name or src_dir,
+                                                     src_dir, e))
             os.chdir(compile_dir)
             env = os.environ.copy()
             env['CXX'] = self._compiler
             try:
                 sp.check_call(
-                    'pwd; sh {src_dir}/configure --prefix={install_dir}'
+                    'sh {src_dir}/configure --prefix={install_dir}'
                     .format(src_dir=src_dir, install_dir=install_dir),
                     shell=True, env=env)
-            except sp.CalledProcessError:
+            except sp.CalledProcessError as e:
                 raise Pype9BuildError(
-                    "Configuration of '{}' NEST module failed. See src "
-                    "directory '{}':\n ".format(component.name, src_dir))
+                    "Configuration of '{}' NEST module failed (see src "
+                    "directory '{}'):\n\n {}".format(component.name, src_dir,
+                                                     e))
             os.chdir(orig_dir)
 
     def compile_source_files(self, compile_dir, component_name, verbose):
@@ -121,14 +123,18 @@ class CodeGenerator(BaseCodeGenerator):
                    .format(compile_dir))
         try:
             sp.check_call('make -j{}'.format(self._build_cores), shell=True)
-        except sp.CalledProcessError:
-            raise Pype9BuildError("Compilation of '{}' NEST module failed. "
-                                  .format(component_name))
+        except sp.CalledProcessError as e:
+            raise Pype9BuildError(
+                "Compilation of '{}' NEST module failed (see compile "
+                "directory '{}'):\n\n {}".format(component_name, compile_dir,
+                                                 e))
         try:
             sp.check_call('make install', shell=True)
-        except sp.CalledProcessError:
-            raise Pype9BuildError("Installation of '{}' NEST module failed. "
-                                  .format(component_name))
+        except sp.CalledProcessError as e:
+            raise Pype9BuildError(
+                "Installation of '{}' NEST module failed (see compile "
+                "directory '{}'):\n\n {}".format(component_name, compile_dir,
+                                                 e))
 
     def clean_src_dir(self, src_dir, component_name):
         # Clean existing src directories from previous builds.
