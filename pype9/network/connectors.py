@@ -41,7 +41,7 @@ class Connector(object):
                                               created_projections[p.value.name]
                 except KeyError:
                     raise pype9.network.common.projections.\
-                                        ProjectionToCloneNotCreatedYetException
+                                        Pype9ProjToCloneNotCreatedException
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
                 RandomDistributionClass = getattr(pype9.network.random,
                                                   p.value.definition.\

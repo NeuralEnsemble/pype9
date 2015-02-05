@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import pyNN.connectors
 import pype9.network.connectors
 import pype9.morphology.point2point
-from pype9.exceptions import ProjectionToCloneNotCreatedYetException
+from pype9.exceptions import Pype9ProjToCloneNotCreatedException
 
 
 class Projection(object):
@@ -21,8 +21,8 @@ class Projection(object):
             nineml_model.rule.definition.componentclass.name)
         try:
             connector = ConnectorClass(nineml_model.rule.parameters, rng)
-        except ProjectionToCloneNotCreatedYetException:
-            raise ProjectionToCloneNotCreatedYetException(nineml_model.name)
+        except Pype9ProjToCloneNotCreatedException:
+            raise Pype9ProjToCloneNotCreatedException(nineml_model.name)
         SynapseClass = getattr(
             self._synapses_module,
             nineml_model.connection_type.definition.componentclass.name)
