@@ -10,7 +10,69 @@
 from __future__ import absolute_import
 import xml.sax
 import collections
-from pype9 import XMLHandler
+
+
+class XMLHandler(xml.sax.handler.ContentHandler):
+
+    def __init__(self):
+        self._open_components = []
+        self._required_attrs = []
+
+    def characters(self, data):
+        pass
+
+    def endElement(self, name):
+        """
+        Closes a component, removing its name from the _open_components list.
+
+        WARNING! Will break if there are two tags with the same name, with one
+        inside the other and only the outer tag is opened and the inside tag is
+        differentiated by its parents and attributes (this would seem an
+        unlikely scenario though). The solution in this case is to open the
+        inside tag and do nothing. Otherwise opening and closing all components
+        explicitly is an option.
+        """
+        if self._open_components and name == self._open_components[-1]:
+            self._open_components.pop()
+            self._required_attrs.pop()
+
+    def _opening(self, tag_name, attr, ref_name, parents=[],
+                 required_attrs=[]):
+        if (tag_name == ref_name and
+            self._parents_match(parents, self._open_components) and
+            all([(attr[key] == val or val is None)
+                 for key, val in required_attrs])):
+            self._open_components.append(ref_name)
+            self._required_attrs.append(required_attrs)
+            return True
+        else:
+            return False
+
+    def _closing(self, tag_name, ref_name, parents=[], required_attrs=[]):
+        if (tag_name == ref_name and
+            self._parents_match(parents, self._open_components[:-1]) and
+                self._required_attrs[-1] == required_attrs):
+            return True
+        else:
+            return False
+
+    def _parents_match(self, required_parents, open_parents):
+        if len(required_parents) > len(open_parents):
+            return False
+        for required, open_p in zip(reversed(required_parents),
+                                    reversed(open_parents)):
+            if isinstance(required, str):
+                if required != open_p:
+                    return False
+            else:
+                try:
+                    if not any([open_p == r for r in required]):
+                        return False
+                except TypeError:
+                    raise Exception("Elements of the 'required_parents' "
+                                    "argument need to be either strings or "
+                                    "lists/tuples of strings")
+        return True
 
 
 class MorphMLHandler(XMLHandler):
@@ -143,122 +205,6 @@ class MorphMLHandler(XMLHandler):
         XMLHandler.endElement(self, name)
 
 
-class NineMLHandler(XMLHandler):
-
-    """
-    A XML handler to extract information required to generate python classes for conductanced-based
-    neuron models from NINEML-Conductance descriptions. Storing them within the handler object to be
-    read when neuron model objects are initialised from the generated NineML class.
-    """
-
-    NineMLDescription = collections.namedtuple('NineMLDescription', 'celltype_id \
-                                                                 ncml_id \
-                                                                 build_options \
-                                                                 mechanisms \
-                                                                 synapses \
-                                                                 capacitances \
-                                                                 axial_resistances \
-                                                                 reversal_potentials \
-                                                                 passive_currents \
-                                                                 action_potential_threshold')
-
-    # Axial resitivity of the segment group ('group_id').
-    AxialResistivity = collections.namedtuple(
-        'AxialResistivity', 'value group_id')
-
-    # Ionic current of the segment group ('group_id').
-    BuildOptions = collections.namedtuple('BuildOptions', 'method kinetics')
-    IonicCurrent = collections.namedtuple('IonicCurrent', 'id group_id params')
-    IonicCurrentParam = collections.namedtuple(
-        'IonicCurrentParam', 'name value')
-    PassiveCurrent = collections.namedtuple(
-        'PassiveCurrent', 'group_id cond_density')
-    Synapse = collections.namedtuple('Synapse', 'id group_id')
-#    SynapseParam = collections.namedtuple('SynapseParam', 'name value')
-    SpecificCapacitance = collections.namedtuple(
-        'SpecificCapacitance', 'value group_id')
-    ReversePotential = collections.namedtuple(
-        'NineMLReversePotential', 'species value group_id')
-    ActionPotentialThreshold = collections.namedtuple(
-        'ActionPotentialThreshold', 'v')
-
-    def __init__(self, celltype_id=None, ncml_id=None):
-        XMLHandler.__init__(self)
-        self.celltype_id = celltype_id
-        self.ncml_id = ncml_id
-        self.found_cell_id = False
-
-    def startElement(self, tag_name, attrs):
-        if self._opening(tag_name, attrs, 'cell', required_attrs=[('id', self.celltype_id)]):
-            self.found_cell_id = True
-        elif self._opening(tag_name, attrs, 'biophysicalProperties', parents=['cell'],
-                           required_attrs=[('id', self.ncml_id)]):
-            self.ncml = self.NineMLDescription(
-                self.celltype_id, attrs['id'], collections.defaultdict(dict),
-                [], [], [], [], [], [], {})
-        elif self._opening(tag_name, attrs, 'defaultBuildOptions',
-                           parents=['biophysicalProperties']):
-            pass
-        elif self._opening(tag_name, attrs, 'build', parents=['defaultBuildOptions']):
-            self.build_tool = attrs['tool']
-            self.build_simulator = attrs['simulator']
-            self.ncml.build_options[self.build_tool][self.build_simulator] = \
-                self.BuildOptions(attrs['method'], [])
-        elif self._opening(tag_name, attrs, 'kinetic', parents=['defaultBuildOptions', 'build']):
-            self.ncml.build_options[self.build_tool][self.build_simulator].\
-                kinetics.append(attrs['comp_id'])
-        elif self._opening(tag_name, attrs, 'membraneProperties',
-                           parents=['biophysicalProperties']):
-            pass
-        elif self._opening(tag_name, attrs, 'synapses', parents=['biophysicalProperties']):
-            pass
-        elif self._opening(tag_name, attrs, 'intracellularProperties',
-                           parents=['biophysicalProperties']):
-            pass
-        elif self._opening(tag_name, attrs, 'actionPotentialThreshold',
-                           parents=['biophysicalProperties']):
-            if 'v' in self.ncml.action_potential_threshold:
-                raise Exception(
-                    "Action potential threshold is multiply specified.")
-            self.ncml.action_potential_threshold['v'] = float(attrs['v'])
-        elif self._opening(tag_name, attrs, 'ncml:ionicCurrent', parents=['membraneProperties']) or\
-                self._opening(tag_name, attrs, 'ncml:decayingPool', parents=['membraneProperties']):
-            self.ncml.mechanisms.append(self.IonicCurrent(attrs['name'],
-                                                          attrs.get(
-                                                              'segmentGroup', None),
-                                                          []))
-        elif self._opening(tag_name, attrs, 'ncml:conductanceSynapse', parents=['membraneProperties']):
-            self.ncml.synapses.append(self.Synapse(attrs['id'],
-                                                   attrs.get('segmentGroup', None)))
-        # -- This tag is deprecated as it is replaced by output python properties file from nemo --#
-        elif self._opening(tag_name, attrs, 'parameter', parents=['ionicCurrent']):
-            self.ncml.mechanisms[-1].params.append(self.IonicCurrentParam(attrs['name'],
-                                                                          float(attrs['value'])))
-        #-- END --#
-        elif self._opening(tag_name, attrs, 'passiveCurrent', parents=['membraneProperties']):
-            # If no 'segmentGroup' is provided, default to None
-            self.ncml.passive_currents.append(self.PassiveCurrent(attrs.get('segmentGroup', None),
-                                                                  attrs['condDensity']))
-#        elif self._opening(tag_name, attrs, 'conductanceSynapse', parents=['synapses']):
-#            self.ncml.synapses.append(self.Synapse(attrs['id'],
-#                                              attrs['type'],
-#                                              attrs.get('segmentGroup', None),
-#                                                  []))
-#        elif self._opening(tag_name, attrs, 'parameter', parents=['conductanceSynapse']):
-#            self.ncml.synapses[-1].params.append(self.SynapseParam(attrs['name'], float(attrs['value'])))
-        elif self._opening(tag_name, attrs, 'specificCapacitance', parents=['membraneProperties']):
-            self.ncml.capacitances.append(self.SpecificCapacitance(float(attrs['value']),
-                                                                   attrs.get('segmentGroup', None)))
-        elif self._opening(tag_name, attrs, 'reversalPotential', parents=['membraneProperties']):
-            self.ncml.reversal_potentials.append(self.ReversePotential(attrs['species'],
-                                                                       float(
-                                                                           attrs['value']),
-                                                                       attrs.get('segmentGroup', None)))
-        elif self._opening(tag_name, attrs, 'resistivity', parents=['intracellularProperties']):
-            self.ncml.axial_resistances.append(self.AxialResistivity(float(attrs['value']),
-                                                                     attrs.get('segmentGroup', None)))
-
-
 def read_MorphML(celltype_id, filename, morph_id=None):
     parser = xml.sax.make_parser()
     handler = MorphMLHandler(celltype_id, morph_id=morph_id)
@@ -271,17 +217,3 @@ def read_MorphML(celltype_id, filename, morph_id=None):
         raise Exception(
             "'morphology' tag was not found in given XML file '{}'".format(filename))
     return handler.morphology
-
-
-def read_NineML(celltype_id, filename):
-    parser = xml.sax.make_parser()
-    handler = NineMLHandler(celltype_id)
-    parser.setContentHandler(handler)
-    parser.parse(filename)
-    if not handler.found_cell_id:
-        raise Exception("Target cell id, '%s', was not found in given XML file '{}'".
-                        format(celltype_id, filename))
-    if not hasattr(handler, 'ncml'):
-        raise Exception("'biophysicalProperties' tag was not found in given XML file '{}'".
-                        format(filename))
-    return handler.ncml
