@@ -18,11 +18,11 @@ basic_nineml_translations = {
     'Voltage': 'V_m', 'Diameter': 'diam', 'Length': 'L'}
 
 
-class Pype9Cell(pype9.cells.Pype9Cell):
+class Pype9Cell(pype9.cells.base.Pype9Cell):
     pass
 
 
-class Pype9CellMetaClass(pype9.cells.Pype9CellMetaClass):
+class Pype9CellMetaClass(pype9.cells.base.Pype9CellMetaClass):
 
     loaded_celltypes = {}
 

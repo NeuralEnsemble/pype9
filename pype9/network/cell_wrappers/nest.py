@@ -5,20 +5,21 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-import pype9.network.common.cells
+from .base import (PyNNCellWrapper as BasePyNNCellWrapper,
+                   PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
 from pyNN.parameters import ParameterSpace
 import pyNN.standardmodels
 import nest
 from pype9.cells.nest import Pype9CellMetaClass, basic_nineml_translations
 
 
-class Pype9CellPyNNWrapper(pype9.network.common.cells.Pype9CellPyNNWrapper,
-                           pyNN.standardmodels.StandardCellType):
+class PyNNCellWrapper(BasePyNNCellWrapper,
+                      pyNN.standardmodels.StandardCellType):
 
     standard_receptor_type = None
 
     def __init__(self, **parameters):
-        pype9.network.common.cells.Pype9CellPyNNWrapper.__init__(self)
+        BasePyNNCellWrapper.__init__(self)
         pyNN.standardmodels.StandardCellType.__init__(self, **parameters)
 
     def memb_init(self):
@@ -46,8 +47,7 @@ class Pype9CellPyNNWrapper(pype9.network.common.cells.Pype9CellPyNNWrapper,
         return nest.GetDefaults(self.nest_model)["receptor_types"][name]
 
 
-class Pype9CellPyNNWrapperMetaClass(
-        pype9.network.common.cells.Pype9CellPyNNWrapperMetaClass):
+class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
 
     """
     Metaclass for compiling NineMLCellType subclases Called by
@@ -71,8 +71,8 @@ class Pype9CellPyNNWrapperMetaClass(
             dct['nest_model'] = name
             dct['translations'] = cls._construct_translations(
                 dct['model'].nineml_model, dct['model'].component_translations)
-            celltype = super(Pype9CellPyNNWrapperMetaClass, cls).__new__(
-                cls, name, (Pype9CellPyNNWrapper,), dct)
+            celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
+                cls, name, (PyNNCellWrapper,), dct)
             # If the url where the celltype is defined is specified save the
             # celltype to be retried later
             if nineml_model.url is not None:

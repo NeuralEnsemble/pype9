@@ -5,13 +5,13 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from ... import DEFAULT_V_INIT
+from pype9 import DEFAULT_V_INIT
 
 
-class Pype9CellPyNNWrapper(object):
+class PyNNCellWrapper(object):
 
     """
-    A base cell object for NineML cell classes.
+    A base cell object for PyNNCellWrapper cell classes.
     """
 
     @classmethod
@@ -24,7 +24,7 @@ class Pype9CellPyNNWrapper(object):
         return cls.parameter_names
 
 
-class Pype9CellPyNNWrapperMetaClass(type):
+class PyNNCellWrapperMetaClass(type):
 
     """
     Metaclass for building NineMLCellType subclasses
@@ -46,7 +46,7 @@ class Pype9CellPyNNWrapperMetaClass(type):
         dct["model_name"] = celltype_id
         dct["weight_variables"] = cls._construct_weight_variables()
         dct["parameter_names"] = dct['default_parameters'].keys()
-        return super(Pype9CellPyNNWrapperMetaClass, cls).__new__(
+        return super(PyNNCellWrapperMetaClass, cls).__new__(
             cls, celltype_id + 'PyNN', bases, dct)
 
     def __init__(self, celltype_name, nineml_model, build_mode='lazy',

@@ -9,8 +9,8 @@ import os.path
 from pyNN.random import NumpyRNG
 import pyNN.standardmodels
 import nineml
-import pype9.network.common
 import quantities as pq
+from pype9.exceptions import ProjectionToCloneNotCreatedYetException
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
@@ -57,8 +57,7 @@ class Network(object):
                         self._populations[model.source.population.name],
                         self._populations[model.target.population.name],
                         model, rng=self._rng)
-                except pype9.network.common.projections.\
-                                  ProjectionToCloneNotCreatedYetException as e:
+                except ProjectionToCloneNotCreatedYetException as e:
                     if e.orig_proj_id in self.nineml_model.projections.keys():
                         projection_models.append(model)
                         # I think this is the theoretical limit for the number

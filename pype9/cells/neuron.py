@@ -65,7 +65,7 @@ def convert_to_neuron_units(value, unit_str):
         value, unit_str, _basic_unit_dict, _compound_unit_dict)
 
 
-class _BasePype9Cell(pype9.cells.Pype9Cell):
+class _BasePype9Cell(pype9.cells.base.Pype9Cell):
 
     class Segment(h.Section):
         """
@@ -748,7 +748,7 @@ class Pype9CellStandAlone(_BasePype9Cell):
         self._recordings = {}
 
 
-class Pype9CellMetaClass(pype9.cells.Pype9CellMetaClass):
+class Pype9CellMetaClass(pype9.cells.base.Pype9CellMetaClass):
 
     """
     Metaclass for building NineMLPype9CellType subclasses Called by
@@ -784,15 +784,15 @@ class Pype9CellMetaClass(pype9.cells.Pype9CellMetaClass):
                                              opt_args)]
         except KeyError:
             dct = {'nineml_model': nineml_model}
-            if isinstance(nineml_model, DummyNinemlModel):
-                install_dir = nineml_model.url
-                dct['component_translations'] = {}
-            else:
+#             if isinstance(nineml_model, DummyNinemlModel):
+#                 install_dir = nineml_model.url
+#                 dct['component_translations'] = {}
+#             else:
 #                 build_options = nineml_model.biophysics.\
 #                     build_hints['nemo']['neuron']
-                code_gen = CodeGenerator()
-                install_dir = code_gen.generate(
-                    nineml_model, build_mode=build_mode, verbose=(not silent))
+            code_gen = CodeGenerator()
+            install_dir = code_gen.generate(
+                nineml_model, build_mode=build_mode, verbose=(not silent))
             load_mechanisms(install_dir)
             dct['mech_path'] = install_dir
             dct['_param_links_tested'] = False

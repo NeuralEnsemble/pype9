@@ -8,12 +8,7 @@ from __future__ import absolute_import
 import pyNN.connectors
 import pype9.network.connectors
 import pype9.morphology.point2point
-
-
-class ProjectionToCloneNotCreatedYetException(Exception):
-
-    def __init__(self, orig_proj_id=None):
-        self.orig_proj_id = orig_proj_id
+from pype9.exceptions import ProjectionToCloneNotCreatedYetException
 
 
 class Projection(object):
@@ -72,11 +67,11 @@ class Projection(object):
                     pype9.morphology.point2point, expr_name)
                 try:
                     param_expr = pyNN.connectors.\
-                                    DisplacementDependentProbabilityConnector.\
-                                    DisplacementExpression(
-                                       GeometricExpression(
-                                         min_value=min_value,
-                                         **cls._convert_all_units(param.args)))
+                        DisplacementDependentProbabilityConnector.\
+                        DisplacementExpression(
+                            GeometricExpression(
+                                min_value=min_value,
+                                **cls._convert_all_units(param.args)))
                 except TypeError as e:
                     raise Exception("Could not initialise distance expression "
                                     "class '{}' from given arguments '{}' for "

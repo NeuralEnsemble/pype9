@@ -26,20 +26,6 @@ from datetime import datetime
 from nineml.utils import expect_single
 
 
-if 'NRNHOME' in os.environ:
-    os.environ['PATH'] += (os.pathsep +
-                           os.path.join(os.environ['NRNHOME'],
-                                        platform.machine(), 'bin'))
-else:
-    try:
-        if os.environ['HOME'] == '/home/tclose':
-            # I apologise for this little hack (this is the path on my machine,
-            # to save me having to set the environment variable in eclipse)
-            os.environ['PATH'] += os.pathsep + '/opt/NEURON/nrn-7.3/x86_64/bin'
-    except KeyError:
-        pass
-
-
 class CodeGenerator(BaseCodeGenerator):
 
     SIMULATOR_NAME = 'neuron'
@@ -80,9 +66,9 @@ class CodeGenerator(BaseCodeGenerator):
             'parameter_scales': [], 'membrane_voltage': 'V_t',
             'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT),
             'weight_variables': [],
-            'deriv_func_args': self.deriv_func_args, 'ode_for': self.ode_for,
-            'all_time_derivs': list(chain(*(r.time_derivatives
-                                            for r in componentclass.regimes)))}
+            'deriv_func_args': self.deriv_func_args,
+            'all_td_dependencies': componentclass.get_dependencies(
+                chain(*(r.time_derivatives for r in componentclass.regimes)))}
         # Render mod file
         self.render_to_file('main.tmpl', tmpl_args, component.name + '.mod',
                             src_dir)
@@ -178,12 +164,7 @@ class CodeGenerator(BaseCodeGenerator):
             for d in os.listdir(os.environ['NRNHOME']):
                 bin_path = os.path.join(d, 'bin')
                 if os.path.exists(bin_path):
-                    # TODO: need to add windows specials dirname here
-                    # NOTE: can't use '_get_specials_dir()' as it uses
-                    #      path_to_exec, to find 'nrnivmodl' which calls this
-                    #      function in turn, creating a recursive loop.
-                    for spc_dir in ('x86_64', 'i386'):
-                        path.append(os.path.join(bin_path, spc_dir))
+                    path.append(bin_path)
         except KeyError:
             pass
         return path

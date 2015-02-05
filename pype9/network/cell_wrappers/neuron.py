@@ -9,22 +9,16 @@ try:
     from mpi4py import MPI  # @UnresolvedImport @UnusedImport
 except:
     pass
-import pype9.network.common
-from pyNN.common.control import build_state_queries
-import pyNN.neuron.simulator as simulator
 import pyNN.models
 from pype9.cells.neuron import Pype9CellMetaClass, basic_nineml_translations
 import logging
+from .base import (PyNNCellWrapper as BasePyNNCellWrapper,
+                   PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
 
 logger = logging.getLogger("PyNN")
 
-get_current_time, get_time_step, get_min_delay, \
-    get_max_delay, num_processes, rank = build_state_queries(simulator)
 
-
-class Pype9CellPyNNWrapper(
-        pyNN.models.BaseCellType,
-        pype9.network.common.cells.Pype9CellPyNNWrapper):
+class PyNNCellWrapper(BasePyNNCellWrapper, pyNN.models.BaseCellType):
 
     """
     Extends the vanilla Pype9Cell to include all the PyNN requirements
@@ -32,8 +26,7 @@ class Pype9CellPyNNWrapper(
     pass
 
 
-class Pype9CellPyNNWrapperMetaClass(
-        pype9.network.common.cells.Pype9CellPyNNWrapperMetaClass):
+class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
 
     _basic_nineml_translations = basic_nineml_translations
     loaded_celltypes = {}
@@ -49,8 +42,8 @@ class Pype9CellPyNNWrapperMetaClass(
                                        solver_name=solver_name,
                                        standalone=False)
             dct = {'model': model}
-            celltype = super(Pype9CellPyNNWrapperMetaClass, cls).__new__(
-                cls, name, (Pype9CellPyNNWrapper,), dct)
+            celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
+                cls, name, (PyNNCellWrapper,), dct)
             assert sorted(celltype.recordable) == sorted(
                 model().recordable.keys()), \
                 ("Mismatch of recordable keys between Pype9CellPyNN and "

@@ -10,7 +10,7 @@ import quantities
 import nineml.user_layer
 import pyNN.connectors
 import pype9.network.random
-import pype9.network.common.projections
+import pype9.network.projections
 from pype9.network.expression import create_anonymous_function
 from pype9.network.expression.structure import _PositionBasedExpression
 
