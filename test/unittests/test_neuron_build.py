@@ -14,7 +14,8 @@ class TestNeuronBuild(TestCase):
         code_generator = CodeGenerator()
         code_generator.generate(component_file, 0.0,
                                 build_mode='force',
-                                ode_solver='derivimplicit', v_threshold=None)
+                                ode_solver='derivimplicit', v_threshold=None,
+                                membrane_voltage='V')
 
 if __name__ == '__main__':
     t = TestNeuronBuild()

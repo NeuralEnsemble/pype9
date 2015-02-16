@@ -12,8 +12,10 @@ import os.path
 import shutil
 import time
 from itertools import chain
+from collections import defaultdict
 import platform
 import tempfile
+from copy import copy
 import uuid
 import subprocess as sp
 import quantities as pq
@@ -55,20 +57,71 @@ class CodeGenerator(BaseCodeGenerator):
 
     def generate_source_files(self, component, initial_state, src_dir,  # @UnusedVariable @IgnorePep8
                               **kwargs):
-        componentclass = component.component_class
+        """
+            *KWArgs*
+                `membrane_voltage` -- Specifies the state that represents
+                                      membrane voltage.
+                `v_threshold`      -- The threshold for the neuron to emit a
+                                      spike.
+                `external_ports`   -- Analog ports to strip from expressions
+                                      as they represent synapses or injected
+                                      currents, which can be inserted manually
+                                      by NEURON objects.
+                `is_subcomponent`  -- Whether to use the 'SUFFIX' tag or not.
+                `ode_solver`       -- specifies the ODE solver to use
+        """
+        # TODO: will check to see if it is a multi-component here and generate
+        #       multiple mod files unless specifically requested to be flat
+        if 'membrane_voltage' not in kwargs:
+            raise Pype9BuildError(
+                "'membrane_voltage' variable must be specified for standalone"
+                " mod files")
+        self.generate_mod_file(
+            component, initial_state, src_dir,
+            membrane_voltage=kwargs['membrane_voltage'],
+            v_threshold=kwargs.get('v_threshold',
+                                   self.V_THRESHOLD_DEFAULT),
+            is_subcomponent=kwargs.get('is_subcomponent', False),
+            external_ports=kwargs.get('external_ports', []),
+            ode_solver=kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT))
+
+
+    def generate_mod_file(self, component, initial_state, src_dir, v_threshold,  # @UnusedVariable @IgnorePep8
+                          membrane_voltage, is_subcomponent,
+                          external_ports, ode_solver):
+        # 'v' is hard-coded as the membrane voltage in NEURON so convert the
+        # specified membrane voltage state to that.
+        if membrane_voltage != 'v':
+            componentclass = copy(component.component_class)
+            if 'v' in componentclass.state_variables:
+                componentclass.rename('v', 'v_')
+            componentclass.rename(membrane_voltage, 'v')
+        # Do some preprocessing outside of the template to generate requires
+        # Dependent states on time derivatives
+        deriv_args = defaultdict(set)
+        all_time_derivs = []
+        for regime in componentclass.regimes:
+            for td in regime.time_derivatives:
+                deriv_args[td.dependent_variable].add(
+                    componentclass.required_definitions(
+                        td.lhs).state_variables)
+                all_time_derivs.append(td)
+        # Required expressions for all time derivatives in resolved order
+        required_td_expressions = componentclass.required_definitions(
+            all_time_derivs).expressions
         tmpl_args = {
             'component': component,
             'componentclass': componentclass,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
-            'ode_solver': kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT),
             'unit_conversion': self.unit_conversion,
-            'parameter_scales': [], 'membrane_voltage': 'V_t',
-            'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT),
+            'ode_solver': ode_solver,
+            'external_ports': external_ports,
+            'is_subcomponent': is_subcomponent,
+            # FIXME: weight_vars needs to be removed or implmented properly
             'weight_variables': [],
-            'deriv_func_args': self.deriv_func_args,
-            'all_td_dependencies': componentclass.get_dependencies(
-                chain(*(r.time_derivatives for r in componentclass.regimes)))}
+            'required_td_expressions': required_td_expressions,
+            'deriv_args': deriv_args}
         # Render mod file
         self.render_to_file('main.tmpl', tmpl_args, component.name + '.mod',
                             src_dir)
@@ -80,8 +133,8 @@ class CodeGenerator(BaseCodeGenerator):
     def compile_source_files(self, compile_dir, component_name, verbose):
         """
         Builds all NMODL files in a directory
-        @param src_dir: The path of the directory to build
-        @param build_mode: Can be one of either, 'lazy', 'super_lazy',
+        `src_dir`     -- The path of the directory to build
+        `build_mode`  -- Can be one of either, 'lazy', 'super_lazy',
                            'require', 'force', or 'build_only'. 'lazy' doesn't
                            run nrnivmodl if the library is found, 'require',
                            requires that the library is found otherwise throws
@@ -91,7 +144,7 @@ class CodeGenerator(BaseCodeGenerator):
                            removes existing library if found and recompiles,
                            and 'build_only' removes existing library if found,
                            recompile and then exit
-        @param verbose: Prints out verbose debugging messages
+        `verbose`     -- Prints out verbose debugging messages
         """
         # Change working directory to model directory
         os.chdir(compile_dir)

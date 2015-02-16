@@ -9,7 +9,7 @@
 TITLE Spiking node generated from 9ML using PyPe9 version {{version}} at '{{timestamp}}'
 
 NEURON {
-    POINT_PROCESS {{component.name}}
+    {% if is_subcomponent %}SUFFIX{% else %}POINT_PROCESS{% endif %} {{component.name}}
     RANGE regime
 
     :StateVariables:
@@ -88,7 +88,7 @@ PARAMETER {
 }
 
 STATE {
-{% for sv in componentclass.state_variables %}
+{% for sv in componentclass.state_variables if sv.name != 'v' %}
     {{sv.name}}
 {% endfor %}
     first_round_fired
@@ -108,19 +108,19 @@ ASSIGNED {
 
 BREAKPOINT {
     SOLVE states METHOD {{ode_solver}}
-{% for expr in all_td_dependencies.expressions %}
+{% for expr in required_td_expressions %}
     {{expr.lhs}} = {{expr.rhs}}
 {% endfor %}
 }
 
 DERIVATIVE states {
 {% for sv in componentclass.state_variables %}
-    {{sv.name}}' = deriv_{{sv.name}}({{deriv_func_args(componentclass, sv.name)}})
+    {{sv.name}}' = deriv_{{sv.name}}({{deriv_args[sv.name]}})
 {% endfor %}
 }
 
 {% for sv in componentclass.state_variables %}
-FUNCTION deriv_{{sv.name}}({{deriv_func_args(componentclass, sv.name)}}) {
+FUNCTION deriv_{{sv.name}}({{deriv_args[sv.name]}}) {
     {% for regime in componentclass.regimes %}
     if (regime == {{regime.name | upper}}) {
         {% if sv in regime.time_derivatives_map %}
@@ -151,13 +151,13 @@ NET_RECEIVE(w, channel) {
 {% for regime in componentclass.regimes %}
         if (regime == {{regime.name | upper}}) {
     {% for oe in regime.on_events %}
-        {% set dp = componentclass.get_dependencies(oe.state_assignments) %}    
+        {% set rd = componentclass.required_definitions(oe.state_assignments) %}    
             if (channel == {{oe.src_port_name | upper}}) {
         {% if weight_variables %}
                 {{get_weight_variable}}({{channel}}, {{weight_variables}}) = w
         {% endif %}        
                 : Expressions
-        {% for expr in dp.expressions %}
+        {% for expr in rd.expressions %}
             {% if hasasttr(expr, 'pieces') %}  {# Is a Piecewise statement #}
                 {% for piece in expr.pieces %}
         {% if not loop.first %}else {% endif -%}

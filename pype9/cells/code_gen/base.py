@@ -76,7 +76,7 @@ class BaseCodeGenerator(object):
 
     def generate(self, component, initial_state=None, install_dir=None,
                  build_dir=None, build_mode='lazy', verbose=True,
-                 **template_args):
+                 **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
         NineML cell class
@@ -93,7 +93,7 @@ class BaseCodeGenerator(object):
                             generate_only - generate src and then quit
                             compile_only - don't generate src but compile
         `verbose` [bool]: Whether the build output is shown or not
-        `template_args` [dict]: A dictionary of (potentially simulator-
+        `kwargs` [dict]: A dictionary of (potentially simulator-
                                 specific) template arguments
         """
         # Save original working directory to reinstate it afterwards (just to
@@ -209,13 +209,10 @@ class BaseCodeGenerator(object):
         # Generate source files from NineML code
         if generate_source:
             self.clean_src_dir(src_dir, component.name)
-            self.generate_source_files(component=component,
-                                       initial_state=initial_state,
-                                       src_dir=src_dir,
-                                       compile_dir=compile_dir,
-                                       install_dir=install_dir,
-                                       verbose=verbose,
-                                       **template_args)
+            self.generate_source_files(
+                component=component, initial_state=initial_state,
+                src_dir=src_dir, compile_dir=compile_dir,
+                install_dir=install_dir, verbose=verbose, **kwargs)
             # Write the timestamp of the 9ML file used to generate the source
             # files
             with open(nineml_mod_time_path, 'w') as f:
@@ -223,10 +220,9 @@ class BaseCodeGenerator(object):
         if compile_source:
             # Clean existing compile & install directories from previous builds
             self.clean_compile_dir(compile_dir)
-            self.configure_build_files(component=component.name,
-                                        src_dir=src_dir,
-                                        compile_dir=compile_dir,
-                                        install_dir=install_dir)
+            self.configure_build_files(
+                component=component.name, src_dir=src_dir,
+                compile_dir=compile_dir, install_dir=install_dir)
             self.clean_install_dir(install_dir)
             # Compile source files
             self.compile_source_files(compile_dir, component.name,
