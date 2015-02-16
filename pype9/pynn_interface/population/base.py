@@ -47,7 +47,7 @@ class Population(object):
                 else:
                     struct_name = 'structure_' + len(self.structures)
                 self.structures[struct_name] = Structure(struct_name,
-                                                         nineml_model.number,
+                                                         nineml_model.size,
                                                          struct_model, rng)
             cellparams = {}
             initial_values = {}
@@ -78,7 +78,7 @@ class Population(object):
             PyNNClass = self.__class__.__mro__[2]
             assert PyNNClass.__module__.startswith(
                 'pyNN') and PyNNClass.__name__ == 'Population'
-            PyNNClass.__init__(self, nineml_model.number, celltype,
+            PyNNClass.__init__(self, nineml_model.size, celltype,
                                cellparams=cellparams,
                                initial_values=initial_values, structure=None,
                                label=nineml_model.name)
