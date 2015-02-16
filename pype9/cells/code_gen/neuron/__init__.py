@@ -17,7 +17,7 @@ import tempfile
 import uuid
 import subprocess as sp
 import quantities as pq
-from .. import BaseCodeGenerator
+from ..base import BaseCodeGenerator
 import nineml.abstraction_layer.units as un
 from nineml.abstraction_layer.dynamics import OnEvent, TimeDerivative
 from pype9.exceptions import Pype9BuildError

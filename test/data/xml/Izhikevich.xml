@@ -1,36 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<NineML xmlns="http://nineml.net/9ML/1.0">
-  <ComponentClass name="IzhikevichFastSpiking">
+<NineML xmlns="http://nineml.net/9ML/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://nineml.net/9ML/1.0/schema/NineML_v1.0.xsd">
+  <ComponentClass name="IzhikevichClass">
     <Parameter name="a" dimension="dimensionless"/>
     <Parameter name="b" dimension="dimensionless"/>
     <Parameter name="c" dimension="voltage"/>
     <Parameter name="k" dimension="dimensionless"/>
-    <Parameter name="Vpeak" dimension="voltage"/>
-    <Parameter name="Vt" dimension="voltage"/>
     <Parameter name="Vr" dimension="voltage"/>
+    <Parameter name="Vt" dimension="voltage"/>
     <Parameter name="Vb" dimension="voltage"/>
+    <Parameter name="Vpeak" dimension="voltage"/>
     <Parameter name="Cm" dimension="specificCapacitance"/>
-    <AnalogReducePort name="Isyn" dimension="current" operator="+"/>
-    <AnalogReceivePort name="Iext" dimension="current"/>
-    <AnalogSendPort name="V" mode="send" dimension="voltage"/>
-    <AnalogSendPort name="U" mode="send" dimension="dimensionless"/>
-    <EventSendPort name="spikeOutput"/>
+    <AnalogReducePort name="iSyn" dimension="current" operator="+"/>
+    <AnalogReceivePort name="iExt" dimension="current"/>
+    <AnalogSendPort name="U" dimension="dimensionless"/>
+    <AnalogSendPort name="V" dimension="voltage"/>
+    <EventSendPort name="spikeOutput" mode="send"/>
     <Dynamics>
       <StateVariable name="V" dimension="voltage"/>
       <StateVariable name="U" dimension="dimensionless"/>
-      <Alias name="UU">
-        <MathInline> heaviside (V - Vb) * (b * (V - Vb) * (V - Vb) * (V - Vb)) </MathInline>
-      </Alias>
-      <Regime name="subthresholdRegime">
-        <TimeDerivative variable="V">
-          <MathInline> ((k * (V - Vr) * (V - Vt) - U + Isyn + Iext) / Cm) </MathInline>
-        </TimeDerivative>
+      <Regime name="subthreshold">
         <TimeDerivative variable="U">
-          <MathInline> a * (UU - U) </MathInline>
+          <MathInline>a * (b * (V - Vb) ^ 3 - U)</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="V">
+          <MathInline>dV</MathInline>
         </TimeDerivative>
         <OnCondition>
           <Trigger>
-            <MathInline>V &gt; Vpeak </MathInline>
+            <MathInline>V &gt; Vpeak</MathInline>
           </Trigger>
           <StateAssignment variable="V">
             <MathInline>c</MathInline>
@@ -38,13 +36,34 @@
           <StateAssignment variable="U">
             <MathInline>U</MathInline>
           </StateAssignment>
-          <OutputEvent port="spikeOutput"/>
+          <EventOut port="spikeOutput"/>
+        </OnCondition>
+        <OnCondition target_regime="subVb">
+          <Trigger>
+            <MathInline>V &lt; Vb</MathInline>
+          </Trigger>
         </OnCondition>
       </Regime>
+      <Regime name="subVb">
+        <TimeDerivative variable="U">
+          <MathInline>- U * a</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="V">
+          <MathInline>dV</MathInline>
+        </TimeDerivative>
+        <OnCondition target_regime="subthreshold">
+          <Trigger>
+            <MathInline>V &gt; Vb</MathInline>
+          </Trigger>
+        </OnCondition>
+      </Regime>
+      <Alias name="dV">
+        <MathInline>(k * (V - Vr) * (V - Vt) - U + iSyn + iExt) / Cm</MathInline>
+      </Alias>
     </Dynamics>
   </ComponentClass>
   <Component name="Izhikevich">
-    <Definition>IzhikevichFastSpiking</Definition>
+    <Definition>IzhikevichClass</Definition>
     <Property name="a">
       <SingleValue>0.02</SingleValue>
     </Property>

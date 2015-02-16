@@ -13,21 +13,15 @@ from __future__ import absolute_import
 import platform
 import os
 import time
-from collections import namedtuple
 from itertools import chain
 import shutil
-from copy import copy
-from os.path import abspath, dirname, join
-from datetime import datetime
+from os.path import join
 from collections import defaultdict
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from itertools import izip
 from runpy import run_path
 from abc import ABCMeta, abstractmethod
 import nineml
-from __builtin__ import classmethod
-from pype9 import version
-from nineml.abstraction_layer import expressions
 from pype9.exceptions import Pype9BuildError
 
 
