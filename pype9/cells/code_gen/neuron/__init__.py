@@ -15,7 +15,7 @@ from itertools import chain
 from collections import defaultdict
 import platform
 import tempfile
-from copy import copy
+from copy import deepcopy
 import uuid
 import subprocess as sp
 import quantities as pq
@@ -85,30 +85,15 @@ class CodeGenerator(BaseCodeGenerator):
             external_ports=kwargs.get('external_ports', []),
             ode_solver=kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT))
 
-
-    def generate_mod_file(self, component, initial_state, src_dir, v_threshold,  # @UnusedVariable @IgnorePep8
-                          membrane_voltage, is_subcomponent,
-                          external_ports, ode_solver):
+    def generate_mod_file(self, component, initial_state, src_dir, v_threshold,
+                          membrane_voltage, is_subcomponent, external_ports,
+                          ode_solver):
         # 'v' is hard-coded as the membrane voltage in NEURON so convert the
         # specified membrane voltage state to that.
-        if membrane_voltage != 'v':
-            componentclass = copy(component.component_class)
-            if 'v' in componentclass.state_variables:
-                componentclass.rename('v', 'v_')
-            componentclass.rename(membrane_voltage, 'v')
-        # Do some preprocessing outside of the template to generate requires
-        # Dependent states on time derivatives
-        deriv_args = defaultdict(set)
-        all_time_derivs = []
-        for regime in componentclass.regimes:
-            for td in regime.time_derivatives:
-                deriv_args[td.dependent_variable].add(
-                    componentclass.required_definitions(
-                        td.lhs).state_variables)
-                all_time_derivs.append(td)
-        # Required expressions for all time derivatives in resolved order
-        required_td_expressions = componentclass.required_definitions(
-            all_time_derivs).expressions
+        # if membrane_voltage != 'v':
+        componentclass = component.component_class
+        if 'v' in componentclass.state_variables_map:
+            componentclass.rename_symbol('v', 'v_')
         tmpl_args = {
             'component': component,
             'componentclass': componentclass,
@@ -119,9 +104,7 @@ class CodeGenerator(BaseCodeGenerator):
             'external_ports': external_ports,
             'is_subcomponent': is_subcomponent,
             # FIXME: weight_vars needs to be removed or implmented properly
-            'weight_variables': [],
-            'required_td_expressions': required_td_expressions,
-            'deriv_args': deriv_args}
+            'weight_variables': []}
         # Render mod file
         self.render_to_file('main.tmpl', tmpl_args, component.name + '.mod',
                             src_dir)

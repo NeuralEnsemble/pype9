@@ -11,8 +11,6 @@
     <Parameter name="Vb" dimension="voltage"/>
     <Parameter name="Vpeak" dimension="voltage"/>
     <Parameter name="Cm" dimension="specificCapacitance"/>
-    <AnalogReducePort name="iSyn" dimension="current" operator="+"/>
-    <AnalogReceivePort name="iExt" dimension="current"/>
     <AnalogSendPort name="U" dimension="dimensionless"/>
     <AnalogSendPort name="V" dimension="voltage"/>
     <EventSendPort name="spikeOutput" mode="send"/>
@@ -58,7 +56,7 @@
         </OnCondition>
       </Regime>
       <Alias name="dV">
-        <MathInline>(k * (V - Vr) * (V - Vt) - U + iSyn + iExt) / Cm</MathInline>
+        <MathInline>(k * (V - Vr) * (V - Vt) - U) / Cm</MathInline>
       </Alias>
     </Dynamics>
   </ComponentClass>
