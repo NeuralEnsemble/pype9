@@ -212,7 +212,7 @@ class CodeGenerator(BaseCodeGenerator):
         for r in component.regimes:
             for time_derivative in (eq for eq in r.time_derivatives
                                     if eq.dependent_variable == variable):
-                for name in (name for name in time_derivative.rhs_names
+                for name in (name for name in time_derivative.rhs_symbol_names
                              if name in [sv.name
                                          for sv in component.state_variables]):
                     args.add(name)

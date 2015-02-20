@@ -6,7 +6,6 @@ import quantities as pq
 import os.path
 import collections
 from itertools import chain
-from nineml.abstraction_layer.expressions.utils import is_builtin_symbol
 from nineml.abstraction_layer.componentclass import Parameter
 from nineml.abstraction_layer.dynamics import (
     TimeDerivative, StateAssignment, DynamicsClass)

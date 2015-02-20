@@ -14,6 +14,7 @@ import platform
 import os
 import time
 from itertools import chain
+from copy import deepcopy
 import shutil
 from os.path import join
 from collections import defaultdict
@@ -52,7 +53,7 @@ class BaseCodeGenerator(object):
         # Add some globals used by the template code
         self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
                                       xrange=xrange, next=next, chain=chain,
-                                      hash=hash)
+                                      hash=hash, deepcopy=deepcopy)
 
     @abstractmethod
     def generate_source_files(self, component, initial_state, src_dir,
