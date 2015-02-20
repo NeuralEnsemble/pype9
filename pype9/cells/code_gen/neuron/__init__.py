@@ -21,8 +21,11 @@ import subprocess as sp
 import quantities as pq
 from ..base import BaseCodeGenerator
 import nineml.abstraction_layer.units as un
-from nineml.abstraction_layer.dynamics import OnEvent, TimeDerivative
-from pype9.exceptions import Pype9BuildError
+from nineml.abstraction_layer.dynamics import (
+    OnEvent, TimeDerivative, StateVariable)
+from nineml.abstraction_layer.ports import (
+    AnalogReceivePort, AnalogSendPort)
+from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import pype9
 from datetime import datetime
 from nineml.utils import expect_single
@@ -72,13 +75,16 @@ class CodeGenerator(BaseCodeGenerator):
         """
         # TODO: will check to see if it is a multi-component here and generate
         #       multiple mod files unless specifically requested to be flat
-        if 'membrane_voltage' not in kwargs:
+        if ('membrane_voltage' not in kwargs or
+                'membrane_capacitance' not in kwargs):
             raise Pype9BuildError(
-                "'membrane_voltage' variable must be specified for standalone"
-                " mod files")
+                "'membrane_voltage' and 'membrane_capacitance' variables must "
+                "be specified for standalone NEURON mod file generation: {}"
+                .format(kwargs))
         self.generate_mod_file(
             component, initial_state, src_dir,
             membrane_voltage=kwargs['membrane_voltage'],
+            membrane_voltage=kwargs['membrane_capacitance'],
             v_threshold=kwargs.get('v_threshold',
                                    self.V_THRESHOLD_DEFAULT),
             is_subcomponent=kwargs.get('is_subcomponent', False),
@@ -86,14 +92,11 @@ class CodeGenerator(BaseCodeGenerator):
             ode_solver=kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT))
 
     def generate_mod_file(self, component, initial_state, src_dir, v_threshold,
-                          membrane_voltage, is_subcomponent, external_ports,
+                          membrane_voltage, membrane_capacitance,
+                          is_subcomponent, external_ports,
                           ode_solver):
-        # 'v' is hard-coded as the membrane voltage in NEURON so convert the
-        # specified membrane voltage state to that.
-        # if membrane_voltage != 'v':
-        componentclass = component.component_class
-        if 'v' in componentclass.state_variables_map:
-            componentclass.rename_symbol('v', 'v_')
+        componentclass = self.convert_to_current_centric(
+            component.component_class, membrane_voltage, membrane_capacitance)
         tmpl_args = {
             'component': component,
             'componentclass': componentclass,
@@ -108,6 +111,53 @@ class CodeGenerator(BaseCodeGenerator):
         # Render mod file
         self.render_to_file('main.tmpl', tmpl_args, component.name + '.mod',
                             src_dir)
+
+    @classmethod
+    def convert_to_current_centric(cls, componentclass, membrane_voltage,
+                                   membrane_capacitance):
+        """
+        Copy the component class to alter it to match NEURON's current
+        centric focus
+        `membrane_voltage` -- the name of the state variable that represents
+                              the membrane voltage
+        `membrane_voltage` -- the name of the capcitance that represents
+                              the membrane capacitance
+        """
+        cc = deepcopy(componentclass)
+        try:
+            v = cc.state_variables_map[membrane_voltage]
+            cm = cc.parameters_map[membrane_capacitance]
+        except KeyError:
+            raise Pype9RuntimeError(
+                "Could not find specified voltage or capacitance ('{}', '{}')"
+                .format(v.name, cm.name))
+        if v.dimension != un.voltage:
+            raise Pype9RuntimeError(
+                "Specified membrane voltage does not have 'voltage' dimension"
+                " ({})".format(v.dimension.name))
+        if cm.dimension != un.specificCapacitance:
+            raise Pype9RuntimeError(
+                "Specified membrane capacitance does not have "
+                "'specificCapacitance' dimension ({})"
+                .format(v.dimension.name))
+        if 'i' not in cc.state_variables_map:
+            i_name = 'i'
+        else:
+            i_name = 'i_'
+        i = StateVariable(i_name, dimension=un.currentDensity)
+        cc.state_variables_map.pop(v)
+        cc.state_variables_map[i.name] = i
+        for regime in cc.regimes:
+            dv_dt = regime.time_derivatives_map.pop(v.name)
+            di_dt = TimeDerivative(i.name, rhs=dv_dt / cm)
+            regime.time_derivatives_map[i.name] = di_dt
+        cc.analogreceiveports_map['v'] = AnalogReceivePort(
+            'v', dimension=un.voltage)
+        i_send_port = AnalogSendPort(i.name, dimension=un.currentDensity)
+        i_send_port.annotations['biophysics'] = {'ion_species': 'NONSPECIFIC'}
+        cc.analogreceiveports_map[i.name] = i_send_port
+        cc.validate()
+        return cc
 
     def configure_build_files(self, component, src_dir, compile_dir,
                                install_dir):
