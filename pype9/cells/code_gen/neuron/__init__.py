@@ -84,7 +84,7 @@ class CodeGenerator(BaseCodeGenerator):
         self.generate_mod_file(
             component, initial_state, src_dir,
             membrane_voltage=kwargs['membrane_voltage'],
-            membrane_voltage=kwargs['membrane_capacitance'],
+            membrane_capacitance=kwargs['membrane_capacitance'],
             v_threshold=kwargs.get('v_threshold',
                                    self.V_THRESHOLD_DEFAULT),
             is_subcomponent=kwargs.get('is_subcomponent', False),
@@ -124,8 +124,9 @@ class CodeGenerator(BaseCodeGenerator):
                               the membrane capacitance
         """
         cc = deepcopy(componentclass)
+        cc.rename_symbol(membrane_voltage, 'v')
         try:
-            v = cc.state_variables_map[membrane_voltage]
+            v = cc.state_variables_map['v']
             cm = cc.parameters_map[membrane_capacitance]
         except KeyError:
             raise Pype9RuntimeError(
@@ -140,22 +141,21 @@ class CodeGenerator(BaseCodeGenerator):
                 "Specified membrane capacitance does not have "
                 "'specificCapacitance' dimension ({})"
                 .format(v.dimension.name))
-        if 'i' not in cc.state_variables_map:
-            i_name = 'i'
-        else:
-            i_name = 'i_'
+        i_name = 'i' if 'i' not in cc.state_variables_map else 'i_'
         i = StateVariable(i_name, dimension=un.currentDensity)
-        cc.state_variables_map.pop(v)
+        cc.state_variables_map.pop(v.name)
+        cc.analog_send_ports_map.pop(v.name, None)
         cc.state_variables_map[i.name] = i
         for regime in cc.regimes:
             dv_dt = regime.time_derivatives_map.pop(v.name)
-            di_dt = TimeDerivative(i.name, rhs=dv_dt / cm)
+            di_dt = TimeDerivative(i.name, rhs=dv_dt.rhs * cm)
             regime.time_derivatives_map[i.name] = di_dt
-        cc.analogreceiveports_map['v'] = AnalogReceivePort(
-            'v', dimension=un.voltage)
+        cc.analog_receive_ports_map[v.name] = AnalogReceivePort(
+            v.name, dimension=un.voltage)
         i_send_port = AnalogSendPort(i.name, dimension=un.currentDensity)
-        i_send_port.annotations['biophysics'] = {'ion_species': 'NONSPECIFIC'}
-        cc.analogreceiveports_map[i.name] = i_send_port
+        i_send_port.annotations = {'biophysics': {'ion_species':
+                                                  'NONSPECIFIC'}}
+        cc.analog_send_ports_map[i.name] = i_send_port
         cc.validate()
         return cc
 
