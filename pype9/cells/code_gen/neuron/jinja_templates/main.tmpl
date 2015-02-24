@@ -46,10 +46,10 @@ NEURON {
 CONSTANT {
     : IDs for regimes, events and conditions 
 
-    : Event flags
-    EXTERNAL_EVENT_ = 0
-    INTERNAL_EVENT_ = 1
-    INIT_ = 2
+    : Transition flags
+    ON_EVENT = 0
+    ON_CONDITION = 1
+    INIT = 2
 
     : Regime ids
 {% for regime in componentclass.regimes %}
@@ -74,7 +74,7 @@ INITIAL {
     regime_ = {{next(componentclass.regimes).name | upper}}
 
     : Initialise the NET_RECEIVE block:
-    net_send(0, INIT_)
+    net_send(0, INIT)
     
     : Active/inactive conditions (conditions transitions are only valid on 
     : triggered from False->True) so check to see if start off False
@@ -130,11 +130,11 @@ ASSIGNED {
     {{var}}
     {% endfor %}
 {% endif %}
- 
-{#    
+
+{% if not is_subcomponent %}   
     : Membrane voltage
-    v
-#}
+    v (mV)
+{% endif %}
 }
 
 BREAKPOINT {
@@ -154,11 +154,7 @@ DERIVATIVE states {
 FUNCTION deriv_{{sv.name}}({{componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variable_names | join(', ')}}) {
     {% for regime in componentclass.regimes %}
     {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
-        {% if sv in regime.time_derivatives %}
-        deriv_{{sv.name}} = {{sv.rhs_str}}
-        {% else %}
-        deriv_{{sv.name}} = 0.0
-        {% endif %}
+        deriv_{{sv.name}} = {{regime.time_derivative(sv.name).rhs_str}}
     {% endfor %}
     }
 }
@@ -168,15 +164,14 @@ NET_RECEIVE(w, channel) {
     INITIAL {
       : stop channel being set to 0 by default
     }
-    if (flag == INIT_) {
+    if (flag == INIT) {
 {% for regime in componentclass.regimes %}
     {% for oc in regime.on_conditions %}
-        WATCH ({{oc.trigger.rhs_str}}) 1  : Trigger a transition event (INTERNAL_EVENT_)
-        {# FIXME: Should strip out non-strict inequalites using sympy objects #}
+        WATCH ({{oc.trigger.rhs_str}}) 1  : Trigger an on-condition
         WATCH ({{oc.trigger.reactivate_condition.rhs_str.replace('=', '')}}) 1  : Reactivate trigger
     {% endfor %}
 {% endfor %}
-    } else if (flag == EXTERNAL_EVENT_) {
+    } else if (flag == ON_EVENT) {
 {% for regime in componentclass.regimes %}
         {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
     {% for oe in regime.on_events %}
@@ -207,34 +202,35 @@ NET_RECEIVE(w, channel) {
     {% endfor %}
 {% endfor %}
         }
-    } else if (flag == INTERNAL_EVENT_) {
-        : Pick up untriaged events emitted by WATCH Block.
-        : Re-validate them against Conditions and Regime:
-        : Retransmit the correct Transition ID
+    } else if (flag == ON_CONDITION) {
+        : Reactivate triggers that have passed below their thresholds
+{% for oc in componentclass.all_on_conditions() %}
+        if ({{oc.trigger.reactivate_condition.rhs_str}}) {
+            {{oc.source_regime.name | lower}}_cond{{componentclass.index_of(oc, key=oc.source_regime)}}_active = 1
+        }
+{% endfor %}
+        : Pick up untriaged on-conditions emitted by WATCH Block and
+        : re-validate them against Conditions and Regime:
         regime_changed_ = 0
 {% for regime in componentclass.regimes %}
         {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
     {% for oc in regime.on_conditions %}
-            if ({{oc.trigger.rhs_str}}) {
-                if ({{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active) {
+            if (({{oc.trigger.rhs_str}}) && {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active) {
 	            {% if oc.target_regime != regime %}
-	                if (!regime_changed_) {
-	                    regime_ = {{oc.target_regime.name | upper}}
-	                    regime_changed_ = 1
-	                } else {
-	                    printf("Warning! Simulataneous regime changes requested, ignoring change from '{{regime.name}}' to '{{oc.target_regime.name}}'.")
-	                }
+                if (!regime_changed_) {
+                    regime_ = {{oc.target_regime.name | upper}}
+                    regime_changed_ = 1
+                } else {
+                    printf("Warning! Simulataneous regime changes requested, ignoring change from '{{regime.name}}' to '{{oc.target_regime.name}}'.")
+                }
 	            {% endif %}
 	        {% for node in oc.event_outputs %}
-	                net_event(t)
+                net_event(t)
 	        {% endfor %}
 	        {% for sa in oc.state_assignments %}
-	                {{sa.lhs}}  = {{sa.rhs_str}}
+                {{sa.lhs}} = {{sa.rhs_str}}
 	        {% endfor %}
-	                {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active = 0
-                }
-            } else {
-                {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active = 1
+                {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active = 0  
             }
     {% endfor %}
 {% endfor %}
