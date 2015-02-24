@@ -11,7 +11,14 @@ TITLE Spiking node generated from 9ML using PyPe9 version {{version}} at '{{time
 
 NEURON {
     {%+ if is_subcomponent %}SUFFIX{% else %}POINT_PROCESS{% endif %} {{component.name}}
-    
+{% for port in componentclass.analog_send_ports if port.dimension == units.currentDensity %}
+    {% set ion_species = port.annotations['biophysics']['ion_species'] %}
+    {% if ion_species == 'non_specific' %}
+    NONSPECIFIC_CURRENT {{port.name}}
+    {% else %}
+    USEION {{ion_species}} WRITE {{ion_species}}i
+    {% endif %}        
+{% endfor %}
     : T
     RANGE regime_
 
@@ -26,13 +33,13 @@ NEURON {
 {% endfor %}
 
     :Ports
-{% for p in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
+{% for p in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) if p.name != 'v' %}
     RANGE {{p.name}}
 {% endfor %}
 
     :Aliases
-{% for expr in chain(componentclass.aliases, componentclass.piecewises) %}
-    RANGE {{expr.lhs}}
+{% for alias in chain(componentclass.aliases, componentclass.piecewises) %}
+    RANGE {{alias.name}}
 {% endfor %}
 }
 
@@ -123,6 +130,11 @@ ASSIGNED {
     {{var}}
     {% endfor %}
 {% endif %}
+ 
+{#    
+    : Membrane voltage
+    v
+#}
 }
 
 BREAKPOINT {

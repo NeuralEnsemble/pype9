@@ -23,6 +23,7 @@ from ..base import BaseCodeGenerator
 import nineml.abstraction_layer.units as un
 from nineml.abstraction_layer.dynamics import (
     OnEvent, TimeDerivative, StateVariable)
+from nineml.abstraction_layer.expressions import Alias
 from nineml.abstraction_layer.ports import (
     AnalogReceivePort, AnalogSendPort)
 from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
@@ -154,18 +155,20 @@ class CodeGenerator(BaseCodeGenerator):
             pass
         # Add current to component
         i_name = 'i' if 'i' not in cc.state_variable_names else 'i_'
-        i = StateVariable(i_name, dimension=un.currentDensity)
-        cc.add(i)
+        dvdt = next(cc.regimes).time_derivative(v.name)
         for regime in cc.regimes:
-            dv_dt = regime.time_derivative(v.name)
-            regime.remove(dv_dt)
-            di_dt = TimeDerivative(i.name, rhs=dv_dt.rhs * cm)
-            regime.add(di_dt)
-        cc.add(AnalogReceivePort(v.name, dimension=un.voltage))
-        i_send_port = AnalogSendPort(i.name, dimension=un.currentDensity)
-        i_send_port.annotations = {'biophysics': {'ion_species':
-                                                  'NONSPECIFIC'}}
+            if regime.time_derivative(v.name) != dvdt:
+                raise Pype9RuntimeError(
+                    "Cannot convert to current centric as the equation for "
+                    "current output changes between regimes")
+            regime.remove(regime.time_derivative(v.name))
+        i = Alias(i_name, rhs=dvdt.rhs * cm)
+        i_out = AnalogSendPort(i_name, dimension=un.currentDensity)
+        i_out.annotations = {'biophysics': {'ion_species':
+                                            'non_specific'}}
         cc.add(i)
+        cc.add(i_out)
+        cc.add(AnalogReceivePort(v.name, dimension=un.voltage))
         cc.validate()
         return cc
 

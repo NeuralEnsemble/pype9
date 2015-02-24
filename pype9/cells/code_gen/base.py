@@ -24,6 +24,7 @@ from runpy import run_path
 from abc import ABCMeta, abstractmethod
 import nineml
 from pype9.exceptions import Pype9BuildError
+from nineml.abstraction_layer import units
 
 
 class BaseCodeGenerator(object):
@@ -53,7 +54,8 @@ class BaseCodeGenerator(object):
         # Add some globals used by the template code
         self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
                                       xrange=xrange, next=next, chain=chain,
-                                      hash=hash, deepcopy=deepcopy)
+                                      hash=hash, deepcopy=deepcopy,
+                                      units=units)
 
     @abstractmethod
     def generate_source_files(self, component, initial_state, src_dir,
