@@ -142,8 +142,8 @@ DERIVATIVE states {
 FUNCTION deriv_{{sv.name}}({{componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variable_names | join(', ')}}) {
     {% for regime in componentclass.regimes %}
     {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
-        {% if sv.name in regime.time_derivatives_map %}
-        deriv_{{sv.name}} = {{regime.time_derivatives_map[sv.name].rhs_str}}
+        {% if sv in regime.time_derivatives %}
+        deriv_{{sv.name}} = {{sv.rhs_str}}
         {% else %}
         deriv_{{sv.name}} = 0.0
         {% endif %}
