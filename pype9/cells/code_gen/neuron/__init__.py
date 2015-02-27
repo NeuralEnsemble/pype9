@@ -71,9 +71,18 @@ class CodeGenerator(BaseCodeGenerator):
         if isinstance(component, KineticsClass):
             self.generate_kinetics(component, initial_state, src_dir,
                                    **kwargs)
-        else:
+        elif 'membrane_voltage' in kwargs:
             self.generate_point_process(component, initial_state, src_dir,
                                         **kwargs)
+        else:
+            self.generate_ion_channel(component, initial_state, src_dir,
+                                      **kwargs)
+
+    def generate_ion_channel(self, component, initial_state, src_dir,
+                             **kwargs):
+        # Render mod file
+        self.generate_mod_file('main.tmpl', component, initial_state, src_dir,
+                               **kwargs)
 
     def generate_kinetics(self, component, initial_state, src_dir,
                           **kwargs):
@@ -108,6 +117,7 @@ class CodeGenerator(BaseCodeGenerator):
         tmpl_args = {
             'component': component,
             'componentclass': componentclass,
+            'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'unit_conversion': self.unit_conversion,
@@ -134,8 +144,8 @@ class CodeGenerator(BaseCodeGenerator):
         """
         # Clone component class
         cc = deepcopy(componentclass)
-        # Rename references to specified membrane voltage to hard coded NEURON
-        # value
+        # Rename references to specified membrane voltage to hard-coded NEURON
+        # identifier 'v'
         cc.rename_symbol(membrane_voltage, 'v')
         try:
             v = cc.state_variable('v')
