@@ -5,6 +5,7 @@
     <pydev_pathproperty name="org.python.pydev.PROJECT_SOURCE_PATH">
 <path>/PyPe9/test</path>
 <path>/PyPe9</path>
+<path>/${PROJECT_DIR_NAME}/test/unittests</path>
 </pydev_pathproperty>
 <pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH">
 <path>/Users/tclose/hg/lazyarray</path>

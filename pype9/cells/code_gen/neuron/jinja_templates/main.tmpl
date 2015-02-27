@@ -80,7 +80,7 @@ INITIAL {
     : triggered from False->True) so check to see if start off False
 {% for regime in componentclass.regimes %}
     {% for oc in regime.on_conditions %}
-    {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active = {{oc.trigger.reactivate_condition.rhs_str.replace('=', '')}}
+    {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active = ({{oc.trigger.reactivate_condition.rhs_str.replace('=', '')}})
     {% endfor %}
 {% endfor %}
 
@@ -119,17 +119,17 @@ ASSIGNED {
     {% endfor %}
 {% endfor %}
 
-    : Aliases
-{% for alias in componentclass.aliases %}
-    {{alias.lhs}}
-{% endfor %}
-
     : Weight variables
 {% if weight_variables %}
     {% for var in weight_variables.values %}
     {{var}}
     {% endfor %}
 {% endif %}
+
+    : Analog send ports
+{% for p in componentclass.analog_send_ports if p.name not in componentclass.state_variable_names %}
+    {{p.name}}{% if p.dimension == units.currentDensity %} (nA) {% endif %}
+{%+ endfor %}
 
 {% if not is_subcomponent %}   
     : Membrane voltage
@@ -141,6 +141,12 @@ BREAKPOINT {
     SOLVE states METHOD {{ode_solver}}
 {% for expr in componentclass.required_for(componentclass.all_time_derivatives()).expressions %}
     {{expr.lhs}} = {{expr.rhs_str}}
+{% endfor %}
+{% for expr in componentclass.required_for(componentclass.all_output_analogs()).expressions %}
+    {{expr.lhs}} = {{expr.rhs_str}}
+{% endfor %}
+{% for oa in componentclass.all_output_analogs() %}
+    {{oa.lhs}} = {{oa.rhs_str}}
 {% endfor %}
 }
 

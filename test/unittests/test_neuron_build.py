@@ -1,10 +1,10 @@
 if __name__ == '__main__':
-    from . import DummyTestCase as TestCase  # @UnusedImport
+    from utils import DummyTestCase as TestCase  # @UnusedImport
 else:
     from unittest import TestCase  # @Reimport
 from pype9.cells.code_gen.neuron import CodeGenerator
 from os import path
-from . import test_data_dir
+from utils import test_data_dir
 
 
 class TestNeuronBuild(TestCase):

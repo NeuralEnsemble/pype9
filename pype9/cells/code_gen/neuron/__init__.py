@@ -36,13 +36,6 @@ class CodeGenerator(BaseCodeGenerator):
 
     SIMULATOR_NAME = 'neuron'
     ODE_SOLVER_DEFAULT = 'derivimplicit'
-    SS_SOLVER_DEFAULT = 'gsl'
-    MAX_STEP_SIZE_DEFAULT = 0.01  # FIXME:!!!
-    ABS_TOLERANCE_DEFAULT = 0.01
-    REL_TOLERANCE_DEFAULT = 0.01
-    V_THRESHOLD_DEFAULT = 0.0
-    FIRST_REGIME_FLAG = 1001
-    FIRST_TRANSITION_FLAG = 5000
     _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
 
     _neuron_units = {un.mV: 'millivolt',
@@ -86,16 +79,13 @@ class CodeGenerator(BaseCodeGenerator):
             component, initial_state, src_dir,
             membrane_voltage=kwargs['membrane_voltage'],
             membrane_capacitance=kwargs['membrane_capacitance'],
-            v_threshold=kwargs.get('v_threshold',
-                                   self.V_THRESHOLD_DEFAULT),
             is_subcomponent=kwargs.get('is_subcomponent', False),
             external_ports=kwargs.get('external_ports', []),
             ode_solver=kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT))
 
-    def generate_mod_file(self, component, initial_state, src_dir, v_threshold,
+    def generate_mod_file(self, component, initial_state, src_dir,
                           membrane_voltage, membrane_capacitance,
-                          is_subcomponent, external_ports,
-                          ode_solver):
+                          is_subcomponent, external_ports, ode_solver):
         componentclass = self.convert_to_current_centric(
             component.component_class, membrane_voltage, membrane_capacitance)
         tmpl_args = {
@@ -145,30 +135,34 @@ class CodeGenerator(BaseCodeGenerator):
                 "Specified membrane capacitance does not have "
                 "'specificCapacitance' dimension ({})"
                 .format(v.dimension.name))
-        # Remove voltage from cloned component
+        # Replace voltage state-variable with analog receive port
         cc.remove(v)
+        cc.add(AnalogReceivePort(v.name, dimension=un.voltage))
         # Remove associated analog send port if present
         try:
-            v_port = cc.analog_send_port('v')
-            cc.remove(v_port)
+            cc.remove(cc.analog_send_port('v'))
         except KeyError:
             pass
         # Add current to component
         i_name = 'i' if 'i' not in cc.state_variable_names else 'i_'
+        # Get the voltage time derivatives from each regime (must be constant
+        # as there is no OutputAnalog)
         dvdt = next(cc.regimes).time_derivative(v.name)
         for regime in cc.regimes:
             if regime.time_derivative(v.name) != dvdt:
                 raise Pype9RuntimeError(
-                    "Cannot convert to current centric as the equation for "
-                    "current output changes between regimes")
+                    "Cannot convert to current centric as the voltage time for"
+                    " derivative equation changes between regimes")
             regime.remove(regime.time_derivative(v.name))
+        # Add alias expression for current
         i = Alias(i_name, rhs=dvdt.rhs * cm)
-        i_out = AnalogSendPort(i_name, dimension=un.currentDensity)
-        i_out.annotations = {'biophysics': {'ion_species':
-                                            'non_specific'}}
         cc.add(i)
-        cc.add(i_out)
-        cc.add(AnalogReceivePort(v.name, dimension=un.voltage))
+        # Add analog send port for current
+        i_port = AnalogSendPort(i_name, dimension=un.currentDensity)
+        i_port.annotations = {'biophysics': {'ion_species':
+                                             'non_specific'}}
+        cc.add(i_port)
+        # Validate the transformed model
         cc.validate()
         return cc
 
@@ -267,28 +261,3 @@ class CodeGenerator(BaseCodeGenerator):
         except KeyError:
             pass
         return path
-
-    @classmethod
-    def deriv_func_args(cls, component, variable):
-        """ """
-        args = set([variable])
-        for r in component.regimes:
-            for time_derivative in (eq for eq in r.time_derivatives
-                                    if eq.dependent_variable == variable):
-                for name in (name for name in time_derivative.rhs_symbol_names
-                             if name in [sv.name
-                                         for sv in component.state_variables]):
-                    args.add(name)
-        return ','.join(args)
-        return args
-
-    @classmethod
-    def ode_for(cls, regime, variable):
-        """
-        Yields the TimeDerivative for the given variable in the regime
-        """
-        odes = [eq for eq in regime.time_derivatives
-                if eq.dependent_variable == variable.name]
-        if len(odes) == 0:
-            odes.append(TimeDerivative(dependent_variable=variable, rhs="0.0"))
-        return expect_single(odes)

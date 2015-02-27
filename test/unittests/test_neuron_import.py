@@ -57,7 +57,7 @@ class TestNMODLImporter(TestCase):
                  Alias('taum_v__tmp',
                        '5.83 / (exp((v - (6.4)) / -9) + '
                        'exp((v + 97) / 17)) + 0.025')],
-        state_variables=[StateVariable('m', un.dimensionless),
+        _state_variables=[StateVariable('m', un.dimensionless),
                          StateVariable('h', un.dimensionless)])
 #         """<?xml version='1.0' encoding='UTF-8'?>
 #         <NineML xmlns="http://nineml.org/9ML/0.3">

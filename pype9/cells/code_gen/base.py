@@ -99,6 +99,27 @@ class BaseCodeGenerator(object):
         `kwargs` [dict]: A dictionary of (potentially simulator-
                                 specific) template arguments
         """
+#         if isinstance(nineml_model, str):
+#             url = nineml_model
+#             nineml_document = nineml.read(nineml_model)
+#             if celltype_name is not None:
+#                 nineml_model = nineml_document[celltype_name]
+#             else:
+#                 comps = [c for c in nineml_document.itervalues()
+#                          if isinstance(c, nineml.Dynamics)]
+#                 compclasses = [c for c in nineml_document.itervalues()
+#                                if isinstance(c, nineml.DynamicsClass)]
+#                 if len(comps) == 1:
+#                     nineml_model = comps[0]
+#                 elif len(compclasses) == 1:
+#                     nineml_model = compclasses[0]
+#                 else:
+#                     raise Pype9RuntimeError(
+#                         "9ml file '{}' contains multiple cell classes ({}), "
+#                         " please specify which one you intend to " "use by the"
+#                         " 'celltype_name' parameter"
+#                         .format(nineml_model,
+#                                 "', '".join(nineml_document.keys())))
         # Save original working directory to reinstate it afterwards (just to
         # be polite)
         orig_dir = os.getcwd()
