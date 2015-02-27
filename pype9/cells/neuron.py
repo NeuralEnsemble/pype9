@@ -68,67 +68,30 @@ def convert_to_neuron_units(value, unit_str):
         value, unit_str, _basic_unit_dict, _compound_unit_dict)
 
 
-class Pype9CellMetaClass(pype9.cells.base.Pype9CellMetaClass):
-
-    """
-    Metaclass for building NineMLPype9CellType subclasses Called by
-    nineml_celltype_from_model
-    """
-
-    _built_types = {}
-
-    def __new__(cls, component, name=None, **kwargs):
-        """
-        `component` -- Either a parsed lib9ml SpikingNode object or a url
-                       to a 9ml file
-        `name`      -- Either the name of a component within the given url
-                       or a name to call the class built with the specified
-                       build options (passed in kwargs).
-        """
-        # Extract out build directives
-        build_mode = kwargs.pop('build_mode', 'lazy')
-        verbose = kwargs.pop('verbose', False)
-        if isinstance(component, basestring):
-            url = component
-        else:
-            url = component.url
-            if name is None:
-                name = component.name
-        try:
-            Cell, build_options = cls._built_types[(name, url)]
-            if build_options != kwargs:
-                raise Pype9RuntimeError(
-                    "Build options '{}' do not match previously built '{}' "
-                    "cell class with same name ('{}'). Please specify a "
-                    "different name (using a loaded nineml.Component instead "
-                    "of a URL)."
-                    .format(kwargs, name, build_options))
-        except KeyError:
-            component, instl_dir = CodeGenerator().generate(
-                component, name, build_mode=build_mode, verbose=verbose)
-            name = component.name
-            # Load newly build mod files
-            load_mechanisms(instl_dir)
-            # Create class member dict of new class
-            dct = {'component': component}
-            dct['install_dir'] = instl_dir
-            # Create new class using Type.__new__ method
-            Cell = super(Pype9CellMetaClass, cls).__new__(
-                cls, component, name, (Pype9Cell,), dct)
-            # Save Cell class to allow it to save it being built again
-            cls._built_types[(name, component.url)] = Cell, kwargs
-        return Cell
-
-
-class _BasePype9Cell(pype9.cells.base.Pype9Cell):
+class Pype9Cell(pype9.cells.base.Pype9Cell):
 
     def __init__(self, model=None, **parameters):
-        super(_BasePype9Cell, self).__init__(model=model)
+        super(Pype9Cell, self).__init__(model=model)
         # Construct all the NEURON structures
         self._construct()
         # Setup variables required by pyNN
         self.source = self.source_section(0.5)._ref_v
         self.parameters = parameters
+
+        # for recording Once NEST supports sections, it might be an idea to
+        # drop this in favour of a more explicit scheme
+        self.recordable = {'spikes': None, 'v': self.source_section._ref_v}
+        for seg_name, seg in self.segments.iteritems():
+            self.recordable['{' + seg_name + '}v'] = seg._ref_v
+        self.spike_times = h.Vector(0)
+        self.traces = {}
+        self.gsyn_trace = {}
+        self.recording_time = 0
+        self.rec = h.NetCon(self.source, None, sec=self.source_section)
+        # Set up references from parameter names to internal variables and set
+        # parameters
+        self._link_parameters()
+        self.set_parameters(parameters)
 
     def _construct(self):
         """
@@ -150,7 +113,7 @@ class _BasePype9Cell(pype9.cells.base.Pype9Cell):
         # Create a empty list for each comp name to contain the segments in it
         self._comp_segments = dict((name, []) for name in comp_names)
         for seg_model in self._model.segments:
-            seg = _BasePype9Cell.Segment(seg_model)
+            seg = Compartment(seg_model)
             self.segments[seg_model.name] = seg
             if not seg_model.parent:
                 assert self.source_section is None
@@ -199,56 +162,39 @@ class _BasePype9Cell(pype9.cells.base.Pype9Cell):
         if 'initial_v' in self.parameters:
             for seg in self.segments.itervalues():
                 seg.v = self.parameters['initial_v']
-
-
-class Pype9Cell(_BasePype9Cell):
-
-    def __init__(self, **parameters):
-        super(Pype9Cell, self).__init__(**parameters)
-        # for recording Once NEST supports sections, it might be an idea to
-        # drop this in favour of a more explicit scheme
-        self.recordable = {'spikes': None, 'v': self.source_section._ref_v}
-        for seg_name, seg in self.segments.iteritems():
-            self.recordable['{' + seg_name + '}v'] = seg._ref_v
-        self.spike_times = h.Vector(0)
-        self.traces = {}
-        self.gsyn_trace = {}
-        self.recording_time = 0
-        self.rec = h.NetCon(self.source, None, sec=self.source_section)
-        # Set up references from parameter names to internal variables and set
-        # parameters
-        self._link_parameters()
-        self.set_parameters(parameters)
-
-    def _link_parameters(self):
-        self._parameters = {}
-        # FIXME: this assumes the source is a 9ml model
-        for p in self._model._source.parameters:
-            if hasattr(self, p.name) and not self.param_links_tested:
-                logger.warning("Naming conflict between parameter '{}' and "
-                               "class member of the same name. Parameter can "
-                               "be set but will not be able to be retrieved "
-                               "except indirectly through the 'segments' "
-                               "attribute. Please consider selecting a "
-                               "different name if possible.".format(p.name))
-            try:
-                varname = basic_nineml_translations[p.reference]
-            except KeyError:
-                varname = p.reference
-            components = []
-            for seg_class in p.segments:
-                segments = self.classifications[p.segments.
-                                                classification][seg_class]
-                if p.component:
-                    class_components = [getattr(seg, p.component)
-                                        for seg in segments]
-                else:
-                    class_components = segments
-            components.extend(class_components)
-            ParamClass = (self.InitialState if p.type == 'initialState'
-                          else self.Parameter)
-            self._parameters[p.name] = ParamClass(p.name, varname, components)
-        self.__class__._param_links_tested = True
+        for param in self._parameters.itervalues():
+            if isinstance(param, self.InitialState):
+                param.initialize_state()
+# 
+#     def _link_parameters(self):
+#         self._parameters = {}
+#         # FIXME: this assumes the source is a 9ml model
+#         for p in self._model._source.parameters:
+#             if hasattr(self, p.name) and not self.param_links_tested:
+#                 logger.warning("Naming conflict between parameter '{}' and "
+#                                "class member of the same name. Parameter can "
+#                                "be set but will not be able to be retrieved "
+#                                "except indirectly through the 'segments' "
+#                                "attribute. Please consider selecting a "
+#                                "different name if possible.".format(p.name))
+#             try:
+#                 varname = basic_nineml_translations[p.reference]
+#             except KeyError:
+#                 varname = p.reference
+#             components = []
+#             for seg_class in p.segments:
+#                 segments = self.classifications[p.segments.
+#                                                 classification][seg_class]
+#                 if p.component:
+#                     class_components = [getattr(seg, p.component)
+#                                         for seg in segments]
+#                 else:
+#                     class_components = segments
+#             components.extend(class_components)
+#             ParamClass = (self.InitialState if p.type == 'initialState'
+#                           else self.Parameter)
+#             self._parameters[p.name] = ParamClass(p.name, varname, components)
+#         self.__class__._param_links_tested = True
 
     def set_parameters(self, parameters):
         for name, value in parameters.iteritems():
@@ -335,94 +281,80 @@ class Pype9Cell(_BasePype9Cell):
 #             raise Exception("Cannot add new attribute '{}' to cell {} class"
 #                               .format(varname, type(self)))
 
+#     def __getattr__(self, varname):
+#         """
+#         First test to see if varname is a segment name and if so return the
+#         segment else fall back to
+# 
+#         @param var [str]: var of the attribute, with optional segment segment
+#                           name enclosed with {} and prepended
+#         """
+#         if '.' in varname:
+#             parts = varname.split('.')
+#             if len(parts) == 2:
+#                 comp_name, var = parts
+#                 # TODO: Just looking at the first segment is a dirty hack,
+#                 #       should have a separate component object that is stored
+#                 #       at cell level with a value and a list of segments to
+#                 #       set
+#                 val = getattr(self._comp_segments[comp_name][0], var)
+#                 assert all([getattr(seg, var) == val
+#                             for seg in self._comp_segments[comp_name]]), \
+#                        "Accessing value of component when values have been " \
+#                        "set independently"
+#                 return val
+#             elif len(parts) == 3:
+#                 seg, comp_name, var = parts
+#                 return getattr(getattr(self.segments[seg], comp_name), var)
+#             else:
+#                 raise AttributeError('Invalid number of components ({})'
+#                                      .format(len(parts)))
+#         else:
+#             try:
+#                 return self.segments[varname]
+#             except KeyError:
+#                 super(Pype9CellStandAlone, self).__getattribute__(varname)
+# 
+#     def __setattr__(self, varname, value):
+#         """
+#         First test to see if varname is a segment name and if so return the
+#         segment else fall back to
+# 
+#         @param var [str]: var of the attribute, with optional segment segment
+#                           name enclosed with {} and prepended
+#         """
+#         # Although '.'s will only part of the varname if setattr is called
+#         # explicitly. This allows a variables to be accessed at either the
+#         # segment specific level or the component level.
+#         if '.' in varname:
+#             parts = varname.split('.')
+#             if len(parts) == 2:
+#                 comp_name, var = parts
+#                 try:
+#                     for seg in self._comp_segments[comp_name]:
+#                         setattr(getattr(seg, comp_name), var, value)
+#                 except KeyError:
+#                     raise AttributeError("Cell derived from model '{}' does "
+#                                          "not have component '{}'."
+#                                          .format(self._model.name,
+#                                                  comp_name))
+#             elif len(parts) == 3:
+#                 segment, comp_name, var = parts
+#                 setattr(getattr(segment, comp_name), var, value)
+#             else:
+#                 raise AttributeError("Invalid number of components ({}), "
+#                                      "can be either 2 (segment group or "
+#                                      "name, variable) or 3 (segment group "
+#                                      "or name, component, variable)"
+#                                      .format(len(parts)))
+#         else:
+#             super(Pype9CellStandAlone, self).__setattr__(varname, value)
+
     def __dir__(self):
-        return dir(super(_BasePype9Cell, self)) + self._parameters.keys()
-
-    def memb_init(self):
-        super(Pype9Cell, self).memb_init()
-        for param in self._parameters.itervalues():
-            if isinstance(param, self.InitialState):
-                param.initialize_state()
-
-
-class Pype9CellStandAlone(_BasePype9Cell):
-
-    def __init__(self, **parameters):
-        super(Pype9CellStandAlone, self).__init__(**parameters)
-        self._recorders = {}
-        self._recordings = {}
-        simulation_controller.register_cell(self)
-
-    def __getattr__(self, varname):
-        """
-        First test to see if varname is a segment name and if so return the
-        segment else fall back to
-
-        @param var [str]: var of the attribute, with optional segment segment
-                          name enclosed with {} and prepended
-        """
-        if '.' in varname:
-            parts = varname.split('.')
-            if len(parts) == 2:
-                comp_name, var = parts
-                # TODO: Just looking at the first segment is a dirty hack,
-                #       should have a separate component object that is stored
-                #       at cell level with a value and a list of segments to
-                #       set
-                val = getattr(self._comp_segments[comp_name][0], var)
-                assert all([getattr(seg, var) == val
-                            for seg in self._comp_segments[comp_name]]), \
-                       "Accessing value of component when values have been " \
-                       "set independently"
-                return val
-            elif len(parts) == 3:
-                seg, comp_name, var = parts
-                return getattr(getattr(self.segments[seg], comp_name), var)
-            else:
-                raise AttributeError('Invalid number of components ({})'
-                                     .format(len(parts)))
-        else:
-            try:
-                return self.segments[varname]
-            except KeyError:
-                super(Pype9CellStandAlone, self).__getattribute__(varname)
-
-    def __setattr__(self, varname, value):
-        """
-        First test to see if varname is a segment name and if so return the
-        segment else fall back to
-
-        @param var [str]: var of the attribute, with optional segment segment
-                          name enclosed with {} and prepended
-        """
-        # Although '.'s will only part of the varname if setattr is called
-        # explicitly. This allows a variables to be accessed at either the
-        # segment specific level or the component level.
-        if '.' in varname:
-            parts = varname.split('.')
-            if len(parts) == 2:
-                comp_name, var = parts
-                try:
-                    for seg in self._comp_segments[comp_name]:
-                        setattr(getattr(seg, comp_name), var, value)
-                except KeyError:
-                    raise AttributeError("Cell derived from model '{}' does "
-                                         "not have component '{}'."
-                                         .format(self._model.name,
-                                                 comp_name))
-            elif len(parts) == 3:
-                segment, comp_name, var = parts
-                setattr(getattr(segment, comp_name), var, value)
-            else:
-                raise AttributeError("Invalid number of components ({}), "
-                                     "can be either 2 (segment group or "
-                                     "name, variable) or 3 (segment group "
-                                     "or name, component, variable)"
-                                     .format(len(parts)))
-        else:
-            super(Pype9CellStandAlone, self).__setattr__(varname, value)
+        return dir(super(Pype9Cell, self)) + self._parameters.keys()
 
     def record(self, variable, segname=None, component=None):
+        self._initialise_local_recording()
         if segname is None:
             seg = self.source_section
         else:
@@ -541,8 +473,30 @@ class Pype9CellStandAlone(_BasePype9Cell):
         self._recorders = {}
         self._recordings = {}
 
+    def _initialise_local_recording(self):
+        if not hasattr(self, '_recorders'):
+            self._recorders = {}
+            self._recordings = {}
+            simulation_controller.register_cell(self)
 
-class Segment(NeuronSection):
+
+class Pype9CellMetaClass(pype9.cells.base.Pype9CellMetaClass):
+
+    """
+    Metaclass for building NineMLPype9CellType subclasses Called by
+    nineml_celltype_from_model
+    """
+
+    _built_types = {}
+    CodeGenerator = CodeGenerator
+    CellBaseClass = Pype9Cell
+
+    @classmethod
+    def load_model(cls, install_dir):
+        load_mechanisms(install_dir)
+
+
+class Compartment(NeuronSection):
     """
     Wraps the basic NEURON section to allow non-NEURON attributes to be
     added to the segment. Additional functionality could be added as needed
@@ -550,11 +504,9 @@ class Segment(NeuronSection):
 
     def __init__(self, model):
         """
-        Initialises the Segment including its proximal and distal sections
+        Initialises the Compartment including its proximal and distal sections
         for connecting child segments
 
-        @param seg [Segment]: Segment tuple loaded from MorphML
-                              (see common.ncml.MorphMLHandler)
         """
         nrn.Section.__init__(self)  # @UndefinedVariable
         h.pt3dclear(sec=self)
@@ -610,14 +562,14 @@ class Segment(NeuronSection):
             components = var.split('.', 1)
             setattr(getattr(self, components[0]), components[1], val)
         else:
-            super(_BasePype9Cell.Segment, self).__setattr__(var, val)
+            super(Compartment, self).__setattr__(var, val)
 
     def _connect(self, parent_seg):
         """
         Connects the segment with its parent, setting its proximal position
         and calculating its length if it needs to.
 
-        @param parent_seg [Segment]: The parent segment to connect to
+        @param parent_seg [Compartment]: The parent segment to connect to
         """
         # Connect the segments in NEURON using h.Section's built-in method.
         self.connect(parent_seg, 1.0, 0)
@@ -635,19 +587,19 @@ class Segment(NeuronSection):
                       [pype9.BiophysicsModel]
         """
         # Insert the mechanism into the segment
-        super(_BasePype9Cell.Segment, self).insert(component.class_name)
+        super(Compartment, self).insert(component.class_name)
         # Map the component (always at position 0.5 as a segment only ever
-        # has one "NEURON segment") to an object in the Segment object. If
+        # has one "NEURON segment") to an object in the Compartment object. If
         # translations are provided, wrap the component in a Component
         # translator that intercepts getters and setters and redirects them
         # to the translated values.
         if translations:
-            super(_BasePype9Cell.Segment, self).__setattr__(
+            super(Compartment, self).__setattr__(
                 component.name, self.ComponentTranslator(
                     getattr(self(0.5), component.class_name),
                     translations))
         else:
-            super(_BasePype9Cell.Segment, self).__setattr__(
+            super(Compartment, self).__setattr__(
                 component.name, getattr(self(0.5), component.class_name))
         if isinstance(component, IonConcentrationModel):
             setattr(self, component.param_name,
@@ -730,7 +682,7 @@ class ComponentTranslator(object):
         super(ComponentTranslator, self).__setattr__('_component',
                                                      component)
         # The translation of the parameter names
-        super(_BasePype9Cell.Segment.ComponentTranslator,
+        super(Compartment.ComponentTranslator,
               self).__setattr__('_translations', translations)
 
     def __setattr__(self, var, value):
@@ -748,7 +700,7 @@ class ComponentTranslator(object):
                                  "for parameter {}".format(e))
 
     def __dir__(self):
-        return (super(_BasePype9Cell.Segment.ComponentTranslator,
+        return (super(Compartment.ComponentTranslator,
                       self).__dir__ + self._translations.keys())
 
 
