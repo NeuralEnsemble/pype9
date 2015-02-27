@@ -12,32 +12,32 @@ import os.path
 import shutil
 import time
 from itertools import chain
+from collections import defaultdict
 import platform
 import tempfile
+from copy import deepcopy, copy
 import uuid
 import subprocess as sp
 import quantities as pq
-from .. import BaseCodeGenerator
+from ..base import BaseCodeGenerator
 import nineml.abstraction_layer.units as un
-from nineml.abstraction_layer.dynamics import OnEvent, TimeDerivative
-from pype9.exceptions import Pype9BuildError
+from nineml.abstraction_layer.dynamics import (
+    OnEvent, TimeDerivative, StateVariable)
+from nineml.abstraction_layer.expressions import Alias
+from nineml.abstraction_layer.ports import (
+    AnalogReceivePort, AnalogSendPort)
+from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import pype9
 from datetime import datetime
 from nineml.utils import expect_single
+from nineml.extensions.kinetics import KineticsClass
 
 
 class CodeGenerator(BaseCodeGenerator):
 
     SIMULATOR_NAME = 'neuron'
     ODE_SOLVER_DEFAULT = 'derivimplicit'
-    SS_SOLVER_DEFAULT = 'gsl'
-    MAX_STEP_SIZE_DEFAULT = 0.01  # FIXME:!!!
-    ABS_TOLERANCE_DEFAULT = 0.01
-    REL_TOLERANCE_DEFAULT = 0.01
-    V_THRESHOLD_DEFAULT = 0.0
-    FIRST_REGIME_FLAG = 1001
-    FIRST_TRANSITION_FLAG = 5000
-    _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
+    _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'templates')
 
     _neuron_units = {un.mV: 'millivolt',
                      un.S: 'siemens',
@@ -55,23 +55,134 @@ class CodeGenerator(BaseCodeGenerator):
 
     def generate_source_files(self, component, initial_state, src_dir,  # @UnusedVariable @IgnorePep8
                               **kwargs):
+        """
+            *KWArgs*
+                `membrane_voltage` -- Specifies the state that represents
+                                      membrane voltage.
+                `v_threshold`      -- The threshold for the neuron to emit a
+                                      spike.
+                `external_ports`   -- Analog ports to strip from expressions
+                                      as they represent synapses or injected
+                                      currents, which can be inserted manually
+                                      by NEURON objects.
+                `is_subcomponent`  -- Whether to use the 'SUFFIX' tag or not.
+                `ode_solver`       -- specifies the ODE solver to use
+        """
+        if isinstance(component, KineticsClass):
+            self.generate_kinetics(component, initial_state, src_dir,
+                                   **kwargs)
+        else:
+            self.generate_point_process(component, initial_state, src_dir,
+                                        **kwargs)
+
+    def generate_kinetics(self, component, initial_state, src_dir,
+                          **kwargs):
+        # Render mod file
+        self.generate_mod_file('kinetics.tmpl', component, initial_state,
+                               src_dir, **kwargs)
+
+    def generate_point_process(self, component, initial_state, src_dir,
+                               **kwargs):
+        try:
+            membrane_voltage = kwargs['membrane_voltage']
+            membrane_capacitance = kwargs['membrane_capacitance']
+        except KeyError:
+            raise Pype9BuildError(
+                "'membrane_voltage' and 'membrane_capacitance' variables must "
+                "be specified for standalone NEURON mod file generation: {}"
+                .format(kwargs))
+        componentclass = self.convert_to_current_centric(
+            component.component_class, membrane_voltage, membrane_capacitance)
+        add_tmpl_args = {
+            'componentclass': componentclass,
+            'is_subcomponent': False}
+        tmpl_args = copy(kwargs)
+        tmpl_args.update(add_tmpl_args)
+        # Render mod file
+        self.generate_mod_file('main.tmpl', component, initial_state, src_dir,
+                               **tmpl_args)
+
+    def generate_mod_file(self, template, component, initial_state, src_dir,
+                          **kwargs):
         componentclass = component.component_class
         tmpl_args = {
             'component': component,
             'componentclass': componentclass,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
-            'ode_solver': kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT),
             'unit_conversion': self.unit_conversion,
-            'parameter_scales': [], 'membrane_voltage': 'V_t',
-            'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT),
-            'weight_variables': [],
-            'deriv_func_args': self.deriv_func_args,
-            'all_td_dependencies': componentclass.get_dependencies(
-                chain(*(r.time_derivatives for r in componentclass.regimes)))}
+            'ode_solver': self.ODE_SOLVER_DEFAULT,
+            'external_ports': [],
+            'is_subcomponent': True,
+            # FIXME: weight_vars needs to be removed or implmented properly
+            'weight_variables': []}
+        tmpl_args.update(kwargs)
         # Render mod file
-        self.render_to_file('main.tmpl', tmpl_args, component.name + '.mod',
+        self.render_to_file(template, tmpl_args, component.name + '.mod',
                             src_dir)
+
+    @classmethod
+    def convert_to_current_centric(cls, componentclass, membrane_voltage,
+                                   membrane_capacitance):
+        """
+        Copy the component class to alter it to match NEURON's current
+        centric focus
+        `membrane_voltage` -- the name of the state variable that represents
+                              the membrane voltage
+        `membrane_voltage` -- the name of the capcitance that represents
+                              the membrane capacitance
+        """
+        # Clone component class
+        cc = deepcopy(componentclass)
+        # Rename references to specified membrane voltage to hard coded NEURON
+        # value
+        cc.rename_symbol(membrane_voltage, 'v')
+        try:
+            v = cc.state_variable('v')
+            cm = cc.parameter(membrane_capacitance)
+        except KeyError:
+            raise Pype9RuntimeError(
+                "Could not find specified voltage or capacitance ('{}', '{}')"
+                .format(v.name, cm.name))
+        if v.dimension != un.voltage:
+            raise Pype9RuntimeError(
+                "Specified membrane voltage does not have 'voltage' dimension"
+                " ({})".format(v.dimension.name))
+        if cm.dimension != un.specificCapacitance:
+            raise Pype9RuntimeError(
+                "Specified membrane capacitance does not have "
+                "'specificCapacitance' dimension ({})"
+                .format(v.dimension.name))
+        # Replace voltage state-variable with analog receive port
+        cc.remove(v)
+        cc.add(AnalogReceivePort(v.name, dimension=un.voltage))
+        # Remove associated analog send port if present
+        try:
+            cc.remove(cc.analog_send_port('v'))
+        except KeyError:
+            pass
+        # Add current to component
+        i_name = 'i' if 'i' not in cc.state_variable_names else 'i_'
+        # Get the voltage time derivatives from each regime (must be constant
+        # as there is no OutputAnalog)
+        dvdt = next(cc.regimes).time_derivative(v.name)
+        for regime in cc.regimes:
+            if regime.time_derivative(v.name) != dvdt:
+                raise Pype9RuntimeError(
+                    "Cannot convert to current centric as the voltage time for"
+                    " derivative equation changes between regimes")
+            regime.remove(regime.time_derivative(v.name))
+        # Add alias expression for current
+        i = Alias(i_name, rhs=dvdt.rhs * cm)
+        cc.add(i)
+        # Add analog send port for current
+        i_port = AnalogSendPort(i_name, dimension=un.currentDensity)
+        i_port.annotations = {'biophysics': {'ion_species':
+                                             'non_specific'}}
+        cc.add(i_port)
+        # Validate the transformed model
+        cc.validate()
+        return cc
 
     def configure_build_files(self, component, src_dir, compile_dir,
                                install_dir):
@@ -80,8 +191,8 @@ class CodeGenerator(BaseCodeGenerator):
     def compile_source_files(self, compile_dir, component_name, verbose):
         """
         Builds all NMODL files in a directory
-        @param src_dir: The path of the directory to build
-        @param build_mode: Can be one of either, 'lazy', 'super_lazy',
+        `src_dir`     -- The path of the directory to build
+        `build_mode`  -- Can be one of either, 'lazy', 'super_lazy',
                            'require', 'force', or 'build_only'. 'lazy' doesn't
                            run nrnivmodl if the library is found, 'require',
                            requires that the library is found otherwise throws
@@ -91,7 +202,7 @@ class CodeGenerator(BaseCodeGenerator):
                            removes existing library if found and recompiles,
                            and 'build_only' removes existing library if found,
                            recompile and then exit
-        @param verbose: Prints out verbose debugging messages
+        `verbose`     -- Prints out verbose debugging messages
         """
         # Change working directory to model directory
         os.chdir(compile_dir)
@@ -168,28 +279,3 @@ class CodeGenerator(BaseCodeGenerator):
         except KeyError:
             pass
         return path
-
-    @classmethod
-    def deriv_func_args(cls, component, variable):
-        """ """
-        args = set([variable])
-        for r in component.regimes:
-            for time_derivative in (eq for eq in r.time_derivatives
-                                    if eq.dependent_variable == variable):
-                for name in (name for name in time_derivative.rhs_names
-                             if name in [sv.name
-                                         for sv in component.state_variables]):
-                    args.add(name)
-        return ','.join(args)
-        return args
-
-    @classmethod
-    def ode_for(cls, regime, variable):
-        """
-        Yields the TimeDerivative for the given variable in the regime
-        """
-        odes = [eq for eq in regime.time_derivatives
-                if eq.dependent_variable == variable.name]
-        if len(odes) == 0:
-            odes.append(TimeDerivative(dependent_variable=variable, rhs="0.0"))
-        return expect_single(odes)

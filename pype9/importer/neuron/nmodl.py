@@ -6,7 +6,6 @@ import quantities as pq
 import os.path
 import collections
 from itertools import chain
-from nineml.abstraction_layer.expressions.utils import is_builtin_symbol
 from nineml.abstraction_layer.componentclass import Parameter
 from nineml.abstraction_layer.dynamics import (
     TimeDerivative, StateAssignment, DynamicsClass)
@@ -105,7 +104,7 @@ class NMODLImporter(object):
                 " {} aliases").format(self.component_name,
                                       len(self.parameters),
                                       len(self.analog_ports),
-                                      len(self.state_variables),
+                                      len(self._state_variables),
                                       len(self.aliases))
 
     def __init__(self, fname):
@@ -127,7 +126,7 @@ class NMODLImporter(object):
         self.valid_parameter_ranges = {}
         self.valid_state_ranges = {}
         self.dimensions = {}
-        self.state_variables = {}
+        self._state_variables = {}
         self.state_variables_initial = {}
         self.stead_state_linear_equations = {}
         self.range_vars = set()
@@ -165,11 +164,11 @@ class NMODLImporter(object):
                                    parameters=self.parameters.values(),
                                    analog_ports=self.analog_ports.values(),
                                    event_ports=self.event_ports.values(),
-                                   regimes=self.regimes,
+                                   regimes=self._regimes,
                                    aliases=self.aliases.values(),
                                    piecewises=self.piecewises.values(),
                                    constants=self.constants.values(),
-                                   state_variables=self.state_variables)
+                                   state_variables=self._state_variables)
         return comp_class
 
     def get_component(self, class_path=None, hoc_properties={}):
@@ -211,7 +210,7 @@ class NMODLImporter(object):
             if p.mode == 'send':
                 print '{}'.format(p.name)
         print "\nTime derivatives:"
-        for r in self.regimes:
+        for r in self._regimes:
             for td in r.time_derivatives:
                 print "{}' = {}".format(td.dependent_variable, td.rhs)
         print "\nAliases:"
@@ -233,7 +232,7 @@ class NMODLImporter(object):
         """
         td_rhs = []
         try:
-            for regime in self.regimes.itervalues():
+            for regime in self._regimes.itervalues():
                 td_rhs.extend([td.rhs for td in regime.time_derivatives])
         except AttributeError:
             for _, time_derivatives in self.regime_parts:
@@ -308,7 +307,7 @@ class NMODLImporter(object):
             self.parameters['diam'] = Parameter('diam', dimension=un.length)
 
     def _create_regimes(self, expand_kinetics=True):
-        self.regimes = []
+        self._regimes = []
         if self.on_event_parts:
             assert len(self.regime_parts) == 1
             regime = self.regime_parts[0]
@@ -330,7 +329,7 @@ class NMODLImporter(object):
                                    '{}={}'.format(a.lhs, a.rhs)
                                    for a in assignments.values()])
             self.aliases.update(aliases)
-            self.regimes.append(Regime(name=regime[0],
+            self._regimes.append(Regime(name=regime[0],
                                        time_derivatives=regime[1],
                                        transitions=on_event))
         for name, (bidirectional, incoming, outgoing,
@@ -340,7 +339,7 @@ class NMODLImporter(object):
                                                          incoming, outgoing,
                                                          constraints,
                                                          compartments)
-                self.regimes.append(Regime(name=name,
+                self._regimes.append(Regime(name=name,
                                            time_derivatives=time_derivatives))
             else:
                 # TODO: Haven't implemented explicit kinetics
@@ -348,7 +347,7 @@ class NMODLImporter(object):
                                           "kinetics schemes")
         # Create Regimes from explicit time derivatives
         for name, time_derivatives in self.regime_parts:
-            self.regimes.append(Regime(name=name,
+            self._regimes.append(Regime(name=name,
                                        time_derivatives=time_derivatives))
 
     @classmethod
@@ -584,9 +583,9 @@ class NMODLImporter(object):
             # If valid range is provided
             if match.group(3):
                 self.valid_state_ranges[var] = (match.group(3), match.group(4))
-            self.state_variables[var] = StateVariable(var, dimension=dimension)
+            self._state_variables[var] = StateVariable(var, dimension=dimension)
         for lhs, rhs in self._initial_assign.iteritems():
-            if lhs in self.state_variables:
+            if lhs in self._state_variables:
                 self.state_variables_initial[lhs] = self._escape_piecewise(lhs,
                                                                            rhs)
             else:
@@ -642,7 +641,7 @@ class NMODLImporter(object):
             # Detect state derivatives
             for lhs, rhs in stmts.iteritems():
                 if lhs.endswith("'"):
-                    if lhs[:-1] not in self.state_variables:
+                    if lhs[:-1] not in self._state_variables:
                         raise Pype9RuntimeError("Unrecognised variable '{}'"
                                                 .format(lhs))
                     td = TimeDerivative(lhs[:-1],

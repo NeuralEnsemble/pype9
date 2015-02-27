@@ -33,7 +33,7 @@ class CodeGenerator(BaseCodeGenerator):
     ABS_TOLERANCE_DEFAULT = 0.01
     REL_TOLERANCE_DEFAULT = 0.01
     V_THRESHOLD_DEFAULT = 0.0
-    _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
+    _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'templates')
 
     def __init__(self, build_cores=1):
         super(CodeGenerator, self).__init__()

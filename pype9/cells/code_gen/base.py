@@ -13,22 +13,18 @@ from __future__ import absolute_import
 import platform
 import os
 import time
-from collections import namedtuple
 from itertools import chain
+from copy import deepcopy
 import shutil
-from copy import copy
-from os.path import abspath, dirname, join
-from datetime import datetime
+from os.path import join
 from collections import defaultdict
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from itertools import izip
 from runpy import run_path
 from abc import ABCMeta, abstractmethod
 import nineml
-from __builtin__ import classmethod
-from pype9 import version
-from nineml.abstraction_layer import expressions
 from pype9.exceptions import Pype9BuildError
+from nineml.abstraction_layer import units
 
 
 class BaseCodeGenerator(object):
@@ -58,7 +54,8 @@ class BaseCodeGenerator(object):
         # Add some globals used by the template code
         self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
                                       xrange=xrange, next=next, chain=chain,
-                                      hash=hash)
+                                      hash=hash, deepcopy=deepcopy,
+                                      units=units)
 
     @abstractmethod
     def generate_source_files(self, component, initial_state, src_dir,
@@ -82,7 +79,7 @@ class BaseCodeGenerator(object):
 
     def generate(self, component, initial_state=None, install_dir=None,
                  build_dir=None, build_mode='lazy', verbose=True,
-                 **template_args):
+                 **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
         NineML cell class
@@ -99,9 +96,30 @@ class BaseCodeGenerator(object):
                             generate_only - generate src and then quit
                             compile_only - don't generate src but compile
         `verbose` [bool]: Whether the build output is shown or not
-        `template_args` [dict]: A dictionary of (potentially simulator-
+        `kwargs` [dict]: A dictionary of (potentially simulator-
                                 specific) template arguments
         """
+#         if isinstance(nineml_model, str):
+#             url = nineml_model
+#             nineml_document = nineml.read(nineml_model)
+#             if celltype_name is not None:
+#                 nineml_model = nineml_document[celltype_name]
+#             else:
+#                 comps = [c for c in nineml_document.itervalues()
+#                          if isinstance(c, nineml.Dynamics)]
+#                 compclasses = [c for c in nineml_document.itervalues()
+#                                if isinstance(c, nineml.DynamicsClass)]
+#                 if len(comps) == 1:
+#                     nineml_model = comps[0]
+#                 elif len(compclasses) == 1:
+#                     nineml_model = compclasses[0]
+#                 else:
+#                     raise Pype9RuntimeError(
+#                         "9ml file '{}' contains multiple cell classes ({}), "
+#                         " please specify which one you intend to " "use by the"
+#                         " 'celltype_name' parameter"
+#                         .format(nineml_model,
+#                                 "', '".join(nineml_document.keys())))
         # Save original working directory to reinstate it afterwards (just to
         # be polite)
         orig_dir = os.getcwd()
@@ -215,13 +233,10 @@ class BaseCodeGenerator(object):
         # Generate source files from NineML code
         if generate_source:
             self.clean_src_dir(src_dir, component.name)
-            self.generate_source_files(component=component,
-                                       initial_state=initial_state,
-                                       src_dir=src_dir,
-                                       compile_dir=compile_dir,
-                                       install_dir=install_dir,
-                                       verbose=verbose,
-                                       **template_args)
+            self.generate_source_files(
+                component=component, initial_state=initial_state,
+                src_dir=src_dir, compile_dir=compile_dir,
+                install_dir=install_dir, verbose=verbose, **kwargs)
             # Write the timestamp of the 9ML file used to generate the source
             # files
             with open(nineml_mod_time_path, 'w') as f:
@@ -229,10 +244,9 @@ class BaseCodeGenerator(object):
         if compile_source:
             # Clean existing compile & install directories from previous builds
             self.clean_compile_dir(compile_dir)
-            self.configure_build_files(component=component.name,
-                                        src_dir=src_dir,
-                                        compile_dir=compile_dir,
-                                        install_dir=install_dir)
+            self.configure_build_files(
+                component=component.name, src_dir=src_dir,
+                compile_dir=compile_dir, install_dir=install_dir)
             self.clean_install_dir(install_dir)
             # Compile source files
             self.compile_source_files(compile_dir, component.name,

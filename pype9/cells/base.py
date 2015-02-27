@@ -13,8 +13,6 @@
 """
 from copy import deepcopy
 from .tree import Tree
-
-import inspect
 # DEFAULT_V_INIT = -65
 
 
@@ -47,8 +45,8 @@ class Pype9CellMetaClass(type):
     def __new__(cls, nineml_model, celltype_name, bases, dct):
         dct['parameter_names'] = [p.name for p in nineml_model.parameters]
         dct['_default_model'] = Tree.from_9ml(nineml_model)
-        return super(Pype9CellMetaClass, cls).__new__(cls, celltype_name, bases,
-                                                     dct)
+        return super(Pype9CellMetaClass, cls).__new__(
+            cls, celltype_name, bases, dct)
 
     def __init__(cls, nineml_model, celltype_name=None, morph_id=None,
                  build_mode=None, silent=None, solver_name=None,

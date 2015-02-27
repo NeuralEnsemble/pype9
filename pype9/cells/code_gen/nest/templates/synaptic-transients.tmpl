@@ -60,7 +60,7 @@ inline void {{component.name}}::{{oe.src_port_name}}_event_in_{{regime.name}}(lo
     {% endfor %}
     
     // Add random variables
-    {% for rv in dp.randomvariables %}
+    {% for rv in dp.random_variables %}
     const double_t {{rv.name}} = {{get_random_function(rv)}}
     {% endfor %}
    

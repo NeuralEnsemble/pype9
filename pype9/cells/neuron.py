@@ -19,11 +19,12 @@ try:
 except ImportError:
     pass
 from neuron import h, nrn, load_mechanisms
-import nineml.extensions.biophysical_cells
 import neo
 import quantities as pq
+import nineml
+from pype9.exceptions import Pype9RuntimeError
 from pype9.cells.code_gen.neuron import CodeGenerator
-import pype9.cells
+import pype9.cells.base
 from pype9.cells.tree import (
     in_units, AxialResistanceModel, MembraneCapacitanceModel,
     IonConcentrationModel)
@@ -35,6 +36,8 @@ basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
 import logging
 
 logger = logging.getLogger("NineLine")
+
+NeuronSection = type(h.Section())
 
 _basic_SI_to_neuron_conversions = (('s', 'ms'),
                                    ('V', 'mV'),
@@ -65,215 +68,59 @@ def convert_to_neuron_units(value, unit_str):
         value, unit_str, _basic_unit_dict, _compound_unit_dict)
 
 
+class Pype9CellMetaClass(pype9.cells.base.Pype9CellMetaClass):
+
+    """
+    Metaclass for building NineMLPype9CellType subclasses Called by
+    nineml_celltype_from_model
+    """
+
+    _built_types = {}
+
+    def __new__(cls, component, name=None, **kwargs):
+        """
+        `component` -- Either a parsed lib9ml SpikingNode object or a url
+                       to a 9ml file
+        `name`      -- Either the name of a component within the given url
+                       or a name to call the class built with the specified
+                       build options (passed in kwargs).
+        """
+        # Extract out build directives
+        build_mode = kwargs.pop('build_mode', 'lazy')
+        verbose = kwargs.pop('verbose', False)
+        if isinstance(component, basestring):
+            url = component
+        else:
+            url = component.url
+            if name is None:
+                name = component.name
+        try:
+            Cell, build_options = cls._built_types[(name, url)]
+            if build_options != kwargs:
+                raise Pype9RuntimeError(
+                    "Build options '{}' do not match previously built '{}' "
+                    "cell class with same name ('{}'). Please specify a "
+                    "different name (using a loaded nineml.Component instead "
+                    "of a URL)."
+                    .format(kwargs, name, build_options))
+        except KeyError:
+            component, instl_dir = CodeGenerator().generate(
+                component, name, build_mode=build_mode, verbose=verbose)
+            name = component.name
+            # Load newly build mod files
+            load_mechanisms(instl_dir)
+            # Create class member dict of new class
+            dct = {'component': component}
+            dct['install_dir'] = instl_dir
+            # Create new class using Type.__new__ method
+            Cell = super(Pype9CellMetaClass, cls).__new__(
+                cls, component, name, (Pype9Cell,), dct)
+            # Save Cell class to allow it to save it being built again
+            cls._built_types[(name, component.url)] = Cell, kwargs
+        return Cell
+
+
 class _BasePype9Cell(pype9.cells.base.Pype9Cell):
-
-    class Segment(h.Section):
-        """
-        Wraps the basic NEURON section to allow non-NEURON attributes to be
-        added to the segment. Additional functionality could be added as needed
-        """
-
-        class ComponentTranslator(object):
-
-            """
-            Acts as a proxy for the true component that was inserted using
-            NEURON's in built 'insert' method. Used as a way to avoid the
-            unique-identifier prefix that is prepended to NeMo parameters,
-            while allowing the cellname prefix to be dropped from the
-            component, thus providing a cleaner interface
-            """
-
-            def __init__(self, component, translations):
-                # The true component object that was created by the pyNEURON
-                # 'insert' method
-                super(_BasePype9Cell.Segment.ComponentTranslator,
-                      self).__setattr__('_component', component)
-                # The translation of the parameter names
-                super(_BasePype9Cell.Segment.ComponentTranslator,
-                      self).__setattr__('_translations', translations)
-
-            def __setattr__(self, var, value):
-                try:
-                    setattr(self._component, self._translations[var], value)
-                except KeyError as e:
-                    raise AttributeError("Component does not have translation"
-                                         " for parameter {}".format(e))
-
-            def __getattr__(self, var):
-                try:
-                    return getattr(self._component, self._translations[var])
-                except KeyError as e:
-                    raise AttributeError("Component does not have translation"
-                                         "for parameter {}".format(e))
-
-            def __dir__(self):
-                return (super(_BasePype9Cell.Segment.ComponentTranslator,
-                              self).__dir__ + self._translations.keys())
-
-        def __init__(self, model):
-            """
-            Initialises the Segment including its proximal and distal sections
-            for connecting child segments
-
-            @param seg [Segment]: Segment tuple loaded from MorphML
-                                  (see common.ncml.MorphMLHandler)
-            """
-            nrn.Section.__init__(self)  # @UndefinedVariable
-            h.pt3dclear(sec=self)
-            self.diam = float(model.diameter)
-            # Save the proximal and distal points for possible future reference
-            self.distal = model.distal
-            self.proximal = model.proximal
-            # Set proximal and distal points in NEURON
-            h.pt3dadd(model.distal[0], model.distal[1],
-                      model.distal[2], model.diameter,
-                      sec=self)
-            h.pt3dadd(model.proximal[0], model.proximal[1],
-                      model.proximal[2], model.diameter,
-                      sec=self)
-            # A list to store any gap junctions in
-            self._gap_junctions = []
-            self._syn_input = []
-            # Local information, though not sure if I need this here
-            self.name = model.name
-            self._parent_seg = None
-            if 'proximal_offset' in model.get_content():
-                self._proximal_offset = model.get_content()['proximal_offset']
-            else:
-                self._proximal_offset = None
-            self._children = []
-
-        def __getattr__(self, var):
-            """
-            Any '.'s in the attribute var are treated as delimeters of a nested
-            varspace lookup. This is done to allow pyNN's population.tset
-            method to set attributes of cell components.
-
-            @param var [str]: var of the attribute or '.' delimeted string of
-                              segment, component and attribute vars
-            """
-            if '.' in var:
-                components = var.split('.', 1)
-                return getattr(getattr(self, components[0]), components[1])
-            else:
-                return getattr(self(0.5), var)
-
-        def __setattr__(self, var, val):
-            """
-            Any '.'s in the attribute var are treated as delimeters of a nested
-            varspace lookup. This is done to allow pyNN's population.tset
-            method to set attributes of cell components.
-
-            @param var [str]: var of the attribute or '.' delimeted string of
-                              segment, component and attribute vars
-            @param val [*]: val of the attribute
-            """
-            if '.' in var:
-                components = var.split('.', 1)
-                setattr(getattr(self, components[0]), components[1], val)
-            else:
-                super(_BasePype9Cell.Segment, self).__setattr__(var, val)
-
-        def _connect(self, parent_seg):
-            """
-            Connects the segment with its parent, setting its proximal position
-            and calculating its length if it needs to.
-
-            @param parent_seg [Segment]: The parent segment to connect to
-            """
-            # Connect the segments in NEURON using h.Section's built-in method.
-            self.connect(parent_seg, 1.0, 0)
-            # Store the segment's parent just in case
-            self._parent_seg = parent_seg
-            parent_seg._children.append(self)
-
-        def insert_distributed(self, component, translations=None):
-            """
-            Inserts a mechanism using the in-built NEURON 'insert' method and
-            then constructs a 'Component' class to point to the variable
-            parameters of the component using meaningful names
-
-            `component` -- The component to be inserted
-                          [pype9.BiophysicsModel]
-            """
-            # Insert the mechanism into the segment
-            super(_BasePype9Cell.Segment, self).insert(component.class_name)
-            # Map the component (always at position 0.5 as a segment only ever
-            # has one "NEURON segment") to an object in the Segment object. If
-            # translations are provided, wrap the component in a Component
-            # translator that intercepts getters and setters and redirects them
-            # to the translated values.
-            if translations:
-                super(_BasePype9Cell.Segment, self).__setattr__(
-                    component.name, self.ComponentTranslator(
-                        getattr(self(0.5), component.class_name),
-                        translations))
-            else:
-                super(_BasePype9Cell.Segment, self).__setattr__(
-                    component.name, getattr(self(0.5), component.class_name))
-            if isinstance(component, IonConcentrationModel):
-                setattr(self, component.param_name,
-                        component.parameters[component.param_name])
-            else:
-                inserted_comp = getattr(self, component.class_name)
-                for param, val in component.iterate_parameters(self):
-                    setattr(inserted_comp, param, val)
-
-        def insert_discrete(self, component):
-            """
-            Inserts discrete (point-process) objects like synapses and current
-            clamps
-            """
-            try:
-                HocClass = getattr(h, component.class_name)
-            except AttributeError:
-                raise Exception("Did not find '{}' point-process type"
-                                .format(component.class_name))
-            discrete_comp = HocClass(0.5, sec=self)
-            for param, val in component.iterate_parameters(self):
-                setattr(discrete_comp, param, val)
-            try:
-                getattr(self, component.name).append(discrete_comp)
-                # TypeError if the component.class_name == component.name and
-                # has already inserted a mechanism of the same name and
-                # AttributeError otherwise
-            except (AttributeError, TypeError):
-                comp_list = [discrete_comp]
-                setattr(self, component.name, comp_list)
-
-        def inject_current(self, current):
-            """
-            Injects current into the segment
-
-            `current` -- a vector containing the current [neo.AnalogSignal]
-            """
-            self.iclamp = h.IClamp(0.5, sec=self)
-            self.iclamp.delay = 0.0
-            self.iclamp.dur = 1e12
-            self.iclamp.amp = 0.0
-            self.iclamp_amps = h.Vector(pq.Quantity(current, 'nA'))
-            self.iclamp_times = h.Vector(pq.Quantity(current.times, 'ms'))
-            self.iclamp_amps.play(self.iclamp._ref_amp, self.iclamp_times)
-
-        def voltage_clamp(self, voltages, series_resistance=1e-3):
-            """
-            Clamps the voltage of a segment
-
-            `voltage` -- a vector containing the voltages to clamp the segment
-                         to [neo.AnalogSignal]
-            """
-            self.seclamp = h.SEClamp(0.5, sec=self)
-            self.seclamp.rs = series_resistance
-            self.seclamp.dur1 = 1e12
-            self.seclamp_amps = h.Vector(pq.Quantity(voltages, 'mV'))
-            self.seclamp_times = h.Vector(pq.Quantity(voltages.times, 'ms'))
-            self.seclamp_amps.play(self.seclamp._ref_amp, self.seclamp_times)
-
-        def synaptic_stimulation(self, spike_train, synapse_name, index=0):
-            synapse = getattr(self, synapse_name)[index]
-            vecstim = VectorSpikeSource(spike_train)
-            netcon = h.NetCon(vecstim, synapse, sec=self)
-            self._syn_input.append((vecstim, netcon))
 
     def __init__(self, model=None, **parameters):
         super(_BasePype9Cell, self).__init__(model=model)
@@ -355,59 +202,6 @@ class _BasePype9Cell(pype9.cells.base.Pype9Cell):
 
 
 class Pype9Cell(_BasePype9Cell):
-
-    class Parameter(object):
-
-        def __init__(self, name, varname, components):
-            self.name = name
-            self.varname = varname
-            self.components = components
-
-        def set(self, value):
-            for comp in self.components:
-                setattr(comp, self.varname, value)
-
-        def get(self):
-            if self.components:
-                value = getattr(self.components[0], self.varname)
-                for comp in self.components:
-                    if value != getattr(comp, self.varname):
-                        raise Exception("Found inconsistent values for "
-                                        "parameter '{}' ({} and {})"
-                                        "across mapped segments"
-                                        .format(self.name, value,
-                                                getattr(comp, self.varname)))
-            else:
-                raise Exception("Parameter '{}' does not map to any segments "
-                                .format(self.name))
-            return value
-
-    class InitialState(object):
-
-        def __init__(self, name, varname, components):
-            self.name = name
-            self.varname = varname
-            self.components = components
-            self.value = None
-            self._initialized = False
-
-        def set(self, value):
-            if self._initialized:
-                raise Exception("Attempted to set initial state '{}' after the"
-                                " cell states have been initialised"
-                                .format(self.name))
-            self.value = value
-
-        def initialize_state(self):
-            for comp in self.components:
-                setattr(comp, self.varname, self.value)
-            self._initialized = True
-
-        def get(self):
-            if self.value is None:
-                logger.warning("Tried to retrieve value of initial state '{}' "
-                               "before it was set".format(self.varname))
-            return self.value
 
     def __init__(self, **parameters):
         super(Pype9Cell, self).__init__(**parameters)
@@ -748,67 +542,273 @@ class Pype9CellStandAlone(_BasePype9Cell):
         self._recordings = {}
 
 
-class Pype9CellMetaClass(pype9.cells.base.Pype9CellMetaClass):
-
+class Segment(NeuronSection):
     """
-    Metaclass for building NineMLPype9CellType subclasses Called by
-    nineml_celltype_from_model
+    Wraps the basic NEURON section to allow non-NEURON attributes to be
+    added to the segment. Additional functionality could be added as needed
     """
 
-    loaded_celltypes = {}
+    def __init__(self, model):
+        """
+        Initialises the Segment including its proximal and distal sections
+        for connecting child segments
 
-    def __new__(cls, nineml_model, celltype_name=None, build_mode='lazy',
-                silent=False, solver_name=None, standalone=True):  # @UnusedVariable @IgnorePep8
+        @param seg [Segment]: Segment tuple loaded from MorphML
+                              (see common.ncml.MorphMLHandler)
         """
-        `nineml_model` -- Either a parsed lib9ml SpikingNode object or a url
-                          to a 9ml file
+        nrn.Section.__init__(self)  # @UndefinedVariable
+        h.pt3dclear(sec=self)
+        self.diam = float(model.diameter)
+        # Save the proximal and distal points for possible future reference
+        self.distal = model.distal
+        self.proximal = model.proximal
+        # Set proximal and distal points in NEURON
+        h.pt3dadd(model.distal[0], model.distal[1],
+                  model.distal[2], model.diameter,
+                  sec=self)
+        h.pt3dadd(model.proximal[0], model.proximal[1],
+                  model.proximal[2], model.diameter,
+                  sec=self)
+        # A list to store any gap junctions in
+        self._gap_junctions = []
+        self._syn_input = []
+        # Local information, though not sure if I need this here
+        self.name = model.name
+        self._parent_seg = None
+        if 'proximal_offset' in model.get_content():
+            self._proximal_offset = model.get_content()['proximal_offset']
+        else:
+            self._proximal_offset = None
+        self._children = []
+
+    def __getattr__(self, var):
         """
-        if isinstance(nineml_model, str):
-            loaded_models = nineml.extensions.biophysical_cells.\
-                parse(nineml_model)
-            if celltype_name is not None:
-                nineml_model = loaded_models[celltype_name]
-            elif len(loaded_models) == 1:
-                nineml_model = loaded_models.values()[0]
-            else:
-                raise Exception("9ml file '{}' contains multiple cell classes "
-                                "({}), please specify which one you intend to "
-                                "use by the 'celltype_name' parameter"
-                                .format(nineml_model,
-                                        ', '.join(loaded_models.keys())))
-        if celltype_name is None:
-            celltype_name = nineml_model.name
-        opt_args = (solver_name, standalone)
+        Any '.'s in the attribute var are treated as delimeters of a nested
+        varspace lookup. This is done to allow pyNN's population.tset
+        method to set attributes of cell components.
+
+        @param var [str]: var of the attribute or '.' delimeted string of
+                          segment, component and attribute vars
+        """
+        if '.' in var:
+            components = var.split('.', 1)
+            return getattr(getattr(self, components[0]), components[1])
+        else:
+            return getattr(self(0.5), var)
+
+    def __setattr__(self, var, val):
+        """
+        Any '.'s in the attribute var are treated as delimeters of a nested
+        varspace lookup. This is done to allow pyNN's population.tset
+        method to set attributes of cell components.
+
+        @param var [str]: var of the attribute or '.' delimeted string of
+                          segment, component and attribute vars
+        @param val [*]: val of the attribute
+        """
+        if '.' in var:
+            components = var.split('.', 1)
+            setattr(getattr(self, components[0]), components[1], val)
+        else:
+            super(_BasePype9Cell.Segment, self).__setattr__(var, val)
+
+    def _connect(self, parent_seg):
+        """
+        Connects the segment with its parent, setting its proximal position
+        and calculating its length if it needs to.
+
+        @param parent_seg [Segment]: The parent segment to connect to
+        """
+        # Connect the segments in NEURON using h.Section's built-in method.
+        self.connect(parent_seg, 1.0, 0)
+        # Store the segment's parent just in case
+        self._parent_seg = parent_seg
+        parent_seg._children.append(self)
+
+    def insert_distributed(self, component, translations=None):
+        """
+        Inserts a mechanism using the in-built NEURON 'insert' method and
+        then constructs a 'Component' class to point to the variable
+        parameters of the component using meaningful names
+
+        `component` -- The component to be inserted
+                      [pype9.BiophysicsModel]
+        """
+        # Insert the mechanism into the segment
+        super(_BasePype9Cell.Segment, self).insert(component.class_name)
+        # Map the component (always at position 0.5 as a segment only ever
+        # has one "NEURON segment") to an object in the Segment object. If
+        # translations are provided, wrap the component in a Component
+        # translator that intercepts getters and setters and redirects them
+        # to the translated values.
+        if translations:
+            super(_BasePype9Cell.Segment, self).__setattr__(
+                component.name, self.ComponentTranslator(
+                    getattr(self(0.5), component.class_name),
+                    translations))
+        else:
+            super(_BasePype9Cell.Segment, self).__setattr__(
+                component.name, getattr(self(0.5), component.class_name))
+        if isinstance(component, IonConcentrationModel):
+            setattr(self, component.param_name,
+                    component.parameters[component.param_name])
+        else:
+            inserted_comp = getattr(self, component.class_name)
+            for param, val in component.iterate_parameters(self):
+                setattr(inserted_comp, param, val)
+
+    def insert_discrete(self, component):
+        """
+        Inserts discrete (point-process) objects like synapses and current
+        clamps
+        """
         try:
-            celltype = cls.loaded_celltypes[(celltype_name, nineml_model.url,
-                                             opt_args)]
-        except KeyError:
-            dct = {'nineml_model': nineml_model}
-#             if isinstance(nineml_model, DummyNinemlModel):
-#                 install_dir = nineml_model.url
-#                 dct['component_translations'] = {}
-#             else:
-#                 build_options = nineml_model.biophysics.\
-#                     build_hints['nemo']['neuron']
-            code_gen = CodeGenerator()
-            install_dir = code_gen.generate(
-                nineml_model, build_mode=build_mode, verbose=(not silent))
-            load_mechanisms(install_dir)
-            dct['mech_path'] = install_dir
-            dct['_param_links_tested'] = False
-            if standalone:
-                BaseClass = Pype9CellStandAlone
-            else:
-                BaseClass = Pype9Cell
-            celltype = super(Pype9CellMetaClass, cls).\
-                __new__(cls, nineml_model, celltype_name,
-                        (BaseClass,), dct)
-            # Save cell type in case it needs to be used again
-            cls.loaded_celltypes[(celltype_name,
-                                  nineml_model.url, opt_args)] = celltype
-        return celltype
+            HocClass = getattr(h, component.class_name)
+        except AttributeError:
+            raise Exception("Did not find '{}' point-process type"
+                            .format(component.class_name))
+        discrete_comp = HocClass(0.5, sec=self)
+        for param, val in component.iterate_parameters(self):
+            setattr(discrete_comp, param, val)
+        try:
+            getattr(self, component.name).append(discrete_comp)
+            # TypeError if the component.class_name == component.name and
+            # has already inserted a mechanism of the same name and
+            # AttributeError otherwise
+        except (AttributeError, TypeError):
+            comp_list = [discrete_comp]
+            setattr(self, component.name, comp_list)
+
+    def inject_current(self, current):
+        """
+        Injects current into the segment
+
+        `current` -- a vector containing the current [neo.AnalogSignal]
+        """
+        self.iclamp = h.IClamp(0.5, sec=self)
+        self.iclamp.delay = 0.0
+        self.iclamp.dur = 1e12
+        self.iclamp.amp = 0.0
+        self.iclamp_amps = h.Vector(pq.Quantity(current, 'nA'))
+        self.iclamp_times = h.Vector(pq.Quantity(current.times, 'ms'))
+        self.iclamp_amps.play(self.iclamp._ref_amp, self.iclamp_times)
+
+    def voltage_clamp(self, voltages, series_resistance=1e-3):
+        """
+        Clamps the voltage of a segment
+
+        `voltage` -- a vector containing the voltages to clamp the segment
+                     to [neo.AnalogSignal]
+        """
+        self.seclamp = h.SEClamp(0.5, sec=self)
+        self.seclamp.rs = series_resistance
+        self.seclamp.dur1 = 1e12
+        self.seclamp_amps = h.Vector(pq.Quantity(voltages, 'mV'))
+        self.seclamp_times = h.Vector(pq.Quantity(voltages.times, 'ms'))
+        self.seclamp_amps.play(self.seclamp._ref_amp, self.seclamp_times)
+
+    def synaptic_stimulation(self, spike_train, synapse_name, index=0):
+        synapse = getattr(self, synapse_name)[index]
+        vecstim = VectorSpikeSource(spike_train)
+        netcon = h.NetCon(vecstim, synapse, sec=self)
+        self._syn_input.append((vecstim, netcon))
 
 
+class ComponentTranslator(object):
+
+    """
+    Acts as a proxy for the true component that was inserted using
+    NEURON's in built 'insert' method. Used as a way to avoid the
+    unique-identifier prefix that is prepended to NeMo parameters,
+    while allowing the cellname prefix to be dropped from the
+    component, thus providing a cleaner interface
+    """
+
+    def __init__(self, component, translations):
+        # The true component object that was created by the pyNEURON
+        # 'insert' method
+        super(ComponentTranslator, self).__setattr__('_component',
+                                                     component)
+        # The translation of the parameter names
+        super(_BasePype9Cell.Segment.ComponentTranslator,
+              self).__setattr__('_translations', translations)
+
+    def __setattr__(self, var, value):
+        try:
+            setattr(self._component, self._translations[var], value)
+        except KeyError as e:
+            raise AttributeError("Component does not have translation"
+                                 " for parameter {}".format(e))
+
+    def __getattr__(self, var):
+        try:
+            return getattr(self._component, self._translations[var])
+        except KeyError as e:
+            raise AttributeError("Component does not have translation"
+                                 "for parameter {}".format(e))
+
+    def __dir__(self):
+        return (super(_BasePype9Cell.Segment.ComponentTranslator,
+                      self).__dir__ + self._translations.keys())
+
+
+class Parameter(object):
+
+    def __init__(self, name, varname, components):
+        self.name = name
+        self.varname = varname
+        self.components = components
+
+    def set(self, value):
+        for comp in self.components:
+            setattr(comp, self.varname, value)
+
+    def get(self):
+        if self.components:
+            value = getattr(self.components[0], self.varname)
+            for comp in self.components:
+                if value != getattr(comp, self.varname):
+                    raise Exception("Found inconsistent values for "
+                                    "parameter '{}' ({} and {})"
+                                    "across mapped segments"
+                                    .format(self.name, value,
+                                            getattr(comp, self.varname)))
+        else:
+            raise Exception("Parameter '{}' does not map to any segments "
+                            .format(self.name))
+        return value
+
+
+class InitialState(object):
+
+    def __init__(self, name, varname, components):
+        self.name = name
+        self.varname = varname
+        self.components = components
+        self.value = None
+        self._initialized = False
+
+    def set(self, value):
+        if self._initialized:
+            raise Exception("Attempted to set initial state '{}' after the"
+                            " cell states have been initialised"
+                            .format(self.name))
+        self.value = value
+
+    def initialize_state(self):
+        for comp in self.components:
+            setattr(comp, self.varname, self.value)
+        self._initialized = True
+
+    def get(self):
+        if self.value is None:
+            logger.warning("Tried to retrieve value of initial state '{}' "
+                           "before it was set".format(self.varname))
+        return self.value
+
+
+# This is adapted from the code for the simulation controller in PyNN for
+# use with individual cell objects
 class _SimulationController(object):
 
     def __init__(self):

@@ -2,11 +2,11 @@
     A module contain unit tests for the nine cells package
 """
 if __name__ == '__main__':
-    from . import DummyTestCase as TestCase  # @UnusedImport
+    from utils import DummyTestCase as TestCase  # @UnusedImport
 else:
     from unittest import TestCase  # @Reimport
 import os.path
-from . import test_data_dir
+from utils import test_data_dir
 # import os
 # from mock import Mock
 # from numpy.testing import assert_array_equal, assert_array_almost_equal
