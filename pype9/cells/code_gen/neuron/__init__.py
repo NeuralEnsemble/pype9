@@ -194,8 +194,7 @@ class CodeGenerator(BaseCodeGenerator):
         cc.validate()
         return cc
 
-    def configure_build_files(self, component, src_dir, compile_dir,
-                               install_dir):
+    def configure_build_files(self, name, src_dir, compile_dir, install_dir):
         pass
 
     def compile_source_files(self, compile_dir, component_name, verbose):

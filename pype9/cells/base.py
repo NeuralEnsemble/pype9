@@ -52,14 +52,16 @@ class Pype9CellMetaClass(type):
                     "of a URL)."
                     .format(kwargs, name, build_options))
         except KeyError:
-            component, instl_dir = cls.CodeGenerator().generate(
+            (componentclass,
+             component, instl_dir) = cls.CodeGenerator().generate(
                 component, name, build_mode=build_mode, verbose=verbose,
                 **kwargs)
             name = component.name
             # Load newly build model
             cls.load_model(name, instl_dir)
             # Create class member dict of new class
-            dct = {'component': component,
+            dct = {'componentclass': componentclass,
+                   'default_parameters': component,
                    'install_dir': instl_dir}
             # Create new class using Type.__new__ method
             Cell = super(Pype9CellMetaClass, cls).__new__(

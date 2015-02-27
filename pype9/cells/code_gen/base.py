@@ -24,7 +24,7 @@ from runpy import run_path
 from abc import ABCMeta, abstractmethod
 import nineml
 from pype9.exceptions import Pype9BuildError
-from nineml.abstraction_layer import units
+from nineml.abstraction_layer import units, ComponentClass
 
 
 class BaseCodeGenerator(object):
@@ -66,8 +66,8 @@ class BaseCodeGenerator(object):
         pass
 
     @abstractmethod
-    def configure_build_files(self, model_name, src_dir, compile_dir,
-                               install_dir):
+    def configure_build_files(self, component, componentclass, src_dir,
+                              compile_dir, install_dir):
         """
         Configures the build files before compiling
         """
@@ -77,9 +77,9 @@ class BaseCodeGenerator(object):
     def compile_source_files(self, compile_dir, component_name, verbose):
         pass
 
-    def generate(self, component, initial_state=None, install_dir=None,
-                 build_dir=None, build_mode='lazy', verbose=True,
-                 **kwargs):
+    def generate(self, component, name=None, initial_state=None,
+                 install_dir=None, build_dir=None, build_mode='lazy',
+                 verbose=True, **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
         NineML cell class
@@ -99,80 +99,29 @@ class BaseCodeGenerator(object):
         `kwargs` [dict]: A dictionary of (potentially simulator-
                                 specific) template arguments
         """
-#         if isinstance(nineml_model, str):
-#             url = nineml_model
-#             nineml_document = nineml.read(nineml_model)
-#             if celltype_name is not None:
-#                 nineml_model = nineml_document[celltype_name]
-#             else:
-#                 comps = [c for c in nineml_document.itervalues()
-#                          if isinstance(c, nineml.Dynamics)]
-#                 compclasses = [c for c in nineml_document.itervalues()
-#                                if isinstance(c, nineml.DynamicsClass)]
-#                 if len(comps) == 1:
-#                     nineml_model = comps[0]
-#                 elif len(compclasses) == 1:
-#                     nineml_model = compclasses[0]
-#                 else:
-#                     raise Pype9RuntimeError(
-#                         "9ml file '{}' contains multiple cell classes ({}), "
-#                         " please specify which one you intend to " "use by the"
-#                         " 'celltype_name' parameter"
-#                         .format(nineml_model,
-#                                 "', '".join(nineml_document.keys())))
         # Save original working directory to reinstate it afterwards (just to
         # be polite)
         orig_dir = os.getcwd()
         # Get component from file if passed as a string
-        if isinstance(component, str):
-            # Interpret the given component as a URL of a NineML component
-            component_src_path = component
-            # Read NineML description
-            context = nineml.read(component_src_path)
-            components = list(context.components)
-            if len(components) == 0:
-                raise Pype9BuildError(
-                    "No components loaded from nineml path '{}'"
-                    .format(component_src_path))
-            elif len(components) > 1:
-                raise Pype9BuildError(
-                    "Multiple components ('{}') loaded from nineml path '{}'"
-                    .format("', '".join(c.name for c in context.components),
-                            component_src_path))
-            component = components[0]
-        else:
-            component_src_path = None
-        # Get initial_state from file if passed as a string
-        if isinstance(component, str):
-            # Interpret the given component as a URL of a NineML component
-            state_src_path = component
-            # Read NineML description
-            # initial_states = parse_9ml(state_src_path)
-            initial_states = [0.0]  # TODO: Write nineml lib for state layer
-            if not initial_states:
-                raise Pype9BuildError(
-                    "No initial_states loaded from nineml path '{}'"
-                    .format(state_src_path))
-            elif len(initial_states) > 1:
-                raise Pype9BuildError(
-                    "Multiple initial states ('{}') loaded from nineml path "
-                    "'{}'".format("', '".join(s.name for s in initial_states),
-                                  state_src_path))
+        (component, componentclass,
+         comp_src_path) = self._read_comp_from_file(component, name)
+        if name is None:
+            if component is not None:
+                name = component.name
             else:
-                initial_state = initial_states[0]
-        else:
-            state_src_path = None
+                name = componentclass.name
         # Set build dir if not provided
-        if not build_dir:
-            if not component_src_path:
+        if build_dir is None:
+            if comp_src_path is None:
                 raise Pype9BuildError(
                     "Build directory must be explicitly provided ('build_dir')"
-                    " when using 9ml component already in memory")
+                    " when using generated 9ml components '{}'"
+                    .format(name))
             build_dir = os.path.abspath(os.path.join(
-                os.path.dirname(component_src_path),
+                os.path.dirname(comp_src_path),
                 self.BUILD_DIR_DEFAULT,
                 self.SIMULATOR_NAME,
-                component.name))
+                name))
         # Calculate src directory path within build directory
         src_dir = os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
         # Calculate compile directory path within build directory
@@ -181,8 +130,8 @@ class BaseCodeGenerator(object):
         # provided
         install_dir = self.get_install_dir(build_dir, install_dir)
         # Get the timestamp of the source file
-        if component_src_path:
-            nineml_mod_time = time.ctime(os.path.getmtime(component_src_path))
+        if comp_src_path:
+            nineml_mod_time = time.ctime(os.path.getmtime(comp_src_path))
         else:
             nineml_mod_time = None
         # Path of the file which contains or will contain the source
@@ -232,11 +181,12 @@ class BaseCodeGenerator(object):
                 .format(build_mode, "', '".join(self.BUILD_MODE_OPTIONS)))
         # Generate source files from NineML code
         if generate_source:
-            self.clean_src_dir(src_dir, component.name)
+            self.clean_src_dir(src_dir, name)
             self.generate_source_files(
-                component=component, initial_state=initial_state,
-                src_dir=src_dir, compile_dir=compile_dir,
-                install_dir=install_dir, verbose=verbose, **kwargs)
+                componentclass=componentclass, default_parameters=component,
+                initial_state=initial_state, src_dir=src_dir,
+                compile_dir=compile_dir, install_dir=install_dir,
+                verbose=verbose, **kwargs)
             # Write the timestamp of the 9ML file used to generate the source
             # files
             with open(nineml_mod_time_path, 'w') as f:
@@ -245,15 +195,59 @@ class BaseCodeGenerator(object):
             # Clean existing compile & install directories from previous builds
             self.clean_compile_dir(compile_dir)
             self.configure_build_files(
-                component=component.name, src_dir=src_dir,
-                compile_dir=compile_dir, install_dir=install_dir)
+                name=name, src_dir=src_dir, compile_dir=compile_dir,
+                install_dir=install_dir)
             self.clean_install_dir(install_dir)
             # Compile source files
-            self.compile_source_files(compile_dir, component.name,
-                                      verbose=verbose)
+            self.compile_source_files(compile_dir, name, verbose=verbose)
         # Switch back to original dir
         os.chdir(orig_dir)
         return component, install_dir
+
+    @classmethod
+    def _read_comp_from_file(cls, component, name):
+        """
+        Reads a component from file, checking to see if there is only one
+        component or component class in the file (or not reading from file at
+        all if component is already a component or component class).
+        """
+        if isinstance(component, str):
+            # Interpret the given component as a URL of a NineML component
+            src_path = component
+            # Read NineML description
+            document = nineml.read(src_path)
+            if name is not None:
+                    component = document[name]
+            else:
+                components = list(document.components)
+                if len(components) == 1:
+                    component = components[0]
+                elif len(components) > 1:
+                    componentclasses = set((c.component_class
+                                            for c in components))
+                else:
+                    componentclasses = list(document.componentclasses)
+                if len(componentclasses) == 1:
+                    component = componentclasses[0]
+                elif len(componentclasses) > 1:
+                    raise Pype9BuildError(
+                        "Multiple component and or classes ('{}') loaded from "
+                        "nineml path '{}'"
+                        .format("', '".join(
+                            c.name for c in document.components), src_path))
+                else:
+                    raise Pype9BuildError(
+                        "No components or component classes loaded from nineml"
+                        " path '{}'".format(src_path))
+            component = components[0]
+        else:
+            src_path = None
+        if isinstance(component, ComponentClass):
+            componentclass = component
+            component = None
+        else:
+            componentclass = component.component_class
+        return component, componentclass, src_path
 
     def unit_conversion(self, units):
         try:

@@ -77,14 +77,13 @@ class CodeGenerator(BaseCodeGenerator):
         self.render_to_file('sli_initialiser.tmpl', tmpl_args,
                              component.name + 'Loader.sli', src_dir)
 
-    def configure_build_files(self, component, src_dir, compile_dir,
-                               install_dir):
+    def configure_build_files(self, name, src_dir, compile_dir, install_dir):
         # Generate Makefile if it is not present
         if not os.path.exists(os.path.join(compile_dir, 'Makefile')):
             if not os.path.exists(compile_dir):
                 os.mkdir(compile_dir)
             orig_dir = os.getcwd()
-            config_args = {'component': component, 'src_dir': src_dir,
+            config_args = {'name': name, 'src_dir': src_dir,
                            'version': pype9.version}
             self.render_to_file('configure-ac.tmpl', config_args,
                                  'configure.ac', src_dir)
@@ -98,7 +97,7 @@ class CodeGenerator(BaseCodeGenerator):
             except sp.CalledProcessError as e:
                 raise Pype9BuildError(
                     "Bootstrapping of '{}' NEST module failed(see src "
-                    "directory '{}'):\n\n {}".format(component.name or src_dir,
+                    "directory '{}'):\n\n {}".format(name or src_dir,
                                                      src_dir, e))
             os.chdir(compile_dir)
             env = os.environ.copy()
@@ -111,8 +110,7 @@ class CodeGenerator(BaseCodeGenerator):
             except sp.CalledProcessError as e:
                 raise Pype9BuildError(
                     "Configuration of '{}' NEST module failed (see src "
-                    "directory '{}'):\n\n {}".format(component.name, src_dir,
-                                                     e))
+                    "directory '{}'):\n\n {}".format(name, src_dir, e))
             os.chdir(orig_dir)
 
     def compile_source_files(self, compile_dir, component_name, verbose):

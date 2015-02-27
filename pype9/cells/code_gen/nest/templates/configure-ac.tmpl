@@ -1,11 +1,11 @@
 AC_PREREQ(2.52)3
 
-AC_INIT({{component.name}}, 1.0, nest_user@nest-initiative.org)
+AC_INIT({{name}}, 1.0, nest_user@nest-initiative.org)
 
 # These variables are exported to include/config.h
-{{component.name | upper}}_MAJOR=1
-{{component.name | upper}}_MINOR=0
-{{component.name | upper}}_PATCHLEVEL=0
+{{name | upper}}_MAJOR=1
+{{name | upper}}_MINOR=0
+{{name | upper}}_PATCHLEVEL=0
 
 # Exporting source and build directories requires full path names.
 # Thus we have to expand.
@@ -22,7 +22,7 @@ PKGBUILDDIR=`pwd`
 # moritz, 06-26-06
 AC_CONFIG_AUX_DIR(.)
 
-AM_INIT_AUTOMAKE(nest, ${{component.name | upper}}_VERSION)
+AM_INIT_AUTOMAKE(nest, ${{name | upper}}_VERSION)
 
 # obtain host system type; HEP 2004-12-20
 AC_CANONICAL_HOST
@@ -107,7 +107,7 @@ AC_MSG_RESULT($SUNDIALS_LDFLAGS)
 # here.
 # HEP 2004-12-21
 
-{{component.name | upper}}_SAVE_CXXFLAGS=$CXXFLAGS
+{{name | upper}}_SAVE_CXXFLAGS=$CXXFLAGS
 
 # Must first check if we are on AIX
 AC_AIX
@@ -117,8 +117,8 @@ AC_AIX
 AC_PROG_CXX([ $NEST_COMPILER ])
 
 # the following is makeshift, should have the macro set proper
-# {{component.name | upper}}_SET_CXXFLAGS
-AM_CXXFLAGS=${{component.name | upper}}_SAVE_CXXFLAGS
+# {{name | upper}}_SET_CXXFLAGS
+AM_CXXFLAGS=${{name | upper}}_SAVE_CXXFLAGS
 CXXFLAGS=
 
 ## Configure C environment
@@ -183,7 +183,7 @@ AC_SUBST(SUNDIALS_CONFIG)
 AC_SUBST(SUNDIALS_CPPFLAGS)
 AC_SUBST(SUNDIALS_LDFLAGS)
 
-AM_CONFIG_HEADER({{component.name}}_config.h:{{component.name}}_config.h.in)
+AM_CONFIG_HEADER({{name}}_config.h:{{name}}_config.h.in)
 AC_CONFIG_FILES(Makefile)
 
 # -----------------------------------------------
@@ -200,7 +200,7 @@ AC_OUTPUT
 
 echo
 echo "-------------------------------------------------------"
-echo "{{component.name}} Configuration Summary"
+echo "{{name}} Configuration Summary"
 echo "-------------------------------------------------------"
 echo
 echo "C++ compiler        : $CXX"
@@ -217,9 +217,9 @@ eval eval eval  PKGDATADIR_AS_CONFIGURED=$PKGDATADIR
 echo
 echo "-------------------------------------------------------"
 echo
-echo "You can build and install {{component.name}} now, using"
+echo "You can build and install {{name}} now, using"
 echo "  make"
 echo "  make install"
 echo
-echo "{{component.name}} will be installed to:"
+echo "{{name}} will be installed to:"
 echo -n "  "; eval eval echo "$libdir"
