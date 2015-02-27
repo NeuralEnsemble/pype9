@@ -11,7 +11,7 @@ class TestNeuronLoad(TestCase):
 
     def test_neuron_load(self):
         component_file = path.join(test_data_dir, 'xml', 'Izhikevich.xml')
-        Izhikevich = Pype9CellMetaClass(component_file)
+        Izhikevich = Pype9CellMetaClass(component_file, name="Izhikevich1")
         izhi = Izhikevich()
         print dir(izhi)
 

@@ -29,6 +29,7 @@ from pype9.cells.tree import (
     IonConcentrationModel)
 from .. import create_unit_conversions, convert_units
 from pyNN.neuron.cells import VectorSpikeSource
+from . import base
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
 
@@ -214,7 +215,7 @@ class Pype9Cell(pype9.cells.base.Pype9Cell):
         # Retrieving the _parameters attribute with __getattribute__ first
         # avoids infinite recursive loops of __getattr__ if the cell hasn't
         # been initialised yet.
-        parameters = self.__getattribute__('_parameters')
+        parameters = self.__getattribute__('default_parameters')
         try:
             return parameters[varname].get()
         except KeyError:
@@ -479,7 +480,7 @@ class Pype9Cell(pype9.cells.base.Pype9Cell):
             simulation_controller.register_cell(self)
 
 
-class Pype9CellMetaClass(pype9.cells.base.Pype9CellMetaClass):
+class Pype9CellMetaClass(base.Pype9CellMetaClass):
 
     """
     Metaclass for building NineMLPype9CellType subclasses Called by
@@ -488,10 +489,10 @@ class Pype9CellMetaClass(pype9.cells.base.Pype9CellMetaClass):
 
     _built_types = {}
     CodeGenerator = CodeGenerator
-    CellBaseClass = Pype9Cell
+    BaseCellClass = Pype9Cell
 
     @classmethod
-    def load_model(cls, name, install_dir):  # @UnusedVariable
+    def load_model(cls, name, install_dir):  # @UnusedVariable @NoSelf
         load_mechanisms(os.path.dirname(install_dir))
 
 

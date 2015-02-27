@@ -14,7 +14,7 @@ class TestNeuronBuild(TestCase):
 
     def test_neuron_build(self):
         component_file = path.join(test_data_dir, 'xml', 'Izhikevich.xml')
-        self.code_generator.generate(component_file, 0.0,
+        self.code_generator.generate(component_file,
                                      build_mode='force',
                                      ode_solver='derivimplicit',
                                      membrane_voltage='V',
@@ -22,7 +22,7 @@ class TestNeuronBuild(TestCase):
 
     def test_kinetics_build(self):
         component_file = path.join(test_data_dir, 'xml', 'kinetic_mechanism.xml')
-        self.code_generator.generate(component_file, 0.0,
+        self.code_generator.generate(component_file,
                                      build_mode='force',
                                      ode_solver='derivimplicit')
 

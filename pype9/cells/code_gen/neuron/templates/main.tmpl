@@ -126,15 +126,15 @@ ASSIGNED {
     {% endfor %}
 {% endif %}
 
-    : Analog send ports
-{% for p in componentclass.analog_send_ports if p.name not in componentclass.state_variable_names %}
-    {{p.name}}{% if p.dimension == units.currentDensity %} (nA) {% endif %}
-{%+ endfor %}
-
 {% if not is_subcomponent %}   
     : Membrane voltage
     v (mV)
 {% endif %}
+
+    : Aliases
+{% for alias in componentclass.aliases %}
+    {{alias.name}}
+{% endfor %}
 }
 
 BREAKPOINT {

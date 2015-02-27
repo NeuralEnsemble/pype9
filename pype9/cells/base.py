@@ -11,7 +11,6 @@
   License: This file is part of the "NineLine" package, which is released under
            the MIT Licence, see LICENSE for details.
 """
-from abc import ABCMeta
 from copy import deepcopy
 from pype9.exceptions import Pype9RuntimeError
 
@@ -22,8 +21,6 @@ class Pype9CellMetaClass(type):
     Metaclass for building NineMLPype9CellType subclasses Called by
     nineml_celltype_from_model
     """
-
-    __metaclass__ = ABCMeta
 
     def __new__(cls, component, name=None, **kwargs):
         """
@@ -52,22 +49,25 @@ class Pype9CellMetaClass(type):
                     "of a URL)."
                     .format(kwargs, name, build_options))
         except KeyError:
-            (componentclass,
-             component, instl_dir) = cls.CodeGenerator().generate(
+            (name, componentclass,
+             default_parameters, instl_dir) = cls.CodeGenerator().generate(
                 component, name, build_mode=build_mode, verbose=verbose,
                 **kwargs)
-            name = component.name
             # Load newly build model
             cls.load_model(name, instl_dir)
             # Create class member dict of new class
             dct = {'componentclass': componentclass,
-                   'default_parameters': component,
+                   'default_parameters': default_parameters,
                    'install_dir': instl_dir}
             # Create new class using Type.__new__ method
             Cell = super(Pype9CellMetaClass, cls).__new__(
                 cls, name, (cls.BaseCellClass,), dct)
             # Save Cell class to allow it to save it being built again
-            cls._built_types[(name, component.url)] = Cell, kwargs
+            if default_parameters is not None:
+                url = default_parameters.url
+            else:
+                url = componentclass.url
+            cls._built_types[(name, url)] = Cell, kwargs
         return Cell
 
     def __init__(cls, component, name=None, **kwargs):
@@ -80,8 +80,6 @@ class Pype9CellMetaClass(type):
 
 
 class Pype9Cell(object):
-
-    __metaclass__ = ABCMeta
 
     def __init__(self, model=None):
         """

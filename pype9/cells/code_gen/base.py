@@ -23,7 +23,7 @@ from itertools import izip
 from runpy import run_path
 from abc import ABCMeta, abstractmethod
 import nineml
-from pype9.exceptions import Pype9BuildError
+from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 from nineml.abstraction_layer import units, ComponentClass
 
 
@@ -77,9 +77,9 @@ class BaseCodeGenerator(object):
     def compile_source_files(self, compile_dir, component_name, verbose):
         pass
 
-    def generate(self, component, name=None, initial_state=None,
-                 install_dir=None, build_dir=None, build_mode='lazy',
-                 verbose=True, **kwargs):
+    def generate(self, component, name=None, saved_name=None,
+                 initial_state=None, install_dir=None, build_dir=None,
+                 build_mode='lazy', verbose=True, **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
         NineML cell class
@@ -101,13 +101,17 @@ class BaseCodeGenerator(object):
         """
         # Save original working directory to reinstate it afterwards (just to
         # be polite)
+        if not isinstance(name, basestring) and name is not None:
+            raise Pype9RuntimeError(
+                "Provided name must be a valid identifer '{}'"
+                .format(name))
         orig_dir = os.getcwd()
         # Get component from file if passed as a string
-        (component, componentclass,
-         comp_src_path) = self._read_comp_from_file(component, name)
+        (componentclass, default_parameters,
+         comp_src_path) = self._read_comp_from_file(component, saved_name)
         if name is None:
-            if component is not None:
-                name = component.name
+            if default_parameters is not None:
+                name = default_parameters.name
             else:
                 name = componentclass.name
         # Set build dir if not provided
@@ -183,7 +187,8 @@ class BaseCodeGenerator(object):
         if generate_source:
             self.clean_src_dir(src_dir, name)
             self.generate_source_files(
-                componentclass=componentclass, default_parameters=component,
+                name=name, componentclass=componentclass,
+                default_parameters=component,
                 initial_state=initial_state, src_dir=src_dir,
                 compile_dir=compile_dir, install_dir=install_dir,
                 verbose=verbose, **kwargs)
@@ -202,7 +207,7 @@ class BaseCodeGenerator(object):
             self.compile_source_files(compile_dir, name, verbose=verbose)
         # Switch back to original dir
         os.chdir(orig_dir)
-        return component, install_dir
+        return name, componentclass, default_parameters, install_dir
 
     @classmethod
     def _read_comp_from_file(cls, component, name):
@@ -217,7 +222,7 @@ class BaseCodeGenerator(object):
             # Read NineML description
             document = nineml.read(src_path)
             if name is not None:
-                    component = document[name]
+                component = document[name]
             else:
                 components = list(document.components)
                 if len(components) == 1:
@@ -245,10 +250,11 @@ class BaseCodeGenerator(object):
             src_path = None
         if isinstance(component, ComponentClass):
             componentclass = component
-            component = None
+            default_parameters = None
         else:
             componentclass = component.component_class
-        return component, componentclass, src_path
+            default_parameters = component
+        return componentclass, default_parameters, src_path
 
     def unit_conversion(self, units):
         try:

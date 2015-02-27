@@ -24,3 +24,12 @@ def ensure_camel_case(name):
     if name == name.lower() or name == name.upper():
         name = name.title()
     return name
+
+
+class abstractclassmethod(classmethod):
+
+    __isabstractmethod__ = True
+
+    def __init__(self, callable_method):
+        callable_method.__isabstractmethod__ = True
+        super(abstractclassmethod, self).__init__(callable_method)

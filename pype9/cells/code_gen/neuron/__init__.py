@@ -33,7 +33,7 @@ from nineml.utils import expect_single
 try:
     from nineml.extensions.kinetics import KineticsClass
 except ImportError:
-    KineticsClass = None
+    KineticsClass = type(None)
 
 
 class CodeGenerator(BaseCodeGenerator):
@@ -87,14 +87,14 @@ class CodeGenerator(BaseCodeGenerator):
         # Render mod file
         self.generate_mod_file(name, 'main.tmpl', componentclass,
                                default_parameters, initial_state, src_dir,
-                               **kwargs)
+                               kwargs)
 
     def generate_kinetics(self, name, componentclass, default_parameters,
                           initial_state, src_dir, **kwargs):
         # Render mod file
         self.generate_mod_file(name, 'kinetics.tmpl', componentclass,
                                default_parameters, initial_state, src_dir,
-                               **kwargs)
+                               kwargs)
 
     def generate_point_process(self, name, componentclass, default_parameters,
                                initial_state, src_dir, **kwargs):
@@ -111,16 +111,16 @@ class CodeGenerator(BaseCodeGenerator):
         add_tmpl_args = {
             'componentclass': componentclass,
             'is_subcomponent': False}
-        tmpl_args = copy(kwargs)
-        tmpl_args.update(add_tmpl_args)
+        template_args = copy(kwargs)
+        template_args.update(add_tmpl_args)
         # Render mod file
         self.generate_mod_file(name, 'main.tmpl', componentclass,
                                default_parameters, initial_state, src_dir,
-                               **tmpl_args)
+                               template_args)
 
     def generate_mod_file(self, name, template, componentclass,
                           default_parameters, initial_state, src_dir,
-                          **kwargs):
+                          template_args):
         tmpl_args = {
             'component_name': name,
             'componentclass': componentclass,
@@ -134,7 +134,7 @@ class CodeGenerator(BaseCodeGenerator):
             'is_subcomponent': True,
             # FIXME: weight_vars needs to be removed or implmented properly
             'weight_variables': []}
-        tmpl_args.update(kwargs)
+        tmpl_args.update(template_args)
         # Render mod file
         self.render_to_file(template, tmpl_args, name + '.mod', src_dir)
 

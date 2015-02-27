@@ -60,7 +60,7 @@
       </Alias>
     </Dynamics>
   </ComponentClass>
-  <Component name="Izhikevich1">
+  <Component name="Izhikevich">
     <Definition>IzhikevichClass</Definition>
     <Property name="a">
       <SingleValue>0.02</SingleValue>
