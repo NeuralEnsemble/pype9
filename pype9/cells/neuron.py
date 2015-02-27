@@ -492,7 +492,7 @@ class Pype9CellMetaClass(pype9.cells.base.Pype9CellMetaClass):
     CellBaseClass = Pype9Cell
 
     @classmethod
-    def load_model(cls, install_dir):
+    def load_model(cls, name, install_dir):  # @UnusedVariable
         load_mechanisms(install_dir)
 
 

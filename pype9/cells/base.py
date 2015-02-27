@@ -56,7 +56,7 @@ class Pype9CellMetaClass(type):
                 component, name, build_mode=build_mode, verbose=verbose)
             name = component.name
             # Load newly build model
-            cls.load_model(instl_dir)
+            cls.load_model(name, instl_dir)
             # Create class member dict of new class
             dct = {'component': component,
                    'install_dir': instl_dir}
