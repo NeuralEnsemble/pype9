@@ -30,13 +30,14 @@ from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import pype9
 from datetime import datetime
 from nineml.utils import expect_single
+from nineml.extensions.kinetics import KineticsClass
 
 
 class CodeGenerator(BaseCodeGenerator):
 
     SIMULATOR_NAME = 'neuron'
     ODE_SOLVER_DEFAULT = 'derivimplicit'
-    _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'jinja_templates')
+    _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'templates')
 
     _neuron_units = {un.mV: 'millivolt',
                      un.S: 'siemens',
@@ -99,9 +100,12 @@ class CodeGenerator(BaseCodeGenerator):
             'is_subcomponent': is_subcomponent,
             # FIXME: weight_vars needs to be removed or implmented properly
             'weight_variables': []}
+        fname = component.name + '.mod'
         # Render mod file
-        self.render_to_file('main.tmpl', tmpl_args, component.name + '.mod',
-                            src_dir)
+        if isinstance(component, KineticsClass):
+            self.render_to_file('kinetics.tmpl', tmpl_args, fname, src_dir)
+        else:
+            self.render_to_file('main.tmpl', tmpl_args, fname, src_dir)
 
     @classmethod
     def convert_to_current_centric(cls, componentclass, membrane_voltage,
