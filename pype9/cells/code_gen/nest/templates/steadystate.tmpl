@@ -108,9 +108,9 @@
 
 {% if ss_solver %}
     {% if ss_solver == "kinsol" %}
-extern "C" int {{component.name}}_steadystate (N_Vector u, N_Vector f, void* pnode) {
+extern "C" int {{component_name}}_steadystate (N_Vector u, N_Vector f, void* pnode) {
     {% elif ss_solver == 'gsl' %}
-extern "C" int {{component.name}}_steadystate (const gsl_vector *u, void *pnode, gsl_vector *f) {
+extern "C" int {{component_name}}_steadystate (const gsl_vector *u, void *pnode, gsl_vector *f) {
     {% endif %}
    return 0;
 }
@@ -122,7 +122,7 @@ extern "C" int {{component.name}}_steadystate (const gsl_vector *u, void *pnode,
 {% endif %}
 
   // params is a reference to the model parameters
-  const struct {{component.name}}::Parameters_* params = (struct {{component.name}}::Parameters_ *)pnode;
+  const struct {{component_name}}::Parameters_* params = (struct {{component_name}}::Parameters_ *)pnode;
 
 {% for parameterDef in steadystate.parameterDefs %}
   {{parameterDef}}

@@ -8,17 +8,17 @@
 // This section was generated from recordables.tmpl //
 //--------------------------------------------------//
 
-RecordablesMap<{{component.name}}> {{component.name}}::recordablesMap_;
+RecordablesMap<{{component_name}}> {{component_name}}::recordablesMap_;
 
-template <> void RecordablesMap<{{component.name}}>::create() {
+template <> void RecordablesMap<{{component_name}}>::create() {
 
 {% for sv in componentclass.state_variables %}
-   insert_("{{sv.name}}", &{{component.name}}::get_y_elem_<{{component.name}}::State_::{{sv.name}}_INDEX>);
+   insert_("{{sv.name}}", &{{component_name}}::get_y_elem_<{{component_name}}::State_::{{sv.name}}_INDEX>);
 {% endfor %}
 
 {# FIXME: Need to translate v->V_m
 {% if ("v" in stateIndexMap) %}
-   insert_(names::V_m, &{{component.name}}::get_y_elem_<{{component.name}}::State_::V>);
+   insert_(names::V_m, &{{component_name}}::get_y_elem_<{{component_name}}::State_::V>);
 {% endif %}
 #}
 }

@@ -33,11 +33,11 @@
 
 {% for regime in componentclass.regimes %}
     {% for oe in regime.on_events %}
-inline void {{component.name}}::{{oe.src_port_name}}_event_in_{{regime.name}}(long_t lag) {
+inline void {{component_name}}::{{oe.src_port_name}}_event_in_{{regime.name}}(long_t lag) {
     
     // Map states used in dynamics to current namespace
         {% for sv in componentclass.state_variables %}
-    const double_t {{sv.name}} = S_.y_[{{component.name}}::State_::{{sv.name}}_INDEX];
+    const double_t {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];
         {% endfor %}
         
     {% set dp = componentclass.get_dependencies(oe.state_assignments) %}
@@ -82,7 +82,7 @@ inline void {{component.name}}::{{oe.src_port_name}}_event_in_{{regime.name}}(lo
 
     // Evaluate differential equations
         {% for assign in oe.state_assignments %}
-    S_.y_[{{component.name}}::State_::{{assign.lhs}}_INDEX] = {{assign.rhs}};
+    S_.y_[{{component_name}}::State_::{{assign.lhs}}_INDEX] = {{assign.rhs}};
         {% endfor %}
 }
     {% endfor %}

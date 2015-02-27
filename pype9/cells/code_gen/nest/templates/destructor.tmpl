@@ -1,7 +1,7 @@
 //-------------------------------------------------//
 // This section was generated from destructor.tmpl //
 //-------------------------------------------------//
-{{component.name}}::~{{component.name}} () {
+{{component_name}}::~{{component_name}} () {
 {% if ode_solver == "cvode" %}
     if ( B_.sys_ ) {
 		// Free y vector

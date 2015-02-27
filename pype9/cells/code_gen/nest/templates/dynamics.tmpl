@@ -35,18 +35,18 @@
 //-----------------------------------------------//
 {% for regime in componentclass.dynamics.regimes %}
     {%- if ode_solver in ('cvode', 'ida') -%}
-extern "C" int {{component.name}}_{{regime.name}}_dynamics(double t_, N_Vector y_, N_Vector f_, void* pnode_) {
+extern "C" int {{component_name}}_{{regime.name}}_dynamics(double t_, N_Vector y_, N_Vector f_, void* pnode_) {
     {% else %}
-extern "C" int {{component.name}}_{{regime.name}}_dynamics(double t_, const double y_[], double f_[], void* pnode_) {
+extern "C" int {{component_name}}_{{regime.name}}_dynamics(double t_, const double y_[], double f_[], void* pnode_) {
     {% endif %}
 
     // Get a reference to the model
     assert(pnode_);
-    const {{component.name}}& node_ = *(reinterpret_cast<{{component.name}}*>(pnode_));
+    const {{component_name}}& node_ = *(reinterpret_cast<{{component_name}}*>(pnode_));
    
     // Map states used in dynamics to current namespace
     {% for state in componentclass.state_variables %}
-    const double_t {{state.name}} = ITEM(y_, {{component.name}}::State_::{{state.name}}_INDEX);
+    const double_t {{state.name}} = ITEM(y_, {{component_name}}::State_::{{state.name}}_INDEX);
     {% endfor %}
     
     {% set dp = componentclass.get_dependencies(regime.time_derivatives) %}
@@ -75,7 +75,7 @@ extern "C" int {{component.name}}_{{regime.name}}_dynamics(double t_, const doub
 
     // Evaluate differential equations
     {% for td in regime.time_derivatives %}
-    ITEM(f_, {{component.name}}::State_::{{td.dependent_variable}}_INDEX) = {{td.rhs}};
+    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{td.rhs}};
     {% endfor %}
 
     {% if ode_solver in ('cvode', 'ida') %}

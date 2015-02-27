@@ -9,7 +9,7 @@
 // This section was generated from buffers.tmpl //
 //----------------------------------------------//
 
-{{component.name}}::Buffers_::Buffers_({{component.name}}& n)
+{{component_name}}::Buffers_::Buffers_({{component_name}}& n)
     : logger_(n),
 {% if ode_solver in ("cvode", "ida") %}    
       sys_(0),
@@ -26,7 +26,7 @@
     // init_buffers_().
 }
 
-{{component.name}}::Buffers_::Buffers_(const Buffers_&, {{component.name}}& n)
+{{component_name}}::Buffers_::Buffers_(const Buffers_&, {{component_name}}& n)
     : logger_(n),
 {% if ode_solver in ("cvode", "ida") %}    
       sys_(0),
@@ -43,7 +43,7 @@
     // init_buffers_().
 }
 
-void {{component.name}}::init_buffers_() {
+void {{component_name}}::init_buffers_() {
 
     // Clear event buffers
 {% for p in componentclass.event_receive_ports %}

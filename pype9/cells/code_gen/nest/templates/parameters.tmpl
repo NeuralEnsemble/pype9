@@ -7,7 +7,7 @@
 //-------------------------------------------------//
 // This section was generated from parameters.tmpl //
 //-------------------------------------------------//
-{{component.name}}::Parameters_::Parameters_():
+{{component_name}}::Parameters_::Parameters_():
 {% for i, param in enumerate(componentclass.parameters) %}
     {{param.name}} (0.0){% if not loop.last %},
 {% endif %}

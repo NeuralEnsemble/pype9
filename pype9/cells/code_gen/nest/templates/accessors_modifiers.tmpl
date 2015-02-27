@@ -10,7 +10,7 @@
 // This section was generated from accessors_modifiers.tmpl //
 //----------------------------------------------------------//
 
-void {{component.name}}::Parameters_::get (DictionaryDatum &d) const {
+void {{component_name}}::Parameters_::get (DictionaryDatum &d) const {
 
 {# TODO: Should change this to names::{{name}}, {{name}} once I work out where
          to put the "names" declarations (probably in the header#}
@@ -21,7 +21,7 @@ void {{component.name}}::Parameters_::get (DictionaryDatum &d) const {
 
 }
 
-void {{component.name}}::Parameters_::set (const DictionaryDatum &d) {
+void {{component_name}}::Parameters_::set (const DictionaryDatum &d) {
 
     // Update internal parameters from dictionary
 {% for p in componentclass.parameters %}
@@ -37,7 +37,7 @@ void {{component.name}}::Parameters_::set (const DictionaryDatum &d) {
 }
 
 
-void {{component.name}}::State_::get (DictionaryDatum &d) const {
+void {{component_name}}::State_::get (DictionaryDatum &d) const {
 
     // Get states from internal variables
 {% for i, sv in enumerate(componentclass.dynamics.state_variables) %}
@@ -51,7 +51,7 @@ void {{component.name}}::State_::get (DictionaryDatum &d) const {
  
 }
     
-void {{component.name}}::State_::set (const DictionaryDatum &d, const Parameters_&) {
+void {{component_name}}::State_::set (const DictionaryDatum &d, const Parameters_&) {
 
     // Set internal state variables from dictionary values
 {% for i, sv in enumerate(componentclass.dynamics.state_variables) %}

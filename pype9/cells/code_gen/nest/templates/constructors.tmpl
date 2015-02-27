@@ -7,7 +7,7 @@
 //---------------------------------------------------//
 // This section was generated from constructors.tmpl //
 //---------------------------------------------------//
-{{component.name}}::{{component.name}}()
+{{component_name}}::{{component_name}}()
     : Archiving_Node(), 
       P_(), 
       S_(P_),
@@ -15,20 +15,20 @@
     recordablesMap_.create();
 }
 
-{{component.name}}::{{component.name}}(const {{component.name}}& n)
+{{component_name}}::{{component_name}}(const {{component_name}}& n)
     : Archiving_Node(n), 
       P_(n.P_), 
       S_(n.S_),
       B_(n.B_, *this) {}
 
-void {{component.name}}::init_node_(const Node& proto) {
-    const {{component.name}}& pr = downcast<{{component.name}}>(proto);
+void {{component_name}}::init_node_(const Node& proto) {
+    const {{component_name}}& pr = downcast<{{component_name}}>(proto);
     P_ = pr.P_;
     S_ = State_(P_);
 }
 
-void {{component.name}}::init_state_(const Node& proto) {
-    const {{component.name}}& pr = downcast<{{component.name}}>(proto);
+void {{component_name}}::init_state_(const Node& proto) {
+    const {{component_name}}& pr = downcast<{{component_name}}>(proto);
     S_ = State_(pr.P_);
 }
 
