@@ -14,3 +14,6 @@ x86_64
 .9build
 /test/data/nmodl/imported/*
 /test/data/xml/*.mod
+/.project
+/.pydevproject
+/.cproject
