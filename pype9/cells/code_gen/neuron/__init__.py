@@ -15,7 +15,7 @@ from itertools import chain
 from collections import defaultdict
 import platform
 import tempfile
-from copy import deepcopy
+from copy import deepcopy, copy
 import uuid
 import subprocess as sp
 import quantities as pq
@@ -68,44 +68,58 @@ class CodeGenerator(BaseCodeGenerator):
                 `is_subcomponent`  -- Whether to use the 'SUFFIX' tag or not.
                 `ode_solver`       -- specifies the ODE solver to use
         """
-        # TODO: will check to see if it is a multi-component here and generate
-        #       multiple mod files unless specifically requested to be flat
-        if ('membrane_voltage' not in kwargs or
-                'membrane_capacitance' not in kwargs):
+        if isinstance(component, KineticsClass):
+            self.generate_kinetics(component, initial_state, src_dir,
+                                   **kwargs)
+        else:
+            self.generate_point_process(component, initial_state, src_dir,
+                                        **kwargs)
+
+    def generate_kinetics(self, component, initial_state, src_dir,
+                          **kwargs):
+        # Render mod file
+        self.generate_mod_file('kinetics.tmpl', component, initial_state,
+                               src_dir, **kwargs)
+
+    def generate_point_process(self, component, initial_state, src_dir,
+                               **kwargs):
+        try:
+            membrane_voltage = kwargs['membrane_voltage']
+            membrane_capacitance = kwargs['membrane_capacitance']
+        except KeyError:
             raise Pype9BuildError(
                 "'membrane_voltage' and 'membrane_capacitance' variables must "
                 "be specified for standalone NEURON mod file generation: {}"
                 .format(kwargs))
-        self.generate_mod_file(
-            component, initial_state, src_dir,
-            membrane_voltage=kwargs['membrane_voltage'],
-            membrane_capacitance=kwargs['membrane_capacitance'],
-            is_subcomponent=kwargs.get('is_subcomponent', False),
-            external_ports=kwargs.get('external_ports', []),
-            ode_solver=kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT))
-
-    def generate_mod_file(self, component, initial_state, src_dir,
-                          membrane_voltage, membrane_capacitance,
-                          is_subcomponent, external_ports, ode_solver):
         componentclass = self.convert_to_current_centric(
             component.component_class, membrane_voltage, membrane_capacitance)
+        add_tmpl_args = {
+            'componentclass': componentclass,
+            'is_subcomponent': False}
+        tmpl_args = copy(kwargs)
+        tmpl_args.update(add_tmpl_args)
+        # Render mod file
+        self.generate_mod_file('main.tmpl', component, initial_state, src_dir,
+                               **tmpl_args)
+
+    def generate_mod_file(self, template, component, initial_state, src_dir,
+                          **kwargs):
+        componentclass = component.component_class
         tmpl_args = {
             'component': component,
             'componentclass': componentclass,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'unit_conversion': self.unit_conversion,
-            'ode_solver': ode_solver,
-            'external_ports': external_ports,
-            'is_subcomponent': is_subcomponent,
+            'ode_solver': self.ODE_SOLVER_DEFAULT,
+            'external_ports': [],
+            'is_subcomponent': True,
             # FIXME: weight_vars needs to be removed or implmented properly
             'weight_variables': []}
-        fname = component.name + '.mod'
+        tmpl_args.update(kwargs)
         # Render mod file
-        if isinstance(component, KineticsClass):
-            self.render_to_file('kinetics.tmpl', tmpl_args, fname, src_dir)
-        else:
-            self.render_to_file('main.tmpl', tmpl_args, fname, src_dir)
+        self.render_to_file(template, tmpl_args, component.name + '.mod',
+                            src_dir)
 
     @classmethod
     def convert_to_current_centric(cls, componentclass, membrane_voltage,
