@@ -253,7 +253,7 @@ class BaseCodeGenerator(object):
                                       verbose=verbose)
         # Switch back to original dir
         os.chdir(orig_dir)
-        return install_dir
+        return component, install_dir
 
     def unit_conversion(self, units):
         try:

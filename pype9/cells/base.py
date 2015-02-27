@@ -11,7 +11,7 @@
   License: This file is part of the "NineLine" package, which is released under
            the MIT Licence, see LICENSE for details.
 """
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 from copy import deepcopy
 from pype9.exceptions import Pype9RuntimeError
 
@@ -53,7 +53,8 @@ class Pype9CellMetaClass(type):
                     .format(kwargs, name, build_options))
         except KeyError:
             component, instl_dir = cls.CodeGenerator().generate(
-                component, name, build_mode=build_mode, verbose=verbose)
+                component, name, build_mode=build_mode, verbose=verbose,
+                **kwargs)
             name = component.name
             # Load newly build model
             cls.load_model(name, instl_dir)
@@ -75,13 +76,10 @@ class Pype9CellMetaClass(type):
         """
         pass
 
-    @abstractmethod
-    @classmethod
-    def load_model(cls, install_dir):
-        pass
-
 
 class Pype9Cell(object):
+
+    __metaclass__ = ABCMeta
 
     def __init__(self, model=None):
         """

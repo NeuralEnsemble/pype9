@@ -21,8 +21,7 @@ except ImportError:
 from neuron import h, nrn, load_mechanisms
 import neo
 import quantities as pq
-import nineml
-from pype9.exceptions import Pype9RuntimeError
+import os.path
 from pype9.cells.code_gen.neuron import CodeGenerator
 import pype9.cells.base
 from pype9.cells.tree import (
@@ -493,7 +492,7 @@ class Pype9CellMetaClass(pype9.cells.base.Pype9CellMetaClass):
 
     @classmethod
     def load_model(cls, name, install_dir):  # @UnusedVariable
-        load_mechanisms(install_dir)
+        load_mechanisms(os.path.dirname(install_dir))
 
 
 class Compartment(NeuronSection):
