@@ -43,11 +43,13 @@ class CodeGenerator(BaseCodeGenerator):
                                    shell=True)
         self._compiler = compiler[:-1]  # strip trailing \n
 
-    def generate_source_files(self, component, initial_state, src_dir,  # @UnusedVariable @IgnorePep8
-                              **kwargs):
+    def generate_source_files(self, name, componentclass, default_parameters,
+                              initial_state, src_dir, **kwargs):
         tmpl_args = {
-            'component': component,
-            'componentclass': component.component_class,
+            'component_name': name,
+            'componentclass': componentclass,
+            'default_parameters': default_parameters,
+            'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'ode_solver': kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT),
@@ -63,19 +65,19 @@ class CodeGenerator(BaseCodeGenerator):
             'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT)}
         # Render C++ header file
         self.render_to_file('header.tmpl', tmpl_args,
-                             component.name + '.h', src_dir)
+                             name + '.h', src_dir)
         # Render C++ class file
-        self.render_to_file('main.tmpl', tmpl_args, component.name + '.cpp',
+        self.render_to_file('main.tmpl', tmpl_args, name + '.cpp',
                              src_dir)
         # Render Loader header file
         self.render_to_file('loader-header.tmpl', tmpl_args,
-                             component.name + 'Loader.h', src_dir)
+                             name + 'Loader.h', src_dir)
         # Render Loader C++ class
         self.render_to_file('loader-cpp.tmpl', tmpl_args,
-                             component.name + 'Loader.cpp', src_dir)
+                             name + 'Loader.cpp', src_dir)
         # Render SLI initialiser
         self.render_to_file('sli_initialiser.tmpl', tmpl_args,
-                             component.name + 'Loader.sli', src_dir)
+                             name + 'Loader.sli', src_dir)
 
     def configure_build_files(self, name, src_dir, compile_dir, install_dir):
         # Generate Makefile if it is not present

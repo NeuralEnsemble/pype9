@@ -30,7 +30,10 @@ from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import pype9
 from datetime import datetime
 from nineml.utils import expect_single
-from nineml.extensions.kinetics import KineticsClass
+try:
+    from nineml.extensions.kinetics import KineticsClass
+except ImportError:
+    KineticsClass = None
 
 
 class CodeGenerator(BaseCodeGenerator):
@@ -53,8 +56,8 @@ class CodeGenerator(BaseCodeGenerator):
         # NMODL files on the current platform
         self.specials_dir = self._get_specials_dir()
 
-    def generate_source_files(self, component, initial_state, src_dir,  # @UnusedVariable @IgnorePep8
-                              **kwargs):
+    def generate_source_files(self, name, componentclass, default_parameters,
+                              initial_state, src_dir, **kwargs):
         """
             *KWArgs*
                 `membrane_voltage` -- Specifies the state that represents
@@ -68,30 +71,33 @@ class CodeGenerator(BaseCodeGenerator):
                 `is_subcomponent`  -- Whether to use the 'SUFFIX' tag or not.
                 `ode_solver`       -- specifies the ODE solver to use
         """
-        if isinstance(component, KineticsClass):
-            self.generate_kinetics(component, initial_state, src_dir,
-                                   **kwargs)
+        if isinstance(componentclass, KineticsClass):
+            self.generate_kinetics(name, componentclass, default_parameters,
+                                   initial_state, src_dir, **kwargs)
         elif 'membrane_voltage' in kwargs:
-            self.generate_point_process(component, initial_state, src_dir,
-                                        **kwargs)
+            self.generate_point_process(name, componentclass,
+                                        default_parameters,
+                                        initial_state, src_dir, **kwargs)
         else:
-            self.generate_ion_channel(component, initial_state, src_dir,
-                                      **kwargs)
+            self.generate_ion_channel(name, componentclass, default_parameters,
+                                      initial_state, src_dir, **kwargs)
 
-    def generate_ion_channel(self, component, initial_state, src_dir,
-                             **kwargs):
+    def generate_ion_channel(self, name, componentclass, default_parameters,
+                             initial_state, src_dir, **kwargs):
         # Render mod file
-        self.generate_mod_file('main.tmpl', component, initial_state, src_dir,
+        self.generate_mod_file(name, 'main.tmpl', componentclass,
+                               default_parameters, initial_state, src_dir,
                                **kwargs)
 
-    def generate_kinetics(self, component, initial_state, src_dir,
-                          **kwargs):
+    def generate_kinetics(self, name, componentclass, default_parameters,
+                          initial_state, src_dir, **kwargs):
         # Render mod file
-        self.generate_mod_file('kinetics.tmpl', component, initial_state,
-                               src_dir, **kwargs)
+        self.generate_mod_file(name, 'kinetics.tmpl', componentclass,
+                               default_parameters, initial_state, src_dir,
+                               **kwargs)
 
-    def generate_point_process(self, component, initial_state, src_dir,
-                               **kwargs):
+    def generate_point_process(self, name, componentclass, default_parameters,
+                               initial_state, src_dir, **kwargs):
         try:
             membrane_voltage = kwargs['membrane_voltage']
             membrane_capacitance = kwargs['membrane_capacitance']
@@ -101,22 +107,24 @@ class CodeGenerator(BaseCodeGenerator):
                 "be specified for standalone NEURON mod file generation: {}"
                 .format(kwargs))
         componentclass = self.convert_to_current_centric(
-            component.component_class, membrane_voltage, membrane_capacitance)
+            componentclass, membrane_voltage, membrane_capacitance)
         add_tmpl_args = {
             'componentclass': componentclass,
             'is_subcomponent': False}
         tmpl_args = copy(kwargs)
         tmpl_args.update(add_tmpl_args)
         # Render mod file
-        self.generate_mod_file('main.tmpl', component, initial_state, src_dir,
+        self.generate_mod_file(name, 'main.tmpl', componentclass,
+                               default_parameters, initial_state, src_dir,
                                **tmpl_args)
 
-    def generate_mod_file(self, template, component, initial_state, src_dir,
+    def generate_mod_file(self, name, template, componentclass,
+                          default_parameters, initial_state, src_dir,
                           **kwargs):
-        componentclass = component.component_class
         tmpl_args = {
-            'component': component,
+            'component_name': name,
             'componentclass': componentclass,
+            'default_parameters': default_parameters,
             'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
@@ -128,8 +136,7 @@ class CodeGenerator(BaseCodeGenerator):
             'weight_variables': []}
         tmpl_args.update(kwargs)
         # Render mod file
-        self.render_to_file(template, tmpl_args, component.name + '.mod',
-                            src_dir)
+        self.render_to_file(template, tmpl_args, name + '.mod', src_dir)
 
     @classmethod
     def convert_to_current_centric(cls, componentclass, membrane_voltage,

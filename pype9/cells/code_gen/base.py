@@ -222,24 +222,25 @@ class BaseCodeGenerator(object):
                 components = list(document.components)
                 if len(components) == 1:
                     component = components[0]
-                elif len(components) > 1:
-                    componentclasses = set((c.component_class
-                                            for c in components))
                 else:
-                    componentclasses = list(document.componentclasses)
-                if len(componentclasses) == 1:
-                    component = componentclasses[0]
-                elif len(componentclasses) > 1:
-                    raise Pype9BuildError(
-                        "Multiple component and or classes ('{}') loaded from "
-                        "nineml path '{}'"
-                        .format("', '".join(
-                            c.name for c in document.components), src_path))
-                else:
-                    raise Pype9BuildError(
-                        "No components or component classes loaded from nineml"
-                        " path '{}'".format(src_path))
-            component = components[0]
+                    if len(components) > 1:
+                        componentclasses = set((c.component_class
+                                                for c in components))
+                    else:
+                        componentclasses = list(document.componentclasses)
+                    if len(componentclasses) == 1:
+                        component = componentclasses[0]
+                    elif len(componentclasses) > 1:
+                        raise Pype9BuildError(
+                            "Multiple component and or classes ('{}') loaded "
+                            "from nineml path '{}'"
+                            .format("', '".join(c.name
+                                                for c in document.components),
+                                    src_path))
+                    else:
+                        raise Pype9BuildError(
+                            "No components or component classes loaded from "
+                            "nineml" " path '{}'".format(src_path))
         else:
             src_path = None
         if isinstance(component, ComponentClass):
