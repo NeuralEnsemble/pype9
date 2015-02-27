@@ -6,12 +6,12 @@ import nineml
 from nineml.abstraction_layer import (
     units as un, AnalogSendPort, AnalogReceivePort, Parameter, DynamicsClass,
     TimeDerivative, Alias, StateVariable)
-from . import test_data_dir
+from utils import test_data_dir
 # from lxml import etree
 
 
 if __name__ == '__main__':
-    from . import DummyTestCase as TestCase  # @UnusedImport
+    from utils import DummyTestCase as TestCase  # @UnusedImport
 else:
     from unittest import TestCase  # @Reimport
 
@@ -58,7 +58,7 @@ class TestNMODLImporter(TestCase):
                        '5.83 / (exp((v - (6.4)) / -9) + '
                        'exp((v + 97) / 17)) + 0.025')],
         _state_variables=[StateVariable('m', un.dimensionless),
-                         StateVariable('h', un.dimensionless)])
+                          StateVariable('h', un.dimensionless)])
 #         """<?xml version='1.0' encoding='UTF-8'?>
 #         <NineML xmlns="http://nineml.org/9ML/0.3">
 #           <ComponentClass name="NaF">
