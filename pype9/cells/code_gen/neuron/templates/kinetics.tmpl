@@ -9,6 +9,9 @@
 
 TITLE Spiking node generated from 9ML using PyPe9 version {{version}} at '{{timestamp}}'
 
+
+Just output anything at all, evidence that this file is being read.
+
 NEURON {
     {%+ if is_subcomponent %}SUFFIX{% else %}POINT_PROCESS{% endif %} {{component_name}}
 {% for port in componentclass.analog_send_ports if port.dimension == units.currentDensity %}
@@ -26,6 +29,12 @@ NEURON {
 {% for sv in componentclass.state_variables %}
     RANGE {{sv.name}}
 {% endfor %}
+
+    :KineticStates:
+{% for sv in componentclass.kinetic_states %}
+    RANGE {{sv.name}}
+{% endfor %}
+
 
     :Parameters
 {% for p in componentclass.parameters %}
@@ -103,6 +112,16 @@ STATE {
     {{sv.name}}
 {% endfor %}
 }
+
+
+KINETICS kin {
+  rates({{}}) 
+  
+  {% for reaction in componentclass.reactions.itervalues {{ reaction.from_state }} %} <-> {% {{ reaction.t_state }} %}
+  {% endfor %}
+}
+
+CONSERVE {{componentclass.constraints}}
 
 
 
@@ -222,20 +241,20 @@ NET_RECEIVE(w, channel) {
         {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
     {% for oc in regime.on_conditions %}
             if (({{oc.trigger.rhs_str}}) && {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active) {
-	            {% if oc.target_regime != regime %}
+              {% if oc.target_regime != regime %}
                 if (!regime_changed_) {
                     regime_ = {{oc.target_regime.name | upper}}
                     regime_changed_ = 1
                 } else {
                     printf("Warning! Simulataneous regime changes requested, ignoring change from '{{regime.name}}' to '{{oc.target_regime.name}}'.")
                 }
-	            {% endif %}
-	        {% for node in oc.event_outputs %}
+              {% endif %}
+          {% for node in oc.event_outputs %}
                 net_event(t)
-	        {% endfor %}
-	        {% for sa in oc.state_assignments %}
+          {% endfor %}
+          {% for sa in oc.state_assignments %}
                 {{sa.lhs}} = {{sa.rhs_str}}
-	        {% endfor %}
+          {% endfor %}
                 {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active = 0  
             }
     {% endfor %}
