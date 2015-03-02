@@ -30,6 +30,8 @@ from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import pype9
 from datetime import datetime
 from nineml.utils import expect_single
+from nineml.user_layer import Dynamics
+from nineml.abstraction_layer import DynamicsClass
 try:
     from nineml.extensions.kinetics import KineticsClass
 except ImportError:
@@ -71,6 +73,9 @@ class CodeGenerator(BaseCodeGenerator):
                 `is_subcomponent`  -- Whether to use the 'SUFFIX' tag or not.
                 `ode_solver`       -- specifies the ODE solver to use
         """
+        assert isinstance(componentclass, DynamicsClass), \
+            ("Provided component class '{}' is not a DynamicsClass"
+             .format(componentclass))
         if isinstance(componentclass, KineticsClass):
             self.generate_kinetics(name, componentclass, default_parameters,
                                    initial_state, src_dir, **kwargs)
