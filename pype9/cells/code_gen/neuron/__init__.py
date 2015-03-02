@@ -30,6 +30,8 @@ from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import pype9
 from datetime import datetime
 from nineml.utils import expect_single
+from nineml.user_layer import Dynamics
+from nineml.abstraction_layer import DynamicsClass
 from nineml.extensions.kinetics import KineticsClass
 
 
@@ -68,7 +70,15 @@ class CodeGenerator(BaseCodeGenerator):
                 `is_subcomponent`  -- Whether to use the 'SUFFIX' tag or not.
                 `ode_solver`       -- specifies the ODE solver to use
         """
-        if isinstance(component, KineticsClass):
+        if isinstance(component, Dynamics):
+            componentclass = component.component_class
+        elif isinstance(component, DynamicsClass):
+            componentclass = component
+        else:
+            raise Pype9RuntimeError(
+                "'component' argument expects a nineml.Dynamics or "
+                "nineml.DynamicsClass object or subtype")
+        if isinstance(componentclass, KineticsClass):
             self.generate_kinetics(component, initial_state, src_dir,
                                    **kwargs)
         elif 'membrane_voltage' in kwargs:
