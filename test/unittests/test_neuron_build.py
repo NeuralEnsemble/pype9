@@ -21,8 +21,7 @@ class TestNeuronBuild(TestCase):
                                      membrane_capacitance='Cm')
 
     def test_kinetics_build(self):
-        component_file = path.join(test_data_dir, 'xml',
-                                   'kinetic_mechanism.xml')
+        component_file = path.join(test_data_dir, 'xml', '<add_file_here>.xml')
         self.code_generator.generate(component_file,
                                      build_mode='force',
                                      ode_solver='derivimplicit')

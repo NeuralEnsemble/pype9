@@ -115,7 +115,7 @@ STATE {
 
 
 KINETICS kin {
-  rates({{}}) 
+  rates() 
   
   {% for reaction in componentclass.reactions.itervalues {{ reaction.from_state }} %} <-> {% {{ reaction.t_state }} %}
   {% endfor %}
