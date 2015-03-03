@@ -1,16 +1,5 @@
-"""
-
-  This package combines the common.ncml with existing pyNN classes
-
-  Author: Thomas G. Close (tclose@oist.jp)
-  Copyright: 2012-2014 Thomas G. Close.
-  License: This file is part of the "NineLine" package, which is released under
-           the MIT Licence, see LICENSE for details.
-"""
 from __future__ import absolute_import
 from datetime import datetime
-import weakref
-import numpy
 # MPI may not be required but NEURON sometimes needs to be initialised after
 # MPI so I am doing it here just to be safe (and to save me headaches in the
 # future)
@@ -23,55 +12,21 @@ import neo
 import quantities as pq
 import os.path
 from pype9.cells.code_gen.neuron import CodeGenerator
-import pype9.cells.base
 from pype9.cells.tree import (
     in_units, AxialResistanceModel, MembraneCapacitanceModel,
     IonConcentrationModel)
-from .. import create_unit_conversions, convert_units
 from pyNN.neuron.cells import VectorSpikeSource
 from . import base
+from .base import simulation_controller
 
-basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
-
-import logging
-
-logger = logging.getLogger("NineLine")
 
 NeuronSection = type(h.Section())
 
-_basic_SI_to_neuron_conversions = (('s', 'ms'),
-                                   ('V', 'mV'),
-                                   ('A', 'nA'),
-                                   ('S', 'uS'),
-                                   ('F', 'nF'),
-                                   ('m', 'um'),
-                                   ('Hz', 'Hz'),
-                                   ('Ohm', 'MOhm'),
-                                   ('M', 'mM'))
 
-_compound_SI_to_neuron_conversions = (((('A', 1), ('m', -2)),
-                                       (('mA', 1), ('cm', -2))),
-                                      ((('F', 1), ('m', -2)),
-                                       (('uF', 1), ('cm', -2))),
-                                      ((('S', 1), ('m', -2)),
-                                       (('S', 1), ('cm', -2))),
-                                      ((('Ohm', 1), ('m', 1)),
-                                       (('Ohm', 1), ('cm', 1))))
-
-
-_basic_unit_dict, _compound_unit_dict = create_unit_conversions(
-    _basic_SI_to_neuron_conversions, _compound_SI_to_neuron_conversions)
-
-
-def convert_to_neuron_units(value, unit_str):
-    return convert_units(
-        value, unit_str, _basic_unit_dict, _compound_unit_dict)
-
-
-class Pype9Cell(pype9.cells.base.Pype9Cell):
+class MultiCompCell(base.Cell):
 
     def __init__(self, model=None, **parameters):
-        super(Pype9Cell, self).__init__(model=model)
+        super(base.Cell, self).__init__(model=model)
         # Construct all the NEURON structures
         self._construct()
         # Setup variables required by pyNN
@@ -91,7 +46,7 @@ class Pype9Cell(pype9.cells.base.Pype9Cell):
         # Set up references from parameter names to internal variables and set
         # parameters
         self._link_parameters()
-        self.set_parameters(parameters)
+        self.set_properties(parameters)
 
     def _construct(self):
         """
@@ -196,7 +151,7 @@ class Pype9Cell(pype9.cells.base.Pype9Cell):
 #             self._parameters[p.name] = ParamClass(p.name, varname, components)
 #         self.__class__._param_links_tested = True
 
-    def set_parameters(self, parameters):
+    def set_properties(self, parameters):
         for name, value in parameters.iteritems():
             try:
                 self._parameters[name].set(value)
@@ -242,7 +197,7 @@ class Pype9Cell(pype9.cells.base.Pype9Cell):
         try:
             parameters = self.__getattribute__('_parameters')
         except AttributeError:
-            super(Pype9Cell, self).__setattr__(varname, val)
+            super(MultiCompCell, self).__setattr__(varname, val)
             return
         # If the varname is a parameter
         if varname in parameters:
@@ -277,7 +232,7 @@ class Pype9Cell(pype9.cells.base.Pype9Cell):
             setattr(self.segments[seg_name], comp_name, val)
         else:
             # TODO: Need to work out if I want this to throw an error or not.
-            super(Pype9Cell, self).__setattr__(varname, val)
+            super(MultiCompCell, self).__setattr__(varname, val)
 #             raise Exception("Cannot add new attribute '{}' to cell {} class"
 #                               .format(varname, type(self)))
 
@@ -313,7 +268,7 @@ class Pype9Cell(pype9.cells.base.Pype9Cell):
 #             try:
 #                 return self.segments[varname]
 #             except KeyError:
-#                 super(Pype9CellStandAlone, self).__getattribute__(varname)
+#                 super(MultiCompCellStandAlone, self).__getattribute__(varname)
 # 
 #     def __setattr__(self, varname, value):
 #         """
@@ -348,10 +303,10 @@ class Pype9Cell(pype9.cells.base.Pype9Cell):
 #                                      "or name, component, variable)"
 #                                      .format(len(parts)))
 #         else:
-#             super(Pype9CellStandAlone, self).__setattr__(varname, value)
+#             super(MultiCompCellStandAlone, self).__setattr__(varname, value)
 
     def __dir__(self):
-        return dir(super(Pype9Cell, self)) + self._parameters.keys()
+        return dir(super(MultiCompCell, self)) + self._parameters.keys()
 
     def record(self, variable, segname=None, component=None):
         self._initialise_local_recording()
@@ -480,16 +435,16 @@ class Pype9Cell(pype9.cells.base.Pype9Cell):
             simulation_controller.register_cell(self)
 
 
-class Pype9CellMetaClass(base.Pype9CellMetaClass):
+class MultiCompCellMetaClass(base.CellMetaClass):
 
     """
-    Metaclass for building NineMLPype9CellType subclasses Called by
+    Metaclass for building NineMLCellType subclasses Called by
     nineml_celltype_from_model
     """
 
     _built_types = {}
     CodeGenerator = CodeGenerator
-    BaseCellClass = Pype9Cell
+    BaseCellClass = MultiCompCell
 
     @classmethod
     def load_model(cls, name, install_dir):  # @UnusedVariable @NoSelf
@@ -702,107 +657,3 @@ class ComponentTranslator(object):
     def __dir__(self):
         return (super(Compartment.ComponentTranslator,
                       self).__dir__ + self._translations.keys())
-
-
-class Parameter(object):
-
-    def __init__(self, name, varname, components):
-        self.name = name
-        self.varname = varname
-        self.components = components
-
-    def set(self, value):
-        for comp in self.components:
-            setattr(comp, self.varname, value)
-
-    def get(self):
-        if self.components:
-            value = getattr(self.components[0], self.varname)
-            for comp in self.components:
-                if value != getattr(comp, self.varname):
-                    raise Exception("Found inconsistent values for "
-                                    "parameter '{}' ({} and {})"
-                                    "across mapped segments"
-                                    .format(self.name, value,
-                                            getattr(comp, self.varname)))
-        else:
-            raise Exception("Parameter '{}' does not map to any segments "
-                            .format(self.name))
-        return value
-
-
-class InitialState(object):
-
-    def __init__(self, name, varname, components):
-        self.name = name
-        self.varname = varname
-        self.components = components
-        self.value = None
-        self._initialized = False
-
-    def set(self, value):
-        if self._initialized:
-            raise Exception("Attempted to set initial state '{}' after the"
-                            " cell states have been initialised"
-                            .format(self.name))
-        self.value = value
-
-    def initialize_state(self):
-        for comp in self.components:
-            setattr(comp, self.varname, self.value)
-        self._initialized = True
-
-    def get(self):
-        if self.value is None:
-            logger.warning("Tried to retrieve value of initial state '{}' "
-                           "before it was set".format(self.varname))
-        return self.value
-
-
-# This is adapted from the code for the simulation controller in PyNN for
-# use with individual cell objects
-class _SimulationController(object):
-
-    def __init__(self):
-        self.running = False
-        self.registered_cells = []
-
-    def register_cell(self, cell):
-        self.registered_cells.append(weakref.ref(cell))
-
-    def run(self, simulation_time, reset=True, timestep='cvode', rtol=None,
-            atol=None):
-        """
-        Run the simulation for a certain time.
-        """
-        if timestep == 'cvode':
-            self.cvode = h.CVode()
-            if rtol is not None:
-                self.cvode.rtol = rtol
-            if atol is not None:
-                self.cvode.atol = atol
-        else:
-            h.dt = timestep
-        if reset or not self.running:
-            self.running = True
-            self.reset()
-        # Convert simulation time to float value in ms
-        simulation_time = float(pq.Quantity(simulation_time, 'ms'))
-        for _ in numpy.arange(h.dt, simulation_time + h.dt, h.dt):
-            h.fadvance()
-        self.tstop += simulation_time
-
-    def reset(self):
-        h.finitialize(-65.0)
-        for cell_ref in reversed(self.registered_cells):
-            if cell_ref():
-                cell_ref().memb_init()
-                cell_ref().reset_recordings()
-            else:
-                # If the cell has been deleted remove the weak reference to it
-                self.registered_cells.remove(cell_ref)
-        self.tstop = 0
-
-# Make a singleton instantiation of the simulation controller
-simulation_controller = _SimulationController()
-del _SimulationController

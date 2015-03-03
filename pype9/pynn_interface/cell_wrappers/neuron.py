@@ -10,7 +10,7 @@ try:
 except:
     pass
 import pyNN.models
-from pype9.cells.neuron import Pype9CellMetaClass, basic_nineml_translations
+from pype9.cells.neuron import CellMetaClass, basic_nineml_translations
 import logging
 from .base import (PyNNCellWrapper as BasePyNNCellWrapper,
                    PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
@@ -21,7 +21,7 @@ logger = logging.getLogger("PyNN")
 class PyNNCellWrapper(BasePyNNCellWrapper, pyNN.models.BaseCellType):
 
     """
-    Extends the vanilla Pype9Cell to include all the PyNN requirements
+    Extends the vanilla Cell to include all the PyNN requirements
     """
     pass
 
@@ -37,7 +37,7 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
             celltype = cls.loaded_celltypes[
                 (nineml_model.name, nineml_model.url)]
         except KeyError:
-            model = Pype9CellMetaClass(nineml_model, name,
+            model = CellMetaClass(nineml_model, name,
                                        build_mode=build_mode, silent=silent,
                                        solver_name=solver_name,
                                        standalone=False)
@@ -46,8 +46,8 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
                 cls, name, (PyNNCellWrapper,), dct)
             assert sorted(celltype.recordable) == sorted(
                 model().recordable.keys()), \
-                ("Mismatch of recordable keys between Pype9CellPyNN and "
-                 "Pype9Cell class '{}'".format(name))
+                ("Mismatch of recordable keys between CellPyNN and "
+                 "Cell class '{}'".format(name))
             # If the url where the celltype is defined is specified save the
             # celltype to be retried later
             if nineml_model.url is not None:
