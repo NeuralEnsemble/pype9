@@ -1,5 +1,6 @@
 from math import isnan, log10
 import re
+from copy import deepcopy
 import regex
 import operator
 import quantities as pq
@@ -159,20 +160,36 @@ class NMODLImporter(object):
         self._create_parameters_and_analog_ports()
         self._create_regimes()
 
-    def get_component_class(self):
-        comp_class = DynamicsClass(name=self.component_name + 'Class',
-                                   parameters=self.parameters.values(),
-                                   analog_ports=self.analog_ports.values(),
-                                   event_ports=self.event_ports.values(),
-                                   regimes=self.regimes,
-                                   aliases=self.aliases.values(),
-                                   piecewises=self.piecewises.values(),
-                                   constants=self.constants.values(),
-                                   state_variables=self.state_variables)
+    def get_component_class(self, flatten_kinetics=False):
+        if self.kinetics:
+            if flatten_kinetics:
+                cpy = deepcopy(self)
+                cpy._flatten_kinetics()
+                comp_class = DynamicsClass(
+                    name=cpy.component_name + 'Class',
+                    parameters=cpy.parameters.values(),
+                    analog_ports=cpy.analog_ports.values(),
+                    event_ports=cpy.event_ports.values(),
+                    regimes=cpy.regimes,
+                    aliases=cpy.aliases.values(),
+                    piecewises=cpy.piecewises.values(),
+                    constants=cpy.constants.values(),
+                    state_variables=cpy.state_variables)
+            else:
+                for name, (bidirectional, incoming, outgoing,
+                       constraints, compartments) in self.kinetics.iteritems():
+                    raise NotImplementedError
+        else:
+            comp_class = DynamicsClass(name=self.component_name + 'Class',
+                                       parameters=self.parameters.values(),
+                                       analog_ports=self.analog_ports.values(),
+                                       event_ports=self.event_ports.values(),
+                                       regimes=self.regimes,
+                                       aliases=self.aliases.values(),
+                                       piecewises=self.piecewises.values(),
+                                       constants=self.constants.values(),
+                                       state_variables=self.state_variables)
         return comp_class
-
-    def get_kinetics_component_class(self):
-        raise NotImplementedError
 
     def get_component(self, class_path=None, hoc_properties={}):
         # Copy properties removing all properties that were added to the analog
@@ -309,7 +326,7 @@ class NMODLImporter(object):
         if uses_diam:
             self.parameters['diam'] = Parameter('diam', dimension=un.length)
 
-    def _create_regimes(self, expand_kinetics=False):
+    def _create_regimes(self):
         self.regimes = []
         if self.on_event_parts:
             assert len(self.regime_parts) == 1
@@ -335,21 +352,22 @@ class NMODLImporter(object):
             self.regimes.append(Regime(name=regime[0],
                                        time_derivatives=regime[1],
                                        transitions=on_event))
-        if expand_kinetics:
-            for name, (bidirectional, incoming, outgoing,
-                       constraints, compartments) in self.kinetics.iteritems():
-                time_derivatives = self._expand_kinetics(bidirectional,
-                                                         incoming, outgoing,
-                                                         constraints,
-                                                         compartments)
-                self.regimes.append(Regime(name=name,
-                                           time_derivatives=time_derivatives))
         # Create Regimes from explicit time derivatives
         for name, time_derivatives in self.regime_parts:
             self.regimes.append(Regime(name=name,
                                         time_derivatives=time_derivatives))
 
-    # TODO: Doesn't inlucde CONSERVE statements
+    def _flatten_kinetics(self):
+        # TODO: Doesn't inlucde CONSERVE statements
+        for name, (bidirectional, incoming, outgoing,
+                   constraints, compartments) in self.kinetics.iteritems():
+            time_derivatives = self._expand_kinetics(bidirectional,
+                                                     incoming, outgoing,
+                                                     constraints,
+                                                     compartments)
+            self.regimes.append(Regime(name=name,
+                                       time_derivatives=time_derivatives))
+
     @classmethod
     def _expand_kinetics(cls, bidirectional, incoming, outgoing,
                          constraints, compartments):  # @UnusedVariable
