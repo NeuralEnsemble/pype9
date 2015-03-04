@@ -32,7 +32,7 @@ class Population(object):
             celltype = self._pyNN_standard_celltypes[celltype_model.name]
         elif isinstance(celltype_model,
                         nineml.extensions.biophysical_cells.ComponentClass):
-            celltype = self._Pype9CellMetaClass(
+            celltype = self._CellMetaClass(
                 celltype_model, celltype_name, build_mode=build_mode,
                 silent=silent_build, solver_name=solver_name)
         else:

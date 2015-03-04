@@ -15,10 +15,10 @@ from copy import deepcopy
 from pype9.exceptions import Pype9RuntimeError
 
 
-class Pype9CellMetaClass(type):
+class CellMetaClass(type):
 
     """
-    Metaclass for building NineMLPype9CellType subclasses Called by
+    Metaclass for building NineMLCellType subclasses Called by
     nineml_celltype_from_model
     """
 
@@ -60,7 +60,7 @@ class Pype9CellMetaClass(type):
                    'default_parameters': default_parameters,
                    'install_dir': instl_dir}
             # Create new class using Type.__new__ method
-            Cell = super(Pype9CellMetaClass, cls).__new__(
+            Cell = super(CellMetaClass, cls).__new__(
                 cls, name, (cls.BaseCellClass,), dct)
             # Save Cell class to allow it to save it being built again
             if default_parameters is not None:
@@ -79,7 +79,7 @@ class Pype9CellMetaClass(type):
         pass
 
 
-class Pype9Cell(object):
+class Cell(object):
 
     def __init__(self, model=None):
         """

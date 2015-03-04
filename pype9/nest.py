@@ -1,4 +1,4 @@
-from .cells.nest import Pype9Cell, Pype9CellMetaClass  # @UnusedImport
+from .cells.nest import Cell, CellMetaClass  # @UnusedImport
 from .pynn_interface.network.nest import Network  # @UnusedImport
 from .pynn_interface.population.nest import Population  # @UnusedImport
 from .pynn_interface.projection.nest import Projection  # @UnusedImport

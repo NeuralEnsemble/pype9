@@ -34,7 +34,7 @@ class Population(BasePopulation, pyNN.nest.Population):
                                               cellname))
                                      for cellname in
                                              pyNN.nest.list_standard_models()])
-    _Pype9CellMetaClass = PyNNCellWrapperMetaClass
+    _CellMetaClass = PyNNCellWrapperMetaClass
 
     @classmethod
     def _translate_variable(cls, variable):

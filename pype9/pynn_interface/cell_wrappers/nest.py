@@ -10,7 +10,7 @@ from .base import (PyNNCellWrapper as BasePyNNCellWrapper,
 from pyNN.parameters import ParameterSpace
 import pyNN.standardmodels
 import nest
-from pype9.cells.nest import Pype9CellMetaClass, basic_nineml_translations
+from pype9.cells.nest import CellMetaClass, basic_nineml_translations
 
 
 class PyNNCellWrapper(BasePyNNCellWrapper,
@@ -63,7 +63,7 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
             celltype = cls.loaded_celltypes[
                 (nineml_model.name, nineml_model.url)]
         except KeyError:
-            dct = {'model': Pype9CellMetaClass(nineml_model, name,
+            dct = {'model': CellMetaClass(nineml_model, name,
                                                build_mode=build_mode,
                                                silent=silent,
                                                solver_name='cvode')}

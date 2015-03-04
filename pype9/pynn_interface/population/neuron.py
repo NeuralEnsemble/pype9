@@ -33,4 +33,4 @@ class Population(BasePopulation, pyNN.neuron.Population):
     _pyNN_standard_celltypes = dict(
         [(cellname, getattr(pyNN.neuron.standardmodels.cells, cellname))
          for cellname in pyNN.neuron.list_standard_models()])
-    _Pype9CellMetaClass = PyNNCellWrapperMetaClass
+    _CellMetaClass = PyNNCellWrapperMetaClass

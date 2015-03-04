@@ -18,15 +18,15 @@ basic_nineml_translations = {
     'Voltage': 'V_m', 'Diameter': 'diam', 'Length': 'L'}
 
 
-class Pype9Cell(pype9.cells.base.Pype9Cell):
+class Cell(pype9.cells.base.Cell):
     pass
 
 
-class Pype9CellMetaClass(pype9.cells.base.Pype9CellMetaClass):
+class CellMetaClass(pype9.cells.base.CellMetaClass):
 
     _built_types = {}
     CodeGenerator = CodeGenerator
-    CellBaseClass = Pype9Cell
+    CellBaseClass = Cell
 
     @classmethod
     def load_model(cls, name, install_dir):
