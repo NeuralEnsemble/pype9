@@ -157,10 +157,7 @@ class NMODLImporter(object):
         assert not self.blocks  # Check to see all blocks have been extracted
         # Create members from extracted information
         self._create_parameters_and_analog_ports()
-        if self.kinetics:
-            self._create_kinetics()
-        else:
-            self._create_regimes()
+        self._create_regimes()
 
     def get_component_class(self):
         comp_class = DynamicsClass(name=self.component_name + 'Class',
@@ -173,6 +170,9 @@ class NMODLImporter(object):
                                    constants=self.constants.values(),
                                    state_variables=self.state_variables)
         return comp_class
+
+    def get_kinetics_component_class(self):
+        raise NotImplementedError
 
     def get_component(self, class_path=None, hoc_properties={}):
         # Copy properties removing all properties that were added to the analog
@@ -309,7 +309,7 @@ class NMODLImporter(object):
         if uses_diam:
             self.parameters['diam'] = Parameter('diam', dimension=un.length)
 
-    def _create_regimes(self):
+    def _create_regimes(self, expand_kinetics=False):
         self.regimes = []
         if self.on_event_parts:
             assert len(self.regime_parts) == 1
@@ -335,11 +335,21 @@ class NMODLImporter(object):
             self.regimes.append(Regime(name=regime[0],
                                        time_derivatives=regime[1],
                                        transitions=on_event))
+        if expand_kinetics:
+            for name, (bidirectional, incoming, outgoing,
+                       constraints, compartments) in self.kinetics.iteritems():
+                time_derivatives = self._expand_kinetics(bidirectional,
+                                                         incoming, outgoing,
+                                                         constraints,
+                                                         compartments)
+                self.regimes.append(Regime(name=name,
+                                           time_derivatives=time_derivatives))
         # Create Regimes from explicit time derivatives
         for name, time_derivatives in self.regime_parts:
             self.regimes.append(Regime(name=name,
                                         time_derivatives=time_derivatives))
 
+    # TODO: Doesn't inlucde CONSERVE statements
     @classmethod
     def _expand_kinetics(cls, bidirectional, incoming, outgoing,
                          constraints, compartments):  # @UnusedVariable
@@ -370,16 +380,6 @@ class NMODLImporter(object):
     def _expand_kinetics_term(cls, states):
         return '*'.join('{}^{}'.format(s, p) if p else s
                         for s, p in states)
-
-    def _create_kinetic_regime(self):
-        for name, (bidirectional, incoming, outgoing,
-                   constraints, compartments) in self.kinetics.iteritems():
-            time_derivatives = self._expand_kinetics(bidirectional,
-                                                     incoming, outgoing,
-                                                     constraints,
-                                                     compartments)
-        self.regimes.append(Regime(name=name,
-                                   time_derivatives=time_derivatives))
 
     # =========================================================================
     # Content readers
