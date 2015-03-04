@@ -68,7 +68,7 @@ def convert_to_neuron_units(value, unit_str):
         value, unit_str, _basic_unit_dict, _compound_unit_dict)
 
 
-class Cell(base.Cell, nineml.Dynamics, nrn.Section):
+class Cell(base.Cell, nineml.user_layer.Dynamics):
 
     def __init__(self, *properties, **kwprops):
         """
@@ -82,7 +82,7 @@ class Cell(base.Cell, nineml.Dynamics, nrn.Section):
         for name, qty in kwprops.iteritems():
             properties.append(convert_to_property(name, qty))
         base.Cell.__init__(self)
-        nineml.Dynamics(self.default_parameters.name, properties)
+        nineml.user_layer.Dynamics(self.default_parameters.name, properties)
         # Construct all the NEURON structures
         self.source_section = self
         self.nrn_object = getattr(h, self.componentclass.name)(0.5, sec=self)
