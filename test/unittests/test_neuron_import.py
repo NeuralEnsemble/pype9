@@ -5,7 +5,7 @@ from pype9.importer.neuron.nmodl import NMODLImporter
 import nineml
 from nineml.abstraction_layer import (
     units as un, AnalogSendPort, AnalogReceivePort, Parameter, DynamicsClass,
-    TimeDerivative, Alias, StateVariable)
+    Regime, TimeDerivative, Alias, StateVariable)
 from utils import test_data_dir
 # from lxml import etree
 
@@ -44,8 +44,10 @@ class TestNMODLImporter(TestCase):
             AnalogReceivePort("ena", un.voltage),
             AnalogSendPort("ina", un.current),
             AnalogReceivePort("v", un.voltage)],
-        time_derivatives=[TimeDerivative('m', '(minf_v - m)/taum_v'),
-                          TimeDerivative('h', '(hinf_v - h)/tauh_v')],
+        regimes=[Regime(name="default",
+                        time_derivatives=[
+                            TimeDerivative('m', '(minf_v - m)/taum_v'),
+                            TimeDerivative('h', '(hinf_v - h)/tauh_v')])],
         aliases=[Alias('tauh_v__tmp',
                        '16.67 / '
                        '(exp((v - 8.3) / -29) + exp((v + 66) / 9)) + 0.2'),
@@ -57,57 +59,8 @@ class TestNMODLImporter(TestCase):
                  Alias('taum_v__tmp',
                        '5.83 / (exp((v - (6.4)) / -9) + '
                        'exp((v + 97) / 17)) + 0.025')],
-        _state_variables=[StateVariable('m', un.dimensionless),
+        state_variables=[StateVariable('m', un.dimensionless),
                           StateVariable('h', un.dimensionless)])
-#         """<?xml version='1.0' encoding='UTF-8'?>
-#         <NineML xmlns="http://nineml.org/9ML/0.3">
-#           <ComponentClass name="NaF">
-#             <AnalogPort mode="send" dimension="dimensionless" name="m"/>
-#             <AnalogPort mode="send" dimension="dimensionless" name="h"/>
-#             <AnalogPort mode="recv" dimension="voltage" name="ena"/>
-#             <AnalogPort mode="send" dimension="membrane_current" name="ina"/>
-#             <AnalogPort mode="recv" dimension="voltage" name="v"/>
-#             <Parameter dimension="dimensionless" name="qdeltat"/>
-#             <Parameter dimension="membrane_conductance" name="gbar"/>
-#             <Dynamics>
-#               <Regime name="states">
-#                 <TimeDerivative variable="m">
-#                   <MathInline>(minf_v - m)/taum_v</MathInline>
-#                 </TimeDerivative>
-#                 <TimeDerivative variable="h">
-#                   <MathInline>(hinf_v - h)/tauh_v</MathInline>
-#                 </TimeDerivative>
-#               </Regime>
-#               <Alias name="tauh_v__tmp">
-#                 <MathInline>
-#                     16.67 / (exp((v - 8.3) / -29) + exp((v + 66) / 9)) + 0.2
-#                 </MathInline>
-#               </Alias>
-#               <Alias name="taum_v">
-#                 <MathInline>taum_v__tmp / qdeltat</MathInline>
-#               </Alias>
-#               <Alias name="tauh_v">
-#                 <MathInline>tauh_v__tmp / qdeltat</MathInline>
-#               </Alias>
-#               <Alias name="minf_v">
-#                 <MathInline>1 / (1 + exp((v + 45) / -7.3))</MathInline>
-#               </Alias>
-#               <Alias name="hinf_v">
-#                 <MathInline>1 / (1 + exp((v + 42) / 5.9))</MathInline>
-#               </Alias>
-#               <Alias name="ina">
-#                 <MathInline>gbar * m*m*m * h * (v - ena)</MathInline>
-#               </Alias>
-#               <Alias name="taum_v__tmp">
-#                 <MathInline>
-#                     5.83 / (exp((v - (6.4)) / -9) + exp((v + 97) / 17)) + 0.025
-#                 </MathInline>
-#               </Alias>
-#               <StateVariable dimension="dimensionless" name="h"/>
-#               <StateVariable dimension="dimensionless" name="m"/>
-#             </Dynamics>
-#           </ComponentClass>
-#         </NineML>""")
 
     def test_nmodl_import(self):
         in_path = os.path.join(test_data_dir, 'nmodl')
@@ -118,7 +71,11 @@ class TestNMODLImporter(TestCase):
                 importer = NMODLImporter(os.path.join(in_path, fname))
                 class_fname = out_path + '/' + fname[:-4] + 'Class.xml'
                 comp_fname = out_path + '/' + fname[:-4] + '.xml'
-                componentclass = importer.get_component_class()
+                try:
+                    componentclass = importer.get_component_class()
+                except:
+                    print "Could not import '{}' mod file".format(fname)
+                    raise
                 nineml.write(componentclass, class_fname)
                 component = importer.get_component(class_fname)
                 nineml.write(component, comp_fname)
