@@ -4,6 +4,7 @@ from copy import deepcopy
 import regex
 import operator
 import quantities as pq
+import sympy
 import os.path
 import collections
 from itertools import chain
@@ -26,6 +27,14 @@ from collections import defaultdict
 from nineml.abstraction_layer import units
 from nineml.abstraction_layer.expressions.piecewise import (Piecewise, Piece,
                                                             Otherwise)
+from nineml.extensions.kinetics import KineticsClass
+from nineml.abstraction_layer.expressions import Expression
+from distlib.util import CONSTRAINTS
+from statsmodels.sandbox.stats.multicomp import cv001
+
+
+from nineml.extensions.kinetics import Constraint, KineticsClass, KineticState
+
 
 
 # Compiled regular expressions
@@ -83,6 +92,8 @@ _SI_to_dimension = {'m/s': un.conductance,
 _SI_to_nineml_units = dict(((u.dimension, u.power), u)
                            for u in (getattr(un, uname) for uname in dir(un))
                            if isinstance(u, un.Unit))
+
+
 
 
 class NMODLImporter(object):
@@ -157,8 +168,8 @@ class NMODLImporter(object):
         self._extract_independent_block()
         assert not self.blocks  # Check to see all blocks have been extracted
         # Create members from extracted information
-        self._create_parameters_and_analog_ports()
         self._create_regimes()
+        self._create_parameters_and_analog_ports()
 
     def get_component_class(self, flatten_kinetics=False):
         if self.kinetics:
@@ -176,11 +187,30 @@ class NMODLImporter(object):
                     constants=cpy.constants.values(),
                     state_variables=cpy.state_variables)
             else:
-                raise NotImplementedError
-#                 for name, (bidirectional, incoming, outgoing,
-#                        constraints, compartments) in self.kinetics.iteritems():
+
+                (name, 
+                 (bidirectional, incoming,
+                  outgoing, constraints,
+                  compartments)) = next(self.kinetics.iteritems())
+      
+                ks = [KineticState(sv.name)
+                      for sv in self.state_variables.itervalues()]
+
+                cst = [ cs for cs in constraints ]
+                cst = Constraint(cst[0][0],ks[0].name)
+       
+                state_variables=list(self.state_variables)
+                comp_class = KineticsClass(name=self.component_name + 'Class',
+                                       parameters=self.parameters.values(),
+                                       analog_ports=self.analog_ports.values(),
+                                       event_ports=self.event_ports.values(),
+                                       aliases=self.aliases.values(),
+                                       kinetic_states=ks, 
+                                       constraints=cst,
+                                       kineticsblock=None)
         else:
-            comp_class = DynamicsClass(name=self.component_name + 'Class',
+             sv=list(self.state_variables)
+             comp_class = DynamicsClass(name=self.component_name + 'Class',
                                        parameters=self.parameters.values(),
                                        analog_ports=self.analog_ports.values(),
                                        event_ports=self.event_ports.values(),
@@ -188,7 +218,9 @@ class NMODLImporter(object):
                                        aliases=self.aliases.values(),
                                        piecewises=self.piecewises.values(),
                                        constants=self.constants.values(),
-                                       state_variables=self.state_variables)
+                                       state_variables=sv)
+            
+         
         return comp_class
 
     def get_component(self, class_path=None, hoc_properties={}):
@@ -252,14 +284,14 @@ class NMODLImporter(object):
         """
         td_rhs = []
         try:
-            for regime in self.regimes.itervalues():
+            for regime in self.regimes:
                 td_rhs.extend([td.rhs for td in regime.time_derivatives])
         except AttributeError:
             for _, time_derivatives in self.regime_parts:
                 td_rhs.extend(td.rhs for td in time_derivatives)
         # Get a list of all expressions used in the model
         simple_rhs = [a.rhs for a in self.aliases.values()
-                      if isinstance(a.rhs, str)]
+                      if isinstance(a.rhs, sympy.Basic)]
         piecewise_rhs = [[expr for expr, _ in a.rhs if isinstance(expr, str)]
                          for a in self.aliases.values()
                          if isinstance(a.rhs, list)]
@@ -311,11 +343,11 @@ class NMODLImporter(object):
         # Add ports/parameters for reserved NMODL keywords
         uses_celsius = uses_voltage = uses_diam = False
         for expr in self.all_expressions():
-            if re.search(r'(\b)celsius(\b)', expr):
+            if re.search(r'(\b)celsius(\b)', str(expr)):
                 uses_celsius = True
-            if re.search(r'(\b)v(\b)', expr):
+            if re.search(r'(\b)v(\b)', str(expr)):
                 uses_voltage = True
-            if re.search(r'(\b)diam(\b)', expr):
+            if re.search(r'(\b)diam(\b)', str(expr)):
                 uses_diam = True
         if uses_voltage:
             self.analog_ports['v'] = AnalogReceivePort(
@@ -355,7 +387,7 @@ class NMODLImporter(object):
         # Create Regimes from explicit time derivatives
         for name, time_derivatives in self.regime_parts:
             self.regimes.append(Regime(name=name,
-                                        time_derivatives=time_derivatives))
+                                       time_derivatives=time_derivatives))
 
     def _flatten_kinetics(self):
         # TODO: Doesn't inlucde CONSERVE statements
@@ -931,7 +963,7 @@ class NMODLImporter(object):
         rhs = self._extract_function_calls(rhs, statements)
         # Append the suffix to the left hand side
         lhs_w_suffix = lhs + suffix
-        if is_builtin_symbol(lhs_w_suffix):
+        if lhs_w_suffix in Expression.reserved_identifiers():
             lhs_w_suffix += '_'
         if suffix:
             subs[lhs] = lhs_w_suffix
