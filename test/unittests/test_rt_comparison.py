@@ -7,9 +7,10 @@ from nineml.abstraction_layer import (
     units as un, AnalogSendPort, AnalogReceivePort, Parameter, DynamicsClass,
     Regime, TimeDerivative, Alias, StateVariable)
 from utils import test_data_dir
-from neuron import h
-#import neuronpy
-# from lxml import etree
+
+
+nineml_file = os.path.join(os.path.dirname(__file__), '..', 'data', '9ml',
+                           'Golgi_Solinas08.9ml')
 
 
 if __name__ == '__main__':
@@ -69,12 +70,15 @@ class TestNMODLImporter(TestCase):
         out_path = os.path.join(os.path.dirname(__file__), '..', 'data',
                                 'nmodl', 'imported')
         for fname in os.listdir(in_path):
-            if fname.endswith('.mod'):
+#            if fname.endswith('.mod'):
+            if fname.endswith('.mod') and fname == 'Golgi_SK2.mod':
                 importer = NMODLImporter(os.path.join(in_path, fname))
                 class_fname = out_path + '/' + fname[:-4] + 'Class.xml'
                 comp_fname = out_path + '/' + fname[:-4] + '.xml'
                 try:
-                    componentclass = importer.get_component_class()
+                    componentclass = importer.get_component_class(flatten_kinetics=False)
+                    importer.print_members()
+                    
                 except:
                     print "Could not import '{}' mod file".format(fname)
                     raise
@@ -107,15 +111,80 @@ class TestNeuronImporter(TestCase):
                                                     '9ml/classes')),
                                          comp_dir=(os.path.join(test_gr_dir,
                                                    '9ml/components')))
+
+
+
+
+
         
-        
-class Compare_output_rt():#compare out put after round trip.
+class Compare_output_rt(TestCase):
+    '''
+    compares output from voltage clamp experiment after round trip.
+    '''
+    
+    import os
+    import neuron as h
+    import matplotlib as plt
+    h.dt = 0.025
+    tstop = 5
+    vinit = -65
+    
+
+    
+ 
+         
+
+    def initialize(self):
+        h.finitialize(vinit)
+        h.fcurrent()
+
+    def integrate(self,tstop):
+        while h.t< tstop:
+            h.fadvance()
     
     
+    def record(self):
+        vec=h.Vector()
+        vec['soma'].record(pre(0.5)._ref_v)
+        vec['t'].record(h._ref_t)
+ 
+    def run(self):
+        self.initialize(h.vinit)
+        #h.stdinit()
+        self.integrate(h.tstop)
+
+    
+    def test_vc_output(self):
+        soma = h.Section()
+        soma.insert('pas')#Here insert the Kinetics Mechanism generated
+        #From the test class above.
+        stim = h.VClamp(h.soma(0.5))
+        tstop=1000
+        self.record()
+        self.run()
+
+    def before_conv(self):
+        os.system('nrnivmodl')#compile the file Golgi_SK2.mod
         
-    if __name__ == '__main__':
-        test = TestNMODLImporter()
-        test.test_nmodl_import()
-        test = TestNeuronImporter()
-        test.test_neuron_import()
-        print "done"
+    
+    def after_conv(self):
+        os.system('rm -r x_86')#compile the file Golgi_SK2.mod
+        os.system('rm *.nmodl')#compile the file Golgi_SK2.mod
+ 
+        
+     #def plot(self):
+     #   plt    
+
+
+
+if __name__ == '__main__':
+    test = TestNMODLImporter()
+    test.test_nmodl_import()
+    os.system('emacs /home/russell/git/pype9/test/unittests/../data/nmodl/imported/Golgi_SK2Class.xml')
+    os.system('emacs /home/russell/git/pype9/test/unittests/../data/nmodl/imported/Golgi_SK2.xml')
+
+    #co=Compare_output_rt
+    #co.test_vc_output()
+    #test = TestNeuronImporter()
+    #test.test_neuron_import()
+    print "done"

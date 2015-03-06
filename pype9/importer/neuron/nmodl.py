@@ -27,13 +27,14 @@ from collections import defaultdict
 from nineml.abstraction_layer import units
 from nineml.abstraction_layer.expressions.piecewise import (Piecewise, Piece,
                                                             Otherwise)
-from nineml.extensions.kinetics import KineticsClass
+
+#from nineml.extensions.kinetics import Constraint, KineticsClass, KineticState
+from nineml.extensions.kinetics import KineticsClass, Constraint, KineticState
 from nineml.abstraction_layer.expressions import Expression
 from distlib.util import CONSTRAINTS
 from statsmodels.sandbox.stats.multicomp import cv001
 
 
-from nineml.extensions.kinetics import Constraint, KineticsClass, KineticState
 
 
 
