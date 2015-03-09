@@ -13,6 +13,7 @@
     
     <AnalogReceivePort name="v" dimension="voltage"/>
     <AnalogReceivePort name="ek" dimension="voltage"/>
+    <AnalogSendPort name="ik" dimension="current"/>
 
       <Kinetics>
         <KineticState name="C1"/>
@@ -39,7 +40,7 @@
             <MathInline> exp(-k2*(d2-v)) </MathInline>
         </Alias> 
         <Alias name="g">    
-            <MathInline> gbar*01 </MathInline>
+            <MathInline> gbar*O1 </MathInline>
         </Alias> 
         <Alias name="ik">    
             <MathInline> g*(v-ek)*(1e-3) </MathInline>
@@ -62,6 +63,7 @@
   <Dimension name="voltage" m="1" l="2" t="-3" i="-1"/>
   <Dimension name="per_voltage" m="-1" l="-2" t="3" i="1"/>
   <Dimension name="conductance" m="-1" l="-2" t="3" i="2"/>
+  <Dimension name="current" i="1"/>
   <Dimension name="area" l="2"/>
  
   <Unit symbol="cm_square" dimension="area" power="-4"/>

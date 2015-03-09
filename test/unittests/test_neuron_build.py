@@ -24,7 +24,7 @@ class TestNeuronBuild(TestCase):
         component_file = path.join(test_data_dir, 'xml', 'kinetic_mechanism.xml')
         self.code_generator.generate(component_file,
                                      build_mode='force',
-                                     ode_solver='derivimplicit')
+                                     ode_solver='derivimplicit')#sparse
 
 if __name__ == '__main__':
     t = TestNeuronBuild()

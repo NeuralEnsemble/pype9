@@ -81,6 +81,7 @@ class TestNMODLImporter(TestCase):
                 nineml.write(componentclass, class_fname)
                 component = importer.get_component(class_fname)
                 nineml.write(component, comp_fname)
+                print type(componentclass)
                 print "Converted '{}' to '{}'".format(fname, comp_fname)
 #         reference_tree = etree.fromstring(self.ref_xml)
 #         self.assertEqual(etree.tostring(imported_tree),

@@ -1,17 +1,9 @@
 import os.path
-from pype9.importer.neuron import NeuronImporter
-from pype9.importer.neuron.hoc import HocImporter
 from pype9.importer.neuron.nmodl import NMODLImporter
-import nineml
-from nineml.abstraction_layer import (
-    units as un, AnalogSendPort, AnalogReceivePort, Parameter, DynamicsClass,
-    Regime, TimeDerivative, Alias, StateVariable)
 from utils import test_data_dir
-
-
-nineml_file = os.path.join(os.path.dirname(__file__), '..', 'data', '9ml',
-                           'Golgi_Solinas08.9ml')
-
+from neuron import h
+import pylab as plt
+from pype9.cells.code_gen.neuron import CodeGenerator
 
 if __name__ == '__main__':
     from utils import DummyTestCase as TestCase  # @UnusedImport
@@ -25,166 +17,108 @@ test_gr_dir = os.path.join(os.path.dirname(__file__), '..', '..', '..',
                            'kbrain', 'external', 'fabios_network')
 
 
-class TestHocImporter(TestCase):
+class TestKinetics(TestCase):
 
-    def test_hoc_import(self):
-        importer = HocImporter(test_cn_dir,
-                               ['DCN_params_axis.hoc', 'DCN_morph.hoc',
-                                'DCN_mechs1.hoc'],
-                               ['DCNmechs()'])
-        print importer.model
+    def setUp(self):
+        self.code_generator = CodeGenerator()
 
-
-class TestNMODLImporter(TestCase):
-
-    naf_class = DynamicsClass(
-        name="NaF",
-        parameters=[Parameter("qdeltat", un.dimensionless),
-                    Parameter("gbar", un.conductance)],
-        analog_ports=[
-            AnalogSendPort("m", un.dimensionless),
-            AnalogSendPort("h", un.dimensionless),
-            AnalogReceivePort("ena", un.voltage),
-            AnalogSendPort("ina", un.current),
-            AnalogReceivePort("v", un.voltage)],
-        regimes=[Regime(name="default",
-                        time_derivatives=[
-                            TimeDerivative('m', '(minf_v - m)/taum_v'),
-                            TimeDerivative('h', '(hinf_v - h)/tauh_v')])],
-        aliases=[Alias('tauh_v__tmp',
-                       '16.67 / '
-                       '(exp((v - 8.3) / -29) + exp((v + 66) / 9)) + 0.2'),
-                 Alias('taum_v', 'taum_v__tmp / qdeltat'),
-                 Alias('tauh_v', 'taum_v__tmp / qdeltat'),
-                 Alias('minf_v', '1 / (1 + exp((v + 45) / -7.3))'),
-                 Alias('hinf_v', '1 / (1 + exp((v + 42) / 5.9))'),
-                 Alias('ina', 'gbar * m*m*m * h * (v - ena)'),
-                 Alias('taum_v__tmp',
-                       '5.83 / (exp((v - (6.4)) / -9) + '
-                       'exp((v + 97) / 17)) + 0.025')],
-        state_variables=[StateVariable('m', un.dimensionless),
-                          StateVariable('h', un.dimensionless)])
-
-    def test_nmodl_import(self):
-        in_path = os.path.join(test_data_dir, 'nmodl')
+    def test_kinetics_roundtrip(self):
+        in_path = os.path.join(test_data_dir, 'nmodl', 'Golgi_SK2.mod')
         out_path = os.path.join(os.path.dirname(__file__), '..', 'data',
-                                'nmodl', 'imported')
-        for fname in os.listdir(in_path):
-#            if fname.endswith('.mod'):
-            if fname.endswith('.mod') and fname == 'Golgi_SK2.mod':
-                importer = NMODLImporter(os.path.join(in_path, fname))
-                class_fname = out_path + '/' + fname[:-4] + 'Class.xml'
-                comp_fname = out_path + '/' + fname[:-4] + '.xml'
-                try:
-                    componentclass = importer.get_component_class(flatten_kinetics=False)
-                    importer.print_members()
-                    
-                except:
-                    print "Could not import '{}' mod file".format(fname)
-                    raise
-                nineml.write(componentclass, class_fname)
-                component = importer.get_component(class_fname)
-                nineml.write(component, comp_fname)
-                print "Converted '{}' to '{}'".format(fname, comp_fname)
-#         reference_tree = etree.fromstring(self.ref_xml)
-#         self.assertEqual(etree.tostring(imported_tree),
-#                          etree.tostring(reference_tree))
+                                'nmodl', 'imported', 'regenerated')
+        importer = NMODLImporter(in_path)
+        component = importer.get_component()
+        self.code_generator.generate(
+            component, name='cc', saved_name=None, initial_state=None,
+            install_dir=out_path, build_dir=os.getcwd(), build_mode='force',
+            verbose=True)
 
 
-class TestNeuronImporter(TestCase):
-
-    def test_neuron_import(self):
-        importer = NeuronImporter('/home/tclose/git/cerebellarnuclei/',
-                                   ['DCN_params_axis.hoc', 'DCN_morph.hoc',
-                                    'DCN_mechs1.hoc'],
-                                   ['DCNmechs()'])
-        importer.write_ion_current_files('/home/tclose/git/cerebellarnuclei/'
-                                         '9ml/ion_channels')
-        importer = NeuronImporter('/home/tclose/git/purkinje/model/'
-                                  'Haroon_active_reduced_model',
-                                   ['for_import.py'])
-        importer.write_ion_current_files('/home/tclose/git/purkinje/model/'
-                                         'Haroon_active_reduced_model/9ml')
-        importer = NeuronImporter(test_gr_dir,
-                                   ['load_sergios_golgi.hoc'])
-        importer.write_ion_current_files(class_dir=(os.path.join(test_gr_dir,
-                                                    '9ml/classes')),
-                                         comp_dir=(os.path.join(test_gr_dir,
-                                                   '9ml/components')))
-
-
-
-
-
-        
 class Compare_output_rt(TestCase):
     '''
     compares output from voltage clamp experiment after round trip.
     '''
-    
-    import os
-    import neuron as h
-    import matplotlib as plt
-    h.dt = 0.025
-    tstop = 5
-    vinit = -65
-    
+    #setUp, is an initialisation method inherited from TestCase
+    #This initialisation is crucial, and allows you to never have to use global variables.
 
-    
- 
-         
+    def setUp(self):
+        self.dt = h.dt = 0.025
+        self.tstop = 10000
+        self.vinit = -65
+        self.soma = h.Section()
+        self.vec = {}
 
     def initialize(self):
-        h.finitialize(vinit)
+        h.finitialize(self.vinit)
         h.fcurrent()
 
-    def integrate(self,tstop):
-        while h.t< tstop:
+    def integrate(self):
+        while h.t< self.tstop:
             h.fadvance()
-    
-    
+
     def record(self):
-        vec=h.Vector()
-        vec['soma'].record(pre(0.5)._ref_v)
-        vec['t'].record(h._ref_t)
+        self.vec['soma'] =h.Vector()
+        self.vec['t'] =h.Vector()
+        self.vec['soma'].record(self.soma(0.5)._ref_v)
+        self.vec['t'].record(h._ref_t)
  
     def run(self):
-        self.initialize(h.vinit)
+        self.initialize()
         #h.stdinit()
-        self.integrate(h.tstop)
+        self.integrate()
 
     
     def test_vc_output(self):
-        soma = h.Section()
-        soma.insert('pas')#Here insert the Kinetics Mechanism generated
+        #soma.insert('pas')
+        #self.soma.insert('Golgi_SK2')
+        self.soma.insert('GRC_NA')
+        self.soma.insert('Golgi_Ca_HVA')#compile the file Golgi_SK2.mod
+        self.soma.insert('Golgi_Ca_LVA')
+        #self.soma.insert('Golgi_SK2')#Here insert the Kinetics Mechanism generated
         #From the test class above.
-        stim = h.VClamp(h.soma(0.5))
-        tstop=1000
+        
+        stim = h.SEClamp(self.soma(0.5),delay = 1000,duration = 100,amplitude = 25)
+        #stim2 = h.SEClamp(self.soma(0.5),delay = 1200,duration = 100,amplitude = 25)
+
+        # sets current pulse delay =  600 mS
+        # sets current pulse duration = 100 mS
+        # sets current pulse amplitude = 25 nA
+
         self.record()
         self.run()
-
-    def before_conv(self):
-        os.system('nrnivmodl')#compile the file Golgi_SK2.mod
+        plt.figure()
+        plt.plot(self.vec['t'].to_python(),self.vec['soma'].to_python())
+        plt.title('Section inserted Ca_HVA,Ca_LVA, GRC_NA')#'Golgi_SK2'
+        plt.xlabel('ms')
+        plt.ylabel('mV')
+        plt.savefig('bf_9ml_trans.png')
         
+    
+    def before_conv(self):
+         
+        nineml_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'nmodl','imported')
+        #os.chdir(nineml_dir)
+        #os.chdir('/home/russell/git/pype9/test/data/nmodl')
+     
     
     def after_conv(self):
         os.system('rm -r x_86')#compile the file Golgi_SK2.mod
         os.system('rm *.nmodl')#compile the file Golgi_SK2.mod
  
-        
-     #def plot(self):
-     #   plt    
+     
 
 
 
 if __name__ == '__main__':
-    test = TestNMODLImporter()
-    test.test_nmodl_import()
-    os.system('emacs /home/russell/git/pype9/test/unittests/../data/nmodl/imported/Golgi_SK2Class.xml')
-    os.system('emacs /home/russell/git/pype9/test/unittests/../data/nmodl/imported/Golgi_SK2.xml')
-
-    #co=Compare_output_rt
+    co=Compare_output_rt()
+    #co.before_conv()
     #co.test_vc_output()
+  
+    test = TestKinetics()
+    test.test_kinetics_roundtrip()
+    #os.system('emacs ../data/nmodl/imported/Golgi_SK2Class.xml')
+    #os.system('emacs /home/russell/git/pype9/test/unittests/../data/nmodl/imported/Golgi_SK2.xml')
+
     #test = TestNeuronImporter()
     #test.test_neuron_import()
     print "done"
