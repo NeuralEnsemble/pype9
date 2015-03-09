@@ -29,9 +29,8 @@ class TestKinetics(TestCase):
         importer = NMODLImporter(in_path)
         component = importer.get_component()
         self.code_generator.generate(
-            component, name='cc', saved_name=None, initial_state=None,
-            install_dir=out_path, build_dir=os.getcwd(), build_mode='force',
-            verbose=True)
+            component, name='Golgi_SK2_regenerated', build_dir=os.getcwd(),
+            build_mode='force', verbose=True)
 
 
 class Compare_output_rt(TestCase):

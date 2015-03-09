@@ -27,15 +27,8 @@ from collections import defaultdict
 from nineml.abstraction_layer import units
 from nineml.abstraction_layer.expressions.piecewise import (Piecewise, Piece,
                                                             Otherwise)
-
-#from nineml.extensions.kinetics import Constraint, KineticsClass, KineticState
 from nineml.extensions.kinetics import KineticsClass, Constraint, KineticState
 from nineml.abstraction_layer.expressions import Expression
-from distlib.util import CONSTRAINTS
-from statsmodels.sandbox.stats.multicomp import cv001
-
-
-
 
 
 # Compiled regular expressions
@@ -93,8 +86,6 @@ _SI_to_dimension = {'m/s': un.conductance,
 _SI_to_nineml_units = dict(((u.dimension, u.power), u)
                            for u in (getattr(un, uname) for uname in dir(un))
                            if isinstance(u, un.Unit))
-
-
 
 
 class NMODLImporter(object):
@@ -188,30 +179,24 @@ class NMODLImporter(object):
                     constants=cpy.constants.values(),
                     state_variables=cpy.state_variables)
             else:
-
-                (name, 
-                 (bidirectional, incoming,
-                  outgoing, constraints,
-                  compartments)) = next(self.kinetics.iteritems())
-      
+                (bidirectional, incoming,
+                 outgoing, constraints, _) = next(self.kinetics.itervalues())
                 ks = [KineticState(sv.name)
                       for sv in self.state_variables.itervalues()]
-
-                cst = [ cs for cs in constraints ]
-                cst = Constraint(cst[0][0],ks[0].name)
-       
-                state_variables=list(self.state_variables)
-                comp_class = KineticsClass(name=self.component_name + 'Class',
-                                       parameters=self.parameters.values(),
-                                       analog_ports=self.analog_ports.values(),
-                                       event_ports=self.event_ports.values(),
-                                       aliases=self.aliases.values(),
-                                       kinetic_states=ks, 
-                                       constraints=cst,
-                                       kineticsblock=None)
+                cst = [cs for cs in constraints]
+                cst = Constraint(cst[0][0], ks[0].name)
+                comp_class = KineticsClass(
+                    name=self.component_name + 'Class',
+                    parameters=self.parameters.values(),
+                    analog_ports=self.analog_ports.values(),
+                    event_ports=self.event_ports.values(),
+                    aliases=self.aliases.values(),
+                    kinetic_states=ks,
+                    constraints=cst,
+                    kineticsblock=None)
         else:
-             sv=list(self.state_variables)
-             comp_class = DynamicsClass(name=self.component_name + 'Class',
+            sv = list(self.state_variables)
+            comp_class = DynamicsClass(name=self.component_name + 'Class',
                                        parameters=self.parameters.values(),
                                        analog_ports=self.analog_ports.values(),
                                        event_ports=self.event_ports.values(),
@@ -220,8 +205,6 @@ class NMODLImporter(object):
                                        piecewises=self.piecewises.values(),
                                        constants=self.constants.values(),
                                        state_variables=sv)
-            
-         
         return comp_class
 
     def get_component(self, class_path=None, hoc_properties={}):
@@ -236,11 +219,13 @@ class NMODLImporter(object):
                           for n, v in hoc_properties.iteritems())
         properties.update((n, (v, self._units2nineml_units(u)))
                           for n, (v, u) in properties.iteritems())
-        context = Document()
-        definition = Definition(self.component_name + 'Class', context,
-                                url=os.path.normpath(class_path))
+        if class_path is not None:
+            definition = Definition(self.component_name + 'Class', Document(),
+                                    url=os.path.normpath(class_path))
+        else:
+            definition = self.get_component_class()
         comp = Dynamics(self.component_name, definition=definition,
-                                 properties=properties)
+                        properties=properties)
         return comp
 
     def print_members(self):
@@ -324,8 +309,9 @@ class NMODLImporter(object):
                     else:
                         assert False, ("Unrecognised used ion element '{}'"
                                        .format(n))
-                    self.analog_ports[n] = AnalogReceivePort(
-                        n, dimension=dimension)
+                    port = AnalogReceivePort(n, dimension=dimension)
+                    port.annotations = {'biophysics': {'ion_species': name}}
+                    self.analog_ports[n] = port
             for n in write:
                 if n.startswith('i'):
                     dimension = un.currentDensity
@@ -334,8 +320,9 @@ class NMODLImporter(object):
                 else:
                     assert False, ("Unrecognised used ion element '{}'"
                                    .format(n))
-                self.analog_ports[n] = AnalogSendPort(
-                    n, dimension=dimension)
+                port = AnalogSendPort(n, dimension=dimension)
+                port.annotations = {'biophysics': {'ion_species': name}}
+                self.analog_ports[n] = port
         # Create parameters for each property
         for name, (_, units) in self.properties.iteritems():
             if name not in self.analog_ports:
