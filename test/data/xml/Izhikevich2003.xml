@@ -6,29 +6,29 @@
     <Parameter name="b" dimension="per_time"/>
     <Parameter name="c" dimension="voltage"/>
     <Parameter name="d" dimension="voltage_per_time"/>
-    <Parameter name="Vthresh" dimension="voltage"/>
-    <AnalogSendPort name="U" dimension="dimensionless"/>
-    <AnalogSendPort name="V" dimension="voltage"/>
+    <Parameter name="vthresh" dimension="voltage"/>
+    <AnalogSendPort name="u" dimension="voltage_per_time"/>
+    <AnalogSendPort name="v" dimension="voltage"/>
     <EventSendPort name="spikeOutput" mode="send"/>
     <Dynamics>
-      <StateVariable name="V" dimension="voltage"/>
-      <StateVariable name="U" dimension="voltage_per_time"/>
+      <StateVariable name="v" dimension="voltage"/>
+      <StateVariable name="u" dimension="voltage_per_time"/>
       <Regime name="subthreshold">
-        <TimeDerivative variable="U">
+        <TimeDerivative variable="u">
           <MathInline>a*(b*v - u)</MathInline>
         </TimeDerivative>
-        <TimeDerivative variable="V">
-          <MathInline>0.04*V*V + 5*V + 140 - U</MathInline>
+        <TimeDerivative variable="v">
+          <MathInline>0.04*v*v + 5*v + 140 - u</MathInline>
         </TimeDerivative>
         <OnCondition>
           <Trigger>
-            <MathInline>V &gt; Vthresh</MathInline>
+            <MathInline>v &gt; vthresh</MathInline>
           </Trigger>
-          <StateAssignment variable="V">
+          <StateAssignment variable="v">
             <MathInline>c</MathInline>
           </StateAssignment>
-          <StateAssignment variable="U">
-            <MathInline>U + d</MathInline>
+          <StateAssignment variable="u">
+            <MathInline>u + d</MathInline>
           </StateAssignment>
           <OutputEvent port="spikeOutput"/>
         </OnCondition>
@@ -37,19 +37,19 @@
   </ComponentClass>
   <Component name="Izhikevich">
     <Definition>IzhikevichClass</Definition>
-    <Property name="a">
+    <Property name="a" units="per_ms">
       <SingleValue>0.02</SingleValue>
     </Property>
-    <Property name="b">
+    <Property name="b" units="per_ms">
       <SingleValue>0.2</SingleValue>
     </Property>
     <Property name="c" units="mV">
       <SingleValue>-65.0</SingleValue>
     </Property>
-    <Property name="d">
+    <Property name="d" units="mV_per_ms">
       <SingleValue>2</SingleValue>
     </Property>
-    <Property name="Vthresh" units="mV">
+    <Property name="vthresh" units="mV">
       <SingleValue>30</SingleValue>
     </Property>
   </Component>
@@ -57,4 +57,7 @@
   <Dimension name="dimensionless"/>
   <Dimension name="voltage" m="1" l="2" t="-3" i="-1"/>
   <Dimension name="voltage_per_time" m="1" l="2" t="-4" i="-1"/>
+  <Unit symbol="per_ms" dimension="per_time" power="-3"/>
+  <Unit symbol="mV_per_ms" dimension="voltage_per_time" power="0"/>
+  <Unit symbol="mV" dimension="voltage" power="-3"/>
 </NineML>

@@ -31,7 +31,7 @@ import pype9
 from datetime import datetime
 from nineml.utils import expect_single
 from nineml.user_layer import Dynamics
-from nineml.abstraction_layer import DynamicsClass
+from nineml.abstraction_layer import DynamicsClass, Parameter
 try:
     from nineml.extensions.kinetics import KineticsClass
 except ImportError:
@@ -145,7 +145,7 @@ class CodeGenerator(BaseCodeGenerator):
 
     @classmethod
     def convert_to_current_centric(cls, componentclass, membrane_voltage,
-                                   membrane_capacitance):
+                                   membrane_capacitance=None):
         """
         Copy the component class to alter it to match NEURON's current
         centric focus
@@ -161,11 +161,15 @@ class CodeGenerator(BaseCodeGenerator):
         cc.rename_symbol(membrane_voltage, 'v')
         try:
             v = cc.state_variable('v')
-            cm = cc.parameter(membrane_capacitance)
         except KeyError:
             raise Pype9RuntimeError(
-                "Could not find specified voltage or capacitance ('{}', '{}')"
-                .format(v.name, cm.name))
+                "Could not find specified voltage '{}'"
+                .format(membrane_voltage))
+        try:
+            cm = cc.parameter(membrane_capacitance)
+        except KeyError:
+            cm = Parameter(name='Cm', dimension=un.specificCapacitance)
+            cc.add(cm)
         if v.dimension != un.voltage:
             raise Pype9RuntimeError(
                 "Specified membrane voltage does not have 'voltage' dimension"
