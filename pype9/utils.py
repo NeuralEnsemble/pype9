@@ -72,10 +72,11 @@ def convert_to_property(name, qty):
 
 def convert_to_quantity(prop):
     units = prop.units
-    return prop.value * (pq.s ** units.t *
-                         pq.kg ** units.m *
-                         pq.m ** units.l *
-                         pq.mole ** units.n *
-                         pq.K ** units.k *
-                         pq.cd ** units.j *
-                         pq.A ** units.i)
+    dim = units.dimension
+    return prop.value * 10 ** units.power * (pq.s ** dim.t *
+                                             pq.kg ** dim.m *
+                                             pq.m ** dim.l *
+                                             pq.mole ** dim.n *
+                                             pq.K ** dim.k *
+                                             pq.cd ** dim.j *
+                                             pq.A ** dim.i)

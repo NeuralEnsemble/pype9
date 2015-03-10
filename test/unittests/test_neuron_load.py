@@ -5,6 +5,7 @@ else:
 from pype9.cells.neuron import CellMetaClass
 from os import path
 from utils import test_data_dir
+import pylab as plt
 
 
 class TestNeuronLoad(TestCase):
@@ -16,7 +17,13 @@ class TestNeuronLoad(TestCase):
                                         membrane_voltage='V',
                                         membrane_capacitance='Cm')
         izhi = Izhikevich()
-        print dir(izhi)
+        izhi.record('v')
+        print "Running for 2000 ms"
+        izhi.run(2000)
+        print "Finished run"
+        v = izhi.recording('v')
+        plt.plot(v.times, v)
+        plt.show()
 
 
 if __name__ == '__main__':

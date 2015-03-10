@@ -170,7 +170,7 @@ class MultiCompCell(base.Cell):
         # Retrieving the _parameters attribute with __getattribute__ first
         # avoids infinite recursive loops of __getattr__ if the cell hasn't
         # been initialised yet.
-        parameters = self.__getattribute__('default_parameters')
+        parameters = self.__getattribute__('prototype')
         try:
             return parameters[varname].get()
         except KeyError:

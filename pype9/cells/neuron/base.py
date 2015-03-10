@@ -9,8 +9,7 @@
 """
 from __future__ import absolute_import
 from datetime import datetime
-import weakref
-import numpy
+from pype9.exceptions import Pype9RuntimeError
 # MPI may not be required but NEURON sometimes needs to be initialised after
 # MPI so I am doing it here just to be safe (and to save me headaches in the
 # future)
@@ -31,12 +30,15 @@ from pyNN.neuron.cells import VectorSpikeSource
 from itertools import chain
 from .. import base
 from pype9.utils import convert_to_property, convert_to_quantity
+from .simulation_controller import simulation_controller
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
 
 import logging
 
 logger = logging.getLogger("NineLine")
+
+V_INIT_DEFAULT = -65.0
 
 
 _basic_SI_to_neuron_conversions = (('s', 'ms'),
@@ -63,7 +65,7 @@ _basic_unit_dict, _compound_unit_dict = create_unit_conversions(
     _basic_SI_to_neuron_conversions, _compound_SI_to_neuron_conversions)
 
 
-def convert_to_neuron_units(value, unit_str):
+def convert_to_neuron_units(value, unit_str='dimensionless'):
     return convert_units(
         value, unit_str, _basic_unit_dict, _compound_unit_dict)
 
@@ -81,23 +83,32 @@ class Cell(base.Cell):
             properties = []
         for name, qty in kwprops.iteritems():
             properties.append(convert_to_property(name, qty))
-        self._nineml = nineml.user_layer.Dynamics(
-            self.default_parameters.name,
-            self.default_parameters, properties)
+        # Init the 9ML component of the cell
+        self._nineml = nineml.user_layer.Dynamics(self.prototype.name,
+                                                  self.prototype, properties)
+        # Call base init (needs to be after 9ML init)
         base.Cell.__init__(self)
         # Construct all the NEURON structures
-        self.source_section = self
-        self.nrn_object = getattr(h, self.componentclass.name)(0.5, sec=self)
+        self.source_section = nrn.Section()  # @UndefinedVariable
+        # FIXME: Should really just be the class name for NEURON I think.
+        try:
+            HocClass = getattr(h, self.prototype.name)
+            self._hoc_suffix = '_' + self.prototype.name
+        except AttributeError:
+            HocClass = getattr(h, self.componentclass.name)
+            self._hoc_suffix = '_' + self.componentclass.name
+        self._hoc = HocClass(0.5, sec=self.source_section)
         # Setup variables required by pyNN
         self.source = self.source_section(0.5)._ref_v
         # for recording Once NEST supports sections, it might be an idea to
         # drop this in favour of a more explicit scheme
-        self.recordable = {'spikes': None, 'v': self.source_section._ref_v}
+        self.recordable = {'spikes': None, 'v': self.source}
         self.spike_times = h.Vector(0)
         self.traces = {}
         self.gsyn_trace = {}
         self.recording_time = 0
         self.rec = h.NetCon(self.source, None, sec=self.source_section)
+        self.initial_v = V_INIT_DEFAULT
         # Set up references from parameter names to internal variables and set
         # parameters
         for prop in self.properties:
@@ -106,13 +117,11 @@ class Cell(base.Cell):
     def get_threshold(self):
         return in_units(self._model.spike_threshold, 'mV')
 
+    def set_initial_v(self, v):
+        self.initial_v = v
+
     def memb_init(self):
-        if 'initial_v' in self.parameters:
-            for seg in self.segments.itervalues():
-                seg.v = self.parameters['initial_v']
-        for param in self._parameters.itervalues():
-            if isinstance(param, self.InitialState):
-                param.initialize_state()
+        self.source_section(0.5).v = self.initial_v
 
     def __getattr__(self, varname):
         """
@@ -122,7 +131,7 @@ class Cell(base.Cell):
         @param var [str]: var of the attribute, with optional segment segment
                           name enclosed with {} and prepended
         """
-        if varname.startswith('prop.'):
+        if varname.startswith('property.'):
             varname = varname[5:]
         try:
             return convert_to_quantity(self._nineml.property(varname))
@@ -139,20 +148,27 @@ class Cell(base.Cell):
                           segment, component and attribute vars
         @param val [*]: val of the attribute
         """
-        if varname.startswith('prop.'):
+        if varname.startswith('property.'):
             varname = varname[5:]
-        if varname in self._nineml.property_names:
-            nineml.Dynamics.set(self, convert_to_property(varname, val))
-            setattr(self.nrn_object, varname + self._suffix,
-                    convert_to_neuron_units(val))
-        else:
+        try:
+            # Check for name name clashes with existing class members (i.e.
+            # 'source', 'source_section', 'record', 'get_recording', etc..)
+            super(Cell, self).__getattr__(varname)
             super(Cell, self).__setattr__(varname, val)
+        except AttributeError:
+            # Try to set as property
+            if varname in self.__class__.componentclass.parameter_names:
+                self._nineml.set(convert_to_property(varname, val))
+                setattr(self._hoc, varname, convert_to_neuron_units(val)[0])
+            else:  # Fall back to super method
+                super(Cell, self).__setattr__(varname, val)
 
     def __dir__(self):
-        return set(chain(dir(super(Cell, self)), self.property_names))
+        return list(set(chain(dir(super(Cell, self)), self.property_names)))
 
     def record(self, variable):
-        self._record(self.source_section, variable, key=variable)
+        self._record(self.source_section(0.5), variable,
+                     key=(variable, None, None))
 
     def _record(self, seg, variable, key):
         self._initialise_local_recording()
@@ -162,12 +178,12 @@ class Cell(base.Cell):
             self._recordings[key] = recording = h.Vector()
             recorder.record(recording)
         else:
-            pointer = nrn.Section.__getattr__(seg, '_ref_' + variable)
+            pointer = getattr(seg, '_ref_' + variable)
             self._recordings[key] = recording = h.Vector()
             recording.record(pointer)
 
-    def get_recording(self, variables=None, segnames=None, components=None,
-                      in_block=False):
+    def recording(self, variables=None, segnames=None, components=None,
+                  in_block=False):
         """
         Gets a recording or recordings of previously recorded variable
 
@@ -223,10 +239,19 @@ class Cell(base.Cell):
                     units = 'mV'
                 else:
                     units = 'nA'
-                analog_signal = neo.AnalogSignal(
-                    self._recordings[key], sampling_period=h.dt * pq.ms,
-                    t_start=0.0 * pq.ms, units=units,
-                    name='.'.join([x for x in key if x is not None]))
+                try:
+                    analog_signal = neo.AnalogSignal(
+                        self._recordings[key], sampling_period=h.dt * pq.ms,
+                        t_start=0.0 * pq.ms, units=units,
+                        name='.'.join([x for x in key if x is not None]))
+                except KeyError:
+                    raise Pype9RuntimeError(
+                        "No recording for '{}'{}{} in cell '{}'"
+                        .format(key[0],
+                                (" in component '{}'".format(key[2])
+                                 if key[2] is not None else ''),
+                                (" on segment '{}'".format(key[1])
+                                 if key[1] is not None else '')))
                 if in_block:
                     segment.analogsignals.append(analog_signal)
                 else:
@@ -295,6 +320,14 @@ class Cell(base.Cell):
     def write(self, file):  # @ReservedAssignment
         self._nineml.write(file)
 
+    def run(self, simulation_time, reset=True, timestep='cvode', rtol=None,
+            atol=None):
+        if self not in (c() for c in simulation_controller.registered_cells):
+            raise Pype9RuntimeError(
+                "Cell '{}' is not being recorded".format(self.name))
+        simulation_controller.run(simulation_time=simulation_time, reset=reset,
+                                  timestep=timestep, rtol=rtol, atol=atol)
+
     # This has to go last to avoid clobbering the property decorators
     def property(self, name):
         return self._nineml.property(name)
@@ -314,58 +347,3 @@ class CellMetaClass(base.CellMetaClass):
     @classmethod
     def load_model(cls, name, install_dir):  # @UnusedVariable @NoSelf
         load_mechanisms(os.path.dirname(install_dir))
-
-
-# This is adapted from the code for the simulation controller in PyNN for
-# use with individual cell objects
-class _SimulationController(object):
-
-    def __init__(self):
-        self.running = False
-        self.registered_cells = []
-        self._time = h.Vector()
-
-    @property
-    def time(self):
-        return pq.Quantity(self._time, 'ms')
-
-    def register_cell(self, cell):
-        self.registered_cells.append(weakref.ref(cell))
-
-    def run(self, simulation_time, reset=True, timestep='cvode', rtol=None,
-            atol=None):
-        """
-        Run the simulation for a certain time.
-        """
-        self._time.record(h._ref_t)
-        if timestep == 'cvode':
-            self.cvode = h.CVode()
-            if rtol is not None:
-                self.cvode.rtol = rtol
-            if atol is not None:
-                self.cvode.atol = atol
-        else:
-            h.dt = timestep
-        if reset or not self.running:
-            self.running = True
-            self.reset()
-        # Convert simulation time to float value in ms
-        simulation_time = float(pq.Quantity(simulation_time, 'ms'))
-        for _ in numpy.arange(h.dt, simulation_time + h.dt, h.dt):
-            h.fadvance()
-        self.tstop += simulation_time
-
-    def reset(self):
-        h.finitialize(-65.0)
-        for cell_ref in reversed(self.registered_cells):
-            if cell_ref():
-                cell_ref().memb_init()
-                cell_ref().reset_recordings()
-            else:
-                # If the cell has been deleted remove the weak reference to it
-                self.registered_cells.remove(cell_ref)
-        self.tstop = 0
-
-# Make a singleton instantiation of the simulation controller
-simulation_controller = _SimulationController()
-del _SimulationController

@@ -43,12 +43,12 @@ class CodeGenerator(BaseCodeGenerator):
                                    shell=True)
         self._compiler = compiler[:-1]  # strip trailing \n
 
-    def generate_source_files(self, name, componentclass, default_parameters,
+    def generate_source_files(self, name, componentclass, prototype,
                               initial_state, src_dir, **kwargs):
         tmpl_args = {
             'component_name': name,
             'componentclass': componentclass,
-            'default_parameters': default_parameters,
+            'prototype': prototype,
             'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),

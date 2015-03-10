@@ -47,8 +47,12 @@ def convert_units(value, unit_str, basic_dict, compound_dict):
     # standardised.
     if unit_str == 'uf/cm2':
         unit_str = 'uF/cm^2'
-    # Convert to a quantity with units
-    quantity = Quantity(value, unit_str)
+    if isinstance(value, Quantity):
+        quantity = value
+        assert unit_str is None
+    else:
+        # Convert to a quantity with units
+        quantity = Quantity(value, unit_str)
     # Check to see if the units are basic units (i.e. dimensionality == 1)
     if len(quantity._dimensionality) == 1:
         try:
@@ -67,7 +71,7 @@ def convert_units(value, unit_str, basic_dict, compound_dict):
         # If there isn't an explicit compound conversion, try to use
         # combination of basic conversions
         except KeyError:
-            units = 1.0
+            units = Quantity(1.0, 'dimensionless')
             for unit_dim, exponent in simplified_units:
                 try:
                     conv_units = basic_dict[unit_dim]

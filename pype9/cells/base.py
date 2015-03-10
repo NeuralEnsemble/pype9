@@ -89,14 +89,15 @@ class Cell(object):
                    the model here is provided here to allow the modification of
                    morphology and distribution of ion channels programmatically
         """
-        if model:
-            if model._source is not self._default_model._source:
-                raise Exception("Only models derived from the same source as "
-                                "the default model can be used to instantiate "
-                                "the cell with.")
-            self._model = model
-        else:
-            self._model = self._default_model
+#         if model:
+#             if model._source is not self._default_model._source:
+#                 raise Exception("Only models derived from the same source as "
+#                                 "the default model can be used to instantiate "
+#                                 "the cell with.")
+#             self._model = model
+#         else:
+#             self._model = self.prototype
+        pass
 
     @classmethod
     def copy_of_default_model(cls):

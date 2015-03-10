@@ -107,11 +107,11 @@ class BaseCodeGenerator(object):
                 .format(name))
         orig_dir = os.getcwd()
         # Get component from file if passed as a string
-        (componentclass, default_parameters,
+        (componentclass, prototype,
          comp_src_path) = self._read_comp_from_file(component, saved_name)
         if name is None:
-            if default_parameters is not None:
-                name = default_parameters.name
+            if prototype is not None:
+                name = prototype.name
             else:
                 name = componentclass.name
         # Set build dir if not provided
@@ -188,7 +188,7 @@ class BaseCodeGenerator(object):
             self.clean_src_dir(src_dir, name)
             self.generate_source_files(
                 name=name, componentclass=componentclass,
-                default_parameters=component,
+                prototype=component,
                 initial_state=initial_state, src_dir=src_dir,
                 compile_dir=compile_dir, install_dir=install_dir,
                 verbose=verbose, **kwargs)
@@ -207,7 +207,7 @@ class BaseCodeGenerator(object):
             self.compile_source_files(compile_dir, name, verbose=verbose)
         # Switch back to original dir
         os.chdir(orig_dir)
-        return name, componentclass, default_parameters, install_dir
+        return name, componentclass, prototype, install_dir
 
     @classmethod
     def _read_comp_from_file(cls, component, name):
@@ -250,11 +250,11 @@ class BaseCodeGenerator(object):
             src_path = None
         if isinstance(component, ComponentClass):
             componentclass = component
-            default_parameters = None
+            prototype = None
         else:
             componentclass = component.component_class
-            default_parameters = component
-        return componentclass, default_parameters, src_path
+            prototype = component
+        return componentclass, prototype, src_path
 
     def unit_conversion(self, units):
         try:

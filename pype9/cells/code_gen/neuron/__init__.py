@@ -58,7 +58,7 @@ class CodeGenerator(BaseCodeGenerator):
         # NMODL files on the current platform
         self.specials_dir = self._get_specials_dir()
 
-    def generate_source_files(self, name, componentclass, default_parameters,
+    def generate_source_files(self, name, componentclass, prototype,
                               initial_state, src_dir, **kwargs):
         """
             *KWArgs*
@@ -77,31 +77,31 @@ class CodeGenerator(BaseCodeGenerator):
             ("Provided component class '{}' is not a DynamicsClass"
              .format(componentclass))
         if isinstance(componentclass, KineticsClass):
-            self.generate_kinetics(name, componentclass, default_parameters,
+            self.generate_kinetics(name, componentclass, prototype,
                                    initial_state, src_dir, **kwargs)
         elif 'membrane_voltage' in kwargs:
             self.generate_point_process(name, componentclass,
-                                        default_parameters,
+                                        prototype,
                                         initial_state, src_dir, **kwargs)
         else:
-            self.generate_ion_channel(name, componentclass, default_parameters,
+            self.generate_ion_channel(name, componentclass, prototype,
                                       initial_state, src_dir, **kwargs)
 
-    def generate_ion_channel(self, name, componentclass, default_parameters,
+    def generate_ion_channel(self, name, componentclass, prototype,
                              initial_state, src_dir, **kwargs):
         # Render mod file
         self.generate_mod_file(name, 'main.tmpl', componentclass,
-                               default_parameters, initial_state, src_dir,
+                               prototype, initial_state, src_dir,
                                kwargs)
 
-    def generate_kinetics(self, name, componentclass, default_parameters,
+    def generate_kinetics(self, name, componentclass, prototype,
                           initial_state, src_dir, **kwargs):
         # Render mod file
         self.generate_mod_file(name, 'kinetics.tmpl', componentclass,
-                               default_parameters, initial_state, src_dir,
+                               prototype, initial_state, src_dir,
                                kwargs)
 
-    def generate_point_process(self, name, componentclass, default_parameters,
+    def generate_point_process(self, name, componentclass, prototype,
                                initial_state, src_dir, **kwargs):
         try:
             membrane_voltage = kwargs['membrane_voltage']
@@ -120,16 +120,16 @@ class CodeGenerator(BaseCodeGenerator):
         template_args.update(add_tmpl_args)
         # Render mod file
         self.generate_mod_file(name, 'main.tmpl', componentclass,
-                               default_parameters, initial_state, src_dir,
+                               prototype, initial_state, src_dir,
                                template_args)
 
     def generate_mod_file(self, name, template, componentclass,
-                          default_parameters, initial_state, src_dir,
+                          prototype, initial_state, src_dir,
                           template_args):
         tmpl_args = {
             'component_name': name,
             'componentclass': componentclass,
-            'default_parameters': default_parameters,
+            'prototype': prototype,
             'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
