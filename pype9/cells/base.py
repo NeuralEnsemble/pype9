@@ -50,21 +50,21 @@ class CellMetaClass(type):
                     .format(kwargs, name, build_options))
         except KeyError:
             (name, componentclass,
-             default_parameters, instl_dir) = cls.CodeGenerator().generate(
+             prototype, instl_dir) = cls.CodeGenerator().generate(
                 component, name, build_mode=build_mode, verbose=verbose,
                 **kwargs)
             # Load newly build model
             cls.load_model(name, instl_dir)
             # Create class member dict of new class
             dct = {'componentclass': componentclass,
-                   'default_parameters': default_parameters,
+                   'prototype': prototype,
                    'install_dir': instl_dir}
             # Create new class using Type.__new__ method
             Cell = super(CellMetaClass, cls).__new__(
                 cls, name, (cls.BaseCellClass,), dct)
             # Save Cell class to allow it to save it being built again
-            if default_parameters is not None:
-                url = default_parameters.url
+            if prototype is not None:
+                url = prototype.url
             else:
                 url = componentclass.url
             cls._built_types[(name, url)] = Cell, kwargs

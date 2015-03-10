@@ -68,7 +68,7 @@ def convert_to_neuron_units(value, unit_str):
         value, unit_str, _basic_unit_dict, _compound_unit_dict)
 
 
-class Cell(base.Cell, nineml.user_layer.Dynamics):
+class Cell(base.Cell):
 
     def __init__(self, *properties, **kwprops):
         """
@@ -81,8 +81,10 @@ class Cell(base.Cell, nineml.user_layer.Dynamics):
             properties = []
         for name, qty in kwprops.iteritems():
             properties.append(convert_to_property(name, qty))
+        self._nineml = nineml.user_layer.Dynamics(
+            self.default_parameters.name,
+            self.default_parameters, properties)
         base.Cell.__init__(self)
-        nineml.user_layer.Dynamics(self.default_parameters.name, properties)
         # Construct all the NEURON structures
         self.source_section = self
         self.nrn_object = getattr(h, self.componentclass.name)(0.5, sec=self)
@@ -123,7 +125,7 @@ class Cell(base.Cell, nineml.user_layer.Dynamics):
         if varname.startswith('prop.'):
             varname = varname[5:]
         try:
-            return convert_to_quantity(self.property(varname))
+            return convert_to_quantity(self._nineml.property(varname))
         except KeyError:
             raise AttributeError(varname)
 
@@ -139,7 +141,7 @@ class Cell(base.Cell, nineml.user_layer.Dynamics):
         """
         if varname.startswith('prop.'):
             varname = varname[5:]
-        if varname in self.property_names:
+        if varname in self._nineml.property_names:
             nineml.Dynamics.set(self, convert_to_property(varname, val))
             setattr(self.nrn_object, varname + self._suffix,
                     convert_to_neuron_units(val))
@@ -259,6 +261,43 @@ class Cell(base.Cell, nineml.user_layer.Dynamics):
             self._recorders = {}
             self._recordings = {}
             simulation_controller.register_cell(self)
+
+    @property
+    def properties(self):
+        """
+        The set of componentclass properties (parameter values).
+        """
+        return self._nineml.properties
+
+    @property
+    def property_names(self):
+        return self._nineml.property_names
+
+    def set(self, prop):
+        self._nineml.set(prop)
+
+    @property
+    def attributes_with_units(self):
+        return self._nineml.attributes_with_units
+
+    def __repr__(self):
+        return ('NeuronCell(name="%s", componentclass="%s")' %
+                (self.__class__.__name__, self.name,
+                 self.component_class.name))
+
+    def to_xml(self):
+        return self._nineml.to_xml()
+
+    @property
+    def used_units(self):
+        return self._nineml.used_units
+
+    def write(self, file):  # @ReservedAssignment
+        self._nineml.write(file)
+
+    # This has to go last to avoid clobbering the property decorators
+    def property(self, name):
+        return self._nineml.property(name)
 
 
 class CellMetaClass(base.CellMetaClass):
