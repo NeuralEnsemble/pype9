@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<NineML xmlns="http://nineml.net/9ML/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://nineml.net/9ML/1.0/schema/NineML_v1.0.xsd">
+  <ComponentClass name="IzhikevichClass">
+    <Parameter name="a" dimension="per_time"/>
+    <Parameter name="b" dimension="per_time"/>
+    <Parameter name="c" dimension="voltage"/>
+    <Parameter name="d" dimension="voltage_per_time"/>
+    <Parameter name="Vthresh" dimension="voltage"/>
+    <AnalogSendPort name="U" dimension="dimensionless"/>
+    <AnalogSendPort name="V" dimension="voltage"/>
+    <EventSendPort name="spikeOutput" mode="send"/>
+    <Dynamics>
+      <StateVariable name="V" dimension="voltage"/>
+      <StateVariable name="U" dimension="voltage_per_time"/>
+      <Regime name="subthreshold">
+        <TimeDerivative variable="U">
+          <MathInline>a*(b*v - u)</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="V">
+          <MathInline>0.04*V*V + 5*V + 140 - U</MathInline>
+        </TimeDerivative>
+        <OnCondition>
+          <Trigger>
+            <MathInline>V &gt; Vthresh</MathInline>
+          </Trigger>
+          <StateAssignment variable="V">
+            <MathInline>c</MathInline>
+          </StateAssignment>
+          <StateAssignment variable="U">
+            <MathInline>U + d</MathInline>
+          </StateAssignment>
+          <OutputEvent port="spikeOutput"/>
+        </OnCondition>
+      </Regime>
+    </Dynamics>
+  </ComponentClass>
+  <Component name="Izhikevich">
+    <Definition>IzhikevichClass</Definition>
+    <Property name="a">
+      <SingleValue>0.02</SingleValue>
+    </Property>
+    <Property name="b">
+      <SingleValue>0.2</SingleValue>
+    </Property>
+    <Property name="c" units="mV">
+      <SingleValue>-65.0</SingleValue>
+    </Property>
+    <Property name="d">
+      <SingleValue>2</SingleValue>
+    </Property>
+    <Property name="Vthresh" units="mV">
+      <SingleValue>30</SingleValue>
+    </Property>
+  </Component>
+  <Dimension name="per_time" t="-1"/>
+  <Dimension name="dimensionless"/>
+  <Dimension name="voltage" m="1" l="2" t="-3" i="-1"/>
+  <Dimension name="voltage_per_time" m="1" l="2" t="-4" i="-1"/>
+</NineML>

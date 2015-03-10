@@ -78,6 +78,7 @@ class Cell(base.Cell):
                                 dictionary of parameters or kwarg parameters,
                                 or a list of nineml.Property objects
         """
+        super(Cell, self).__setattr__('_initialised', False)
         if len(properties) == 1 and isinstance(properties, dict):
             kwprops.update(properties)
             properties = []
@@ -90,16 +91,10 @@ class Cell(base.Cell):
         base.Cell.__init__(self)
         # Construct all the NEURON structures
         self.source_section = nrn.Section()  # @UndefinedVariable
-        # FIXME: Should really just be the class name for NEURON I think.
-        try:
-            HocClass = getattr(h, self.prototype.name)
-            self._hoc_suffix = '_' + self.prototype.name
-        except AttributeError:
-            HocClass = getattr(h, self.componentclass.name)
-            self._hoc_suffix = '_' + self.componentclass.name
+        HocClass = getattr(h, self.__class__.name)
         self._hoc = HocClass(0.5, sec=self.source_section)
         # Setup variables required by pyNN
-        self.source = self.source_section(0.5)._ref_v
+        self.source = self._hoc
         # for recording Once NEST supports sections, it might be an idea to
         # drop this in favour of a more explicit scheme
         self.recordable = {'spikes': None, 'v': self.source}
@@ -109,10 +104,15 @@ class Cell(base.Cell):
         self.recording_time = 0
         self.rec = h.NetCon(self.source, None, sec=self.source_section)
         self.initial_v = V_INIT_DEFAULT
+        self._initialised = True
         # Set up references from parameter names to internal variables and set
         # parameters
         for prop in self.properties:
             self.set(prop)
+
+    @property
+    def name(self):
+        return self.prototype.name
 
     def get_threshold(self):
         return in_units(self._model.spike_threshold, 'mV')
@@ -131,12 +131,24 @@ class Cell(base.Cell):
         @param var [str]: var of the attribute, with optional segment segment
                           name enclosed with {} and prepended
         """
-        if varname.startswith('property.'):
-            varname = varname[5:]
-        try:
-            return convert_to_quantity(self._nineml.property(varname))
-        except KeyError:
-            raise AttributeError(varname)
+        if self._initialised:
+            if varname.startswith('property.'):
+                varname = varname[5:]
+            if varname in self.componentclass.parameter_names:
+                val = convert_to_quantity(self._nineml.property(varname))
+                assert val == getattr(self._hoc, varname)
+            elif varname in self.componentclass.state_variable_names:
+                try:
+                    val = getattr(self._hoc, varname)
+                except AttributeError:
+                    raise AttributeError("{} does not have attribute '{}'"
+                                         .format(self.name, varname))
+            else:
+                raise AttributeError("{} does not have attribute '{}'"
+                                     .format(self.name, varname))
+            return val
+        else:
+            return super(Cell, self).__getattr__(varname)
 
     def __setattr__(self, varname, val):
         """
@@ -148,39 +160,47 @@ class Cell(base.Cell):
                           segment, component and attribute vars
         @param val [*]: val of the attribute
         """
-        if varname.startswith('property.'):
-            varname = varname[5:]
-        try:
-            # Check for name name clashes with existing class members (i.e.
-            # 'source', 'source_section', 'record', 'get_recording', etc..)
-            super(Cell, self).__getattr__(varname)
-            super(Cell, self).__setattr__(varname, val)
-        except AttributeError:
-            # Try to set as property
-            if varname in self.__class__.componentclass.parameter_names:
-                self._nineml.set(convert_to_property(varname, val))
-                setattr(self._hoc, varname, convert_to_neuron_units(val)[0])
-            else:  # Fall back to super method
+        if self._initialised:
+            if varname.startswith('property.'):
+                varname = varname[5:]
+            try:
+                # Check for name name clashes with existing class members (i.e.
+                # 'source', 'source_section', 'record', 'get_recording', etc..)
+                super(Cell, self).__getattr__(varname)
                 super(Cell, self).__setattr__(varname, val)
+            except AttributeError:
+                # Try to set as property
+                component_class = self.__class__.componentclass
+                if varname in component_class.parameter_names:
+                    self._nineml.set(convert_to_property(varname, val))
+                elif varname not in component_class.state_variable_names:
+                    raise Pype9RuntimeError(
+                        "'{}' is not a parameter or state variable of the '{}'"
+                        " component class ('{}')"
+                        .format(varname, component_class.name,
+                                "', '".join(chain(
+                                    component_class.parameter_names,
+                                    component_class.state_variable_names))))
+                setattr(self._hoc, varname, convert_to_neuron_units(val)[0])
+        else:
+            super(Cell, self).__setattr__(varname, val)
 
     def __dir__(self):
         return list(set(chain(dir(super(Cell, self)), self.property_names)))
 
     def record(self, variable):
-        self._record(self.source_section(0.5), variable,
-                     key=(variable, None, None))
-
-    def _record(self, seg, variable, key):
+        key = (variable, None, None)
         self._initialise_local_recording()
         if variable == 'spikes':
             self._recorders[key] = recorder = h.NetCon(
-                seg._ref_v, None, self.get_threshold(), 0.0, 1.0, sec=seg)
-            self._recordings[key] = recording = h.Vector()
-            recorder.record(recording)
+                self.source_section._ref_v, None, self.get_threshold(),
+                0.0, 1.0, sec=self.source_section)
+        elif variable == 'v':
+            recorder = getattr(self.source_section(0.5), '_ref_' + variable)
         else:
-            pointer = getattr(seg, '_ref_' + variable)
-            self._recordings[key] = recording = h.Vector()
-            recording.record(pointer)
+            recorder = getattr(self._hoc, '_ref_' + variable)
+        self._recordings[key] = recording = h.Vector()
+        recording.record(recorder)
 
     def recording(self, variables=None, segnames=None, components=None,
                   in_block=False):
@@ -251,7 +271,8 @@ class Cell(base.Cell):
                                 (" in component '{}'".format(key[2])
                                  if key[2] is not None else ''),
                                 (" on segment '{}'".format(key[1])
-                                 if key[1] is not None else '')))
+                                 if key[1] is not None else ''),
+                                self.name))
                 if in_block:
                     segment.analogsignals.append(analog_signal)
                 else:
@@ -278,13 +299,12 @@ class Cell(base.Cell):
         """
         Clears all recorders and recordings
         """
-        self._recorders = {}
-        self._recordings = {}
+        super(Cell, self).__setattr__('_recorders', {})
+        super(Cell, self).__setattr__('_recordings', {})
 
     def _initialise_local_recording(self):
         if not hasattr(self, '_recorders'):
-            self._recorders = {}
-            self._recordings = {}
+            self.clear_recorders()
             simulation_controller.register_cell(self)
 
     @property
@@ -331,6 +351,40 @@ class Cell(base.Cell):
     # This has to go last to avoid clobbering the property decorators
     def property(self, name):
         return self._nineml.property(name)
+
+    def inject_current(self, current):
+        """
+        Injects current into the segment
+
+        `current` -- a vector containing the current [neo.AnalogSignal]
+        """
+        super(Cell, self).__setattr__('iclamp',
+                                      h.IClamp(0.5, sec=self.source_section))
+        self.iclamp.delay = 0.0
+        self.iclamp.dur = 1e12
+        self.iclamp.amp = 0.0
+        super(Cell, self).__setattr__(
+            'iclamp_amps', h.Vector(pq.Quantity(current, 'nA')))
+        super(Cell, self).__setattr__(
+            'iclamp_times', h.Vector(pq.Quantity(current.times, 'ms')))
+        self.iclamp_amps.play(self.iclamp._ref_amp, self.iclamp_times)
+
+    def voltage_clamp(self, voltages, series_resistance=1e-3):
+        """
+        Clamps the voltage of a segment
+
+        `voltage` -- a vector containing the voltages to clamp the segment
+                     to [neo.AnalogSignal]
+        """
+        super(Cell, self).__setattr__('seclamp',
+                                      h.SEClamp(0.5, sec=self.source_section))
+        self.seclamp.rs = series_resistance
+        self.seclamp.dur1 = 1e12
+        super(Cell, self).__setattr__(
+            'seclamp_amps', h.Vector(pq.Quantity(voltages, 'mV')))
+        super(Cell, self).__setattr__(
+            'seclamp_times', h.Vector(pq.Quantity(voltages.times, 'ms')))
+        self.seclamp_amps.play(self.seclamp._ref_amp, self.seclamp_times)
 
 
 class CellMetaClass(base.CellMetaClass):

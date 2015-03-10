@@ -56,7 +56,8 @@ class CellMetaClass(type):
             # Load newly build model
             cls.load_model(name, instl_dir)
             # Create class member dict of new class
-            dct = {'componentclass': componentclass,
+            dct = {'name': name,
+                   'componentclass': componentclass,
                    'prototype': prototype,
                    'install_dir': instl_dir}
             # Create new class using Type.__new__ method
