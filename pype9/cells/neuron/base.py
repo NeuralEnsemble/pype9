@@ -38,8 +38,6 @@ import logging
 
 logger = logging.getLogger("NineLine")
 
-V_INIT_DEFAULT = -65.0
-
 
 _basic_SI_to_neuron_conversions = (('s', 'ms'),
                                    ('V', 'mV'),
@@ -72,6 +70,8 @@ def convert_to_neuron_units(value, unit_str='dimensionless'):
 
 class Cell(base.Cell):
 
+    V_INIT_DEFAULT = -65.0
+
     def __init__(self, *properties, **kwprops):
         """
         `propertes/kwprops` --  Can accept a single parameter, which is a
@@ -103,7 +103,7 @@ class Cell(base.Cell):
         self.gsyn_trace = {}
         self.recording_time = 0
         self.rec = h.NetCon(self.source, None, sec=self.source_section)
-        self.initial_v = V_INIT_DEFAULT
+        self.initial_v = self.V_INIT_DEFAULT
         self._initialised = True
         # Set up references from parameter names to internal variables and set
         # parameters
