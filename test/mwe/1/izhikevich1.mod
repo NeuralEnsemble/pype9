@@ -1,12 +1,5 @@
-: Izhikevich artificial neuron model from 
-: EM Izhikevich "Simple Model of Spiking Neurons"
-: IEEE Transactions On Neural Networks, Vol. 14, No. 6, November 2003 pp 1569-1572
-:
-: This NMODL file may not work properly if used outside of PyNN.
-: Ted Carnevale has written a more complete, general-purpose implementation - see http://www.neuron.yale.edu/ftp/ted/devel/izhdistrib.zip
-
 NEURON {
-    POINT_PROCESS Izhikevich
+    POINT_PROCESS Izhikevich1
     RANGE a, b, c, d, u, uinit, vthresh
     NONSPECIFIC_CURRENT i
 }
@@ -23,7 +16,7 @@ INITIAL {
 }
 
 PARAMETER {
-    a       = 0.02 (/ms)
+    e       = 0.02 (/ms)
     b       = 0.2  (/ms)
     c       = -65  (mV)   : reset potential after a spike
     d       = 2    (mV/ms)
@@ -48,7 +41,7 @@ BREAKPOINT {
 }
 
 DERIVATIVE states {
-    u' = a*(b*v - u) 
+    u' = e*(b*v - u) 
 }
 
 NET_RECEIVE (weight (mV)) {

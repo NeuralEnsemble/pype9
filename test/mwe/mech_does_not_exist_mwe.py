@@ -6,16 +6,7 @@ from os import path
 
 
 def _new_property(obj_hierarchy, attr_name):
-    """
-    Returns a new property, mapping attr_name to obj_hierarchy.attr_name.
-
-    For example, suppose that an object of class A has an attribute b which
-    itself has an attribute c which itself has an attribute d. Then placing
-      e = _new_property('b.c', 'd')
-    in the class definition of A makes A.e an alias for A.b.c.d
-    """
-
-    def set(self, value):  # @ReservedAssignment
+    def set(self, value):
         obj = reduce(getattr, [self] + obj_hierarchy.split('.'))
         setattr(obj, attr_name, value)
 
@@ -26,42 +17,42 @@ def _new_property(obj_hierarchy, attr_name):
     return property(fset=set, fget=get)
 
 
-class IzhikevichPyNN(nrn.Section):  # @UndefinedVariable
+class Izhikevich(nrn.Section):
     """docstring"""
 
-    def __init__(self, a_=0.02, b=0.2):
-
-        # initialise Section object with 'pas' mechanism
-        nrn.Section.__init__(self)  # @UndefinedVariable
+    def __init__(self):
+        nrn.Section.__init__(self)
         self.seg = self(0.5)
         self.source_section = self
         self.L = 10
         self.seg.diam = 10 / pi
         self.c_m = 1.0
-
-        # insert Izhikevich mechanism
-        self.izh = h.Izhikevich(0.5, sec=self)
+        self.izh = h.Izhikevich1(0.5, sec=self)
         self.source = self.izh
-        self.a_ = a_
-        self.b = b
 
-    a_ = _new_property('izh', 'a')
-    b = _new_property('izh', 'b')
+        # Comment out this line or replace with 'self.izh.b = 0.2' or replace
+        # the property name with a name that isn't in the izhikevich class
+        # like 'self.e = 0.02'
+        self.a = 0.02
+#         self.izh.a = 0.2
+#         self.e = 0.02
 
-# load_mechanisms('/Users/tclose/git/pyNN/src/neuron/nmodl')
-# load_mechanisms('/Users/tclose/git/pype9/test/data/xml/9build/neuron/'
-#                 'Izhikevich9ML/src')
+        a = _new_property('izh', 'e')
+
+
 load_mechanisms(path.join(path.dirname(__file__), '1'))
+
+# Comment out this line and it works regardless
 load_mechanisms(path.join(path.dirname(__file__), '2'))
-sec = IzhikevichPyNN()
+
+
+sec = Izhikevich()
 stim = h.IClamp(1.0, sec=sec)
-stim.delay = 1   # ms
-stim.dur = 100   # ms
-stim.amp = 0.2   # nA
-# Record Time from NEURON (neuron.h._ref_t)
+stim.delay = 1
+stim.dur = 100
+stim.amp = 0.2
 rec_t = neuron.h.Vector()
 rec_t.record(neuron.h._ref_t)
-# Record Voltage from the center of the soma
 rec_v = neuron.h.Vector()
 rec_v.record(sec(0.5)._ref_v)
 neuron.h.finitialize(-60)

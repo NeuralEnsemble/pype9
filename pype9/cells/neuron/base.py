@@ -90,7 +90,7 @@ class Cell(base.Cell):
         # Call base init (needs to be after 9ML init)
         base.Cell.__init__(self)
         # Construct all the NEURON structures
-        self.source_section = nrn.Section()  # @UndefinedVariable
+        self.source_section = h.Section()  # @UndefinedVariable
         HocClass = getattr(h, self.__class__.name)
         self._hoc = HocClass(0.5, sec=self.source_section)
         # Setup variables required by pyNN

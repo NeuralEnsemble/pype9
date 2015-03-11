@@ -1,15 +1,5 @@
-:VERBATIM
-:extern double nineml_gsl_normal(double, double);
-:extern double nineml_gsl_uniform(double, double);
-:extern double nineml_gsl_binomial(double, int);
-:extern double nineml_gsl_exponential(double);
-:extern double nineml_gsl_poisson(double);
-:ENDVERBATIM
-
-TITLE Spiking node generated from 9ML using PyPe9 version 0.1 at 'Wed 11 Mar 15 02:10:48AM'
-
 NEURON {
-    POINT_PROCESS Izhikevich9ML
+    POINT_PROCESS Izhikevich2
     RANGE a, b, c, d, u, uinit, vthresh
     NONSPECIFIC_CURRENT i
 }
