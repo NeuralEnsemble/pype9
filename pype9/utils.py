@@ -16,6 +16,7 @@ from nineml import (
     ConnectionRuleClass, Distribution, DistributionClass)
 from copy import copy
 from nineml.exceptions import NineMLMissingElementError
+import math
 
 
 def remove_ignore_missing(path):
@@ -134,7 +135,9 @@ def convert_to_property(name, qty):
                 powers['k'] = power
             else:
                 assert False, "Unrecognised units '{}'".format(si_unit)
-        units = nineml.Unit(unit_name, **powers)
+        dimension = nineml.Dimension(unit_name + 'Dimension', **powers)
+        units = nineml.Unit(unit_name, dimension=dimension,
+                            power=float(math.log10(qty.units.simplified)))
     else:
         raise Pype9RuntimeError(
             "Cannot '{}' to nineml.Property (can only convert "

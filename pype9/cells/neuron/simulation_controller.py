@@ -18,6 +18,10 @@ class _SimulationController(object):
         self.registered_cells = []
         self._time = h.Vector()
 
+    def initialize(self):
+        self.running = True
+        self.reset()
+
     def finalize(self):
         logger.info("Finishing up with NEURON.")
         h.quit()
@@ -44,8 +48,7 @@ class _SimulationController(object):
         else:
             h.dt = timestep
         if reset or not self.running:
-            self.running = True
-            self.reset()
+            self.initialize()
         # Convert simulation time to float value in ms
         simulation_time = float(pq.Quantity(simulation_time, 'ms'))
         for _ in numpy.arange(h.dt, simulation_time + h.dt, h.dt):

@@ -21,9 +21,7 @@ from nineml.abstraction_layer.expressions import Alias
 from nineml.abstraction_layer.ports import (
     AnalogReceivePort, AnalogSendPort)
 from pype9.exceptions import (
-    Pype9BuildError, Pype9RuntimeError,
-    Pype9CouldNotGuessFromDimensionException,
-    Pype9NoElementWithMatchingDimensionException)
+    Pype9BuildError, Pype9RuntimeError, Pype9NoMatchingElementException)
 import pype9
 from datetime import datetime
 from nineml import Document
@@ -158,7 +156,6 @@ class CodeGenerator(BaseCodeGenerator):
         if orig_v.name != 'v':
             trans.rename_symbol(orig_v.name, 'v')
             v = trans.state_variable('v')
-            orig_v.annotations[PYPE9_NS][TRANSFORM_DEST] = v
             v.annotations[PYPE9_NS][TRANSFORM_SRC] = orig_v
         else:
             v = trans.state_variable('v')
@@ -180,17 +177,22 @@ class CodeGenerator(BaseCodeGenerator):
         # Get or guess the location of the membrane capacitance
         try:
             orig_cm = self._get_member_from_kwargs_or_guess_via_dimension(
-                'membrane_capactiance', 'parameters', un.specificCapacitance,
+                'membrane_capacitance', 'parameters', un.specificCapacitance,
                 orig, kwargs)
             cm_prop = props(orig_cm.name)
             cm = trans.parameter(orig_cm.name)
             orig.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = orig_cm.name
-        except Pype9NoElementWithMatchingDimensionException:
-            # Add capacitance parameter if it isn't present
-            cm = Parameter('cm_', dimension=un.specificCapacitance)
-            cm_prop = Property(name=cm.name, value=1.0, units=un.uF_per_cm2)
-            cm.annotations[PYPE9_NS][TRANSFORM_SRC] = None
+        except Pype9NoMatchingElementException:
+            # Add capacitance property if it isn't present
+            if 'membrane_capacitance' in kwargs:
+                cm_prop = kwargs['membrane_capacitance']
+                assert isinstance(cm_prop, Property)
+            else:
+                cm_prop = Property(name='cm_', value=1.0, units=un.uF_per_cm2)
             props.append(cm_prop)
+            # Add corresponding capacitance parameter
+            cm = Parameter(cm_prop.name, dimension=un.specificCapacitance)
+            cm.annotations[PYPE9_NS][TRANSFORM_SRC] = None
             trans.add(cm)
         trans.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = cm.name
         # ---------------------------------------------------------------------
@@ -206,7 +208,7 @@ class CodeGenerator(BaseCodeGenerator):
                     " derivative equation changes between regimes")
             regime.remove(regime.time_derivative(v.name))
         # Add alias expression for current
-        i = Alias('i_', rhs=dvdt.rhs * cm)
+        i = Alias('i_', rhs=dvdt.rhs * cm * -1.0)
         # FIXME: Need to be able to sympy time derivatives
         i.annotations[PYPE9_NS][TRANSFORM_SRC] = (dvdt, cm), dvdt
         dvdt.annotations[PYPE9_NS][TRANSFORM_DEST] = (i, cm), i

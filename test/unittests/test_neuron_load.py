@@ -11,7 +11,8 @@ import pylab as plt
 from pype9.cells.neuron import (
     CellMetaClass, simulation_controller as simulator)
 import numpy
-import neo
+from nineml.user_layer import Property
+from nineml.abstraction_layer import units as un
 import quantities as pq
 
 # from pyNN.neuron.cells import Izhikevich_ as IzhikevichPyNN
@@ -36,11 +37,10 @@ class TestNeuronLoad(TestCase):
     izhikevich_name = 'Izhikevich9ML'
 
     def test_neuron_load(self):
-        Izhikevich9ML = CellMetaClass(self.izhikevich_file,
-                                      name=self.izhikevich_name,
-                                      build_mode='compile_only', verbose=True,
-                                      membrane_voltage='V',
-                                      membrane_capacitance='Cm')
+        Izhikevich9ML = CellMetaClass(
+            self.izhikevich_file, name=self.izhikevich_name,
+            build_mode='force', verbose=True, membrane_voltage='V',
+            membrane_capacitance=Property('Cm', 1, un.uF_per_cm2))
         # ---------------------------------------------------------------------
         # Set up PyNN section
         # ---------------------------------------------------------------------
@@ -55,26 +55,62 @@ class TestNeuronLoad(TestCase):
         stim.dur = 100   # ms
         stim.amp = 0.2   # nA
         # Record Time from NEURON (neuron.h._ref_t)
-        rec_t = neuron.h.Vector()
-        rec_t.record(neuron.h._ref_t)
-        # Record Voltage from the center of the soma
-        rec_v = neuron.h.Vector()
-        rec_v.record(pnn(0.5)._ref_v)
+        rec = Recorder(pnn, pnn_izhi)
+        tests = ('v', 'Cm')
+        for test in tests:
+            rec.record(test)
         # ---------------------------------------------------------------------
         # Set up 9ML cell
         # ---------------------------------------------------------------------
-        nml = Izhikevich9ML()
-        nml.inject_current(neo.AnalogSignal([1.0], units='nA',
-                                            sampling_period=100 * pq.ms))
-        nml.record('v')
-        simulator.run(10)
-        v = nml.recording('v')
-        pnn_v = numpy.array(rec_v)
-        pnn_t = numpy.array(rec_t)
-        plt.plot(pnn_t, pnn_v)
-        plt.plot(v.times, v)
+#         izhi = Izhikevich9ML(a=0.02 * 1 / pq.ms, b=0.2 * 1.0 / pq.ms,
+#                              c=-65.0 * pq.mV, d=2 * pq.mV / pq.ms,
+#                              vthresh=30 * pq.mV)
+        izhi = Izhikevich9ML()
+        print izhi.a
+#         izhi.inject_current(neo.AnalogSignal([0.0] + [0.2] * 9, units='nA',
+#                                             sampling_period=1 * pq.ms))
+        stim2 = h.IClamp(1.0, sec=izhi.source_section)
+        stim2.delay = 1   # ms
+        stim2.dur = 100   # ms
+        stim2.amp = 0.2   # nA
+        for test in tests:
+            izhi.record(test)
+        simulator.initialize()
+        izhi.u = -14 * pq.mV / pq.ms
+        simulator.run(10, reset=False)
+        leg = []
+        for test in tests:
+            n = izhi.recording(test)
+            t, p = rec.recording(test)
+            plt.plot(t, p)
+            plt.plot(n.times, n)
+            leg.extend(('PyNN ' + test, '9ML ' + test))
+        plt.legend(leg)
         plt.show()
         h.quit()
+
+
+class Recorder(object):
+
+    def __init__(self, sec, mech):
+        self.sec = sec
+        self.mech = mech
+        self.rec_t = h.Vector()
+        self.rec_t.record(neuron.h._ref_t)
+        self.recs = {}
+
+    def record(self, varname):
+        rec = h.Vector()
+        self.recs[varname] = rec
+        if varname == 'v':
+            rec.record(self.sec(0.5)._ref_v)
+        elif varname == 'Cm':
+            rec.record(self.sec(0.5)._ref_cm)
+        else:
+            rec.record(getattr(self.mech, '_ref_' + varname))
+
+    def recording(self, varname):
+        return numpy.array(self.rec_t), numpy.array(self.recs[varname])
 
 
 if __name__ == '__main__':

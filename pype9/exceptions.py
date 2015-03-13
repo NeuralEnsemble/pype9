@@ -20,7 +20,11 @@ class Pype9CouldNotGuessFromDimensionException(Exception):
     pass
 
 
-class Pype9NoElementWithMatchingDimensionException(Exception):
+class Pype9NoMatchingElementException(Exception):
+    pass
+
+
+class Pype9MemberNameClashException(Exception):
     pass
 
 

@@ -32,6 +32,7 @@ from .simulation_controller import simulation_controller
 from math import pi
 from pype9.annotations import PYPE9_NS, MEMBRANE_CAPACITANCE
 from nineml.abstraction_layer import units as un
+from pype9.exceptions import Pype9MemberNameClashException
 
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
@@ -87,6 +88,8 @@ class Cell(base.Cell):
         if len(properties) == 1 and isinstance(properties, dict):
             kwprops.update(properties)
             properties = []
+        else:
+            properties = list(properties)
         for name, qty in kwprops.iteritems():
             properties.append(convert_to_property(name, qty))
         # Init the 9ML component of the cell
@@ -108,9 +111,12 @@ class Cell(base.Cell):
         assert cm.units == un.uF_per_cm2, \
             ("membrane capacitance not in neuron units (converter not "
              "implemented yet)")
+        # Set capacitance in hoc
         self.source_section.cm = cm.value
         HocClass = getattr(h, self.__class__.name)
         self._hoc = HocClass(0.5, sec=self.source_section)
+        # Set capacitance in mechanism
+        setattr(self._hoc, cm.name, cm.value / 1000.0)  # FIXME: Not quite sure about this (taken from the PyNN Izhikevich neuron)
         # Setup variables required by pyNN
         self.source = self._hoc
         # for recording Once NEST supports sections, it might be an idea to
@@ -150,11 +156,9 @@ class Cell(base.Cell):
                           name enclosed with {} and prepended
         """
         if self._initialised:
-            if varname.startswith('property.'):
-                varname = varname[5:]
             if varname in self.componentclass.parameter_names:
                 val = convert_to_quantity(self._nineml.property(varname))
-                assert val == getattr(self._hoc, varname)
+                # FIXME: Need to assert the same as hoc value
             elif varname in self.componentclass.state_variable_names:
                 try:
                     val = getattr(self._hoc, varname)
@@ -165,8 +169,6 @@ class Cell(base.Cell):
                 raise AttributeError("{} does not have attribute '{}'"
                                      .format(self.name, varname))
             return val
-        else:
-            return super(Cell, self).__getattr__(varname)
 
     def __setattr__(self, varname, val):
         """
@@ -179,29 +181,25 @@ class Cell(base.Cell):
         @param val [*]: val of the attribute
         """
         if self._initialised:
-            if varname.startswith('property.'):
-                varname = varname[5:]
-            try:
-                # Check for name name clashes with existing class members (i.e.
-                # 'source', 'source_section', 'record', 'get_recording', etc..)
-                super(Cell, self).__getattr__(varname)
-                super(Cell, self).__setattr__(varname, val)
-            except AttributeError:
-                # Try to set as property
-                component_class = self.__class__.componentclass
-                if varname in component_class.parameter_names:
-                    self._nineml.set(convert_to_property(varname, val))
-                elif varname not in component_class.state_variable_names:
-                    raise Pype9RuntimeError(
-                        "'{}' is not a parameter or state variable of the '{}'"
-                        " component class ('{}')"
-                        .format(varname, component_class.name,
-                                "', '".join(chain(
-                                    component_class.parameter_names,
-                                    component_class.state_variable_names))))
-                setattr(self._hoc, varname, convert_to_neuron_units(val)[0])
+            # Try to set as property
+            if varname in self.componentclass.parameter_names:
+                self._nineml.set(convert_to_property(varname, val))
+            elif varname not in self.componentclass.state_variable_names:
+                raise Pype9RuntimeError(
+                    "'{}' is not a parameter or state variable of the '{}'"
+                    " component class ('{}')"
+                    .format(varname, self.componentclass.name,
+                            "', '".join(chain(
+                                self.componentclass.parameter_names,
+                                self.componentclass.state_variable_names))))
+            setattr(self._hoc, varname, convert_to_neuron_units(val)[0])
         else:
             super(Cell, self).__setattr__(varname, val)
+
+    def set(self, prop):
+        self._nineml.set(prop)
+        # FIXME: need to convert to NEURON units
+        setattr(self._hoc, prop.name, prop.value)
 
     def __dir__(self):
         return list(set(chain(dir(super(Cell, self)), self.property_names)))
@@ -335,9 +333,6 @@ class Cell(base.Cell):
     @property
     def property_names(self):
         return self._nineml.property_names
-
-    def set(self, prop):
-        self._nineml.set(prop)
 
     @property
     def attributes_with_units(self):

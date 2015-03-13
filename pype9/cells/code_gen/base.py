@@ -24,11 +24,10 @@ from itertools import izip
 from runpy import run_path
 from abc import ABCMeta, abstractmethod
 from nineml.abstraction_layer import units
-from nineml.user_layer import Component
+from nineml.user_layer import Component, Property
 from pype9.exceptions import (
-    Pype9BuildError, Pype9RuntimeError,
-    Pype9CouldNotGuessFromDimensionException,
-    Pype9NoElementWithMatchingDimensionException)
+    Pype9BuildError, Pype9RuntimeError, Pype9NoMatchingElementException,
+    Pype9CouldNotGuessFromDimensionException)
 import logging
 from nineml import BaseNineMLObject
 import pype9.annotations
@@ -334,16 +333,24 @@ class BaseCodeGenerator(object):
 
     @classmethod
     def _get_member_from_kwargs_or_guess_via_dimension(
-            cls, member_name, elements_name, dimension, component, kwargs):
+            cls, member_name, elements_name, dimension, componentclass,
+            kwargs):
         """
         Guess the location of the member from its unit dimension
         """
         element_descr = elements_name.replace('_', ' ')
         member_descr = member_name.replace('_', ' ')
-        elements = list(getattr(component, elements_name))
+        elements = list(getattr(componentclass, elements_name))
         if member_name in kwargs:
             # Get specified member
             member = kwargs[member_name]
+            if isinstance(member, Property):
+                try:
+                    member = componentclass.parameter(member.name)
+                except KeyError:
+                    raise Pype9NoMatchingElementException(
+                        "Did not find parameter corresponding to kwarg"
+                        "property '{}'".format(member.name))
             if isinstance(member, basestring):
                 try:
                     member = next(e for e in elements if e.name == member)
@@ -365,13 +372,13 @@ class BaseCodeGenerator(object):
             if len(matching) == 1:
                 member = matching[0]
                 logger.info("Guessed that the {} in component class '{}'"
-                            "is '{}'".format(member_descr, component.name,
+                            "is '{}'".format(member_descr, componentclass.name,
                                              member.name))
             elif not matching:
-                raise Pype9NoElementWithMatchingDimensionException(
+                raise Pype9NoMatchingElementException(
                     "Component '{}' does not have a {} with suitable dimension"
                     " for the {} ('{}'). Found '{}'"
-                    .format(component.name, element_descr, member_descr,
+                    .format(componentclass.name, element_descr, member_descr,
                             dimension.name,
                             "', '".join(e.name for e in elements)))
             else:
@@ -379,7 +386,7 @@ class BaseCodeGenerator(object):
                     "Could not guess {} in component '{}' from the following "
                     "{} with dimension '{}', '{}'. Please specify which one is"
                     " the {}" "via the '{}' keyword arg"
-                    .format(member_descr, component.name, element_descr,
+                    .format(member_descr, componentclass.name, element_descr,
                             dimension.name,
                             "', '".join(e.name for e in matching),
                             member_descr, member_name))
