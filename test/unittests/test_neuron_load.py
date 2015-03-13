@@ -19,6 +19,13 @@ from math import pi
 import pyNN  # @UnusedImport
 
 
+class Cell(object):
+
+    def __init__(self):
+        self.source_section = h.Section()  # @UndefinedVariable
+        self._hoc = h.Izhikevich9ML(0.5, sec=self.source_section)
+
+
 class TestNeuronLoad(TestCase):
 
     izhikevich_file = path.join(test_data_dir, 'xml', 'Izhikevich2003.xml')
@@ -30,14 +37,20 @@ class TestNeuronLoad(TestCase):
                                       build_mode='compile_only', verbose=True,
                                       membrane_voltage='V',
                                       membrane_capacitance='Cm')
+        pnn = h.Section()
+        pnn.L = 10
+        pnn.diam = 10 / pi
+        pnn.cm = 1.0
+        pnn_izhi = h.Izhikevich(0.5, sec=pnn)  # @UnusedVariable
+# #         nml = Cell()
+#         nml = h.Section()  # @UndefinedVariable
+#         nml.L = 10
+#         nml.diam = 10 / pi
+#         nml.cm = 1.0
+#         izhi2 = h.Izhikevich9ML(0.5, sec=nml)
         nml = Izhikevich9ML()
-        pyNN_sec = h.Section()
-        pyNN_sec.L = 10
-        pyNN_sec.diam = 10 / pi
-        pyNN_sec.cm = 1.0
-        pyNN_izhi = h.Izhikevich(0.5, sec=pyNN_sec)  # @UnusedVariable
         # PyNN version
-        for sec in (nml.source_section, pyNN_sec):
+        for sec in (pnn, nml.source_section):
             # Specify current injection
             stim = h.IClamp(1.0, sec=sec)
             stim.delay = 1   # ms

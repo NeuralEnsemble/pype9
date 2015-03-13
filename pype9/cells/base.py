@@ -13,6 +13,7 @@
 """
 from copy import deepcopy
 from pype9.exceptions import Pype9RuntimeError
+from pype9.utils import load_9ml_prototype
 
 
 class CellMetaClass(type):
@@ -22,14 +23,18 @@ class CellMetaClass(type):
     nineml_celltype_from_model
     """
 
-    def __new__(cls, component, name=None, **kwargs):
+    def __new__(cls, component, name=None, saved_name=None, **kwargs):
         """
-        `component` -- Either a parsed lib9ml SpikingNode object or a url
-                       to a 9ml file
-        `name`      -- Either the name of a component within the given url
-                       or a name to call the class built with the specified
-                       build options (passed in kwargs).
+        `component`  -- Either a parsed lib9ml SpikingNode object or a url
+                        to a 9ml file
+        `name`       -- The name to call the class built with the specified
+                        build options (passed in kwargs).
+        `saved_name` -- The name of a component within the given url
         """
+        if name is None:
+            name = saved_name
+        elif saved_name is None:
+            saved_name = name
         # Extract out build directives
         build_mode = kwargs.pop('build_mode', 'lazy')
         verbose = kwargs.pop('verbose', False)
@@ -49,25 +54,31 @@ class CellMetaClass(type):
                     "of a URL)."
                     .format(kwargs, name, build_options))
         except KeyError:
-            (name, componentclass,
-             prototype, instl_dir) = cls.CodeGenerator().generate(
-                component, name, build_mode=build_mode, verbose=verbose,
-                **kwargs)
+            # Initialise code generator
+            code_gen = cls.CodeGenerator()
+            prototype = load_9ml_prototype(component, name, saved_name)
+            trfm_prototype, trfm_elements = cls.transform(prototype, **kwargs)
+            # Set build dir default from original prototype url if not
+            # explicitly provided
+            build_dir = kwargs.pop('build_dir', None)
+            if build_dir is None:
+                build_dir = code_gen.get_build_dir(prototype.url, name)
+            instl_dir = code_gen.generate(
+                trfm_prototype, build_mode=build_mode, verbose=verbose,
+                transformed=trfm_elements, build_dir=build_dir, **kwargs)
             # Load newly build model
             cls.load_model(name, instl_dir)
             # Create class member dict of new class
             dct = {'name': name,
-                   'componentclass': componentclass,
+                   'componentclass': prototype.component_class,
                    'prototype': prototype,
-                   'install_dir': instl_dir}
+                   'install_dir': instl_dir,
+                   'transformed': trfm_elements,
+                   'build_options': kwargs}
             # Create new class using Type.__new__ method
             Cell = super(CellMetaClass, cls).__new__(
                 cls, name, (cls.BaseCellClass,), dct)
             # Save Cell class to allow it to save it being built again
-            if prototype is not None:
-                url = prototype.url
-            else:
-                url = componentclass.url
             cls._built_types[(name, url)] = Cell, kwargs
         return Cell
 
@@ -78,6 +89,21 @@ class CellMetaClass(type):
         (not sure if there is a more elegant way to do this).
         """
         pass
+
+    def load_libraries(self, name, install_dir, **kwargs):
+        """
+        To be overridden by derived classes to allow the model to be loaded
+        from compiled external libraries
+        """
+        pass
+
+    def transform(self, component, **kwargs):  # @UnusedVariable
+        """
+        To be overridden by derived classes to transform the model into a
+        format that better suits the simulator implementation
+        """
+        transformed_elems = {}
+        return component, transformed_elems
 
 
 class Cell(object):
@@ -90,14 +116,14 @@ class Cell(object):
                    the model here is provided here to allow the modification of
                    morphology and distribution of ion channels programmatically
         """
-#         if model:
-#             if model._source is not self._default_model._source:
-#                 raise Exception("Only models derived from the same source as "
-#                                 "the default model can be used to instantiate "
-#                                 "the cell with.")
-#             self._model = model
-#         else:
-#             self._model = self.prototype
+#     if model:
+#         if model._source is not self._default_model._source:
+#             raise Exception("Only models derived from the same source as "
+#                             "the default model can be used to instantiate "
+#                             "the cell with.")
+#         self._model = model
+#     else:
+#         self._model = self.prototype
         pass
 
     @classmethod

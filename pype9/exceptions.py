@@ -16,6 +16,14 @@ class Pype9BuildError(Exception):
     pass
 
 
+class Pype9CouldNotGuessFromDimensionException(Exception):
+    pass
+
+
+class Pype9NoElementWithMatchingDimensionException(Exception):
+    pass
+
+
 class Pype9ProjToCloneNotCreatedException(Exception):
 
     def __init__(self, orig_proj_id=None):

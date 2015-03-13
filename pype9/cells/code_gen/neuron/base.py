@@ -9,16 +9,10 @@
 """
 from __future__ import absolute_import
 import os.path
-import shutil
-import time
-from itertools import chain
-from collections import defaultdict
-import platform
 import tempfile
-from copy import deepcopy, copy
+from copy import copy
 import uuid
 import subprocess as sp
-import quantities as pq
 from ..base import BaseCodeGenerator
 import nineml.abstraction_layer.units as un
 from nineml.abstraction_layer.dynamics import (
@@ -26,16 +20,26 @@ from nineml.abstraction_layer.dynamics import (
 from nineml.abstraction_layer.expressions import Alias
 from nineml.abstraction_layer.ports import (
     AnalogReceivePort, AnalogSendPort)
-from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
+from pype9.exceptions import (
+    Pype9BuildError, Pype9RuntimeError,
+    Pype9CouldNotGuessFromDimensionException,
+    Pype9NoElementWithMatchingDimensionException)
 import pype9
 from datetime import datetime
-from nineml.utils import expect_single
-from nineml.user_layer import Dynamics
-from nineml.abstraction_layer import DynamicsClass, Parameter
+from nineml import Document
+from nineml.user_layer import Dynamics, Definition, Property
+from nineml.abstraction_layer import Parameter
 try:
-    from nineml.extensions.kinetics import KineticsClass
+    from nineml.extensions.kinetics import Kinetics
 except ImportError:
     KineticsClass = type(None)
+from pype9 import PYPE9_NS
+from ...neuron import ION_SPECIES_NS
+import logging
+
+TRANSFORM_NS = 'NeuronBuildTransform'
+
+logger = logging.getLogger("PyPe9")
 
 
 class CodeGenerator(BaseCodeGenerator):
@@ -58,8 +62,8 @@ class CodeGenerator(BaseCodeGenerator):
         # NMODL files on the current platform
         self.specials_dir = self._get_specials_dir()
 
-    def generate_source_files(self, name, componentclass, prototype,
-                              initial_state, src_dir, **kwargs):
+    def generate_source_files(self, name, prototype, initial_state, src_dir,
+                              **kwargs):
         """
             *KWArgs*
                 `membrane_voltage` -- Specifies the state that represents
@@ -73,62 +77,45 @@ class CodeGenerator(BaseCodeGenerator):
                 `is_subcomponent`  -- Whether to use the 'SUFFIX' tag or not.
                 `ode_solver`       -- specifies the ODE solver to use
         """
-        assert isinstance(componentclass, DynamicsClass), \
-            ("Provided component class '{}' is not a DynamicsClass"
-             .format(componentclass))
-        if isinstance(componentclass, KineticsClass):
-            self.generate_kinetics(name, componentclass, prototype,
-                                   initial_state, src_dir, **kwargs)
+        assert isinstance(prototype, Dynamics), \
+            ("Provided prototype class '{}' is not a Dynamics object"
+             .format(prototype))
+        if isinstance(prototype, Kinetics):
+            self.generate_kinetics(name, prototype, initial_state, src_dir,
+                                   **kwargs)
         elif 'membrane_voltage' in kwargs:
-            self.generate_point_process(name, componentclass,
-                                        prototype,
-                                        initial_state, src_dir, **kwargs)
+            self.generate_point_process(
+                name, prototype, initial_state, src_dir, **kwargs)
         else:
-            self.generate_ion_channel(name, componentclass, prototype,
-                                      initial_state, src_dir, **kwargs)
+            self.generate_ion_channel(name, prototype, initial_state, src_dir,
+                                      **kwargs)
 
-    def generate_ion_channel(self, name, componentclass, prototype,
-                             initial_state, src_dir, **kwargs):
+    def generate_ion_channel(self, name, prototype, initial_state, src_dir,
+                             **kwargs):
         # Render mod file
-        self.generate_mod_file(name, 'main.tmpl', componentclass,
-                               prototype, initial_state, src_dir,
-                               kwargs)
+        self.generate_mod_file(name, 'main.tmpl', prototype, initial_state,
+                               src_dir, kwargs)
 
-    def generate_kinetics(self, name, componentclass, prototype,
-                          initial_state, src_dir, **kwargs):
+    def generate_kinetics(self, name, prototype, initial_state, src_dir,
+                          **kwargs):
         # Render mod file
-        self.generate_mod_file(name, 'kinetics.tmpl', componentclass,
-                               prototype, initial_state, src_dir,
-                               kwargs)
+        self.generate_mod_file(name, 'kinetics.tmpl', prototype, initial_state,
+                               src_dir, kwargs)
 
-    def generate_point_process(self, name, componentclass, prototype,
-                               initial_state, src_dir, **kwargs):
-        try:
-            membrane_voltage = kwargs['membrane_voltage']
-            membrane_capacitance = kwargs['membrane_capacitance']
-        except KeyError:
-            raise Pype9BuildError(
-                "'membrane_voltage' and 'membrane_capacitance' variables must "
-                "be specified for standalone NEURON mod file generation: {}"
-                .format(kwargs))
-        componentclass = self.convert_to_current_centric(
-            componentclass, membrane_voltage, membrane_capacitance)
-        add_tmpl_args = {
-            'componentclass': componentclass,
-            'is_subcomponent': False}
+    def generate_point_process(self, name, prototype, initial_state, src_dir,
+                               **kwargs):
+        add_tmpl_args = {'is_subcomponent': False}
         template_args = copy(kwargs)
         template_args.update(add_tmpl_args)
         # Render mod file
-        self.generate_mod_file(name, 'main.tmpl', componentclass,
-                               prototype, initial_state, src_dir,
-                               template_args)
+        self.generate_mod_file(name, 'main.tmpl', prototype, initial_state,
+                               src_dir, template_args)
 
-    def generate_mod_file(self, name, template, componentclass,
-                          prototype, initial_state, src_dir,
-                          template_args):
+    def generate_mod_file(self, name, template, prototype, initial_state,
+                          src_dir, template_args):
         tmpl_args = {
             'component_name': name,
-            'componentclass': componentclass,
+            'componentclass': prototype.component_class,
             'prototype': prototype,
             'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
@@ -144,8 +131,7 @@ class CodeGenerator(BaseCodeGenerator):
         self.render_to_file(template, tmpl_args, name + '.mod', src_dir)
 
     @classmethod
-    def convert_to_current_centric(cls, componentclass, membrane_voltage,
-                                   membrane_capacitance=None):
+    def transform(cls, prototype, **kwargs):
         """
         Copy the component class to alter it to match NEURON's current
         centric focus
@@ -154,61 +140,83 @@ class CodeGenerator(BaseCodeGenerator):
         `membrane_voltage` -- the name of the capcitance that represents
                               the membrane capacitance
         """
-        # Clone component class
-        cc = deepcopy(componentclass)
-        # Rename references to specified membrane voltage to hard-coded NEURON
-        # identifier 'v'
-        cc.rename_symbol(membrane_voltage, 'v')
-        try:
-            v = cc.state_variable('v')
-        except KeyError:
-            raise Pype9RuntimeError(
-                "Could not find specified voltage '{}'"
-                .format(membrane_voltage))
-        try:
-            cm = cc.parameter(membrane_capacitance)
-        except KeyError:
-            cm = Parameter(name='Cm', dimension=un.specificCapacitance)
-            cc.add(cm)
-        if v.dimension != un.voltage:
-            raise Pype9RuntimeError(
-                "Specified membrane voltage does not have 'voltage' dimension"
-                " ({})".format(v.dimension.name))
-        if cm.dimension != un.specificCapacitance:
-            raise Pype9RuntimeError(
-                "Specified membrane capacitance does not have "
-                "'specificCapacitance' dimension ({})"
-                .format(v.dimension.name))
+        # ---------------------------------------------------------------------
+        # Clone original component class and properties
+        # ---------------------------------------------------------------------
+        orig = prototype.component_class
+        # Clone component class before transforming
+        trans = copy(orig)
+        # Clone properties for transformed component
+        props = [copy(p) for p in prototype.properties]
+        # ---------------------------------------------------------------------
+        # Remove the membrane voltage
+        # ---------------------------------------------------------------------
+        # Get or guess the location of the membrane voltage
+        orig_v = cls._get_member_from_kwargs_or_guess_via_dimension(
+            'membrane_voltage', 'state_variables', un.voltage, orig, kwargs)
+        # Map voltage to hard-coded 'v' symbol
+        if orig_v.name != 'v':
+            trans.rename_symbol(orig_v.name, 'v')
+            v = trans.state_variable('v')
+            orig_v.annotations[PYPE9_NS][TRANSFORM_NS]['target'] = v
+            v.annotations[PYPE9_NS][TRANSFORM_NS]['source'] = orig_v
+        else:
+            v = trans.state_variable('v')
         # Replace voltage state-variable with analog receive port
-        cc.remove(v)
-        cc.add(AnalogReceivePort(v.name, dimension=un.voltage))
+        trans.remove(v)
+        v_port = AnalogReceivePort(v.name, dimension=un.voltage)
+        orig_v.annotations[PYPE9_NS][TRANSFORM_NS] = v_port
+        trans.add(v_port)
         # Remove associated analog send port if present
         try:
-            cc.remove(cc.analog_send_port('v'))
+            trans.remove(trans.analog_send_port('v'))
         except KeyError:
             pass
+        # ---------------------------------------------------------------------
+        # Insert membrane capacitance if not present
+        # ---------------------------------------------------------------------
+        # Get or guess the location of the membrane capacitance
+        try:
+            orig_cm = cls._get_member_from_kwargs_or_guess_via_dimension(
+                'membrane_capactiance', 'parameters', un.specificCapacitance,
+                orig, kwargs)
+            cm_prop = props(orig_cm.name)
+            cm = trans.parameter(orig_cm.name)
+        except Pype9NoElementWithMatchingDimensionException:
+            # Add capacitance parameter if it isn't present
+            cm_prop = Property(name='cm_', value=1.0, units=un.uF_per_cm2)
+            cm = Parameter('cm_', dimension=un.specificCapacitance)
+            cm.annotations[PYPE9_NS][TRANSFORM_NS]['source'] = None
+            props.append(cm_prop)
+            trans.add(cm)
+        # ---------------------------------------------------------------------
         # Add current to component
-        i_name = 'i' if 'i' not in cc.state_variable_names else 'i_'
+        # ---------------------------------------------------------------------
         # Get the voltage time derivatives from each regime (must be constant
-        # as there is no OutputAnalog)
-        dvdt = next(cc.regimes).time_derivative(v.name)
-        for regime in cc.regimes:
+        # as there is no OutputAnalog in the spec see )
+        dvdt = next(trans.regimes).time_derivative(v.name)
+        for regime in trans.regimes:
             if regime.time_derivative(v.name) != dvdt:
                 raise Pype9RuntimeError(
                     "Cannot convert to current centric as the voltage time for"
                     " derivative equation changes between regimes")
             regime.remove(regime.time_derivative(v.name))
         # Add alias expression for current
-        i = Alias(i_name, rhs=dvdt.rhs * cm)
-        cc.add(i)
+        i = Alias('i_', rhs=dvdt.rhs * cm)
+        i.annotations[PYPE9_NS][TRANSFORM_NS]['source'] = (dvdt, cm), dvdt * cm
+        dvdt.annotations[PYPE9_NS][TRANSFORM_NS]['target'] = (i, cm), i / cm
+        trans.add(i)
         # Add analog send port for current
-        i_port = AnalogSendPort(i_name, dimension=un.currentDensity)
-        i_port.annotations = {'biophysics': {'ion_species':
-                                             'non_specific'}}
-        cc.add(i_port)
-        # Validate the transformed model
-        cc.validate()
-        return cc
+        i_port = AnalogSendPort('i_', dimension=un.currentDensity)
+        i_port.annotations[PYPE9_NS][ION_SPECIES_NS] = 'non_specific'
+        trans.add(i_port)
+        # ---------------------------------------------------------------------
+        # Validate the transformed component class and construct prototype
+        # ---------------------------------------------------------------------
+        trans.validate()
+        # Retun a prototype of the transformed class
+        return prototype.__class__(
+            Definition(trans, Document(trans)), props.itervalues())
 
     def configure_build_files(self, name, src_dir, compile_dir, install_dir):
         pass

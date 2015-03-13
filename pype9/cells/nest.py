@@ -29,7 +29,7 @@ class CellMetaClass(pype9.cells.base.CellMetaClass):
     CellBaseClass = Cell
 
     @classmethod
-    def load_model(cls, name, install_dir):
+    def load_libraries(cls, name, install_dir):
         lib_dir = os.path.join(install_dir, 'lib', 'nest')
         if (sys.platform.startswith('linux') or
             sys.platform in ['os2', 'os2emx', 'cygwin', 'atheos',

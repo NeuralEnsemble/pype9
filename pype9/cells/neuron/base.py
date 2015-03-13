@@ -25,14 +25,17 @@ import os.path
 from pype9.cells.code_gen.neuron import CodeGenerator
 from pype9.cells.tree import (
     in_units, IonConcentrationModel)
-from ... import create_unit_conversions, convert_units
+from pype9.utils import create_unit_conversions, convert_units
 from pyNN.neuron.cells import VectorSpikeSource
 from itertools import chain
 from .. import base
 from pype9.utils import convert_to_property, convert_to_quantity
 from .simulation_controller import simulation_controller
+from math import pi
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
+
+NEURON_NS = 'NEURON'
 
 import logging
 
@@ -91,6 +94,15 @@ class Cell(base.Cell):
         base.Cell.__init__(self)
         # Construct all the NEURON structures
         self.source_section = h.Section()  # @UndefinedVariable
+        # In order to scale the distributed current to the same units as point
+        # process current, i.e. mA/cm^2 -> nA the surface area needs to be
+        # 100um. mA/cm^2 = -3-(-2^2) = 10^1, 100um^2 = 2 + -6^2 = 10^(-10), nA
+        # = 10^(-9). 1 - 10 = - 9. (see PyNN Izhikevich neuron implementation)
+        self.source_section.L = 10.0
+        self.source_section.diam = 10.0 / pi
+        self.source_section.cm = convert_to_neuron_units(
+            convert_to_quantity(self.prototype.property(
+                self.build_options['membrane_capacitance'])))
         HocClass = getattr(h, self.__class__.name)
         self._hoc = HocClass(0.5, sec=self.source_section)
         # Setup variables required by pyNN
@@ -399,5 +411,5 @@ class CellMetaClass(base.CellMetaClass):
     BaseCellClass = Cell
 
     @classmethod
-    def load_model(cls, name, install_dir):  # @UnusedVariable @NoSelf
+    def load_libraries(cls, _, install_dir):
         load_mechanisms(os.path.dirname(install_dir))

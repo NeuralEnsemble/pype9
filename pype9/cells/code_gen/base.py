@@ -6,7 +6,7 @@
 
 ##########################################################################
 #
-#  Copyright 2011 Okinawa Institute of Science and Technology (OIST), Okinawa, Japan
+#  Copyright 2011 Okinawa Institute of Science and Technology (OIST), Okinawa
 #
 ##########################################################################
 from __future__ import absolute_import
@@ -22,9 +22,16 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from itertools import izip
 from runpy import run_path
 from abc import ABCMeta, abstractmethod
-import nineml
-from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
-from nineml.abstraction_layer import units, ComponentClass
+from nineml.abstraction_layer import units
+from nineml.user_layer import Component
+from pype9.exceptions import (
+    Pype9BuildError, Pype9RuntimeError,
+    Pype9CouldNotGuessFromDimensionException,
+    Pype9NoElementWithMatchingDimensionException)
+import logging
+from nineml import BaseNineMLObject
+
+logger = logging.getLogger('PyPe9')
 
 
 class BaseCodeGenerator(object):
@@ -77,9 +84,8 @@ class BaseCodeGenerator(object):
     def compile_source_files(self, compile_dir, component_name, verbose):
         pass
 
-    def generate(self, component, name=None, saved_name=None,
-                 initial_state=None, install_dir=None, build_dir=None,
-                 build_mode='lazy', verbose=True, **kwargs):
+    def generate(self, prototype, initial_state=None, install_dir=None,
+                 build_dir=None, build_mode='lazy', verbose=True, **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
         NineML cell class
@@ -101,31 +107,18 @@ class BaseCodeGenerator(object):
         """
         # Save original working directory to reinstate it afterwards (just to
         # be polite)
-        if not isinstance(name, basestring) and name is not None:
-            raise Pype9RuntimeError(
-                "Provided name must be a valid identifer '{}'"
-                .format(name))
         orig_dir = os.getcwd()
-        # Get component from file if passed as a string
-        (componentclass, prototype,
-         comp_src_path) = self._read_comp_from_file(component, saved_name)
-        if name is None:
-            if prototype is not None:
-                name = prototype.name
-            else:
-                name = componentclass.name
+        assert isinstance(prototype, Component), \
+            "Prototype is not a 9ML component ('{}')".format(prototype)
+        name = prototype.name
         # Set build dir if not provided
         if build_dir is None:
-            if comp_src_path is None:
+            if prototype.url is None:
                 raise Pype9BuildError(
                     "Build directory must be explicitly provided ('build_dir')"
                     " when using generated 9ml components '{}'"
                     .format(name))
-            build_dir = os.path.abspath(os.path.join(
-                os.path.dirname(comp_src_path),
-                self.BUILD_DIR_DEFAULT,
-                self.SIMULATOR_NAME,
-                name))
+            build_dir = self.get_build_dir(prototype.url, name)
         # Calculate src directory path within build directory
         src_dir = os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
         # Calculate compile directory path within build directory
@@ -134,8 +127,8 @@ class BaseCodeGenerator(object):
         # provided
         install_dir = self.get_install_dir(build_dir, install_dir)
         # Get the timestamp of the source file
-        if comp_src_path:
-            nineml_mod_time = time.ctime(os.path.getmtime(comp_src_path))
+        if prototype.url:
+            nineml_mod_time = time.ctime(os.path.getmtime(prototype.url))
         else:
             nineml_mod_time = None
         # Path of the file which contains or will contain the source
@@ -171,7 +164,7 @@ class BaseCodeGenerator(object):
                             print ("Found existing build in '{}' directory, "
                                    "code generation skipped (set 'build_mode' "
                                    "argument to 'force' or 'build_only' to "
-                                   "enforce regeneration".format(build_dir))
+                                   "enforce regeneration)".format(build_dir))
         # Check if required directories are present depending on build_mode
         elif build_mode == 'require':
             if not os.path.exists(install_dir):
@@ -187,11 +180,9 @@ class BaseCodeGenerator(object):
         if generate_source:
             self.clean_src_dir(src_dir, name)
             self.generate_source_files(
-                name=name, componentclass=componentclass,
-                prototype=component,
-                initial_state=initial_state, src_dir=src_dir,
-                compile_dir=compile_dir, install_dir=install_dir,
-                verbose=verbose, **kwargs)
+                name=name, prototype=prototype, initial_state=initial_state,
+                src_dir=src_dir, compile_dir=compile_dir,
+                install_dir=install_dir, verbose=verbose, **kwargs)
             # Write the timestamp of the 9ML file used to generate the source
             # files
             with open(nineml_mod_time_path, 'w') as f:
@@ -207,54 +198,7 @@ class BaseCodeGenerator(object):
             self.compile_source_files(compile_dir, name, verbose=verbose)
         # Switch back to original dir
         os.chdir(orig_dir)
-        return name, componentclass, prototype, install_dir
-
-    @classmethod
-    def _read_comp_from_file(cls, component, name):
-        """
-        Reads a component from file, checking to see if there is only one
-        component or component class in the file (or not reading from file at
-        all if component is already a component or component class).
-        """
-        if isinstance(component, str):
-            # Interpret the given component as a URL of a NineML component
-            src_path = component
-            # Read NineML description
-            document = nineml.read(src_path)
-            if name is not None:
-                component = document[name]
-            else:
-                components = list(document.components)
-                if len(components) == 1:
-                    component = components[0]
-                else:
-                    if len(components) > 1:
-                        componentclasses = set((c.component_class
-                                                for c in components))
-                    else:
-                        componentclasses = list(document.componentclasses)
-                    if len(componentclasses) == 1:
-                        component = componentclasses[0]
-                    elif len(componentclasses) > 1:
-                        raise Pype9BuildError(
-                            "Multiple component and or classes ('{}') loaded "
-                            "from nineml path '{}'"
-                            .format("', '".join(c.name
-                                                for c in document.components),
-                                    src_path))
-                    else:
-                        raise Pype9BuildError(
-                            "No components or component classes loaded from "
-                            "nineml" " path '{}'".format(src_path))
-        else:
-            src_path = None
-        if isinstance(component, ComponentClass):
-            componentclass = component
-            prototype = None
-        else:
-            componentclass = component.component_class
-            prototype = component
-        return componentclass, prototype, src_path
+        return install_dir
 
     def unit_conversion(self, units):
         try:
@@ -268,6 +212,11 @@ class BaseCodeGenerator(object):
             factor = 1.0
             offset = 0.0
         return (factor, offset)
+
+    def get_build_dir(self, url, name):
+        return os.path.abspath(os.path.join(
+            os.path.dirname(url), self.BUILD_DIR_DEFAULT,
+            self.SIMULATOR_NAME, name))
 
     def get_install_dir(self, build_dir, install_dir):
         """
@@ -379,3 +328,58 @@ class BaseCodeGenerator(object):
                      var_name), mapped_var in loaded_props.iteritems():
                     component_translations[comp_name][var_name] = mapped_var
         return component_translations
+
+    @classmethod
+    def _get_member_from_kwargs_or_guess_via_dimension(
+            cls, member_name, elements_name, dimension, component, kwargs):
+        """
+        Guess the location of the member from its unit dimension
+        """
+        element_descr = elements_name.replace('_', ' ')
+        member_descr = member_name.replace('_', ' ')
+        elements = getattr(component, 'elements_name')
+        matching = [e for e in elements if e.dimension == dimension]
+        if member_name in kwargs:
+            # Get specified member
+            member = kwargs[member_name]
+            if isinstance(member, basestring):
+                try:
+                    member = next(e for e in elements
+                                  if e.name == member)
+                except KeyError:
+                    raise Pype9RuntimeError(
+                        "Could not find specified {} '{}'".format(member_descr,
+                                                                  member_name))
+            elif not isinstance(member, BaseNineMLObject):
+                raise Pype9RuntimeError(
+                    "Invalid type provided for '{}' kwarg (expected string or "
+                    "9ML type, found '{}')".format(member_name, member))
+            if member.dimension != dimension:
+                raise Pype9RuntimeError(
+                    "Specified {} '{}' does not have "
+                    "voltage dimension ('{}')"
+                    .format(member_descr, member.name, member.dimension))
+        else:
+            # guess member from dimension
+            if len(matching) == 1:
+                member = matching[0]
+                logger.info("Guessed that the {} in component class '{}'"
+                            "is '{}'".format(member_descr, component.name,
+                                             member.name))
+            elif not matching:
+                raise Pype9NoElementWithMatchingDimensionException(
+                    "Component '{}' does not have a {} with suitable dimension"
+                    " for the {} ('{}'). Found '{}'"
+                    .format(component.name, element_descr, member_descr,
+                            dimension.name,
+                            "', '".join(e.name for e in elements)))
+            else:
+                raise Pype9CouldNotGuessFromDimensionException(
+                    "Could not guess {} in component '{}' from the following "
+                    "{} with dimension '{}', '{}'. Please specify which one is"
+                    " the {}" "via the '{}' keyword arg"
+                    .format(member_descr, component.name, element_descr,
+                            dimension.name,
+                            "', '".join(e.name for e in matching),
+                            member_descr, member_name))
+        return member
