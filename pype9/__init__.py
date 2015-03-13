@@ -13,4 +13,4 @@
 
 version = "0.1"
 
-PYPE9_NS = 'net.pype9'
+

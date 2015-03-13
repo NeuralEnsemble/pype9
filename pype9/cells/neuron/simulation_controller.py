@@ -2,6 +2,9 @@ from neuron import h
 import quantities as pq
 import weakref
 import numpy
+import logging
+
+logger = logging.getLogger('PyPe9')
 
 
 class _SimulationController(object):
@@ -14,6 +17,10 @@ class _SimulationController(object):
         self.running = False
         self.registered_cells = []
         self._time = h.Vector()
+
+    def finalize(self):
+        logger.info("Finishing up with NEURON.")
+        h.quit()
 
     @property
     def time(self):

@@ -33,8 +33,9 @@ try:
     from nineml.extensions.kinetics import Kinetics
 except ImportError:
     KineticsClass = type(None)
-from pype9 import PYPE9_NS
-from ...neuron import BASIC_NS, ION_SPECIES_NS
+from pype9.annotations import (
+    PYPE9_NS, ION_SPECIES, MEMBRANE_VOLTAGE, MEMBRANE_CAPACITANCE,
+    TRANSFORM_SRC, TRANSFORM_DEST, NON_SPECIFIC_CURRENT)
 import logging
 
 TRANSFORM_NS = 'NeuronBuildTransform'
@@ -80,10 +81,11 @@ class CodeGenerator(BaseCodeGenerator):
         assert isinstance(prototype, Dynamics), \
             ("Provided prototype class '{}' is not a Dynamics object"
              .format(prototype))
-        if isinstance(prototype, Kinetics):
-            self.generate_kinetics(name, prototype, initial_state, src_dir,
-                                   **kwargs)
-        elif 'membrane_voltage' in kwargs:
+#         if isinstance(prototype, Kinetics):
+#             self.generate_kinetics(name, prototype, initial_state, src_dir,
+#                                    **kwargs)
+#         el
+        if 'membrane_voltage' in kwargs:
             self.generate_point_process(
                 name, prototype, initial_state, src_dir, **kwargs)
         else:
@@ -156,8 +158,8 @@ class CodeGenerator(BaseCodeGenerator):
         if orig_v.name != 'v':
             trans.rename_symbol(orig_v.name, 'v')
             v = trans.state_variable('v')
-            orig_v.annotations[PYPE9_NS][TRANSFORM_NS]['target'] = v
-            v.annotations[PYPE9_NS][TRANSFORM_NS]['source'] = orig_v
+            orig_v.annotations[PYPE9_NS][TRANSFORM_DEST] = v
+            v.annotations[PYPE9_NS][TRANSFORM_SRC] = orig_v
         else:
             v = trans.state_variable('v')
         # Replace voltage state-variable with analog receive port
@@ -170,8 +172,8 @@ class CodeGenerator(BaseCodeGenerator):
             trans.remove(trans.analog_send_port('v'))
         except KeyError:
             pass
-        orig.annotations[PYPE9_NS][BASIC_NS]['membrane_voltage'] = orig_v.name
-        trans.annotations[PYPE9_NS][BASIC_NS]['membrane_voltage'] = 'v'
+        orig.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = orig_v.name
+        trans.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = 'v'
         # ---------------------------------------------------------------------
         # Insert membrane capacitance if not present
         # ---------------------------------------------------------------------
@@ -182,16 +184,15 @@ class CodeGenerator(BaseCodeGenerator):
                 orig, kwargs)
             cm_prop = props(orig_cm.name)
             cm = trans.parameter(orig_cm.name)
-            orig.annotations[PYPE9_NS][BASIC_NS][
-                'membrane_capacitance'] = orig_cm.name
+            orig.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = orig_cm.name
         except Pype9NoElementWithMatchingDimensionException:
             # Add capacitance parameter if it isn't present
             cm = Parameter('cm_', dimension=un.specificCapacitance)
             cm_prop = Property(name=cm.name, value=1.0, units=un.uF_per_cm2)
-            cm.annotations[PYPE9_NS][TRANSFORM_NS]['source'] = None
+            cm.annotations[PYPE9_NS][TRANSFORM_SRC] = None
             props.append(cm_prop)
             trans.add(cm)
-        trans.annotations[PYPE9_NS][BASIC_NS]['membrane_capacitance'] = cm.name
+        trans.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = cm.name
         # ---------------------------------------------------------------------
         # Add current to component
         # ---------------------------------------------------------------------
@@ -207,12 +208,12 @@ class CodeGenerator(BaseCodeGenerator):
         # Add alias expression for current
         i = Alias('i_', rhs=dvdt.rhs * cm)
         # FIXME: Need to be able to sympy time derivatives
-        i.annotations[PYPE9_NS][TRANSFORM_NS]['source'] = (dvdt, cm), dvdt
-        dvdt.annotations[PYPE9_NS][TRANSFORM_NS]['target'] = (i, cm), i
+        i.annotations[PYPE9_NS][TRANSFORM_SRC] = (dvdt, cm), dvdt
+        dvdt.annotations[PYPE9_NS][TRANSFORM_DEST] = (i, cm), i
         trans.add(i)
         # Add analog send port for current
         i_port = AnalogSendPort('i_', dimension=un.currentDensity)
-        i_port.annotations[PYPE9_NS][ION_SPECIES_NS] = 'non_specific'
+        i_port.annotations[PYPE9_NS][ION_SPECIES] = NON_SPECIFIC_CURRENT
         trans.add(i_port)
         # ---------------------------------------------------------------------
         # Validate the transformed component class and construct prototype

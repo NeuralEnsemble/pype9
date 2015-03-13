@@ -6,9 +6,13 @@ else:
 from os import path
 from utils import test_data_dir
 import neuron
-from neuron import h, load_mechanisms
+from neuron import h
 import pylab as plt
-from pype9.cells.neuron import CellMetaClass
+from pype9.cells.neuron import (
+    CellMetaClass, simulation_controller as simulator)
+import numpy
+import neo
+import quantities as pq
 
 # from pyNN.neuron.cells import Izhikevich_ as IzhikevichPyNN
 # MPI may not be required but NEURON sometimes needs to be initialised after
@@ -16,7 +20,7 @@ from pype9.cells.neuron import CellMetaClass
 # future)
 
 from math import pi
-import pyNN  # @UnusedImport
+import pyNN.neuron  # @UnusedImport loads pyNN mechanisms
 
 
 class Cell(object):
@@ -37,36 +41,40 @@ class TestNeuronLoad(TestCase):
                                       build_mode='compile_only', verbose=True,
                                       membrane_voltage='V',
                                       membrane_capacitance='Cm')
+        # ---------------------------------------------------------------------
+        # Set up PyNN section
+        # ---------------------------------------------------------------------
         pnn = h.Section()
         pnn.L = 10
         pnn.diam = 10 / pi
         pnn.cm = 1.0
         pnn_izhi = h.Izhikevich(0.5, sec=pnn)  # @UnusedVariable
-# #         nml = Cell()
-#         nml = h.Section()  # @UndefinedVariable
-#         nml.L = 10
-#         nml.diam = 10 / pi
-#         nml.cm = 1.0
-#         izhi2 = h.Izhikevich9ML(0.5, sec=nml)
+        # Specify current injection
+        stim = h.IClamp(1.0, sec=pnn)
+        stim.delay = 1   # ms
+        stim.dur = 100   # ms
+        stim.amp = 0.2   # nA
+        # Record Time from NEURON (neuron.h._ref_t)
+        rec_t = neuron.h.Vector()
+        rec_t.record(neuron.h._ref_t)
+        # Record Voltage from the center of the soma
+        rec_v = neuron.h.Vector()
+        rec_v.record(pnn(0.5)._ref_v)
+        # ---------------------------------------------------------------------
+        # Set up 9ML cell
+        # ---------------------------------------------------------------------
         nml = Izhikevich9ML()
-        # PyNN version
-        for sec in (pnn, nml.source_section):
-            # Specify current injection
-            stim = h.IClamp(1.0, sec=sec)
-            stim.delay = 1   # ms
-            stim.dur = 100   # ms
-            stim.amp = 0.2   # nA
-            # Record Time from NEURON (neuron.h._ref_t)
-            rec_t = neuron.h.Vector()
-            rec_t.record(neuron.h._ref_t)
-            # Record Voltage from the center of the soma
-            rec_v = neuron.h.Vector()
-            rec_v.record(sec(0.5)._ref_v)
-            neuron.h.finitialize(-60)
-            neuron.init()
-            neuron.run(5)
-            plt.plot(rec_t, rec_v)
+        nml.inject_current(neo.AnalogSignal([1.0], units='nA',
+                                            sampling_period=100 * pq.ms))
+        nml.record('v')
+        simulator.run(10)
+        v = nml.recording('v')
+        pnn_v = numpy.array(rec_v)
+        pnn_t = numpy.array(rec_t)
+        plt.plot(pnn_t, pnn_v)
+        plt.plot(v.times, v)
         plt.show()
+        h.quit()
 
 
 if __name__ == '__main__':

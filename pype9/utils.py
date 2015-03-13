@@ -155,7 +155,7 @@ def convert_to_quantity(prop):
                                              pq.A ** dim.i)
 
 
-def load_9ml_prototype(url_or_comp, name, default_value=0.0, saved_name=None):
+def load_9ml_prototype(url_or_comp, default_value=0.0, saved_name=None):
     """
     Reads a component from file, checking to see if there is only one
     component or component class in the file (or not reading from file at
@@ -212,10 +212,10 @@ def load_9ml_prototype(url_or_comp, name, default_value=0.0, saved_name=None):
             ComponentType = ConnectionRule
         elif isinstance(componentclass, DistributionClass):
             ComponentType = Distribution
-        prototype = ComponentType(name=name, properties=properties)
+        prototype = ComponentType(name=componentclass.name + 'Component',
+                                  properties=properties)
     elif isinstance(url_or_comp, nineml.user_layer.Component):
         prototype = copy(url_or_comp)
-        prototype.name = name
     else:
         raise Pype9RuntimeError(
             "Can't load 9ML prototype from '{}' object".format(url_or_comp))

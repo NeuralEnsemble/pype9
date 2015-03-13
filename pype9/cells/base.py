@@ -14,6 +14,8 @@
 from copy import deepcopy
 from pype9.exceptions import Pype9RuntimeError
 from pype9.utils import load_9ml_prototype
+import time
+import os.path
 
 
 class CellMetaClass(type):
@@ -33,17 +35,15 @@ class CellMetaClass(type):
         """
         if name is None:
             name = saved_name
-        elif saved_name is None:
-            saved_name = name
         # Extract out build directives
         build_mode = kwargs.pop('build_mode', 'lazy')
         verbose = kwargs.pop('verbose', False)
-        if isinstance(component, basestring):
-            url = component
+        prototype = load_9ml_prototype(component, name, saved_name)
+        if name is not None:
+            prototype.name = name
         else:
-            url = component.url
-            if name is None:
-                name = component.name
+            name = prototype.name
+        url = prototype.url
         try:
             Cell, build_options = cls._built_types[(name, url)]
             if build_options != kwargs:
@@ -56,16 +56,16 @@ class CellMetaClass(type):
         except KeyError:
             # Initialise code generator
             code_gen = cls.CodeGenerator()
-            prototype = load_9ml_prototype(component, name, saved_name)
             build_prototype = code_gen.transform_for_build(prototype, **kwargs)
             # Set build dir default from original prototype url if not
             # explicitly provided
             build_dir = kwargs.pop('build_dir', None)
             if build_dir is None:
                 build_dir = code_gen.get_build_dir(prototype.url, name)
+            mod_time = time.ctime(os.path.getmtime(url))
             instl_dir = code_gen.generate(
                 build_prototype, build_mode=build_mode, verbose=verbose,
-                build_dir=build_dir, **kwargs)
+                build_dir=build_dir, mod_time=mod_time, **kwargs)
             # Load newly build model
             cls.load_libraries(name, instl_dir)
             # Create class member dict of new class

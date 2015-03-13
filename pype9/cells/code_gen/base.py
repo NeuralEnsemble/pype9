@@ -13,6 +13,7 @@ from __future__ import absolute_import
 import platform
 import os
 import time
+from copy import copy
 from itertools import chain
 from copy import deepcopy
 import shutil
@@ -30,6 +31,7 @@ from pype9.exceptions import (
     Pype9NoElementWithMatchingDimensionException)
 import logging
 from nineml import BaseNineMLObject
+import pype9.annotations
 
 logger = logging.getLogger('PyPe9')
 
@@ -51,9 +53,10 @@ class BaseCodeGenerator(object):
     # units
     DEFAULT_UNITS = {}
 
-    # Abstract methods that are required in the derived classes
-
     def __init__(self):
+        # Get a dictionary of all the annotations used in PyPe9
+        annotations_dict = copy(pype9.annotations.__dict__)
+        annotations_dict.pop('__builtins__')
         # Initialise the Jinja2 environment
         self.jinja_env = Environment(loader=FileSystemLoader(self._TMPL_PATH),
                                      trim_blocks=True, lstrip_blocks=True,
@@ -62,7 +65,7 @@ class BaseCodeGenerator(object):
         self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
                                       xrange=xrange, next=next, chain=chain,
                                       hash=hash, deepcopy=deepcopy,
-                                      units=units)
+                                      units=units, **annotations_dict)
 
     @abstractmethod
     def generate_source_files(self, component, initial_state, src_dir,
@@ -130,7 +133,7 @@ class BaseCodeGenerator(object):
         if prototype.url:
             nineml_mod_time = time.ctime(os.path.getmtime(prototype.url))
         else:
-            nineml_mod_time = None
+            nineml_mod_time = kwargs.get('mod_time', time.ctime())
         # Path of the file which contains or will contain the source
         # modification timestamp in the installation directory
         nineml_mod_time_path = os.path.join(src_dir, self._9ML_MOD_TIME_FILE)

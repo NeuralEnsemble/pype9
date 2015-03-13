@@ -17,23 +17,20 @@ try:
     from mpi4py import MPI  # @UnusedImport @IgnorePep8 This is imported before NEURON to avoid a bug in NEURON
 except ImportError:
     pass
-from neuron import h, nrn, load_mechanisms
+from neuron import h, load_mechanisms
 import neo
 import quantities as pq
 import nineml
 import os.path
 from pype9.cells.code_gen.neuron import CodeGenerator
-from pype9.cells.tree import (
-    in_units, IonConcentrationModel)
+from pype9.cells.tree import in_units
 from pype9.utils import create_unit_conversions, convert_units
-from pyNN.neuron.cells import VectorSpikeSource
 from itertools import chain
 from .. import base
 from pype9.utils import convert_to_property, convert_to_quantity
 from .simulation_controller import simulation_controller
 from math import pi
-from pype9 import PYPE9_NS
-from . import BASIC_NS
+from pype9.annotations import PYPE9_NS, MEMBRANE_CAPACITANCE
 from nineml.abstraction_layer import units as un
 
 
@@ -107,7 +104,7 @@ class Cell(base.Cell):
         self.source_section.diam = 10.0 / pi
         cm = self.build_prototype.property(
             self.build_componentclass.annotations[
-                PYPE9_NS][BASIC_NS]['membrane_capacitance'])
+                PYPE9_NS][MEMBRANE_CAPACITANCE])
         assert cm.units == un.uF_per_cm2, \
             ("membrane capacitance not in neuron units (converter not "
              "implemented yet)")
