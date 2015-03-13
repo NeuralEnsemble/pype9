@@ -40,7 +40,7 @@ class TestNeuronLoad(TestCase):
         Izhikevich9ML = CellMetaClass(
             self.izhikevich_file, name=self.izhikevich_name,
             build_mode='force', verbose=True, membrane_voltage='V',
-            membrane_capacitance=Property('Cm', 1, un.uF_per_cm2))
+            membrane_capacitance=Property('Cm', 0.001, un.nF))
         # ---------------------------------------------------------------------
         # Set up PyNN section
         # ---------------------------------------------------------------------

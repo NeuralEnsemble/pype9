@@ -177,7 +177,7 @@ class CodeGenerator(BaseCodeGenerator):
         # Get or guess the location of the membrane capacitance
         try:
             orig_cm = self._get_member_from_kwargs_or_guess_via_dimension(
-                'membrane_capacitance', 'parameters', un.specificCapacitance,
+                'membrane_capacitance', 'parameters', un.capacitance,
                 orig, kwargs)
             cm_prop = props(orig_cm.name)
             cm = trans.parameter(orig_cm.name)
@@ -188,10 +188,10 @@ class CodeGenerator(BaseCodeGenerator):
                 cm_prop = kwargs['membrane_capacitance']
                 assert isinstance(cm_prop, Property)
             else:
-                cm_prop = Property(name='cm_', value=1.0, units=un.uF_per_cm2)
+                cm_prop = Property(name='cm_', value=1.0, units=un.nF)
             props.append(cm_prop)
             # Add corresponding capacitance parameter
-            cm = Parameter(cm_prop.name, dimension=un.specificCapacitance)
+            cm = Parameter(cm_prop.name, dimension=un.capacitance)
             cm.annotations[PYPE9_NS][TRANSFORM_SRC] = None
             trans.add(cm)
         trans.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = cm.name

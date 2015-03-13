@@ -31,8 +31,6 @@ from pype9.utils import convert_to_property, convert_to_quantity
 from .simulation_controller import simulation_controller
 from math import pi
 from pype9.annotations import PYPE9_NS, MEMBRANE_CAPACITANCE
-from nineml.abstraction_layer import units as un
-from pype9.exceptions import Pype9MemberNameClashException
 
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
@@ -99,25 +97,25 @@ class Cell(base.Cell):
         base.Cell.__init__(self)
         # Construct all the NEURON structures
         self._sec = h.Section()  # @UndefinedVariable
+        # Insert dynamics mechanism (the built component class)
+        HocClass = getattr(h, self.__class__.name)
+        self._hoc = HocClass(0.5, sec=self._sec)
         # In order to scale the distributed current to the same units as point
         # process current, i.e. mA/cm^2 -> nA the surface area needs to be
         # 100um. mA/cm^2 = -3-(-2^2) = 10^1, 100um^2 = 2 + -6^2 = 10^(-10), nA
         # = 10^(-9). 1 - 10 = - 9. (see PyNN Izhikevich neuron implementation)
         self._sec.L = 10.0
         self._sec.diam = 10.0 / pi
-        cm_prop = self.build_prototype.property(
+        # Get the membrane capacitance property
+        self._cm_prop = self.build_prototype.property(
             self.build_componentclass.annotations[
                 PYPE9_NS][MEMBRANE_CAPACITANCE])
-        # Set capacitance in hoc
-        cm = pq.Quantity(convert_to_quantity(cm_prop), 'uF/cm^2')
-        self._sec.cm = float(cm)
-        HocClass = getattr(h, self.__class__.name)
-        self._hoc = HocClass(0.5, sec=self._sec)
+        cm = pq.Quantity(convert_to_quantity(self._cm_prop), 'nF')
         # Set capacitance in mechanism
-        total_cm = pq.Quantity(cm * self.surface_area, 'nF')
-        setattr(self._hoc, cm_prop.name, float(total_cm))
-        # Setup variables required by pyNN
-        self.source = self._hoc
+        setattr(self._hoc, self._cm_prop.name, float(cm))
+        # Set capacitance in hoc
+        specific_cm = pq.Quantity(cm / self.surface_area, 'uF/cm^2')
+        self._sec.cm = float(specific_cm)
         # for recording Once NEST supports sections, it might be an idea to
         # drop this in favour of a more explicit scheme
         self.recordable = {'spikes': None, 'v': self.source}
@@ -139,7 +137,17 @@ class Cell(base.Cell):
 
     @property
     def source_section(self):
+        """
+        A property used when treated as a PyNN standard model
+        """
         return self._sec
+
+    @property
+    def source(self):
+        """
+        A property used when treated as a PyNN standard model
+        """
+        return self._hoc
 
     @property
     def surface_area(self):
@@ -205,8 +213,12 @@ class Cell(base.Cell):
 
     def set(self, prop):
         self._nineml.set(prop)
-        # FIXME: need to convert to NEURON units
+        # FIXME: need to convert to NEURON units!!!!!!!!!!!
         setattr(self._hoc, prop.name, prop.value)
+        # Set membrane capacitance in hoc if required
+        if prop.name == self._cm_prop.name:
+            self._sec.cm = float(pq.Quantity(convert_to_quantity(prop),
+                                             'uF/cm^2'))
 
     def __dir__(self):
         return list(set(chain(dir(super(Cell, self)), self.property_names)))
