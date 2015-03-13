@@ -34,7 +34,7 @@ try:
 except ImportError:
     KineticsClass = type(None)
 from pype9 import PYPE9_NS
-from ...neuron import ION_SPECIES_NS
+from ...neuron import BASIC_NS, ION_SPECIES_NS
 import logging
 
 TRANSFORM_NS = 'NeuronBuildTransform'
@@ -130,11 +130,11 @@ class CodeGenerator(BaseCodeGenerator):
         # Render mod file
         self.render_to_file(template, tmpl_args, name + '.mod', src_dir)
 
-    @classmethod
-    def transform(cls, prototype, **kwargs):
+    def transform_for_build(self, prototype, **kwargs):
         """
         Copy the component class to alter it to match NEURON's current
         centric focus
+        `prototype`        -- the component to be transformed
         `membrane_voltage` -- the name of the state variable that represents
                               the membrane voltage
         `membrane_voltage` -- the name of the capcitance that represents
@@ -144,15 +144,13 @@ class CodeGenerator(BaseCodeGenerator):
         # Clone original component class and properties
         # ---------------------------------------------------------------------
         orig = prototype.component_class
-        # Clone component class before transforming
         trans = copy(orig)
-        # Clone properties for transformed component
         props = [copy(p) for p in prototype.properties]
         # ---------------------------------------------------------------------
         # Remove the membrane voltage
         # ---------------------------------------------------------------------
         # Get or guess the location of the membrane voltage
-        orig_v = cls._get_member_from_kwargs_or_guess_via_dimension(
+        orig_v = self._get_member_from_kwargs_or_guess_via_dimension(
             'membrane_voltage', 'state_variables', un.voltage, orig, kwargs)
         # Map voltage to hard-coded 'v' symbol
         if orig_v.name != 'v':
@@ -172,23 +170,28 @@ class CodeGenerator(BaseCodeGenerator):
             trans.remove(trans.analog_send_port('v'))
         except KeyError:
             pass
+        orig.annotations[PYPE9_NS][BASIC_NS]['membrane_voltage'] = orig_v.name
+        trans.annotations[PYPE9_NS][BASIC_NS]['membrane_voltage'] = 'v'
         # ---------------------------------------------------------------------
         # Insert membrane capacitance if not present
         # ---------------------------------------------------------------------
         # Get or guess the location of the membrane capacitance
         try:
-            orig_cm = cls._get_member_from_kwargs_or_guess_via_dimension(
+            orig_cm = self._get_member_from_kwargs_or_guess_via_dimension(
                 'membrane_capactiance', 'parameters', un.specificCapacitance,
                 orig, kwargs)
             cm_prop = props(orig_cm.name)
             cm = trans.parameter(orig_cm.name)
+            orig.annotations[PYPE9_NS][BASIC_NS][
+                'membrane_capacitance'] = orig_cm.name
         except Pype9NoElementWithMatchingDimensionException:
             # Add capacitance parameter if it isn't present
-            cm_prop = Property(name='cm_', value=1.0, units=un.uF_per_cm2)
             cm = Parameter('cm_', dimension=un.specificCapacitance)
+            cm_prop = Property(name=cm.name, value=1.0, units=un.uF_per_cm2)
             cm.annotations[PYPE9_NS][TRANSFORM_NS]['source'] = None
             props.append(cm_prop)
             trans.add(cm)
+        trans.annotations[PYPE9_NS][BASIC_NS]['membrane_capacitance'] = cm.name
         # ---------------------------------------------------------------------
         # Add current to component
         # ---------------------------------------------------------------------
@@ -203,8 +206,9 @@ class CodeGenerator(BaseCodeGenerator):
             regime.remove(regime.time_derivative(v.name))
         # Add alias expression for current
         i = Alias('i_', rhs=dvdt.rhs * cm)
-        i.annotations[PYPE9_NS][TRANSFORM_NS]['source'] = (dvdt, cm), dvdt * cm
-        dvdt.annotations[PYPE9_NS][TRANSFORM_NS]['target'] = (i, cm), i / cm
+        # FIXME: Need to be able to sympy time derivatives
+        i.annotations[PYPE9_NS][TRANSFORM_NS]['source'] = (dvdt, cm), dvdt
+        dvdt.annotations[PYPE9_NS][TRANSFORM_NS]['target'] = (i, cm), i
         trans.add(i)
         # Add analog send port for current
         i_port = AnalogSendPort('i_', dimension=un.currentDensity)
@@ -215,8 +219,8 @@ class CodeGenerator(BaseCodeGenerator):
         # ---------------------------------------------------------------------
         trans.validate()
         # Retun a prototype of the transformed class
-        return prototype.__class__(
-            Definition(trans, Document(trans)), props.itervalues())
+        return Dynamics(
+            prototype.name, Definition(trans.name, Document(trans)), props)
 
     def configure_build_files(self, name, src_dir, compile_dir, install_dir):
         pass

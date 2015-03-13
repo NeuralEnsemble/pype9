@@ -337,30 +337,28 @@ class BaseCodeGenerator(object):
         """
         element_descr = elements_name.replace('_', ' ')
         member_descr = member_name.replace('_', ' ')
-        elements = getattr(component, 'elements_name')
-        matching = [e for e in elements if e.dimension == dimension]
+        elements = list(getattr(component, elements_name))
         if member_name in kwargs:
             # Get specified member
             member = kwargs[member_name]
             if isinstance(member, basestring):
                 try:
-                    member = next(e for e in elements
-                                  if e.name == member)
-                except KeyError:
-                    raise Pype9RuntimeError(
+                    member = next(e for e in elements if e.name == member)
+                except StopIteration:
+                    raise KeyError(
                         "Could not find specified {} '{}'".format(member_descr,
-                                                                  member_name))
+                                                                  member))
             elif not isinstance(member, BaseNineMLObject):
-                raise Pype9RuntimeError(
+                raise ValueError(
                     "Invalid type provided for '{}' kwarg (expected string or "
                     "9ML type, found '{}')".format(member_name, member))
             if member.dimension != dimension:
                 raise Pype9RuntimeError(
-                    "Specified {} '{}' does not have "
-                    "voltage dimension ('{}')"
+                    "Specified {} '{}' does not have voltage dimension ('{}')"
                     .format(member_descr, member.name, member.dimension))
         else:
             # guess member from dimension
+            matching = [e for e in elements if e.dimension == dimension]
             if len(matching) == 1:
                 member = matching[0]
                 logger.info("Guessed that the {} in component class '{}'"

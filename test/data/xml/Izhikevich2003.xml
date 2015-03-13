@@ -8,23 +8,23 @@
     <Parameter name="d" dimension="voltage_per_time"/>
     <Parameter name="vthresh" dimension="voltage"/>
     <AnalogSendPort name="u" dimension="voltage_per_time"/>
-    <AnalogSendPort name="v" dimension="voltage"/>
+    <AnalogSendPort name="V" dimension="voltage"/>
     <EventSendPort name="spikeOutput" mode="send"/>
     <Dynamics>
-      <StateVariable name="v" dimension="voltage"/>
+      <StateVariable name="V" dimension="voltage"/>
       <StateVariable name="u" dimension="voltage_per_time"/>
       <Regime name="subthreshold">
         <TimeDerivative variable="u">
-          <MathInline>a*(b*v - u)</MathInline>
+          <MathInline>a*(b*V - u)</MathInline>
         </TimeDerivative>
-        <TimeDerivative variable="v">
-          <MathInline>0.04*v*v + 5*v + 140 - u</MathInline>
+        <TimeDerivative variable="V">
+          <MathInline>0.04*V*V + 5*V + 140 - u</MathInline>
         </TimeDerivative>
         <OnCondition>
           <Trigger>
-            <MathInline>v &gt; vthresh</MathInline>
+            <MathInline>V &gt; vthresh</MathInline>
           </Trigger>
-          <StateAssignment variable="v">
+          <StateAssignment variable="V">
             <MathInline>c</MathInline>
           </StateAssignment>
           <StateAssignment variable="u">

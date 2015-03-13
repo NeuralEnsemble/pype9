@@ -32,6 +32,10 @@ from .. import base
 from pype9.utils import convert_to_property, convert_to_quantity
 from .simulation_controller import simulation_controller
 from math import pi
+from pype9 import PYPE9_NS
+from . import BASIC_NS
+from nineml.abstraction_layer import units as un
+
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
 
@@ -52,21 +56,22 @@ _basic_SI_to_neuron_conversions = (('s', 'ms'),
                                    ('Ohm', 'MOhm'),
                                    ('M', 'mM'))
 
-_compound_SI_to_neuron_conversions = (((('A', 1), ('m', -2)),
-                                       (('mA', 1), ('cm', -2))),
-                                      ((('F', 1), ('m', -2)),
-                                       (('uF', 1), ('cm', -2))),
-                                      ((('S', 1), ('m', -2)),
-                                       (('S', 1), ('cm', -2))),
-                                      ((('Ohm', 1), ('m', 1)),
-                                       (('Ohm', 1), ('cm', 1))))
+_compound_SI_to_neuron_conversions = (
+    ((('A', 1), ('m', -2)),
+     (('mA', 1), ('cm', -2))),
+    ((('F', 1), ('m', -2)),
+     (('uF', 1), ('cm', -2))),
+    ((('S', 1), ('m', -2)),
+     (('S', 1), ('cm', -2))),
+    ((('Ohm', 1), ('m', 1)),
+     (('Ohm', 1), ('cm', 1))))
 
 
 _basic_unit_dict, _compound_unit_dict = create_unit_conversions(
     _basic_SI_to_neuron_conversions, _compound_SI_to_neuron_conversions)
 
 
-def convert_to_neuron_units(value, unit_str='dimensionless'):
+def convert_to_neuron_units(value, unit_str=None):
     return convert_units(
         value, unit_str, _basic_unit_dict, _compound_unit_dict)
 
@@ -100,9 +105,13 @@ class Cell(base.Cell):
         # = 10^(-9). 1 - 10 = - 9. (see PyNN Izhikevich neuron implementation)
         self.source_section.L = 10.0
         self.source_section.diam = 10.0 / pi
-        self.source_section.cm = convert_to_neuron_units(
-            convert_to_quantity(self.prototype.property(
-                self.build_options['membrane_capacitance'])))
+        cm = self.build_prototype.property(
+            self.build_componentclass.annotations[
+                PYPE9_NS][BASIC_NS]['membrane_capacitance'])
+        assert cm.units == un.uF_per_cm2, \
+            ("membrane capacitance not in neuron units (converter not "
+             "implemented yet)")
+        self.source_section.cm = cm.value
         HocClass = getattr(h, self.__class__.name)
         self._hoc = HocClass(0.5, sec=self.source_section)
         # Setup variables required by pyNN

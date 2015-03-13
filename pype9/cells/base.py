@@ -57,23 +57,24 @@ class CellMetaClass(type):
             # Initialise code generator
             code_gen = cls.CodeGenerator()
             prototype = load_9ml_prototype(component, name, saved_name)
-            trfm_prototype, trfm_elements = cls.transform(prototype, **kwargs)
+            build_prototype = code_gen.transform_for_build(prototype, **kwargs)
             # Set build dir default from original prototype url if not
             # explicitly provided
             build_dir = kwargs.pop('build_dir', None)
             if build_dir is None:
                 build_dir = code_gen.get_build_dir(prototype.url, name)
             instl_dir = code_gen.generate(
-                trfm_prototype, build_mode=build_mode, verbose=verbose,
-                transformed=trfm_elements, build_dir=build_dir, **kwargs)
+                build_prototype, build_mode=build_mode, verbose=verbose,
+                build_dir=build_dir, **kwargs)
             # Load newly build model
-            cls.load_model(name, instl_dir)
+            cls.load_libraries(name, instl_dir)
             # Create class member dict of new class
             dct = {'name': name,
                    'componentclass': prototype.component_class,
                    'prototype': prototype,
                    'install_dir': instl_dir,
-                   'transformed': trfm_elements,
+                   'build_prototype': build_prototype,
+                   'build_componentclass': build_prototype.component_class,
                    'build_options': kwargs}
             # Create new class using Type.__new__ method
             Cell = super(CellMetaClass, cls).__new__(
@@ -97,7 +98,7 @@ class CellMetaClass(type):
         """
         pass
 
-    def transform(self, component, **kwargs):  # @UnusedVariable
+    def transform_for_build(self, component, **kwargs):  # @UnusedVariable
         """
         To be overridden by derived classes to transform the model into a
         format that better suits the simulator implementation

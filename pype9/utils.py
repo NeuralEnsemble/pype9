@@ -197,10 +197,7 @@ def load_9ml_prototype(url_or_comp, name, default_value=0.0, saved_name=None):
                     raise Pype9RuntimeError(
                         "No components or component classes loaded from "
                         "nineml" " path '{}'".format(url))
-    else:
-        assert saved_name is None, \
-            "Component was passed as an object, cannot use 'saved_name'"
-    if isinstance(url_or_comp, nineml.abstraction_layer.ComponentClass):
+    elif isinstance(url_or_comp, nineml.abstraction_layer.ComponentClass):
         componentclass = url_or_comp
         properties = []
         for param in componentclass.parameters:
@@ -221,5 +218,5 @@ def load_9ml_prototype(url_or_comp, name, default_value=0.0, saved_name=None):
         prototype.name = name
     else:
         raise Pype9RuntimeError(
-            "Can't load 9ML prototype from '{}' object".format(prototype))
+            "Can't load 9ML prototype from '{}' object".format(url_or_comp))
     return prototype
