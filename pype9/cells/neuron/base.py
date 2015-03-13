@@ -98,25 +98,24 @@ class Cell(base.Cell):
         # Call base init (needs to be after 9ML init)
         base.Cell.__init__(self)
         # Construct all the NEURON structures
-        self.source_section = h.Section()  # @UndefinedVariable
+        self._sec = h.Section()  # @UndefinedVariable
         # In order to scale the distributed current to the same units as point
         # process current, i.e. mA/cm^2 -> nA the surface area needs to be
         # 100um. mA/cm^2 = -3-(-2^2) = 10^1, 100um^2 = 2 + -6^2 = 10^(-10), nA
         # = 10^(-9). 1 - 10 = - 9. (see PyNN Izhikevich neuron implementation)
-        self.source_section.L = 10.0
-        self.source_section.diam = 10.0 / pi
-        cm = self.build_prototype.property(
+        self._sec.L = 10.0
+        self._sec.diam = 10.0 / pi
+        cm_prop = self.build_prototype.property(
             self.build_componentclass.annotations[
                 PYPE9_NS][MEMBRANE_CAPACITANCE])
-        assert cm.units == un.uF_per_cm2, \
-            ("membrane capacitance not in neuron units (converter not "
-             "implemented yet)")
         # Set capacitance in hoc
-        self.source_section.cm = cm.value
+        cm = pq.Quantity(convert_to_quantity(cm_prop), 'uF/cm^2')
+        self._sec.cm = float(cm)
         HocClass = getattr(h, self.__class__.name)
-        self._hoc = HocClass(0.5, sec=self.source_section)
+        self._hoc = HocClass(0.5, sec=self._sec)
         # Set capacitance in mechanism
-        setattr(self._hoc, cm.name, cm.value / 1000.0)  # FIXME: Not quite sure about this (taken from the PyNN Izhikevich neuron)
+        total_cm = pq.Quantity(cm * self.surface_area, 'nF')
+        setattr(self._hoc, cm_prop.name, float(total_cm))
         # Setup variables required by pyNN
         self.source = self._hoc
         # for recording Once NEST supports sections, it might be an idea to
@@ -126,7 +125,7 @@ class Cell(base.Cell):
         self.traces = {}
         self.gsyn_trace = {}
         self.recording_time = 0
-        self.rec = h.NetCon(self.source, None, sec=self.source_section)
+        self.rec = h.NetCon(self.source, None, sec=self._sec)
         self.initial_v = self.V_INIT_DEFAULT
         self._initialised = True
         # Set up references from parameter names to internal variables and set
@@ -138,6 +137,14 @@ class Cell(base.Cell):
     def name(self):
         return self.prototype.name
 
+    @property
+    def source_section(self):
+        return self._sec
+
+    @property
+    def surface_area(self):
+        return (self._sec.L * pq.um) * (self._sec.diam * pi * pq.um)
+
     def get_threshold(self):
         return in_units(self._model.spike_threshold, 'mV')
 
@@ -145,7 +152,7 @@ class Cell(base.Cell):
         self.initial_v = v
 
     def memb_init(self):
-        self.source_section(0.5).v = self.initial_v
+        self._sec(0.5).v = self.initial_v
 
     def __getattr__(self, varname):
         """
@@ -209,10 +216,10 @@ class Cell(base.Cell):
         self._initialise_local_recording()
         if variable == 'spikes':
             self._recorders[key] = recorder = h.NetCon(
-                self.source_section._ref_v, None, self.get_threshold(),
-                0.0, 1.0, sec=self.source_section)
+                self._sec._ref_v, None, self.get_threshold(),
+                0.0, 1.0, sec=self._sec)
         elif variable == 'v':
-            recorder = getattr(self.source_section(0.5), '_ref_' + variable)
+            recorder = getattr(self._sec(0.5), '_ref_' + variable)
         else:
             recorder = getattr(self._hoc, '_ref_' + variable)
         self._recordings[key] = recording = h.Vector()
@@ -294,8 +301,8 @@ class Cell(base.Cell):
                 else:
                     recordings.append(analog_signal)
         if in_block:
-            data = neo.Block(description="Recording from NineLine stand-alone "
-                                         "cell")
+            data = neo.Block(
+                description="Recording from PyPe9 '{}' cell".format(self.name))
             data.segments = [segment]
             return data
         elif return_single:
@@ -317,6 +324,7 @@ class Cell(base.Cell):
         """
         super(Cell, self).__setattr__('_recorders', {})
         super(Cell, self).__setattr__('_recordings', {})
+        simulation_controller.deregister_cell(self)
 
     def _initialise_local_recording(self):
         if not hasattr(self, '_recorders'):
@@ -357,7 +365,7 @@ class Cell(base.Cell):
             atol=None):
         if self not in (c() for c in simulation_controller.registered_cells):
             raise Pype9RuntimeError(
-                "Cell '{}' is not being recorded".format(self.name))
+                "PyPe9 Cell '{}' is not being recorded".format(self.name))
         simulation_controller.run(simulation_time=simulation_time, reset=reset,
                                   timestep=timestep, rtol=rtol, atol=atol)
 
@@ -372,7 +380,7 @@ class Cell(base.Cell):
         `current` -- a vector containing the current [neo.AnalogSignal]
         """
         super(Cell, self).__setattr__('iclamp',
-                                      h.IClamp(0.5, sec=self.source_section))
+                                      h.IClamp(0.5, sec=self._sec))
         self.iclamp.delay = 0.0
         self.iclamp.dur = 1e12
         self.iclamp.amp = 0.0
@@ -390,7 +398,7 @@ class Cell(base.Cell):
                      to [neo.AnalogSignal]
         """
         super(Cell, self).__setattr__('seclamp',
-                                      h.SEClamp(0.5, sec=self.source_section))
+                                      h.SEClamp(0.5, sec=self._sec))
         self.seclamp.rs = series_resistance
         self.seclamp.dur1 = 1e12
         super(Cell, self).__setattr__(

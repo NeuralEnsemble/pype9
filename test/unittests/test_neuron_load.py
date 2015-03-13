@@ -75,9 +75,9 @@ class TestNeuronLoad(TestCase):
         stim2.amp = 0.2   # nA
         for test in tests:
             izhi.record(test)
-        simulator.initialize()
+        simulator.initialize()  # @UndefinedVariable
         izhi.u = -14 * pq.mV / pq.ms
-        simulator.run(10, reset=False)
+        simulator.run(10, reset=False)  # @UndefinedVariable
         leg = []
         for test in tests:
             n = izhi.recording(test)

@@ -2,6 +2,7 @@ from neuron import h
 import quantities as pq
 import weakref
 import numpy
+from pype9.exceptions import Pype9RuntimeError
 import logging
 
 logger = logging.getLogger('PyPe9')
@@ -13,7 +14,14 @@ class _SimulationController(object):
     use with individual cell objects
     """
 
+    instance_counter = 0
+
     def __init__(self):
+        if self.instance_counter:
+            raise Pype9RuntimeError(
+                "Cannot instantiate more than one instance of "
+                "_SimualtionController")
+        self.instance_counter += 1
         self.running = False
         self.registered_cells = []
         self._time = h.Vector()
@@ -32,6 +40,11 @@ class _SimulationController(object):
 
     def register_cell(self, cell):
         self.registered_cells.append(weakref.ref(cell))
+
+    def deregister_cell(self, cell):
+        for cell_ref in reversed(self.registered_cells):
+            if cell is cell_ref() or not cell_ref():
+                self.registered_cells.remove(cell_ref)
 
     def run(self, simulation_time, reset=True, timestep='cvode', rtol=None,
             atol=None):
@@ -68,4 +81,3 @@ class _SimulationController(object):
 
 # Make a singleton instantiation of the simulation controller
 simulation_controller = _SimulationController()
-del _SimulationController
