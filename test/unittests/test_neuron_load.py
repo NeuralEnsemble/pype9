@@ -39,7 +39,7 @@ class TestNeuronLoad(TestCase):
     def test_neuron_load(self):
         Izhikevich9ML = CellMetaClass(
             self.izhikevich_file, name=self.izhikevich_name,
-            build_mode='force', verbose=True, membrane_voltage='V',
+            build_mode='compile_only', verbose=True, membrane_voltage='V',
             membrane_capacitance=Property('Cm', 0.001, un.nF))
         # ---------------------------------------------------------------------
         # Set up PyNN section
@@ -56,7 +56,7 @@ class TestNeuronLoad(TestCase):
         stim.amp = 0.2   # nA
         # Record Time from NEURON (neuron.h._ref_t)
         rec = Recorder(pnn, pnn_izhi)
-        tests = ('v', 'Cm')
+        tests = ('v', 'u')
         for test in tests:
             rec.record(test)
         # ---------------------------------------------------------------------
@@ -76,7 +76,8 @@ class TestNeuronLoad(TestCase):
         for test in tests:
             izhi.record(test)
         simulator.initialize()  # @UndefinedVariable
-        izhi.u = -14 * pq.mV / pq.ms
+        izhi.u = -14.0 * pq.mV / pq.ms
+        pnn_izhi.u = -14.0
         simulator.run(10, reset=False)  # @UndefinedVariable
         leg = []
         for test in tests:
