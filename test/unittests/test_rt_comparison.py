@@ -4,7 +4,11 @@ from utils import test_data_dir
 from neuron import h
 import pylab as plt
 from pype9.cells.code_gen.neuron import CodeGenerator
+import matplotlib
+from datetime import datetime
 
+import numpy as numpy
+from nineml.extensions.kinetics import KineticsBlock, KineticsClass
 if __name__ == '__main__':
     from utils import DummyTestCase as TestCase  # @UnusedImport
 else:
@@ -28,24 +32,27 @@ class TestKinetics(TestCase):
                                 'nmodl', 'imported', 'regenerated')
         importer = NMODLImporter(in_path)
         component = importer.get_component()
+
+
+        #timestamp= datetime.now().strftime('%a %d %b %y %I:%M:%S%p')
+        
         self.code_generator.generate(
             component, name='Golgi_SK2_regenerated', build_dir=os.getcwd(),
             build_mode='force', verbose=True)
 
-
+            
 class Compare_output_rt(TestCase):
     '''
-    compares output from voltage clamp experiment after round trip.
+    compares output from voltage clamp experiment before and after round trip.
     '''
-    #setUp, is an initialisation method inherited from TestCase
-    #This initialisation is crucial, and allows you to never have to use global variables.
-
+  
     def setUp(self):
         self.dt = h.dt = 0.025
-        self.tstop = 10000
+        self.tstop = 1000
         self.vinit = -65
         self.soma = h.Section()
         self.vec = {}
+        self.stim
 
     def initialize(self):
         h.finitialize(self.vinit)
@@ -56,43 +63,81 @@ class Compare_output_rt(TestCase):
             h.fadvance()
 
     def record(self):
-        self.vec['soma'] =h.Vector()
-        self.vec['t'] =h.Vector()
-        self.vec['soma'].record(self.soma(0.5)._ref_v)
+
+        self.vec['soma_cai'] = h.Vector()
+        self.vec['soma_vm'] = h.Vector()
+   
+        self.vec['soma_ica'] = h.Vector()
+        self.vec['soma_ica_HVA'] = h.Vector()
+        self.vec['t'] = h.Vector()
+        self.vec['ik']=h.Vector()
+        self.vec['ik_SK2']=h.Vector()
+
+
+
+        self.vec['soma_cai'].record(self.soma(0.5)._ref_cai)
+        self.vec['soma_vm'].record(self.soma(0.5)._ref_v)
+        self.vec['soma_ica'].record(self.soma(0.5)._ref_ica)
+        self.vec['soma_ica_HVA'].record(self.soma(0.5)._ref_ica_Golgi_Ca_HVA)
+        self.vec['ik_SK2'].record(self.soma(0.5)._ref_ik_Golgi_SK2)
         self.vec['t'].record(h._ref_t)
- 
+        
     def run(self):
         self.initialize()
         #h.stdinit()
         self.integrate()
+    
+   
 
     
     def test_vc_output(self):
-        #soma.insert('pas')
-        #self.soma.insert('Golgi_SK2')
-        self.soma.insert('GRC_NA')
+        #self.soma.insert('hh')
+        self.soma.insert('Golgi_SK2')
         self.soma.insert('Golgi_Ca_HVA')#compile the file Golgi_SK2.mod
-        self.soma.insert('Golgi_Ca_LVA')
-        #self.soma.insert('Golgi_SK2')#Here insert the Kinetics Mechanism generated
-        #From the test class above.
+        #self.soma.insert('Golgi_Ca_LVA')
+        self.stim = h.SEClamp(0.5, sec=self.soma)
+        self.stim.amp1=-20
+        self.stim.dur1=500
+        self.stim.dur2=0
+        self.stim.dur3=0
         
-        stim = h.SEClamp(self.soma(0.5),delay = 1000,duration = 100,amplitude = 25)
-        #stim2 = h.SEClamp(self.soma(0.5),delay = 1200,duration = 100,amplitude = 25)
-
-        # sets current pulse delay =  600 mS
-        # sets current pulse duration = 100 mS
-        # sets current pulse amplitude = 25 nA
+        print h.psection()        
+        # sets current pulse delay =  0 mS
+        # sets current pulse duration = 500 mS
+        # sets current pulse amplitude = 25mV
 
         self.record()
         self.run()
         plt.figure()
-        plt.plot(self.vec['t'].to_python(),self.vec['soma'].to_python())
-        plt.title('Section inserted Ca_HVA,Ca_LVA, GRC_NA')#'Golgi_SK2'
+
+
+        plt.plot(self.vec['t'].to_python(),self.vec['soma_ica_HVA'].to_python(),label='$ica_{HVA}$')
+        plt.plot(self.vec['t'].to_python(),self.vec['ik_SK2'].to_python(), label='$ik_{SK2}$')
+        plt.legend(loc='best')
+
+        plt.title('Inserted Mechanisms: $Ca_{HVA}$, $SK_{2}$')#'Golgi_SK2'
         plt.xlabel('ms')
-        plt.ylabel('mV')
+        plt.ylabel('mA')
         plt.savefig('bf_9ml_trans.png')
         
-    
+        index=500/0.025
+        #index1=100/0.025
+
+        stims=numpy.zeros_like(self.vec['t'].to_python())
+        stims[0:index]=-20
+        plt.figure()
+        plt.plot(self.vec['t'].to_python(),self.vec['soma_vm'].to_python(),label='$V_{M}$')
+        plt.plot(self.vec['t'].to_python(),stims,label='SEClamp')
+        plt.legend(loc='best')
+        plt.title('SEClamp')#'Golgi_SK2'
+        plt.xlabel('ms')
+        plt.ylabel('mV')
+        #plt.ylim(0,30)
+        #plt.xlim(0,1000)
+
+        plt.savefig('stim.png')
+
+
     def before_conv(self):
          
         nineml_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'nmodl','imported')
@@ -109,15 +154,11 @@ class Compare_output_rt(TestCase):
 
 
 if __name__ == '__main__':
-    co=Compare_output_rt()
-    #co.before_conv()
+    #co=Compare_output_rt()
     #co.test_vc_output()
   
     test = TestKinetics()
     test.test_kinetics_roundtrip()
-    #os.system('emacs ../data/nmodl/imported/Golgi_SK2Class.xml')
-    #os.system('emacs /home/russell/git/pype9/test/unittests/../data/nmodl/imported/Golgi_SK2.xml')
-
-    #test = TestNeuronImporter()
-    #test.test_neuron_import()
+    
+    
     print "done"

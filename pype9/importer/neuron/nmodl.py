@@ -27,9 +27,9 @@ from collections import defaultdict
 from nineml.abstraction_layer import units
 from nineml.abstraction_layer.expressions.piecewise import (Piecewise, Piece,
                                                             Otherwise)
-from nineml.extensions.kinetics import KineticsClass, Constraint, KineticState
+from nineml.extensions.kinetics import (
+    KineticsClass, Constraint, KineticState, Kinetics, Reaction, ReactionRate, ForwardRate, ReverseRate, KineticState)
 from nineml.abstraction_layer.expressions import Expression
-
 
 # Compiled regular expressions
 newline_re = re.compile(r" *[\n\r]+ *")
@@ -162,6 +162,7 @@ class NMODLImporter(object):
         # Create members from extracted information
         self._create_regimes()
         self._create_parameters_and_analog_ports()
+        self.reactions = []
 
     def get_component_class(self, flatten_kinetics=False):
         if self.kinetics:
@@ -180,7 +181,19 @@ class NMODLImporter(object):
                     state_variables=cpy.state_variables)
             else:
                 (bidirectional, incoming,
-                 outgoing, constraints, _) = next(self.kinetics.itervalues())
+                 outgoing, constraints,
+                 compartments) = next(self.kinetics.itervalues())
+
+                for b in bidirectional: 
+                    frr=ForwardRate(b[2])
+                    rrr=ReverseRate(b[3])
+                    # The step of creating Kinetic State objects is perhaps unnecessary since it was only
+                    # the name attribute from the object that was used in the constructor, not the Object itself.
+                    ks_t=KineticState(name=b[0][0][0])
+                    ks_f=KineticState(name=b[1][0][0])
+                    r=Reaction(to_state=ks_t.name,from_state=ks_f.name,forward_rate=frr,reverse_rate=rrr)
+                    self.reactions.append(r)
+
                 ks = [KineticState(sv.name)
                       for sv in self.state_variables.itervalues()]
                 cst = [cs for cs in constraints]
@@ -191,6 +204,8 @@ class NMODLImporter(object):
                     analog_ports=self.analog_ports.values(),
                     event_ports=self.event_ports.values(),
                     aliases=self.aliases.values(),
+
+                    reactions=self.reactions,
                     kinetic_states=ks,
                     constraints=cst,
                     kineticsblock=None)
@@ -224,8 +239,12 @@ class NMODLImporter(object):
                                     url=os.path.normpath(class_path))
         else:
             definition = self.get_component_class()
-        comp = Dynamics(self.component_name, definition=definition,
-                        properties=properties)
+        if self.kinetics:
+               comp = Kinetics(self.component_name, definition=definition,
+                            properties=properties)
+        else:
+            comp = Dynamics(self.component_name, definition=definition,
+                            properties=properties)
         return comp
 
     def print_members(self):

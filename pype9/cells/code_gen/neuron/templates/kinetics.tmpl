@@ -23,10 +23,6 @@ NEURON {
     : T
     RANGE regime_
 
-    :StateVariables:
-{% for sv in componentclass.state_variables %}
-    RANGE {{sv.name}}
-{% endfor %}
 
     :KineticStates:
 {% for sv in componentclass.kinetic_states %}
@@ -49,10 +45,7 @@ NEURON {
     RANGE {{alias.name}}
 {% endfor %}
 }
-PARAMETER{
 
-
-}
 
 
 
@@ -67,12 +60,12 @@ ASSIGNED {
     
     
 {% for reaction in componentclass.reactions %}   
-  {{reaction.forward_rate.name}}
-  {{reaction.reverse_rate.name}}
+    {{reaction.forward_rate.name}}
+    {{reaction.reverse_rate.name}}
 {% endfor %}
   
 {% for p in componentclass.analog_receive_ports %}
-    {{p.name}}{% if p.dimension == units.voltage %} (mV) {% endif %}
+    {{p.name}} {%+ if p.dimension == units.voltage %} (mV) {% endif %}
 {%+ endfor %}   
     
 {% for regime in componentclass.regimes %}
@@ -141,6 +134,8 @@ INITIAL {
 }
 
 PARAMETER {
+
+    g
     : True parameters
 {% for p in componentclass.parameters %}
     {{p.name}} = 0
@@ -152,44 +147,38 @@ PARAMETER {
 {% endfor %}
 }
 
-{#
-STATE {
-{% for sv in componentclass.state_variables if sv.name != 'v' %}
-    {{sv.name}}
-{% endfor %}
-}#}
+
 
 STATE {
-
 
 {% for sv in componentclass.kinetic_states if sv.name != 'v' %}
     {{sv.name}}
 {% endfor %}
 
 
-
 }
 
 
-{#
-:Aliases
-{% for alias in chain(componentclass.aliases, componentclass.piecewises) %}
-    RANGE {{alias.name}}
-{% endfor %}
-}
-
-#}
 
 KINETIC kin {
-  rates(v)
-  {% for reaction in componentclass.reactions %}
+   
+    
+    rates( )
+    {#rates(v)#}
+    
+    {% for reaction in componentclass.reactions %}
      
-  {{'~'}} {{ reaction.from_state }}  {{'<->'}}  {{ reaction.to_state }} ({{reaction.forward_rate.name
+    {{'~'}} {{ reaction.from_state }}  {{'<->'}}  {{ reaction.to_state }} ({{reaction.forward_rate.name
 }},{{reaction.reverse_rate.name}})
-  {% endfor %}
-  
+    {% endfor %}
 
-  CONSERVE {{componentclass.constraints['C1'].rhs+1}} = 1
+    {# Want this, when going from 9ML to NMODL
+    CONSERVE {{ componentclass.constraints[componentclass.constraints.keys()[0]].rhs+1 }} = 1
+    #}
+
+    {# Want this, when going from NMODL to ComponentClass to NMODL#}
+    CONSERVE {{ componentclass.constraints[componentclass.constraints.keys()[0]].rhs }} = 1
+    
 
 }
 
@@ -210,17 +199,22 @@ BREAKPOINT {
 
 }
 
-PROCEDURE rates(v(millivolt) ) 
-
+PROCEDURE rates(v(millivolt)){ 
+   {#if a certain condition is true print LOCAL #}
 {% for expr in componentclass.required_for(componentclass.all_time_derivatives()).expressions %}
     {{expr.lhs}} = {{expr.rhs_str}}
 {% endfor %}
+
+{#
 {% for expr in componentclass.required_for(componentclass.all_output_analogs()).expressions %}
     {{expr.lhs}} = {{expr.rhs_str}}
 {% endfor %}
+
 {% for oa in componentclass.all_output_analogs() %}
     {{oa.lhs}} = {{oa.rhs_str}}
 {% endfor %}
+#}
+
 }
 
 
