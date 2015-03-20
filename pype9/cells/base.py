@@ -38,11 +38,10 @@ class CellMetaClass(type):
         # Extract out build directives
         build_mode = kwargs.pop('build_mode', 'lazy')
         verbose = kwargs.pop('verbose', False)
-        prototype = load_9ml_prototype(component, name, saved_name)
-        if name is not None:
-            prototype.name = name
-        else:
-            name = prototype.name
+        prototype = load_9ml_prototype(component, default_value=0.0,
+                                       override_name=name,
+                                       saved_name=saved_name)
+        name = prototype.name
         url = prototype.url
         try:
             Cell, build_options = cls._built_types[(name, url)]

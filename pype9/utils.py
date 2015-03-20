@@ -158,7 +158,8 @@ def convert_to_quantity(prop):
                                              pq.A ** dim.i)
 
 
-def load_9ml_prototype(url_or_comp, default_value=0.0, saved_name=None):
+def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,
+                       saved_name=None, **kwargs):  # @UnusedVariable
     """
     Reads a component from file, checking to see if there is only one
     component or component class in the file (or not reading from file at
@@ -222,4 +223,6 @@ def load_9ml_prototype(url_or_comp, default_value=0.0, saved_name=None):
     else:
         raise Pype9RuntimeError(
             "Can't load 9ML prototype from '{}' object".format(url_or_comp))
+    if override_name is not None:
+        prototype.name = override_name
     return prototype

@@ -31,6 +31,7 @@ from pype9.exceptions import (
 import logging
 from nineml import BaseNineMLObject
 import pype9.annotations
+from pype9.utils import load_9ml_prototype
 
 logger = logging.getLogger('PyPe9')
 
@@ -110,8 +111,12 @@ class BaseCodeGenerator(object):
         # Save original working directory to reinstate it afterwards (just to
         # be polite)
         orig_dir = os.getcwd()
-        assert isinstance(prototype, Component), \
-            "Prototype is not a 9ML component ('{}')".format(prototype)
+        if isinstance(prototype, basestring):
+            prototype = load_9ml_prototype(prototype, **kwargs)
+        elif not isinstance(prototype, Component):
+            raise TypeError(
+                "Provided prototype is not a 9ML component ('{}')"
+                .format(prototype))
         name = prototype.name
         # Set build dir if not provided
         if build_dir is None:
@@ -182,7 +187,7 @@ class BaseCodeGenerator(object):
         if generate_source:
             self.clean_src_dir(src_dir, name)
             self.generate_source_files(
-                name=name, prototype=prototype, initial_state=initial_state,
+                prototype=prototype, initial_state=initial_state,
                 src_dir=src_dir, compile_dir=compile_dir,
                 install_dir=install_dir, verbose=verbose, **kwargs)
             # Write the timestamp of the 9ML file used to generate the source

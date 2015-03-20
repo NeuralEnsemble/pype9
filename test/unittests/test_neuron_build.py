@@ -32,5 +32,4 @@ class TestNeuronBuild(TestCase):
 
 if __name__ == '__main__':
     t = TestNeuronBuild()
-    t.test_built_mechanism()
-#     t.test_neuron_build()
+    t.test_neuron_build()

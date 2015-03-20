@@ -61,7 +61,7 @@ class CodeGenerator(BaseCodeGenerator):
         # NMODL files on the current platform
         self.specials_dir = self._get_specials_dir()
 
-    def generate_source_files(self, name, prototype, initial_state, src_dir,
+    def generate_source_files(self, prototype, initial_state, src_dir,
                               **kwargs):
         """
             *KWArgs*
@@ -85,36 +85,35 @@ class CodeGenerator(BaseCodeGenerator):
 #         el
         if 'membrane_voltage' in kwargs:
             self.generate_point_process(
-                name, prototype, initial_state, src_dir, **kwargs)
+                prototype, initial_state, src_dir, **kwargs)
         else:
-            self.generate_ion_channel(name, prototype, initial_state, src_dir,
+            self.generate_ion_channel(prototype, initial_state, src_dir,
                                       **kwargs)
 
-    def generate_ion_channel(self, name, prototype, initial_state, src_dir,
+    def generate_ion_channel(self, prototype, initial_state, src_dir,
                              **kwargs):
         # Render mod file
-        self.generate_mod_file(name, 'main.tmpl', prototype, initial_state,
-                               src_dir, kwargs)
+        self.generate_mod_file('main.tmpl', prototype, initial_state, src_dir,
+                               kwargs)
 
-    def generate_kinetics(self, name, prototype, initial_state, src_dir,
-                          **kwargs):
+    def generate_kinetics(self, prototype, initial_state, src_dir, **kwargs):
         # Render mod file
-        self.generate_mod_file(name, 'kinetics.tmpl', prototype, initial_state,
+        self.generate_mod_file('kinetics.tmpl', prototype, initial_state,
                                src_dir, kwargs)
 
-    def generate_point_process(self, name, prototype, initial_state, src_dir,
+    def generate_point_process(self, prototype, initial_state, src_dir,
                                **kwargs):
         add_tmpl_args = {'is_subcomponent': False}
         template_args = copy(kwargs)
         template_args.update(add_tmpl_args)
         # Render mod file
-        self.generate_mod_file(name, 'main.tmpl', prototype, initial_state,
+        self.generate_mod_file('main.tmpl', prototype, initial_state,
                                src_dir, template_args)
 
-    def generate_mod_file(self, name, template, prototype, initial_state,
-                          src_dir, template_args):
+    def generate_mod_file(self, template, prototype, initial_state, src_dir,
+                          template_args):
         tmpl_args = {
-            'component_name': name,
+            'component_name': prototype.name,
             'componentclass': prototype.component_class,
             'prototype': prototype,
             'initial_state': initial_state,
@@ -128,7 +127,8 @@ class CodeGenerator(BaseCodeGenerator):
             'weight_variables': []}
         tmpl_args.update(template_args)
         # Render mod file
-        self.render_to_file(template, tmpl_args, name + '.mod', src_dir)
+        self.render_to_file(template, tmpl_args, prototype.name + '.mod',
+                            src_dir)
 
     def transform_for_build(self, prototype, **kwargs):
         """
