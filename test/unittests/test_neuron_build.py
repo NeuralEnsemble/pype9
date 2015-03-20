@@ -22,13 +22,13 @@ class TestNeuronBuild(TestCase):
                                      ode_solver='derivimplicit',
                                      membrane_voltage='V',
                                      membrane_capacitance='Cm')
-
-    def test_kinetics_build(self):
-        component_file = path.join(test_data_dir, 'xml',
-                                   'kinetic_mechanism.xml')
-        self.code_generator.generate(component_file,
-                                     build_mode='force',
-                                     ode_solver='derivimplicit')
+# 
+#     def test_kinetics_build(self):
+#         component_file = path.join(test_data_dir, 'xml',
+#                                    'kinetic_mechanism.xml')
+#         self.code_generator.generate(component_file,
+#                                      build_mode='force',
+#                                      ode_solver='derivimplicit')
 
 if __name__ == '__main__':
     t = TestNeuronBuild()

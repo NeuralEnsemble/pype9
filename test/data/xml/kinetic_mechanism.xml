@@ -8,45 +8,65 @@
     <Parameter name="tau1" dimension="time"/>
     <Parameter name="tau2" dimension="time"/>
     <AnalogReceivePort name="v" dimension="voltage"/>
-      <Kinetics>
-        <KineticState name="C1"/>
-        <KineticState name="C2"/> 
-        <KineticState name="O1"/>
-          <Reaction from="C1" to="C2">
-          <Annotations>
-           <Comment>
-            Forward rate and Reverse rate might be supposed to be aliases.
-           </Comment>          
-          </Annotations>
-          <ForwardRate> <MathInline>k1/(tau1(v)*(1+K1)) </MathInline> </ForwardRate>
-          <ReverseRate> <MathInline>1/(tau1(v)*(1+K1)) </MathInline> </ReverseRate>
-        </Reaction>
-        <Reaction from="C2" to="O1"> 
-          <ForwardRate> <MathInline>K2/(tau2(v)*(1+K2)) </MathInline> </ForwardRate>
-          <ReverseRate> <MathInline>1/(tau1(v)*(1+K1)) </MathInline>  </ReverseRate>      
-        </Reaction>
-        <Constraint state ="C1"> <MathInline>C1 + C2 + O1 - 1  </MathInline> </Constraint>
-        <Alias name="K1">    
-          <MathInline>exp(k2*(d2-v)-k1*(d1-v)) </MathInline>
-        </Alias>
-        <Alias name="K2">    
-            <MathInline>exp(-k2*(d2-v)) </MathInline>
-        </Alias>    
+    <Kinetics>
+      <KineticState name="C1"/>
+      <KineticState name="C2"/>
+      <KineticState name="O1"/>
+      <Reaction from="C1" to="C2">
+        <Annotations>
+          <Comment> Forward rate and Reverse rate might be supposed to be aliases. </Comment>
+        </Annotations>
+        <ForwardRate>
+          <MathInline>k1/(tau1(v)*(1+K1)) </MathInline>
+        </ForwardRate>
+        <ReverseRate>
+          <MathInline>1/(tau1(v)*(1+K1)) </MathInline>
+        </ReverseRate>
+      </Reaction>
+      <Reaction from="C2" to="O1">
+        <ForwardRate>
+          <MathInline>K2/(tau2(v)*(1+K2)) </MathInline>
+        </ForwardRate>
+        <ReverseRate>
+          <MathInline>1/(tau1(v)*(1+K1)) </MathInline>
+        </ReverseRate>
+      </Reaction>
+      <Constraint state="C1">
+        <MathInline>C1 + C2 + O1 - 1 </MathInline>
+      </Constraint>
+      <Alias name="K1">
+        <MathInline>exp(k2*(d2-v)-k1*(d1-v)) </MathInline>
+      </Alias>
+      <Alias name="K2">
+        <MathInline>exp(-k2*(d2-v)) </MathInline>
+      </Alias>
     </Kinetics>
   </ComponentClass>
   <Component name="KineticsTest">
     <Definition>Kinetic_Class</Definition>
-    <Property name="d1" units="mV"><SingleValue>-50</SingleValue></Property>
-    <Property name="d2" units="mV"><SingleValue>-50</SingleValue></Property>
-    <Property name="k1" units="per_mV"><SingleValue>-50</SingleValue></Property>
-    <Property name="k2" units="per_mV"><SingleValue>-50</SingleValue></Property>
-    <Property name="tau1" units="ms"><SingleValue>10</SingleValue></Property>
-    <Property name="tau2" units="ms"><SingleValue>10</SingleValue></Property>
-  </Component> 
+    <Property name="d1" units="mV">
+      <SingleValue>-50</SingleValue>
+    </Property>
+    <Property name="d2" units="mV">
+      <SingleValue>-50</SingleValue>
+    </Property>
+    <Property name="k1" units="per_mV">
+      <SingleValue>-50</SingleValue>
+    </Property>
+    <Property name="k2" units="per_mV">
+      <SingleValue>-50</SingleValue>
+    </Property>
+    <Property name="tau1" units="ms">
+      <SingleValue>10</SingleValue>
+    </Property>
+    <Property name="tau2" units="ms">
+      <SingleValue>10</SingleValue>
+    </Property>
+  </Component>
   <Dimension name="time" t="-1"/>
   <Dimension name="voltage" m="1" l="2" t="-3" i="-1"/>
   <Dimension name="per_voltage" m="-1" l="-2" t="3" i="1"/>
   <Unit symbol="mV" dimension="voltage" power="-3"/>
   <Unit symbol="per_mV" dimension="per_voltage" power="3"/>
-  <Unit symbol="ms" dimension="time" power="-3"/> 
-</NineML>  
+  <Unit symbol="ms" dimension="time" power="-3"/>
+</NineML>
