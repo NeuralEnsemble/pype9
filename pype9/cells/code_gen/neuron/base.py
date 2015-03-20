@@ -12,11 +12,10 @@ import os.path
 import tempfile
 from copy import copy
 import uuid
+from itertools import chain
 import subprocess as sp
 from ..base import BaseCodeGenerator
 import nineml.abstraction_layer.units as un
-from nineml.abstraction_layer.dynamics import (
-    OnEvent, TimeDerivative, StateVariable)
 from nineml.abstraction_layer.expressions import Alias
 from nineml.abstraction_layer.ports import (
     AnalogReceivePort, AnalogSendPort)
@@ -160,10 +159,10 @@ class CodeGenerator(BaseCodeGenerator):
         else:
             v = trans.state_variable('v')
         # Replace voltage state-variable with analog receive port
-        trans.remove(v)
-        v_port = AnalogReceivePort(v.name, dimension=un.voltage)
-        orig_v.annotations[PYPE9_NS][TRANSFORM_NS] = v_port
-        trans.add(v_port)
+#         trans.remove(v)
+#         v_port = AnalogReceivePort(v.name, dimension=un.voltage)
+#         orig_v.annotations[PYPE9_NS][TRANSFORM_NS] = v_port
+#         trans.add(v_port)
         # Remove associated analog send port if present
         try:
             trans.remove(trans.analog_send_port('v'))

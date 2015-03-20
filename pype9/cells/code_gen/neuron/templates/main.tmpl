@@ -151,12 +151,12 @@ BREAKPOINT {
 }
 
 DERIVATIVE states {
-{% for sv in componentclass.state_variables %}
+{% for sv in componentclass.state_variables if sv.name != 'v'  %}
     {{sv.name}}' = deriv_{{sv.name}}({{componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variable_names | join(', ')}})
 {% endfor %}
 }
 
-{% for sv in componentclass.state_variables %}
+{% for sv in componentclass.state_variables if sv.name != 'v' %}
 FUNCTION deriv_{{sv.name}}({{componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variable_names | join(', ')}}) {
     {% for regime in componentclass.regimes %}
     {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {

@@ -14,6 +14,7 @@ import numpy
 from nineml.user_layer import Property
 from nineml.abstraction_layer import units as un
 import quantities as pq
+import neo
 
 # from pyNN.neuron.cells import Izhikevich_ as IzhikevichPyNN
 # MPI may not be required but NEURON sometimes needs to be initialised after
@@ -39,7 +40,7 @@ class TestNeuronLoad(TestCase):
     def test_neuron_load(self):
         Izhikevich9ML = CellMetaClass(
             self.izhikevich_file, name=self.izhikevich_name,
-            build_mode='compile_only', verbose=True, membrane_voltage='V',
+            build_mode='force', verbose=True, membrane_voltage='V',
             membrane_capacitance=Property('Cm', 0.001, un.nF))
         # ---------------------------------------------------------------------
         # Set up PyNN section
@@ -56,39 +57,68 @@ class TestNeuronLoad(TestCase):
         stim.amp = 0.2   # nA
         # Record Time from NEURON (neuron.h._ref_t)
         rec = Recorder(pnn, pnn_izhi)
-        tests = ('v', 'u')
-        for test in tests:
-            rec.record(test)
+        rec.record('v')
         # ---------------------------------------------------------------------
         # Set up 9ML cell
         # ---------------------------------------------------------------------
-#         izhi = Izhikevich9ML(a=0.02 * 1 / pq.ms, b=0.2 * 1.0 / pq.ms,
-#                              c=-65.0 * pq.mV, d=2 * pq.mV / pq.ms,
-#                              vthresh=30 * pq.mV)
         izhi = Izhikevich9ML()
         print izhi.a
-#         izhi.inject_current(neo.AnalogSignal([0.0] + [0.2] * 9, units='nA',
-#                                             sampling_period=1 * pq.ms))
-        stim2 = h.IClamp(1.0, sec=izhi.source_section)
-        stim2.delay = 1   # ms
-        stim2.dur = 100   # ms
-        stim2.amp = 0.2   # nA
-        for test in tests:
-            izhi.record(test)
+        izhi.inject_current(neo.AnalogSignal([0.0] + [0.2] * 9, units='nA',
+                                             sampling_period=1 * pq.ms))
+        izhi.record('v')
         simulator.initialize()  # @UndefinedVariable
         izhi.u = -14.0 * pq.mV / pq.ms
         pnn_izhi.u = -14.0
         simulator.run(10, reset=False)  # @UndefinedVariable
-        leg = []
-        for test in tests:
-            n = izhi.recording(test)
-            t, p = rec.recording(test)
-            plt.plot(t, p)
-            plt.plot(n.times, n)
-            leg.extend(('PyNN ' + test, '9ML ' + test))
-        plt.legend(leg)
+        nml_v = izhi.recording('v')
+        pnn_t, pnn_v = rec.recording('v')  # @UnusedVariable
+        self.assertAlmostEqual(float((nml_v - pnn_v[1:] * pq.mV).sum()), 0)
+        plt.plot(pnn_t[:-1], pnn_v[1:])
+        plt.plot(nml_v.times, nml_v)
+        plt.legend(('PyNN v', '9ML v'))
         plt.show()
         h.quit()
+
+
+# class TestNeuronMWE(TestCase):
+# 
+#     def test_neuron_load(self):
+#         # ---------------------------------------------------------------------
+#         # Set up PyNN section
+#         # ---------------------------------------------------------------------
+#         pnn = h.Section()
+#         pnn.L = 10
+#         pnn.diam = 10 / pi
+#         pnn.cm = 1.0
+#         pnn_izhi = h.Izhikevich(0.5, sec=pnn)  # @UnusedVariable
+#         # Specify current injection
+#         stim = h.IClamp(1.0, sec=pnn)
+#         stim.delay = 1   # ms
+#         stim.dur = 100   # ms
+#         stim.amp = 0.2   # nA
+#         # Record Time from NEURON (neuron.h._ref_t)
+#         rec = h.Vector()
+#         rec.record(pnn(0.5)._ref_v)
+#         # ---------------------------------------------------------------------
+#         # Set up 9ML cell
+#         # ---------------------------------------------------------------------
+#         izhi = Izhikevich9ML()
+#         print izhi.a
+#         izhi.inject_current(neo.AnalogSignal([0.0] + [0.2] * 9, units='nA',
+#                                              sampling_period=1 * pq.ms))
+#         izhi.record('v')
+#         simulator.initialize()  # @UndefinedVariable
+#         izhi.u = -14.0 * pq.mV / pq.ms
+#         pnn_izhi.u = -14.0
+#         simulator.run(10, reset=False)  # @UndefinedVariable
+#         nml_v = izhi.recording('v')
+#         pnn_t, pnn_v = rec.recording('v')  # @UnusedVariable
+#         self.assertAlmostEqual(float((nml_v - pnn_v[1:] * pq.mV).sum()), 0)
+#         plt.plot(pnn_t[:-1], pnn_v[1:])
+#         plt.plot(nml_v.times, nml_v)
+#         plt.legend(('PyNN v', '9ML v'))
+#         plt.show()
+#         h.quit()
 
 
 class Recorder(object):
