@@ -20,3 +20,6 @@ class DummyTestCase(object):
     def assertEqual(self, first, second):
         print '{} and {} are{} equal'.format(repr(first), repr(second),
                                              ' not' if first != second else '')
+
+    def assertAlmostEqual(self, first, second):
+        pass

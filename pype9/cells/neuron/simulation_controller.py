@@ -35,6 +35,10 @@ class _SimulationController(object):
         h.quit()
 
     @property
+    def dt(self):
+        return h.dt
+
+    @property
     def time(self):
         return pq.Quantity(self._time, 'ms')
 

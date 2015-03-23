@@ -11,9 +11,10 @@ from pype9.exceptions import Pype9RuntimeError
 import numpy
 import nineml
 from quantities import Quantity
-from nineml import (
-    Property, Unit, Dynamics, DynamicsClass, ConnectionRule,
-    ConnectionRuleClass, Distribution, DistributionClass)
+from nineml.abstraction_layer import (
+    Unit, DynamicsClass, ConnectionRuleClass, DistributionClass)
+from nineml.user_layer import (
+    Property, Dynamics, ConnectionRule, Distribution)
 from copy import copy
 from nineml.exceptions import NineMLMissingElementError
 import math
