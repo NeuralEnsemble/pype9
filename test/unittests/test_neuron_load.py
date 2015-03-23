@@ -25,13 +25,6 @@ from math import pi
 import pyNN.neuron  # @UnusedImport loads pyNN mechanisms
 
 
-class Cell(object):
-
-    def __init__(self):
-        self.source_section = h.Section()  # @UndefinedVariable
-        self._hoc = h.Izhikevich9ML(0.5, sec=self.source_section)
-
-
 class TestNeuronLoad(TestCase):
 
     izhikevich_file = path.join(test_data_dir, 'xml', 'Izhikevich2003.xml')

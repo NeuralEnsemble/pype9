@@ -12,7 +12,7 @@ import sys
 import os.path
 import nest
 from pype9.cells.code_gen.nest import CodeGenerator
-import pype9.cells
+import pype9.cells.base
 
 basic_nineml_translations = {
     'Voltage': 'V_m', 'Diameter': 'diam', 'Length': 'L'}
