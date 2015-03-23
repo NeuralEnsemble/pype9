@@ -10,22 +10,22 @@
 // This section was generated from accessors_modifiers.tmpl //
 //----------------------------------------------------------//
 
-void {{component_name}}::Parameters_::get (DictionaryDatum &d) const {
+void {{component_name}}::Parameters_::get (DictionaryDatum &d_) const {
 
 {# TODO: Should change this to names::{{name}}, {{name}} once I work out where
          to put the "names" declarations (probably in the header#}
     // Update dictionary from internal parameters, scaling if required.
 {% for p in componentclass.parameters %}
-    def<double_t>(d, "{{p.name}}", {{p.name}}{% if name in parameter_scales %} / {{parameter_scales[name]}}{% endif %});
+    def<double_t>(d_, "{{p.name}}", {{p.name}}{% if name in parameter_scales %} / {{parameter_scales[name]}}{% endif %});
 {% endfor %}
 
 }
 
-void {{component_name}}::Parameters_::set (const DictionaryDatum &d) {
+void {{component_name}}::Parameters_::set (const DictionaryDatum &d_) {
 
     // Update internal parameters from dictionary
 {% for p in componentclass.parameters %}
-    updateValue<double_t>(d, "{{p.name}}", {{p.name}});
+    updateValue<double_t>(d_, "{{p.name}}", {{p.name}});
 {% endfor %}
 
     // Scale parameters as required
@@ -37,29 +37,29 @@ void {{component_name}}::Parameters_::set (const DictionaryDatum &d) {
 }
 
 
-void {{component_name}}::State_::get (DictionaryDatum &d) const {
+void {{component_name}}::State_::get (DictionaryDatum &d_) const {
 
     // Get states from internal variables
 {% for i, sv in enumerate(componentclass.state_variables) %}
-    def<double_t>(d, "{{sv.name}}", y_[{{i}}]);
+    def<double_t>(d_, "{{sv.name}}", y_[{{i}}]);
 {% endfor %}
 {# FIXME: Need to include special handling of v->V_m
 {% if ("v" in stateIndexMap) %}
-    def<double_t>(d, names::V_m, y_[{{stateIndexMap["v"]}}]);
+    def<double_t>(d_, names::V_m, y_[{{stateIndexMap["v"]}}]);
 {% endif %}
 #}
  
 }
     
-void {{component_name}}::State_::set (const DictionaryDatum &d, const Parameters_&) {
+void {{component_name}}::State_::set (const DictionaryDatum &d_, const Parameters_&) {
 
     // Set internal state variables from dictionary values
 {% for i, sv in enumerate(componentclass.state_variables) %}
-    updateValue<double_t>(d, "{{sv.name}}", y_[{{i}}]);
+    updateValue<double_t>(d_, "{{sv.name}}", y_[{{i}}]);
 {% endfor %}
 {# FIXME: Need to include special handling of v->V_m
 {% if ("v" in stateIndexMap) %}
-   updateValue<double_t>(d, names::V_m, y_[{{stateIndexMap["v"]}}]);
+   updateValue<double_t>(d_, names::V_m, y_[{{stateIndexMap["v"]}}]);
 {% endif %}
 #}
     

@@ -12,13 +12,11 @@ import os.path
 import tempfile
 from copy import copy
 import uuid
-from itertools import chain
 import subprocess as sp
 from ..base import BaseCodeGenerator
 import nineml.abstraction_layer.units as un
 from nineml.abstraction_layer.expressions import Alias
-from nineml.abstraction_layer.ports import (
-    AnalogReceivePort, AnalogSendPort)
+from nineml.abstraction_layer.ports import AnalogSendPort
 from pype9.exceptions import (
     Pype9BuildError, Pype9RuntimeError, Pype9NoMatchingElementException)
 import pype9
@@ -136,7 +134,7 @@ class CodeGenerator(BaseCodeGenerator):
         `prototype`        -- the component to be transformed
         `membrane_voltage` -- the name of the state variable that represents
                               the membrane voltage
-        `membrane_voltage` -- the name of the capcitance that represents
+        `membrane_capacitance` -- the name of the capcitance that represents
                               the membrane capacitance
         """
         # ---------------------------------------------------------------------

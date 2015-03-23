@@ -11,11 +11,17 @@ from __future__ import absolute_import
 import os.path
 import subprocess as sp
 from ..base import BaseCodeGenerator
+from nineml.abstraction_layer import units as un
 from pype9.utils import remove_ignore_missing
 from pype9.exceptions import Pype9BuildError
 import pype9
 import shutil
 from datetime import datetime
+from copy import copy
+from pype9.annotations import (
+    MEMBRANE_VOLTAGE, PYPE9_NS, TRANSFORM_SRC, TRANSFORM_DEST)
+from nineml.user_layer import Dynamics, Definition
+from nineml import Document
 
 
 class CodeGenerator(BaseCodeGenerator):
@@ -55,7 +61,7 @@ class CodeGenerator(BaseCodeGenerator):
                                         self.ABS_TOLERANCE_DEFAULT),
             'rel_tolerance': kwargs.get('max_step_size',
                                         self.REL_TOLERANCE_DEFAULT),
-            'parameter_scales': [], 'membrane_voltage': 'V_t',
+            'parameter_scales': [],
             'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT)}
         # Render C++ header file
         self.render_to_file('header.tmpl', tmpl_args,
@@ -171,6 +177,46 @@ class CodeGenerator(BaseCodeGenerator):
         if 'NEST_INSTALL_DIR' in os.environ:
             path.append(os.path.join(os.environ['NEST_INSTALL_DIR'], 'bin'))
         return path
+
+    def transform_for_build(self, prototype, **kwargs):
+        """
+        Copy the component class to alter it to match NEURON's current
+        centric focus
+        `prototype`        -- the component to be transformed
+        `membrane_voltage` -- the name of the state variable that represents
+                              the membrane voltage
+        `membrane_voltage` -- the name of the capcitance that represents
+                              the membrane capacitance
+        """
+        # ---------------------------------------------------------------------
+        # Clone original component class and properties
+        # ---------------------------------------------------------------------
+        orig = prototype.component_class
+        trans = copy(orig)
+        props = [copy(p) for p in prototype.properties]
+        # ---------------------------------------------------------------------
+        # Remove the membrane voltage
+        # ---------------------------------------------------------------------
+        # Get or guess the location of the membrane voltage
+        orig_v = self._get_member_from_kwargs_or_guess_via_dimension(
+            'membrane_voltage', 'state_variables', un.voltage, orig, kwargs)
+        # Map voltage to hard-coded 'v' symbol
+        if orig_v.name != 'V_m':
+            trans.rename_symbol(orig_v.name, 'V_m')
+            v = trans.state_variable('V_m')
+            v.annotations[PYPE9_NS][TRANSFORM_SRC] = orig_v
+            orig_v.annotations[PYPE9_NS][TRANSFORM_DEST] = v
+        else:
+            v = trans.state_variable('V_m')
+        orig.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = orig_v.name
+        trans.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = 'V_m'
+        # ---------------------------------------------------------------------
+        # Validate the transformed component class and construct prototype
+        # ---------------------------------------------------------------------
+        trans.validate()
+        # Retun a prototype of the transformed class
+        return Dynamics(
+            prototype.name, Definition(trans.name, Document(trans)), props)
 
 # Old template arguments to Ivan's templates.
 

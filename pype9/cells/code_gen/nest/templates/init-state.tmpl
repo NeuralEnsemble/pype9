@@ -97,12 +97,12 @@
 void {{component_name}}::calibrate() {
     B_.logger_.init();  
 {% if (ode_solver == "gsl") %}
-    V_.U_old_ = S_.y_[{{component_name}}::State_::{{membrane_voltage}}_INDEX];
-    {% if refractory_period %}
+    V_.U_old_ = S_.y_[{{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX];
+    {#{% if refractory_period %}
     V_.RefractoryCounts_ = Time(Time::ms(P_.t_ref)).get_steps();
-    {% else %}
+    {% else %}#}
     V_.RefractoryCounts_ = 0;
-    {% endif %}
+    {#{% endif %}#}
 {% endif %}
 }
 // ------------------- init-state.tmpl ------------------------//
