@@ -40,7 +40,7 @@ void {{component_name}}::Parameters_::set (const DictionaryDatum &d) {
 void {{component_name}}::State_::get (DictionaryDatum &d) const {
 
     // Get states from internal variables
-{% for i, sv in enumerate(componentclass.dynamics.state_variables) %}
+{% for i, sv in enumerate(componentclass.state_variables) %}
     def<double_t>(d, "{{sv.name}}", y_[{{i}}]);
 {% endfor %}
 {# FIXME: Need to include special handling of v->V_m
@@ -54,7 +54,7 @@ void {{component_name}}::State_::get (DictionaryDatum &d) const {
 void {{component_name}}::State_::set (const DictionaryDatum &d, const Parameters_&) {
 
     // Set internal state variables from dictionary values
-{% for i, sv in enumerate(componentclass.dynamics.state_variables) %}
+{% for i, sv in enumerate(componentclass.state_variables) %}
     updateValue<double_t>(d, "{{sv.name}}", y_[{{i}}]);
 {% endfor %}
 {# FIXME: Need to include special handling of v->V_m

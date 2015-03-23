@@ -40,7 +40,7 @@ inline void {{component_name}}::{{oe.src_port_name}}_event_in_{{regime.name}}(lo
     const double_t {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];
         {% endfor %}
         
-    {% set dp = componentclass.get_dependencies(oe.state_assignments) %}
+    {% set dp = componentclass.required_for(oe.state_assignments) %}
     
     // Map parameters used in dynamics to current namespace
         {% for param in dp.parameters %}
@@ -71,18 +71,18 @@ inline void {{component_name}}::{{oe.src_port_name}}_event_in_{{regime.name}}(lo
                 {% for piece in expr.pieces %}
     {% if not loop.first %}else {% endif -%}
     if ({{expr.condition}})
-        {{expr_name}} = {{expr.rhs}};
+        {{expr_name}} = {{expr.rhs_cstr}};
                 {%- endfor %}
     else
-        {{expr_name}} = {{expr.otherwise.rhs}}; 
+        {{expr_name}} = {{expr.otherwise.rhs_cstr}}; 
             {% else %}
-    const double_t {{expr.lhs}} = {{expr.rhs}};
+    const double_t {{expr.lhs}} = {{expr.rhs_cstr}};
             {% endif %}
         {% endfor %}
 
     // Evaluate differential equations
         {% for assign in oe.state_assignments %}
-    S_.y_[{{component_name}}::State_::{{assign.lhs}}_INDEX] = {{assign.rhs}};
+    S_.y_[{{component_name}}::State_::{{assign.lhs}}_INDEX] = {{assign.rhs_cstr}};
         {% endfor %}
 }
     {% endfor %}

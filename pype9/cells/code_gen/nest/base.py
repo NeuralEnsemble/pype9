@@ -8,18 +8,12 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-import time
 import os.path
 import subprocess as sp
-import re
-from itertools import chain
-from .. import BaseCodeGenerator
+from ..base import BaseCodeGenerator
 from pype9.utils import remove_ignore_missing
-from nineml import Dimension
-from nineml.abstraction_layer import units as un
 from pype9.exceptions import Pype9BuildError
 import pype9
-import warnings
 import shutil
 from datetime import datetime
 
@@ -43,11 +37,11 @@ class CodeGenerator(BaseCodeGenerator):
                                    shell=True)
         self._compiler = compiler[:-1]  # strip trailing \n
 
-    def generate_source_files(self, name, componentclass, prototype,
-                              initial_state, src_dir, **kwargs):
+    def generate_source_files(self, prototype, initial_state, src_dir,
+                              **kwargs):
         tmpl_args = {
-            'component_name': name,
-            'componentclass': componentclass,
+            'component_name': prototype.name,
+            'componentclass': prototype.component_class,
             'prototype': prototype,
             'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
@@ -65,19 +59,19 @@ class CodeGenerator(BaseCodeGenerator):
             'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT)}
         # Render C++ header file
         self.render_to_file('header.tmpl', tmpl_args,
-                             name + '.h', src_dir)
+                             prototype.name + '.h', src_dir)
         # Render C++ class file
-        self.render_to_file('main.tmpl', tmpl_args, name + '.cpp',
+        self.render_to_file('main.tmpl', tmpl_args, prototype.name + '.cpp',
                              src_dir)
         # Render Loader header file
         self.render_to_file('loader-header.tmpl', tmpl_args,
-                             name + 'Loader.h', src_dir)
+                             prototype.name + 'Loader.h', src_dir)
         # Render Loader C++ class
         self.render_to_file('loader-cpp.tmpl', tmpl_args,
-                             name + 'Loader.cpp', src_dir)
+                             prototype.name + 'Loader.cpp', src_dir)
         # Render SLI initialiser
         self.render_to_file('sli_initialiser.tmpl', tmpl_args,
-                             name + 'Loader.sli', src_dir)
+                             prototype.name + 'Loader.sli', src_dir)
 
     def configure_build_files(self, name, src_dir, compile_dir, install_dir):
         # Generate Makefile if it is not present
@@ -150,6 +144,13 @@ class CodeGenerator(BaseCodeGenerator):
 
     def clean_compile_dir(self, compile_dir):
         orig_dir = os.getcwd()
+        try:
+            if not os.path.exists(compile_dir):
+                os.makedirs(compile_dir)
+        except IOError, e:
+            raise Pype9BuildError(
+                "Could not make compile directory '{}': {}"
+                .format(compile_dir, e))
         try:
             os.chdir(compile_dir)
             sp.check_call('make clean', shell=True)

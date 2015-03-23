@@ -13,7 +13,7 @@
     int status;
 
     // Vector length (number of states)
-    int N = {{componentclass.num_states}};
+    int N = {{componentclass.num_state_variables}};
     // only positive direction (rising edge) of spike events will be detected
     int rootdir = 1;
 
@@ -116,7 +116,7 @@
     {% endif %}
 {% elif ode_solver == "gsl" %}
     static const gsl_odeiv2_step_type* T1 = gsl_odeiv2_step_rk2;
-    B_.N = {{componentclass.num_states}};
+    B_.N = {{componentclass.num_state_variables}};
 
     if ( B_.s_ == 0 )
         B_.s_ = gsl_odeiv2_step_alloc (T1, B_.N);
@@ -149,7 +149,7 @@
   {% if ode_solver == "cvode" %}
     int status, N, rootdir;
     
-    N = {{componentclass.num_states}};
+    N = {{componentclass.num_state_variables}};
     // only positive direction (rising edge) of spike events will be detected
     rootdir = 1;
     
@@ -217,7 +217,7 @@
         throw CVodeSolverFailure (get_name(), status);
 {% elif ode_solver == "ida" %}
     int status, N, rootdir;
-    N = {{componentclass.num_states}};
+    N = {{componentclass.num_state_variables}};
     
     // only positive direction (rising edge) of spike events will be detected
     rootdir = 1;

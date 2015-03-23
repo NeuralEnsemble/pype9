@@ -20,7 +20,7 @@ extern "C" int {{component_name}}_{{regime.name}}_residual (double t, N_Vector y
              
     status = {{component_name}}_{{regime.name}}_dynamics (t, y, y1, pnode);
 
-        {% for i in xrange(componentclass.num_states) %}
+        {% for i in xrange(componentclass.num_state_variables) %}
     ITEM(f, {{i}}) = ITEM(y1, {{i}}) - ITEM(yp, {{i}});
         {% endfor %}
 

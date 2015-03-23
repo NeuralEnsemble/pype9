@@ -33,7 +33,7 @@
 //-----------------------------------------------//
 // This section was generated from dynamics.tmpl //
 //-----------------------------------------------//
-{% for regime in componentclass.dynamics.regimes %}
+{% for regime in componentclass.regimes %}
     {%- if ode_solver in ('cvode', 'ida') -%}
 extern "C" int {{component_name}}_{{regime.name}}_dynamics(double t_, N_Vector y_, N_Vector f_, void* pnode_) {
     {% else %}
@@ -49,7 +49,7 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics(double t_, const doub
     const double_t {{state.name}} = ITEM(y_, {{component_name}}::State_::{{state.name}}_INDEX);
     {% endfor %}
     
-    {% set dp = componentclass.get_dependencies(regime.time_derivatives) %}
+    {% set dp = componentclass.required_for(regime.time_derivatives) %}
    
     // Map parameters used in dynamics to current namespace
     {% for param in dp.parameters %}
@@ -70,12 +70,12 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics(double t_, const doub
    
     // Evaluate aliases used in differential equations 
     {% for expr in dp.expressions %}
-    const double_t {{expr.lhs}} = {{expr.rhs}};
+    const double_t {{expr.lhs}} = {{expr.rhs_cstr}};
     {% endfor %}
 
     // Evaluate differential equations
     {% for td in regime.time_derivatives %}
-    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{td.rhs}};
+    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{td.rhs_cstr}};
     {% endfor %}
 
     {% if ode_solver in ('cvode', 'ida') %}

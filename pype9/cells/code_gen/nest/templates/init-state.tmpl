@@ -74,7 +74,7 @@
   r_ = s.r_;
 {% endif %}
         
-  for (int i = 0 ; i < {{componentclass.num_states}} ; ++i)
+  for (int i = 0 ; i < {{componentclass.num_state_variables}} ; ++i)
       y_[i] = s.y_[i];
 }
 
@@ -88,7 +88,7 @@
 {% endif %}
         
   assert(this != &s);  
-  for (size_t i = 0 ; i < {{componentclass.num_states}} ; ++i)
+  for (size_t i = 0 ; i < {{componentclass.num_state_variables}} ; ++i)
        y_[i] = s.y_[i];
 
   return *this;
