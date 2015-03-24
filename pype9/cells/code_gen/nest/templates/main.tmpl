@@ -8,7 +8,10 @@
 
 {% include "includes.tmpl" %}
 
-namespace nest {
+// Includes template specialization that needs to be in the nest namesapce
+{% include "recordables.tmpl" %}
+
+namespace nineml {
 
 {% include "dynamics.tmpl" %}
 
@@ -25,8 +28,6 @@ namespace nest {
 {% include "accessors_modifiers.tmpl" %}
 
 {% include "buffers.tmpl" %}
-
-{% include "recordables.tmpl" %}
 
 {% include "constructors.tmpl" %}
 

@@ -3,7 +3,7 @@
 
    This template defines C++ methods of the form:
 
-   int ModelName::synapticEvent_transients (long_t lag)
+   int ModelName::synapticEvent_transients (nest::long_t lag)
 
    These methods update the synaptic states when a spike is received.
    They are invoked by the event handling portion of the update method,
@@ -33,7 +33,7 @@
 
 {% for regime in componentclass.regimes %}
     {% for oe in regime.on_events %}
-inline void {{component_name}}::{{oe.src_port_name}}_event_in_{{regime.name}}(long_t lag) {
+inline void {{component_name}}::{{oe.src_port_name}}_event_in_{{regime.name}}(nest::long_t lag) {
     
     // Map states used in dynamics to current namespace
         {% for sv in componentclass.state_variables %}

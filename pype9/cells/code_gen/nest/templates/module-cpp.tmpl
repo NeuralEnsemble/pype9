@@ -86,7 +86,7 @@ void nineml::{{component_name}}Module::init(SLIInterpreter *i, nest::Network*) {
        The first argument is always a reference to the network.
        Return value is a handle for later unregistration.
     */
-   nest::register_model<nest::{{component_name}}>(nest::NestModule::get_network(),
+   nest::register_model<{{component_name}}>(nest::NestModule::get_network(),
                                                  "{{component_name}}");
 
 }  // {{component_name}}Module::init()

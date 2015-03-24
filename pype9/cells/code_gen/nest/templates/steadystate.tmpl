@@ -92,7 +92,7 @@
          iter++;
          status = gsl_multiroot_fsolver_iterate (s);
          if ((status == GSL_EBADFUNC) || (status == GSL_ENOPROG))
-            throw GSLSolverFailure(name, status);
+            throw nest::GSLSolverFailure(name, status);
          status =  gsl_multiroot_test_residual (s->f, 1e-7);
       } while (status == GSL_CONTINUE && iter < 1000);
 

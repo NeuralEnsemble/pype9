@@ -59,7 +59,7 @@ void {{component_name}}::init_buffers_() {
     
     B_.logger_.reset();
     
-    B_.step_ = Time::get_resolution().get_ms();
+    B_.step_ = nest::Time::get_resolution().get_ms();
     B_.IntegrationStep_ = B_.step_;
     
 {% for p in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}

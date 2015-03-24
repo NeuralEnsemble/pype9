@@ -3,7 +3,7 @@
 
    This template defines a C++ function of the form:
 
-   int ModelName_update (Time const & origin, const long_t from, const long_t to)
+   int ModelName_update (nest::Time const & origin, const nest::long_t from, const nest::long_t to)
 
    This is the model state update function invoked by the NEST simulator.
 
@@ -25,14 +25,14 @@
 //---------------------------------------------//
 // This section was generated from update.tmpl //
 //---------------------------------------------//
-void {{component_name}}::update(Time const & origin, const long_t from, const long_t to) {
+void {{component_name}}::update(nest::Time const & origin, const nest::long_t from, const nest::long_t to) {
 
-    assert(to >= 0 && (delay) from < Scheduler::get_min_delay());
+    assert(to >= 0 && (nest::delay) from < nest::Scheduler::get_min_delay());
     assert(from < to);
 
-    long_t current_steps = origin.get_steps();
+    nest::long_t current_steps = origin.get_steps();
 
-    for (long_t lag = from; lag < to; ++lag) {
+    for (nest::long_t lag = from; lag < to; ++lag) {
         double dt = B_.step_;    
         double tt = 0.0;
 
@@ -61,8 +61,8 @@ void {{component_name}}::update(Time const & origin, const long_t from, const lo
             switch (status) {
                 case {{abbrev}}_SUCCESS:      continue;
                 case {{abbrev}}_ROOT_RETURN: {
-                    set_spiketime(Time::ms(tt));
-	                SpikeEvent se;
+                    set_spiketime(nest::Time::ms(tt));
+	                nest::SpikeEvent se;
 	                // Copy solver state to NEST state
 	                for (int i = 0; i < N; i++)
 	                    S_.y_[i] = ITEM(B_.y,i);
@@ -90,7 +90,7 @@ void {{component_name}}::update(Time const & origin, const long_t from, const lo
 	                                                  &B_.IntegrationStep_, // integration window (written on!)
 	                                                  S_.y_); // neuron state
 	      if (status != GSL_SUCCESS)
-	        throw GSLSolverFailure(get_name(), status);
+	        throw nest::GSLSolverFailure(get_name(), status);
 	    }
 	    
 		// Check threshold if not refractory and emit spike if crossed
@@ -100,8 +100,8 @@ void {{component_name}}::update(Time const & origin, const long_t from, const lo
 	    else if (S_.y_[{{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX] >= {{v_threshold}} &&
 	             V_.U_old_ > S_.y_[{{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX]) {
 	        S_.r_ = V_.RefractoryCounts_;
-	        set_spiketime(Time::step(origin.get_steps()+lag+1));
-	        SpikeEvent se;
+	        set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
+	        nest::SpikeEvent se;
 	        network()->send(*this, se, lag);
 	    }
 {% endif %}
