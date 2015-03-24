@@ -83,4 +83,4 @@ class CellMetaClass(pype9.cells.base.CellMetaClass):
         nest.sli_run('({}) addpath'
                      .format(os.path.join(install_dir, 'share', 'nest')))
         # Install nest module
-        nest.Install(name + 'Loader')
+        nest.Install(name + 'Module')

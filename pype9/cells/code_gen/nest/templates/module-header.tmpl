@@ -1,5 +1,5 @@
 /*
- *  {{component_name}}Loader.h
+ *  {{component_name}}Module.h
  *
  *  This file is part of NEST.
  *
@@ -33,7 +33,7 @@ namespace nineml {
  * Class defining your model.
  * @note For each model, you must define one such class, with a unique name.
  */
-class {{component_name}}Loader : public DynModule {
+class {{component_name}}Module : public DynModule {
  public:
 
   // Interface functions ------------------------------------------
@@ -42,13 +42,13 @@ class {{component_name}}Loader : public DynModule {
    * @note The constructor registers the module with the dynamic loader.
    *       Initialization proper is performed by the init() method.
    */
-  {{component_name}}Loader();
+  {{component_name}}Module();
 
   /**
    * @note The destructor does not do much in modules. Proper "downrigging"
    *       is the responsibility of the unregister() method.
    */
-  ~{{component_name}}Loader();
+  ~{{component_name}}Module();
 
   /**
    * Initialize module by registering models with the network.
@@ -65,35 +65,12 @@ class {{component_name}}Loader : public DynModule {
   const std::string name(void) const;
 
   /**
-   * Return the name of a sli file to execute when {{component_name}}Loader is loaded.
+   * Return the name of a sli file to execute when {{component_name}}Module is loaded.
    * This mechanism can be used to define SLI commands associated with your
    * module, in particular, set up type tries for functions you have defined.
    */
   const std::string commandstring(void) const;
 
- public:
-
-  // Classes implementing your functions -----------------------------
-
-  /**
-   * Implement a function for a step-pattern-based connection.
-   * @note What this function does is described in the SLI documentation
-   *       in the cpp file.
-   * @note The mangled name indicates this function expects the following
-   *       arguments on the stack (bottom first): vector of int, int,
-   *       vector of int, int.
-   * @note You must define a member object in your module class
-   *       of the function class. execute() is later invoked on this
-   *       member.
-   */
-  class StepPatternConnect_Vi_i_Vi_i_lFunction: public SLIFunction
-     {
-     public:
-       void execute(SLIInterpreter *) const;
-     };
-
-     StepPatternConnect_Vi_i_Vi_i_lFunction stepPatternConnect_Vi_i_Vi_i_lFunction;
-  };
 }  // nineml namespace
 
 #endif  // {{component_name | upper}}_MODULE_H

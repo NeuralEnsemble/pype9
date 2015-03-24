@@ -3,10 +3,10 @@
  * Run automatically when {{component_name}} is loaded.
  */
 
-M_DEBUG ({{component_name}}Loader.sli) (Initializing SLI support for {{component_name}}.) message
+M_DEBUG ({{component_name}}Module.sli) (Initializing SLI support for {{component_name}}.) message
 
-/{{component_name}}Loader /SLI ($Revision: 7918 $) provide-component
-/{{component_name}}Loader /C++ (7165) require-component
+/{{component_name}}Module /SLI ($Revision: 7918 $) provide-component
+/{{component_name}}Module /C++ (7165) require-component
 
 /StepPatternConnect [ /arraytype /integertype /arraytype /integertype /literaltype ]
 {

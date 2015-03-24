@@ -70,14 +70,14 @@ class CodeGenerator(BaseCodeGenerator):
         self.render_to_file('main.tmpl', tmpl_args, prototype.name + '.cpp',
                              src_dir)
         # Render Loader header file
-        self.render_to_file('loader-header.tmpl', tmpl_args,
-                             prototype.name + 'Loader.h', src_dir)
+        self.render_to_file('module-header.tmpl', tmpl_args,
+                             prototype.name + 'Module.h', src_dir)
         # Render Loader C++ class
-        self.render_to_file('loader-cpp.tmpl', tmpl_args,
-                             prototype.name + 'Loader.cpp', src_dir)
+        self.render_to_file('module-cpp.tmpl', tmpl_args,
+                             prototype.name + 'Module.cpp', src_dir)
         # Render SLI initialiser
         self.render_to_file('sli_initialiser.tmpl', tmpl_args,
-                             prototype.name + 'Loader.sli', src_dir)
+                             prototype.name + 'Module-init.sli', src_dir)
 
     def configure_build_files(self, name, src_dir, compile_dir, install_dir):
         # Generate Makefile if it is not present
@@ -144,9 +144,9 @@ class CodeGenerator(BaseCodeGenerator):
         else:
             remove_ignore_missing(prefix + '.h')
             remove_ignore_missing(prefix + '.cpp')
-            remove_ignore_missing(prefix + 'Loader.h')
-            remove_ignore_missing(prefix + 'Loader.cpp')
-            remove_ignore_missing(prefix + 'Loader.sli')
+            remove_ignore_missing(prefix + 'Module.h')
+            remove_ignore_missing(prefix + 'Module.cpp')
+            remove_ignore_missing(prefix + 'Module-init.sli')
 
     def clean_compile_dir(self, compile_dir):
         orig_dir = os.getcwd()
