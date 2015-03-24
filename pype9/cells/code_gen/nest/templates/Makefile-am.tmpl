@@ -23,7 +23,7 @@ AM_LDFLAGS = @SUNDIALS_LDFLAGS@
 .PHONY: install-slidoc
 
 nobase_pkgdata_DATA=\
-	{{name}}Module.sli
+	{{name}}Module-init.sli
 
 install-slidoc:
 	NESTRCFILENAME=/dev/null $(DESTDIR)$(NEST_PREFIX)/bin/sli --userargs="@HELPDIRS@" \

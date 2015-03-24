@@ -76,7 +76,7 @@ class CodeGenerator(BaseCodeGenerator):
         self.render_to_file('module-cpp.tmpl', tmpl_args,
                              prototype.name + 'Module.cpp', src_dir)
         # Render SLI initialiser
-        self.render_to_file('sli_initialiser.tmpl', tmpl_args,
+        self.render_to_file('module_sli_init.tmpl', tmpl_args,
                              prototype.name + 'Module-init.sli', src_dir)
 
     def configure_build_files(self, name, src_dir, compile_dir, install_dir):
