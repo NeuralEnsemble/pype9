@@ -15,19 +15,24 @@ namespace nineml {
 
 {% include "solver-preludes.tmpl" %}
 
-{% if ode_solver == "cvode" %}
-    extern "C" int {{component_name}}_dynamics (double, const N_Vector, N_Vector, void*);
-    extern "C" int {{component_name}}_event (double, N_Vector, double *, void*);
-{% elif ode_solver == "ida" %}
-    extern "C" int {{component_name}}_residual (double, N_Vector, N_Vector, N_Vector, void*);
-    extern "C" int {{component_name}}_event (double, N_Vector, N_Vector, double *, void*);
-{% elif ode_solver == 'gsl' %}
-    extern "C" int {{component_name}}_dynamics (double, const double*, double*, void*);
-{% endif %}
+{% for regime in componentclass.regimes %}
+    {% if ode_solver == "cvode" or ode_solver == "ida" %}
+  extern "C" int {{component_name}}_{{regime.name}}_dynamics (double, const N_Vector, N_Vector, void*);
+  extern "C" int {{component_name}}_{{regime.name}}_residual (double, N_Vector, N_Vector, N_Vector, void*);
+        {% if ode_solver == "cvode" %}
+  extern "C" int {{component_name}}_{{regime.name}}_event (double, N_Vector, double *, void*);
+        {% else %}
+  extern "C" int {{component_name}}_{{regime.name}}_event (double, N_Vector, N_Vector, double *, void*);
+        {% endif %}
+    {% elif ode_solver == 'gsl' %}
+  extern "C" int {{component_name}}_{{regime.name}}_dynamics (double, const double*, double*, void*);
+    {% endif %}
+{% endfor %}
+
 {% if ss_solver == "kinsol" %}
-    extern "C" int {{component_name}}_steadystate (N_Vector, N_Vector, void*);
+  extern "C" int {{component_name}}_steadystate (N_Vector, N_Vector, void*);
 {% elif ss_solver == 'gsl' %}
-    extern "C" int {{component_name}}_steadystate (const gsl_vector *, void *, gsl_vector *);
+  extern "C" int {{component_name}}_steadystate (const gsl_vector *, void *, gsl_vector *);
 {% endif %}
 
   class {{component_name}} : public nest::Archiving_Node {

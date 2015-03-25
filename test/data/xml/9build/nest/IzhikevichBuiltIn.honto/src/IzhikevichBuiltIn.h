@@ -19,62 +19,11 @@ namespace nineml
 
   class Network;
 
-  /* BeginDocumentation
-     Name: IzhikevichBuiltIn - Izhikevich neuron model
+  //------------------------------------------------------//
+  // This section was generated from solver-preludes.tmpl //
+  //------------------------------------------------------//
+  // ------------------- solver-preludes.tmpl ------------------------//
 
-     Description:
-     Implementation of the simple spiking neuron model introduced by Izhikevich [1].
-     The dynamics are given by:
-         dv/dt = 0.04*v^2 + 5*v + 140 - u + I
-	    du/dt = a*(b*v - u)
-
-	 if v >= V_th:
- 	   v is set to c
-	   u is incremented by d
-
-	 v jumps on each spike arrival by the weight of the spike. 
-   
-     As published in [1], the numerics differs from the standard forward Euler technique 
-     in two ways: 
-     1) the new value of u is calulated based on the new value of v, rather than the 
-        previous value
-     2) the variable v is updated using a time step half the size of that used to update 
-        variable u. 
-   
-     This model offers both forms of integration, they can be selected using the
-     boolean parameter consistent_integration. To reproduce some results published on 
-	 the basis of this model, it is necessary to use the published form of the dynamics.
-     In this case, consistent_integration must be set to false. For all other purposes,
-     it is recommended to use the standard technique for forward Euler integration. In 
-     this case, consistent_integration must be set to true (default).
-
-
-     Parameters:
-     The following parameters can be set in the status dictionary.
-
-     V_m        double - Membrane potential in mV
-     U_m		double - Membrane potential recovery variable
-     V_th       double - Spike threshold in mV.
-     I_e        double - Constant input current in pA. (R=1)
-     V_min      double - Absolute lower value for the membrane potential.
-     a			double - describes time scale of recovery variable
-     b			double - sensitivity of recovery variable
-     c			double - after-spike reset value of V_m
-     d			double - after-spike reset value of U_m
-	 consistent_integration		bool - use standard integration technique
-
-
-     References:
-     [1] Izhikevich, Simple Model of Spiking Neurons,
-     IEEE Transactions on Neural Networks (2003) 14:1569-1572
-
-     Sends: SpikeEvent
-
-     Receives: SpikeEvent, CurrentEvent, DataLoggingRequest
-     FirstVersion: 2009
-     Author: Hanuschkin, Morrison, Kunkel
-     SeeAlso: iaf_psc_delta, mat2_psc_exp
-  */
   class IzhikevichBuiltIn : public nest::Archiving_Node
   {
 
@@ -82,28 +31,25 @@ namespace nineml
 
     IzhikevichBuiltIn();
     IzhikevichBuiltIn(const IzhikevichBuiltIn &);
+    ~IzhikevichBuiltIn();
 
     /**
      * Import sets of overloaded virtual functions.
-     * We need to explicitly include sets of overloaded
-     * virtual functions into the current scope.
-     * According to the SUN C++ FAQ, this is the correct
-     * way of doing things, although all other compilers
-     * happily live without.
+     * This is necessary to ensure proper overload and overriding resolution.
+     * @see http://www.gotw.ca/gotw/005.htm.
      */
-
     using nest::Node::connect_sender;
     using nest::Node::handle;
 
-    void handle(nest::DataLoggingRequest &);
+    nest::port check_connection(nest::Connection&, nest::port);
+
     void handle(nest::SpikeEvent &);
     void handle(nest::CurrentEvent &);
+    void handle(nest::DataLoggingRequest &);
 
-    nest::port connect_sender(nest::DataLoggingRequest &, nest::port);
     nest::port connect_sender(nest::SpikeEvent &, nest::port);
     nest::port connect_sender(nest::CurrentEvent &, nest::port);
-
-    nest::port check_connection(nest::Connection&, nest::port);
+    nest::port connect_sender(nest::DataLoggingRequest &, nest::port);
 
     void get_status(DictionaryDatum &) const;
     void set_status(const DictionaryDatum &);

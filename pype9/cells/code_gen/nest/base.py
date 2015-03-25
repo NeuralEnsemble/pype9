@@ -33,6 +33,7 @@ class CodeGenerator(BaseCodeGenerator):
     MAX_STEP_SIZE_DEFAULT = 0.01  # FIXME:!!!
     ABS_TOLERANCE_DEFAULT = 0.01
     REL_TOLERANCE_DEFAULT = 0.01
+    GSL_JACOBIAN_APPROX_STEP_DEFAULT = 0.01
     V_THRESHOLD_DEFAULT = 0.0
     _TMPL_PATH = path.join(path.dirname(__file__), 'templates')
 
@@ -46,6 +47,7 @@ class CodeGenerator(BaseCodeGenerator):
 
     def generate_source_files(self, prototype, initial_state, src_dir,
                               **kwargs):
+        component_class = prototype.component_class
         tmpl_args = {
             'component_name': prototype.name,
             'componentclass': prototype.component_class,
@@ -56,6 +58,10 @@ class CodeGenerator(BaseCodeGenerator):
             'ode_solver': kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT),
             'ss_solver': kwargs.get('ss_solver', self.SS_SOLVER_DEFAULT),
             'unit_conversion': self.unit_conversion,
+            'default_regime': kwargs.get('default_regime',
+                                         next(component_class.regime_names)),
+            'jacobian_approx_step': kwargs.get(
+                'jacobian_approx_step', self.GSL_JACOBIAN_APPROX_STEP_DEFAULT),
             'max_step_size': kwargs.get('max_step_size',
                                         self.MAX_STEP_SIZE_DEFAULT),
             'abs_tolerance': kwargs.get('max_step_size',

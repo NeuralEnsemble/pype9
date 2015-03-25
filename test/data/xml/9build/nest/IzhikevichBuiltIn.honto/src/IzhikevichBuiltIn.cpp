@@ -141,6 +141,8 @@ nineml::IzhikevichBuiltIn::IzhikevichBuiltIn(const nineml::IzhikevichBuiltIn & n
     B_(n.B_, *this)
 {}
 
+nineml::IzhikevichBuiltIn::~IzhikevichBuiltIn() {}
+
 /* ----------------------------------------------------------------
  * Node initialization functions
  * ---------------------------------------------------------------- */

@@ -54,7 +54,7 @@
     status = {{prefix}}Init (B_.sys_, {{component_name}}_dynamics, 0.0, B_.y);
     {% elif ode_solver == 'ida' %}
     // resdual function, the initial time, and the initial values.
-    status = {{prefix}}Init (B_.sys_, {{component_name}}_residual, 0.0, B_.y, B_.yp);
+    status = {{prefix}}Init (B_.sys_, {{component_name}}_{{default_regime}}_residual, 0.0, B_.y, B_.yp);
     {% endif %}
     if (check_flag(&status, "{{prefix}}Init", 1))
         throw {{prefix}}SolverFailure (get_name(), status);
@@ -133,8 +133,8 @@
     else
         gsl_odeiv2_evolve_reset(B_.e_);
 
-    B_.sys_.function  = {{component_name}}_dynamics;
-    B_.sys_.jacobian  = {{component_name}}_jacobian;
+    B_.sys_.function  = {{component_name}}_{{default_regime}}_dynamics;
+    B_.sys_.jacobian  = {{component_name}}_{{default_regime}}_jacobian;
     B_.sys_.dimension = B_.N;
     B_.sys_.params    = reinterpret_cast<void*>(this);
 
@@ -144,7 +144,8 @@
     assert (B_.jac);
 {% endif %}
     // ------------------- init-solver.tmpl ------------------------//
-{# Old implementation
+
+{# Old implementation ********************************************************
 
   {% if ode_solver == "cvode" %}
     int status, N, rootdir;
@@ -241,7 +242,7 @@
 
     /* Calls IDAInit to initialize the integrator memory and specify the
     * resdual function, the initial time, and the initial values. */
-    status = IDAInit (B_.sys_, {{component_name}}_residual, 0.0, B_.y, B_.yp);
+    status = IDAInit (B_.sys_, {{component_name}}_{{default_regime}}_residual, 0.0, B_.y, B_.yp);
 
     if (check_flag(&status, "IDAInit", 1))
         throw IDASolverFailure (get_name(), status);
