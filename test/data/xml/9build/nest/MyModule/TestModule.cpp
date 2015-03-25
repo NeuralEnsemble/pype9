@@ -53,43 +53,40 @@ nineml::TestModule TestModule_LTX_mod;
 
 // -- DynModule functions ------------------------------------------------------
 
-nineml::TestModule::TestModule()
-  {
+nineml::TestModule::TestModule() {
 #ifdef LINKED_MODULE
      // register this module at the dynamic loader
      // this is needed to allow for linking in this module at compile time
      // all registered modules will be initialized by the main app's dynamic loader
      nest::DynamicLoaderModule::registerLinkedModule(this);
 #endif
-   }
+}
 
-nineml::TestModule::~TestModule()
-   {}
+nineml::TestModule::~TestModule() {}
 
-   const std::string nineml::TestModule::name(void) const
-   {
-     return std::string("My NEST Module"); // Return name of the module
-   }
+const std::string nineml::TestModule::name(void) const {
+    return std::string("Auto-generated module for Test class"); // Return name of the module
+}
 
-   const std::string nineml::TestModule::commandstring(void) const
-   {
-     // Instruct the interpreter to load TestModule-init.sli
-     return std::string("(TestModule-init) run");
-   }
+const std::string nineml::TestModule::commandstring(void) const {
+ /* 1. Tell interpreter that we provide the C++ part of TestModule with the
+       current revision number.
+    2. Instruct the interpreter to check that TestModule.sli exists,
+       provides at least version 1.0 of the SLI interface to TestModule, and
+       to load it.
+  */
+    return std::string("(TestModule-init) run");
+}
 
+//-------------------------------------------------------------------------------------
 
-  //-------------------------------------------------------------------------------------
-
-  void nineml::TestModule::init(SLIInterpreter *i, nest::Network*)
-  {
+void nineml::TestModule::init(SLIInterpreter *i, nest::Network*) {
     /* Register a neuron or device model.
        Give node type as template argument and the name as second argument.
        The first argument is always a reference to the network.
        Return value is a handle for later unregistration.
     */
-    nest::register_model<Test>(nest::NestModule::get_network(),
-                                        "Test");
+   nest::register_model<Test>(nest::NestModule::get_network(),
+                              "Test");
 
-  }  // TestModule::init()
-
-
+}  // TestModule::init()
