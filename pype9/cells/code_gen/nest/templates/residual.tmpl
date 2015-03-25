@@ -5,9 +5,7 @@
 #}
 {% if ode_solver == "ida" %}
 
-//-----------------------------------------------//
-// This section was generated from residual.tmpl //
-//-----------------------------------------------//
+// TEMPLATE: residual <<<
     {% for regime in componentclass.regimes %}
 extern "C" int {{component_name}}_{{regime.name}}_residual (double t, N_Vector y, N_Vector yp, N_Vector f, void* pnode) {
     int status;
@@ -27,5 +25,5 @@ extern "C" int {{component_name}}_{{regime.name}}_residual (double t, N_Vector y
     return status;
     {% endfor %}
 }
-//-------------- residual.tmpl ------------------//
+// TEMPLATE: residual >>>
 {% endif %}

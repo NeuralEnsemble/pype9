@@ -4,9 +4,7 @@
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
-//----------------------------------------------//
-// This section was generated from trigger.tmpl //
-//----------------------------------------------//
+// TEMPLATE: trigger <<<
 {% if ode_solver in ('cvode', 'ida') %}
 extern "C" int {{component_name}}_trigger (double t, N_Vector y,{% if ode_solver == 'ida' %} N_Vector yp,{% endif %} double *g, void* pnode) {
     double v, vt; v = -1.0; vt = 0.0;
@@ -38,4 +36,4 @@ extern "C" int {{component_name}}_trigger (double t, N_Vector y,{% if ode_solver
 {% elif ode_solver == 'gsl' %}
     // Trigger is hard coded as V_m > V_t, if V_t is present, at the moment.
 {% endif %}
-// ------------------- trigger.tmpl ------------------------//
+// TEMPLATE: trigger >>>

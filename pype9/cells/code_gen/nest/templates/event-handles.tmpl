@@ -24,9 +24,7 @@
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
-//---------------------------------------------------//
-// This section was generated from event-handle.tmpl //
-//---------------------------------------------------//
+// TEMPLATE: event-handle <<<
 void {{component_name}}::handle(nest::SpikeEvent & e) {
     assert(e.get_delay() > 0);
 {% for port in componentclass.event_receive_ports %}
@@ -53,4 +51,4 @@ void {{component_name}}::handle(nest::CurrentEvent& e) {
 void {{component_name}}::handle(nest::DataLoggingRequest& e) {
     B_.logger_.handle(e);
 }
-// ------------------- event-handle.tmpl ------------------------//
+// TEMPLATE: event-handle >>>

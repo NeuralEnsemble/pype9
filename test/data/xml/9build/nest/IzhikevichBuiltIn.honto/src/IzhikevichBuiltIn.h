@@ -4,9 +4,7 @@
 #ifndef IZHIKEVICHBUILTIN_H
 #define IZHIKEVICHBUILTIN_H
 
-//------------------------------------------------------//
-// This section was generated from header-includes.tmpl //
-//------------------------------------------------------//
+// TEMPLATE: header-includes <<<
 #include "nest.h"
 #include "event.h"
 #include "archiving_node.h"
@@ -22,7 +20,7 @@ namespace nineml
   //------------------------------------------------------//
   // This section was generated from solver-preludes.tmpl //
   //------------------------------------------------------//
-  // ------------------- solver-preludes.tmpl ------------------------//
+  // TEMPLATE: solver-preludes >>>
 
   class IzhikevichBuiltIn : public nest::Archiving_Node
   {

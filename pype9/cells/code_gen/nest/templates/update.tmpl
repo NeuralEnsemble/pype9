@@ -22,9 +22,7 @@
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
-//---------------------------------------------//
-// This section was generated from update.tmpl //
-//---------------------------------------------//
+// TEMPLATE: update <<<
 void {{component_name}}::update(nest::Time const & origin, const nest::long_t from, const nest::long_t to) {
 
     assert(to >= 0 && (nest::delay) from < nest::Scheduler::get_min_delay());
@@ -160,4 +158,4 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         B_.logger_.record_data(current_steps + lag);
     }
 }
-//------------- update.tmpl -------------//
+// TEMPLATE: update >>>

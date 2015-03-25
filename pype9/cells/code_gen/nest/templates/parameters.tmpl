@@ -4,9 +4,7 @@
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
-//-------------------------------------------------//
-// This section was generated from parameters.tmpl //
-//-------------------------------------------------//
+// TEMPLATE: parameters <<<
 {{component_name}}::Parameters_::Parameters_():
 {% for i, param in enumerate(componentclass.parameters) %}
     {{param.name}} (0.0){% if not loop.last %},
@@ -19,4 +17,4 @@
     {% endfor %}
 {% endfor %}
 }
-// ------------------- parameters.tmpl ------------------------//
+// TEMPLATE: parameters >>>

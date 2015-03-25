@@ -1,6 +1,5 @@
-    //--------------------------------------------------//
-    // This section was generated from init-solver.tmpl //
-    //--------------------------------------------------//
+    
+    // TEMPLATE: init-solver <<<
 {% if ode_solver in ('cvode', 'ida') %}
     {% if ode_solver == 'cvode' %}
         {% set abbrev = 'CV' %}
@@ -143,7 +142,7 @@
     B_.jac = (double *)malloc(sizeof(double) * B_.N);
     assert (B_.jac);
 {% endif %}
-    // ------------------- init-solver.tmpl ------------------------//
+    // TEMPLATE: init-solver >>>
 {# Old implementation ********************************************************
 
 

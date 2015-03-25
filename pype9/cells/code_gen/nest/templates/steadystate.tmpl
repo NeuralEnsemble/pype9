@@ -31,9 +31,7 @@
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
-//--------------------------------------------------//
-// This section was generated from steadystate.tmpl //
-//--------------------------------------------------//
+// TEMPLATE: steadystate <<<
 {% if ss_solver == "kinsol" %}
   int fsolve (KINSysFn f, int N, N_Vector fval, void *user_data,
               std::string name) {
@@ -151,4 +149,4 @@ extern "C" int {{component_name}}_steadystate (const gsl_vector *u, void *pnode,
 
 {% endfor %}
 #}
-//---------------- steadystate.tmpl ---------------//
+// TEMPLATE: steadystate >>>

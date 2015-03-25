@@ -1,6 +1,4 @@
-//-------------------------------------------------//
-// This section was generated from destructor.tmpl //
-//-------------------------------------------------//
+// TEMPLATE: destructor <<<
 {{component_name}}::~{{component_name}} () {
 {% if ode_solver == "cvode" %}
     if ( B_.sys_ ) {
@@ -40,4 +38,4 @@
         free (B_.jac);
 {% endif %}
 }
-// ------------------- destructor.tmpl ------------------------//
+// TEMPLATE: destructor >>>

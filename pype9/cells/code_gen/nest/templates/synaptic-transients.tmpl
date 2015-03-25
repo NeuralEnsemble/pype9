@@ -27,9 +27,7 @@
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
-//----------------------------------------------------------//
-// This section was generated from synaptic-transients.tmpl //
-//----------------------------------------------------------//
+// TEMPLATE: synaptic-transients <<<
 
 {% for regime in componentclass.regimes %}
     {% for oe in regime.on_events %}
@@ -87,4 +85,4 @@ inline void {{component_name}}::{{oe.src_port_name}}_event_in_{{regime.name}}(ne
 }
     {% endfor %}
 {% endfor %}
-//-------------- synaptic-transients.tmpl --------------//
+// TEMPLATE: synaptic-transients >>>

@@ -30,9 +30,7 @@
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
-//-----------------------------------------------//
-// This section was generated from dynamics.tmpl //
-//-----------------------------------------------//
+// TEMPLATE: dynamics <<<
 {% for regime in componentclass.regimes %}
     {%- if ode_solver in ('cvode', 'ida') -%}
 extern "C" int {{component_name}}_{{regime.name}}_dynamics(double t_, N_Vector y_, N_Vector f_, void* pnode_) {
@@ -85,4 +83,4 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics(double t_, const doub
     {% endif %}
 }
 {% endfor %}
-// ------------------- dynamics.tmpl ------------------------//
+// TEMPLATE: dynamics >>>

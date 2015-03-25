@@ -5,9 +5,7 @@
 #}
 {% if ode_solver == "gsl" %}
 
-//-----------------------------------------------//
-// This section was generated from jacobian.tmpl //
-//-----------------------------------------------//
+// TEMPLATE: jacobian <<<
 
     {% for regime in componentclass.regimes %}
 /** Diagonal Jacobian approximation (for GSL): (f(s+.01) - f(s))/.001 */
@@ -30,5 +28,5 @@ extern "C" int {{component_name}}_{{regime.name}}_jacobian (double t, const doub
   return 0;
 }
     {% endfor %}
-// ------------------- jacobian.tmpl ------------------------//
+// TEMPLATE: jacobian >>>
 {% endif %}
