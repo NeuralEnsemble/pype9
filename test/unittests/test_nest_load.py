@@ -24,7 +24,7 @@ class TestNestLoad(TestCase):
     def test_nest_load(self):
         Izhikevich9ML = CellMetaClass(
             self.izhikevich_file, name=self.izhikevich_name,
-            build_mode='force', verbose=True, membrane_voltage='V',
+            build_mode='lazy', verbose=True, membrane_voltage='V',
             membrane_capacitance=Property('Cm', 0.001, un.nF))
         # ---------------------------------------------------------------------
         # Set up PyNN section
@@ -42,22 +42,22 @@ class TestNestLoad(TestCase):
         # ---------------------------------------------------------------------
         # Set up 9ML cell
         # ---------------------------------------------------------------------
-#         nml = Izhikevich9ML()
-#         print nml.a
-#         nml.inject_current(neo.AnalogSignal([0.0] + [0.2] * 9, units='nA',
-#                                              sampling_period=1 * pq.ms))
-#         nml.record('v')
-#         simulator.initialize()  # @UndefinedVariable
-#         nml.u = -14.0 * pq.mV / pq.ms
-#         #pnn_izhi.u = -14.0
-#         simulator.run(10, reset=False)
-#         nml_v = nml.recording('v')
-#         pnn_t, pnn_v = voltmeter.recording('v')  # @UnusedVariable
-#         self.assertAlmostEqual(float((nml_v - pnn_v[1:] * pq.mV).sum()), 0)
-#         plt.plot(pnn_t[:-1], pnn_v[1:])
-#         plt.plot(nml_v.times, nml_v)
-#         plt.legend(('PyNN v', '9ML v'))
-#         plt.show()
+        nml = Izhikevich9ML()
+        print nml.a
+        nml.inject_current(neo.AnalogSignal([0.0] + [0.2] * 9, units='nA',
+                                             sampling_period=1 * pq.ms))
+        nml.record('v')
+        simulator.initialize()  # @UndefinedVariable
+        nml.u = -14.0 * pq.mV / pq.ms
+        # pnn_izhi.u = -14.0
+        simulator.run(10, reset=False)  # @UndefinedVariable
+        nml_v = nml.recording('v')
+        pnn_t, pnn_v = voltmeter.recording('v')  # @UnusedVariable
+        self.assertAlmostEqual(float((nml_v - pnn_v[1:] * pq.mV).sum()), 0)
+        plt.plot(pnn_t[:-1], pnn_v[1:])
+        plt.plot(nml_v.times, nml_v)
+        plt.legend(('PyNN v', '9ML v'))
+        plt.show()
 
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 import nest
 import tempfile
 import numpy
+import weakref
 
 
 def nest_property(name, dtype):
@@ -35,6 +36,8 @@ class _SimulationController(object):
         self.tempdirs = []
         self.recording_devices = []
         self.populations = []
+        self.registered_cells = []
+        self.segment_counter = 0
 
     @property
     def t(self):
@@ -101,7 +104,7 @@ class _SimulationController(object):
         nest.sli_run("M_%s setverbosity" % verbosity.upper())
     verbosity = property(fset=_set_verbosity)
 
-    def run(self, simtime):
+    def run(self, simtime, reset=False):
         """Advance the simulation for a certain time."""
         for device in self.recording_devices:
             if not device._connected:
@@ -140,5 +143,17 @@ class _SimulationController(object):
         nest.SetKernelStatus({'data_path': tempdir})
         self.segment_counter = -1
         self.reset()
+
+    def initialize(self):
+        self.reset()
+
+    # FIXME: Should go in a base class
+    def register_cell(self, cell):
+        self.registered_cells.append(weakref.ref(cell))
+
+    def deregister_cell(self, cell):
+        for cell_ref in reversed(self.registered_cells):
+            if cell is cell_ref() or not cell_ref():
+                self.registered_cells.remove(cell_ref)
 
 simulation_controller = _SimulationController()

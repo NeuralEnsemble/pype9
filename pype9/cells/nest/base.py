@@ -13,19 +13,40 @@ import os.path
 import nest
 from pype9.cells.code_gen.nest import CodeGenerator
 from .simulation_controller import simulation_controller
-import pype9.cells.base
+from pype9.cells import base
 
 
 basic_nineml_translations = {
     'Voltage': 'V_m', 'Diameter': 'diam', 'Length': 'L'}
 
 
-class Cell(pype9.cells.base.Cell):
+class Cell(base.Cell):
 
     _controller = simulation_controller
 
-    def __init__(self):
+    def __init__(self, *properties, **kwprops):
+        super(Cell, self).__setattr__('_initialized', False)
         self._cell = nest.Create(self.__class__.name)
+        super(Cell, self).__init__(*properties, **kwprops)
+        self._initialized = True
+
+    def __getattr__(self, varname):
+        if self._initialized and varname in self._nineml.property_names:
+            return nest.GetStatus(self._cell, keys=varname)[0]
+        else:
+            raise AttributeError("'{}' cell class does not have parameter '{}'"
+                                 .format(self.componentclass.name, varname))
+
+    def __setattr__(self, varname, value):
+        if self._initialized and varname in self._nineml.property_names:
+            nest.SetStatus(self._cell, varname, value)
+        else:
+            super(Cell, self).__setattr__(varname, value)
+
+    def set(self, prop):
+        super(Cell, self).set(prop)
+        # FIXME: need to convert to NEST units!!!!!!!!!!!
+        nest.SetStatus(self._cell, prop.name, prop.value)
 
     def record(self, variable):
         key = (variable, None, None)
@@ -47,18 +68,18 @@ class Cell(pype9.cells.base.Cell):
         `current` -- a vector containing the current [neo.AnalogSignal]
         """
         self._iclamp = nest.Create('step_current_generator')
-        nest.Connect(self.iclamp, self._cell)
+        nest.Connect(self._iclamp, self._cell)
         nest.SetStatus(self._iclamp, {'amplitude_values': current,
                                       'amplitude_times': current.times,
-                                      'start': current.time_start,
-                                      'stop': current.tim_stop})
+                                      'start': current.t_start,
+                                      'stop': current.t_stop})
 
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         raise NotImplementedError("voltage clamps are not supported for "
                                   "Pype9->NEST at this stage.")
 
 
-class CellMetaClass(pype9.cells.base.CellMetaClass):
+class CellMetaClass(base.CellMetaClass):
 
     _built_types = {}
     CodeGenerator = CodeGenerator
