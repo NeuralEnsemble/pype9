@@ -34,7 +34,7 @@
 {% for regime in componentclass.regimes %}
     {%- if ode_solver in ('cvode', 'ida') -%}
 extern "C" int {{component_name}}_{{regime.name}}_dynamics(double t_, N_Vector y_, N_Vector f_, void* pnode_) {
-    {% elif ode_solver == 'gsl' %}
+    {% else %}
 extern "C" int {{component_name}}_{{regime.name}}_dynamics(double t_, const double y_[], double f_[], void* pnode_) {
     {% endif %}
 
@@ -76,10 +76,10 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics(double t_, const doub
     ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{td.rhs_cstr}};
     {% endfor %}
 
-    {% if ode_solver in ('cvode', 'ida') %}
-    return 0;
-    {% elif ode_solver == 'gsl' %}
+    {% if ode_solver == 'gsl' %}
     return GSL_SUCCESS;
+    {% else %}
+    return 0;
     {% endif %}
 }
 {% endfor %}

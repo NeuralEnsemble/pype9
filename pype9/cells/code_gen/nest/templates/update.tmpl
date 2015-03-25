@@ -25,14 +25,24 @@
 // TEMPLATE: update <<<
 void {{component_name}}::update(nest::Time const & origin, const nest::long_t from, const nest::long_t to) {
 
-    assert(to >= 0 && (nest::delay) from < nest::Scheduler::get_min_delay());
-    assert(from < to);
-
-    nest::long_t current_steps = origin.get_steps();
-
-    for (nest::long_t lag = from; lag < to; ++lag) {
-        double dt = B_.step_;
-        double tt = 0.0;
+	assert(to >= 0 && (nest::delay) from < nest::Scheduler::get_min_delay());
+	assert(from < to);
+	
+	nest::long_t current_steps = origin.get_steps();
+	
+{% if ode_solver in ('cvode', 'ida') %}	
+    int N = NV_LENGTH_S (B_.y);
+{% else %}
+	int N = {{component_name}}::State_.N  // Size of the state vector
+{% endif %}
+	
+{% if ode_solver == 'euler' %}
+    double f_[N];  // Vector to hold the time derivatives
+{% endif %}    
+	
+	for (nest::long_t lag = from; lag < to; ++lag) {
+	    double dt = B_.step_;
+	    double tt = 0.0;
 
 {% if ode_solver in ('cvode', 'ida') %}
     {% if ode_solver == 'cvode' %}
@@ -44,18 +54,11 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         {% set prefix = 'IDA' %}
         {% set solver = 'IDASolve' %}
     {% endif %}
-	    int N = NV_LENGTH_S (B_.y);
 	    double tout = (current_steps+lag) * dt;
 
 		// adaptive step integration
         while (tt < tout) {
-            const int status = {{solver}} (B_.sys_, tout,
-    {% if ode_solver == 'cvode' %}
-                                                B_.y, &tt,
-    {% elif ode_solver == 'ida' %}
-                                                &tt, B_.y, B_.yp,
-    {% endif %}
-                                                {{abbrev}}_NORMAL);
+            const int status = {{solver}}(B_.sys_, tout, {% if ode_solver == 'cvode' %}B_.y, &tt{% elif ode_solver == 'ida' %}&tt, B_.y, B_.yp{% endif %}, {{abbrev}}_NORMAL);
             switch (status) {
                 case {{abbrev}}_SUCCESS:      continue;
                 case {{abbrev}}_ROOT_RETURN: {
@@ -102,9 +105,13 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 	        nest::SpikeEvent se;
 	        network()->send(*this, se, lag);
 	    }
+{% elif ode_solver == 'euler' %}
+        // Calculate time derivatives
+	    {{component_name}}_{{default_regime}}_dynamics(tt, S_.y_, f_, this);
+	    for (int i = 0; i < N; ++i)
+	       S_.y_[i] = f_[i] * dt;
 {% endif %}
 
-{# Event handling #}
 	    // Event handling (still needs to handle events that arrive in the same
 	    // timestep.
 	    int num_events = 0;

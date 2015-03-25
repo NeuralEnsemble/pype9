@@ -25,6 +25,7 @@ class TestNestLoad(TestCase):
         Izhikevich9ML = CellMetaClass(
             self.izhikevich_file, name=self.izhikevich_name,
             build_mode='force', verbose=True, membrane_voltage='V',
+            ode_solver='euler',
             membrane_capacitance=Property('Cm', 0.001, un.nF))
         # ---------------------------------------------------------------------
         # Set up PyNN section
