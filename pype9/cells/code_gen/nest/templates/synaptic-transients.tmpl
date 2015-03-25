@@ -1,5 +1,5 @@
 {#
-   NEST synaptic event transient template 
+   NEST synaptic event transient template
 
    This template defines C++ methods of the form:
 
@@ -22,7 +22,7 @@
      - eventVar - the name of the variable the receives the event argument (e.g. weight)
      - externalEventEqDef - the equations that assigns values to any imported quantities, e.g. voltage
      - transientEventEqDefs - the equations that update the synaptic states
-   
+
    Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
@@ -34,14 +34,14 @@
 {% for regime in componentclass.regimes %}
     {% for oe in regime.on_events %}
 inline void {{component_name}}::{{oe.src_port_name}}_event_in_{{regime.name}}(nest::long_t lag) {
-    
+
     // Map states used in dynamics to current namespace
         {% for sv in componentclass.state_variables %}
     const double_t {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];
         {% endfor %}
-        
+
     {% set dp = componentclass.required_for(oe.state_assignments) %}
-    
+
     // Map parameters used in dynamics to current namespace
         {% for param in dp.parameters %}
     const double_t {{param.name}} = P_.{{param.name}};
@@ -58,12 +58,12 @@ inline void {{component_name}}::{{oe.src_port_name}}_event_in_{{regime.name}}(ne
         {% set conv_value = conv[0] * const.value + conv[1] %}
     const static double_t {{const.name}} = {{conv_value}};  // {{const.value}} ({{const.units.name}})
     {% endfor %}
-    
+
     // Add random variables
     {% for rv in dp.random_variables %}
     const double_t {{rv.name}} = {{get_random_function(rv)}}
     {% endfor %}
-   
+
     // Evaluate aliases used in differential equations
         {% for expr in dp.expressions %}
             {% if hasasttr(expr, 'pieces') %}  {# Is a Piecewise statement #}
@@ -74,7 +74,7 @@ inline void {{component_name}}::{{oe.src_port_name}}_event_in_{{regime.name}}(ne
         {{expr_name}} = {{expr.rhs_cstr}};
                 {%- endfor %}
     else
-        {{expr_name}} = {{expr.otherwise.rhs_cstr}}; 
+        {{expr_name}} = {{expr.otherwise.rhs_cstr}};
             {% else %}
     const double_t {{expr.lhs}} = {{expr.rhs_cstr}};
             {% endif %}

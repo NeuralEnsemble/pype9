@@ -1,10 +1,9 @@
-{# This template adds a accessors and modifiers for the Parameter and State 
+{# This template adds a accessors and modifiers for the Parameter and State
    classes
 
    Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
-
 
 //----------------------------------------------------------//
 // This section was generated from accessors_modifiers.tmpl //
@@ -29,13 +28,12 @@ void {{component_name}}::Parameters_::set (const DictionaryDatum &d_) {
 {% endfor %}
 
     // Scale parameters as required
-{# Not sure if this is necessary     
+{# Not sure if this is necessary
 {% for name, scale in parameter_scales) %}
-    {{name}} *= {{scale}};  
+    {{name}} *= {{scale}};
 {% endfor %}
 #}
 }
-
 
 void {{component_name}}::State_::get (DictionaryDatum &d_) const {
 
@@ -48,9 +46,9 @@ void {{component_name}}::State_::get (DictionaryDatum &d_) const {
     def<double_t>(d_, names::V_m, y_[{{stateIndexMap["v"]}}]);
 {% endif %}
 #}
- 
+
 }
-    
+
 void {{component_name}}::State_::set (const DictionaryDatum &d_, const Parameters_&) {
 
     // Set internal state variables from dictionary values
@@ -62,7 +60,7 @@ void {{component_name}}::State_::set (const DictionaryDatum &d_, const Parameter
    updateValue<double_t>(d_, names::V_m, y_[{{stateIndexMap["v"]}}]);
 {% endif %}
 #}
-    
+
 }
 
 // ------------------- accessors_modifiers.tmpl ------------------------//

@@ -11,7 +11,7 @@
 
 {{component_name}}::Buffers_::Buffers_({{component_name}}& n)
     : logger_(n),
-{% if ode_solver in ("cvode", "ida") %}    
+{% if ode_solver in ("cvode", "ida") %}
       sys_(0),
 {% elif ode_solver == "gsl" %}
       s_(0),
@@ -21,14 +21,14 @@
       u(0),
       jac(0),
 {%- endif %}
-      current_regime(DEFAULT_REGIME_) { 
+      current_regime(DEFAULT_REGIME_) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
 
 {{component_name}}::Buffers_::Buffers_(const Buffers_&, {{component_name}}& n)
     : logger_(n),
-{% if ode_solver in ("cvode", "ida") %}    
+{% if ode_solver in ("cvode", "ida") %}
       sys_(0),
 {% elif ode_solver == "gsl" %}
       s_(0),
@@ -37,8 +37,8 @@
       N(0),
       u(0),
       jac(0),
-{%- endif %}    
-      current_regime(DEFAULT_REGIME_) { 
+{%- endif %}
+      current_regime(DEFAULT_REGIME_) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
@@ -49,24 +49,24 @@ void {{component_name}}::init_buffers_() {
 {% for p in componentclass.event_receive_ports %}
     B_.{{p.name}}_event_port.clear();
 {% endfor %}
-    
+
     // Clear analog buffers
 {% for p in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
     B_.{{p.name}}_analog_port.clear();
 {% endfor %}
-    
+
     Archiving_Node::clear_history();
-    
+
     B_.logger_.reset();
-    
+
     B_.step_ = nest::Time::get_resolution().get_ms();
     B_.IntegrationStep_ = B_.step_;
-    
+
 {% for p in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
     B_.{{p.name}}_value = 0.0;
 {% endfor %}
 
-{% include "init-solver.tmpl" %}    
+{% include "init-solver.tmpl" %}
 }
 
 // ------------------- buffers.tmpl ------------------------//

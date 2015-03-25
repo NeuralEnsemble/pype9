@@ -1,5 +1,5 @@
 {#
-   NEST update template 
+   NEST update template
 
    This template defines a C++ function of the form:
 
@@ -33,7 +33,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
     nest::long_t current_steps = origin.get_steps();
 
     for (nest::long_t lag = from; lag < to; ++lag) {
-        double dt = B_.step_;    
+        double dt = B_.step_;
         double tt = 0.0;
 
 {% if ode_solver in ('cvode', 'ida') %}
@@ -48,12 +48,12 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
     {% endif %}
 	    int N = NV_LENGTH_S (B_.y);
 	    double tout = (current_steps+lag) * dt;
-	
+
 		// adaptive step integration
         while (tt < tout) {
             const int status = {{solver}} (B_.sys_, tout,
     {% if ode_solver == 'cvode' %}
-                                                B_.y, &tt, 
+                                                B_.y, &tt,
     {% elif ode_solver == 'ida' %}
                                                 &tt, B_.y, B_.yp,
     {% endif %}
@@ -75,15 +75,15 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
                     throw {{prefix}}SolverFailure (get_name(), 0);
             }
 	   	}
-	
+
         // Copy items from CVODE/IDA vector to NEST state array.
 	    for (int i = 0; i < N; i++)
 	       S_.y_[i] = ITEM(B_.y, i);
 {% elif ode_solver == "gsl" %}
 	    V_.U_old_ = S_.y_[{{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX];
-	
+
 	    while (tt < dt) {
-	      const int status =  gsl_odeiv2_evolve_apply(B_.e_, B_.c_, B_.s_, 
+	      const int status =  gsl_odeiv2_evolve_apply(B_.e_, B_.c_, B_.s_,
 	                                                  &B_.sys_, // system of ODE
 	                                                  &tt, // from t...
 	                                                  dt, // ...to t= t + dt
@@ -92,7 +92,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 	      if (status != GSL_SUCCESS)
 	        throw nest::GSLSolverFailure(get_name(), status);
 	    }
-	    
+
 		// Check threshold if not refractory and emit spike if crossed
 	    if ( S_.r_ > 0 )
 	       S_.r_--;
@@ -119,7 +119,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
             {%+ if not loop.first %}} else {% endif %}if (B_.{{oe.src_port_name}}_event_port.get_value(lag)) {
         {% if oe.target_regime != regime %}
 	            if (transition)
-	                std::cout << "Warning!: multiple transitions in the same time step. Transition " << transition << " was ignored in favour of transition " << {{oe.target_regime.name}}_REGIME << "." << std::endl;  
+	                std::cout << "Warning!: multiple transitions in the same time step. Transition " << transition << " was ignored in favour of transition " << {{oe.target_regime.name}}_REGIME << "." << std::endl;
 	            transition = {{oe.target_regime.name}}_REGIME;
         {% endif %}
 	            {{oe.src_port_name}}_event_in_{{regime.name}}(lag);
@@ -129,10 +129,10 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         {% endif %}
     {% endfor %}
     {% if loop.last %}
-        }    
-    {% endif %}    
+        }
+    {% endif %}
 {% endfor %}
-	    /* 
+	    /*
 	     * FIXME:
 	     * Not sure if this is necessary, Ivan thought it was but I haven't seen it
 	     * in NEST examples
@@ -156,7 +156,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 
 {% for port in componentclass.analog_receive_ports %}
         B_.{{port.name}}_value = B_.{{port.name}}_analog_port.get_value(lag);
-{% endfor %}    
+{% endfor %}
         B_.logger_.record_data(current_steps + lag);
     }
 }

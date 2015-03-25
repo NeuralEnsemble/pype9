@@ -6,7 +6,7 @@
     if ( B_.sys_ ) {
 		// Free y vector
 		N_VDestroy_Serial(B_.y);
-		
+
 		// Free integrator memory
 		if (B_.sys_ != NULL) {
             CVodeFree(&B_.sys_);
@@ -26,11 +26,11 @@
         }
     }
 {% elif ode_solver == "gsl" %}
-    // GSL structs only allocated by init_nodes_(), 
+    // GSL structs only allocated by init_nodes_(),
     // so we need to protect destruction
     if ( B_.s_ != NULL)
         gsl_odeiv2_step_free (B_.s_);
-    if ( B_.c_ != NULL) 
+    if ( B_.c_ != NULL)
         gsl_odeiv2_control_free (B_.c_);
     if ( B_.e_ != NULL)
         gsl_odeiv2_evolve_free (B_.e_);

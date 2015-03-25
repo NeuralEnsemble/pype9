@@ -10,14 +10,14 @@
 //-----------------------------------------------//
     {% for regime in componentclass.regimes %}
 extern "C" int {{component_name}}_{{regime.name}}_residual (double t, N_Vector y, N_Vector yp, N_Vector f, void* pnode) {
-    int status; 
+    int status;
 
     // cast the node ptr to an object of the proper type
     assert(pnode);
     {{component_name}} & vnode =  *(reinterpret_cast<{{component_name}}*>(pnode));
 
     N_Vector y1 = vnode.B_.y1;
-             
+
     status = {{component_name}}_{{regime.name}}_dynamics (t, y, y1, pnode);
 
         {% for i in xrange(componentclass.num_state_variables) %}

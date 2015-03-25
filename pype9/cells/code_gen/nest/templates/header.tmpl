@@ -30,7 +30,7 @@ namespace nineml {
     extern "C" int {{component_name}}_steadystate (const gsl_vector *, void *, gsl_vector *);
 {% endif %}
 
-  class {{component_name}} : public nest::Archiving_Node { 
+  class {{component_name}} : public nest::Archiving_Node {
 
    public:
 
@@ -47,25 +47,25 @@ namespace nineml {
     using nest::Node::handle;
 
     nest::port check_connection(nest::Connection&, nest::port);
-	  
+
     void handle(nest::SpikeEvent &);
     void handle(nest::CurrentEvent &);
-    void handle(nest::DataLoggingRequest &); 
-  
+    void handle(nest::DataLoggingRequest &);
+
     nest::port connect_sender(nest::SpikeEvent &, nest::port);
     nest::port connect_sender(nest::CurrentEvent &, nest::port);
     nest::port connect_sender(nest::DataLoggingRequest &, nest::port);
-  
+
     void get_status(DictionaryDatum &) const;
     void set_status(const DictionaryDatum &);
-  
+
     void init_node_(const nest::Node& proto);
     void init_state_(const nest::Node& proto);
     void init_buffers_();
     void calibrate();
-  
+
     void update(nest::Time const &, const nest::long_t, const nest::long_t);
-  
+
     // Set dynamics methods (the ones that actually model the dynamics) as friends
 {% if (ode_solver == "cvode") %}
     friend int {{component_name}}_dynamics (double, const N_Vector, N_Vector, void*);
@@ -75,7 +75,7 @@ namespace nineml {
     friend int {{component_name}}_event (double, N_Vector, N_Vector, double *, void*);
 {% elif (ode_solver == "gsl") %}
     friend int {{component_name}}_dynamics (double, const double*, double*, void*);
-{% endif %} 
+{% endif %}
 {% if ss_solver == "kinsol" %}
     friend  int {{component_name}}_steadystate (N_Vector, N_Vector, void*);
 {% elif ss_solver == 'gsl' %}
@@ -83,18 +83,19 @@ namespace nineml {
 {% endif %}
 
     // Regime ids
-    static const int DEFAULT_REGIME_ = 0;    
+    static const int DEFAULT_REGIME_ = 0;
     enum Regimes {
         {% for regime in componentclass.regimes %}
             {% if loop.first %}
         {{regime.name}}_REGIME = DEFAULT_REGIME_,
             {% else %}
         {{regime.name}}_REGIME,
-            {% endif -%}  
+            {% endif -%}
         {% endfor %}
         SUP_REGIME_
     };
-    
+
+
 {% if componentclass.event_receive_ports %}
     /* Event port ids
      * @note Start with 1 so we can forbid port 0 to avoid accidental
@@ -136,7 +137,8 @@ namespace nineml {
     {% endfor %}
         SUP_ANALOG_PORT_
     };
-    
+
+
 {% endif %}
     // Synaptic event function definitions
 {% for regime in componentclass.regimes %}
@@ -149,7 +151,7 @@ namespace nineml {
     friend class nest::RecordablesMap<{{component_name}}>;
     friend class nest::UniversalDataLogger<{{component_name}}>;
 
-    struct Parameters_ { 
+    struct Parameters_ {
 {% for param in componentclass.parameters %}
         double {{param.name}};
 {% endfor %}
@@ -158,7 +160,7 @@ namespace nineml {
         void set(const DictionaryDatum&);
     }; // end struct Parameters_
 
-    struct State_ { 
+    struct State_ {
 
       enum StateVecElems {
 {% for sv in componentclass.state_variables %}
@@ -170,13 +172,15 @@ namespace nineml {
 {% endfor %}
         STATE_VEC_SIZE_
       };
-	
+
+
       double y_[STATE_VEC_SIZE_];
 {% if (ode_solver == "gsl") %}
       nest::int_t r_; /* refractory counter */
 {% endif %}
-		
-      State_(const Parameters_& p); 
+
+
+      State_(const Parameters_& p);
       State_(const State_& s);
       State_& operator=(const State_& s);
       void get(DictionaryDatum&) const;
@@ -216,7 +220,8 @@ namespace nineml {
         // Timesteps
         double_t step_;       //!< step size in ms
         double   IntegrationStep_;//!< current integration time step, updated by solver
-    
+
+
         // Event receive port buffers
 {% for port in componentclass.event_receive_ports %}
         nest::RingBuffer {{port.name}}_event_port;
@@ -227,30 +232,31 @@ namespace nineml {
         nest::RingBuffer {{port.name}}_analog_port;
 {% endfor %}
 
-        // Variables to hold the last value of the analog receive port buffers        
+        // Variables to hold the last value of the analog receive port buffers
 {% for port in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
         double_t {{port.name}}_value;
 {% endfor %}
-        
+
+
         // Holds the id of the current regime
         int current_regime;
-	
+
+
 	}; // end struct Buffers_
 
 
 	template <State_::StateVecElems elem>
 	double_t get_y_elem_() const { return S_.y_[elem]; }
-	
+
 	Parameters_ P_;
 	State_      S_;
 	Variables_  V_;
 	Buffers_    B_;
-	
+
     //! Mapping of recordables names to access functions	
 	static nest::RecordablesMap<{{component_name}}> recordablesMap_;
 
   }; // end class {{component_name}}
-
 
   inline nest::port {{component_name}}::check_connection(nest::Connection& c, nest::port receptor_type) {
 	  nest::SpikeEvent e;
@@ -259,7 +265,6 @@ namespace nineml {
 	  return c.get_target()->connect_sender(e, receptor_type);
   }
 
-
   inline nest::port {{component_name}}::connect_sender(nest::SpikeEvent&, nest::port receptor_type) {
     if (receptor_type < 0 || receptor_type >= SUP_EVENT_PORT_)
       throw nest::UnknownReceptorType(receptor_type, this->get_name());
@@ -267,7 +272,7 @@ namespace nineml {
       throw nest::IncompatibleReceptorType(receptor_type, this->get_name(), "SpikeEvent");
     return receptor_type;
   }
- 
+
 
   inline nest::port {{component_name}}::connect_sender(nest::CurrentEvent&, nest::port receptor_type) {
     if (receptor_type != 0)
@@ -303,9 +308,9 @@ namespace nineml {
     ptmp.set(d);             // throws if BadProperty
     State_    stmp = S_;  // temporary copy in case of errors
     stmp.set(d, ptmp);         // throws if BadProperty
-    // We now know that (ptmp, stmp) are consistent. We do not 
-    // write them back to (P_, S_) before we are also sure that 
-	// the properties to be set in the parent class are internally 
+    // We now know that (ptmp, stmp) are consistent. We do not
+    // write them back to (P_, S_) before we are also sure that
+	// the properties to be set in the parent class are internally
 	// consistent.
 	nest::Archiving_Node::set_status(d);
 	// if we get here, temporaries contain consistent set of properties

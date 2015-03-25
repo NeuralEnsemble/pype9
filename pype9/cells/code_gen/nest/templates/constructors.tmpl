@@ -8,16 +8,16 @@
 // This section was generated from constructors.tmpl //
 //---------------------------------------------------//
 {{component_name}}::{{component_name}}()
-    : Archiving_Node(), 
-      P_(), 
+    : Archiving_Node(),
+      P_(),
       S_(P_),
       B_(*this) {
     recordablesMap_.create();
 }
 
 {{component_name}}::{{component_name}}(const {{component_name}}& n)
-    : Archiving_Node(n), 
-      P_(n.P_), 
+    : Archiving_Node(n),
+      P_(n.P_),
       S_(n.S_),
       B_(n.B_, *this) {}
 

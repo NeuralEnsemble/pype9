@@ -5,8 +5,6 @@ lib_LTLIBRARIES=      {{name}}Module.la lib{{name}}Module.la
 {{name}}Module_la_CXXFLAGS= @AM_CXXFLAGS@
 {{name}}Module_la_SOURCES=  {{name}}Module.cpp {{name}}Module.h \
                             {{name}}.cpp {{name}}.h
-                            
-
 
 {{name}}Module_la_LDFLAGS=  -module{% if ode_solver in ('cvode', 'ida') %} @SUNDIALS_LDFLAGS@{% endif %}
 
@@ -17,7 +15,7 @@ MAKEFLAGS= @MAKE_FLAGS@
 
 AM_CPPFLAGS= @NEST_CPPFLAGS@ \
 {% if ode_solver in ('cvode', 'ida') %}
-             @SUNDIALS_CPPFLAGS@ \  
+             @SUNDIALS_CPPFLAGS@ \
 {% endif %}             @INCLTDL@
 
 {% if ode_solver in ('cvode', 'ida') %}

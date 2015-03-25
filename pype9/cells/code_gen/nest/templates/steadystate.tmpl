@@ -1,11 +1,11 @@
 {#
-   NEST steady state template 
+   NEST steady state template
 
    This template defines a C++ function of the form:
 
    int ModelName_steadystate (N_Vector u, N_Vector f, void* pnode)
 
-   if using the KINSOL solver, or 
+   if using the KINSOL solver, or
 
    int ModelName_steadystate (const gsl_vector *u, void *pnode, gsl_vector *f)
 
@@ -26,7 +26,7 @@
                            - lbs - local variables used in steady state expressions
                            - defs - list of equations of the form "f[i] = rhs" where "i" is the index of a state,
                              and "rhs" is the corresponding derivative expr for that state
-   
+
    Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
@@ -42,11 +42,11 @@
       void *kmem;
 
       u0 = N_VNew_Serial(N);
-      N_VConst_Serial(0.0,u0); 
-      N_VConst_Serial(0.0,fval); 
+      N_VConst_Serial(0.0,u0);
+      N_VConst_Serial(0.0,fval);
 
       sc = N_VNew_Serial(N);
-      N_VConst_Serial(1.0,sc); 
+      N_VConst_Serial(1.0,sc);
 
       kmem = KINCreate();
 
@@ -65,7 +65,7 @@
       status = KINSol (kmem, fval, KIN_NONE, sc, sc);
       if (check_flag (&status, "KINSol", 1))
         throw KINSolverFailure (name, status);
-      
+
       N_VDestroy_Serial(sc);
       N_VDestroy_Serial(u0);
 
@@ -76,7 +76,7 @@
 {% elif ss_solver == "gsl" %}
   int fsolve (int (*fss)(const gsl_vector *, void *user_data, gsl_vector *),
               int N, gsl_vector *fval, void *user_data, std::string name) {
-      
+
       const gsl_multiroot_fsolver_type * T = gsl_multiroot_fsolver_hybrid;
       gsl_multiroot_fsolver * s = gsl_multiroot_fsolver_alloc (T, N);
       gsl_multiroot_function f = {fss, N, user_data};

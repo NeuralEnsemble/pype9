@@ -1,11 +1,11 @@
 {#
-   NEST dynamics template 
+   NEST dynamics template
 
    This template defines a C++ function of the form:
 
    int ModelName_dynamics (double t, N_Vector y, N_Vector f, void* pnode)
 
-   if using the CVODE/IDA solvers, or 
+   if using the CVODE/IDA solvers, or
 
    int ModelName_dynamics (double t, const double y[], double f[], void* pnode)
 
@@ -20,14 +20,14 @@
    - parameterDefs - the parameter equations of the form "name = params->name"
                      which retrieve parameter values from the params structure and assign it
                      to local variables
-   - ratePrevEqDefs - a list of equations that retrieve the state values computed at the previous 
+   - ratePrevEqDefs - a list of equations that retrieve the state values computed at the previous
                       time step and assign them to local variables
    - eqOrderDefs - topologically sorted list of strings with
                    external, assignment, reaction, pool equations in C++ syntax
    - rateOrderDefs - list of strings with the rate equatins in C++ syntaxa
-   
+
    Authors: Thomas G. Close and Ivan Raikov
-   Copyright Okinawa Institute of Science and Technology Graudate University 2014   
+   Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
 
 //-----------------------------------------------//
@@ -43,14 +43,14 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics(double t_, const doub
     // Get a reference to the model
     assert(pnode_);
     const {{component_name}}& node_ = *(reinterpret_cast<{{component_name}}*>(pnode_));
-   
+
     // Map states used in dynamics to current namespace
     {% for state in componentclass.state_variables %}
     const double_t {{state.name}} = ITEM(y_, {{component_name}}::State_::{{state.name}}_INDEX);
     {% endfor %}
-    
+
     {% set dp = componentclass.required_for(regime.time_derivatives) %}
-   
+
     // Map parameters used in dynamics to current namespace
     {% for param in dp.parameters %}
     const double_t {{param.name}} = node_.P_.{{param.name}};
@@ -60,15 +60,15 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics(double t_, const doub
     {% for port in dp.ports %}
     const double_t {{port.name}} = node_.B_.{{port.name}}_value;
     {% endfor %}
-   
+
     // Add constants
     {% for const in dp.constants %}
         {% set conv = componentclass.unit_conversion_factor(const.units) %}
         {% set conv_value = conv[0] * const.value + conv[1] %}
     const static double_t {{const.name}} = {{conv_value}}; // {{const.value}} ({{const.units.name}})
     {% endfor %}
-   
-    // Evaluate aliases used in differential equations 
+
+    // Evaluate aliases used in differential equations
     {% for expr in dp.expressions %}
     const double_t {{expr.lhs}} = {{expr.rhs_cstr}};
     {% endfor %}

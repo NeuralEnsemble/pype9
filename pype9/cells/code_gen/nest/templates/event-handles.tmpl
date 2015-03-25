@@ -1,5 +1,5 @@
 {#
-   NEST event handlers template 
+   NEST event handlers template
 
    This template defines three C++ methods of the form:
 
@@ -17,13 +17,12 @@
 
      - pscName - descriptive name (label) of the post-synaptic conductance component
      - pscId - unique identifier of the post-synaptic conductance component
-     - wthreshold - threshold for synaptic event weights - 
+     - wthreshold - threshold for synaptic event weights -
        if defined, events with weight below wthreshold are discarded
 
    Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
-
 
 //---------------------------------------------------//
 // This section was generated from event-handle.tmpl //
@@ -45,7 +44,7 @@ void {{component_name}}::handle(nest::CurrentEvent& e) {
     const double_t w = e.get_weight();
 
 {% for port in componentclass.analog_receive_ports %}
-    {%+ if not loop.first %}else {% endif %}if (e.get_rport() == {{port.name}}_ANALOG_PORT) 
+    {%+ if not loop.first %}else {% endif %}if (e.get_rport() == {{port.name}}_ANALOG_PORT)
         B_.{{port.name}}_analog_port.add_value(
             e.get_rel_delivery_steps(network()->get_slice_origin()), w * c);
 {% endfor %}
