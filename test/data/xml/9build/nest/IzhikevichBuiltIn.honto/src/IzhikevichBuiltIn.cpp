@@ -36,18 +36,18 @@
  * Recordables map
  * ---------------------------------------------------------------- */
 
-nest::RecordablesMap<nest::IzhikevichBuiltIn> nest::IzhikevichBuiltIn::recordablesMap_;
+nest::RecordablesMap<nineml::IzhikevichBuiltIn> nineml::IzhikevichBuiltIn::recordablesMap_;
 
 namespace nest
 {
   // Override the create() method with one call to RecordablesMap::insert_()
   // for each quantity to be recorded.
   template <>
-  void RecordablesMap<IzhikevichBuiltIn>::create()
+  void RecordablesMap<nineml::IzhikevichBuiltIn>::create()
   {
     // use standard names whereever you can for consistency!
-    insert_(names::V_m, &IzhikevichBuiltIn::get_V_m_);
-    insert_(names::U_m, &IzhikevichBuiltIn::get_U_m_);
+    insert_(names::V_m, &nineml::IzhikevichBuiltIn::get_V_m_);
+    insert_(names::U_m, &nineml::IzhikevichBuiltIn::get_U_m_);
   }
 }
 
@@ -55,7 +55,7 @@ namespace nest
  * Default constructors defining default parameters and state
  * ---------------------------------------------------------------- */
 
-nest::IzhikevichBuiltIn::Parameters_::Parameters_()
+nineml::IzhikevichBuiltIn::Parameters_::Parameters_()
   : a_	  (   0.02 ), // a
     b_    (   0.2  ), // b
     c_    ( -65.0  ), // c without unit
@@ -66,7 +66,7 @@ nest::IzhikevichBuiltIn::Parameters_::Parameters_()
     consistent_integration_(true)
 {}
 
-nest::IzhikevichBuiltIn::State_::State_()
+nineml::IzhikevichBuiltIn::State_::State_()
   : v_( -65.0 ), // membrane potential
     u_(   0.0 ), // membrane recovery variable
     I_(   0.0 )  // input current
@@ -76,48 +76,48 @@ nest::IzhikevichBuiltIn::State_::State_()
  * Parameter and state extractions and manipulation functions
  * ---------------------------------------------------------------- */
 
-void nest::IzhikevichBuiltIn::Parameters_::get(DictionaryDatum & d) const
+void nineml::IzhikevichBuiltIn::Parameters_::get(DictionaryDatum & d) const
 {
-  def<double>(d, names::I_e, I_e_);
-  def<double>(d, names::V_th, V_th_ );  // threshold value
-  def<double>(d, names::V_min, V_min_);
-  def<double>(d, names::a, a_);
-  def<double>(d, names::b, b_);
-  def<double>(d, names::c, c_);
-  def<double>(d, names::d, d_);
-  def<bool>(d, names::consistent_integration, consistent_integration_);
+  def<double>(d, nest::names::I_e, I_e_);
+  def<double>(d, nest::names::V_th, V_th_ );  // threshold value
+  def<double>(d, nest::names::V_min, V_min_);
+  def<double>(d, nest::names::a, a_);
+  def<double>(d, nest::names::b, b_);
+  def<double>(d, nest::names::c, c_);
+  def<double>(d, nest::names::d, d_);
+  def<bool>(d, nest::names::consistent_integration, consistent_integration_);
 }
 
-void nest::IzhikevichBuiltIn::Parameters_::set(const DictionaryDatum & d)
+void nineml::IzhikevichBuiltIn::Parameters_::set(const DictionaryDatum & d)
 {
 
-  updateValue<double>(d, names::V_th, V_th_);
-  updateValue<double>(d, names::V_min, V_min_);
-  updateValue<double>(d, names::I_e, I_e_);
-  updateValue<double>(d, names::a, a_);
-  updateValue<double>(d, names::b, b_);
-  updateValue<double>(d, names::c, c_);
-  updateValue<double>(d, names::d, d_);
-  updateValue<bool>(d, names::consistent_integration, consistent_integration_);
+  updateValue<double>(d, nest::names::V_th, V_th_);
+  updateValue<double>(d, nest::names::V_min, V_min_);
+  updateValue<double>(d, nest::names::I_e, I_e_);
+  updateValue<double>(d, nest::names::a, a_);
+  updateValue<double>(d, nest::names::b, b_);
+  updateValue<double>(d, nest::names::c, c_);
+  updateValue<double>(d, nest::names::d, d_);
+  updateValue<bool>(d, nest::names::consistent_integration, consistent_integration_);
 }
 
-void nest::IzhikevichBuiltIn::State_::get(DictionaryDatum & d,  const Parameters_ &) const
+void nineml::IzhikevichBuiltIn::State_::get(DictionaryDatum & d,  const Parameters_ &) const
 {
- def<double>(d, names::U_m, u_); // Membrane potential recovery variable
- def<double>(d, names::V_m, v_); // Membrane potential
+ def<double>(d, nest::names::U_m, u_); // Membrane potential recovery variable
+ def<double>(d, nest::names::V_m, v_); // Membrane potential
 }
 
-void nest::IzhikevichBuiltIn::State_::set(const DictionaryDatum & d,  const Parameters_ &)
+void nineml::IzhikevichBuiltIn::State_::set(const DictionaryDatum & d,  const Parameters_ &)
 {
-  updateValue<double>(d, names::U_m, u_);
-  updateValue<double>(d, names::V_m, v_);
+  updateValue<double>(d, nest::names::U_m, u_);
+  updateValue<double>(d, nest::names::V_m, v_);
 }
 
-nest::IzhikevichBuiltIn::Buffers_::Buffers_(IzhikevichBuiltIn & n)
+nineml::IzhikevichBuiltIn::Buffers_::Buffers_(nineml::IzhikevichBuiltIn & n)
   : logger_(n)
 {}
 
-nest::IzhikevichBuiltIn::Buffers_::Buffers_(const Buffers_ &, IzhikevichBuiltIn & n)
+nineml::IzhikevichBuiltIn::Buffers_::Buffers_(const Buffers_ &, nineml::IzhikevichBuiltIn & n)
   : logger_(n)
 {}
 
@@ -125,8 +125,8 @@ nest::IzhikevichBuiltIn::Buffers_::Buffers_(const Buffers_ &, IzhikevichBuiltIn 
  * Default and copy constructor for node
  * ---------------------------------------------------------------- */
 
-nest::IzhikevichBuiltIn::IzhikevichBuiltIn()
-  : Archiving_Node(),
+nineml::IzhikevichBuiltIn::IzhikevichBuiltIn()
+  : nest::Archiving_Node(),
     P_(),
     S_(),
     B_(*this)
@@ -134,8 +134,8 @@ nest::IzhikevichBuiltIn::IzhikevichBuiltIn()
   recordablesMap_.create();
 }
 
-nest::IzhikevichBuiltIn::IzhikevichBuiltIn(const IzhikevichBuiltIn & n)
-  : Archiving_Node(n),
+nineml::IzhikevichBuiltIn::IzhikevichBuiltIn(const nineml::IzhikevichBuiltIn & n)
+  : nest::Archiving_Node(n),
     P_(n.P_),
     S_(n.S_),
     B_(n.B_, *this)
@@ -145,21 +145,21 @@ nest::IzhikevichBuiltIn::IzhikevichBuiltIn(const IzhikevichBuiltIn & n)
  * Node initialization functions
  * ---------------------------------------------------------------- */
 
-void nest::IzhikevichBuiltIn::init_state_(const Node & proto)
+void nineml::IzhikevichBuiltIn::init_state_(const Node & proto)
 {
-  const IzhikevichBuiltIn & pr = downcast<IzhikevichBuiltIn>(proto);
+  const nineml::IzhikevichBuiltIn & pr = downcast<nineml::IzhikevichBuiltIn>(proto);
   S_ = pr.S_;
 }
 
-void nest::IzhikevichBuiltIn::init_buffers_()
+void nineml::IzhikevichBuiltIn::init_buffers_()
 {
   B_.spikes_.clear();   // includes resize
   B_.currents_.clear(); // includes resize
   B_.logger_.reset();   // includes resize
-  Archiving_Node::clear_history();
+  nest::Archiving_Node::clear_history();
 }
 
-void nest::IzhikevichBuiltIn::calibrate()
+void nineml::IzhikevichBuiltIn::calibrate()
 {
   B_.logger_.init();
 }
@@ -168,16 +168,16 @@ void nest::IzhikevichBuiltIn::calibrate()
  * Update and spike handling functions
  */
 
-void nest::IzhikevichBuiltIn::update(Time const & origin,
-			      const long_t from, const long_t to)
+void nineml::IzhikevichBuiltIn::update(nest::Time const & origin,
+			      const nest::long_t from, const nest::long_t to)
 {
-  assert(to >= 0 && (delay) from < Scheduler::get_min_delay());
+  assert(to >= 0 && (nest::delay) from < nest::Scheduler::get_min_delay());
   assert(from < to);
 
-  const double_t h = Time::get_resolution().get_ms();
+  const nest::double_t h = nest::Time::get_resolution().get_ms();
   double_t v_old, u_old;
 
-  for ( long_t lag = from ; lag < to ; ++lag )
+  for ( nest::long_t lag = from ; lag < to ; ++lag )
   {
     // neuron is never refractory
 	// use standard forward Euler numerics in this case  
@@ -209,9 +209,9 @@ void nest::IzhikevichBuiltIn::update(Time const & origin,
       S_.u_ = S_.u_ + P_.d_;
 
       // compute spike time
-      set_spiketime(Time::step(origin.get_steps()+lag+1));
+      set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
 
-      SpikeEvent se;
+      nest::SpikeEvent se;
       network()->send(*this, se, lag);
     }
 
@@ -223,14 +223,14 @@ void nest::IzhikevichBuiltIn::update(Time const & origin,
   }
 }
 
-void nest::IzhikevichBuiltIn::handle(SpikeEvent & e)
+void nineml::IzhikevichBuiltIn::handle(nest::SpikeEvent & e)
 {
   assert(e.get_delay() > 0);
   B_.spikes_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
 		       e.get_weight() * e.get_multiplicity());
 }
 
-void nest::IzhikevichBuiltIn::handle(CurrentEvent & e)
+void nineml::IzhikevichBuiltIn::handle(nest::CurrentEvent & e)
 {
   assert(e.get_delay() > 0);
 
@@ -240,7 +240,7 @@ void nest::IzhikevichBuiltIn::handle(CurrentEvent & e)
 			 w *c);
 }
 
-void nest::IzhikevichBuiltIn::handle(DataLoggingRequest & e)
+void nineml::IzhikevichBuiltIn::handle(nest::DataLoggingRequest & e)
 {
   B_.logger_.handle(e);
 }
