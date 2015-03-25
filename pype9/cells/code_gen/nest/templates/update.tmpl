@@ -30,14 +30,16 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 	
 	nest::long_t current_steps = origin.get_steps();
 	
+{# to remove	
 {% if ode_solver in ('cvode', 'ida') %}	
     int N = NV_LENGTH_S (B_.y);
 {% else %}
-	int N = {{component_name}}::State_.N  // Size of the state vector
+	int N = S_.N  // Size of the state vector
 {% endif %}
+#}
 	
 {% if ode_solver == 'euler' %}
-    double f_[N];  // Vector to hold the time derivatives
+    double f_[{{component_name}}::State_::STATE_VEC_SIZE_];  // Vector to hold the time derivatives
 {% endif %}    
 	
 	for (nest::long_t lag = from; lag < to; ++lag) {
@@ -65,7 +67,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
                     set_spiketime(nest::Time::ms(tt));
 	                nest::SpikeEvent se;
 	                // Copy solver state to NEST state
-	                for (int i = 0; i < N; i++)
+	                for (int i = 0; i < {{component_name}}::State_::STATE_VEC_SIZE_; i++)
 	                    S_.y_[i] = ITEM(B_.y,i);
 	                network()->send(*this, se, lag);
 	                adjust_zero_crossings(B_.y, {{abs_tolerance}});
@@ -78,7 +80,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 	   	}
 
         // Copy items from CVODE/IDA vector to NEST state array.
-	    for (int i = 0; i < N; i++)
+	    for (int i = 0; i < {{component_name}}::STATE_VEC_SIZE_; i++)
 	       S_.y_[i] = ITEM(B_.y, i);
 {% elif ode_solver == "gsl" %}
 	    V_.U_old_ = S_.y_[{{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX];
@@ -108,7 +110,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 {% elif ode_solver == 'euler' %}
         // Calculate time derivatives
 	    {{component_name}}_{{default_regime}}_dynamics(tt, S_.y_, f_, this);
-	    for (int i = 0; i < N; ++i)
+	    for (int i = 0; i < {{component_name}}::State_::STATE_VEC_SIZE_; ++i)
 	       S_.y_[i] = f_[i] * dt;
 {% endif %}
 

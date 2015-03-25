@@ -193,10 +193,10 @@ namespace nineml {
     }; // end struct State_
 
 
-{% if ode_solver in ("cvode", "ida") %}
-    struct Variables_ {};
-{% elif ode_solver == "gsl"  %}
+{% if ode_solver == "gsl"  %}
     struct Variables_ { nest::int_t RefractoryCounts_; double U_old_; /* for spike-detection */ };
+{% else %}
+    struct Variables_ {};    
 {% endif %}
 
     struct Buffers_ {
