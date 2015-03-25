@@ -5,6 +5,7 @@
 
 M_DEBUG (TestModule.sli) (Initializing SLI support for TestModule.) message
 
+
 /StepPatternConnect [ /arraytype /integertype /arraytype /integertype /literaltype ]
 {
   StepPatternConnect_Vi_i_Vi_i_l
