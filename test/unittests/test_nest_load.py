@@ -19,7 +19,7 @@ import nest
 class TestNestLoad(TestCase):
 
     izhikevich_file = path.join(test_data_dir, 'xml', 'Izhikevich2003.xml')
-    izhikevich_name = 'Izhikevich2003'
+    izhikevich_name = 'Test'
 
     def test_nest_load(self):
         Izhikevich9ML = CellMetaClass(

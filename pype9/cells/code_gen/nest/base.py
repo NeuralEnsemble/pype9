@@ -8,7 +8,8 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-import os.path
+import os
+from os import path
 import subprocess as sp
 from ..base import BaseCodeGenerator
 from nineml.abstraction_layer import units as un
@@ -33,7 +34,7 @@ class CodeGenerator(BaseCodeGenerator):
     ABS_TOLERANCE_DEFAULT = 0.01
     REL_TOLERANCE_DEFAULT = 0.01
     V_THRESHOLD_DEFAULT = 0.0
-    _TMPL_PATH = os.path.join(os.path.dirname(__file__), 'templates')
+    _TMPL_PATH = path.join(path.dirname(__file__), 'templates')
 
     def __init__(self, build_cores=1):
         super(CodeGenerator, self).__init__()
@@ -77,12 +78,13 @@ class CodeGenerator(BaseCodeGenerator):
                              prototype.name + 'Module.cpp', src_dir)
         # Render SLI initialiser
         self.render_to_file('module_sli_init.tmpl', tmpl_args,
-                             prototype.name + 'Module-init.sli', src_dir)
+                             prototype.name + 'Module-init.sli',
+                             path.join(src_dir, 'sli'))
 
     def configure_build_files(self, name, src_dir, compile_dir, install_dir):
         # Generate Makefile if it is not present
-        if not os.path.exists(os.path.join(compile_dir, 'Makefile')):
-            if not os.path.exists(compile_dir):
+        if not path.exists(path.join(compile_dir, 'Makefile')):
+            if not path.exists(compile_dir):
                 os.mkdir(compile_dir)
             orig_dir = os.getcwd()
             config_args = {'name': name, 'src_dir': src_dir,
@@ -138,20 +140,21 @@ class CodeGenerator(BaseCodeGenerator):
 
     def clean_src_dir(self, src_dir, component_name):
         # Clean existing src directories from previous builds.
-        prefix = os.path.join(src_dir, component_name)
-        if not os.path.exists(src_dir):
-            os.makedirs(src_dir)
+        prefix = path.join(src_dir, component_name)
+        if not path.exists(src_dir):
+            os.makedirs(path.join(src_dir, 'sli'))
         else:
             remove_ignore_missing(prefix + '.h')
             remove_ignore_missing(prefix + '.cpp')
             remove_ignore_missing(prefix + 'Module.h')
             remove_ignore_missing(prefix + 'Module.cpp')
-            remove_ignore_missing(prefix + 'Module-init.sli')
+            remove_ignore_missing(
+                path.join(src_dir, 'sli', component_name + 'Module-init.sli'))
 
     def clean_compile_dir(self, compile_dir):
         orig_dir = os.getcwd()
         try:
-            if not os.path.exists(compile_dir):
+            if not path.exists(compile_dir):
                 os.makedirs(compile_dir)
         except IOError, e:
             raise Pype9BuildError(
@@ -175,7 +178,7 @@ class CodeGenerator(BaseCodeGenerator):
     def simulator_specific_paths(self):
         path = []
         if 'NEST_INSTALL_DIR' in os.environ:
-            path.append(os.path.join(os.environ['NEST_INSTALL_DIR'], 'bin'))
+            path.append(path.join(os.environ['NEST_INSTALL_DIR'], 'bin'))
         return path
 
     def transform_for_build(self, prototype, **kwargs):
