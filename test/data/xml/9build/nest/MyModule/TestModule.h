@@ -32,7 +32,7 @@ namespace nest
 }
 
 // Put your stuff into your own namespace.
-namespace mynest {
+namespace nineml {
 
 /**
  * Class defining your model.
@@ -81,6 +81,6 @@ public:
 
   // Classes implementing your functions -----------------------------
 };
-} // namespace mynest
+} // namespace nineml
 
 #endif

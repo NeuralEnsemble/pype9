@@ -40,7 +40,7 @@
   SeeAlso: synapsedict
 */
 
-namespace mynest {
+namespace nineml {
 
 /**
  * Connection class for illustration purposes.

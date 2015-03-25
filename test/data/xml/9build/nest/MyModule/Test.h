@@ -42,7 +42,7 @@
 //#include <gsl/gsl_multiroots.h>
 
 
-namespace mynest {
+namespace nineml {
 
   /* BeginDocumentation
 Name: Test - Perfect integrate-and-fire neuron model with alpha PSC synapse.
@@ -127,7 +127,7 @@ iaf_psc_delta, iaf_psc_exp, iaf_psc_alpha
     nest::port check_connection(nest::Connection&, nest::port);
 
     /**
-     * @defgroup mynest_handle Functions handling incoming events.
+     * @defgroup nineml_handle Functions handling incoming events.
      * We tell nest that we can handle incoming events of various types by
      * defining @c handle() and @c connect_sender() for the given event.
      * @{
@@ -317,7 +317,7 @@ iaf_psc_delta, iaf_psc_exp, iaf_psc_alpha
   };
 
 inline
-nest::port mynest::Test::check_connection(nest::Connection& c, nest::port receptor_type)
+nest::port nineml::Test::check_connection(nest::Connection& c, nest::port receptor_type)
 {
   // You should usually not change the code in this function.
   // It confirms that the target of connection @c c accepts @c SpikeEvent on
@@ -329,7 +329,7 @@ nest::port mynest::Test::check_connection(nest::Connection& c, nest::port recept
 }
 
 inline
-nest::port mynest::Test::connect_sender(nest::SpikeEvent&, nest::port receptor_type)
+nest::port nineml::Test::connect_sender(nest::SpikeEvent&, nest::port receptor_type)
 {
   // You should usually not change the code in this function.
   // It confirms to the connection management system that we are able
@@ -341,7 +341,7 @@ nest::port mynest::Test::connect_sender(nest::SpikeEvent&, nest::port receptor_t
 }
 
 inline
-nest::port mynest::Test::connect_sender(nest::CurrentEvent&, nest::port receptor_type)
+nest::port nineml::Test::connect_sender(nest::CurrentEvent&, nest::port receptor_type)
 {
   // You should usually not change the code in this function.
   // It confirms to the connection management system that we are able
@@ -353,7 +353,7 @@ nest::port mynest::Test::connect_sender(nest::CurrentEvent&, nest::port receptor
 }
 
 inline
-nest::port mynest::Test::connect_sender(nest::DataLoggingRequest& dlr,
+nest::port nineml::Test::connect_sender(nest::DataLoggingRequest& dlr,
 						 nest::port receptor_type)
 {
   // You should usually not change the code in this function.
