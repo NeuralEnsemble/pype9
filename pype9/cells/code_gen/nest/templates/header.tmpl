@@ -72,13 +72,13 @@ namespace nineml {
     void update(nest::Time const &, const nest::long_t, const nest::long_t);
 
     // Set dynamics methods (the ones that actually model the dynamics) as friends
-{% if (ode_solver == "cvode") %}
+{% if ode_solver == "cvode" %}
     friend int {{component_name}}_dynamics (double, const N_Vector, N_Vector, void*);
     friend int {{component_name}}_event (double, N_Vector, double *, void*);
-{% elif (ode_solver == "ida") %}
+{% elif ode_solver == "ida" %}
     friend int {{component_name}}_residual (double, N_Vector, N_Vector, N_Vector, void*);
     friend int {{component_name}}_event (double, N_Vector, N_Vector, double *, void*);
-{% elif (ode_solver == "gsl") %}
+{% elif ode_solver == "gsl" %}
     friend int {{component_name}}_dynamics (double, const double*, double*, void*);
 {% endif %}
 {% if ss_solver == "kinsol" %}
@@ -180,7 +180,7 @@ namespace nineml {
 
 
       double y_[STATE_VEC_SIZE_];
-{% if (ode_solver == "gsl") %}
+{% if ode_solver == "gsl" %}
       nest::int_t r_; /* refractory counter */
 {% endif %}
 
@@ -195,7 +195,7 @@ namespace nineml {
 
 {% if ode_solver in ("cvode", "ida") %}
     struct Variables_ {};
-{% elif (ode_solver == "gsl")  %}
+{% elif ode_solver == "gsl"  %}
     struct Variables_ { nest::int_t RefractoryCounts_; double U_old_; /* for spike-detection */ };
 {% endif %}
 

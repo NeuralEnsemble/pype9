@@ -30,9 +30,9 @@ class CodeGenerator(BaseCodeGenerator):
     SIMULATOR_NAME = 'nest'
     ODE_SOLVER_DEFAULT = 'gsl'
     SS_SOLVER_DEFAULT = 'gsl'
-    MAX_STEP_SIZE_DEFAULT = 0.01  # FIXME:!!!
-    ABS_TOLERANCE_DEFAULT = 0.01
-    REL_TOLERANCE_DEFAULT = 0.01
+    MAX_STEP_SIZE_DEFAULT = 0.01  # Used for CVODE/IDA, FIXME: not sure best value!!! @IgnorePep8
+    ABS_TOLERANCE_DEFAULT = 1e-3
+    REL_TOLERANCE_DEFAULT = 0.0
     GSL_JACOBIAN_APPROX_STEP_DEFAULT = 0.01
     V_THRESHOLD_DEFAULT = 0.0
     _TMPL_PATH = path.join(path.dirname(__file__), 'templates')
