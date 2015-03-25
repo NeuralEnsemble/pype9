@@ -62,7 +62,7 @@ class CellMetaClass(pype9.cells.base.CellMetaClass):
 
     _built_types = {}
     CodeGenerator = CodeGenerator
-    CellBaseClass = Cell
+    BaseCellClass = Cell
 
     @classmethod
     def load_libraries(cls, name, install_dir):
