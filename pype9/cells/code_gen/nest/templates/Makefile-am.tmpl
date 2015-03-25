@@ -18,7 +18,7 @@ MAKEFLAGS= @MAKE_FLAGS@
 AM_CPPFLAGS= @NEST_CPPFLAGS@ \
 {% if ode_solver in ('cvode', 'ida') %}
              @SUNDIALS_CPPFLAGS@ \  
-{% endif %}@INCLTDL@
+{% endif %}             @INCLTDL@
 
 {% if ode_solver in ('cvode', 'ida') %}
 AM_LDFLAGS = @SUNDIALS_LDFLAGS@
