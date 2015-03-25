@@ -20,7 +20,10 @@
  */
 
 // include necessary NEST headers
-#include "config.h"
+#include "../../IzhikevichBuiltIn.honto/src/IzhikevichBuiltInModule.h"
+
+#include "../../IzhikevichBuiltIn.honto/compile/libltdl/config.h"
+#include "../../IzhikevichBuiltIn.honto/src/IzhikevichBuiltIn.h"
 #include "network.h"
 #include "model.h"
 #include "dynamicloader.h"
@@ -34,8 +37,6 @@
 #include "nestmodule.h"
 
 // include headers with your own stuff
-#include "IzhikevichBuiltInModule.h"
-#include "IzhikevichBuiltIn.h"
 
 // -- Interface to dynamic module loader ---------------------------------------
 
@@ -86,7 +87,7 @@ void nineml::IzhikevichBuiltInModule::init(SLIInterpreter *i, nest::Network*) {
        The first argument is always a reference to the network.
        Return value is a handle for later unregistration.
     */
-   nest::register_model<IzhikevichBuiltIn>(nest::NestModule::get_network(),
+   nest::register_model<nest::IzhikevichBuiltIn>(nest::NestModule::get_network(),
                                             "IzhikevichBuiltIn");
 
 }  // IzhikevichBuiltInModule::init()
