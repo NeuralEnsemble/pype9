@@ -1,11 +1,5 @@
-AC_PREREQ(2.52)3
-
-AC_INIT({{name}}, 1.0, nest_user@nest-initiative.org)
-
-# These variables are exported to include/config.h
-{{name | upper}}_MAJOR=1
-{{name | upper}}_MINOR=0
-{{name | upper}}_PATCHLEVEL=0
+AC_PREREQ(2.52)
+AC_INIT([{{name}}Module], [1.0], [nest_user@nest-initiative.org])
 
 # Exporting source and build directories requires full path names.
 # Thus we have to expand.
@@ -22,7 +16,7 @@ PKGBUILDDIR=`pwd`
 # moritz, 06-26-06
 AC_CONFIG_AUX_DIR(.)
 
-AM_INIT_AUTOMAKE(nest, ${{name | upper}}_VERSION)
+AM_INIT_AUTOMAKE([tar-ustar])
 
 # obtain host system type; HEP 2004-12-20
 AC_CANONICAL_HOST
@@ -38,7 +32,7 @@ AC_CANONICAL_HOST
 
 # nest-config
 NEST_CONFIG=`which nest-config`
-AC_ARG_WITH(nest,[  --with-nest=script    nest-config script including path],
+AC_ARG_WITH(nest,[  --with-nest=script	nest-config script including path],
 [
   if test "$withval" != yes; then
     NEST_CONFIG=$withval
@@ -51,6 +45,7 @@ AC_ARG_WITH(nest,[  --with-nest=script    nest-config script including path],
 # END Handle options
 # -------------------------------------------
 
+{% if ode_solver in ('cvode', 'ida') %}
 # sundials-config
 SUNDIALS_CONFIG=`which sundials-config`
 AC_ARG_WITH(sundials,[  --with-sundials=script    sundials-config script including path],
@@ -61,6 +56,7 @@ AC_ARG_WITH(sundials,[  --with-sundials=script    sundials-config script includi
 #    AC_MSG_ERROR([--with-sundials-config expects the sundials-config script as argument. See README for details.])
   fi
 ])
+{% endif %}
 
 # does nest-config work
 AC_MSG_CHECKING([for nest-config ])
@@ -68,11 +64,13 @@ AC_CHECK_FILE($NEST_CONFIG, HAVE_NEST=yes,
               AC_MSG_ERROR([No usable nest-config was found. You may want to use --with-nest-config.]))
 AC_MSG_RESULT(found)
 
+{% if ode_solver in ('cvode', 'ida') %}
 # Does sundials-config work
 AC_MSG_CHECKING([for sundials-config ])
 AC_CHECK_FILE($SUNDIALS_CONFIG, HAVE_SUNDIALS=yes,
               AC_MSG_ERROR([No usable sundials-config was found. You may want to use --with-sundials-config.]))
 AC_MSG_RESULT(found)
+{% endif %}
 
 # the following will crash if nest-config does not run
 # careful, lines below must not break
@@ -83,6 +81,7 @@ NEST_COMPILER=`$NEST_CONFIG --compiler`
 if test $prefix = NONE; then prefix=`$NEST_CONFIG --prefix`; fi
 AC_MSG_RESULT($NEST_CPPFLAGS)
 
+{% if ode_solver in ('cvode', 'ida') %}
 AC_MSG_CHECKING([for SUNDIALS preprocessor flags ])
 SUNDIALS_CPPFLAGS="`$SUNDIALS_CONFIG -m cvode -t s -l c -s cppflags`"
 AC_MSG_RESULT($SUNDIALS_CPPFLAGS)
@@ -90,6 +89,7 @@ AC_MSG_RESULT($SUNDIALS_CPPFLAGS)
 AC_MSG_CHECKING([for SUNDIALS linker options ])
 SUNDIALS_LDFLAGS="`$SUNDIALS_CONFIG -m cvode -t s -l c -s libs` -lblas -llapack"
 AC_MSG_RESULT($SUNDIALS_LDFLAGS)
+{% endif %}
 
 # Set the platform-dependent compiler flags based on the canonical
 # host string.  These flags are placed in AM_{C,CXX}FLAGS.  If
@@ -107,7 +107,7 @@ AC_MSG_RESULT($SUNDIALS_LDFLAGS)
 # here.
 # HEP 2004-12-21
 
-{{name | upper}}_SAVE_CXXFLAGS=$CXXFLAGS
+{{name | upper}}MODULE_SAVE_CXXFLAGS=$CXXFLAGS
 
 # Must first check if we are on AIX
 AC_AIX
@@ -117,8 +117,8 @@ AC_AIX
 AC_PROG_CXX([ $NEST_COMPILER ])
 
 # the following is makeshift, should have the macro set proper
-# {{name | upper}}_SET_CXXFLAGS
-AM_CXXFLAGS=${{name | upper}}_SAVE_CXXFLAGS
+# {{name | upper}}MODULE_SET_CXXFLAGS
+AM_CXXFLAGS=${{name | upper}}MODULE_SAVE_CXXFLAGS
 CXXFLAGS=
 
 ## Configure C environment
@@ -126,8 +126,8 @@ CXXFLAGS=
 AC_PROG_LD
 AC_PROG_INSTALL
 
-AC_LIBLTDL_CONVENIENCE       ## put libltdl into a convenience library
-AC_PROG_LIBTOOL           ## use libtool
+AC_LIBLTDL_CONVENIENCE	   ## put libltdl into a convenience library
+AC_PROG_LIBTOOL		   ## use libtool
 AC_CONFIG_SUBDIRS(libltdl) ## also configure subdir containing libltdl
 
 #-- Set the language to C++
@@ -179,11 +179,13 @@ AC_SUBST(MAKE)
 AC_SUBST(MAKE_FLAGS)
 AC_SUBST(INCLTDL)
 AC_SUBST(LIBLTDL)
+{% if ode_solver in ('cvode', 'ida') %}
 AC_SUBST(SUNDIALS_CONFIG)
 AC_SUBST(SUNDIALS_CPPFLAGS)
 AC_SUBST(SUNDIALS_LDFLAGS)
+{% endif %}
 
-AM_CONFIG_HEADER({{name}}_config.h:{{name}}_config.h.in)
+AM_CONFIG_HEADER({{name}}Module_config.h:{{name}}Module_config.h.in)
 AC_CONFIG_FILES(Makefile)
 
 # -----------------------------------------------
@@ -200,14 +202,16 @@ AC_OUTPUT
 
 echo
 echo "-------------------------------------------------------"
-echo "{{name}} Configuration Summary"
+echo "{{name}}Module Configuration Summary"
 echo "-------------------------------------------------------"
 echo
 echo "C++ compiler        : $CXX"
 echo "C++ compiler flags  : $AM_CXXFLAGS"
 echo "NEST compiler flags : $NEST_CPPFLAGS"
+{% if ode_solver in ('cvode', 'ida') %}
 echo "SUNDIALS compiler flags : $SUNDIALS_CPPFLAGS"
 echo "SUNDIALS linker flags : $SUNDIALS_LDFLAGS"
+{% endif %}
 
 # these variables will still contain '${prefix}'
 # we want to have the versions where this is resolved, too:
@@ -217,9 +221,9 @@ eval eval eval  PKGDATADIR_AS_CONFIGURED=$PKGDATADIR
 echo
 echo "-------------------------------------------------------"
 echo
-echo "You can build and install {{name}} now, using"
+echo "You can build and install {{name}}Module now, using"
 echo "  make"
 echo "  make install"
 echo
-echo "{{name}} will be installed to:"
+echo "{{name}}Module will be installed to:"
 echo -n "  "; eval eval echo "$libdir"
