@@ -38,7 +38,7 @@ namespace nineml {
  * Class defining your model.
  * @note For each model, you must define one such class, with a unique name.
  */
-class MyModule : public DynModule
+class TestModule : public DynModule
 {
 public:
 
@@ -48,13 +48,13 @@ public:
    * @note The constructor registers the module with the dynamic loader.
    *       Initialization proper is performed by the init() method.
    */
-  MyModule();
+  TestModule();
 
   /**
    * @note The destructor does not do much in modules. Proper "downrigging"
    *       is the responsibility of the unregister() method.
    */
-  ~MyModule();
+  ~TestModule();
 
   /**
    * Initialize module by registering models with the network.

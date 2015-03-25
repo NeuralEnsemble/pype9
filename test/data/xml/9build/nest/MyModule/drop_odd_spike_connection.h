@@ -35,7 +35,7 @@
   Transmits: SpikeEvent
 
   Remarks:
-  This synapse type is provided only for illustration purposes in MyModule.
+  This synapse type is provided only for illustration purposes in TestModule.
 
   SeeAlso: synapsedict
 */

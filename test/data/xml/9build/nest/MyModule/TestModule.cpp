@@ -49,11 +49,11 @@
  * The dynamicloader can then load modulename and search for symbol "mod" in it.
  */
 
-nineml::MyModule TestModule_LTX_mod;
+nineml::TestModule TestModule_LTX_mod;
 
 // -- DynModule functions ------------------------------------------------------
 
-nineml::MyModule::MyModule()
+nineml::TestModule::TestModule()
   {
 #ifdef LINKED_MODULE
      // register this module at the dynamic loader
@@ -63,15 +63,15 @@ nineml::MyModule::MyModule()
 #endif
    }
 
-nineml::MyModule::~MyModule()
+nineml::TestModule::~TestModule()
    {}
 
-   const std::string nineml::MyModule::name(void) const
+   const std::string nineml::TestModule::name(void) const
    {
      return std::string("My NEST Module"); // Return name of the module
    }
 
-   const std::string nineml::MyModule::commandstring(void) const
+   const std::string nineml::TestModule::commandstring(void) const
    {
      // Instruct the interpreter to load TestModule-init.sli
      return std::string("(TestModule-init) run");
@@ -80,7 +80,7 @@ nineml::MyModule::~MyModule()
 
   //-------------------------------------------------------------------------------------
 
-  void nineml::MyModule::init(SLIInterpreter *i, nest::Network*)
+  void nineml::TestModule::init(SLIInterpreter *i, nest::Network*)
   {
     /* Register a neuron or device model.
        Give node type as template argument and the name as second argument.
@@ -90,6 +90,6 @@ nineml::MyModule::~MyModule()
     nest::register_model<Test>(nest::NestModule::get_network(),
                                         "Test");
 
-  }  // MyModule::init()
+  }  // TestModule::init()
 
 
