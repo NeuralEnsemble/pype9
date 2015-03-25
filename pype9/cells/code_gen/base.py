@@ -199,7 +199,7 @@ class BaseCodeGenerator(object):
             self.clean_compile_dir(compile_dir)
             self.configure_build_files(
                 name=name, src_dir=src_dir, compile_dir=compile_dir,
-                install_dir=install_dir)
+                install_dir=install_dir, **kwargs)
             self.clean_install_dir(install_dir)
             # Compile source files
             self.compile_source_files(compile_dir, name, verbose=verbose)

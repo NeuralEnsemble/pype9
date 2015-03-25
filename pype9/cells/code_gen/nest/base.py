@@ -81,13 +81,16 @@ class CodeGenerator(BaseCodeGenerator):
                              prototype.name + 'Module-init.sli',
                              path.join(src_dir, 'sli'))
 
-    def configure_build_files(self, name, src_dir, compile_dir, install_dir):
+    def configure_build_files(self, name, src_dir, compile_dir, install_dir,
+                              **kwargs):
         # Generate Makefile if it is not present
         if not path.exists(path.join(compile_dir, 'Makefile')):
             if not path.exists(compile_dir):
                 os.mkdir(compile_dir)
             orig_dir = os.getcwd()
             config_args = {'name': name, 'src_dir': src_dir,
+                           'ode_solver': kwargs.get('ode_solver',
+                                                    self.ODE_SOLVER_DEFAULT),
                            'version': pype9.version}
             self.render_to_file('configure-ac.tmpl', config_args,
                                  'configure.ac', src_dir)

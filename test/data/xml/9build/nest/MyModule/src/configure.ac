@@ -52,6 +52,7 @@ AC_CHECK_FILE($NEST_CONFIG, HAVE_NEST=yes,
               AC_MSG_ERROR([No usable nest-config was found. You may want to use --with-nest-config.]))
 AC_MSG_RESULT(found)
 
+
 # the following will crash if nest-config does not run
 # careful, lines below must not break
 AC_MSG_CHECKING([for NEST directory information ])
@@ -60,6 +61,7 @@ NEST_CPPFLAGS=`$NEST_CONFIG --cflags`
 NEST_COMPILER=`$NEST_CONFIG --compiler`
 if test $prefix = NONE; then prefix=`$NEST_CONFIG --prefix`; fi
 AC_MSG_RESULT($NEST_CPPFLAGS)
+
 
 # Set the platform-dependent compiler flags based on the canonical
 # host string.  These flags are placed in AM_{C,CXX}FLAGS.  If
@@ -77,7 +79,7 @@ AC_MSG_RESULT($NEST_CPPFLAGS)
 # here.
 # HEP 2004-12-21
 
-MYMODULE_SAVE_CXXFLAGS=$CXXFLAGS
+TESTMODULE_SAVE_CXXFLAGS=$CXXFLAGS
 
 # Must first check if we are on AIX
 AC_AIX
@@ -87,8 +89,8 @@ AC_AIX
 AC_PROG_CXX([ $NEST_COMPILER ])
 
 # the following is makeshift, should have the macro set proper
-# MYMODULE_SET_CXXFLAGS
-AM_CXXFLAGS=$MYMODULE_SAVE_CXXFLAGS
+# TESTMODULE_SET_CXXFLAGS
+AM_CXXFLAGS=$TESTMODULE_SAVE_CXXFLAGS
 CXXFLAGS=
 
 ## Configure C environment
@@ -167,7 +169,7 @@ AC_OUTPUT
 
 echo
 echo "-------------------------------------------------------"
-echo "MyModule Configuration Summary"
+echo "TestModule Configuration Summary"
 echo "-------------------------------------------------------"
 echo
 echo "C++ compiler        : $CXX"
@@ -182,10 +184,9 @@ eval eval eval  PKGDATADIR_AS_CONFIGURED=$PKGDATADIR
 echo
 echo "-------------------------------------------------------"
 echo
-echo "You can build and install MyModule now, using"
+echo "You can build and install TestModule now, using"
 echo "  make"
 echo "  make install"
 echo
-echo "MyModule will be installed to:"
+echo "TestModule will be installed to:"
 echo -n "  "; eval eval echo "$libdir"
-echo

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo "Bootstrapping MyModule"
+echo "Bootstrapping /Users/tclose/git/pype9/test/data/xml/9build/nest/Test/src"
 
 if test -d autom4te.cache ; then
 # we must remove this cache, because it
