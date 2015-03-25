@@ -20,374 +20,283 @@
  *
  */
 
-#ifndef PIF_PSC_ALPHA_H
-#define PIF_PSC_ALPHA_H
+#ifndef IZHIKEVICH_BUILT_IN_H
+#define IZHIKEVICH_BUILT_IN_H
 
 #include "nest.h"
 #include "event.h"
-#include "node.h"
+#include "archiving_node.h"
 #include "ring_buffer.h"
 #include "connection.h"
 #include "universal_data_logger.h"
-#include "dictdatum.h"
 
+namespace nest
+{
 
-//#include <gsl/gsl_errno.h>
-//#include <gsl/gsl_matrix.h>
-//#include <gsl/gsl_sf_exp.h>
-//#include <gsl/gsl_odeiv2.h>
-//#define ITEM(v,i)  (v[i])
-//
-//#include <gsl/gsl_vector.h>
-//#include <gsl/gsl_multiroots.h>
-
-
-namespace nineml {
+  class Network;
 
   /* BeginDocumentation
-Name: IzhikevichBuiltIn - Perfect integrate-and-fire neuron model with alpha PSC synapse.
+     Name: IzhikevichBuiltIn - Izhikevich neuron model
 
-Description:
-  IzhikevichBuiltIn implements a non-leaky integrate-and-fire neuron with
-  with alpha-function shaped synaptic currents. The threshold crossing is
-  followed by an absolute refractory period during which the membrane potential
-  is clamped to the resting potential, while synaptic currents evolve normally.
+     Description:
+     Implementation of the simple spiking neuron model introduced by Izhikevich [1].
+     The dynamics are given by:
+         dv/dt = 0.04*v^2 + 5*v + 140 - u + I
+	    du/dt = a*(b*v - u)
 
-  The dynamics of the neuron are defined by
+	 if v >= V_th:
+ 	   v is set to c
+	   u is incremented by d
 
-     C_m dV/dt  = I_syn(t) + I_e
+	 v jumps on each spike arrival by the weight of the spike. 
+   
+     As published in [1], the numerics differs from the standard forward Euler technique 
+     in two ways: 
+     1) the new value of u is calulated based on the new value of v, rather than the 
+        previous value
+     2) the variable v is updated using a time step half the size of that used to update 
+        variable u. 
+   
+     This model offers both forms of integration, they can be selected using the
+     boolean parameter consistent_integration. To reproduce some results published on 
+	 the basis of this model, it is necessary to use the published form of the dynamics.
+     In this case, consistent_integration must be set to false. For all other purposes,
+     it is recommended to use the standard technique for forward Euler integration. In 
+     this case, consistent_integration must be set to true (default).
 
-     I_syn(t)   = Sum_{t_{j,k} < t} w_j x (t-t_{j,k}) x e/tau_syn x e^{-(t-t_{j,k})/tau_syn}
 
-  where t_{j,k} is the time of the k-th spike arriving from neuron j, and w_j is
-  the weight of the synapse from neuron j onto the present neuron. The alpha function
-  is normalized by amplitude, i.e., the maximum input current for any spike is w_j.
+     Parameters:
+     The following parameters can be set in the status dictionary.
 
-  Parameters:
-  C_m      double - Membrane capacitance, in pF
-  I_e      double - Intrinsic DC current, in nA
-  tau_syn  double - Synaptic time constant, in ms
-  t_ref    double - Duration of refractory period in ms.
-  V_th     double - Spike threshold in mV.
-  V_reset  double - Reset potential of the membrane in mV.
+     V_m        double - Membrane potential in mV
+     U_m		double - Membrane potential recovery variable
+     V_th       double - Spike threshold in mV.
+     I_e        double - Constant input current in pA. (R=1)
+     V_min      double - Absolute lower value for the membrane potential.
+     a			double - describes time scale of recovery variable
+     b			double - sensitivity of recovery variable
+     c			double - after-spike reset value of V_m
+     d			double - after-spike reset value of U_m
+	 consistent_integration		bool - use standard integration technique
 
-  Remarks:
-  The linear subthresold dynamics is integrated by the Exact
-  Integration scheme [1]. The neuron dynamics is solved on the time
-  grid given by the computation step size. Incoming as well as emitted
-  spikes are forced to that grid.
 
-References:
-  [1] Rotter S & Diesmann M (1999) Exact simulation of time-invariant linear
-      systems with applications to neuronal modeling. Biologial Cybernetics
-      81:381-402.
+     References:
+     [1] Izhikevich, Simple Model of Spiking Neurons,
+     IEEE Transactions on Neural Networks (2003) 14:1569-1572
 
-Sends: SpikeEvent
+     Sends: SpikeEvent
 
-Receives: SpikeEvent, CurrentEvent, DataLoggingRequest
-
-Author:
-  Hans Ekkehard Plesser, based on iaf_psc_alpha
-
-SeeAlso:
-iaf_psc_delta, iaf_psc_exp, iaf_psc_alpha
-*/
-
-  /**
-   * Non-leaky integrate-and-fire neuron with alpha-shaped PSCs.
-   */
-  class IzhikevichBuiltIn : public nest::Node
+     Receives: SpikeEvent, CurrentEvent, DataLoggingRequest
+     FirstVersion: 2009
+     Author: Hanuschkin, Morrison, Kunkel
+     SeeAlso: iaf_psc_delta, mat2_psc_exp
+  */
+  class IzhikevichBuiltIn : public Archiving_Node
   {
-  public:
 
-    /**
-     * The constructor is only used to create the model prototype in the model manager.
-     */
+   public:
+
     IzhikevichBuiltIn();
-
-    /**
-     * The copy constructor is used to create model copies and instances of the model.
-     * @node The copy constructor needs to initialize the parameters and the state.
-     *       Initialization of buffers and interal variables is deferred to
-     *       @c init_buffers_() and @c calibrate().
-     */
-    IzhikevichBuiltIn(const IzhikevichBuiltIn&);
+    IzhikevichBuiltIn(const IzhikevichBuiltIn &);
 
     /**
      * Import sets of overloaded virtual functions.
-     * This is necessary to ensure proper overload and overriding resolution.
-     * @see http://www.gotw.ca/gotw/005.htm.
+     * We need to explicitly include sets of overloaded
+     * virtual functions into the current scope.
+     * According to the SUN C++ FAQ, this is the correct
+     * way of doing things, although all other compilers
+     * happily live without.
      */
-    using nest::Node::connect_sender;
-    using nest::Node::handle;
 
-    /**
-     * Used to validate that we can send SpikeEvent to desired target:port.
-     */
-    nest::port check_connection(nest::Connection&, nest::port);
+    using Node::connect_sender;
+    using Node::handle;
 
-    /**
-     * @defgroup nineml_handle Functions handling incoming events.
-     * We tell nest that we can handle incoming events of various types by
-     * defining @c handle() and @c connect_sender() for the given event.
-     * @{
-     */
-    void handle(nest::SpikeEvent &);        //! accept spikes
-    void handle(nest::CurrentEvent &);      //! accept input current
-    void handle(nest::DataLoggingRequest &);//! allow recording with multimeter
+    void handle(DataLoggingRequest &);
+    void handle(SpikeEvent &);
+    void handle(CurrentEvent &);
 
-    nest::port connect_sender(nest::SpikeEvent&, nest::port);
-    nest::port connect_sender(nest::CurrentEvent&, nest::port);
-    nest::port connect_sender(nest::DataLoggingRequest&, nest::port);
-    /** @} */
+    port connect_sender(DataLoggingRequest &, port);
+    port connect_sender(SpikeEvent &, port);
+    port connect_sender(CurrentEvent &, port);
+
+    port check_connection(Connection&, port);
 
     void get_status(DictionaryDatum &) const;
     void set_status(const DictionaryDatum &);
 
-  private:
+   private:
+    friend class RecordablesMap<IzhikevichBuiltIn>;
+    friend class UniversalDataLogger<IzhikevichBuiltIn>;
 
-    //! Reset parameters and state of neuron.
-
-    //! Reset state of neuron.
-    void init_state_(const Node& proto);
-
-    //! Reset internal buffers of neuron.
+    void init_state_(const Node & proto);
     void init_buffers_();
-
-    //! Initialize auxiliary quantities, leave parameters and state untouched.
     void calibrate();
 
-    //! Take neuron through given time interval
-    void update(nest::Time const &, const nest::long_t, const nest::long_t);
+    void update(Time const &, const long_t, const long_t);
 
-    // The next two classes need to be friends to access the State_ class/member
-    friend class nest::RecordablesMap<IzhikevichBuiltIn>;
-    friend class nest::UniversalDataLogger<IzhikevichBuiltIn>;
+    // ----------------------------------------------------------------
 
     /**
-     * Free parameters of the neuron.
-     *
-     * These are the parameters that can be set by the user through @c SetStatus.
-     * They are initialized from the model prototype when the node is created.
-     * Parameters do not change during calls to @c update() and are not reset by
-     * @c ResetNetwork.
-     *
-     * @note Parameters_ need neither copy constructor nor @c operator=(), since
-     *       all its members are copied properly by the default copy constructor
-     *       and assignment operator. Important:
-     *       - If Parameters_ contained @c Time members, you need to define the
-     *         assignment operator to recalibrate all members of type @c Time . You
-     *         may also want to define the assignment operator.
-     *       - If Parameters_ contained members that cannot copy themselves, such
-     *         as C-style arrays, you need to define the copy constructor and
-     *         assignment operator to copy those members.
+     * Independent parameters of the model.
      */
     struct Parameters_ {
-      double C_m;      //!< Membrane capacitance, in pF.
-      double I_e;      //!< Intrinsic DC current, in nA.
-      double tau_syn;  //!< Synaptic time constant, in ms.
-      double V_th;     //!< Spike threshold, in mV.
-      double V_reset;  //!< Reset potential of the membrane, in mV.
-      double t_ref;    //!< Duration of refractory period, in ms.
+      double_t a_;
+      double_t b_;
+      double_t c_;
+      double_t d_;
 
-      //! Initialize parameters to their default values.
-      Parameters_();
+      /** External DC current */
+      double_t I_e_;
 
-      //! Store parameter values in dictionary.
-      void get(DictionaryDatum&) const;
+      /** Threshold */
+      double_t V_th_;
 
-      //! Set parameter values from dictionary.
-      void set(const DictionaryDatum&);
+      /** Lower bound */
+      double_t V_min_;
+
+	  /** Use standard integration numerics **/	
+      bool consistent_integration_;
+
+      Parameters_();  //!< Sets default parameter values
+
+      void get(DictionaryDatum&) const;  //!< Store current values in dictionary
+      void set(const DictionaryDatum&);  //!< Set values from dicitonary
     };
 
+    // ----------------------------------------------------------------
+
     /**
-     * Dynamic state of the neuron.
-     *
-     * These are the state variables that are advanced in time by calls to
-     * @c update(). In many models, some or all of them can be set by the user
-     * through @c SetStatus. The state variables are initialized from the model
-     * prototype when the node is created. State variables are reset by @c ResetNetwork.
-     *
-     * @note State_ need neither copy constructor nor @c operator=(), since
-     *       all its members are copied properly by the default copy constructor
-     *       and assignment operator. Important:
-     *       - If State_ contained @c Time members, you need to define the
-     *         assignment operator to recalibrate all members of type @c Time . You
-     *         may also want to define the assignment operator.
-     *       - If State_ contained members that cannot copy themselves, such
-     *         as C-style arrays, you need to define the copy constructor and
-     *         assignment operator to copy those members.
+     * State variables of the model.
      */
     struct State_ {
-      double V_m;        //!< Membrane potential, in mV.
-      double dI_syn;     //!< Derivative of synaptic current, in nA/ms.
-      double I_syn;      //!< Synaptic current, in nA.
-      double I_ext;      //!< External current, in nA.
-      long   refr_count; //!< Number of steps neuron is still refractory for
+      double_t     v_; // membrane potential
+      double_t     u_; // membrane recovery variable
+      double_t     I_; // input current
 
-      /**
-       * Construct new default State_ instance based on values in Parameters_.
-       * This c'tor is called by the no-argument c'tor of the neuron model. It
-       * takes a reference to the parameters instance of the model, so that the
-       * state can be initialized in accordance with parameters, e.g., initializing
-       * the membrane potential with the resting potential.
-       */
-      State_(const Parameters_&);
 
-      /** Store state values in dictionary. */
-      void get(DictionaryDatum&) const;
+      /** Accumulate spikes arriving during refractory period, discounted for
+	  decay until end of refractory period.
+      */
 
-      /**
-       * Set membrane potential from dictionary.
-       * @note Receives Parameters_ so it can test that the new membrane potential
-       *       is below threshold.
-       */
+      State_();  //!< Default initialization
+
+      void get(DictionaryDatum&, const Parameters_&) const;
       void set(const DictionaryDatum&, const Parameters_&);
     };
 
+    // ----------------------------------------------------------------
+
     /**
-     * Buffers of the neuron.
-     * Ususally buffers for incoming spikes and data logged for analog recorders.
-     * Buffers must be initialized by @c init_buffers_(), which is called before
-     * @c calibrate() on the first call to @c Simulate after the start of NEST,
-     * ResetKernel or ResetNetwork.
-     * @node Buffers_ needs neither constructor, copy constructor or assignment operator,
-     *       since it is initialized by @c init_nodes_(). If Buffers_ has members that
-     *       cannot destroy themselves, Buffers_ will need a destructor.
+     * Buffers of the model.
      */
     struct Buffers_ {
-      Buffers_(IzhikevichBuiltIn&);
-      Buffers_(const Buffers_ &, IzhikevichBuiltIn&);
+      /**
+       * Buffer for recording
+       */
+      Buffers_(IzhikevichBuiltIn &);
+      Buffers_(const Buffers_ &, IzhikevichBuiltIn &);
+      UniversalDataLogger<IzhikevichBuiltIn> logger_;
 
-      nest::RingBuffer spikes;    //!< Buffer incoming spikes through delay, as sum
-      nest::RingBuffer currents;  //!< Buffer incoming currents through delay, as sum
-
-      //! Logger for all analog data
-      nest::UniversalDataLogger<IzhikevichBuiltIn> logger_;
+      /** buffers and sums up incoming spikes/currents */
+      RingBuffer spikes_;
+      RingBuffer currents_;
     };
 
+    // ----------------------------------------------------------------
+
     /**
-     * Internal variables of the neuron.
-     * These variables must be initialized by @c calibrate, which is called before
-     * the first call to @c update() upon each call to @c Simulate.
-     * @node Variables_ needs neither constructor, copy constructor or assignment operator,
-     *       since it is initialized by @c calibrate(). If Variables_ has members that
-     *       cannot destroy themselves, Variables_ will need a destructor.
+     * Internal variables of the model.
      */
-    struct Variables_ {
-      double P11;
-      double P21;
-      double P22;
-      double P31;
-      double P32;
-      double P30;
-      double P33;
+    struct Variables_ {};
 
-      double pscInitialValue;
-      long   t_ref_steps;  //!< Duration of refractory period, in steps.
-    };
+    // Access functions for UniversalDataLogger -----------------------
+
+    //! Read out the membrane potential
+    double_t get_V_m_() const { return S_.v_; }
+    //! Read out the recovery variable
+    double_t get_U_m_() const { return S_.u_; }
+
+    // ----------------------------------------------------------------
 
     /**
-     * @defgroup Access functions for UniversalDataLogger.
+     * @defgroup iaf_psc_alpha_data
+     * Instances of private data structures for the different types
+     * of data pertaining to the model.
+     * @note The order of definitions is important for speed.
      * @{
      */
-    //! Read out the real membrane potential
-    nest::double_t get_V_m_() const { return S_.V_m; }
-    /** @} */
-
-    /**
-     * @defgroup pif_members Member variables of neuron model.
-     * Each model neuron should have precisely the following four data members,
-     * which are one instance each of the parameters, state, buffers and variables
-     * structures. Experience indicates that the state and variables member should
-     * be next to each other to achieve good efficiency (caching).
-     * @note Devices require one additional data member, an instance of the @c Device
-     *       child class they belong to.
-     * @{
-     */
-    Parameters_ P_;  //!< Free parameters.
-    State_      S_;  //!< Dynamic state.
-    Variables_  V_;  //!< Internal Variables
-    Buffers_    B_;  //!< Buffers.
+    Parameters_ P_;
+    State_      S_;
+    Variables_  V_;
+    Buffers_    B_;
 
     //! Mapping of recordables names to access functions
-    static nest::RecordablesMap<IzhikevichBuiltIn> recordablesMap_;
-
+    static RecordablesMap<IzhikevichBuiltIn> recordablesMap_;
     /** @} */
+
   };
 
-inline
-nest::port nineml::IzhikevichBuiltIn::check_connection(nest::Connection& c, nest::port receptor_type)
-{
-  // You should usually not change the code in this function.
-  // It confirms that the target of connection @c c accepts @c SpikeEvent on
-  // the given @c receptor_type.
-  nest::SpikeEvent e;
-  e.set_sender(*this);
-  c.check_event(e);
-  return c.get_target()->connect_sender(e, receptor_type);
-}
+  inline
+  port IzhikevichBuiltIn::check_connection(Connection& c, port receptor_type)
+  {
+    SpikeEvent e;
+    e.set_sender(*this);
+    c.check_event(e);
+    return c.get_target()->connect_sender(e, receptor_type);
+  }
 
-inline
-nest::port nineml::IzhikevichBuiltIn::connect_sender(nest::SpikeEvent&, nest::port receptor_type)
-{
-  // You should usually not change the code in this function.
-  // It confirms to the connection management system that we are able
-  // to handle @c SpikeEvent on port 0. You need to extend the function
-  // if you want to differentiate between input ports.
-  if (receptor_type != 0)
-    throw nest::UnknownReceptorType(receptor_type, get_name());
-  return 0;
-}
+  inline
+  port IzhikevichBuiltIn::connect_sender(SpikeEvent&, port receptor_type)
+  {
+    if (receptor_type != 0)
+      throw UnknownReceptorType(receptor_type, get_name());
+    return 0;
+  }
 
-inline
-nest::port nineml::IzhikevichBuiltIn::connect_sender(nest::CurrentEvent&, nest::port receptor_type)
-{
-  // You should usually not change the code in this function.
-  // It confirms to the connection management system that we are able
-  // to handle @c CurrentEvent on port 0. You need to extend the function
-  // if you want to differentiate between input ports.
-  if (receptor_type != 0)
-    throw nest::UnknownReceptorType(receptor_type, get_name());
-  return 0;
-}
+  inline
+  port IzhikevichBuiltIn::connect_sender(CurrentEvent&, port receptor_type)
+  {
+    if (receptor_type != 0)
+      throw UnknownReceptorType(receptor_type, get_name());
+    return 0;
+  }
 
-inline
-nest::port nineml::IzhikevichBuiltIn::connect_sender(nest::DataLoggingRequest& dlr,
-						 nest::port receptor_type)
-{
-  // You should usually not change the code in this function.
-  // It confirms to the connection management system that we are able
-  // to handle @c DataLoggingRequest on port 0.
-  // The function also tells the built-in UniversalDataLogger that this node
-  // is recorded from and that it thus needs to collect data during simulation.
-  if (receptor_type != 0)
-    throw nest::UnknownReceptorType(receptor_type, get_name());
+  inline
+  port IzhikevichBuiltIn::connect_sender(DataLoggingRequest &dlr, port receptor_type)
+  {
+    if (receptor_type != 0)
+      throw UnknownReceptorType(receptor_type, get_name());
+    return B_.logger_.connect_logging_device(dlr, recordablesMap_);
+  }
 
-  return B_.logger_.connect_logging_device(dlr, recordablesMap_);
-}
+  inline
+  void IzhikevichBuiltIn::get_status(DictionaryDatum &d) const
+  {
+    P_.get(d);
+    S_.get(d, P_);
+    Archiving_Node::get_status(d);
+    (*d)[names::recordables] = recordablesMap_.get_list();
+  }
 
-inline
-void IzhikevichBuiltIn::get_status(DictionaryDatum &d) const
-{
-  P_.get(d);
-  S_.get(d);
-  (*d)[nest::names::recordables] = recordablesMap_.get_list();
-}
+  inline
+  void IzhikevichBuiltIn::set_status(const DictionaryDatum &d)
+  {
+    Parameters_ ptmp = P_;  // temporary copy in case of errors
+    ptmp.set(d);                       // throws if BadProperty
+    State_      stmp = S_;  // temporary copy in case of errors
+    stmp.set(d, ptmp);                 // throws if BadProperty
 
-inline
-void IzhikevichBuiltIn::set_status(const DictionaryDatum &d)
-{
-  Parameters_ ptmp = P_;  // temporary copy in case of errors
-  ptmp.set(d);                       // throws if BadProperty
-  State_      stmp = S_;  // temporary copy in case of errors
-  stmp.set(d, ptmp);                 // throws if BadProperty
+    // We now know that (ptmp, stmp) are consistent. We do not
+    // write them back to (P_, S_) before we are also sure that
+    // the properties to be set in the parent class are internally
+    // consistent.
+    Archiving_Node::set_status(d);
 
-  // if we get here, temporaries contain consistent set of properties
-  P_ = ptmp;
-  S_ = stmp;
-}
+    // if we get here, temporaries contain consistent set of properties
+    P_ = ptmp;
+    S_ = stmp;
+  }
 
-} // namespace
+} // namespace nest
 
-#endif /* #ifndef PIF_PSC_ALPHA_H */
+#endif /* #ifndef IZHIKEVICH_BUILT_IN_H */
