@@ -291,7 +291,7 @@ TestModule_la-TestModule.lo: TestModule.cpp \
  /Users/tclose/git/nest/sli/booldatum.h \
  /Users/tclose/git/nest/sli/integerdatum.h \
  /Users/tclose/git/nest/nestkernel/exceptions.h \
- /Users/tclose/git/nest/nestkernel/nestmodule.h test.h \
+ /Users/tclose/git/nest/nestkernel/nestmodule.h TestModule.h Test.h \
  /Users/tclose/git/nest/nestkernel/nest.h \
  /Users/tclose/git/nest/nestkernel/event.h \
  /Users/tclose/git/nest/nestkernel/node.h \
@@ -299,7 +299,7 @@ TestModule_la-TestModule.lo: TestModule.cpp \
  /Users/tclose/git/nest/nestkernel/connection.h \
  /Users/tclose/git/nest/sli/doubledatum.h \
  /Users/tclose/git/nest/nestkernel/universal_data_logger.h \
- /Users/tclose/git/nest/nestkernel/recordables_map.h TestModule.h
+ /Users/tclose/git/nest/nestkernel/recordables_map.h
 
 /Users/tclose/git/nest/build/libnestutil/config.h:
 
@@ -1017,7 +1017,9 @@ TestModule_la-TestModule.lo: TestModule.cpp \
 
 /Users/tclose/git/nest/nestkernel/nestmodule.h:
 
-test.h:
+TestModule.h:
+
+Test.h:
 
 /Users/tclose/git/nest/nestkernel/nest.h:
 
@@ -1034,5 +1036,3 @@ test.h:
 /Users/tclose/git/nest/nestkernel/universal_data_logger.h:
 
 /Users/tclose/git/nest/nestkernel/recordables_map.h:
-
-TestModule.h:

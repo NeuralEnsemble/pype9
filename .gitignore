@@ -21,3 +21,4 @@ x86_64
 *.dylib
 *.o
 .libs
+*.Plo
