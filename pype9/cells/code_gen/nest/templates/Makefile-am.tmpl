@@ -15,10 +15,10 @@ lib{{name}}Module_la_SOURCES=  $({{name}}Module_la_SOURCES)
 
 MAKEFLAGS= @MAKE_FLAGS@
 
-AM_CPPFLAGS= @NEST_CPPFLAGS@ \{% if ode_solver in ('cvode', 'ida') %}
-             @SUNDIALS_CPPFLAGS@ \
-{% endif %}             
-             @INCLTDL@
+AM_CPPFLAGS= @NEST_CPPFLAGS@ \
+{% if ode_solver in ('cvode', 'ida') %}
+             @SUNDIALS_CPPFLAGS@ \  
+{% endif %}@INCLTDL@
 
 {% if ode_solver in ('cvode', 'ida') %}
 AM_LDFLAGS = @SUNDIALS_LDFLAGS@

@@ -1,5 +1,5 @@
 AC_PREREQ(2.52)
-AC_INIT([TestModule], [1.0], [nest_user@nest-initiative.org])
+AC_INIT([IzhikevichBuiltInModule], [1.0], [nest_user@nest-initiative.org])
 
 # Exporting source and build directories requires full path names.
 # Thus we have to expand.
@@ -152,7 +152,7 @@ AC_SUBST(MAKE_FLAGS)
 AC_SUBST(INCLTDL)
 AC_SUBST(LIBLTDL)
 
-AC_CONFIG_HEADER(TestModule_config.h:TestModule_config.h.in)
+AC_CONFIG_HEADER(IzhikevichBuiltInModule_config.h:IzhikevichBuiltInModule_config.h.in)
 AC_CONFIG_FILES(Makefile)
 
 # -----------------------------------------------
@@ -169,7 +169,7 @@ AC_OUTPUT
 
 echo
 echo "-------------------------------------------------------"
-echo "TestModule Configuration Summary"
+echo "IzhikevichBuiltInModule Configuration Summary"
 echo "-------------------------------------------------------"
 echo
 echo "C++ compiler        : $CXX"
@@ -184,9 +184,9 @@ eval eval eval  PKGDATADIR_AS_CONFIGURED=$PKGDATADIR
 echo
 echo "-------------------------------------------------------"
 echo
-echo "You can build and install TestModule now, using"
+echo "You can build and install IzhikevichBuiltInModule now, using"
 echo "  make"
 echo "  make install"
 echo
-echo "TestModule will be installed to:"
+echo "IzhikevichBuiltInModule will be installed to:"
 echo -n "  "; eval eval echo "$libdir"

@@ -1,5 +1,5 @@
 /*
- *  TestModule.h
+ *  IzhikevichBuiltInModule.h
  *
  *  This file is part of NEST.
  *
@@ -33,7 +33,7 @@ namespace nineml {
  * Class defining your model.
  * @note For each model, you must define one such class, with a unique name.
  */
-class TestModule : public DynModule {
+class IzhikevichBuiltInModule : public DynModule {
  public:
 
   // Interface functions ------------------------------------------
@@ -42,13 +42,13 @@ class TestModule : public DynModule {
    * @note The constructor registers the module with the dynamic loader.
    *       Initialization proper is performed by the init() method.
    */
-  TestModule();
+  IzhikevichBuiltInModule();
 
   /**
    * @note The destructor does not do much in modules. Proper "downrigging"
    *       is the responsibility of the unregister() method.
    */
-  ~TestModule();
+  ~IzhikevichBuiltInModule();
 
   /**
    * Initialize module by registering models with the network.
@@ -65,7 +65,7 @@ class TestModule : public DynModule {
   const std::string name(void) const;
 
   /**
-   * Return the name of a sli file to execute when TestModule is loaded.
+   * Return the name of a sli file to execute when IzhikevichBuiltInModule is loaded.
    * This mechanism can be used to define SLI commands associated with your
    * module, in particular, set up type tries for functions you have defined.
    */

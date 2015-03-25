@@ -5,7 +5,7 @@
 //----------------------------------------------//
 // This section was generated from includes.tmpl //
 //----------------------------------------------//
-#include "Test.h"
+#include "IzhikevichBuiltIn.h"
 #include "exceptions.h"
 #include "network.h"
 #include "dict.h"
@@ -24,17 +24,17 @@ using namespace nest;
  * Recordables map
  * ---------------------------------------------------------------- */
 
-nest::RecordablesMap<nineml::Test> nineml::Test::recordablesMap_;
+nest::RecordablesMap<nineml::IzhikevichBuiltIn> nineml::IzhikevichBuiltIn::recordablesMap_;
 
 namespace nest
 {
   // Override the create() method with one call to RecordablesMap::insert_()
   // for each quantity to be recorded.
   template <>
-  void RecordablesMap<nineml::Test>::create()
+  void RecordablesMap<nineml::IzhikevichBuiltIn>::create()
   {
     // use standard names whereever you can for consistency!
-    insert_(names::V_m, &nineml::Test::get_V_m_);
+    insert_(names::V_m, &nineml::IzhikevichBuiltIn::get_V_m_);
   }
 }
 
@@ -43,7 +43,7 @@ namespace nest
  * Default constructors defining default parameters and state
  * ---------------------------------------------------------------- */
 
-nineml::Test::Parameters_::Parameters_()
+nineml::IzhikevichBuiltIn::Parameters_::Parameters_()
   : C_m    (250.0),  // pF
     I_e    (  0.0),  // nA
     tau_syn(  2.0),  // ms
@@ -52,7 +52,7 @@ nineml::Test::Parameters_::Parameters_()
     t_ref  (  2.0)   // ms
   {}
 
-nineml::Test::State_::State_(const Parameters_& p)
+nineml::IzhikevichBuiltIn::State_::State_(const Parameters_& p)
   : V_m       (p.V_reset),
     dI_syn    (0.0),
     I_syn     (0.0),
@@ -64,7 +64,7 @@ nineml::Test::State_::State_(const Parameters_& p)
  * Parameter and state extractions and manipulation functions
  * ---------------------------------------------------------------- */
 
-void nineml::Test::Parameters_::get(DictionaryDatum &d) const
+void nineml::IzhikevichBuiltIn::Parameters_::get(DictionaryDatum &d) const
 {
   (*d)[names::C_m    ] = C_m;
   (*d)[names::I_e    ] = I_e;
@@ -74,7 +74,7 @@ void nineml::Test::Parameters_::get(DictionaryDatum &d) const
   (*d)[names::t_ref  ] = t_ref;
 }
 
-void nineml::Test::Parameters_::set(const DictionaryDatum& d)
+void nineml::IzhikevichBuiltIn::Parameters_::set(const DictionaryDatum& d)
 {
   updateValue<double>(d, names::C_m, C_m);
   updateValue<double>(d, names::I_e, I_e);
@@ -96,25 +96,25 @@ void nineml::Test::Parameters_::set(const DictionaryDatum& d)
     throw nest::BadProperty("The refractory time must be at least one simulation step.");
 }
 
-void nineml::Test::State_::get(DictionaryDatum &d) const
+void nineml::IzhikevichBuiltIn::State_::get(DictionaryDatum &d) const
 {
   // Only the membrane potential is shown in the status; one could show also the other
   // state variables
   (*d)[names::V_m] = V_m;
 }
 
-void nineml::Test::State_::set(const DictionaryDatum& d, const Parameters_& p)
+void nineml::IzhikevichBuiltIn::State_::set(const DictionaryDatum& d, const Parameters_& p)
 {
   // Only the membrane potential can be set; one could also make other state variables
   // settable.
   updateValue<double>(d, names::V_m, V_m);
 }
 
-nineml::Test::Buffers_::Buffers_(Test &n)
+nineml::IzhikevichBuiltIn::Buffers_::Buffers_(IzhikevichBuiltIn &n)
   : logger_(n)
 {}
 
-nineml::Test::Buffers_::Buffers_(const Buffers_ &, Test &n)
+nineml::IzhikevichBuiltIn::Buffers_::Buffers_(const Buffers_ &, IzhikevichBuiltIn &n)
   : logger_(n)
 {}
 
@@ -123,7 +123,7 @@ nineml::Test::Buffers_::Buffers_(const Buffers_ &, Test &n)
  * Default and copy constructor for node
  * ---------------------------------------------------------------- */
 
-nineml::Test::Test()
+nineml::IzhikevichBuiltIn::IzhikevichBuiltIn()
   : Node(),
     P_(),
     S_(P_),
@@ -132,7 +132,7 @@ nineml::Test::Test()
   recordablesMap_.create();
 }
 
-nineml::Test::Test(const Test& n)
+nineml::IzhikevichBuiltIn::IzhikevichBuiltIn(const IzhikevichBuiltIn& n)
   : Node(n),
     P_(n.P_),
     S_(n.S_),
@@ -143,20 +143,20 @@ nineml::Test::Test(const Test& n)
  * Node initialization functions
  * ---------------------------------------------------------------- */
 
-void nineml::Test::init_state_(const Node& proto)
+void nineml::IzhikevichBuiltIn::init_state_(const Node& proto)
 {
-  const Test& pr = downcast<Test>(proto);
+  const IzhikevichBuiltIn& pr = downcast<IzhikevichBuiltIn>(proto);
   S_ = pr.S_;
 }
 
-void nineml::Test::init_buffers_()
+void nineml::IzhikevichBuiltIn::init_buffers_()
 {
   B_.spikes.clear();    // includes resize
   B_.currents.clear();  // include resize
   B_.logger_.reset(); // includes resize
 }
 
-void nineml::Test::calibrate()
+void nineml::IzhikevichBuiltIn::calibrate()
 {
   B_.logger_.init();
 
@@ -185,7 +185,7 @@ void nineml::Test::calibrate()
  * Update and spike handling functions
  * ---------------------------------------------------------------- */
 
-void nineml::Test::update(Time const& slice_origin,
+void nineml::IzhikevichBuiltIn::update(Time const& slice_origin,
                                    const nest::long_t from_step,
                                    const nest::long_t to_step)
 {
@@ -229,7 +229,7 @@ void nineml::Test::update(Time const& slice_origin,
   }
 }
 
-void nineml::Test::handle(SpikeEvent & e)
+void nineml::IzhikevichBuiltIn::handle(SpikeEvent & e)
 {
   assert(e.get_delay() > 0);
 
@@ -237,7 +237,7 @@ void nineml::Test::handle(SpikeEvent & e)
                       e.get_weight());
 }
 
-void nineml::Test::handle(CurrentEvent& e)
+void nineml::IzhikevichBuiltIn::handle(CurrentEvent& e)
 {
   assert(e.get_delay() > 0);
 
@@ -247,7 +247,7 @@ void nineml::Test::handle(CurrentEvent& e)
 
 // Do not move this function as inline to h-file. It depends on
 // universal_data_logger_impl.h being included here.
-void nineml::Test::handle(DataLoggingRequest& e)
+void nineml::IzhikevichBuiltIn::handle(DataLoggingRequest& e)
 {
   B_.logger_.handle(e);  // the logger does this for us
 }

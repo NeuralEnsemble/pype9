@@ -1,5 +1,5 @@
 /*
- *  Test.h
+ *  IzhikevichBuiltIn.h
  *
  *  This file is part of NEST.
  *
@@ -45,10 +45,10 @@
 namespace nineml {
 
   /* BeginDocumentation
-Name: Test - Perfect integrate-and-fire neuron model with alpha PSC synapse.
+Name: IzhikevichBuiltIn - Perfect integrate-and-fire neuron model with alpha PSC synapse.
 
 Description:
-  Test implements a non-leaky integrate-and-fire neuron with
+  IzhikevichBuiltIn implements a non-leaky integrate-and-fire neuron with
   with alpha-function shaped synaptic currents. The threshold crossing is
   followed by an absolute refractory period during which the membrane potential
   is clamped to the resting potential, while synaptic currents evolve normally.
@@ -96,14 +96,14 @@ iaf_psc_delta, iaf_psc_exp, iaf_psc_alpha
   /**
    * Non-leaky integrate-and-fire neuron with alpha-shaped PSCs.
    */
-  class Test : public nest::Node
+  class IzhikevichBuiltIn : public nest::Node
   {
   public:
 
     /**
      * The constructor is only used to create the model prototype in the model manager.
      */
-    Test();
+    IzhikevichBuiltIn();
 
     /**
      * The copy constructor is used to create model copies and instances of the model.
@@ -111,7 +111,7 @@ iaf_psc_delta, iaf_psc_exp, iaf_psc_alpha
      *       Initialization of buffers and interal variables is deferred to
      *       @c init_buffers_() and @c calibrate().
      */
-    Test(const Test&);
+    IzhikevichBuiltIn(const IzhikevichBuiltIn&);
 
     /**
      * Import sets of overloaded virtual functions.
@@ -161,8 +161,8 @@ iaf_psc_delta, iaf_psc_exp, iaf_psc_alpha
     void update(nest::Time const &, const nest::long_t, const nest::long_t);
 
     // The next two classes need to be friends to access the State_ class/member
-    friend class nest::RecordablesMap<Test>;
-    friend class nest::UniversalDataLogger<Test>;
+    friend class nest::RecordablesMap<IzhikevichBuiltIn>;
+    friend class nest::UniversalDataLogger<IzhikevichBuiltIn>;
 
     /**
      * Free parameters of the neuron.
@@ -256,14 +256,14 @@ iaf_psc_delta, iaf_psc_exp, iaf_psc_alpha
      *       cannot destroy themselves, Buffers_ will need a destructor.
      */
     struct Buffers_ {
-      Buffers_(Test&);
-      Buffers_(const Buffers_ &, Test&);
+      Buffers_(IzhikevichBuiltIn&);
+      Buffers_(const Buffers_ &, IzhikevichBuiltIn&);
 
       nest::RingBuffer spikes;    //!< Buffer incoming spikes through delay, as sum
       nest::RingBuffer currents;  //!< Buffer incoming currents through delay, as sum
 
       //! Logger for all analog data
-      nest::UniversalDataLogger<Test> logger_;
+      nest::UniversalDataLogger<IzhikevichBuiltIn> logger_;
     };
 
     /**
@@ -311,13 +311,13 @@ iaf_psc_delta, iaf_psc_exp, iaf_psc_alpha
     Buffers_    B_;  //!< Buffers.
 
     //! Mapping of recordables names to access functions
-    static nest::RecordablesMap<Test> recordablesMap_;
+    static nest::RecordablesMap<IzhikevichBuiltIn> recordablesMap_;
 
     /** @} */
   };
 
 inline
-nest::port nineml::Test::check_connection(nest::Connection& c, nest::port receptor_type)
+nest::port nineml::IzhikevichBuiltIn::check_connection(nest::Connection& c, nest::port receptor_type)
 {
   // You should usually not change the code in this function.
   // It confirms that the target of connection @c c accepts @c SpikeEvent on
@@ -329,7 +329,7 @@ nest::port nineml::Test::check_connection(nest::Connection& c, nest::port recept
 }
 
 inline
-nest::port nineml::Test::connect_sender(nest::SpikeEvent&, nest::port receptor_type)
+nest::port nineml::IzhikevichBuiltIn::connect_sender(nest::SpikeEvent&, nest::port receptor_type)
 {
   // You should usually not change the code in this function.
   // It confirms to the connection management system that we are able
@@ -341,7 +341,7 @@ nest::port nineml::Test::connect_sender(nest::SpikeEvent&, nest::port receptor_t
 }
 
 inline
-nest::port nineml::Test::connect_sender(nest::CurrentEvent&, nest::port receptor_type)
+nest::port nineml::IzhikevichBuiltIn::connect_sender(nest::CurrentEvent&, nest::port receptor_type)
 {
   // You should usually not change the code in this function.
   // It confirms to the connection management system that we are able
@@ -353,7 +353,7 @@ nest::port nineml::Test::connect_sender(nest::CurrentEvent&, nest::port receptor
 }
 
 inline
-nest::port nineml::Test::connect_sender(nest::DataLoggingRequest& dlr,
+nest::port nineml::IzhikevichBuiltIn::connect_sender(nest::DataLoggingRequest& dlr,
 						 nest::port receptor_type)
 {
   // You should usually not change the code in this function.
@@ -368,7 +368,7 @@ nest::port nineml::Test::connect_sender(nest::DataLoggingRequest& dlr,
 }
 
 inline
-void Test::get_status(DictionaryDatum &d) const
+void IzhikevichBuiltIn::get_status(DictionaryDatum &d) const
 {
   P_.get(d);
   S_.get(d);
@@ -376,7 +376,7 @@ void Test::get_status(DictionaryDatum &d) const
 }
 
 inline
-void Test::set_status(const DictionaryDatum &d)
+void IzhikevichBuiltIn::set_status(const DictionaryDatum &d)
 {
   Parameters_ ptmp = P_;  // temporary copy in case of errors
   ptmp.set(d);                       // throws if BadProperty

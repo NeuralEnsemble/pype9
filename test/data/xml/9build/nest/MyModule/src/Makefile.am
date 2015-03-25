@@ -1,20 +1,20 @@
 libdir= @libdir@/nest
 
-lib_LTLIBRARIES=      TestModule.la libTestModule.la
+lib_LTLIBRARIES=      IzhikevichBuiltInModule.la libIzhikevichBuiltInModule.la
 
-TestModule_la_CXXFLAGS= @AM_CXXFLAGS@
-TestModule_la_SOURCES=  TestModule.cpp TestModule.h \
-                            Test.cpp Test.h
+IzhikevichBuiltInModule_la_CXXFLAGS= @AM_CXXFLAGS@
+IzhikevichBuiltInModule_la_SOURCES=  IzhikevichBuiltInModule.cpp IzhikevichBuiltInModule.h \
+                            IzhikevichBuiltIn.cpp IzhikevichBuiltIn.h
                             
 
 
-TestModule_la_LDFLAGS=  -module
-libTestModule_la_CXXFLAGS= $(TestModule_la_CXXFLAGS) -DLINKED_MODULE
-libTestModule_la_SOURCES=  $(TestModule_la_SOURCES)
+IzhikevichBuiltInModule_la_LDFLAGS=  -module
+libIzhikevichBuiltInModule_la_CXXFLAGS= $(IzhikevichBuiltInModule_la_CXXFLAGS) -DLINKED_MODULE
+libIzhikevichBuiltInModule_la_SOURCES=  $(IzhikevichBuiltInModule_la_SOURCES)
 
 MAKEFLAGS= @MAKE_FLAGS@
 
-AM_CPPFLAGS= @NEST_CPPFLAGS@ \             
+AM_CPPFLAGS= @NEST_CPPFLAGS@ \
              @INCLTDL@
 
 
@@ -23,7 +23,7 @@ AM_CPPFLAGS= @NEST_CPPFLAGS@ \
 pkgdatadir=@datadir@/nest
 
 nobase_pkgdata_DATA=\
-	sli/TestModule-init.sli
+	sli/IzhikevichBuiltInModule-init.sli
 
 install-slidoc:
 	NESTRCFILENAME=/dev/null $(DESTDIR)$(NEST_PREFIX)/bin/sli --userargs="@HELPDIRS@" \
