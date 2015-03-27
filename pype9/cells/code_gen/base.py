@@ -75,9 +75,8 @@ class BaseCodeGenerator(object):
         """
         pass
 
-    @abstractmethod
-    def configure_build_files(self, component, componentclass, src_dir,
-                              compile_dir, install_dir):
+    def configure_build_files(self, name, src_dir, compile_dir, install_dir,
+                              **kwargs):
         """
         Configures the build files before compiling
         """

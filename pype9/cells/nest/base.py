@@ -10,10 +10,13 @@
 from __future__ import absolute_import
 import sys
 import os.path
+import neo
 import nest
+import quantities as pq
 from pype9.cells.code_gen.nest import CodeGenerator
 from .simulation_controller import simulation_controller
 from pype9.cells import base
+from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE
 
 
 basic_nineml_translations = {
@@ -49,17 +52,32 @@ class Cell(base.Cell):
         nest.SetStatus(self._cell, prop.name, prop.value)
 
     def record(self, variable):
-        key = (variable, None, None)
         self._initialise_local_recording()
-        if variable == 'spikes':
-            raise NotImplementedError
-        elif variable == 'v':
-            self._recordings[key] = recorder = nest.Create('voltmeter')
-            nest.Connect(recorder, self._cell)
-        else:
-            raise NotImplementedError(
-                "Haven't implemented non-membrane voltage recording for NEST "
-                "yet.")
+        if variable == self.componentclass.annotations[
+                PYPE9_NS][MEMBRANE_VOLTAGE]:
+            variable = self.build_componentclass.annotations[
+                PYPE9_NS][MEMBRANE_VOLTAGE]
+        self._recorders[variable] = recorder = nest.Create('multimeter')
+        nest.SetStatus(recorder, {'record_from': [variable]})
+        nest.Connect(recorder, self._cell)
+
+    def recording(self, variable):
+        """
+        Return recorded data as a dictionary containing one numpy array for
+        each neuron, ids as keys.
+        """
+        if variable == self.componentclass.annotations[
+                PYPE9_NS][MEMBRANE_VOLTAGE]:
+            variable = self.build_componentclass.annotations[
+                PYPE9_NS][MEMBRANE_VOLTAGE]
+        events = nest.GetStatus(self._recorders[variable], 'events')[0]
+#         ids = events['senders']
+        data = neo.AnalogSignal(
+            events[variable],
+            sampling_period=self._controller.dt * pq.ms,
+            t_start=0.0 * pq.ms, units='mV',  # FIXME: This should be read from prop. @IgnorePep8
+            name=variable)
+        return data
 
     def inject_current(self, current):
         """

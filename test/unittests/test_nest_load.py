@@ -33,12 +33,10 @@ class TestNestLoad(TestCase):
 #                   'b': 0.2,
 #                   'c': -65.0,
 #                   'd': 2}
-        pnn = nest.Create('izhikevich')
-        voltmeter = nest.Create('voltmeter')
-        nest.Connect(voltmeter, pnn)
-        # Record Time from NEURON (neuron.h._ref_t)
-#         rec = Recorder(pnn, pnn_izhi)
-#         rec.record('v')
+        pynn = nest.Create('izhikevich')
+        multimeter = nest.Create('multimeter')
+        nest.SetStatus(multimeter, {'record_from': ['V_m']})
+        nest.Connect(multimeter, pynn)
         # ---------------------------------------------------------------------
         # Set up 9ML cell
         # ---------------------------------------------------------------------
@@ -46,17 +44,19 @@ class TestNestLoad(TestCase):
         print nml.a
         nml.inject_current(neo.AnalogSignal([0.0] + [0.2] * 9, units='nA',
                                              sampling_period=1 * pq.ms))
-        nml.record('v')
+        nml.record('V')
         simulator.initialize()  # @UndefinedVariable
         nml.u = -14.0 * pq.mV / pq.ms
         # pnn_izhi.u = -14.0
-        simulator.run(10, reset=False)  # @UndefinedVariable
-        nml_v = nml.recording('v')
-#         pnn_t, pnn_v = voltmeter.recording('v')  # @UnusedVariable
+        simulator.run(1000, reset=False)  # @UndefinedVariable
+        nml_v = nml.recording('V')
+        pynn_v = neo.AnalogSignal(
+            nest.GetStatus(multimeter, 'events')[0]['V_m'],
+            sampling_period=simulator.dt * pq.ms, units='mV')  # @UndefinedVariable @IgnorePep8
 #         self.assertAlmostEqual(float((nml_v - pnn_v[1:] * pq.mV).sum()), 0)
-#         plt.plot(pnn_t[:-1], pnn_v[1:])
+        plt.plot(pynn_v.times, pynn_v)
         plt.plot(nml_v.times, nml_v)
-#         plt.legend(('PyNN v', '9ML v'))
+        plt.legend(('PyNN v', '9ML v'))
         plt.show()
 
 

@@ -222,9 +222,6 @@ class CodeGenerator(BaseCodeGenerator):
         return Dynamics(
             prototype.name, Definition(trans.name, Document(trans)), props)
 
-    def configure_build_files(self, name, src_dir, compile_dir, install_dir):
-        pass
-
     def compile_source_files(self, compile_dir, component_name, verbose):
         """
         Builds all NMODL files in a directory
