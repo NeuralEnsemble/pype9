@@ -12,9 +12,9 @@ import numpy
 import nineml
 from quantities import Quantity
 from nineml.abstraction_layer import (
-    Unit, DynamicsClass, ConnectionRuleClass, DistributionClass)
+    Unit, DynamicsClass, ConnectionRuleClass, RandomDistributionClass)
 from nineml.user_layer import (
-    Property, Dynamics, ConnectionRule, Distribution)
+    Property, Dynamics, ConnectionRule, RandomDistribution)
 from copy import copy
 from nineml.exceptions import NineMLMissingElementError
 import math
@@ -215,8 +215,8 @@ def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,
             ComponentType = Dynamics
         elif isinstance(componentclass, ConnectionRuleClass):
             ComponentType = ConnectionRule
-        elif isinstance(componentclass, DistributionClass):
-            ComponentType = Distribution
+        elif isinstance(componentclass, RandomDistributionClass):
+            ComponentType = RandomDistribution
         prototype = ComponentType(name=componentclass.name + 'Component',
                                   properties=properties)
     elif isinstance(url_or_comp, nineml.user_layer.Component):

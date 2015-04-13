@@ -17,7 +17,7 @@ class TestNeuronBuild(TestCase):
 
     def test_neuron_build(self):
         self.code_generator.generate(self.izhikevich_file,
-                                     name=self.izhikevich_name,
+#                                      name=self.izhikevich_name,
                                      build_mode='force',
                                      ode_solver='derivimplicit',
                                      membrane_voltage='V',

@@ -230,7 +230,7 @@ NET_RECEIVE(w, channel) {
                     printf("Warning! Simulataneous regime changes requested, ignoring change from '{{regime.name}}' to '{{oc.target_regime.name}}'.")
                 }
 	            {% endif %}
-	        {% for node in oc.event_outputs %}
+	        {% for node in oc.output_events %}
                 net_event(t)
 	        {% endfor %}
 	        {% for sa in oc.state_assignments %}
