@@ -38,11 +38,10 @@ class TestNestLoad(TestCase):
         pynn_iclamp = nest.Create('step_current_generator')
         nest.Create('step_current_generator')
         nest.Connect(pynn_iclamp, pynn)
-        nest.SetStatus(pynn_iclamp, {'amplitude_values': [0.0] + [0.2] * 9,
-                                      'amplitude_times': numpy.arange(1,
-                                                                      10, 1),
-                                      'start': 0.0,
-                                      'stop': 10.0})
+        nest.SetStatus(pynn_iclamp, {
+            'amplitude_values': numpy.asarray([0.0] + [10.0] * 9),
+            'amplitude_times': numpy.arange(0.0, 10.0, 1.0),
+            'start': 0.0, 'stop': 10.0})
         multimeter = nest.Create('multimeter')
         nest.SetStatus(multimeter, {'record_from': ['V_m']})
         nest.Connect(multimeter, pynn)
