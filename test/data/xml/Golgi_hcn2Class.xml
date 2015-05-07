@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <NineML xmlns="http://nineml.net/9ML/1.0">
-  <ComponentClass name="Golgi_hcn2Class">
+  <Dynamics name="Golgi_hcn2Class">
     <AnalogSendPort dimension="currentDensity" name="ih"/>
     <AnalogReceivePort dimension="temperature" name="celsius"/>
     <AnalogReceivePort dimension="voltage" name="v"/>
@@ -17,7 +17,7 @@
     <Parameter dimension="conductanceDensity" name="gbar"/>
     <Parameter dimension="per_voltage" name="tEs"/>
     <Parameter dimension="voltage" name="Ehalf"/>
-    <Dynamics>
+    
       <Regime name="state">
         <TimeDerivative variable="o_fast">
           <MathInline>(o_fast_inf - o_fast) / tau_f</MathInline>
@@ -74,10 +74,9 @@
       <StateVariable name="o_fast"/>
       <StateVariable name="o_slow"/>
     </Dynamics>
-  </ComponentClass>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="-1" t="-3" m="1" l="2" name="voltage"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" k="1" name="temperature"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" t="3" m="-1" l="-2" name="per_voltage"/>
-  <nineml:Dimension xmlns:nineml="http://nineml.net/9ML/1.0" i="1" name="currentDensity" l="-2"/>
+  <Dimension xmlns="http://nineml.net/9ML/1.0" i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <Dimension xmlns="http://nineml.net/9ML/1.0" k="1" name="temperature"/>
+  <Dimension xmlns="http://nineml.net/9ML/1.0" i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <Dimension xmlns="http://nineml.net/9ML/1.0" i="1" t="3" m="-1" l="-2" name="per_voltage"/>
+  <Dimension xmlns="http://nineml.net/9ML/1.0" i="1" name="currentDensity" l="-2"/>
 </NineML>

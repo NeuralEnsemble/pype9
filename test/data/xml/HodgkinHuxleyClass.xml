@@ -6,7 +6,7 @@
   <Dimension name="specificCapacitance" m="-1" l="-4" t="4" i="2"/>
   <Dimension name="current" i="1"/>
   <Dimension name="temperature" k="1"/>
-  <ComponentClass name="HodgkinHuxleyClass">
+  <Dynamics name="HodgkinHuxleyClass">
     <Annotations>
       <Description>This class implements the basic Hodgkin Huxley model</Description>
     </Annotations>
@@ -41,7 +41,7 @@
     <!--<AnalogReceivePort name="injectedCurrent" dimension="current"/>-->
     <EventReceivePort name="incomingSpike"/>
     <EventSendPort name="outgoingSpike"/>
-    <Dynamics>
+    
       <Annotations><Description>Dynamics are used to describe components that are added to the differential equation solver</Description></Annotations>
       <StateVariable name="v" dimension="voltage"/>
       <StateVariable name="m"/>
@@ -120,5 +120,4 @@
         <MathInline>n_beta_A * exp(-(v - n_beta_V0) / n_beta_K)</MathInline>
       </Alias>
     </Dynamics>
-  </ComponentClass>
 </NineML>

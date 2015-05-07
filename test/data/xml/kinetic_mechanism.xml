@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <NineML xmlns="http://nineml.net/9ML/1.0">
-  <ComponentClass name="Kinetic_Class">
+  <Dynamics name="Kinetic_Class">
     <Parameter name="d1" dimension="voltage"/>
     <Parameter name="d2" dimension="voltage"/>
     <Parameter name="k1" dimension="per_voltage"/>
@@ -41,7 +41,7 @@
         <MathInline>exp(-k2*(d2-v)) </MathInline>
       </Alias>
     </Kinetics>
-  </ComponentClass>
+  </Dynamics>
   <Component name="KineticsTest">
     <Definition>Kinetic_Class</Definition>
     <Property name="d1" units="mV">

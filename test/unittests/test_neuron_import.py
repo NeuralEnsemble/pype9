@@ -4,7 +4,7 @@ from pype9.importer.neuron.hoc import HocImporter
 from pype9.importer.neuron.nmodl import NMODLImporter
 import nineml
 from nineml.abstraction_layer import (
-    units as un, AnalogSendPort, AnalogReceivePort, Parameter, DynamicsClass,
+    units as un, AnalogSendPort, AnalogReceivePort, Parameter, Dynamics,
     TimeDerivative, Alias, StateVariable)
 from utils import test_data_dir
 # from lxml import etree
@@ -34,7 +34,7 @@ class TestHocImporter(TestCase):
 
 class TestNMODLImporter(TestCase):
 
-    naf_class = DynamicsClass(
+    naf_class = Dynamics(
         name="NaF",
         parameters=[Parameter("qdeltat", un.dimensionless),
                     Parameter("gbar", un.conductance)],
@@ -61,7 +61,7 @@ class TestNMODLImporter(TestCase):
                           StateVariable('h', un.dimensionless)])
 #         """<?xml version='1.0' encoding='UTF-8'?>
 #         <NineML xmlns="http://nineml.org/9ML/0.3">
-#           <ComponentClass name="NaF">
+#           <Dynamics name="NaF">
 #             <AnalogPort mode="send" dimension="dimensionless" name="m"/>
 #             <AnalogPort mode="send" dimension="dimensionless" name="h"/>
 #             <AnalogPort mode="recv" dimension="voltage" name="ena"/>
@@ -106,7 +106,7 @@ class TestNMODLImporter(TestCase):
 #               <StateVariable dimension="dimensionless" name="h"/>
 #               <StateVariable dimension="dimensionless" name="m"/>
 #             </Dynamics>
-#           </ComponentClass>
+#           </Dynamics>
 #         </NineML>""")
 
     def test_nmodl_import(self):

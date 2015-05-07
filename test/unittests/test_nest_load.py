@@ -9,10 +9,11 @@ import pylab as plt
 from pype9.cells.nest import (
     CellMetaClass, simulation_controller as simulator)
 from nineml.user_layer import Property
-from nineml.abstraction_layer import units as un
+from nineml import units as un
 import quantities as pq
 import neo
 import nest
+import numpy
 
 
 class TestNestLoad(TestCase):
@@ -34,6 +35,14 @@ class TestNestLoad(TestCase):
 #                   'c': -65.0,
 #                   'd': 2}
         pynn = nest.Create('izhikevich')
+        pynn_iclamp = nest.Create('step_current_generator')
+        nest.Create('step_current_generator')
+        nest.Connect(pynn_iclamp, pynn)
+        nest.SetStatus(pynn_iclamp, {'amplitude_values': [0.0] + [0.2] * 9,
+                                      'amplitude_times': numpy.arange(1,
+                                                                      10, 1),
+                                      'start': 0.0,
+                                      'stop': 10.0})
         multimeter = nest.Create('multimeter')
         nest.SetStatus(multimeter, {'record_from': ['V_m']})
         nest.Connect(multimeter, pynn)
@@ -56,7 +65,7 @@ class TestNestLoad(TestCase):
 #         self.assertAlmostEqual(float((nml_v - pnn_v[1:] * pq.mV).sum()), 0)
         plt.plot(pynn_v.times, pynn_v)
         plt.plot(nml_v.times, nml_v)
-        plt.legend(('PyNN v', '9ML v'))
+#         plt.legend(('PyNN v', '9ML v'))
         plt.show()
 
 

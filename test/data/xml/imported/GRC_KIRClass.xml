@@ -1,63 +1,62 @@
 <?xml version='1.0' encoding='UTF-8' standalone='yes'?>
-<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
-  <nineml:Dimension name="per_time" t="-1"/>
-  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-  <nineml:Dimension i="1" name="currentDensity" l="-2"/>
-  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
-  <nineml:ComponentClass name="GRC_KIRClass">
-    <nineml:AnalogSendPort dimension="currentDensity" name="ik"/>
-    <nineml:AnalogReceivePort dimension="voltage" name="v"/>
-    <nineml:Parameter dimension="voltage" name="ek"/>
-    <nineml:Parameter dimension="voltage" name="Kbeta_d"/>
-    <nineml:Parameter dimension="conductanceDensity" name="gkbar"/>
-    <nineml:Parameter dimension="voltage" name="V0beta_d"/>
-    <nineml:Parameter dimension="per_time" name="Abeta_d"/>
-    <nineml:Parameter dimension="per_time" name="Aalpha_d"/>
-    <nineml:Parameter dimension="temperature" name="celsius"/>
-    <nineml:Parameter dimension="voltage" name="Kalpha_d"/>
-    <nineml:Parameter dimension="voltage" name="V0alpha_d"/>
-    <nineml:Dynamics>
-      <nineml:Regime name="states">
-        <nineml:TimeDerivative variable="d">
-          <nineml:MathInline>(d_inf - d)/tau_d</nineml:MathInline>
-        </nineml:TimeDerivative>
-      </nineml:Regime>
-      <nineml:Alias name="bet_d_v">
-        <nineml:MathInline>Q10_v*Abeta_d*exp((v-V0beta_d)/Kbeta_d)</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="alpha_d">
-        <nineml:MathInline>alp_d_v</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="Q10_v">
-        <nineml:MathInline>3^((celsius-20)/10)</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="g">
-        <nineml:MathInline>gkbar*d</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="tau_d">
-        <nineml:MathInline>1/(a_d + b_d)</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="b_d">
-        <nineml:MathInline>bet_d_v</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="alp_d_v">
-        <nineml:MathInline>Q10_v*Aalpha_d*exp((v-V0alpha_d)/Kalpha_d)</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="ik">
-        <nineml:MathInline>g*(v - ek)</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="a_d">
-        <nineml:MathInline>alp_d_v</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="beta_d">
-        <nineml:MathInline>bet_d_v</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="d_inf">
-        <nineml:MathInline>a_d/(a_d + b_d)</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:StateVariable dimension="dimensionless" name="d"/>
-    </nineml:Dynamics>
-  </nineml:ComponentClass>
-  <nineml:Dimension name="dimensionless"/>
-  <nineml:Dimension k="1" name="temperature"/>
-</nineml:NineML>
+<NineML xmlns="http://nineml.net/9ML/1.0">
+  <Dimension name="per_time" t="-1"/>
+  <Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <Dimension i="1" name="currentDensity" l="-2"/>
+  <Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <Dynamics name="GRC_KIRClass">
+    <AnalogSendPort dimension="currentDensity" name="ik"/>
+    <AnalogReceivePort dimension="voltage" name="v"/>
+    <Parameter dimension="voltage" name="ek"/>
+    <Parameter dimension="voltage" name="Kbeta_d"/>
+    <Parameter dimension="conductanceDensity" name="gkbar"/>
+    <Parameter dimension="voltage" name="V0beta_d"/>
+    <Parameter dimension="per_time" name="Abeta_d"/>
+    <Parameter dimension="per_time" name="Aalpha_d"/>
+    <Parameter dimension="temperature" name="celsius"/>
+    <Parameter dimension="voltage" name="Kalpha_d"/>
+    <Parameter dimension="voltage" name="V0alpha_d"/>
+    
+      <Regime name="states">
+        <TimeDerivative variable="d">
+          <MathInline>(d_inf - d)/tau_d</MathInline>
+        </TimeDerivative>
+      </Regime>
+      <Alias name="bet_d_v">
+        <MathInline>Q10_v*Abeta_d*exp((v-V0beta_d)/Kbeta_d)</MathInline>
+      </Alias>
+      <Alias name="alpha_d">
+        <MathInline>alp_d_v</MathInline>
+      </Alias>
+      <Alias name="Q10_v">
+        <MathInline>3^((celsius-20)/10)</MathInline>
+      </Alias>
+      <Alias name="g">
+        <MathInline>gkbar*d</MathInline>
+      </Alias>
+      <Alias name="tau_d">
+        <MathInline>1/(a_d + b_d)</MathInline>
+      </Alias>
+      <Alias name="b_d">
+        <MathInline>bet_d_v</MathInline>
+      </Alias>
+      <Alias name="alp_d_v">
+        <MathInline>Q10_v*Aalpha_d*exp((v-V0alpha_d)/Kalpha_d)</MathInline>
+      </Alias>
+      <Alias name="ik">
+        <MathInline>g*(v - ek)</MathInline>
+      </Alias>
+      <Alias name="a_d">
+        <MathInline>alp_d_v</MathInline>
+      </Alias>
+      <Alias name="beta_d">
+        <MathInline>bet_d_v</MathInline>
+      </Alias>
+      <Alias name="d_inf">
+        <MathInline>a_d/(a_d + b_d)</MathInline>
+      </Alias>
+      <StateVariable dimension="dimensionless" name="d"/>
+    </Dynamics>
+  <Dimension name="dimensionless"/>
+  <Dimension k="1" name="temperature"/>
+</NineML>

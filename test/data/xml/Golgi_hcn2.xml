@@ -1,52 +1,52 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
-  <nineml:Component name="Golgi_hcn2">
-    <nineml:Definition url="/Users/tclose/git/pype9/test/data/xml/Golgi_hcn2Class.xml"
-      >Golgi_hcn2Class</nineml:Definition>
-    <nineml:Property name="Ehalf" units="mV">
-      <nineml:SingleValue>-81.95</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property name="c" units="per_mV">
-      <nineml:SingleValue>0.1661</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property name="ehcn2" units="mV">
-      <nineml:SingleValue>-20.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property name="gbar" units="S_per_cm2">
-      <nineml:SingleValue>8e-05</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property name="q_10">
-      <nineml:SingleValue>3.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property name="rA" units="per_mV">
-      <nineml:SingleValue>-0.0227</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property name="rB">
-      <nineml:SingleValue>-1.4694</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property name="tCf">
-      <nineml:SingleValue>0.0269</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property name="tCs">
-      <nineml:SingleValue>0.0152</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property name="tDf" units="mV">
-      <nineml:SingleValue>-5.6111</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property name="tDs" units="mV">
-      <nineml:SingleValue>-5.2944</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property name="tEf" units="per_mV">
-      <nineml:SingleValue>2.3026</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property name="tEs" units="per_mV">
-      <nineml:SingleValue>2.3026</nineml:SingleValue>
-    </nineml:Property>
-  </nineml:Component>
-  <nineml:Unit symbol="per_mV" dimension="per_voltage" power="3"/>
-  <nineml:Dimension i="1" t="3" m="-1" l="-2" name="per_voltage"/>
-  <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
-  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
-  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
-</nineml:NineML>
+<NineML xmlns="http://nineml.net/9ML/1.0" xmlns="http://nineml.net/9ML/1.0">
+  <Component name="Golgi_hcn2">
+    <Definition url="/Users/tclose/git/pype9/test/data/xml/Golgi_hcn2Class.xml"
+      >Golgi_hcn2Class</Definition>
+    <Property name="Ehalf" units="mV">
+      <SingleValue>-81.95</SingleValue>
+    </Property>
+    <Property name="c" units="per_mV">
+      <SingleValue>0.1661</SingleValue>
+    </Property>
+    <Property name="ehcn2" units="mV">
+      <SingleValue>-20.0</SingleValue>
+    </Property>
+    <Property name="gbar" units="S_per_cm2">
+      <SingleValue>8e-05</SingleValue>
+    </Property>
+    <Property name="q_10">
+      <SingleValue>3.0</SingleValue>
+    </Property>
+    <Property name="rA" units="per_mV">
+      <SingleValue>-0.0227</SingleValue>
+    </Property>
+    <Property name="rB">
+      <SingleValue>-1.4694</SingleValue>
+    </Property>
+    <Property name="tCf">
+      <SingleValue>0.0269</SingleValue>
+    </Property>
+    <Property name="tCs">
+      <SingleValue>0.0152</SingleValue>
+    </Property>
+    <Property name="tDf" units="mV">
+      <SingleValue>-5.6111</SingleValue>
+    </Property>
+    <Property name="tDs" units="mV">
+      <SingleValue>-5.2944</SingleValue>
+    </Property>
+    <Property name="tEf" units="per_mV">
+      <SingleValue>2.3026</SingleValue>
+    </Property>
+    <Property name="tEs" units="per_mV">
+      <SingleValue>2.3026</SingleValue>
+    </Property>
+  </Component>
+  <Unit symbol="per_mV" dimension="per_voltage" power="3"/>
+  <Dimension i="1" t="3" m="-1" l="-2" name="per_voltage"/>
+  <Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
+  <Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <Unit symbol="mV" dimension="voltage" power="-3"/>
+  <Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+</NineML>

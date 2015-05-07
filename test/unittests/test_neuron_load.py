@@ -12,7 +12,7 @@ from pype9.cells.neuron import (
     CellMetaClass, simulation_controller as simulator)
 import numpy
 from nineml.user_layer import Property
-from nineml.abstraction_layer import units as un
+from nineml import units as un
 import quantities as pq
 import neo
 

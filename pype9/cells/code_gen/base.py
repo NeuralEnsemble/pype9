@@ -23,7 +23,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from itertools import izip
 from runpy import run_path
 from abc import ABCMeta, abstractmethod
-from nineml.abstraction_layer import units
+from nineml import units
 from nineml.user_layer import Component, Property
 from pype9.exceptions import (
     Pype9BuildError, Pype9RuntimeError, Pype9NoMatchingElementException,

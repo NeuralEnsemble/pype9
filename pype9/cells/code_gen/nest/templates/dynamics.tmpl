@@ -61,9 +61,7 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics(double t_, const doub
 
     // Add constants
     {% for const in dp.constants %}
-        {% set conv = componentclass.unit_conversion_factor(const.units) %}
-        {% set conv_value = conv[0] * const.value + conv[1] %}
-    const static double_t {{const.name}} = {{conv_value}}; // {{const.value}} ({{const.units.name}})
+    const static double_t {{const.name}} = {{const.value}}; // ({{const.units.name}})
     {% endfor %}
 
     // Evaluate aliases used in differential equations

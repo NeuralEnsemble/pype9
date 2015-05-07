@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <NineML xmlns="http://nineml.net/9ML/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://nineml.net/9ML/1.0/schema/NineML_v1.0.xsd">
-  <ComponentClass name="IzhikevichClass">
+  <Dynamics name="IzhikevichClass">
     <Parameter name="a" dimension="dimensionless"/>
     <Parameter name="b" dimension="conductance_per_voltage2"/>
     <Parameter name="c" dimension="voltage"/>
@@ -16,7 +16,7 @@
     <AnalogSendPort name="U" dimension="current"/>
     <AnalogSendPort name="V" dimension="voltage"/>
     <EventSendPort name="spikeOutput"/>
-    <Dynamics>
+    
       <StateVariable name="V" dimension="voltage"/>
       <StateVariable name="U" dimension="current"/>
       <Regime name="subthresholdRegime">
@@ -61,7 +61,6 @@
         <MathInline>(k * (V - Vr) * (V - Vt) - U + iSyn + iExt) / Cm</MathInline>
       </Alias>
     </Dynamics>
-  </ComponentClass>
   <Component name="Izhikevich">
     <Definition>IzhikevichClass</Definition>
     <Property name="a" units="none">

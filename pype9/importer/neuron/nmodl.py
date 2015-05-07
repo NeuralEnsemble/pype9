@@ -9,7 +9,7 @@ import collections
 from itertools import chain
 from nineml.abstraction_layer.componentclass import Parameter
 from nineml.abstraction_layer.dynamics import (
-    TimeDerivative, StateAssignment, DynamicsClass)
+    TimeDerivative, StateAssignment, Dynamics)
 from nineml.abstraction_layer.dynamics import Regime, StateVariable, OnEvent
 from nineml.abstraction_layer.expressions import Alias
 from nineml.abstraction_layer.ports import (
@@ -165,7 +165,7 @@ class NMODLImporter(object):
             if flatten_kinetics:
                 cpy = deepcopy(self)
                 cpy._flatten_kinetics()
-                comp_class = DynamicsClass(
+                comp_class = Dynamics(
                     name=cpy.component_name + 'Class',
                     parameters=cpy.parameters.values(),
                     analog_ports=cpy.analog_ports.values(),
@@ -180,7 +180,7 @@ class NMODLImporter(object):
 #                 for name, (bidirectional, incoming, outgoing,
 #                        constraints, compartments) in self.kinetics.iteritems():
         else:
-            comp_class = DynamicsClass(name=self.component_name + 'Class',
+            comp_class = Dynamics(name=self.component_name + 'Class',
                                        parameters=self.parameters.values(),
                                        analog_ports=self.analog_ports.values(),
                                        event_ports=self.event_ports.values(),

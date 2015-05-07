@@ -11,10 +11,9 @@ from pype9.exceptions import Pype9RuntimeError
 import numpy
 import nineml
 from quantities import Quantity
-from nineml.abstraction_layer import (
-    Unit, DynamicsClass, ConnectionRuleClass, RandomDistributionClass)
-from nineml.user_layer import (
-    Property, Dynamics, ConnectionRule, RandomDistribution)
+from nineml import (
+    Unit, Dynamics, ConnectionRule, RandomDistribution)
+from nineml.user_layer import Property
 from copy import copy
 from nineml.exceptions import NineMLMissingElementError
 import math
@@ -115,7 +114,7 @@ def convert_units(value, unit_str, basic_dict, compound_dict):
 
 def convert_to_property(name, qty):
     if isinstance(qty, (int, float)):
-        units = nineml.abstraction_layer.units.unitless
+        units = nineml.units.unitless
     elif isinstance(qty, pq.Quantity):
         unit_name = str(qty.units).split()[1]
         powers = {}
@@ -202,7 +201,7 @@ def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,
                     raise Pype9RuntimeError(
                         "No components or component classes loaded from "
                         "nineml" " path '{}'".format(url))
-    elif isinstance(url_or_comp, nineml.abstraction_layer.ComponentClass):
+    elif isinstance(url_or_comp, nineml.abstraction_layer.Dynamics):
         componentclass = url_or_comp
         properties = []
         for param in componentclass.parameters:
@@ -211,11 +210,11 @@ def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,
                 units=Unit(
                     ('unit' + param.dimension.name),
                     dimension=param.dimension, power=0)))
-        if isinstance(componentclass, DynamicsClass):
+        if isinstance(componentclass, Dynamics):
             ComponentType = Dynamics
-        elif isinstance(componentclass, ConnectionRuleClass):
+        elif isinstance(componentclass, ConnectionRule):
             ComponentType = ConnectionRule
-        elif isinstance(componentclass, RandomDistributionClass):
+        elif isinstance(componentclass, RandomDistribution):
             ComponentType = RandomDistribution
         prototype = ComponentType(name=componentclass.name + 'Component',
                                   properties=properties)

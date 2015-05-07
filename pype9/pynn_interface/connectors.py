@@ -43,10 +43,10 @@ class Connector(object):
                 except KeyError:
                     raise Pype9ProjToCloneNotCreatedException
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
-                RandomDistributionClass = getattr(
+                RandomDistribution = getattr(
                     pype9.pynn_interface.random,
                     p.value.definition.componentclass.name)
-                conv_param = RandomDistributionClass(p.value.parameters, rng)
+                conv_param = RandomDistribution(p.value.parameters, rng)
             elif isinstance(p.value, nineml.user_layer.AnonymousFunction):
                 conv_param = create_anonymous_function(p.value)
             else:

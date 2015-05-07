@@ -21,7 +21,7 @@
       <B:AnalogPort mode='send' name="C"/>
     </B:Component>
 
-    <B:ComponentClass type="ionic-current" name="Nadef">
+    <B:Dynamics type="ionic-current" name="Nadef">
       <B:Interface><B:Parameter name="A_alpha_m"/>
       <B:Parameter name="B_alpha_m"/>
       <B:Parameter name="C_alpha_m"/>
@@ -76,9 +76,9 @@
         <B:AnalogPort mode='send' name="gbar"/>
       </B:Component>
 
-    </B:ComponentClass>
+    </B:Dynamics>
 
-    <B:ComponentClass type="ionic-current" name="Kdef">
+    <B:Dynamics type="ionic-current" name="Kdef">
       <B:Interface><B:Parameter name="A_alpha_n"/>
       <B:Parameter name="B_alpha_n"/>
       <B:Parameter name="C_alpha_n"/>
@@ -118,9 +118,9 @@
         <B:AnalogPort mode='send' name="erev"/>
       </B:Component>
 
-    </B:ComponentClass>
+    </B:Dynamics>
 
-    <B:ComponentClass type="ionic-current" name="Leakdef">
+    <B:Dynamics type="ionic-current" name="Leakdef">
       <B:Interface><B:Parameter name="e"/>
       <B:Parameter name="g"/>
       </B:Interface>
@@ -138,7 +138,7 @@
         <B:AnalogPort mode='send' name="erev"/>
       </B:Component>
 
-    </B:ComponentClass>
+    </B:Dynamics>
 
     <B:Component name="Na" definition="Nadef">
       <B:properties><B:Parameter name="A_alpha_m">

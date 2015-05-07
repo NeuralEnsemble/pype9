@@ -12,7 +12,7 @@ import os
 from os import path
 import subprocess as sp
 from ..base import BaseCodeGenerator
-from nineml.abstraction_layer import units as un
+from nineml import units as un
 from pype9.utils import remove_ignore_missing
 from pype9.exceptions import Pype9BuildError
 import pype9
@@ -21,7 +21,7 @@ from datetime import datetime
 from copy import copy
 from pype9.annotations import (
     MEMBRANE_VOLTAGE, PYPE9_NS, TRANSFORM_SRC, TRANSFORM_DEST)
-from nineml.user_layer import Dynamics, Definition
+from nineml.user_layer import Component, Definition
 from nineml import Document
 
 
@@ -227,7 +227,7 @@ class CodeGenerator(BaseCodeGenerator):
         # ---------------------------------------------------------------------
         trans.validate()
         # Retun a prototype of the transformed class
-        return Dynamics(
+        return Component(
             prototype.name, Definition(trans.name, Document(trans)), props)
 
 # Old template arguments to Ivan's templates.

@@ -1,79 +1,78 @@
 <?xml version='1.0' encoding='UTF-8' standalone='yes'?>
-<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
-  <nineml:Unit symbol="C" dimension="charge" power="0"/>
-  <nineml:Dimension k="1" name="temperature"/>
-  <nineml:Unit symbol="J_per_K" dimension="energy_per_temperature" power="0"/>
-  <nineml:Dimension i="1" name="charge" t="1"/>
-  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
-  <nineml:Dimension i="1" name="currentDensity" l="-2"/>
-  <nineml:ComponentClass name="Golgi_Ca_LVAClass">
-    <nineml:AnalogSendPort dimension="currentDensity" name="ica2"/>
-    <nineml:AnalogReceivePort dimension="concentration" name="ca2i"/>
-    <nineml:AnalogReceivePort dimension="temperature" name="celsius"/>
-    <nineml:AnalogReceivePort dimension="concentration" name="ca2o"/>
-    <nineml:AnalogReceivePort dimension="voltage" name="v"/>
-    <nineml:Parameter dimension="voltage" name="v0_tau_m2"/>
-    <nineml:Parameter dimension="voltage" name="v0_tau_m1"/>
-    <nineml:Parameter dimension="voltage" name="shift"/>
-    <nineml:Parameter dimension="dimensionless" name="C_tau_m"/>
-    <nineml:Parameter dimension="dimensionless" name="C_tau_h"/>
-    <nineml:Parameter dimension="dimensionless" name="A_tau_m"/>
-    <nineml:Parameter dimension="voltage" name="k_m_inf"/>
-    <nineml:Parameter dimension="voltage" name="v0_m_inf"/>
-    <nineml:Parameter dimension="voltage" name="v0_h_inf"/>
-    <nineml:Parameter dimension="voltage" name="k_tau_m1"/>
-    <nineml:Parameter dimension="voltage" name="k_tau_m2"/>
-    <nineml:Parameter dimension="voltage" name="k_h_inf"/>
-    <nineml:Parameter dimension="dimensionless" name="A_tau_h"/>
-    <nineml:Parameter dimension="voltage" name="k_tau_h2"/>
-    <nineml:Parameter dimension="voltage" name="k_tau_h1"/>
-    <nineml:Parameter dimension="voltage" name="v0_tau_h1"/>
-    <nineml:Parameter dimension="conductanceDensity" name="gca2bar"/>
-    <nineml:Parameter dimension="voltage" name="v0_tau_h2"/>
-    <nineml:Dynamics>
-      <nineml:Regime name="ca2state">
-        <nineml:TimeDerivative variable="h">
-          <nineml:MathInline>(h_inf - h) / tau_h</nineml:MathInline>
-        </nineml:TimeDerivative>
-        <nineml:TimeDerivative variable="m">
-          <nineml:MathInline>(m_inf - m) / tau_m</nineml:MathInline>
-        </nineml:TimeDerivative>
-      </nineml:Regime>
-      <nineml:Alias name="tau_m">
-        <nineml:MathInline>( C_tau_m + A_tau_m / ( exp((v+shift - v0_tau_m1)/ k_tau_m1) + exp((v+shift - v0_tau_m2)/k_tau_m2) ) ) / phi_m</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="m_inf">
-        <nineml:MathInline>1.0 / ( 1 + exp((v + shift - v0_m_inf)/k_m_inf) )</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="g">
-        <nineml:MathInline>gca2bar * m*m*h</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="tau_h">
-        <nineml:MathInline>( C_tau_h + A_tau_h / ( exp((v+shift - v0_tau_h1)/k_tau_h1) + exp((v+shift - v0_tau_h2)/k_tau_h2) ) ) / phi_h</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="ica2">
-        <nineml:MathInline>gca2bar * m*m*h * (v-ca2rev)</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="h_inf">
-        <nineml:MathInline>1.0 / ( 1 + exp((v + shift - v0_h_inf)/k_h_inf) )</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="ca2rev">
-        <nineml:MathInline>(1e3) * (R*(celsius+273.15))/(2*FARADAY) * log (ca2o/ca2i)</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="phi_h">
-        <nineml:MathInline>3.0 ^ ((celsius-24)/10)</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Alias name="phi_m">
-        <nineml:MathInline>5.0 ^ ((celsius-24)/10)</nineml:MathInline>
-      </nineml:Alias>
-      <nineml:Constant units="C" name="FARADAY">96485.3365</nineml:Constant>
-      <nineml:Constant units="J_per_K" name="R">8.3144621</nineml:Constant>
-      <nineml:StateVariable dimension="dimensionless" name="h"/>
-      <nineml:StateVariable dimension="dimensionless" name="m"/>
-    </nineml:Dynamics>
-  </nineml:ComponentClass>
-  <nineml:Dimension k="-1" t="-2" m="1" l="2" name="energy_per_temperature"/>
-  <nineml:Dimension name="dimensionless"/>
-  <nineml:Dimension l="-3" name="concentration" n="1"/>
-  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-</nineml:NineML>
+<NineML xmlns="http://nineml.net/9ML/1.0">
+  <Unit symbol="C" dimension="charge" power="0"/>
+  <Dimension k="1" name="temperature"/>
+  <Unit symbol="J_per_K" dimension="energy_per_temperature" power="0"/>
+  <Dimension i="1" name="charge" t="1"/>
+  <Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <Dimension i="1" name="currentDensity" l="-2"/>
+  <Dynamics name="Golgi_Ca_LVAClass">
+    <AnalogSendPort dimension="currentDensity" name="ica2"/>
+    <AnalogReceivePort dimension="concentration" name="ca2i"/>
+    <AnalogReceivePort dimension="temperature" name="celsius"/>
+    <AnalogReceivePort dimension="concentration" name="ca2o"/>
+    <AnalogReceivePort dimension="voltage" name="v"/>
+    <Parameter dimension="voltage" name="v0_tau_m2"/>
+    <Parameter dimension="voltage" name="v0_tau_m1"/>
+    <Parameter dimension="voltage" name="shift"/>
+    <Parameter dimension="dimensionless" name="C_tau_m"/>
+    <Parameter dimension="dimensionless" name="C_tau_h"/>
+    <Parameter dimension="dimensionless" name="A_tau_m"/>
+    <Parameter dimension="voltage" name="k_m_inf"/>
+    <Parameter dimension="voltage" name="v0_m_inf"/>
+    <Parameter dimension="voltage" name="v0_h_inf"/>
+    <Parameter dimension="voltage" name="k_tau_m1"/>
+    <Parameter dimension="voltage" name="k_tau_m2"/>
+    <Parameter dimension="voltage" name="k_h_inf"/>
+    <Parameter dimension="dimensionless" name="A_tau_h"/>
+    <Parameter dimension="voltage" name="k_tau_h2"/>
+    <Parameter dimension="voltage" name="k_tau_h1"/>
+    <Parameter dimension="voltage" name="v0_tau_h1"/>
+    <Parameter dimension="conductanceDensity" name="gca2bar"/>
+    <Parameter dimension="voltage" name="v0_tau_h2"/>
+    
+      <Regime name="ca2state">
+        <TimeDerivative variable="h">
+          <MathInline>(h_inf - h) / tau_h</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="m">
+          <MathInline>(m_inf - m) / tau_m</MathInline>
+        </TimeDerivative>
+      </Regime>
+      <Alias name="tau_m">
+        <MathInline>( C_tau_m + A_tau_m / ( exp((v+shift - v0_tau_m1)/ k_tau_m1) + exp((v+shift - v0_tau_m2)/k_tau_m2) ) ) / phi_m</MathInline>
+      </Alias>
+      <Alias name="m_inf">
+        <MathInline>1.0 / ( 1 + exp((v + shift - v0_m_inf)/k_m_inf) )</MathInline>
+      </Alias>
+      <Alias name="g">
+        <MathInline>gca2bar * m*m*h</MathInline>
+      </Alias>
+      <Alias name="tau_h">
+        <MathInline>( C_tau_h + A_tau_h / ( exp((v+shift - v0_tau_h1)/k_tau_h1) + exp((v+shift - v0_tau_h2)/k_tau_h2) ) ) / phi_h</MathInline>
+      </Alias>
+      <Alias name="ica2">
+        <MathInline>gca2bar * m*m*h * (v-ca2rev)</MathInline>
+      </Alias>
+      <Alias name="h_inf">
+        <MathInline>1.0 / ( 1 + exp((v + shift - v0_h_inf)/k_h_inf) )</MathInline>
+      </Alias>
+      <Alias name="ca2rev">
+        <MathInline>(1e3) * (R*(celsius+273.15))/(2*FARADAY) * log (ca2o/ca2i)</MathInline>
+      </Alias>
+      <Alias name="phi_h">
+        <MathInline>3.0 ^ ((celsius-24)/10)</MathInline>
+      </Alias>
+      <Alias name="phi_m">
+        <MathInline>5.0 ^ ((celsius-24)/10)</MathInline>
+      </Alias>
+      <Constant units="C" name="FARADAY">96485.3365</Constant>
+      <Constant units="J_per_K" name="R">8.3144621</Constant>
+      <StateVariable dimension="dimensionless" name="h"/>
+      <StateVariable dimension="dimensionless" name="m"/>
+    </Dynamics>
+  <Dimension k="-1" t="-2" m="1" l="2" name="energy_per_temperature"/>
+  <Dimension name="dimensionless"/>
+  <Dimension l="-3" name="concentration" n="1"/>
+  <Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+</NineML>
