@@ -7,22 +7,19 @@
     <Parameter name="c" dimension="voltage"/>
     <Parameter name="d" dimension="voltage_per_time"/>
     <Parameter name="theta" dimension="voltage"/>
-    <!-- AnalogPort or Exposure?? -->
     <AnalogReducePort name="iSyn" dimension="current" operator="+"/>
+    <AnalogReceivePort name="iExt" dimension="current"/>
     <AnalogSendPort name="U_m" dimension="voltage_per_time"/>
     <AnalogSendPort name="V_m" dimension="voltage"/>
     <EventSendPort name="spikeOutput" mode="send"/>
-    <!-- Suggested addition Wednesday morning...-->
     <StateVariable name="V_m" dimension="voltage"/>
     <StateVariable name="U_m" dimension="voltage_per_time"/>
     <Regime name="subthresholdRegime">
-      <!-- if "independent_variable" is missing, it should be assumed to be "t" -->
-      <!-- Should this "ODE" be called "Rate", RateODE, "RateEqn" ??-->
       <TimeDerivative variable="U_m">
         <MathInline>a*(b*V_m - U_m)</MathInline>
       </TimeDerivative>
       <TimeDerivative variable="V_m">
-        <MathInline>const1*V_m*V_m + const2*V_m + const3 - U_m + iSyn/C</MathInline>
+        <MathInline>const1*V_m*V_m + const2*V_m + const3 - U_m + (iSyn + iExt)/C</MathInline>
       </TimeDerivative>
       <OnCondition>
         <Trigger>

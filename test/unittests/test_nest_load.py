@@ -42,8 +42,8 @@ class TestNestLoad(TestCase):
         # ---------------------------------------------------------------------
         Izhikevich9ML = CellMetaClass(
             self.izhikevich_file, name=self.izhikevich_name,
-            build_mode='lazy', verbose=True, membrane_voltage='V_m',
-            ode_solver='euler',
+            build_mode='force', verbose=True, membrane_voltage='V_m',
+            ode_solver='euler', ss_solver=None,
             membrane_capacitance=Property('Cm', 0.001, un.nF))
         nml = Izhikevich9ML()
         nml.inject_current(neo.AnalogSignal([0.0] + [0.2] * 9, units='nA',

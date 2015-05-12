@@ -10,6 +10,7 @@
 from __future__ import absolute_import
 import sys
 import os.path
+from itertools import chain
 import neo
 import nest
 import quantities as pq
@@ -41,7 +42,10 @@ class Cell(base.Cell):
                                  .format(self.componentclass.name, varname))
 
     def __setattr__(self, varname, value):
-        if self._initialized and varname in self._nineml.property_names:
+        if (self._initialized and
+            varname in chain(
+                self._nineml.property_names,
+                self._nineml.component_class.state_variable_names)):
             nest.SetStatus(self._cell, varname, value)
         else:
             super(Cell, self).__setattr__(varname, value)

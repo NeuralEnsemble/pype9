@@ -171,7 +171,7 @@ namespace nineml {
     //Analog port ids
     static const nest::port MIN_ANALOG_PORT_ = {% if componentclass.analog_receive_ports %}SUP_EVENT_PORT_{% else %}1{% endif %};
     enum AnalogPorts {
-    {% for port in componentclass.analog_receive_ports %}
+    {% for port in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
         {% if loop.first %}
         {{port.name}}_ANALOG_PORT = MIN_ANALOG_PORT_,
         {% else %}

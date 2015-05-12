@@ -20,8 +20,10 @@
  *
  */
 
-#include "exceptions.h"
+#include <limits>
+
 #include "IzhikevichBuiltIn.h"
+#include "exceptions.h"
 #include "network.h"
 #include "dict.h"
 #include "integerdatum.h"
@@ -30,11 +32,11 @@
 #include "numerics.h"
 #include "universal_data_logger_impl.h"
 
-#include <limits>
 
-/* ----------------------------------------------------------------
+
+/******************************************************************
  * Recordables map
- * ---------------------------------------------------------------- */
+ ********************************************************************/
 
 nest::RecordablesMap<nineml::IzhikevichBuiltIn> nineml::IzhikevichBuiltIn::recordablesMap_;
 
@@ -51,9 +53,9 @@ namespace nest
   }
 }
 
-/* ----------------------------------------------------------------
+/******************************************************************
  * Default constructors defining default parameters and state
- * ---------------------------------------------------------------- */
+ ********************************************************************/
 
 nineml::IzhikevichBuiltIn::Parameters_::Parameters_()
   : a_	  (   0.02 ), // a
@@ -72,9 +74,9 @@ nineml::IzhikevichBuiltIn::State_::State_()
     I_(   0.0 )  // input current
 {}
 
-/* ----------------------------------------------------------------
+/******************************************************************
  * Parameter and state extractions and manipulation functions
- * ---------------------------------------------------------------- */
+ ********************************************************************/
 
 void nineml::IzhikevichBuiltIn::Parameters_::get(DictionaryDatum & d) const
 {
@@ -121,9 +123,9 @@ nineml::IzhikevichBuiltIn::Buffers_::Buffers_(const Buffers_ &, nineml::Izhikevi
   : logger_(n)
 {}
 
-/* ----------------------------------------------------------------
+/******************************************************************
  * Default and copy constructor for node
- * ---------------------------------------------------------------- */
+ ********************************************************************/
 
 nineml::IzhikevichBuiltIn::IzhikevichBuiltIn()
   : nest::Archiving_Node(),
@@ -143,9 +145,9 @@ nineml::IzhikevichBuiltIn::IzhikevichBuiltIn(const nineml::IzhikevichBuiltIn & n
 
 nineml::IzhikevichBuiltIn::~IzhikevichBuiltIn() {}
 
-/* ----------------------------------------------------------------
+/******************************************************************
  * Node initialization functions
- * ---------------------------------------------------------------- */
+ ********************************************************************/
 
 void nineml::IzhikevichBuiltIn::init_state_(const Node & proto)
 {
@@ -166,7 +168,7 @@ void nineml::IzhikevichBuiltIn::calibrate()
   B_.logger_.init();
 }
 
-/* ----------------------------------------------------------------
+/******************************************************************
  * Update and spike handling functions
  */
 
