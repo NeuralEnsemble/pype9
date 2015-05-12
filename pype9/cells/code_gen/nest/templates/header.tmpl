@@ -9,7 +9,45 @@
 #ifndef {{component_name | upper}}_H
 #define {{component_name | upper}}_H
 
-{% include "header-includes.tmpl" %}
+#include "nest.h"
+#include "event.h"
+#include "node.h"
+#include "archiving_node.h"
+#include "ring_buffer.h"
+#include "connection.h"
+#include "universal_data_logger.h"
+#include "recordables_map.h"
+
+{% if ode_solver in ('cvode', 'ida') %}
+#include <cvode/cvode.h>       /* prototypes for CVODE fcts., consts. */
+#include <cvode/cvode_diag.h>    /* prototype for CVDiag */
+{% elif ode_solver == "ida" %}
+#include <sundials/sundials_types.h> /* definition of type realtype */
+#include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., macros */    
+#include <ida/ida.h>         /* prototypes for IDA fcts., consts. */
+#include <ida/ida_dense.h>
+{% elif ode_solver == "gsl" %}
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_sf_exp.h>
+#include <gsl/gsl_odeiv2.h>
+{% endif %}
+
+{% if ss_solver == "kinsol" %}
+#include <sundials/sundials_types.h> /* definition of type realtype */
+#include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., macros */
+#include <kinsol/kinsol.h>       /* prototypes for KINSOL fcts. */
+#include <kinsol/kinsol_dense.h>   /* prototype for KINDense */
+{% elif ss_solver == "gsl" %}
+#include <gsl/gsl_vector.h>
+#include <gsl/gsl_multiroots.h>
+{% endif %}
+
+{% if ode_solver in ('cvode', 'ida') %}
+#define ITEM(v,i)  NV_Ith_S(v,i)  /* Ith component in a vector */
+{% else %}
+#define ITEM(v,i)  (v[i])
+{% endif %}
 
 namespace nineml {
 
