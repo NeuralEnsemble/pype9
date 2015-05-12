@@ -9,30 +9,30 @@
     <Parameter name="theta" dimension="voltage"/>
     <!-- AnalogPort or Exposure?? -->
     <AnalogReducePort name="iSyn" dimension="current" operator="+"/>
-    <AnalogSendPort name="U" dimension="voltage_per_time"/>
-    <AnalogSendPort name="V" dimension="voltage"/>
+    <AnalogSendPort name="U_m" dimension="voltage_per_time"/>
+    <AnalogSendPort name="V_m" dimension="voltage"/>
     <EventSendPort name="spikeOutput" mode="send"/>
     <!-- Suggested addition Wednesday morning...-->
-    <StateVariable name="V" dimension="voltage"/>
-    <StateVariable name="U" dimension="voltage_per_time"/>
+    <StateVariable name="V_m" dimension="voltage"/>
+    <StateVariable name="U_m" dimension="voltage_per_time"/>
     <Regime name="subthresholdRegime">
       <!-- if "independent_variable" is missing, it should be assumed to be "t" -->
       <!-- Should this "ODE" be called "Rate", RateODE, "RateEqn" ??-->
-      <TimeDerivative variable="U">
-        <MathInline>a*(b*V - U)</MathInline>
+      <TimeDerivative variable="U_m">
+        <MathInline>a*(b*V_m - U_m)</MathInline>
       </TimeDerivative>
-      <TimeDerivative variable="V">
-        <MathInline>const1*V*V + const2*V + const3 - U + iSyn/C</MathInline>
+      <TimeDerivative variable="V_m">
+        <MathInline>const1*V_m*V_m + const2*V_m + const3 - U_m + iSyn/C</MathInline>
       </TimeDerivative>
       <OnCondition>
         <Trigger>
-          <MathInline>V &gt; theta</MathInline>
+          <MathInline>V_m &gt; theta</MathInline>
         </Trigger>
-        <StateAssignment variable="V">
+        <StateAssignment variable="V_m">
           <MathInline>c</MathInline>
         </StateAssignment>
-        <StateAssignment variable="U">
-          <MathInline>U+d</MathInline>
+        <StateAssignment variable="U_m">
+          <MathInline>U_m+d</MathInline>
         </StateAssignment>
         <OutputEvent port="spikeOutput"/>
       </OnCondition>

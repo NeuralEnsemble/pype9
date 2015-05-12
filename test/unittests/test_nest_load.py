@@ -13,61 +13,79 @@ from nineml import units as un
 import quantities as pq
 import neo
 import nest
-import numpy
 
 
 class TestNestLoad(TestCase):
+
+    dt = 0.01
 
     izhikevich_file = path.join(test_data_dir, 'xml', 'Izhikevich2003.xml')
     izhikevich_name = 'IzhikevichBuiltIn'
 
     def test_nest_load(self):
-        Izhikevich9ML = CellMetaClass(
-            self.izhikevich_file, name=self.izhikevich_name,
-            build_mode='lazy', verbose=True, membrane_voltage='V',
-            ode_solver='euler',
-            membrane_capacitance=Property('Cm', 0.001, un.nF))
         # ---------------------------------------------------------------------
         # Set up PyNN section
         # ---------------------------------------------------------------------
-#         params = {'a': 0.02,
-#                   'b': 0.2,
-#                   'c': -65.0,
-#                   'd': 2}
-        pynn = nest.Create('izhikevich')
-        pynn_iclamp = nest.Create('step_current_generator')
-        nest.Create('step_current_generator')
-        nest.Connect(pynn_iclamp, pynn)
-        nest.SetStatus(pynn_iclamp, {
-            'amplitude_values': numpy.asarray([0.0] + [10.0] * 9),
-            'amplitude_times': numpy.arange(0.0, 10.0, 1.0),
-            'start': 0.0, 'stop': 10.0})
-        multimeter = nest.Create('multimeter')
-        nest.SetStatus(multimeter, {'record_from': ['V_m']})
-        nest.Connect(multimeter, pynn)
+        nest.SetKernelStatus({'resolution': 0.01})
+        pynn_cells = nest.Create(
+            'izhikevich', 1,
+            {'a': 0.02, 'c': -65.0, 'b': 0.2, 'd': 6.0})
+        pynn_iclamp = nest.Create(
+            'dc_generator', 1, {'start': 2.0, 'stop': 95.0, 'amplitude': 25.0})
+        nest.Connect(pynn_iclamp, pynn_cells)
+        pynn_multimeter = nest.Create('multimeter', 1, {"interval": self.dt})
+        nest.SetStatus(pynn_multimeter, {'record_from': ['V_m', 'U_m']})
+        nest.Connect(pynn_multimeter, pynn_cells)
+        nest.SetStatus(pynn_cells, {'V_m': -70.0, 'U_m': -14.0})
         # ---------------------------------------------------------------------
         # Set up 9ML cell
         # ---------------------------------------------------------------------
+        Izhikevich9ML = CellMetaClass(
+            self.izhikevich_file, name=self.izhikevich_name,
+            build_mode='lazy', verbose=True, membrane_voltage='V_m',
+            ode_solver='euler',
+            membrane_capacitance=Property('Cm', 0.001, un.nF))
         nml = Izhikevich9ML()
-        print nml.a
         nml.inject_current(neo.AnalogSignal([0.0] + [0.2] * 9, units='nA',
-                                             sampling_period=1 * pq.ms))
-        nml.record('V')
+                                            sampling_period=1 * pq.ms))
+        nml.record('V_m')
+        nml.record('U_m')
         simulator.initialize()  # @UndefinedVariable
-        nml.u = -14.0 * pq.mV / pq.ms
-        # pnn_izhi.u = -14.0
-        simulator.run(1000, reset=False)  # @UndefinedVariable
-        nml_v = nml.recording('V')
+        nml.V_m = -70 * pq.mV
+        nml.U_m = -14.0 * pq.mV / pq.ms
+        # ---------------------------------------------------------------------
+        # Run Simulation
+        # ---------------------------------------------------------------------
+        simulator.run(100, reset=False)  # @UndefinedVariable
+        # ---------------------------------------------------------------------
+        # Get PyNN results
+        # ---------------------------------------------------------------------
         pynn_v = neo.AnalogSignal(
-            nest.GetStatus(multimeter, 'events')[0]['V_m'],
-            sampling_period=simulator.dt * pq.ms, units='mV')  # @UndefinedVariable @IgnorePep8
-#         self.assertAlmostEqual(float((nml_v - pnn_v[1:] * pq.mV).sum()), 0)
+            nest.GetStatus(pynn_multimeter, 'events')[0]['V_m'],
+            sampling_period=simulator.dt * pq.s, units='mV')  # @UndefinedVariable @IgnorePep8
+        pynn_u = neo.AnalogSignal(
+            nest.GetStatus(pynn_multimeter, 'events')[0]['U_m'],
+            sampling_period=simulator.dt * pq.s, units='mV')  # @UndefinedVariable @IgnorePep8
+        # ---------------------------------------------------------------------
+        # Get 9ML results
+        # ---------------------------------------------------------------------
+        nml_v = nml.recording('V_m')
+        nml_u = nml.recording('U_m')
+        # ---------------------------------------------------------------------
+        # Plot voltage
+        # ---------------------------------------------------------------------
+        plt.figure()
         plt.plot(pynn_v.times, pynn_v)
-        plt.plot(nml_v.times, nml_v)
-#         plt.legend(('PyNN v', '9ML v'))
+        plt.plot(nml_v.times * 100, nml_v)
+        plt.legend(('PyNN v', '9ML v'))
+        # ---------------------------------------------------------------------
+        # Plot U
+        # ---------------------------------------------------------------------
+        plt.figure()
+        plt.plot(pynn_u.times, pynn_u)
+        plt.plot(nml_u.times * 100, nml_u)
+        plt.legend(('PyNN u', '9ML u'))
         plt.show()
-
-
-if __name__ == '__main__':
-    t = TestNestLoad()
-    t.test_nest_load()
+        self.assertEqual(pynn_v, nml_v,
+                         "PyNN and 9ML versions of Izhikevich model are "
+                         "not identical")
