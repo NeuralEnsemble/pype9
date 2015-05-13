@@ -262,9 +262,7 @@ class BaseCodeGenerator(object):
         annotations_dict = copy(pype9.annotations.__dict__)
         annotations_dict.pop('__builtins__')
         # Initialise the template loader to include the flag directories
-        template_paths = [
-            self.BASE_TMPL_PATH,
-            os.path.join(self.BASE_TMPL_PATH, 'includes', 'common')]
+        template_paths = [self.BASE_TMPL_PATH]
         # Add include paths for various switches (e.g. solver type)
         for name, value in switches.iteritems():
             if value is not None:

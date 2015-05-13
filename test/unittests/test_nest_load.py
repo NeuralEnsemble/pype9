@@ -43,7 +43,7 @@ class TestNestLoad(TestCase):
         Izhikevich9ML = CellMetaClass(
             self.izhikevich_file, name=self.izhikevich_name,
             build_mode='force', verbose=True, membrane_voltage='V_m',
-            ode_solver='cvode', ss_solver=None,
+            ode_solver='euler', ss_solver=None,
             membrane_capacitance=Property('Cm', 0.001, un.nF))
         nml = Izhikevich9ML()
         nml_iclamp = nest.Create(

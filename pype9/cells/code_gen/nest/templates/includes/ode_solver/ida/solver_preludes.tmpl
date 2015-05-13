@@ -7,7 +7,7 @@
 	* Exception to be thrown if a IDA solver does not return IDA_SUCCESS
 	* @ingroup KernelExceptions
 	*/
-    class IDASolverFailure: public KernelException {
+    class IDASolverFailure: public nest::KernelException {
 	  public:
         /**
 	     * @note model should be passed from get_name() to ensure that
