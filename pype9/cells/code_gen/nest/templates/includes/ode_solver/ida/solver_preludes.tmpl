@@ -3,39 +3,27 @@
    Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
-
-// TEMPLATE: solver-preludes <<<
-{% if ode_solver in ('cvode', 'ida') %}
-    {% if ode_solver == 'cvode' %}
-        {% set abbrev = 'CV' %}
-        {% set prefix = 'CVode' %}
-        {% set solver = 'CVode' %}
-    {% else %}
-        {% set abbrev = 'IDA' %}
-        {% set prefix = 'IDA' %}
-        {% set solver = 'IDASolve' %}
-    {% endif %}
 	/**
-	* Exception to be thrown if a {{prefix}} solver does not return {{abbrev}}_SUCCESS
+	* Exception to be thrown if a IDA solver does not return IDA_SUCCESS
 	* @ingroup KernelExceptions
 	*/
-    class {{prefix}}SolverFailure: public KernelException {
+    class IDASolverFailure: public KernelException {
 	  public:
         /**
 	     * @note model should be passed from get_name() to ensure that
 	     *             names of copied models are reported correctly.
 	     * @param model name of model causing problem
-	     * @param status exit status of the {{prefix}} solver
+	     * @param status exit status of the IDA solver
 	     */
-        {{prefix}}SolverFailure(const std::string& model, const int status)
-	     : KernelException("{{prefix}}SolverFailure"),
+        IDASolverFailure(const std::string& model, const int status)
+	     : KernelException("IDASolverFailure"),
 	       model_(model),
 	       status_(status) {}
-        ~{{prefix}}SolverFailure() throw() {}
+        ~IDASolverFailure() throw() {}
 
 	    std::string message() {
             std::ostringstream msg;
-            msg << "In model " << model_ << ", the {{solver}} solver "
+            msg << "In model " << model_ << ", the IDASolve solver "
 	            << "returned with exit status " << status_ << ".\n";
 	        return msg.str();
 	    }
@@ -87,39 +75,3 @@
                 ITEM(v,i) = 0;
         return;
     }
-{% endif %}
-{% if ss_solver == 'kinsol' %}
-    /**
-     * Exception to be thrown if a KinSol solver does not return KIN_SUCCESS
-     * @ingroup KernelExceptions
-     */
-    class KINSolverFailure: public KernelException {
-      public:
-        /**
-          * @note model should be passed from get_name() to ensure that
-          *             names of copied models are reported correctly.
-          * @param model name of model causing problem
-          * @param status exit status of the KINSOL solver
-          */
-        KINSolverFailure(const std::string& model,
-                         const int status)
-          : KernelException("KINSolverFailure"),
-            model_(model),
-            status_(status)
-          {}
-
-        ~KINSolverFailure() throw() {}
-
-        std::string message() {
-            std::ostringstream msg;
-            msg << "In model " << model_ << ", the KINSOL solver "
-                << "returned with exit status " << status_ << ".\n";
-            return msg.str();
-        }
-
-      private:
-        const std::string model_;
-        const int status_;
-    };
-{% endif %}
-// TEMPLATE: solver-preludes >>>

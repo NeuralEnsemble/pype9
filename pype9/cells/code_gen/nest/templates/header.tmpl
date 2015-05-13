@@ -51,7 +51,8 @@
 
 namespace nineml {
 
-{% include "solver-preludes.tmpl" %}
+{% include "solver_preludes.tmpl" %}
+{% include "ss_solver_preludes.tmpl" %}
 
 {% for regime in componentclass.regimes %}
     {% if ode_solver == "cvode" or ode_solver == "ida" %}

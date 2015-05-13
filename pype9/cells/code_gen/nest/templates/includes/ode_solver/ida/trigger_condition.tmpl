@@ -1,0 +1,27 @@
+extern "C" int {{component_name}}_trigger (double t, N_Vector y,{% if ode_solver == 'ida' %} N_Vector yp,{% endif %} double *g, void* pnode) {
+    double v, vt; v = -1.0; vt = 0.0;
+
+    // S is shorthand for the type that describes the model state
+    typedef {{component_name}}::State_ S;
+
+    // cast the node ptr to an object of the proper type
+    assert(pnode);
+    const {{component_name}} & node =  *(reinterpret_cast<{{component_name}}*>(pnode));
+
+    // params is a reference to the model parameters
+    const struct {{component_name}}::Parameters_ *params;
+    params = &(node.P_);
+
+    // state is a reference to the model state
+    const struct {{component_name}}::State_ *state;
+    state = &(node.S_);
+
+    {% if v_threshold %}
+    v = ITEM(y, {{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX);
+    g[0] = v - params->{{v_threshold}};
+    {% else %}
+    g[0] = -1.0;
+    {% endif %}
+
+    return 0;
+}

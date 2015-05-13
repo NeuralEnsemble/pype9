@@ -1,0 +1,76 @@
+    // Holds the return status values of the CVODE/IDA initialisations
+    int status;
+
+    // Vector length (number of states)
+    int N = {{componentclass.num_state_variables}};
+    // only positive direction (rising edge) of spike events will be detected
+    int rootdir = 1;
+
+    /* Creates serial vectors of length N */
+    B_.y = N_VNew_Serial(N);
+    B_.y1 = N_VNew_Serial(N);
+    B_.yp = N_VNew_Serial(N);
+
+    if (check_flag((void *)B_.y, "N_VNew_Serial", 0))
+        throw IDASolverFailure (get_name(), 0);
+
+    // Copy NEST state to CVODE/IDA vector
+    for (int i = 0; i < N; i++)
+       ITEM(B_.y,i) = S_.y_[i];
+
+    // Run the dynamics function to initialise B._yp
+        {# Get the func_name from the default regime (the first in the list) #}
+    {{component_name}}_{{next(componentclass.regimes).name}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
+
+    // Calls IDACreate to create the solver memory
+    B_.sys_ = IDACreate();
+    if (check_flag((void *)B_.sys_, "IDACreate", 0))
+        throw IDASolverFailure (get_name(), 0);
+
+    // Calls IDAInit to initialize the integrator memory and specify the
+    // resdual function, the initial time, and the initial values.
+    status = IDAInit (B_.sys_, {{component_name}}_{{default_regime}}_residual, 0.0, B_.y, B_.yp);
+    if (check_flag(&status, "IDAInit", 1))
+        throw IDASolverFailure (get_name(), status);
+
+    {% if v_threshold %}
+    /* Event trigger handler (detects event triggers) */
+    status = IDARootInit(B_.sys_, 1, (IDARootFn){{component_name}}_trigger);
+    if (check_flag(&status, "IDARootInit", 1))
+        throw IDASolverFailure (get_name(), status);
+
+    /* Detect only the rising edge of spikes */
+    status = IDASetRootDirection(B_.sys_, &rootdir);
+    if (check_flag(&status, "IDASetRootDirection", 1))
+        throw IDASolverFailure (get_name(), status);
+
+    {% endif %}
+    /* Sets the relative and absolute error tolerances of IDA  */
+    status = IDASStolerances (B_.sys_, {{abs_tolerance}}, {{rel_tolerance}});
+    if (check_flag(&status, "IDASStolerances", 1))
+        throw IDASolverFailure (get_name(), status);
+
+    /* Sets the maximum order of IDA  */
+    status = IDASetMaxOrd (B_.sys_,5);
+    if (check_flag(&status, "IDASetMaxOrd", 1))
+        throw IDASolverFailure (get_name(), status);
+
+    /* Sets maximum step size. */
+    status = IDASetMaxStep (B_.sys_,{% if max_step_size %}{{max_step_size}}{% else %}B_.step_{% endif %});
+    if (check_flag(&status, "IDASetMaxStep", 1))
+        throw IDASolverFailure (get_name(), status);
+
+    /* Calls IDASetUserData to configure the integrator to pass the
+     * params structure to the right-hand function */
+    status = IDASetUserData(B_.sys_, reinterpret_cast<void*>(this));
+    if (check_flag(&status, "IDASetUserData", 1))
+        throw IDASolverFailure (get_name(), status);
+
+    /* Initializes dense linear solver. */
+    status = IDADense (B_.sys_, N);
+    if (check_flag(&status, "IDADense", 1))
+        throw IDASolverFailure (get_name(), status);
+
+    status = IDACalcIC(B_.sys_, IDA_Y_INIT, 0.0);
+    if (check_flag(&status, "IDACalcIC", 1))
+        throw IDASolverFailure (get_name(), status);
