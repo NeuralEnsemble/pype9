@@ -18,20 +18,7 @@
 #include "universal_data_logger.h"
 #include "recordables_map.h"
 
-{% if ode_solver in ('cvode', 'ida') %}
-#include <cvode/cvode.h>       /* prototypes for CVODE fcts., consts. */
-#include <cvode/cvode_diag.h>    /* prototype for CVDiag */
-{% elif ode_solver == "ida" %}
-#include <sundials/sundials_types.h> /* definition of type realtype */
-#include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., macros */    
-#include <ida/ida.h>         /* prototypes for IDA fcts., consts. */
-#include <ida/ida_dense.h>
-{% elif ode_solver == "gsl" %}
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_sf_exp.h>
-#include <gsl/gsl_odeiv2.h>
-{% endif %}
+{% include "solver_includes.tmpl" %}
 
 {% if ss_solver == "kinsol" %}
 #include <sundials/sundials_types.h> /* definition of type realtype */
@@ -219,9 +206,11 @@ namespace nineml {
 
 
       double y_[STATE_VEC_SIZE_];
+{#      
 {% if ode_solver == "gsl" %}
       nest::int_t r_; /* refractory counter */
 {% endif %}
+#}
 
 
       State_(const Parameters_& p);
