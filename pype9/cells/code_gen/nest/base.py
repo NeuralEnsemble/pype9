@@ -73,9 +73,6 @@ class CodeGenerator(BaseCodeGenerator):
         if ode_solver is None:
             raise Pype9BuildError("'ode_solver' cannot be None")
         switches = {'ode_solver': ode_solver, 'ss_solver': ss_solver}
-        # FIXME: Temporary fix until solvers are handled by switches
-        tmpl_args['ode_solver'] = ode_solver
-        tmpl_args['ss_solver'] = ss_solver
         # Render C++ header file
         self.render_to_file('header.tmpl', tmpl_args,
                              prototype.name + '.h', src_dir, switches)

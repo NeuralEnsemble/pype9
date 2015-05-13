@@ -1,0 +1,6 @@
+        gsl_odeiv2_step*  s_;  //!< stepping function
+        gsl_odeiv2_control* c_;  //!< adaptive stepsize control function
+        gsl_odeiv2_evolve*  e_;  //!< evolution function
+        gsl_odeiv2_system   sys_;  //!< struct describing system
+        unsigned int N;  // size of state vector used by Jacobian
+        double *u, *jac;  // intermediate state vectors used for Jacobian approximation

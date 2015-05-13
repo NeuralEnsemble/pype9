@@ -25,302 +25,282 @@
 namespace nineml {
 
 {% include "solver_preludes.tmpl" %}
-{% include "ss_solver_preludes.tmpl" %}
+{% include "ss_solver_preludes.tmpl" -%}
 
 {% for regime in componentclass.regimes %}
-	extern "C" {% include "dynamics_signature.tmpl" %};
-	extern "C" {% include "residual_signature.tmpl" %};
-	extern "C" {% include "event_signature.tmpl" %};
-	extern "C" {% include "ss_function_signature.tmpl" %};
+    extern "C" {% include "dynamics_signature.tmpl" %};
+    {% include "residual_signature.tmpl" %}
+    {% include "event_signature.tmpl" %}
+    {% include "ss_signature.tmpl" %}
 {% endfor %}
 
-  class {{component_name}} : public nest::Archiving_Node {
+    class {{component_name}} : public nest::Archiving_Node {
 
-   public:
+      public:
 
-    ~{{component_name}}();
-    {{component_name}}(const {{component_name}} &);
-    {{component_name}}();
-
-    /**
-     * Import sets of overloaded virtual functions.
-     * This is necessary to ensure proper overload and overriding resolution.
-     * @see http://www.gotw.ca/gotw/005.htm.
-     */
-    using nest::Node::connect_sender;
-    using nest::Node::handle;
-
-    nest::port check_connection(nest::Connection&, nest::port);
-
-    void handle(nest::SpikeEvent &);
-    void handle(nest::CurrentEvent &);
-    void handle(nest::DataLoggingRequest &);
-
-    nest::port connect_sender(nest::SpikeEvent &, nest::port);
-    nest::port connect_sender(nest::CurrentEvent &, nest::port);
-    nest::port connect_sender(nest::DataLoggingRequest &, nest::port);
-
-    void get_status(DictionaryDatum &) const;
-    void set_status(const DictionaryDatum &);
-
-    void init_node_(const nest::Node& proto);
-    void init_state_(const nest::Node& proto);
-    void init_buffers_();
-    void calibrate();
-
-    void update(nest::Time const &, const nest::long_t, const nest::long_t);
+        ~{{component_name}}();
+	    {{component_name}}(const {{component_name}} &);
+	    {{component_name}}();
+	
+	    /**
+	     * Import sets of overloaded virtual functions.
+	     * This is necessary to ensure proper overload and overriding resolution.
+	     * @see http://www.gotw.ca/gotw/005.htm.
+	     */
+	    using nest::Node::connect_sender;
+	    using nest::Node::handle;
+	
+	    nest::port check_connection(nest::Connection&, nest::port);
+	
+	    void handle(nest::SpikeEvent &);
+	    void handle(nest::CurrentEvent &);
+	    void handle(nest::DataLoggingRequest &);
+	
+	    nest::port connect_sender(nest::SpikeEvent &, nest::port);
+	    nest::port connect_sender(nest::CurrentEvent &, nest::port);
+	    nest::port connect_sender(nest::DataLoggingRequest &, nest::port);
+	
+	    void get_status(DictionaryDatum &) const;
+	    void set_status(const DictionaryDatum &);
+	
+	    void init_node_(const nest::Node& proto);
+	    void init_state_(const nest::Node& proto);
+	    void init_buffers_();
+	    void calibrate();
+	
+	    void update(nest::Time const &, const nest::long_t, const nest::long_t);
 
     // Set dynamics methods (the ones that actually model the dynamics) as friends
 {% for regime in componentclass.regimes %}
-    friend {% include "dynamics_signature.tmpl" %};
-    friend {% include "residual_signature.tmpl" %};
-    friend {% include "event_signature.tmpl" %};
-    friend {% include "ss_function_signature.tmpl" %};
+	    friend {% include "dynamics_signature.tmpl" %};
+	    {% include "residual_friend.tmpl" %}
+	    {% include "event_friend.tmpl" %}
+	    {% include "ss_friend.tmpl" %}
 {% endfor %}
 
-    // Regime ids
-    static const int DEFAULT_REGIME_ = 0;
-    enum Regimes {
-        {% for regime in componentclass.regimes %}
-            {% if loop.first %}
-        {{regime.name}}_REGIME = DEFAULT_REGIME_,
-            {% else %}
-        {{regime.name}}_REGIME,
-            {% endif -%}
-        {% endfor %}
-        SUP_REGIME_
-    };
+	    // Regime ids
+	    static const int DEFAULT_REGIME_ = 0;
+	    enum Regimes {
+	        {% for regime in componentclass.regimes %}
+	            {% if loop.first %}
+	        {{regime.name}}_REGIME = DEFAULT_REGIME_,
+	            {% else %}
+	        {{regime.name}}_REGIME,
+	            {% endif -%}
+	        {% endfor %}
+	        SUP_REGIME_
+	    };
 
 
 {% if componentclass.event_receive_ports %}
-    /* Event port ids
-     * @note Start with 1 so we can forbid port 0 to avoid accidental
-     *     creation of connections with no receptor type set.
-     */
-    static const nest::port MIN_EVENT_PORT_ = 1;
-    enum EventPorts {
+	    /* Event port ids
+	     * @note Start with 1 so we can forbid port 0 to avoid accidental
+	     *     creation of connections with no receptor type set.
+	     */
+	    static const nest::port MIN_EVENT_PORT_ = 1;
+	    enum EventPorts {
     {% for port in componentclass.event_receive_ports %}
         {% if loop.first %}
-        {{port.name}}_EVENT_PORT = MIN_EVENT_PORT_,
+	        {{port.name}}_EVENT_PORT = MIN_EVENT_PORT_,
         {% else %}
-        {{port.name}}_EVENT_PORT,
+	        {{port.name}}_EVENT_PORT,
         {% endif %}
     {% endfor %}
-        SUP_EVENT_PORT_
-    };
-
-    // On event ids
-    enum OnEvents {
+	        SUP_EVENT_PORT_
+	    };
+	
+	    // On event ids
+	    enum OnEvents {
     {% for regime in componentclass.regimes %}
         {% for oe in regime.on_events %}
-        {{oe.src_port_name}}_ON_EVENT,
+	        {{oe.src_port_name}}_ON_EVENT,
         {% endfor %}
     {% endfor %}
-        SUP_ON_EVENT_
-    };
+	        SUP_ON_EVENT_
+	    };
 
 {% endif %}
 {% if componentclass.analog_receive_ports %}
-    //Analog port ids
-    static const nest::port MIN_ANALOG_PORT_ = 1;
-    enum AnalogPorts {
+	    //Analog port ids
+	    static const nest::port MIN_ANALOG_PORT_ = 1;
+	    enum AnalogPorts {
     {% for port in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
         {% if loop.first %}
-        {{port.name}}_ANALOG_PORT = MIN_ANALOG_PORT_,
+            {{port.name}}_ANALOG_PORT = MIN_ANALOG_PORT_,
         {% else %}
-        {{port.name}}_ANALOG_PORT,
+            {{port.name}}_ANALOG_PORT,
         {% endif %}
     {% endfor %}
-        SUP_ANALOG_PORT_
-    };
+            SUP_ANALOG_PORT_
+        };
 
 
 {% endif %}
-    // Synaptic event function definitions
+        // Synaptic event function definitions
 {% for regime in componentclass.regimes %}
     {% for oe in regime.on_events %}
-    inline void {{oe.src_port_name}}_event_in_{{regime.name}}(nest::long_t lag);
+        inline void {{oe.src_port_name}}_event_in_{{regime.name}}(nest::long_t lag);
     {% endfor %}
 {% endfor %}
 
-    // The next two classes need to be friends to access the State_ class/member
-    friend class nest::RecordablesMap<{{component_name}}>;
-    friend class nest::UniversalDataLogger<{{component_name}}>;
-
-    struct Parameters_ {
+	    // The next two classes need to be friends to access the State_ class/member
+	    friend class nest::RecordablesMap<{{component_name}}>;
+	    friend class nest::UniversalDataLogger<{{component_name}}>;
+	
+        struct Parameters_ {
 {% for param in componentclass.parameters %}
-        double {{param.name}};
+            double {{param.name}};
 {% endfor %}
-        Parameters_();
-        void get(DictionaryDatum&) const;
-        void set(const DictionaryDatum&);
-    }; // end struct Parameters_
+	        Parameters_();
+	        void get(DictionaryDatum&) const;
+	        void set(const DictionaryDatum&);
+	    }; // end struct Parameters_
 
-    struct State_ {
-
-      enum StateVecElems {
+	    struct State_ {
+	
+            enum StateVecElems {
 {% for sv in componentclass.state_variables %}
     {% if loop.first %}
-        {{sv.name}}_INDEX = 0,
+                {{sv.name}}_INDEX = 0,
     {% else %}
-        {{sv.name}}_INDEX,
+                {{sv.name}}_INDEX,
     {% endif %}
 {% endfor %}
-        STATE_VEC_SIZE_
-      };
+                STATE_VEC_SIZE_
+            };
 
-
-      double y_[STATE_VEC_SIZE_];
+            double y_[STATE_VEC_SIZE_];
 {#      
 {% if ode_solver == "gsl" %}
-      nest::int_t r_; /* refractory counter */
+            nest::int_t r_; /* refractory counter */
 {% endif %}
 #}
 
+	      State_(const Parameters_& p);
+	      State_(const State_& s);
+	      State_& operator=(const State_& s);
+	      void get(DictionaryDatum&) const;
+	      void set(const DictionaryDatum&, const Parameters_&);
+	    }; // end struct State_
 
-      State_(const Parameters_& p);
-      State_(const State_& s);
-      State_& operator=(const State_& s);
-      void get(DictionaryDatum&) const;
-      void set(const DictionaryDatum&, const Parameters_&);
-    }; // end struct State_
-
-
+{#
 {% if ode_solver == "gsl"  %}
-    struct Variables_ { nest::int_t RefractoryCounts_; double U_old_; /* for spike-detection */ };
+        struct Variables_ { nest::int_t RefractoryCounts_; double U_old_; /* for spike-detection */ };
 {% else %}
-    struct Variables_ {};    
-{% endif %}
+#}
+        struct Variables_ {};
 
-    struct Buffers_ {
+        struct Buffers_ {
+	        Buffers_({{component_name}}&);
+	        Buffers_(const Buffers_&, {{component_name}}&);
+	        nest::UniversalDataLogger<{{component_name}}> logger_;
 
-        Buffers_({{component_name}}&);
-        Buffers_(const Buffers_&, {{component_name}}&);
-        nest::UniversalDataLogger<{{component_name}}> logger_;
+            // Structures required by the solver
+{% include "solver_work_vars.tmpl" %}
 
-        // Structures required by the solver
-{% if ode_solver == "cvode" %}
-        N_Vector y;  //!< current state vector used by CVode
-        void *   sys_;  //!< CVode control structure
-{% elif ode_solver == "ida" %}
-        N_Vector y, y1;  //!< current state vector used by IDA
-        N_Vector yp;  //!< derivatives vector used by IDA
-        void *   sys_;  //!< IDA control structure
-{% elif ode_solver == "gsl" %}
-		gsl_odeiv2_step*  s_;  //!< stepping function
-		gsl_odeiv2_control* c_;  //!< adaptive stepsize control function
-		gsl_odeiv2_evolve*  e_;  //!< evolution function
-		gsl_odeiv2_system   sys_;  //!< struct describing system
-		unsigned int N;  // size of state vector used by Jacobian
-		double *u, *jac;  // intermediate state vectors used for Jacobian approximation
-{% endif %}
-
-        // Timesteps
-        double_t step_;       //!< step size in ms
-        double   IntegrationStep_;//!< current integration time step, updated by solver
-
-
-        // Event receive port buffers
+	        // Timesteps
+	        double_t step_;       //!< step size in ms
+	        double   IntegrationStep_;//!< current integration time step, updated by solver
+	
+	        // Event receive port buffers
 {% for port in componentclass.event_receive_ports %}
-        nest::RingBuffer {{port.name}}_event_port;
+            nest::RingBuffer {{port.name}}_event_port;
 {% endfor %}
 
-        // Analog receive port buffers
+            // Analog receive port buffers
 {% for port in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
-        nest::RingBuffer {{port.name}}_analog_port;
+            nest::RingBuffer {{port.name}}_analog_port;
 {% endfor %}
 
-        // Variables to hold the last value of the analog receive port buffers
+            // Variables to hold the last value of the analog receive port buffers
 {% for port in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
-        double_t {{port.name}}_value;
+            double_t {{port.name}}_value;
 {% endfor %}
 
+            // Holds the id of the current regime
+            int current_regime;
 
-        // Holds the id of the current regime
-        int current_regime;
-
-
-	}; // end struct Buffers_
+	    }; // end struct Buffers_
 
 
-	template <State_::StateVecElems elem>
-	double_t get_y_elem_() const { return S_.y_[elem]; }
+		template <State_::StateVecElems elem>
+		double_t get_y_elem_() const { return S_.y_[elem]; }
+	
+		Parameters_ P_;
+		State_      S_;
+		Variables_  V_;
+		Buffers_    B_;
+	
+	    //! Mapping of recordables names to access functions	
+		static nest::RecordablesMap<{{component_name}}> recordablesMap_;
+	
+	}; // end class {{component_name}}
 
-	Parameters_ P_;
-	State_      S_;
-	Variables_  V_;
-	Buffers_    B_;
-
-    //! Mapping of recordables names to access functions	
-	static nest::RecordablesMap<{{component_name}}> recordablesMap_;
-
-  }; // end class {{component_name}}
-
-  inline nest::port {{component_name}}::check_connection(nest::Connection& c, nest::port receptor_type) {
-	  nest::SpikeEvent e;
-	  e.set_sender(*this);
-	  c.check_event(e);
-	  return c.get_target()->connect_sender(e, receptor_type);
-  }
-
-  inline nest::port {{component_name}}::connect_sender(nest::SpikeEvent&, nest::port receptor_type) {
-    if (receptor_type < 0 || receptor_type >= SUP_EVENT_PORT_)
-      throw nest::UnknownReceptorType(receptor_type, this->get_name());
-    else if (receptor_type < MIN_EVENT_PORT_)
-      throw nest::IncompatibleReceptorType(receptor_type, this->get_name(), "SpikeEvent");
-    return receptor_type;
-  }
-
-
-  inline nest::port {{component_name}}::connect_sender(nest::CurrentEvent&, nest::port receptor_type) {
-    if (receptor_type < 0 || receptor_type >= SUP_ANALOG_PORT_)
-      throw nest::UnknownReceptorType(receptor_type, this->get_name());
-    else if (receptor_type < MIN_ANALOG_PORT_)
-      throw nest::IncompatibleReceptorType(receptor_type, this->get_name(), "SpikeEvent");
-    return receptor_type;
-  }
-
-
-  inline nest::port {{component_name}}::connect_sender(nest::DataLoggingRequest& dlr, nest::port receptor_type) {
-    if (receptor_type != 0)
-      throw nest::UnknownReceptorType(receptor_type, this->get_name());
-    return B_.logger_.connect_logging_device(dlr, recordablesMap_);
-  }
-
-
-  inline void {{component_name}}::get_status(DictionaryDatum &d) const {
-    P_.get(d);
-    S_.get(d);
-    nest::Archiving_Node::get_status(d);
-    (*d)[nest::names::recordables] = recordablesMap_.get_list();
-    def<double_t>(d, nest::names::t_spike, get_spiketime_ms());
-    DictionaryDatum receptor_dict_ = new Dictionary();
-    // Synaptic event dictionary
+    inline nest::port {{component_name}}::check_connection(nest::Connection& c, nest::port receptor_type) {
+		nest::SpikeEvent e;
+		e.set_sender(*this);
+		c.check_event(e);
+		return c.get_target()->connect_sender(e, receptor_type);
+    }
+	
+    inline nest::port {{component_name}}::connect_sender(nest::SpikeEvent&, nest::port receptor_type) {
+	    if (receptor_type < 0 || receptor_type >= SUP_EVENT_PORT_)
+            throw nest::UnknownReceptorType(receptor_type, this->get_name());
+        else if (receptor_type < MIN_EVENT_PORT_)
+            throw nest::IncompatibleReceptorType(receptor_type, this->get_name(), "SpikeEvent");
+		return receptor_type;
+    }
+		
+		
+    inline nest::port {{component_name}}::connect_sender(nest::CurrentEvent&, nest::port receptor_type) {
+		if (receptor_type < 0 || receptor_type >= SUP_ANALOG_PORT_)
+		    throw nest::UnknownReceptorType(receptor_type, this->get_name());
+		else if (receptor_type < MIN_ANALOG_PORT_)
+		    throw nest::IncompatibleReceptorType(receptor_type, this->get_name(), "SpikeEvent");
+	    return receptor_type;
+	}
+		
+		
+	inline nest::port {{component_name}}::connect_sender(nest::DataLoggingRequest& dlr, nest::port receptor_type) {
+	    if (receptor_type != 0)
+            throw nest::UnknownReceptorType(receptor_type, this->get_name());
+		return B_.logger_.connect_logging_device(dlr, recordablesMap_);
+    }
+		
+		
+    inline void {{component_name}}::get_status(DictionaryDatum &d) const {
+		P_.get(d);
+		S_.get(d);
+		nest::Archiving_Node::get_status(d);
+		(*d)[nest::names::recordables] = recordablesMap_.get_list();
+		def<double_t>(d, nest::names::t_spike, get_spiketime_ms());
+		DictionaryDatum receptor_dict_ = new Dictionary();
+		// Synaptic event dictionary
 {% for port in componentclass.event_receive_ports %}
-    (*receptor_dict_)[Name("{{port.name}}")]  = {{port.name}}_EVENT_PORT;
+        (*receptor_dict_)[Name("{{port.name}}")]  = {{port.name}}_EVENT_PORT;
 {% endfor %}
 {% for port in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
-    (*receptor_dict_)[Name("{{port.name}}")]  = {{port.name}}_ANALOG_PORT;
+        (*receptor_dict_)[Name("{{port.name}}")]  = {{port.name}}_ANALOG_PORT;
 {% endfor %}
-    (*d)[nest::names::receptor_types] = receptor_dict_;
-  }
+        (*d)[nest::names::receptor_types] = receptor_dict_;
+    }
 
 
-  inline void {{component_name}}::set_status(const DictionaryDatum &d) {
-    Parameters_ ptmp = P_;  // temporary copy in case of errors
-    ptmp.set(d);             // throws if BadProperty
-    State_    stmp = S_;  // temporary copy in case of errors
-    stmp.set(d, ptmp);         // throws if BadProperty
-    // We now know that (ptmp, stmp) are consistent. We do not
-    // write them back to (P_, S_) before we are also sure that
-	// the properties to be set in the parent class are internally
-	// consistent.
-	nest::Archiving_Node::set_status(d);
-	// if we get here, temporaries contain consistent set of properties
-	P_ = ptmp;
-	S_ = stmp;	
-    calibrate();
-  }
+    inline void {{component_name}}::set_status(const DictionaryDatum &d) {
+	    Parameters_ ptmp = P_;  // temporary copy in case of errors
+	    ptmp.set(d);             // throws if BadProperty
+	    State_    stmp = S_;  // temporary copy in case of errors
+	    stmp.set(d, ptmp);         // throws if BadProperty
+	    // We now know that (ptmp, stmp) are consistent. We do not
+	    // write them back to (P_, S_) before we are also sure that
+		// the properties to be set in the parent class are internally
+		// consistent.
+		nest::Archiving_Node::set_status(d);
+		// if we get here, temporaries contain consistent set of properties
+		P_ = ptmp;
+		S_ = stmp;	
+	    calibrate();
+    }
 
 } // end namespace nest
 

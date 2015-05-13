@@ -185,12 +185,12 @@ namespace nineml {
 {% endfor %}
 
 {% include "solve_steady_state.tmpl" %}
+}
 
 /***********************************
  * Copy constructor for State class
  ***********************************/
 {{component_name}}::State_::State_(const State_& s) {
-
   for (int i = 0 ; i < {{componentclass.num_state_variables}} ; ++i)
       y_[i] = s.y_[i];
 }
@@ -201,7 +201,6 @@ namespace nineml {
  ********************************************/
 
 {{component_name}}::State_& {{component_name}}::State_::operator=(const State_& s) {
-
   assert(this != &s);
   for (size_t i = 0 ; i < {{componentclass.num_state_variables}} ; ++i)
        y_[i] = s.y_[i];
@@ -211,16 +210,6 @@ namespace nineml {
 
 void {{component_name}}::calibrate() {
     B_.logger_.init();
-    {#
-{% if ode_solver == "gsl" %}
-    V_.U_old_ = S_.y_[{{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX];
-    {% if refractory_period %}
-    V_.RefractoryCounts_ = nest::Time(nest::Time::ms(P_.t_ref)).get_steps();
-    {% else %}
-    V_.RefractoryCounts_ = 0;
-    {% endif %}
-{% endif %}
-#}
 }
 
 
