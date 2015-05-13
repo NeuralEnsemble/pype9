@@ -141,7 +141,9 @@ class Cell(object):
         """
         Append the property names to the list of attributes of a cell object
         """
-        return list(set(chain(dir(super(Cell, self)), self.property_names)))
+        return list(set(chain(
+            dir(super(self.__class__, self)), self.property_names,
+            self.state_variable_names)))
 
     @property
     def properties(self):
@@ -154,9 +156,13 @@ class Cell(object):
     def property_names(self):
         return self._nineml.property_names
 
+    @property
+    def state_variable_names(self):
+        return self._nineml.component_class.state_variable_names
+
     def __repr__(self):
-        return '{}(component_class="{}")'.format(self.__class__.__name__,
-                                                 self.component_class.name)
+        return '{}(component_class="{}")'.format(
+            self.__class__.__name__, self._nineml.component_class.name)
 
     def to_xml(self):
         return self._nineml.to_xml()

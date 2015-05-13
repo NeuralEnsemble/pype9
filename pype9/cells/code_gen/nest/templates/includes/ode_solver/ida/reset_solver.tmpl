@@ -1,0 +1,4 @@
+            /* Reinitializes IDA state if any synaptic events have occurred */
+            int status = IDAReInit(B_.sys_, tt, B_.y, B_.yp);
+            if (check_flag(&status, "IDAReInit", 1))
+                throw IDASolverFailure(get_name(), status);

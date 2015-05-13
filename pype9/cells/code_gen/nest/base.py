@@ -35,7 +35,7 @@ class CodeGenerator(BaseCodeGenerator):
     REL_TOLERANCE_DEFAULT = 0.0
     GSL_JACOBIAN_APPROX_STEP_DEFAULT = 0.01
     V_THRESHOLD_DEFAULT = 0.0
-    _TMPL_PATH = path.join(path.dirname(__file__), 'templates')
+    BASE_TMPL_PATH = path.join(path.dirname(__file__), 'templates')
 
     def __init__(self, build_cores=1):
         super(CodeGenerator, self).__init__()
@@ -55,8 +55,6 @@ class CodeGenerator(BaseCodeGenerator):
             'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
-            'ode_solver': kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT),
-            'ss_solver': kwargs.get('ss_solver', self.SS_SOLVER_DEFAULT),
             'unit_conversion': self.unit_conversion,
             'default_regime': kwargs.get('default_regime',
                                          next(component_class.regime_names)),
@@ -70,12 +68,20 @@ class CodeGenerator(BaseCodeGenerator):
                                         self.REL_TOLERANCE_DEFAULT),
             'parameter_scales': [],
             'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT)}
+        ode_solver = kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT)
+        ss_solver = kwargs.get('ss_solver', self.SS_SOLVER_DEFAULT)
+        if ode_solver is None:
+            raise Pype9BuildError("'ode_solver' cannot be None")
+        switches = {'ode_solver': ode_solver, 'ss_solver': ss_solver}
+        # FIXME: Temporary fix until solvers are handled by switches
+        tmpl_args['ode_solver'] = ode_solver
+        tmpl_args['ss_solver'] = ss_solver
         # Render C++ header file
         self.render_to_file('header.tmpl', tmpl_args,
-                             prototype.name + '.h', src_dir)
+                             prototype.name + '.h', src_dir, switches)
         # Render C++ class file
         self.render_to_file('main.tmpl', tmpl_args, prototype.name + '.cpp',
-                             src_dir)
+                             src_dir, switches)
         # Render Loader header file
         self.render_to_file('module-header.tmpl', tmpl_args,
                              prototype.name + 'Module.h', src_dir)

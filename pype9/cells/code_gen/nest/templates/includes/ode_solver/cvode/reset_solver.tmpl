@@ -1,0 +1,4 @@
+            /* Reinitializes CVode state if any synaptic events have occurred */
+            int status = CVodeReInit(B_.sys_, tt, B_.y);
+            if (check_flag(&status, "CVodeReInit", 1))
+                throw CVodeSolverFailure(get_name(), status);

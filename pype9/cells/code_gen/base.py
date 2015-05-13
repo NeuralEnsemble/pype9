@@ -53,20 +53,6 @@ class BaseCodeGenerator(object):
     # units
     DEFAULT_UNITS = {}
 
-    def __init__(self):
-        # Get a dictionary of all the annotations used in PyPe9
-        annotations_dict = copy(pype9.annotations.__dict__)
-        annotations_dict.pop('__builtins__')
-        # Initialise the Jinja2 environment
-        self.jinja_env = Environment(loader=FileSystemLoader(self._TMPL_PATH),
-                                     trim_blocks=True, lstrip_blocks=True,
-                                     undefined=StrictUndefined)
-        # Add some globals used by the template code
-        self.jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
-                                      xrange=xrange, next=next, chain=chain,
-                                      hash=hash, deepcopy=deepcopy,
-                                      units=units, **annotations_dict)
-
     @abstractmethod
     def generate_source_files(self, component, initial_state, src_dir,
                               **kwargs):
@@ -271,8 +257,34 @@ class BaseCodeGenerator(object):
                 "required permissions or specify a different \"parent build "
                 "directory\" ('parent_build_dir') -> {}".format(e))
 
-    def render_to_file(self, template, args, filename, directory):
-        contents = self.jinja_env.get_template(template).render(**args)
+    def render_to_file(self, template, args, filename, directory, switches={}):
+        # Get a dictionary of all the annotations used in PyPe9
+        annotations_dict = copy(pype9.annotations.__dict__)
+        annotations_dict.pop('__builtins__')
+        # Initialise the template loader to include the flag directories
+        template_paths = [
+            self.BASE_TMPL_PATH,
+            os.path.join(self.BASE_TMPL_PATH, 'includes', 'common')]
+        # Add include paths for various switches (e.g. solver type)
+        for name, value in switches.iteritems():
+            if value is not None:
+                template_paths.append(os.path.join(self.BASE_TMPL_PATH,
+                                                   'includes', name, value))
+        # Add default path for template includes
+        template_paths.append(
+            os.path.join(self.BASE_TMPL_PATH, 'includes', 'default'))
+        # Initialise the Jinja2 environment
+        jinja_env = Environment(loader=FileSystemLoader(template_paths),
+                                trim_blocks=True, lstrip_blocks=True,
+                                undefined=StrictUndefined)
+        # Add some globals used by the template code
+        jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
+                                 xrange=xrange, next=next, chain=chain,
+                                 hash=hash, deepcopy=deepcopy,
+                                 units=units, **annotations_dict)
+        # Actually render the contents
+        contents = jinja_env.get_template(template).render(**args)
+        # Write the contents to file
         with open(os.path.join(directory, filename), 'w') as f:
             f.write(contents)
 

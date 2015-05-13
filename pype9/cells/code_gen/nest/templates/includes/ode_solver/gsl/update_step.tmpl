@@ -1,0 +1,25 @@
+{# Performs the update step for the GSL solver #}        
+        V_.U_old_ = S_.y_[{{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX];
+
+        while (tt < dt) {
+          const int status =  gsl_odeiv2_evolve_apply(B_.e_, B_.c_, B_.s_,
+                                                      &B_.sys_, // system of ODE
+                                                      &tt, // from t...
+                                                      dt, // ...to t= t + dt
+                                                      &B_.IntegrationStep_, // integration window (written on!)
+                                                      S_.y_); // neuron state
+          if (status != GSL_SUCCESS)
+            throw nest::GSLSolverFailure(get_name(), status);
+        }
+
+        // Check threshold if not refractory and emit spike if crossed
+        if ( S_.r_ > 0 )
+           S_.r_--;
+        {# FIXME: This threshold crossing should be handled by regimes #}
+        else if (S_.y_[{{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX] >= {{v_threshold}} &&
+                 V_.U_old_ > S_.y_[{{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX]) {
+            S_.r_ = V_.RefractoryCounts_;
+            set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
+            nest::SpikeEvent se;
+            network()->send(*this, se, lag);
+        }

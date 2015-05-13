@@ -32,20 +32,21 @@ class Cell(base.Cell):
         super(Cell, self).__setattr__('_initialized', False)
         self._cell = nest.Create(self.__class__.name)
         super(Cell, self).__init__(*properties, **kwprops)
+        self._receive_ports = nest.GetDefaults(
+            self.__class__.name)['receptor_types']
         self._initialized = True
 
     def __getattr__(self, varname):
-        if self._initialized and varname in self._nineml.property_names:
+        if (self._initialized and varname in chain(
+                self.property_names, self.state_variable_names)):
             return nest.GetStatus(self._cell, keys=varname)[0]
         else:
             raise AttributeError("'{}' cell class does not have parameter '{}'"
                                  .format(self.componentclass.name, varname))
 
     def __setattr__(self, varname, value):
-        if (self._initialized and
-            varname in chain(
-                self._nineml.property_names,
-                self._nineml.component_class.state_variable_names)):
+        if (self._initialized and varname in chain(
+                self.property_names, self.state_variable_names)):
             nest.SetStatus(self._cell, varname, value)
         else:
             super(Cell, self).__setattr__(varname, value)
@@ -54,6 +55,10 @@ class Cell(base.Cell):
         super(Cell, self).set(prop)
         # FIXME: need to convert to NEST units!!!!!!!!!!!
         nest.SetStatus(self._cell, prop.name, prop.value)
+
+    @property
+    def receive_ports(self):
+        return self._receive_ports
 
     def record(self, variable):
         self._initialise_local_recording()

@@ -710,90 +710,14 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
     assert(from < to);
     
     nest::long_t current_steps = origin.get_steps();
-    
-{# to remove    
-{% if ode_solver in ('cvode', 'ida') %} 
-    int N = NV_LENGTH_S (B_.y);
-{% else %}
-    int N = S_.N  // Size of the state vector
-{% endif %}
-#}
 
-{% if ode_solver == 'euler' %}
-    double f_[{{component_name}}::State_::STATE_VEC_SIZE_];  // Vector to hold the time derivatives
-{% endif %}    
+{% include "update_work_vector.tmpl" %}  
   
     for (nest::long_t lag = from; lag < to; ++lag) {
         double dt = nest::Time::get_resolution().get_ms();
         double tt = 0.0;
 
-{% if ode_solver in ('cvode', 'ida') %}
-    {% if ode_solver == 'cvode' %}
-        {% set abbrev = 'CV' %}
-        {% set prefix = 'CVode' %}
-        {% set solver = 'CVode' %}
-    {% else %}
-        {% set abbrev = 'IDA' %}
-        {% set prefix = 'IDA' %}
-        {% set solver = 'IDASolve' %}
-    {% endif %}
-        double tout = (current_steps+lag) * dt;
-
-        // adaptive step integration
-        while (tt < tout) {
-            const int status = {{solver}}(B_.sys_, tout, {% if ode_solver == 'cvode' %}B_.y, &tt{% elif ode_solver == 'ida' %}&tt, B_.y, B_.yp{% endif %}, {{abbrev}}_NORMAL);
-            switch (status) {
-                case {{abbrev}}_SUCCESS:      continue;
-                case {{abbrev}}_ROOT_RETURN: {
-                    set_spiketime(nest::Time::ms(tt));
-                    nest::SpikeEvent se;
-                    // Copy solver state to NEST state
-                    for (int i = 0; i < {{component_name}}::State_::STATE_VEC_SIZE_; i++)
-                        S_.y_[i] = ITEM(B_.y,i);
-                    network()->send(*this, se, lag);
-                    adjust_zero_crossings(B_.y, {{abs_tolerance}});
-                    continue;
-                }
-                case {{abbrev}}_TSTOP_RETURN: break;
-                default:
-                    throw {{prefix}}SolverFailure (get_name(), 0);
-            }
-        }
-
-        // Copy items from CVODE/IDA vector to NEST state array.
-        for (int i = 0; i < {{component_name}}::STATE_VEC_SIZE_; i++)
-           S_.y_[i] = ITEM(B_.y, i);
-{% elif ode_solver == "gsl" %}
-        V_.U_old_ = S_.y_[{{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX];
-
-        while (tt < dt) {
-          const int status =  gsl_odeiv2_evolve_apply(B_.e_, B_.c_, B_.s_,
-                                                      &B_.sys_, // system of ODE
-                                                      &tt, // from t...
-                                                      dt, // ...to t= t + dt
-                                                      &B_.IntegrationStep_, // integration window (written on!)
-                                                      S_.y_); // neuron state
-          if (status != GSL_SUCCESS)
-            throw nest::GSLSolverFailure(get_name(), status);
-        }
-
-        // Check threshold if not refractory and emit spike if crossed
-        if ( S_.r_ > 0 )
-           S_.r_--;
-        {# FIXME: This threshold crossing should be handled by regimes #}
-        else if (S_.y_[{{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX] >= {{v_threshold}} &&
-                 V_.U_old_ > S_.y_[{{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX]) {
-            S_.r_ = V_.RefractoryCounts_;
-            set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
-            nest::SpikeEvent se;
-            network()->send(*this, se, lag);
-        }
-{% elif ode_solver == 'euler' %}
-        // Calculate time derivatives
-        {{component_name}}_{{default_regime}}_dynamics(tt, S_.y_, f_, this);
-        for (int i = 0; i < {{component_name}}::State_::STATE_VEC_SIZE_; ++i)
-           S_.y_[i] += f_[i] * dt;
-{% endif %}
+{% include "update_step.tmpl" %}
 
         // Event handling (still needs to handle events that arrive in the same
         // timestep.
@@ -826,20 +750,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
          * in NEST examples
          */
         if (num_events > 0) {
-{% if (ode_solver == "cvode") %}
-            /* Reinitializes CVode state if any synaptic events have occurred */
-            int status = CVodeReInit(B_.sys_, tt, B_.y);
-            if (check_flag(&status, "CVodeReInit", 1))
-                throw CVodeSolverFailure(get_name(), status);
-{% elif (ode_solver == "ida") %}
-            /* Reinitializes IDA state if any synaptic events have occurred */
-            int status = IDAReInit(B_.sys_, tt, B_.y, B_.yp);
-            if (check_flag(&status, "IDAReInit", 1))
-                throw IDASolverFailure(get_name(), status);
-{% elif (ode_solver == "gsl") %}
-            /* Resets the GSL stepping function if any synaptic events have occurred */
-            gsl_odeiv2_step_reset(B_.s_);
-{% endif %}
+{% include "reset_solver.tmpl" %}
         }
 
 {% for port in componentclass.analog_receive_ports %}
@@ -857,7 +768,6 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 
 void {{component_name}}::handle(nest::SpikeEvent & e) {
     assert(e.get_delay() > 0);
-    
     // Loop through event receive ports
 {% for port in componentclass.event_receive_ports %}
     {%+ if not loop.first %} else {% endif %}if (e.get_rport() == {{port.name}}_EVENT_PORT)
@@ -865,36 +775,19 @@ void {{component_name}}::handle(nest::SpikeEvent & e) {
             e.get_rel_delivery_steps(network()->get_slice_origin()),
             fabs(e.get_weight()) * e.get_multiplicity());
 {% endfor %}
-{% if componentclass.num_event_receive_ports %}
-    else {
-{% endif %}
-        {# FIXME: Need to work out what the standard practice is in this case #}
-        std::cout << "WARNING! Tried to connect unrecognised port" << std::endl;
-{% if componentclass.num_event_receive_ports %}
-    }
-{% endif %}        
 }
 
 void {{component_name}}::handle(nest::CurrentEvent& e) {
     assert(e.get_delay() > 0);
 
     const double_t c = e.get_current();
-    const double_t w = e.get_weight();
-    
+    const double_t w = e.get_weight();    
     // Loop through analog receive ports
 {% for port in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
-    {%+ if not loop.first %}else {% endif %}if (e.get_rport() == {{port.name}}_ANALOG_PORT)
+    {%+ if not loop.first %} else {% endif %}if (e.get_rport() == {{port.name}}_ANALOG_PORT)
         B_.{{port.name}}_analog_port.add_value(
             e.get_rel_delivery_steps(network()->get_slice_origin()), w * c);
 {% endfor %}
-{% if componentclass.num_analog_receive_ports + componentclass.num_analog_reduce_ports %}
-    else
-{% endif %}
-        std::cout << "WARNING! Tried to connect unrecognised port" << std::endl;
-{% if componentclass.num_analog_receive_ports + componentclass.num_analog_reduce_ports %}
-    }
-{% endif %}
-
 }
 
 void {{component_name}}::handle(nest::DataLoggingRequest& e) {

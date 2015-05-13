@@ -46,8 +46,12 @@ class TestNestLoad(TestCase):
             ode_solver='euler', ss_solver=None,
             membrane_capacitance=Property('Cm', 0.001, un.nF))
         nml = Izhikevich9ML()
-        nml.inject_current(neo.AnalogSignal([0.0] + [0.2] * 9, units='nA',
-                                            sampling_period=1 * pq.ms))
+        nml_iclamp = nest.Create(
+            'dc_generator', 1, {'start': 2.0, 'stop': 95.0, 'amplitude': 5.0})
+        nest.Connect(nml_iclamp, nml._cell,
+                     syn_spec={"receptor_type": nml.receive_ports['iExt']})
+#         nml.inject_current(neo.AnalogSignal([0.0] + [0.2] * 9, units='nA',
+#                                             sampling_period=1 * pq.ms))
         nml.record('V_m')
         nml.record('U_m')
         simulator.initialize()  # @UndefinedVariable

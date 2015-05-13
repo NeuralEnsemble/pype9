@@ -169,7 +169,7 @@ namespace nineml {
 {% endif %}
 {% if componentclass.analog_receive_ports %}
     //Analog port ids
-    static const nest::port MIN_ANALOG_PORT_ = {% if componentclass.analog_receive_ports %}SUP_EVENT_PORT_{% else %}1{% endif %};
+    static const nest::port MIN_ANALOG_PORT_ = 1;
     enum AnalogPorts {
     {% for port in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
         {% if loop.first %}
@@ -318,9 +318,11 @@ namespace nineml {
 
 
   inline nest::port {{component_name}}::connect_sender(nest::CurrentEvent&, nest::port receptor_type) {
-    if (receptor_type != 0)
+    if (receptor_type < 0 || receptor_type >= SUP_ANALOG_PORT_)
       throw nest::UnknownReceptorType(receptor_type, this->get_name());
-    return 0;
+    else if (receptor_type < MIN_ANALOG_PORT_)
+      throw nest::IncompatibleReceptorType(receptor_type, this->get_name(), "SpikeEvent");
+    return receptor_type;
   }
 
 
@@ -341,6 +343,9 @@ namespace nineml {
     // Synaptic event dictionary
 {% for port in componentclass.event_receive_ports %}
     (*receptor_dict_)[Name("{{port.name}}")]  = {{port.name}}_EVENT_PORT;
+{% endfor %}
+{% for port in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
+    (*receptor_dict_)[Name("{{port.name}}")]  = {{port.name}}_ANALOG_PORT;
 {% endfor %}
     (*d)[nest::names::receptor_types] = receptor_dict_;
   }
