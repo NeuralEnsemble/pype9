@@ -1,0 +1,12 @@
+    N_Vector {{SSvector}};
+    ssvect = N_VNew_Serial({{steadyStateSize}});
+    fsolve ({{component_name}}_steadystate, {{steadyStateSize}}, {{SSvector}},
+          (void *)&p,  "{{component_name}}");
+    {% for name in rateEqStates %}
+        {% if (name in steadyStateIndexMap) %}
+    y_[{{stateIndexMap[name]}}] = ITEM({{SSvector}}, {{steadyStateIndexMap[name]}});
+        {% else %}
+    y_[{{stateIndexMap[name]}}] = {{name}};
+        {% endif %}
+    {% endfor %}
+    N_VDestroy_Serial ({{SSvector}});

@@ -19,22 +19,8 @@
 #include "recordables_map.h"
 
 {% include "solver_includes.tmpl" %}
-
-{% if ss_solver == "kinsol" %}
-#include <sundials/sundials_types.h> /* definition of type realtype */
-#include <nvector/nvector_serial.h>  /* serial N_Vector types, fcts., macros */
-#include <kinsol/kinsol.h>       /* prototypes for KINSOL fcts. */
-#include <kinsol/kinsol_dense.h>   /* prototype for KINDense */
-{% elif ss_solver == "gsl" %}
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_multiroots.h>
-{% endif %}
-
-{% if ode_solver in ('cvode', 'ida') %}
-#define ITEM(v,i)  NV_Ith_S(v,i)  /* Ith component in a vector */
-{% else %}
-#define ITEM(v,i)  (v[i])
-{% endif %}
+{% include "ss_solver_includes.tmpl" %}
+{% include "item_macro.tmpl" %}
 
 namespace nineml {
 
@@ -42,24 +28,11 @@ namespace nineml {
 {% include "ss_solver_preludes.tmpl" %}
 
 {% for regime in componentclass.regimes %}
-    {% if ode_solver == "cvode" or ode_solver == "ida" %}
-  extern "C" int {{component_name}}_{{regime.name}}_dynamics (double, const N_Vector, N_Vector, void*);
-  extern "C" int {{component_name}}_{{regime.name}}_residual (double, N_Vector, N_Vector, N_Vector, void*);
-        {% if ode_solver == "cvode" %}
-  extern "C" int {{component_name}}_{{regime.name}}_event (double, N_Vector, double *, void*);
-        {% else %}
-  extern "C" int {{component_name}}_{{regime.name}}_event (double, N_Vector, N_Vector, double *, void*);
-        {% endif %}
-    {% elif ode_solver == 'gsl' %}
-  extern "C" int {{component_name}}_{{regime.name}}_dynamics (double, const double*, double*, void*);
-    {% endif %}
+	extern "C" {% include "dynamics_signature.tmpl" %};
+	extern "C" {% include "residual_signature.tmpl" %};
+	extern "C" {% include "event_signature.tmpl" %};
+	extern "C" {% include "ss_function_signature.tmpl" %};
 {% endfor %}
-
-{% if ss_solver == "kinsol" %}
-  extern "C" int {{component_name}}_steadystate (N_Vector, N_Vector, void*);
-{% elif ss_solver == 'gsl' %}
-  extern "C" int {{component_name}}_steadystate (const gsl_vector *, void *, gsl_vector *);
-{% endif %}
 
   class {{component_name}} : public nest::Archiving_Node {
 
@@ -98,20 +71,12 @@ namespace nineml {
     void update(nest::Time const &, const nest::long_t, const nest::long_t);
 
     // Set dynamics methods (the ones that actually model the dynamics) as friends
-{% if ode_solver == "cvode" %}
-    friend int {{component_name}}_dynamics (double, const N_Vector, N_Vector, void*);
-    friend int {{component_name}}_event (double, N_Vector, double *, void*);
-{% elif ode_solver == "ida" %}
-    friend int {{component_name}}_residual (double, N_Vector, N_Vector, N_Vector, void*);
-    friend int {{component_name}}_event (double, N_Vector, N_Vector, double *, void*);
-{% elif ode_solver == "gsl" %}
-    friend int {{component_name}}_dynamics (double, const double*, double*, void*);
-{% endif %}
-{% if ss_solver == "kinsol" %}
-    friend  int {{component_name}}_steadystate (N_Vector, N_Vector, void*);
-{% elif ss_solver == 'gsl' %}
-    friend  int {{component_name}}_steadystate (const gsl_vector *, void *, gsl_vector *);
-{% endif %}
+{% for regime in componentclass.regimes %}
+    friend {% include "dynamics_signature.tmpl" %};
+    friend {% include "residual_signature.tmpl" %};
+    friend {% include "event_signature.tmpl" %};
+    friend {% include "ss_function_signature.tmpl" %};
+{% endfor %}
 
     // Regime ids
     static const int DEFAULT_REGIME_ = 0;
