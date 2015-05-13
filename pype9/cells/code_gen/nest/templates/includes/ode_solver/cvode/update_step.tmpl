@@ -1,21 +1,12 @@
         double tt = 0.0;
-    {% if ode_solver == 'cvode' %}
-        {% set abbrev = 'CV' %}
-        {% set prefix = 'CVode' %}
-        {% set solver = 'CVode' %}
-    {% else %}
-        {% set abbrev = 'IDA' %}
-        {% set prefix = 'IDA' %}
-        {% set solver = 'IDASolve' %}
-    {% endif %}
         double tout = (current_steps+lag) * dt;
 
         // adaptive step integration
         while (tt < tout) {
-            const int status = {{solver}}(B_.sys_, tout, {% if ode_solver == 'cvode' %}B_.y, &tt{% elif ode_solver == 'ida' %}&tt, B_.y, B_.yp{% endif %}, {{abbrev}}_NORMAL);
+            const int status = CVode(B_.sys_, tout, B_.y, &tt, CV_NORMAL);
             switch (status) {
-                case {{abbrev}}_SUCCESS:      continue;
-                case {{abbrev}}_ROOT_RETURN: {
+                case CV_SUCCESS:      continue;
+                case CV_ROOT_RETURN: {
                     set_spiketime(nest::Time::ms(tt));
                     nest::SpikeEvent se;
                     // Copy solver state to NEST state
@@ -25,12 +16,12 @@
                     adjust_zero_crossings(B_.y, {{abs_tolerance}});
                     continue;
                 }
-                case {{abbrev}}_TSTOP_RETURN: break;
+                case CV_TSTOP_RETURN: break;
                 default:
-                    throw {{prefix}}SolverFailure (get_name(), 0);
+                    throw CVodeSolverFailure (get_name(), 0);
             }
         }
 
-        // Copy items from CVODE/IDA vector to NEST state array.
-        for (int i = 0; i < {{component_name}}::STATE_VEC_SIZE_; i++)
+        // Copy items from CVODE vector to NEST state array.
+        for (int i = 0; i < {{component_name}}::State_::STATE_VEC_SIZE_; i++)
            S_.y_[i] = ITEM(B_.y, i);

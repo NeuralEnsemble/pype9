@@ -1,4 +1,4 @@
-extern "C" int {{component_name}}_trigger (double t, N_Vector y,{% if ode_solver == 'ida' %} N_Vector yp,{% endif %} double *g, void* pnode) {
+extern "C" int {{component_name}}_trigger (double t, N_Vector y, N_Vector yp, double *g, void* pnode) {
     double v, vt; v = -1.0; vt = 0.0;
 
     // S is shorthand for the type that describes the model state

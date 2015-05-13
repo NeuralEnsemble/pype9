@@ -7,7 +7,7 @@
 	* Exception to be thrown if a CV solver does not return CV_SUCCESS
 	* @ingroup KernelExceptions
 	*/
-    class CVSolverFailure: public KernelException {
+    class CVodeSolverFailure: public nest::KernelException {
 	  public:
         /**
 	     * @note model should be passed from get_name() to ensure that
@@ -15,11 +15,11 @@
 	     * @param model name of model causing problem
 	     * @param status exit status of the CV solver
 	     */
-        CVSolverFailure(const std::string& model, const int status)
-	     : KernelException("CVSolverFailure"),
+        CVodeSolverFailure(const std::string& model, const int status)
+	     : KernelException("CVodeSolverFailure"),
 	       model_(model),
 	       status_(status) {}
-        ~CVSolverFailure() throw() {}
+        ~CVodeSolverFailure() throw() {}
 
 	    std::string message() {
             std::ostringstream msg;

@@ -92,6 +92,7 @@ namespace nineml {
     {% endfor %}
 
     {% include "dynamics_return.tmpl" %}
+
 }
 {% endfor %}
 
@@ -466,9 +467,25 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
     {% endfor %}
         {{endif(loop.last)}}
 {% endfor %}
+
+{#
+        // Check threshold if not refractory and emit spike if crossed
+        if ( S_.r_ > 0 )
+           S_.r_--;
+        // FIXME: This threshold crossing should be handled by regimes
+        else if (S_.y_[{{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX] >= {{v_threshold}} &&
+                 V_.U_old_ > S_.y_[{{component_name}}::State_::{{componentclass.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX]) {
+            S_.r_ = V_.RefractoryCounts_;
+            set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
+            nest::SpikeEvent se;
+            network()->send(*this, se, lag);
+        }
+#}
+        
         // FIXME: Not sure if resetting the solver is necessary, Ivan thought it was but I haven't seen it in NEST examples
         if (num_events > 0) {
 {% include "reset_solver.tmpl" %}
+
         }
 
 {% for port in componentclass.analog_receive_ports %}

@@ -1,22 +1,21 @@
-
 {% for regime in componentclass.regimes %}
 /** Diagonal Jacobian approximation (for GSL): (f(s+.01) - f(s))/.001 */
 extern "C" int {{component_name}}_{{regime.name}}_jacobian (double t, const double y[], double *dfdy, double dfdt[], void* pnode) {
-  // cast the node ptr to an object of the proper type
-  assert(pnode);
-  const {{component_name}} & node = *(reinterpret_cast<{{component_name}}*>(pnode));
-  {{component_name}} & vnode =  *(reinterpret_cast<{{component_name}}*>(pnode));
+    // cast the node ptr to an object of the proper type
+    assert(pnode);
+    const {{component_name}} & node = *(reinterpret_cast<{{component_name}}*>(pnode));
+    {{component_name}} & vnode =    *(reinterpret_cast<{{component_name}}*>(pnode));
 
-  // state is a reference to the model state
-  struct {{component_name}}::Buffers_ *b;
-  b = &(vnode.B_);
+    // state is a reference to the model state
+    struct {{component_name}}::Buffers_ *b;
+    b = &(vnode.B_);
 
-  for (int i = 0; i < b->N; i++)
-    b->u[i] = y[i] + 0.01;
+    for (int i = 0; i < b->N; i++)
+        b->u[i] = y[i] + 0.01;
 
-  {{component_name}}_{{regime.name}}_dynamics(t, b->u, b->jac, pnode);
-  for (int i = 0; i < b->N; i++)
-    dfdt[i*b->N + i] = (b->jac[i] - dfdy[i]) / .001;
-  return 0;
+    {{component_name}}_{{regime.name}}_dynamics(t, b->u, b->jac, pnode);
+    for (int i = 0; i < b->N; i++)
+        dfdt[i*b->N + i] = (b->jac[i] - dfdy[i]) / .001;
+    return 0;
 }
 {% endfor %}

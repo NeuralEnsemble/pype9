@@ -25,7 +25,7 @@
     // Calls CVodeInit to initialize the integrator memory and specify the
     // right hand side function in y''=f(t,y), the initial time, and
     // the initial values.
-    status = CVodeInit (B_.sys_, {{component_name}}_dynamics, 0.0, B_.y);
+    status = CVodeInit (B_.sys_, {{component_name}}_{{default_regime}}_dynamics, 0.0, B_.y);
     if (check_flag(&status, "CVodeInit", 1))
         throw CVodeSolverFailure (get_name(), status);
 
