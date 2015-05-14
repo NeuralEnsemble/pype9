@@ -19,8 +19,7 @@
        ITEM(B_.y,i) = S_.y_[i];
 
     // Run the dynamics function to initialise B._yp
-        {# Get the func_name from the default regime (the first in the list) #}
-    {{component_name}}_{{next(componentclass.regimes).name}}_dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
+    {{component_name}}__dynamics (0.0, B_.y, B_.yp, reinterpret_cast<void*>(this));
 
     // Calls IDACreate to create the solver memory
     B_.sys_ = IDACreate();
@@ -29,7 +28,7 @@
 
     // Calls IDAInit to initialize the integrator memory and specify the
     // resdual function, the initial time, and the initial values.
-    status = IDAInit (B_.sys_, {{component_name}}_{{default_regime}}_residual, 0.0, B_.y, B_.yp);
+    status = IDAInit (B_.sys_, {{component_name}}_residual, 0.0, B_.y, B_.yp);
     if (check_flag(&status, "IDAInit", 1))
         throw IDASolverFailure (get_name(), status);
 

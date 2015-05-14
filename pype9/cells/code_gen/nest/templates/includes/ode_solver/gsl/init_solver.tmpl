@@ -16,8 +16,8 @@
     else
         gsl_odeiv2_evolve_reset(B_.e_);
 
-    B_.sys_.function  = {{component_name}}_{{default_regime}}_dynamics;
-    B_.sys_.jacobian  = {{component_name}}_{{default_regime}}_jacobian;
+    B_.sys_.function  = {{component_name}}_dynamics;
+    B_.sys_.jacobian  = {{component_name}}_jacobian;
     B_.sys_.dimension = B_.N;
     B_.sys_.params    = reinterpret_cast<void*>(this);
 

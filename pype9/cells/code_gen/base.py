@@ -278,8 +278,8 @@ class BaseCodeGenerator(object):
         # Add some globals used by the template code
         jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
                                  xrange=xrange, next=next, chain=chain,
-                                 hash=hash, deepcopy=deepcopy,
-                                 units=units, **annotations_dict)
+                                 hash=hash, deepcopy=deepcopy, units=units,
+                                 hasattr=hasattr, **annotations_dict)
         # Actually render the contents
         contents = jinja_env.get_template(template).render(**args)
         # Write the contents to file

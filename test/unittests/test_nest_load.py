@@ -20,7 +20,7 @@ class TestNestLoad(TestCase):
     dt = 0.01
 
     izhikevich_file = path.join(test_data_dir, 'xml', 'Izhikevich2003.xml')
-    izhikevich_name = 'IzhikevichBuiltIn'
+    izhikevich_name = 'Izhikevich'
 
     def test_nest_load(self):
         # ---------------------------------------------------------------------
@@ -43,7 +43,7 @@ class TestNestLoad(TestCase):
         Izhikevich9ML = CellMetaClass(
             self.izhikevich_file, name=self.izhikevich_name,
             build_mode='force', verbose=True, membrane_voltage='V_m',
-            ode_solver='euler', ss_solver=None,
+            ode_solver='gsl', ss_solver=None,
             membrane_capacitance=Property('Cm', 0.001, un.nF))
         nml = Izhikevich9ML()
         nml_iclamp = nest.Create(

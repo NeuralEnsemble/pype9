@@ -1,4 +1,4 @@
         // Calculate time derivatives
-        {{component_name}}_{{default_regime}}_dynamics(lag, S_.y_, f_, this);
+        {{component_name}}_dynamics(lag, S_.y_, f_, this);
         for (int i = 0; i < {{component_name}}::State_::STATE_VEC_SIZE_; ++i)
            S_.y_[i] += f_[i] * dt;
