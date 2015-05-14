@@ -20,9 +20,10 @@
  *
  */
 
+#include "../../IzhikevichBuiltIn/src/IzhikevichBuiltIn.h"
+
 #include <limits>
 
-#include "IzhikevichBuiltIn.h"
 #include "exceptions.h"
 #include "network.h"
 #include "dict.h"

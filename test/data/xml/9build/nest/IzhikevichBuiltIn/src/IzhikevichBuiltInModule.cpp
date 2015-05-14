@@ -20,7 +20,10 @@
  */
 
 // include necessary NEST headers
-#include "config.h"
+#include "../../IzhikevichBuiltIn/src/IzhikevichBuiltInModule.h"
+
+#include "../../IzhikevichBuiltIn/compile/libltdl/config.h"
+#include "../../IzhikevichBuiltIn/src/IzhikevichBuiltIn.h"
 #include "network.h"
 #include "model.h"
 #include "dynamicloader.h"
@@ -34,8 +37,6 @@
 #include "nestmodule.h"
 
 // include headers with your own stuff
-#include "IzhikevichBuiltInModule.h"
-#include "IzhikevichBuiltIn.h"
 
 // -- Interface to dynamic module loader ---------------------------------------
 

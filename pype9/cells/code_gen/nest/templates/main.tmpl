@@ -2,6 +2,9 @@
    Authors: Thomas G. Close and Ivan Raikov
    Copyright Okinawa Institute of Science and Technology Graudate University 2014
 #}
+
+{% import "macros.tmpl" as macros %}
+
 {% macro elseif(first) %}{% if first %}if{% else %}} else if{% endif %}{% endmacro %}
 {% macro endif(last) %}{% if last %}}{% endif %}{% endmacro %}
 
@@ -58,40 +61,16 @@ extern "C" {% include "dynamics_signature.tmpl" %} {
 	// Get a reference to the model
 	assert(pnode_);
 	const {{component_name}}& node_ = *(reinterpret_cast<{{component_name}}*>(pnode_));
-	
-	// Map states used in dynamics to current namespace
-	{% for state in componentclass.state_variables %}
-	const double_t {{state.name}} = ITEM(y_, {{component_name}}::State_::{{state.name}}_INDEX);
-	{% endfor %}
 
 {% for regime in componentclass.regimes %}
     {{elseif(loop.first)}} (node_.B_.current_regime == {{component_name}}::{{regime.name}}_REGIME) {
-	    {% set dp = componentclass.required_for(regime.time_derivatives) %}
-	
-	    // Map parameters used in dynamics to current namespace
-	    {% for param in dp.parameters %}
-	    const double_t {{param.name}} = node_.P_.{{param.name}};
-	    {% endfor %}
-	
-	    // Map port buffers to current namespace
-	    {% for port in dp.ports %}
-	    const double_t {{port.name}} = node_.B_.{{port.name}}_value;
-	    {% endfor %}
-	
-	    // Add constants
-	    {% for const in dp.constants %}
-	    const static double_t {{const.name}} = {{const.value}}; // ({{const.units.name}})
-	    {% endfor %}
-	
-	    // Evaluate aliases used in differential equations
-	    {% for expr in dp.expressions %}
-	    const double_t {{expr.lhs}} = {{expr.rhs_cstr}};
-	    {% endfor %}
+	    
+	    {{macros.map_required_vars_locally(regime.time_derivatives, component_class, component_name) | indent}}
 	
 	    // Evaluate differential equations
-	    {% for td in regime.time_derivatives %}
+	{% for td in regime.time_derivatives %}
 	    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{td.rhs_cstr}};
-	    {% endfor %}
+	{% endfor %}
     {{endif(loop.last)}}
 {% endfor %}
 
@@ -334,6 +313,7 @@ void {{component_name}}::init_buffers_() {
       S_(P_),
       B_(*this) {
     recordablesMap_.create();
+    {{macros.set_triggers(default_regime) | indent}}
 }
 
 {{component_name}}::{{component_name}}(const {{component_name}}& n)
@@ -346,11 +326,13 @@ void {{component_name}}::init_node_(const Node& proto) {
     const {{component_name}}& pr = downcast<{{component_name}}>(proto);
     P_ = pr.P_;
     S_ = State_(P_);
+    {{macros.set_triggers(default_regime) | indent}}    
 }
 
 void {{component_name}}::init_state_(const Node& proto) {
     const {{component_name}}& pr = downcast<{{component_name}}>(proto);
     S_ = State_(pr.P_);
+    {{macros.set_triggers(default_regime) | indent}}    
 }
 
 
@@ -363,82 +345,11 @@ void {{component_name}}::init_state_(const Node& proto) {
 }
 
 
+/************************************************************************
+ * Function to be solved for its roots be solver to exact trigger times *
+ ************************************************************************/
 
-/********************************************************
- * Trigger condition for regime changes and event outs. *
- ********************************************************/
-
-{% include "trigger_condition.tmpl" %}
-
-
-/********************************************************
- * OnEvent condition for regime changes and event outs. *
- ********************************************************/
-
-{% for regime in componentclass.regimes %}
-    {% for trans in regime.transitions %}
-inline void {{component_name}}::{% if hasattr(trans, 'src_port_name') %}{{oe.src_port_name}}_event{% else %}trigger_{{regime.index_of(trans)}}{% endif %}_in_{{regime.name}}_transition(nest::long_t lag) {
-
-    // Map states used in dynamics to current namespace
-        {% for sv in componentclass.state_variables %}
-    const double_t {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];
-        {% endfor %}
-
-    {% set dp = componentclass.required_for(trans.state_assignments) %}
-
-    // Map parameters used in dynamics to current namespace
-        {% for param in dp.parameters %}
-    const double_t {{param.name}} = P_.{{param.name}};
-        {% endfor %}
-
-    // Map port buffers to current namespace
-        {% for port in dp.ports %}
-    const double_t {{port.name}} = B_.{{port.name}}_value;
-        {% endfor %}
-
-    // Add constants
-    {% for const in dp.constants %}
-        {% set conv = componentclass.unit_conversion_factor(const.units) %}
-        {% set conv_value = conv[0] * const.value + conv[1] %}
-    const static double_t {{const.name}} = {{conv_value}};  // {{const.value}} ({{const.units.name}})
-    {% endfor %}
-
-    // Add random variables
-    {% for rv in dp.random_variables %}
-    const double_t {{rv.name}} = {{get_random_function(rv)}}
-    {% endfor %}
-
-    // Evaluate aliases used in differential equations
-        {% for expr in dp.expressions %}
-            {% if hasasttr(expr, 'pieces') %}  {# Is a Piecewise statement #}
-    const double_t {{expr.name}};
-                {% for piece in expr.pieces %}
-    {{elseif(loop.first)}} if ({{expr.condition}}) {
-        {{expr_name}} = {{expr.rhs_cstr}};
-                {%- endfor %}
-    } else {
-        {{expr_name}} = {{expr.otherwise.rhs_cstr}};
-    }
-            {% else %}
-    const double_t {{expr.lhs}} = {{expr.rhs_cstr}};
-            {% endif %}
-        {% endfor %}
-
-    // Evaluate differential equations
-        {% for assign in trans.state_assignments %}
-    S_.y_[{{component_name}}::State_::{{assign.lhs}}_INDEX] = {{assign.rhs_cstr}};
-        {% endfor %}
-        
-    // FIXME: Need to specify different output ports in a way that can be read by the receiving nodes
-        {% for output_event in trans.output_events %}
-    set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
-    nest::SpikeEvent se;
-    network()->send(*this, se, lag);
-        {% endfor %}
-}
-    {% endfor %}
-{% endfor %}
-
+{% include "trigger_roots.tmpl" %}
 
 
 /***********************
@@ -467,36 +378,55 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         int transition = -1;
 {% for regime in componentclass.regimes %}
         {{elseif(loop.first)}} (B_.current_regime == {{regime.name}}_REGIME) {
-            // check for triggered conditions
-    {% for oc in regime.on_conditions %}
-            if ({{oc.trigger.rhs_cstr}}) {
+        
+            {{macros.map_required_vars_locally(chain(regime.all_triggers(), regime.all_state_assignments()), component_class, component_name) | indent}}
+
+    {% for trans in regime.transitions %}
+        {% if hasattr(trans, 'trigger') %}
+            // Check trigger condition
+            if ({{trans.trigger.rhs_cstr}}) {
                 // Check to see if trigger is active (i.e. was false since on the change from false->true triggers a transition)
-                if (B_.{{regime.name}}_trigger_{{regime.index_of(oc)}}_active) {
-        {% if oc.target_regime != regime %}
-	                if (transition != -1)
-	                    std::cout << "Warning!: multiple transitions in the same time step. Transition to 'Regime " << transition << "' was ignored in favour of transition " << {{oe.target_regime.name}}_REGIME << "." << std::endl;
-	                transition = {{oc.target_regime.name}}_REGIME;
+                if (B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active) {
+                    // Deactivate the trigger (triggers can only be 
+                    B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active = false;
+        {% else %}
+            // Check for incoming event
+            if (B_.{{trans.src_port_name}}_event_port.get_value(lag)) {
         {% endif %}
-	                trigger_{{regime.index_of(oc)}}_in_{{regime.name}}_transition(lag);
-	                B_.{{regime.name}}_trigger_{{regime.index_of(oc)}}_active = false; 
-	                reset_solver = true;
+
+				    // State assignments
+        {% for assign in trans.state_assignments %}
+				    S_.y_[{{component_name}}::State_::{{assign.lhs}}_INDEX] = {{assign.rhs_cstr}};
+        {% endfor %}
+
+				    // FIXME: Need to specify different output ports in a way that can be read by the receiving nodes
+				    // Output events
+        {% for output_event in trans.output_events %}
+				    set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
+				    nest::SpikeEvent se;
+				    network()->send(*this, se, lag);
+        {% endfor %}
+                
+        {% if trans.target_regime != regime %}
+                    // FIXME: Need to work out the best way to emit a warning in NEST.        
+                    // Set transition to new regime
+                    if (transition != -1)
+                        std::cout << "Warning!: multiple transitions in the same time step. Transition to 'Regime " << transition << "' was ignored in favour of transition " << {{oe.target_regime.name}}_REGIME << "." << std::endl;
+                    transition = {{trans.target_regime.name}}_REGIME;
+                    
+                    {{macros.set_triggers(trans.target_regime) | indent}}
+        {% endif %}
+                    // Flag the solver to be reset if required               
+                    reset_solver = true;
+        {% if hasattr(trans, 'trigger') %}
                 }
-	        } else
-                B_.{{regime.name}}_trigger_{{regime.index_of(oc)}}_active = true;  
+            } else
+                // Activate the trigger
+                B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active = true;
+        {% else %}
+            }
+        {% endif %}  
     {% endfor %}
-            // Check for incoming events
-    {% for oe in regime.on_events %}
-            {{elseif(loop.first)}} (B_.{{oe.src_port_name}}_event_port.get_value(lag)) {
-        {% if oe.target_regime != regime %}
-                if (transition != -1)
-                    std::cout << "Warning!: multiple transitions in the same time step. Transition " << transition << " was ignored in favour of transition " << {{oe.target_regime.name}}_REGIME << "." << std::endl;
-                transition = {{oe.target_regime.name}}_REGIME;
-        {% endif %}
-                {{oe.src_port_name}}_event_in_{{regime.name}}_transition(lag);
-                reset_solver = true;
-            {{endif(loop.last)}}
-    {% endfor %}
-        {{endif(loop.last)}}
 {% endfor %}
 
         if (reset_solver) {
