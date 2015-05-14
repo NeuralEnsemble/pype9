@@ -42,12 +42,12 @@ class TestNestLoad(TestCase):
         # ---------------------------------------------------------------------
         Izhikevich9ML = CellMetaClass(
             self.izhikevich_file, name=self.izhikevich_name,
-            build_mode='force', verbose=True, membrane_voltage='V_m',
+            build_mode='lazy', verbose=True, membrane_voltage='V_m',
             ode_solver='euler', ss_solver=None,
             membrane_capacitance=Property('Cm', 0.001, un.nF))
         nml = Izhikevich9ML()
         nml_iclamp = nest.Create(
-            'dc_generator', 1, {'start': 2.0, 'stop': 95.0, 'amplitude': 5.0})
+            'dc_generator', 1, {'start': 2.0, 'stop': 95.0, 'amplitude': 25.0})
         nest.Connect(nml_iclamp, nml._cell,
                      syn_spec={"receptor_type": nml.receive_ports['iExt']})
 #         nml.inject_current(neo.AnalogSignal([0.0] + [0.2] * 9, units='nA',

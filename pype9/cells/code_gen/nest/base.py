@@ -50,7 +50,7 @@ class CodeGenerator(BaseCodeGenerator):
         component_class = prototype.component_class
         tmpl_args = {
             'component_name': prototype.name,
-            'componentclass': prototype.component_class,
+            'component_class': prototype.component_class,
             'prototype': prototype,
             'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,

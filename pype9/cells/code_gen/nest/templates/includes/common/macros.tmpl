@@ -1,33 +1,21 @@
-{% macro map_required_vars_locally(expressions, componentclass, component_name) %}
-    {% set required = componentclass.required_for(expressions) %}
-    
-// Map states used in dynamics to current namespace
+{% macro map_required_vars_locally(expressions, component_class, component_name) %}
+// Map required variables to local namespace
+    {% set required = component_class.required_for(expressions) %}
     {% for sv in required.state_variables %}
 const double_t {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];
     {% endfor %}
-
-// Map parameters used in dynamics to current namespace
     {% for param in required.parameters %}
 const double_t {{param.name}} = P_.{{param.name}};
     {% endfor %}
-
-// Map port buffers to current namespace
     {% for port in required.ports %}
 const double_t {{port.name}} = B_.{{port.name}}_value;
     {% endfor %}
-
-// TODO: Need to implement simulator-dependent unit conversions
-// Set required constants
     {% for const in required.constants %}
 const static double_t {{const.name}} = {{const.value}};  // {{const.value}} ({{const.units.name}})  WARNING: Units not converted!!!!
     {% endfor %}
-
-// Add random variables
     {% for rv in required.random_variables %}
 const double_t {{rv.name}} = {{get_random_function(rv)}}
     {% endfor %}
-
-// Evaluate aliases used in differential equations
     {% for expr in required.expressions %}
 {# Is a Piecewise statement 
         {% if hasasttr(expr, 'pieces') %}
@@ -45,8 +33,8 @@ const double_t {{expr.lhs}} = {{expr.rhs_cstr}};
     {% endfor %}
 {% endmacro %}
 
-{% macro set_triggers(regime) %}
-{{map_required_vars_locally(regime.all_triggers())}}
+{% macro set_triggers(regime, component_class, component_name) %}
+{{map_required_vars_locally(regime.all_triggers(), component_class, component_name)}}
     {% for oc in regime.on_conditions %}
 B_.{{regime.name}}_trigger_{{regime.index_of(oc)}}_active = !({{oc.trigger.rhs_cstr}});
     {% endfor %}

@@ -35,7 +35,7 @@
   {% if ode_solver == "cvode" %}
     int status, N, rootdir;
 
-    N = {{componentclass.num_state_variables}};
+    N = {{component_class.num_state_variables}};
     // only positive direction (rising edge) of spike events will be detected
     rootdir = 1;
 
@@ -103,7 +103,7 @@
         throw CVodeSolverFailure (get_name(), status);
 {% elif ode_solver == "ida" %}
     int status, N, rootdir;
-    N = {{componentclass.num_state_variables}};
+    N = {{component_class.num_state_variables}};
 
     // only positive direction (rising edge) of spike events will be detected
     rootdir = 1;

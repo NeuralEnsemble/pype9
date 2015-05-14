@@ -37,7 +37,7 @@ nest::RecordablesMap<nineml::{{component_name}}> nineml::{{component_name}}::rec
 
 namespace nest{
   template <> void RecordablesMap<nineml::{{component_name}}>::create() {
-{% for sv in componentclass.state_variables %}
+{% for sv in component_class.state_variables %}
     insert_("{{sv.name}}", &nineml::{{component_name}}::get_y_elem_<nineml::{{component_name}}::State_::{{sv.name}}_INDEX>);
 {% endfor %}
 {# FIXME: Need to translate v->V_m
@@ -58,15 +58,17 @@ namespace nineml {
 
 extern "C" {% include "dynamics_signature.tmpl" %} {
 
-	// Get a reference to the model
+	// Get references to the members of the model
 	assert(pnode_);
 	const {{component_name}}& node_ = *(reinterpret_cast<{{component_name}}*>(pnode_));
+	const {{component_name}}::Parameters_& P_ = node_.P_;
+	const {{component_name}}::State_& S_ = node_.S_;
+	const {{component_name}}::Buffers_& B_ = node_.B_;
 
-{% for regime in componentclass.regimes %}
-    {{elseif(loop.first)}} (node_.B_.current_regime == {{component_name}}::{{regime.name}}_REGIME) {
-	    
-	    {{macros.map_required_vars_locally(regime.time_derivatives, component_class, component_name) | indent}}
-	
+{% for regime in component_class.regimes %}
+    {{elseif(loop.first)}} (B_.current_regime == {{component_name}}::{{regime.name}}_REGIME) {
+	    {{macros.map_required_vars_locally(regime.time_derivatives, component_class, component_name) | indent(8)}}
+
 	    // Evaluate differential equations
 	{% for td in regime.time_derivatives %}
 	    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{td.rhs_cstr}};
@@ -142,12 +144,12 @@ extern "C" {% include "dynamics_signature.tmpl" %} {
  **********************************/
 
 {{component_name}}::Parameters_::Parameters_():
-{% for i, param in enumerate(componentclass.parameters) %}
+{% for i, param in enumerate(component_class.parameters) %}
     {{param.name}} (0.0){% if not loop.last %},
 {% endif %}
 {% endfor %} {
 // Check constraints on parameters
-{% for param in componentclass.parameters %}
+{% for param in component_class.parameters %}
     {% for constraint in param.constraints %}
     {{constraint}}
     {% endfor %}
@@ -164,7 +166,7 @@ extern "C" {% include "dynamics_signature.tmpl" %} {
     const Parameters_ *params = &p;
 
     // FIXME: need to add initial state here
-{% for sv in componentclass.state_variables %}
+{% for sv in component_class.state_variables %}
     y_[{{sv.name}}_INDEX] = 0.0;
 {% endfor %}
 
@@ -175,7 +177,7 @@ extern "C" {% include "dynamics_signature.tmpl" %} {
  * Copy constructor for State class
  ***********************************/
 {{component_name}}::State_::State_(const State_& s) {
-  for (int i = 0 ; i < {{componentclass.num_state_variables}} ; ++i)
+  for (int i = 0 ; i < {{component_class.num_state_variables}} ; ++i)
       y_[i] = s.y_[i];
 }
 
@@ -186,7 +188,7 @@ extern "C" {% include "dynamics_signature.tmpl" %} {
 
 {{component_name}}::State_& {{component_name}}::State_::operator=(const State_& s) {
   assert(this != &s);
-  for (size_t i = 0 ; i < {{componentclass.num_state_variables}} ; ++i)
+  for (size_t i = 0 ; i < {{component_class.num_state_variables}} ; ++i)
        y_[i] = s.y_[i];
 
   return *this;
@@ -206,7 +208,7 @@ void {{component_name}}::Parameters_::get (DictionaryDatum &d_) const {
 {# TODO: Should change this to names::{{name}}, {{name}} once I work out where
          to put the "names" declarations (probably in the header#}
     // Update dictionary from internal parameters, scaling if required.
-{% for p in componentclass.parameters %}
+{% for p in component_class.parameters %}
     def<double_t>(d_, "{{p.name}}", {{p.name}}{% if name in parameter_scales %} / {{parameter_scales[name]}}{% endif %});
 {% endfor %}
 
@@ -215,7 +217,7 @@ void {{component_name}}::Parameters_::get (DictionaryDatum &d_) const {
 void {{component_name}}::Parameters_::set (const DictionaryDatum &d_) {
 
     // Update internal parameters from dictionary
-{% for p in componentclass.parameters %}
+{% for p in component_class.parameters %}
     updateValue<double_t>(d_, "{{p.name}}", {{p.name}});
 {% endfor %}
 
@@ -230,7 +232,7 @@ void {{component_name}}::Parameters_::set (const DictionaryDatum &d_) {
 void {{component_name}}::State_::get (DictionaryDatum &d_) const {
 
     // Get states from internal variables
-{% for i, sv in enumerate(componentclass.state_variables) %}
+{% for i, sv in enumerate(component_class.state_variables) %}
     def<double_t>(d_, "{{sv.name}}", y_[{{i}}]);
 {% endfor %}
 {# FIXME: Need to include special handling of v->V_m
@@ -244,7 +246,7 @@ void {{component_name}}::State_::get (DictionaryDatum &d_) const {
 void {{component_name}}::State_::set (const DictionaryDatum &d_, const Parameters_&) {
 
     // Set internal state variables from dictionary values
-{% for i, sv in enumerate(componentclass.state_variables) %}
+{% for i, sv in enumerate(component_class.state_variables) %}
     updateValue<double_t>(d_, "{{sv.name}}", y_[{{i}}]);
 {% endfor %}
 {# FIXME: Need to include special handling of v->V_m
@@ -279,12 +281,12 @@ void {{component_name}}::State_::set (const DictionaryDatum &d_, const Parameter
 void {{component_name}}::init_buffers_() {
 
     // Clear event buffers
-{% for p in componentclass.event_receive_ports %}
+{% for p in component_class.event_receive_ports %}
     B_.{{p.name}}_event_port.clear();
 {% endfor %}
 
     // Clear analog buffers
-{% for p in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
+{% for p in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
     B_.{{p.name}}_analog_port.clear();
 {% endfor %}
 
@@ -295,7 +297,7 @@ void {{component_name}}::init_buffers_() {
     B_.step_ = nest::Time::get_resolution().get_ms();
     B_.IntegrationStep_ = B_.step_;
 
-{% for p in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
+{% for p in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
     B_.{{p.name}}_value = 0.0;
 {% endfor %}
 
@@ -312,8 +314,10 @@ void {{component_name}}::init_buffers_() {
       P_(),
       S_(P_),
       B_(*this) {
+
     recordablesMap_.create();
-    {{macros.set_triggers(default_regime) | indent}}
+
+    {{macros.set_triggers(component_class.regime(default_regime), component_class, component_name) | indent}}
 }
 
 {{component_name}}::{{component_name}}(const {{component_name}}& n)
@@ -326,13 +330,15 @@ void {{component_name}}::init_node_(const Node& proto) {
     const {{component_name}}& pr = downcast<{{component_name}}>(proto);
     P_ = pr.P_;
     S_ = State_(P_);
-    {{macros.set_triggers(default_regime) | indent}}    
+
+    {{macros.set_triggers(component_class.regime(default_regime), component_class, component_name) | indent}}    
 }
 
 void {{component_name}}::init_state_(const Node& proto) {
     const {{component_name}}& pr = downcast<{{component_name}}>(proto);
     S_ = State_(pr.P_);
-    {{macros.set_triggers(default_regime) | indent}}    
+
+    {{macros.set_triggers(component_class.regime(default_regime), component_class, component_name) | indent}}    
 }
 
 
@@ -372,14 +378,15 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 
 {% include "update_step.tmpl" %}
 
+
         /***** Transition handling *****/
 
         bool reset_solver = false;
         int transition = -1;
-{% for regime in componentclass.regimes %}
+{% for regime in component_class.regimes %}
         {{elseif(loop.first)}} (B_.current_regime == {{regime.name}}_REGIME) {
         
-            {{macros.map_required_vars_locally(chain(regime.all_triggers(), regime.all_state_assignments()), component_class, component_name) | indent}}
+            {{macros.map_required_vars_locally(chain(regime.all_triggers(), regime.all_state_assignments()), component_class, component_name) | indent(12)}}
 
     {% for trans in regime.transitions %}
         {% if hasattr(trans, 'trigger') %}
@@ -414,7 +421,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
                         std::cout << "Warning!: multiple transitions in the same time step. Transition to 'Regime " << transition << "' was ignored in favour of transition " << {{oe.target_regime.name}}_REGIME << "." << std::endl;
                     transition = {{trans.target_regime.name}}_REGIME;
                     
-                    {{macros.set_triggers(trans.target_regime) | indent}}
+                    {{macros.set_triggers(trans.target_regime, component_class, component_name) | indent}}
         {% endif %}
                     // Flag the solver to be reset if required               
                     reset_solver = true;
@@ -425,7 +432,8 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
                 B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active = true;
         {% else %}
             }
-        {% endif %}  
+        {% endif %}
+        {{endif(loop.last)}}  
     {% endfor %}
 {% endfor %}
 
@@ -436,7 +444,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 
         /***** Get analog port values *****/
     
-{% for port in componentclass.analog_receive_ports %}
+{% for port in component_class.analog_receive_ports %}
         B_.{{port.name}}_value = B_.{{port.name}}_analog_port.get_value(lag);
 {% endfor %}
         B_.logger_.record_data(current_steps + lag);
@@ -451,7 +459,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 void {{component_name}}::handle(nest::SpikeEvent & e) {
     assert(e.get_delay() > 0);
     // Loop through event receive ports
-{% for port in componentclass.event_receive_ports %}
+{% for port in component_class.event_receive_ports %}
     {{elseif(loop.first)}} (e.get_rport() == {{port.name}}_EVENT_PORT) {
         B_.{{port.name}}_event_port.add_value(
             e.get_rel_delivery_steps(network()->get_slice_origin()),
@@ -466,7 +474,7 @@ void {{component_name}}::handle(nest::CurrentEvent& e) {
     const double_t c = e.get_current();
     const double_t w = e.get_weight();    
     // Loop through analog receive ports
-{% for port in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
+{% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
     {{elseif(loop.first)}} (e.get_rport() == {{port.name}}_ANALOG_PORT) {
         B_.{{port.name}}_analog_port.add_value(
             e.get_rel_delivery_steps(network()->get_slice_origin()), w * c);

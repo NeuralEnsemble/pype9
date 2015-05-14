@@ -29,7 +29,7 @@ namespace nineml {
 {% include "solver_preludes.tmpl" %}
 {% include "ss_solver_preludes.tmpl" %}
 
-{% for regime in componentclass.regimes %}
+{% for regime in component_class.regimes %}
     extern "C" {% include "dynamics_signature.tmpl" %};
     {% include "residual_signature.tmpl" %}
     {% include "event_signature.tmpl" %}
@@ -73,7 +73,7 @@ namespace nineml {
 	    void update(nest::Time const &, const nest::long_t, const nest::long_t);
 
     // Set dynamics methods (the ones that actually model the dynamics) as friends
-{% for regime in componentclass.regimes %}
+{% for regime in component_class.regimes %}
 	    friend {% include "dynamics_signature.tmpl" %};
 	    {% include "residual_friend.tmpl" %}
 	    {% include "event_friend.tmpl" %}
@@ -83,7 +83,7 @@ namespace nineml {
 	    // Regime ids
 	    static const int DEFAULT_REGIME_ = 0;
 	    enum Regimes {
-	        {% for regime in componentclass.regimes %}
+	        {% for regime in component_class.regimes %}
 	            {% if loop.first %}
 	        {{regime.name}}_REGIME = DEFAULT_REGIME_,
 	            {% else %}
@@ -94,14 +94,14 @@ namespace nineml {
 	    };
 
 
-{% if componentclass.event_receive_ports %}
+{% if component_class.event_receive_ports %}
 	    /* Event port ids
 	     * @note Start with 1 so we can forbid port 0 to avoid accidental
 	     *     creation of connections with no receptor type set.
 	     */
 	    static const nest::port MIN_EVENT_PORT_ = 1;
 	    enum EventPorts {
-    {% for port in componentclass.event_receive_ports %}
+    {% for port in component_class.event_receive_ports %}
         {% if loop.first %}
 	        {{port.name}}_EVENT_PORT = MIN_EVENT_PORT_,
         {% else %}
@@ -113,7 +113,7 @@ namespace nineml {
 	
 	    // On event ids
 	    enum OnEvents {
-    {% for regime in componentclass.regimes %}
+    {% for regime in component_class.regimes %}
         {% for oe in regime.on_events %}
 	        {{oe.src_port_name}}_ON_EVENT,
         {% endfor %}
@@ -122,11 +122,11 @@ namespace nineml {
 	    };
 
 {% endif %}
-{% if componentclass.analog_receive_ports %}
+{% if component_class.analog_receive_ports %}
 	    //Analog port ids
 	    static const nest::port MIN_ANALOG_PORT_ = 1;
 	    enum AnalogPorts {
-    {% for port in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
+    {% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
         {% if loop.first %}
             {{port.name}}_ANALOG_PORT = MIN_ANALOG_PORT_,
         {% else %}
@@ -139,7 +139,7 @@ namespace nineml {
 
 {% endif %}
         // Synaptic event function definitions
-{% for regime in componentclass.regimes %}
+{% for regime in component_class.regimes %}
     {% for oe in regime.on_events %}
         inline void {{oe.src_port_name}}_event_in_{{regime.name}}(nest::long_t lag);
     {% endfor %}
@@ -150,7 +150,7 @@ namespace nineml {
 	    friend class nest::UniversalDataLogger<{{component_name}}>;
 	
         struct Parameters_ {
-{% for param in componentclass.parameters %}
+{% for param in component_class.parameters %}
             double {{param.name}};
 {% endfor %}
 	        Parameters_();
@@ -161,7 +161,7 @@ namespace nineml {
 	    struct State_ {
 	
             enum StateVecElems {
-{% for sv in componentclass.state_variables %}
+{% for sv in component_class.state_variables %}
     {% if loop.first %}
                 {{sv.name}}_INDEX = 0,
     {% else %}
@@ -205,21 +205,21 @@ namespace nineml {
 	        double   IntegrationStep_;//!< current integration time step, updated by solver
 	
 	        // Event receive port buffers
-{% for port in componentclass.event_receive_ports %}
+{% for port in component_class.event_receive_ports %}
             nest::RingBuffer {{port.name}}_event_port;
 {% endfor %}
 
             // Analog receive port buffers
-{% for port in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
+{% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
             nest::RingBuffer {{port.name}}_analog_port;
 {% endfor %}
 
             // Variables to hold the last value of the analog receive port buffers
-{% for port in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
+{% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
             double_t {{port.name}}_value;
 {% endfor %}
 
-{% for regime in componentclass.regimes %}
+{% for regime in component_class.regimes %}
     {% for oc in regime.on_conditions %}
             bool {{regime.name}}_trigger_{{regime.index_of(oc)}}_active;
     {% endfor %}
@@ -284,10 +284,10 @@ namespace nineml {
 		def<double_t>(d, nest::names::t_spike, get_spiketime_ms());
 		DictionaryDatum receptor_dict_ = new Dictionary();
 		// Synaptic event dictionary
-{% for port in componentclass.event_receive_ports %}
+{% for port in component_class.event_receive_ports %}
         (*receptor_dict_)[Name("{{port.name}}")]  = {{port.name}}_EVENT_PORT;
 {% endfor %}
-{% for port in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
+{% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
         (*receptor_dict_)[Name("{{port.name}}")]  = {{port.name}}_ANALOG_PORT;
 {% endfor %}
         (*d)[nest::names::receptor_types] = receptor_dict_;
