@@ -128,13 +128,8 @@ class CellMetaClass(base.CellMetaClass):
         else:
             os.environ[lib_path_key] = lib_dir
         # Add module install directory to NEST path
-        nest.sli_run('({}) addpath'
-                     .format(os.path.join(install_dir)))
-        nest.sli_run('({}) addpath'
-                     .format(os.path.join(install_dir, 'share')))
-        nest.sli_run('({}) addpath'
-                     .format(os.path.join(install_dir, 'share', 'nest')))
-        nest.sli_run('({}) addpath'
-                     .format(os.path.join(install_dir, 'share', 'nest', 'sli')))        
+        nest.sli_run(
+            '({}) addpath'.format(os.path.join(install_dir, 'share', 'nest',
+                                               'sli')))
         # Install nest module
         nest.Install(name + 'Module')

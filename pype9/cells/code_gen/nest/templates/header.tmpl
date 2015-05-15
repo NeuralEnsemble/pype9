@@ -172,24 +172,14 @@ namespace nineml {
             };
 
             double y_[STATE_VEC_SIZE_];
-{#      
-{% if ode_solver == "gsl" %}
-            nest::int_t r_; /* refractory counter */
-{% endif %}
-#}
 
-	      State_(const Parameters_& p);
-	      State_(const State_& s);
-	      State_& operator=(const State_& s);
-	      void get(DictionaryDatum&) const;
-	      void set(const DictionaryDatum&, const Parameters_&);
+	        State_(const Parameters_& p);
+	        State_(const State_& s);
+	        State_& operator=(const State_& s);
+	        void get(DictionaryDatum&) const;
+	        void set(const DictionaryDatum&, const Parameters_&);
 	    }; // end struct State_
 
-{#
-{% if ode_solver == "gsl"  %}
-        struct Variables_ { nest::int_t RefractoryCounts_; double U_old_; /* for spike-detection */ };
-{% else %}
-#}
         struct Variables_ {};
 
         struct Buffers_ {
@@ -255,7 +245,7 @@ namespace nineml {
             throw nest::UnknownReceptorType(receptor_type, this->get_name());
         else if (receptor_type < MIN_EVENT_PORT_)
             throw nest::IncompatibleReceptorType(receptor_type, this->get_name(), "SpikeEvent");
-		return 0;
+		return receptor_type;
     }
 		
 		
@@ -264,14 +254,14 @@ namespace nineml {
 		    throw nest::UnknownReceptorType(receptor_type, this->get_name());
 		else if (receptor_type < MIN_ANALOG_PORT_)
 		    throw nest::IncompatibleReceptorType(receptor_type, this->get_name(), "SpikeEvent");
-	    return 0;
+	    return receptor_type;
 	}
 		
 		
 	inline nest::port {{component_name}}::handles_test_event(nest::DataLoggingRequest& dlr, nest::port receptor_type) {
 	    if (receptor_type != 0)
             throw nest::UnknownReceptorType(receptor_type, this->get_name());
-		return 0;
+		return B_.logger_.connect_logging_device( dlr, recordablesMap_ );
     }
 		
 		
