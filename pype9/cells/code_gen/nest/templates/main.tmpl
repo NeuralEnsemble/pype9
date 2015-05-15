@@ -394,7 +394,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
             if ({{trans.trigger.rhs_cstr}}) {
                 // Check to see if trigger is active (i.e. was false since on the change from false->true triggers a transition)
                 if (B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active) {
-                    // Deactivate the trigger (triggers can only be 
+                    // Deactivate the trigger (triggers are only triggered when the change from false -> true)
                     B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active = false;
         {% else %}
             // Check for incoming event

@@ -2,24 +2,24 @@
 // Map required variables to local namespace
     {% set required = component_class.required_for(expressions) %}
     {% for sv in required.state_variables %}
-const double_t {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];
+const double_t& {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];
     {% endfor %}
     {% for param in required.parameters %}
-const double_t {{param.name}} = P_.{{param.name}};
+const double_t& {{param.name}} = P_.{{param.name}};
     {% endfor %}
     {% for port in required.ports %}
-const double_t {{port.name}} = B_.{{port.name}}_value;
+const double_t& {{port.name}} = B_.{{port.name}}_value;
     {% endfor %}
     {% for const in required.constants %}
 const static double_t {{const.name}} = {{const.value}};  // {{const.value}} ({{const.units.name}})  WARNING: Units not converted!!!!
     {% endfor %}
     {% for rv in required.random_variables %}
-const double_t {{rv.name}} = {{get_random_function(rv)}}
+const double_t& {{rv.name}} = {{get_random_function(rv)}}
     {% endfor %}
     {% for expr in required.expressions %}
 {# Is a Piecewise statement 
         {% if hasasttr(expr, 'pieces') %}
-const double_t {{expr.name}};
+const double_t& {{expr.name}};
             {% for piece in expr.pieces %}
 {{elseif(loop.first)}} if ({{expr.condition}}) {
     {{expr_name}} = {{expr.rhs_cstr}};
@@ -28,7 +28,7 @@ const double_t {{expr.name}};
     {{expr_name}} = {{expr.otherwise.rhs_cstr}};
 }
         {% else %}#}
-const double_t {{expr.lhs}} = {{expr.rhs_cstr}};
+const double_t& {{expr.lhs}} = {{expr.rhs_cstr}};
         {#{% endif %}#}
     {% endfor %}
 {% endmacro %}

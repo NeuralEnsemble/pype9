@@ -11,7 +11,7 @@
 
 #include "nest.h"
 #include "event.h"
-#include "node.h"
+//#include "node.h"
 #include "archiving_node.h"
 #include "ring_buffer.h"
 #include "connection.h"
@@ -49,18 +49,18 @@ namespace nineml {
 	     * This is necessary to ensure proper overload and overriding resolution.
 	     * @see http://www.gotw.ca/gotw/005.htm.
 	     */
-	    using nest::Node::connect_sender;
 	    using nest::Node::handle;
+	    using nest::Node::handles_test_event;
 	
-	    nest::port check_connection(nest::Connection&, nest::port);
+	    nest::port send_test_event(nest::Node&, nest::port, nest::synindex, bool);
 	
 	    void handle(nest::SpikeEvent &);
 	    void handle(nest::CurrentEvent &);
 	    void handle(nest::DataLoggingRequest &);
 	
-	    nest::port connect_sender(nest::SpikeEvent &, nest::port);
-	    nest::port connect_sender(nest::CurrentEvent &, nest::port);
-	    nest::port connect_sender(nest::DataLoggingRequest &, nest::port);
+	    nest::port handles_test_event(nest::SpikeEvent &, nest::port);
+	    nest::port handles_test_event(nest::CurrentEvent &, nest::port);
+	    nest::port handles_test_event(nest::DataLoggingRequest &, nest::port);
 	
 	    void get_status(DictionaryDatum &) const;
 	    void set_status(const DictionaryDatum &);
@@ -244,35 +244,34 @@ namespace nineml {
 	
 	}; // end class {{component_name}}
 
-    inline nest::port {{component_name}}::check_connection(nest::Connection& c, nest::port receptor_type) {
+    inline nest::port {{component_name}}::send_test_event(nest::Node& target, nest::port receptor_type, nest::synindex, bool) {
 		nest::SpikeEvent e;
 		e.set_sender(*this);
-		c.check_event(e);
-		return c.get_target()->connect_sender(e, receptor_type);
+		return target.handles_test_event(e, receptor_type);
     }
 	
-    inline nest::port {{component_name}}::connect_sender(nest::SpikeEvent&, nest::port receptor_type) {
+    inline nest::port {{component_name}}::handles_test_event(nest::SpikeEvent&, nest::port receptor_type) {
 	    if (receptor_type < 0 || receptor_type >= SUP_EVENT_PORT_)
             throw nest::UnknownReceptorType(receptor_type, this->get_name());
         else if (receptor_type < MIN_EVENT_PORT_)
             throw nest::IncompatibleReceptorType(receptor_type, this->get_name(), "SpikeEvent");
-		return receptor_type;
+		return 0;
     }
 		
 		
-    inline nest::port {{component_name}}::connect_sender(nest::CurrentEvent&, nest::port receptor_type) {
+    inline nest::port {{component_name}}::handles_test_event(nest::CurrentEvent&, nest::port receptor_type) {
 		if (receptor_type < 0 || receptor_type >= SUP_ANALOG_PORT_)
 		    throw nest::UnknownReceptorType(receptor_type, this->get_name());
 		else if (receptor_type < MIN_ANALOG_PORT_)
 		    throw nest::IncompatibleReceptorType(receptor_type, this->get_name(), "SpikeEvent");
-	    return receptor_type;
+	    return 0;
 	}
 		
 		
-	inline nest::port {{component_name}}::connect_sender(nest::DataLoggingRequest& dlr, nest::port receptor_type) {
+	inline nest::port {{component_name}}::handles_test_event(nest::DataLoggingRequest& dlr, nest::port receptor_type) {
 	    if (receptor_type != 0)
             throw nest::UnknownReceptorType(receptor_type, this->get_name());
-		return B_.logger_.connect_logging_device(dlr, recordablesMap_);
+		return 0;
     }
 		
 		
