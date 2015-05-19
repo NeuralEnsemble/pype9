@@ -3,8 +3,9 @@ from pype9.importer.neuron import NeuronImporter
 from pype9.importer.neuron.hoc import HocImporter
 from pype9.importer.neuron.nmodl import NMODLImporter
 import nineml
+from nineml import units as un
 from nineml.abstraction_layer import (
-    units as un, AnalogSendPort, AnalogReceivePort, Parameter, Dynamics,
+    AnalogSendPort, AnalogReceivePort, Parameter, Dynamics,
     TimeDerivative, Alias, StateVariable)
 from utils import test_data_dir
 # from lxml import etree

@@ -14,16 +14,16 @@ from nineml.abstraction_layer.dynamics import Regime, StateVariable, OnEvent
 from nineml.abstraction_layer.expressions import Alias
 from nineml.abstraction_layer.ports import (
     AnalogReceivePort, AnalogSendPort, EventReceivePort)
-import nineml.abstraction_layer.units as un
+import nineml.units as un
 from nineml.user_layer import Definition
 from nineml.document import Document
-from nineml.user_layer import Dynamics
+from nineml.user_layer import DynamicsProperties
 from nineml.abstraction_layer.expressions import Constant
 from pype9.exceptions import Pype9RuntimeError
 
 # from nineml.user_layer.dynamics import IonDynamics
 from collections import defaultdict
-from nineml.abstraction_layer import units
+from nineml import units
 from nineml.abstraction_layer.expressions.piecewise import (Piecewise, Piece,
                                                             Otherwise)
 
@@ -206,8 +206,8 @@ class NMODLImporter(object):
         context = Document()
         definition = Definition(self.component_name + 'Class', context,
                                 url=os.path.normpath(class_path))
-        comp = Dynamics(self.component_name, definition=definition,
-                                 properties=properties)
+        comp = DynamicsProperties(self.component_name, definition=definition,
+                                  properties=properties)
         return comp
 
     def print_members(self):
