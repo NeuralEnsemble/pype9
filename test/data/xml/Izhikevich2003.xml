@@ -51,10 +51,10 @@
       <SingleValue>-65.0</SingleValue>
     </Property>
     <Property name="d" units="mV_per_ms">
-      <SingleValue>8</SingleValue>
+      <SingleValue>6</SingleValue>
     </Property>
     <Property name="theta" units="mV">
-      <SingleValue>-40.0</SingleValue>
+      <SingleValue>30.0</SingleValue>
     </Property>
   </Component>
   <Dimension name="voltage" m="1" l="2" t="-3" i="-1"/>

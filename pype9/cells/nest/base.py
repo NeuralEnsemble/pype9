@@ -14,6 +14,8 @@ from itertools import chain
 import neo
 import nest
 import quantities as pq
+import nineml
+from pype9.exceptions import Pype9RuntimeError
 from pype9.cells.code_gen.nest import CodeGenerator
 from .simulation_controller import simulation_controller
 from pype9.cells import base
@@ -56,50 +58,65 @@ class Cell(base.Cell):
         # FIXME: need to convert to NEST units!!!!!!!!!!!
         nest.SetStatus(self._cell, prop.name, prop.value)
 
-    @property
-    def receive_ports(self):
-        return self._receive_ports
-
-    def record(self, variable):
+    def record(self, variable, interval=None):
+        # TODO: Need to translate variable to port
+        if interval is None:
+            interval = simulation_controller.dt
         self._initialise_local_recording()
         if variable == self.componentclass.annotations[
                 PYPE9_NS][MEMBRANE_VOLTAGE]:
             variable = self.build_componentclass.annotations[
                 PYPE9_NS][MEMBRANE_VOLTAGE]
-        self._recorders[variable] = recorder = nest.Create('multimeter')
+        self._recorders[variable] = recorder = nest.Create(
+            'multimeter', 1, {"interval": interval})
         nest.SetStatus(recorder, {'record_from': [variable]})
         nest.Connect(recorder, self._cell)
 
-    def recording(self, variable):
+    def recording(self, port_name):
         """
         Return recorded data as a dictionary containing one numpy array for
         each neuron, ids as keys.
         """
-        if variable == self.componentclass.annotations[
+        if port_name == self.componentclass.annotations[
                 PYPE9_NS][MEMBRANE_VOLTAGE]:
-            variable = self.build_componentclass.annotations[
+            port_name = self.build_componentclass.annotations[
                 PYPE9_NS][MEMBRANE_VOLTAGE]
-        events = nest.GetStatus(self._recorders[variable], 'events')[0]
-#         ids = events['senders']
+        events, interval = nest.GetStatus(self._recorders[port_name],
+                                          ('events', 'interval'))[0]
         data = neo.AnalogSignal(
-            events[variable],
-            sampling_period=self._controller.dt * pq.ms,
+            events[port_name],
+            sampling_period=interval * pq.ms,
             t_start=0.0 * pq.ms, units='mV',  # FIXME: This should be read from prop. @IgnorePep8
-            name=variable)
+            name=port_name)
         return data
 
-    def inject_current(self, current):
+    def play(self, port_name, signal):
         """
         Injects current into the segment
 
         `current` -- a vector containing the current [neo.AnalogSignal]
         """
-        self._iclamp = nest.Create('step_current_generator')
-        nest.Connect(self._iclamp, self._cell)
-        nest.SetStatus(self._iclamp, {'amplitude_values': current,
-                                      'amplitude_times': current.times,
-                                      'start': current.t_start,
-                                      'stop': current.t_stop})
+        if isinstance(self._nineml.component_class.receive_port(port_name),
+                      nineml.abstraction_layer.EventPort):
+            raise NotImplementedError
+        else:
+            self.signals[port_name] = nest.Create(
+                'step_current_generator', 1,
+                {'amplitude_values': signal,  # FIXME: Need to scale by appropriate units. @IgnorePep8
+                 'amplitude_times': pq.Quantity(signal.times, 'ms'),
+                 'start': float(pq.Quantity(signal.t_start, 'ms')),
+                 'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
+            nest.Connect(self.signals[port_name], self._cell,
+                         syn_spec={"receptor_type":
+                                   self._receive_ports[port_name]})
+
+    @property
+    def signals(self):
+        try:
+            return self._signals
+        except AttributeError:
+            super(Cell, self).__setattr__('_signals', {})
+            return self._signals
 
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         raise NotImplementedError("voltage clamps are not supported for "
