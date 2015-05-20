@@ -176,9 +176,26 @@ class NMODLImporter(object):
                     constants=cpy.constants.values(),
                     state_variables=cpy.state_variables)
             else:
-                raise NotImplementedError
-#                 for name, (bidirectional, incoming, outgoing,
-#                        constraints, compartments) in self.kinetics.iteritems():
+                (name,
+                 (bidirectional, incoming,
+                  outgoing, constraints,
+                  compartments)) = next(self.kinetics.iteritems())
+
+                ks = [KineticState(sv.name)
+                      for sv in self.state_variables.itervalues()]
+
+                cst = [ cs for cs in constraints ]
+                cst = Constraint(cst[0][0],ks[0].name)
+
+                state_variables=list(self.state_variables)
+                comp_class = KineticsClass(name=self.component_name + 'Class',
+                                       parameters=self.parameters.values(),
+                                       analog_ports=self.analog_ports.values(),
+                                       event_ports=self.event_ports.values(),
+                                       aliases=self.aliases.values(),
+                                       kinetic_states=ks,
+                                       constraints=cst,
+                                       kineticsblock=None)
         else:
             comp_class = Dynamics(name=self.component_name + 'Class',
                                        parameters=self.parameters.values(),

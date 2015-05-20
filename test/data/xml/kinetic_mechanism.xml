@@ -7,6 +7,10 @@
     <Parameter name="k2" dimension="per_voltage"/>
     <Parameter name="tau1" dimension="time"/>
     <Parameter name="tau2" dimension="time"/>
+    <Parameter name="gbar" dimension="conductance"/>
+
+    
+    
     <AnalogReceivePort name="v" dimension="voltage"/>
     <Kinetics>
       <KineticState name="C1"/>
@@ -66,6 +70,11 @@
   <Dimension name="time" t="-1"/>
   <Dimension name="voltage" m="1" l="2" t="-3" i="-1"/>
   <Dimension name="per_voltage" m="-1" l="-2" t="3" i="1"/>
+  <Dimension name="conductance" m="-1" l="-2" t="3" i="2"/>
+  <Dimension name="area" l="2"/>
+ 
+  <Unit symbol="cm_square" dimension="area" power="-4"/>
+  <Unit symbol="mS" dimension="conductance" power="-3"/>
   <Unit symbol="mV" dimension="voltage" power="-3"/>
   <Unit symbol="per_mV" dimension="per_voltage" power="3"/>
   <Unit symbol="ms" dimension="time" power="-3"/>

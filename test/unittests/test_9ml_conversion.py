@@ -1,7 +1,10 @@
+
+
 if __name__ == '__main__':
-    from . import DummyTestCase as TestCase  # @UnusedImport
+    from utils import DummyTestCase as TestCase  # @UnusedImport
 else:
     from unittest import TestCase  # @Reimport
+
 import os.path
 from copy import deepcopy
 import nineml.extensions.biophysical_cells
