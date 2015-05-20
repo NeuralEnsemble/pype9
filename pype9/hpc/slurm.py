@@ -13,7 +13,7 @@ import subprocess
 from .base import HPCSubmitter
 
 
-class SGESubmitter(HPCSubmitter):
+class SlurmSubmitter(HPCSubmitter):
     """
     This class automates the submission of MPI jobs on a SGE-powered high-
     performance computing cluster
