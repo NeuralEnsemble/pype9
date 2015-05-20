@@ -17,3 +17,8 @@ x86_64
 .project
 .pydevproject
 .cproject
+*.so
+*.dylib
+*.o
+.libs
+*.Plo

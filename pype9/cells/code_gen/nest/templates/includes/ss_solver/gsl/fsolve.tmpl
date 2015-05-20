@@ -1,0 +1,34 @@
+  int fsolve (int (*fss)(const gsl_vector *, void *user_data, gsl_vector *),
+              int N, gsl_vector *fval, void *user_data, std::string name) {
+
+      const gsl_multiroot_fsolver_type * T = gsl_multiroot_fsolver_hybrid;
+      gsl_multiroot_fsolver * s = gsl_multiroot_fsolver_alloc (T, N);
+      gsl_multiroot_function f = {fss, N, user_data};
+
+      int status, iter;
+      gsl_vector *x = gsl_vector_alloc (N);
+      for (int i = 0; i < N; i++)
+         gsl_vector_set (x, i, 0.0);
+      gsl_multiroot_fsolver_set (s, &f, x);
+
+      iter = 0;
+      do {
+         iter++;
+         status = gsl_multiroot_fsolver_iterate (s);
+         if ((status == GSL_EBADFUNC) || (status == GSL_ENOPROG))
+            throw nest::GSLSolverFailure(name, status);
+         status =  gsl_multiroot_test_residual (s->f, 1e-7);
+      } while (status == GSL_CONTINUE && iter < 1000);
+
+      for (int i = 0; i < N; i++)
+         gsl_vector_set (fval, i, gsl_vector_get (s->x, i));
+
+      gsl_vector_free (x);
+      gsl_multiroot_fsolver_free (s);
+
+      return 0;
+  }
+  
+  extern "C" int {{component_name}}_steadystate (const gsl_vector *u, void *pnode, gsl_vector *f) {
+    return 0;
+  }

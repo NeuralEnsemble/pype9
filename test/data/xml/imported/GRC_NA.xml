@@ -1,74 +1,74 @@
 <?xml version='1.0' encoding='UTF-8' standalone='yes'?>
-<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
-  <nineml:Dimension k="1" name="temperature"/>
-  <nineml:Component name="GRC_NA">
-    <nineml:Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_NAClass.xml">GRC_NAClass</nineml:Definition>
-    <nineml:Property units="unitless" name="ACoff">
-      <nineml:SingleValue>0.5</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="ACon">
-      <nineml:SingleValue>0.005</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="AOoff">
-      <nineml:SingleValue>0.005</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="AOon">
-      <nineml:SingleValue>0.75</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="Aalfa">
-      <nineml:SingleValue>353.91</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="Abeta">
-      <nineml:SingleValue>1.272</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="Adelta">
-      <nineml:SingleValue>40.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="Aepsilon">
-      <nineml:SingleValue>1.75</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="Agamma">
-      <nineml:SingleValue>150.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="Ateta">
-      <nineml:SingleValue>0.0201</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="Valfa">
-      <nineml:SingleValue>13.99</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="Vbeta">
-      <nineml:SingleValue>13.99</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="Vteta">
-      <nineml:SingleValue>25.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="degC" name="celsius">
-      <nineml:SingleValue>20.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV" name="ena">
-      <nineml:SingleValue>87.39</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="S_per_cm2" name="gnabar">
-      <nineml:SingleValue>0.013</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="n1">
-      <nineml:SingleValue>5.422</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="n2">
-      <nineml:SingleValue>3.279</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="n3">
-      <nineml:SingleValue>1.83</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="n4">
-      <nineml:SingleValue>0.738</nineml:SingleValue>
-    </nineml:Property>
-  </nineml:Component>
-  <nineml:Unit symbol="degC" dimension="temperature" power="0" offset="273.15"/>
-  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
-  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
-  <nineml:Unit symbol="unitless" dimension="dimensionless" power="0"/>
-  <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
-  <nineml:Dimension name="dimensionless"/>
-  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-</nineml:NineML>
+<NineML xmlns="http://nineml.net/9ML/1.0">
+  <Dimension k="1" name="temperature"/>
+  <Component name="GRC_NA">
+    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_NAClass.xml">GRC_NAClass</Definition>
+    <Property units="unitless" name="ACoff">
+      <SingleValue>0.5</SingleValue>
+    </Property>
+    <Property units="unitless" name="ACon">
+      <SingleValue>0.005</SingleValue>
+    </Property>
+    <Property units="unitless" name="AOoff">
+      <SingleValue>0.005</SingleValue>
+    </Property>
+    <Property units="unitless" name="AOon">
+      <SingleValue>0.75</SingleValue>
+    </Property>
+    <Property units="unitless" name="Aalfa">
+      <SingleValue>353.91</SingleValue>
+    </Property>
+    <Property units="unitless" name="Abeta">
+      <SingleValue>1.272</SingleValue>
+    </Property>
+    <Property units="unitless" name="Adelta">
+      <SingleValue>40.0</SingleValue>
+    </Property>
+    <Property units="unitless" name="Aepsilon">
+      <SingleValue>1.75</SingleValue>
+    </Property>
+    <Property units="unitless" name="Agamma">
+      <SingleValue>150.0</SingleValue>
+    </Property>
+    <Property units="unitless" name="Ateta">
+      <SingleValue>0.0201</SingleValue>
+    </Property>
+    <Property units="unitless" name="Valfa">
+      <SingleValue>13.99</SingleValue>
+    </Property>
+    <Property units="unitless" name="Vbeta">
+      <SingleValue>13.99</SingleValue>
+    </Property>
+    <Property units="unitless" name="Vteta">
+      <SingleValue>25.0</SingleValue>
+    </Property>
+    <Property units="degC" name="celsius">
+      <SingleValue>20.0</SingleValue>
+    </Property>
+    <Property units="mV" name="ena">
+      <SingleValue>87.39</SingleValue>
+    </Property>
+    <Property units="S_per_cm2" name="gnabar">
+      <SingleValue>0.013</SingleValue>
+    </Property>
+    <Property units="unitless" name="n1">
+      <SingleValue>5.422</SingleValue>
+    </Property>
+    <Property units="unitless" name="n2">
+      <SingleValue>3.279</SingleValue>
+    </Property>
+    <Property units="unitless" name="n3">
+      <SingleValue>1.83</SingleValue>
+    </Property>
+    <Property units="unitless" name="n4">
+      <SingleValue>0.738</SingleValue>
+    </Property>
+  </Component>
+  <Unit symbol="degC" dimension="temperature" power="0" offset="273.15"/>
+  <Unit symbol="mV" dimension="voltage" power="-3"/>
+  <Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+  <Unit symbol="unitless" dimension="dimensionless" power="0"/>
+  <Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
+  <Dimension name="dimensionless"/>
+  <Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+</NineML>

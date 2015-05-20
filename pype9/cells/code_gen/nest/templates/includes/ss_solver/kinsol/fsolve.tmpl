@@ -1,0 +1,42 @@
+  int fsolve (KINSysFn f, int N, N_Vector fval, void *user_data,
+              std::string name) {
+      int status;
+      N_Vector u0, sc;
+      void *kmem;
+
+      u0 = N_VNew_Serial(N);
+      N_VConst_Serial(0.0,u0);
+      N_VConst_Serial(0.0,fval);
+
+      sc = N_VNew_Serial(N);
+      N_VConst_Serial(1.0,sc);
+
+      kmem = KINCreate();
+
+      status = KINSetUserData (kmem, user_data);
+      if (check_flag (&status, "KinSetUserData", 1))
+        throw KINSolverFailure (name, status);
+
+      status = KINInit (kmem, f, u0);
+      if (check_flag (&status, "KinInit", 1))
+        throw KINSolverFailure (name, status);
+
+      status = KINDense (kmem, N);
+      if (check_flag (&status, "KinDense", 1))
+        throw KINSolverFailure (name, status);
+
+      status = KINSol (kmem, fval, KIN_NONE, sc, sc);
+      if (check_flag (&status, "KINSol", 1))
+        throw KINSolverFailure (name, status);
+
+      N_VDestroy_Serial(sc);
+      N_VDestroy_Serial(u0);
+
+      KINFree (&kmem);
+
+      return 0;
+  }
+
+  extern "C" int {{component_name}}_steadystate (N_Vector u, N_Vector f, void* pnode) {
+     return 0;
+  }

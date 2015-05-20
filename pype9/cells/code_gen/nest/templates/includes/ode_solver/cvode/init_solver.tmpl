@@ -1,0 +1,73 @@
+    // Holds the return status values of the CVODE/IDA initialisations
+    int status;
+
+    // Vector length (number of states)
+    int N = {{component_class.num_state_variables}};
+    // only positive direction (rising edge) of spike events will be detected
+    int rootdir = 1;
+
+    /* Creates serial vectors of length N */
+    B_.y = N_VNew_Serial(N);
+    if (check_flag((void *)B_.y, "N_VNew_Serial", 0))
+        throw CVodeSolverFailure (get_name(), 0);
+
+    // Copy NEST state to CVODE/IDA vector
+    for (int i = 0; i < N; i++)
+       ITEM(B_.y,i) = S_.y_[i];
+
+    // Calls CVodeCreate to create the solver memory
+    // and specify the Backward Differentiation Formula and the use of a
+    // Newton iteration
+    B_.sys_ = CVodeCreate(CV_BDF, CV_NEWTON);
+    if (check_flag((void *)B_.sys_, "CVodeCreate", 0))
+        throw CVodeSolverFailure (get_name(), 0);
+
+    // Calls CVodeInit to initialize the integrator memory and specify the
+    // right hand side function in y''=f(t,y), the initial time, and
+    // the initial values.
+    status = CVodeInit (B_.sys_, {{component_name}}_dynamics, 0.0, B_.y);
+    if (check_flag(&status, "CVodeInit", 1))
+        throw CVodeSolverFailure (get_name(), status);
+
+    {% if v_threshold %}
+    /* Event trigger handler (detects event triggers) */
+    status = CVodeRootInit(B_.sys_, 1, (CVRootFn){{component_name}}_trigger);
+    if (check_flag(&status, "CVodeRootInit", 1))
+        throw CVodeSolverFailure (get_name(), status);
+
+    /* Detect only the rising edge of spikes */
+    status = CVodeSetRootDirection(B_.sys_, &rootdir);
+    if (check_flag(&status, "CVodeSetRootDirection", 1))
+        throw CVodeSolverFailure (get_name(), status);
+
+    {% endif %}
+    /* Sets the relative and absolute error tolerances of CVode  */
+    status = CVodeSStolerances (B_.sys_, {{abs_tolerance}}, {{rel_tolerance}});
+    if (check_flag(&status, "CVodeSStolerances", 1))
+        throw CVodeSolverFailure (get_name(), status);
+
+    /* Turns on CVode stability limit detection (only applicable for order 3 and greater) */
+    status = CVodeSetStabLimDet (B_.sys_,true);
+    if (check_flag(&status, "CVodeSetStabLimDet", 1))
+        throw CVodeSolverFailure (get_name(), status);
+
+    /* Sets the maximum order of CVode  */
+    status = CVodeSetMaxOrd (B_.sys_,5);
+    if (check_flag(&status, "CVodeSetMaxOrd", 1))
+        throw CVodeSolverFailure (get_name(), status);
+
+    /* Sets maximum step size. */
+    status = CVodeSetMaxStep (B_.sys_,{% if max_step_size %}{{max_step_size}}{% else %}B_.step_{% endif %});
+    if (check_flag(&status, "CVodeSetMaxStep", 1))
+        throw CVodeSolverFailure (get_name(), status);
+
+    /* Calls CVodeSetUserData to configure the integrator to pass the
+     * params structure to the right-hand function */
+    status = CVodeSetUserData(B_.sys_, reinterpret_cast<void*>(this));
+    if (check_flag(&status, "CVodeSetUserData", 1))
+        throw CVodeSolverFailure (get_name(), status);
+
+    /* Initializes diagonal linear solver. */
+    status = CVDiag (B_.sys_);
+    if (check_flag(&status, "CVDiag", 1))
+        throw CVodeSolverFailure (get_name(), status);

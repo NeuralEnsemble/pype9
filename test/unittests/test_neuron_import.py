@@ -3,9 +3,15 @@ from pype9.importer.neuron import NeuronImporter
 from pype9.importer.neuron.hoc import HocImporter
 from pype9.importer.neuron.nmodl import NMODLImporter
 import nineml
+from nineml import units as un
 from nineml.abstraction_layer import (
+<<<<<<< HEAD
     units as un, AnalogSendPort, AnalogReceivePort, Parameter, DynamicsClass,
     Regime, TimeDerivative, Alias, StateVariable)
+=======
+    AnalogSendPort, AnalogReceivePort, Parameter, Dynamics,
+    TimeDerivative, Alias, StateVariable)
+>>>>>>> cf0db4ab951b54ed8868b23c7f8c40f0c1af33aa
 from utils import test_data_dir
 from neuron import h
 #import neuronpy
@@ -36,7 +42,7 @@ class TestHocImporter(TestCase):
 
 class TestNMODLImporter(TestCase):
 
-    naf_class = DynamicsClass(
+    naf_class = Dynamics(
         name="NaF",
         parameters=[Parameter("qdeltat", un.dimensionless),
                     Parameter("gbar", un.conductance)],
@@ -63,6 +69,58 @@ class TestNMODLImporter(TestCase):
                        'exp((v + 97) / 17)) + 0.025')],
         state_variables=[StateVariable('m', un.dimensionless),
                           StateVariable('h', un.dimensionless)])
+<<<<<<< HEAD
+=======
+#         """<?xml version='1.0' encoding='UTF-8'?>
+#         <NineML xmlns="http://nineml.org/9ML/0.3">
+#           <Dynamics name="NaF">
+#             <AnalogPort mode="send" dimension="dimensionless" name="m"/>
+#             <AnalogPort mode="send" dimension="dimensionless" name="h"/>
+#             <AnalogPort mode="recv" dimension="voltage" name="ena"/>
+#             <AnalogPort mode="send" dimension="membrane_current" name="ina"/>
+#             <AnalogPort mode="recv" dimension="voltage" name="v"/>
+#             <Parameter dimension="dimensionless" name="qdeltat"/>
+#             <Parameter dimension="membrane_conductance" name="gbar"/>
+#             <Dynamics>
+#               <Regime name="states">
+#                 <TimeDerivative variable="m">
+#                   <MathInline>(minf_v - m)/taum_v</MathInline>
+#                 </TimeDerivative>
+#                 <TimeDerivative variable="h">
+#                   <MathInline>(hinf_v - h)/tauh_v</MathInline>
+#                 </TimeDerivative>
+#               </Regime>
+#               <Alias name="tauh_v__tmp">
+#                 <MathInline>
+#                     16.67 / (exp((v - 8.3) / -29) + exp((v + 66) / 9)) + 0.2
+#                 </MathInline>
+#               </Alias>
+#               <Alias name="taum_v">
+#                 <MathInline>taum_v__tmp / qdeltat</MathInline>
+#               </Alias>
+#               <Alias name="tauh_v">
+#                 <MathInline>tauh_v__tmp / qdeltat</MathInline>
+#               </Alias>
+#               <Alias name="minf_v">
+#                 <MathInline>1 / (1 + exp((v + 45) / -7.3))</MathInline>
+#               </Alias>
+#               <Alias name="hinf_v">
+#                 <MathInline>1 / (1 + exp((v + 42) / 5.9))</MathInline>
+#               </Alias>
+#               <Alias name="ina">
+#                 <MathInline>gbar * m*m*m * h * (v - ena)</MathInline>
+#               </Alias>
+#               <Alias name="taum_v__tmp">
+#                 <MathInline>
+#                     5.83 / (exp((v - (6.4)) / -9) + exp((v + 97) / 17)) + 0.025
+#                 </MathInline>
+#               </Alias>
+#               <StateVariable dimension="dimensionless" name="h"/>
+#               <StateVariable dimension="dimensionless" name="m"/>
+#             </Dynamics>
+#           </Dynamics>
+#         </NineML>""")
+>>>>>>> cf0db4ab951b54ed8868b23c7f8c40f0c1af33aa
 
     def test_nmodl_import(self):
         in_path = os.path.join(test_data_dir, 'nmodl')

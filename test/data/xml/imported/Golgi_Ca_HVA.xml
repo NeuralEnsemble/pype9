@@ -1,56 +1,56 @@
 <?xml version='1.0' encoding='UTF-8' standalone='yes'?>
-<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
-  <nineml:Dimension name="per_time" t="-1"/>
-  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-  <nineml:Component name="Golgi_Ca_HVA">
-    <nineml:Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_Ca_HVAClass.xml">Golgi_Ca_HVAClass</nineml:Definition>
-    <nineml:Property units="per_ms" name="Aalpha_s">
-      <nineml:SingleValue>0.04944</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="per_ms" name="Aalpha_u">
-      <nineml:SingleValue>0.0013</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="per_ms" name="Abeta_s">
-      <nineml:SingleValue>0.08298</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="per_ms" name="Abeta_u">
-      <nineml:SingleValue>0.0013</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV" name="Kalpha_s">
-      <nineml:SingleValue>15.873015873</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV" name="Kalpha_u">
-      <nineml:SingleValue>-18.183</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV" name="Kbeta_s">
-      <nineml:SingleValue>-25.641</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV" name="Kbeta_u">
-      <nineml:SingleValue>83.33</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="Q10">
-      <nineml:SingleValue>3.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV" name="V0alpha_s">
-      <nineml:SingleValue>-29.06</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV" name="V0alpha_u">
-      <nineml:SingleValue>-48.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV" name="V0beta_s">
-      <nineml:SingleValue>-18.66</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="mV" name="V0beta_u">
-      <nineml:SingleValue>-48.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="S_per_cm2" name="gcabar">
-      <nineml:SingleValue>0.00046</nineml:SingleValue>
-    </nineml:Property>
-  </nineml:Component>
-  <nineml:Unit symbol="mV" dimension="voltage" power="-3"/>
-  <nineml:Unit symbol="unitless" dimension="dimensionless" power="0"/>
-  <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
-  <nineml:Unit symbol="per_ms" dimension="per_time" power="3"/>
-  <nineml:Dimension name="dimensionless"/>
-  <nineml:Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
-</nineml:NineML>
+<NineML xmlns="http://nineml.net/9ML/1.0">
+  <Dimension name="per_time" t="-1"/>
+  <Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <Component name="Golgi_Ca_HVA">
+    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_Ca_HVAClass.xml">Golgi_Ca_HVAClass</Definition>
+    <Property units="per_ms" name="Aalpha_s">
+      <SingleValue>0.04944</SingleValue>
+    </Property>
+    <Property units="per_ms" name="Aalpha_u">
+      <SingleValue>0.0013</SingleValue>
+    </Property>
+    <Property units="per_ms" name="Abeta_s">
+      <SingleValue>0.08298</SingleValue>
+    </Property>
+    <Property units="per_ms" name="Abeta_u">
+      <SingleValue>0.0013</SingleValue>
+    </Property>
+    <Property units="mV" name="Kalpha_s">
+      <SingleValue>15.873015873</SingleValue>
+    </Property>
+    <Property units="mV" name="Kalpha_u">
+      <SingleValue>-18.183</SingleValue>
+    </Property>
+    <Property units="mV" name="Kbeta_s">
+      <SingleValue>-25.641</SingleValue>
+    </Property>
+    <Property units="mV" name="Kbeta_u">
+      <SingleValue>83.33</SingleValue>
+    </Property>
+    <Property units="unitless" name="Q10">
+      <SingleValue>3.0</SingleValue>
+    </Property>
+    <Property units="mV" name="V0alpha_s">
+      <SingleValue>-29.06</SingleValue>
+    </Property>
+    <Property units="mV" name="V0alpha_u">
+      <SingleValue>-48.0</SingleValue>
+    </Property>
+    <Property units="mV" name="V0beta_s">
+      <SingleValue>-18.66</SingleValue>
+    </Property>
+    <Property units="mV" name="V0beta_u">
+      <SingleValue>-48.0</SingleValue>
+    </Property>
+    <Property units="S_per_cm2" name="gcabar">
+      <SingleValue>0.00046</SingleValue>
+    </Property>
+  </Component>
+  <Unit symbol="mV" dimension="voltage" power="-3"/>
+  <Unit symbol="unitless" dimension="dimensionless" power="0"/>
+  <Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
+  <Unit symbol="per_ms" dimension="per_time" power="3"/>
+  <Dimension name="dimensionless"/>
+  <Dimension i="-1" t="-3" m="1" l="2" name="voltage"/>
+</NineML>

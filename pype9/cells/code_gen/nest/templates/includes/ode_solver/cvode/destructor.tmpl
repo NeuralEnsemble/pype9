@@ -1,0 +1,10 @@
+    if ( B_.sys_ ) {
+        // Free y vector
+        N_VDestroy_Serial(B_.y);
+
+        // Free integrator memory
+        if (B_.sys_ != NULL) {
+            CVodeFree(&B_.sys_);
+            B_.sys_ = NULL;
+        }
+    }

@@ -1,29 +1,33 @@
 libdir= @libdir@/nest
 
-lib_LTLIBRARIES=      {{name}}Loader.la lib{{name}}Loader.la
+lib_LTLIBRARIES=      {{name}}Module.la lib{{name}}Module.la
 
-{{name}}Loader_la_CXXFLAGS= @AM_CXXFLAGS@
-{{name}}Loader_la_SOURCES=  {{name}}.cpp {{name}}.h \
-                                     {{name}}Loader.cpp {{name}}Loader.h
+{{name}}Module_la_CXXFLAGS= @AM_CXXFLAGS@
+{{name}}Module_la_SOURCES=  {{name}}Module.cpp {{name}}Module.h \
+                            {{name}}.cpp {{name}}.h
 
+{{name}}Module_la_LDFLAGS=  -module{% if ode_solver in ('cvode', 'ida') %} @SUNDIALS_LDFLAGS@{% endif %}
 
-{{name}}Loader_la_LDFLAGS=  -module @SUNDIALS_LDFLAGS@
-
-lib{{name}}Loader_la_CXXFLAGS= $({{name}}Loader_la_CXXFLAGS) -DLINKED_MODULE
-lib{{name}}Loader_la_SOURCES=  $({{name}}Loader_la_SOURCES)
+lib{{name}}Module_la_CXXFLAGS= $({{name}}Module_la_CXXFLAGS) -DLINKED_MODULE
+lib{{name}}Module_la_SOURCES=  $({{name}}Module_la_SOURCES)
 
 MAKEFLAGS= @MAKE_FLAGS@
 
 AM_CPPFLAGS= @NEST_CPPFLAGS@ \
+{% if ode_solver in ('cvode', 'ida') %}
              @SUNDIALS_CPPFLAGS@ \
-             @INCLTDL@
+{% endif %}             @INCLTDL@
 
+{% if ode_solver in ('cvode', 'ida') %}
 AM_LDFLAGS = @SUNDIALS_LDFLAGS@
+{% endif %}
 
 .PHONY: install-slidoc
 
+pkgdatadir=@datadir@/nest
+
 nobase_pkgdata_DATA=\
-	{{name}}Loader.sli
+	sli/{{name}}Module-init.sli
 
 install-slidoc:
 	NESTRCFILENAME=/dev/null $(DESTDIR)$(NEST_PREFIX)/bin/sli --userargs="@HELPDIRS@" \

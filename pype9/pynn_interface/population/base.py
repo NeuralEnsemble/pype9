@@ -10,7 +10,7 @@ import pyNN.parameters
 from pype9.pynn_interface.structure import Structure
 import pype9.pynn_interface.random
 from pyNN.random import RandomDistribution
-from nineml.abstraction_layer.dynamics import DynamicsClass
+from nineml.abstraction_layer.dynamics import Dynamics
 import nineml.extensions.biophysical_cells
 import nineml.user_layer
 
@@ -28,10 +28,10 @@ class Population(object):
         # Store the definition url inside the cell type for use when checking
         # reloading of cell model
         celltype_model.url = nineml_model.prototype.definition.url
-        if isinstance(celltype_model, DynamicsClass):
+        if isinstance(celltype_model, Dynamics):
             celltype = self._pyNN_standard_celltypes[celltype_model.name]
         elif isinstance(celltype_model,
-                        nineml.extensions.biophysical_cells.ComponentClass):
+                        nineml.extensions.biophysical_cells.Dynamics):
             celltype = self._CellMetaClass(
                 celltype_model, celltype_name, build_mode=build_mode,
                 silent=silent_build, solver_name=solver_name)
@@ -57,10 +57,10 @@ class Population(object):
                 if isinstance(p.value, float):
                     param = p.value
                 elif isinstance(p.value, nineml.user_layer.RandomDistribution):
-                    RandomDistributionClass = getattr(
+                    RandomDistribution = getattr(
                         pype9.pynn_interface.random,
                         p.value.definition.componentclass.name)
-                    param = RandomDistributionClass(
+                    param = RandomDistribution(
                         p.value.parameters, rng, use_units=False)
                 elif isinstance(p.value, nineml.user_layer.values.ArrayValue):
                     param = pyNN.parameters.Sequence(p.value)

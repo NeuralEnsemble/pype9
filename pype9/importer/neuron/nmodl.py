@@ -10,21 +10,21 @@ import collections
 from itertools import chain
 from nineml.abstraction_layer.componentclass import Parameter
 from nineml.abstraction_layer.dynamics import (
-    TimeDerivative, StateAssignment, DynamicsClass)
+    TimeDerivative, StateAssignment, Dynamics)
 from nineml.abstraction_layer.dynamics import Regime, StateVariable, OnEvent
 from nineml.abstraction_layer.expressions import Alias
 from nineml.abstraction_layer.ports import (
     AnalogReceivePort, AnalogSendPort, EventReceivePort)
-import nineml.abstraction_layer.units as un
+import nineml.units as un
 from nineml.user_layer import Definition
 from nineml.document import Document
-from nineml.user_layer import Dynamics
+from nineml.user_layer import DynamicsProperties
 from nineml.abstraction_layer.expressions import Constant
 from pype9.exceptions import Pype9RuntimeError
 
 # from nineml.user_layer.dynamics import IonDynamics
 from collections import defaultdict
-from nineml.abstraction_layer import units
+from nineml import units
 from nineml.abstraction_layer.expressions.piecewise import (Piecewise, Piece,
                                                             Otherwise)
 
@@ -177,7 +177,7 @@ class NMODLImporter(object):
             if flatten_kinetics:
                 cpy = deepcopy(self)
                 cpy._flatten_kinetics()
-                comp_class = DynamicsClass(
+                comp_class = Dynamics(
                     name=cpy.component_name + 'Class',
                     parameters=cpy.parameters.values(),
                     analog_ports=cpy.analog_ports.values(),
@@ -210,8 +210,12 @@ class NMODLImporter(object):
                                        constraints=cst,
                                        kineticsblock=None)
         else:
+<<<<<<< HEAD
              sv=list(self.state_variables)
              comp_class = DynamicsClass(name=self.component_name + 'Class',
+=======
+            comp_class = Dynamics(name=self.component_name + 'Class',
+>>>>>>> cf0db4ab951b54ed8868b23c7f8c40f0c1af33aa
                                        parameters=self.parameters.values(),
                                        analog_ports=self.analog_ports.values(),
                                        event_ports=self.event_ports.values(),
@@ -239,8 +243,8 @@ class NMODLImporter(object):
         context = Document()
         definition = Definition(self.component_name + 'Class', context,
                                 url=os.path.normpath(class_path))
-        comp = Dynamics(self.component_name, definition=definition,
-                                 properties=properties)
+        comp = DynamicsProperties(self.component_name, definition=definition,
+                                  properties=properties)
         return comp
 
     def print_members(self):

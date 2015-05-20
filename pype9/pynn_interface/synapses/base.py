@@ -33,10 +33,10 @@ class Synapse(object):
             elif isinstance(p.value, str):
                 conv_param = p.value
             elif isinstance(p.value, nineml.user_layer.RandomDistribution):
-                RandomDistributionClass = getattr(
+                RandomDistribution = getattr(
                     pype9.pynn_interface.random,
                     p.value.definition.componentclass.name)
-                conv_param = RandomDistributionClass(
+                conv_param = RandomDistribution(
                     p.value.parameters, rng, use_units=False)
             elif isinstance(p.value, nineml.user_layer.StructureExpression):
                 StructureExpressionClass = getattr(

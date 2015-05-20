@@ -12,8 +12,8 @@ TITLE Spiking node generated from 9ML using PyPe9 version {{version}} at '{{time
 NEURON {
     {%+ if is_subcomponent %}SUFFIX{% else %}POINT_PROCESS{% endif %} {{component_name}}
 {% for port in componentclass.analog_send_ports if port.dimension == units.currentDensity %}
-    {% set ion_species = port.annotations['biophysics']['ion_species'] %}
-    {% if ion_species == 'non_specific' %}
+    {% set ion_species = port.annotations[PYPE9_NS][ION_SPECIES] %}
+    {% if ion_species == NON_SPECIFIC_CURRENT %}
     NONSPECIFIC_CURRENT {{port.name}}
     {% else %}
     USEION {{ion_species}} WRITE {{ion_species}}i
@@ -38,7 +38,7 @@ NEURON {
 {% endfor %}
 
     :Aliases
-{% for alias in chain(componentclass.aliases, componentclass.piecewises) %}
+{% for alias in chain(componentclass.aliases) %}
     RANGE {{alias.name}}
 {% endfor %}
 }
@@ -80,7 +80,7 @@ INITIAL {
     : triggered from False->True) so check to see if start off False
 {% for regime in componentclass.regimes %}
     {% for oc in regime.on_conditions %}
-    {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active = ({{oc.trigger.reactivate_condition.rhs_str.replace('=', '')}})
+    {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active = ({{oc.trigger.reactivate_condition.rhs_cstr.replace('=', '')}})
     {% endfor %}
 {% endfor %}
 
@@ -140,27 +140,27 @@ ASSIGNED {
 BREAKPOINT {
     SOLVE states METHOD {{ode_solver}}
 {% for expr in componentclass.required_for(componentclass.all_time_derivatives()).expressions %}
-    {{expr.lhs}} = {{expr.rhs_str}}
+    {{expr.lhs}} = {{expr.rhs_cstr}}
 {% endfor %}
 {% for expr in componentclass.required_for(componentclass.all_output_analogs()).expressions %}
-    {{expr.lhs}} = {{expr.rhs_str}}
+    {{expr.lhs}} = {{expr.rhs_cstr}}
 {% endfor %}
 {% for oa in componentclass.all_output_analogs() %}
-    {{oa.lhs}} = {{oa.rhs_str}}
+    {{oa.lhs}} = {{oa.rhs_cstr}}
 {% endfor %}
 }
 
 DERIVATIVE states {
-{% for sv in componentclass.state_variables %}
+{% for sv in componentclass.state_variables if sv.name != 'v'  %}
     {{sv.name}}' = deriv_{{sv.name}}({{componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variable_names | join(', ')}})
 {% endfor %}
 }
 
-{% for sv in componentclass.state_variables %}
+{% for sv in componentclass.state_variables if sv.name != 'v' %}
 FUNCTION deriv_{{sv.name}}({{componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variable_names | join(', ')}}) {
     {% for regime in componentclass.regimes %}
     {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
-        deriv_{{sv.name}} = {{regime.time_derivative(sv.name).rhs_str}}
+        deriv_{{sv.name}} = {{regime.time_derivative(sv.name).rhs_cstr}}
     {% endfor %}
     }
 }
@@ -173,8 +173,8 @@ NET_RECEIVE(w, channel) {
     if (flag == INIT) {
 {% for regime in componentclass.regimes %}
     {% for oc in regime.on_conditions %}
-        WATCH ({{oc.trigger.rhs_str}}) 1  : Trigger an on-condition
-        WATCH ({{oc.trigger.reactivate_condition.rhs_str.replace('=', '')}}) 1  : Reactivate trigger
+        WATCH ({{oc.trigger.rhs_cstr}}) 1  : Trigger an on-condition
+        WATCH ({{oc.trigger.reactivate_condition.rhs_cstr.replace('=', '')}}) 1  : Reactivate trigger
     {% endfor %}
 {% endfor %}
     } else if (flag == ON_EVENT) {
@@ -190,16 +190,16 @@ NET_RECEIVE(w, channel) {
             {% if hasasttr(expr, 'pieces') %}  {# Is a Piecewise statement #}
                 {% for piece in expr.pieces %}
                 {{elseif(loop.first)}} ({{expr.condition}})
-                    {{expr_name}} = {{piece.rhs_str}}
+                    {{expr_name}} = {{piece.rhs_cstr}}
                 {% endfor %}
                 else
-                    {{expr_name}} = {{expr.otherwise.rhs_str}} 
+                    {{expr_name}} = {{expr.otherwise.rhs_cstr}} 
             {% else %}
-                {{expr.lhs}} = {{expr.rhs_str}}
+                {{expr.lhs}} = {{expr.rhs_cstr}}
             {% endif %}
         {% endfor %}
         {% for sa in oe.state_assignments %}
-                {{sa.lhs}} = {{sa.rhs_str}}
+                {{sa.lhs}} = {{sa.rhs_cstr}}
         {% endfor %}
         {% for node in oe.event_outputs %}
                 {{as_expr}}(node)
@@ -211,7 +211,7 @@ NET_RECEIVE(w, channel) {
     } else if (flag == ON_CONDITION) {
         : Reactivate triggers that have passed below their thresholds
 {% for oc in componentclass.all_on_conditions() %}
-        if ({{oc.trigger.reactivate_condition.rhs_str}}) {
+        if ({{oc.trigger.reactivate_condition.rhs_cstr}}) {
             {{oc.source_regime.name | lower}}_cond{{componentclass.index_of(oc, key=oc.source_regime)}}_active = 1
         }
 {% endfor %}
@@ -221,7 +221,7 @@ NET_RECEIVE(w, channel) {
 {% for regime in componentclass.regimes %}
         {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
     {% for oc in regime.on_conditions %}
-            if (({{oc.trigger.rhs_str}}) && {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active) {
+            if (({{oc.trigger.rhs_cstr}}) && {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active) {
 	            {% if oc.target_regime != regime %}
                 if (!regime_changed_) {
                     regime_ = {{oc.target_regime.name | upper}}
@@ -230,11 +230,11 @@ NET_RECEIVE(w, channel) {
                     printf("Warning! Simulataneous regime changes requested, ignoring change from '{{regime.name}}' to '{{oc.target_regime.name}}'.")
                 }
 	            {% endif %}
-	        {% for node in oc.event_outputs %}
+	        {% for node in oc.output_events %}
                 net_event(t)
 	        {% endfor %}
 	        {% for sa in oc.state_assignments %}
-                {{sa.lhs}} = {{sa.rhs_str}}
+                {{sa.lhs}} = {{sa.rhs_cstr}}
 	        {% endfor %}
                 {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active = 0  
             }

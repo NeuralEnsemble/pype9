@@ -1,0 +1,32 @@
+    /**
+     * Exception to be thrown if a KinSol solver does not return KIN_SUCCESS
+     * @ingroup KernelExceptions
+     */
+    class KINSolverFailure: public KernelException {
+      public:
+        /**
+          * @note model should be passed from get_name() to ensure that
+          *             names of copied models are reported correctly.
+          * @param model name of model causing problem
+          * @param status exit status of the KINSOL solver
+          */
+        KINSolverFailure(const std::string& model,
+                         const int status)
+          : KernelException("KINSolverFailure"),
+            model_(model),
+            status_(status)
+          {}
+
+        ~KINSolverFailure() throw() {}
+
+        std::string message() {
+            std::ostringstream msg;
+            msg << "In model " << model_ << ", the KINSOL solver "
+                << "returned with exit status " << status_ << ".\n";
+            return msg.str();
+        }
+
+      private:
+        const std::string model_;
+        const int status_;
+    };

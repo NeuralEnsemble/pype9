@@ -1,49 +1,49 @@
 <?xml version='1.0' encoding='UTF-8' standalone='yes'?>
-<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
-  <nineml:Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
-  <nineml:Component name="Golgi_SK2">
-    <nineml:Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_SK2Class.xml">Golgi_SK2Class</nineml:Definition>
-    <nineml:Property units="unitless" name="Q10">
-      <nineml:SingleValue>3.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="diff">
-      <nineml:SingleValue>3.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="dirc2">
-      <nineml:SingleValue>200.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="dirc3">
-      <nineml:SingleValue>160.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="dirc4">
-      <nineml:SingleValue>80.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="diro1">
-      <nineml:SingleValue>0.16</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="diro2">
-      <nineml:SingleValue>1.2</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="S_per_cm2" name="gkbar">
-      <nineml:SingleValue>0.038</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="invc1">
-      <nineml:SingleValue>0.08</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="invc2">
-      <nineml:SingleValue>0.08</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="invc3">
-      <nineml:SingleValue>0.2</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="invo1">
-      <nineml:SingleValue>1.0</nineml:SingleValue>
-    </nineml:Property>
-    <nineml:Property units="unitless" name="invo2">
-      <nineml:SingleValue>0.1</nineml:SingleValue>
-    </nineml:Property>
-  </nineml:Component>
-  <nineml:Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
-  <nineml:Unit symbol="unitless" dimension="dimensionless" power="0"/>
-  <nineml:Dimension name="dimensionless"/>
-</nineml:NineML>
+<NineML xmlns="http://nineml.net/9ML/1.0">
+  <Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
+  <Component name="Golgi_SK2">
+    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_SK2Class.xml">Golgi_SK2Class</Definition>
+    <Property units="unitless" name="Q10">
+      <SingleValue>3.0</SingleValue>
+    </Property>
+    <Property units="unitless" name="diff">
+      <SingleValue>3.0</SingleValue>
+    </Property>
+    <Property units="unitless" name="dirc2">
+      <SingleValue>200.0</SingleValue>
+    </Property>
+    <Property units="unitless" name="dirc3">
+      <SingleValue>160.0</SingleValue>
+    </Property>
+    <Property units="unitless" name="dirc4">
+      <SingleValue>80.0</SingleValue>
+    </Property>
+    <Property units="unitless" name="diro1">
+      <SingleValue>0.16</SingleValue>
+    </Property>
+    <Property units="unitless" name="diro2">
+      <SingleValue>1.2</SingleValue>
+    </Property>
+    <Property units="S_per_cm2" name="gkbar">
+      <SingleValue>0.038</SingleValue>
+    </Property>
+    <Property units="unitless" name="invc1">
+      <SingleValue>0.08</SingleValue>
+    </Property>
+    <Property units="unitless" name="invc2">
+      <SingleValue>0.08</SingleValue>
+    </Property>
+    <Property units="unitless" name="invc3">
+      <SingleValue>0.2</SingleValue>
+    </Property>
+    <Property units="unitless" name="invo1">
+      <SingleValue>1.0</SingleValue>
+    </Property>
+    <Property units="unitless" name="invo2">
+      <SingleValue>0.1</SingleValue>
+    </Property>
+  </Component>
+  <Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
+  <Unit symbol="unitless" dimension="dimensionless" power="0"/>
+  <Dimension name="dimensionless"/>
+</NineML>

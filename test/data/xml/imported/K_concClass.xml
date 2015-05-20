@@ -1,32 +1,31 @@
 <?xml version='1.0' encoding='UTF-8' standalone='yes'?>
-<nineml:NineML xmlns:nineml="http://nineml.net/9ML/1.0">
-  <nineml:Unit symbol="C" dimension="charge" power="0"/>
-  <nineml:Dimension name="per_time" t="-1"/>
-  <nineml:Dimension i="1" name="charge" t="1"/>
-  <nineml:ComponentClass name="k_concClass">
-    <nineml:AnalogSendPort dimension="concentration" name="ki"/>
-    <nineml:AnalogSendPort dimension="concentration" name="ko"/>
-    <nineml:AnalogReceivePort dimension="currentDensity" name="ik"/>
-    <nineml:Parameter dimension="concentration" name="ko0"/>
-    <nineml:Parameter dimension="per_time" name="beta"/>
-    <nineml:Parameter dimension="concentration" name="ki0"/>
-    <nineml:Parameter dimension="length" name="d"/>
-    <nineml:Dynamics>
-      <nineml:Regime name="conc">
-        <nineml:TimeDerivative variable="ki">
-          <nineml:MathInline>-(ik)/(2*FARADAY*d)*(1e4) - beta*(ki-ki0)</nineml:MathInline>
-        </nineml:TimeDerivative>
-        <nineml:TimeDerivative variable="ko">
-          <nineml:MathInline>(ik)/(2*FARADAY*d)*(1e4) - beta*(ko-ko0)</nineml:MathInline>
-        </nineml:TimeDerivative>
-      </nineml:Regime>
-      <nineml:Constant units="C" name="FARADAY">96485.3365</nineml:Constant>
-      <nineml:StateVariable dimension="dimensionless" name="ki"/>
-      <nineml:StateVariable dimension="dimensionless" name="ko"/>
-    </nineml:Dynamics>
-  </nineml:ComponentClass>
-  <nineml:Dimension name="length" l="1"/>
-  <nineml:Dimension i="1" name="currentDensity" l="-2"/>
-  <nineml:Dimension name="dimensionless"/>
-  <nineml:Dimension l="-3" name="concentration" n="1"/>
-</nineml:NineML>
+<NineML xmlns="http://nineml.net/9ML/1.0">
+  <Unit symbol="C" dimension="charge" power="0"/>
+  <Dimension name="per_time" t="-1"/>
+  <Dimension i="1" name="charge" t="1"/>
+  <Dynamics name="k_concClass">
+    <AnalogSendPort dimension="concentration" name="ki"/>
+    <AnalogSendPort dimension="concentration" name="ko"/>
+    <AnalogReceivePort dimension="currentDensity" name="ik"/>
+    <Parameter dimension="concentration" name="ko0"/>
+    <Parameter dimension="per_time" name="beta"/>
+    <Parameter dimension="concentration" name="ki0"/>
+    <Parameter dimension="length" name="d"/>
+    
+      <Regime name="conc">
+        <TimeDerivative variable="ki">
+          <MathInline>-(ik)/(2*FARADAY*d)*(1e4) - beta*(ki-ki0)</MathInline>
+        </TimeDerivative>
+        <TimeDerivative variable="ko">
+          <MathInline>(ik)/(2*FARADAY*d)*(1e4) - beta*(ko-ko0)</MathInline>
+        </TimeDerivative>
+      </Regime>
+      <Constant units="C" name="FARADAY">96485.3365</Constant>
+      <StateVariable dimension="dimensionless" name="ki"/>
+      <StateVariable dimension="dimensionless" name="ko"/>
+    </Dynamics>
+  <Dimension name="length" l="1"/>
+  <Dimension i="1" name="currentDensity" l="-2"/>
+  <Dimension name="dimensionless"/>
+  <Dimension l="-3" name="concentration" n="1"/>
+</NineML>
