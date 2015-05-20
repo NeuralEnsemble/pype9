@@ -1184,7 +1184,7 @@ class NMODLImporter(object):
                 test = self._substitute_functions(test)
                 pieces.append((expr, test))
         assert otherwise is not None, "No otherwise statement found"
-        self.aliases[lhs] = Alias(name=lhs, Piecewise(pieces + [otherwise]))
+        self.aliases[lhs] = Alias(lhs, Piecewise(pieces + [otherwise]))
 
     def _escape_piecewise(self, lhs, rhs):
         """
