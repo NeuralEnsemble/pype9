@@ -1,12 +1,14 @@
 from math import isnan, log10
 import re
-from copy import deepcopy
+# from copy import deepcopy
 import regex
 import operator
 import quantities as pq
 import os.path
 import collections
 from itertools import chain
+from sympy.functions import Piecewise
+from nineml.abstraction_layer.expressions.utils import is_builtin_symbol
 from nineml.abstraction_layer.componentclass import Parameter
 from nineml.abstraction_layer.dynamics import (
     TimeDerivative, StateAssignment, Dynamics)
@@ -24,8 +26,6 @@ from pype9.exceptions import Pype9RuntimeError
 # from nineml.user_layer.dynamics import IonDynamics
 from collections import defaultdict
 from nineml import units
-from nineml.abstraction_layer.expressions.piecewise import (Piecewise, Piece,
-                                                            Otherwise)
 
 
 # Compiled regular expressions
@@ -162,40 +162,41 @@ class NMODLImporter(object):
 
     def get_component_class(self, flatten_kinetics=False):
         if self.kinetics:
-            if flatten_kinetics:
-                cpy = deepcopy(self)
-                cpy._flatten_kinetics()
-                comp_class = Dynamics(
-                    name=cpy.component_name + 'Class',
-                    parameters=cpy.parameters.values(),
-                    analog_ports=cpy.analog_ports.values(),
-                    event_ports=cpy.event_ports.values(),
-                    regimes=cpy.regimes,
-                    aliases=cpy.aliases.values(),
-                    piecewises=cpy.piecewises.values(),
-                    constants=cpy.constants.values(),
-                    state_variables=cpy.state_variables)
-            else:
-                (name,
-                 (bidirectional, incoming,
-                  outgoing, constraints,
-                  compartments)) = next(self.kinetics.iteritems())
-
-                ks = [KineticState(sv.name)
-                      for sv in self.state_variables.itervalues()]
-
-                cst = [ cs for cs in constraints ]
-                cst = Constraint(cst[0][0],ks[0].name)
-
-                state_variables=list(self.state_variables)
-                comp_class = KineticsClass(name=self.component_name + 'Class',
-                                       parameters=self.parameters.values(),
-                                       analog_ports=self.analog_ports.values(),
-                                       event_ports=self.event_ports.values(),
-                                       aliases=self.aliases.values(),
-                                       kinetic_states=ks,
-                                       constraints=cst,
-                                       kineticsblock=None)
+            raise NotImplementedError
+#             if flatten_kinetics:
+#                 cpy = deepcopy(self)
+#                 cpy._flatten_kinetics()
+#                 comp_class = Dynamics(
+#                     name=cpy.component_name + 'Class',
+#                     parameters=cpy.parameters.values(),
+#                     analog_ports=cpy.analog_ports.values(),
+#                     event_ports=cpy.event_ports.values(),
+#                     regimes=cpy.regimes,
+#                     aliases=cpy.aliases.values(),
+#                     piecewises=cpy.piecewises.values(),
+#                     constants=cpy.constants.values(),
+#                     state_variables=cpy.state_variables)
+#             else:
+#                 (name,
+#                  (bidirectional, incoming,
+#                   outgoing, constraints,
+#                   compartments)) = next(self.kinetics.iteritems())
+# 
+#                 ks = [KineticState(sv.name)
+#                       for sv in self.state_variables.itervalues()]
+# 
+#                 cst = [ cs for cs in constraints ]
+#                 cst = Constraint(cst[0][0],ks[0].name)
+# 
+#                 state_variables=list(self.state_variables)
+#                 comp_class = KineticsClass(name=self.component_name + 'Class',
+#                                        parameters=self.parameters.values(),
+#                                        analog_ports=self.analog_ports.values(),
+#                                        event_ports=self.event_ports.values(),
+#                                        aliases=self.aliases.values(),
+#                                        kinetic_states=ks,
+#                                        constraints=cst,
+#                                        kineticsblock=None)
         else:
             comp_class = Dynamics(name=self.component_name + 'Class',
                                        parameters=self.parameters.values(),
@@ -1178,13 +1179,12 @@ class NMODLImporter(object):
             expr = self._substitute_functions(expr)
             if test == '__otherwise__':
                 assert otherwise is None, "Multiple otherwise statements"
-                otherwise = Otherwise(expr)
+                otherwise = (expr, True)
             else:
                 test = self._substitute_functions(test)
-                pieces.append(Piece(expr, test))
+                pieces.append((expr, test))
         assert otherwise is not None, "No otherwise statement found"
-        self.piecewises[lhs] = Piecewise(name=lhs, pieces=pieces,
-                                         otherwise=otherwise)
+        self.aliases[lhs] = Alias(name=lhs, Piecewise(pieces + [otherwise]))
 
     def _escape_piecewise(self, lhs, rhs):
         """
