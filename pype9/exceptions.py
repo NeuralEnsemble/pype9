@@ -8,6 +8,10 @@ class Pype9TypeError(TypeError):
     pass
 
 
+class Pype9ImportError(Pype9RuntimeError):
+    pass
+
+
 class Pype9IrreducibleMorphException(Exception):
     pass
 
