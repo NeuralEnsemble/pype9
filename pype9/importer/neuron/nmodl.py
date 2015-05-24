@@ -2,17 +2,18 @@ from math import isnan, log10
 import re
 # from copy import deepcopy
 import regex
-import operator
+import sympy
 import quantities as pq
 import os.path
 import collections
-from itertools import chain
+from itertools import chain, groupby
 from sympy.functions import Piecewise
 from nineml.abstraction_layer.expressions.utils import is_builtin_symbol
 from nineml.abstraction_layer.componentclass import Parameter
 from nineml.abstraction_layer.dynamics import (
     TimeDerivative, StateAssignment, Dynamics)
-from nineml.abstraction_layer.dynamics import Regime, StateVariable, OnEvent
+from nineml.abstraction_layer.dynamics import (Regime, StateVariable, OnEvent,
+                                               OutputEvent)
 from nineml.abstraction_layer.expressions import Alias
 from nineml.abstraction_layer.ports import (
     AnalogReceivePort, AnalogSendPort, EventReceivePort)
@@ -92,12 +93,14 @@ class NMODLImporter(object):
 
     # This is used to differentiate a state assigment in a NET_RECEIVE block
     # from a regular alias
-    StateAssignment = collections.namedtuple("StateAssignment", "variable")
-    NetSend = collections.namedtuple('NetSend', ('target', 'flag'))
-    NetEvent = collections.namedtuple('NetEvent', 'arg')
-    Watch = collections.namedtuple('Watch', 'expr')
-    _inbuilt_procs = {'net_send': NetSend, 'net_event': NetEvent,
-                      'WATCH': Watch}
+#     StateAssignment = collections.namedtuple("StateAssignment", "variable")
+#     NetSend = collections.namedtuple('NetSend', ('target', 'flag'))
+#     NetEvent = collections.namedtuple('NetEvent', 'arg')
+#     Watch = collections.namedtuple('Watch', 'expr')
+    Transition = collections.namedtuple('Transition',
+                                        ('target', 'args', 'assignments',
+                                         'aliases', 'output_events'))
+    _inbuilt_procs = ('net_send', 'net_event', 'WATCH')
 
     _inbuilt_constants = {'faraday': (96485.3365, 'coulomb'),
                           'k-mole': (8.3144621, 'J/K'),
@@ -146,7 +149,8 @@ class NMODLImporter(object):
         self.regime_parts = []
         self.kinetics = {}
         self.initial_events = []
-        self.on_event_parts = None
+        self.transitions = {}
+        self.triggers = {}
         # Extract declarations and expressions from blocks into members
         self._extract_neuron_block()
         self._extract_units_block()
@@ -205,14 +209,14 @@ class NMODLImporter(object):
 #                                        kineticsblock=None)
         else:
             comp_class = Dynamics(name=self.component_name + 'Class',
-                                       parameters=self.parameters.values(),
-                                       analog_ports=self.analog_ports.values(),
-                                       event_ports=self.event_ports.values(),
-                                       regimes=self.regimes,
-                                       aliases=self.aliases.values(),
-                                       piecewises=self.piecewises.values(),
-                                       constants=self.constants.values(),
-                                       state_variables=self.state_variables)
+                                  parameters=self.parameters.values(),
+                                  analog_ports=self.analog_ports.values(),
+                                  event_ports=self.event_ports.values(),
+                                  regimes=self.regimes,
+                                  aliases=self.aliases.values(),
+                                  piecewises=self.piecewises.values(),
+                                  constants=self.constants.values(),
+                                  state_variables=self.state_variables)
         return comp_class
 
     def get_component(self, class_path=None, hoc_properties={}):
@@ -274,28 +278,21 @@ class NMODLImporter(object):
         """
         Create a list of all the expressions used in the NMODL file
         """
-        td_rhs = []
+        expr_strs = []
         try:
             for regime in self.regimes.itervalues():
-                td_rhs.extend([td.rhs for td in regime.time_derivatives])
+                expr_strs.extend([td.rhs_str
+                                    for td in regime.time_derivatives])
         except AttributeError:
             for _, time_derivatives in self.regime_parts:
-                td_rhs.extend(td.rhs for td in time_derivatives)
-        # Get a list of all expressions used in the model
-        simple_rhs = [a.rhs for a in self.aliases.values()
-                      if isinstance(a.rhs, str)]
-        piecewise_rhs = [[expr for expr, _ in a.rhs if isinstance(expr, str)]
-                         for a in self.aliases.values()
-                         if isinstance(a.rhs, list)]
-        if piecewise_rhs:
-            piecewise_rhs = reduce(operator.add, piecewise_rhs)
-        piecewise_test = [[test for _, test in a.rhs
-                           if not isinstance(test, _Otherwise)]
-                          for a in self.aliases.values()
-                          if isinstance(a.rhs, list)]
-        if piecewise_test:
-            piecewise_test = reduce(operator.add, piecewise_test)
-        return td_rhs + simple_rhs + piecewise_rhs + piecewise_test
+                expr_strs.extend(td.rhs_str for td in time_derivatives)
+        for alias in self.aliases.values():
+            if isinstance(alias.rhs, sympy.Piecewise):
+                expr_strs.extend(chain(*((str(e), str(t))
+                                         for e, t in alias.rhs.args)))
+            else:
+                expr_strs.append(alias.rhs_str)
+        return expr_strs
 
     def _create_parameters_and_analog_ports(self):
         # Add used ions to analog ports
@@ -352,6 +349,9 @@ class NMODLImporter(object):
 
     def _create_regimes(self):
         self.regimes = []
+        # TODO: Need to analyse transitions and determine which are on-event,
+        # on-condition and which are initial, then create the correct number
+        # of regimes and assign the time-derivatives to them.
         if self.on_event_parts:
             assert len(self.regime_parts) == 1
             regime = self.regime_parts[0]
@@ -630,8 +630,8 @@ class NMODLImporter(object):
             if lhs in self.state_variables:
                 self.state_variables_initial[lhs] = self._escape_piecewise(
                     lhs, rhs)
-            elif isinstance(lhs, self.NetSend):
-                self.initial_events.append(lhs)
+            elif lhs.startswith('__INBUILT_PROC_net_send'):
+                self.initial_events.append(rhs[1])
             else:
                 self._set_alias_or_piecewise(lhs, rhs)
 
@@ -714,25 +714,54 @@ class NMODLImporter(object):
     def _extract_netreceive_block(self):
         arg_block = self.blocks.pop('NET_RECEIVE', None)
         if arg_block:
+            # Not sure this argument extraction is right
             arg_line, block = arg_block
+            args = []
+            for arg_str in self._split_args(arg_line)[0]:
+                match = re.match(r'(\w+)\s*(\(\w+\))?', arg_str)
+                args.append((match.group(1), match.group(2)))
             stmts = self._extract_stmts_block(block)
-            match = re.match(r'(\w+) *\((\w+)\)', arg_line)
-            if match:
-                name = match.group(1)
-                units = match.group(2)
-                dimension = self._units2dimension(units)
-                port = (name, dimension)
-            else:
-                port = None
-            aliases = {}
-            assignments = {}
-            for lhs, rhs in stmts.iteritems():
-                if isinstance(lhs, self.StateAssignment):
-                    assignments[lhs.variable] = StateAssignment(lhs.variable,
-                                                                rhs)
+            common_transition = None
+            for flag, lhss in groupby(sorted(stmts.iterkeys(),
+                                             key=self._transition_flag),
+                                      key=self._transition_flag):
+                aliases = {}
+                assignments = {}
+                output_events = {}
+                target = None
+                for lhs in lhss:
+                    # Get RHS from parsed statements
+                    rhs = stmts[lhs]
+                    # Strip transition prefix from LHS
+                    lhs = lhs[len('__TRANSITION__') + len(str(flag)):]
+                    if lhs.startswith('__STATE_ASSIGNMENT_'):
+                        variable = lhs[len('__STATE_ASSIGNMENT_'):]
+                        assignments[variable] = StateAssignment(variable, rhs)
+                    elif lhs.startswith('__INBUILT_PROC_net_send'):
+                        # FIXME: Not sure what to do with first arg
+                        target = rhs[1]
+                    elif lhs.startswith('__INBUILT_PROC_net_event'):
+                        # FIMXE: Need to check this is the only type of event
+                        output_events['spike'] = OutputEvent('spike')
+                    elif lhs.startswith('__INBUILT_PROC_WATCH'):
+                        self.triggers[rhs[1]] = rhs[0]
+                    elif lhs in self.state_variables or lhs == 'v':
+                        assignments[lhs] = StateAssignment(lhs, rhs)
+                    else:
+                        aliases[lhs] = Alias(lhs, rhs)
+                transition = self.Transition(
+                    target=target, args=args, assignments=assignments,
+                    aliases=aliases, output_events=output_events)
+                if flag is None:
+                    assert target is None
+                    common_transition = transition
                 else:
-                    aliases[lhs] = Alias(lhs, rhs)
-            self.on_event_parts = (port, assignments, aliases)
+                    self.transitions[flag] = transition
+            if common_transition is not None:
+                for trans in self.transitions.itervalues():
+                    trans.assignments.update(common_transition.assignments)
+                    trans.aliases.update(common_transition.aliases)
+                    trans.output_events.update(common_transition.output_events)
 
     def _extract_linear_block(self):
         named_blocks = self.blocks.pop('LINEAR', {})
@@ -900,10 +929,17 @@ class NMODLImporter(object):
                     raise Pype9ImportError(
                         "Unrecognised statement on line '{}'".format(line))
                 if match.group(1) == 'if':
-                    # Set the line that has been peeked at to the next line and
-                    # continue to iterate through the lines
-                    line = self._extract_conditional_block(
-                        line, statements, line_iter, subs, suffix)
+                    # Check for test including the 'magic' flag variable
+                    # that specifies the receive port of the incoming event
+                    if re.search(r'flag\s*==', line):
+                        # Should only be found in NET_RECEIVE blog
+                        line = self._extract_transition_block(
+                            line, statements, line_iter, subs, suffix)
+                    else:
+                        # Set the line that has been peeked at to the next line
+                        # and continue to iterate through the lines
+                        line = self._extract_conditional_block(
+                            line, statements, line_iter, subs, suffix)
                     continue
                 elif match.group(1) in ('for', 'while'):
                     raise Pype9ImportError(
@@ -915,13 +951,15 @@ class NMODLImporter(object):
                     # Reuse the infrastructure for alias parsing for the
                     # state assignment (substitutes in functions and arguments)
                     expr = next(self._extract_stmts_block([l]).itervalues())
-                    statements[self.StateAssignment(state)] = expr
+                    statements['__STATE_ASSIGNMENT_'.format(state)] = expr
                 else:
                     proc_name = match.group(1)
                     if proc_name in self._inbuilt_procs:
-                        pstmts = {
-                            self._inbuilt_procs[proc_name](
-                                *self._split_args(match.group(2))[0]): ''}
+                        args = self._split_args(match.group(2))[0]
+                        if proc_name == 'WATCH':
+                            args.append(line.split()[-1])  # The flag triggered
+                        pstmts = {'__INBUILT_PROC_{}_{}'
+                                  .format(proc_name, '_'.join(args)): args}
                     else:
                         try:
                             pargs, pbody = self.procedures[proc_name]
@@ -1074,10 +1112,9 @@ class NMODLImporter(object):
         # If the final block isn't an 'else' statement, the aliases should be
         # defined previously.
         no_otherwise_condition = not isinstance(test, _Otherwise)
-        # Collate all the variables that are assigned in each sub-block
-        common_lhss = reduce(set.intersection,
-                             (set(s.keys())
-                              for t, s in conditional_stmts))
+        # Find all the variables that are assigned in every sub-block
+        common_lhss = reduce(set.intersection, (set(s.keys())
+                                                for t, s in conditional_stmts))
         if len(conditional_stmts) > 2:
             # Create numbered versions of the helper statements in the sub-
             # blocks (i.e. that don't appear in all sub- blocks)
@@ -1086,17 +1123,21 @@ class NMODLImporter(object):
                 # Get a list of substitutions to perform to unwrap the
                 # conditional block
                 for lhs, rhs in stmts.iteritems():
-                    if lhs not in common_lhss:
+                    if type(lhs) in self._inbuilt_procs.itervalues():
+                        # Set the RHS of the in built procs to the test
+                        # condition
+                        stmts[lhs] = (rhs + ' & ' + test) if rhs else test
+                    elif lhs not in common_lhss:
                         new_lhs = ('{}__branch{}{}'
-                                   .format(lhs[:-len(suffix)], i,
-                                           suffix))
+                                   .format(lhs[:-len(suffix)], i, suffix))
                         branch_subs[lhs] = new_lhs
                 # Perform the substitutions on all the conditional statements
                 for old, new in branch_subs.iteritems():
                     i = 1
                     # Substitute into the right-hand side equation
                     for lhs, rhs in stmts.iteritems():
-                        stmts[lhs] = self._subs_variable(old, new, rhs)
+                        if type(lhs) not in self._inbuilt_procs.itervalues():
+                            stmts[lhs] = self._subs_variable(old, new, rhs)
                     # Substitute the left-hand side
                     rhs = stmts.pop(old)
                     stmts[new] = rhs
@@ -1144,6 +1185,38 @@ class NMODLImporter(object):
             subs.update((lhs[:-len(suffix)], lhs) for lhs in common_lhss)
         return line
 
+    def _extract_transition_block(self, line, statements, line_iter, subs={},
+                                  suffix=''):
+        # Loop through all sub-blocks of the if/else-if/else statement
+        flags = []
+        for pre, sblock, nline in self._matching_braces(line_iter, line=line):
+            # Extract the test conditions for if and else if blocks
+            match = re.search(r'\((.*)\)', pre)
+            if match:
+                assert pre.count('flag') == 1
+                test = match.group(1)
+                flag = int(re.match(r'\s*flag\s*==\s*(\d+)\s*', test).group(1))
+            else:
+                assert 0 not in flags
+                flag = 0
+            # Extract the statements from the sub-block
+            stmts = self._extract_stmts_block(sblock, subs, suffix)
+            # Prepend the statements with a special prefix stating which
+            # transition they belong to
+            statements.update(('__TRANSITION_{}_'.format(flag) + lhs, rhs)
+                               for lhs, rhs in stmts.iteritems())
+            # Peek ahead at the next line and check to see whether there is an
+            # 'else' on it, and if not stop the sub-block iteration
+            try:
+                while not nline.strip():
+                    nline = next(line_iter)
+            except StopIteration:
+                line = ''
+            if not re.search(r'(\b)else(\b)', nline):
+                line = nline
+                break
+        return line
+
     @classmethod
     def _unwrap_piecewise_stmt(cls, stmt, test, pieces):
         """
@@ -1168,14 +1241,17 @@ class NMODLImporter(object):
     # =========================================================================
 
     def _subs_variable(self, old, new, expr):
-        # If the new expression contains more than one "word" enclose it
-        # in parentheses
-        if notword_re.search(new):
-            new = '(' + new + ')'
-        expr = re.sub(r'\b({})\b'.format(re.escape(old)), new, expr)
-        # Update dimensions tracking
-        if old in self.dimensions:
-            self.dimensions[new] = self.dimensions[old]
+        # Check to see that the expression is actually an expression not args
+        # for a built-in procedure
+        if isinstance(expr, basestring):
+            # If the new expression contains more than one "word" enclose it
+            # in parentheses
+            if notword_re.search(new):
+                new = '(' + new + ')'
+            expr = re.sub(r'\b({})\b'.format(re.escape(old)), new, expr)
+            # Update dimensions tracking
+            if old in self.dimensions:
+                self.dimensions[new] = self.dimensions[old]
         return expr
 
     def _set_alias_or_piecewise(self, lhs, rhs):
@@ -1365,3 +1441,8 @@ class NMODLImporter(object):
             a = re.sub(r'[\. ]', '_', a)
             suffix += '_' + a
         return suffix
+
+    @classmethod
+    def _transition_flag(cls, lhs):
+        match = re.match(r'__TRANSITION_(\d+)_', lhs)
+        return match.group(1) if match else None
