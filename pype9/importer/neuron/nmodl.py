@@ -62,8 +62,8 @@ class _Otherwise(object):
 
 _SI_to_dimension = {'m/s': un.conductance,
                     'kg*m**2/(s**3*A)': un.voltage,
-                    'kg*m**2/(s**4*A)': un.voltage / un.current,
-                    's**4*A**2/(kg*m**2)': un.current ** 2 / un.voltage,
+                    'kg*m**2/(s**4*A)': un.voltage / un.time,
+                    's**4*A**2/(kg*m**2)': un.current * un.time / un.voltage,
                     'mol/m**3': un.concentration,
                     'A/m**2': un.currentDensity,
                     's': un.time,
@@ -125,6 +125,10 @@ class NMODLImporter(object):
         # Read file
         with open(fname) as f:
             self.contents = f.read()
+        if self.contents.find('VERBATIM') != -1:
+            raise Pype9ImportError(
+                "Cannot import NMODL file with VERBATIM elements (NB: try "
+                "commenting them out for a partial import)")
         # Parse file contents into blocks
         self._read_title()
         self._read_comments()
@@ -346,7 +350,7 @@ class NMODLImporter(object):
         # Create analog ports for any remaining range vars
         for name in self.range_vars:
             if name not in chain(self.parameters, self.analog_ports,
-                                 self.state_variables):
+                                 self.state_variables, self.aliases):
                 self.analog_ports[name] = AnalogReceivePort(
                     name, self.dimensions[name])
 
@@ -580,7 +584,7 @@ class NMODLImporter(object):
 
     def _extract_units_block(self):
         # Read the unit aliases
-        for line in self._iterate_block(self.blocks.pop('UNITS')):
+        for line in self._iterate_block(self.blocks.pop('UNITS', [])):
             match = re.match(r'\(?(\w+)\)? *= *\(([\w \/\*\-]+)\)'
                              r'(?: *\(([\w \d\/\*]+)\))?',
                              line)
@@ -1402,12 +1406,12 @@ class NMODLImporter(object):
             expr = self._substitute_functions(expr)
             if test == '__otherwise__':
                 assert otherwise is None, "Multiple otherwise statements"
-                otherwise = (expr, True)
+                otherwise = (sympy.sympify(expr), sympy.sympify(True))
             else:
                 test = self._substitute_functions(test)
-                pieces.append((expr, test))
+                pieces.append((sympy.sympify(expr), sympy.sympify(test)))
         assert otherwise is not None, "No otherwise statement found"
-        return Alias(lhs, Piecewise(pieces + [otherwise]))
+        return Alias(lhs, Piecewise(*(pieces + [otherwise])))
 
     def _escape_piecewise(self, lhs, rhs):
         """
