@@ -62,6 +62,8 @@ class _Otherwise(object):
 
 _SI_to_dimension = {'m/s': un.conductance,
                     'kg*m**2/(s**3*A)': un.voltage,
+                    'kg*m**2/(s**4*A)': un.voltage / un.current,
+                    's**4*A**2/(kg*m**2)': un.current ** 2 / un.voltage,
                     'mol/m**3': un.concentration,
                     'A/m**2': un.currentDensity,
                     's': un.time,
@@ -146,12 +148,12 @@ class NMODLImporter(object):
         self.valid_state_ranges = {}
         self.globals = []
         self.model_type = None
+        self.range_vars = set()
         # working variables
         self.functions = {}
         self.procedures = {}
         self.dimensions = {}
         self.stead_state_linear_equations = {}
-        self.range_vars = set()
         self.breakpoint_solve_methods = {}
         self.initial_solve_methods = {}
         self.regime_parts = []
@@ -341,6 +343,12 @@ class NMODLImporter(object):
             if name not in self.analog_ports:
                 dimension = self._units2dimension(units)
                 self.parameters[name] = Parameter(name, dimension=dimension)
+        # Create analog ports for any remaining range vars
+        for name in self.range_vars:
+            if name not in chain(self.parameters, self.analog_ports,
+                                 self.state_variables):
+                self.analog_ports[name] = AnalogReceivePort(
+                    name, self.dimensions[name])
 
     def _create_regimes(self):
         if len(self.regime_parts) > 1:
@@ -1071,7 +1079,7 @@ class NMODLImporter(object):
                     # Reuse the infrastructure for alias parsing for the
                     # state assignment (substitutes in functions and arguments)
                     expr = next(self._extract_stmts_block([l]).itervalues())
-                    statements['__STATE_ASSIGNMENT_'.format(state)] = expr
+                    statements['__STATE_ASSIGNMENT_{}'.format(state)] = expr
                 else:
                     proc_name = match.group(1)
                     if proc_name in self._inbuilt_procs:
