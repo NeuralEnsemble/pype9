@@ -346,8 +346,10 @@ class NMODLImporter(object):
         if len(self.regime_parts) > 1:
             raise NotImplementedError("Cannot handle multiple dynamic regimes "
                                       "at this stage")
-        else:
-            time_derivatives = self.regime_parts[0][1]
+        elif len(self.regime_parts) == 0:
+            return
+        # Get the loaded time derivatives
+        time_derivatives = self.regime_parts[0][1]
         # The flag used to set up the WATCH statements should not be included
         # in the triggers
         assert self.initial_flag not in self.triggers
@@ -813,7 +815,7 @@ class NMODLImporter(object):
                 dimension_name = match.group(2)
                 if dimension_name is not None:
                     dim = pq29_quantity(
-                        pq.Quantity(1.0, dimension_name)).dimension
+                        pq.Quantity(1.0, dimension_name)).units.dimension
                 else:
                     dim = un.dimensionless
                 all_args.append((name, dim))
@@ -831,7 +833,9 @@ class NMODLImporter(object):
                     # Get RHS from parsed statements
                     rhs = stmts[lhs]
                     # Strip transition prefix from LHS
-                    lhs = lhs[len('__TRANSITION__') + len(str(flag)):]
+                    if lhs.startswith('__TRANSITION_'):
+                        lhs = lhs[len('__TRANSITION__') + len(str(flag)):]
+                    # Create assignments and aliases
                     if lhs.startswith('__STATE_ASSIGNMENT_'):
                         variable = lhs[len('__STATE_ASSIGNMENT_'):]
                         assignments[variable] = StateAssignment(variable, rhs)
@@ -850,7 +854,7 @@ class NMODLImporter(object):
                         aliases[lhs] = Alias(lhs, rhs)
                 # Get the args that are used in this net receive flag
                 args = [a for a in all_args
-                        if any(a[0] in sa.rhs_symbols
+                        if any(sympy.Symbol(a[0]) in sa.rhs_symbols
                                for sa in assignments.itervalues())]
                 # Set the 'last_transition' state variable to the current time
                 # if required to measure the delay until the next transition
@@ -877,7 +881,7 @@ class NMODLImporter(object):
                         trans.aliases.update(common.aliases)
                         trans.output_events.update(common.output_events)
             else:  # There is only one transition (flag's aren't used)
-                self.net_receives.append(common)
+                self.net_receives[0] = common
 
     def _extract_linear_block(self):
         named_blocks = self.blocks.pop('LINEAR', {})
