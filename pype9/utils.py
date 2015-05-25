@@ -112,7 +112,12 @@ def convert_units(value, unit_str, basic_dict, compound_dict):
     return converted_quantity, quantity.units
 
 
-def convert_to_property(name, qty):
+def convert_to_property(name, qty_pq):
+    qty9 = pq29_quantity(qty_pq)
+    return nineml.Property(name, qty9.name, qty9.value)
+
+
+def pq29_quantity(qty):
     if isinstance(qty, (int, float)):
         units = nineml.units.unitless
     elif isinstance(qty, pq.Quantity):
@@ -143,7 +148,7 @@ def convert_to_property(name, qty):
             "Cannot '{}' to nineml.Property (can only convert "
             "quantities.Quantity and numeric objects)"
             .format(qty))
-    return nineml.Property(name, float(qty), units)
+    return nineml.user_layer.component.Quantity(float(qty), units)
 
 
 def convert_to_quantity(prop):

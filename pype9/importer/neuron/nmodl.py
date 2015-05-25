@@ -6,6 +6,7 @@ import sympy
 import quantities as pq
 import os.path
 import collections
+from copy import deepcopy
 from itertools import chain, groupby
 from sympy.functions import Piecewise
 from nineml.abstraction_layer.expressions.utils import is_builtin_symbol
@@ -13,7 +14,7 @@ from nineml.abstraction_layer.componentclass import Parameter
 from nineml.abstraction_layer.dynamics import (
     TimeDerivative, StateAssignment, Dynamics)
 from nineml.abstraction_layer.dynamics import (Regime, StateVariable, OnEvent,
-                                               OutputEvent)
+                                               OutputEvent, OnCondition)
 from nineml.abstraction_layer.expressions import Alias
 from nineml.abstraction_layer.ports import (
     AnalogReceivePort, AnalogSendPort, EventReceivePort)
@@ -23,6 +24,7 @@ from nineml.document import Document
 from nineml.user_layer import DynamicsProperties
 from nineml.abstraction_layer.expressions import Constant
 from pype9.exceptions import Pype9ImportError
+from pype9.utils import pq29_quantity
 
 # from nineml.user_layer.dynamics import IonDynamics
 from collections import defaultdict
@@ -97,9 +99,10 @@ class NMODLImporter(object):
 #     NetSend = collections.namedtuple('NetSend', ('target', 'flag'))
 #     NetEvent = collections.namedtuple('NetEvent', 'arg')
 #     Watch = collections.namedtuple('Watch', 'expr')
-    Transition = collections.namedtuple('Transition',
-                                        ('target', 'args', 'assignments',
-                                         'aliases', 'output_events'))
+    NetReceive = collections.namedtuple('NetReceive',
+                                        ('target', 'delay', 'args',
+                                         'assignments', 'aliases',
+                                         'output_events'))
     _inbuilt_procs = ('net_send', 'net_event', 'WATCH')
 
     _inbuilt_constants = {'faraday': (96485.3365, 'coulomb'),
@@ -124,33 +127,38 @@ class NMODLImporter(object):
         self._read_title()
         self._read_comments()
         self._read_blocks()
-        # Initialise members
-        self.used_units = ['degC', 'kelvin']
-        self.functions = {}
-        self.procedures = {}
+        # Extracted members (used to construct the 9ML objects)
         self.aliases = {}
-        self.piecewises = {}
         self.constants = {}
         self.properties = {}
-        self.valid_parameter_ranges = {}
-        self.valid_state_ranges = {}
-        self.dimensions = {}
+        self.regimes = {}
         self.state_variables = {}
-        self.state_variables_initial = {}
-        self.stead_state_linear_equations = {}
-        self.range_vars = set()
-        self.globals = []  # Unused currently
-        self.used_ions = {}
-        self.breakpoint_solve_methods = {}
-        self.initial_solve_methods = {}
         self.parameters = {}
         self.analog_ports = {}
         self.event_ports = {}
-        self.regime_parts = []
         self.kinetics = {}
-        self.initial_events = []
-        self.transitions = {}
-        self.triggers = {}
+        self.used_units = ['degC', 'kelvin']
+        # Other extracted information that might be useful for annotations
+        self.used_ions = {}
+        self.initial_state = {}
+        self.init_statements = {}
+        self.valid_parameter_ranges = {}
+        self.valid_state_ranges = {}
+        self.globals = []
+        self.model_type = None
+        # working variables
+        self.functions = {}
+        self.procedures = {}
+        self.dimensions = {}
+        self.stead_state_linear_equations = {}
+        self.range_vars = set()
+        self.breakpoint_solve_methods = {}
+        self.initial_solve_methods = {}
+        self.regime_parts = []
+        self.initial_flag = None
+        self.net_receives = {}
+        self.triggers = defaultdict(list)
+        self._breakpoint_aliases = {}
         # Extract declarations and expressions from blocks into members
         self._extract_neuron_block()
         self._extract_units_block()
@@ -169,6 +177,10 @@ class NMODLImporter(object):
         # Create members from extracted information
         self._create_parameters_and_analog_ports()
         self._create_regimes()
+        self._add_required_reserved_variables()
+        # Clean up unused parameters (ones which are actually used for init)
+        if not self.kinetics:
+            self._clean_init_parameters()
 
     def get_component_class(self, flatten_kinetics=False):
         if self.kinetics:
@@ -208,15 +220,15 @@ class NMODLImporter(object):
 #                                        constraints=cst,
 #                                        kineticsblock=None)
         else:
-            comp_class = Dynamics(name=self.component_name + 'Class',
-                                  parameters=self.parameters.values(),
-                                  analog_ports=self.analog_ports.values(),
-                                  event_ports=self.event_ports.values(),
-                                  regimes=self.regimes,
-                                  aliases=self.aliases.values(),
-                                  piecewises=self.piecewises.values(),
-                                  constants=self.constants.values(),
-                                  state_variables=self.state_variables)
+            comp_class = Dynamics(
+                name=self.component_name + 'Class',
+                parameters=self.parameters.values(),
+                analog_ports=self.analog_ports.values(),
+                event_ports=self.event_ports.values(),
+                regimes=self.regimes.values(),
+                aliases=self.aliases.values(),
+                constants=self.constants.values(),
+                state_variables=self.state_variables.values())
         return comp_class
 
     def get_component(self, class_path=None, hoc_properties={}):
@@ -267,32 +279,29 @@ class NMODLImporter(object):
         print "\nConstants:"
         for c in self.constants.itervalues():
             print '{} = {} ({})'.format(c.name, c.value, c.units.name)
-        print "\nPiecewises:"
-        for p in self.piecewises.itervalues():
-            print '{} =:'.format(p.name)
-            for pc in p.pieces:
-                print '    {},   {}'.format(*pc)
-            print '    {},   otherwise'.format(str(p.otherwise))
 
     def all_expressions(self):
         """
         Create a list of all the expressions used in the NMODL file
         """
-        expr_strs = []
-        try:
-            for regime in self.regimes.itervalues():
-                expr_strs.extend([td.rhs_str
-                                    for td in regime.time_derivatives])
-        except AttributeError:
-            for _, time_derivatives in self.regime_parts:
-                expr_strs.extend(td.rhs_str for td in time_derivatives)
+        expressions = []
+        for regime in self.regimes.itervalues():
+            expressions.extend(td.rhs for td in regime.time_derivatives)
+            for oc in regime.on_conditions:
+                expressions.append(oc.trigger.rhs)
+                expressions.extend(sa.rhs for sa in oc.state_assignments)
+            for oe in regime.on_events:
+                expressions.extend(sa.rhs for sa in oe.state_assignments)
         for alias in self.aliases.values():
             if isinstance(alias.rhs, sympy.Piecewise):
-                expr_strs.extend(chain(*((str(e), str(t))
-                                         for e, t in alias.rhs.args)))
+                expressions.extend(chain(*(alias.rhs.args)))
             else:
-                expr_strs.append(alias.rhs_str)
-        return expr_strs
+                expressions.append(alias.rhs)
+        return expressions
+
+    def all_rhs_symbols(self):
+        return set(chain(*((str(s) for s in e.free_symbols)
+                           for e in self.all_expressions())))
 
     def _create_parameters_and_analog_ports(self):
         # Add used ions to analog ports
@@ -316,7 +325,10 @@ class NMODLImporter(object):
                         n, dimension=dimension)
             for n in write:
                 if n.startswith('i'):
-                    dimension = un.currentDensity
+                    if self.model_type == 'mechanism':
+                        dimension = un.currentDensity
+                    else:
+                        dimension = un.current
                 elif n.endswith('o') or n.endswith('i'):
                     dimension = un.concentration
                 else:
@@ -329,57 +341,128 @@ class NMODLImporter(object):
             if name not in self.analog_ports:
                 dimension = self._units2dimension(units)
                 self.parameters[name] = Parameter(name, dimension=dimension)
-        # Add ports/parameters for reserved NMODL keywords
-        uses_celsius = uses_voltage = uses_diam = False
-        for expr in self.all_expressions():
-            if re.search(r'(\b)celsius(\b)', expr):
-                uses_celsius = True
-            if re.search(r'(\b)v(\b)', expr):
-                uses_voltage = True
-            if re.search(r'(\b)diam(\b)', expr):
-                uses_diam = True
-        if uses_voltage:
-            self.analog_ports['v'] = AnalogReceivePort(
-                'v', dimension=un.voltage)
-        if uses_celsius and 'celsius' not in self.parameters:
-            self.analog_ports['celsius'] = AnalogReceivePort(
-                'celsius', dimension=un.temperature)
-        if uses_diam:
-            self.parameters['diam'] = Parameter('diam', dimension=un.length)
 
     def _create_regimes(self):
-        self.regimes = []
-        # TODO: Need to analyse transitions and determine which are on-event,
-        # on-condition and which are initial, then create the correct number
-        # of regimes and assign the time-derivatives to them.
-        if self.on_event_parts:
-            assert len(self.regime_parts) == 1
-            regime = self.regime_parts[0]
-            parameter, assignments, aliases = self.on_event_parts
-            if parameter:
-                port_name, dimension = parameter
-                event_port_name = port_name + "_event"
-                # Create an analog port from which to read the event weight
-                # from. NB: this is just a hack for now until EventPorts
-                # support parameters
-                self.analog_ports.append(AnalogReceivePort(
-                    name=port_name, dimension=dimension))
+        if len(self.regime_parts) > 1:
+            raise NotImplementedError("Cannot handle multiple dynamic regimes "
+                                      "at this stage")
+        else:
+            time_derivatives = self.regime_parts[0][1]
+        # The flag used to set up the WATCH statements should not be included
+        # in the triggers
+        assert self.initial_flag not in self.triggers
+        # Check that there aren't any extra statements that need to be set in
+        # the initialisation (triggered by a net_send in the INITIAL BLOCK)
+        if self.initial_flag is not None:
+            (target, delay, args, assignments,
+             aliases, events) = self.net_receives.pop(self.initial_flag)
+            assert target == -1 and delay is None and not events and not args
+            self.init_statements.update(
+                s for s in chain(assignments.iteritems(), aliases.iteritems()))
+        # Loop through all net receives and record which receives they trigger
+        # via a delayed net_send, creating a new regime for each delay
+        regime_flags = [-1]  # Start with the default regime
+        self.origins = defaultdict(list)
+        for flag, receive in self.net_receives.iteritems():
+            self.origins[receive.target].append((flag, receive.delay))
+            # if time is spent in the current "flag" create a regime for it
+            if receive.delay is not None:
+                regime_flags.append(flag)
+        # Map regimes flags to consecutive ids starting from 0
+        regime_ids = dict((f, i) for i, f in enumerate(sorted(regime_flags)))
+        regime_transitions = dict((r, []) for r in regime_flags)
+        for flag, receive in self.net_receives.iteritems():
+            # Check to see whether the aliases are used in the breakpoint
+            # block, in which case set as dimensionless states, otherwise
+            # set as general aliases
+            state_assignments = list(receive.assignments.itervalues())
+            output_events = list(receive.output_events.itervalues())
+            for alias in receive.aliases.itervalues():
+                if any(sympy.Symbol(alias.name) in a.rhs_symbols
+                       for a in self._breakpoint_aliases.itervalues()):
+                    if alias.name not in self.state_variables:
+                        self.state_variables[alias.name] = StateVariable(
+                            alias.name, dimension=self.dimensions[alias.name])
+                    state_assignments.append(StateAssignment(alias.name,
+                                                             alias.rhs))
+                    # Remove new state variable from list of aliases
+                    self.aliases.pop(alias.name, None)
+                else:
+                    assert alias.name not in self.aliases
+                    self.aliases[alias.name] = alias
+            # Create analog ports for any required arguments
+            for name, dimension in receive.args:
+                if name not in self.analog_ports:
+                    self.analog_ports[name] = AnalogReceivePort(
+                        name, dimension)
+            # Get target name
+            if receive.delay:
+                target_regime = 'regime_{}'.format(regime_ids[flag])
+            else:  # return to default regimes
+                target_regime = 'regime_0'
+            for from_flag, delay in self.origins[flag]:
+                on_condition = OnCondition(
+                    trigger='t > (last_transition + {})'.format(delay),
+                    state_assignments=deepcopy(state_assignments),
+                    output_events=deepcopy(output_events),
+                    target_regime=target_regime)
+                regime_transitions[from_flag].append(on_condition)
+            for test in self.triggers[flag]:
+                on_condition = OnCondition(
+                    trigger=deepcopy(test),
+                    state_assignments=deepcopy(state_assignments),
+                    output_events=deepcopy(output_events),
+                    target_regime=target_regime)
+                # Add the trigger condition to the default regime
+                regime_transitions[-1].append(on_condition)
+            # Add on event
+            if flag == 0:
+                if 'incoming_spike' not in self.event_ports:
+                    self.event_ports['incoming_spike'] = EventReceivePort(
+                        'incoming_spike')
+                on_event = OnEvent(
+                    'incoming_spike',
+                    state_assignments=deepcopy(state_assignments),
+                    output_events=deepcopy(output_events),
+                    target_regime=target_regime)
+                # Add the event condition to  the default regime
+                regime_transitions[-1].append(on_event)
+        for flag, transitions in regime_transitions.iteritems():
+            name = 'regime_{}'.format(regime_ids[flag])
+            self.regimes[name] = Regime(
+                name=name, time_derivatives=deepcopy(time_derivatives),
+                transitions=transitions)
+
+    def _add_required_reserved_variables(self):
+        # Add ports/parameters for reserved NMODL keywords
+        if 'v' in self.all_rhs_symbols():
+            # check whether v is assigned to, in which case a dummy state
+            # variable will be recreated but will need to be manually edited
+            if 'v' in chain(*chain(*((t.state_assignment_variables
+                                      for t in r.transitions)
+                                     for r in self.regimes.itervalues()))):
+                print ("WARNING! Membrane voltage ('v') is assigned to but not"
+                       " explicitly integrated, it will need to be manually "
+                       "added")
+                self.state_variables['v'] = StateVariable('v', un.voltage)
             else:
-                event_port_name = port_name
-            self.event_ports[event_port_name] = EventReceivePort(
-                name=event_port_name)
-            on_event = OnEvent(event_port_name,
-                               state_assignments=[
-                                   '{}={}'.format(a.lhs, a.rhs)
-                                   for a in assignments.values()])
-            self.aliases.update(aliases)
-            self.regimes.append(Regime(name=regime[0],
-                                       time_derivatives=regime[1],
-                                       transitions=on_event))
-        # Create Regimes from explicit time derivatives
-        for name, time_derivatives in self.regime_parts:
-            self.regimes.append(Regime(name=name,
-                                        time_derivatives=time_derivatives))
+                self.analog_ports['v'] = AnalogReceivePort(
+                    'v', dimension=un.voltage)
+        if ('celsius' in self.all_rhs_symbols() and
+                'celsius' not in self.parameters):
+            self.analog_ports['celsius'] = AnalogReceivePort(
+                'celsius', dimension=un.temperature)
+        if ('diam' in self.all_rhs_symbols() and
+                'diam' not in self.parameters):
+            self.parameters['diam'] = Parameter('diam', dimension=un.length)
+
+    def _clean_init_parameters(self):
+        for name in self.parameters.keys():
+            if name not in self.all_rhs_symbols():
+                self.parameters.pop(name)
+                value, unit_str = self.properties.pop(name)
+                units = pq29_quantity(pq.Quantity(1.0, unit_str)).units
+                self.init_statements[name] = Constant(name, value, units)
 
     def _flatten_kinetics(self):
         # TODO: Doesn't inlucde CONSERVE statements
@@ -598,7 +681,7 @@ class NMODLImporter(object):
             else:
                 reduced_block.append(line)
         # Read initial block
-        self._initial_assign = self._extract_stmts_block(reduced_block)
+        self.init_statements.update(self._extract_stmts_block(reduced_block))
 
     def _extract_state_block(self):
         # Read state variables
@@ -617,7 +700,7 @@ class NMODLImporter(object):
                 dimension = self.dimensions[var] = self._units2dimension(units)
             else:
                 try:
-                    initial = self._initial_assign.pop(var)
+                    initial = self.init_statements.pop(var)
                     dimension = self.dimensions[initial]
                 except KeyError:
                     dimension = None
@@ -626,14 +709,15 @@ class NMODLImporter(object):
             if match.group(3):
                 self.valid_state_ranges[var] = (match.group(3), match.group(4))
             self.state_variables[var] = StateVariable(var, dimension=dimension)
-        for lhs, rhs in self._initial_assign.iteritems():
+        for lhs, rhs in self.init_statements.iteritems():
             if lhs in self.state_variables:
-                self.state_variables_initial[lhs] = self._escape_piecewise(
+                self.initial_state[lhs] = self._escape_piecewise(
                     lhs, rhs)
             elif lhs.startswith('__INBUILT_PROC_net_send'):
-                self.initial_events.append(rhs[1])
+                assert self.initial_flag is None
+                self.initial_flag = rhs[1]
             else:
-                self._set_alias_or_piecewise(lhs, rhs)
+                self._set_alias(lhs, rhs)
 
     def _extract_neuron_block(self):
         # Read the NEURON block
@@ -641,10 +725,13 @@ class NMODLImporter(object):
         for line in self._iterate_block(self.blocks.pop('NEURON')):
             if line.startswith('SUFFIX'):
                 self.component_name = line.split()[1]
+                self.model_type = 'mechanism'
             elif line.startswith('POINT_PROCESS'):
                 self.component_name = line.split()[1]
+                self.model_type = 'point_process'
             elif line.startswith('ARTIFICIAL_CELL'):
                 self.component_name = line.split()[1]
+                self.model_type = 'artificial'
             elif line.startswith('RANGE'):
                 self.range_vars.update(list_re.split(line[6:]))
             elif line.startswith('USEION'):
@@ -692,7 +779,7 @@ class NMODLImporter(object):
                                         self._escape_piecewise(lhs, rhs))
                     time_derivatives.append(td)
                 else:
-                    self._set_alias_or_piecewise(lhs, rhs)
+                    self._set_alias(lhs, rhs)
             self.regime_parts.append((name, time_derivatives))
 
     def _extract_breakpoint_block(self):
@@ -709,26 +796,37 @@ class NMODLImporter(object):
                 reduced_block.append(line)
         stmts = self._extract_stmts_block(reduced_block)
         for lhs, rhs in stmts.iteritems():
-            self._set_alias_or_piecewise(lhs, rhs)
+            # Need to record which aliases are used in
+            alias = self._get_alias(lhs, rhs)
+            self._breakpoint_aliases[lhs] = alias
+            self.aliases[lhs] = alias
 
     def _extract_netreceive_block(self):
         arg_block = self.blocks.pop('NET_RECEIVE', None)
         if arg_block:
             # Not sure this argument extraction is right
             arg_line, block = arg_block
-            args = []
+            all_args = []
             for arg_str in self._split_args(arg_line)[0]:
                 match = re.match(r'(\w+)\s*(\(\w+\))?', arg_str)
-                args.append((match.group(1), match.group(2)))
+                name = match.group(1)
+                dimension_name = match.group(2)
+                if dimension_name is not None:
+                    dim = pq29_quantity(
+                        pq.Quantity(1.0, dimension_name)).dimension
+                else:
+                    dim = un.dimensionless
+                all_args.append((name, dim))
             stmts = self._extract_stmts_block(block)
-            common_transition = None
+            common = None
             for flag, lhss in groupby(sorted(stmts.iterkeys(),
                                              key=self._transition_flag),
                                       key=self._transition_flag):
                 aliases = {}
                 assignments = {}
                 output_events = {}
-                target = None
+                target = -1  # Back to the default regime
+                delay = None
                 for lhs in lhss:
                     # Get RHS from parsed statements
                     rhs = stmts[lhs]
@@ -740,28 +838,46 @@ class NMODLImporter(object):
                     elif lhs.startswith('__INBUILT_PROC_net_send'):
                         # FIXME: Not sure what to do with first arg
                         target = rhs[1]
+                        delay = rhs[0]
                     elif lhs.startswith('__INBUILT_PROC_net_event'):
                         # FIMXE: Need to check this is the only type of event
                         output_events['spike'] = OutputEvent('spike')
                     elif lhs.startswith('__INBUILT_PROC_WATCH'):
-                        self.triggers[rhs[1]] = rhs[0]
+                        self.triggers[rhs[1]].append(rhs[0])
                     elif lhs in self.state_variables or lhs == 'v':
                         assignments[lhs] = StateAssignment(lhs, rhs)
                     else:
                         aliases[lhs] = Alias(lhs, rhs)
-                transition = self.Transition(
-                    target=target, args=args, assignments=assignments,
-                    aliases=aliases, output_events=output_events)
+                # Get the args that are used in this net receive flag
+                args = [a for a in all_args
+                        if any(a[0] in sa.rhs_symbols
+                               for sa in assignments.itervalues())]
+                # Set the 'last_transition' state variable to the current time
+                # if required to measure the delay until the next transition
+                if target != -1:
+                    if 'last_transition' not in self.state_variables:
+                        self.state_variables[
+                            'last_transition'] = StateVariable(
+                                'last_transition', un.time)
+                    assignments['last_transition'] = StateAssignment(
+                        'last_transition', 't')
+                net_receive = self.NetReceive(
+                    target=target, delay=delay, args=args,
+                    assignments=assignments, aliases=aliases,
+                    output_events=output_events)
                 if flag is None:
-                    assert target is None
-                    common_transition = transition
+                    assert target == -1
+                    common = net_receive
                 else:
-                    self.transitions[flag] = transition
-            if common_transition is not None:
-                for trans in self.transitions.itervalues():
-                    trans.assignments.update(common_transition.assignments)
-                    trans.aliases.update(common_transition.aliases)
-                    trans.output_events.update(common_transition.output_events)
+                    self.net_receives[flag] = net_receive
+            if self.net_receives:
+                if common is not None:
+                    for trans in self.net_receives.itervalues():
+                        trans.assignments.update(common.assignments)
+                        trans.aliases.update(common.aliases)
+                        trans.output_events.update(common.output_events)
+            else:  # There is only one transition (flag's aren't used)
+                self.net_receives.append(common)
 
     def _extract_linear_block(self):
         named_blocks = self.blocks.pop('LINEAR', {})
@@ -864,7 +980,7 @@ class NMODLImporter(object):
             self.kinetics[name] = (bidirectional, incoming, outgoing,
                                    constraints, compartments)
             for lhs, rhs in statements.iteritems():
-                self._set_alias_or_piecewise(lhs, rhs)
+                self._set_alias(lhs, rhs)
 
     def _extract_independent_block(self):
         self.blocks.pop('INDEPENDENT', None)
@@ -958,6 +1074,8 @@ class NMODLImporter(object):
                         args = self._split_args(match.group(2))[0]
                         if proc_name == 'WATCH':
                             args.append(line.split()[-1])  # The flag triggered
+                        else:
+                            args.append('True')  # The condition is it trigger
                         pstmts = {'__INBUILT_PROC_{}_{}'
                                   .format(proc_name, '_'.join(args)): args}
                     else:
@@ -1115,42 +1233,44 @@ class NMODLImporter(object):
         # Find all the variables that are assigned in every sub-block
         common_lhss = reduce(set.intersection, (set(s.keys())
                                                 for t, s in conditional_stmts))
-        if len(conditional_stmts) > 2:
-            # Create numbered versions of the helper statements in the sub-
-            # blocks (i.e. that don't appear in all sub- blocks)
-            for i, (test, stmts) in enumerate(conditional_stmts):
-                branch_subs = {}
-                # Get a list of substitutions to perform to unwrap the
-                # conditional block
-                for lhs, rhs in stmts.iteritems():
-                    if type(lhs) in self._inbuilt_procs.itervalues():
-                        # Set the RHS of the in built procs to the test
-                        # condition
-                        stmts[lhs] = (rhs + ' & ' + test) if rhs else test
-                    elif lhs not in common_lhss:
-                        new_lhs = ('{}__branch{}{}'
-                                   .format(lhs[:-len(suffix)], i, suffix))
-                        branch_subs[lhs] = new_lhs
-                # Perform the substitutions on all the conditional statements
-                for old, new in branch_subs.iteritems():
-                    i = 1
-                    # Substitute into the right-hand side equation
-                    for lhs, rhs in stmts.iteritems():
-                        if type(lhs) not in self._inbuilt_procs.itervalues():
-                            stmts[lhs] = self._subs_variable(old, new, rhs)
-                    # Substitute the left-hand side
-                    rhs = stmts.pop(old)
-                    stmts[new] = rhs
-                # Copy all the "non-common lhs" statements, which have been
-                # escaped into their separate branches to the general statement
-                # block
-                for _, new_lhs in branch_subs.iteritems():
-                    rhs = stmts[new_lhs]
-                    statements[new_lhs] = rhs
-        else:
+#         if len(conditional_stmts) > 2:
+        # Create numbered versions of the helper statements in the sub-
+        # blocks (i.e. that don't appear in all sub- blocks)
+        for i, (test, stmts) in enumerate(conditional_stmts):
+            branch_subs = {}
+            # Get a list of substitutions to perform to unwrap the
+            # conditional block
             for lhs, rhs in stmts.iteritems():
+                if lhs.startswith('__INBUILT_PROC_'):
+                    # Set the RHS of the in built procs to the test
+                    # condition
+                    stmts[lhs][-1] = (rhs[-1] + ' & ' + test) if rhs else test
                 if lhs not in common_lhss:
-                    statements[lhs] = rhs
+                    new_lhs = ('{}__branch{}{}'
+                               .format(lhs[:-len(suffix)] if suffix else lhs,
+                                       i, suffix))
+                    branch_subs[lhs] = new_lhs
+            # Perform the substitutions on all the conditional statements
+            for old, new in branch_subs.iteritems():
+                i = 1
+                # Substitute into the right-hand side equation
+                for lhs, rhs in stmts.iteritems():
+                    if not lhs.startswith('__INBUILT_PROC_'):
+                        stmts[lhs] = self._subs_variable(old, new, rhs)
+                # Substitute the left-hand side
+                rhs = stmts.pop(old)
+                stmts[new] = rhs
+            # Copy all the "non-common lhs" statements, which have been
+            # escaped into their separate branches to the general statement
+            # block
+            for _, new_lhs in branch_subs.iteritems():
+                rhs = stmts[new_lhs]
+                statements[new_lhs] = rhs
+#         else:
+#             for _, stmts in conditional_stmts:
+#                 for lhs, rhs in stmts.iteritems():
+#                     if lhs not in common_lhss:
+#                         statements[lhs] = rhs
         # Loop through statements that are common to all conditions and create
         # a single piecewise statement for them
         for lhs in common_lhss:
@@ -1254,13 +1374,16 @@ class NMODLImporter(object):
                 self.dimensions[new] = self.dimensions[old]
         return expr
 
-    def _set_alias_or_piecewise(self, lhs, rhs):
-        if isinstance(rhs, list):
-            self._set_piecewise(lhs, rhs)
-        else:
-            self.aliases[lhs] = Alias(lhs, self._substitute_functions(rhs))
+    def _set_alias(self, lhs, rhs):
+        self.aliases[lhs] = self._get_alias(lhs, rhs)
 
-    def _set_piecewise(self, lhs, rhs):
+    def _get_alias(self, lhs, rhs):
+        if isinstance(rhs, list):
+            return self._get_piecewise(lhs, rhs)
+        else:
+            return Alias(lhs, self._substitute_functions(rhs))
+
+    def _get_piecewise(self, lhs, rhs):
         pieces = []
         otherwise = None
         for expr, test in rhs:
@@ -1272,7 +1395,7 @@ class NMODLImporter(object):
                 test = self._substitute_functions(test)
                 pieces.append((expr, test))
         assert otherwise is not None, "No otherwise statement found"
-        self.aliases[lhs] = Alias(lhs, Piecewise(pieces + [otherwise]))
+        return Alias(lhs, Piecewise(pieces + [otherwise]))
 
     def _escape_piecewise(self, lhs, rhs):
         """
