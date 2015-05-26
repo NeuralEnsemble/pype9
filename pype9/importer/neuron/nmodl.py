@@ -111,6 +111,7 @@ class NMODLImporter(object):
 
     def __init__(self, fname):
         # Read file
+        self.fname = fname
         with open(fname) as f:
             contents = f.read()
         content_parts = self._verbatim_re.split(contents)
@@ -459,7 +460,8 @@ class NMODLImporter(object):
                 if self.initial_flag is None:
                     self.initial_flag = int(rhs[1])
                 else:
-                    print "WARNING! Multiple initial flags found"
+                    print ("WARNING! Multiple initial flags found in file '{}'"
+                           .format(self.fname))
             else:
                 try:
                     if lhs not in self.state_variables:
@@ -1075,6 +1077,8 @@ class NMODLImporter(object):
             elif line.startswith('VERBATIM'):
                 raise Pype9ImportError("Cannot parse VERBATIM block:\n\n{}"
                                         .format(block))
+            elif line.startswith('printf'):
+                continue
             # Escape all array indexing
             line = getitem_re.sub(r'\1__elem\2', line)
             # Split line into lhs and rhs (if '=' is present)
