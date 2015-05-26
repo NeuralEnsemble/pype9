@@ -3,6 +3,7 @@ import re
 # from copy import deepcopy
 import regex
 import sympy
+from copy import copy
 import quantities as pq
 import os.path
 import collections
@@ -36,6 +37,7 @@ newline_re = re.compile(r" *[\n\r]+ *")
 # An assignment not proceded by a greater or equals sign @IgnorePep8
 assign_re = re.compile(r"(?<![\>\<]) *= *")
 list_re = re.compile(r" *, *")
+with_units_re = re.compile(r'(\w+)\s*(?:\((\w+)\))?')
 title_re = re.compile(r"TITLE (.*)")
 comments_re = re.compile(r"COMMENT(.*)ENDCOMMENT")
 whitespace_re = re.compile(r'\s')
@@ -91,6 +93,7 @@ class NMODLImporter(object):
                                          'assignments', 'aliases',
                                          'output_events'))
     _inbuilt_procs = ('net_send', 'net_event', 'WATCH')
+    _verbatim_re = re.compile(r'(?:VERBATIM|ENDVERBATIM)')
 
     _inbuilt_constants = {'faraday': (96485.3365, 'coulomb'),
                           'k-mole': (8.3144621, 'J/K'),
@@ -109,11 +112,12 @@ class NMODLImporter(object):
     def __init__(self, fname):
         # Read file
         with open(fname) as f:
-            self.contents = f.read()
-        if self.contents.find('VERBATIM') != -1:
-            raise Pype9ImportError(
-                "Cannot import NMODL file with VERBATIM elements (NB: try "
-                "commenting them out for a partial import)")
+            contents = f.read()
+        content_parts = self._verbatim_re.split(contents)
+        if len(content_parts) > 1:
+            print ("'{}' contains VERBATIM segments, which have been ignored:"
+                   .format(fname))
+        self.contents = ''.join(content_parts[::2])
         # Parse file contents into blocks
         self._read_title()
         self._read_comments()
@@ -455,11 +459,16 @@ class NMODLImporter(object):
                 assert self.initial_flag is None
                 self.initial_flag = int(rhs[1])
             else:
-                if lhs not in self.state_variables:
-                    self.state_variables[lhs] = StateVariable(
-                        lhs, self.dimensions[lhs])
-                self.initial_state[lhs] = self._escape_piecewise(
-                    lhs, rhs)
+                try:
+                    if lhs not in self.state_variables:
+                        self.state_variables[lhs] = StateVariable(
+                            lhs, self.dimensions[lhs])
+                    self.initial_state[lhs] = self._escape_piecewise(
+                        lhs, rhs)
+                except KeyError:
+                    # if it is not also in the ASSIGNED block it is probably
+                    # not meant to be state variable
+                    pass
         # Set state variables for pointers (analog send ports)
         for name in self.pointers:
             if name not in chain(self.parameters, self.analog_ports,
@@ -592,12 +601,16 @@ class NMODLImporter(object):
                 signature = signature.strip()
                 match = re.match(r'(\w+) *\((.*)\)', signature)
                 name = match.group(1).strip()
+                args = []
+                arg_units = []
                 arglist = match.group(2).strip()
                 if arglist:
-                    args = list_re.split(arglist)
-                else:
-                    args = []
-                dct[name] = (args, block)
+                    arglist = list_re.split(arglist)
+                    for arg_unit in arglist:
+                        match = with_units_re.match(arg_unit)
+                        args.append(match.group(1))
+                        arg_units.append(match.group(2))
+                dct[name] = (args, arg_units, block)
 
     def _extract_units_block(self):
         # Read the unit aliases
@@ -1108,11 +1121,21 @@ class NMODLImporter(object):
                                   .format(proc_name, '_'.join(args)): args}
                     else:
                         try:
-                            pargs, pbody = self.procedures[proc_name]
+                            pargs, _, pbody = self.procedures[proc_name]
                         except KeyError:
-                            raise Pype9ImportError(
-                                "Unrecognised procedure '{}'"
-                                .format(proc_name))
+                            # Sometimes (rarely) function will be called
+                            # without being assigned to a value where we
+                            # ignore it and skip to the next
+                            if proc_name in self.functions:
+                                try:
+                                    line = next(line_iter)
+                                except StopIteration:
+                                    line = ''
+                                continue
+                            else:
+                                raise Pype9ImportError(
+                                    "Unrecognised procedure '{}'"
+                                    .format(proc_name))
                         argvals, _ = self._split_args(match.group(2))
                         argvals = [self._extract_function_calls(a, statements)
                                    for a in argvals]
@@ -1197,16 +1220,19 @@ class NMODLImporter(object):
                 raw_name, arglist = match
                 name = raw_name.strip()
                 try:
-                    params, body = self.functions[name]
+                    params, _, body = self.functions[name]
                     argvals, raw_arglist = self._split_args(arglist)
                     argvals = [self._extract_function_calls(a, statements)
                                for a in argvals]
                     # Append a string of escaped argument values as an
-                    # additional suffix
+                    # additional suffix, along with another set of escapes that
+                    # won't be overriden by local assignments (i.e. {}_arg_)
                     suffix = self._args_suffix(argvals)
-                    stmts = self._extract_stmts_block(body, suffix=suffix,
-                                                      subs=dict(zip(params,
-                                                                    argvals)))
+                    stmts = self._extract_stmts_block(
+                        body, suffix=suffix, subs=dict(
+                            zip(params, argvals) +
+                            zip(('{}_arg_'.format(p) for p in params),
+                                argvals)))
                     statements.update(stmts)
                     expr = expr.replace('{}({})'.format(raw_name, raw_arglist),
                                         name + suffix)
@@ -1262,7 +1288,6 @@ class NMODLImporter(object):
         # Add state_assigns to common_lhs (we will need to make the missing
         # branches)
         common_lhss.update(state_assigns)
-#         if len(conditional_stmts) > 2:
         # Create numbered versions of the helper statements in the sub-
         # blocks (i.e. that don't appear in all sub- blocks)
         for i, (test, stmts) in enumerate(conditional_stmts):
@@ -1300,41 +1325,63 @@ class NMODLImporter(object):
             for _, new_lhs in branch_subs.iteritems():
                 rhs = stmts[new_lhs]
                 statements[new_lhs] = rhs
-#         else:
-#             for _, stmts in conditional_stmts:
-#                 for lhs, rhs in stmts.iteritems():
-#                     if lhs not in common_lhss:
-#                         statements[lhs] = rhs
         # Loop through statements that are common to all conditions and create
         # a single piecewise statement for them
         for lhs in common_lhss:
-            pieces = []
-            for i, (test, stmts) in enumerate(conditional_stmts):
-                self._unwrap_piecewise_stmt(stmts[lhs], test, pieces)
-            if no_otherwise_condition:
-                if lhs in statements:
-                    rhs = statements[lhs]
-                elif lhs in self.properties:
-                    rhs = lhs
-                    new_lhs = lhs + '_constrained'
-                    subs[lhs] = new_lhs
-                    lhs = new_lhs
-                else:
-                    if lhs in self.state_variables:
-                        rhs = lhs
-                    else:
-                        raise Pype9ImportError(
-                            "Could not find previous definition of '{}' to "
-                            "form otherwise condition of conditional block"
-                            .format(lhs))
-                self._unwrap_piecewise_stmt(rhs, 'True', pieces)
+            if lhs.startswith('__INBUILT_PROC'):
+                for i, (test, stmts) in enumerate(conditional_stmts):
+                    rhs = copy(stmts[lhs])
+                    # Add current test to the condition under which the event
+                    # will be triggered
+                    rhs[-1] += '({}) & ({})'.format(rhs[-1], test)
+                    statements[lhs + 'branch_{}'.format(i)] = rhs
             else:
-                # If it does have an otherwise condition it shouldn't have been
-                # defined previously
-                # FIXME: possibily could have been though in strange NMODL
-                # files
-                assert lhs not in statements
-            statements[lhs] = pieces
+                pieces = []
+                for i, (test, stmts) in enumerate(conditional_stmts):
+                        self._unwrap_piecewise_stmt(stmts[lhs], test, pieces)
+                if no_otherwise_condition:
+                    if lhs in statements:
+                        rhs = statements[lhs]
+                    elif lhs in self.properties:
+                        rhs = lhs
+                        new_lhs = lhs + '_constrained'
+                        subs[lhs] = new_lhs
+                        lhs = new_lhs
+                    else:
+                        if lhs in self.state_variables:
+                            rhs = lhs
+                        else:
+                            try:
+                                # If the local variable conditionally overrides
+                                # a function argument substitution
+                                rhs = subs[lhs[:-len(suffix)] + '_arg_']
+                            except KeyError:
+                                msg = ("Could not find previous definition of "
+                                       "'{}' to form otherwise condition of "
+                                       "conditional block".format(lhs))
+                                try:
+                                    print ("WARNING! {}, assuming it is state "
+                                           "variable".format(msg))
+                                    self.state_variables[lhs] = StateVariable(
+                                        lhs, self.dimensions[lhs])
+                                    rhs = lhs
+                                except KeyError:
+                                    if len(conditional_stmts) == 1:
+                                        print ("WARNING! {}, assuming it is "
+                                               "not " "required outside of "
+                                               "the current branch"
+                                               .format(msg))
+                                        statements[lhs] = stmts[lhs]
+                                        continue
+                                    else:
+                                        # finally give up
+                                        raise Pype9ImportError(msg)
+                    self._unwrap_piecewise_stmt(rhs, 'True', pieces)
+                else:
+                    # If it does have an otherwise condition it shouldn't have
+                    # been defined previously
+                    assert lhs not in statements
+                statements[lhs] = pieces
         # Add aliases from procedure to list of substitutions in order to
         # append the suffixes
         if suffix:
@@ -1351,7 +1398,12 @@ class NMODLImporter(object):
             if match:
                 assert pre.count('flag') == 1
                 test = match.group(1)
-                flag = int(re.match(r'\s*flag\s*==\s*(\d+)\s*', test).group(1))
+                flag_match = re.match(r'\s*flag\s*==\s*(\d+)\s*', test)
+                if flag_match is None:
+                    raise Pype9ImportError(
+                        "Could not parse complex net-receive flag '{}'"
+                        .format(test))
+                flag = int()
             else:
                 assert 0 not in flags
                 flag = 0
@@ -1437,9 +1489,9 @@ class NMODLImporter(object):
         initialisation to that
         """
         if isinstance(rhs, list):
-            new_rhs = lhs + '__piecewise'
-            self._set_piecewise(new_rhs, rhs)
-            return new_rhs
+            new_lhs = lhs + '__piecewise'
+            self._set_alias(new_lhs, rhs)
+            return new_lhs
         else:
             return self._substitute_functions(rhs)
 
