@@ -286,6 +286,7 @@ class NMODLImporter(object):
         for c in self.constants.itervalues():
             print '{} = {} ({})'.format(c.name, c.value, c.units.name)
 
+    @property
     def all_expressions(self):
         """
         Create a list of all the expressions used in the NMODL file
@@ -305,9 +306,16 @@ class NMODLImporter(object):
                 expressions.append(alias.rhs)
         return expressions
 
+    @property
     def all_rhs_symbols(self):
         return set(chain(*((str(s) for s in e.free_symbols)
-                           for e in self.all_expressions())))
+                           for e in self.all_expressions)))
+
+    @property
+    def all_assigned_states(self):
+        return set(chain(*(chain(*((sa.variable for sa in t.state_assignments)
+                                   for t in r.transitions))
+                           for r in self.regimes.itervalues())))
 
     def _create_parameters_and_analog_ports(self):
         # Add used ions to analog ports
@@ -355,13 +363,14 @@ class NMODLImporter(object):
                     name, self.dimensions[name])
 
     def _create_regimes(self):
+        # Get the loaded time derivatives
         if len(self.regime_parts) > 1:
             raise NotImplementedError("Cannot handle multiple dynamic regimes "
                                       "at this stage")
+        elif self.regime_parts:
+            time_derivatives = self.regime_parts[0][1]
         elif len(self.regime_parts) == 0:
-            return
-        # Get the loaded time derivatives
-        time_derivatives = self.regime_parts[0][1]
+            time_derivatives = []
         # The flag used to set up the WATCH statements should not be included
         # in the triggers
         assert self.initial_flag not in self.triggers
@@ -449,30 +458,28 @@ class NMODLImporter(object):
 
     def _add_required_reserved_variables(self):
         # Add ports/parameters for reserved NMODL keywords
-        if 'v' in self.all_rhs_symbols():
+        if 'v' in self.all_assigned_states:
             # check whether v is assigned to, in which case a dummy state
             # variable will be recreated but will need to be manually edited
-            if 'v' in chain(*chain(*((t.state_assignment_variables
-                                      for t in r.transitions)
-                                     for r in self.regimes.itervalues()))):
-                print ("WARNING! Membrane voltage ('v') is assigned to but not"
-                       " explicitly integrated, it will need to be manually "
-                       "added")
-                self.state_variables['v'] = StateVariable('v', un.voltage)
-            else:
-                self.analog_ports['v'] = AnalogReceivePort(
-                    'v', dimension=un.voltage)
-        if ('celsius' in self.all_rhs_symbols() and
+            # TODO: could 
+            print ("WARNING! Membrane voltage ('v') is assigned to but not"
+                   " explicitly integrated, it will need to be manually "
+                   "added")
+            self.state_variables['v'] = StateVariable('v', un.voltage)
+        elif 'v' in self.all_rhs_symbols:
+            self.analog_ports['v'] = AnalogReceivePort(
+                'v', dimension=un.voltage)
+        if ('celsius' in self.all_rhs_symbols and
                 'celsius' not in self.parameters):
             self.analog_ports['celsius'] = AnalogReceivePort(
                 'celsius', dimension=un.temperature)
-        if ('diam' in self.all_rhs_symbols() and
+        if ('diam' in self.all_rhs_symbols and
                 'diam' not in self.parameters):
             self.parameters['diam'] = Parameter('diam', dimension=un.length)
 
     def _clean_init_parameters(self):
         for name in self.parameters.keys():
-            if name not in self.all_rhs_symbols():
+            if name not in self.all_rhs_symbols:
                 self.parameters.pop(name)
                 value, unit_str = self.properties.pop(name)
                 units = pq29_quantity(pq.Quantity(1.0, unit_str)).units
@@ -729,7 +736,7 @@ class NMODLImporter(object):
                     lhs, rhs)
             elif lhs.startswith('__INBUILT_PROC_net_send'):
                 assert self.initial_flag is None
-                self.initial_flag = rhs[1]
+                self.initial_flag = int(rhs[1])
             else:
                 self._set_alias(lhs, rhs)
 
@@ -798,7 +805,7 @@ class NMODLImporter(object):
 
     def _extract_breakpoint_block(self):
         reduced_block = []
-        for line in self._iterate_block(self.blocks.pop('BREAKPOINT')):
+        for line in self._iterate_block(self.blocks.pop('BREAKPOINT', [])):
             if line.startswith('SOLVE'):
                 match = re.match(r'SOLVE (\w+) '
                                  r'METHOD (\w+)', line)
@@ -853,7 +860,7 @@ class NMODLImporter(object):
                         assignments[variable] = StateAssignment(variable, rhs)
                     elif lhs.startswith('__INBUILT_PROC_net_send'):
                         # FIXME: Not sure what to do with first arg
-                        target = rhs[1]
+                        target = int(rhs[1])
                         delay = rhs[0]
                     elif lhs.startswith('__INBUILT_PROC_net_event'):
                         # FIMXE: Need to check this is the only type of event
@@ -885,7 +892,7 @@ class NMODLImporter(object):
                     assert target == -1
                     common = net_receive
                 else:
-                    self.net_receives[flag] = net_receive
+                    self.net_receives[int(flag)] = net_receive
             if self.net_receives:
                 if common is not None:
                     for trans in self.net_receives.itervalues():
