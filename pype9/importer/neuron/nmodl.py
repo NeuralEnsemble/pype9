@@ -456,8 +456,10 @@ class NMODLImporter(object):
         # Set state variables from init statement
         for lhs, rhs in self.init_statements.iteritems():
             if lhs.startswith('__INBUILT_PROC_net_send'):
-                assert self.initial_flag is None
-                self.initial_flag = int(rhs[1])
+                if self.initial_flag is None:
+                    self.initial_flag = int(rhs[1])
+                else:
+                    print "WARNING! Multiple initial flags found"
             else:
                 try:
                     if lhs not in self.state_variables:
@@ -1403,7 +1405,7 @@ class NMODLImporter(object):
                     raise Pype9ImportError(
                         "Could not parse complex net-receive flag '{}'"
                         .format(test))
-                flag = int()
+                flag = int(flag_match.group(1))
             else:
                 assert 0 not in flags
                 flag = 0
