@@ -44,22 +44,6 @@ logstate_re = re.compile(r' *(\d+)? *(\w+)')  # For kinetics terms
 notword_re = re.compile(r'\W')
 
 
-class _Otherwise(object):
-    """
-    An object used to represent the "else/otherwise" condition of a piecewise
-    function
-    """
-
-    def __init__(self, not_tests=[]):
-        self.not_tests = not_tests
-
-    def full_condition(self):
-        return ' & '.join('!({})'.format(test) for test in self.not_tests)
-
-    def __str__(self):
-        return '__otherwise__'
-
-
 _SI_to_dimension = {'m/s': un.conductance,
                     's**2': un.time ** 2,
                     'kg*m**2/(s**3*A)': un.voltage,
@@ -639,8 +623,8 @@ class NMODLImporter(object):
                     try:
                         # Add alias to quantities object
                         unit = pq.Quantity(1, unitname)
-                        unit.aliases.append(alias)
-                    except:
+                        pq.registry.unit_registry[alias] = unit
+                    except LookupError:
                         raise Pype9ImportError("Unrecognised unit '{}'"
                                                 .format(unitname))
                 self.used_units.append(alias)
@@ -1239,7 +1223,6 @@ class NMODLImporter(object):
                                    suffix=''):
         conditional_stmts = []
         # Loop through all sub-blocks of the if/else-if/else statement
-        previous_tests = []
         for pre, sblock, nline in self._matching_braces(line_iter, line=line):
             # Extract the test conditions for if and else if blocks
             match = re.search(r'\((.*)\)', pre)
@@ -1250,12 +1233,8 @@ class NMODLImporter(object):
                     test = self._subs_variable(old, new, test)
                 # Substitute in function calls
                 test = self._extract_function_calls(test, statements)
-                # Append any previous tests
-                for prev_test in previous_tests:
-                    test += ' & !({})'.format(prev_test)
-                previous_tests.append(test)
             else:
-                test = _Otherwise(previous_tests)
+                test = 'True'
             # Extract the statements from the sub-block
             stmts = self._extract_stmts_block(sblock, subs, suffix)
             # Append the test and statements to a list for processing after all
@@ -1273,7 +1252,7 @@ class NMODLImporter(object):
                 break
         # If the final block isn't an 'else' statement, the aliases should be
         # defined previously.
-        no_otherwise_condition = not isinstance(test, _Otherwise)
+        no_otherwise_condition = (test != 'True')
         # Find all the variables that are assigned in every sub-block
         common_lhss = reduce(set.intersection, (set(s.keys())
                                                 for t, s in conditional_stmts))
@@ -1348,9 +1327,7 @@ class NMODLImporter(object):
                             "Could not find previous definition of '{}' to "
                             "form otherwise condition of conditional block"
                             .format(lhs))
-                self._unwrap_piecewise_stmt(rhs,
-                                            _Otherwise([t for _, t in pieces]),
-                                            pieces)
+                self._unwrap_piecewise_stmt(rhs, 'True', pieces)
             else:
                 # If it does have an otherwise condition it shouldn't have been
                 # defined previously
@@ -1403,14 +1380,10 @@ class NMODLImporter(object):
         """
         if isinstance(stmt, list):
             for s, t in stmt:
-                if t == '__otherwise__':
+                if t == 'True':
                     combined_test = test
                 else:
-                    if isinstance(test, _Otherwise):
-                        combined_test = ('{} & ({})'
-                                         .format(test.full_condition(), t))
-                    else:
-                        combined_test = '({}) & ({})'.format(test, t)
+                    combined_test = '({}) & ({})'.format(test, t)
                 cls._unwrap_piecewise_stmt(s, combined_test, pieces)
         else:
             pieces.append((stmt, str(test)))
@@ -1443,16 +1416,16 @@ class NMODLImporter(object):
             return Alias(lhs, self._substitute_functions(rhs))
 
     def _get_piecewise(self, lhs, rhs):
+        psr = Parser()
         pieces = []
         otherwise = None
         for expr, test in rhs:
             expr = self._substitute_functions(expr)
-            if test == '__otherwise__':
+            if test == 'True':
                 assert otherwise is None, "Multiple otherwise statements"
-                otherwise = (sympy.sympify(expr), sympy.sympify(True))
+                otherwise = (psr.parse(expr), sympy.sympify(True))
             else:
                 test = self._substitute_functions(test)
-                psr = Parser()
                 pieces.append((psr.parse(expr), psr.parse(test)))
         assert otherwise is not None, "No otherwise statement found"
         return Alias(lhs, Piecewise(*(pieces + [otherwise])))

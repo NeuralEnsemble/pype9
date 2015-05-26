@@ -6,7 +6,7 @@ pynn_nmodl_dir = os.path.join(os.environ['HOME'], 'git', 'pynn', 'src',
                               'neuron', 'nmodl')
 
 fnames = os.listdir(pynn_nmodl_dir)
-# fnames = ['stdwa_guetig.mod']  # debugging
+# fnames = ['tmgsyn.mod']  # debugging
 
 for fname in fnames:
     if fname.endswith('.mod'):
