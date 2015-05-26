@@ -22,7 +22,7 @@ import nineml.units as un
 from nineml.user_layer import Definition
 from nineml.document import Document
 from nineml.user_layer import DynamicsProperties
-from nineml.abstraction_layer.expressions import Constant
+from nineml.abstraction_layer.expressions import Constant, Parser
 from pype9.exceptions import Pype9ImportError
 from pype9.utils import pq29_quantity
 
@@ -61,6 +61,7 @@ class _Otherwise(object):
 
 
 _SI_to_dimension = {'m/s': un.conductance,
+                    's**2': un.time ** 2,
                     'kg*m**2/(s**3*A)': un.voltage,
                     'kg*m**2/(s**4*A)': un.voltage / un.time,
                     's**4*A**2/(kg*m**2)': un.current * un.time / un.voltage,
@@ -153,6 +154,7 @@ class NMODLImporter(object):
         self.globals = []
         self.model_type = None
         self.range_vars = set()
+        self.pointers = set()
         # working variables
         self.functions = {}
         self.procedures = {}
@@ -168,11 +170,12 @@ class NMODLImporter(object):
         # Extract declarations and expressions from blocks into members
         self._extract_neuron_block()
         self._extract_units_block()
-        self._extract_procedure_and_function_blocks()
         self._extract_assigned_block()
+        self._extract_procedure_and_function_blocks()
         self._extract_parameter_and_constant_block()
         self._extract_initial_block()  # Done early so aliases can be overwrit.
-        self._extract_state_block()  # Comes after state block to check dims.
+        self._extract_state_block()  # Comes after assigned block to check dims
+        self._create_state_variables()
         self._extract_linear_block()
         self._extract_kinetic_block()
         self._extract_derivative_block()
@@ -355,11 +358,16 @@ class NMODLImporter(object):
             if name not in self.analog_ports:
                 dimension = self._units2dimension(units)
                 self.parameters[name] = Parameter(name, dimension=dimension)
-        # Create analog ports for any remaining range vars
+#         Create analog ports for any remaining range vars
         for name in self.range_vars:
             if name not in chain(self.parameters, self.analog_ports,
                                  self.state_variables, self.aliases):
                 self.analog_ports[name] = AnalogReceivePort(
+                    name, self.dimensions[name])
+        for name in self.pointers:
+            if name not in chain(self.parameters, self.analog_ports,
+                                 self.state_variables, self.aliases):
+                self.analog_ports[name] = AnalogSendPort(
                     name, self.dimensions[name])
 
     def _create_regimes(self):
@@ -456,12 +464,30 @@ class NMODLImporter(object):
                 name=name, time_derivatives=deepcopy(time_derivatives),
                 transitions=transitions)
 
+    def _create_state_variables(self):
+        # Set state variables from init statement
+        for lhs, rhs in self.init_statements.iteritems():
+            if lhs.startswith('__INBUILT_PROC_net_send'):
+                assert self.initial_flag is None
+                self.initial_flag = int(rhs[1])
+            else:
+                if lhs not in self.state_variables:
+                    self.state_variables[lhs] = StateVariable(
+                        lhs, self.dimensions[lhs])
+                self.initial_state[lhs] = self._escape_piecewise(
+                    lhs, rhs)
+        # Set state variables for pointers (analog send ports)
+        for name in self.pointers:
+            if name not in chain(self.parameters, self.analog_ports,
+                                 self.state_variables, self.aliases):
+                self.state_variables[name] = StateVariable(
+                    name, self.dimensions[name])
+
     def _add_required_reserved_variables(self):
         # Add ports/parameters for reserved NMODL keywords
         if 'v' in self.all_assigned_states:
             # check whether v is assigned to, in which case a dummy state
             # variable will be recreated but will need to be manually edited
-            # TODO: could 
             print ("WARNING! Membrane voltage ('v') is assigned to but not"
                    " explicitly integrated, it will need to be manually "
                    "added")
@@ -730,15 +756,6 @@ class NMODLImporter(object):
             if match.group(3):
                 self.valid_state_ranges[var] = (match.group(3), match.group(4))
             self.state_variables[var] = StateVariable(var, dimension=dimension)
-        for lhs, rhs in self.init_statements.iteritems():
-            if lhs in self.state_variables:
-                self.initial_state[lhs] = self._escape_piecewise(
-                    lhs, rhs)
-            elif lhs.startswith('__INBUILT_PROC_net_send'):
-                assert self.initial_flag is None
-                self.initial_flag = int(rhs[1])
-            else:
-                self._set_alias(lhs, rhs)
 
     def _extract_neuron_block(self):
         # Read the NEURON block
@@ -755,6 +772,8 @@ class NMODLImporter(object):
                 self.model_type = 'artificial'
             elif line.startswith('RANGE'):
                 self.range_vars.update(list_re.split(line[6:]))
+            elif line.startswith('POINTER'):
+                self.pointers.update(list_re.split(line[8:]))
             elif line.startswith('USEION'):
                 name = re.match(r'USEION (\w+)', line).group(1)
                 match = re.match(r'.*READ ((?:\w+(?: *\, *)?)+)', line)
@@ -868,9 +887,11 @@ class NMODLImporter(object):
                     elif lhs.startswith('__INBUILT_PROC_WATCH'):
                         self.triggers[rhs[1]].append(rhs[0])
                     elif lhs in self.state_variables or lhs == 'v':
+                        if isinstance(rhs, list):
+                            rhs = self._get_piecewise(lhs, rhs).rhs
                         assignments[lhs] = StateAssignment(lhs, rhs)
                     else:
-                        aliases[lhs] = Alias(lhs, rhs)
+                        self._set_alias(lhs, rhs)
                 # Get the args that are used in this net receive flag
                 args = [a for a in all_args
                         if any(sympy.Symbol(a[0]) in sa.rhs_symbols
@@ -1256,11 +1277,22 @@ class NMODLImporter(object):
         # Find all the variables that are assigned in every sub-block
         common_lhss = reduce(set.intersection, (set(s.keys())
                                                 for t, s in conditional_stmts))
+        state_assigns = set(v for v in chain(*[s.iterkeys()
+                                               for _, s in conditional_stmts])
+                            if v in self.state_variables)
+        # Add state_assigns to common_lhs (we will need to make the missing
+        # branches)
+        common_lhss.update(state_assigns)
 #         if len(conditional_stmts) > 2:
         # Create numbered versions of the helper statements in the sub-
         # blocks (i.e. that don't appear in all sub- blocks)
         for i, (test, stmts) in enumerate(conditional_stmts):
             branch_subs = {}
+            # If a state assignment is missing from the branch just set it to
+            # itself or a previous defined value
+            for sa in state_assigns:
+                if sa not in stmts:
+                    stmts[sa] = statements.pop(sa, sa)
             # Get a list of substitutions to perform to unwrap the
             # conditional block
             for lhs, rhs in stmts.iteritems():
@@ -1270,8 +1302,8 @@ class NMODLImporter(object):
                     stmts[lhs][-1] = (rhs[-1] + ' & ' + test) if rhs else test
                 if lhs not in common_lhss:
                     new_lhs = ('{}__branch{}{}'
-                               .format(lhs[:-len(suffix)] if suffix else lhs,
-                                       i, suffix))
+                               .format(lhs[:-len(suffix)]
+                                       if suffix else lhs, i, suffix))
                     branch_subs[lhs] = new_lhs
             # Perform the substitutions on all the conditional statements
             for old, new in branch_subs.iteritems():
@@ -1309,9 +1341,13 @@ class NMODLImporter(object):
                     subs[lhs] = new_lhs
                     lhs = new_lhs
                 else:
-                    raise Pype9ImportError(
-                        "Could not find previous definition of '{}' to form "
-                        "otherwise condition of conditional block".format(lhs))
+                    if lhs in self.state_variables:
+                        rhs = lhs
+                    else:
+                        raise Pype9ImportError(
+                            "Could not find previous definition of '{}' to "
+                            "form otherwise condition of conditional block"
+                            .format(lhs))
                 self._unwrap_piecewise_stmt(rhs,
                                             _Otherwise([t for _, t in pieces]),
                                             pieces)
@@ -1416,7 +1452,8 @@ class NMODLImporter(object):
                 otherwise = (sympy.sympify(expr), sympy.sympify(True))
             else:
                 test = self._substitute_functions(test)
-                pieces.append((sympy.sympify(expr), sympy.sympify(test)))
+                psr = Parser()
+                pieces.append((psr.parse(expr), psr.parse(test)))
         assert otherwise is not None, "No otherwise statement found"
         return Alias(lhs, Piecewise(*(pieces + [otherwise])))
 

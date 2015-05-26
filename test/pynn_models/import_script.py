@@ -6,15 +6,16 @@ pynn_nmodl_dir = os.path.join(os.environ['HOME'], 'git', 'pynn', 'src',
                               'neuron', 'nmodl')
 
 fnames = os.listdir(pynn_nmodl_dir)
-# fnames = ['reset.mod']  # debugging
+# fnames = ['stdwa_guetig.mod']  # debugging
 
 for fname in fnames:
-    try:
-        importer = NMODLImporter(os.path.join(pynn_nmodl_dir, fname))
-        class_fname = os.path.join(os.getcwd(), fname[:-4] + 'Class.xml')
-        importer.get_component_class().write(class_fname)
-        importer.get_component(class_fname).write(
-            os.path.join(os.getcwd(), fname[:-4] + '.xml'))
-        print "Imported '{}".format(fname)
-    except Pype9ImportError, e:
-        print "Failed to import '{}': {}".format(fname, e)
+    if fname.endswith('.mod'):
+        try:
+            importer = NMODLImporter(os.path.join(pynn_nmodl_dir, fname))
+            class_fname = os.path.join(os.getcwd(), fname[:-4] + 'Class.xml')
+            importer.get_component_class().write(class_fname)
+            importer.get_component(class_fname).write(
+                os.path.join(os.getcwd(), fname[:-4] + '.xml'))
+            print "Imported '{}".format(fname)
+        except Pype9ImportError, e:
+            print "Failed to import '{}': {}".format(fname, e)
