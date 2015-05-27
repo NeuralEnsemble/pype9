@@ -44,6 +44,7 @@ whitespace_re = re.compile(r'\s')
 getitem_re = re.compile(r'(\w+)\[(\d+)\]')
 logstate_re = re.compile(r' *(\d+)? *(\w+)')  # For kinetics terms
 notword_re = re.compile(r'\W')
+square_brackets_re = re.compile(r'(?:\[|\])')
 
 
 _SI_to_dimension = {'m/s': un.conductance,
@@ -119,6 +120,8 @@ class NMODLImporter(object):
             print ("'{}' contains VERBATIM segments, which have been ignored:"
                    .format(fname))
         self.contents = ''.join(content_parts[::2])
+        self.incomplete_import = False
+        self.warnings = []
         # Parse file contents into blocks
         self._read_title()
         self._read_comments()
@@ -168,14 +171,36 @@ class NMODLImporter(object):
         self._extract_linear_block()
         self._extract_kinetic_block()
         self._extract_derivative_block()
-        self._extract_breakpoint_block()
-        self._extract_netreceive_block()
+        try:
+            self._extract_breakpoint_block()
+        except Pype9ImportError, e:
+            self.incomplete_import = True
+            warning = ("Could not import BREAKPOINT block (aliases "
+                       "will be omitted) set due to: {}".format(e))
+            self.warnings.append(warning)
+            print 'WARNING!: ' + warning
+        try:
+            self._extract_netreceive_block()
+        except Pype9ImportError, e:
+            self.incomplete_import = True
+            warning = ("Could not import NET_RECEIVE block "
+                       "(transitions will be omitted) due to: {}".format(e))
+            self.warnings.append(warning)
+            print 'WARNING!: ' + warning
         self._extract_independent_block()
         assert not self.blocks  # Check to see all blocks have been extracted
         # Create members from extracted information
-        self._create_parameters_and_analog_ports()
-        self._create_regimes()
-        self._add_required_reserved_variables()
+        try:
+            self._create_parameters_and_analog_ports()
+            self._create_regimes()
+            self._add_required_reserved_variables()
+        except Exception, e:
+            if self.incomplete_import:
+                raise Pype9ImportError(
+                    "Import failed, probably due to earlier warnings ('{}'): "
+                    "{} {}".format("'; '".join(self.warnings), type(e), e))
+            else:
+                raise
         # Clean up unused parameters (ones which are actually used for init)
         if not self.kinetics:
             self._clean_init_parameters()
@@ -1468,9 +1493,14 @@ class NMODLImporter(object):
         return expr
 
     def _set_alias(self, lhs, rhs):
-        self.aliases[lhs] = self._get_alias(lhs, rhs)
+        alias = self._get_alias(lhs, rhs)
+        self.aliases[alias.lhs] = alias
 
     def _get_alias(self, lhs, rhs):
+        if '[' in lhs:
+            parts = square_brackets_re.split(lhs)
+            assert len(parts) == 3 and not parts[-1]
+            lhs = '{}__index_{}__'.format(*parts[:-1])
         if isinstance(rhs, list):
             return self._get_piecewise(lhs, rhs)
         else:
