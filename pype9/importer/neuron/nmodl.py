@@ -354,8 +354,7 @@ class NMODLImporter(object):
                 self.analog_ports[name] = AnalogReceivePort(
                     name, self.dimensions[name])
         for name in self.pointers:
-            if name not in chain(self.parameters, self.analog_ports,
-                                 self.state_variables, self.aliases):
+            if name not in chain(self.parameters, self.analog_ports):
                 self.analog_ports[name] = AnalogSendPort(
                     name, self.dimensions[name])
 
@@ -1078,6 +1077,10 @@ class NMODLImporter(object):
                 raise Pype9ImportError("Cannot parse VERBATIM block:\n\n{}"
                                         .format(block))
             elif line.startswith('printf'):
+                try:
+                    line = next(line_iter)
+                except StopIteration:
+                    line = ''
                 continue
             # Escape all array indexing
             line = getitem_re.sub(r'\1__elem\2', line)
