@@ -15,6 +15,7 @@ from nineml.user_layer import Property
 from nineml import units as un
 import quantities as pq
 import neo
+import os
 
 # from pyNN.neuron.cells import Izhikevich_ as IzhikevichPyNN
 # MPI may not be required but NEURON sometimes needs to be initialised after
@@ -29,56 +30,66 @@ class TestNeuronLoad(TestCase):
 
     izhikevich_file = path.join(test_data_dir, 'xml', 'Izhikevich2003.xml')
     izhikevich_name = 'Izhikevich9ML'
+    models9ML = ['AdExpIF', 'HHTraub', 'IF', 'IFRefrac', 'Izhikevich']
+    modelsPyNN = ['AdExpIF', 'hh_traub', 'Reset', 'ResetRefrac', 'Izhikevich']
+    pyNN_import_dir = path.join(os.environ['HOME'], 'git', 'nineml_catalog',
+                                'pynn_nmodl_import', 'neurons')
 
     def test_neuron_load(self):
-        Izhikevich9ML = CellMetaClass(
-            self.izhikevich_file, name=self.izhikevich_name,
-            build_mode='force', verbose=True, membrane_voltage='V',
-            membrane_capacitance=Property('Cm', 0.001, un.nF))
-        # ---------------------------------------------------------------------
-        # Set up PyNN section
-        # ---------------------------------------------------------------------
-        pnn = h.Section()
-        pnn.L = 10
-        pnn.diam = 10 / pi
-        pnn.cm = 1.0
-        pnn_izhi = h.Izhikevich(0.5, sec=pnn)  # @UnusedVariable
-        # Specify current injection
-        stim = h.IClamp(1.0, sec=pnn)
-        stim.delay = 1   # ms
-        stim.dur = 100   # ms
-        stim.amp = 0.2   # nA
-        # Record Time from NEURON (neuron.h._ref_t)
-        rec = Recorder(pnn, pnn_izhi)
-        rec.record('v')
-        # ---------------------------------------------------------------------
-        # Set up 9ML cell
-        # ---------------------------------------------------------------------
-        izhi = Izhikevich9ML()
-        print izhi.a
-        izhi.inject_current(neo.AnalogSignal([0.0] + [0.2] * 9, units='nA',
-                                             sampling_period=1 * pq.ms))
-        izhi.record('v')
-        simulator.initialize()  # @UndefinedVariable
-        izhi.u = -14.0 * pq.mV / pq.ms
-        pnn_izhi.u = -14.0
-        simulator.run(10, reset=False)  # @UndefinedVariable
-        nml_v = izhi.recording('v')
-        pnn_t, pnn_v = rec.recording('v')  # @UnusedVariable
-        self.assertAlmostEqual(float((nml_v - pnn_v[1:] * pq.mV).sum()), 0)
-        plt.plot(pnn_t[:-1], pnn_v[1:])
-        plt.plot(nml_v.times, nml_v)
-        plt.legend(('PyNN v', '9ML v'))
-        plt.show()
-        h.quit()
+        # for name9, namePynn in zip(self.models9ML, self.modelsPyNN):
+        for name9, namePynn in zip(['AdExpIaF'], ['AdExpIF']):
+            # -----------------------------------------------------------------
+            # Set up PyNN section
+            # -----------------------------------------------------------------
+            pnn = h.Section()
+            pnn.L = 10
+            pnn.diam = 10 / pi
+            pnn.cm = 1.0
+            pnn_cell = eval('h.{}(0.5, sec=pnn)'.format(namePynn))
+            # Specify current injection
+            stim = h.IClamp(1.0, sec=pnn)
+            stim.delay = 1   # ms
+            stim.dur = 100   # ms
+            stim.amp = 0.2   # nA
+            # Record Time from NEURON (neuron.h._ref_t)
+            rec = Recorder(pnn, pnn_cell)
+            rec.record('v')
+            # -----------------------------------------------------------------
+            # Set up 9ML cell
+            # -----------------------------------------------------------------
+            CellClass = CellMetaClass(
+                path.join(self.pyNN_import_dir, name9 + '.xml'),
+                name=name9 + 'Properties',
+                build_mode='force', verbose=True, membrane_voltage='v',
+                membrane_capacitance=Property('Cm', 0.001, un.nF))
+            cell9 = CellClass()
+            cell9.inject_current(neo.AnalogSignal(
+                [0.0] + [0.2] * 9, units='nA', sampling_period=1 * pq.ms))
+            cell9.record('v')
+            simulator.initialize()  # @UndefinedVariable
+            # Initialise
+            for prop in cell9.nineml.properties:
+                setattr(cell9, prop.name, prop.value)
+            # -----------------------------------------------------------------
+            # Run and plot the simulation
+            # -----------------------------------------------------------------
+            simulator.run(10, reset=False)  # @UndefinedVariable
+            nml_v = cell9.recording('v')
+            pnn_t, pnn_v = rec.recording('v')  # @UnusedVariable
+            self.assertAlmostEqual(float((nml_v - pnn_v[1:] * pq.mV).sum()), 0)
+            plt.plot(pnn_t[:-1], pnn_v[1:])
+            plt.plot(nml_v.times, nml_v)
+            plt.legend(('PyNN v', '9ML v'))
+            plt.show()
+            h.quit()
 
 
 # class TestNeuronMWE(TestCase):
 # 
 #     def test_neuron_load(self):
-#         # ---------------------------------------------------------------------
+#         # -------------------------------------------------------------------
 #         # Set up PyNN section
-#         # ---------------------------------------------------------------------
+#         # -------------------------------------------------------------------
 #         pnn = h.Section()
 #         pnn.L = 10
 #         pnn.diam = 10 / pi

@@ -1,4 +1,5 @@
 {% macro elseif(first) %}{% if first %}if{% else %}} else if{% endif %}{% endmacro %}
+{% macro endif(last) %}{% if last %}}{% endif %}{% endmacro %}
 :VERBATIM
 :extern double nineml_gsl_normal(double, double);
 :extern double nineml_gsl_uniform(double, double);
@@ -158,11 +159,11 @@ DERIVATIVE states {
 
 {% for sv in componentclass.state_variables if sv.name != 'v' %}
 FUNCTION deriv_{{sv.name}}({{componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variable_names | join(', ')}}) {
-    {% for regime in componentclass.regimes %}
+    {% for regime in componentclass.regimes  if sv.name in regime._time_derivatives %}
     {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
         deriv_{{sv.name}} = {{regime.time_derivative(sv.name).rhs_cstr}}
+    {{endif(loop.last)}}
     {% endfor %}
-    }
 }
 {% endfor %}
 

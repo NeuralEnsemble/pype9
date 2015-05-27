@@ -199,11 +199,16 @@ class CodeGenerator(BaseCodeGenerator):
         # as there is no OutputAnalog in the spec see )
         dvdt = next(trans.regimes).time_derivative(v.name)
         for regime in trans.regimes:
-            if regime.time_derivative(v.name) != dvdt:
-                raise Pype9RuntimeError(
-                    "Cannot convert to current centric as the voltage time for"
-                    " derivative equation changes between regimes")
-            regime.remove(regime.time_derivative(v.name))
+            try:
+                if regime.time_derivative(v.name) != dvdt:
+                    raise Pype9RuntimeError(
+                        "Cannot convert to current centric as the voltage time"
+                        " for derivative equation changes between regimes")
+                    regime.remove(regime.time_derivative(v.name))
+            except KeyError:
+                # No time derivative for voltage in this regime, don't
+                # need to worry about it
+                pass
         # Add alias expression for current
         i = Alias('i_', rhs=dvdt.rhs * cm * -1.0)
         # FIXME: Need to be able to sympy time derivatives
@@ -211,7 +216,7 @@ class CodeGenerator(BaseCodeGenerator):
         dvdt.annotations[PYPE9_NS][TRANSFORM_DEST] = (i, cm), i
         trans.add(i)
         # Add analog send port for current
-        i_port = AnalogSendPort('i_', dimension=un.currentDensity)
+        i_port = AnalogSendPort('i_', dimension=un.current)
         i_port.annotations[PYPE9_NS][ION_SPECIES] = NON_SPECIFIC_CURRENT
         trans.add(i_port)
         # ---------------------------------------------------------------------
