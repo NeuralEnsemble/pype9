@@ -18,7 +18,7 @@ from nineml.abstraction_layer.dynamics import (Regime, StateVariable, OnEvent,
                                                OutputEvent, OnCondition)
 from nineml.abstraction_layer.expressions import Alias
 from nineml.abstraction_layer.ports import (
-    AnalogReceivePort, AnalogSendPort, EventReceivePort)
+    AnalogReceivePort, AnalogReducePort, AnalogSendPort, EventReceivePort)
 import nineml.units as un
 from nineml.user_layer import Definition
 from nineml.document import Document
@@ -111,9 +111,10 @@ class NMODLImporter(object):
                                       len(self.state_variables),
                                       len(self.aliases))
 
-    def __init__(self, fname):
+    def __init__(self, fname, **kwargs):
         # Basic members
         self.fname = fname
+        self.kwargs = kwargs
         self.incomplete_import = False
         self.warnings = []
         # Read file
@@ -155,6 +156,7 @@ class NMODLImporter(object):
         self.model_type = None
         self.range_vars = set()
         self.pointers = set()
+        self.default_regime = None
         # working variables
         self.functions = {}
         self.procedures = {}
@@ -202,7 +204,7 @@ class NMODLImporter(object):
 #         try:
         self._create_parameters_and_analog_ports()
         self._create_regimes()
-        self._add_required_reserved_variables()
+        self._add_reserved_variables()
 #         except Exception, e:
 #             if self.incomplete_import:
 #                 raise Pype9ImportError(
@@ -441,6 +443,7 @@ class NMODLImporter(object):
                 regime_flags.append(flag)
         # Map regimes flags to consecutive ids starting from 0
         regime_ids = dict((f, i) for i, f in enumerate(sorted(regime_flags)))
+        self.default_regime = 'regime_0'
         regime_transitions = dict((r, []) for r in regime_flags)
         for flag, receive in self.net_receives.iteritems():
             # Check to see whether the aliases are used in the breakpoint
@@ -531,15 +534,38 @@ class NMODLImporter(object):
                 self.state_variables[name] = StateVariable(
                     name, self.dimensions[name])
 
-    def _add_required_reserved_variables(self):
+    def _add_reserved_variables(self):
         # Add ports/parameters for reserved NMODL keywords
-        if 'v' in self.all_assigned_states:
+        # Add membrane voltage if required
+        if ('v' in self.all_assigned_states or
+                self.kwargs.pop('add_membrane_voltage', False)):
             # check whether v is assigned to, in which case a dummy state
             # variable will be recreated but will need to be manually edited
-            print ("WARNING! Membrane voltage ('v') is assigned to but not"
-                   " explicitly integrated, it will need to be manually "
-                   "added")
             self.state_variables['v'] = StateVariable('v', un.voltage)
+            # Add membrane equation time derivative expression to all regimes
+            self.parameters['cm'] = Parameter('cm', dimension=un.capacitance)
+            self.analog_ports['iExt'] = AnalogReducePort(
+                'iExt', dimension=un.current)
+            self.properties['cm'] = (1.0, 'uF')
+            cm = sympy.Symbol('cm')
+            dvdt = sympy.Symbol('iExt')
+            for _, currents, _ in self.used_ions.itervalues():
+                for current in currents:
+                    dvdt += sympy.Symbol(current)
+            # TODO: piecewise expressions will stuff this up but they will
+            # require different regimes
+#             if isinstance(dvdt, sympy.Piecewise):
+#                 dvdt = Piecewise(
+#                     *((expr / cm, cond) for expr, cond in dvdt.args))
+#             else:
+            dvdt /= cm
+            if self.default_regime is not None:
+                self.regimes[self.default_regime].add(
+                    TimeDerivative('v', dvdt))
+            else:
+                # Otherwise add to all
+                for regime in self.regimes.itervalues():
+                    regime.add(TimeDerivative('v', dvdt))
         elif 'v' in self.all_rhs_symbols:
             self.analog_ports['v'] = AnalogReceivePort(
                 'v', dimension=un.voltage)
@@ -567,8 +593,8 @@ class NMODLImporter(object):
                                                      incoming, outgoing,
                                                      constraints,
                                                      compartments)
-            self.regimes.append(Regime(name=name,
-                                       time_derivatives=time_derivatives))
+            self.regimes[name] = Regime(name=name,
+                                        time_derivatives=time_derivatives)
 
     @classmethod
     def _expand_kinetics(cls, bidirectional, incoming, outgoing,
@@ -944,7 +970,7 @@ class NMODLImporter(object):
                         # FIMXE: Need to check this is the only type of event
                         output_events['spike'] = OutputEvent('spike')
                     elif lhs.startswith('__INBUILT_PROC_WATCH'):
-                        self.triggers[rhs[1]].append(rhs[0])
+                        self.triggers[int(rhs[1])].append(rhs[0])
                     elif lhs in self.state_variables or lhs == 'v':
                         if isinstance(rhs, list):
                             rhs = self._get_piecewise(lhs, rhs).rhs
