@@ -39,12 +39,14 @@ assign_re = re.compile(r"(?<![\>\<]) *= *")
 list_re = re.compile(r" *, *")
 with_units_re = re.compile(r'(\w+)\s*(?:\((\w+)\))?')
 title_re = re.compile(r"TITLE (.*)")
-comments_re = re.compile(r"COMMENT(.*)ENDCOMMENT")
+comments_re = re.compile(r"(?:COMMENT|ENDCOMMENT)")
+verbatim_re = re.compile(r'(?:VERBATIM|ENDVERBATIM)')
 whitespace_re = re.compile(r'\s')
 getitem_re = re.compile(r'(\w+)\[(\d+)\]')
 logstate_re = re.compile(r' *(\d+)? *(\w+)')  # For kinetics terms
 notword_re = re.compile(r'\W')
 square_brackets_re = re.compile(r'(?:\[|\])')
+define_re = re.compile(r'(?<=\n)DEFINE\s+(\w+)\s+([\d\.\-eE]+)')
 
 
 _SI_to_dimension = {'m/s': un.conductance,
@@ -94,7 +96,6 @@ class NMODLImporter(object):
                                          'assignments', 'aliases',
                                          'output_events'))
     _inbuilt_procs = ('net_send', 'net_event', 'WATCH')
-    _verbatim_re = re.compile(r'(?:VERBATIM|ENDVERBATIM)')
 
     _inbuilt_constants = {'faraday': (96485.3365, 'coulomb'),
                           'k-mole': (8.3144621, 'J/K'),
@@ -111,20 +112,27 @@ class NMODLImporter(object):
                                       len(self.aliases))
 
     def __init__(self, fname):
-        # Read file
+        # Basic members
         self.fname = fname
+        self.incomplete_import = False
+        self.warnings = []
+        # Read file
         with open(fname) as f:
             contents = f.read()
-        content_parts = self._verbatim_re.split(contents)
+        # Extract comments
+        content_parts = comments_re.split(contents)
+        if len(content_parts) > 1:
+            self.comments = content_parts[1::2]
+        contents = ''.join(content_parts[::2])
+        # Extract verbatim sections
+        content_parts = verbatim_re.split(contents)
         if len(content_parts) > 1:
             print ("'{}' contains VERBATIM segments, which have been ignored:"
                    .format(fname))
         self.contents = ''.join(content_parts[::2])
-        self.incomplete_import = False
-        self.warnings = []
         # Parse file contents into blocks
         self._read_title()
-        self._read_comments()
+#         self._read_comments()
         self._read_blocks()
         # Extracted members (used to construct the 9ML objects)
         self.aliases = {}
@@ -160,6 +168,7 @@ class NMODLImporter(object):
         self.triggers = defaultdict(list)
         self._breakpoint_aliases = {}
         # Extract declarations and expressions from blocks into members
+        self._extract_defines()
         self._extract_neuron_block()
         self._extract_units_block()
         self._extract_assigned_block()
@@ -190,17 +199,17 @@ class NMODLImporter(object):
         self._extract_independent_block()
         assert not self.blocks  # Check to see all blocks have been extracted
         # Create members from extracted information
-        try:
-            self._create_parameters_and_analog_ports()
-            self._create_regimes()
-            self._add_required_reserved_variables()
-        except Exception, e:
-            if self.incomplete_import:
-                raise Pype9ImportError(
-                    "Import failed, probably due to earlier warnings ('{}'): "
-                    "{} {}".format("'; '".join(self.warnings), type(e), e))
-            else:
-                raise
+#         try:
+        self._create_parameters_and_analog_ports()
+        self._create_regimes()
+        self._add_required_reserved_variables()
+#         except Exception, e:
+#             if self.incomplete_import:
+#                 raise Pype9ImportError(
+#                     "Import failed, probably due to earlier warnings ('{}'): "
+#                     "{} {}".format("'; '".join(self.warnings), type(e), e))
+#             else:
+#                 raise
         # Clean up unused parameters (ones which are actually used for init)
         if not self.kinetics:
             self._clean_init_parameters()
@@ -243,15 +252,24 @@ class NMODLImporter(object):
 #                                        constraints=cst,
 #                                        kineticsblock=None)
         else:
-            comp_class = Dynamics(
-                name=self.component_name + 'Class',
-                parameters=self.parameters.values(),
-                analog_ports=self.analog_ports.values(),
-                event_ports=self.event_ports.values(),
-                regimes=self.regimes.values(),
-                aliases=self.aliases.values(),
-                constants=self.constants.values(),
-                state_variables=self.state_variables.values())
+            try:
+                comp_class = Dynamics(
+                    name=self.component_name + 'Class',
+                    parameters=self.parameters.values(),
+                    analog_ports=self.analog_ports.values(),
+                    event_ports=self.event_ports.values(),
+                    regimes=self.regimes.values(),
+                    aliases=self.aliases.values(),
+                    constants=self.constants.values(),
+                    state_variables=self.state_variables.values())
+            except Exception, e:
+                if self.incomplete_import:
+                    raise Pype9ImportError(
+                        "Construction of Dynamics class failed, probably due "
+                        "to earlier warnings ('{}'): {} {}"
+                        .format("'; '".join(self.warnings), type(e), e))
+                else:
+                    raise
         return comp_class
 
     def get_component(self, class_path=None, hoc_properties={}):
@@ -398,11 +416,20 @@ class NMODLImporter(object):
         # Check that there aren't any extra statements that need to be set in
         # the initialisation (triggered by a net_send in the INITIAL BLOCK)
         if self.initial_flag is not None:
-            (target, delay, args, assignments,
-             aliases, events) = self.net_receives.pop(self.initial_flag)
-            assert target == -1 and delay is None and not events and not args
-            self.init_statements.update(
-                s for s in chain(assignments.iteritems(), aliases.iteritems()))
+            try:
+                (target, delay, args, assignments,
+                 aliases, events) = self.net_receives.pop(self.initial_flag)
+                assert (target == -1 and delay is None and not events
+                        and not args)
+                self.init_statements.update(
+                    s for s in chain(assignments.iteritems(),
+                                     aliases.iteritems()))
+            except KeyError:
+                if self.warnings:
+                    print ("WARNING! Setting of initial statements has been"
+                           "skipped as they couldn't be imported")
+                else:
+                    raise
         # Loop through all net receives and record which receives they trigger
         # via a delayed net_send, creating a new regime for each delay
         regime_flags = [-1]  # Start with the default regime
@@ -611,6 +638,13 @@ class NMODLImporter(object):
     # =========================================================================
     # Block extractors
     # =========================================================================
+
+    def _extract_defines(self):
+        # Get defines
+        self.defines = define_re.findall(self.contents)
+        for name, value in self.defines:
+            self.parameters[name] = Parameter(name, dimension=un.dimensionless)
+            self.properties[name] = (float(value), 'dimensionless')
 
     def _extract_procedure_and_function_blocks(self):
         # Read functions
