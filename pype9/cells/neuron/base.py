@@ -203,7 +203,8 @@ class Cell(base.Cell):
         setattr(self._hoc, prop.name, prop.value)
         # Set membrane capacitance in hoc if required
         if prop.name == self._cm_prop.name:
-            self._sec.cm = float(pq.Quantity(convert_to_quantity(prop),
+            cm = convert_to_quantity(prop)
+            self._sec.cm = float(pq.Quantity(cm / self.surface_area,
                                              'uF/cm^2'))
 
     def record(self, variable):

@@ -65,20 +65,20 @@ class TestNeuronLoad(TestCase):
                 [0.0] + [0.2] * 9, units='nA', sampling_period=1 * pq.ms))
             cell9.record('v')
             simulator.initialize()  # @UndefinedVariable
-            # Initialise
-            for prop in cell9.nineml.properties:
-                setattr(cell9, prop.name, prop.value)
+#             # Initialise
+#             for prop in cell9.properties:
+#                 setattr(cell9, prop.name, prop.value)
             # -----------------------------------------------------------------
             # Run and plot the simulation
             # -----------------------------------------------------------------
             simulator.run(10, reset=False)  # @UndefinedVariable
             nml_v = cell9.recording('v')
             pnn_t, pnn_v = rec.recording('v')  # @UnusedVariable
-            self.assertAlmostEqual(float((nml_v - pnn_v[1:] * pq.mV).sum()), 0)
             plt.plot(pnn_t[:-1], pnn_v[1:])
             plt.plot(nml_v.times, nml_v)
             plt.legend(('PyNN v', '9ML v'))
             plt.show()
+            self.assertAlmostEqual(float((nml_v - pnn_v[1:] * pq.mV).sum()), 0)
             h.quit()
 
 

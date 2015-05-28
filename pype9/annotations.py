@@ -9,6 +9,9 @@ PYPE9_NS = 'http://pype9.net'
 MEMBRANE_VOLTAGE = 'MembraneVoltage'
 MEMBRANE_CAPACITANCE = 'MembraneCapacitance'
 
+# External current ports
+EXTERNAL_CURRENTS = 'ExternalCurrents'
+
 # Transform information
 TRANSFORM_SRC = 'TransformSource'
 TRANSFORM_DEST = 'TransformDestination'

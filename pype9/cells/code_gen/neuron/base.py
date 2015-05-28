@@ -18,8 +18,7 @@ from ..base import BaseCodeGenerator
 import nineml.units as un
 from nineml.abstraction.expressions import Alias
 from nineml.abstraction.ports import AnalogSendPort
-from pype9.exceptions import (
-    Pype9BuildError, Pype9RuntimeError, Pype9NoMatchingElementException)
+from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import pype9
 from datetime import datetime
 from nineml import Document
@@ -31,7 +30,8 @@ except ImportError:
     KineticsClass = type(None)
 from pype9.annotations import (
     PYPE9_NS, ION_SPECIES, MEMBRANE_VOLTAGE, MEMBRANE_CAPACITANCE,
-    TRANSFORM_SRC, TRANSFORM_DEST, NON_SPECIFIC_CURRENT)
+    TRANSFORM_SRC, TRANSFORM_DEST, NON_SPECIFIC_CURRENT,
+    EXTERNAL_CURRENTS)
 import logging
 
 TRANSFORM_NS = 'NeuronBuildTransform'
@@ -85,7 +85,10 @@ class CodeGenerator(BaseCodeGenerator):
 #             self.generate_kinetics(name, prototype, initial_state, src_dir,
 #                                    **kwargs)
 #         el
-        if 'membrane_voltage' in kwargs:
+        # Check whether it is a point process or a ion channel
+        cc = prototype.component_class
+        if isinstance(cc[cc.annotations[PYPE9_NS]['MembraneVoltage']],
+                      StateVariable):
             self.generate_point_process(
                 prototype, initial_state, src_dir, **kwargs)
         else:
@@ -268,6 +271,7 @@ class CodeGenerator(BaseCodeGenerator):
             for i in ext_is:
                 memb_i += i
                 trans.remove(i)
+            trans.annotations[PYPE9_NS][EXTERNAL_CURRENTS] = ext_is
             trans.add(memb_i)
             # Add analog send port for current
             i_port = AnalogSendPort('i_', dimension=un.current)

@@ -281,7 +281,7 @@ class BaseCodeGenerator(object):
         jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
                                  xrange=xrange, next=next, chain=chain,
                                  hash=hash, deepcopy=deepcopy, units=units,
-                                 hasattr=hasattr, **annotations_dict)
+                                 hasattr=hasattr, set=set, **annotations_dict)
         # Actually render the contents
         contents = jinja_env.get_template(template).render(**args)
         # Write the contents to file
@@ -347,63 +347,63 @@ class BaseCodeGenerator(object):
                     component_translations[comp_name][var_name] = mapped_var
         return component_translations
 
-    @classmethod
-    def _get_member_from_kwargs_or_guess_via_dimension(
-            cls, member_name, elements_name, dimension, componentclass,
-            kwargs):
-        """
-        Guess the location of the member from its unit dimension
-        """
-        element_descr = elements_name.replace('_', ' ')
-        member_descr = member_name.replace('_', ' ')
-        elements = list(getattr(componentclass, elements_name))
-        if member_name in kwargs:
-            # Get specified member
-            member = kwargs[member_name]
-            if isinstance(member, Property):
-                try:
-                    member = componentclass.parameter(member.name)
-                except KeyError:
-                    raise Pype9NoMatchingElementException(
-                        "Did not find parameter corresponding to kwarg"
-                        "property '{}'".format(member.name))
-            if isinstance(member, basestring):
-                try:
-                    member = next(e for e in elements if e.name == member)
-                except StopIteration:
-                    raise KeyError(
-                        "Could not find specified {} '{}'".format(member_descr,
-                                                                  member))
-            elif not isinstance(member, BaseNineMLObject):
-                raise ValueError(
-                    "Invalid type provided for '{}' kwarg (expected string or "
-                    "9ML type, found '{}')".format(member_name, member))
-            if member.dimension != dimension:
-                raise Pype9RuntimeError(
-                    "Specified {} '{}' does not have voltage dimension ('{}')"
-                    .format(member_descr, member.name, member.dimension))
-        else:
-            # guess member from dimension
-            matching = [e for e in elements if e.dimension == dimension]
-            if len(matching) == 1:
-                member = matching[0]
-                logger.info("Guessed that the {} in component class '{}'"
-                            "is '{}'".format(member_descr, componentclass.name,
-                                             member.name))
-            elif not matching:
-                raise Pype9NoMatchingElementException(
-                    "Component '{}' does not have a {} with suitable dimension"
-                    " for the {} ('{}'). Found '{}'"
-                    .format(componentclass.name, element_descr, member_descr,
-                            dimension.name,
-                            "', '".join(e.name for e in elements)))
-            else:
-                raise Pype9CouldNotGuessFromDimensionException(
-                    "Could not guess {} in component '{}' from the following "
-                    "{} with dimension '{}', '{}'. Please specify which one is"
-                    " the {}" "via the '{}' keyword arg"
-                    .format(member_descr, componentclass.name, element_descr,
-                            dimension.name,
-                            "', '".join(e.name for e in matching),
-                            member_descr, member_name))
-        return member
+#     @classmethod
+#     def _get_member_from_kwargs_or_guess_via_dimension(
+#             cls, member_name, elements_name, dimension, componentclass,
+#             kwargs):
+#         """
+#         Guess the location of the member from its unit dimension
+#         """
+#         element_descr = elements_name.replace('_', ' ')
+#         member_descr = member_name.replace('_', ' ')
+#         elements = list(getattr(componentclass, elements_name))
+#         if member_name in kwargs:
+#             # Get specified member
+#             member = kwargs[member_name]
+#             if isinstance(member, Property):
+#                 try:
+#                     member = componentclass.parameter(member.name)
+#                 except KeyError:
+#                     raise Pype9NoMatchingElementException(
+#                         "Did not find parameter corresponding to kwarg"
+#                         "property '{}'".format(member.name))
+#             if isinstance(member, basestring):
+#                 try:
+#                     member = next(e for e in elements if e.name == member)
+#                 except StopIteration:
+#                     raise KeyError(
+#                         "Could not find specified {} '{}'".format(member_descr,
+#                                                                   member))
+#             elif not isinstance(member, BaseNineMLObject):
+#                 raise ValueError(
+#                     "Invalid type provided for '{}' kwarg (expected string or "
+#                     "9ML type, found '{}')".format(member_name, member))
+#             if member.dimension != dimension:
+#                 raise Pype9RuntimeError(
+#                     "Specified {} '{}' does not have voltage dimension ('{}')"
+#                     .format(member_descr, member.name, member.dimension))
+#         else:
+#             # guess member from dimension
+#             matching = [e for e in elements if e.dimension == dimension]
+#             if len(matching) == 1:
+#                 member = matching[0]
+#                 logger.info("Guessed that the {} in component class '{}'"
+#                             "is '{}'".format(member_descr, componentclass.name,
+#                                              member.name))
+#             elif not matching:
+#                 raise Pype9NoMatchingElementException(
+#                     "Component '{}' does not have a {} with suitable dimension"
+#                     " for the {} ('{}'). Found '{}'"
+#                     .format(componentclass.name, element_descr, member_descr,
+#                             dimension.name,
+#                             "', '".join(e.name for e in elements)))
+#             else:
+#                 raise Pype9CouldNotGuessFromDimensionException(
+#                     "Could not guess {} in component '{}' from the following "
+#                     "{} with dimension '{}', '{}'. Please specify which one is"
+#                     " the {}" "via the '{}' keyword arg"
+#                     .format(member_descr, componentclass.name, element_descr,
+#                             dimension.name,
+#                             "', '".join(e.name for e in matching),
+#                             member_descr, member_name))
+#         return member

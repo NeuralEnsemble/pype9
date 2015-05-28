@@ -140,19 +140,15 @@ ASSIGNED {
 
 BREAKPOINT {
     SOLVE states METHOD {{ode_solver}}
-{% for expr in componentclass.required_for(componentclass.all_time_derivatives()).expressions %}
+{% for expr in set(chain(componentclass.required_for(componentclass.all_time_derivatives()).expressions,
+                         componentclass.required_for(componentclass.all_output_analogs()).expressions,
+                         componentclass.all_output_analogs()))%}
     {{expr.lhs}} = {{expr.rhs_cstr}}
-{% endfor %}
-{% for expr in componentclass.required_for(componentclass.all_output_analogs()).expressions %}
-    {{expr.lhs}} = {{expr.rhs_cstr}}
-{% endfor %}
-{% for oa in componentclass.all_output_analogs() %}
-    {{oa.lhs}} = {{oa.rhs_cstr}}
 {% endfor %}
 }
 
 DERIVATIVE states {
-{% for sv in componentclass.state_variables if sv.name != 'v'  %}
+{% for sv in componentclass.state_variables if sv.name != 'v' %}
     {{sv.name}}' = deriv_{{sv.name}}({{componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variable_names | join(', ')}})
 {% endfor %}
 }
