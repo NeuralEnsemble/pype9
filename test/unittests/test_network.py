@@ -3,13 +3,13 @@
 # except ImportError:
 #     import unittest
 
-import nineml.user_layer
+import nineml.user
 
 
 # class TestNetworkRead(unittest.TestCase):
 
 if __name__ == '__main__':
-    model = nineml.user_layer.parse(
+    model = nineml.user.parse(
         '/home/tclose/kbrain/xml/9ml/networks/fabios_network.xml')
     net = model.groups['Network']
     gr = net.populations['Granules']

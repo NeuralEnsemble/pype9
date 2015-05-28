@@ -11,7 +11,7 @@ import pylab as plt
 from pype9.cells.neuron import (
     CellMetaClass, simulation_controller as simulator)
 import numpy
-from nineml.user_layer import Property
+from nineml.user import Property
 from nineml import units as un
 import quantities as pq
 import neo
@@ -59,9 +59,7 @@ class TestNeuronLoad(TestCase):
             # -----------------------------------------------------------------
             CellClass = CellMetaClass(
                 path.join(self.pyNN_import_dir, name9 + '.xml'),
-                name=name9 + 'Properties',
-                build_mode='force', verbose=True, membrane_voltage='v',
-                membrane_capacitance=Property('Cm', 0.001, un.nF))
+                name=name9 + 'Properties', build_mode='force', verbose=True)
             cell9 = CellClass()
             cell9.inject_current(neo.AnalogSignal(
                 [0.0] + [0.2] * 9, units='nA', sampling_period=1 * pq.ms))

@@ -21,7 +21,7 @@ from datetime import datetime
 from copy import copy
 from pype9.annotations import (
     MEMBRANE_VOLTAGE, PYPE9_NS, TRANSFORM_SRC, TRANSFORM_DEST)
-from nineml.user_layer import Component, Definition
+from nineml.user import Component, Definition
 from nineml import Document
 
 

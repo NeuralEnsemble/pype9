@@ -97,7 +97,7 @@ class Cell(base.Cell):
         `current` -- a vector containing the current [neo.AnalogSignal]
         """
         if isinstance(self._nineml.component_class.receive_port(port_name),
-                      nineml.abstraction_layer.EventPort):
+                      nineml.abstraction.EventPort):
             raise NotImplementedError
         else:
             self.signals[port_name] = nest.Create(

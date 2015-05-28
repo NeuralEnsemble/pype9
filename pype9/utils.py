@@ -13,7 +13,7 @@ import nineml
 from quantities import Quantity
 from nineml import (
     Unit, Dynamics, ConnectionRule, RandomDistribution)
-from nineml.user_layer import Property
+from nineml.user import Property
 from copy import copy
 from nineml.exceptions import NineMLMissingElementError
 import math
@@ -148,7 +148,7 @@ def pq29_quantity(qty):
             "Cannot '{}' to nineml.Property (can only convert "
             "quantities.Quantity and numeric objects)"
             .format(qty))
-    return nineml.user_layer.component.Quantity(float(qty), units)
+    return nineml.user.component.Quantity(float(qty), units)
 
 
 def convert_to_quantity(prop):
@@ -206,7 +206,7 @@ def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,
                     raise Pype9RuntimeError(
                         "No components or component classes loaded from "
                         "nineml" " path '{}'".format(url))
-    elif isinstance(url_or_comp, nineml.abstraction_layer.Dynamics):
+    elif isinstance(url_or_comp, nineml.abstraction.Dynamics):
         componentclass = url_or_comp
         properties = []
         for param in componentclass.parameters:
@@ -223,7 +223,7 @@ def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,
             ComponentType = RandomDistribution
         prototype = ComponentType(name=componentclass.name + 'Component',
                                   properties=properties)
-    elif isinstance(url_or_comp, nineml.user_layer.Component):
+    elif isinstance(url_or_comp, nineml.user.Component):
         prototype = copy(url_or_comp)
     else:
         raise Pype9RuntimeError(

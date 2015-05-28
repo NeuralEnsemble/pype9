@@ -24,7 +24,7 @@ from itertools import izip
 from runpy import run_path
 from abc import ABCMeta, abstractmethod
 from nineml import units
-from nineml.user_layer import Component, Property
+from nineml.user import Component, Property
 from pype9.exceptions import (
     Pype9BuildError, Pype9RuntimeError, Pype9NoMatchingElementException,
     Pype9CouldNotGuessFromDimensionException)
@@ -78,7 +78,7 @@ class BaseCodeGenerator(object):
         Generates and builds the required simulator-specific files for a given
         NineML cell class
 
-        `component` [nineml.user_layer.Component]: 9ML component
+        `component` [nineml.user.Component]: 9ML component
         `install_dir` [str]: Path to the directory where the NMODL files
                              will be generated and compiled
         `build_dir` [str]: Used to set the default 'install_dir' path

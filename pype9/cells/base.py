@@ -123,7 +123,7 @@ class Cell(object):
         for name, qty in kwprops.iteritems():
             properties.append(convert_to_property(name, qty))
         # Init the 9ML component of the cell
-        self._nineml = nineml.user_layer.Component(self.prototype.name,
+        self._nineml = nineml.user.Component(self.prototype.name,
                                                    self.prototype, properties)
         # Set up references from parameter names to internal variables and set
         # parameters

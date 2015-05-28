@@ -10,24 +10,24 @@ import collections
 from copy import deepcopy
 from itertools import chain, groupby
 from sympy.functions import Piecewise
-from nineml.abstraction_layer.expressions.utils import is_builtin_symbol
-from nineml.abstraction_layer.componentclass import Parameter
-from nineml.abstraction_layer.dynamics import (
+from nineml.abstraction.expressions.utils import is_builtin_symbol
+from nineml.abstraction.componentclass import Parameter
+from nineml.abstraction.dynamics import (
     TimeDerivative, StateAssignment, Dynamics)
-from nineml.abstraction_layer.dynamics import (Regime, StateVariable, OnEvent,
+from nineml.abstraction.dynamics import (Regime, StateVariable, OnEvent,
                                                OutputEvent, OnCondition)
-from nineml.abstraction_layer.expressions import Alias
-from nineml.abstraction_layer.ports import (
+from nineml.abstraction.expressions import Alias
+from nineml.abstraction.ports import (
     AnalogReceivePort, AnalogReducePort, AnalogSendPort, EventReceivePort)
 import nineml.units as un
-from nineml.user_layer import Definition
+from nineml.user import Definition
 from nineml.document import Document
-from nineml.user_layer import DynamicsProperties
-from nineml.abstraction_layer.expressions import Constant, Parser
+from nineml.user import DynamicsProperties
+from nineml.abstraction.expressions import Constant, Parser
 from pype9.exceptions import Pype9ImportError
 from pype9.utils import pq29_quantity
 
-# from nineml.user_layer.dynamics import IonDynamics
+# from nineml.user.dynamics import IonDynamics
 from collections import defaultdict
 from nineml import units
 

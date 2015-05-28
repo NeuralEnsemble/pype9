@@ -15,19 +15,18 @@ import uuid
 from itertools import chain
 import subprocess as sp
 from ..base import BaseCodeGenerator
-import sympy
 import nineml.units as un
-from nineml.abstraction_layer.expression import Alias
-from nineml.abstraction_layer.ports import AnalogSendPort
+from nineml.abstraction.expressions import Alias
+from nineml.abstraction.ports import AnalogSendPort
 from pype9.exceptions import (
     Pype9BuildError, Pype9RuntimeError, Pype9NoMatchingElementException)
 import pype9
 from datetime import datetime
 from nineml import Document
-from nineml.user import Component, Definition, Property
-from nineml.abstraction_layer import Parameter
+from nineml.user import DynamicsProperties, Definition, Property
+from nineml.abstraction import Parameter, StateVariable
 try:
-    from nineml.extensions.kinetics import Kinetics
+    from nineml.extensions.kinetics import Kinetics  # @UnusedImport
 except ImportError:
     KineticsClass = type(None)
 from pype9.annotations import (
@@ -66,6 +65,10 @@ class CodeGenerator(BaseCodeGenerator):
             *KWArgs*
                 `membrane_voltage` -- Specifies the state that represents
                                       membrane voltage.
+                `membrane_capacitance` -- Specifies the state that represents
+                                      membrane capacitance.
+                `default_capacitance` -- Specifies the quantity assigned to
+                                      the membrane capacitance by default
                 `v_threshold`      -- The threshold for the neuron to emit a
                                       spike.
                 `external_ports`   -- Analog ports to strip from expressions
@@ -75,7 +78,7 @@ class CodeGenerator(BaseCodeGenerator):
                 `is_subcomponent`  -- Whether to use the 'SUFFIX' tag or not.
                 `ode_solver`       -- specifies the ODE solver to use
         """
-        assert isinstance(prototype, Component), \
+        assert isinstance(prototype, DynamicsProperties), \
             ("Provided prototype class '{}' is not a Dynamics object"
              .format(prototype))
 #         if isinstance(prototype, Kinetics):
@@ -146,99 +149,137 @@ class CodeGenerator(BaseCodeGenerator):
         trans = copy(orig)
         props = [copy(p) for p in prototype.properties]
         # ---------------------------------------------------------------------
-        # Remove the membrane voltage
+        # Get the membrane voltage and convert it to 'v'
         # ---------------------------------------------------------------------
         # Get the location of the membrane voltage
         if 'membrane_voltage' in kwargs:
             name = kwargs['membrane_voltage']
-            if name is not None:
-                orig_v = orig.state_variable(name)
-        else:  # Guess voltage from dimension
-            candidate_vs = [cv for cv in orig.state_variables
-                            if cv.dimension == un.voltage]
-            if not candidate_vs:
-                candidate_i_exts
+            try:
+                orig_v = orig[name]
+            except KeyError:
                 raise Pype9BuildError(
-                    "No "
-                
-        orig_v = self._get_member_from_kwargs_or_guess_via_dimension(
-            'membrane_voltage', 'state_variables', un.voltage, orig, kwargs)
+                    "Could not find specified membrane voltage '{}'"
+                    .format(name))
+        else:  # Guess voltage from dimension
+            candidate_vs = [cv for cv in chain(orig.state_variables,
+                                               orig.analog_receive_ports)
+                            if cv.dimension == un.voltage]
+            if len(candidate_vs) == 1:
+                orig_v = candidate_vs[0]
+                print ("Guessing that '{}' is the membrane voltage"
+                       .format(orig_v))
+            elif len(candidate_vs) > 1:
+                raise Pype9BuildError(
+                    "Could not guess the membrane voltage, candidates: '{}'"
+                    .format("', '".join(candidate_vs)))
+            else:
+                raise Pype9BuildError(
+                    "No candidates for the membrane voltage, "
+                    "state_variables '{}', analog_receive_ports '{}'"
+                    .format("', '".join(orig.state_variables),
+                            "', '".join(orig.analog_receive_ports)))
         # Map voltage to hard-coded 'v' symbol
         if orig_v.name != 'v':
             trans.rename_symbol(orig_v.name, 'v')
-            v = trans.state_variable('v')
+            v = ['v']
             v.annotations[PYPE9_NS][TRANSFORM_SRC] = orig_v
         else:
-            v = trans.state_variable('v')
+            v = trans['v']
+        # Add annotations to the original and build models
+        orig.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = orig_v.name
+        trans.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = 'v'
         # Remove associated analog send port if present
         try:
             trans.remove(trans.analog_send_port('v'))
         except KeyError:
             pass
-        orig.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = orig_v.name
-        trans.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = 'v'
-        # ---------------------------------------------------------------------
-        # Insert membrane capacitance if not present
-        # ---------------------------------------------------------------------
-        # Get or guess the location of the membrane capacitance
-        try:
-            orig_cm = self._get_member_from_kwargs_or_guess_via_dimension(
-                'membrane_capacitance', 'parameters', un.capacitance,
-                orig, kwargs)
-            cm_prop = next(p for p in props if p.name == orig_cm.name)
-            cm = trans.parameter(orig_cm.name)
-            orig.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = orig_cm.name
-        except Pype9NoMatchingElementException:
-            # Add capacitance property if it isn't present
+        # Need to convert to AnalogReceivePort if v is a StateVariable
+        if isinstance(v, StateVariable):
+            # -----------------------------------------------------------------
+            # Insert membrane capacitance if not present
+            # -----------------------------------------------------------------
+            # Get or guess the location of the membrane capacitance
             if 'membrane_capacitance' in kwargs:
-                cm_prop = kwargs['membrane_capacitance']
-                assert isinstance(cm_prop, Property)
+                name = kwargs['membrane_capacitance']
+                try:
+                    orig_cm = orig.parameter(name)
+                except KeyError:
+                    raise Pype9BuildError(
+                        "Could not find specified membrane capacitance '{}'"
+                        .format(name))
+                cm = trans[orig_cm.name]
             else:
-                cm_prop = Property(name='cm_', value=1.0, units=un.nF)
-            props.append(cm_prop)
-            # Add corresponding capacitance parameter
-            cm = Parameter(cm_prop.name, dimension=un.capacitance)
+                candidate_cms = [ccm for ccm in orig.parameters
+                                 if ccm.dimension == un.capacitance]
+                if len(candidate_cms) == 1:
+                    orig_cm = candidate_cms[0]
+                    cm = trans[orig_cm.name]
+                    print ("Guessing that '{}' is the membrane capacitance"
+                           .format(orig_cm))
+                elif len(candidate_cms) > 1:
+                    raise Pype9BuildError(
+                        "Could not guess the membrane capacitance, candidates:"
+                        " '{}'".format("', '".join(candidate_cms)))
+                else:
+                    cm = Parameter("cm_", dimension=un.capacitance)
+                    trans.add(cm)
+                    qty = kwargs.get('default_capacitance', (1.0, un.nF))
+                    props.append(Property('cm_', *qty))
             cm.annotations[PYPE9_NS][TRANSFORM_SRC] = None
-            trans.add(cm)
-        trans.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = cm.name
-        # ---------------------------------------------------------------------
-        # Replace membrane voltage equation with membrane current
-        # ---------------------------------------------------------------------
-        # Get the voltage time derivatives from each regime (must be constant
-        # as there is no OutputAnalog in the spec see )
-        dvdt = next(trans.regimes).time_derivative(v.name)
-        for regime in trans.regimes:
-            try:
-                if regime.time_derivative(v.name) != dvdt:
-                    raise Pype9RuntimeError(
-                        "Cannot convert to current centric as the voltage time"
-                        " for derivative equation changes between regimes")
-                regime.remove(regime.time_derivative(v.name))
-            except KeyError:
-                # No time derivative for voltage in this regime, don't
-                # need to worry about it
-                pass
-        memb_i = Alias('i_', dvdt.rhs * cm * -1.0)
-        # Get all the candidates for external currents from analog receive
-        # ports and remove them as they are handled implicitly by NEURON
-        for i in chain(orig.analog_receive_ports, orig.analog_reduce_ports):
-            if i.dimension == un.current and i in memb_i.rhs_symbol_names:
+            trans.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = cm.name
+            # -----------------------------------------------------------------
+            # Replace membrane voltage equation with membrane current
+            # -----------------------------------------------------------------
+            # Get the voltage time derivatives from each regime (must be
+            # constant as there is no OutputAnalog in the spec see )
+            dvdt = next(trans.regimes).time_derivative(v.name)
+            for regime in trans.regimes:
+                try:
+                    if regime.time_derivative(v.name) != dvdt:
+                        raise Pype9RuntimeError(
+                            "Cannot convert to current centric as the voltage "
+                            " time for derivative equation changes between "
+                            "regimes")
+                    regime.remove(regime.time_derivative(v.name))
+                except KeyError:
+                    # No time derivative for voltage in this regime, don't
+                    # need to worry about it
+                    pass
+            memb_i = Alias('i_', dvdt.rhs * cm * -1.0)
+            memb_i.annotations[PYPE9_NS][TRANSFORM_SRC] = (dvdt, cm), dvdt
+            dvdt.annotations[PYPE9_NS][TRANSFORM_DEST] = (memb_i, cm), memb_i
+            # -----------------------------------------------------------------
+            # Get the external input currents
+            # -----------------------------------------------------------------
+            # Analog receive or reduce ports that are of dimension current and
+            # are purely additive to the membrane current and nothing else
+            # (actually subtractive as it is outward current)
+            ext_is = [
+                i for i in chain(orig.analog_receive_ports,
+                                 orig.analog_reduce_ports)
+                if (i.dimension == un.current and
+                    i.name in memb_i.rhs_symbol_names and
+                    len([e for e in orig.all_expressions
+                         if i.symbol in e.free_symbols]) == 1 and
+                    i.symbol not in (memb_i.rhs + i.symbol).free_symbols)]
+            print ("Removing external input currents to the membrane, '{}'"
+                   .format("', '".join(i.name for i in ext_is)))
+            # Remove external currents (as NEURON handles them)
+            for i in ext_is:
+                memb_i += i
                 trans.remove(i)
-                memb_i += i  # Positive current so needs to be subtracted
-        memb_i.annotations[PYPE9_NS][TRANSFORM_SRC] = (dvdt, cm), dvdt
-        dvdt.annotations[PYPE9_NS][TRANSFORM_DEST] = (memb_i, cm), memb_i
-        trans.add(memb_i)
-        # Add analog send port for current
-        i_port = AnalogSendPort('i_', dimension=un.current)
-        i_port.annotations[PYPE9_NS][ION_SPECIES] = NON_SPECIFIC_CURRENT
-        trans.add(i_port)
-        # ---------------------------------------------------------------------
-        # Validate the transformed component class and construct prototype
-        # ---------------------------------------------------------------------
-        trans.validate()
-        # Retun a prototype of the transformed class
-        return Component(
-            prototype.name, Definition(trans.name, Document(trans)), props)
+            trans.add(memb_i)
+            # Add analog send port for current
+            i_port = AnalogSendPort('i_', dimension=un.current)
+            i_port.annotations[PYPE9_NS][ION_SPECIES] = NON_SPECIFIC_CURRENT
+            trans.add(i_port)
+            # -----------------------------------------------------------------
+            # Validate the transformed component class and construct prototype
+            # -----------------------------------------------------------------
+            trans.validate()
+            # Retun a prototype of the transformed class
+            return DynamicsProperties(
+                prototype.name, Definition(trans.name, Document(trans)), props)
 
     def compile_source_files(self, compile_dir, component_name, verbose):
         """
@@ -259,20 +300,24 @@ class CodeGenerator(BaseCodeGenerator):
         # Change working directory to model directory
         os.chdir(compile_dir)
         if verbose:
-            print ("Building NEURON mechanisms in '{}' directory."
+            print ("Building NMODL mechanisms in '{}' directory."
                    .format(compile_dir))
         # Run nrnivmodl command in src directory
         try:
-            if not verbose:
-                with open(os.devnull, "w") as fnull:
-                    sp.check_call(self.nrnivmodl_path, stdout=fnull,
-                                  stderr=fnull)
-            else:
-                sp.check_call(self.nrnivmodl_path)
+            pipe = sp.Popen([self.nrnivmodl_path], stdout=sp.PIPE,
+                            stderr=sp.PIPE)
+            stdout, stderr = pipe.communicate()
         except sp.CalledProcessError as e:
             raise Pype9BuildError(
                 "Compilation of NMODL files for '{}' model failed. See src "
                 "directory '{}':\n\n{}".format(component_name, compile_dir, e))
+        if stderr.strip().endswith('Error 1'):
+            raise Pype9BuildError(
+                "Generated mod file failed to compile with output:\n{}\n{}"
+                .format(stdout, stderr))
+        if verbose:
+            print stdout
+            print stderr
 
     def get_install_dir(self, build_dir, install_dir):
         if install_dir:

@@ -10,9 +10,9 @@ import pyNN.parameters
 from pype9.pynn_interface.structure import Structure
 import pype9.pynn_interface.random
 from pyNN.random import RandomDistribution
-from nineml.abstraction_layer.dynamics import Dynamics
+from nineml.abstraction.dynamics import Dynamics
 import nineml.extensions.biophysical_cells
-import nineml.user_layer
+import nineml.user
 
 _pyNN_standard_class_translations = {}
 
@@ -56,13 +56,13 @@ class Population(object):
                 p = nineml_model.prototype.parameters[param_definition.name]
                 if isinstance(p.value, float):
                     param = p.value
-                elif isinstance(p.value, nineml.user_layer.RandomDistribution):
+                elif isinstance(p.value, nineml.user.RandomDistribution):
                     RandomDistribution = getattr(
                         pype9.pynn_interface.random,
                         p.value.definition.componentclass.name)
                     param = RandomDistribution(
                         p.value.parameters, rng, use_units=False)
-                elif isinstance(p.value, nineml.user_layer.values.ArrayValue):
+                elif isinstance(p.value, nineml.user.values.ArrayValue):
                     param = pyNN.parameters.Sequence(p.value)
                 else:
                     raise Exception("Unrecognised parameter type '{}'"

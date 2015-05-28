@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 from abc import ABCMeta
 import quantities
-import nineml.user_layer
+import nineml.user
 import pyNN.connectors
 import pype9.pynn_interface.random
 # import pype9.pynn_interface.projections
@@ -37,17 +37,17 @@ class Connector(object):
                 conv_param = bool(p.value)
             elif isinstance(p.value, str):
                 conv_param = p.value
-            elif isinstance(p.value, nineml.user_layer.Reference):
+            elif isinstance(p.value, nineml.user.Reference):
                 try:
                     conv_param = Projection.created_projections[p.value.name]
                 except KeyError:
                     raise Pype9ProjToCloneNotCreatedException
-            elif isinstance(p.value, nineml.user_layer.RandomDistribution):
+            elif isinstance(p.value, nineml.user.RandomDistribution):
                 RandomDistribution = getattr(
                     pype9.pynn_interface.random,
                     p.value.definition.componentclass.name)
                 conv_param = RandomDistribution(p.value.parameters, rng)
-            elif isinstance(p.value, nineml.user_layer.AnonymousFunction):
+            elif isinstance(p.value, nineml.user.AnonymousFunction):
                 conv_param = create_anonymous_function(p.value)
             else:
                 raise Exception("Unrecognised child '{}' of type '{}'"

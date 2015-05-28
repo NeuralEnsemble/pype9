@@ -6,7 +6,7 @@
 """
 from __future__ import absolute_import
 from abc import ABCMeta
-import nineml.user_layer
+import nineml.user
 import pype9.pynn_interface.random
 from pype9.pynn_interface import convert_to_pyNN_units
 
@@ -21,7 +21,7 @@ class Synapse(object):
         Converts parameters from lib9ml objects into values with 'quantities'
         units and or random distributions
         """
-        assert isinstance(nineml_params, nineml.user_layer.PropertySet)
+        assert isinstance(nineml_params, nineml.user.PropertySet)
         converted_params = {}
         for name, p in nineml_params.iteritems():
             # Use the quantities package to convert all the values in SI units
@@ -32,13 +32,13 @@ class Synapse(object):
                     p.value, p.unit)  # @UnusedVariable
             elif isinstance(p.value, str):
                 conv_param = p.value
-            elif isinstance(p.value, nineml.user_layer.RandomDistribution):
+            elif isinstance(p.value, nineml.user.RandomDistribution):
                 RandomDistribution = getattr(
                     pype9.pynn_interface.random,
                     p.value.definition.componentclass.name)
                 conv_param = RandomDistribution(
                     p.value.parameters, rng, use_units=False)
-            elif isinstance(p.value, nineml.user_layer.StructureExpression):
+            elif isinstance(p.value, nineml.user.StructureExpression):
                 StructureExpressionClass = getattr(
                     pype9.pynn_interface.expression.structure,
                     p.value.definition.componentclass.name)

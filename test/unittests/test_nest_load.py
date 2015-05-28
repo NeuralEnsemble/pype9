@@ -8,7 +8,7 @@ from utils import test_data_dir
 import pylab as plt
 from pype9.cells.nest import (
     CellMetaClass, simulation_controller as simulator)
-from nineml.user_layer import Property
+from nineml.user import Property
 from nineml import units as un
 import quantities as pq
 import neo
