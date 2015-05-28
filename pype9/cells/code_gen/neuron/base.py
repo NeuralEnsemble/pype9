@@ -12,17 +12,19 @@ import os.path
 import tempfile
 from copy import copy
 import uuid
+from itertools import chain
 import subprocess as sp
 from ..base import BaseCodeGenerator
+import sympy
 import nineml.units as un
-from nineml.abstraction_layer.expressions import Alias
+from nineml.abstraction_layer.expression import Alias
 from nineml.abstraction_layer.ports import AnalogSendPort
 from pype9.exceptions import (
     Pype9BuildError, Pype9RuntimeError, Pype9NoMatchingElementException)
 import pype9
 from datetime import datetime
 from nineml import Document
-from nineml.user_layer import Component, Definition, Property
+from nineml.user import Component, Definition, Property
 from nineml.abstraction_layer import Parameter
 try:
     from nineml.extensions.kinetics import Kinetics
@@ -146,7 +148,19 @@ class CodeGenerator(BaseCodeGenerator):
         # ---------------------------------------------------------------------
         # Remove the membrane voltage
         # ---------------------------------------------------------------------
-        # Get or guess the location of the membrane voltage
+        # Get the location of the membrane voltage
+        if 'membrane_voltage' in kwargs:
+            name = kwargs['membrane_voltage']
+            if name is not None:
+                orig_v = orig.state_variable(name)
+        else:  # Guess voltage from dimension
+            candidate_vs = [cv for cv in orig.state_variables
+                            if cv.dimension == un.voltage]
+            if not candidate_vs:
+                candidate_i_exts
+                raise Pype9BuildError(
+                    "No "
+                
         orig_v = self._get_member_from_kwargs_or_guess_via_dimension(
             'membrane_voltage', 'state_variables', un.voltage, orig, kwargs)
         # Map voltage to hard-coded 'v' symbol
@@ -156,11 +170,6 @@ class CodeGenerator(BaseCodeGenerator):
             v.annotations[PYPE9_NS][TRANSFORM_SRC] = orig_v
         else:
             v = trans.state_variable('v')
-        # Replace voltage state-variable with analog receive port
-#         trans.remove(v)
-#         v_port = AnalogReceivePort(v.name, dimension=un.voltage)
-#         orig_v.annotations[PYPE9_NS][TRANSFORM_NS] = v_port
-#         trans.add(v_port)
         # Remove associated analog send port if present
         try:
             trans.remove(trans.analog_send_port('v'))
@@ -176,7 +185,7 @@ class CodeGenerator(BaseCodeGenerator):
             orig_cm = self._get_member_from_kwargs_or_guess_via_dimension(
                 'membrane_capacitance', 'parameters', un.capacitance,
                 orig, kwargs)
-            cm_prop = props(orig_cm.name)
+            cm_prop = next(p for p in props if p.name == orig_cm.name)
             cm = trans.parameter(orig_cm.name)
             orig.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = orig_cm.name
         except Pype9NoMatchingElementException:
@@ -193,7 +202,7 @@ class CodeGenerator(BaseCodeGenerator):
             trans.add(cm)
         trans.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = cm.name
         # ---------------------------------------------------------------------
-        # Add current to component
+        # Replace membrane voltage equation with membrane current
         # ---------------------------------------------------------------------
         # Get the voltage time derivatives from each regime (must be constant
         # as there is no OutputAnalog in the spec see )
@@ -204,17 +213,21 @@ class CodeGenerator(BaseCodeGenerator):
                     raise Pype9RuntimeError(
                         "Cannot convert to current centric as the voltage time"
                         " for derivative equation changes between regimes")
-                    regime.remove(regime.time_derivative(v.name))
+                regime.remove(regime.time_derivative(v.name))
             except KeyError:
                 # No time derivative for voltage in this regime, don't
                 # need to worry about it
                 pass
-        # Add alias expression for current
-        i = Alias('i_', rhs=dvdt.rhs * cm * -1.0)
-        # FIXME: Need to be able to sympy time derivatives
-        i.annotations[PYPE9_NS][TRANSFORM_SRC] = (dvdt, cm), dvdt
-        dvdt.annotations[PYPE9_NS][TRANSFORM_DEST] = (i, cm), i
-        trans.add(i)
+        memb_i = Alias('i_', dvdt.rhs * cm * -1.0)
+        # Get all the candidates for external currents from analog receive
+        # ports and remove them as they are handled implicitly by NEURON
+        for i in chain(orig.analog_receive_ports, orig.analog_reduce_ports):
+            if i.dimension == un.current and i in memb_i.rhs_symbol_names:
+                trans.remove(i)
+                memb_i += i  # Positive current so needs to be subtracted
+        memb_i.annotations[PYPE9_NS][TRANSFORM_SRC] = (dvdt, cm), dvdt
+        dvdt.annotations[PYPE9_NS][TRANSFORM_DEST] = (memb_i, cm), memb_i
+        trans.add(memb_i)
         # Add analog send port for current
         i_port = AnalogSendPort('i_', dimension=un.current)
         i_port.annotations[PYPE9_NS][ION_SPECIES] = NON_SPECIFIC_CURRENT
