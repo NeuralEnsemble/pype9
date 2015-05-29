@@ -1,46 +1,50 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <NineML xmlns="http://nineml.net/9ML/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://nineml.net/9ML/1.0/schema/NineML_v0.2.xsd">
-  <Dynamics name="IzhikevichClass">
+  <Dynamics name="Izhikevich">
     <Parameter name="a" dimension="per_time"/>
     <Parameter name="b" dimension="per_time"/>
     <Parameter name="c" dimension="voltage"/>
     <Parameter name="d" dimension="voltage_per_time"/>
-    <Parameter name="theta" dimension="voltage"/>
-    <AnalogReducePort name="iSyn" dimension="current" operator="+"/>
-    <AnalogReceivePort name="iExt" dimension="current"/>
-    <AnalogSendPort name="U_m" dimension="voltage_per_time"/>
-    <AnalogSendPort name="V_m" dimension="voltage"/>
-    <EventSendPort name="spikeOutput" mode="send"/>
-    <StateVariable name="V_m" dimension="voltage"/>
-    <StateVariable name="U_m" dimension="voltage_per_time"/>
-    <Regime name="subthresholdRegime">
-      <TimeDerivative variable="U_m">
-        <MathInline>a*(b*V_m - U_m)</MathInline>
+    <Parameter name="vthresh" dimension="voltage"/>
+    <Parameter name="Cm" dimension="capacitance"/>
+    <AnalogReducePort name="iExt" dimension="current" operator="+"/>
+    <EventSendPort name="spike" mode="send"/>
+    <StateVariable name="v" dimension="voltage"/>
+    <StateVariable name="u" dimension="voltage_per_time"/>
+    <EventReceivePort name="incoming_spike"/>
+    <AnalogReceivePort dimension="voltage" name="weight"/>   
+    <Regime name="subthreshold">
+      <TimeDerivative variable="u">
+        <MathInline>a*(b*v - u)</MathInline>
       </TimeDerivative>
-      <TimeDerivative variable="V_m">
-        <MathInline>const1*V_m*V_m + const2*V_m + const3 - U_m + (iSyn + iExt)/C</MathInline>
+      <TimeDerivative variable="v">
+        <MathInline>const1*v*v + const2*v + const3 - u + iExt/Cm</MathInline>
       </TimeDerivative>
       <OnCondition>
         <Trigger>
-          <MathInline>V_m &gt; theta</MathInline>
+          <MathInline>v &gt; vthresh</MathInline>
         </Trigger>
-        <StateAssignment variable="V_m">
+        <StateAssignment variable="v">
           <MathInline>c</MathInline>
         </StateAssignment>
-        <StateAssignment variable="U_m">
-          <MathInline>U_m+d</MathInline>
+        <StateAssignment variable="u">
+          <MathInline>u+d</MathInline>
         </StateAssignment>
-        <OutputEvent port="spikeOutput"/>
+        <OutputEvent port="spike"/>
       </OnCondition>
+      <OnEvent target_regime="subthreshold" port="incoming_spike">
+        <StateAssignment variable="v">
+          <MathInline>v + weight</MathInline>
+        </StateAssignment>
+      </OnEvent> 
     </Regime>
-    <Constant name="const1" units="per_mV_ms">0.04</Constant>
-    <Constant name="const2" units="per_ms">5</Constant>
-    <Constant name="const3" units="mV_per_ms">140</Constant>
-    <Constant name="C" units="nF">1.0</Constant>
+    <Constant name="const1" units="per_mvs" value="0.04"/>
+    <Constant name="const2" units="per_ms" value="5"/>
+    <Constant name="const3" units="mV_per_ms" value="140"/>
   </Dynamics>
-  <Component name="Izhikevich">
-    <Definition>IzhikevichClass</Definition>
+  <DynamicsProperties name="IzhikevichProperties">
+    <Definition name="Izhikevich"/>
     <Property name="a" units="per_ms">
       <SingleValue>0.02</SingleValue>
     </Property>
@@ -53,10 +57,13 @@
     <Property name="d" units="mV_per_ms">
       <SingleValue>6</SingleValue>
     </Property>
-    <Property name="theta" units="mV">
+    <Property name="vthresh" units="mV">
       <SingleValue>30.0</SingleValue>
     </Property>
-  </Component>
+    <Property name="Cm" units="nF">
+      <SingleValue>1.0</SingleValue>
+    </Property>
+  </DynamicsProperties>
   <Dimension name="voltage" m="1" l="2" t="-3" i="-1"/>
   <Dimension name="voltage_per_time" m="1" l="2" t="-4" i="-1"/>
   <Dimension name="per_voltage_time" m="-1" l="-2" t="2" i="1"/>
@@ -64,8 +71,8 @@
   <Dimension name="current" i="1"/>
   <Dimension name="capacitance" m="-1" l="-2" t="4" i="2"/>
   <Unit symbol="mV" dimension="voltage" power="-3"/>
-  <Unit symbol="mV_per_ms" dimension="voltage_per_time" power="3"/>
-  <Unit symbol="per_mV_ms" dimension="per_voltage_time" power="6"/>
+  <Unit symbol="mV_per_ms" dimension="voltage_per_time" power="0"/>
+  <Unit symbol="per_mvs" dimension="per_voltage_time" power="6"/>
   <Unit symbol="per_ms" dimension="per_time" power="3"/>
   <Unit symbol="nF" dimension="capacitance" power="-9"/>
 </NineML>

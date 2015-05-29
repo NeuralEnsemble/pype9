@@ -47,7 +47,7 @@
     </Kinetics>
   </Dynamics>
   <Component name="KineticsTest">
-    <Definition>Kinetic_Class</Definition>
+    <Definition name="Kinetic_Class"/>
     <Property name="d1" units="mV">
       <SingleValue>-50</SingleValue>
     </Property>

@@ -16,7 +16,6 @@
     <AnalogSendPort name="U" dimension="current"/>
     <AnalogSendPort name="V" dimension="voltage"/>
     <EventSendPort name="spikeOutput"/>
-    
       <StateVariable name="V" dimension="voltage"/>
       <StateVariable name="U" dimension="current"/>
       <Regime name="subthresholdRegime">
@@ -62,7 +61,7 @@
       </Alias>
     </Dynamics>
   <Component name="Izhikevich">
-    <Definition>IzhikevichClass</Definition>
+    <Definition name="IzhikevichClass"/>
     <Property name="a" units="none">
       <SingleValue>0.02</SingleValue>
     </Property>

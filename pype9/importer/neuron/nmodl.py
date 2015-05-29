@@ -551,7 +551,7 @@ class NMODLImporter(object):
             dvdt = sympy.Symbol('iExt')
             for _, currents, _ in self.used_ions.itervalues():
                 for current in currents:
-                    dvdt += sympy.Symbol(current)
+                    dvdt -= sympy.Symbol(current)
             # TODO: piecewise expressions will stuff this up but they will
             # require different regimes
 #             if isinstance(dvdt, sympy.Piecewise):
