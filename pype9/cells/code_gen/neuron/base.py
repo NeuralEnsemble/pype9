@@ -164,9 +164,11 @@ class CodeGenerator(BaseCodeGenerator):
                     "Could not find specified membrane voltage '{}'"
                     .format(name))
         else:  # Guess voltage from dimension
-            candidate_vs = [cv for cv in chain(orig.state_variables,
-                                               orig.analog_receive_ports)
+            candidate_vs = [cv for cv in orig.state_variables
                             if cv.dimension == un.voltage]
+            if len(candidate_vs) == 0:
+                candidate_vs = [cv for cv in orig.analog_receive_ports
+                                if cv.dimension == un.voltage]
             if len(candidate_vs) == 1:
                 orig_v = candidate_vs[0]
                 print ("Guessing that '{}' is the membrane voltage"
@@ -174,7 +176,7 @@ class CodeGenerator(BaseCodeGenerator):
             elif len(candidate_vs) > 1:
                 raise Pype9BuildError(
                     "Could not guess the membrane voltage, candidates: '{}'"
-                    .format("', '".join(candidate_vs)))
+                    .format("', '".join(v.name for v in candidate_vs)))
             else:
                 raise Pype9BuildError(
                     "No candidates for the membrane voltage, "
@@ -264,13 +266,14 @@ class CodeGenerator(BaseCodeGenerator):
                     i.name in memb_i.rhs_symbol_names and
                     len([e for e in orig.all_expressions
                          if i.symbol in e.free_symbols]) == 1 and
-                    i.symbol not in (memb_i.rhs + i.symbol).free_symbols)]
+                    i.symbol not in (memb_i.rhs + i).simplify().free_symbols)]
             print ("Removing external input currents to the membrane, '{}'"
                    .format("', '".join(i.name for i in ext_is)))
             # Remove external currents (as NEURON handles them)
             for i in ext_is:
                 memb_i += i
                 trans.remove(i)
+            memb_i.simplify()
             trans.annotations[PYPE9_NS][EXTERNAL_CURRENTS] = ext_is
             trans.add(memb_i)
             # Add analog send port for current

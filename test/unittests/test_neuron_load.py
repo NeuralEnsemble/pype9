@@ -37,7 +37,7 @@ class TestNeuronLoad(TestCase):
 
     def test_neuron_load(self):
         # for name9, namePynn in zip(self.models9ML, self.modelsPyNN):
-        for name9, namePynn in zip(['AdExpIaF'], ['AdExpIF']):
+        for name9, namePynn in zip(['Izhikevich'], ['Izhikevich']):  # zip(['AdExpIaF'], ['AdExpIF']):
             # -----------------------------------------------------------------
             # Set up PyNN section
             # -----------------------------------------------------------------
@@ -50,7 +50,7 @@ class TestNeuronLoad(TestCase):
             stim = h.IClamp(1.0, sec=pnn)
             stim.delay = 1   # ms
             stim.dur = 100   # ms
-            stim.amp = 0.2   # nA
+            stim.amp = 0.02   # nA
             # Record Time from NEURON (neuron.h._ref_t)
             rec = Recorder(pnn, pnn_cell)
             rec.record('v')
@@ -62,7 +62,7 @@ class TestNeuronLoad(TestCase):
                 name=name9 + 'Properties', build_mode='force', verbose=True)
             cell9 = CellClass()
             cell9.inject_current(neo.AnalogSignal(
-                [0.0] + [0.2] * 9, units='nA', sampling_period=1 * pq.ms))
+                [0.0] + [0.02] * 9, units='nA', sampling_period=1 * pq.ms))
             cell9.record('v')
             simulator.initialize()  # @UndefinedVariable
 #             # Initialise

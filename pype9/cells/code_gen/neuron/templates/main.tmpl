@@ -181,7 +181,7 @@ NET_RECEIVE(w, channel) {
         {% for sa in oe.state_assignments %}
                 {{sa.lhs}} = {{sa.rhs_cstr}}
         {% endfor %}
-        {% for node in oe.event_outputs %}
+        {% for node in oe.output_events %}
                 {{as_expr}}(node)
         {% endfor %}
             }
