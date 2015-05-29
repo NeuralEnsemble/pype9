@@ -76,6 +76,14 @@ INITIAL {
 
     : Initialise the NET_RECEIVE block:
     net_send(0, INIT)
+    
+    : Active/inactive conditions (conditions transitions are only valid on 
+    : triggered from False->True) so check to see if start off False
+{% for regime in componentclass.regimes %}
+    {% for oc in regime.on_conditions %}
+    {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active = ({{oc.trigger.reactivate_condition.rhs_cstr.replace('=', '')}})
+    {% endfor %}
+{% endfor %}
 
 }
 
@@ -103,6 +111,14 @@ ASSIGNED {
     : Internal flags
     regime_
     regime_changed_
+    
+    : Active/inactive conditions (conditions transitions are only valid on 
+    : triggered from False->True)
+{% for regime in componentclass.regimes %}
+    {% for oc in regime.on_conditions %}
+    {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active
+    {% endfor %}
+{% endfor %}
 
     : Weight variables
 {% if weight_variables %}
@@ -155,6 +171,7 @@ NET_RECEIVE(w, channel) {
 {% for regime in componentclass.regimes %}
     {% for oc in regime.on_conditions %}
         WATCH ({{oc.trigger.rhs_cstr}}) 1  : Trigger an on-condition
+        WATCH ({{oc.trigger.reactivate_condition.rhs_cstr.replace('=', '')}}) 1  : Reactivate trigger
     {% endfor %}
 {% endfor %}
     } else if (flag == ON_EVENT) {
@@ -189,13 +206,19 @@ NET_RECEIVE(w, channel) {
 {% endfor %}
         }
     } else if (flag == ON_CONDITION) {
+        : Reactivate triggers that have passed below their thresholds
+{% for oc in componentclass.all_on_conditions() %}
+        if ({{oc.trigger.reactivate_condition.rhs_cstr}}) {
+            {{oc.source_regime.name | lower}}_cond{{componentclass.index_of(oc, key=oc.source_regime)}}_active = 1
+        }
+{% endfor %}
         : Pick up untriaged on-conditions emitted by WATCH Block and
         : re-validate them against Conditions and Regime:
         regime_changed_ = 0
 {% for regime in componentclass.regimes %}
         {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
     {% for oc in regime.on_conditions %}
-            if ({{oc.trigger.rhs_cstr}}) {
+            if (({{oc.trigger.rhs_cstr}}) && {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active) {
 	            {% if oc.target_regime != regime %}
                 if (!regime_changed_) {
                     regime_ = {{oc.target_regime.name | upper}}
@@ -210,6 +233,7 @@ NET_RECEIVE(w, channel) {
 	        {% for sa in oc.state_assignments %}
                 {{sa.lhs}} = {{sa.rhs_cstr}}
 	        {% endfor %}
+                {{regime.name | lower}}_cond{{componentclass.index_of(oc, key=regime)}}_active = 0  
             }
     {% endfor %}
 {% endfor %}
