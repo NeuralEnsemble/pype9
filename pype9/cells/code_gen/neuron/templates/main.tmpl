@@ -12,7 +12,7 @@ TITLE Spiking node generated from 9ML using PyPe9 version {{version}} at '{{time
 
 NEURON {
     {%+ if is_subcomponent %}SUFFIX{% else %}POINT_PROCESS{% endif %} {{component_name}}
-{% for port in componentclass.analog_send_ports if port.dimension == units.currentDensity %}
+{% for port in componentclass.analog_send_ports if port.dimension == units.currentDensity or port.dimension == units.current %}
     {% set ion_species = port.annotations[PYPE9_NS][ION_SPECIES] %}
     {% if ion_species == NON_SPECIFIC_CURRENT %}
     NONSPECIFIC_CURRENT {{port.name}}
