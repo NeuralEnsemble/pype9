@@ -17,7 +17,7 @@ import quantities as pq
 import nineml
 from pype9.exceptions import Pype9RuntimeError
 from pype9.cells.code_gen.nest import CodeGenerator
-from .simulation_controller import simulation_controller
+from .controller import simulation_controller
 from pype9.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE
 
@@ -31,15 +31,15 @@ class Cell(base.Cell):
     _controller = simulation_controller
 
     def __init__(self, *properties, **kwprops):
-        super(Cell, self).__setattr__('_initialized', False)
+        super(Cell, self).__setattr__('_created', False)
         self._cell = nest.Create(self.__class__.name)
         super(Cell, self).__init__(*properties, **kwprops)
         self._receive_ports = nest.GetDefaults(
             self.__class__.name)['receptor_types']
-        self._initialized = True
+        self._created = True
 
     def __getattr__(self, varname):
-        if (self._initialized and varname in chain(
+        if (self._created and varname in chain(
                 self.property_names, self.state_variable_names)):
             return nest.GetStatus(self._cell, keys=varname)[0]
         else:
@@ -47,7 +47,7 @@ class Cell(base.Cell):
                                  .format(self.componentclass.name, varname))
 
     def __setattr__(self, varname, value):
-        if (self._initialized and varname in chain(
+        if (self._created and varname in chain(
                 self.property_names, self.state_variable_names)):
             nest.SetStatus(self._cell, varname, value)
         else:

@@ -129,6 +129,12 @@ class Cell(object):
         # parameters
         for prop in self.properties:
             self.set(prop)
+        # Flag to determine whether the cell has been initialised or not
+        # (it makes a difference to how the state of the cell is updated,
+        # either saved until the 'initialze' method is called or directly
+        # set to the state)
+        self._initialized = False
+        self._initial_state = {}
 
     def set(self, prop):
         """
@@ -170,6 +176,20 @@ class Cell(object):
     @property
     def used_units(self):
         return self._nineml.used_units
+
+    def update_state(self, state):
+        if self._initialized:
+            self._set_state(state)
+        else:
+            self._initial_state = state
+
+    def _set_state(self, state):
+        for k, q in state:
+            setattr(self, k, q)  # FIXME: Need to convert units
+
+    def initialize(self):
+        self._set_state(self._initial_state)
+        super(Cell, self).__setattr__('_initialized', True)
 
     def write(self, file):  # @ReservedAssignment
         self._nineml.write(file)

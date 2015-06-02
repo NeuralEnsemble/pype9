@@ -1,7 +1,7 @@
 import nest
 import tempfile
 import numpy
-import weakref
+from ..controller import SimulationController
 
 
 def nest_property(name, dtype):
@@ -16,12 +16,14 @@ def nest_property(name, dtype):
     return property(fget=_get, fset=_set)
 
 
-class _SimulationController(object):
+class _SimulationController(SimulationController):
     """Represent the simulator state."""
+
+    instance_counter = 0
 
     def __init__(self):
         """Initialize the simulator."""
-        self.running = False
+        super(_SimulationController, self).__init__()
         self.t_start = 0
         self.write_on_end = []
         self.recorders = set([])
@@ -36,7 +38,6 @@ class _SimulationController(object):
         self.tempdirs = []
         self.recording_devices = []
         self.populations = []
-        self.registered_cells = []
         self.segment_counter = 0
 
     @property
@@ -106,6 +107,8 @@ class _SimulationController(object):
 
     def run(self, simtime, reset=False):
         """Advance the simulation for a certain time."""
+        if reset:
+            self.reset()
         for device in self.recording_devices:
             if not device._connected:
                 device.connect_to_cells()
@@ -127,6 +130,7 @@ class _SimulationController(object):
         self.running = False
         self.t_start = 0.0
         self.segment_counter += 1
+        self.reset_cells()
 
     def clear(self):
         self.populations = []
@@ -143,17 +147,5 @@ class _SimulationController(object):
         nest.SetKernelStatus({'data_path': tempdir})
         self.segment_counter = -1
         self.reset()
-
-    def initialize(self):
-        self.reset()
-
-    # FIXME: Should go in a base class
-    def register_cell(self, cell):
-        self.registered_cells.append(weakref.ref(cell))
-
-    def deregister_cell(self, cell):
-        for cell_ref in reversed(self.registered_cells):
-            if cell is cell_ref() or not cell_ref():
-                self.registered_cells.remove(cell_ref)
 
 simulation_controller = _SimulationController()

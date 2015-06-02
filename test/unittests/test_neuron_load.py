@@ -11,8 +11,6 @@ import pylab as plt
 from pype9.cells.neuron import (
     CellMetaClass, simulation_controller as simulator)
 import numpy
-from nineml.user import Property
-from nineml import units as un
 import quantities as pq
 import neo
 import os
@@ -59,15 +57,13 @@ class TestNeuronLoad(TestCase):
             # -----------------------------------------------------------------
             CellClass = CellMetaClass(
                 path.join(self.pyNN_import_dir, name9 + '.xml'),
-                name=name9 + 'Properties', build_mode='force', verbose=True)
+                name=name9 + 'Properties', build_mode='force')
             cell9 = CellClass()
-            cell9.inject_current(neo.AnalogSignal(
+            cell9.play('iExt', neo.AnalogSignal(
                 [0.0] + [0.02] * 9, units='nA', sampling_period=1 * pq.ms))
             cell9.record('v')
             simulator.initialize()  # @UndefinedVariable
-#             # Initialise
-#             for prop in cell9.properties:
-#                 setattr(cell9, prop.name, prop.value)
+            cell9.u = -14 * pq.mV / pq.ms
             # -----------------------------------------------------------------
             # Run and plot the simulation
             # -----------------------------------------------------------------

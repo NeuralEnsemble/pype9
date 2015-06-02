@@ -19,15 +19,16 @@ except ImportError:
 from neuron import h, load_mechanisms
 import quantities as pq
 import os.path
+from nineml import units as un
 from pype9.cells.code_gen.neuron import CodeGenerator
 from pype9.cells.tree import in_units
 from pype9.utils import create_unit_conversions, convert_units
 from itertools import chain
 from .. import base
 from pype9.utils import convert_to_property, convert_to_quantity
-from .simulation_controller import simulation_controller
+from .controller import simulation_controller
 from math import pi
-from pype9.annotations import PYPE9_NS, MEMBRANE_CAPACITANCE
+from pype9.annotations import PYPE9_NS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS
 
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
@@ -81,7 +82,7 @@ class Cell(base.Cell):
                                 dictionary of parameters or kwarg parameters,
                                 or a list of nineml.Property objects
         """
-        super(Cell, self).__setattr__('_initialised', False)
+        super(Cell, self).__setattr__('_created', False)
         # Construct all the NEURON structures
         self._sec = h.Section()  # @UndefinedVariable
         # Insert dynamics mechanism (the built component class)
@@ -115,7 +116,7 @@ class Cell(base.Cell):
         super(Cell, self).__init__(*properties, **kwprops)
         # Enable the override of setattr so that only properties of the 9ML
         # component can be set.
-        self._initialised = True
+        self._created = True
 
     @property
     def name(self):
@@ -142,12 +143,6 @@ class Cell(base.Cell):
     def get_threshold(self):
         return in_units(self._model.spike_threshold, 'mV')
 
-    def set_initial_v(self, v):
-        self.initial_v = v
-
-    def memb_init(self):
-        self._sec(0.5).v = self.initial_v
-
     def __getattr__(self, varname):
         """
         To support the access to components on particular segments in PyNN the
@@ -156,7 +151,7 @@ class Cell(base.Cell):
         @param var [str]: var of the attribute, with optional segment segment
                           name enclosed with {} and prepended
         """
-        if self._initialised:
+        if self._created:
             if varname in self.componentclass.parameter_names:
                 val = convert_to_quantity(self._nineml.property(varname))
                 # FIXME: Need to assert the same as hoc value
@@ -164,8 +159,10 @@ class Cell(base.Cell):
                 try:
                     val = getattr(self._hoc, varname)
                 except AttributeError:
-                    raise AttributeError("{} does not have attribute '{}'"
-                                         .format(self.name, varname))
+                    try:
+                        val = getattr(self._sec, varname)
+                    except AttributeError:
+                        assert False
             else:
                 raise AttributeError("{} does not have attribute '{}'"
                                      .format(self.name, varname))
@@ -181,7 +178,7 @@ class Cell(base.Cell):
                           segment, component and attribute vars
         @param val [*]: val of the attribute
         """
-        if self._initialised:
+        if self._created:
             # Try to set as property
             if varname in self.componentclass.parameter_names:
                 self._nineml.set(convert_to_property(varname, val))
@@ -221,20 +218,26 @@ class Cell(base.Cell):
         self._recordings[key] = recording = h.Vector()
         recording.record(recorder)
 
-    def inject_current(self, current):
+    def play(self, port_name, signal):
         """
         Injects current into the segment
 
         `current` -- a vector containing the current [neo.AnalogSignal]
         """
+        ext_is = self.build_componentclass.annotations[
+            PYPE9_NS][EXTERNAL_CURRENTS]
+        if port_name not in (p.name for p in ext_is):
+            raise NotImplementedError(
+                "Can only play into external current ports ('{}'), not '{}' "
+                "port.".format("', '".join(p.name for p in ext_is), port_name))
         super(Cell, self).__setattr__('iclamp', h.IClamp(0.5, sec=self._sec))
         self.iclamp.delay = 0.0
         self.iclamp.dur = 1e12
         self.iclamp.amp = 0.0
         super(Cell, self).__setattr__(
-            'iclamp_amps', h.Vector(pq.Quantity(current, 'nA')))
+            'iclamp_amps', h.Vector(pq.Quantity(signal, 'nA')))
         super(Cell, self).__setattr__(
-            'iclamp_times', h.Vector(pq.Quantity(current.times, 'ms')))
+            'iclamp_times', h.Vector(pq.Quantity(signal.times, 'ms')))
         self.iclamp_amps.play(self.iclamp._ref_amp, self.iclamp_times)
 
     def voltage_clamp(self, voltages, series_resistance=1e-3):
