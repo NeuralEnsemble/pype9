@@ -12,15 +12,12 @@ import os
 from os import path
 import subprocess as sp
 from ..base import BaseCodeGenerator
-from nineml import units as un
 from pype9.utils import remove_ignore_missing
 from pype9.exceptions import Pype9BuildError
 import pype9
 import shutil
 from datetime import datetime
 from copy import copy
-from pype9.annotations import (
-    MEMBRANE_VOLTAGE, PYPE9_NS, TRANSFORM_SRC, TRANSFORM_DEST)
 from nineml.user import DynamicsProperties, Definition
 from nineml import Document
 
@@ -193,7 +190,7 @@ class CodeGenerator(BaseCodeGenerator):
             path.append(path.join(os.environ['NEST_INSTALL_DIR'], 'bin'))
         return path
 
-    def transform_for_build(self, prototype, **kwargs):
+    def transform_for_build(self, prototype, **kwargs):  # @UnusedVariable
         """
         Copy the component class to alter it to match NEURON's current
         centric focus
@@ -210,53 +207,11 @@ class CodeGenerator(BaseCodeGenerator):
         trans = copy(orig)
         props = [copy(p) for p in prototype.properties]
         # ---------------------------------------------------------------------
-        # Get the membrane voltage and convert it to 'v'
+        # Don't need to do anything at the moment
         # ---------------------------------------------------------------------
-        # Get the location of the membrane voltage
-        if 'membrane_voltage' in kwargs:
-            name = kwargs['membrane_voltage']
-            try:
-                orig_v = orig[name]
-            except KeyError:
-                raise Pype9BuildError(
-                    "Could not find specified membrane voltage '{}'"
-                    .format(name))
-        else:  # Guess voltage from dimension
-            candidate_vs = [cv for cv in orig.state_variables
-                            if cv.dimension == un.voltage]
-            if len(candidate_vs) == 0:
-                candidate_vs = [cv for cv in orig.analog_receive_ports
-                                if cv.dimension == un.voltage]
-            if len(candidate_vs) == 1:
-                orig_v = candidate_vs[0]
-                print ("Guessing that '{}' is the membrane voltage"
-                       .format(orig_v))
-            elif len(candidate_vs) > 1:
-                raise Pype9BuildError(
-                    "Could not guess the membrane voltage, candidates: '{}'"
-                    .format("', '".join(v.name for v in candidate_vs)))
-            else:
-                raise Pype9BuildError(
-                    "No candidates for the membrane voltage, "
-                    "state_variables '{}', analog_receive_ports '{}'"
-                    .format("', '".join(orig.state_variables),
-                            "', '".join(orig.analog_receive_ports)))
-#         orig_v = self._get_member_from_kwargs_or_guess_via_dimension(
-#             'membrane_voltage', 'state_variables', un.voltage, orig, kwargs)
-        # Map voltage to hard-coded 'v' symbol
-        if orig_v.name != 'V_m':
-            trans.rename_symbol(orig_v.name, 'V_m')
-            v = trans.state_variable('V_m')
-            v.annotations[PYPE9_NS][TRANSFORM_SRC] = orig_v
-            orig_v.annotations[PYPE9_NS][TRANSFORM_DEST] = v
-        else:
-            v = trans.state_variable('V_m')
-        orig.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = orig_v.name
-        trans.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = 'V_m'
         # ---------------------------------------------------------------------
         # Validate the transformed component class and construct prototype
         # ---------------------------------------------------------------------
-        trans.validate()
         # Retun a prototype of the transformed class
         return DynamicsProperties(
             prototype.name, Definition(trans.name, Document(trans)), props)

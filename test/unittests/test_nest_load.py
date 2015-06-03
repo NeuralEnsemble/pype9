@@ -23,7 +23,7 @@ class TestNestLoad(TestCase):
     izhikevich_file = path.join('/Users', 'tclose', 'git', 'nineml_catalog',
                                 'pynn_nmodl_import', 'neurons',
                                 'Izhikevich.xml')
-    izhikevich_name = 'Izhikevich'
+    izhikevich_name = 'Izhikevich2003'
 
     def test_nest_load(self):
         # ---------------------------------------------------------------------
@@ -32,7 +32,7 @@ class TestNestLoad(TestCase):
         nest.SetKernelStatus({'resolution': 0.01})
         pynn_cells = nest.Create(
             'izhikevich', 1,
-            {'a': 0.02, 'c': -65.0, 'b': 0.2, 'd': 6.0})
+            {'a': 0.02, 'c': -65.0, 'b': 0.2, 'd': 2.0})
         pynn_iclamp = nest.Create(
             'dc_generator', 1, {'start': 2.0, 'stop': 95.0,
                                 'amplitude': self.amp})
@@ -46,15 +46,15 @@ class TestNestLoad(TestCase):
         # ---------------------------------------------------------------------
         Izhikevich9ML = CellMetaClass(
             self.izhikevich_file, name=self.izhikevich_name,
-            build_mode='lazy', verbose=True, ode_solver='euler',
+            build_mode='force', verbose=True, ode_solver='euler',
             ss_solver=None)
         nml = Izhikevich9ML()
         nml.play('iExt',
                  neo.AnalogSignal([0.0] * 2 + [self.amp] * 93 + [0.0] * 5,
                                   sampling_period=1 * pq.ms, units='nA'))
-        nml.record('V_m')
+        nml.record('v')
         nml.record('u')
-        nml.update_state({'V_m': -70 * pq.mV,
+        nml.update_state({'v': -70 * pq.mV,
                           'u': -14.0 * pq.mV / pq.ms})
         simulator.initialize()  # @UndefinedVariable
         # ---------------------------------------------------------------------
@@ -73,7 +73,7 @@ class TestNestLoad(TestCase):
         # ---------------------------------------------------------------------
         # Get 9ML results
         # ---------------------------------------------------------------------
-        nml_v = nml.recording('V_m')
+        nml_v = nml.recording('v')
         nml_u = nml.recording('u')
         # ---------------------------------------------------------------------
         # Plot voltage

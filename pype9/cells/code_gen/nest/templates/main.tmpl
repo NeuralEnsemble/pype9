@@ -40,11 +40,6 @@ namespace nest{
 {% for sv in component_class.state_variables %}
     insert_("{{sv.name}}", &nineml::{{component_name}}::get_y_elem_<nineml::{{component_name}}::State_::{{sv.name}}_INDEX>);
 {% endfor %}
-{# FIXME: Need to translate v->V_m
-{% if ("v" in stateIndexMap) %}
-    insert_(names::V_m, &nineml::{{component_name}}::get_y_elem_<nineml::{{component_name}}::State_::V>);
-{% endif %}
-#}
   }
 }
 
@@ -230,31 +225,17 @@ void {{component_name}}::Parameters_::set (const DictionaryDatum &d_) {
 }
 
 void {{component_name}}::State_::get (DictionaryDatum &d_) const {
-
     // Get states from internal variables
 {% for i, sv in enumerate(component_class.state_variables) %}
     def<double_t>(d_, "{{sv.name}}", y_[{{i}}]);
 {% endfor %}
-{# FIXME: Need to include special handling of v->V_m
-{% if ("v" in stateIndexMap) %}
-    def<double_t>(d_, names::V_m, y_[{{stateIndexMap["v"]}}]);
-{% endif %}
-#}
-
 }
 
 void {{component_name}}::State_::set (const DictionaryDatum &d_, const Parameters_&) {
-
     // Set internal state variables from dictionary values
 {% for i, sv in enumerate(component_class.state_variables) %}
     updateValue<double_t>(d_, "{{sv.name}}", y_[{{i}}]);
 {% endfor %}
-{# FIXME: Need to include special handling of v->V_m
-{% if ("v" in stateIndexMap) %}
-   updateValue<double_t>(d_, names::V_m, y_[{{stateIndexMap["v"]}}]);
-{% endif %}
-#}
-
 }
 
 
@@ -443,7 +424,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 
         /***** Get analog port values *****/
     
-{% for port in component_class.analog_receive_ports %}
+{% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
         B_.{{port.name}}_value = B_.{{port.name}}_analog_port.get_value(lag);
 {% endfor %}
         B_.logger_.record_data(current_steps + lag);
