@@ -22,7 +22,7 @@
           <MathInline>(ina)/(2*FARADAY*d)*(1e4) - beta*(nao-nao0)</MathInline>
         </TimeDerivative>
       </Regime>
-      <Constant units="C" name="FARADAY">96485.3365</Constant>
+      <Constant units="C" name="FARADAY" value="96485.3365"/>
       <StateVariable dimension="dimensionless" name="nai"/>
       <StateVariable dimension="dimensionless" name="nao"/>
     </Dynamics>

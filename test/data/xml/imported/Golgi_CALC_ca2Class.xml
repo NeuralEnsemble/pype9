@@ -19,7 +19,7 @@
       <Alias name="ca2_pump_i">
         <MathInline>2*beta*(ca2i-ca2i0)</MathInline>
       </Alias>
-      <Constant units="C" name="F">96485.3365</Constant>
+      <Constant units="C" name="F" value="96485.3365"/>
       <StateVariable dimension="dimensionless" name="ca2i"/>
     </Dynamics>
   <Dimension name="length" l="1"/>

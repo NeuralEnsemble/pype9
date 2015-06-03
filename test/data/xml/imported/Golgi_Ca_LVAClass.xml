@@ -66,8 +66,8 @@
       <Alias name="phi_m">
         <MathInline>5.0 ^ ((celsius-24)/10)</MathInline>
       </Alias>
-      <Constant units="C" name="FARADAY">96485.3365</Constant>
-      <Constant units="J_per_K" name="R">8.3144621</Constant>
+      <Constant units="C" name="FARADAY" value="96485.3365"/>
+      <Constant units="J_per_K" name="R" value="8.3144621"/>
       <StateVariable dimension="dimensionless" name="h"/>
       <StateVariable dimension="dimensionless" name="m"/>
     </Dynamics>

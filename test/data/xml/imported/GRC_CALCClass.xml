@@ -16,7 +16,7 @@
           <MathInline>-ica/(2*F*d)*(1e4) - beta*(cai-cai0)</MathInline>
         </TimeDerivative>
       </Regime>
-      <Constant units="C" name="F">96485.3365</Constant>
+      <Constant units="C" name="F" value="96485.3365"/>
       <StateVariable dimension="dimensionless" name="cai"/>
     </Dynamics>
   <Dimension name="length" l="1"/>

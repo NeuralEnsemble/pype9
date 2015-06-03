@@ -20,7 +20,7 @@
           <MathInline>(ik)/(2*FARADAY*d)*(1e4) - beta*(ko-ko0)</MathInline>
         </TimeDerivative>
       </Regime>
-      <Constant units="C" name="FARADAY">96485.3365</Constant>
+      <Constant units="C" name="FARADAY" value="96485.3365"/>
       <StateVariable dimension="dimensionless" name="ki"/>
       <StateVariable dimension="dimensionless" name="ko"/>
     </Dynamics>
