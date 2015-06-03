@@ -23,7 +23,7 @@ import pype9
 from datetime import datetime
 from nineml import Document
 from nineml.user import DynamicsProperties, Definition, Property
-from nineml.abstraction import Parameter, StateVariable
+from nineml.abstraction import Parameter, StateVariable, Constant
 try:
     from nineml.extensions.kinetics import Kinetics  # @UnusedImport
 except ImportError:
@@ -31,7 +31,7 @@ except ImportError:
 from pype9.annotations import (
     PYPE9_NS, ION_SPECIES, MEMBRANE_VOLTAGE, MEMBRANE_CAPACITANCE,
     TRANSFORM_SRC, TRANSFORM_DEST, NON_SPECIFIC_CURRENT,
-    EXTERNAL_CURRENTS)
+    EXTERNAL_CURRENTS, NO_TIME_DERIVS)
 import logging
 
 TRANSFORM_NS = 'NeuronBuildTransform'
@@ -238,7 +238,11 @@ class CodeGenerator(BaseCodeGenerator):
             # Get the voltage time derivatives from each regime (must be
             # constant as there is no OutputAnalog in the spec see )
             dvdt = next(trans.regimes).time_derivative(v.name)
+            has_td = dict((sv.name, []) for sv in orig.state_variables)
             for regime in trans.regimes:
+                # Record whether the state var has a time deriv. in this regime
+                for var in regime.time_derivative_variables:
+                    has_td[var] = regime
                 try:
                     if regime.time_derivative(v.name) != dvdt:
                         raise Pype9RuntimeError(
@@ -254,6 +258,23 @@ class CodeGenerator(BaseCodeGenerator):
             memb_i.annotations[PYPE9_NS][TRANSFORM_SRC] = (dvdt, cm), dvdt
             dvdt.annotations[PYPE9_NS][TRANSFORM_DEST] = (memb_i, cm), memb_i
             # -----------------------------------------------------------------
+            # Add clamping currents for regimes without voltage derivatives
+            # -----------------------------------------------------------------
+            trans.annotations[PYPE9_NS][NO_TIME_DERIVS] = (
+                ['v'] + [var for var, reg in has_td.iteritems() if not reg])
+#             regimes_missing_v = [r for r in trans.regimes
+#                                  if r.name not in has_td['v']]
+#             if regimes_missing_v:
+#                 # Add a variable to clamp the voltage to
+#                 trans.add(StateVariable('last_v_', un.voltage))
+#                 trans.add(Constant('big_g_', value=1e6,
+#                                    units=un.conductanceDensity))
+#                 clamping_i = Alias('clamping_i_', '0')
+#                 trans.add(clamping_i)
+#                 memb_i += clamping_i
+#                 for regime in regimes_missing_v:
+#                     regime.add(Alias('clamping_i_', 'big_g_ * (v - last_v_)'))
+            # -----------------------------------------------------------------
             # Get the external input currents
             # -----------------------------------------------------------------
             # Analog receive or reduce ports that are of dimension current and
@@ -265,13 +286,12 @@ class CodeGenerator(BaseCodeGenerator):
                 if (i.dimension == un.current and
                     i.name in memb_i.rhs_symbol_names and
                     len([e for e in orig.all_expressions
-                         if i.symbol in e.free_symbols]) == 1 and
-                    i.symbol not in (memb_i.rhs - i).simplify().free_symbols)]
+                         if i.symbol in e.free_symbols]) == 1)]
             print ("Removing external input currents to the membrane, '{}'"
                    .format("', '".join(i.name for i in ext_is)))
             # Remove external currents (as NEURON handles them)
             for i in ext_is:
-                memb_i -= i
+                memb_i.subs(i, 0)
                 trans.remove(i)
             memb_i.simplify()
             trans.annotations[PYPE9_NS][EXTERNAL_CURRENTS] = ext_is

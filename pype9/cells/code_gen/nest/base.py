@@ -21,7 +21,7 @@ from datetime import datetime
 from copy import copy
 from pype9.annotations import (
     MEMBRANE_VOLTAGE, PYPE9_NS, TRANSFORM_SRC, TRANSFORM_DEST)
-from nineml.user import Component, Definition
+from nineml.user import DynamicsProperties, Definition
 from nineml import Document
 
 
@@ -210,11 +210,39 @@ class CodeGenerator(BaseCodeGenerator):
         trans = copy(orig)
         props = [copy(p) for p in prototype.properties]
         # ---------------------------------------------------------------------
-        # Remove the membrane voltage
+        # Get the membrane voltage and convert it to 'v'
         # ---------------------------------------------------------------------
-        # Get or guess the location of the membrane voltage
-        orig_v = self._get_member_from_kwargs_or_guess_via_dimension(
-            'membrane_voltage', 'state_variables', un.voltage, orig, kwargs)
+        # Get the location of the membrane voltage
+        if 'membrane_voltage' in kwargs:
+            name = kwargs['membrane_voltage']
+            try:
+                orig_v = orig[name]
+            except KeyError:
+                raise Pype9BuildError(
+                    "Could not find specified membrane voltage '{}'"
+                    .format(name))
+        else:  # Guess voltage from dimension
+            candidate_vs = [cv for cv in orig.state_variables
+                            if cv.dimension == un.voltage]
+            if len(candidate_vs) == 0:
+                candidate_vs = [cv for cv in orig.analog_receive_ports
+                                if cv.dimension == un.voltage]
+            if len(candidate_vs) == 1:
+                orig_v = candidate_vs[0]
+                print ("Guessing that '{}' is the membrane voltage"
+                       .format(orig_v))
+            elif len(candidate_vs) > 1:
+                raise Pype9BuildError(
+                    "Could not guess the membrane voltage, candidates: '{}'"
+                    .format("', '".join(v.name for v in candidate_vs)))
+            else:
+                raise Pype9BuildError(
+                    "No candidates for the membrane voltage, "
+                    "state_variables '{}', analog_receive_ports '{}'"
+                    .format("', '".join(orig.state_variables),
+                            "', '".join(orig.analog_receive_ports)))
+#         orig_v = self._get_member_from_kwargs_or_guess_via_dimension(
+#             'membrane_voltage', 'state_variables', un.voltage, orig, kwargs)
         # Map voltage to hard-coded 'v' symbol
         if orig_v.name != 'V_m':
             trans.rename_symbol(orig_v.name, 'V_m')
@@ -230,7 +258,7 @@ class CodeGenerator(BaseCodeGenerator):
         # ---------------------------------------------------------------------
         trans.validate()
         # Retun a prototype of the transformed class
-        return Component(
+        return DynamicsProperties(
             prototype.name, Definition(trans.name, Document(trans)), props)
 
 # Old template arguments to Ivan's templates.

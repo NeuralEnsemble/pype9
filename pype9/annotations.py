@@ -11,6 +11,7 @@ MEMBRANE_CAPACITANCE = 'MembraneCapacitance'
 
 # External current ports
 EXTERNAL_CURRENTS = 'ExternalCurrents'
+NO_TIME_DERIVS = 'StateVariablesThatHaveNoTimeDerivatives'
 
 # Transform information
 TRANSFORM_SRC = 'TransformSource'
@@ -19,3 +20,5 @@ TRANSFORM_DEST = 'TransformDestination'
 # Ion species information
 ION_SPECIES = 'IonSpecies'
 NON_SPECIFIC_CURRENT = 'nonSpecific'
+
+
