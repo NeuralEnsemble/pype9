@@ -65,7 +65,7 @@ class TestNeuronLoad(TestCase):
             # -----------------------------------------------------------------
             CellClass = CellMetaClass(
                 path.join(self.pyNN_import_dir, name9 + '.xml'),
-                name=name9 + 'Properties', build_mode='compile_only')
+                name=name9 + 'Properties', build_mode='force')
             cell9 = CellClass()
             cell9.play('iExt', neo.AnalogSignal(
                 [0.0] + [stim.amp] * 9, units='nA', sampling_period=1 * pq.ms))

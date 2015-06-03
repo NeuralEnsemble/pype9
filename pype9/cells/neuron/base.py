@@ -230,6 +230,11 @@ class Cell(base.Cell):
         """
         ext_is = self.build_componentclass.annotations[
             PYPE9_NS][EXTERNAL_CURRENTS]
+        try:
+            self.componentclass.port(port_name)
+        except KeyError:
+            raise Pype9RuntimeError(
+                "Cannot play into unrecognised port '{}'".format(port_name))
         if port_name not in (p.name for p in ext_is):
             raise NotImplementedError(
                 "Can only play into external current ports ('{}'), not '{}' "

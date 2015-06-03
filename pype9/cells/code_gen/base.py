@@ -49,6 +49,15 @@ class BaseCodeGenerator(object):
     _CMPL_DIR = 'compile'  # Ignored for NEURON but used for NEST
     _9ML_MOD_TIME_FILE = 'source_modification_time'
 
+    # Python functions and annotations to be made available in the templates
+    _globals = dict(
+        [('len', len), ('izip', izip), ('enumerate', enumerate),
+         ('xrange', xrange), ('next', next), ('chain', chain),
+         ('hash', hash), ('deepcopy', deepcopy), ('units', units),
+         ('hasattr', hasattr), ('set', set), ('list', list)] +
+        [(n, v) for n, v in pype9.annotations.__dict__.iteritems()
+         if n != '__builtins__'])
+
     # Derived classes should provide mapping from 9ml dimensions to default
     # units
     DEFAULT_UNITS = {}
@@ -258,9 +267,6 @@ class BaseCodeGenerator(object):
                 "directory\" ('parent_build_dir') -> {}".format(e))
 
     def render_to_file(self, template, args, filename, directory, switches={}):
-        # Get a dictionary of all the annotations used in PyPe9
-        annotations_dict = copy(pype9.annotations.__dict__)
-        annotations_dict.pop('__builtins__')
         # Initialise the template loader to include the flag directories
         template_paths = [
             self.BASE_TMPL_PATH,
@@ -278,10 +284,7 @@ class BaseCodeGenerator(object):
                                 trim_blocks=True, lstrip_blocks=True,
                                 undefined=StrictUndefined)
         # Add some globals used by the template code
-        jinja_env.globals.update(len=len, izip=izip, enumerate=enumerate,
-                                 xrange=xrange, next=next, chain=chain,
-                                 hash=hash, deepcopy=deepcopy, units=units,
-                                 hasattr=hasattr, set=set, **annotations_dict)
+        jinja_env.globals.update(**self._globals)
         # Actually render the contents
         contents = jinja_env.get_template(template).render(**args)
         # Write the contents to file

@@ -266,16 +266,20 @@ class CodeGenerator(BaseCodeGenerator):
                     i.name in memb_i.rhs_symbol_names and
                     len([e for e in orig.all_expressions
                          if i.symbol in e.free_symbols]) == 1 and
-                    i.symbol not in (memb_i.rhs + i).simplify().free_symbols)]
+                    i.symbol not in (memb_i.rhs - i).simplify().free_symbols)]
             print ("Removing external input currents to the membrane, '{}'"
                    .format("', '".join(i.name for i in ext_is)))
             # Remove external currents (as NEURON handles them)
             for i in ext_is:
-                memb_i += i
+                memb_i -= i
                 trans.remove(i)
             memb_i.simplify()
             trans.annotations[PYPE9_NS][EXTERNAL_CURRENTS] = ext_is
             trans.add(memb_i)
+            # Remove existing current analog send ports
+            for p in orig.analog_send_ports:
+                if p.dimension == un.current:
+                    trans.remove(p)
             # Add analog send port for current
             i_port = AnalogSendPort('i_', dimension=un.current)
             i_port.annotations[PYPE9_NS][ION_SPECIES] = NON_SPECIFIC_CURRENT
