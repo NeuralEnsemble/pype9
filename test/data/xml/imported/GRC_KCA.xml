@@ -2,7 +2,7 @@
 <NineML xmlns="http://nineml.net/9ML/1.0">
   <Unit symbol="mol_per_m3" dimension="concentration" power="0"/>
   <Component name="GRC_KCA">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_KCAClass.xml">GRC_KCAClass</Definition>
+    <Definition name="GRC_KCAClass" url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_KCAClass.xml"/>
     <Property units="per_ms" name="Aalpha_c">
       <SingleValue>2.5</SingleValue>
     </Property>

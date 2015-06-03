@@ -33,9 +33,17 @@ class TestNeuronLoad(TestCase):
     pyNN_import_dir = path.join(os.environ['HOME'], 'git', 'nineml_catalog',
                                 'pynn_nmodl_import', 'neurons')
 
+    initial_states = {'Izhikevich': {'u': -14 * pq.mV / pq.ms,
+                                     'v': -65.0 * pq.mV},
+                      'AdExpIaF': {'w': 0.0 * pq.nA,
+                                   'v': -65 * pq.mV}}
+
     def test_neuron_load(self):
         # for name9, namePynn in zip(self.models9ML, self.modelsPyNN):
-        for name9, namePynn in zip(['Izhikevich'], ['Izhikevich']):  # zip(['AdExpIaF'], ['AdExpIF']):
+        for name9, namePynn in (
+#                                 ('Izhikevich', 'Izhikevich'),
+                                ('AdExpIaF', 'AdExpIF'),
+                                ):
             # -----------------------------------------------------------------
             # Set up PyNN section
             # -----------------------------------------------------------------
@@ -57,17 +65,23 @@ class TestNeuronLoad(TestCase):
             # -----------------------------------------------------------------
             CellClass = CellMetaClass(
                 path.join(self.pyNN_import_dir, name9 + '.xml'),
-                name=name9 + 'Properties', build_mode='force')
+                name=name9 + 'Properties', build_mode='compile_only')
             cell9 = CellClass()
             cell9.play('iExt', neo.AnalogSignal(
-                [0.0] + [0.02] * 9, units='nA', sampling_period=1 * pq.ms))
+                [0.0] + [stim.amp] * 9, units='nA', sampling_period=1 * pq.ms))
             cell9.record('v')
-            simulator.initialize()  # @UndefinedVariable
-            cell9.u = -14 * pq.mV / pq.ms
+            cell9.update_state(self.initial_states[name9])
+
+            # Hacks to fix
+            cell9._sec.cm = 1.0
+#             pnn.L = 100
+#             pnn.diam = 100 / pi
+#             cell9._sec.L = 100
+#             cell9._sec.diam = 100 / pi
             # -----------------------------------------------------------------
             # Run and plot the simulation
             # -----------------------------------------------------------------
-            simulator.run(10, reset=False)  # @UndefinedVariable
+            simulator.run(10.0, reset=False)  # @UndefinedVariable
             nml_v = cell9.recording('v')
             pnn_t, pnn_v = rec.recording('v')  # @UnusedVariable
             plt.plot(pnn_t[:-1], pnn_v[1:])

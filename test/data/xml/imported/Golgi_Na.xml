@@ -3,7 +3,7 @@
   <Dimension name="per_time" t="-1"/>
   <Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
   <Component name="Golgi_Na">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_NaClass.xml">Golgi_NaClass</Definition>
+    <Definition name="Golgi_NaClass" url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_NaClass.xml"/>
     <Property units="per_ms" name="Aalpha_h">
       <SingleValue>0.21</SingleValue>
     </Property>

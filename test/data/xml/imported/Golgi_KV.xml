@@ -3,7 +3,7 @@
   <Dimension name="per_time" t="-1"/>
   <Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
   <Component name="Golgi_KV">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_KVClass.xml">Golgi_KVClass</Definition>
+    <Definition name="Golgi_KVClass" url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_KVClass.xml"/>
     <Property units="unitless" name="Aalpha_n">
       <SingleValue>-0.01</SingleValue>
     </Property>

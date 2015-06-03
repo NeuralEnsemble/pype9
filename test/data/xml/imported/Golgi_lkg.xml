@@ -3,7 +3,7 @@
   <Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
   <Unit symbol="mV" dimension="voltage" power="-3"/>
   <Component name="Golgi_lkg">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_lkgClass.xml">Golgi_lkgClass</Definition>
+    <Definition name="Golgi_lkgClass" url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_lkgClass.xml"/>
     <Property units="mV" name="el">
       <SingleValue>-55.0</SingleValue>
     </Property>

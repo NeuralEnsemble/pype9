@@ -14,7 +14,7 @@ NEURON {
     {%+ if is_subcomponent %}SUFFIX{% else %}POINT_PROCESS{% endif %} {{component_name}}
 {% for port in componentclass.analog_send_ports if port.dimension == units.currentDensity %}
     {% set ion_species = port.annotations['biophysics']['ion_species'] %}
-    {% if ion_species == 'non_specific' %}
+    {% if not ion_species or ion_species == 'non_specific' %}
     NONSPECIFIC_CURRENT {{port.name}}
     {% else %}
     USEION {{ion_species}} WRITE {{ion_species}}i

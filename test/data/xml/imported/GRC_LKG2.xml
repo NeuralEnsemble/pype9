@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8' standalone='yes'?>
 <NineML xmlns="http://nineml.net/9ML/1.0">
   <Component name="GRC_LKG2">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_LKG2Class.xml">GRC_LKG2Class</Definition>
+    <Definition name="GRC_LKG2Class" url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_LKG2Class.xml"/>
     <Property units="mV" name="egaba">
       <SingleValue>-65.0</SingleValue>
     </Property>

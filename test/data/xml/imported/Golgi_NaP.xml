@@ -2,7 +2,7 @@
 <NineML xmlns="http://nineml.net/9ML/1.0">
   <Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
   <Component name="Golgi_NaP">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_NaPClass.xml">Golgi_NaPClass</Definition>
+    <Definition name="Golgi_NaPClass" url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_NaPClass.xml"/>
     <Property units="unitless" name="Aalpha_m">
       <SingleValue>-0.91</SingleValue>
     </Property>

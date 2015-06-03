@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8' standalone='yes'?>
 <NineML xmlns="http://nineml.net/9ML/1.0">
   <Component name="Golgi_hcn2">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_hcn2Class.xml">Golgi_hcn2Class</Definition>
+    <Definition name="Golgi_hcn2Class" url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_hcn2Class.xml"/>
     <Property units="mV" name="Ehalf">
       <SingleValue>-81.95</SingleValue>
     </Property>

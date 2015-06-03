@@ -3,7 +3,7 @@
   <Dimension name="per_time" t="-1"/>
   <Dimension k="1" name="temperature"/>
   <Component name="GRC_KA">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_KAClass.xml">GRC_KAClass</Definition>
+    <Definition name="GRC_KAClass" url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_KAClass.xml"/>
     <Property units="per_ms" name="Aalpha_a">
       <SingleValue>0.8147</SingleValue>
     </Property>

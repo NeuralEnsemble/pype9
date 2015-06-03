@@ -2,7 +2,7 @@
 <NineML xmlns="http://nineml.net/9ML/1.0">
   <Dimension name="per_time" t="-1"/>
   <Component name="GRC_KV">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_KVClass.xml">GRC_KVClass</Definition>
+    <Definition name="GRC_KVClass" url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_KVClass.xml"/>
     <Property units="unitless" name="Aalpha_n">
       <SingleValue>-0.01</SingleValue>
     </Property>

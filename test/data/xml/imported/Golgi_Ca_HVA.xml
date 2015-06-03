@@ -3,7 +3,7 @@
   <Dimension name="per_time" t="-1"/>
   <Dimension i="2" t="3" m="-1" l="-4" name="conductanceDensity"/>
   <Component name="Golgi_Ca_HVA">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_Ca_HVAClass.xml">Golgi_Ca_HVAClass</Definition>
+    <Definition name="Golgi_Ca_HVAClass" url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_Ca_HVAClass.xml"/>
     <Property units="per_ms" name="Aalpha_s">
       <SingleValue>0.04944</SingleValue>
     </Property>

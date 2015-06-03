@@ -6,7 +6,7 @@
   <Unit symbol="um" dimension="length" power="-6"/>
   <Dimension name="length" l="1"/>
   <Component name="GRC_CALC">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_CALCClass.xml">GRC_CALCClass</Definition>
+    <Definition name="GRC_CALCClass" url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_CALCClass.xml"/>
     <Property units="per_ms" name="beta">
       <SingleValue>1.5</SingleValue>
     </Property>

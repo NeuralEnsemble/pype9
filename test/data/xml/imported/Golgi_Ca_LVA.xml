@@ -4,7 +4,7 @@
   <Unit symbol="mV" dimension="voltage" power="-3"/>
   <Unit symbol="unitless" dimension="dimensionless" power="0"/>
   <Component name="Golgi_Ca_LVA">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_Ca_LVAClass.xml">Golgi_Ca_LVAClass</Definition>
+    <Definition name="Golgi_Ca_LVAClass" url="/Users/tclose/git/pype9/test/data/nmodl/imported/Golgi_Ca_LVAClass.xml"/>
     <Property units="unitless" name="A_tau_h">
       <SingleValue>1.0</SingleValue>
     </Property>

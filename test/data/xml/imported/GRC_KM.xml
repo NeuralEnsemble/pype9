@@ -9,7 +9,7 @@
   <Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
   <Unit symbol="per_ms" dimension="per_time" power="3"/>
   <Component name="GRC_KM">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_KMClass.xml">GRC_KMClass</Definition>
+    <Definition name="GRC_KMClass" url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_KMClass.xml"/>
     <Property units="per_ms" name="Aalpha_n">
       <SingleValue>0.0033</SingleValue>
     </Property>

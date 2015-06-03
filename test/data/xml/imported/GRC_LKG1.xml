@@ -2,7 +2,7 @@
 <NineML xmlns="http://nineml.net/9ML/1.0">
   <Unit symbol="S_per_cm2" dimension="conductanceDensity" power="4"/>
   <Component name="GRC_LKG1">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_LKG1Class.xml">GRC_LKG1Class</Definition>
+    <Definition name="GRC_LKG1Class" url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_LKG1Class.xml"/>
     <Property units="mV" name="el">
       <SingleValue>-16.5</SingleValue>
     </Property>

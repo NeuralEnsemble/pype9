@@ -190,7 +190,11 @@ class Cell(base.Cell):
                             "', '".join(chain(
                                 self.componentclass.parameter_names,
                                 self.componentclass.state_variable_names))))
-            setattr(self._hoc, varname, convert_to_neuron_units(val)[0])
+            val = convert_to_neuron_units(val)[0]
+            try:
+                setattr(self._hoc, varname, val)
+            except LookupError:
+                setattr(self._sec, varname, val)
         else:
             super(Cell, self).__setattr__(varname, val)
 

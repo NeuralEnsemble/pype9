@@ -2,7 +2,7 @@
 <NineML xmlns="http://nineml.net/9ML/1.0">
   <Dimension k="1" name="temperature"/>
   <Component name="GRC_NA">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_NAClass.xml">GRC_NAClass</Definition>
+    <Definition name="GRC_NAClass" url="/Users/tclose/git/pype9/test/data/nmodl/imported/GRC_NAClass.xml"/>
     <Property units="unitless" name="ACoff">
       <SingleValue>0.5</SingleValue>
     </Property>

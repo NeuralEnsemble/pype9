@@ -2,7 +2,7 @@
 <NineML xmlns="http://nineml.net/9ML/1.0">
   <Unit symbol="mol_per_m3" dimension="concentration" power="0"/>
   <Component name="k_conc">
-    <Definition url="/Users/tclose/git/pype9/test/data/nmodl/imported/K_concClass.xml">k_concClass</Definition>
+    <Definition name="k_concClass" url="/Users/tclose/git/pype9/test/data/nmodl/imported/K_concClass.xml"/>
     <Property units="per_ms" name="beta">
       <SingleValue>1.3</SingleValue>
     </Property>

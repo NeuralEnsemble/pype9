@@ -134,7 +134,7 @@ class Cell(object):
         # either saved until the 'initialze' method is called or directly
         # set to the state)
         self._initialized = False
-        self._initial_state = {}
+        self._initial_state = None
 
     def set(self, prop):
         """
@@ -181,13 +181,16 @@ class Cell(object):
         if self._initialized:
             self._set_state(state)
         else:
-            self._initial_state = state
+            super(Cell, self).__setattr__('_initial_state', state)
 
     def _set_state(self, state):
-        for k, q in state:
+        for k, q in state.iteritems():
             setattr(self, k, q)  # FIXME: Need to convert units
 
     def initialize(self):
+        if self._initial_state is None:
+            raise Pype9RuntimeError("Initial state not set for '{}' cell"
+                                    .format(self.name))
         self._set_state(self._initial_state)
         super(Cell, self).__setattr__('_initialized', True)
 
