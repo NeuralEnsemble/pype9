@@ -41,8 +41,8 @@ class TestNeuronLoad(TestCase):
     def test_neuron_load(self):
         # for name9, namePynn in zip(self.models9ML, self.modelsPyNN):
         for name9, namePynn in (
-                                ('Izhikevich', 'Izhikevich'),
-#                                 ('AdExpIaF', 'AdExpIF'),
+#                                 ('Izhikevich', 'Izhikevich'),
+                                ('AdExpIaF', 'AdExpIF'),
                                 ):
             # -----------------------------------------------------------------
             # Set up PyNN section
@@ -65,19 +65,12 @@ class TestNeuronLoad(TestCase):
             # -----------------------------------------------------------------
             CellClass = CellMetaClass(
                 path.join(self.pyNN_import_dir, name9 + '.xml'),
-                name=name9 + 'Properties', build_mode='force')
+                name=name9 + 'Properties', build_mode='compile_only')
             cell9 = CellClass()
             cell9.play('iExt', neo.AnalogSignal(
                 [0.0] + [stim.amp] * 9, units='nA', sampling_period=1 * pq.ms))
             cell9.record('v')
             cell9.update_state(self.initial_states[name9])
-
-            # Hacks to fix
-            cell9._sec.cm = 1.0
-#             pnn.L = 100
-#             pnn.diam = 100 / pi
-#             cell9._sec.L = 100
-#             cell9._sec.diam = 100 / pi
             # -----------------------------------------------------------------
             # Run and plot the simulation
             # -----------------------------------------------------------------
@@ -88,7 +81,9 @@ class TestNeuronLoad(TestCase):
             plt.plot(nml_v.times, nml_v)
             plt.legend(('PyNN v', '9ML v'))
             plt.show()
-            self.assertAlmostEqual(float((nml_v - pnn_v[1:] * pq.mV).sum()), 0)
+            self.assertAlmostEqual(
+                float(pq.Quantity((nml_v - pnn_v[1:] * pq.mV).sum(), 'V')), 0,
+                places=3)
             h.quit()
 
 
