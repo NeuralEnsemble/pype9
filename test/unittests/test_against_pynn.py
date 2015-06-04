@@ -29,6 +29,8 @@ import os
 from math import pi
 import pyNN.neuron  # @UnusedImport loads pyNN mechanisms
 
+stim_amp = 20
+
 
 class TestAgainstPyNN(TestCase):
 
@@ -60,8 +62,11 @@ class TestAgainstPyNN(TestCase):
                    'IF': {},
                    'IFRefrac': {}}
 
+    injected_signal = neo.AnalogSignal(
+        [0.0] * 2 + [stim_amp] * 93 + [0.0] * 5, sampling_period=1 * pq.ms,
+        units='pA')
+
     order = [0, 1, 2, 3, 4]
-    stim_amp = 0.02
     duration = 10 * pq.ms
     dt = 0.01
 
@@ -90,13 +95,13 @@ class TestAgainstPyNN(TestCase):
             if plot:
                 leg = []
                 if 'nrnPyNN' in tests:
-                    self._plot_NEURON(nameNEURON)
+                    self._plot_NEURON(name)
                     leg.append('PyNN NEURON')
                 if 'nrn9ML' in tests:
                     self._plot_9ML(name, 'NEURON')
                     leg.append('9ML NEURON')
                 if 'nestPyNN' in tests:
-                    self._plot_NEST(nameNEST, 'NEST')
+                    self._plot_NEST(name)
                     leg.append('PyNN NEST')
                 if 'nest9ML' in tests:
                     self._plot_9ML(name, 'NEST')
@@ -121,11 +126,9 @@ class TestAgainstPyNN(TestCase):
         else:
             assert False
         CellClass = CellMetaClass(
-            path.join(self.xml_dir, name + '.xml'), build_mode='force')
+            path.join(self.xml_dir, name + '.xml'), build_mode='lazy')
         self.nml_cells[sim_name] = CellClass()
-        self.nml_cells[sim_name].play('iExt', neo.AnalogSignal(
-            [0.0] + [self.stim_amp] * 9, units='nA',
-            sampling_period=1 * pq.ms))
+        self.nml_cells[sim_name].play('iExt', self.injected_signal)
         self.nml_cells[sim_name].record('v')
         self.nml_cells[sim_name].update_state(self.initial_states[name])
 
@@ -155,8 +158,9 @@ class TestAgainstPyNN(TestCase):
         nest.SetKernelStatus({'resolution': 0.01})
         self.nest_cells = nest.Create(model_name, 1, self.nest_params[name])
         self.nest_iclamp = nest.Create(
-            'dc_generator', 1, {'start': 2.0, 'stop': 95.0,
-                                'amplitude': self.stim_amp})
+            'dc_generator', 1,
+            {'start': 2.0, 'stop': 95.0,
+             'amplitude': float(pq.Quantity(stim_amp, 'pA'))})
         nest.Connect(self.nest_iclamp, self.nest_cells)
         self.nest_multimeter = nest.Create('multimeter', 1,
                                            {"interval": self.dt})
@@ -172,8 +176,8 @@ class TestAgainstPyNN(TestCase):
         pnn_t, pnn_v = self._get_NEURON_signal()
         plt.plot(pnn_t[:-1], pnn_v[1:])
 
-    def _plot_NEST(self, name):  # @UnusedVariable
-        nest_v = self._get_NEST_signal()
+    def _plot_NEST(self, name):
+        nest_v = self._get_NEST_signal(name)
         plt.plot(pq.Quantity(nest_v.times, 'ms'), pq.Quantity(nest_v, 'mV'))
 
     def _plot_9ML(self, name, sim_name):  # @UnusedVariable
@@ -185,19 +189,20 @@ class TestAgainstPyNN(TestCase):
         nml_v = self.nml_cells['NEURON'].recording('v')
         return float(pq.Quantity((nml_v - pnn_v[1:] * pq.mV).sum(), 'V'))
 
-    def _diff_NEST(self, name):  # @UnusedVariable
-        nest_v = self._get_NEST_signal()
+    def _diff_NEST(self, name):
+        nest_v = self._get_NEST_signal(name)
         nml_v = self.nml_cells['NEST'].recording('v')
         return float(pq.Quantity((nml_v - nest_v * pq.mV).sum(), 'V'))
 
     def _get_NEURON_signal(self):
         return self._nrn_rec.recording('v')  # @UnusedVariable
 
-    def _get_NEST_signal(self):
+    def _get_NEST_signal(self, name):
         return neo.AnalogSignal(
             nest.GetStatus(
-                self.nest_multimeter, 'events')[0][self.nest_states['v']],
-            sampling_period=simulator.dt * pq.ms, units='mV')  # @UndefinedVariable @IgnorePep8
+                self.nest_multimeter, 'events')[0][
+                    self.nest_states[name]['v']],
+            sampling_period=simulatorNEST.dt * pq.ms, units='mV')  # @UndefinedVariable @IgnorePep8
 
 
 class NEURONRecorder(object):
@@ -227,6 +232,6 @@ if __name__ == '__main__':
     t = TestAgainstPyNN()
     t.test_against_pyNN_models(
         plot=True,
-        tests=('nrn9ML', 'nrnPyNN'))
-#         tests=('nest9ML', 'nestPyNN'))
+#         tests=('nrn9ML', 'nrnPyNN'))
+        tests=('nest9ML', 'nestPyNN'))
 #         tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN'))

@@ -50,8 +50,7 @@ class TestNestLoad(TestCase):
             ss_solver=None)
         nml = Izhikevich9ML()
         nml.play('iExt',
-                 neo.AnalogSignal([0.0] * 2 + [self.amp] * 93 + [0.0] * 5,
-                                  sampling_period=1 * pq.ms, units='nA'))
+                 )
         nml.record('v')
         nml.record('u')
         nml.update_state({'v': -70 * pq.mV,

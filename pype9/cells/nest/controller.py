@@ -105,7 +105,7 @@ class _SimulationController(SimulationController):
         nest.sli_run("M_%s setverbosity" % verbosity.upper())
     verbosity = property(fset=_set_verbosity)
 
-    def run(self, simtime, reset=False):
+    def run(self, simtime, reset=True):
         """Advance the simulation for a certain time."""
         if reset:
             self.reset()
