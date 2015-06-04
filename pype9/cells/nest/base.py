@@ -102,7 +102,7 @@ class Cell(base.Cell):
         else:
             self.signals[port_name] = nest.Create(
                 'step_current_generator', 1,
-                {'amplitude_values': signal,  # FIXME: Need to scale by appropriate units. @IgnorePep8
+                {'amplitude_values': pq.Quantity(signal, 'pA'),
                  'amplitude_times': pq.Quantity(signal.times, 'ms'),
                  'start': float(pq.Quantity(signal.t_start, 'ms')),
                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})

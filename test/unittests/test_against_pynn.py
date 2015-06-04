@@ -29,7 +29,7 @@ import os
 from math import pi
 import pyNN.neuron  # @UnusedImport loads pyNN mechanisms
 
-stim_amp = 20
+stim_amp = pq.Quantity(0.02, 'nA')
 
 
 class TestAgainstPyNN(TestCase):
@@ -37,7 +37,7 @@ class TestAgainstPyNN(TestCase):
     xml_dir = path.join(os.environ['HOME'], 'git', 'nineml_catalog',
                         'pynn_nmodl_import', 'neurons')
     models = [('Izhikevich', 'Izhikevich', 'izhikevich'),
-              ('AdExpIaF', 'AdExpIF'),
+              ('AdExpIaF', 'AdExpIF', 'aeif_cond_alpha'),
               ('HHTraub', 'hh_traub'),
               ('IF', 'Reset'),
               ('IFRefrac', 'ResetRefrac')]
@@ -46,15 +46,15 @@ class TestAgainstPyNN(TestCase):
                                      'v': -65.0 * pq.mV},
                       'AdExpIaF': {'w': 0.0 * pq.nA,
                                    'v': -65 * pq.mV},
-                      'HHTraub': {'m': 0.0, 'h': 0.0, 'n': 0.0},
-                      'IF': {},
-                      'IFRefrac': {}}
+                      'HHTraub': {'v': -65 * pq.mV},
+                      'IF': {'v': -65 * pq.mV},
+                      'IFRefrac': {'v': -65 * pq.mV}}
 
     nest_states = {'Izhikevich': {'u': 'U_m', 'v': 'V_m'},
-                   'AdExpIaF': {'w': 0.0 * pq.nA, 'v': -65 * pq.mV},
-                   'HHTraub': {'m': 0.0, 'h': 0.0, 'n': 0.0},
-                   'IF': {},
-                   'IFRefrac': {}}
+                   'AdExpIaF': {'w': 'w', 'v': 'V_m'},
+                   'HHTraub': {'v': 'V_m'},
+                   'IF': {'v': 'V_m'},
+                   'IFRefrac': {'v': 'V_m'}}
 
     nest_params = {'Izhikevich': {'a': 0.02, 'c': -65.0, 'b': 0.2, 'd': 2.0},
                    'AdExpIaF': {},
@@ -63,8 +63,8 @@ class TestAgainstPyNN(TestCase):
                    'IFRefrac': {}}
 
     injected_signal = neo.AnalogSignal(
-        [0.0] * 2 + [stim_amp] * 93 + [0.0] * 5, sampling_period=1 * pq.ms,
-        units='pA')
+        [0.0] * 2 + [float(pq.Quantity(stim_amp, 'nA'))] * 93 + [0.0] * 5,
+        sampling_period=1 * pq.ms, units='nA')
 
     order = [0, 1, 2, 3, 4]
     duration = 10 * pq.ms
@@ -146,7 +146,7 @@ class TestAgainstPyNN(TestCase):
         self._nrn_stim = h.IClamp(1.0, sec=self._nrn_pnn)
         self._nrn_stim.delay = 1   # ms
         self._nrn_stim.dur = 100   # ms
-        self._nrn_stim.amp = 0.02   # nA
+        self._nrn_stim.amp = stim_amp   # nA
         # Record Time from NEURON (neuron.h._ref_t)
         self._nrn_rec = NEURONRecorder(self._nrn_pnn, self._nrn_pnn_cell)
         self._nrn_rec.record('v')
@@ -233,5 +233,5 @@ if __name__ == '__main__':
     t.test_against_pyNN_models(
         plot=True,
 #         tests=('nrn9ML', 'nrnPyNN'))
-        tests=('nest9ML', 'nestPyNN'))
-#         tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN'))
+#         tests=('nest9ML', 'nestPyNN'))
+        tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN'))
