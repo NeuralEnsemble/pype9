@@ -180,7 +180,7 @@ NET_RECEIVE(weight_, channel) {
             if (found_transition_ == -1) {
                 found_transition_ = flag
             } else {
-                printf("WARNING!! Found multiple transitions %f and %f at a single timestep", found_transition_, flag)
+                printf("WARNING!! Found multiple transitions %f and %f at time %f", found_transition_, flag, t)
             }
             regime_ = {{trans.target_regime.name | upper}}
         }
