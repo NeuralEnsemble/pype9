@@ -41,8 +41,8 @@ class TestNeuronLoad(TestCase):
     def test_neuron_load(self):
         # for name9, namePynn in zip(self.models9ML, self.modelsPyNN):
         for name9, namePynn in (
-#                                 ('Izhikevich', 'Izhikevich'),
-                                ('AdExpIaF', 'AdExpIF'),
+                                ('Izhikevich', 'Izhikevich'),
+#                                 ('AdExpIaF', 'AdExpIF'),
                                 ):
             # -----------------------------------------------------------------
             # Set up PyNN section

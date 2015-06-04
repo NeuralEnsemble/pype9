@@ -14,16 +14,19 @@ from copy import copy
 import uuid
 from itertools import chain
 import subprocess as sp
+from collections import defaultdict
+import sympy
 from ..base import BaseCodeGenerator
 import nineml.units as un
 from nineml.abstraction.expressions import Alias
 from nineml.abstraction.ports import AnalogSendPort
-from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
+from pype9.exceptions import Pype9BuildError
 import pype9
 from datetime import datetime
 from nineml import Document
 from nineml.user import DynamicsProperties, Definition, Property
-from nineml.abstraction import Parameter, StateVariable, Constant
+from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
+                                Constant)
 try:
     from nineml.extensions.kinetics import Kinetics  # @UnusedImport
 except ImportError:
@@ -149,13 +152,13 @@ class CodeGenerator(BaseCodeGenerator):
         # Clone original component class and properties
         # ---------------------------------------------------------------------
         orig = prototype.component_class
-        trans = copy(orig)
+        trfrm = copy(orig)
         props = [copy(p) for p in prototype.properties]
         # ---------------------------------------------------------------------
         # Get the membrane voltage and convert it to 'v'
         # ---------------------------------------------------------------------
         # Get the location of the membrane voltage
-        if 'membrane_voltage' in kwargs:
+        try:
             name = kwargs['membrane_voltage']
             try:
                 orig_v = orig[name]
@@ -163,7 +166,7 @@ class CodeGenerator(BaseCodeGenerator):
                 raise Pype9BuildError(
                     "Could not find specified membrane voltage '{}'"
                     .format(name))
-        else:  # Guess voltage from dimension
+        except KeyError:  # Guess voltage from its dimension if not supplied
             candidate_vs = [cv for cv in orig.state_variables
                             if cv.dimension == un.voltage]
             if len(candidate_vs) == 0:
@@ -185,17 +188,17 @@ class CodeGenerator(BaseCodeGenerator):
                             "', '".join(orig.analog_receive_ports)))
         # Map voltage to hard-coded 'v' symbol
         if orig_v.name != 'v':
-            trans.rename_symbol(orig_v.name, 'v')
+            trfrm.rename_symbol(orig_v.name, 'v')
             v = ['v']
             v.annotations[PYPE9_NS][TRANSFORM_SRC] = orig_v
         else:
-            v = trans['v']
+            v = trfrm['v']
         # Add annotations to the original and build models
         orig.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = orig_v.name
-        trans.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = 'v'
+        trfrm.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = 'v'
         # Remove associated analog send port if present
         try:
-            trans.remove(trans.analog_send_port('v'))
+            trfrm.remove(trfrm.analog_send_port('v'))
         except KeyError:
             pass
         # Need to convert to AnalogReceivePort if v is a StateVariable
@@ -204,7 +207,7 @@ class CodeGenerator(BaseCodeGenerator):
             # Insert membrane capacitance if not present
             # -----------------------------------------------------------------
             # Get or guess the location of the membrane capacitance
-            if 'membrane_capacitance' in kwargs:
+            try:
                 name = kwargs['membrane_capacitance']
                 try:
                     orig_cm = orig.parameter(name)
@@ -212,13 +215,13 @@ class CodeGenerator(BaseCodeGenerator):
                     raise Pype9BuildError(
                         "Could not find specified membrane capacitance '{}'"
                         .format(name))
-                cm = trans[orig_cm.name]
-            else:
+                cm = trfrm.parameter(orig_cm.name)
+            except KeyError:  # 'membrane_capacitance' was not specified
                 candidate_cms = [ccm for ccm in orig.parameters
                                  if ccm.dimension == un.capacitance]
                 if len(candidate_cms) == 1:
                     orig_cm = candidate_cms[0]
-                    cm = trans[orig_cm.name]
+                    cm = trfrm[orig_cm.name]
                     print ("Guessing that '{}' is the membrane capacitance"
                            .format(orig_cm))
                 elif len(candidate_cms) > 1:
@@ -227,90 +230,120 @@ class CodeGenerator(BaseCodeGenerator):
                         " '{}'".format("', '".join(candidate_cms)))
                 else:
                     cm = Parameter("cm_", dimension=un.capacitance)
-                    trans.add(cm)
+                    trfrm.add(cm)
                     qty = kwargs.get('default_capacitance', (1.0, un.nF))
                     props.append(Property('cm_', *qty))
             cm.annotations[PYPE9_NS][TRANSFORM_SRC] = None
-            trans.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = cm.name
+            trfrm.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = cm.name
             # -----------------------------------------------------------------
             # Replace membrane voltage equation with membrane current
             # -----------------------------------------------------------------
-            # Get the voltage time derivatives from each regime (must be
-            # constant as there is no OutputAnalog in the spec see )
-            dvdt = next(trans.regimes).time_derivative(v.name)
-            has_td = dict((sv.name, []) for sv in orig.state_variables)
-            for regime in trans.regimes:
-                # Record whether the state var has a time deriv. in this regime
-                for var in regime.time_derivative_variables:
-                    has_td[var] = regime
+            # Determine the regimes in which each state variables has a time
+            # derivative in
+            has_td = defaultdict(list)
+            # List which regimes need to be clamped to their last voltage
+            # (as it has no time derivative)
+            clamped_regimes = []
+            # The voltage clamp equation where v_clamp is the last voltage
+            # value and g_clamp_ is a large conductance
+            clamp_i = sympy.sympify('g_clamp_ * (v - v_clamp_)')
+            memb_is = []
+            for regime in trfrm.regimes:
+                # Add an appropriate membrane current
                 try:
-                    if regime.time_derivative(v.name) != dvdt:
-                        raise Pype9RuntimeError(
-                            "Cannot convert to current centric as the voltage "
-                            " time for derivative equation changes between "
-                            "regimes")
-                    regime.remove(regime.time_derivative(v.name))
+                    # Convert the voltage time derivative into a membrane
+                    # current
+                    dvdt = regime.time_derivative(v.name)
+                    regime.remove(dvdt)
+                    i = -dvdt.rhs * cm
+                    memb_is.append(i)
                 except KeyError:
-                    # No time derivative for voltage in this regime, don't
-                    # need to worry about it
-                    pass
-            memb_i = Alias('i_', dvdt.rhs * cm * -1.0)
-            memb_i.annotations[PYPE9_NS][TRANSFORM_SRC] = (dvdt, cm), dvdt
-            dvdt.annotations[PYPE9_NS][TRANSFORM_DEST] = (memb_i, cm), memb_i
+                    i = clamp_i
+                    clamped_regimes.append(regime)
+                regime.add(Alias('i_', i))
+                # Record state vars that have a time deriv. in this regime
+                for var in regime.time_derivative_variables:
+                    if var != 'v':
+                        has_td[var].append(regime)
+            # Pick the most popular membrane current to be the alias in
+            # the global scope
+            assert memb_is, "No regimes contain voltage time derivatives"
+            memb_i = Alias('i_', max(memb_is, key=memb_is.count))
+            # Add membrane current along with a analog send port
+            trfrm.add(memb_i)
+            i_port = AnalogSendPort('i_', dimension=un.current)
+            i_port.annotations[PYPE9_NS][ION_SPECIES] = NON_SPECIFIC_CURRENT
+            trfrm.add(i_port)
+            # Remove membrane currents that match the membrane current in the
+            # outer scope
+            for regime in trfrm.regimes:
+                if regime.alias('i_') == memb_i:
+                    regime.remove(regime.alias('i_'))
+            # If there are clamped regimes add extra parameters and set the
+            # voltage to clamp to in the regimes that trfrmition to them
+            if clamped_regimes:
+                trfrm.add(StateVariable('v_clamp_', un.voltage))
+                trfrm.add(Constant('g_clamp_', 1e8, un.uS))
+                for trans in trfrm.transitions:
+                    if trans.target_regime in clamped_regimes:
+                        # Assign v_clamp_ to the value
+                        try:
+                            v_clamp_rhs = trans.state_assignment('v').rhs
+                        except KeyError:
+                            v_clamp_rhs = 'v'
+                        trans.add(StateAssignment('v_clamp_', v_clamp_rhs))
             # -----------------------------------------------------------------
-            # Add clamping currents for regimes without voltage derivatives
-            # -----------------------------------------------------------------
-            trans.annotations[PYPE9_NS][NO_TIME_DERIVS] = (
-                ['v'] + [var for var, reg in has_td.iteritems() if not reg])
-#             regimes_missing_v = [r for r in trans.regimes
-#                                  if r.name not in has_td['v']]
-#             if regimes_missing_v:
-#                 # Add a variable to clamp the voltage to
-#                 trans.add(StateVariable('last_v_', un.voltage))
-#                 trans.add(Constant('big_g_', value=1e6,
-#                                    units=un.conductanceDensity))
-#                 clamping_i = Alias('clamping_i_', '0')
-#                 trans.add(clamping_i)
-#                 memb_i += clamping_i
-#                 for regime in regimes_missing_v:
-#                     regime.add(Alias('clamping_i_', 'big_g_ * (v - last_v_)'))
+            trfrm.annotations[PYPE9_NS][NO_TIME_DERIVS] = (
+                ['v'] + [sv for sv in trfrm.state_variable_names
+                         if sv not in has_td])
             # -----------------------------------------------------------------
             # Get the external input currents
             # -----------------------------------------------------------------
             # Analog receive or reduce ports that are of dimension current and
             # are purely additive to the membrane current and nothing else
             # (actually subtractive as it is outward current)
-            ext_is = [
-                i for i in chain(orig.analog_receive_ports,
-                                 orig.analog_reduce_ports)
-                if (i.dimension == un.current and
-                    i.name in memb_i.rhs_symbol_names and
-                    len([e for e in orig.all_expressions
-                         if i.symbol in e.free_symbols]) == 1)]
-            print ("Removing external input currents to the membrane, '{}'"
-                   .format("', '".join(i.name for i in ext_is)))
-            # Remove external currents (as NEURON handles them)
-            for i in ext_is:
-                memb_i.subs(i, 0)
-                trans.remove(i)
-            memb_i.simplify()
-            trans.annotations[PYPE9_NS][EXTERNAL_CURRENTS] = ext_is
-            trans.add(memb_i)
-            # Remove existing current analog send ports
-            for p in orig.analog_send_ports:
-                if p.dimension == un.current:
-                    trans.remove(p)
-            # Add analog send port for current
-            i_port = AnalogSendPort('i_', dimension=un.current)
-            i_port.annotations[PYPE9_NS][ION_SPECIES] = NON_SPECIFIC_CURRENT
-            trans.add(i_port)
+            try:
+                ext_is = []
+                for i_name in kwargs['external_currents']:
+                    try:
+                        ext_i = trfrm.analog_receive_port(i_name)
+                    except KeyError:
+                        try:
+                            ext_i = trfrm.analog_reduce_port(i_name)
+                        except KeyError:
+                            raise Pype9BuildError(
+                                "Did not find specified external current port "
+                                "'{}'".format(i_name))
+                    if ext_i.dimension != un.current:
+                        raise Pype9BuildError(
+                            "Analog receive port matching specified external "
+                            "current '{}' does not have 'current' dimension "
+                            "({})".format(ext_i.name, ext_i.dimension))
+                    ext_is.append(ext_i)
+            except KeyError:
+                ext_is = [
+                    i for i in chain(orig.analog_receive_ports,
+                                     orig.analog_reduce_ports)
+                    if (i.dimension == un.current and
+                        i.name in memb_i.rhs_symbol_names and
+                        len([e for e in orig.all_expressions
+                             if i.symbol in e.free_symbols]) == 1)]
+                print ("Guessing '{}' external currents to be removed"
+                       .format("', '".join(i.name for i in ext_is)))
+            trfrm.annotations[PYPE9_NS][EXTERNAL_CURRENTS] = ext_is
+            # Remove external input current ports (as NEURON handles them)
+            for ext_i in ext_is:
+                trfrm.remove(ext_i)
+                for expr in chain(trfrm.aliases, trfrm.all_time_derivatives()):
+                    expr.subs(ext_i, 0)
+                    expr.simplify()
             # -----------------------------------------------------------------
             # Validate the transformed component class and construct prototype
             # -----------------------------------------------------------------
-            trans.validate()
+            trfrm.validate()
             # Retun a prototype of the transformed class
             return DynamicsProperties(
-                prototype.name, Definition(trans.name, Document(trans)), props)
+                prototype.name, Definition(trfrm.name, Document(trfrm)), props)
 
     def compile_source_files(self, compile_dir, component_name, verbose):
         """
