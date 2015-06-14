@@ -74,7 +74,7 @@ class TestNMODLImporter(TestCase):
 #             <AnalogPort mode="recv" dimension="voltage" name="v"/>
 #             <Parameter dimension="dimensionless" name="qdeltat"/>
 #             <Parameter dimension="membrane_conductance" name="gbar"/>
-#             <Dynamics>
+#             
 #               <Regime name="states">
 #                 <TimeDerivative variable="m">
 #                   <MathInline>(minf_v - m)/taum_v</MathInline>
