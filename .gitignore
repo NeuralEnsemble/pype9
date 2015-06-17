@@ -22,3 +22,4 @@ x86_64
 *.o
 .libs
 *.Plo
+/doc/_build
