@@ -337,13 +337,13 @@ class CodeGenerator(BaseCodeGenerator):
                 for expr in chain(trfrm.aliases, trfrm.all_time_derivatives()):
                     expr.subs(ext_i, 0)
                     expr.simplify()
-            # -----------------------------------------------------------------
-            # Validate the transformed component class and construct prototype
-            # -----------------------------------------------------------------
-            trfrm.validate()
-            # Retun a prototype of the transformed class
-            return DynamicsProperties(
-                prototype.name, Definition(trfrm.name, Document(trfrm)), props)
+        # -----------------------------------------------------------------
+        # Validate the transformed component class and construct prototype
+        # -----------------------------------------------------------------
+        trfrm.validate()
+        # Retun a prototype of the transformed class
+        return DynamicsProperties(
+            prototype.name, Definition(trfrm.name, Document(trfrm)), props)
 
     def compile_source_files(self, compile_dir, component_name, verbose):
         """
