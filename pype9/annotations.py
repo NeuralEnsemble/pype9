@@ -19,6 +19,6 @@ TRANSFORM_DEST = 'TransformDestination'
 
 # Ion species information
 ION_SPECIES = 'IonSpecies'
-NON_SPECIFIC_CURRENT = 'nonSpecific'
-
-
+NONSPECIFIC_CURRENT = 'nonSpecific'
+INTERNAL_CONCENTRATION = 'InternalConcentration'
+EXTERNAL_CONCENTRATION = 'ExternalConcentration'

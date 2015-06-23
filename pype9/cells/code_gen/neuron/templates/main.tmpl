@@ -11,15 +11,27 @@
 TITLE Spiking node generated from 9ML using PyPe9 version {{version}} at '{{timestamp}}'
 
 NEURON {
-    {%+ if is_subcomponent %}SUFFIX{% else %}POINT_PROCESS{% endif %} {{component_name}}
-{% for port in componentclass.analog_send_ports if port.dimension == units.currentDensity or port.dimension == units.current %}
-    {% set ion_species = port.annotations[PYPE9_NS][ION_SPECIES] %}
-    {% if not ion_species or ion_species == NON_SPECIFIC_CURRENT %}
-    NONSPECIFIC_CURRENT {{port.name}}
-    {% else %}
-    USEION {{ion_species}} WRITE {{ion_species}}i
-    {% endif %}        
-{% endfor %}
+{% if is_subcomponent %}
+    SUFFIX {{component_name}}
+    {% for species, ports in componentclass.annotations[PYPE9_NS][ION_SPECIES].iteritems() %}
+        {% if species == NONSPECIFIC_CURRENT %}
+    NONSPECIFIC_CURRENT {% for port in componentclass.analog_send_ports if port.dimension == units.currentDensity %}{{port.name}}{% if not loop.last %}, {% endif %}{% endfor %}
+        {% else %}
+    USEION {{species}} 
+            {%- for p in ports if p.mode == 'recv' %}
+                {%- if loop.first %} READ{% endif %} {{p.name}}{% if not loop.last %},{% endif %}
+            {%- endfor %}
+            {%- for p in ports if p.mode == 'send' %}
+                {%- if loop.first %} WRITE{% endif %} {{p.name}}{% if not loop.last %},{% endif %}
+            {%- endfor %}
+        {% endif %}
+
+    {% endfor %}
+{% else %}
+    POINT_PROCESS {{component_name}}
+    NONSPECIFIC_CURRENT {% for port in componentclass.analog_send_ports if port.dimension == units.current %}{% if not loop.first %}, {% endif %}{{port.name}}{% endfor %}
+{% endif %}
+
     : T
     RANGE regime_
 
@@ -30,11 +42,6 @@ NEURON {
 
     :Parameters
 {% for p in componentclass.parameters %}
-    RANGE {{p.name}}
-{% endfor %}
-
-    :Ports
-{% for p in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) if p.name != 'v' %}
     RANGE {{p.name}}
 {% endfor %}
 
@@ -73,9 +80,10 @@ INITIAL {
     {# This should come from the initial state, when we sort out that format #}
     regime_ = {{next(componentclass.regimes).name | upper}}
 
+{% if not is_subcomponent %}
     : Initialise the NET_RECEIVE block by sending appropriate flag to itself
     net_send(0, INIT)
-
+{% endif %}
 }
 
 PARAMETER {
@@ -86,7 +94,7 @@ PARAMETER {
 
     : Constants
 {% for c in componentclass.constants %}
-    {{c.name}} = {{c.value}} ({{c.units.name}})
+    {{c.name}} = {{c.value}} :({{c.units.name}})
 {% endfor %}
 }
 
@@ -102,11 +110,9 @@ ASSIGNED {
     : Internal flags
     regime_
     found_transition_
-{% if not is_subcomponent %}
-   
-    : Membrane voltage
-    v (mV)
-{% endif %}
+{% for p in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
+    {{p.name}} 
+{% endfor %}    
 
     : Aliases
 {% for alias in componentclass.aliases %}
@@ -118,10 +124,12 @@ BREAKPOINT {
     SOLVE states METHOD {{ode_solver}}
 {% set output_analog_exprs = componentclass.required_for(componentclass.all_output_analogs()).expressions + list(componentclass.all_output_analogs()) %}
 {% for expr in output_analog_exprs %}
-    {{expr.lhs}} = {{expr.rhs_cstr}}
+    {{code_gen.assign_str(expr)}}
+    {#{{expr.lhs}} = {{expr.rhs_cstr}}#}
 {% endfor %}
 {% for expr in componentclass.required_for(componentclass.all_time_derivatives()).expressions if expr not in output_analog_exprs %}
-    {{expr.lhs}} = {{expr.rhs_cstr}}
+    {{code_gen.assign_str(expr)}}
+    {#{{expr.lhs}} = {{expr.rhs_cstr}}#}
 {% endfor %}
 }
 
@@ -141,6 +149,8 @@ FUNCTION deriv_{{sv.name}}({{componentclass.required_for(componentclass.all_time
 }
 {% endfor %}
 
+
+{% if not is_subcomponent %}
 NET_RECEIVE(weight_, channel) {
     INITIAL {
       : stop channel being set to 0 by default
@@ -148,33 +158,33 @@ NET_RECEIVE(weight_, channel) {
     found_transition_ = -1
     if (flag == INIT) {
         : Set up required watch statements
-{% for regime in componentclass.regimes %}
-    {% for oc in regime.on_conditions %}
+    {% for regime in componentclass.regimes %}
+        {% for oc in regime.on_conditions %}
         WATCH ({{oc.trigger.rhs_cstr}}) {{componentclass.index_of(oc.trigger.rhs, key='TriggerRHS') + 1}}  : Watch trigger of on-condition and send appropriate flag
-    {% endfor %}
-{% endfor %}
-{% for regime in componentclass.regimes %}
-    } else if (regime_ == {{regime.name | upper}}) {
-    {% for trans in regime.transitions %}
-        {% if hasattr(trans, 'trigger') %}
-        if (flag == {{componentclass.index_of(trans.trigger.rhs, key='TriggerRHS') + 1}}) {  : Condition '{{trans.trigger.rhs_str}}'
-        {% else %}
-        if (flag == ON_EVENT && channel == {{trans.src_port_name | upper}}) {
-        {% endif %}      
-            : Required aliases
-        {% for expr in componentclass.required_for(trans.state_assignments).expressions %}
-            {{expr.lhs}} = {{expr.rhs_cstr}}
         {% endfor %}
+    {% endfor %}
+    {% for regime in componentclass.regimes %}
+    } else if (regime_ == {{regime.name | upper}}) {
+        {% for trans in regime.transitions %}
+            {% if hasattr(trans, 'trigger') %}
+        if (flag == {{componentclass.index_of(trans.trigger.rhs, key='TriggerRHS') + 1}}) {  : Condition '{{trans.trigger.rhs_str}}'
+            {% else %}
+        if (flag == ON_EVENT && channel == {{trans.src_port_name | upper}}) {
+            {% endif %}      
+            : Required aliases
+            {% for expr in componentclass.required_for(trans.state_assignments).expressions %}
+            {{expr.lhs}} = {{expr.rhs_cstr}}
+            {% endfor %}
 
             : State assignments
-        {% for sa in trans.state_assignments %}
+            {% for sa in trans.state_assignments %}
             {{sa.lhs}} = {{sa.rhs_cstr}}
-        {% endfor %}
+            {% endfor %}
 
             : Output events
-        {% for node in trans.output_events %}
+            {% for node in trans.output_events %}
             net_event(t)  : FIXME: Need to specify which output port this is
-        {% endfor %}
+            {% endfor %}
         
             : Regime transition
             if (found_transition_ == -1) {
@@ -184,9 +194,10 @@ NET_RECEIVE(weight_, channel) {
             }
             regime_ = {{trans.target_regime.name | upper}}
         }
+        {% endfor %}
     {% endfor %}
-{% endfor %}
     } else {
         printf("ERROR! Unrecognised regime %f", regime_)
     }
 }
+{% endif %}
