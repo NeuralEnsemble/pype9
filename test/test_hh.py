@@ -13,11 +13,11 @@ import numpy
 
 hh = nineml.read(os.path.join(
     os.environ['HOME'], 'git',
-    'nineml_catalog', 'neurons', 'HHTraub.xml'))['HHTraubProperties']
+    'nineml_catalog', 'neurons', 'HodgkinHuxley.xml'))['HodgkinHuxley']
 
 
-HH = CellMetaClass(hh, build_mode='force', ion_species={
-    'ik': 'k', 'ina': 'na', 'il': None, 'ena': 'na', 'ek': 'k'})
+HH = CellMetaClass(hh, build_mode='force')#, ion_species={
+#    'ik': 'k', 'ina': 'na', 'il': None, 'ena': 'na', 'ek': 'k'})
 
 hh = HH()
 hh.record('v')
