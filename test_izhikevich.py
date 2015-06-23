@@ -12,8 +12,8 @@ import numpy
 
 
 izhi = nineml.read(os.path.join(
-    os.environ['HOME'], 'git', 'nineml_catalog', 'neurons',
-    'Izhikevich2003.xml'))['Izhikevich2003Properties']
+    os.environ['HOME'], 'git', 'nineml_catalog', 'pynn_nmodl_import',
+    'neurons/Izhikevich.xml'))['IzhikevichProperties']
 
 
 Izhikevich = CellMetaClass(izhi)
@@ -21,12 +21,12 @@ Izhikevich = CellMetaClass(izhi)
 izhi = Izhikevich()
 izhi.record('v')
 izhi.update_state({'v': -65.0 * pq.ms})
-current = neo.AnalogSignal(
-    numpy.concatenate((numpy.zeros(300), numpy.ones(700))) * 10,
-    units=pq.nA, sampling_period=1.0 * pq.ms)
-izhi.play('iExt', current)
 izhi.run(1000 * pq.ms)
+current = neo.AnalogSignal(numpy.random.random(1000) * 10.0, units=pq.nA,
+                           sampling_period=1.0 * pq.ms)
+plt.plot(current.times, current)
+plt.show()
+izhi.play('iExt', current)
 v = izhi.recording('v')
 plt.plot(v.times, v)
-plt.plot(current.times, current)
 plt.show()

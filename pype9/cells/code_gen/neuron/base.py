@@ -12,7 +12,7 @@ import os.path
 import tempfile
 from copy import copy
 import uuid
-from itertools import chain
+from itertools import chain, groupby
 import subprocess as sp
 from collections import defaultdict
 import sympy
@@ -27,14 +27,17 @@ from nineml import Document
 from nineml.user import DynamicsProperties, Definition, Property
 from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
                                 Constant)
+from sympy.printing import ccode
+
 try:
     from nineml.extensions.kinetics import Kinetics  # @UnusedImport
 except ImportError:
     KineticsClass = type(None)
 from pype9.annotations import (
     PYPE9_NS, ION_SPECIES, MEMBRANE_VOLTAGE, MEMBRANE_CAPACITANCE,
-    TRANSFORM_SRC, TRANSFORM_DEST, NON_SPECIFIC_CURRENT,
-    EXTERNAL_CURRENTS, NO_TIME_DERIVS)
+    TRANSFORM_SRC, TRANSFORM_DEST, NONSPECIFIC_CURRENT,
+    EXTERNAL_CURRENTS, NO_TIME_DERIVS, INTERNAL_CONCENTRATION,
+    EXTERNAL_CONCENTRATION)
 import logging
 
 TRANSFORM_NS = 'NeuronBuildTransform'
@@ -121,6 +124,7 @@ class CodeGenerator(BaseCodeGenerator):
     def generate_mod_file(self, template, prototype, initial_state, src_dir,
                           template_args):
         tmpl_args = {
+            'code_gen': self,
             'component_name': prototype.name,
             'componentclass': prototype.component_class,
             'prototype': prototype,
@@ -157,7 +161,6 @@ class CodeGenerator(BaseCodeGenerator):
         # ---------------------------------------------------------------------
         # Get the membrane voltage and convert it to 'v'
         # ---------------------------------------------------------------------
-        # Get the location of the membrane voltage
         try:
             name = kwargs['membrane_voltage']
             try:
@@ -177,9 +180,15 @@ class CodeGenerator(BaseCodeGenerator):
                 print ("Guessing that '{}' is the membrane voltage"
                        .format(orig_v))
             elif len(candidate_vs) > 1:
-                raise Pype9BuildError(
-                    "Could not guess the membrane voltage, candidates: '{}'"
-                    .format("', '".join(v.name for v in candidate_vs)))
+                try:
+                    orig_v = next(c for c in candidate_vs if c.name == 'v')
+                    print ("Guessing that '{}' is the membrane voltage"
+                           .format(orig_v))
+                except StopIteration:
+                    raise Pype9BuildError(
+                        "Could not guess the membrane voltage, candidates: "
+                        "'{}'" .format("', '".join(v.name
+                                                   for v in candidate_vs)))
             else:
                 raise Pype9BuildError(
                     "No candidates for the membrane voltage, "
@@ -272,7 +281,7 @@ class CodeGenerator(BaseCodeGenerator):
             # Add membrane current along with a analog send port
             trfrm.add(memb_i)
             i_port = AnalogSendPort('i_', dimension=un.current)
-            i_port.annotations[PYPE9_NS][ION_SPECIES] = NON_SPECIFIC_CURRENT
+            i_port.annotations[PYPE9_NS][ION_SPECIES] = NONSPECIFIC_CURRENT
             trfrm.add(i_port)
             # Remove membrane currents that match the membrane current in the
             # outer scope
@@ -337,6 +346,81 @@ class CodeGenerator(BaseCodeGenerator):
                 for expr in chain(trfrm.aliases, trfrm.all_time_derivatives()):
                     expr.subs(ext_i, 0)
                     expr.simplify()
+        else:
+            # -----------------------------------------------------------------
+            # Sort out different analog ports into ionic species
+            # -----------------------------------------------------------------
+            assigned_species = kwargs.get('ion_species', {})
+            for port in trfrm.analog_ports:
+                # TODO: Need to check for temperature analog ports or more
+                #       general analog ports (i.e. POINTERS)
+                if port.name != 'v':
+                    try:
+                        species = assigned_species[port.name]
+                        if species is None:
+                            if port.dimension not in (un.current,
+                                                      un.currentDensity):
+                                raise Pype9BuildError(
+                                    "Only current ports can be ion "
+                                    "non-specific {}".format(port))
+                            species = NONSPECIFIC_CURRENT
+                    except KeyError:
+                        if ION_SPECIES not in port.annotations[PYPE9_NS]:
+                            raise Pype9BuildError(
+                                "'{}' port was not assigned a ionic species"
+                                .format(port.name))
+                        species = port.annotations[PYPE9_NS][ION_SPECIES]
+                    if species != NONSPECIFIC_CURRENT:
+                        if port.dimension == un.voltage:
+                            new_name = 'e' + species
+                        elif port.dimension == un.currentDensity:
+                            new_name = 'i' + species
+                        elif port.dimension == un.concentration:
+                            try:
+                                if species[1] == INTERNAL_CONCENTRATION:
+                                    new_name = species[0] + 'i'
+                                elif species[1] == EXTERNAL_CONCENTRATION:
+                                    new_name = species[0] + 'o'
+                                else:
+                                    raise Pype9BuildError(
+                                        "Concentration receive ports must "
+                                        "specify whether they are internal or "
+                                        "external")
+                            except IndexError:
+                                raise Pype9BuildError(
+                                    "Concentration receive ports must specify "
+                                    "whether they are internal or external")
+                        else:
+                            raise Pype9BuildError(
+                                "Unrecognised dimension of analog receive port"
+                                " '{}', can only be voltage or current density"
+                                .format(port.dimension))
+                        trfrm.rename_symbol(port.name, new_name)
+                    port.annotations[PYPE9_NS][ION_SPECIES] = species
+            # Collate all ports relating to each ion species
+            key_func = lambda p: p.annotations[PYPE9_NS][ION_SPECIES]
+            sorted_ion_ports = sorted(
+                (p for p in trfrm.analog_ports
+                 if ION_SPECIES in p.annotations[PYPE9_NS]), key=key_func)
+            trfrm.annotations[PYPE9_NS][ION_SPECIES] = dict(
+                (s, list(ps)) for s, ps in groupby(sorted_ion_ports,
+                                                   key=key_func))
+            try:
+                non_specifics = trfrm.annotations[
+                    PYPE9_NS][ION_SPECIES][NONSPECIFIC_CURRENT]
+                if len(non_specifics) != 1:
+                    raise Pype9BuildError(
+                        "More than one non-specific current port found ('{}')"
+                        .format("', '".join(p.name for p in non_specifics)))
+                non_spec = non_specifics[0]
+                if not (isinstance(non_spec, AnalogSendPort) and
+                        non_spec.dimension in (un.current, un.currentDensity)):
+                    raise Pype9BuildError(
+                        "Only analog send ports with current or current "
+                        "density dimensiones can be non-specific ({})"
+                        .format(non_spec))
+            except KeyError:
+                pass  # No non-specific currents
         # -----------------------------------------------------------------
         # Validate the transformed component class and construct prototype
         # -----------------------------------------------------------------
@@ -440,3 +524,11 @@ class CodeGenerator(BaseCodeGenerator):
         except KeyError:
             pass
         return path
+
+    def assign_str(self, expr):
+        rhs = expr.expand_integer_powers()
+        nmodl_str = ccode(rhs, user_functions=expr._cfunc_map,
+                          assign_to=expr.lhs)
+        nmodl_str = expr.rationals_re.sub(r'\1/\2', nmodl_str)
+        nmodl_str = nmodl_str.replace(';', '')
+        return nmodl_str
