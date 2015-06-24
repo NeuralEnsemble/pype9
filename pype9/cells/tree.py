@@ -7,7 +7,7 @@ import nineml
 from pype9.exceptions import Pype9IrreducibleMorphException
 from nineml.user.multicomponent import (
     Mapping as Mapping9ML, MultiCompartment, Domain as Domain9ML,
-    MultiComponent as MultiComponent9ML)
+    MultiComponent as MultiComponent9ML, SubComponent as SubComponent9ML)
 from os import path
 import quantities as pq
 from abc import ABCMeta  # Metaclass for abstract base classes
@@ -164,18 +164,20 @@ class Tree(STree2):
         mapping = Mapping9ML(keys, domain_indices)
         domains = []
         for i, domain_comps in enumerate(domain_compss):
-            subcomponents = [
-                nineml.read(path.join(comp_dir, c.name + '.xml'))[c.name]
-                for c in domain_comps
-                if (isinstance(c, IonChannelModel) and
-                    c.name.split('_')[0] not in ('capacitance',) and
-                    c.name.split('_')[-1] not in ('ion',))]
+            comps = [nineml.read(path.join(comp_dir, c.name + '.xml'))[c.name]
+                     for c in domain_comps
+                     if (isinstance(c, IonChannelModel) and
+                         c.name.split('_')[0] not in ('capacitance',) and
+                         c.name.split('_')[-1] not in ('ion',))]
             domains.append(
                 Domain9ML(
                     name='domain' + str(i),
                     dynamics=MultiComponent9ML(
                         name='domain' + str(i) + '_comp',
-                        subcomponents=subcomponents),
+                        subcomponents=[
+                            SubComponent9ML(name=c.component_class.name,
+                                            dynamics=c)
+                            for c in comps]),
                     port_connections=[]))
         return MultiCompartment(self.name, tree, mapping, domains)
 
