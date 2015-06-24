@@ -37,33 +37,34 @@ class TestHocImporter(TestCase):
 
 class TestNMODLImporter(TestCase):
 
-    naf_class = Dynamics(
-        name="NaF",
-        parameters=[Parameter("qdeltat", un.dimensionless),
-                    Parameter("gbar", un.conductance)],
-        analog_ports=[
-            AnalogSendPort("m", un.dimensionless),
-            AnalogSendPort("h", un.dimensionless),
-            AnalogReceivePort("ena", un.voltage),
-            AnalogSendPort("ina", un.current),
-            AnalogReceivePort("v", un.voltage)],
-        regimes=[Regime(name="default",
-                        time_derivatives=[
-                            TimeDerivative('m', '(minf_v - m)/taum_v'),
-                            TimeDerivative('h', '(hinf_v - h)/tauh_v')])],
-        aliases=[Alias('tauh_v__tmp',
-                       '16.67 / '
-                       '(exp((v - 8.3) / -29) + exp((v + 66) / 9)) + 0.2'),
-                 Alias('taum_v', 'taum_v__tmp / qdeltat'),
-                 Alias('tauh_v', 'taum_v__tmp / qdeltat'),
-                 Alias('minf_v', '1 / (1 + exp((v + 45) / -7.3))'),
-                 Alias('hinf_v', '1 / (1 + exp((v + 42) / 5.9))'),
-                 Alias('ina', 'gbar * m*m*m * h * (v - ena)'),
-                 Alias('taum_v__tmp',
-                       '5.83 / (exp((v - (6.4)) / -9) + '
-                       'exp((v + 97) / 17)) + 0.025')],
-        state_variables=[StateVariable('m', un.dimensionless),
-                          StateVariable('h', un.dimensionless)])
+#     naf_class = Dynamics(
+#         name="NaF",
+#         parameters=[Parameter("qdeltat", un.dimensionless),
+#                     Parameter("gbar", un.conductance)],
+#         analog_ports=[
+#             AnalogSendPort("m", un.dimensionless),
+#             AnalogSendPort("h", un.dimensionless),
+#             AnalogReceivePort("ena", un.voltage),
+#             AnalogSendPort("ina", un.current),
+#             AnalogReceivePort("v", un.voltage)],
+#         regimes=[Regime(name="default",
+#                         time_derivatives=[
+#                             TimeDerivative('m', '(minf_v - m)/taum_v'),
+#                             TimeDerivative('h', '(hinf_v - h)/tauh_v')])],
+#         aliases=[Alias('tauh_v__tmp',
+#                        '16.67 / '
+#                        '(exp((v - 8.3) / -29) + exp((v + 66) / 9)) + 0.2'),
+#                  Alias('taum_v', 'taum_v__tmp / qdeltat'),
+#                  Alias('tauh_v', 'taum_v__tmp / qdeltat'),
+#                  Alias('minf_v', '1 / (1 + exp((v + 45) / -7.3))'),
+#                  Alias('hinf_v', '1 / (1 + exp((v + 42) / 5.9))'),
+#                  Alias('ina', 'gbar * m*m*m * h * (v - ena)'),
+#                  Alias('taum_v__tmp',
+#                        '5.83 / (exp((v - (6.4)) / -9) + '
+#                        'exp((v + 97) / 17)) + 0.025')],
+#         constants=[Constant
+#         state_variables=[StateVariable('m', un.dimensionless),
+#                           StateVariable('h', un.dimensionless)])
 #         """<?xml version='1.0' encoding='UTF-8'?>
 #         <NineML xmlns="http://nineml.org/9ML/0.3">
 #           <Dynamics name="NaF">
@@ -140,16 +141,17 @@ class TestNMODLImporter(TestCase):
 class TestNeuronImporter(TestCase):
 
     def test_neuron_import(self):
-        importer = NeuronImporter('/home/tclose/git/cerebellarnuclei/',
+        importer = NeuronImporter('/Users/tclose/git/cerebellarnuclei/',
                                    ['DCN_params_axis.hoc', 'DCN_morph.hoc',
                                     'DCN_mechs1.hoc'],
                                    ['DCNmechs()'])
-        importer.write_ion_current_files('/home/tclose/git/cerebellarnuclei/'
-                                         '9ml/ion_channels')
-        importer = NeuronImporter('/home/tclose/git/purkinje/model/'
+        importer.write_ion_current_files(
+            '/Users/tclose/git/cerebellarnuclei/9ml/ion_channels/classes',
+            '/Users/tclose/git/cerebellarnuclei/9ml/ion_channels/properties')
+        importer = NeuronImporter('/Users/tclose/git/purkinje/model/'
                                   'Haroon_active_reduced_model',
                                    ['for_import.py'])
-        importer.write_ion_current_files('/home/tclose/git/purkinje/model/'
+        importer.write_ion_current_files('/Users/tclose/git/purkinje/model/'
                                          'Haroon_active_reduced_model/9ml')
         importer = NeuronImporter(test_gr_dir,
                                    ['load_sergios_golgi.hoc'])

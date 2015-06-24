@@ -5,6 +5,7 @@ from lxml.builder import E
 from nineml.exceptions import NineMLMathParseError, NineMLRuntimeError
 from .hoc import HocImporter
 from .nmodl import NMODLImporter
+from nineml.exceptions import NineMLDimensionError
 
 
 class NeuronImporter(object):
@@ -30,7 +31,14 @@ class NeuronImporter(object):
             nmodl_imptr = self.nmodl_importers[class_name]
             if class_name not in class_paths:
                 try:
-                    class9ml = nmodl_imptr.get_component_class()
+                    try:
+                        class9ml = nmodl_imptr.get_component_class()
+                    except NineMLDimensionError:
+                        class9ml = nmodl_imptr.get_component_class(
+                            validate_dimensions=False)
+                        print ("Warning '{}' was imported despite failing "
+                               "dimensionality checks"
+                               .format(nmodl_imptr.component_name))
                     class_path = os.path.join(class_dir,
                                               nmodl_imptr.component_name +
                                               '_Class.xml')
@@ -83,6 +91,6 @@ class NeuronImporter(object):
                                       self.available_mods[class_name])
             try:
                 self.nmodl_importers[class_name] = NMODLImporter(nmodl_file)
-            except (NotImplementedError, NineMLMathParseError) as e:
+            except Exception as e:
                 print ("Could not parse '{}' mod file because of {} error: "
                        "'{}'".format(nmodl_file, e.__class__.__name__, e))

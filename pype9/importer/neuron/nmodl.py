@@ -10,6 +10,7 @@ import collections
 from copy import deepcopy
 from itertools import chain, groupby
 from sympy.functions import Piecewise
+import nineml
 from nineml.abstraction.expressions.utils import is_builtin_symbol
 from nineml.abstraction.componentclass import Parameter
 from nineml.abstraction.dynamics import (
@@ -216,7 +217,8 @@ class NMODLImporter(object):
         if not self.kinetics:
             self._clean_init_parameters()
 
-    def get_component_class(self, flatten_kinetics=False):
+    def get_component_class(self, flatten_kinetics=False,
+                            validate_dimensions=True):
         if self.kinetics:
             raise NotImplementedError
 #             if flatten_kinetics:
@@ -263,7 +265,8 @@ class NMODLImporter(object):
                     regimes=self.regimes.values(),
                     aliases=self.aliases.values(),
                     constants=self.constants.values(),
-                    state_variables=self.state_variables.values())
+                    state_variables=self.state_variables.values(),
+                    validate_dimensions=validate_dimensions)
             except Exception, e:
                 if self.incomplete_import:
                     raise Pype9ImportError(
@@ -286,9 +289,14 @@ class NMODLImporter(object):
                           for n, v in hoc_properties.iteritems())
         properties.update((n, (v, self._units2nineml_units(u)))
                           for n, (v, u) in properties.iteritems())
-        context = Document()
-        definition = Definition(self.component_name + 'Class', context,
-                                url=os.path.normpath(class_path))
+        class_name = self.component_name + 'Class'
+        class_path = os.path.normpath(class_path)
+        try:
+            
+        document = nineml.read(os.path.normpath(class_path))
+        elem = super(Document, document)[name]
+        DynamicsXMLLoader(document).load_dynamics(element)
+        definition = Definition(dynamics, url=class_path)
         comp = DynamicsProperties(self.component_name, definition=definition,
                                   properties=properties)
         return comp
@@ -313,7 +321,7 @@ class NMODLImporter(object):
             if p.mode == 'send':
                 print '{}'.format(p.name)
         print "\nTime derivatives:"
-        for r in self.regimes:
+        for r in self.regimes.itervalues():
             for td in r.time_derivatives:
                 print "{}' = {}".format(td.dependent_variable, td.rhs)
         print "\nAliases:"
@@ -518,9 +526,9 @@ class NMODLImporter(object):
                            .format(self.fname))
             else:
                 try:
-                    if lhs not in self.state_variables:
-                        self.state_variables[lhs] = StateVariable(
-                            lhs, self.dimensions[lhs])
+#                     if lhs not in self.state_variables:
+#                         self.state_variables[lhs] = StateVariable(
+#                             lhs, self.dimensions[lhs])
                     self.initial_state[lhs] = self._escape_piecewise(
                         lhs, rhs)
                 except KeyError:
@@ -737,8 +745,9 @@ class NMODLImporter(object):
             if len(parts) == 1:
                 var = parts[0]
                 dimension = None
-            elif len(parts) == 2:
-                var, units = parts
+            elif len(parts) > 1:
+                var = parts[0]
+                units = '('.join(parts[1:])
                 var = var.strip()
                 units = units[:-1]  # remove parentheses
                 dimension = self._units2dimension(units)
