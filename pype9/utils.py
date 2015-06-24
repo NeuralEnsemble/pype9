@@ -12,7 +12,9 @@ import numpy
 import nineml
 from quantities import Quantity
 from nineml import (
-    Unit, Dynamics, ConnectionRule, RandomDistribution)
+    Unit, Dynamics, ConnectionRule, RandomDistribution,
+    DynamicsProperties, ConnectionRuleProperties,
+    RandomDistributionProperties, Definition)
 from nineml.user import Property
 from copy import copy
 from nineml.exceptions import NineMLMissingElementError
@@ -208,6 +210,7 @@ def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,
                         "nineml" " path '{}'".format(url))
     elif isinstance(url_or_comp, nineml.abstraction.Dynamics):
         componentclass = url_or_comp
+        definition = Definition(componentclass)
         properties = []
         for param in componentclass.parameters:
             properties.append(Property(
@@ -216,12 +219,13 @@ def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,
                     ('unit' + param.dimension.name),
                     dimension=param.dimension, power=0)))
         if isinstance(componentclass, Dynamics):
-            ComponentType = Dynamics
+            ComponentType = DynamicsProperties
         elif isinstance(componentclass, ConnectionRule):
-            ComponentType = ConnectionRule
+            ComponentType = ConnectionRuleProperties
         elif isinstance(componentclass, RandomDistribution):
-            ComponentType = RandomDistribution
-        prototype = ComponentType(name=componentclass.name + 'Component',
+            ComponentType = RandomDistributionProperties
+        prototype = ComponentType(name=componentclass.name + 'Properties',
+                                  definition=definition,
                                   properties=properties)
     elif isinstance(url_or_comp, nineml.user.Component):
         prototype = copy(url_or_comp)
