@@ -148,6 +148,11 @@ class TestNeuronImporter(TestCase):
         importer.write_ion_current_files(
             '/Users/tclose/git/cerebellarnuclei/9ml/ion_channels/classes',
             '/Users/tclose/git/cerebellarnuclei/9ml/ion_channels/properties')
+        importer.write_model(
+            os.path.join(
+                os.environ['HOME'], 'git', 'cerebellarnuclei', '9ml',
+                'dcn.xml'),
+            '/Users/tclose/git/cerebellarnuclei/9ml/ion_channels/properties')
 #         importer = NeuronImporter('/Users/tclose/git/purkinje/model/'
 #                                   'Haroon_active_reduced_model',
 #                                    ['for_import.py'])

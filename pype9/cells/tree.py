@@ -3,7 +3,12 @@ from itertools import groupby, chain, islice, izip_longest
 from operator import itemgetter
 from copy import deepcopy
 from lxml import etree
+import nineml
 from pype9.exceptions import Pype9IrreducibleMorphException
+from nineml.user.multicomponent import (
+    Mapping as Mapping9ML, MultiCompartment, Domain as Domain9ML,
+    MultiComponent as MultiComponent9ML)
+from os import path
 import quantities as pq
 from abc import ABCMeta  # Metaclass for abstract base classes
 try:
@@ -146,27 +151,46 @@ class Tree(STree2):
                 setattr(result, k, deepcopy(v, memo))
         return result
 
-    def to_9ml(self):
-        # clsf = Classification9ml('default',
-        #                          [c.to_9ml()
-        #                          for c in self.segment_classes.itervalues()])
-        return Morphology9ml(self.name,
-                             dict([(seg.name, seg.to_9ml())
-                                   for seg in self.segments]),
-                             {'default': []})
+    def to_9ml(self, comp_dir):
+        self._normalise_SWC_indices(offset=1)
+        tree = [
+            (0 if seg.parent is None else (1 if seg.parent is self.root_segment
+                                           else seg.parent.get_index()))
+            for seg in self.segments]
+        domain_compss = self.categorise_segments_for_SWC(offset=0)
+        keys = dict((i, "domain" + str(i)) for i in xrange(len(domain_compss)))
+        domain_indices = [seg.get_content()['p3d'].type
+                          for seg in self.segments]
+        mapping = Mapping9ML(keys, domain_indices)
+        domains = []
+        for i, domain_comps in enumerate(domain_compss):
+            subcomponents = [
+                nineml.read(path.join(comp_dir, c.name + '.xml'))[c.name]
+                for c in domain_comps
+                if (isinstance(c, IonChannelModel) and
+                    c.name.split('_')[0] not in ('capacitance',) and
+                    c.name.split('_')[-1] not in ('ion',))]
+            domains.append(
+                Domain9ML(
+                    name='domain' + str(i),
+                    dynamics=MultiComponent9ML(
+                        name='domain' + str(i) + '_comp',
+                        subcomponents=subcomponents),
+                    port_connections=[]))
+        return MultiCompartment(self.name, tree, mapping, domains)
 
     def write_9ml(self, filename):
         xml = etree.ElementTree(self.to_9ml().to_xml())
         xml.write(filename, encoding="UTF-8", pretty_print=True,
                   xml_declaration=True)
 
-    def _normalise_SWC_indices(self):
+    def _normalise_SWC_indices(self, offset=3):
         # the self.segments generator will traverse the tree in a depth-first
         # search so the enumerated indices will satisfy SWC's constraint that
         # children have a higher index than their parents. Starts from 4 as the
         # first three points are reserved for the 3-point soma
         for i, seg in enumerate(islice(self.segments, 1, None)):
-            seg._index = i + 4
+            seg._index = i + offset + 1
 
     def write_SWC_tree_to_file(self, filename):
         self._normalise_SWC_indices()
@@ -697,13 +721,13 @@ class Tree(STree2):
         comp_classes = set()
         for section in self.sections:
             comp_classes.add(section[0].id_components)
-        type_index_dict = dict(
-            (c, i) for i, c in enumerate(sorted(comp_classes,
-                                                key=lambda x: len(x))))
+        comp_classes = sorted(comp_classes, key=lambda x: len(x))
+        type_index_dict = dict((c, i) for i, c in enumerate(comp_classes))
         for section in self.sections:
             type_index = offset + type_index_dict[section[0].id_components]
             for seg in section:
                 seg.get_content()['p3d'].type = type_index
+        return comp_classes
 
     def get_segment_categories(self):
         sortkey = lambda s: sorted(s.id_components)

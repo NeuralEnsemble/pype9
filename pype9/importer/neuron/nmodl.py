@@ -260,7 +260,7 @@ class NMODLImporter(object):
         else:
             try:
                 comp_class = Dynamics(
-                    name=self.component_name + 'Class',
+                    name=self.component_name,
                     parameters=self.parameters.values(),
                     analog_ports=self.analog_ports.values(),
                     event_ports=self.event_ports.values(),
@@ -279,7 +279,9 @@ class NMODLImporter(object):
                     raise
         return comp_class
 
-    def get_component(self, class_path=None, hoc_properties={}):
+    def get_component(self, class_path=None, hoc_properties={}, name=None):
+        if name is None:
+            name = self.component_name + 'Properties'
         # Copy properties removing all properties that were added to the analog
         # ports
         properties = dict((n, (v, u))
@@ -299,10 +301,10 @@ class NMODLImporter(object):
                           if v is not None)
         properties.update((n, (v, self._units2nineml_units(u)))
                           for n, (v, u) in properties.iteritems())
-        class_name = self.component_name + 'Class'
+        class_name = self.component_name
         class_path = os.path.normpath(class_path)
         definition = Definition(class_name, url=class_path)
-        comp = DynamicsProperties(self.component_name, definition=definition,
+        comp = DynamicsProperties(name, definition=definition,
                                   properties=properties)
         return comp
 

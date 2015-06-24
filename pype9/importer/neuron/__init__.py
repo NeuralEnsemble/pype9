@@ -39,9 +39,8 @@ class NeuronImporter(object):
                         print ("Warning '{}' was imported despite failing "
                                "dimensionality checks"
                                .format(nmodl_imptr.component_name))
-                    class_path = os.path.join(class_dir,
-                                              nmodl_imptr.component_name +
-                                              '_Class.xml')
+                    class_path = os.path.join(
+                        class_dir, nmodl_imptr.component_name + '.xml')
                     class9ml.write(class_path)
                     class_paths[class_name] = class_path
                 except NineMLRuntimeError as e:
@@ -50,13 +49,12 @@ class NeuronImporter(object):
                            .format(nmodl_imptr.component_name, e))
                     continue
             comp9ml = nmodl_imptr.get_component(
-                class_paths[class_name], hoc_properties=component.parameters)
-            comp_xml = comp9ml.to_xml()
-            comp_path = os.path.join(comp_dir, component.name + '.xml')
-            doc = E.NineML(comp_xml)
-            etree.ElementTree(doc).write(comp_path, encoding="UTF-8",
-                                         pretty_print=True,
-                                         xml_declaration=True)
+                class_paths[class_name], hoc_properties=component.parameters,
+                name=component.name)
+            comp9ml.write(os.path.join(comp_dir, component.name + '.xml'))
+
+    def write_model(self, output_path, comp_dir):
+        self.hoc_importer.model.to_9ml(comp_dir).write(output_path)
 
     def _scan_dir_for_mod_files(self):
         self.available_mods = {}
