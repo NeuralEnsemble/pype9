@@ -97,7 +97,6 @@ class HocImporter(object):
                  .format(printer_dir) + "print '<BREAK>';"
                  "h.load_file(os.path.join('{}', 'print_modelview.hoc'))"
                  .format(printer_dir))
-        print pycmd
         # Run the python command and save the output
         process = sp.Popen(["python", "-c", pycmd], stdout=sp.PIPE)
         output = process.communicate()[0]

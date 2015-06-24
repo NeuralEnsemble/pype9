@@ -27,6 +27,8 @@ from nineml.user import DynamicsProperties
 from nineml.abstraction.expressions import Constant, Parser
 from pype9.exceptions import Pype9ImportError
 from pype9.utils import pq29_quantity
+from nineml.exceptions import NineMLDimensionError, NineMLRuntimeError
+from nineml.abstraction.dynamics.visitors.xml import DynamicsXMLLoader
 
 # from nineml.user.dynamics import IonDynamics
 from collections import defaultdict
@@ -50,7 +52,7 @@ square_brackets_re = re.compile(r'(?:\[|\])')
 define_re = re.compile(r'(?<=\n)DEFINE\s+(\w+)\s+([\d\.\-eE]+)')
 
 
-_SI_to_dimension = {'m/s': un.conductance,
+_SI_to_dimension = {'m/s': un.velocity,
                     's**2': un.time ** 2,
                     'kg*m**2/(s**3*A)': un.voltage,
                     'kg*m**2/(s**4*A)': un.voltage / un.time,
@@ -283,20 +285,23 @@ class NMODLImporter(object):
         properties = dict((n, (v, u))
                           for n, (v, u) in self.properties.iteritems()
                           if n not in self.analog_ports)
+        # Check for distributed params
+        distributed_params = [n for n, v in hoc_properties.iteritems()
+                              if v is None]
+        if distributed_params:
+            print ("The following parameters were distributed across the model"
+                   "and will need to be set manually ('{}')"
+                   .format("', '".join(distributed_params)))
         # Update the parameters of the properties using the hoc set parameters
         # and the units specified in the NMODL file
         properties.update((n, (v, self.properties[n][1]))
-                          for n, v in hoc_properties.iteritems())
+                          for n, v in hoc_properties.iteritems()
+                          if v is not None)
         properties.update((n, (v, self._units2nineml_units(u)))
                           for n, (v, u) in properties.iteritems())
         class_name = self.component_name + 'Class'
         class_path = os.path.normpath(class_path)
-        try:
-            
-        document = nineml.read(os.path.normpath(class_path))
-        elem = super(Document, document)[name]
-        DynamicsXMLLoader(document).load_dynamics(element)
-        definition = Definition(dynamics, url=class_path)
+        definition = Definition(class_name, url=class_path)
         comp = DynamicsProperties(self.component_name, definition=definition,
                                   properties=properties)
         return comp
@@ -404,8 +409,12 @@ class NMODLImporter(object):
         for name in self.range_vars:
             if name not in chain(self.parameters, self.analog_ports,
                                  self.state_variables, self.aliases):
-                self.analog_ports[name] = AnalogReceivePort(
-                    name, self.dimensions[name])
+                try:
+                    self.analog_ports[name] = AnalogReceivePort(
+                        name, self.dimensions[name])
+                except KeyError:
+                    if name not in self.procedures:
+                        raise
         for name in self.pointers:
             if name not in chain(self.parameters, self.analog_ports):
                 self.analog_ports[name] = AnalogSendPort(
@@ -829,7 +838,7 @@ class NMODLImporter(object):
         block = self.blocks.pop('STATE', [])
         # Sometimes states can be written all on one line
         if len(block) == 1 and '(' not in block[0] and 'FROM' not in block[0]:
-            block = block[0].split()
+            block = block[0].split(':')[0].split()
         for line in self._iterate_block(block):
             match = re.match(r'(\w+)(?: *\(([\w \/\*]+)\))?'
                              r'(?: *FROM *([\d\.\-]+) *TO *([\d\.\-]+))?',
@@ -1659,7 +1668,11 @@ class NMODLImporter(object):
             raise Pype9ImportError(
                 "Unrecognised dimension from units '{}'('{}')"
                 .format(units, dim_str))
-        return _SI_to_nineml_units[(dim, power)]
+        try:
+            return _SI_to_nineml_units[(dim, power)]
+        except KeyError:
+            raise Pype9ImportError(
+                "No precalculated units for {}".format((dim, power)))
 
     @classmethod
     def _units2dimension(cls, units):

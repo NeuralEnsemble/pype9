@@ -148,17 +148,17 @@ class TestNeuronImporter(TestCase):
         importer.write_ion_current_files(
             '/Users/tclose/git/cerebellarnuclei/9ml/ion_channels/classes',
             '/Users/tclose/git/cerebellarnuclei/9ml/ion_channels/properties')
-        importer = NeuronImporter('/Users/tclose/git/purkinje/model/'
-                                  'Haroon_active_reduced_model',
-                                   ['for_import.py'])
-        importer.write_ion_current_files('/Users/tclose/git/purkinje/model/'
-                                         'Haroon_active_reduced_model/9ml')
-        importer = NeuronImporter(test_gr_dir,
-                                   ['load_sergios_golgi.hoc'])
-        importer.write_ion_current_files(class_dir=(os.path.join(test_gr_dir,
-                                                    '9ml/classes')),
-                                         comp_dir=(os.path.join(test_gr_dir,
-                                                   '9ml/components')))
+#         importer = NeuronImporter('/Users/tclose/git/purkinje/model/'
+#                                   'Haroon_active_reduced_model',
+#                                    ['for_import.py'])
+#         importer.write_ion_current_files('/Users/tclose/git/purkinje/model/'
+#                                          'Haroon_active_reduced_model/9ml')
+#         importer = NeuronImporter(test_gr_dir,
+#                                    ['load_sergios_golgi.hoc'])
+#         importer.write_ion_current_files(class_dir=(os.path.join(test_gr_dir,
+#                                                     '9ml/classes')),
+#                                          comp_dir=(os.path.join(test_gr_dir,
+#                                                    '9ml/components')))
 
 if __name__ == '__main__':
 #     test = TestNMODLImporter()
