@@ -4,7 +4,7 @@ from datetime import datetime
 # MPI so I am doing it here just to be safe (and to save me headaches in the
 # future)
 try:
-    from mpi4py import MPI  # @UnusedImport @IgnorePep8 This is imported before NEURON to avoid a bug in NEURON
+    from mpi4py import MPI  # This is imported before 'neuron' to avoid a bug in NEURON @UnusedImport @IgnorePep8 
 except ImportError:
     pass
 from neuron import h, nrn, load_mechanisms
@@ -23,15 +23,15 @@ from .base import simulation_controller
 NeuronSection = type(h.Section())
 
 
-class MultiCompCell(base.Cell):
+class MultiCompartmentCell(base.Cell):
 
-    def __init__(self, model=None, **parameters):
-        super(base.Cell, self).__init__(model=model)
+    def __init__(self, **properties):
+        super(base.Cell, self).__init__()
         # Construct all the NEURON structures
         self._construct()
         # Setup variables required by pyNN
         self.source = self.source_section(0.5)._ref_v
-        self.parameters = parameters
+        self.properties = properties
 
         # for recording Once NEST supports sections, it might be an idea to
         # drop this in favour of a more explicit scheme
@@ -44,9 +44,9 @@ class MultiCompCell(base.Cell):
         self.recording_time = 0
         self.rec = h.NetCon(self.source, None, sec=self.source_section)
         # Set up references from parameter names to internal variables and set
-        # parameters
-        self._link_parameters()
-        self.set_properties(parameters)
+        # properties
+        self._link_properties()
+        self.set_properties(properties)
 
     def _construct(self):
         """
@@ -114,17 +114,17 @@ class MultiCompCell(base.Cell):
         return in_units(self._model.spike_threshold, 'mV')
 
     def memb_init(self):
-        if 'initial_v' in self.parameters:
+        if 'initial_v' in self.properties:
             for seg in self.segments.itervalues():
-                seg.v = self.parameters['initial_v']
-        for param in self._parameters.itervalues():
+                seg.v = self.properties['initial_v']
+        for param in self._properties.itervalues():
             if isinstance(param, self.InitialState):
                 param.initialize_state()
 # 
-#     def _link_parameters(self):
-#         self._parameters = {}
+#     def _link_properties(self):
+#         self._properties = {}
 #         # FIXME: this assumes the source is a 9ml model
-#         for p in self._model._source.parameters:
+#         for p in self._model._source.properties:
 #             if hasattr(self, p.name) and not self.param_links_tested:
 #                 logger.warning("Naming conflict between parameter '{}' and "
 #                                "class member of the same name. Parameter can "
@@ -148,13 +148,13 @@ class MultiCompCell(base.Cell):
 #             components.extend(class_components)
 #             ParamClass = (self.InitialState if p.type == 'initialState'
 #                           else self.Parameter)
-#             self._parameters[p.name] = ParamClass(p.name, varname, components)
+#             self._properties[p.name] = ParamClass(p.name, varname, components)
 #         self.__class__._param_links_tested = True
 
-    def set_properties(self, parameters):
-        for name, value in parameters.iteritems():
+    def set_properties(self, properties):
+        for name, value in properties.iteritems():
             try:
-                self._parameters[name].set(value)
+                self._properties[name].set(value)
             except KeyError:
                 raise Exception("NineLine celltype '{}' does not have "
                                 "parameter '{}'".format(type(self), name))
@@ -167,12 +167,12 @@ class MultiCompCell(base.Cell):
         @param var [str]: var of the attribute, with optional segment segment
                           name enclosed with {} and prepended
         """
-        # Retrieving the _parameters attribute with __getattribute__ first
+        # Retrieving the _properties attribute with __getattribute__ first
         # avoids infinite recursive loops of __getattr__ if the cell hasn't
         # been initialised yet.
-        parameters = self.__getattribute__('prototype')
+        properties = self.__getattribute__('prototype')
         try:
-            return parameters[varname].get()
+            return properties[varname].get()
         except KeyError:
             if varname.startswith('{'):
                 seg_name, comp_name = varname[1:].split('}', 1)
@@ -190,23 +190,23 @@ class MultiCompCell(base.Cell):
                           segment, component and attribute vars
         @param val [*]: val of the attribute
         """
-        # Check to see if cell has the '_parameters' attribute, which is
+        # Check to see if cell has the '_properties' attribute, which is
         # initialised last out of the internal member variables, after which
-        # the cell is assumed to be initialised and only parameters can be set
+        # the cell is assumed to be initialised and only properties can be set
         # as attributes.
         try:
-            parameters = self.__getattribute__('_parameters')
+            properties = self.__getattribute__('_properties')
         except AttributeError:
-            super(MultiCompCell, self).__setattr__(varname, val)
+            super(MultiCompartmentCell, self).__setattr__(varname, val)
             return
         # If the varname is a parameter
-        if varname in parameters:
-            parameters[varname].set(val)
+        if varname in properties:
+            properties[varname].set(val)
         # Any attribute that ends with '_init' is assumed to be an initial
         # state (this is how PyNN sets neuron initial states)
         elif varname.endswith('_init'):
             try:
-                parameter = parameters[varname[:-5]]
+                parameter = properties[varname[:-5]]
             except KeyError:
                 raise Exception("Cell does not have initial state '{}' (as "
                                 "specified by attempting to set '{}' on the "
@@ -216,7 +216,7 @@ class MultiCompCell(base.Cell):
                                 "specified by attempting to set '{}' on the "
                                 "cell)" .format(varname[:-5], varname))
             parameter.set(val)
-        # Component parameters can also be directly accessed (without the need
+        # Component properties can also be directly accessed (without the need
         # to specify them explicitly as a parameter) by placing the segment
         # name in brackets beforehand, then using a '.' to separate the
         # component name from the parameter name if required, i.e.
@@ -232,7 +232,7 @@ class MultiCompCell(base.Cell):
             setattr(self.segments[seg_name], comp_name, val)
         else:
             # TODO: Need to work out if I want this to throw an error or not.
-            super(MultiCompCell, self).__setattr__(varname, val)
+            super(MultiCompartmentCell, self).__setattr__(varname, val)
 #             raise Exception("Cannot add new attribute '{}' to cell {} class"
 #                               .format(varname, type(self)))
 
@@ -268,7 +268,7 @@ class MultiCompCell(base.Cell):
 #             try:
 #                 return self.segments[varname]
 #             except KeyError:
-#                 super(MultiCompCellStandAlone, self).__getattribute__(varname)
+#                 super(MultiCompartmentCellStandAlone, self).__getattribute__(varname)
 # 
 #     def __setattr__(self, varname, value):
 #         """
@@ -303,10 +303,10 @@ class MultiCompCell(base.Cell):
 #                                      "or name, component, variable)"
 #                                      .format(len(parts)))
 #         else:
-#             super(MultiCompCellStandAlone, self).__setattr__(varname, value)
+#             super(MultiCompartmentCellStandAlone, self).__setattr__(varname, value)
 
     def __dir__(self):
-        return dir(super(MultiCompCell, self)) + self._parameters.keys()
+        return dir(super(MultiCompartmentCell, self)) + self._properties.keys()
 
     def record(self, variable, segname=None, component=None):
         self._initialise_local_recording()
@@ -435,7 +435,7 @@ class MultiCompCell(base.Cell):
             simulation_controller.register_cell(self)
 
 
-class MultiCompCellMetaClass(base.CellMetaClass):
+class MultiCompartmentCellMetaClass(base.CellMetaClass):
 
     """
     Metaclass for building NineMLCellType subclasses Called by
@@ -444,7 +444,7 @@ class MultiCompCellMetaClass(base.CellMetaClass):
 
     _built_types = {}
     CodeGenerator = CodeGenerator
-    BaseCellClass = MultiCompCell
+    BaseCellClass = MultiCompartmentCell
 
     @classmethod
     def load_model(cls, name, install_dir):  # @UnusedVariable @NoSelf
@@ -536,7 +536,7 @@ class Compartment(NeuronSection):
         """
         Inserts a mechanism using the in-built NEURON 'insert' method and
         then constructs a 'Component' class to point to the variable
-        parameters of the component using meaningful names
+        properties of the component using meaningful names
 
         `component` -- The component to be inserted
                       [pype9.BiophysicsModel]
@@ -558,10 +558,10 @@ class Compartment(NeuronSection):
                 component.name, getattr(self(0.5), component.class_name))
         if isinstance(component, IonConcentrationModel):
             setattr(self, component.param_name,
-                    component.parameters[component.param_name])
+                    component.properties[component.param_name])
         else:
             inserted_comp = getattr(self, component.class_name)
-            for param, val in component.iterate_parameters(self):
+            for param, val in component.iterate_properties(self):
                 setattr(inserted_comp, param, val)
 
     def insert_discrete(self, component):
@@ -575,7 +575,7 @@ class Compartment(NeuronSection):
             raise Exception("Did not find '{}' point-process type"
                             .format(component.class_name))
         discrete_comp = HocClass(0.5, sec=self)
-        for param, val in component.iterate_parameters(self):
+        for param, val in component.iterate_properties(self):
             setattr(discrete_comp, param, val)
         try:
             getattr(self, component.name).append(discrete_comp)
@@ -621,39 +621,39 @@ class Compartment(NeuronSection):
         self._syn_input.append((vecstim, netcon))
 
 
-class ComponentTranslator(object):
-
-    """
-    Acts as a proxy for the true component that was inserted using
-    NEURON's in built 'insert' method. Used as a way to avoid the
-    unique-identifier prefix that is prepended to NeMo parameters,
-    while allowing the cellname prefix to be dropped from the
-    component, thus providing a cleaner interface
-    """
-
-    def __init__(self, component, translations):
-        # The true component object that was created by the pyNEURON
-        # 'insert' method
-        super(ComponentTranslator, self).__setattr__('_component',
-                                                     component)
-        # The translation of the parameter names
-        super(Compartment.ComponentTranslator,
-              self).__setattr__('_translations', translations)
-
-    def __setattr__(self, var, value):
-        try:
-            setattr(self._component, self._translations[var], value)
-        except KeyError as e:
-            raise AttributeError("Component does not have translation"
-                                 " for parameter {}".format(e))
-
-    def __getattr__(self, var):
-        try:
-            return getattr(self._component, self._translations[var])
-        except KeyError as e:
-            raise AttributeError("Component does not have translation"
-                                 "for parameter {}".format(e))
-
-    def __dir__(self):
-        return (super(Compartment.ComponentTranslator,
-                      self).__dir__ + self._translations.keys())
+# class ComponentTranslator(object):
+# 
+#     """
+#     Acts as a proxy for the true component that was inserted using
+#     NEURON's in built 'insert' method. Used as a way to avoid the
+#     unique-identifier prefix that is prepended to NeMo properties,
+#     while allowing the cellname prefix to be dropped from the
+#     component, thus providing a cleaner interface
+#     """
+# 
+#     def __init__(self, component, translations):
+#         # The true component object that was created by the pyNEURON
+#         # 'insert' method
+#         super(ComponentTranslator, self).__setattr__('_component',
+#                                                      component)
+#         # The translation of the parameter names
+#         super(Compartment.ComponentTranslator,
+#               self).__setattr__('_translations', translations)
+# 
+#     def __setattr__(self, var, value):
+#         try:
+#             setattr(self._component, self._translations[var], value)
+#         except KeyError as e:
+#             raise AttributeError("Component does not have translation"
+#                                  " for parameter {}".format(e))
+# 
+#     def __getattr__(self, var):
+#         try:
+#             return getattr(self._component, self._translations[var])
+#         except KeyError as e:
+#             raise AttributeError("Component does not have translation"
+#                                  "for parameter {}".format(e))
+# 
+#     def __dir__(self):
+#         return (super(Compartment.ComponentTranslator,
+#                       self).__dir__ + self._translations.keys())

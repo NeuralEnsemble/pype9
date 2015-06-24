@@ -217,3 +217,9 @@ def read_MorphML(celltype_id, filename, morph_id=None):
         raise Exception(
             "'morphology' tag was not found in given XML file '{}'".format(filename))
     return handler.morphology
+
+
+if __name__ == '__main__':
+    import os.path
+    morphology = read_MorphML(os.path.join(os.getcwd(), 'pyramidal.xml'))
+    print morphology
