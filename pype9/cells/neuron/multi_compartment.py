@@ -621,6 +621,14 @@ class Compartment(NeuronSection):
         self._syn_input.append((vecstim, netcon))
 
 
+class MultiSplitCompartmentCell(object):
+
+    def __init__(self, model):
+        """
+        `model` -- A nineml.user.multicomponent.MultiCompartment object
+                   defining a multiple compartment neuron model
+        """
+
 # class ComponentTranslator(object):
 # 
 #     """

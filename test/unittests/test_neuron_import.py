@@ -6,7 +6,7 @@ import nineml
 from nineml import units as un
 from nineml.abstraction import (
     AnalogSendPort, AnalogReceivePort, Parameter, Dynamics,
-    TimeDerivative, Alias, StateVariable)
+    TimeDerivative, Alias, StateVariable, Regime)
 from utils import test_data_dir
 from neuron import h
 #import neuronpy
@@ -157,11 +157,10 @@ class TestNeuronImporter(TestCase):
                                                     '9ml/classes')),
                                          comp_dir=(os.path.join(test_gr_dir,
                                                    '9ml/components')))
-        
-        
+
 if __name__ == '__main__':
-    test = TestNMODLImporter()
-    test.test_nmodl_import()
+#     test = TestNMODLImporter()
+#     test.test_nmodl_import()
     test = TestNeuronImporter()
     test.test_neuron_import()
     print "done"

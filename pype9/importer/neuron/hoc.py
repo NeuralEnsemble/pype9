@@ -97,6 +97,7 @@ class HocImporter(object):
                  .format(printer_dir) + "print '<BREAK>';"
                  "h.load_file(os.path.join('{}', 'print_modelview.hoc'))"
                  .format(printer_dir))
+        print pycmd
         # Run the python command and save the output
         process = sp.Popen(["python", "-c", pycmd], stdout=sp.PIPE)
         output = process.communicate()[0]
@@ -420,6 +421,6 @@ class HocImporter(object):
                     seg.set_component(comp[0])
 
 if __name__ == '__main__':
-    importer = HocImporter('/home/tclose/git/cerebellarnuclei/'
+    importer = HocImporter('/Users/tclose/git/cerebellarnuclei/'
                            'DCN_morph.hoc')
     print importer.psections
