@@ -8,6 +8,9 @@ from pype9.exceptions import Pype9IrreducibleMorphException
 from nineml.user.multicomponent import (
     Mapping as Mapping9ML, MultiCompartment, Domain as Domain9ML,
     MultiComponent as MultiComponent9ML, SubComponent as SubComponent9ML)
+from nineml import units as un, Dynamics, DynamicsProperties
+from nineml.abstraction import Parameter, Alias
+from nineml.user.values import ArrayValue
 from os import path
 import quantities as pq
 from abc import ABCMeta  # Metaclass for abstract base classes
@@ -163,12 +166,32 @@ class Tree(STree2):
                           for seg in self.segments]
         mapping = Mapping9ML(keys, domain_indices)
         domains = []
+        compartment = Dynamics(
+            name="BasicCompartment",
+            parameters=[
+                Parameter(name="cm", dimension=un.specificCapacitance),
+                Parameter(name="L", dimension=un.length),
+                Parameter(name="Ra", dimension=(un.resistance / un.length)),
+                Parameter(name="diam", dimension=un.length)],
+            aliases=[Alias('dummy', 'cm * L * Ra * diam')])
         for i, domain_comps in enumerate(domain_compss):
             comps = [nineml.read(path.join(comp_dir, c.name + '.xml'))[c.name]
                      for c in domain_comps
                      if (isinstance(c, IonChannelModel) and
                          c.name.split('_')[0] not in ('capacitance',) and
                          c.name.split('_')[-1] not in ('ion',))]
+            domain_segments = [s for s in self.segments
+                               if s.get_content()['p3d'].type == i]
+            diams, lengths, cms, ras = zip(*[(s.diameter, s.length, s.cm, s.Ra)
+                                             for s in domain_segments])
+            comps.append(DynamicsProperties(
+                name="CompartmentProps",
+                definition=compartment,
+                properties={
+                    'diam': (ArrayValue(diams), un.um),
+                    'L': (ArrayValue(lengths), un.um),
+                    'cm': (ArrayValue(cms), un.uF_per_cm2),
+                    'Ra': (ArrayValue(ras), un.ohm / un.cm)}))
             domains.append(
                 Domain9ML(
                     name='domain' + str(i),
