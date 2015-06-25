@@ -10,7 +10,6 @@ import collections
 from copy import deepcopy
 from itertools import chain, groupby
 from sympy.functions import Piecewise
-import nineml
 from nineml.abstraction.expressions.utils import is_builtin_symbol
 from nineml.abstraction.componentclass import Parameter
 from nineml.abstraction.dynamics import (
@@ -22,13 +21,10 @@ from nineml.abstraction.ports import (
     AnalogReceivePort, AnalogReducePort, AnalogSendPort, EventReceivePort)
 import nineml.units as un
 from nineml.user import Definition
-from nineml.document import Document
 from nineml.user import DynamicsProperties
 from nineml.abstraction.expressions import Constant, Parser
 from pype9.exceptions import Pype9ImportError
 from pype9.utils import pq29_quantity
-from nineml.exceptions import NineMLDimensionError, NineMLRuntimeError
-from nineml.abstraction.dynamics.visitors.xml import DynamicsXMLLoader
 
 # from nineml.user.dynamics import IonDynamics
 from collections import defaultdict

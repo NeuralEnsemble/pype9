@@ -21,7 +21,7 @@ except ImportError:
 
 try:
     from nineml.extensions.morphology import (
-        Morphology as Morphology9ml, Segment as Segment9ml, ProximalPoint as
+        Segment as Segment9ml, ProximalPoint as
         ProximalPoint9ml, DistalPoint as DistalPoint9ml, ParentSegment as
         ParentSegment9ml)
 except ImportError:

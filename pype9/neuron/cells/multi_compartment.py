@@ -11,8 +11,8 @@ from neuron import h, nrn, load_mechanisms
 import neo
 import quantities as pq
 import os.path
-from pype9.cells.code_gen.neuron import CodeGenerator
-from pype9.cells.tree import (
+from .code_gen import CodeGenerator
+from pype9.common.cells.tree import (
     in_units, AxialResistanceModel, MembraneCapacitanceModel,
     IonConcentrationModel)
 from pyNN.neuron.cells import VectorSpikeSource

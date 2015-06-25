@@ -1,9 +1,8 @@
 from neuron import h
 import quantities as pq
 import numpy
-from pype9.exceptions import Pype9RuntimeError
 import logging
-from ..controller import SimulationController
+from pype9.common.cells.controller import SimulationController
 
 logger = logging.getLogger('PyPe9')
 
