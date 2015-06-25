@@ -21,7 +21,6 @@ from nineml.abstraction.ports import (
     AnalogReceivePort, AnalogReducePort, AnalogSendPort, EventReceivePort)
 import nineml.units as un
 from nineml.user import Definition
-from nineml.document import Document
 from nineml.user import DynamicsProperties
 from nineml.abstraction.expressions import Constant, Parser
 from pype9.exceptions import Pype9ImportError

@@ -13,7 +13,6 @@ from __future__ import absolute_import
 import platform
 import os
 import time
-from copy import copy
 from itertools import chain
 from copy import deepcopy
 import shutil
@@ -24,12 +23,9 @@ from itertools import izip
 from runpy import run_path
 from abc import ABCMeta, abstractmethod
 from nineml import units
-from nineml.user import Component, Property
-from pype9.exceptions import (
-    Pype9BuildError, Pype9RuntimeError, Pype9NoMatchingElementException,
-    Pype9CouldNotGuessFromDimensionException)
+from nineml.user import Component
+from pype9.exceptions import Pype9BuildError
 import logging
-from nineml import BaseNineMLObject
 import pype9.annotations
 from pype9.utils import load_9ml_prototype
 

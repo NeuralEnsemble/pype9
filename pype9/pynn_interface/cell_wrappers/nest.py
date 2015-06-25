@@ -10,7 +10,7 @@ from .base import (PyNNCellWrapper as BasePyNNCellWrapper,
 from pyNN.parameters import ParameterSpace
 import pyNN.standardmodels
 import nest
-from pype9.cells.nest import CellMetaClass, basic_nineml_translations
+from pype9.nest.cells import CellMetaClass, basic_nineml_translations
 
 
 class PyNNCellWrapper(BasePyNNCellWrapper,

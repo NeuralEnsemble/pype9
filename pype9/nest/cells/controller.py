@@ -1,7 +1,7 @@
 import nest
 import tempfile
 import numpy
-from ..controller import SimulationController
+from pype9.common.cells.controller import SimulationController
 
 
 def nest_property(name, dtype):

@@ -15,10 +15,9 @@ import neo
 import nest
 import quantities as pq
 import nineml
-from pype9.exceptions import Pype9RuntimeError
-from pype9.cells.code_gen.nest import CodeGenerator
+from .code_gen import CodeGenerator
 from .controller import simulation_controller
-from pype9.cells import base
+from pype9.common.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE
 
 
