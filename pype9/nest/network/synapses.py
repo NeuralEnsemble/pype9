@@ -6,7 +6,7 @@
 """
 from __future__ import absolute_import
 import pyNN.nest.standardmodels.synapses
-from .base import StaticSynapse
+from pype9.common.network.synapses import StaticSynapse
 
 
 class StaticSynapse(StaticSynapse,

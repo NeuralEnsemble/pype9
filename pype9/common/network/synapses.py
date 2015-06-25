@@ -7,8 +7,7 @@
 from __future__ import absolute_import
 from abc import ABCMeta
 import nineml.user
-import pype9.pynn_interface.random
-from pype9.pynn_interface import convert_to_pyNN_units
+from . import random
 
 
 class Synapse(object):

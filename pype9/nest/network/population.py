@@ -17,7 +17,7 @@ if '--debug' in sys.argv:
 import pyNN.nest.standardmodels
 from pyNN.common.control import build_state_queries
 import pyNN.nest.simulator as simulator
-from ..cell_wrappers.nest import PyNNCellWrapperMetaClass
+from .wrapper import PyNNCellWrapperMetaClass
 from .base import Population as BasePopulation
 
 (get_current_time, get_time_step,

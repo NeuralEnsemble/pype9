@@ -9,7 +9,7 @@ from abc import ABCMeta
 import quantities
 import nineml.user
 import pyNN.connectors
-import pype9.pynn_interface.random
+from . import random
 # import pype9.pynn_interface.projections
 # from pype9.pynn_interface.expression import create_anonymous_function
 # from pype9.pynn_interface.expression.structure import _PositionBasedExpression
@@ -44,8 +44,7 @@ class Connector(object):
                     raise Pype9ProjToCloneNotCreatedException
             elif isinstance(p.value, nineml.user.RandomDistribution):
                 RandomDistribution = getattr(
-                    pype9.pynn_interface.random,
-                    p.value.definition.componentclass.name)
+                    random, p.value.definition.componentclass.name)
                 conv_param = RandomDistribution(p.value.parameters, rng)
             elif isinstance(p.value, nineml.user.AnonymousFunction):
                 conv_param = create_anonymous_function(p.value)

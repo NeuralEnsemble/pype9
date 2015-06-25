@@ -7,26 +7,26 @@
   License: This file is part of the "NineLine" package, which is released under
            the MIT Licence, see LICENSE for details.
 """
+# This is required to ensure that the right MPI variables are set before
+# NEURON is initiated
 from __future__ import absolute_import
-import sys
-from pype9.exceptions import Pype9RuntimeError
-# Remove any system arguments that may conflict with
-if '--debug' in sys.argv:
-    raise Pype9RuntimeError(
-        "'--debug' argument passed to script conflicts with an argument to "
-        "nest, causing the import to stop at the NEST prompt")
-from pyNN.nest import setup
-from nest.hl_api import NESTError
+from pyNN.neuron import setup
+try:
+    from mpi4py import MPI  # @UnresolvedImport @UnusedImport
+except:
+    pass
 from pyNN.common.control import build_state_queries
-from . import Network as BaseNetwork
-import pyNN.nest.simulator as simulator
-from ..population.nest import Population
-from ..projection.nest import Projection
+import pyNN.neuron.simulator as simulator
+import neuron
+import logging
+from .population import Population
+from .projection import Projection
+from pype9.common.network import Network as BaseNetwork
 
+logger = logging.getLogger("PyNN")
 
-(get_current_time, get_time_step,
- get_min_delay, get_max_delay,
- num_processes, rank) = build_state_queries(simulator)
+get_current_time, get_time_step, get_min_delay, \
+    get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 
 class Network(BaseNetwork):
@@ -36,10 +36,10 @@ class Network(BaseNetwork):
 
     def __init__(self, filename, build_mode='lazy', timestep=None,
                  min_delay=None, max_delay=None, temperature=None,
-                 silent_build=False, flags=[], solver_name='cvode', rng=None):
+                 silent_build=False, flags=[], solver_name=None, rng=None):
         # Sets the 'get_min_delay' function for use in the network init
         self.get_min_delay = get_min_delay
-        self.temperature = None
+        # Call the base function initialisation function.
         BaseNetwork.__init__(
             self, filename, build_mode=build_mode, timestep=timestep,
             min_delay=min_delay, max_delay=max_delay, temperature=temperature,
@@ -55,12 +55,5 @@ class Network(BaseNetwork):
                                  setup method or set explicitly
         """
         p = self._get_simulation_params(**params)
-        try:
-            setup(p['timestep'], p['min_delay'], p['max_delay'])
-        except NESTError as e:
-            raise Exception("There was an error setting the min_delay of the "
-                            "simulation, try changing the values for timestep "
-                            "({time}) and min_delay ({delay}). (Message - {e})"
-                            .format(time=p['timestep'], delay=p['min_delay'],
-                                    e=e))
-        self.temperature = p['temperature']
+        setup(p['timestep'], p['min_delay'], p['max_delay'])
+        neuron.h.celsius = p['temperature']

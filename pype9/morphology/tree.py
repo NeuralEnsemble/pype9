@@ -230,7 +230,7 @@ class FlattenedTree(object):
         """
         Calculate the number of overlapping voxels between two trees
 
-        @param tree [FlattenedTree]: The second tree to calculate the overlap with
+        @param tree [FlattenedTree]: The second tree to calculate the overlap
         @param vox_size [tuple(float)]: The voxel sizes to use when
                                         calculating the overlap
         """
@@ -243,7 +243,7 @@ class FlattenedTree(object):
         Calculate the probability of there being any connection (there may be
         multiple)
 
-        @param tree [FlattenedTree]: The second tree to calculate the overlap with
+        @param tree [FlattenedTree]: The second tree to calculate the overlap
         @param kernel [Kernel]: The kernel used to define the probability masks
         """
         prob_mask = self.get_mask(kernel1).overlap(tree.get_mask(kernel2))
@@ -310,11 +310,9 @@ class FlattenedTree(object):
 
         dataset = points.mlab_source.dataset
         dataset.point_data.get_array(0).name = 'diameter'
-        dataset.lines = numpy.hstack((numpy.reshape(
-                                            numpy.arange(self.num_points - 1),
-                                            (1, -1)),
-                                      numpy.reshape(self._prev_indices[2:],
-                                                    (1, -1))))
+        dataset.lines = numpy.hstack(
+            (numpy.reshape(numpy.arange(self.num_points - 1), (1, -1)),
+             numpy.reshape(self._prev_indices[2:], (1, -1))))
         dataset.point_data.update()
 
         # The tube
@@ -374,8 +372,8 @@ class DisplacedTree(FlattenedTree):
                      dimension or a single float for isotropic voxels
         """
         try:
-            return self._undisplaced_tree.get_volume_mask(*mask_args).\
-                                              displaced_mask(self.displacement)
+            return self._undisplaced_tree.get_volume_mask(
+                *mask_args).displaced_mask(self.displacement)
         except mask.DisplacedVoxelSizeMismatchException as e:
             raise Exception("Cannot get volume mask of displaced tree because "
                             "its displacement {} is not a multiple of the mask"
@@ -407,7 +405,7 @@ class DisplacedTree(FlattenedTree):
     def segments(self):
         for seg in self._undisplaced_tree.segments:
             yield FlattenedTree.Segment(seg.begin + self.displacement,
-                               seg.end + self.displacement, seg.diam)
+                                        seg.end + self.displacement, seg.diam)
 
 
 class Soma(object):
