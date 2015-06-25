@@ -18,10 +18,10 @@ if '--debug' in sys.argv:
 from pyNN.nest import setup
 from nest.hl_api import NESTError
 from pyNN.common.control import build_state_queries
-from . import Network as BaseNetwork
+from pype9.common.network import Network as BaseNetwork
 import pyNN.nest.simulator as simulator
-from ..population.nest import Population
-from ..projection.nest import Projection
+from .population import Population
+from .projection import Projection
 
 
 (get_current_time, get_time_step,

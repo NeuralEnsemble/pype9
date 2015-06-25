@@ -19,9 +19,9 @@ from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
 import neuron
 import logging
-from ..population.neuron import Population
-from ..projection.neuron import Projection
-from .base import Network as BaseNetwork
+from .population import Population
+from .projection import Projection
+from pype9.common.network import Network as BaseNetwork
 
 logger = logging.getLogger("PyNN")
 

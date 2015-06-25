@@ -6,12 +6,6 @@
 """
 from __future__ import absolute_import
 from pype9 import DEFAULT_V_INIT
-import os.path
-from pyNN.random import NumpyRNG
-import pyNN.standardmodels
-import nineml
-import quantities as pq
-from pype9.exceptions import Pype9ProjToCloneNotCreatedException
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 

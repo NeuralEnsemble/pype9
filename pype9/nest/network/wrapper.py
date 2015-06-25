@@ -5,12 +5,13 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from .base import (PyNNCellWrapper as BasePyNNCellWrapper,
-                   PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
+from pype9.common.network.wrapper import (
+    PyNNCellWrapper as BasePyNNCellWrapper,
+    PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
 from pyNN.parameters import ParameterSpace
 import pyNN.standardmodels
 import nest
-from pype9.nest.cells import CellMetaClass, basic_nineml_translations
+from pype9.nest.cells import CellMetaClass
 
 
 class PyNNCellWrapper(BasePyNNCellWrapper,

@@ -10,10 +10,11 @@ try:
 except:
     pass
 import pyNN.models
-from pype9.cells.neuron import CellMetaClass, basic_nineml_translations
+from pype9.neuron.cells import CellMetaClass
 import logging
-from .base import (PyNNCellWrapper as BasePyNNCellWrapper,
-                   PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
+from pype9.common.network.wrapper import (
+    PyNNCellWrapper as BasePyNNCellWrapper,
+    PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
 
 logger = logging.getLogger("PyNN")
 
