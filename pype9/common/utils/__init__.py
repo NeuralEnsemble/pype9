@@ -4,12 +4,15 @@ from .diophantine import solve
 
 class UnitConverter(object):
 
+    def __init__(self):
+        self._cache = {}
+
     def project_onto(self, unit, basis_units):
         A = array([list(b.dimension) for b in basis_units]).T
         b = array(list(unit.dimension))
-        solve(A, b)
+        return solve(A, b)
 
-    def scale(self, unit, basis_units):
+    def scale(self, unit):
         """
         Projects a given unit onto a list of units that span the space of
         dimensions present in the unit to project.
@@ -17,7 +20,12 @@ class UnitConverter(object):
         Returns a list of the basis units with their associated powers and the
         scale of the presented units.
         """
-        xs = self.get_projections(unit, basis_units)
-        min_x = xs[argmin(sum(abs(x)) for x in xs)]
-        scale = 10 ** -min_x.dot([b.power for b in basis_units])
-        return scale, [(u, p) for u, p in zip(basis_units, min_x) if p]
+        try:
+            min_x = self._cache[tuple(unit.dimension)]
+        except KeyError:
+            xs = self.project_onto(unit, self.basis)
+            min_x = xs[argmin(sum(abs(x)) for x in xs)]
+            self._cache[tuple(unit.dimension)] = min_x
+        compound = [(u, p) for u, p in zip(self.basis, min_x) if p]
+        scale = -min_x.dot([b.power for b in self.basis])
+        return scale, compound
