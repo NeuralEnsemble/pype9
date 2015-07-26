@@ -21,10 +21,10 @@ class TestUnitConversion(TestCase):
                      un.uF ** 3 / un.um,
                      un.cd / un.A]:
             scale, compound = self.neuron.scale(unit)
+            inv_scale = numpy.sum([p * u.power for u, p in compound])
+            self.assertEquals(scale + inv_scale, 0,
+                              "Scale doesn't match in unit conversion")
             x = numpy.sum(numpy.array([numpy.array(list(u.dimension)) * p
                                        for u, p in compound]), axis=0)
-            self.assertEquals(list(unit.dimension), list(x))
-
-# if __name__ == '__main__':
-#     test = TestUnitConversion()
-#     test.test_conversions()
+            self.assertEquals(list(unit.dimension), list(x),
+                              "Dimensions do not match original conversion")
