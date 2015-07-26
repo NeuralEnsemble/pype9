@@ -23,7 +23,7 @@ from .population import Population
 from .projection import Projection
 from pype9.common.network import Network as BaseNetwork
 
-logger = logging.getLogger("PyNN")
+logger = logging.getLogger("PyPe9")
 
 get_current_time, get_time_step, get_min_delay, \
     get_max_delay, num_processes, rank = build_state_queries(simulator)

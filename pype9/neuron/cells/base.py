@@ -36,7 +36,7 @@ NEURON_NS = 'NEURON'
 
 import logging
 
-logger = logging.getLogger("NineLine")
+logger = logging.getLogger("PyPe9")
 
 
 _basic_SI_to_neuron_conversions = (('s', 'ms'),

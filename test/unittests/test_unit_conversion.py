@@ -5,6 +5,7 @@ else:
 from nineml import units as un
 from pype9.nest.utils import UnitConverter as NestUnitConverter
 from pype9.neuron.utils import UnitConverter as NeuronUnitConverter
+import numpy
 
 
 class TestUnitConversion(TestCase):
@@ -19,9 +20,11 @@ class TestUnitConversion(TestCase):
                      un.K ** 2 / (un.uF * un.mV ** 2),
                      un.uF ** 3 / un.um,
                      un.cd / un.A]:
-            scale, units = self.neuron.scale(unit)
-            print unit, units, scale
+            scale, compound = self.neuron.scale(unit)
+            x = numpy.sum(numpy.array([numpy.array(list(u.dimension)) * p
+                                       for u, p in compound]), axis=0)
+            self.assertEquals(list(unit.dimension), list(x))
 
-if __name__ == '__main__':
-    test = TestUnitConversion()
-    test.test_conversions()
+# if __name__ == '__main__':
+#     test = TestUnitConversion()
+#     test.test_conversions()

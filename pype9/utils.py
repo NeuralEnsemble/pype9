@@ -153,18 +153,6 @@ def pq29_quantity(qty):
     return nineml.user.component.Quantity(float(qty), units)
 
 
-def convert_to_quantity(prop):
-    units = prop.units
-    dim = units.dimension
-    return prop.value * 10 ** units.power * (pq.s ** dim.t *
-                                             pq.kg ** dim.m *
-                                             pq.m ** dim.l *
-                                             pq.mole ** dim.n *
-                                             pq.K ** dim.k *
-                                             pq.cd ** dim.j *
-                                             pq.A ** dim.i)
-
-
 def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,
                        saved_name=None, **kwargs):  # @UnusedVariable
     """
