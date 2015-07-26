@@ -22,4 +22,5 @@ x86_64
 *.o
 .libs
 *.Plo
+.unit_conversion_cache.pkl
 /doc/_build
