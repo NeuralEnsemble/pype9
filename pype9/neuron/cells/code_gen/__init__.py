@@ -28,6 +28,7 @@ from nineml.user import DynamicsProperties, Definition, Property
 from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
                                 Constant)
 from sympy.printing import ccode
+from pype9.neuron.utils import unit_converter
 
 try:
     from nineml.extensions.kinetics import Kinetics  # @UnusedImport
@@ -131,7 +132,7 @@ class CodeGenerator(BaseCodeGenerator):
             'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
-            'unit_conversion': self.unit_conversion,
+            'unit_converter': unit_converter,
             'ode_solver': self.ODE_SOLVER_DEFAULT,
             'external_ports': [],
             'is_subcomponent': True,

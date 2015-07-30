@@ -51,6 +51,19 @@ NEURON {
 {% endfor %}
 }
 
+UNITS {
+    : Define symbols for base units
+    (ms) = (milliseconds)
+    (mV) = (millivolt)
+    (nA) = (nanoamp)
+    (nF) = (nanofarad)
+    (uS) = (microsiemens)
+    (mM) = (milli/liter)
+    (um) = (micrometer)
+    (K)  = (kelvin)
+    (cd) = (candela)
+}
+
 CONSTANT {
     : IDs for regimes, events and conditions 
 
@@ -94,7 +107,7 @@ PARAMETER {
 
     : Constants
 {% for c in componentclass.constants %}
-    {{c.name}} = {{c.value}} :({{c.units.name}})
+    {{c.name}} = {{c.value}}{{unit_converter.scale_str(c.units)}}({{unit_converter.unit_str(c.units)}}
 {% endfor %}
 }
 
@@ -125,11 +138,9 @@ BREAKPOINT {
 {% set output_analog_exprs = componentclass.required_for(componentclass.all_output_analogs()).expressions + list(componentclass.all_output_analogs()) %}
 {% for expr in output_analog_exprs %}
     {{code_gen.assign_str(expr)}}
-    {#{{expr.lhs}} = {{expr.rhs_cstr}}#}
 {% endfor %}
 {% for expr in componentclass.required_for(componentclass.all_time_derivatives()).expressions if expr not in output_analog_exprs %}
     {{code_gen.assign_str(expr)}}
-    {#{{expr.lhs}} = {{expr.rhs_cstr}}#}
 {% endfor %}
 }
 
