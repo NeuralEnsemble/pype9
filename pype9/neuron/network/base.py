@@ -21,7 +21,7 @@ import neuron
 import logging
 from .population import Population
 from .projection import Projection
-from pype9.common.network import Network as BaseNetwork
+from pype9.base.network import Network as BaseNetwork
 
 logger = logging.getLogger("PyPe9")
 

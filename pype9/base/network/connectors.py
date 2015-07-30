@@ -8,13 +8,12 @@ from __future__ import absolute_import
 from abc import ABCMeta
 import quantities
 import nineml.user
-import pyNN.connectors
-from . import random
+import pyNN.connectorspype9.basefrom . import random
 # import pype9.pynn_interface.projections
 # from pype9.pynn_interface.expression import create_anonymous_function
 # from pype9.pynn_interface.expression.structure import _PositionBasedExpression
 from pype9.exceptions import Pype9ProjToCloneNotCreatedException
-from .projection import Projection
+from pype9.base import Projection
 
 
 class Connector(object):

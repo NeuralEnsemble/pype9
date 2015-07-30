@@ -5,8 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-import pyNN.connectors
-from . import connectors
+import pyNN.connectorspype9.basefrom . import connectors
 import pype9.morphology.point2point
 from pype9.exceptions import Pype9ProjToCloneNotCreatedException
 

@@ -7,8 +7,7 @@
 from __future__ import absolute_import
 import numpy
 import pyNN.parameters
-from pype9.pynn_interface.structure import Structure
-from . import random
+from pype9.pynn_interface.structure import Structurepype9.basefrom . import random
 from pyNN.random import RandomDistribution
 from nineml.abstraction.dynamics import Dynamics
 import nineml.extensions.biophysical_cells

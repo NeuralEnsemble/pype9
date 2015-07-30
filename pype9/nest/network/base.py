@@ -18,7 +18,7 @@ if '--debug' in sys.argv:
 from pyNN.nest import setup
 from nest.hl_api import NESTError
 from pyNN.common.control import build_state_queries
-from pype9.common.network import Network as BaseNetwork
+from pype9.base.network import Network as BaseNetwork
 import pyNN.nest.simulator as simulator
 from .population import Population
 from .projection import Projection

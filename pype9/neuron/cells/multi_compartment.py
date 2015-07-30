@@ -12,7 +12,7 @@ import neo
 import quantities as pq
 import os.path
 from .code_gen import CodeGenerator
-from pype9.common.cells.tree import (
+from pype9.base.cells.tree import (
     in_units, AxialResistanceModel, MembraneCapacitanceModel,
     IonConcentrationModel)
 from pyNN.neuron.cells import VectorSpikeSource

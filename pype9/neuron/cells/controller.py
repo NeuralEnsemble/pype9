@@ -2,7 +2,7 @@ from neuron import h
 import quantities as pq
 import numpy
 import logging
-from pype9.common.cells.controller import SimulationController
+from pype9.base.cells.controller import SimulationController
 
 logger = logging.getLogger('PyPe9')
 

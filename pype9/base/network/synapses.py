@@ -6,8 +6,7 @@
 """
 from __future__ import absolute_import
 from abc import ABCMeta
-import nineml.user
-from . import random
+import nineml.userpype9.basefrom . import random
 
 
 class Synapse(object):

@@ -11,7 +11,7 @@ from __future__ import absolute_import
 import os
 from os import path
 import subprocess as sp
-from pype9.common.cells.code_gen import BaseCodeGenerator
+from pype9.base.cells.code_gen import BaseCodeGenerator
 from pype9.utils import remove_ignore_missing
 from pype9.exceptions import Pype9BuildError
 import pype9

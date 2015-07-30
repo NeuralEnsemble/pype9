@@ -20,10 +20,10 @@ from neuron import h, load_mechanisms
 import quantities as pq
 import os.path
 from .code_gen import CodeGenerator
-from pype9.common.cells.tree import in_units
+from pype9.base.cells.tree import in_units
 from pype9.utils import create_unit_conversions, convert_units
 from itertools import chain
-from pype9.common.cells import base
+from pype9.base.cells import base
 from pype9.utils import convert_to_property, convert_to_quantity
 from .controller import simulation_controller
 from math import pi
