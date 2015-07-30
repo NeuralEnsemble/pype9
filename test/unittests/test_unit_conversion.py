@@ -3,16 +3,17 @@ if __name__ == '__main__':
 else:
     from unittest import TestCase  # @Reimport
 from nineml import units as un
-from pype9.nest.utils import UnitConverter as NestUnitConverter
-from pype9.neuron.utils import UnitConverter as NeuronUnitConverter
+from pype9.nest.utils import DimensionToUnitMapper as NestDimensionToUnitMapper
+from pype9.neuron.utils import (
+    DimensionToUnitMapper as NeuronDimensionToUnitMapper)
 import numpy
 
 
 class TestUnitConversion(TestCase):
 
     def setUp(self):
-        self.neuron = NeuronUnitConverter()
-        self.nest = NestUnitConverter()
+        self.neuron = NeuronDimensionToUnitMapper()
+        self.nest = NestDimensionToUnitMapper()
 
     def test_conversions(self):
         for unit in [un.mV / un.uF,
@@ -20,7 +21,7 @@ class TestUnitConversion(TestCase):
                      un.K ** 2 / (un.uF * un.mV ** 2),
                      un.uF ** 3 / un.um,
                      un.cd / un.A]:
-            scale, compound = self.neuron.scale(unit)
+            scale, compound = self.neuron.project_onto_basis(unit)
             inv_scale = numpy.sum([p * u.power for u, p in compound])
             self.assertEquals(scale + inv_scale, 0,
                               "Scale doesn't match in unit conversion")

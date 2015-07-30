@@ -197,19 +197,6 @@ class BaseCodeGenerator(object):
         os.chdir(orig_dir)
         return install_dir
 
-    def unit_conversion(self, units):
-        try:
-            default_units = self.DEFAULT_UNITS[units.dimension]
-            factor = 10 ** (units.power - default_units.power)
-            offset = (default_units.offset - units.offset) * factor
-        except KeyError:
-            # FIXME: In this case we should try to work out a combination of
-            #        equivalent default units (could be a little tricky) or
-            #        convert to SI units if unit is not covered by simulator.
-            factor = 1.0
-            offset = 0.0
-        return (factor, offset)
-
     def get_build_dir(self, url, name):
         return os.path.abspath(os.path.join(
             os.path.dirname(url), self.BUILD_DIR_DEFAULT,
