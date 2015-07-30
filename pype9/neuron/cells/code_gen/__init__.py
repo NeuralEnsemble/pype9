@@ -16,7 +16,7 @@ from itertools import chain, groupby
 import subprocess as sp
 from collections import defaultdict
 import sympy
-from pype9.common.cells.code_gen import BaseCodeGenerator
+from pype9.base.cells.code_gen import BaseCodeGenerator
 import nineml.units as un
 from nineml.abstraction.expressions import Alias
 from nineml.abstraction.ports import AnalogSendPort

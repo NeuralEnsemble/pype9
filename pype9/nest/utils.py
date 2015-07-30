@@ -1,5 +1,5 @@
 from nineml import units as un
-from pype9.common.utils import BaseDimensionToUnitMapper
+from pype9.base.utils import BaseDimensionToUnitMapper
 
 
 class DimensionToUnitMapper(BaseDimensionToUnitMapper):

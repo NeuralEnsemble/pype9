@@ -7,7 +7,7 @@ from copy import deepcopy
 import itertools
 from operator import itemgetter
 import numpy
-from pype9.common.cells.tree import (Tree, SegmentModel, AxialResistanceModel,
+from pype9.base.cells.tree import (Tree, SegmentModel, AxialResistanceModel,
                                      MembraneCapacitanceModel, IonChannelModel,
                                      IonConcentrationModel, CurrentClampModel,
                                      SynapseModel)

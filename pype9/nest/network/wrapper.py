@@ -5,7 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from pype9.common.network.wrapper import (
+from pype9.base.network.wrapper import (
     PyNNCellWrapper as BasePyNNCellWrapper,
     PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
 from pyNN.parameters import ParameterSpace

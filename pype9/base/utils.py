@@ -31,7 +31,7 @@ class BaseDimensionToUnitMapper(object):
                 # generated, reset the cache
                 if loaded_A != self.A:
                     self._cache = {}
-        except IOError:
+        except (IOError, EOFError):
             logger.warning("Could not load unit conversion cache from file "
                            "'{}'".format(self._cache_path))
             self._cache = {}

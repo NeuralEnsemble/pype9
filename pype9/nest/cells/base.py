@@ -17,7 +17,7 @@ import quantities as pq
 import nineml
 from .code_gen import CodeGenerator
 from .controller import simulation_controller
-from pype9.common.cells import base
+from pype9.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE
 
 
