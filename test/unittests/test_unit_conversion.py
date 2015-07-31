@@ -3,8 +3,7 @@ if __name__ == '__main__':
 else:
     from unittest import TestCase  # @Reimport
 from nineml import units as un
-from pype9.neuron.utils import (
-    unit_mapper as neuron_unit_mapper, ExpressionUnitScaler)
+from pype9.neuron.utils import UnitAssigner
 from nineml.abstraction import (
     Dynamics, AnalogReceivePort, Parameter, Regime)
 import numpy
@@ -18,7 +17,7 @@ class TestUnitConversion(TestCase):
                      un.K ** 2 / (un.uF * un.mV ** 2),
                      un.uF ** 3 / un.um,
                      un.cd / un.A]:
-            scale, compound = neuron_unit_mapper.map_to_units(unit.dimension)
+            scale, compound = UnitAssigner.dimension_to_units(unit.dimension)
             inv_scale = numpy.sum([p * u.power for u, p in compound])
             self.assertEquals(scale + inv_scale, 0,
                               "Scale doesn't match in unit conversion")
@@ -45,7 +44,7 @@ class TestUnitScaler(TestCase):
                         Parameter('P4', dimension=un.length / un.current ** 2),
                         Parameter('P5', dimension=un.current ** 2 / un.length)]
         )
-        self.scaler = ExpressionUnitScaler(a)
+        self.assigner = UnitAssigner(a)
 
     def test_scaling(self):
-        print self.scaler.scale_expression('A2')
+        print self.assigner.scale_expression('A2')
