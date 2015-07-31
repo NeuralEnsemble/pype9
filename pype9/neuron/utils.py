@@ -1,5 +1,6 @@
 from nineml import units as un
-from pype9.base.utils import BaseDimensionToUnitMapper
+from pype9.base.utils import (
+    BaseDimensionToUnitMapper, BaseExpressionUnitScaler)
 import cPickle as pkl  # @UnusedImport
 import atexit
 
@@ -33,6 +34,7 @@ unit_mapper = _DimensionToUnitMapper()
 del _DimensionToUnitMapper  # To ensure only one version of the mapper exists
 atexit.register(unit_mapper.save_cache)
 
-if __name__ == '__main__':
-    exponent, compound = unit_mapper.convert(un.A * un.uF / un.um ** 2)
-    print unit_mapper.compound_str(compound)
+
+class ExpressionUnitScaler(BaseExpressionUnitScaler):
+
+    _mapper = unit_mapper
