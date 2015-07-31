@@ -38,6 +38,6 @@ default_units = [un.ms,
                  un.S / un.cm ** 2,
                  un.uS,
                  un.ohm * un.cm,
-                 10e6 * un.ohm,
+                 un.Mohm,
                  un.C,
                  un.cd]
