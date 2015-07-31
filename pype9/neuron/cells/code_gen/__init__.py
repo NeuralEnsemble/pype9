@@ -28,7 +28,7 @@ from nineml.user import DynamicsProperties, Definition, Property
 from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
                                 Constant)
 from sympy.printing import ccode
-from pype9.neuron.utils import unit_converter
+from pype9.neuron.utils import unit_mapper
 
 try:
     from nineml.extensions.kinetics import Kinetics  # @UnusedImport

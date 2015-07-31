@@ -1,13 +1,15 @@
 from nineml import units as un
 from pype9.base.utils import BaseDimensionToUnitMapper
+import cPickle as pkl  # @UnusedImport
+import atexit
 
 
-class DimensionToUnitMapper(BaseDimensionToUnitMapper):
+class _DimensionToUnitMapper(BaseDimensionToUnitMapper):
 
     basis = [un.ms, un.mV, un.nA, un.mM, un.nF, un.um, un.uS, un.K, un.cd]
 
     def scale_str(self, unit):
-        exponent, _ = self.convert(unit)
+        exponent, _ = self.map_to_units(unit)
         if exponent != 0:
             scale_str = '* 1e{} '.format(exponent)
         else:
@@ -15,7 +17,7 @@ class DimensionToUnitMapper(BaseDimensionToUnitMapper):
         return scale_str
 
     def unit_str(self, unit):
-        _, compound = self.convert(unit)
+        _, compound = self.map_to_units(unit)
         if unit == un.dimensionless:
             unit_str = '1'
         else:
@@ -27,9 +29,10 @@ class DimensionToUnitMapper(BaseDimensionToUnitMapper):
         return unit_str
 
 
-unit_converter = DimensionToUnitMapper()
+unit_mapper = _DimensionToUnitMapper()
+del _DimensionToUnitMapper  # To ensure only one version of the mapper exists
+atexit.register(unit_mapper.save_cache)
 
 if __name__ == '__main__':
-    conv = DimensionToUnitMapper()
-    exponent, compound = conv.convert(un.A * un.uF / un.um ** 2)
-    print conv.compound_str(compound)
+    exponent, compound = unit_mapper.convert(un.A * un.uF / un.um ** 2)
+    print unit_mapper.compound_str(compound)

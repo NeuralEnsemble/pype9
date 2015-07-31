@@ -5,6 +5,7 @@ import cPickle as pkl
 from numpy import array, sum, abs, argmin
 import quantities as pq
 import diophantine
+from nineml import units as un
 from nineml.abstraction.dynamics.visitors import DynamicsDimensionResolver
 
 
@@ -29,14 +30,14 @@ class BaseDimensionToUnitMapper(object):
                 self._cache, loaded_A = pkl.load(f)
                 # If the dimension matrix has been changed since the cache was
                 # generated, reset the cache
-                if loaded_A != self.A:
+                if (loaded_A != self.A).all():
                     self._cache = {}
         except (IOError, EOFError):
             logger.warning("Could not load unit conversion cache from file "
                            "'{}'".format(self._cache_path))
             self._cache = {}
 
-    def __del__(self):
+    def save_cache(self):
         try:
             with open(self._cache_path, 'w') as f:
                 pkl.dump((self._cache, self.A), f)
@@ -52,6 +53,7 @@ class BaseDimensionToUnitMapper(object):
         Returns a list of the basis units with their associated powers and the
         scale of the presented units.
         """
+        assert isinstance(dimension, un.Dimension)
         try:
             # Check to see if unit dimension is in basis
             base_unit = next(u for u in self.basis
