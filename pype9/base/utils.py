@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import cPickle as pkl
+from sympy import sympify
 from numpy import array, sum, abs, argmin
 import quantities as pq
 import diophantine
@@ -89,21 +90,36 @@ class BaseDimensionToUnitMapper(object):
         return units.power - target_units.power
 
 
-class ExpressionUnitScaler(DynamicsDimensionResolver):
+class BaseExpressionUnitScaler(DynamicsDimensionResolver):
 
     def __init__(self, component_class):
-        super(ExpressionUnitScaler, self).__init__(component_class)
         self._scaled = {}
+        super(BaseExpressionUnitScaler, self).__init__(component_class)
+
+    def scale_expression(self, element):
+        assert element in self.component_class
+        return self._flatten(sympify(element))
+
+    def _flatten_symbol(self, sym):
+        try:
+            scaled_expr = self._scaled[sym]
+            units = self._mapper.map_to_units(self._dims[sym])
+        except KeyError:
+            element = self._find_element(sym)
+            scaled_expr, units = self._flatten(element.rhs)
+            self._scaled[sym] = scaled_expr
+            self._dims[sym] = units.dimension
+        return scaled_expr, units
 
     def _flatten_boolean(self, expr):  # @UnusedVariable
         units = self._mapper.map_to_units(
-            super(ExpressionUnitScaler, self)._flatten_boolean(expr))
+            super(BaseExpressionUnitScaler, self)._flatten_boolean(expr))
         scaled_expr = type(expr)(*(self._flatten(a)[0] for a in expr.args))
         return scaled_expr, units
 
     def _flatten_constant(self, expr):  # @UnusedVariable
         units = self._mapper.map_to_units(
-            super(ExpressionUnitScaler, self)._flatten_constant(expr))
+            super(BaseExpressionUnitScaler, self)._flatten_constant(expr))
         return expr, units
 
     def _flatten_reserved(self, expr):
@@ -111,19 +127,19 @@ class ExpressionUnitScaler(DynamicsDimensionResolver):
 
     def _flatten_function(self, expr):  # @UnusedVariable
         units = self._mapper.map_to_units(
-            super(ExpressionUnitScaler, self)._flatten_function(expr))
+            super(BaseExpressionUnitScaler, self)._flatten_function(expr))
         scaled_expr = type(expr)(*(self._flatten(a)[0] for a in expr.args))
         return scaled_expr, units
 
     def _flatten_matching(self, expr):
         units = self._mapper.map_to_units(
-            super(ExpressionUnitScaler, self)._flatten_matching(expr))
+            super(BaseExpressionUnitScaler, self)._flatten_matching(expr))
         scaled_expr = type(expr)(*(self._flatten(a)[0] for a in expr.args))
         return scaled_expr, units
 
     def _flatten_multiplied(self, expr):
         units = self._mapper.map_to_units(
-            super(ExpressionUnitScaler, self)._flatten_multiplied(expr))
+            super(BaseExpressionUnitScaler, self)._flatten_multiplied(expr))
         arg_power = sum(self._mapper.map_to_units(self._flatten(a)[1]).power
                         for a in expr.args)
         scale = units.power - arg_power
@@ -131,16 +147,10 @@ class ExpressionUnitScaler(DynamicsDimensionResolver):
 
     def _flatten_power(self, expr):
         units = self._mapper.map_to_units(
-            super(ExpressionUnitScaler, self)._flatten_power(expr))
-        scaled_expr = type(expr)(*(self._flatten(a)[0] for a in expr.args))
-        return scaled_expr, units
-
-    def _flatten_symbol(self, expr):
-        units = self._mapper.map_to_units(
-            super(ExpressionUnitScaler, self)._flatten_symbol(expr))
+            super(BaseExpressionUnitScaler, self)._flatten_power(expr))
         scaled_expr = type(expr)(*(self._flatten(a)[0] for a in expr.args))
         return scaled_expr, units
 
     def _set_dims(self, expr, flattened):
-        super(ExpressionUnitScaler, self)._set_dims(
+        super(BaseExpressionUnitScaler, self)._set_dims(
             expr, flattened[1].dimension)

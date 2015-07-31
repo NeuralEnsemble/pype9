@@ -1,5 +1,6 @@
 from nineml import units as un
-from pype9.base.utils import BaseDimensionToUnitMapper
+from pype9.base.utils import (
+    BaseDimensionToUnitMapper, BaseExpressionUnitScaler)
 import cPickle as pkl  # @UnusedImport
 import atexit
 
@@ -12,3 +13,8 @@ class _DimensionToUnitMapper(BaseDimensionToUnitMapper):
 unit_mapper = _DimensionToUnitMapper()
 del _DimensionToUnitMapper  # Delete class to ensure only one instance
 atexit.register(unit_mapper.save_cache)
+
+
+class ExpressionUnitScaler(BaseExpressionUnitScaler):
+
+    _mapper = unit_mapper
