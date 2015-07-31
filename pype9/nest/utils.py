@@ -1,20 +1,7 @@
 from nineml import units as un
-from pype9.base.utils import (
-    BaseDimensionToUnitMapper, BaseExpressionUnitScaler)
-import cPickle as pkl  # @UnusedImport
-import atexit
+from pype9.base.utils import BaseUnitAssigner
 
 
-class _DimensionToUnitMapper(BaseDimensionToUnitMapper):
+class _DimensionToUnitMapper(BaseUnitAssigner):
 
     basis = [un.ms, un.mV, un.pA, un.mM, un.uF, un.um, un.uS, un.K, un.cd]
-
-
-unit_mapper = _DimensionToUnitMapper()
-del _DimensionToUnitMapper  # Delete class to ensure only one instance
-atexit.register(unit_mapper.save_cache)
-
-
-class ExpressionUnitScaler(BaseExpressionUnitScaler):
-
-    _mapper = unit_mapper
