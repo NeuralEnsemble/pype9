@@ -1,6 +1,7 @@
 import os
 import logging
 import operator
+from itertools import chain
 import collections
 import cPickle as pkl
 from abc import ABCMeta, abstractmethod
@@ -17,8 +18,6 @@ import atexit
 
 logger = logging.getLogger('PyPe9')
 
-_CACHE_FILENAME = '.unit_mapping_cache.pkl'
-
 
 class BaseUnitAssigner(DynamicsDimensionResolver):
     """
@@ -28,6 +27,8 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
     """
 
     __metaclass__ = ABCMeta
+
+    _CACHE_FILENAME = '.unit_mapping_cache.pkl'
 
     def __init__(self, component_class):
         self._scaled = {}
@@ -78,8 +79,9 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
             assert isinstance(dimension, un.Dimension), (
                 "'{}' is not a Dimension".format(dimension))
         try:
-            # Check to see if unit dimension is in basis
-            base_unit = next(u for u in cls.basis
+            # Check to see if unit dimension is in basis units or specific
+            # compounds
+            base_unit = next(u for u in chain(cls.basis, cls.compounds)
                              if u.dimension == dimension)
             compound = [(base_unit, 1)]
             exponent = -base_unit.power
@@ -113,12 +115,16 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
 
     @classmethod
     def _load_basis_matrices_and_cache(cls, basis, directory):
+        """
+        Creates matrix corresponding to unit basis and loads cache of
+        previously calculated mappings from dimensions onto this basis.
+        """
         assert all(u.offset == 0 for u in basis), (
             "Non-zero offsets found in basis units")
         # Get matrix of basis unit dimensions
         A = array([list(b.dimension) for b in basis]).T
         # Get cache path from file path of subclass
-        cache_path = os.path.join(directory, _CACHE_FILENAME)
+        cache_path = os.path.join(directory, cls._CACHE_FILENAME)
         try:
             with open(cache_path) as f:
                 cache, loaded_A = pkl.load(f)
@@ -138,6 +144,8 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
                 logger.warning("Could not save unit conversion cache to file "
                                "'{}'".format(cache_path))
         atexit.register(save_cache)
+        # The lengths in terms of SI dimension bases of each of the unit
+        # basis compounds.
         si_lengths = [sum(abs(si) for si in d.dimension) for d in basis]
         return A, cache, si_lengths
 
