@@ -58,12 +58,9 @@ UNITS {
     (nF) = (nanofarad)
     (uF) = (microfarad)
     (S) = (siemens)
-    (cm) = (centremeter)
     (uS) = (microsiemens)
     (mM) = (milli/liter)
     (um) = (micrometer)
-    (K)  = (kelvin)
-    (cd) = (candela)
 }
 
 CONSTANT {
@@ -111,11 +108,14 @@ PARAMETER {
 {% for const, value, units in unit_assigner.assign_units_to_constants(componentclass.constants) %}
     {{const.name}} = {{value}} ({{units}})
 {% endfor %}
+
+    : Unit correction for printf
+    PER_MS = 1 (/ms)
 }
 
 STATE {
-{% for sv in componentclass.state_variables if sv.name != 'v' %}
-    {{sv.name}}
+{% for sv, units in unit_assigner.assign_units_to_parameters(componentclass.state_variables) if sv.name != 'v' %}
+    {{sv.name}} ({{units}})
 {% endfor %}
 }
 
@@ -127,8 +127,13 @@ ASSIGNED {
     found_transition_
 {% for port, units in unit_assigner.assign_units_to_parameters(chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports)) %}
     {{port.name}} ({{units}}) 
-{% endfor %}    
+{% endfor %}
 
+{% if 'v' in componentclass.state_variable_names %}
+    : Membrane voltage
+    v (mV)
+    
+{% endif %}
     : Aliases
 {% for alias, _, units in unit_assigner.assign_units_to_expressions(componentclass.aliases) %}
     {{alias.name}} ({{units}})
@@ -153,7 +158,11 @@ DERIVATIVE states {
 }
 
 {% for sv in componentclass.state_variables if sv.name not in componentclass.annotations[PYPE9_NS][NO_TIME_DERIVS] %}
-FUNCTION deriv_{{sv.name}}({{componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variable_names | join(', ')}}) {
+FUNCTION deriv_{{sv.name}}(
+    {%- for sv, units in unit_assigner.assign_units_to_parameters(componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variables) -%}
+        {{sv.name}} ({{units}}){%- if not loop.last %}, {% endif -%}
+    {%- endfor %}
+    ) ({{unit_assigner.assign_units_to_parameter(sv, derivative_of=True)}}) {
     {% for regime in componentclass.regimes  if sv.name in regime._time_derivatives %}
     {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
         deriv_{{sv.name}} = {{regime.time_derivative(sv.name).rhs_cstr}}
@@ -203,7 +212,7 @@ NET_RECEIVE(weight_, channel) {
             if (found_transition_ == -1) {
                 found_transition_ = flag
             } else {
-                printf("WARNING!! Found multiple transitions %f and %f at time %f", found_transition_, flag, t)
+                printf("WARNING!! Found multiple transitions %f and %f at time %f", found_transition_, flag, t * PER_MS)
             }
             regime_ = {{trans.target_regime.name | upper}}
         }
