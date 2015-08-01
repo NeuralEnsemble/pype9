@@ -2,7 +2,6 @@ import os
 import logging
 import operator
 from itertools import chain
-import collections
 import cPickle as pkl
 from abc import ABCMeta, abstractmethod
 import sympy
@@ -39,27 +38,42 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
             self._scaled[sympify(a)] = sympify(a)
         super(DynamicsDimensionResolver, self).__init__(component_class)
 
-    def _assign_units(self, element):
+    def assign_units_to_expression(self, element):
         assert element in self.component_class
         scaled_expr, dims = self._flatten(sympify(element))
         _, units = self.dimension_to_units(dims)
-        return scaled_expr, self.unit_to_str(units)
+        return scaled_expr, self._compound_units_to_str(units)
 
-    def assign_units(self, elements):
+    def assign_units_to_expressions(self, elements):
         """
         Iterate through a list of elements, yielding a scaled version along
         with a string representation of the units
         """
-        if isinstance(elements, collections.Iterable):
-            # If list or tuple of elements, yield scaled expression and units
-            # for each element in the list.
-            for elem in elements:
-                yield elem, self.scale_expression(elem)
-        else:  # A single element to provide units for
-            return self._assign_units(elements)
+        # If list or tuple of elements, yield scaled expression and units
+        # for each element in the list.
+        for elem in elements:
+            yield (elem,) + self.assign_units_to_expression(elem)
+
+    def assign_units_to_constant(self, constant):
+        exponent, compound = self.dimension_to_units(constant.units.dimension)
+        scale = exponent - constant.units.power
+        return (10 ** scale * constant.value,
+                self._compound_units_to_str(compound))
+
+    def assign_units_to_constants(self, constants):
+        for const in constants:
+            yield (const,) + self.assign_units_to_constant(const)
+
+    def assign_units_to_parameter(self, parameter):
+        _, compound = self.dimension_to_units(parameter.dimension)
+        return self._compound_units_to_str(compound)
+
+    def assign_units_to_parameters(self, parameters):
+        for param in parameters:
+            yield param, self.assign_units_to_parameter(param)
 
     @abstractmethod
-    def unit_to_str(self, unit):
+    def _compound_units_to_str(self, unit):
         pass
 
     @classmethod

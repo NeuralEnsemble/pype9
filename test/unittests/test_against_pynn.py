@@ -10,10 +10,10 @@ try:
     import pylab as plt
 except ImportError:
     plt = None
-from pype9.cells.neuron import (
+from pype9.neuron.cells import (
     CellMetaClass as CellMetaClassNEURON,
     simulation_controller as simulatorNEURON)
-from pype9.cells.nest import (
+from pype9.nest.cells import (
     CellMetaClass as CellMetaClassNEST,
     simulation_controller as simulatorNEST)
 import numpy
