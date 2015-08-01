@@ -26,7 +26,7 @@ from datetime import datetime
 from nineml import Document
 from nineml.user import DynamicsProperties, Definition, Property
 from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
-                                Constant)
+                                Constant, Expression)
 from sympy.printing import ccode
 from pype9.neuron.utils import UnitAssigner
 
@@ -62,6 +62,7 @@ class CodeGenerator(BaseCodeGenerator):
         super(CodeGenerator, self).__init__()
         # Find the path to nrnivmodl
         self.nrnivmodl_path = self.path_to_exec('nrnivmodl')
+        self.modlunit_path = self.path_to_exec('modlunit')
         # Work out the name of the installation directory for the compiled
         # NMODL files on the current platform
         self.specials_dir = self._get_specials_dir()
@@ -451,6 +452,22 @@ class CodeGenerator(BaseCodeGenerator):
         if verbose:
             print ("Building NMODL mechanisms in '{}' directory."
                    .format(compile_dir))
+        # Check the created units by running modlunit
+        if __debug__:
+            for fname in os.listdir('.'):
+                if fname.endswith('.mod'):
+                    try:
+                        pipe = sp.Popen(
+                            [self.modlunit_path, fname], stdout=sp.PIPE,
+                            stderr=sp.PIPE)
+                        stdout, stderr = pipe.communicate()
+                        assert '<<ERROR>>' not in stderr, (
+                            "Incorrect units assigned in NMODL file:\n {}{}"
+                            .format(stdout, stderr))
+                    except sp.CalledProcessError as e:
+                        raise Pype9BuildError(
+                            "Could not run 'modlunit' to check dimensions in "
+                            "NMODL file".format(stderr))
         # Run nrnivmodl command in src directory
         try:
             pipe = sp.Popen([self.nrnivmodl_path], stdout=sp.PIPE,
@@ -526,10 +543,10 @@ class CodeGenerator(BaseCodeGenerator):
             pass
         return path
 
-    def assign_str(self, expr):
-        rhs = expr.expand_integer_powers()
-        nmodl_str = ccode(rhs, user_functions=expr._cfunc_map,
-                          assign_to=expr.lhs)
-        nmodl_str = expr.rationals_re.sub(r'\1/\2', nmodl_str)
+    def assign_str(self, lhs, rhs):
+        rhs = Expression.expand_integer_powers(rhs)
+        nmodl_str = ccode(rhs, user_functions=Expression._cfunc_map,
+                          assign_to=lhs)
+        nmodl_str = Expression.rationals_re.sub(r'\1/\2', nmodl_str)
         nmodl_str = nmodl_str.replace(';', '')
         return nmodl_str

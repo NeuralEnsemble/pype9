@@ -27,7 +27,7 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
 
     __metaclass__ = ABCMeta
 
-    _CACHE_FILENAME = '.unit_mapping_cache.pkl'
+    _CACHE_FILENAME = '.unit_assigner_cache.pkl'
 
     def __init__(self, component_class):
         self._scaled = {}
@@ -38,21 +38,21 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
             self._scaled[sympify(a)] = sympify(a)
         super(DynamicsDimensionResolver, self).__init__(component_class)
 
-    def assign_units_to_expression(self, element):
-        assert element in self.component_class
-        scaled_expr, dims = self._flatten(sympify(element))
-        _, units = self.dimension_to_units(dims)
-        return scaled_expr, self._compound_units_to_str(units)
+    def assign_units_to_alias(self, alias):
+        assert alias in self.component_class
+        dims = self._flatten(sympify(alias))[1]
+        units = self.dimension_to_units(dims)[1]
+        return self._compound_units_to_str(units)
 
-    def assign_units_to_expressions(self, elements):
+    def assign_units_to_aliases(self, aliases):
         """
         Iterate through a list of elements, yielding a scaled version along
         with a string representation of the units
         """
         # If list or tuple of elements, yield scaled expression and units
         # for each element in the list.
-        for elem in elements:
-            yield (elem,) + self.assign_units_to_expression(elem)
+        for alias in aliases:
+            yield alias, self.assign_units_to_alias(alias)
 
     def assign_units_to_constant(self, constant):
         exponent, compound = self.dimension_to_units(constant.units.dimension)
@@ -64,15 +64,23 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
         for const in constants:
             yield (const,) + self.assign_units_to_constant(const)
 
-    def assign_units_to_parameter(self, parameter, derivative_of=False):
+    def assign_units_to_variable(self, parameter, derivative_of=False):
         _, compound = self.dimension_to_units(parameter.dimension)
         if derivative_of:
             compound.append((un.ms, -1))
         return self._compound_units_to_str(compound)
 
-    def assign_units_to_parameters(self, parameters):
+    def assign_units_to_variables(self, parameters):
         for param in parameters:
-            yield param, self.assign_units_to_parameter(param)
+            yield param, self.assign_units_to_variable(param)
+
+    def scale_rhs(self, element):
+        assert element in self.component_class
+        return self._flatten(sympify(element.rhs))[0]
+
+    def scale_rhss(self, elements):
+        for elem in elements:
+            yield elem, self.scale_rhs(elem)
 
     @abstractmethod
     def _compound_units_to_str(self, unit):
