@@ -6,11 +6,8 @@
 """
 import os
 import errno
-import quantities as pq
 from pype9.exceptions import Pype9RuntimeError
-import numpy
 import nineml
-from quantities import Quantity
 from nineml import (
     Unit, Dynamics, ConnectionRule, RandomDistribution,
     DynamicsProperties, ConnectionRuleProperties,
@@ -18,7 +15,6 @@ from nineml import (
 from nineml.user import Property
 from copy import copy
 from nineml.exceptions import NineMLMissingElementError
-import math
 
 
 def remove_ignore_missing(path):
@@ -46,115 +42,6 @@ class abstractclassmethod(classmethod):
     def __init__(self, callable_method):
         callable_method.__isabstractmethod__ = True
         super(abstractclassmethod, self).__init__(callable_method)
-
-
-def create_unit_conversions(basic_conversions, compound_conversions):
-    basic_dict = {}
-    for SI_unit, pyNN_unit in basic_conversions:
-        # The units are simplified (converted into from the unit strings into
-        # SI "quantity" units, which may)
-        basic_dict[Quantity(
-            1, SI_unit).simplified._dimensionality] = Quantity(1, pyNN_unit)
-    compound_dict = {}
-    for SI_unit_tple, nl_unit_tple in compound_conversions:
-        simplified_SI = []
-        nl_unit = 1.0
-        for SI_cmp, nl_cmp in zip(SI_unit_tple, nl_unit_tple):
-            simplified_SI.append(
-                (Quantity(1, SI_cmp[0]).simplified._dimensionality, SI_cmp[1]))
-            nl_unit *= pow(Quantity(1, nl_cmp[0]), nl_cmp[1])
-        compound_dict[tuple(sorted(simplified_SI))] = nl_unit
-    return basic_dict, compound_dict
-
-
-def convert_units(value, unit_str, basic_dict, compound_dict):
-    # FIXME a little hack until Ivan tidies up the units in NeMo to be more
-    # standardised.
-    if unit_str == 'uf/cm2':
-        unit_str = 'uF/cm^2'
-    if isinstance(value, Quantity):
-        quantity = value
-        assert unit_str is None
-    else:
-        # Convert to a quantity with units
-        quantity = Quantity(value, unit_str)
-    # Check to see if the units are basic units (i.e. dimensionality == 1)
-    if len(quantity._dimensionality) == 1:
-        try:
-            units = basic_dict[quantity.simplified._dimensionality]
-        except KeyError:
-            raise Exception(
-                "No PyNN conversion for '{}' units".format(quantity.units))
-    else:
-        # Convert compound units into their simplified forms
-        simplified_units = []
-        for unit_comp, exponent in quantity._dimensionality.iteritems():
-            simplified_units.append(
-                (unit_comp.simplified._dimensionality, exponent))
-        try:
-            units = compound_dict[tuple(sorted(simplified_units))]
-        # If there isn't an explicit compound conversion, try to use
-        # combination of basic conversions
-        except KeyError:
-            units = Quantity(1.0, 'dimensionless')
-            for unit_dim, exponent in simplified_units:
-                try:
-                    conv_units = basic_dict[unit_dim]
-                except KeyError:
-                    raise Exception("No PyNN conversion for '{}' units"
-                                    .format(quantity.units))
-                units *= pow(conv_units, exponent)
-    quantity.units = units
-    # Check to see if is a proper array (with multiple dimensions) or just a
-    # 0-d array created by the quantity conversion.
-    if quantity.shape:
-        converted_quantity = numpy.asarray(quantity)
-    else:
-        converted_quantity = float(quantity)
-    return converted_quantity, quantity.units
-
-
-def convert_to_property(name, qty_pq):
-    qty9 = pq29_quantity(qty_pq)
-    return nineml.Property(name, qty9.name, qty9.value)
-
-
-def pq29_quantity(qty):
-    if isinstance(qty, (int, float)):
-        units = nineml.units.unitless
-    elif isinstance(qty, pq.Quantity):
-        unit_name = str(qty.units).split()[1]
-        powers = {}
-        for si_unit, power in qty.units.simplified._dimensionality.iteritems():
-            if isinstance(si_unit, pq.UnitMass):
-                powers['m'] = power
-            elif isinstance(si_unit, pq.UnitLength):
-                powers['l'] = power
-            elif isinstance(si_unit, pq.UnitTime):
-                powers['t'] = power
-            elif isinstance(si_unit, pq.UnitCurrent):
-                powers['i'] = power
-            elif isinstance(si_unit, pq.UnitLuminousIntensity):
-                powers['j'] = power
-            elif isinstance(si_unit, pq.UnitSubstance):
-                powers['n'] = power
-            elif isinstance(si_unit, pq.UnitTemperature):
-                powers['k'] = power
-            else:
-                assert False, "Unrecognised units '{}'".format(si_unit)
-        dimension = nineml.Dimension(unit_name + 'Dimension', **powers)
-        units = nineml.Unit(unit_name, dimension=dimension,
-                            power=float(math.log10(qty.units.simplified)))
-    else:
-        raise Pype9RuntimeError(
-            "Cannot '{}' to nineml.Property (can only convert "
-            "quantities.Quantity and numeric objects)"
-            .format(qty))
-    return nineml.user.component.Quantity(float(qty), units)
-
-
-def convert_to_quantity(value, unit):
-    return pq.Quantity(value, unit.to_SI_units_str())
 
 
 def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,

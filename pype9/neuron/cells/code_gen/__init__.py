@@ -28,7 +28,7 @@ from nineml.user import DynamicsProperties, Definition, Property
 from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
                                 Constant, Expression)
 from sympy.printing import ccode
-from pype9.neuron.utils import UnitAssigner
+from pype9.neuron.units import UnitHandler
 
 try:
     from nineml.extensions.kinetics import Kinetics  # @UnusedImport
@@ -133,7 +133,7 @@ class CodeGenerator(BaseCodeGenerator):
             'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
-            'unit_assigner': UnitAssigner(prototype.component_class),
+            'unit_handler': UnitHandler(prototype.component_class),
             'ode_solver': self.ODE_SOLVER_DEFAULT,
             'external_ports': [],
             'is_subcomponent': True,
@@ -547,6 +547,6 @@ class CodeGenerator(BaseCodeGenerator):
         rhs = Expression.expand_integer_powers(rhs)
         nmodl_str = ccode(rhs, user_functions=Expression._cfunc_map,
                           assign_to=lhs)
-        nmodl_str = Expression.rationals_re.sub(r'\1/\2', nmodl_str)
+        nmodl_str = Expression.rationals_re.sub(r'\1/\2', nmodl_str)  # @UndefinedVariable @IgnorePep8
         nmodl_str = nmodl_str.replace(';', '')
         return nmodl_str

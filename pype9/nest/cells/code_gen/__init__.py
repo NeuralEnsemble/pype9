@@ -20,6 +20,7 @@ from datetime import datetime
 from copy import copy
 from nineml.user import DynamicsProperties, Definition
 from nineml import Document
+from pype9.nest.units import UnitHandler
 
 
 class CodeGenerator(BaseCodeGenerator):
@@ -52,7 +53,7 @@ class CodeGenerator(BaseCodeGenerator):
             'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
-            'unit_conversion': self.unit_conversion,
+            'unit_handler': UnitHandler(prototype.component_class),
             'default_regime': kwargs.get('default_regime',
                                          next(component_class.regime_names)),
             'jacobian_approx_step': kwargs.get(

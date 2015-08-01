@@ -35,28 +35,28 @@ stim_amp = pq.Quantity(0.02, 'nA')
 class TestAgainstPyNN(TestCase):
 
     xml_dir = path.join(os.environ['HOME'], 'git', 'nineml_catalog',
-                        'pynn_nmodl_import', 'neurons')
-    models = [('Izhikevich', 'Izhikevich', 'izhikevich'),
+                        'neurons')
+    models = [('Izhikevich2003', 'Izhikevich', 'izhikevich'),
               ('AdExpIaF', 'AdExpIF', 'aeif_cond_alpha'),
               ('HHTraub', 'hh_traub'),
               ('IF', 'Reset'),
               ('IFRefrac', 'ResetRefrac')]
 
-    initial_states = {'Izhikevich': {'u': -14 * pq.mV / pq.ms,
-                                     'v': -65.0 * pq.mV},
+    initial_states = {'Izhikevich2003': {'u': -14 * pq.mV / pq.ms,
+                                         'v': -65.0 * pq.mV},
                       'AdExpIaF': {'w': 0.0 * pq.nA,
                                    'v': -65 * pq.mV},
                       'HHTraub': {'v': -65 * pq.mV},
                       'IF': {'v': -65 * pq.mV},
                       'IFRefrac': {'v': -65 * pq.mV}}
 
-    nest_states = {'Izhikevich': {'u': 'U_m', 'v': 'V_m'},
+    nest_states = {'Izhikevich2003': {'u': 'U_m', 'v': 'V_m'},
                    'AdExpIaF': {'w': 'w', 'v': 'V_m'},
                    'HHTraub': {'v': 'V_m'},
                    'IF': {'v': 'V_m'},
                    'IFRefrac': {'v': 'V_m'}}
 
-    nest_params = {'Izhikevich': {'a': 0.02, 'c': -65.0, 'b': 0.2, 'd': 2.0},
+    nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2, 'd': 2.0},
                    'AdExpIaF': {},
                    'HHTraub': {},
                    'IF': {},
@@ -110,9 +110,10 @@ class TestAgainstPyNN(TestCase):
                 plt.show()
             else:
                 if 'nrn9ML' in tests or 'nrnPyNN' in tests:
-                    self.assertAlmostEqual(self._diff_NEURON(), 0, places=3)
+                    self.assertAlmostEqual(self._diff_NEURON(name), 0,
+                                           places=3)
                 if 'nest9ML' in tests or 'nestPyNN' in tests:
-                    self.assertAlmostEqual(self._diff_NEST(), 0, places=3)
+                    self.assertAlmostEqual(self._diff_NEST(name), 0, places=3)
             break
 
     def _create_9ML(self, name, sim_name):

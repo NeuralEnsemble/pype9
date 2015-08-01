@@ -16,15 +16,15 @@ try:
     from mpi4py import MPI  # @UnusedImport @IgnorePep8 This is imported before NEURON to avoid a bug in NEURON
 except ImportError:
     pass
+from nineml.user.component import Property
 from neuron import h, load_mechanisms
 import quantities as pq
 import os.path
 from .code_gen import CodeGenerator
 from pype9.base.cells.tree import in_units
-from pype9.utils import create_unit_conversions, convert_units
 from itertools import chain
 from pype9.base.cells import base
-from pype9.utils import convert_to_property, convert_to_quantity
+from pype9.neuron.units import UnitHandler
 from .controller import simulation_controller
 from math import pi
 from pype9.annotations import PYPE9_NS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS
@@ -37,36 +37,6 @@ NEURON_NS = 'NEURON'
 import logging
 
 logger = logging.getLogger("PyPe9")
-
-
-_basic_SI_to_neuron_conversions = (('s', 'ms'),
-                                   ('V', 'mV'),
-                                   ('A', 'nA'),
-                                   ('S', 'uS'),
-                                   ('F', 'nF'),
-                                   ('m', 'um'),
-                                   ('Hz', 'Hz'),
-                                   ('Ohm', 'MOhm'),
-                                   ('M', 'mM'))
-
-_compound_SI_to_neuron_conversions = (
-    ((('A', 1), ('m', -2)),
-     (('mA', 1), ('cm', -2))),
-    ((('F', 1), ('m', -2)),
-     (('uF', 1), ('cm', -2))),
-    ((('S', 1), ('m', -2)),
-     (('S', 1), ('cm', -2))),
-    ((('Ohm', 1), ('m', 1)),
-     (('Ohm', 1), ('cm', 1))))
-
-
-_basic_unit_dict, _compound_unit_dict = create_unit_conversions(
-    _basic_SI_to_neuron_conversions, _compound_SI_to_neuron_conversions)
-
-
-def convert_to_neuron_units(value, unit_str=None):
-    return convert_units(
-        value, unit_str, _basic_unit_dict, _compound_unit_dict)
 
 
 class Cell(base.Cell):
@@ -97,7 +67,7 @@ class Cell(base.Cell):
         self._cm_prop = self.build_prototype.property(
             self.build_componentclass.annotations[
                 PYPE9_NS][MEMBRANE_CAPACITANCE])
-        cm = pq.Quantity(convert_to_quantity(self._cm_prop), 'nF')
+        cm = pq.Quantity(UnitHandler.to_pq_quantity(self._cm_prop), 'nF')
         # Set capacitance in mechanism
         setattr(self._hoc, self._cm_prop.name, float(cm))
         # Set capacitance in hoc
@@ -152,7 +122,8 @@ class Cell(base.Cell):
         """
         if self._created:
             if varname in self.componentclass.parameter_names:
-                val = convert_to_quantity(self._nineml.property(varname))
+                val = UnitHandler.to_pq_quantity(
+                    self._nineml.property(varname))
                 # FIXME: Need to assert the same as hoc value
             elif varname in self.componentclass.state_variable_names:
                 try:
@@ -180,7 +151,8 @@ class Cell(base.Cell):
         if self._created:
             # Try to set as property
             if varname in self.componentclass.parameter_names:
-                self._nineml.set(convert_to_property(varname, val))
+                qty = UnitHandler.from_pq_quantity(val)
+                self._nineml.set(Property(varname, qty.value, qty.units))
             elif varname not in self.componentclass.state_variable_names:
                 raise Pype9RuntimeError(
                     "'{}' is not a parameter or state variable of the '{}'"
@@ -189,7 +161,7 @@ class Cell(base.Cell):
                             "', '".join(chain(
                                 self.componentclass.parameter_names,
                                 self.componentclass.state_variable_names))))
-            val = convert_to_neuron_units(val)[0]
+            val = UnitHandler.scale_quantity(val)
             try:
                 setattr(self._hoc, varname, val)
             except LookupError:
@@ -203,7 +175,7 @@ class Cell(base.Cell):
         setattr(self._hoc, prop.name, prop.value)
         # Set membrane capacitance in hoc if required
         if prop.name == self._cm_prop.name:
-            cm = convert_to_quantity(prop)
+            cm = UnitHandler.to_pq_quantity(prop)
             self._sec.cm = float(pq.Quantity(cm / self.surface_area,
                                              'uF/cm^2'))
 

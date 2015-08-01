@@ -4,7 +4,7 @@ else:
     from unittest import TestCase  # @Reimport
 from sympy import sympify
 from nineml import units as un
-from pype9.neuron.utils import UnitAssigner
+from pype9.neuron.utils import UnitHandler
 from nineml.abstraction import (
     Dynamics, AnalogReceivePort, Parameter, Regime)
 import numpy
@@ -31,7 +31,7 @@ class TestUnitAssignment(TestCase):
                         Parameter('P5', dimension=un.current ** 2 / un.length),
                         Parameter('P6', dimension=un.length ** 2)]
         )
-        self.assigner = UnitAssigner(a)
+        self.assigner = UnitHandler(a)
 
     def test_conversions(self):
         for unit in [un.mV / un.uF,
@@ -39,7 +39,7 @@ class TestUnitAssignment(TestCase):
                      un.K ** 2 / (un.uF * un.mV ** 2),
                      un.uF ** 3 / un.um,
                      un.cd / un.A]:
-            scale, compound = UnitAssigner.dimension_to_units(unit.dimension)
+            scale, compound = UnitHandler.dimension_to_units(unit.dimension)
             inv_scale = numpy.sum([p * u.power for u, p in compound])
             self.assertEquals(scale + inv_scale, 0,
                               "Scale doesn't match in unit conversion")
