@@ -22,5 +22,5 @@ x86_64
 *.o
 .libs
 *.Plo
-.unit_mapping_cache.pkl
+.unit_assigner_cache.pkl
 /doc/_build

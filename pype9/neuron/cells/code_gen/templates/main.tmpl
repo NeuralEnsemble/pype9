@@ -100,7 +100,7 @@ INITIAL {
 
 PARAMETER {
     : True parameters
-{% for param, units in unit_assigner.assign_units_to_parameters(componentclass.parameters) %}
+{% for param, units in unit_assigner.assign_units_to_variables(componentclass.parameters) %}
     {{param.name}} = 0 ({{units}})
 {% endfor %}
 
@@ -109,12 +109,12 @@ PARAMETER {
     {{const.name}} = {{value}} ({{units}})
 {% endfor %}
 
-    : Unit correction for printf
+    : Unit correction for 't' used in printf in order to get modlunit to work.
     PER_MS = 1 (/ms)
 }
 
 STATE {
-{% for sv, units in unit_assigner.assign_units_to_parameters(componentclass.state_variables) if sv.name != 'v' %}
+{% for sv, units in unit_assigner.assign_units_to_variables(componentclass.state_variables) if sv.name != 'v' %}
     {{sv.name}} ({{units}})
 {% endfor %}
 }
@@ -125,7 +125,7 @@ ASSIGNED {
     : Internal flags
     regime_
     found_transition_
-{% for port, units in unit_assigner.assign_units_to_parameters(chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports)) %}
+{% for port, units in unit_assigner.assign_units_to_variables(chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports)) %}
     {{port.name}} ({{units}}) 
 {% endfor %}
 
@@ -135,7 +135,7 @@ ASSIGNED {
     
 {% endif %}
     : Aliases
-{% for alias, _, units in unit_assigner.assign_units_to_expressions(componentclass.aliases) %}
+{% for alias, units in unit_assigner.assign_units_to_aliases(componentclass.aliases) %}
     {{alias.name}} ({{units}})
 {% endfor %}
 }
@@ -143,11 +143,11 @@ ASSIGNED {
 BREAKPOINT {
     SOLVE states METHOD {{ode_solver}}
 {% set output_analog_exprs = componentclass.required_for(componentclass.all_output_analogs()).expressions + list(componentclass.all_output_analogs()) %}
-{% for expr in output_analog_exprs %}
-    {{code_gen.assign_str(expr)}}
+{% for elem, scaled_expr in unit_assigner.scale_rhss(output_analog_exprs) %}
+    {{code_gen.assign_str(elem.lhs, scaled_expr)}}
 {% endfor %}
-{% for expr in componentclass.required_for(componentclass.all_time_derivatives()).expressions if expr not in output_analog_exprs %}
-    {{code_gen.assign_str(expr)}}
+{% for elem, scaled_expr in unit_assigner.scale_rhss(componentclass.required_for(componentclass.all_time_derivatives()).expressions) if elem not in output_analog_exprs %}
+    {{code_gen.assign_str(elem.lhs, scaled_expr)}}
 {% endfor %}
 }
 
@@ -159,10 +159,10 @@ DERIVATIVE states {
 
 {% for sv in componentclass.state_variables if sv.name not in componentclass.annotations[PYPE9_NS][NO_TIME_DERIVS] %}
 FUNCTION deriv_{{sv.name}}(
-    {%- for sv, units in unit_assigner.assign_units_to_parameters(componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variables) -%}
-        {{sv.name}} ({{units}}){%- if not loop.last %}, {% endif -%}
+    {%- for sv, units in unit_assigner.assign_units_to_variables(componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variables) -%}
+        {{sv.name}} ({{units}}){%- if loop.last %}{% else %}, {% endif -%}
     {%- endfor %}
-    ) ({{unit_assigner.assign_units_to_parameter(sv, derivative_of=True)}}) {
+    ) ({{unit_assigner.assign_units_to_variable(sv, derivative_of=True)}}) {
     {% for regime in componentclass.regimes  if sv.name in regime._time_derivatives %}
     {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
         deriv_{{sv.name}} = {{regime.time_derivative(sv.name).rhs_cstr}}
@@ -194,13 +194,13 @@ NET_RECEIVE(weight_, channel) {
         if (flag == ON_EVENT && channel == {{trans.src_port_name | upper}}) {
             {% endif %}      
             : Required aliases
-            {% for expr in componentclass.required_for(trans.state_assignments).expressions %}
-            {{expr.lhs}} = {{expr.rhs_cstr}}
+            {% for elem, scaled_expr in unit_assigner.scale_rhss(componentclass.required_for(trans.state_assignments).expressions) %}
+            {{code_gen.assign_str(elem.lhs, scaled_expr)}}
             {% endfor %}
 
             : State assignments
-            {% for sa in trans.state_assignments %}
-            {{sa.lhs}} = {{sa.rhs_cstr}}
+            {% for sa, scaled_expr in unit_assigner.scale_rhss(trans.state_assignments) %}
+            {{code_gen.assign_str(sa.lhs, scaled_expr)}}
             {% endfor %}
 
             : Output events
