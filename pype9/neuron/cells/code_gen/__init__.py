@@ -547,6 +547,6 @@ class CodeGenerator(BaseCodeGenerator):
         rhs = Expression.expand_integer_powers(rhs)
         nmodl_str = ccode(rhs, user_functions=Expression._cfunc_map,
                           assign_to=lhs)
-        nmodl_str = Expression.rationals_re.sub(r'\1/\2', nmodl_str)
+        nmodl_str = Expression.rationals_re.sub(r'\1/\2', nmodl_str)  # @UndefinedVariable @IgnorePep8
         nmodl_str = nmodl_str.replace(';', '')
         return nmodl_str

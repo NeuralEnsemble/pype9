@@ -6,13 +6,15 @@ import cPickle as pkl
 from abc import ABCMeta, abstractmethod
 import sympy
 from sympy import sympify
-from numpy import array, sum, abs, argmin
+from numpy import array, sum, abs, argmin, log10
 import quantities as pq
 import diophantine
 from nineml import units as un
+from nineml.user.component import Quantity
 from nineml.abstraction.ports import SendPortBase
 from nineml.abstraction.dynamics.visitors import DynamicsDimensionResolver
 import atexit
+from pype9.exceptions import Pype9RuntimeError
 
 
 logger = logging.getLogger('PyPe9')
@@ -133,9 +135,49 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
             pq.K ** dim.k * pq.cd ** dim.j * pq.A ** dim.i)
 
     @classmethod
-    def scale_to(cls, units, target_units):
-        assert units.dimension == target_units.dimension
-        return units.power - target_units.power
+    def from_quantity(cls, qty):
+        if isinstance(qty, (int, float)):
+            units = un.unitless
+        elif isinstance(qty, pq.Quantity):
+            unit_name = str(qty.units).split()[1]
+            powers = {}
+            for si_unit, power in \
+                    qty.units.simplified._dimensionality.iteritems():
+                if isinstance(si_unit, pq.UnitMass):
+                    powers['m'] = power
+                elif isinstance(si_unit, pq.UnitLength):
+                    powers['l'] = power
+                elif isinstance(si_unit, pq.UnitTime):
+                    powers['t'] = power
+                elif isinstance(si_unit, pq.UnitCurrent):
+                    powers['i'] = power
+                elif isinstance(si_unit, pq.UnitLuminousIntensity):
+                    powers['j'] = power
+                elif isinstance(si_unit, pq.UnitSubstance):
+                    powers['n'] = power
+                elif isinstance(si_unit, pq.UnitTemperature):
+                    powers['k'] = power
+                else:
+                    assert False, "Unrecognised units '{}'".format(si_unit)
+            dimension = un.Dimension(unit_name + 'Dimension', **powers)
+            units = un.Unit(unit_name, dimension=dimension,
+                            power=float(log10(qty.units.simplified)))
+        else:
+            raise Pype9RuntimeError(
+                "Cannot '{}' to nineml.Quantity (can only convert "
+                "quantities.Quantity and numeric objects)"
+                .format(qty))
+        return Quantity(float(qty), units)
+
+    @classmethod
+    def scale_value_to_units(cls, value, units):
+        exponent, _ = cls.dimension_to_units(units.dimension)
+        return 10 ** (units.power - exponent) * value
+
+    @classmethod
+    def scale_quantity(cls, qty):
+        nineml_qty = cls.from_quantity(qty)
+        return cls.scale_value_to_units(nineml_qty.value, nineml_qty.units)
 
     @classmethod
     def _load_basis_matrices_and_cache(cls, basis, directory):
@@ -187,6 +229,10 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
         else:
             min_x = min_length_xs[0]
         return min_x
+
+    # Override DynamicsDimensionResolver methods to include the scaling of
+    # sub expressions where it is required (i.e. when there is a change of
+    # units and the new units power is different)
 
     def _flatten_symbol(self, sym):
         try:

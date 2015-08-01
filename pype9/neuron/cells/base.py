@@ -24,6 +24,7 @@ from pype9.base.cells.tree import in_units
 from pype9.utils import create_unit_conversions, convert_units
 from itertools import chain
 from pype9.base.cells import base
+from pype9.neuron.utils import UnitAssigner
 from pype9.utils import convert_to_property, convert_to_quantity
 from .controller import simulation_controller
 from math import pi
@@ -189,7 +190,7 @@ class Cell(base.Cell):
                             "', '".join(chain(
                                 self.componentclass.parameter_names,
                                 self.componentclass.state_variable_names))))
-            val = convert_to_neuron_units(val)[0]
+            val = UnitAssigner.scale_quantity(self, val)
             try:
                 setattr(self._hoc, varname, val)
             except LookupError:

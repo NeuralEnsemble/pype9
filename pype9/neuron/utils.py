@@ -31,15 +31,3 @@ class UnitAssigner(BaseUnitAssigner):
             if denominator:
                 unit_str += '/' + ' '.join(denominator)
         return unit_str
-
-    def scale_str(self, unit):
-        """
-        Calculates the correct scaling that should be applied to quantity of
-        the given unit to match its projection onto the basis units.
-        """
-        exponent, _ = self.dimension_to_units(unit.dimension)
-        if exponent != 0:
-            scale_str = '* 1e{} '.format(exponent)
-        else:
-            scale_str = ''
-        return scale_str
