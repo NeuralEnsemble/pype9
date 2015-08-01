@@ -53,10 +53,12 @@ NEURON {
 
 UNITS {
     : Define symbols for base units
-    (ms) = (milliseconds)
     (mV) = (millivolt)
     (nA) = (nanoamp)
     (nF) = (nanofarad)
+    (uF) = (microfarad)
+    (S) = (siemens)
+    (cm) = (centremeter)
     (uS) = (microsiemens)
     (mM) = (milli/liter)
     (um) = (micrometer)
@@ -101,13 +103,13 @@ INITIAL {
 
 PARAMETER {
     : True parameters
-{% for p in componentclass.parameters %}
-    {{p.name}} = 0
+{% for param, units in unit_assigner.assign_units_to_parameters(componentclass.parameters) %}
+    {{param.name}} = 0 ({{units}})
 {% endfor %}
 
     : Constants
-{% for c in componentclass.constants %}
-    {{c.name}} = {{c.value}}{{unit_converter.scale_str(c.units)}}({{unit_converter.unit_str(c.units)}}
+{% for const, value, units in unit_assigner.assign_units_to_constants(componentclass.constants) %}
+    {{const.name}} = {{value}} ({{units}})
 {% endfor %}
 }
 
@@ -123,13 +125,13 @@ ASSIGNED {
     : Internal flags
     regime_
     found_transition_
-{% for p in chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports) %}
-    {{p.name}} 
+{% for port, units in unit_assigner.assign_units_to_parameters(chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports)) %}
+    {{port.name}} ({{units}}) 
 {% endfor %}    
 
     : Aliases
-{% for alias in componentclass.aliases %}
-    {{alias.name}}
+{% for alias, _, units in unit_assigner.assign_units_to_expressions(componentclass.aliases) %}
+    {{alias.name}} ({{units}})
 {% endfor %}
 }
 

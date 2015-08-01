@@ -27,7 +27,7 @@ from nineml.user import Component
 from pype9.exceptions import Pype9BuildError
 import logging
 import pype9.annotations
-from pype9.utils import load_9ml_prototype
+
 
 logger = logging.getLogger('PyPe9')
 
@@ -101,9 +101,7 @@ class BaseCodeGenerator(object):
         # Save original working directory to reinstate it afterwards (just to
         # be polite)
         orig_dir = os.getcwd()
-        if isinstance(prototype, basestring):
-            prototype = load_9ml_prototype(prototype, **kwargs)
-        elif not isinstance(prototype, Component):
+        if not isinstance(prototype, Component):
             raise TypeError(
                 "Provided prototype is not a 9ML component ('{}')"
                 .format(prototype))

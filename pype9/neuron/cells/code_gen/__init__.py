@@ -132,7 +132,7 @@ class CodeGenerator(BaseCodeGenerator):
             'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
-            'unit_converter': unit_converter,
+            'unit_assigner': UnitAssigner(prototype.component_class),
             'ode_solver': self.ODE_SOLVER_DEFAULT,
             'external_ports': [],
             'is_subcomponent': True,

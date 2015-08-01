@@ -21,7 +21,7 @@
       <TimeDerivative variable="v">
         <MathInline>const1*v*v + const2*v + const3 - u + iExt/Cm</MathInline>
       </TimeDerivative>
-      <OnCondition>
+      <OnCondition target_regime="subthreshold">
         <Trigger>
           <MathInline>v &gt; vthresh</MathInline>
         </Trigger>

@@ -49,11 +49,11 @@ class TestUnitAssignment(TestCase):
                               "Dimensions do not match original conversion")
 
     def test_scaling(self):
-        self.assertEquals(self.assigner.assign_units_to_element('A2'),
+        self.assertEquals(self.assigner.assign_units_to_expression('A2'),
                           (sympify('ARP2 + P3'), 'ms nA'))
-        self.assertEquals(self.assigner.assign_units_to_element('P2'),
+        self.assertEquals(self.assigner.assign_units_to_expression('P2'),
                           (sympify('P2'), '/uS'))
-        self.assertEquals(self.assigner.assign_units_to_element('P6'),
+        self.assertEquals(self.assigner.assign_units_to_expression('P6'),
                           (sympify('P6'), 'um2'))
-        self.assertEquals(self.assigner.assign_units_to_element('A4'),
+        self.assertEquals(self.assigner.assign_units_to_expression('A4'),
                           (sympify('ARP3 + 100/(P2*P6)'), 'S/cm2'))
