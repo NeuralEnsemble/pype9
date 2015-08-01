@@ -64,8 +64,10 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
         for const in constants:
             yield (const,) + self.assign_units_to_constant(const)
 
-    def assign_units_to_parameter(self, parameter):
+    def assign_units_to_parameter(self, parameter, derivative_of=False):
         _, compound = self.dimension_to_units(parameter.dimension)
+        if derivative_of:
+            compound.append((un.ms, -1))
         return self._compound_units_to_str(compound)
 
     def assign_units_to_parameters(self, parameters):
@@ -112,7 +114,7 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
             # Get list of compound units with the powers
             compound = [(u, p) for u, p in zip(cls.basis, min_x) if p]
             # Calculate the appropriate scale for the new compound quantity
-            exponent = -min_x.dot([b.power for b in cls.basis])
+            exponent = min_x.dot([b.power for b in cls.basis])
         return exponent, compound
 
     @classmethod
