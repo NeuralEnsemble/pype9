@@ -15,10 +15,12 @@ import neo
 import nest
 import quantities as pq
 import nineml
+from nineml.user.component import Quantity
 from .code_gen import CodeGenerator
 from .controller import simulation_controller
 from pype9.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE
+from pype9.nest.units import UnitHandler
 
 
 basic_nineml_translations = {
@@ -54,8 +56,8 @@ class Cell(base.Cell):
 
     def set(self, prop):
         super(Cell, self).set(prop)
-        # FIXME: need to convert to NEST units!!!!!!!!!!!
-        nest.SetStatus(self._cell, prop.name, prop.value)
+        value = UnitHandler.scale_quantity(Quantity(prop.value, prop.units))
+        nest.SetStatus(self._cell, prop.name, value)
 
     def record(self, variable, interval=None):
         # TODO: Need to translate variable to port
@@ -82,11 +84,11 @@ class Cell(base.Cell):
                 PYPE9_NS][MEMBRANE_VOLTAGE]
         events, interval = nest.GetStatus(self._recorders[port_name],
                                           ('events', 'interval'))[0]
+        unit_str = UnitHandler.dimension_to_unit_str(
+            self._nineml.component_class[port_name].dimension)
         data = neo.AnalogSignal(
-            events[port_name],
-            sampling_period=interval * pq.ms,
-            t_start=0.0 * pq.ms, units='mV',  # FIXME: This should be read from prop. @IgnorePep8
-            name=port_name)
+            events[port_name], sampling_period=interval * pq.ms,
+            t_start=0.0 * pq.ms, units=unit_str, name=port_name)
         return data
 
     def play(self, port_name, signal):
