@@ -128,7 +128,7 @@ class TestAgainstPyNN(TestCase):
         else:
             assert False
         CellClass = CellMetaClass(
-            path.join(self.xml_dir, name + '.xml'), build_mode='lazy')
+            path.join(self.xml_dir, name + '.xml'), build_mode='force')
         self.nml_cells[sim_name] = CellClass()
         self.nml_cells[sim_name].play('iExt', self.injected_signal)
         self.nml_cells[sim_name].record('v')
