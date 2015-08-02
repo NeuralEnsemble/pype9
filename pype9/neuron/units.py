@@ -1,9 +1,9 @@
 import os.path
 from nineml import units as un
-from pype9.base.utils import BaseUnitAssigner
+from pype9.base.units import BaseUnitHandler
 
 
-class UnitAssigner(BaseUnitAssigner):
+class UnitHandler(BaseUnitHandler):
 
     basis = [un.ms, un.mV, un.nA, un.mM, un.nF, un.um, un.uS, un.K, un.cd]
     compounds = [un.uF_per_cm2, un.S_per_cm2]
@@ -12,7 +12,7 @@ class UnitAssigner(BaseUnitAssigner):
                      un.cd: 'cd', un.uF_per_cm2: 'uF/cm2',
                      un.S_per_cm2: 'S/cm2'}
 
-    A, cache, si_lengths = BaseUnitAssigner._load_basis_matrices_and_cache(
+    A, cache, si_lengths = BaseUnitHandler._load_basis_matrices_and_cache(
         basis, os.path.dirname(__file__))
 
     def _compound_units_to_str(self, units):

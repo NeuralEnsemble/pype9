@@ -153,7 +153,7 @@ def pq29_quantity(qty):
     return nineml.user.component.Quantity(float(qty), units)
 
 
-def convert_to_quantity(value, unit):
+def convert_to_pq_quantity(value, unit):
     return pq.Quantity(value, unit.to_SI_units_str())
 
 

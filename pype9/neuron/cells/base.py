@@ -24,8 +24,8 @@ from pype9.base.cells.tree import in_units
 from pype9.utils import create_unit_conversions, convert_units
 from itertools import chain
 from pype9.base.cells import base
-from pype9.neuron.utils import UnitAssigner
-from pype9.utils import convert_to_property, convert_to_quantity
+from pype9.neuron.units import UnitHandler
+from pype9.utils import convert_to_property, convert_to_pq_quantity
 from .controller import simulation_controller
 from math import pi
 from pype9.annotations import PYPE9_NS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS
@@ -98,7 +98,7 @@ class Cell(base.Cell):
         self._cm_prop = self.build_prototype.property(
             self.build_componentclass.annotations[
                 PYPE9_NS][MEMBRANE_CAPACITANCE])
-        cm = pq.Quantity(convert_to_quantity(self._cm_prop), 'nF')
+        cm = pq.Quantity(convert_to_pq_quantity(self._cm_prop), 'nF')
         # Set capacitance in mechanism
         setattr(self._hoc, self._cm_prop.name, float(cm))
         # Set capacitance in hoc
@@ -153,7 +153,7 @@ class Cell(base.Cell):
         """
         if self._created:
             if varname in self.componentclass.parameter_names:
-                val = convert_to_quantity(self._nineml.property(varname))
+                val = convert_to_pq_quantity(self._nineml.property(varname))
                 # FIXME: Need to assert the same as hoc value
             elif varname in self.componentclass.state_variable_names:
                 try:
@@ -190,7 +190,7 @@ class Cell(base.Cell):
                             "', '".join(chain(
                                 self.componentclass.parameter_names,
                                 self.componentclass.state_variable_names))))
-            val = UnitAssigner.scale_quantity(self, val)
+            val = UnitHandler.scale_quantity(self, val)
             try:
                 setattr(self._hoc, varname, val)
             except LookupError:
@@ -204,7 +204,7 @@ class Cell(base.Cell):
         setattr(self._hoc, prop.name, prop.value)
         # Set membrane capacitance in hoc if required
         if prop.name == self._cm_prop.name:
-            cm = convert_to_quantity(prop)
+            cm = convert_to_pq_quantity(prop)
             self._sec.cm = float(pq.Quantity(cm / self.surface_area,
                                              'uF/cm^2'))
 

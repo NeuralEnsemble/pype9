@@ -20,7 +20,7 @@ from pype9.exceptions import Pype9RuntimeError
 logger = logging.getLogger('PyPe9')
 
 
-class BaseUnitAssigner(DynamicsDimensionResolver):
+class BaseUnitHandler(DynamicsDimensionResolver):
     """
     Base class for simulator-specific "unit assigners", which map dynamics
     class dimensions onto a set of "basis" unit compounds that the simulator
@@ -29,7 +29,7 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
 
     __metaclass__ = ABCMeta
 
-    _CACHE_FILENAME = '.unit_assigner_cache.pkl'
+    _CACHE_FILENAME = '.unit_handler_cache.pkl'
 
     def __init__(self, component_class):
         self._scaled = {}
@@ -128,14 +128,14 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
         return exponent, compound
 
     @classmethod
-    def to_quantity(cls, value, units):
+    def to_pq_quantity(cls, value, units):
         dim = units.dimension
         return (value * 10 ** units.power + units.offset) * (
             pq.s ** dim.t * pq.kg ** dim.m * pq.m ** dim.l * pq.mole ** dim.n *
             pq.K ** dim.k * pq.cd ** dim.j * pq.A ** dim.i)
 
     @classmethod
-    def from_quantity(cls, qty):
+    def from_pq_quantity(cls, qty):
         if isinstance(qty, (int, float)):
             units = un.unitless
         elif isinstance(qty, pq.Quantity):
@@ -176,7 +176,7 @@ class BaseUnitAssigner(DynamicsDimensionResolver):
 
     @classmethod
     def scale_quantity(cls, qty):
-        nineml_qty = cls.from_quantity(qty)
+        nineml_qty = cls.from_pq_quantity(qty)
         return cls.scale_value_to_units(nineml_qty.value, nineml_qty.units)
 
     @classmethod

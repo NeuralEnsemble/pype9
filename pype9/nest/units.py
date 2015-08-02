@@ -1,8 +1,8 @@
 from nineml import units as un
-from pype9.base.utils import BaseUnitAssigner
+from pype9.base.units import BaseUnitHandler
 
 
-class UnitAssigner(BaseUnitAssigner):
+class UnitHandler(BaseUnitHandler):
 
     basis = [un.ms, un.mV, un.pA, un.mM, un.uF, un.um, un.uS, un.K, un.cd]
     compounds = []
