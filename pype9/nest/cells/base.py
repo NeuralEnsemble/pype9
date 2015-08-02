@@ -56,7 +56,7 @@ class Cell(base.Cell):
 
     def set(self, prop):
         super(Cell, self).set(prop)
-        value = UnitHandler.scale_quantity(pq.Quantity(prop.value, prop.units))
+        value = UnitHandler.scale_quantity(Quantity(prop.value, prop.units))
         nest.SetStatus(self._cell, prop.name, value)
 
     def record(self, variable, interval=None):
@@ -84,13 +84,11 @@ class Cell(base.Cell):
                 PYPE9_NS][MEMBRANE_VOLTAGE]
         events, interval = nest.GetStatus(self._recorders[port_name],
                                           ('events', 'interval'))[0]
-        units = UnitHandler.dimension_to_units(
-            self._nineml.component_class.analog_send_port(port_name).dimension)
+        unit_str = UnitHandler.dimension_to_unit_str(
+            self._nineml.component_class[port_name].dimension)
         data = neo.AnalogSignal(
             events[port_name], sampling_period=interval * pq.ms,
-            t_start=0.0 * pq.ms,
-            units=UnitHandler.to_pq_quantity(Quantity(1.0, units)),
-            name=port_name)
+            t_start=0.0 * pq.ms, units=unit_str, name=port_name)
         return data
 
     def play(self, port_name, signal):

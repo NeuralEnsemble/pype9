@@ -43,7 +43,7 @@ class UnitHandler(DynamicsDimensionResolver):
     def assign_units_to_alias(self, alias):
         assert alias in self.component_class
         dims = self._flatten(sympify(alias))[1]
-        units = self.dimension_to_units(dims)[1]
+        units = self.dimension_to_units_compound(dims)[1]
         return self._compound_units_to_str(units)
 
     def assign_units_to_aliases(self, aliases):
@@ -57,7 +57,7 @@ class UnitHandler(DynamicsDimensionResolver):
             yield alias, self.assign_units_to_alias(alias)
 
     def assign_units_to_constant(self, constant):
-        exponent, compound = self.dimension_to_units(constant.units.dimension)
+        exponent, compound = self.dimension_to_units_compound(constant.units.dimension)
         scale = exponent - constant.units.power
         return (10 ** scale * constant.value,
                 self._compound_units_to_str(compound))
@@ -67,7 +67,7 @@ class UnitHandler(DynamicsDimensionResolver):
             yield (const,) + self.assign_units_to_constant(const)
 
     def assign_units_to_variable(self, parameter, derivative_of=False):
-        _, compound = self.dimension_to_units(parameter.dimension)
+        _, compound = self.dimension_to_units_compound(parameter.dimension)
         if derivative_of:
             compound.append((un.ms, -1))
         return self._compound_units_to_str(compound)
@@ -80,7 +80,7 @@ class UnitHandler(DynamicsDimensionResolver):
         assert element in self.component_class
         scaled_expr, dims = self._flatten(sympify(element.rhs))
         units_str = self._compound_units_to_str(
-            self.dimension_to_units(dims)[1])
+            self.dimension_to_units_compound(dims)[1])
         return scaled_expr, units_str
 
     def scale_rhss(self, elements):
@@ -93,7 +93,7 @@ class UnitHandler(DynamicsDimensionResolver):
         pass
 
     @classmethod
-    def dimension_to_units(cls, dimension):
+    def dimension_to_units_compound(cls, dimension):
         """
         Projects a given unit onto a list of units that span the space of
         dimensions present in the unit to project.
@@ -130,6 +130,31 @@ class UnitHandler(DynamicsDimensionResolver):
             # Calculate the appropriate scale for the new compound quantity
             exponent = min_x.dot([b.power for b in cls.basis])
         return exponent, compound
+
+    @classmethod
+    def dimension_to_units(cls, dimension):
+        """
+        Returns the units associated with the given dimension
+        """
+        exponent, compound = cls.dimension_to_units_compound(dimension)
+        numerator = '_'.join(u.name for u, p in compound if p > 0)
+        denominator = '_'.join(u.name for u, p in compound if p < 0)
+        if denominator and numerator:
+            unit_name = numerator + '_per_' + denominator
+        elif numerator:
+            unit_name = numerator
+        elif denominator:
+            unit_name = 'per_' + denominator
+        return un.Unit(unit_name, dimension=dimension, power=-exponent)
+
+    @classmethod
+    def dimension_to_unit_str(cls, dimension):
+        """
+        Returns the units associated with the given dimension
+        """
+        _, compound = cls.dimension_to_units_compound(dimension)
+        return '*'.join('{}**{}'.format(cls.unit_name_map[u], p)
+                        for u, p in compound)
 
     @classmethod
     def to_pq_quantity(cls, qty):
@@ -175,14 +200,15 @@ class UnitHandler(DynamicsDimensionResolver):
         return Quantity(float(qty), units)
 
     @classmethod
-    def scale_value_to_units(cls, value, units):
-        exponent, _ = cls.dimension_to_units(units.dimension)
-        return 10 ** (units.power - exponent) * value
-
-    @classmethod
     def scale_quantity(cls, qty):
-        nineml_qty = cls.from_pq_quantity(qty)
-        return cls.scale_value_to_units(nineml_qty.value, nineml_qty.units)
+        """
+        Scales a given quantity so that it matches the units used for the
+        specified simulator
+        """
+        if isinstance(qty, pq.Quantity):
+            qty = cls.from_pq_quantity(qty)
+        exponent, _ = cls.dimension_to_units_compound(qty.units.dimension)
+        return float(10 ** (qty.units.power - exponent) * qty.value)
 
     @classmethod
     def _load_basis_matrices_and_cache(cls, basis, directory):
@@ -277,8 +303,8 @@ class UnitHandler(DynamicsDimensionResolver):
         dims = reduce(operator.mul, arg_dims)
         if isinstance(dims, sympy.Basic):
             dims = dims.powsimp()  # Simplify the expression
-        power, _ = self.dimension_to_units(dims)
-        arg_power = sum(self.dimension_to_units(self._flatten(a)[1])[0]
+        power, _ = self.dimension_to_units_compound(dims)
+        arg_power = sum(self.dimension_to_units_compound(self._flatten(a)[1])[0]
                         for a in arg_exprs)
         scale = power - arg_power
         return 10 ** scale * type(expr)(*expr.args), dims
