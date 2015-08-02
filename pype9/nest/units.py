@@ -22,12 +22,16 @@ class UnitHandler(BaseUnitHandler):
         if not units:
             unit_str = 'dimensionless'
         else:
-            unit_str = '*'.join(
+            numerator = '*'.join(
                 '{}{}'.format(self.unit_name_map[u], p if p > 1 else '')
                 for u, p in units if p > 0)
             denominator = '*'.join(
                 '{}{}'.format(self.unit_name_map[u], -p if p < -1 else '')
                 for u, p in units if p < 0)
-            if denominator:
-                unit_str += '/' + denominator
+            if numerator and denominator:
+                unit_str = numerator + '/' + denominator
+            elif denominator:
+                unit_str = '1/' + denominator
+            else:
+                unit_str = numerator
         return unit_str
