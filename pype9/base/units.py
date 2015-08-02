@@ -78,11 +78,15 @@ class BaseUnitHandler(DynamicsDimensionResolver):
 
     def scale_rhs(self, element):
         assert element in self.component_class
-        return self._flatten(sympify(element.rhs))[0]
+        scaled_expr, dims = self._flatten(sympify(element.rhs))
+        units_str = self._compound_units_to_str(
+            self.dimension_to_units(dims)[1])
+        return scaled_expr, units_str
 
     def scale_rhss(self, elements):
         for elem in elements:
-            yield elem, self.scale_rhs(elem)
+            scaled_expr, units_str = self.scale_rhs(elem)
+            yield elem, scaled_expr, units_str
 
     @abstractmethod
     def _compound_units_to_str(self, unit):
@@ -128,9 +132,9 @@ class BaseUnitHandler(DynamicsDimensionResolver):
         return exponent, compound
 
     @classmethod
-    def to_pq_quantity(cls, value, units):
-        dim = units.dimension
-        return (value * 10 ** units.power + units.offset) * (
+    def to_pq_quantity(cls, qty):
+        dim = qty.units.dimension
+        return (qty.value * 10 ** qty.units.power + qty.units.offset) * (
             pq.s ** dim.t * pq.kg ** dim.m * pq.m ** dim.l * pq.mole ** dim.n *
             pq.K ** dim.k * pq.cd ** dim.j * pq.A ** dim.i)
 

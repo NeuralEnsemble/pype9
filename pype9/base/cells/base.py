@@ -20,7 +20,6 @@ import neo
 import quantities as pq
 from datetime import datetime
 import nineml
-from pype9.utils import convert_to_property
 
 
 class CellMetaClass(type):
