@@ -1,6 +1,6 @@
 import os.path
 from nineml import units as un
-from pype9.base.units import BaseUnitHandler
+from pype9.base.units import UnitHandler as BaseUnitHandler
 
 
 class UnitHandler(BaseUnitHandler):
@@ -25,9 +25,9 @@ class UnitHandler(BaseUnitHandler):
             unit_str = ' '.join(
                 '{}{}'.format(self.unit_name_map[u], p if p > 1 else '')
                 for u, p in units if p > 0)
-            denominator = [
+            denominator = ' '.join(
                 '{}{}'.format(self.unit_name_map[u], -p if p < -1 else '')
-                for u, p in units if p < 0]
+                for u, p in units if p < 0)
             if denominator:
-                unit_str += '/' + ' '.join(denominator)
+                unit_str += '/' + denominator
         return unit_str

@@ -20,6 +20,7 @@ import neo
 import quantities as pq
 from datetime import datetime
 import nineml
+from ..units import UnitHandler
 
 
 class CellMetaClass(type):

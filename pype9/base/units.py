@@ -20,7 +20,7 @@ from pype9.exceptions import Pype9RuntimeError
 logger = logging.getLogger('PyPe9')
 
 
-class BaseUnitHandler(DynamicsDimensionResolver):
+class UnitHandler(DynamicsDimensionResolver):
     """
     Base class for simulator-specific "unit assigners", which map dynamics
     class dimensions onto a set of "basis" unit compounds that the simulator
@@ -143,7 +143,8 @@ class BaseUnitHandler(DynamicsDimensionResolver):
         if isinstance(qty, (int, float)):
             units = un.unitless
         elif isinstance(qty, pq.Quantity):
-            unit_name = str(qty.units).split()[1]
+            unit_name = str(qty.units).split()[1].replace(
+                '/', '_per_').replace('*', '_')
             powers = {}
             for si_unit, power in \
                     qty.units.simplified._dimensionality.iteritems():
@@ -165,7 +166,7 @@ class BaseUnitHandler(DynamicsDimensionResolver):
                     assert False, "Unrecognised units '{}'".format(si_unit)
             dimension = un.Dimension(unit_name + 'Dimension', **powers)
             units = un.Unit(unit_name, dimension=dimension,
-                            power=float(log10(qty.units.simplified)))
+                            power=log10(float(qty.units.simplified)))
         else:
             raise Pype9RuntimeError(
                 "Cannot '{}' to nineml.Quantity (can only convert "

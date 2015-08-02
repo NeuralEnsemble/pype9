@@ -161,7 +161,7 @@ class Cell(base.Cell):
                             "', '".join(chain(
                                 self.componentclass.parameter_names,
                                 self.componentclass.state_variable_names))))
-            val = UnitHandler.scale_quantity(self, val)
+            val = UnitHandler.scale_quantity(val)
             try:
                 setattr(self._hoc, varname, val)
             except LookupError:
