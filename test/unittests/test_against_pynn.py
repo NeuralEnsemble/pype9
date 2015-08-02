@@ -56,7 +56,8 @@ class TestAgainstPyNN(TestCase):
                    'IF': {'v': 'V_m'},
                    'IFRefrac': {'v': 'V_m'}}
 
-    nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2, 'd': 2.0},
+    nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2,
+                                      'd': 2.0},
                    'AdExpIaF': {},
                    'HHTraub': {},
                    'IF': {},
