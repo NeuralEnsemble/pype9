@@ -57,7 +57,8 @@ class UnitHandler(DynamicsDimensionResolver):
             yield alias, self.assign_units_to_alias(alias)
 
     def assign_units_to_constant(self, constant):
-        exponent, compound = self.dimension_to_units_compound(constant.units.dimension)
+        exponent, compound = self.dimension_to_units_compound(
+            constant.units.dimension)
         scale = exponent - constant.units.power
         return (10 ** scale * constant.value,
                 self._units_for_code_gen(compound))
@@ -91,28 +92,6 @@ class UnitHandler(DynamicsDimensionResolver):
     @abstractmethod
     def _units_for_code_gen(self, unit):
         pass
-
-    @classmethod
-    def compound_units_str(self, units, mult_symbol='*'):
-        """
-        Converts a compound unit list into a string representation
-        """
-        if not units:
-            unit_str = '1'
-        else:
-            numerator = mult_symbol.join(
-                '{}{}'.format(self.unit_name_map[u], p if p > 1 else '')
-                for u, p in units if p > 0)
-            denominator = mult_symbol.join(
-                '{}{}'.format(self.unit_name_map[u], -p if p < -1 else '')
-                for u, p in units if p < 0)
-            if numerator and denominator:
-                unit_str = numerator + '/' + denominator
-            elif denominator:
-                unit_str = '1/' + denominator
-            else:
-                unit_str = numerator
-        return unit_str
 
     @classmethod
     def dimension_to_units_compound(cls, dimension):
@@ -159,31 +138,55 @@ class UnitHandler(DynamicsDimensionResolver):
         Returns the units associated with the given dimension
         """
         exponent, compound = cls.dimension_to_units_compound(dimension)
-        numerator = '_'.join(u.name for u, p in compound if p > 0)
-        denominator = '_'.join(u.name for u, p in compound if p < 0)
-        if denominator and numerator:
-            unit_name = numerator + '_per_' + denominator
-        elif numerator:
-            unit_name = numerator
-        elif denominator:
-            unit_name = 'per_' + denominator
+        unit_name = cls._unit_name_from_compound(compound)
         return un.Unit(unit_name, dimension=dimension, power=-exponent)
+
+    @classmethod
+    def compound_to_units_str(cls, compound, mult_symbol='*'):
+        """
+        Converts a compound unit list into a string representation
+        """
+        if not compound:
+            unit_str = '1'
+        else:
+            numerator = mult_symbol.join(
+                '{}{}'.format(cls.unit_name_map[u], p if p > 1 else '')
+                for u, p in compound if p > 0)
+            denominator = mult_symbol.join(
+                '{}{}'.format(cls.unit_name_map[u], -p if p < -1 else '')
+                for u, p in compound if p < 0)
+            if numerator and denominator:
+                unit_str = numerator + '/' + denominator
+            elif denominator:
+                unit_str = '1/' + denominator
+            else:
+                unit_str = numerator
+        return unit_str
 
     @classmethod
     def dimension_to_unit_str(cls, dimension):
         """
         Returns the units associated with the given dimension
         """
+        return cls.compound_to_units_str(
+            cls.dimension_to_units_compound(dimension)[1])
+
+    @classmethod
+    def scale_value(cls, qty):
+        exponent, _ = cls.dimension_to_units_compound(qty.units.dimension)
+        return 10 ** (exponent - qty.units.power) * qty.value
+
+    @classmethod
+    def assign_units(cls, value, dimension):
         _, compound = cls.dimension_to_units_compound(dimension)
-        return '*'.join('{}**{}'.format(cls.unit_name_map[u], p)
-                        for u, p in compound)
+        return pq.Quantity(value, cls.compound_to_units_str(compound))
 
     @classmethod
     def to_pq_quantity(cls, qty):
         exponent, compound = cls.dimension_to_units_compound(
             qty.units.dimension)
         scale = exponent - qty.units.power
-        units_str = cls.compound_units_str(compound)
+        units_str = cls.compound_to_units_str(compound)
         return 10 ** scale * pq.Quantity(qty.value, units_str)
 
     @classmethod
@@ -221,17 +224,6 @@ class UnitHandler(DynamicsDimensionResolver):
                 "quantities.Quantity and numeric objects)"
                 .format(qty))
         return Quantity(float(qty), units)
-
-    @classmethod
-    def scale_quantity(cls, qty):
-        """
-        Scales a given quantity so that it matches the units used for the
-        specified simulator
-        """
-        if isinstance(qty, pq.Quantity):
-            qty = cls.from_pq_quantity(qty)
-        exponent, _ = cls.dimension_to_units_compound(qty.units.dimension)
-        return float(10 ** (qty.units.power - exponent) * qty.value)
 
     @classmethod
     def _load_basis_matrices_and_cache(cls, basis, directory):
@@ -284,6 +276,18 @@ class UnitHandler(DynamicsDimensionResolver):
             min_x = min_length_xs[0]
         return min_x
 
+    @classmethod
+    def _unit_name_from_compound(cls, compound):
+        numerator = '_'.join(u.name for u, p in compound if p > 0)
+        denominator = '_'.join(u.name for u, p in compound if p < 0)
+        if denominator and numerator:
+            unit_name = numerator + '_per_' + denominator
+        elif numerator:
+            unit_name = numerator
+        elif denominator:
+            unit_name = 'per_' + denominator
+        return unit_name
+
     # Override DynamicsDimensionResolver methods to include the scaling of
     # sub expressions where it is required (i.e. when there is a change of
     # units and the new units power is different)
@@ -327,8 +331,9 @@ class UnitHandler(DynamicsDimensionResolver):
         if isinstance(dims, sympy.Basic):
             dims = dims.powsimp()  # Simplify the expression
         power, _ = self.dimension_to_units_compound(dims)
-        arg_power = sum(self.dimension_to_units_compound(self._flatten(a)[1])[0]
-                        for a in arg_exprs)
+        arg_power = sum(
+            self.dimension_to_units_compound(self._flatten(a)[1])[0]
+            for a in arg_exprs)
         scale = power - arg_power
         return 10 ** scale * type(expr)(*expr.args), dims
 

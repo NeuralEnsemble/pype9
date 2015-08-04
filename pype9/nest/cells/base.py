@@ -10,18 +10,18 @@
 from __future__ import absolute_import
 import sys
 import os.path
-from itertools import chain
+import logging
 import neo
 import nest
 import quantities as pq
 import nineml
-from nineml.user.component import Quantity
 from .code_gen import CodeGenerator
 from .controller import simulation_controller
 from pype9.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE
 from pype9.nest.units import UnitHandler
 
+logger = logging.getLogger('PyPe9')
 
 basic_nineml_translations = {
     'Voltage': 'V_m', 'Diameter': 'diam', 'Length': 'L'}
@@ -30,34 +30,21 @@ basic_nineml_translations = {
 class Cell(base.Cell):
 
     _controller = simulation_controller
+    _unit_handler = UnitHandler
 
     def __init__(self, *properties, **kwprops):
-        super(Cell, self).__setattr__('_created', False)
+        self._flag_created(False)
         self._cell = nest.Create(self.__class__.name)
         super(Cell, self).__init__(*properties, **kwprops)
         self._receive_ports = nest.GetDefaults(
             self.__class__.name)['receptor_types']
-        self._created = True
+        self._flag_created(True)
 
-    def __getattr__(self, varname):
-        if (self._created and varname in chain(
-                self.property_names, self.state_variable_names)):
-            return nest.GetStatus(self._cell, keys=varname)[0]
-        else:
-            raise AttributeError("'{}' cell class does not have parameter '{}'"
-                                 .format(self.componentclass.name, varname))
+    def _get(self, varname):
+        return nest.GetStatus(self._cell, keys=varname)[0]
 
-    def __setattr__(self, varname, value):
-        if (self._created and varname in chain(
-                self.property_names, self.state_variable_names)):
-            nest.SetStatus(self._cell, varname, value)
-        else:
-            super(Cell, self).__setattr__(varname, value)
-
-    def set(self, prop):
-        super(Cell, self).set(prop)
-        value = UnitHandler.scale_quantity(Quantity(prop.value, prop.units))
-        nest.SetStatus(self._cell, prop.name, value)
+    def _set(self, varname, value):
+        nest.SetStatus(self._cell, varname, value)
 
     def record(self, variable, interval=None):
         # TODO: Need to translate variable to port
@@ -90,6 +77,10 @@ class Cell(base.Cell):
             events[port_name], sampling_period=interval * pq.ms,
             t_start=0.0 * pq.ms, units=unit_str, name=port_name)
         return data
+
+    def reset_recordings(self):
+        raise logger.warning("Haven't worked out how to implement reset "
+                             "recordings for NEST yet")
 
     def play(self, port_name, signal):
         """

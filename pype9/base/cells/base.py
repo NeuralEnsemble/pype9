@@ -11,16 +11,14 @@
   License: This file is part of the "NineLine" package, which is released under
            the MIT Licence, see LICENSE for details.
 """
-from pype9.exceptions import Pype9RuntimeError
+from pype9.exceptions import Pype9RuntimeError, Pype9AttributeError
 from pype9.utils import load_9ml_prototype
 from itertools import chain
 import time
 import os.path
-import neo
 import quantities as pq
-from datetime import datetime
 import nineml
-from ..units import UnitHandler
+from nineml.user import Property
 
 
 class CellMetaClass(type):
@@ -120,8 +118,9 @@ class Cell(object):
             properties = []
         else:
             properties = list(properties)
-        for name, qty in kwprops.iteritems():
-            properties.append(convert_to_property(name, qty))
+        for name, pq_qty in kwprops.iteritems():
+            qty = self._unit_handler.from_pq_quantity(pq_qty)
+            properties.append(Property(name, qty.value, qty.units))
         # Init the 9ML component of the cell
         self._nineml = nineml.user.DynamicsProperties(
             self.prototype.name, self.prototype, properties)
@@ -136,12 +135,94 @@ class Cell(object):
         self._initialized = False
         self._initial_state = None
 
+    @property
+    def component_class(self):
+        return self._nineml.component_class
+
+    def _flag_created(self, flag):
+        """
+        Dis/Enable the override of setattr so that only properties of the 9ML
+        component can be set
+        """
+        super(Cell, self).__setattr__('_created', flag)
+
+    def __contains__(self, varname):
+        return varname in chain(self.componentclass.parameter_names,
+                                self.componentclass.state_variable_names)
+
+    def __getattr__(self, varname):
+        """
+        Gets the value of parameters and state variables
+        """
+        if self._created:
+            if varname not in self:
+                raise Pype9AttributeError(
+                    "'{}' is not a parameter or state variable of the '{}'"
+                    " component class ('{}')"
+                    .format(varname, self.componentclass.name,
+                            "', '".join(chain(
+                                self.componentclass.parameter_names,
+                                self.componentclass.state_variable_names))))
+            val = self._get(varname)
+            qty = self._unit_handler.assign_units(
+                val, self.component_class[varname].dimension)
+            return qty
+
+    def __setattr__(self, varname, val):
+        """
+        Sets the value of parameters and state variables
+
+        `varname` [str]: name of the of the parameter or state variable
+        `val` [float|pq.Quantity|nineml.Quantity]: the value to set
+        """
+        if self._created:  # Once the __init__ method has set all the members
+            if varname not in self:
+                raise Pype9AttributeError(
+                    "'{}' is not a parameter or state variable of the '{}'"
+                    " component class ('{}')"
+                    .format(varname, self.componentclass.name,
+                            "', '".join(chain(
+                                self.componentclass.parameter_names,
+                                self.componentclass.state_variable_names))))
+            # If float, assume it is in the "natural" units of the simulator,
+            # i.e. the units that quantities of the variable's dimension will
+            # be translated into (e.g. voltage -> mV for NEURON)
+            if isinstance(val, float):
+                prop = Property(
+                    varname, val,
+                    self._unit_handler.dimension_to_units(
+                        self.component_class.dimension_of(varname)))
+            # If quantity, scale quantity to value in the "natural" units for
+            # the simulator
+            else:
+                if isinstance(val, pq.Quantity):
+                    qty = self._unit_handler.from_pq_quantity(val)
+                else:
+                    qty = val
+                if varname in self.component_class.parameter_names:
+                    prop = self._nineml.set(
+                        Property(varname, qty.value, qty.units))
+                val = self._unit_handler.scale_value(qty)
+            # If varname is a parameter (not a state variable) set in
+            # associated 9ML representation
+            if varname in self.componentclass.parameter_names:
+                self._nineml.set(prop)
+            self._set(varname, val)
+        else:
+            super(Cell, self).__setattr__(varname, val)
+
     def set(self, prop):
         """
-        Sets the properties of the cell, should be overrided/extended to set
-        the simulator specific properties as well
+        Sets the properties of the cell given a 9ML property
         """
         self._nineml.set(prop)
+        self._set(prop.name, self._unit_handler.scale_value(prop))
+
+    def get(self, varname):
+        """
+        Gets the 9ML property associated with the varname
+        """
+        return self._nineml.prop(varname)
 
     def __dir__(self):
         """
@@ -206,12 +287,7 @@ class Cell(object):
                                   timestep=timestep, rtol=rtol, atol=atol)
 
     def reset_recordings(self):
-        """
-        Resets the recordings for the cell and the NEURON simulator (assumes
-        that only one cell is instantiated)
-        """
-        for rec in self._recordings.itervalues():
-            rec.resize(0)
+        raise NotImplementedError("Should be implemented by derived class")
 
     def clear_recorders(self):
         """
@@ -226,91 +302,8 @@ class Cell(object):
             self.clear_recorders()
             self._controller.register_cell(self)
 
-    def recording(self, variables=None, segnames=None, components=None,
-                  in_block=False):
-        """
-        Gets a recording or recordings of previously recorded variable
-
-        `variables`  -- the name of the variable or a list of names of
-                        variables to return [str | list(str)]
-        `segnames`   -- the segment name the variable is located or a list of
-                        segment names (in which case length must match number
-                        of variables) [str | list(str)]. "None" variables will
-                        be translated to the 'source_section' segment
-        `components` -- the component name the variable is part of or a list
-                        of components names (in which case length must match
-                        number of variables) [str | list(str)]. "None"
-                        variables will be translated as segment variables
-                        (i.e. no component)
-        `in_block`   -- returns a neo.Block object instead of a neo.SpikeTrain
-                        neo.AnalogSignal object (or list of for multiple
-                        variable names)
-        """
-        return_single = False
-        if variables is None:
-            if segnames is None:
-                raise Exception("As no variables were provided all recordings "
-                                "will be returned, soit doesn't make sense to "
-                                "provide segnames")
-            if components is None:
-                raise Exception("As no variables were provided all recordings "
-                                "will be returned, so it doesn't make sense to"
-                                " provide components")
-            variables, segnames, components = zip(*self._recordings.keys())
-        else:
-            if isinstance(variables, basestring):
-                variables = [variables]
-                return_single = True
-            if isinstance(segnames, basestring) or segnames is None:
-                segnames = [segnames] * len(variables)
-            if isinstance(components, basestring) or components is None:
-                components = [components] * len(segnames)
-        if in_block:
-            segment = neo.Segment(rec_datetime=datetime.now())
-        else:
-            recordings = []
-        for key in zip(variables, segnames, components):
-            if key[0] == 'spikes':
-                spike_train = neo.SpikeTrain(
-                    self._recordings[key], t_start=0.0 * pq.ms,
-                    t_stop=self._controller.dt * pq.ms, units='ms')
-                if in_block:
-                    segment.spiketrains.append(spike_train)
-                else:
-                    recordings.append(spike_train)
-            else:
-                if key[0] == 'v':
-                    units = 'mV'
-                else:
-                    units = 'nA'
-                try:
-                    analog_signal = neo.AnalogSignal(
-                        self._recordings[key],
-                        sampling_period=self._controller.dt * pq.ms,
-                        t_start=0.0 * pq.ms, units=units,
-                        name='.'.join([x for x in key if x is not None]))
-                except KeyError:
-                    raise Pype9RuntimeError(
-                        "No recording for '{}'{}{} in cell '{}'"
-                        .format(key[0],
-                                (" in component '{}'".format(key[2])
-                                 if key[2] is not None else ''),
-                                (" on segment '{}'".format(key[1])
-                                 if key[1] is not None else ''),
-                                self.name))
-                if in_block:
-                    segment.analogsignals.append(analog_signal)
-                else:
-                    recordings.append(analog_signal)
-        if in_block:
-            data = neo.Block(
-                description="Recording from PyPe9 '{}' cell".format(self.name))
-            data.segments = [segment]
-            return data
-        elif return_single:
-            return recordings[0]
-        else:
-            return recordings
+    def recording(self, port_name):
+        raise NotImplementedError("Should be implemented by derived class")
 
     # This has to go last to avoid clobbering the property decorators
     def property(self, name):
