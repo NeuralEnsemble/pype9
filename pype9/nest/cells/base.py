@@ -32,12 +32,12 @@ class Cell(base.Cell):
     _unit_handler = UnitHandler
 
     def __init__(self, *properties, **kwprops):
-        super(Cell, self).__setattr__('_created', False)
+        self._flag_created(False)
         self._cell = nest.Create(self.__class__.name)
         super(Cell, self).__init__(*properties, **kwprops)
         self._receive_ports = nest.GetDefaults(
             self.__class__.name)['receptor_types']
-        self._created = True
+        self._flag_created(True)
 
     def _get(self, varname):
         return nest.GetStatus(self._cell, keys=varname)[0]
