@@ -15,19 +15,5 @@ class UnitHandler(BaseUnitHandler):
     A, cache, si_lengths = BaseUnitHandler._load_basis_matrices_and_cache(
         basis, os.path.dirname(__file__))
 
-    def _compound_units_to_str(self, units):
-        """
-        Converts a compound unit list into an NMODL representation
-        """
-        if not units:
-            unit_str = '1'
-        else:
-            unit_str = ' '.join(
-                '{}{}'.format(self.unit_name_map[u], p if p > 1 else '')
-                for u, p in units if p > 0)
-            denominator = ' '.join(
-                '{}{}'.format(self.unit_name_map[u], -p if p < -1 else '')
-                for u, p in units if p < 0)
-            if denominator:
-                unit_str += '/' + denominator
-        return unit_str
+    def _units_for_code_gen(self, units):
+        return self.compound_units_str(self, units, mult_symbol=' ')

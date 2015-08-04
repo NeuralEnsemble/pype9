@@ -44,7 +44,7 @@ class UnitHandler(DynamicsDimensionResolver):
         assert alias in self.component_class
         dims = self._flatten(sympify(alias))[1]
         units = self.dimension_to_units_compound(dims)[1]
-        return self._compound_units_to_str(units)
+        return self._units_for_code_gen(units)
 
     def assign_units_to_aliases(self, aliases):
         """
@@ -60,7 +60,7 @@ class UnitHandler(DynamicsDimensionResolver):
         exponent, compound = self.dimension_to_units_compound(constant.units.dimension)
         scale = exponent - constant.units.power
         return (10 ** scale * constant.value,
-                self._compound_units_to_str(compound))
+                self._units_for_code_gen(compound))
 
     def assign_units_to_constants(self, constants):
         for const in constants:
@@ -70,7 +70,7 @@ class UnitHandler(DynamicsDimensionResolver):
         _, compound = self.dimension_to_units_compound(parameter.dimension)
         if derivative_of:
             compound.append((un.ms, -1))
-        return self._compound_units_to_str(compound)
+        return self._units_for_code_gen(compound)
 
     def assign_units_to_variables(self, parameters):
         for param in parameters:
@@ -79,7 +79,7 @@ class UnitHandler(DynamicsDimensionResolver):
     def scale_rhs(self, element):
         assert element in self.component_class
         scaled_expr, dims = self._flatten(sympify(element.rhs))
-        units_str = self._compound_units_to_str(
+        units_str = self._units_for_code_gen(
             self.dimension_to_units_compound(dims)[1])
         return scaled_expr, units_str
 
@@ -89,8 +89,30 @@ class UnitHandler(DynamicsDimensionResolver):
             yield elem, scaled_expr, units_str
 
     @abstractmethod
-    def _compound_units_to_str(self, unit):
+    def _units_for_code_gen(self, unit):
         pass
+
+    @classmethod
+    def compound_units_str(self, units, mult_symbol='*'):
+        """
+        Converts a compound unit list into a string representation
+        """
+        if not units:
+            unit_str = '1'
+        else:
+            numerator = mult_symbol.join(
+                '{}{}'.format(self.unit_name_map[u], p if p > 1 else '')
+                for u, p in units if p > 0)
+            denominator = mult_symbol.join(
+                '{}{}'.format(self.unit_name_map[u], -p if p < -1 else '')
+                for u, p in units if p < 0)
+            if numerator and denominator:
+                unit_str = numerator + '/' + denominator
+            elif denominator:
+                unit_str = '1/' + denominator
+            else:
+                unit_str = numerator
+        return unit_str
 
     @classmethod
     def dimension_to_units_compound(cls, dimension):
@@ -158,10 +180,11 @@ class UnitHandler(DynamicsDimensionResolver):
 
     @classmethod
     def to_pq_quantity(cls, qty):
-        dim = qty.units.dimension
-        return (qty.value * 10 ** qty.units.power + qty.units.offset) * (
-            pq.s ** dim.t * pq.kg ** dim.m * pq.m ** dim.l * pq.mole ** dim.n *
-            pq.K ** dim.k * pq.cd ** dim.j * pq.A ** dim.i)
+        exponent, compound = cls.dimension_to_units_compound(
+            qty.units.dimension)
+        scale = exponent - qty.units.power
+        units_str = cls.compound_units_str(compound)
+        return 10 ** scale * pq.Quantity(qty.value, units_str)
 
     @classmethod
     def from_pq_quantity(cls, qty):
