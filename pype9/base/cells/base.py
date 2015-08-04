@@ -11,7 +11,7 @@
   License: This file is part of the "NineLine" package, which is released under
            the MIT Licence, see LICENSE for details.
 """
-from pype9.exceptions import Pype9RuntimeError
+from pype9.exceptions import Pype9RuntimeError, Pype9AttributeError
 from pype9.utils import load_9ml_prototype
 from itertools import chain
 import time
@@ -20,7 +20,7 @@ import neo
 import quantities as pq
 from datetime import datetime
 import nineml
-from ..units import UnitHandler
+from nineml.user import Property
 
 
 class CellMetaClass(type):
@@ -120,8 +120,9 @@ class Cell(object):
             properties = []
         else:
             properties = list(properties)
-        for name, qty in kwprops.iteritems():
-            properties.append(convert_to_property(name, qty))
+        for name, pq_qty in kwprops.iteritems():
+            qty = self._unit_handler.from_pq_quantity(pq_qty)
+            properties.append(Property(name, qty.value, qty.units))
         # Init the 9ML component of the cell
         self._nineml = nineml.user.DynamicsProperties(
             self.prototype.name, self.prototype, properties)
@@ -136,12 +137,89 @@ class Cell(object):
         self._initialized = False
         self._initial_state = None
 
+    def _flag_created(self, flag):
+        """
+        Dis/Enable the override of setattr so that only properties of the 9ML
+        component can be set
+        """
+        super(Cell, self).__setattr__('_created', flag)
+
+    def __contains__(self, varname):
+        return varname in chain(self.componentclass.parameter_names,
+                                self.componentclass.state_variable_names)
+
+    def __getattr__(self, varname):
+        """
+        Gets the value of parameters and state variables
+        """
+        if self._created:
+            if varname not in self:
+                raise Pype9AttributeError(
+                    "'{}' is not a parameter or state variable of the '{}'"
+                    " component class ('{}')"
+                    .format(varname, self.componentclass.name,
+                            "', '".join(chain(
+                                self.componentclass.parameter_names,
+                                self.componentclass.state_variable_names))))
+            val = self._get(varname)
+            qty = self._unit_handler.assign_units(
+                val, self.component_class[varname].dimension)
+            return qty
+
+    def __setattr__(self, varname, val):
+        """
+        Sets the value of parameters and state variables
+
+        `varname` [str]: name of the of the parameter or state variable
+        `val` [float|pq.Quantity|nineml.Quantity]: the value to set
+        """
+        if self._created:  # Once the __init__ method has set all the members
+            if varname not in self:
+                raise Pype9AttributeError(
+                    "'{}' is not a parameter or state variable of the '{}'"
+                    " component class ('{}')"
+                    .format(varname, self.componentclass.name,
+                            "', '".join(chain(
+                                self.componentclass.parameter_names,
+                                self.componentclass.state_variable_names))))
+            # If float, assume it is in the "natural" units of the simulator,
+            # i.e. the units that quantities of the variable's dimension will
+            # be translated into (e.g. voltage -> mV for NEURON)
+            if isinstance(val, float):
+                prop = Property(
+                    varname, val,
+                    self._unit_handler.dimension_to_units(
+                        self.component_class.dimension_of(varname)))
+            # If quantity, scale quantity to value in the "natural" units for
+            # the simulator
+            else:
+                if isinstance(val, pq.Quantity):
+                    qty = self._unit_handler.from_pq_quantity(val)
+                else:
+                    qty = val
+                prop = self._nineml.set(Property(varname, qty.value,
+                                                 qty.units))
+                val = self._unit_handler.scale_value(qty)
+            # If varname is a parameter (not a state variable) set in
+            # associated 9ML representation
+            if varname in self.componentclass.parameter_names:
+                self._nineml.set(prop)
+            self._set(varname, val)
+        else:
+            super(Cell, self).__setattr__(varname, val)
+
     def set(self, prop):
         """
-        Sets the properties of the cell, should be overrided/extended to set
-        the simulator specific properties as well
+        Sets the properties of the cell given a 9ML property
         """
         self._nineml.set(prop)
+        self._set(prop.name, self._unit_handler.scale_value(prop))
+
+    def get(self, varname):
+        """
+        Gets the 9ML property associated with the varname
+        """
+        return self._nineml.prop(varname)
 
     def __dir__(self):
         """

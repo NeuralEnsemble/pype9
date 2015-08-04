@@ -25,6 +25,7 @@ from pype9.base.cells.tree import in_units
 from itertools import chain
 from pype9.base.cells import base
 from pype9.neuron.units import UnitHandler
+import nineml.units as un
 from .controller import simulation_controller
 from math import pi
 from pype9.annotations import PYPE9_NS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS
@@ -44,6 +45,7 @@ class Cell(base.Cell):
     V_INIT_DEFAULT = -65.0
 
     _controller = simulation_controller
+    _unit_handler = UnitHandler
 
     def __init__(self, *properties, **kwprops):
         """
@@ -51,7 +53,7 @@ class Cell(base.Cell):
                                 dictionary of parameters or kwarg parameters,
                                 or a list of nineml.Property objects
         """
-        super(Cell, self).__setattr__('_created', False)
+        self._flag_created(False)
         # Construct all the NEURON structures
         self._sec = h.Section()  # @UndefinedVariable
         # Insert dynamics mechanism (the built component class)
@@ -80,12 +82,12 @@ class Cell(base.Cell):
         self.gsyn_trace = {}
         self.recording_time = 0
         self.rec = h.NetCon(self.source, None, sec=self._sec)
+        self._inputs = {}
+        self._input_auxs = []
         self.initial_v = self.V_INIT_DEFAULT
         # Call base init (needs to be after 9ML init)
         super(Cell, self).__init__(*properties, **kwprops)
-        # Enable the override of setattr so that only properties of the 9ML
-        # component can be set.
-        self._created = True
+        self._flag_created(True)
 
     @property
     def name(self):
@@ -112,72 +114,26 @@ class Cell(base.Cell):
     def get_threshold(self):
         return in_units(self._model.spike_threshold, 'mV')
 
-    def __getattr__(self, varname):
-        """
-        To support the access to components on particular segments in PyNN the
-        segment name can be prepended enclosed in curly brackets (i.e. '{}').
-
-        @param var [str]: var of the attribute, with optional segment segment
-                          name enclosed with {} and prepended
-        """
-        if self._created:
-            if varname in self.componentclass.parameter_names:
-                val = UnitHandler.to_pq_quantity(
-                    self._nineml.property(varname))
-                # FIXME: Need to assert the same as hoc value
-            elif varname in self.componentclass.state_variable_names:
-                try:
-                    val = getattr(self._hoc, varname)
-                except AttributeError:
-                    try:
-                        val = getattr(self._sec, varname)
-                    except AttributeError:
-                        assert False
-            else:
-                raise AttributeError("{} does not have attribute '{}'"
-                                     .format(self.name, varname))
-            return val
-
-    def __setattr__(self, varname, val):
-        """
-        Any '.'s in the attribute var are treated as delimeters of a nested
-        varspace lookup. This is done to allow pyNN's population.tset method to
-        set attributes of cell components.
-
-        @param var [str]: var of the attribute or '.' delimeted string of
-                          segment, component and attribute vars
-        @param val [*]: val of the attribute
-        """
-        if self._created:
-            # Try to set as property
-            if varname in self.componentclass.parameter_names:
-                qty = UnitHandler.from_pq_quantity(val)
-                self._nineml.set(Property(varname, qty.value, qty.units))
-            elif varname not in self.componentclass.state_variable_names:
-                raise Pype9RuntimeError(
-                    "'{}' is not a parameter or state variable of the '{}'"
-                    " component class ('{}')"
-                    .format(varname, self.componentclass.name,
-                            "', '".join(chain(
-                                self.componentclass.parameter_names,
-                                self.componentclass.state_variable_names))))
-            val = UnitHandler.scale_quantity(val)
+    def _get(self, varname):
+        try:
+            return getattr(self._hoc, varname)
+        except AttributeError:
             try:
-                setattr(self._hoc, varname, val)
-            except LookupError:
-                setattr(self._sec, varname, val)
-        else:
-            super(Cell, self).__setattr__(varname, val)
+                return getattr(self._sec, varname)
+            except AttributeError:
+                assert False
 
-    def set(self, prop):
-        super(Cell, self).set(prop)
-        # FIXME: need to convert to NEURON units!!!!!!!!!!!
-        setattr(self._hoc, prop.name, prop.value)
-        # Set membrane capacitance in hoc if required
-        if prop.name == self._cm_prop.name:
-            cm = UnitHandler.to_pq_quantity(prop)
-            self._sec.cm = float(pq.Quantity(cm / self.surface_area,
-                                             'uF/cm^2'))
+    def _set(self, varname, val):
+        try:
+            setattr(self._hoc, varname, val)
+            # If capacitance, also set the section capacitance
+            if varname == self._cm_prop.name:
+                # This assumes that the value of the capacitance is in nF
+                # which it should be from the super setattr method
+                self._sec.cm = float(
+                    pq.Quantity(val * pq.nF / self.surface_area, 'uF/cm^2'))
+        except LookupError:
+            setattr(self._sec, varname, val)
 
     def record(self, variable):
         key = (variable, None, None)
@@ -210,15 +166,15 @@ class Cell(base.Cell):
             raise NotImplementedError(
                 "Can only play into external current ports ('{}'), not '{}' "
                 "port.".format("', '".join(p.name for p in ext_is), port_name))
-        super(Cell, self).__setattr__('iclamp', h.IClamp(0.5, sec=self._sec))
-        self.iclamp.delay = 0.0
-        self.iclamp.dur = 1e12
-        self.iclamp.amp = 0.0
-        super(Cell, self).__setattr__(
-            'iclamp_amps', h.Vector(pq.Quantity(signal, 'nA')))
-        super(Cell, self).__setattr__(
-            'iclamp_times', h.Vector(pq.Quantity(signal.times, 'ms')))
-        self.iclamp_amps.play(self.iclamp._ref_amp, self.iclamp_times)
+        iclamp = h.IClamp(0.5, sec=self._sec)
+        iclamp.delay = 0.0
+        iclamp.dur = 1e12
+        iclamp.amp = 0.0
+        iclamp_amps = h.Vector(pq.Quantity(signal, 'nA'))
+        iclamp_times = h.Vector(pq.Quantity(signal.times, 'ms'))
+        self.iclamp_amps.play(self.iclamp._ref_amp, iclamp_times)
+        self._inputs['iclamp'] = iclamp
+        self._input_auxs.extend((iclamp_amps, iclamp_times))
 
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         """
@@ -227,14 +183,14 @@ class Cell(base.Cell):
         `voltage` -- a vector containing the voltages to clamp the segment
                      to [neo.AnalogSignal]
         """
-        super(Cell, self).__setattr__('seclamp', h.SEClamp(0.5, sec=self._sec))
-        self.seclamp.rs = series_resistance
-        self.seclamp.dur1 = 1e12
-        super(Cell, self).__setattr__(
-            'seclamp_amps', h.Vector(pq.Quantity(voltages, 'mV')))
-        super(Cell, self).__setattr__(
-            'seclamp_times', h.Vector(pq.Quantity(voltages.times, 'ms')))
-        self.seclamp_amps.play(self.seclamp._ref_amp, self.seclamp_times)
+        seclamp = h.SEClamp(0.5, sec=self._sec)
+        seclamp.rs = series_resistance
+        seclamp.dur1 = 1e12
+        seclamp_amps = h.Vector(pq.Quantity(voltages, 'mV'))
+        seclamp_times = h.Vector(pq.Quantity(voltages.times, 'ms'))
+        seclamp_amps.play(seclamp._ref_amp, seclamp_times)
+        self._inputs['seclamp'] = seclamp
+        self._input_auxs.extend((seclamp_amps, seclamp_times))
 
 
 class CellMetaClass(base.CellMetaClass):

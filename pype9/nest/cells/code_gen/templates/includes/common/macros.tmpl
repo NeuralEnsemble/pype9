@@ -10,7 +10,7 @@ const double_t& {{param.name}} = P_.{{param.name}}; // ({{units}})
     {% for port, units in unit_handler.assign_units_to_variables(required.ports) %}
 const double_t& {{port.name}} = B_.{{port.name}}_value; // ({{units}})
     {% endfor %}
-    {% for const, value, units in unit_handler.assign_units_to_constants(required.constants) %}
+    {% for const, value, units in unit_handler.assign_units_to_quantities(required.constants) %}
 const static double_t {{const.name}} = {{value}};  // ({{units}})
     {% endfor %}
     {% for rv in required.random_variables %}
