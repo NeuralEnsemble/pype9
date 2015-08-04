@@ -16,16 +16,13 @@ try:
     from mpi4py import MPI  # @UnusedImport @IgnorePep8 This is imported before NEURON to avoid a bug in NEURON
 except ImportError:
     pass
-from nineml.user.component import Property
 from neuron import h, load_mechanisms
 import quantities as pq
 import os.path
 from .code_gen import CodeGenerator
 from pype9.base.cells.tree import in_units
-from itertools import chain
 from pype9.base.cells import base
 from pype9.neuron.units import UnitHandler
-import nineml.units as un
 from .controller import simulation_controller
 from math import pi
 from pype9.annotations import PYPE9_NS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS
