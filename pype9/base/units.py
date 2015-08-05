@@ -358,6 +358,8 @@ class UnitHandler(DynamicsDimensionResolver):
     def _flatten_multiplied(self, expr):
         arg_exprs, arg_dims = zip(*[self._flatten(a) for a in expr.args])
         dims = reduce(operator.mul, arg_dims)
+        if isinstance(dims, sympy.Basic):
+            dims = dims.powsimp()  # Simplify the expression
         power, _ = self.dimension_to_units_compound(dims)
         arg_power = sum(
             self.dimension_to_units_compound(self._flatten(a)[1])[0]
@@ -368,10 +370,4 @@ class UnitHandler(DynamicsDimensionResolver):
     def _flatten_power(self, expr):
         base, exponent = expr.args
         scaled_base, dims = self._flatten(base)
-        # Typically the units used will not change because of a power, but
-        # for special compound units they could so we need to scale them to
-        # be sure.
-        base_power = self.dimension_to_units_compound(dims)[0]
-        new_power = self.dimension_to_units_compound(dims ** exponent)[0]
-        scale = base_power * exponent - new_power
-        return 10 ** scale * scaled_base ** exponent, dims ** exponent
+        return scaled_base ** exponent, dims ** exponent
