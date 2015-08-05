@@ -143,11 +143,11 @@ ASSIGNED {
 BREAKPOINT {
     SOLVE states METHOD {{ode_solver}}
 {% set output_analog_exprs = componentclass.required_for(componentclass.all_output_analogs()).expressions + list(componentclass.all_output_analogs()) %}
-{% for elem, scaled_expr, _ in unit_handler.scale_rhss(output_analog_exprs) %}
-    {{code_gen.assign_str(elem.lhs, scaled_expr)}}
+{% for elem, scaled_expr, _ in unit_handler.scale_expressions(output_analog_exprs) %}
+    {{code_gen.assign_str(elem.lhs, scaled_expr.rhs)}}
 {% endfor %}
-{% for elem, scaled_expr, _ in unit_handler.scale_rhss(componentclass.required_for(componentclass.all_time_derivatives()).expressions) if elem not in output_analog_exprs %}
-    {{code_gen.assign_str(elem.lhs, scaled_expr)}}
+{% for elem, scaled_expr, _ in unit_handler.scale_expressions(componentclass.required_for(componentclass.all_time_derivatives()).expressions) if elem not in output_analog_exprs %}
+    {{code_gen.assign_str(elem.lhs, scaled_expr.rhs)}}
 {% endfor %}
 }
 
@@ -194,13 +194,13 @@ NET_RECEIVE(weight_, channel) {
         if (flag == ON_EVENT && channel == {{trans.src_port_name | upper}}) {
             {% endif %}      
             : Required aliases
-            {% for elem, scaled_expr, _ in unit_handler.scale_rhss(componentclass.required_for(trans.state_assignments).expressions) %}
-            {{code_gen.assign_str(elem.lhs, scaled_expr)}}
+            {% for elem, scaled_expr, _ in unit_handler.scale_expressions(componentclass.required_for(trans.state_assignments).expressions) %}
+            {{code_gen.assign_str(elem.lhs, scaled_expr.rhs)}}
             {% endfor %}
 
             : State assignments
-            {% for sa, scaled_expr, _ in unit_handler.scale_rhss(trans.state_assignments) %}
-            {{code_gen.assign_str(sa.lhs, scaled_expr)}}
+            {% for sa, scaled_expr, _ in unit_handler.scale_expressions(trans.state_assignments) %}
+            {{code_gen.assign_str(sa.lhs, scaled_expr.rhs)}}
             {% endfor %}
 
             : Output events

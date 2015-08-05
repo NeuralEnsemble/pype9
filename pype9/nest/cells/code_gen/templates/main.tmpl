@@ -65,8 +65,8 @@ extern "C" {% include "dynamics_signature.tmpl" %} {
 	    {{macros.map_required_vars_locally(regime.time_derivatives, component_class, component_name, unit_handler) | indent(8)}}
 
 	    // Evaluate differential equations
-	{% for td in regime.time_derivatives %}
-	    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{td.rhs_cstr}};
+	{% for td, scaled_expr, units in unit_handler.scale_expressions(regime.time_derivatives) %}
+	    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
 	{% endfor %}
     {{endif(loop.last)}}
 {% endfor %}
@@ -387,7 +387,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         {% endif %}
 
 				    // State assignments
-        {% for sa, scaled_expr, units in unit_handler.scale_rhss(trans.state_assignments) %}
+        {% for sa, scaled_expr, units in unit_handler.scale_expressions(trans.state_assignments) %}
 				    S_.y_[{{component_name}}::State_::{{sa.name}}_INDEX] = {{scaled_expr}};  // ({{units}})
         {% endfor %}
 

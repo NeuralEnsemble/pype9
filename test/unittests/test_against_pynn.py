@@ -93,10 +93,7 @@ class TestAgainstPyNN(TestCase):
             if 'nrn9ML' in tests or 'nrnPyNN' in tests:
                 simulatorNEURON.run(10.0)
             if 'nest9ML' in tests or 'nestPyNN' in tests:
-                try:
-                    simulatorNEST.run(10.0)
-                except NESTError:
-                    print "Could not simulate nest9ML"
+                simulatorNEST.run(10.0)
             if plot:
                 leg = []
                 if 'nrnPyNN' in tests:
@@ -137,8 +134,6 @@ class TestAgainstPyNN(TestCase):
         self.nml_cells[sim_name].play('iExt', self.injected_signal)
         self.nml_cells[sim_name].record('v')
         self.nml_cells[sim_name].update_state(self.initial_states[name])
-        nml = self.nml_cells[sim_name]
-        print nml.Cm
 
     def _create_NEURON(self, name, model_name):  # @UnusedVariable
         # -----------------------------------------------------------------
@@ -242,4 +237,4 @@ if __name__ == '__main__':
         plot=True,
 #         tests=('nrn9ML', 'nrnPyNN'))
 #         tests=('nest9ML', 'nestPyNN'))
-        tests=('nrn9ML', 'nrnPyNN', 'nestPyNN'))  # 'nest9ML', 
+        tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN'))
