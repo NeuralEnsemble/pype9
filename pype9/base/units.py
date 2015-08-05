@@ -115,7 +115,7 @@ class UnitHandler(DynamicsDimensionResolver):
             base_unit = next(u for u in chain(cls.basis, cls.compounds)
                              if u.dimension == dimension)
             compound = [(base_unit, 1)]
-            exponent = -base_unit.power
+            exponent = base_unit.power
         except StopIteration:
             try:
                 # Check cache for precalculated compounds
@@ -174,7 +174,7 @@ class UnitHandler(DynamicsDimensionResolver):
     @classmethod
     def scale_value(cls, qty):
         exponent, _ = cls.dimension_to_units_compound(qty.units.dimension)
-        return 10 ** (exponent - qty.units.power) * qty.value
+        return 10 ** (qty.units.power - exponent) * qty.value
 
     @classmethod
     def assign_units(cls, value, dimension):
@@ -185,7 +185,7 @@ class UnitHandler(DynamicsDimensionResolver):
     def to_pq_quantity(cls, qty):
         exponent, compound = cls.dimension_to_units_compound(
             qty.units.dimension)
-        scale = exponent - qty.units.power
+        scale = qty.units.power - exponent
         units_str = cls.compound_to_units_str(compound)
         return 10 ** scale * pq.Quantity(qty.value, units_str)
 
