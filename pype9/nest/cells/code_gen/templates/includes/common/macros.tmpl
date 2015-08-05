@@ -10,13 +10,13 @@ const double_t& {{param.name}} = P_.{{param.name}};  // ({{units}})
     {% for port, units in unit_handler.assign_units_to_variables(required.ports) %}
 const double_t& {{port.name}} = B_.{{port.name}}_value;  // ({{units}})
     {% endfor %}
-    {% for const, scale, units in unit_handler.assign_units_to_constants(required.constants) %}
-const static double_t {{const.name}} = {{scale}} * {{const.value}};  // ({{units}})
+    {% for const, value, units in unit_handler.assign_units_to_constants(required.constants) %}
+const static double_t {{const.name}} = {{value}};  // ({{units}})
     {% endfor %}
     {% for rv, scale, units in unit_handler.assign_units_to_constants(required.random_variables) %}
 const double_t& {{rv.name}} = {{scale}} * {{get_random_function(rv)}}
     {% endfor %}
-    {% for alias, scaled_rhs, units  in unit_handler.scale_rhss(required.expressions) %}
+    {% for alias, scaled_rhs, units  in unit_handler.scale_expressions(required.expressions) %}
 {# Is a Piecewise statement 
         {% if hasasttr(scaled_expr, 'pieces') %}
 const double_t& {{alias.name}};  // ({{units}})

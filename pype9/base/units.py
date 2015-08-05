@@ -11,6 +11,7 @@ import quantities as pq
 import diophantine
 from nineml import units as un
 from nineml.user.component import Quantity
+from nineml.abstraction import Expression
 from nineml.abstraction.ports import SendPortBase
 from nineml.abstraction.dynamics.visitors import DynamicsDimensionResolver
 import atexit
@@ -60,11 +61,22 @@ class UnitHandler(DynamicsDimensionResolver):
         exponent, compound = self.dimension_to_units_compound(
             constant.units.dimension)
         scale = exponent - constant.units.power
-        return (10 ** scale, self._units_for_code_gen(compound))
+        return (10 ** scale * constant.value,
+                self._units_for_code_gen(compound))
 
     def assign_units_to_constants(self, constants):
         for const in constants:
             yield (const,) + self.assign_units_to_constant(const)
+
+    def assign_units_to_random_variable(self, constant):
+        exponent, compound = self.dimension_to_units_compound(
+            constant.units.dimension)
+        scale = exponent - constant.units.power
+        return (10 ** scale, self._units_for_code_gen(compound))
+
+    def assign_units_to_random_variables(self, constants):
+        for const in constants:
+            yield (const,) + self.assign_units_to_random_variable(const)
 
     def assign_units_to_variable(self, parameter, derivative_of=False):
         _, compound = self.dimension_to_units_compound(parameter.dimension)
@@ -76,17 +88,17 @@ class UnitHandler(DynamicsDimensionResolver):
         for param in parameters:
             yield param, self.assign_units_to_variable(param)
 
-    def scale_rhs(self, element):
+    def scale_expression(self, element):
         assert element in self.component_class
-        scaled_expr, dims = self._flatten(sympify(element.rhs))
+        scaled, dims = self._flatten(sympify(element.rhs))
         units_str = self._units_for_code_gen(
             self.dimension_to_units_compound(dims)[1])
-        return scaled_expr, units_str
+        return Expression(scaled), units_str
 
-    def scale_rhss(self, elements):
+    def scale_expressions(self, elements):
         for elem in elements:
-            scaled_expr, units_str = self.scale_rhs(elem)
-            yield elem, scaled_expr, units_str
+            scaled, units_str = self.scale_expression(elem)
+            yield elem, scaled, units_str
 
     @abstractmethod
     def _units_for_code_gen(self, unit):
