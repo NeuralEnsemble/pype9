@@ -16,9 +16,7 @@ from pype9.utils import load_9ml_prototype
 from itertools import chain
 import time
 import os.path
-import neo
 import quantities as pq
-from datetime import datetime
 import nineml
 from nineml.user import Property
 
@@ -137,6 +135,10 @@ class Cell(object):
         self._initialized = False
         self._initial_state = None
 
+    @property
+    def component_class(self):
+        return self._nineml.component_class
+
     def _flag_created(self, flag):
         """
         Dis/Enable the override of setattr so that only properties of the 9ML
@@ -197,8 +199,9 @@ class Cell(object):
                     qty = self._unit_handler.from_pq_quantity(val)
                 else:
                     qty = val
-                prop = self._nineml.set(Property(varname, qty.value,
-                                                 qty.units))
+                if varname in self.component_class.parameter_names:
+                    prop = self._nineml.set(
+                        Property(varname, qty.value, qty.units))
                 val = self._unit_handler.scale_value(qty)
             # If varname is a parameter (not a state variable) set in
             # associated 9ML representation
@@ -284,12 +287,7 @@ class Cell(object):
                                   timestep=timestep, rtol=rtol, atol=atol)
 
     def reset_recordings(self):
-        """
-        Resets the recordings for the cell and the NEURON simulator (assumes
-        that only one cell is instantiated)
-        """
-        for rec in self._recordings.itervalues():
-            rec.resize(0)
+        raise NotImplementedError("Should be implemented by derived class")
 
     def clear_recorders(self):
         """
@@ -304,91 +302,8 @@ class Cell(object):
             self.clear_recorders()
             self._controller.register_cell(self)
 
-    def recording(self, variables=None, segnames=None, components=None,
-                  in_block=False):
-        """
-        Gets a recording or recordings of previously recorded variable
-
-        `variables`  -- the name of the variable or a list of names of
-                        variables to return [str | list(str)]
-        `segnames`   -- the segment name the variable is located or a list of
-                        segment names (in which case length must match number
-                        of variables) [str | list(str)]. "None" variables will
-                        be translated to the 'source_section' segment
-        `components` -- the component name the variable is part of or a list
-                        of components names (in which case length must match
-                        number of variables) [str | list(str)]. "None"
-                        variables will be translated as segment variables
-                        (i.e. no component)
-        `in_block`   -- returns a neo.Block object instead of a neo.SpikeTrain
-                        neo.AnalogSignal object (or list of for multiple
-                        variable names)
-        """
-        return_single = False
-        if variables is None:
-            if segnames is None:
-                raise Exception("As no variables were provided all recordings "
-                                "will be returned, soit doesn't make sense to "
-                                "provide segnames")
-            if components is None:
-                raise Exception("As no variables were provided all recordings "
-                                "will be returned, so it doesn't make sense to"
-                                " provide components")
-            variables, segnames, components = zip(*self._recordings.keys())
-        else:
-            if isinstance(variables, basestring):
-                variables = [variables]
-                return_single = True
-            if isinstance(segnames, basestring) or segnames is None:
-                segnames = [segnames] * len(variables)
-            if isinstance(components, basestring) or components is None:
-                components = [components] * len(segnames)
-        if in_block:
-            segment = neo.Segment(rec_datetime=datetime.now())
-        else:
-            recordings = []
-        for key in zip(variables, segnames, components):
-            if key[0] == 'spikes':
-                spike_train = neo.SpikeTrain(
-                    self._recordings[key], t_start=0.0 * pq.ms,
-                    t_stop=self._controller.dt * pq.ms, units='ms')
-                if in_block:
-                    segment.spiketrains.append(spike_train)
-                else:
-                    recordings.append(spike_train)
-            else:
-                if key[0] == 'v':
-                    units = 'mV'
-                else:
-                    units = 'nA'
-                try:
-                    analog_signal = neo.AnalogSignal(
-                        self._recordings[key],
-                        sampling_period=self._controller.dt * pq.ms,
-                        t_start=0.0 * pq.ms, units=units,
-                        name='.'.join([x for x in key if x is not None]))
-                except KeyError:
-                    raise Pype9RuntimeError(
-                        "No recording for '{}'{}{} in cell '{}'"
-                        .format(key[0],
-                                (" in component '{}'".format(key[2])
-                                 if key[2] is not None else ''),
-                                (" on segment '{}'".format(key[1])
-                                 if key[1] is not None else ''),
-                                self.name))
-                if in_block:
-                    segment.analogsignals.append(analog_signal)
-                else:
-                    recordings.append(analog_signal)
-        if in_block:
-            data = neo.Block(
-                description="Recording from PyPe9 '{}' cell".format(self.name))
-            data.segments = [segment]
-            return data
-        elif return_single:
-            return recordings[0]
-        else:
-            return recordings
+    def recording(self, port_name):
+        raise NotImplementedError("Should be implemented by derived class")
 
     # This has to go last to avoid clobbering the property decorators
     def property(self, name):

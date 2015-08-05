@@ -10,7 +10,7 @@
 from __future__ import absolute_import
 import sys
 import os.path
-from itertools import chain
+import logging
 import neo
 import nest
 import quantities as pq
@@ -21,6 +21,7 @@ from pype9.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE
 from pype9.nest.units import UnitHandler
 
+logger = logging.getLogger('PyPe9')
 
 basic_nineml_translations = {
     'Voltage': 'V_m', 'Diameter': 'diam', 'Length': 'L'}
@@ -76,6 +77,10 @@ class Cell(base.Cell):
             events[port_name], sampling_period=interval * pq.ms,
             t_start=0.0 * pq.ms, units=unit_str, name=port_name)
         return data
+
+    def reset_recordings(self):
+        raise logger.warning("Haven't worked out how to implement reset "
+                             "recordings for NEST yet")
 
     def play(self, port_name, signal):
         """

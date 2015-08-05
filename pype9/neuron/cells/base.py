@@ -16,17 +16,20 @@ try:
     from mpi4py import MPI  # @UnusedImport @IgnorePep8 This is imported before NEURON to avoid a bug in NEURON
 except ImportError:
     pass
-from neuron import h, load_mechanisms
-import quantities as pq
 import os.path
+import quantities as pq
+import neo
+from neuron import h, load_mechanisms
+from nineml.abstraction import EventPort
+from math import pi
 from .code_gen import CodeGenerator
 from pype9.base.cells.tree import in_units
 from pype9.base.cells import base
 from pype9.neuron.units import UnitHandler
 from .controller import simulation_controller
-from math import pi
-from pype9.annotations import PYPE9_NS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS
-
+from pype9.annotations import (
+    PYPE9_NS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
+    MEMBRANE_VOLTAGE)
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
 
@@ -132,19 +135,59 @@ class Cell(base.Cell):
         except LookupError:
             setattr(self._sec, varname, val)
 
-    def record(self, variable):
-        key = (variable, None, None)
+    def record(self, port_name):
         self._initialise_local_recording()
-        if variable == 'spikes':
-            self._recorders[key] = recorder = h.NetCon(
-                self._sec._ref_v, None, self.get_threshold(),
-                0.0, 1.0, sec=self._sec)
-        elif variable == 'v':
-            recorder = getattr(self._sec(0.5), '_ref_' + variable)
-        else:
-            recorder = getattr(self._hoc, '_ref_' + variable)
-        self._recordings[key] = recording = h.Vector()
+        port = self.component_class[port_name]
+        if isinstance(port, EventPort):
+            logger.warning("Assuming '{}' is voltage threshold crossing"
+                           .format(port_name))
+            # FIXME: This assumes that all event ports are voltage threshold
+            #        crossings
+            self._recorders[port_name] = recorder = h.NetCon(
+                self._sec._ref_v, None, self.get_threshold(), 0.0, 1.0,
+                sec=self._sec)
+        try:
+            recorder = getattr(self._hoc, '_ref_' + port_name)
+        except AttributeError:
+            recorder = getattr(self._sec(0.5), '_ref_' + port_name)
+        self._recordings[port_name] = recording = h.Vector()
         recording.record(recorder)
+
+    def recording(self, port_name):
+        """
+        Return recorded data as a dictionary containing one numpy array for
+        each neuron, ids as keys.
+        """
+        port = self.component_class[port_name]
+        if port_name == self.componentclass.annotations[
+                PYPE9_NS][MEMBRANE_VOLTAGE]:
+            port_name = self.build_componentclass.annotations[
+                PYPE9_NS][MEMBRANE_VOLTAGE]
+        if isinstance(port, EventPort):
+            recording = neo.SpikeTrain(
+                self._recordings[port_name], t_start=0.0 * pq.ms,
+                t_stop=h.t * pq.ms, units='ms')
+        else:
+            units_str = UnitHandler.dimension_to_unit_str(port.dimension)
+            recording = neo.AnalogSignal(
+                self._recordings[port_name], sampling_period=h.dt * pq.ms,
+                t_start=0.0 * pq.ms, units=units_str, name=port_name)
+        return recording
+
+    def reset_recordings(self):
+        """
+        Resets the recordings for the cell and the NEURON simulator (assumes
+        that only one cell is instantiated)
+        """
+        for rec in self._recordings.itervalues():
+            rec.resize(0)
+
+    def clear_recorders(self):
+        """
+        Clears all recorders and recordings
+        """
+        super(Cell, self).clear_recorders()
+        super(base.Cell, self).__setattr__('_recordings', {})
 
     def play(self, port_name, signal):
         """
@@ -169,7 +212,7 @@ class Cell(base.Cell):
         iclamp.amp = 0.0
         iclamp_amps = h.Vector(pq.Quantity(signal, 'nA'))
         iclamp_times = h.Vector(pq.Quantity(signal.times, 'ms'))
-        self.iclamp_amps.play(self.iclamp._ref_amp, iclamp_times)
+        iclamp_amps.play(iclamp._ref_amp, iclamp_times)
         self._inputs['iclamp'] = iclamp
         self._input_auxs.extend((iclamp_amps, iclamp_times))
 

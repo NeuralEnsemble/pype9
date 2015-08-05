@@ -186,7 +186,7 @@ class UnitHandler(DynamicsDimensionResolver):
         exponent, compound = cls.dimension_to_units_compound(
             qty.units.dimension)
         scale = exponent - qty.units.power
-        units_str = cls.compound_units_str(compound)
+        units_str = cls.compound_to_units_str(compound)
         return 10 ** scale * pq.Quantity(qty.value, units_str)
 
     @classmethod

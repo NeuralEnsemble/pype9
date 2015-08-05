@@ -105,7 +105,7 @@ PARAMETER {
 {% endfor %}
 
     : Constants
-{% for const, value, units in unit_handler.assign_units_to_quantities(componentclass.constants) %}
+{% for const, value, units in unit_handler.assign_units_to_constants(componentclass.constants) %}
     {{const.name}} = {{value}} ({{units}})
 {% endfor %}
 
