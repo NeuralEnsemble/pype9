@@ -60,8 +60,7 @@ class UnitHandler(DynamicsDimensionResolver):
         exponent, compound = self.dimension_to_units_compound(
             constant.units.dimension)
         scale = exponent - constant.units.power
-        return (10 ** scale * constant.value,
-                self._units_for_code_gen(compound))
+        return (10 ** scale, self._units_for_code_gen(compound))
 
     def assign_units_to_constants(self, constants):
         for const in constants:

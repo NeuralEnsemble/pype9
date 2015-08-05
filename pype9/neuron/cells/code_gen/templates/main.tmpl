@@ -105,8 +105,8 @@ PARAMETER {
 {% endfor %}
 
     : Constants
-{% for const, value, units in unit_handler.assign_units_to_constants(componentclass.constants) %}
-    {{const.name}} = {{value}} ({{units}})
+{% for const, scale, units in unit_handler.assign_units_to_constants(componentclass.constants) %}
+    {{const.name}} = {{scale}} * {{const.value}} ({{units}})
 {% endfor %}
 
     : Unit correction for 't' used in printf in order to get modlunit to work.
