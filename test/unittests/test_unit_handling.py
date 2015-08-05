@@ -3,7 +3,7 @@ if __name__ == '__main__':
 else:
     from unittest import TestCase  # @Reimport
 import os.path
-from sympy import sympify
+import math
 from nineml import units as un
 from pype9.base.units import UnitHandler as BaseUnitHandler
 from nineml.abstraction import (
@@ -25,7 +25,8 @@ class TestUnitHandler(BaseUnitHandler):
         basis, os.path.dirname(__file__))
 
     def _units_for_code_gen(self, units):
-        return self.compound_to_units_str(units, mult_symbol='*')
+        return self.compound_to_units_str(units, mult_symbol='*',
+                                          pow_symbol='^')
 
 
 class TestUnitAssignment(TestCase):
@@ -41,7 +42,7 @@ class TestUnitAssignment(TestCase):
             name='A',
             aliases=['A1 := P1 / P2', 'A2 := ARP2 + P3', 'A3 := P4 * P5',
                      'A4 := 1 / (P2 * P6) + ARP3', 'A5 := P7 * P8',
-                     'A6 := 1 / (P6 * P9)'],
+                     'A6 := P9/P10'],
             regimes=[
                 Regime('dSV1/dt = -A1 / A2',
                        name='R1')],
@@ -58,7 +59,9 @@ class TestUnitAssignment(TestCase):
                         Parameter('P7', dimension=un.current / un.capacitance),
                         Parameter('P8', dimension=un.time),
                         Parameter('P9',
-                                  dimension=un.length ** 2 / un.capacitance)]
+                                  dimension=un.capacitance / un.length ** 2),
+                        Parameter('P10',
+                                  dimension=un.conductance / un.length ** 2)]
         )
         # Create an instance of the type
         self.handler = TestUnitHandler(self.a)
@@ -86,11 +89,11 @@ class TestUnitAssignment(TestCase):
         self.assertEquals(self.handler.scale_expression('A5'),
                           (Expression('1e-6 * P7 * P8'), 'mV'))
         self.assertEquals(self.handler.scale_expression('A6'),
-                          (Expression('1/P9'), 'mV'))
+                          (Expression('1e-3 * P9/P10'), 'ms'))
 
     def test_assignment(self):
         self.assertEquals(self.handler.assign_units_to_variable('P2'), '1/uS')
-        self.assertEquals(self.handler.assign_units_to_variable('P6'), 'um2')
+        self.assertEquals(self.handler.assign_units_to_variable('P6'), 'um^2')
 
     def test_pq_round_trip(self):
         for unit in self.test_units:
@@ -100,7 +103,8 @@ class TestUnitAssignment(TestCase):
             self.assertEquals(qty.units.dimension, new_qty.units.dimension,
                               "Python-quantities roundtrip of '{}' changed "
                               "dimension".format(unit.name))
-            self.assertEquals(qty.value * 10 ** qty.units.power,
-                              new_qty.value * 10 ** new_qty.units.power,
+            new_power = int(math.log10(new_qty.value) + new_qty.units.power)
+            self.assertEquals(unit.power, new_power,
                               "Python-quantities roundtrip of '{}' changed "
-                              "scale".format(unit.name))
+                              "scale ({} -> {})".format(unit.name, unit.power,
+                                                        new_power))
