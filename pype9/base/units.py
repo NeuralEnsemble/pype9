@@ -7,6 +7,7 @@ from abc import ABCMeta, abstractmethod
 import sympy
 from sympy import sympify
 from numpy import array, sum, abs, argmin, log10, nonzero
+from numpy.linalg import matrix_rank
 import quantities as pq
 import diophantine
 from nineml import units as un
@@ -139,16 +140,27 @@ class UnitHandler(DynamicsDimensionResolver):
         else:
             assert isinstance(dimension, un.Dimension), (
                 "'{}' is not a Dimension".format(dimension))
-        try:
-            # Check to see if unit dimension is in basis units or specific
-            # compounds
-            base_unit = next(u for u in chain(cls.basis, cls.compounds)
-                             if u.dimension == dimension)
-            compound = [(base_unit, 1)]
+        # Check to see if unit dimension is in basis units or specific
+        # compounds, or some multiple thereof
+        # First check for linear dependence
+        matches = [
+            u for u in chain(cls.basis, cls.compounds)
+            if matrix_rank(array([list(dimension), list(u.dimension)])) == 1]
+        # Then check whether they are integer multiples of a basis vector
+        # Get the first nonzero element of each dimension vector
+        first_nonzeros = [nonzero(list(u.dimension))[0][0]
+                          for u in matches]
+        scalars = [(list(dimension)[nz] / list(u.dimension)[nz])
+                   for u, nz in zip(matches, first_nonzeros)]
+        matches = [(u, s) for u, s in zip(matches, scalars)
+                   if float(s).is_integer()]
+        if len(matches) == 1:
+            base_unit, scalar = matches[0]
+            compound = [(base_unit, int(scalar))]
             exponent = base_unit.power
-        except StopIteration:
+        elif not matches:
             try:
-                # Check cache for precalculated compounds
+                # Check cache for precalculated basis units projections
                 min_x = cls.cache[tuple(dimension)]
             except KeyError:
                 # Get projection of dimension onto basis units
@@ -160,6 +172,10 @@ class UnitHandler(DynamicsDimensionResolver):
             compound = [(u, p) for u, p in zip(cls.basis, min_x) if p]
             # Calculate the appropriate scale for the new compound quantity
             exponent = int(min_x.dot([b.power for b in cls.basis]))
+        else:
+            assert False, ("There should not be matches for multiple "
+                           "basis/compound units, the dimension vector of one "
+                           "must be a factor of an another")
         return exponent, compound
 
     @classmethod
