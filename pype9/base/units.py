@@ -6,7 +6,7 @@ import cPickle as pkl
 from abc import ABCMeta, abstractmethod
 import sympy
 from sympy import sympify
-from numpy import array, sum, abs, argmin, log10
+from numpy import array, sum, abs, argmin, log10, nonzero
 import quantities as pq
 import diophantine
 from nineml import units as un
@@ -29,6 +29,10 @@ class UnitHandler(DynamicsDimensionResolver):
     """
 
     __metaclass__ = ABCMeta
+
+    _pq_si_to_dim = {pq.UnitMass: 'm', pq.UnitLength: 'l', pq.UnitTime: 't',
+                     pq.UnitCurrent: 'i', pq.UnitLuminousIntensity: 'j',
+                     pq.UnitSubstance: 'n', pq.UnitTemperature: 'k'}
 
     _CACHE_FILENAME = '.unit_handler_cache.pkl'
 
@@ -58,9 +62,13 @@ class UnitHandler(DynamicsDimensionResolver):
             yield alias, self.assign_units_to_alias(alias)
 
     def assign_units_to_constant(self, constant):
+        if isinstance(constant, basestring):
+            constant = self.component_class[constant]
+        else:
+            assert constant in self.component_class
         exponent, compound = self.dimension_to_units_compound(
             constant.units.dimension)
-        scale = exponent - constant.units.power
+        scale = constant.units.power - exponent
         return (10 ** scale * constant.value,
                 self._units_for_code_gen(compound))
 
@@ -68,18 +76,26 @@ class UnitHandler(DynamicsDimensionResolver):
         for const in constants:
             yield (const,) + self.assign_units_to_constant(const)
 
-    def assign_units_to_random_variable(self, constant):
+    def assign_units_to_random_variable(self, random_variable):
+        if isinstance(random_variable, basestring):
+            random_variable = self.component_class[random_variable]
+        else:
+            assert random_variable in self.component_class
         exponent, compound = self.dimension_to_units_compound(
-            constant.units.dimension)
-        scale = exponent - constant.units.power
+            random_variable.units.dimension)
+        scale = random_variable.units.power - exponent
         return (10 ** scale, self._units_for_code_gen(compound))
 
     def assign_units_to_random_variables(self, constants):
         for const in constants:
             yield (const,) + self.assign_units_to_random_variable(const)
 
-    def assign_units_to_variable(self, parameter, derivative_of=False):
-        _, compound = self.dimension_to_units_compound(parameter.dimension)
+    def assign_units_to_variable(self, variable, derivative_of=False):
+        if isinstance(variable, basestring):
+            variable = self.component_class[variable]
+        else:
+            assert variable in self.component_class
+        _, compound = self.dimension_to_units_compound(variable.dimension)
         if derivative_of:
             compound.append((un.ms, -1))
         return self._units_for_code_gen(compound)
@@ -89,7 +105,10 @@ class UnitHandler(DynamicsDimensionResolver):
             yield param, self.assign_units_to_variable(param)
 
     def scale_expression(self, element):
-        assert element in self.component_class
+        if isinstance(element, basestring):
+            element = self.component_class[element]
+        else:
+            assert element in self.component_class
         scaled, dims = self._flatten(sympify(element.rhs))
         units_str = self._units_for_code_gen(
             self.dimension_to_units_compound(dims)[1])
@@ -135,7 +154,7 @@ class UnitHandler(DynamicsDimensionResolver):
                 # Get projection of dimension onto basis units
                 b = array(list(dimension))
                 xs = diophantine.solve(cls.A, b)
-                min_x = cls._minium_combination(xs)
+                min_x = cls._select_best_compound(xs)
                 cls.cache[tuple(dimension)] = min_x
             # Get list of compound units with the powers
             compound = [(u, p) for u, p in zip(cls.basis, min_x) if p]
@@ -150,7 +169,9 @@ class UnitHandler(DynamicsDimensionResolver):
         """
         exponent, compound = cls.dimension_to_units_compound(dimension)
         unit_name = cls._unit_name_from_compound(compound)
-        return un.Unit(unit_name, dimension=dimension, power=-exponent)
+        if isinstance(dimension, sympy.Basic):
+            dimension = un.Dimension.from_sympy(dimension)
+        return un.Unit(unit_name, dimension=dimension, power=exponent)
 
     @classmethod
     def compound_to_units_str(cls, compound, mult_symbol='*'):
@@ -207,28 +228,12 @@ class UnitHandler(DynamicsDimensionResolver):
         elif isinstance(qty, pq.Quantity):
             unit_name = str(qty.units).split()[1].replace(
                 '/', '_per_').replace('*', '_')
-            powers = {}
-            for si_unit, power in \
-                    qty.units.simplified._dimensionality.iteritems():
-                if isinstance(si_unit, pq.UnitMass):
-                    powers['m'] = power
-                elif isinstance(si_unit, pq.UnitLength):
-                    powers['l'] = power
-                elif isinstance(si_unit, pq.UnitTime):
-                    powers['t'] = power
-                elif isinstance(si_unit, pq.UnitCurrent):
-                    powers['i'] = power
-                elif isinstance(si_unit, pq.UnitLuminousIntensity):
-                    powers['j'] = power
-                elif isinstance(si_unit, pq.UnitSubstance):
-                    powers['n'] = power
-                elif isinstance(si_unit, pq.UnitTemperature):
-                    powers['k'] = power
-                else:
-                    assert False, "Unrecognised units '{}'".format(si_unit)
+            powers = dict(
+                (cls._pq_si_to_dim[type(u)], p)
+                for u, p in qty.units.simplified._dimensionality.iteritems())
             dimension = un.Dimension(unit_name + 'Dimension', **powers)
             units = un.Unit(unit_name, dimension=dimension,
-                            power=log10(float(qty.units.simplified)))
+                            power=int(log10(float(qty.units.simplified))))
         else:
             raise Pype9RuntimeError(
                 "Cannot '{}' to nineml.Quantity (can only convert "
@@ -273,11 +278,11 @@ class UnitHandler(DynamicsDimensionResolver):
         return A, cache, si_lengths
 
     @classmethod
-    def _minium_combination(cls, xs):
+    def _select_best_compound(cls, xs):
         """
         Selects the "best" combination of units based on the number of units
         in the compound, then the ones with the smallest number of SI units,
-        then the ones with the smallest absolute power
+        then the ones with the lowest indices in the basis list
         """
         # Find the number of units in each of the compounds
         lengths = [sum(abs(x)) for x in xs]
@@ -295,15 +300,16 @@ class UnitHandler(DynamicsDimensionResolver):
             if len(min_si_length_sums) == 1:
                 min_x = min_si_length_sums[0]
             else:
-                abs_exps = [abs(x.dot([b.power for b in cls.basis]))
-                            for x in min_si_length_sums]
-                min_x = min_si_length_sums[argmin(abs_exps)]
+                index_sums = [nonzero(x)[0].sum() for x in min_si_length_sums]
+                min_x = min_si_length_sums[argmin(index_sums)]
         return min_x
 
     @classmethod
     def _unit_name_from_compound(cls, compound):
-        numerator = '_'.join(u.name for u, p in compound if p > 0)
-        denominator = '_'.join(u.name for u, p in compound if p < 0)
+        numerator = '_'.join(u.name + (str(p) if p > 1 else '')
+                             for u, p in compound if p > 0)
+        denominator = '_'.join(u.name + (str(-p) if p < -1 else '')
+                               for u, p in compound if p < 0)
         if denominator and numerator:
             unit_name = numerator + '_per_' + denominator
         elif numerator:
@@ -352,16 +358,20 @@ class UnitHandler(DynamicsDimensionResolver):
     def _flatten_multiplied(self, expr):
         arg_exprs, arg_dims = zip(*[self._flatten(a) for a in expr.args])
         dims = reduce(operator.mul, arg_dims)
-        if isinstance(dims, sympy.Basic):
-            dims = dims.powsimp()  # Simplify the expression
         power, _ = self.dimension_to_units_compound(dims)
         arg_power = sum(
             self.dimension_to_units_compound(self._flatten(a)[1])[0]
             for a in arg_exprs)
-        scale = power - arg_power
+        scale = arg_power - power
         return 10 ** scale * type(expr)(*expr.args), dims
 
     def _flatten_power(self, expr):
         base, exponent = expr.args
         scaled_base, dims = self._flatten(base)
-        return scaled_base ** exponent, dims ** exponent
+        # Typically the units used will not change because of a power, but
+        # for special compound units they could so we need to scale them to
+        # be sure.
+        base_power = self.dimension_to_units_compound(dims)[0]
+        new_power = self.dimension_to_units_compound(dims ** exponent)[0]
+        scale = base_power * exponent - new_power
+        return 10 ** scale * scaled_base ** exponent, dims ** exponent
