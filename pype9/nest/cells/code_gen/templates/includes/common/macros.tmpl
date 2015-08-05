@@ -1,14 +1,14 @@
 {% macro map_required_vars_locally(expressions, component_class, component_name, unit_handler) %}
 // Map required variables to local namespace
     {% set required = component_class.required_for(expressions) %}
-    {% for sv in required.state_variables %}
-const double_t& {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];
+    {% for sv, units in unit_handler.assign_units_to_variables(required.state_variables) %}
+const double_t& {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];  // ({{units}}))
     {% endfor %}
     {% for param, units in unit_handler.assign_units_to_variables(required.parameters) %}
-const double_t& {{param.name}} = P_.{{param.name}}; // ({{units}})
+const double_t& {{param.name}} = P_.{{param.name}};  // ({{units}})
     {% endfor %}
     {% for port, units in unit_handler.assign_units_to_variables(required.ports) %}
-const double_t& {{port.name}} = B_.{{port.name}}_value; // ({{units}})
+const double_t& {{port.name}} = B_.{{port.name}}_value;  // ({{units}})
     {% endfor %}
     {% for const, value, units in unit_handler.assign_units_to_constants(required.constants) %}
 const static double_t {{const.name}} = {{value}};  // ({{units}})
@@ -19,7 +19,7 @@ const double_t& {{rv.name}} = {{get_random_function(rv)}}
     {% for alias, scaled_rhs, units  in unit_handler.scale_rhss(required.expressions) %}
 {# Is a Piecewise statement 
         {% if hasasttr(scaled_expr, 'pieces') %}
-const double_t& {{alias.name}}; // ({{units}})
+const double_t& {{alias.name}};  // ({{units}})
             {% for piece in scaled_expr.pieces %}
 {{elseif(loop.first)}} if ({{piece.condition}}) {
     {{alias.name}} = {{piece.rhs_cstr}};
@@ -28,7 +28,7 @@ const double_t& {{alias.name}}; // ({{units}})
     {{alias.name}} = {{scaled_expr.otherwise.rhs_cstr}};
 }
         {% else %}#}
-const double_t& {{alias.name}} = {{scaled_expr.rhs_cstr}}; // ({{units}})
+const double_t& {{alias.name}} = {{scaled_expr.rhs_cstr}};  // ({{units}})
         {#{% endif %}#}
     {% endfor %}
 {% endmacro %}

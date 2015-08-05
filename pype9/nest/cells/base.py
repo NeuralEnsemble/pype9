@@ -38,6 +38,7 @@ class Cell(base.Cell):
         super(Cell, self).__init__(*properties, **kwprops)
         self._receive_ports = nest.GetDefaults(
             self.__class__.name)['receptor_types']
+        self._inputs = {}
         self._flag_created(True)
 
     def _get(self, varname):
@@ -79,8 +80,8 @@ class Cell(base.Cell):
         return data
 
     def reset_recordings(self):
-        raise logger.warning("Haven't worked out how to implement reset "
-                             "recordings for NEST yet")
+        logger.warning("Haven't worked out how to implement reset recordings "
+                       "for NEST yet")
 
     def play(self, port_name, signal):
         """
@@ -88,27 +89,19 @@ class Cell(base.Cell):
 
         `current` -- a vector containing the current [neo.AnalogSignal]
         """
-        if isinstance(self._nineml.component_class.receive_port(port_name),
+        if isinstance(self.component_class.receive_port(port_name),
                       nineml.abstraction.EventPort):
             raise NotImplementedError
         else:
-            self.signals[port_name] = nest.Create(
+            self._inputs[port_name] = nest.Create(
                 'step_current_generator', 1,
                 {'amplitude_values': pq.Quantity(signal, 'pA'),
                  'amplitude_times': pq.Quantity(signal.times, 'ms'),
                  'start': float(pq.Quantity(signal.t_start, 'ms')),
                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
-            nest.Connect(self.signals[port_name], self._cell,
+            nest.Connect(self._inputs[port_name], self._cell,
                          syn_spec={"receptor_type":
                                    self._receive_ports[port_name]})
-
-    @property
-    def signals(self):
-        try:
-            return self._signals
-        except AttributeError:
-            super(Cell, self).__setattr__('_signals', {})
-            return self._signals
 
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         raise NotImplementedError("voltage clamps are not supported for "

@@ -207,7 +207,7 @@ class Cell(object):
             # associated 9ML representation
             if varname in self.componentclass.parameter_names:
                 self._nineml.set(prop)
-            self._set(varname, val)
+            self._set(varname, float(val))
         else:
             super(Cell, self).__setattr__(varname, val)
 
@@ -216,7 +216,7 @@ class Cell(object):
         Sets the properties of the cell given a 9ML property
         """
         self._nineml.set(prop)
-        self._set(prop.name, self._unit_handler.scale_value(prop))
+        self._set(prop.name, float(self._unit_handler.scale_value(prop)))
 
     def get(self, varname):
         """

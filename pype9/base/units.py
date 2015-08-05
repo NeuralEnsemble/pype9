@@ -129,7 +129,7 @@ class UnitHandler(DynamicsDimensionResolver):
             # Get list of compound units with the powers
             compound = [(u, p) for u, p in zip(cls.basis, min_x) if p]
             # Calculate the appropriate scale for the new compound quantity
-            exponent = min_x.dot([b.power for b in cls.basis])
+            exponent = int(min_x.dot([b.power for b in cls.basis]))
         return exponent, compound
 
     @classmethod
@@ -263,17 +263,30 @@ class UnitHandler(DynamicsDimensionResolver):
 
     @classmethod
     def _minium_combination(cls, xs):
+        """
+        Selects the "best" combination of units based on the number of units
+        in the compound, then the ones with the smallest number of SI units,
+        then the ones with the smallest absolute power
+        """
         # Find the number of units in each of the compounds
         lengths = [sum(abs(x)) for x in xs]
         min_length = min(lengths)
         min_length_xs = [x for x, l in zip(xs, lengths) if l == min_length]
         # If there are multiple compounds of equal length pick the compound
         # with the smallest number of base units
-        if len(min_length_xs) > 1:
-            si_length_sums = [x.dot(cls.si_lengths) for x in min_length_xs]
-            min_x = min_length_xs[argmin(si_length_sums)]
-        else:
+        if len(min_length_xs) == 1:
             min_x = min_length_xs[0]
+        else:
+            si_length_sums = [x.dot(cls.si_lengths) for x in min_length_xs]
+            min_si_length_sum = min(si_length_sums)
+            min_si_length_sums = [x for x, l in zip(xs, si_length_sums)
+                                  if l == min_si_length_sum]
+            if len(min_si_length_sums) == 1:
+                min_x = min_si_length_sums[0]
+            else:
+                abs_exps = [abs(x.dot([b.power for b in cls.basis]))
+                            for x in min_si_length_sums]
+                min_x = min_si_length_sums[argmin(abs_exps)]
         return min_x
 
     @classmethod
