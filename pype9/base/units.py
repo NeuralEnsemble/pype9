@@ -1,3 +1,4 @@
+from __future__ import division
 import os
 import logging
 import operator
@@ -6,8 +7,7 @@ import cPickle as pkl
 from abc import ABCMeta, abstractmethod
 import sympy
 from sympy import sympify
-from numpy import array, sum, abs, argmin, log10, nonzero
-from numpy.linalg import matrix_rank
+from numpy import array, sum, abs, argmin, log10, nonzero, unique
 import quantities as pq
 import diophantine
 from nineml import units as un
@@ -133,6 +133,7 @@ class UnitHandler(DynamicsDimensionResolver):
         Returns a list of the basis units with their associated powers and the
         scale of the presented units.
         """
+        import numpy
         if dimension == 1:
             return 1, []
         if isinstance(dimension, sympy.Basic):
@@ -142,23 +143,30 @@ class UnitHandler(DynamicsDimensionResolver):
                 "'{}' is not a Dimension".format(dimension))
         # Check to see if unit dimension is in basis units or specific
         # compounds, or some multiple thereof
-        # First check for linear dependence
-        matches = [
-            u for u in chain(cls.basis, cls.compounds)
-            if matrix_rank(array([list(dimension), list(u.dimension)])) == 1]
-        # Then check whether they are integer multiples of a basis vector
-        # Get the first nonzero element of each dimension vector
-        first_nonzeros = [nonzero(list(u.dimension))[0][0]
-                          for u in matches]
-        scalars = [(list(dimension)[nz] / list(u.dimension)[nz])
-                   for u, nz in zip(matches, first_nonzeros)]
-        matches = [(u, s) for u, s in zip(matches, scalars)
-                   if float(s).is_integer()]
-        if len(matches) == 1:
+        dim_vector = array(list(dimension))
+        mask = dim_vector != 0  # mask of units in compound
+        # Check for basis dimensions that use the same units
+        mask_matches = [u for u in chain(cls.basis, cls.compounds)
+                          if ((array(list(u.dimension)) != 0) == mask).all()]
+        # Check if any are a linearly dependent
+        scalars = [unique(dim_vector[mask] /
+                           array(list(u.dimension))[mask])
+                   for u in mask_matches]
+        matches = [(u, s[0]) for u, s in zip(mask_matches, scalars)
+                   if len(s) == 1]
+        assert len(matches) <= 1, (
+            "There should not be matches for multiple basis/compound units, "
+            "the dimension vector of one must be a factor of an another")
+        # If there is a match and the scalar is an integer then use that unit
+        # basis/compound.
+        if matches and float(matches[0][1]).is_integer():
             base_unit, scalar = matches[0]
             compound = [(base_unit, int(scalar))]
-            exponent = base_unit.power
-        elif not matches:
+            exponent = base_unit.power * scalar
+        # If there is not a direct relationship to a basis vector or special
+        # compound, project the dimension onto the basis vectors, finding
+        # the "minimal" solution (see _select_best_compound)
+        else:
             try:
                 # Check cache for precalculated basis units projections
                 min_x = cls.cache[tuple(dimension)]
@@ -172,10 +180,6 @@ class UnitHandler(DynamicsDimensionResolver):
             compound = [(u, p) for u, p in zip(cls.basis, min_x) if p]
             # Calculate the appropriate scale for the new compound quantity
             exponent = int(min_x.dot([b.power for b in cls.basis]))
-        else:
-            assert False, ("There should not be matches for multiple "
-                           "basis/compound units, the dimension vector of one "
-                           "must be a factor of an another")
         return exponent, compound
 
     @classmethod
@@ -244,6 +248,8 @@ class UnitHandler(DynamicsDimensionResolver):
         elif isinstance(qty, pq.Quantity):
             unit_name = str(qty.units).split()[1].replace(
                 '/', '_per_').replace('*', '_')
+            if unit_name.startswith('_per_'):
+                unit_name = unit_name[1:]  # strip leading underscore
             powers = dict(
                 (cls._pq_si_to_dim[type(u)], p)
                 for u, p in qty.units.simplified._dimensionality.iteritems())
@@ -372,15 +378,14 @@ class UnitHandler(DynamicsDimensionResolver):
         return scaled_expr, arg_dims[0]
 
     def _flatten_multiplied(self, expr):
-        arg_exprs, arg_dims = zip(*[self._flatten(a) for a in expr.args])
+        arg_dims = [self._flatten(a)[1] for a in expr.args]
         dims = reduce(operator.mul, arg_dims)
         if isinstance(dims, sympy.Basic):
             dims = dims.powsimp()  # Simplify the expression
-        power, _ = self.dimension_to_units_compound(dims)
-        arg_power = sum(
-            self.dimension_to_units_compound(self._flatten(a)[1])[0]
-            for a in arg_exprs)
-        scale = arg_power - power
+        power = self.dimension_to_units_compound(dims)[0]
+        arg_power = sum(self.dimension_to_units_compound(d)[0]
+                        for d in arg_dims)
+        scale = int(arg_power - power)
         return 10 ** scale * type(expr)(*expr.args), dims
 
     def _flatten_power(self, expr):

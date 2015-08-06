@@ -41,7 +41,7 @@ class TestUnitAssignment(TestCase):
             name='A',
             aliases=['A1 := P1 / P2', 'A2 := ARP2 + P3', 'A3 := P4 * P5',
                      'A4 := 1 / (P2 * P6) + ARP3', 'A5 := P7 * P8',
-                     'A6 := 1 / (P6 * P9)'],
+                     'A6 := P9/P10'],
             regimes=[
                 Regime('dSV1/dt = -A1 / A2',
                        name='R1')],
@@ -58,7 +58,9 @@ class TestUnitAssignment(TestCase):
                         Parameter('P7', dimension=un.current / un.capacitance),
                         Parameter('P8', dimension=un.time),
                         Parameter('P9',
-                                  dimension=un.length ** 2 / un.capacitance)]
+                                  dimension=un.capacitance / un.length ** 2),
+                        Parameter('P10',
+                                  dimension=un.conductance / un.length ** 2)]
         )
         # Create an instance of the type
         self.handler = TestUnitHandler(self.a)
@@ -86,7 +88,7 @@ class TestUnitAssignment(TestCase):
         self.assertEquals(self.handler.scale_expression('A5'),
                           (Expression('1e-6 * P7 * P8'), 'mV'))
         self.assertEquals(self.handler.scale_expression('A6'),
-                          (Expression('1/P9'), 'mV'))
+                          (Expression('1e-3 * P9/P10'), 'ms'))
 
     def test_assignment(self):
         self.assertEquals(self.handler.assign_units_to_variable('P2'), '1/uS')
