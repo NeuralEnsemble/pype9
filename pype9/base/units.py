@@ -133,7 +133,6 @@ class UnitHandler(DynamicsDimensionResolver):
         Returns a list of the basis units with their associated powers and the
         scale of the presented units.
         """
-        import numpy
         if dimension == 1:
             return 1, []
         if isinstance(dimension, sympy.Basic):
@@ -194,25 +193,26 @@ class UnitHandler(DynamicsDimensionResolver):
         return un.Unit(unit_name, dimension=dimension, power=exponent)
 
     @classmethod
-    def compound_to_units_str(cls, compound, mult_symbol='*'):
+    def compound_to_units_str(cls, compound, pow_symbol='**', mult_symbol='*',
+                              use_parentheses=True):
         """
         Converts a compound unit list into a string representation
         """
-        if not compound:
-            unit_str = '1'
+        numerator = [(u, p) for u, p in compound if p > 0]
+        denominator = [(u, -p) for u, p in compound if p < 0]
+        num_str, den_str = [
+            mult_symbol.join(
+                cls.unit_name_map[u] + (pow_symbol + str(p) if p > 1 else '')
+                for u, p in num_den)
+            for num_den in (numerator, denominator)]
+        if num_str:
+            unit_str = num_str
         else:
-            numerator = mult_symbol.join(
-                '{}{}'.format(cls.unit_name_map[u], p if p > 1 else '')
-                for u, p in compound if p > 0)
-            denominator = mult_symbol.join(
-                '{}{}'.format(cls.unit_name_map[u], -p if p < -1 else '')
-                for u, p in compound if p < 0)
-            if numerator and denominator:
-                unit_str = numerator + '/' + denominator
-            elif denominator:
-                unit_str = '1/' + denominator
-            else:
-                unit_str = numerator
+            unit_str = '1'
+        if den_str:
+            if use_parentheses and len(denominator) > 1:
+                den_str = '(' + den_str + ')'
+            unit_str += '/' + den_str
         return unit_str
 
     @classmethod
@@ -239,7 +239,7 @@ class UnitHandler(DynamicsDimensionResolver):
             qty.units.dimension)
         scale = qty.units.power - exponent
         units_str = cls.compound_to_units_str(compound)
-        return 10 ** scale * pq.Quantity(qty.value, units_str)
+        return pq.Quantity(10 ** scale * qty.value, units_str)
 
     @classmethod
     def from_pq_quantity(cls, qty):
@@ -247,7 +247,7 @@ class UnitHandler(DynamicsDimensionResolver):
             units = un.unitless
         elif isinstance(qty, pq.Quantity):
             unit_name = str(qty.units).split()[1].replace(
-                '/', '_per_').replace('*', '_')
+                '/', '_per_').replace('**', '').replace('*', '_')
             if unit_name.startswith('_per_'):
                 unit_name = unit_name[1:]  # strip leading underscore
             powers = dict(

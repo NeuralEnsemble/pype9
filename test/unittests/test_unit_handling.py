@@ -3,7 +3,7 @@ if __name__ == '__main__':
 else:
     from unittest import TestCase  # @Reimport
 import os.path
-from sympy import sympify
+import math
 from nineml import units as un
 from pype9.base.units import UnitHandler as BaseUnitHandler
 from nineml.abstraction import (
@@ -25,7 +25,8 @@ class TestUnitHandler(BaseUnitHandler):
         basis, os.path.dirname(__file__))
 
     def _units_for_code_gen(self, units):
-        return self.compound_to_units_str(units, mult_symbol='*')
+        return self.compound_to_units_str(units, mult_symbol='*',
+                                          pow_symbol='^')
 
 
 class TestUnitAssignment(TestCase):
@@ -92,7 +93,7 @@ class TestUnitAssignment(TestCase):
 
     def test_assignment(self):
         self.assertEquals(self.handler.assign_units_to_variable('P2'), '1/uS')
-        self.assertEquals(self.handler.assign_units_to_variable('P6'), 'um2')
+        self.assertEquals(self.handler.assign_units_to_variable('P6'), 'um^2')
 
     def test_pq_round_trip(self):
         for unit in self.test_units:
@@ -102,7 +103,8 @@ class TestUnitAssignment(TestCase):
             self.assertEquals(qty.units.dimension, new_qty.units.dimension,
                               "Python-quantities roundtrip of '{}' changed "
                               "dimension".format(unit.name))
-            self.assertEquals(qty.value * 10 ** qty.units.power,
-                              new_qty.value * 10 ** new_qty.units.power,
+            new_power = int(math.log10(new_qty.value) + new_qty.units.power)
+            self.assertEquals(unit.power, new_power,
                               "Python-quantities roundtrip of '{}' changed "
-                              "scale".format(unit.name))
+                              "scale ({} -> {})".format(unit.name, unit.power,
+                                                        new_power))

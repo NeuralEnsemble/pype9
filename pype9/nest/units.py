@@ -16,4 +16,5 @@ class UnitHandler(BaseUnitHandler):
         basis, os.path.dirname(__file__))
 
     def _units_for_code_gen(self, units):
-        return self.compound_to_units_str(units, mult_symbol='*')
+        return self.compound_to_units_str(
+            units, mult_symbol='*', pow_symbol='^', use_parentheses=False)
