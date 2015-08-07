@@ -6,13 +6,15 @@ import os.path
 import math
 from nineml import units as un
 from pype9.base.units import UnitHandler as BaseUnitHandler
+from pype9.nest.units import UnitHandler as NestUnitHandler
 from nineml.abstraction import (
-    Dynamics, AnalogReceivePort, Parameter, Regime, Expression)
+    Dynamics, AnalogReceivePort, Parameter, Regime, Expression, Constant,
+    StateVariable)
 import numpy
 from nineml.user import Quantity
 
 
-class TestUnitHandler(BaseUnitHandler):
+class TestUnitHandler1(BaseUnitHandler):
 
     basis = [un.ms, un.mV, un.nA, un.mM, un.nF, un.um, un.uS, un.K, un.cd]
     compounds = [un.uF_per_cm2, un.S_per_cm2]
@@ -28,6 +30,24 @@ class TestUnitHandler(BaseUnitHandler):
     def _units_for_code_gen(self, units):
         return self.compound_to_units_str(units, mult_symbol='*',
                                           pow_symbol='^')
+
+
+class TestUnitHandler2(BaseUnitHandler):
+
+    basis = [un.ms, un.mV, un.pA, un.mM, un.uF, un.um, un.uS, un.K, un.cd]
+    compounds = []
+
+    unit_name_map = {un.ms: 'ms', un.mV: 'mV', un.pA: 'pA', un.mM: 'mM',
+                     un.uF: 'nF', un.um: 'um', un.uS: 'uS', un.K: 'K',
+                     un.cd: 'cd'}
+
+    (A, cache,
+     cache_path, si_lengths) = BaseUnitHandler._load_basis_matrices_and_cache(
+        basis, compounds, os.path.dirname(__file__))
+
+    def _units_for_code_gen(self, units):
+        return self.compound_to_units_str(
+            units, mult_symbol='*', pow_symbol='^', use_parentheses=False)
 
 
 class TestUnitAssignment(TestCase):
@@ -52,11 +72,19 @@ class TestUnitAssignment(TestCase):
                      'A6 := P9/P10'],
             regimes=[
                 Regime('dSV1/dt = -A1 / A2',
+                       ('dSV2/dt = C1 * SV2 ** 2 + C2 * SV2 + C3 + SV3 + '
+                        'ARP4 / P11'),
+                       'dSV3/dt = P12',
                        name='R1')],
+            state_variables=[StateVariable('SV1', dimension=un.dimensionless),
+                             StateVariable('SV2', dimension=un.voltage),
+                             StateVariable('SV3',
+                                           dimension=un.voltage_per_time)],
             analog_ports=[AnalogReceivePort('ARP1', dimension=un.resistance),
                           AnalogReceivePort('ARP2', dimension=un.charge),
                           AnalogReceivePort('ARP3',
-                                            dimension=un.conductanceDensity)],
+                                            dimension=un.conductanceDensity),
+                          AnalogReceivePort('ARP4', dimension=un.current)],
             parameters=[Parameter('P1', dimension=un.voltage),
                         Parameter('P2', dimension=un.resistance),
                         Parameter('P3', dimension=un.charge),
@@ -68,7 +96,13 @@ class TestUnitAssignment(TestCase):
                         Parameter('P9',
                                   dimension=un.capacitance / un.length ** 2),
                         Parameter('P10',
-                                  dimension=un.conductance / un.length ** 2)]
+                                  dimension=un.conductance / un.length ** 2),
+                        Parameter('P11', dimension=un.capacitance),
+                        Parameter('P12', dimension=un.voltage / un.time ** 2)],
+            constants=[Constant('C1', 0.04, units=(un.unitless /
+                                                   (un.mV * un.ms))),
+                       Constant('C2', 5.0, units=un.unitless / un.ms),
+                       Constant('C3', 140.0, units=un.mV / un.ms)]
         )
 
     def test_dimension_to_units(self):
@@ -78,9 +112,9 @@ class TestUnitAssignment(TestCase):
                       un.cd / un.A: un.cd / un.nA,
                       un.A / un.uF: un.nA / un.nF,
                       un.nF / (un.m ** 2 * un.s): un.S / un.cm ** 2}
-        TestUnitHandler.clear_cache()
+        TestUnitHandler1.clear_cache()
         for unit, unit_mapped in test_units.iteritems():
-            new_unit = TestUnitHandler.dimension_to_units(unit.dimension)
+            new_unit = TestUnitHandler1.dimension_to_units(unit.dimension)
             self.assertEqual(new_unit, unit_mapped,
                              "New unit mapped incorrectly {}->{} ({})"
                              .format(unit, new_unit, unit_mapped))
@@ -92,7 +126,7 @@ class TestUnitAssignment(TestCase):
                       un.uF ** 3 / un.um,
                       un.cd / un.A]
         for unit in test_units:
-            scale, compound = TestUnitHandler.dimension_to_units_compound(
+            scale, compound = TestUnitHandler1.dimension_to_units_compound(
                 unit.dimension)
             new_scale = numpy.sum([p * u.power for u, p in compound])
             self.assertEqual(scale - new_scale, 0,
@@ -106,23 +140,28 @@ class TestUnitAssignment(TestCase):
                              "unit '{}'".format(unit))
 
     def test_scaling_and_assignment(self):
-        handler = TestUnitHandler(self.a)
-        self.assertEqual(handler.scale_expression('A2'),
+        handler1 = TestUnitHandler1(self.a)
+        handler2 = NestUnitHandler(self.a)
+        self.assertEqual(handler1.scale_expression('A2'),
                          (Expression('ARP2 + P3'), 'ms*nA'))
-        self.assertEqual(handler.scale_expression('A4'),
+        self.assertEqual(handler1.scale_expression('A4'),
                          (Expression('ARP3 + 100/(P2*P6)'), 'S/cm2'))
-        self.assertEqual(handler.scale_expression('A5'),
+        self.assertEqual(handler1.scale_expression('A5'),
                          (Expression('P7 * P8'), 'mV'))
-        self.assertEqual(handler.scale_expression('A6'),
+        self.assertEqual(handler1.scale_expression('A6'),
                          (Expression('1e-3 * P9/P10'), 'ms'))
-        self.assertEqual(handler.assign_units_to_variable('P2'), '1/uS')
-        self.assertEqual(handler.assign_units_to_variable('P6'), 'um^2')
+        self.assertEqual(
+            handler2.scale_expression(self.a.regime('R1')['SV2']),
+            (Expression('C1 * SV2 ** 2 + C2 * SV2 + C3 + SV3 + '
+                        '1e-6 * ARP4 / P11'), 'mV/ms'))
+        self.assertEqual(handler1.assign_units_to_variable('P2'), '1/uS')
+        self.assertEqual(handler1.assign_units_to_variable('P6'), 'um^2')
 
     def test_pq_round_trip(self):
         for unit in self.test_units:
             qty = Quantity(1.0, unit)
-            pq_qty = TestUnitHandler.to_pq_quantity(qty)
-            new_qty = TestUnitHandler.from_pq_quantity(pq_qty)
+            pq_qty = TestUnitHandler1.to_pq_quantity(qty)
+            new_qty = TestUnitHandler1.from_pq_quantity(pq_qty)
             self.assertEqual(qty.units.dimension, new_qty.units.dimension,
                              "Python-quantities roundtrip of '{}' changed "
                              "dimension".format(unit.name))

@@ -17,10 +17,13 @@ from pype9.neuron.cells import (
 from pype9.nest.cells import (
     CellMetaClass as CellMetaClassNEST,
     simulation_controller as simulatorNEST)
+from pype9.nest.units import UnitHandler
 import numpy
 import quantities as pq
 import neo
 import os
+
+UnitHandler.clear_cache()
 
 # from pyNN.neuron.cells import Izhikevich_ as IzhikevichPyNN
 # MPI may not be required but NEURON sometimes needs to be initialised after
@@ -130,7 +133,7 @@ class TestAgainstPyNN(TestCase):
         else:
             assert False
         CellClass = CellMetaClass(
-            path.join(self.xml_dir, name + '.xml'), build_mode='lazy')
+            path.join(self.xml_dir, name + '.xml'), build_mode='force')
         self.nml_cells[sim_name] = CellClass()
         self.nml_cells[sim_name].play('iExt', self.injected_signal)
         self.nml_cells[sim_name].record('v')
