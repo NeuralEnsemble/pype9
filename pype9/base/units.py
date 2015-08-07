@@ -3,11 +3,13 @@ import os
 import logging
 import operator
 from itertools import chain
+from operator import xor
 import cPickle as pkl
 from abc import ABCMeta, abstractmethod
 import sympy
 from sympy import sympify
-from numpy import array, sum, abs, argmin, log10, nonzero, unique
+import numpy
+from numpy import array, sum, abs, argmin, log10, nonzero
 import quantities as pq
 import diophantine
 from nineml import units as un
@@ -17,6 +19,8 @@ from nineml.abstraction.ports import SendPortBase
 from nineml.abstraction.dynamics.visitors import DynamicsDimensionResolver
 import atexit
 from pype9.exceptions import Pype9RuntimeError
+from pype9.utils import classproperty
+from fractions import gcd
 
 
 logger = logging.getLogger('PyPe9')
@@ -124,6 +128,11 @@ class UnitHandler(DynamicsDimensionResolver):
     def _units_for_code_gen(self, unit):
         pass
 
+    @classproperty
+    @classmethod
+    def specified_units(cls):
+        return chain(cls.basis, cls.compounds)
+
     @classmethod
     def dimension_to_units_compound(cls, dimension):
         """
@@ -140,45 +149,47 @@ class UnitHandler(DynamicsDimensionResolver):
         else:
             assert isinstance(dimension, un.Dimension), (
                 "'{}' is not a Dimension".format(dimension))
-        # Check to see if unit dimension is in basis units or specific
-        # compounds, or some multiple thereof
-        dim_vector = array(list(dimension))
-        mask = dim_vector != 0  # mask of units in compound
-        # Check for basis dimensions that use the same units
-        mask_matches = [u for u in chain(cls.basis, cls.compounds)
-                          if ((array(list(u.dimension)) != 0) == mask).all()]
-        # Check if any are a linearly dependent
-        scalars = [unique(dim_vector[mask] /
-                           array(list(u.dimension))[mask])
-                   for u in mask_matches]
-        matches = [(u, s[0]) for u, s in zip(mask_matches, scalars)
-                   if len(s) == 1]
+        # Check to see if unit dimension, or some integer power thereof,
+        # has been stored in the cache (the basis and compounds are preloaded)
+        dim_vector = array(list(dimension), dtype='float')
+        # mask of units in compound
+        mask = (dim_vector != 0)
+        # Get the coefficients required to transform the basis dim elements
+        # into the provided dimension, and test to see if they are constant
+        with_scalars = [(x, numpy.unique(dim_vector[mask] /
+                                         numpy.asarray(d)[mask]))
+                        for d, x in cls.cache.iteritems()
+                        if ((numpy.asarray(d) != 0) == mask).all()]
+        matches = [(u, s[0]) for u, s in with_scalars if len(s) == 1]
         assert len(matches) <= 1, (
             "There should not be matches for multiple basis/compound units, "
             "the dimension vector of one must be a factor of an another")
         # If there is a match and the scalar is an integer then use that unit
         # basis/compound.
         if matches and float(matches[0][1]).is_integer():
-            base_unit, scalar = matches[0]
-            compound = [(base_unit, int(scalar))]
-            exponent = base_unit.power * scalar
+            base_x, scalar = matches[0]
+            scalar = int(scalar)
+            num_compounds = len(nonzero(x[len(cls.basis):])[0])
+            assert num_compounds <= 1, (
+                "Multiple compound indices matched (x={})".format(x))
+            assert xor(x[:len(cls.basis)].any(), num_compounds != 0), (
+                "Mix of basis vectors and compounds (x={})".format(x))
+            x = base_x * scalar
         # If there is not a direct relationship to a basis vector or special
         # compound, project the dimension onto the basis vectors, finding
         # the "minimal" solution (see _select_best_compound)
         else:
-            try:
-                # Check cache for precalculated basis units projections
-                min_x = cls.cache[tuple(dimension)]
-            except KeyError:
-                # Get projection of dimension onto basis units
-                b = array(list(dimension))
-                xs = diophantine.solve(cls.A, b)
-                min_x = cls._select_best_compound(xs)
-                cls.cache[tuple(dimension)] = min_x
-            # Get list of compound units with the powers
-            compound = [(u, p) for u, p in zip(cls.basis, min_x) if p]
-            # Calculate the appropriate scale for the new compound quantity
-            exponent = int(min_x.dot([b.power for b in cls.basis]))
+            # Get projection of dimension onto basis units
+            b = array(list(dimension))
+            xs = diophantine.solve(cls.A, b)
+            min_x = cls._select_best_compound(xs)
+            x = numpy.concatenate((min_x, numpy.zeros(len(cls.compounds),
+                                                      dtype='int')))
+            cls.cache[tuple(dimension)] = x / int(abs(reduce(gcd, x)))
+        # Get list of compound units with the powers
+        compound = [(u, p) for u, p in zip(cls.specified_units, x) if p]
+        # Calculate the appropriate scale for the new compound quantity
+        exponent = int(x.dot([b.power for b in cls.specified_units]))
         return exponent, compound
 
     @classmethod
@@ -264,7 +275,7 @@ class UnitHandler(DynamicsDimensionResolver):
         return Quantity(float(qty), units)
 
     @classmethod
-    def _load_basis_matrices_and_cache(cls, basis, directory):
+    def _load_basis_matrices_and_cache(cls, basis, compounds, directory):
         """
         Creates matrix corresponding to unit basis and loads cache of
         previously calculated mappings from dimensions onto this basis.
@@ -285,7 +296,7 @@ class UnitHandler(DynamicsDimensionResolver):
         except (IOError, EOFError):
             logger.warning("Could not load unit conversion cache from file "
                            "'{}'".format(cache_path))
-            cache = {}
+            cache = cls._init_cache(basis, compounds)
         def save_cache():  # @IgnorePep8
             try:
                 with open(cache_path, 'w') as f:
@@ -297,7 +308,34 @@ class UnitHandler(DynamicsDimensionResolver):
         # The lengths in terms of SI dimension bases of each of the unit
         # basis compounds.
         si_lengths = [sum(abs(si) for si in d.dimension) for d in basis]
-        return A, cache, si_lengths
+        return A, cache, cache_path, si_lengths
+
+    @classmethod
+    def _init_cache(cls, basis, compounds):
+        """
+        Removes the existing cache of unit projections and creates a new one in
+        its place
+        """
+        # Create a new cache with the specified units entered into it
+        cache = {}
+        num_units = len(basis) + len(compounds)
+        for i, unit in enumerate(chain(basis, compounds)):
+            x = numpy.zeros(num_units, dtype='int')
+            x[i] = 1
+            cache[tuple(unit.dimension)] = x
+        return cache
+
+    @classmethod
+    def clear_cache(cls):
+        """
+        Removes the existing cache of unit projections and creates a new one in
+        its place
+        """
+        # Removed saved version of cache
+        if os.path.exists(cls.cache_path):
+            os.remove(cls.cache_path)
+        # Create a new cache with the specified units entered into it
+        cls.cache = cls._init_cache(cls.basis, cls.compounds)
 
     @classmethod
     def _select_best_compound(cls, xs):
@@ -306,6 +344,8 @@ class UnitHandler(DynamicsDimensionResolver):
         in the compound, then the ones with the smallest number of SI units,
         then the ones with the lowest indices in the basis list
         """
+        # Convert xs to numpy arrays
+        xs = [numpy.asarray(list(x), dtype='int') for x in xs]
         # Find the number of units in each of the compounds
         lengths = [sum(abs(x)) for x in xs]
         min_length = min(lengths)
@@ -315,9 +355,11 @@ class UnitHandler(DynamicsDimensionResolver):
         if len(min_length_xs) == 1:
             min_x = min_length_xs[0]
         else:
-            si_length_sums = [x.dot(cls.si_lengths) for x in min_length_xs]
+            si_length_sums = [abs(x).dot(cls.si_lengths)
+                              for x in min_length_xs]
             min_si_length_sum = min(si_length_sums)
-            min_si_length_sums = [x for x, l in zip(xs, si_length_sums)
+            min_si_length_sums = [x for x, l in zip(min_length_xs,
+                                                    si_length_sums)
                                   if l == min_si_length_sum]
             if len(min_si_length_sums) == 1:
                 min_x = min_si_length_sums[0]

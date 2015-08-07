@@ -93,6 +93,7 @@ class TestAgainstPyNN(TestCase):
             if 'nrn9ML' in tests or 'nrnPyNN' in tests:
                 simulatorNEURON.run(10.0)
             if 'nest9ML' in tests or 'nestPyNN' in tests:
+                print nest.GetStatus(self.nml_cells['NEST']._cell)
                 simulatorNEST.run(10.0)
             if plot:
                 leg = []
@@ -129,7 +130,7 @@ class TestAgainstPyNN(TestCase):
         else:
             assert False
         CellClass = CellMetaClass(
-            path.join(self.xml_dir, name + '.xml'), build_mode='force')
+            path.join(self.xml_dir, name + '.xml'), build_mode='lazy')
         self.nml_cells[sim_name] = CellClass()
         self.nml_cells[sim_name].play('iExt', self.injected_signal)
         self.nml_cells[sim_name].record('v')

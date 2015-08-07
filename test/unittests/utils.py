@@ -17,9 +17,12 @@ class DummyTestCase(object):
         except AttributeError:
             pass
 
-    def assertEqual(self, first, second):
-        print '{} and {} are{} equal'.format(repr(first), repr(second),
-                                             ' not' if first != second else '')
+    def assertEqual(self, first, second, message=None):
+        if first != second:
+            if message is None:
+                message = '{} and {} are{} not equal'.format(repr(first),
+                                                             repr(second))
+            print message
 
     def assertAlmostEqual(self, first, second):
         pass
