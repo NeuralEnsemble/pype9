@@ -14,7 +14,7 @@ import quantities as pq
 import diophantine
 from nineml import units as un
 from nineml.user.component import Quantity
-from nineml.abstraction import Expression
+from nineml.abstraction import Expression, TimeDerivative
 from nineml.abstraction.ports import SendPortBase
 from nineml.abstraction.dynamics.visitors import DynamicsDimensionResolver
 import atexit
@@ -143,7 +143,7 @@ class UnitHandler(DynamicsDimensionResolver):
         scale of the presented units.
         """
         if dimension == 1:
-            return 1, []
+            return 0, []
         if isinstance(dimension, sympy.Basic):
             dimension = un.Dimension.from_sympy(dimension)
         else:
