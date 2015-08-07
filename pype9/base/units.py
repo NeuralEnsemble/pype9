@@ -134,7 +134,7 @@ class UnitHandler(DynamicsDimensionResolver):
         return chain(cls.basis, cls.compounds)
 
     @classmethod
-    def dimension_to_units_compound(cls, dimension):
+    def dimension_to_units_compound(cls, dimension, specific_compounds=[]):
         """
         Projects a given unit onto a list of units that span the space of
         dimensions present in the unit to project.
@@ -160,7 +160,8 @@ class UnitHandler(DynamicsDimensionResolver):
                                          numpy.asarray(d)[mask]))
                         for d, x in cls.cache.iteritems()
                         if ((numpy.asarray(d) != 0) == mask).all()]
-        matches = [(u, s[0]) for u, s in with_scalars if len(s) == 1]
+        matches = [(u, int(s[0])) for u, s in with_scalars
+                   if len(s) == 1 and float(s[0]).is_integer()]
         assert len(matches) <= 1, (
             "There should not be matches for multiple basis/compound units, "
             "the dimension vector of one must be a factor of an another")
@@ -386,7 +387,7 @@ class UnitHandler(DynamicsDimensionResolver):
     # sub expressions where it is required (i.e. when there is a change of
     # units and the new units power is different)
 
-    def _flatten_symbol(self, sym):
+    def _flatten_symbol(self, sym, **kwargs):  # @UnusedVariable
         try:
             scaled_expr = self._scaled[sym]
             dims = self._dims[sym]
@@ -397,40 +398,45 @@ class UnitHandler(DynamicsDimensionResolver):
             self._dims[sym] = dims
         return scaled_expr, dims
 
-    def _flatten_boolean(self, expr):  # @UnusedVariable
-        dims = super(DynamicsDimensionResolver, self)._flatten_boolean(expr)
+    def _flatten_boolean(self, expr, **kwargs):  # @UnusedVariable
+        dims = super(DynamicsDimensionResolver, self)._flatten(expr, **kwargs)
         scaled_expr = type(expr)(*(self._flatten(a)[0] for a in expr.args))
         return scaled_expr, dims
 
-    def _flatten_constant(self, expr):  # @UnusedVariable
-        dims = super(DynamicsDimensionResolver, self)._flatten_constant(expr)
+    def _flatten_constant(self, expr, **kwargs):  # @UnusedVariable
+        dims = super(DynamicsDimensionResolver, self)._flatten(expr, **kwargs)
         return expr, dims
 
-    def _flatten_reserved(self, expr):
+    def _flatten_reserved(self, expr, **kwargs):  # @UnusedVariable
         return expr, self.reserved_symbol_dims[expr]
 
-    def _flatten_function(self, expr):  # @UnusedVariable
-        dims = super(DynamicsDimensionResolver, self)._flatten_function(expr)
+    def _flatten_function(self, expr, **kwargs):  # @UnusedVariable
+        dims = super(DynamicsDimensionResolver, self)._flatten(expr, **kwargs)
         scaled_expr = type(expr)(*(self._flatten(a) for a in expr.args))
         return scaled_expr, dims
 
-    def _flatten_matching(self, expr):
+    def _flatten_matching(self, expr, **kwargs):  # @UnusedVariable
         arg_exprs, arg_dims = zip(*[self._flatten(a) for a in expr.args])
         scaled_expr = type(expr)(*arg_exprs)
         return scaled_expr, arg_dims[0]
 
-    def _flatten_multiplied(self, expr):
+    def _flatten_multiplied(self, expr, **kwargs):  # @UnusedVariable
         arg_dims = [self._flatten(a)[1] for a in expr.args]
         dims = reduce(operator.mul, arg_dims)
         if isinstance(dims, sympy.Basic):
             dims = dims.powsimp()  # Simplify the expression
-        power = self.dimension_to_units_compound(dims)[0]
-        arg_power = sum(self.dimension_to_units_compound(d)[0]
-                        for d in arg_dims)
+        # Get specific_compounds
+        specific_compounds = kwargs.get('specific_compounds', [])
+        power = self.dimension_to_units_compound(
+            dims, specific_compounds=specific_compounds)[0]
+        arg_power = sum(
+            self.dimension_to_units_compound(
+                d, specific_compounds=specific_compounds)[0]
+            for d in arg_dims)
         scale = int(arg_power - power)
         return 10 ** scale * type(expr)(*expr.args), dims
 
-    def _flatten_power(self, expr):
+    def _flatten_power(self, expr, **kwargs):  # @UnusedVariable
         base, exponent = expr.args
         scaled_base, dims = self._flatten(base)
         return scaled_base ** exponent, dims ** exponent
