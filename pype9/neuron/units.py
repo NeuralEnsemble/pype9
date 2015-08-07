@@ -12,8 +12,9 @@ class UnitHandler(BaseUnitHandler):
                      un.cd: 'cd', un.uF_per_cm2: 'uF/cm2',
                      un.S_per_cm2: 'S/cm2'}
 
-    A, cache, si_lengths = BaseUnitHandler._load_basis_matrices_and_cache(
-        basis, os.path.dirname(__file__))
+    (A, cache,
+     cache_path, si_lengths) = BaseUnitHandler._load_basis_matrices_and_cache(
+        basis, compounds, os.path.dirname(__file__))
 
     def _units_for_code_gen(self, units):
         return self.compound_to_units_str(

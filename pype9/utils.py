@@ -6,6 +6,7 @@
 """
 import os
 import errno
+import numpy
 from pype9.exceptions import Pype9RuntimeError
 import nineml
 from nineml import (
@@ -42,6 +43,11 @@ class abstractclassmethod(classmethod):
     def __init__(self, callable_method):
         callable_method.__isabstractmethod__ = True
         super(abstractclassmethod, self).__init__(callable_method)
+
+
+class classproperty(property):
+    def __get__(self, cls, owner):
+        return self.fget.__get__(None, owner)()
 
 
 def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,
