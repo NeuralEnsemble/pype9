@@ -36,7 +36,7 @@ import pyNN.neuron  # @UnusedImport loads pyNN mechanisms
 stim_amp = pq.Quantity(0.02, 'nA')
 
 
-class TestAgainstPyNN(TestCase):
+class TestBasicNeuronModels(TestCase):
 
     xml_dir = path.join(os.environ['HOME'], 'git', 'nineml_catalog',
                         'neurons')
