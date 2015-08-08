@@ -5,7 +5,6 @@ else:
 from os import path
 import neuron
 import nest
-from nest.hl_api import NESTError
 from neuron import h
 try:
     import pylab as plt
@@ -36,7 +35,7 @@ import pyNN.neuron  # @UnusedImport loads pyNN mechanisms
 stim_amp = pq.Quantity(0.02, 'nA')
 
 
-class TestAgainstPyNN(TestCase):
+class TestBasicNeuronModels(TestCase):
 
     xml_dir = path.join(os.environ['HOME'], 'git', 'nineml_catalog',
                         'neurons')
@@ -79,7 +78,7 @@ class TestAgainstPyNN(TestCase):
              [0.0] * (100 - self.stim_start - self.stim_duration)),
             sampling_period=1 * pq.ms, units='nA')
 
-    def test_against_pyNN_models(
+    def test_basic_models(
             self, plot=False,
             tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN')):
         self.nml_cells = {}
@@ -240,8 +239,8 @@ class NEURONRecorder(object):
 
 
 if __name__ == '__main__':
-    t = TestAgainstPyNN()
-    t.test_against_pyNN_models(
+    t = TestBasicNeuronModels()
+    t.test_basic_models(
         plot=True,
 #         tests=('nrn9ML', 'nrnPyNN'))
 #         tests=('nest9ML', 'nestPyNN'))
