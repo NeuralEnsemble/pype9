@@ -18,17 +18,17 @@ const double_t& {{rv.name}} = {{scale}} * {{get_random_function(rv)}}  // ({{uni
     {% endfor %}
     {% for alias, scaled_rhs, units  in unit_handler.scale_aliases(required.expressions) %}
 {# Is a Piecewise statement 
-        {% if hasasttr(scaled_expr, 'pieces') %}
+        {% if hasasttr(scaled_rhs, 'pieces') %}
 const double_t& {{alias.name}};  // ({{units}})
-            {% for piece in scaled_expr.pieces %}
+            {% for piece in scaled_rhs.pieces %}
 {{elseif(loop.first)}} if ({{piece.condition}}) {
     {{alias.name}} = {{piece.rhs_cstr}};
             {%- endfor %}
 } else {
-    {{alias.name}} = {{scaled_expr.otherwise.rhs_cstr}};
+    {{alias.name}} = {{scaled_rhs.otherwise.rhs_cstr}};
 }
         {% else %}#}
-const double_t& {{alias.name}} = {{scaled_expr.rhs_cstr}};  // ({{units}})
+const double_t& {{alias.name}} = {{scaled_rhs.rhs_cstr}};  // ({{units}})
         {#{% endif %}#}
     {% endfor %}
 {% endmacro %}
