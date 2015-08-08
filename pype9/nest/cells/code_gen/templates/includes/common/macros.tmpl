@@ -16,7 +16,7 @@ const static double_t {{const.name}} = {{value}};  // ({{units}})
     {% for rv, scale, units in unit_handler.assign_units_to_constants(required.random_variables) %}
 const double_t& {{rv.name}} = {{scale}} * {{get_random_function(rv)}}  // ({{units}})
     {% endfor %}
-    {% for alias, scaled_rhs, units  in unit_handler.scale_expressions(required.expressions) %}
+    {% for alias, scaled_rhs, units  in unit_handler.scale_aliases(required.expressions) %}
 {# Is a Piecewise statement 
         {% if hasasttr(scaled_expr, 'pieces') %}
 const double_t& {{alias.name}};  // ({{units}})
