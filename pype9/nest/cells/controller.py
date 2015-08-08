@@ -1,6 +1,7 @@
 import nest
 import tempfile
 import numpy
+import quantities as pq
 from pype9.base.cells.controller import SimulationController
 
 

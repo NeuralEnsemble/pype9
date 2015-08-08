@@ -93,6 +93,9 @@ class Cell(base.Cell):
                       nineml.abstraction.EventPort):
             raise NotImplementedError
         else:
+            # For some reason signals that are played into NEST do not start
+            # at t=0, but t=1 ms. So check that the first 1 ms are blank and
+            # then trim them from signal
             self._inputs[port_name] = nest.Create(
                 'step_current_generator', 1,
                 {'amplitude_values': pq.Quantity(signal, 'pA'),
