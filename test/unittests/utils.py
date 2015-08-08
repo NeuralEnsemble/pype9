@@ -20,8 +20,8 @@ class DummyTestCase(object):
     def assertEqual(self, first, second, message=None):
         if first != second:
             if message is None:
-                message = '{} and {} are{} not equal'.format(repr(first),
-                                                             repr(second))
+                message = '{} and {} are not equal'.format(repr(first),
+                                                           repr(second))
             print message
 
     def assertAlmostEqual(self, first, second):

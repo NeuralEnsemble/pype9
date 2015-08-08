@@ -74,7 +74,7 @@ class TestUnitAssignment(TestCase):
                 Regime('dSV1/dt = -A1 / A2',
                        ('dSV2/dt = C1 * SV2 ** 2 + C2 * SV2 + C3 + SV3 + '
                         'ARP4 / P11'),
-                       'dSV3/dt = P12',
+                       'dSV3/dt = P12*(SV2*P13 - SV3)',
                        name='R1')],
             state_variables=[StateVariable('SV1', dimension=un.dimensionless),
                              StateVariable('SV2', dimension=un.voltage),
@@ -98,7 +98,8 @@ class TestUnitAssignment(TestCase):
                         Parameter('P10',
                                   dimension=un.conductance / un.length ** 2),
                         Parameter('P11', dimension=un.capacitance),
-                        Parameter('P12', dimension=un.voltage / un.time ** 2)],
+                        Parameter('P12', dimension=un.per_time),
+                        Parameter('P13', dimension=un.per_time)],
             constants=[Constant('C1', 0.04, units=(un.unitless /
                                                    (un.mV * un.ms))),
                        Constant('C2', 5.0, units=un.unitless / un.ms),
@@ -142,18 +143,21 @@ class TestUnitAssignment(TestCase):
     def test_scaling_and_assignment(self):
         handler1 = TestUnitHandler1(self.a)
         handler2 = NestUnitHandler(self.a)
-        self.assertEqual(handler1.scale_expression('A2'),
+        self.assertEqual(handler1.scale_alias('A2'),
                          (Expression('ARP2 + P3'), 'ms*nA'))
-        self.assertEqual(handler1.scale_expression('A4'),
+        self.assertEqual(handler1.scale_alias('A4'),
                          (Expression('ARP3 + 100/(P2*P6)'), 'S/cm2'))
-        self.assertEqual(handler1.scale_expression('A5'),
+        self.assertEqual(handler1.scale_alias('A5'),
                          (Expression('P7 * P8'), 'mV'))
-        self.assertEqual(handler1.scale_expression('A6'),
+        self.assertEqual(handler1.scale_alias('A6'),
                          (Expression('1e-3 * P9/P10'), 'ms'))
         self.assertEqual(
-            handler2.scale_expression(self.a.regime('R1')['SV2']),
+            handler2.scale_time_derivative(self.a.regime('R1')['SV2']),
             (Expression('C1 * SV2 ** 2 + C2 * SV2 + C3 + SV3 + '
-                        '1e-6 * ARP4 / P11'), 'mV/ms'))
+                        '1e-3 * ARP4 / P11'), 'mV/ms'))
+        self.assertEqual(
+            handler2.scale_time_derivative(self.a.regime('R1')['SV3']),
+            (Expression('P12*(SV2*P13 - SV3)'), 'mV/ms^2'))
         self.assertEqual(handler1.assign_units_to_variable('P2'), '1/uS')
         self.assertEqual(handler1.assign_units_to_variable('P6'), 'um^2')
 
@@ -173,4 +177,4 @@ class TestUnitAssignment(TestCase):
 
 if __name__ == '__main__':
     tester = TestUnitAssignment()
-    tester.test_dimension_to_units()
+    tester.test_scaling_and_assignment()

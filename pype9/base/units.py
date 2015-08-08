@@ -14,7 +14,7 @@ import quantities as pq
 import diophantine
 from nineml import units as un
 from nineml.user.component import Quantity
-from nineml.abstraction import Expression, TimeDerivative
+from nineml.abstraction import Expression
 from nineml.abstraction.ports import SendPortBase
 from nineml.abstraction.dynamics.visitors import DynamicsDimensionResolver
 import atexit
@@ -109,7 +109,7 @@ class UnitHandler(DynamicsDimensionResolver):
         for param in parameters:
             yield param, self.assign_units_to_variable(param)
 
-    def scale_expression(self, element):
+    def scale_alias(self, element):
         if isinstance(element, basestring):
             element = self.component_class[element]
         else:
@@ -119,10 +119,54 @@ class UnitHandler(DynamicsDimensionResolver):
             self.dimension_to_units_compound(dims)[1])
         return Expression(scaled), units_str
 
-    def scale_expressions(self, elements):
+    def scale_aliases(self, elements):
         for elem in elements:
-            scaled, units_str = self.scale_expression(elem)
+            scaled, units_str = self.scale_alias(elem)
             yield elem, scaled, units_str
+
+    def scale_time_derivative(self, element):
+        """
+        Scales the time derivative, ensuring that the overall expression is in
+        the same units as the state variable divided by the time units
+        """
+        if isinstance(element, basestring):
+            element = self.component_class[element]
+        else:
+            assert element in self.component_class
+        expr, dims = self._flatten(sympify(element.rhs))
+        state_var_dims = self.component_class.state_variable(
+            element.dependent_variable).dimension
+        assert dims == state_var_dims / un.time
+        exp = self.dimension_to_units_compound(dims)[0]
+        target_exp, compound = self.dimension_to_units_compound(state_var_dims)
+        # Divide the state variable units by the time units to get the target
+        # compound
+        try:
+            time_unit, power = compound.pop(
+                next(i for i, (u, _) in enumerate(compound)
+                     if u.dimension == un.time))
+            compound.append((time_unit, power - 1))
+        except StopIteration:
+            compound.append((self.time_units, -1))
+        target_exp -= self.time_units.power
+        scale = exp - target_exp
+        # Scale expression to match target expression
+        expr = 10 ** scale * expr
+        units_str = self._units_for_code_gen(compound)
+        return Expression(expr), units_str
+
+    def scale_time_derivatives(self, elements):
+        for elem in elements:
+            scaled, units_str = self.scale_time_derivative(elem)
+            yield elem, scaled, units_str
+
+    @classproperty
+    @classmethod
+    def time_units(cls):
+        try:
+            return next(u for u in cls.basis if u.dimension == un.time)
+        except StopIteration:
+            assert False, "No time dimension in basis"
 
     @abstractmethod
     def _units_for_code_gen(self, unit):
@@ -134,7 +178,7 @@ class UnitHandler(DynamicsDimensionResolver):
         return chain(cls.basis, cls.compounds)
 
     @classmethod
-    def dimension_to_units_compound(cls, dimension, specific_compounds=[]):
+    def dimension_to_units_compound(cls, dimension):
         """
         Projects a given unit onto a list of units that span the space of
         dimensions present in the unit to project.
@@ -214,7 +258,8 @@ class UnitHandler(DynamicsDimensionResolver):
         denominator = [(u, -p) for u, p in compound if p < 0]
         num_str, den_str = [
             mult_symbol.join(
-                cls.unit_name_map[u] + (pow_symbol + str(p) if p > 1 else '')
+                cls.unit_name_map[u] + (pow_symbol + str(int(p))
+                                        if p > 1 else '')
                 for u, p in num_den)
             for num_den in (numerator, denominator)]
         if num_str:
@@ -283,6 +328,8 @@ class UnitHandler(DynamicsDimensionResolver):
         """
         assert all(u.offset == 0 for u in basis), (
             "Non-zero offsets found in basis units")
+        assert any(u.dimension == un.time for u in basis), (
+            "No pure time dimension found in basis units")
         # Get matrix of basis unit dimensions
         A = array([list(b.dimension) for b in basis]).T
         # Get cache path from file path of subclass
@@ -399,19 +446,19 @@ class UnitHandler(DynamicsDimensionResolver):
         return scaled_expr, dims
 
     def _flatten_boolean(self, expr, **kwargs):  # @UnusedVariable
-        dims = super(DynamicsDimensionResolver, self)._flatten(expr, **kwargs)
+        dims = super(DynamicsDimensionResolver, self)._flatten_boolean(expr, **kwargs)
         scaled_expr = type(expr)(*(self._flatten(a)[0] for a in expr.args))
         return scaled_expr, dims
 
     def _flatten_constant(self, expr, **kwargs):  # @UnusedVariable
-        dims = super(DynamicsDimensionResolver, self)._flatten(expr, **kwargs)
+        dims = super(DynamicsDimensionResolver, self)._flatten_constant(expr, **kwargs)
         return expr, dims
 
     def _flatten_reserved(self, expr, **kwargs):  # @UnusedVariable
         return expr, self.reserved_symbol_dims[expr]
 
     def _flatten_function(self, expr, **kwargs):  # @UnusedVariable
-        dims = super(DynamicsDimensionResolver, self)._flatten(expr, **kwargs)
+        dims = super(DynamicsDimensionResolver, self)._flatten_function(expr, **kwargs)
         scaled_expr = type(expr)(*(self._flatten(a) for a in expr.args))
         return scaled_expr, dims
 
@@ -425,14 +472,9 @@ class UnitHandler(DynamicsDimensionResolver):
         dims = reduce(operator.mul, arg_dims)
         if isinstance(dims, sympy.Basic):
             dims = dims.powsimp()  # Simplify the expression
-        # Get specific_compounds
-        specific_compounds = kwargs.get('specific_compounds', [])
-        power = self.dimension_to_units_compound(
-            dims, specific_compounds=specific_compounds)[0]
-        arg_power = sum(
-            self.dimension_to_units_compound(
-                d, specific_compounds=specific_compounds)[0]
-            for d in arg_dims)
+        power = self.dimension_to_units_compound(dims)[0]
+        arg_power = sum(self.dimension_to_units_compound(d)[0]
+                        for d in arg_dims)
         scale = int(arg_power - power)
         return 10 ** scale * type(expr)(*expr.args), dims
 
