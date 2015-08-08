@@ -67,17 +67,24 @@ class TestAgainstPyNN(TestCase):
                    'IF': {},
                    'IFRefrac': {}}
 
-    injected_signal = neo.AnalogSignal(
-        [0.0] * 2 + [float(pq.Quantity(stim_amp, 'nA'))] * 93 + [0.0] * 5,
-        sampling_period=1 * pq.ms, units='nA')
-
     order = [0, 1, 2, 3, 4]
     duration = 10 * pq.ms
-    dt = 0.01
+    dt = 0.02
+    min_delay = 0.04
+    max_delay = 10
+    stim_start = 3
+    stim_duration = 90
+
+    def setUp(self):
+        self.injected_signal = neo.AnalogSignal(
+            ([0.0] * self.stim_start +
+             [float(pq.Quantity(stim_amp, 'nA'))] * self.stim_duration +
+             [0.0] * (100 - self.stim_start - self.stim_duration)),
+            sampling_period=1 * pq.ms, units='nA')
 
     def test_against_pyNN_models(
-            self,
-            plot=False, tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN')):
+            self, plot=False,
+            tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN')):
         self.nml_cells = {}
         # for name9, namePynn in zip(self.models9ML, self.modelsPyNN):
         for i in self.order:
@@ -96,7 +103,6 @@ class TestAgainstPyNN(TestCase):
             if 'nrn9ML' in tests or 'nrnPyNN' in tests:
                 simulatorNEURON.run(10.0)
             if 'nest9ML' in tests or 'nestPyNN' in tests:
-                print nest.GetStatus(self.nml_cells['NEST']._cell)
                 simulatorNEST.run(10.0)
             if plot:
                 leg = []
@@ -147,12 +153,12 @@ class TestAgainstPyNN(TestCase):
         self._nrn_pnn.L = 10
         self._nrn_pnn.diam = 10 / pi
         self._nrn_pnn.cm = 1.0
-        self._nrn_pnn_cell = eval('h.{}(0.5, '
-                                  'sec=self._nrn_pnn)'.format(model_name))
+        self._nrn_pnn_cell = eval(
+            'h.{}(0.5, sec=self._nrn_pnn)'.format(model_name))
         # Specify current injection
         self._nrn_stim = h.IClamp(1.0, sec=self._nrn_pnn)
-        self._nrn_stim.delay = 1   # ms
-        self._nrn_stim.dur = 100   # ms
+        self._nrn_stim.delay = self.stim_start   # ms
+        self._nrn_stim.dur = self.stim_duration   # ms
         self._nrn_stim.amp = stim_amp   # nA
         # Record Time from NEURON (neuron.h._ref_t)
         self._nrn_rec = NEURONRecorder(self._nrn_pnn, self._nrn_pnn_cell)
@@ -162,11 +168,13 @@ class TestAgainstPyNN(TestCase):
         # ---------------------------------------------------------------------
         # Set up PyNN section
         # ---------------------------------------------------------------------
-        nest.SetKernelStatus({'resolution': 0.01})
+        print simulatorNEST.min_delay
+        nest.SetKernelStatus({'resolution': self.dt})
         self.nest_cells = nest.Create(model_name, 1, self.nest_params[name])
         self.nest_iclamp = nest.Create(
             'dc_generator', 1,
-            {'start': 2.0, 'stop': 95.0,
+            {'start': float(self.stim_start - 1),
+             'stop': float(self.stim_start + self.stim_duration),
              'amplitude': float(pq.Quantity(stim_amp, 'pA'))})
         nest.Connect(self.nest_iclamp, self.nest_cells)
         self.nest_multimeter = nest.Create('multimeter', 1,
