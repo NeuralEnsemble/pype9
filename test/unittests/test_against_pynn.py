@@ -42,32 +42,29 @@ class TestAgainstPyNN(TestCase):
                         'neurons')
     models = [('Izhikevich2003', 'Izhikevich', 'izhikevich'),
               ('AdExpIaF', 'AdExpIF', 'aeif_cond_alpha'),
-              ('HHTraub', 'hh_traub'),
-              ('IF', 'Reset'),
-              ('IFRefrac', 'ResetRefrac')]
+              ('HHTraub', 'hh_traub', 'hh_traub'),
+              ('IFRefrac', 'IFRefrac', 'ResetRefrac')]
 
     initial_states = {'Izhikevich2003': {'u': -14 * pq.mV / pq.ms,
                                          'v': -65.0 * pq.mV},
                       'AdExpIaF': {'w': 0.0 * pq.nA,
                                    'v': -65 * pq.mV},
                       'HHTraub': {'v': -65 * pq.mV},
-                      'IF': {'v': -65 * pq.mV},
                       'IFRefrac': {'v': -65 * pq.mV}}
 
     nest_states = {'Izhikevich2003': {'u': 'U_m', 'v': 'V_m'},
                    'AdExpIaF': {'w': 'w', 'v': 'V_m'},
                    'HHTraub': {'v': 'V_m'},
-                   'IF': {'v': 'V_m'},
                    'IFRefrac': {'v': 'V_m'}}
 
     nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2,
                                       'd': 2.0},
                    'AdExpIaF': {},
                    'HHTraub': {},
-                   'IF': {},
                    'IFRefrac': {}}
 
-    order = [0, 1, 2, 3, 4]
+#     order = [0, 1, 2, 3, 4]
+    order = [2, 3, 4]
     duration = 10 * pq.ms
     dt = 0.02
     min_delay = 0.04
@@ -168,7 +165,6 @@ class TestAgainstPyNN(TestCase):
         # ---------------------------------------------------------------------
         # Set up PyNN section
         # ---------------------------------------------------------------------
-        print simulatorNEST.min_delay
         nest.SetKernelStatus({'resolution': self.dt})
         self.nest_cells = nest.Create(model_name, 1, self.nest_params[name])
         self.nest_iclamp = nest.Create(
