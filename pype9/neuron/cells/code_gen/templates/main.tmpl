@@ -147,7 +147,18 @@ BREAKPOINT {
     {{code_gen.assign_str(elem.lhs, scaled_expr.rhs)}}
 {% endfor %}
 {% for elem, scaled_expr, _ in unit_handler.scale_aliases(componentclass.required_for(componentclass.all_time_derivatives()).expressions) if elem not in output_analog_exprs %}
+    {% if hasasttr(scaled_rhs, 'pieces') %}
+            {% for piece in scaled_rhs.pieces %}
+    {{elseif(loop.first)}} if ({{piece.condition}}) {
+        {{alias.name}} = {{piece.rhs_cstr}};
+            {%- endfor %}
+    } else {
+        
+        {{alias.name}} = {{scaled_rhs.otherwise.rhs_cstr}};
+    }
+        {% else %}
     {{code_gen.assign_str(elem.lhs, scaled_expr.rhs)}}
+    {% endif %}
 {% endfor %}
 }
 
