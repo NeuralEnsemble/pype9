@@ -146,11 +146,17 @@ class TestBasicNeuronModels(TestCase):
         # Set up PyNN section
         # -----------------------------------------------------------------
         self._nrn_pnn = h.Section()
-        self._nrn_pnn.L = 10
-        self._nrn_pnn.diam = 10 / pi
+        try:
+            self._nrn_pnn_cell = eval(
+                'h.{}(0.5, sec=self._nrn_pnn)'.format(model_name))
+            self._nrn_pnn.L = 10
+            self._nrn_pnn.diam = 10 / pi
+        except TypeError:
+            self._nrn_pnn.insert(model_name)
+            self._nrn_pnn_cell = self._nrn_pnn(0.5)
+            self._nrn_pnn.L = 1000
+            self._nrn_pnn.diam = 1000 / pi
         self._nrn_pnn.cm = 1.0
-        self._nrn_pnn_cell = eval(
-            'h.{}(0.5, sec=self._nrn_pnn)'.format(model_name))
         # Specify current injection
         self._nrn_stim = h.IClamp(1.0, sec=self._nrn_pnn)
         self._nrn_stim.delay = self.stim_start   # ms

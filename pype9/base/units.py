@@ -21,6 +21,7 @@ import atexit
 from pype9.exceptions import Pype9RuntimeError
 from pype9.utils import classproperty
 from fractions import gcd
+numpy.seterr(all='raise')
 
 
 logger = logging.getLogger('PyPe9')
@@ -186,7 +187,7 @@ class UnitHandler(DynamicsDimensionResolver):
         Returns a list of the basis units with their associated powers and the
         scale of the presented units.
         """
-        if dimension == 1:
+        if dimension == 1 or dimension == un.dimensionless:
             return 0, []
         if isinstance(dimension, sympy.Basic):
             dimension = un.Dimension.from_sympy(dimension)
@@ -364,9 +365,12 @@ class UnitHandler(DynamicsDimensionResolver):
         Removes the existing cache of unit projections and creates a new one in
         its place
         """
-        # Create a new cache with the specified units entered into it
-        cache = {}
+        # Get the length of the "x" vectors, which hold the combination of
+        # basis vectors required to represent a given dimension
         num_units = len(basis) + len(compounds)
+        # Create a new cache with the basis units and specified compound units
+        # entered into it
+        cache = {}
         for i, unit in enumerate(chain(basis, compounds)):
             x = numpy.zeros(num_units, dtype='int')
             x[i] = 1
@@ -446,20 +450,23 @@ class UnitHandler(DynamicsDimensionResolver):
         return scaled_expr, dims
 
     def _flatten_boolean(self, expr, **kwargs):  # @UnusedVariable
-        dims = super(DynamicsDimensionResolver, self)._flatten_boolean(expr, **kwargs)
+        dims = super(DynamicsDimensionResolver, self)._flatten_boolean(
+            expr, **kwargs)
         scaled_expr = type(expr)(*(self._flatten(a)[0] for a in expr.args))
         return scaled_expr, dims
 
     def _flatten_constant(self, expr, **kwargs):  # @UnusedVariable
-        dims = super(DynamicsDimensionResolver, self)._flatten_constant(expr, **kwargs)
+        dims = super(DynamicsDimensionResolver, self)._flatten_constant(
+            expr, **kwargs)
         return expr, dims
 
     def _flatten_reserved(self, expr, **kwargs):  # @UnusedVariable
         return expr, self.reserved_symbol_dims[expr]
 
     def _flatten_function(self, expr, **kwargs):  # @UnusedVariable
-        dims = super(DynamicsDimensionResolver, self)._flatten_function(expr, **kwargs)
-        scaled_expr = type(expr)(*(self._flatten(a) for a in expr.args))
+        dims = super(DynamicsDimensionResolver, self)._flatten_function(
+            expr, **kwargs)
+        scaled_expr = type(expr)(*(self._flatten(a)[0] for a in expr.args))
         return scaled_expr, dims
 
     def _flatten_matching(self, expr, **kwargs):  # @UnusedVariable
