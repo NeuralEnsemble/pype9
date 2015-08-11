@@ -41,7 +41,7 @@ class TestBasicNeuronModels(TestCase):
                         'neurons')
     models = [('Izhikevich2003', 'Izhikevich', 'izhikevich'),
               ('AdExpIaF', 'AdExpIF', 'aeif_cond_alpha'),
-              ('HHTraub', 'hh_traub', 'hh_traub'),
+              ('HHTraub', 'hh_traub', 'hh_cond_exp_traub'),
               ('IFRefrac', 'IFRefrac', 'ResetRefrac')]
 
     initial_states = {'Izhikevich2003': {'u': -14 * pq.mV / pq.ms,
