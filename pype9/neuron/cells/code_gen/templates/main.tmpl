@@ -147,18 +147,7 @@ BREAKPOINT {
     {{code_gen.assign_str(elem.lhs, scaled_expr.rhs)}}
 {% endfor %}
 {% for elem, scaled_expr, _ in unit_handler.scale_aliases(componentclass.required_for(componentclass.all_time_derivatives()).expressions) if elem not in output_analog_exprs %}
-    {% if hasasttr(scaled_rhs, 'pieces') %}
-            {% for piece in scaled_rhs.pieces %}
-    {{elseif(loop.first)}} if ({{piece.condition}}) {
-        {{alias.name}} = {{piece.rhs_cstr}};
-            {%- endfor %}
-    } else {
-        
-        {{alias.name}} = {{scaled_rhs.otherwise.rhs_cstr}};
-    }
-        {% else %}
-    {{code_gen.assign_str(elem.lhs, scaled_expr.rhs)}}
-    {% endif %}
+    {{code_gen.assign_str(elem.lhs, scaled_expr.rhs) | indent(4)}}
 {% endfor %}
 }
 
@@ -176,7 +165,8 @@ FUNCTION deriv_{{sv.name}}(
     ) ({{unit_handler.assign_units_to_variable(sv, derivative_of=True)}}) {
     {% for regime in componentclass.regimes  if sv.name in regime._time_derivatives %}
     {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
-        deriv_{{sv.name}} = {{regime.time_derivative(sv.name).rhs_cstr}}
+        {% set scaled_expr, units = unit_handler.scale_time_derivative(regime.time_derivative(sv.name)) %}
+        {{code_gen.assign_str('deriv_' + sv.name, scaled_expr.rhs)}}
     {{endif(loop.last)}}
     {% endfor %}
 }

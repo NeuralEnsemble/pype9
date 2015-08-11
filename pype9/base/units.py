@@ -21,6 +21,7 @@ import atexit
 from pype9.exceptions import Pype9RuntimeError
 from pype9.utils import classproperty
 from fractions import gcd
+numpy.seterr(divide='raise')
 
 
 logger = logging.getLogger('PyPe9')
@@ -446,20 +447,23 @@ class UnitHandler(DynamicsDimensionResolver):
         return scaled_expr, dims
 
     def _flatten_boolean(self, expr, **kwargs):  # @UnusedVariable
-        dims = super(DynamicsDimensionResolver, self)._flatten_boolean(expr, **kwargs)
+        dims = super(DynamicsDimensionResolver, self)._flatten_boolean(
+            expr, **kwargs)
         scaled_expr = type(expr)(*(self._flatten(a)[0] for a in expr.args))
         return scaled_expr, dims
 
     def _flatten_constant(self, expr, **kwargs):  # @UnusedVariable
-        dims = super(DynamicsDimensionResolver, self)._flatten_constant(expr, **kwargs)
+        dims = super(DynamicsDimensionResolver, self)._flatten_constant(
+            expr, **kwargs)
         return expr, dims
 
     def _flatten_reserved(self, expr, **kwargs):  # @UnusedVariable
         return expr, self.reserved_symbol_dims[expr]
 
     def _flatten_function(self, expr, **kwargs):  # @UnusedVariable
-        dims = super(DynamicsDimensionResolver, self)._flatten_function(expr, **kwargs)
-        scaled_expr = type(expr)(*(self._flatten(a) for a in expr.args))
+        dims = super(DynamicsDimensionResolver, self)._flatten_function(
+            expr, **kwargs)
+        scaled_expr = type(expr)(*(self._flatten(a)[0] for a in expr.args))
         return scaled_expr, dims
 
     def _flatten_matching(self, expr, **kwargs):  # @UnusedVariable
