@@ -1,21 +1,38 @@
 {% macro map_required_vars_locally(expressions, component_class, component_name, unit_handler) %}
 // Map required variables to local namespace
     {% set required = component_class.required_for(expressions) %}
+// State Variables
     {% for sv, units in unit_handler.assign_units_to_variables(required.state_variables) %}
 const double_t& {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];  // ({{units}})
     {% endfor %}
+    
+// Parameters
     {% for param, units in unit_handler.assign_units_to_variables(required.parameters) %}
 const double_t& {{param.name}} = P_.{{param.name}};  // ({{units}})
     {% endfor %}
+    
+std::cout << "9ML Parameters: "
+    {%- for name in required.parameter_names -%}
+        << "{{name}}: " << P_.{{name}}
+    {%- endfor -%}
+<< std::endl;
+    
+// Analog receive ports
     {% for port, units in unit_handler.assign_units_to_variables(required.ports) %}
 const double_t& {{port.name}} = B_.{{port.name}}_value;  // ({{units}})
     {% endfor %}
+    
+// Constants
     {% for const, value, units in unit_handler.assign_units_to_constants(required.constants) %}
 const static double_t {{const.name}} = {{value}};  // ({{units}})
     {% endfor %}
+    
+// Random variables
     {% for rv, scale, units in unit_handler.assign_units_to_constants(required.random_variables) %}
 const double_t& {{rv.name}} = {{scale}} * {{get_random_function(rv)}}  // ({{units}})
     {% endfor %}
+    
+// Aliases
     {% for alias, scaled_rhs, units  in unit_handler.scale_aliases(required.expressions) %}
 {# Is a Piecewise statement 
         {% if hasasttr(scaled_rhs, 'pieces') %}
