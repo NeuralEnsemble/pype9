@@ -5,17 +5,25 @@
     {% for sv, units in unit_handler.assign_units_to_variables(required.state_variables) %}
 const double_t& {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];  // ({{units}})
     {% endfor %}
-    
+{#
+std::cout << "9ML States:"
+    {%- for name in required.state_variable_names -%}
+        << " {{name}}=" << S_.y_[{{component_name}}::State_::{{name}}_INDEX]
+    {%- endfor -%}
+<< std::endl;
+#}
+  
 // Parameters
     {% for param, units in unit_handler.assign_units_to_variables(required.parameters) %}
 const double_t& {{param.name}} = P_.{{param.name}};  // ({{units}})
     {% endfor %}
-    
-std::cout << "9ML Parameters: "
+{# 
+std::cout << "9ML Parameters:"
     {%- for name in required.parameter_names -%}
-        << "{{name}}: " << P_.{{name}}
+        << " {{name}}=" << P_.{{name}}
     {%- endfor -%}
 << std::endl;
+#}
     
 // Analog receive ports
     {% for port, units in unit_handler.assign_units_to_variables(required.ports) %}
@@ -48,6 +56,13 @@ const double_t& {{alias.name}};  // ({{units}})
 const double_t& {{alias.name}} = {{scaled_rhs.rhs_cstr}};  // ({{units}})
         {#{% endif %}#}
     {% endfor %}
+{#
+std::cout << "9ML Aliases:"
+    {%- for expr in required.expressions -%}
+        << " {{expr.name}}=" << {{expr.name}}
+    {%- endfor -%}
+<< std::endl;
+#}
 {% endmacro %}
 
 {% macro set_triggers(regime, component_class, component_name, unit_handler) %}

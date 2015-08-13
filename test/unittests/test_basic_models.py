@@ -21,7 +21,6 @@ import numpy
 import quantities as pq
 import neo
 import os
-import nineml
 
 UnitHandler.clear_cache()
 
@@ -52,12 +51,14 @@ class TestBasicNeuronModels(TestCase):
                                          'v': -65.0 * pq.mV},
                       'AdExpIaF': {'w': 0.0 * pq.nA,
                                    'v': -65 * pq.mV},
-                      'HodgkinHuxley': {'v': -65 * pq.mV},
+                      'HodgkinHuxley': {'v': -65 * pq.mV,
+                                        'm': 0, 'h': 1, 'n': 0},
                       'IFRefrac': {'v': -65 * pq.mV}}
 
     nest_states = {'Izhikevich2003': {'u': 'U_m', 'v': 'V_m'},
                    'AdExpIaF': {'w': 'w', 'v': 'V_m'},
-                   'HodgkinHuxley': {'v': 'V_m', 'm': 0, 'h': 1, 'n': 1},
+                   'HodgkinHuxley': {'v': 'V_m', 'm': 'Act_m', 'h': 'Act_h',
+                                     'n': 'Inact_n'},
                    'IFRefrac': {'v': 'V_m'}}
 
     nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2,
@@ -68,8 +69,8 @@ class TestBasicNeuronModels(TestCase):
     paradigms = {'Izhikevich2003': {'duration': 10 * pq.ms,
                                     'stim_amp': 0.02 * pq.nA,
                                     'stim_start': 3 * pq.ms},
-                 'HodgkinHuxley': {'duration': 52 * pq.ms,
-                                   'stim_amp': 0.2 * pq.nA,
+                 'HodgkinHuxley': {'duration': 1000 * pq.ms,
+                                   'stim_amp': -0.7 * pq.nA,
                                    'stim_start': 50 * pq.ms}}
 
 #     order = [0, 1, 2, 3, 4]
@@ -186,12 +187,12 @@ class TestBasicNeuronModels(TestCase):
             {'start': stim_start,
              'stop': duration,
              'amplitude': stim_amp})
-        nest.Connect(self.nest_iclamp, self.nest_cells)
+        nest.Connect(self.nest_iclamp, self.nest_cells, 1, 1)
         self.nest_multimeter = nest.Create('multimeter', 1,
                                            {"interval": self.dt})
         nest.SetStatus(self.nest_multimeter,
                        {'record_from': [self.nest_states[name]['v']]})
-        nest.Connect(self.nest_multimeter, self.nest_cells)
+        nest.Connect(self.nest_multimeter, self.nest_cells, 1, 1)
         nest.SetStatus(
             self.nest_cells,
             dict((self.nest_states[name][n], float(v))
@@ -257,6 +258,6 @@ if __name__ == '__main__':
     t = TestBasicNeuronModels()
     t.test_basic_models(
         plot=True, build_mode='force',
-#         tests=('nrn9ML', 'nrnPyNN'))
+# #         tests=('nrn9ML', 'nrnPyNN'))
 #         tests=('nest9ML', 'nestPyNN'))
         tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN'))
