@@ -42,15 +42,6 @@ class UnitHandler(DynamicsDimensionResolver):
 
     _CACHE_FILENAME = '.unit_handler_cache.pkl'
 
-    def __init__(self, component_class):
-        self._scaled = {}
-        for a in component_class.attributes_with_dimension:
-            if not isinstance(a, SendPortBase):
-                self._scaled[sympify(a)] = sympify(a)
-        for a in component_class.attributes_with_units:
-            self._scaled[sympify(a)] = sympify(a)
-        super(DynamicsDimensionResolver, self).__init__(component_class)
-
     def assign_units_to_alias(self, alias):
         assert alias in self.component_class
         dims = self._flatten(sympify(alias))[1]
@@ -283,8 +274,12 @@ class UnitHandler(DynamicsDimensionResolver):
 
     @classmethod
     def scale_value(cls, qty):
-        exponent, _ = cls.dimension_to_units_compound(qty.units.dimension)
-        return 10 ** (qty.units.power - exponent) * qty.value
+        try:
+            exponent, _ = cls.dimension_to_units_compound(qty.units.dimension)
+            scaled = 10 ** (qty.units.power - exponent) * qty.value
+        except AttributeError:  # Float or int value quantity
+            scaled = qty
+        return scaled
 
     @classmethod
     def assign_units(cls, value, dimension):
@@ -440,14 +435,12 @@ class UnitHandler(DynamicsDimensionResolver):
 
     def _flatten_symbol(self, sym, **kwargs):  # @UnusedVariable
         try:
-            scaled_expr = self._scaled[sym]
             dims = self._dims[sym]
         except KeyError:
             element = self._find_element(sym)
-            scaled_expr, dims = self._flatten(element.rhs)
-            self._scaled[sym] = scaled_expr
+            dims = self._flatten(element.rhs)[1]
             self._dims[sym] = dims
-        return scaled_expr, dims
+        return sym, dims
 
     def _flatten_boolean(self, expr, **kwargs):  # @UnusedVariable
         dims = super(DynamicsDimensionResolver, self)._flatten_boolean(
