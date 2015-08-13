@@ -21,6 +21,7 @@ import numpy
 import quantities as pq
 import neo
 import os
+import nineml
 
 UnitHandler.clear_cache()
 
@@ -32,74 +33,82 @@ UnitHandler.clear_cache()
 from math import pi
 import pyNN.neuron  # @UnusedImport loads pyNN mechanisms
 
-stim_amp = pq.Quantity(0.02, 'nA')
+
+def to_float(qty, units):
+    return float(pq.Quantity(qty, units))
+
+
+xml_dir = path.join(os.environ['HOME'], 'git', 'nineml_catalog', 'neurons')
 
 
 class TestBasicNeuronModels(TestCase):
 
-    xml_dir = path.join(os.environ['HOME'], 'git', 'nineml_catalog',
-                        'neurons')
     models = [('Izhikevich2003', 'Izhikevich', 'izhikevich'),
               ('AdExpIaF', 'AdExpIF', 'aeif_cond_alpha'),
-              ('HHTraub', 'hh_traub', 'hh_cond_exp_traub'),
+              ('HodgkinHuxley', 'hh_traub', 'hh_cond_exp_traub'),
               ('IFRefrac', 'IFRefrac', 'ResetRefrac')]
 
     initial_states = {'Izhikevich2003': {'u': -14 * pq.mV / pq.ms,
                                          'v': -65.0 * pq.mV},
                       'AdExpIaF': {'w': 0.0 * pq.nA,
                                    'v': -65 * pq.mV},
-                      'HHTraub': {'v': -65 * pq.mV},
+                      'HodgkinHuxley': {'v': -65 * pq.mV},
                       'IFRefrac': {'v': -65 * pq.mV}}
 
     nest_states = {'Izhikevich2003': {'u': 'U_m', 'v': 'V_m'},
                    'AdExpIaF': {'w': 'w', 'v': 'V_m'},
-                   'HHTraub': {'v': 'V_m'},
+                   'HodgkinHuxley': {'v': 'V_m', 'm': 0, 'h': 1, 'n': 1},
                    'IFRefrac': {'v': 'V_m'}}
 
     nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2,
                                       'd': 2.0},
                    'AdExpIaF': {},
-                   'HHTraub': {},
+                   'HodgkinHuxley': {},
                    'IFRefrac': {}}
+    paradigms = {'Izhikevich2003': {'duration': 10 * pq.ms,
+                                    'stim_amp': 0.02 * pq.nA,
+                                    'stim_start': 3 * pq.ms},
+                 'HodgkinHuxley': {'duration': 52 * pq.ms,
+                                   'stim_amp': 0.2 * pq.nA,
+                                   'stim_start': 50 * pq.ms}}
 
 #     order = [0, 1, 2, 3, 4]
     order = [2, 3, 4]
-    duration = 10 * pq.ms
     dt = 0.02
     min_delay = 0.04
     max_delay = 10
-    stim_start = 3
-    stim_duration = 90
-
-    def setUp(self):
-        self.injected_signal = neo.AnalogSignal(
-            ([0.0] * self.stim_start +
-             [float(pq.Quantity(stim_amp, 'nA'))] * self.stim_duration +
-             [0.0] * (100 - self.stim_start - self.stim_duration)),
-            sampling_period=1 * pq.ms, units='nA')
 
     def test_basic_models(
-            self, plot=False,
+            self, plot=False, build_mode='force',
             tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN')):
         self.nml_cells = {}
         # for name9, namePynn in zip(self.models9ML, self.modelsPyNN):
         for i in self.order:
             name, nameNEURON, nameNEST = self.models[i]
+            paradigm = self.paradigms[name]
+            stim_amp = to_float(paradigm['stim_amp'], 'nA')
+            duration = to_float(paradigm['duration'], 'ms')
+            stim_start = to_float(paradigm['stim_start'], 'ms')
+            injected_signal = neo.AnalogSignal(
+                ([0.0] * int(stim_start) + [stim_amp] * int(duration)),
+                sampling_period=1 * pq.ms, units='nA')
             if 'nrnPyNN' in tests:
-                self._create_NEURON(name, nameNEURON)
+                self._create_NEURON(name, nameNEURON, stim_amp, stim_start,
+                                    duration)
             if 'nrn9ML' in tests:
-                self._create_9ML(name, 'NEURON')
+                self._create_9ML(name, 'NEURON', build_mode, injected_signal)
             if 'nestPyNN' in tests:
-                self._create_NEST(name, nameNEST)
+                self._create_NEST(name, nameNEST, stim_amp, stim_start,
+                                  duration)
             if 'nest9ML' in tests:
-                self._create_9ML(name, 'NEST')
+                self._create_9ML(name, 'NEST', build_mode, injected_signal)
             # -----------------------------------------------------------------
             # Run and plot the simulation
             # -----------------------------------------------------------------
             if 'nrn9ML' in tests or 'nrnPyNN' in tests:
-                simulatorNEURON.run(10.0)
+                simulatorNEURON.run(duration)
             if 'nest9ML' in tests or 'nestPyNN' in tests:
-                simulatorNEST.run(10.0)
+                simulatorNEST.run(duration)
             if plot:
                 leg = []
                 if 'nrnPyNN' in tests:
@@ -124,7 +133,7 @@ class TestBasicNeuronModels(TestCase):
                     self.assertAlmostEqual(self._diff_NEST(name), 0, places=3)
             break
 
-    def _create_9ML(self, name, sim_name):
+    def _create_9ML(self, name, sim_name, build_mode, injected_signal):
         # -----------------------------------------------------------------
         # Set up 9MLML cell
         # -----------------------------------------------------------------
@@ -135,13 +144,13 @@ class TestBasicNeuronModels(TestCase):
         else:
             assert False
         CellClass = CellMetaClass(
-            path.join(self.xml_dir, name + '.xml'), build_mode='force')
+            path.join(xml_dir, name + '.xml'), build_mode=build_mode)
         self.nml_cells[sim_name] = CellClass()
-        self.nml_cells[sim_name].play('iExt', self.injected_signal)
+        self.nml_cells[sim_name].play('iExt', injected_signal)
         self.nml_cells[sim_name].record('v')
         self.nml_cells[sim_name].update_state(self.initial_states[name])
 
-    def _create_NEURON(self, name, model_name):  # @UnusedVariable
+    def _create_NEURON(self, name, model_name, stim_start, stim_amp, duration):  # @UnusedVariable @IgnorePep8
         # -----------------------------------------------------------------
         # Set up PyNN section
         # -----------------------------------------------------------------
@@ -159,14 +168,14 @@ class TestBasicNeuronModels(TestCase):
         self._nrn_pnn.cm = 1.0
         # Specify current injection
         self._nrn_stim = h.IClamp(1.0, sec=self._nrn_pnn)
-        self._nrn_stim.delay = self.stim_start   # ms
-        self._nrn_stim.dur = self.stim_duration   # ms
+        self._nrn_stim.delay = stim_start   # ms
+        self._nrn_stim.dur = duration   # ms
         self._nrn_stim.amp = stim_amp   # nA
         # Record Time from NEURON (neuron.h._ref_t)
         self._nrn_rec = NEURONRecorder(self._nrn_pnn, self._nrn_pnn_cell)
         self._nrn_rec.record('v')
 
-    def _create_NEST(self, name, model_name):
+    def _create_NEST(self, name, model_name, stim_start, stim_amp, duration):
         # ---------------------------------------------------------------------
         # Set up PyNN section
         # ---------------------------------------------------------------------
@@ -174,9 +183,9 @@ class TestBasicNeuronModels(TestCase):
         self.nest_cells = nest.Create(model_name, 1, self.nest_params[name])
         self.nest_iclamp = nest.Create(
             'dc_generator', 1,
-            {'start': float(self.stim_start - 1),
-             'stop': float(self.stim_start + self.stim_duration),
-             'amplitude': float(pq.Quantity(stim_amp, 'pA'))})
+            {'start': stim_start,
+             'stop': duration,
+             'amplitude': stim_amp})
         nest.Connect(self.nest_iclamp, self.nest_cells)
         self.nest_multimeter = nest.Create('multimeter', 1,
                                            {"interval": self.dt})
@@ -247,7 +256,7 @@ class NEURONRecorder(object):
 if __name__ == '__main__':
     t = TestBasicNeuronModels()
     t.test_basic_models(
-        plot=True,
+        plot=True, build_mode='compile_only',
 #         tests=('nrn9ML', 'nrnPyNN'))
 #         tests=('nest9ML', 'nestPyNN'))
         tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN'))
