@@ -256,7 +256,7 @@ class NEURONRecorder(object):
 if __name__ == '__main__':
     t = TestBasicNeuronModels()
     t.test_basic_models(
-        plot=True, build_mode='compile_only',
+        plot=True, build_mode='force',
 #         tests=('nrn9ML', 'nrnPyNN'))
 #         tests=('nest9ML', 'nestPyNN'))
         tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN'))

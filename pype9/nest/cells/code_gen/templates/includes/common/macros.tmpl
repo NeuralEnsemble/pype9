@@ -9,8 +9,13 @@ const double_t& {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDE
 // Parameters
     {% for param, units in unit_handler.assign_units_to_variables(required.parameters) %}
 const double_t& {{param.name}} = P_.{{param.name}};  // ({{units}})
-{# std::cout << "{{param.name}}: " << P_.{{param.name}} << std::endl; #}
     {% endfor %}
+    
+std::cout << "9ML Parameters: "
+    {%- for name in required.parameter_names -%}
+        << "{{name}}: " << P_.{{name}}
+    {%- endfor -%}
+<< std::endl;
     
 // Analog receive ports
     {% for port, units in unit_handler.assign_units_to_variables(required.ports) %}
