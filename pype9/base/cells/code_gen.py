@@ -48,8 +48,8 @@ class BaseCodeGenerator(object):
     # Python functions and annotations to be made available in the templates
     _globals = dict(
         [('len', len), ('izip', izip), ('enumerate', enumerate),
-         ('xrange', xrange), ('next', next), ('chain', chain),
-         ('hash', hash), ('deepcopy', deepcopy), ('units', units),
+         ('xrange', xrange), ('next', next), ('chain', chain), ('sorted',
+         sorted), ('hash', hash), ('deepcopy', deepcopy), ('units', units),
          ('hasattr', hasattr), ('set', set), ('list', list), ('None', None)] +
         [(n, v) for n, v in pype9.annotations.__dict__.iteritems()
          if n != '__builtins__'])
