@@ -60,7 +60,6 @@ class TestBasicNeuronModels(TestCase):
                    'HodgkinHuxley': {'v': 'V_m', 'm': 'Act_m', 'h': 'Act_h',
                                      'n': 'Inact_n'},
                    'IFRefrac': {'v': 'V_m'}}
-
     nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2,
                                       'd': 2.0},
                    'AdExpIaF': {},
@@ -70,8 +69,8 @@ class TestBasicNeuronModels(TestCase):
                                     'stim_amp': 0.02 * pq.nA,
                                     'stim_start': 3 * pq.ms,
                                     'dt': 0.02 * pq.ms},
-                 'HodgkinHuxley': {'duration': 1000 * pq.ms,
-                                   'stim_amp': 0.0 * pq.nA,
+                 'HodgkinHuxley': {'duration': 100 * pq.ms,
+                                   'stim_amp': 1 * pq.nA,
                                    'stim_start': 50 * pq.ms,
                                    'dt': 0.002 * pq.ms}}
 
@@ -100,12 +99,12 @@ class TestBasicNeuronModels(TestCase):
                 ([0.0] * int(stim_start) + [stim_amp] * int(duration)),
                 sampling_period=1 * pq.ms, units='nA')
             if 'nrnPyNN' in tests:
-                self._create_NEURON(name, nameNEURON, stim_amp, stim_start,
+                self._create_NEURON(name, nameNEURON, stim_start, stim_amp,
                                     duration)
             if 'nrn9ML' in tests:
                 self._create_9ML(name, 'NEURON', build_mode, injected_signal)
             if 'nestPyNN' in tests:
-                self._create_NEST(name, nameNEST, stim_amp, stim_start,
+                self._create_NEST(name, nameNEST, stim_start, stim_amp,
                                   duration, dt)
             if 'nest9ML' in tests:
                 self._create_9ML(name, 'NEST', build_mode, injected_signal)
@@ -167,12 +166,13 @@ class TestBasicNeuronModels(TestCase):
                 'h.{}(0.5, sec=self._nrn_pnn)'.format(model_name))
             self._nrn_pnn.L = 10
             self._nrn_pnn.diam = 10 / pi
+            self._nrn_pnn.cm = 1.0
         except TypeError:
             self._nrn_pnn.insert(model_name)
             self._nrn_pnn_cell = self._nrn_pnn(0.5)
-            self._nrn_pnn.L = 1000
+            self._nrn_pnn.L = 100
             self._nrn_pnn.diam = 1000 / pi
-        self._nrn_pnn.cm = 1.0
+            self._nrn_pnn.cm = 0.2
         # Specify current injection
         self._nrn_stim = h.IClamp(1.0, sec=self._nrn_pnn)
         self._nrn_stim.delay = stim_start   # ms
@@ -263,8 +263,8 @@ class NEURONRecorder(object):
 if __name__ == '__main__':
     t = TestBasicNeuronModels()
     t.test_basic_models(
-        plot=True, build_mode='compile_only',
+        plot=True, build_mode='force',
 # #         tests=('nrn9ML', 'nrnPyNN'))
-        tests=('nest9ML', 'nestPyNN'))
+#         tests=('nest9ML', 'nestPyNN'))
 #         tests=('nestPyNN',))
-#         tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN'))
+        tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN'))
