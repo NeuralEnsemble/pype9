@@ -60,7 +60,6 @@ class TestBasicNeuronModels(TestCase):
                    'HodgkinHuxley': {'v': 'V_m', 'm': 'Act_m', 'h': 'Act_h',
                                      'n': 'Inact_n'},
                    'IFRefrac': {'v': 'V_m'}}
-
     nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2,
                                       'd': 2.0},
                    'AdExpIaF': {},
@@ -68,14 +67,15 @@ class TestBasicNeuronModels(TestCase):
                    'IFRefrac': {}}
     paradigms = {'Izhikevich2003': {'duration': 10 * pq.ms,
                                     'stim_amp': 0.02 * pq.nA,
-                                    'stim_start': 3 * pq.ms},
-                 'HodgkinHuxley': {'duration': 1000 * pq.ms,
-                                   'stim_amp': -0.7 * pq.nA,
-                                   'stim_start': 50 * pq.ms}}
+                                    'stim_start': 3 * pq.ms,
+                                    'dt': 0.02 * pq.ms},
+                 'HodgkinHuxley': {'duration': 100 * pq.ms,
+                                   'stim_amp': 1 * pq.nA,
+                                   'stim_start': 50 * pq.ms,
+                                   'dt': 0.002 * pq.ms}}
 
 #     order = [0, 1, 2, 3, 4]
     order = [2, 3, 4]
-    dt = 0.02
     min_delay = 0.04
     max_delay = 10
 
@@ -87,20 +87,25 @@ class TestBasicNeuronModels(TestCase):
         for i in self.order:
             name, nameNEURON, nameNEST = self.models[i]
             paradigm = self.paradigms[name]
-            stim_amp = to_float(paradigm['stim_amp'], 'nA')
+            stim_amp = paradigm['stim_amp']
             duration = to_float(paradigm['duration'], 'ms')
             stim_start = to_float(paradigm['stim_start'], 'ms')
+            dt = paradigm['dt']
+            if 'nrn9ML' in tests or 'nrnPyNN' in tests:
+                h.dt = to_float(dt, 'ms')
+            if 'nest9ML' in tests or 'nestPyNN' in tests:
+                nest.SetKernelStatus({'resolution': to_float(dt, 'ms')})
             injected_signal = neo.AnalogSignal(
                 ([0.0] * int(stim_start) + [stim_amp] * int(duration)),
                 sampling_period=1 * pq.ms, units='nA')
             if 'nrnPyNN' in tests:
-                self._create_NEURON(name, nameNEURON, stim_amp, stim_start,
+                self._create_NEURON(name, nameNEURON, stim_start, stim_amp,
                                     duration)
             if 'nrn9ML' in tests:
                 self._create_9ML(name, 'NEURON', build_mode, injected_signal)
             if 'nestPyNN' in tests:
-                self._create_NEST(name, nameNEST, stim_amp, stim_start,
-                                  duration)
+                self._create_NEST(name, nameNEST, stim_start, stim_amp,
+                                  duration, dt)
             if 'nest9ML' in tests:
                 self._create_9ML(name, 'NEST', build_mode, injected_signal)
             # -----------------------------------------------------------------
@@ -161,38 +166,39 @@ class TestBasicNeuronModels(TestCase):
                 'h.{}(0.5, sec=self._nrn_pnn)'.format(model_name))
             self._nrn_pnn.L = 10
             self._nrn_pnn.diam = 10 / pi
+            self._nrn_pnn.cm = 1.0
         except TypeError:
             self._nrn_pnn.insert(model_name)
             self._nrn_pnn_cell = self._nrn_pnn(0.5)
-            self._nrn_pnn.L = 1000
+            self._nrn_pnn.L = 100
             self._nrn_pnn.diam = 1000 / pi
-        self._nrn_pnn.cm = 1.0
+            self._nrn_pnn.cm = 0.2
         # Specify current injection
         self._nrn_stim = h.IClamp(1.0, sec=self._nrn_pnn)
         self._nrn_stim.delay = stim_start   # ms
         self._nrn_stim.dur = duration   # ms
-        self._nrn_stim.amp = stim_amp   # nA
+        self._nrn_stim.amp = to_float(stim_amp, 'nA')   # nA
         # Record Time from NEURON (neuron.h._ref_t)
         self._nrn_rec = NEURONRecorder(self._nrn_pnn, self._nrn_pnn_cell)
         self._nrn_rec.record('v')
 
-    def _create_NEST(self, name, model_name, stim_start, stim_amp, duration):
+    def _create_NEST(self, name, model_name, stim_start, stim_amp, duration,
+                     dt):
         # ---------------------------------------------------------------------
         # Set up PyNN section
         # ---------------------------------------------------------------------
-        nest.SetKernelStatus({'resolution': self.dt})
         self.nest_cells = nest.Create(model_name, 1, self.nest_params[name])
         self.nest_iclamp = nest.Create(
             'dc_generator', 1,
             {'start': stim_start,
              'stop': duration,
-             'amplitude': stim_amp})
-        nest.Connect(self.nest_iclamp, self.nest_cells, 1, 1)
+             'amplitude': to_float(stim_amp, 'pA')})
+        nest.Connect(self.nest_iclamp, self.nest_cells)
         self.nest_multimeter = nest.Create('multimeter', 1,
-                                           {"interval": self.dt})
+                                           {"interval": to_float(dt, 'ms')})
         nest.SetStatus(self.nest_multimeter,
                        {'record_from': [self.nest_states[name]['v']]})
-        nest.Connect(self.nest_multimeter, self.nest_cells, 1, 1)
+        nest.Connect(self.nest_multimeter, self.nest_cells)
         nest.SetStatus(
             self.nest_cells,
             dict((self.nest_states[name][n], float(v))
@@ -260,4 +266,5 @@ if __name__ == '__main__':
         plot=True, build_mode='force',
 # #         tests=('nrn9ML', 'nrnPyNN'))
 #         tests=('nest9ML', 'nestPyNN'))
+#         tests=('nestPyNN',))
         tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN'))

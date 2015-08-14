@@ -1,29 +1,30 @@
 {% macro map_required_vars_locally(expressions, component_class, component_name, unit_handler) %}
 // Map required variables to local namespace
     {% set required = component_class.required_for(expressions) %}
+    {% set debug = False %}
 // State Variables
     {% for sv, units in unit_handler.assign_units_to_variables(required.state_variables) %}
 const double_t& {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];  // ({{units}})
     {% endfor %}
-{#
+    {% if debug %}
 std::cout << "9ML States:"
-    {%- for name in required.state_variable_names -%}
+        {%- for name in sorted(required.state_variable_names) -%}
         << " {{name}}=" << S_.y_[{{component_name}}::State_::{{name}}_INDEX]
-    {%- endfor -%}
+        {%- endfor -%}
 << std::endl;
-#}
+    {% endif %}
   
 // Parameters
     {% for param, units in unit_handler.assign_units_to_variables(required.parameters) %}
 const double_t& {{param.name}} = P_.{{param.name}};  // ({{units}})
     {% endfor %}
-{# 
+    {% if debug %}
 std::cout << "9ML Parameters:"
-    {%- for name in required.parameter_names -%}
+        {%- for name in sorted(required.parameter_names) -%}
         << " {{name}}=" << P_.{{name}}
-    {%- endfor -%}
+        {%- endfor -%}
 << std::endl;
-#}
+    {% endif %}
     
 // Analog receive ports
     {% for port, units in unit_handler.assign_units_to_variables(required.ports) %}
@@ -44,7 +45,7 @@ const double_t& {{rv.name}} = {{scale}} * {{get_random_function(rv)}}  // ({{uni
     {% for alias, scaled_rhs, units  in unit_handler.scale_aliases(required.expressions) %}
 {# Is a Piecewise statement 
         {% if hasasttr(scaled_rhs, 'pieces') %}
-const double_t& {{alias.name}};  // ({{units}})
+const double_t {{alias.name}};  // ({{units}})
             {% for piece in scaled_rhs.pieces %}
 {{elseif(loop.first)}} if ({{piece.condition}}) {
     {{alias.name}} = {{piece.rhs_cstr}};
@@ -53,16 +54,16 @@ const double_t& {{alias.name}};  // ({{units}})
     {{alias.name}} = {{scaled_rhs.otherwise.rhs_cstr}};
 }
         {% else %}#}
-const double_t& {{alias.name}} = {{scaled_rhs.rhs_cstr}};  // ({{units}})
+const double_t {{alias.name}} = {{scaled_rhs.rhs_cstr}};  // ({{units}})
         {#{% endif %}#}
     {% endfor %}
-{#
+    {% if debug %}
 std::cout << "9ML Aliases:"
-    {%- for expr in required.expressions -%}
-        << " {{expr.name}}=" << {{expr.name}}
-    {%- endfor -%}
+        {%- for name in sorted(required.expression_names) -%}
+        << " {{name}}=" << {{name}}
+        {%- endfor -%}
 << std::endl;
-#}
+    {% endif %}
 {% endmacro %}
 
 {% macro set_triggers(regime, component_class, component_name, unit_handler) %}
