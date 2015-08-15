@@ -59,7 +59,8 @@ class Cell(base.Cell):
         self._recorders[variable] = recorder = nest.Create(
             'multimeter', 1, {"interval": interval})
         nest.SetStatus(recorder, {'record_from': [variable]})
-        nest.Connect(recorder, self._cell)
+        nest.Connect(recorder, self._cell,
+                     syn_spec={'delay': simulation_controller.min_delay})
 
     def recording(self, port_name):
         """
@@ -93,18 +94,20 @@ class Cell(base.Cell):
                       nineml.abstraction.EventPort):
             raise NotImplementedError
         else:
-            # For some reason signals that are played into NEST do not start
-            # at t=0, but t=1 ms. So check that the first 1 ms are blank and
-            # then trim them from signal
+            # Signals are played into NEST cells include a delay (set to be the
+            # minimum), which is is subtracted from the start of the signal so
+            # that the effect of the signal aligns with other simulators
             self._inputs[port_name] = nest.Create(
                 'step_current_generator', 1,
                 {'amplitude_values': pq.Quantity(signal, 'pA'),
-                 'amplitude_times': pq.Quantity(signal.times, 'ms'),
+                 'amplitude_times': (pq.Quantity(signal.times, 'ms') -
+                                     simulation_controller.min_delay * pq.ms),
                  'start': float(pq.Quantity(signal.t_start, 'ms')),
                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
             nest.Connect(self._inputs[port_name], self._cell,
                          syn_spec={"receptor_type":
-                                   self._receive_ports[port_name]})
+                                   self._receive_ports[port_name],
+                                   'delay': simulation_controller.min_delay})
 
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         raise NotImplementedError("voltage clamps are not supported for "

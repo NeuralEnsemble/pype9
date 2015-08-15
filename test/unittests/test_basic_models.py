@@ -65,17 +65,17 @@ class TestBasicNeuronModels(TestCase):
                    'AdExpIaF': {},
                    'HodgkinHuxley': {},
                    'IFRefrac': {}}
-    paradigms = {'Izhikevich2003': {'duration': 10 * pq.ms,
+    paradigms = {'Izhikevich2003': {'duration': 100 * pq.ms,
                                     'stim_amp': 0.02 * pq.nA,
-                                    'stim_start': 3 * pq.ms,
+                                    'stim_start': 20 * pq.ms,
                                     'dt': 0.02 * pq.ms},
                  'HodgkinHuxley': {'duration': 100 * pq.ms,
-                                   'stim_amp': 1 * pq.nA,
+                                   'stim_amp': 0.5 * pq.nA,
                                    'stim_start': 50 * pq.ms,
                                    'dt': 0.002 * pq.ms}}
 
 #     order = [0, 1, 2, 3, 4]
-    order = [2, 3, 4]
+    order = [0, 2, 3, 4]
     min_delay = 0.04
     max_delay = 10
 
@@ -190,10 +190,11 @@ class TestBasicNeuronModels(TestCase):
         self.nest_cells = nest.Create(model_name, 1, self.nest_params[name])
         self.nest_iclamp = nest.Create(
             'dc_generator', 1,
-            {'start': stim_start,
+            {'start': stim_start - self.min_delay,
              'stop': duration,
              'amplitude': to_float(stim_amp, 'pA')})
-        nest.Connect(self.nest_iclamp, self.nest_cells)
+        nest.Connect(self.nest_iclamp, self.nest_cells,
+                     syn_spec={'delay': self.min_delay})
         self.nest_multimeter = nest.Create('multimeter', 1,
                                            {"interval": to_float(dt, 'ms')})
         nest.SetStatus(self.nest_multimeter,
