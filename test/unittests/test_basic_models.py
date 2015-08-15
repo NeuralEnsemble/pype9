@@ -45,7 +45,7 @@ class TestBasicNeuronModels(TestCase):
     models = [('Izhikevich2003', 'Izhikevich', 'izhikevich'),
               ('AdExpIaF', 'AdExpIF', 'aeif_cond_alpha'),
               ('HodgkinHuxley', 'hh_traub', 'hh_cond_exp_traub'),
-              ('IFRefrac', 'IFRefrac', 'ResetRefrac')]
+              ('LeakyIntegrateAndFire', 'ResetRefrac', 'iaf_psc_alpha')]
 
     initial_states = {'Izhikevich2003': {'u': -14 * pq.mV / pq.ms,
                                          'v': -65.0 * pq.mV},
@@ -53,18 +53,28 @@ class TestBasicNeuronModels(TestCase):
                                    'v': -65 * pq.mV},
                       'HodgkinHuxley': {'v': -65 * pq.mV,
                                         'm': 0, 'h': 1, 'n': 0},
-                      'IFRefrac': {'v': -65 * pq.mV}}
+                      'LeakyIntegrateAndFire': {'v': -60 * pq.mV,
+                                                'end_refractory': 0.0}}
 
     nest_states = {'Izhikevich2003': {'u': 'U_m', 'v': 'V_m'},
                    'AdExpIaF': {'w': 'w', 'v': 'V_m'},
                    'HodgkinHuxley': {'v': 'V_m', 'm': 'Act_m', 'h': 'Act_h',
                                      'n': 'Inact_n'},
-                   'IFRefrac': {'v': 'V_m'}}
+                   'LeakyIntegrateAndFire': {'v': 'V_m',
+                                             'end_refractory': None}}
     nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2,
                                       'd': 2.0},
                    'AdExpIaF': {},
-                   'HodgkinHuxley': {},
-                   'IFRefrac': {}}
+                   'HodgkinHuxley': {"C_m": 250.0,
+                                     "tau_m": 20.0,
+                                     "tau_syn_ex": 0.5,
+                                     "tau_syn_in": 0.5,
+                                     "t_ref": 2.0,
+                                     "E_L": 0.0,
+                                     "V_reset": 0.0,
+                                     "V_m": 0.0,
+                                     "V_th": 20.0},
+                   'LeakyIntegrateAndFire': {}}
     paradigms = {'Izhikevich2003': {'duration': 100 * pq.ms,
                                     'stim_amp': 0.02 * pq.nA,
                                     'stim_start': 20 * pq.ms,
@@ -72,10 +82,14 @@ class TestBasicNeuronModels(TestCase):
                  'HodgkinHuxley': {'duration': 100 * pq.ms,
                                    'stim_amp': 0.5 * pq.nA,
                                    'stim_start': 50 * pq.ms,
-                                   'dt': 0.002 * pq.ms}}
+                                   'dt': 0.002 * pq.ms},
+                 'LeakyIntegrateAndFire': {'duration': 50 * pq.ms,
+                                           'stim_amp': 1 * pq.nA,
+                                           'stim_start': 25 * pq.ms,
+                                           'dt': 0.002 * pq.ms}}
 
 #     order = [0, 1, 2, 3, 4]
-    order = [0, 2, 3, 4]
+    order = [3, 2, 3, 4]
     min_delay = 0.04
     max_delay = 10
 
@@ -203,7 +217,8 @@ class TestBasicNeuronModels(TestCase):
         nest.SetStatus(
             self.nest_cells,
             dict((self.nest_states[name][n], float(v))
-                 for n, v in self.initial_states[name].iteritems()))
+                 for n, v in self.initial_states[name].iteritems()
+                 if self.nest_states[name][n] is not None))
 
     def _plot_NEURON(self, name):  # @UnusedVariable
         pnn_t, pnn_v = self._get_NEURON_signal()
@@ -247,7 +262,7 @@ class NEURONRecorder(object):
         self.rec_t.record(neuron.h._ref_t)
         self.recs = {}
 
-    def record(self, varname):
+    def record(self, varname): 
         rec = h.Vector()
         self.recs[varname] = rec
         if varname == 'v':
@@ -265,7 +280,8 @@ if __name__ == '__main__':
     t = TestBasicNeuronModels()
     t.test_basic_models(
         plot=True, build_mode='force',
-# #         tests=('nrn9ML', 'nrnPyNN'))
+#         tests=('nrn9ML', 'nrnPyNN'))
 #         tests=('nest9ML', 'nestPyNN'))
+#         tests=('nest9ML',))
 #         tests=('nestPyNN',))
         tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN'))

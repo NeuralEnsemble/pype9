@@ -12,6 +12,7 @@ MEMBRANE_CAPACITANCE = 'MembraneCapacitance'
 # External current ports
 EXTERNAL_CURRENTS = 'ExternalCurrents'
 NO_TIME_DERIVS = 'StateVariablesThatHaveNoTimeDerivatives'
+HAS_TIME_DERIVS = 'HasTimeDerivatives'
 
 # Transform information
 TRANSFORM_SRC = 'TransformSource'

@@ -6,7 +6,9 @@
     {% for sv, units in unit_handler.assign_units_to_variables(required.state_variables) %}
 const double_t& {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];  // ({{units}})
     {% endfor %}
+    
     {% if debug %}
+std::cout << "-------- time " << t << " ---------" << std::endl;    
 std::cout << "9ML States:"
         {%- for name in sorted(required.state_variable_names) -%}
         << " {{name}}=" << S_.y_[{{component_name}}::State_::{{name}}_INDEX]
@@ -30,22 +32,43 @@ std::cout << "9ML Parameters:"
     {% for port, units in unit_handler.assign_units_to_variables(required.ports) %}
 const double_t& {{port.name}} = B_.{{port.name}}_value;  // ({{units}})
     {% endfor %}
+    {% if debug %}
+std::cout << "9ML Analog receive ports:"
+        {%- for name in sorted(required.port_names) -%}
+        << " {{name}}=" << {{name}}
+        {%- endfor -%}
+<< std::endl;
+    {% endif %}    
     
 // Constants
     {% for const, value, units in unit_handler.assign_units_to_constants(required.constants) %}
 const static double_t {{const.name}} = {{value}};  // ({{units}})
     {% endfor %}
+    {% if debug %}
+std::cout << "9ML Constants:"
+        {%- for name in sorted(required.port_names) -%}
+        << " {{name}}=" << {{name}}
+        {%- endfor -%}
+<< std::endl;
+    {% endif %}    
     
 // Random variables
     {% for rv, scale, units in unit_handler.assign_units_to_constants(required.random_variables) %}
-const double_t& {{rv.name}} = {{scale}} * {{get_random_function(rv)}}  // ({{units}})
+const double_t {{rv.name}} = {{scale}} * {{get_random_function(rv)}}  // ({{units}})
     {% endfor %}
+    {% if debug %}
+std::cout << "9ML Random variables:"
+        {%- for name in sorted(required.random_variable_names) -%}
+        << " {{name}}=" << {{name}}
+        {%- endfor -%}
+<< std::endl;
+    {% endif %}        
     
 // Aliases
     {% for alias, scaled_rhs, units  in unit_handler.scale_aliases(required.expressions) %}
 {# Is a Piecewise statement 
         {% if hasasttr(scaled_rhs, 'pieces') %}
-const double_t {{alias.name}};  // ({{units}})
+double_t {{alias.name}};  // ({{units}})
             {% for piece in scaled_rhs.pieces %}
 {{elseif(loop.first)}} if ({{piece.condition}}) {
     {{alias.name}} = {{piece.rhs_cstr}};
@@ -63,11 +86,11 @@ std::cout << "9ML Aliases:"
         << " {{name}}=" << {{name}}
         {%- endfor -%}
 << std::endl;
+std::cout << "-----------------" << std::endl;
     {% endif %}
 {% endmacro %}
 
 {% macro set_triggers(regime, component_class, component_name, unit_handler) %}
-{{map_required_vars_locally(regime.all_triggers(), component_class, component_name, unit_handler)}}
     {% for oc in regime.on_conditions %}
 B_.{{regime.name}}_trigger_{{regime.index_of(oc)}}_active = !({{oc.trigger.rhs_cstr}});
     {% endfor %}

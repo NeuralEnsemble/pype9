@@ -251,7 +251,7 @@ class BaseCodeGenerator(object):
         # Initialise the template loader to include the flag directories
         template_paths = [
             self.BASE_TMPL_PATH,
-            os.path.join(self.BASE_TMPL_PATH, 'includes', 'common')]
+            os.path.join(self.BASE_TMPL_PATH, 'includes')]
         # Add include paths for various switches (e.g. solver type)
         for name, value in switches.iteritems():
             if value is not None:

@@ -63,7 +63,6 @@ extern "C" {% include "dynamics_signature.tmpl" %} {
 {% for regime in component_class.regimes %}
     {{elseif(loop.first)}} (B_.current_regime == {{component_name}}::{{regime.name}}_REGIME) {
 	    {{macros.map_required_vars_locally(regime.time_derivatives, component_class, component_name, unit_handler) | indent(8)}}
-
 	    // Evaluate differential equations
 	{% for td, scaled_expr, units in unit_handler.scale_time_derivatives(regime.time_derivatives) %}
 	    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
@@ -71,6 +70,7 @@ extern "C" {% include "dynamics_signature.tmpl" %} {
     {{endif(loop.last)}}
 {% endfor %}
 
+    //std::cout << "Success at t=" << t << ": " << GSL_SUCCESS << std::endl;
     {% include "dynamics_return.tmpl" %}
 
 }
@@ -297,6 +297,9 @@ void {{component_name}}::init_buffers_() {
       B_(*this) {
 
     recordablesMap_.create();
+    
+    double t = 0.0;
+    {{macros.map_required_vars_locally(component_class.regime(default_regime).all_triggers(), component_class, component_name, unit_handler) | indent(4)}}
 
     {{macros.set_triggers(component_class.regime(default_regime), component_class, component_name, unit_handler) | indent}}
 }
@@ -312,12 +315,18 @@ void {{component_name}}::init_node_(const Node& proto) {
     P_ = pr.P_;
     S_ = State_(P_);
 
+    double t = 0.0;
+    {{macros.map_required_vars_locally(component_class.regime(default_regime).all_triggers(), component_class, component_name, unit_handler) | indent(4)}}
+
     {{macros.set_triggers(component_class.regime(default_regime), component_class, component_name, unit_handler) | indent}}    
 }
 
 void {{component_name}}::init_state_(const Node& proto) {
     const {{component_name}}& pr = downcast<{{component_name}}>(proto);
     S_ = State_(pr.P_);
+
+    double t = 0.0;
+    {{macros.map_required_vars_locally(component_class.regime(default_regime).all_triggers(), component_class, component_name, unit_handler) | indent(4)}}
 
     {{macros.set_triggers(component_class.regime(default_regime), component_class, component_name, unit_handler) | indent}}    
 }
@@ -353,26 +362,30 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 
     double f_[{{component_name}}::State_::STATE_VEC_SIZE_];  // Vector to hold the time derivatives
   
-    for (nest::long_t lag = from; lag < to; ++lag) {      
-
-        /***** ODE update *****/
-
-{% include "update_step.tmpl" %}
-
+    for (nest::long_t lag = from; lag < to; ++lag) {
+    
         /***** Transition handling *****/
 
         bool reset_solver = false;
-        int transition = -1;
-        
-        // Get the simulation time in case it is needed in the state
-        // assignments
-        double t = origin.get_ms() + lag * dt;
+
+        // FIXME: Should include precisely timed change of regimes within lags
 
 {% for regime in component_class.regimes %}
         {{elseif(loop.first)}} (B_.current_regime == {{regime.name}}_REGIME) {
-        
-            {{macros.map_required_vars_locally(chain(regime.all_triggers(), regime.all_state_assignments()), component_class, component_name, unit_handler) | indent(12)}}
 
+    {% if regime.num_time_derivatives %}
+            /***** ODE update *****/
+            {% include "update_step.tmpl" %}
+    {% endif %}
+        
+            // Get the simulation time in case it is needed in the triggers or assignments
+            double t = origin.get_ms() + lag * dt;
+
+            //std::cout << "Regime: {{regime.name}} at time " << t << std::endl;            
+        
+            {{macros.map_required_vars_locally(chain(regime.all_triggers(), regime.all_target_triggers(), regime.all_state_assignments()), component_class, component_name, unit_handler) | indent(12)}}
+
+            int transition = -1;
     {% for trans in regime.transitions %}
         {% if hasattr(trans, 'trigger') %}
             // Check trigger condition
@@ -402,11 +415,12 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         {% if trans.target_regime != regime %}
                     // FIXME: Need to work out the best way to emit a warning in NEST.        
                     // Set transition to new regime
-                    if (transition != -1)
+                    if (transition < 0)
+                        B_.current_regime = transition = {{trans.target_regime.name}}_REGIME;
+                    else 
                         std::cout << "Warning!: multiple transitions in the same time step. Transition to 'Regime " << transition << "' was ignored in favour of transition " << {{trans.target_regime.name}}_REGIME << "." << std::endl;
-                    transition = {{trans.target_regime.name}}_REGIME;
-                    
-                    {{macros.set_triggers(trans.target_regime, component_class, component_name, unit_handler) | indent}}
+
+                    {{macros.set_triggers(trans.target_regime, component_class, component_name, unit_handler) | indent(20)}}
         {% endif %}
                     // Flag the solver to be reset if required               
                     reset_solver = true;

@@ -141,21 +141,28 @@ ASSIGNED {
 }
 
 BREAKPOINT {
+{% if componentclass.annotations[PYPE9_NS][HAS_TIME_DERIVS] %}
     SOLVE states METHOD {{ode_solver}}
+{% endif %}
 {% set output_analog_exprs = componentclass.required_for(componentclass.all_output_analogs()).expressions + list(componentclass.all_output_analogs()) %}
 {% for elem, scaled_expr, _ in unit_handler.scale_aliases(output_analog_exprs) %}
+    {# Need to add code to handle regime-specific aliases #}
     {{code_gen.assign_str(elem.lhs, scaled_expr.rhs)}}
 {% endfor %}
+{# Can't remember why I needed to separate these out from the output_analog_exprs #}
 {% for elem, scaled_expr, _ in unit_handler.scale_aliases(componentclass.required_for(componentclass.all_time_derivatives()).expressions) if elem not in output_analog_exprs %}
     {{code_gen.assign_str(elem.lhs, scaled_expr.rhs) | indent(4)}}
 {% endfor %}
 }
 
+
+{% if componentclass.annotations[PYPE9_NS][HAS_TIME_DERIVS] %}
 DERIVATIVE states {
-{% for sv in componentclass.state_variables if sv.name not in componentclass.annotations[PYPE9_NS][NO_TIME_DERIVS] %}
+    {% for sv in componentclass.state_variables if sv.name not in componentclass.annotations[PYPE9_NS][NO_TIME_DERIVS] %}
     {{sv.name}}' = deriv_{{sv.name}}({{componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variable_names | join(', ')}})
-{% endfor %}
+    {% endfor %}
 }
+{% endif %}
 
 {% for sv in componentclass.state_variables if sv.name not in componentclass.annotations[PYPE9_NS][NO_TIME_DERIVS] %}
 FUNCTION deriv_{{sv.name}}(
