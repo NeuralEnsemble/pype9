@@ -40,12 +40,6 @@ def to_float(qty, units):
 xml_dir = path.join(os.environ['HOME'], 'git', 'nineml_catalog', 'neurons')
 
 
-tauSyn = 0.5
-CMem = 250.0
-tauMem = 20.0
-theta = 20.0
-
-
 class TestBasicNeuronModels(TestCase):
 
     models = [('Izhikevich2003', 'Izhikevich', 'izhikevich'),
@@ -59,27 +53,18 @@ class TestBasicNeuronModels(TestCase):
                                    'v': -65 * pq.mV},
                       'HodgkinHuxley': {'v': -65 * pq.mV,
                                         'm': 0, 'h': 1, 'n': 0},
-                      'IaF': {'v': -65 * pq.mV}}
+                      'IaF': {'v': -65 * pq.mV, 't_end_refrac': 0.5}}
 
     nest_states = {'Izhikevich2003': {'u': 'U_m', 'v': 'V_m'},
                    'AdExpIaF': {'w': 'w', 'v': 'V_m'},
                    'HodgkinHuxley': {'v': 'V_m', 'm': 'Act_m', 'h': 'Act_h',
                                      'n': 'Inact_n'},
-                   'IaF': {'v': 'V_m'}}
+                   'IaF': {'v': 'V_m', 't_end_refrac': None}}
     nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2,
                                       'd': 2.0},
                    'AdExpIaF': {},
                    'HodgkinHuxley': {},
                    'IaF': {}}
-#                    'IaF': {"C_m": CMem,
-#                            "tau_m": tauMem,
-#                            "tau_syn_ex": tauSyn,
-#                            "tau_syn_in": tauSyn,
-#                            "t_ref": 2.0,
-#                            "E_L": 0.0,
-#                            "V_reset": 0.0,
-#                            "V_m": 0.0,
-#                            "V_th": theta}}
     paradigms = {'Izhikevich2003': {'duration': 100 * pq.ms,
                                     'stim_amp': 0.02 * pq.nA,
                                     'stim_start': 20 * pq.ms,
@@ -88,7 +73,7 @@ class TestBasicNeuronModels(TestCase):
                                    'stim_amp': 0.5 * pq.nA,
                                    'stim_start': 50 * pq.ms,
                                    'dt': 0.002 * pq.ms},
-                 'IaF': {'duration': 0.1 * pq.ms,
+                 'IaF': {'duration': 1 * pq.ms,
                                    'stim_amp': 0.5 * pq.nA,
                                    'stim_start': 50 * pq.ms,
                                    'dt': 0.002 * pq.ms}}
@@ -222,7 +207,8 @@ class TestBasicNeuronModels(TestCase):
         nest.SetStatus(
             self.nest_cells,
             dict((self.nest_states[name][n], float(v))
-                 for n, v in self.initial_states[name].iteritems()))
+                 for n, v in self.initial_states[name].iteritems()
+                 if self.nest_states[name][n] is not None))
 
     def _plot_NEURON(self, name):  # @UnusedVariable
         pnn_t, pnn_v = self._get_NEURON_signal()
@@ -266,7 +252,7 @@ class NEURONRecorder(object):
         self.rec_t.record(neuron.h._ref_t)
         self.recs = {}
 
-    def record(self, varname):
+    def record(self, varname): 
         rec = h.Vector()
         self.recs[varname] = rec
         if varname == 'v':
@@ -284,7 +270,7 @@ if __name__ == '__main__':
     t = TestBasicNeuronModels()
     t.test_basic_models(
         plot=True, build_mode='force',
-# #         tests=('nrn9ML', 'nrnPyNN'))
+#         tests=('nrn9ML', 'nrnPyNN'))
 #         tests=('nest9ML', 'nestPyNN'))
 #         tests=('nestPyNN',))
         tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN'))

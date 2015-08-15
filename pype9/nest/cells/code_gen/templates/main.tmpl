@@ -63,7 +63,7 @@ extern "C" {% include "dynamics_signature.tmpl" %} {
 {% for regime in component_class.regimes %}
     {{elseif(loop.first)}} (B_.current_regime == {{component_name}}::{{regime.name}}_REGIME) {
 	    {{macros.map_required_vars_locally(regime.time_derivatives, component_class, component_name, unit_handler) | indent(8)}}
-
+        std::cout << "Regime: {{regime.name}} at time " << t << std::endl;
 	    // Evaluate differential equations
 	{% for td, scaled_expr, units in unit_handler.scale_time_derivatives(regime.time_derivatives) %}
 	    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
