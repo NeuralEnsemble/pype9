@@ -67,7 +67,6 @@ std::cout << "9ML Aliases:"
 {% endmacro %}
 
 {% macro set_triggers(regime, component_class, component_name, unit_handler) %}
-{{map_required_vars_locally(regime.all_triggers(), component_class, component_name, unit_handler)}}
     {% for oc in regime.on_conditions %}
 B_.{{regime.name}}_trigger_{{regime.index_of(oc)}}_active = !({{oc.trigger.rhs_cstr}});
     {% endfor %}

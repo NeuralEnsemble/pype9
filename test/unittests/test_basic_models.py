@@ -40,12 +40,18 @@ def to_float(qty, units):
 xml_dir = path.join(os.environ['HOME'], 'git', 'nineml_catalog', 'neurons')
 
 
+tauSyn = 0.5
+CMem = 250.0
+tauMem = 20.0
+theta = 20.0
+
+
 class TestBasicNeuronModels(TestCase):
 
     models = [('Izhikevich2003', 'Izhikevich', 'izhikevich'),
               ('AdExpIaF', 'AdExpIF', 'aeif_cond_alpha'),
               ('HodgkinHuxley', 'hh_traub', 'hh_cond_exp_traub'),
-              ('IFRefrac', 'IFRefrac', 'ResetRefrac')]
+              ('IaF', 'ResetRefrac', 'iaf_psc_alpha')]
 
     initial_states = {'Izhikevich2003': {'u': -14 * pq.mV / pq.ms,
                                          'v': -65.0 * pq.mV},
@@ -53,18 +59,27 @@ class TestBasicNeuronModels(TestCase):
                                    'v': -65 * pq.mV},
                       'HodgkinHuxley': {'v': -65 * pq.mV,
                                         'm': 0, 'h': 1, 'n': 0},
-                      'IFRefrac': {'v': -65 * pq.mV}}
+                      'IaF': {'v': -65 * pq.mV}}
 
     nest_states = {'Izhikevich2003': {'u': 'U_m', 'v': 'V_m'},
                    'AdExpIaF': {'w': 'w', 'v': 'V_m'},
                    'HodgkinHuxley': {'v': 'V_m', 'm': 'Act_m', 'h': 'Act_h',
                                      'n': 'Inact_n'},
-                   'IFRefrac': {'v': 'V_m'}}
+                   'IaF': {'v': 'V_m'}}
     nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2,
                                       'd': 2.0},
                    'AdExpIaF': {},
                    'HodgkinHuxley': {},
-                   'IFRefrac': {}}
+                   'IaF': {}}
+#                    'IaF': {"C_m": CMem,
+#                            "tau_m": tauMem,
+#                            "tau_syn_ex": tauSyn,
+#                            "tau_syn_in": tauSyn,
+#                            "t_ref": 2.0,
+#                            "E_L": 0.0,
+#                            "V_reset": 0.0,
+#                            "V_m": 0.0,
+#                            "V_th": theta}}
     paradigms = {'Izhikevich2003': {'duration': 100 * pq.ms,
                                     'stim_amp': 0.02 * pq.nA,
                                     'stim_start': 20 * pq.ms,
@@ -72,10 +87,14 @@ class TestBasicNeuronModels(TestCase):
                  'HodgkinHuxley': {'duration': 100 * pq.ms,
                                    'stim_amp': 0.5 * pq.nA,
                                    'stim_start': 50 * pq.ms,
+                                   'dt': 0.002 * pq.ms},
+                 'IaF': {'duration': 0.1 * pq.ms,
+                                   'stim_amp': 0.5 * pq.nA,
+                                   'stim_start': 50 * pq.ms,
                                    'dt': 0.002 * pq.ms}}
 
 #     order = [0, 1, 2, 3, 4]
-    order = [0, 2, 3, 4]
+    order = [3, 2, 3, 4]
     min_delay = 0.04
     max_delay = 10
 

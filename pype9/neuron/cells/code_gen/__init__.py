@@ -38,7 +38,7 @@ from pype9.annotations import (
     PYPE9_NS, ION_SPECIES, MEMBRANE_VOLTAGE, MEMBRANE_CAPACITANCE,
     TRANSFORM_SRC, TRANSFORM_DEST, NONSPECIFIC_CURRENT,
     EXTERNAL_CURRENTS, NO_TIME_DERIVS, INTERNAL_CONCENTRATION,
-    EXTERNAL_CONCENTRATION)
+    EXTERNAL_CONCENTRATION, HAS_TIME_DERIVS)
 import logging
 
 TRANSFORM_NS = 'NeuronBuildTransform'
@@ -307,6 +307,7 @@ class CodeGenerator(BaseCodeGenerator):
             trfrm.annotations[PYPE9_NS][NO_TIME_DERIVS] = (
                 ['v'] + [sv for sv in trfrm.state_variable_names
                          if sv not in has_td])
+            trfrm.annotations[PYPE9_NS][HAS_TIME_DERIVS] = bool(len(has_td))
             # -----------------------------------------------------------------
             # Get the external input currents
             # -----------------------------------------------------------------
