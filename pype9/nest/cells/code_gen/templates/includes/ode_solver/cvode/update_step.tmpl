@@ -1,27 +1,27 @@
-        double tt = 0.0;
-        double tout = (current_steps+lag) * dt;
-
-        // adaptive step integration
-        while (tt < tout) {
-            const int status = CVode(B_.sys_, tout, B_.y, &tt, CV_NORMAL);
-            switch (status) {
-                case CV_SUCCESS:      continue;
-                case CV_ROOT_RETURN: {
-                    set_spiketime(nest::Time::ms(tt));
-                    nest::SpikeEvent se;
-                    // Copy solver state to NEST state
-                    for (int i = 0; i < {{component_name}}::State_::STATE_VEC_SIZE_; i++)
-                        S_.y_[i] = ITEM(B_.y,i);
-                    network()->send(*this, se, lag);
-                    adjust_zero_crossings(B_.y, {{abs_tolerance}});
-                    continue;
-                }
-                case CV_TSTOP_RETURN: break;
-                default:
-                    throw CVodeSolverFailure (get_name(), 0);
-            }
-        }
-
-        // Copy items from CVODE vector to NEST state array.
-        for (int i = 0; i < {{component_name}}::State_::STATE_VEC_SIZE_; i++)
-           S_.y_[i] = ITEM(B_.y, i);
+	        double tt = 0.0;
+	        double tout = (current_steps+lag) * dt;
+	
+	        // adaptive step integration
+	        while (tt < tout) {
+	            const int status = CVode(B_.sys_, tout, B_.y, &tt, CV_NORMAL);
+	            switch (status) {
+	                case CV_SUCCESS:      continue;
+	                case CV_ROOT_RETURN: {
+	                    set_spiketime(nest::Time::ms(tt));
+	                    nest::SpikeEvent se;
+	                    // Copy solver state to NEST state
+	                    for (int i = 0; i < {{component_name}}::State_::STATE_VEC_SIZE_; i++)
+	                        S_.y_[i] = ITEM(B_.y,i);
+	                    network()->send(*this, se, lag);
+	                    adjust_zero_crossings(B_.y, {{abs_tolerance}});
+	                    continue;
+	                }
+	                case CV_TSTOP_RETURN: break;
+	                default:
+	                    throw CVodeSolverFailure (get_name(), 0);
+	            }
+	        }
+	
+	        // Copy items from CVODE vector to NEST state array.
+	        for (int i = 0; i < {{component_name}}::State_::STATE_VEC_SIZE_; i++)
+	           S_.y_[i] = ITEM(B_.y, i);
