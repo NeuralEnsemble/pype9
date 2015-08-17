@@ -53,8 +53,20 @@ class TestBasicNeuronModels(TestCase):
                                    'v': -65 * pq.mV},
                       'HodgkinHuxley': {'v': -65 * pq.mV,
                                         'm': 0, 'h': 1, 'n': 0},
-                      'LeakyIntegrateAndFire': {'v': -60 * pq.mV,
+                      'LeakyIntegrateAndFire': {'v': -65 * pq.mV,
                                                 'end_refractory': 0.0}}
+
+    neuron_pas = {'Izhikevich2003': None,
+                  'AdExpIaF': None,
+                  'HodgkinHuxley': None,
+                  'LeakyIntegrateAndFire': {'g': 0.00025, 'e': -70}}
+    neuron_params = {'Izhikevich2003': None,
+                     'AdExpIaF': None,
+                     'HodgkinHuxley': None,
+                     'LeakyIntegrateAndFire': {
+                         'vthresh': -55,
+                         'vreset': -70,
+                         'trefrac': 2}}
 
     nest_states = {'Izhikevich2003': {'u': 'U_m', 'v': 'V_m'},
                    'AdExpIaF': {'w': 'w', 'v': 'V_m'},
@@ -187,6 +199,13 @@ class TestBasicNeuronModels(TestCase):
             self._nrn_pnn.L = 100
             self._nrn_pnn.diam = 1000 / pi
             self._nrn_pnn.cm = 0.2
+#         if self.neuron_params[name] is not None:
+#             for k, v in self.neuron_params[name].iteritems():
+#                 setattr(getattr(self._nrn_pnn(0.5), model_name), k, v)
+        if self.neuron_pas[name] is not None:
+            self._nrn_pnn.insert('pas')
+            self._nrn_pnn(0.5).pas.g = self.neuron_pas[name]['g']
+            self._nrn_pnn(0.5).pas.e = self.neuron_pas[name]['e']
         # Specify current injection
         self._nrn_stim = h.IClamp(1.0, sec=self._nrn_pnn)
         self._nrn_stim.delay = stim_start   # ms
@@ -262,7 +281,7 @@ class NEURONRecorder(object):
         self.rec_t.record(neuron.h._ref_t)
         self.recs = {}
 
-    def record(self, varname): 
+    def record(self, varname):
         rec = h.Vector()
         self.recs[varname] = rec
         if varname == 'v':
@@ -280,7 +299,7 @@ if __name__ == '__main__':
     t = TestBasicNeuronModels()
     t.test_basic_models(
         plot=True, build_mode='force',
-#         tests=('nrn9ML', 'nrnPyNN'))
+#         tests=('nrn9ML', 'nrnPyNN',))
 #         tests=('nest9ML', 'nestPyNN'))
 #         tests=('nest9ML',))
 #         tests=('nestPyNN',))

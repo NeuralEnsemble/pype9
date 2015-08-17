@@ -65,6 +65,7 @@ extern "C" {% include "dynamics_signature.tmpl" %} {
 	    {{macros.map_required_vars_locally(regime.time_derivatives, component_class, component_name, unit_handler) | indent(8)}}
 	    // Evaluate differential equations
 	{% for td, scaled_expr, units in unit_handler.scale_time_derivatives(regime.time_derivatives) %}
+	    //std::cout << "{{td.dependent_variable}}=" << {{scaled_expr.rhs_cstr}};
 	    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
 	{% endfor %}
     {{endif(loop.last)}}
