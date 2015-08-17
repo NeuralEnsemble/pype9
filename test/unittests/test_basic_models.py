@@ -45,7 +45,7 @@ class TestBasicNeuronModels(TestCase):
     models = [('Izhikevich2003', 'Izhikevich', 'izhikevich'),
               ('AdExpIaF', 'AdExpIF', 'aeif_cond_alpha'),
               ('HodgkinHuxley', 'hh_traub', 'hh_cond_exp_traub'),
-              ('IaF', 'ResetRefrac', 'iaf_psc_alpha')]
+              ('LeakyIntegrateAndFire', 'ResetRefrac', 'iaf_psc_alpha')]
 
     initial_states = {'Izhikevich2003': {'u': -14 * pq.mV / pq.ms,
                                          'v': -65.0 * pq.mV},
@@ -53,18 +53,28 @@ class TestBasicNeuronModels(TestCase):
                                    'v': -65 * pq.mV},
                       'HodgkinHuxley': {'v': -65 * pq.mV,
                                         'm': 0, 'h': 1, 'n': 0},
-                      'IaF': {'v': -65 * pq.mV, 't_end_refrac': 0.5}}
+                      'LeakyIntegrateAndFire': {'v': -60 * pq.mV,
+                                                'end_refractory': 0.0}}
 
     nest_states = {'Izhikevich2003': {'u': 'U_m', 'v': 'V_m'},
                    'AdExpIaF': {'w': 'w', 'v': 'V_m'},
                    'HodgkinHuxley': {'v': 'V_m', 'm': 'Act_m', 'h': 'Act_h',
                                      'n': 'Inact_n'},
-                   'IaF': {'v': 'V_m', 't_end_refrac': None}}
+                   'LeakyIntegrateAndFire': {'v': 'V_m',
+                                             'end_refractory': None}}
     nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2,
                                       'd': 2.0},
                    'AdExpIaF': {},
-                   'HodgkinHuxley': {},
-                   'IaF': {}}
+                   'HodgkinHuxley': {"C_m": 250.0,
+                                     "tau_m": 20.0,
+                                     "tau_syn_ex": 0.5,
+                                     "tau_syn_in": 0.5,
+                                     "t_ref": 2.0,
+                                     "E_L": 0.0,
+                                     "V_reset": 0.0,
+                                     "V_m": 0.0,
+                                     "V_th": 20.0},
+                   'LeakyIntegrateAndFire': {}}
     paradigms = {'Izhikevich2003': {'duration': 100 * pq.ms,
                                     'stim_amp': 0.02 * pq.nA,
                                     'stim_start': 20 * pq.ms,
@@ -73,10 +83,10 @@ class TestBasicNeuronModels(TestCase):
                                    'stim_amp': 0.5 * pq.nA,
                                    'stim_start': 50 * pq.ms,
                                    'dt': 0.002 * pq.ms},
-                 'IaF': {'duration': 1 * pq.ms,
-                                   'stim_amp': 0.5 * pq.nA,
-                                   'stim_start': 50 * pq.ms,
-                                   'dt': 0.002 * pq.ms}}
+                 'LeakyIntegrateAndFire': {'duration': 50 * pq.ms,
+                                           'stim_amp': 1 * pq.nA,
+                                           'stim_start': 25 * pq.ms,
+                                           'dt': 0.002 * pq.ms}}
 
 #     order = [0, 1, 2, 3, 4]
     order = [3, 2, 3, 4]
@@ -272,5 +282,6 @@ if __name__ == '__main__':
         plot=True, build_mode='force',
 #         tests=('nrn9ML', 'nrnPyNN'))
 #         tests=('nest9ML', 'nestPyNN'))
+#         tests=('nest9ML',))
 #         tests=('nestPyNN',))
         tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN'))

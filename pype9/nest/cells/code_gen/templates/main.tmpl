@@ -70,6 +70,7 @@ extern "C" {% include "dynamics_signature.tmpl" %} {
     {{endif(loop.last)}}
 {% endfor %}
 
+    //std::cout << "Success at t=" << t << ": " << GSL_SUCCESS << std::endl;
     {% include "dynamics_return.tmpl" %}
 
 }
@@ -418,8 +419,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
                         B_.current_regime = transition = {{trans.target_regime.name}}_REGIME;
                     else 
                         std::cout << "Warning!: multiple transitions in the same time step. Transition to 'Regime " << transition << "' was ignored in favour of transition " << {{trans.target_regime.name}}_REGIME << "." << std::endl;
-                    
-                    
+
                     {{macros.set_triggers(trans.target_regime, component_class, component_name, unit_handler) | indent(20)}}
         {% endif %}
                     // Flag the solver to be reset if required               
