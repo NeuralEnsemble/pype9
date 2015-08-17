@@ -46,7 +46,7 @@ const static double_t {{const.name}} = {{value}};  // ({{units}})
     {% endfor %}
     {% if debug %}
 std::cout << "9ML Constants:"
-        {%- for name in sorted(required.port_names) -%}
+        {%- for name in sorted(required.constants) -%}
         << " {{name}}=" << {{name}}
         {%- endfor -%}
 << std::endl;
