@@ -40,7 +40,7 @@ def to_float(qty, units):
 xml_dir = path.join(os.environ['HOME'], 'git', 'nineml_catalog', 'neurons')
 
 
-class TestBasicNeuronModels(TestCase):
+class TestCells(TestCase):
 
     models = [('Izhikevich2003', 'Izhikevich', 'izhikevich'),
               ('AdExpIaF', 'AdExpIF', 'aeif_cond_alpha'),
@@ -77,20 +77,24 @@ class TestBasicNeuronModels(TestCase):
     nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2,
                                       'd': 2.0},
                    'AdExpIaF': {},
-                   'HodgkinHuxley': {"C_m": 250.0,
-                                     "tau_m": 20.0,
-                                     "tau_syn_ex": 0.5,
-                                     "tau_syn_in": 0.5,
-                                     "t_ref": 2.0,
-                                     "E_L": 0.0,
-                                     "V_reset": 0.0,
-                                     "V_m": 0.0,
-                                     "V_th": 20.0},
-                   'LeakyIntegrateAndFire': {}}
+                   'HodgkinHuxley': {},
+                   'LeakyIntegrateAndFire': {"C_m": 250.0,
+                                             "tau_m": 20.0,
+                                             "tau_syn_ex": 0.5,
+                                             "tau_syn_in": 0.5,
+                                             "t_ref": 2.0,
+                                             "E_L": 0.0,
+                                             "V_reset": 0.0,
+                                             "V_m": 0.0,
+                                             "V_th": 20.0}}
     paradigms = {'Izhikevich2003': {'duration': 100 * pq.ms,
                                     'stim_amp': 0.02 * pq.nA,
                                     'stim_start': 20 * pq.ms,
                                     'dt': 0.02 * pq.ms},
+                 'AdExpIaF': {'duration': 50 * pq.ms,
+                              'stim_amp': 1 * pq.nA,
+                              'stim_start': 25 * pq.ms,
+                              'dt': 0.002 * pq.ms},
                  'HodgkinHuxley': {'duration': 100 * pq.ms,
                                    'stim_amp': 0.5 * pq.nA,
                                    'stim_start': 50 * pq.ms,
@@ -101,11 +105,11 @@ class TestBasicNeuronModels(TestCase):
                                            'dt': 0.002 * pq.ms}}
 
 #     order = [0, 1, 2, 3, 4]
-    order = [3, 2, 3, 4]
+    order = [2, 2, 3]
     min_delay = 0.04
     max_delay = 10
 
-    def test_basic_models(
+    def test_cells(
             self, plot=False, build_mode='force',
             tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN')):
         self.nml_cells = {}
@@ -296,8 +300,8 @@ class NEURONRecorder(object):
 
 
 if __name__ == '__main__':
-    t = TestBasicNeuronModels()
-    t.test_basic_models(
+    t = TestCells()
+    t.test_cells(
         plot=True, build_mode='force',
 #         tests=('nrn9ML', 'nrnPyNN',))
 #         tests=('nest9ML', 'nestPyNN'))
