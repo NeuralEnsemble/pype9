@@ -40,7 +40,7 @@ def to_float(qty, units):
 xml_dir = path.join(os.environ['HOME'], 'git', 'nineml_catalog', 'neurons')
 
 
-class TestBasicNeuronModels(TestCase):
+class TestCells(TestCase):
 
     models = [('Izhikevich2003', 'Izhikevich', 'izhikevich'),
               ('AdExpIaF', 'AdExpIF', 'aeif_cond_alpha'),
@@ -91,6 +91,10 @@ class TestBasicNeuronModels(TestCase):
                                     'stim_amp': 0.02 * pq.nA,
                                     'stim_start': 20 * pq.ms,
                                     'dt': 0.02 * pq.ms},
+                 'AdExpIaF': {'duration': 50 * pq.ms,
+                              'stim_amp': 1 * pq.nA,
+                              'stim_start': 25 * pq.ms,
+                              'dt': 0.002 * pq.ms},
                  'HodgkinHuxley': {'duration': 100 * pq.ms,
                                    'stim_amp': 0.5 * pq.nA,
                                    'stim_start': 50 * pq.ms,
@@ -101,11 +105,11 @@ class TestBasicNeuronModels(TestCase):
                                            'dt': 0.002 * pq.ms}}
 
 #     order = [0, 1, 2, 3, 4]
-    order = [3, 2, 3, 4]
+    order = [1, 2, 3]
     min_delay = 0.04
     max_delay = 10
 
-    def test_basic_models(
+    def test_cells(
             self, plot=False, build_mode='force',
             tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN')):
         self.nml_cells = {}
@@ -296,8 +300,8 @@ class NEURONRecorder(object):
 
 
 if __name__ == '__main__':
-    t = TestBasicNeuronModels()
-    t.test_basic_models(
+    t = TestCells()
+    t.test_cells(
         plot=True, build_mode='force',
 #         tests=('nrn9ML', 'nrnPyNN',))
 #         tests=('nest9ML', 'nestPyNN'))
