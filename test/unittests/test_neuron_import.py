@@ -1,11 +1,19 @@
+"""
+Test the import of NMODL and Hoc models into 9ML
+
+NB: Currently disabled until suitable test data is found and the imported files
+    are compared with simulated output.
+"""
 import os.path
 from pype9.neuron.importer import NeuronImporter, HocImporter, NMODLImporter
 import nineml
 from nineml import units as un
+import pyNN
 from nineml.abstraction import (
     AnalogSendPort, AnalogReceivePort, Parameter, Dynamics,
     TimeDerivative, Alias, StateVariable, Regime)
 from utils import test_data_dir
+from pype9.exceptions import Pype9ImportError
 
 
 if __name__ == '__main__':
@@ -20,7 +28,11 @@ test_gr_dir = os.path.join(os.path.dirname(__file__), '..', '..', '..',
                            'kbrain', 'external', 'fabios_network')
 
 
-class TestHocImporter(TestCase):
+pynn_nmodl_dir = os.path.join(os.path.dirname(pyNN.__file__), 'neuron',
+                              'nmodl')
+
+
+class TestHocImporter(object):
 
     def test_hoc_import(self):
         importer = HocImporter(test_cn_dir,
@@ -30,7 +42,7 @@ class TestHocImporter(TestCase):
         print importer.model
 
 
-class TestNMODLImporter(TestCase):
+class TestNMODLImporter(object):
 
     naf_class = Dynamics(
         name="NaF",
@@ -83,7 +95,7 @@ class TestNMODLImporter(TestCase):
 #                          etree.tostring(reference_tree))
 
 
-class TestNeuronImporter(TestCase):
+class TestNeuronImporter(object):
 
     def test_neuron_import(self):
         importer = NeuronImporter('/home/tclose/git/cerebellarnuclei/',
@@ -109,4 +121,19 @@ if __name__ == '__main__':
     test.test_nmodl_import()
     test = TestNeuronImporter()
     test.test_neuron_import()
+    fnames = os.listdir(pynn_nmodl_dir)
+
+    for fname in fnames:
+        if fname.endswith('.mod'):
+            try:
+                importer = NMODLImporter(os.path.join(pynn_nmodl_dir, fname))
+                class_fname = os.path.join(os.getcwd(), fname[:-4] +
+                                           'Class.xml')
+                importer.get_component_class().write(class_fname)
+                importer.get_component(class_fname).write(
+                    os.path.join(os.getcwd(), fname[:-4] + '.xml'))
+                print "Imported '{}".format(fname)
+            except Pype9ImportError, e:
+                print "Failed to import '{}': {}".format(fname, e)
+
     print "done"
