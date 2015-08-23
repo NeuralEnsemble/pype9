@@ -14,12 +14,11 @@ from nineml.abstraction import (
     TimeDerivative, Alias, StateVariable, Regime)
 from utils import test_data_dir
 from pype9.exceptions import Pype9ImportError
-
-
 if __name__ == '__main__':
     from utils import DummyTestCase as TestCase  # @UnusedImport
 else:
     from unittest import TestCase  # @Reimport
+
 
 test_cn_dir = os.path.join(os.path.dirname(__file__), '..', '..', '..',
                            'cerebellarnuclei')

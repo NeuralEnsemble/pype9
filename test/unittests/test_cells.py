@@ -40,6 +40,10 @@ def to_float(qty, units):
 xml_dir = path.join(os.environ['HOME'], 'git', 'nineml_catalog', 'neurons')
 
 
+class Comparer(object):
+    pass
+
+
 class TestCells(TestCase):
 
     models = [('Izhikevich2003', 'Izhikevich', 'izhikevich'),
