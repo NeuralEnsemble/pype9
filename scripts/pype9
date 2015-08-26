@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Master PyPe9 command that then calls the appropriate script based on the 
+# first argument.
+
 # Get the first argument, which determines which command to execute
 switch=$1
 script_dir=`dirname $0`
