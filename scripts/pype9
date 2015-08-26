@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Get the first argument, which determines which command to execute
+switch=$1
+scripts_dir=`dirname $0`
+if [ "$switch" == 'compare' ]; then
+    python $scripts_dir/compare.py ${@:2}
+elif [ "$switch" == '' ] || [ "$switch" == 'help' ]; then
+    echo "pype9 switches:"
+    echo "  * compare"
+else
+    echo "Unrecognised switch '$switch', see 'pype9 help' for details"
+fi
