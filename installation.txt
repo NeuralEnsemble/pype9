@@ -4,9 +4,7 @@ Install Instructions
 
 These instructions are for Linux and OSX systems only.
 
-Install the prerequisites regexp, numpy, ply, quantities, nineml, jinha2, and btmorph, and all of their dependencies. 
-
-Also nineml dependends on lxml, ply, Python Nose, Cheetah.
+Install the prerequisites quantities, nineml, jinja2 and their dependencies
 
 Instructions for installing http://software.incf.org/software/nineml/documentation/python-api/installation/at_download/file
 
@@ -23,39 +21,10 @@ Run analogous commands for installing pip.
 
 
 
-Install btmorph
-============
-
-Change directory to a suitable destination for package installation.
-$cd /usr/local/
-
-The following will clone the remote directory and provide a local copy at the path /usr/local/btmorph 
-$sudo git clone https://bitbucket.org/btorb/btmorph
-
-If you are using Eclipse it is recomended to use setup_tools in order to make a python egg. A setup.py is provided in this directory.
-cd /NineLine/btmorph_setup
-sudo python setup.py install
-
-## If not using Eclipse.
-#btmorph does not have a setup.py file, therefore btmorph needs to be added to p#ythons load path in order to be visible to the python interpretator. The follow#ing command achieves this:
-#$export PYTHONPATH=$PYTHONPATH:/usr/local/btmorph
-
-
-
-
 Install quantities:
 ============
-The pip package of quantities does not contain the required units namely: mho/cm**2
-so install quantities using the git repo
-
-tclose/quantities.
 
 $sudo pip install quantities
-
-Install ply:
-============
-
-$sudo pip install ply
 
 Install jinja2:
 ============

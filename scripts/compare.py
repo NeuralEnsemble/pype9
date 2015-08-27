@@ -3,7 +3,6 @@ Command that compares a 9ML model with an existing version in NEURON and/or
 NEST
 """
 import argparse
-from os import path
 import neuron
 import nest
 from neuron import h
@@ -24,265 +23,250 @@ import neo
 
 class Comparer(object):
 
-    models = [('Izhikevich2003', 'Izhikevich', 'izhikevich'),
-              ('AdExpIaF', 'AdExpIF', 'aeif_cond_alpha'),
-              ('HodgkinHuxley', 'hh_traub', 'hh_cond_exp_traub'),
-              ('LeakyIntegrateAndFire', 'ResetRefrac', 'iaf_psc_alpha')]
+    def compare(self, nineml_model, parameters, state_variable, nineml_sims,
+                duration, dt, initial_states, neuron_model=None,
+                nest_model=None, analog_signal=None, event_train=None,
+                plot=True, min_delay=0.2 * pq.ms, max_delay=10.0 * pq.ms,
+                include_passive=False):
+        """
+        nineml_model   -- 9ML model to compare
+        nineml_sims    -- tuple of simulator names to simulate the 9ML model in
+        duration       -- simulation duration
+        dt             -- simulation time step
+        initial_states -- a dictionary of the initial states
+        neuron_model   -- a tuple containing the name of neuron model and a
+                          dictionary of parameter and state name mappings
+        nest_model     -- a tuple containing the name of nest model and a
+                          dictionary of parameter and state name mappings
+        analog_signal  -- tuple containing the analog signal (in Neo format)
+                          and the port to play it into
+        event_train    -- tuple containing the event train (in Neo format)
+                          and the port to play it into
+        """
+        simulate_neuron = 'neuron' in nineml_sims or neuron_model is not None
+        simulate_nest = 'nest' in nineml_sims or nest_model is not None
+        self.dt = self.to_float(dt, 'ms')
+        self.min_delay = self.to_float(min_delay, 'ms')
+        self.max_delay = self.to_float(max_delay, 'ms')
+        if simulate_neuron:
+            h.dt = self.dt
+        if simulate_nest:
+            nest.SetKernelStatus({'resolution': self.dt,
+                                  'min_delay': self.min_delay,
+                                  'max_delay': self.max_delay})
+        for simulator in nineml_sims:
+            self._create_9ML(nineml_model, simulator, initial_states,
+                             state_variable, analog_signal, event_train)
+        if neuron_model is not None:
+            neuron_name, translations = neuron_model
+            self._create_NEURON(neuron_name, parameters, initial_states,
+                                state_variable, analog_signal, event_train,
+                                translations, include_passive)
+        if nest_model is not None:
+            nest_name, translations = nest_model
+            self._create_NEST(nest_name, parameters, initial_states,
+                              state_variable, analog_signal, event_train,
+                              translations)
+        # -----------------------------------------------------------------
+        # Run and plot the simulation
+        # -----------------------------------------------------------------
+        if simulate_neuron:
+            simulatorNEURON.run(duration)
+        if simulate_nest:
+            simulatorNEST.run(duration)
+        if plot:
+            legend = []
+            for simulator in nineml_sims:
+                self._plot_9ML(simulator)
+                legend.append('9ML (' + simulator + ')')
+            if neuron_model:
+                self._plot_NEURON()
+                legend.append(neuron_model[0] + ' (NEURON)')
+            if nest_model:
+                self._plot_NEST()
+                legend.append(nest_model[0] + ' (NEST)')
+            plt.legend(legend)
+            plt.show()
 
-    initial_states = {'Izhikevich2003': {'u': -14 * pq.mV / pq.ms,
-                                         'v': -65.0 * pq.mV},
-                      'AdExpIaF': {'w': 0.0 * pq.nA,
-                                   'v': -65 * pq.mV},
-                      'HodgkinHuxley': {'v': -65 * pq.mV,
-                                        'm': 0, 'h': 1, 'n': 0},
-                      'LeakyIntegrateAndFire': {'v': -65 * pq.mV,
-                                                'end_refractory': 0.0}}
-
-    neuron_pas = {'Izhikevich2003': None,
-                  'AdExpIaF': None,
-                  'HodgkinHuxley': None,
-                  'LeakyIntegrateAndFire': {'g': 0.00025, 'e': -70}}
-    neuron_params = {'Izhikevich2003': None,
-                     'AdExpIaF': None,
-                     'HodgkinHuxley': None,
-                     'LeakyIntegrateAndFire': {
-                         'vthresh': -55,
-                         'vreset': -70,
-                         'trefrac': 2}}
-
-    nest_states = {'Izhikevich2003': {'u': 'U_m', 'v': 'V_m'},
-                   'AdExpIaF': {'w': 'w', 'v': 'V_m'},
-                   'HodgkinHuxley': {'v': 'V_m', 'm': 'Act_m', 'h': 'Act_h',
-                                     'n': 'Inact_n'},
-                   'LeakyIntegrateAndFire': {'v': 'V_m',
-                                             'end_refractory': None}}
-    nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2,
-                                      'd': 2.0},
-                   'AdExpIaF': {},
-                   'HodgkinHuxley': {},
-                   'LeakyIntegrateAndFire': {"C_m": 250.0,
-                                             "tau_m": 20.0,
-                                             "tau_syn_ex": 0.5,
-                                             "tau_syn_in": 0.5,
-                                             "t_ref": 2.0,
-                                             "E_L": 0.0,
-                                             "V_reset": 0.0,
-                                             "V_m": 0.0,
-                                             "V_th": 20.0}}
-    paradigms = {'Izhikevich2003': {'duration': 100 * pq.ms,
-                                    'stim_amp': 0.02 * pq.nA,
-                                    'stim_start': 20 * pq.ms,
-                                    'dt': 0.02 * pq.ms},
-                 'AdExpIaF': {'duration': 50 * pq.ms,
-                              'stim_amp': 1 * pq.nA,
-                              'stim_start': 25 * pq.ms,
-                              'dt': 0.002 * pq.ms},
-                 'HodgkinHuxley': {'duration': 100 * pq.ms,
-                                   'stim_amp': 0.5 * pq.nA,
-                                   'stim_start': 50 * pq.ms,
-                                   'dt': 0.002 * pq.ms},
-                 'LeakyIntegrateAndFire': {'duration': 50 * pq.ms,
-                                           'stim_amp': 1 * pq.nA,
-                                           'stim_start': 25 * pq.ms,
-                                           'dt': 0.002 * pq.ms}}
-
-#     order = [0, 1, 2, 3, 4]
-    order = [2, 2, 3]
-    min_delay = 0.04
-    max_delay = 10
-
-    def test_cells(
-            self, plot=False, build_mode='force',
-            tests=('nrn9ML', 'nrnPyNN', 'nest9ML', 'nestPyNN')):
-        self.nml_cells = {}
-        # for name9, namePynn in zip(self.models9ML, self.modelsPyNN):
-        for i in self.order:
-            name, nameNEURON, nameNEST = self.models[i]
-            paradigm = self.paradigms[name]
-            stim_amp = paradigm['stim_amp']
-            duration = to_float(paradigm['duration'], 'ms')
-            stim_start = to_float(paradigm['stim_start'], 'ms')
-            dt = paradigm['dt']
-            if 'nrn9ML' in tests or 'nrnPyNN' in tests:
-                h.dt = to_float(dt, 'ms')
-            if 'nest9ML' in tests or 'nestPyNN' in tests:
-                nest.SetKernelStatus({'resolution': to_float(dt, 'ms')})
-            injected_signal = neo.AnalogSignal(
-                ([0.0] * int(stim_start) + [stim_amp] * int(duration)),
-                sampling_period=1 * pq.ms, units='nA')
-            if 'nrnPyNN' in tests:
-                self._create_NEURON(name, nameNEURON, stim_start, stim_amp,
-                                    duration)
-            if 'nrn9ML' in tests:
-                self._create_9ML(name, 'NEURON', build_mode, injected_signal)
-            if 'nestPyNN' in tests:
-                self._create_NEST(name, nameNEST, stim_start, stim_amp,
-                                  duration, dt)
-            if 'nest9ML' in tests:
-                self._create_9ML(name, 'NEST', build_mode, injected_signal)
-            # -----------------------------------------------------------------
-            # Run and plot the simulation
-            # -----------------------------------------------------------------
-            if 'nrn9ML' in tests or 'nrnPyNN' in tests:
-                simulatorNEURON.run(duration)
-            if 'nest9ML' in tests or 'nestPyNN' in tests:
-                simulatorNEST.run(duration)
-            if plot:
-                leg = []
-                if 'nrnPyNN' in tests:
-                    self._plot_NEURON(name)
-                    leg.append('PyNN NEURON')
-                if 'nrn9ML' in tests:
-                    self._plot_9ML(name, 'NEURON')
-                    leg.append('9ML NEURON')
-                if 'nestPyNN' in tests:
-                    self._plot_NEST(name)
-                    leg.append('PyNN NEST')
-                if 'nest9ML' in tests:
-                    self._plot_9ML(name, 'NEST')
-                    leg.append('9ML NEST')
-                plt.legend(leg)
-                plt.show()
-            else:
-                if 'nrn9ML' in tests or 'nrnPyNN' in tests:
-                    self.assertAlmostEqual(self._diff_NEURON(name), 0,
-                                           places=3)
-                if 'nest9ML' in tests or 'nestPyNN' in tests:
-                    self.assertAlmostEqual(self._diff_NEST(name), 0, places=3)
-            break
-
-    def _create_9ML(self, name, sim_name, build_mode, injected_signal):
+    def _create_9ML(self, model, simulator, initial_states, state_variable,
+                    analog_signal, event_train):
         # -----------------------------------------------------------------
         # Set up 9MLML cell
         # -----------------------------------------------------------------
-        if sim_name == 'NEURON':
+        if simulator == 'NEURON':
             CellMetaClass = CellMetaClassNEURON
-        elif sim_name == 'NEST':
+        elif simulator == 'NEST':
             CellMetaClass = CellMetaClassNEST
         else:
             assert False
-        CellClass = CellMetaClass(
-            path.join(xml_dir, name + '.xml'), build_mode=build_mode)
-        self.nml_cells[sim_name] = CellClass()
-        self.nml_cells[sim_name].play('iExt', injected_signal)
-        self.nml_cells[sim_name].record('v')
-        self.nml_cells[sim_name].update_state(self.initial_states[name])
+        self.nml_cells[simulator] = CellMetaClass(model, build_mode='force')()
+        if analog_signal is not None:
+            self.nml_cells[simulator].play(*analog_signal)
+        if event_train is not None:
+            self.nml_cells[simulator].play(*event_train)
+        self.nml_cells[simulator].record(state_variable)
+        self.nml_cells[simulator].update_state(initial_states)
 
-    def _create_NEURON(self, name, model_name, stim_start, stim_amp, duration):  # @UnusedVariable @IgnorePep8
+    def _create_NEURON(self, neuron_name, parameters, initial_states,
+                       state_variable, analog_signal, event_train,
+                       translations, include_passive=False):
         # -----------------------------------------------------------------
-        # Set up PyNN section
+        # Set up NEURON section
         # -----------------------------------------------------------------
         self._nrn_pnn = h.Section()
         try:
             self._nrn_pnn_cell = eval(
-                'h.{}(0.5, sec=self._nrn_pnn)'.format(model_name))
+                'h.{}(0.5, sec=self._nrn_pnn)'.format(neuron_name))
             self._nrn_pnn.L = 10
-            self._nrn_pnn.diam = 10 / pi
+            self._nrn_pnn.diam = 10 / numpy.pi
             self._nrn_pnn.cm = 1.0
         except TypeError:
-            self._nrn_pnn.insert(model_name)
+            self._nrn_pnn.insert(neuron_name)
             self._nrn_pnn_cell = self._nrn_pnn(0.5)
             self._nrn_pnn.L = 100
-            self._nrn_pnn.diam = 1000 / pi
+            self._nrn_pnn.diam = 1000 / numpy.pi
             self._nrn_pnn.cm = 0.2
-#         if self.neuron_params[name] is not None:
-#             for k, v in self.neuron_params[name].iteritems():
-#                 setattr(getattr(self._nrn_pnn(0.5), model_name), k, v)
-        if self.neuron_pas[name] is not None:
+        if include_passive:
             self._nrn_pnn.insert('pas')
-            self._nrn_pnn(0.5).pas.g = self.neuron_pas[name]['g']
-            self._nrn_pnn(0.5).pas.e = self.neuron_pas[name]['e']
+        for name, value in parameters.iteritems():
+            try:
+                varname, scale = translations[name]
+                value = value * scale
+            except (ValueError, KeyError):
+                varname = translations.get(name, name)
+                value = value
+            if varname == 'pas.g':
+                self._nrn_pnn(0.5).pas.g = value
+            elif varname == 'pas.e':
+                self._nrn_pnn(0.5).pas.e = value
+            elif varname == 'cm':
+                self._nrn_pnn.cm = value
+            else:
+                setattr(self._nrn_pnn_cell, name, value)
+        for name, value in initial_states.iteritems():
+            try:
+                varname, scale = translations[name]
+                value = value * scale
+            except (ValueError, KeyError):
+                varname = translations.get(name, name)
+                value = value
+            setattr(self._nrn_pnn_cell, name, value)
         # Specify current injection
-        self._nrn_stim = h.IClamp(1.0, sec=self._nrn_pnn)
-        self._nrn_stim.delay = stim_start   # ms
-        self._nrn_stim.dur = duration   # ms
-        self._nrn_stim.amp = to_float(stim_amp, 'nA')   # nA
+        if analog_signal is not None:
+            _, signal = analog_signal
+            self._nrn_iclamp = h.IClamp(0.5, sec=self._nrn_pnn)
+            self._nrn_iclamp.delay = 0.0
+            self._nrn_iclamp.dur = 1e12
+            self._nrn_iclamp.amp = 0.0
+            self._nrn_iclamp_amps = h.Vector(pq.Quantity(signal, 'nA'))
+            self._nrn_iclamp_times = h.Vector(pq.Quantity(signal.times, 'ms'))
+            self._nrn_iclamp_amps.play(self._nrn_iclamp._ref_amp,
+                                       self._nrn_iclamp_times)
         # Record Time from NEURON (neuron.h._ref_t)
-        self._nrn_rec = NEURONRecorder(self._nrn_pnn, self._nrn_pnn_cell)
-        self._nrn_rec.record('v')
+        self._nrn_rec = self.NEURONRecorder(self._nrn_pnn, self._nrn_pnn_cell)
+        translations.get(state_variable, state_variable)
+        self._nrn_rec.record()
 
-    def _create_NEST(self, name, model_name, stim_start, stim_amp, duration,
-                     dt):
-        # ---------------------------------------------------------------------
-        # Set up PyNN section
-        # ---------------------------------------------------------------------
-        self.nest_cells = nest.Create(model_name, 1, self.nest_params[name])
-        self.nest_iclamp = nest.Create(
-            'dc_generator', 1,
-            {'start': stim_start - self.min_delay,
-             'stop': duration,
-             'amplitude': to_float(stim_amp, 'pA')})
+    def _create_NEST(self, nest_name, parameters, initial_states,
+                     state_variable, analog_signal, event_train, translations):
+        trans_params = {}
+        for name, value in parameters.iteritems():
+            try:
+                varname, scale = translations[name]
+                value = value * scale
+            except ValueError:
+                varname = translations[name]
+                value = value
+            trans_params[varname] = value
+        self.nest_cells = nest.Create(nest_name, 1, trans_params)
+        if analog_signal is not None:
+            nest.Create(
+                'step_current_generator', 1,
+                {'amplitude_values': pq.Quantity(analog_signal, 'pA'),
+                 'amplitude_times': (pq.Quantity(analog_signal.times, 'ms') -
+                                     self.min_delay * pq.ms),
+                 'start': float(pq.Quantity(analog_signal.t_start, 'ms')),
+                 'stop': float(pq.Quantity(analog_signal.t_stop, 'ms'))})
         nest.Connect(self.nest_iclamp, self.nest_cells,
                      syn_spec={'delay': self.min_delay})
-        self.nest_multimeter = nest.Create('multimeter', 1,
-                                           {"interval": to_float(dt, 'ms')})
-        nest.SetStatus(self.nest_multimeter,
-                       {'record_from': [self.nest_states[name]['v']]})
-        nest.Connect(self.nest_multimeter, self.nest_cells)
+        self.nest_multimeter = nest.Create(
+            'multimeter', 1, {"interval": self.to_float(self.dt, 'ms')})
         nest.SetStatus(
-            self.nest_cells,
-            dict((self.nest_states[name][n], float(v))
-                 for n, v in self.initial_states[name].iteritems()
-                 if self.nest_states[name][n] is not None))
+            self.nest_multimeter,
+            {'record_from': translations.get(state_variable, state_variable)})
+        nest.Connect(self.nest_multimeter, self.nest_cells)
+        trans_states = {}
+        for name, value in initial_states.iteritems():
+            try:
+                varname, scale = translations[name]
+                value = value * scale
+            except ValueError:
+                varname = translations[name]
+                value = value
+            trans_states[varname] = value
+        nest.SetStatus(self.nest_cells, trans_states)
 
-    def _plot_NEURON(self, name):  # @UnusedVariable
+    def _plot_NEURON(self):  # @UnusedVariable
         pnn_t, pnn_v = self._get_NEURON_signal()
         plt.plot(pnn_t[:-1], pnn_v[1:])
 
-    def _plot_NEST(self, name):
-        nest_v = self._get_NEST_signal(name)
+    def _plot_NEST(self):
+        nest_v = self._get_NEST_signal()
         plt.plot(pq.Quantity(nest_v.times, 'ms'), pq.Quantity(nest_v, 'mV'))
 
-    def _plot_9ML(self, name, sim_name):  # @UnusedVariable
+    def _plot_9ML(self, sim_name):  # @UnusedVariable
         nml_v = self.nml_cells[sim_name].recording('v')
         plt.plot(nml_v.times, nml_v)
 
-    def _diff_NEURON(self, name):  # @UnusedVariable
+    def _diff_NEURON(self):  # @UnusedVariable
         _, pnn_v = self._get_NEURON_signal()
         nml_v = self.nml_cells['NEURON'].recording('v')
         return float(pq.Quantity((nml_v - pnn_v[1:] * pq.mV).sum(), 'V'))
 
-    def _diff_NEST(self, name):
-        nest_v = self._get_NEST_signal(name)
+    def _diff_NEST(self):
+        nest_v = self._get_NEST_signal()
         nml_v = self.nml_cells['NEST'].recording('v')
         return float(pq.Quantity((nml_v - nest_v * pq.mV).sum(), 'V'))
 
     def _get_NEURON_signal(self):
         return self._nrn_rec.recording('v')  # @UnusedVariable
 
-    def _get_NEST_signal(self, name):
+    def _get_NEST_signal(self, translations):
         return neo.AnalogSignal(
             nest.GetStatus(
-                self.nest_multimeter, 'events')[0][
-                    self.nest_states[name]['v']],
+                self.nest_multimeter, 'events')[0][translations['v']],
             sampling_period=simulatorNEST.dt * pq.ms, units='mV')  # @UndefinedVariable @IgnorePep8
 
+    @classmethod
+    def to_float(cls, qty, units):
+        return float(pq.Quantity(qty, units))
 
-class NEURONRecorder(object):
+    class NEURONRecorder(object):
 
-    def __init__(self, sec, mech):
-        self.sec = sec
-        self.mech = mech
-        self.rec_t = h.Vector()
-        self.rec_t.record(neuron.h._ref_t)
-        self.recs = {}
+        def __init__(self, sec, mech):
+            self.sec = sec
+            self.mech = mech
+            self.rec_t = h.Vector()
+            self.rec_t.record(neuron.h._ref_t)
+            self.recs = {}
 
-    def record(self, varname):
-        rec = h.Vector()
-        self.recs[varname] = rec
-        if varname == 'v':
-            rec.record(self.sec(0.5)._ref_v)
-        elif varname == 'Cm':
-            rec.record(self.sec(0.5)._ref_cm)
-        else:
-            rec.record(getattr(self.mech, '_ref_' + varname))
+        def record(self, varname):
+            rec = h.Vector()
+            self.recs[varname] = rec
+            if varname == 'v':
+                rec.record(self.sec(0.5)._ref_v)
+            elif varname == 'Cm':
+                rec.record(self.sec(0.5)._ref_cm)
+            else:
+                rec.record(getattr(self.mech, '_ref_' + varname))
 
-    def recording(self, varname):
-        return numpy.array(self.rec_t), numpy.array(self.recs[varname])
+        def recording(self, varname):
+            return numpy.array(self.rec_t), numpy.array(self.recs[varname])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(__doc__)
-    parser.add_argument('nineml_model', type=str, help="The 9ML model to compare")
+    parser.add_argument('nineml_model', type=str,
+                        help="The 9ML model to compare")
     parser.add_argument('temp', type=int, help="dummy")
     parser.add_argument('--nest', type=str,
                         help="The name of the nest model to compare against")
