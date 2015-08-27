@@ -20,6 +20,7 @@ from .controller import simulation_controller
 from pype9.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE
 from pype9.nest.units import UnitHandler
+from pype9.exceptions import Pype9RuntimeError
 
 logger = logging.getLogger('PyPe9')
 
@@ -92,7 +93,19 @@ class Cell(base.Cell):
         """
         if isinstance(self.component_class.receive_port(port_name),
                       nineml.abstraction.EventPort):
-            raise NotImplementedError
+            spike_times = (pq.Quantity(signal, 'ms') -
+                           simulation_controller.min_delay * pq.ms)
+            if any(spike_times < 0.0):
+                raise Pype9RuntimeError(
+                    "Some spike are less than minimum delay and so can't be "
+                    "played into cell ({})".format(', '.join(
+                        spike_times < simulation_controller.min_delay)))
+            self._inputs[port_name] = nest.Create(
+                'spike_generator', 1, {'spike_times': spike_times})
+            nest.Connect(self._inputs[port_name], self._cell,
+                         syn_spec={'receptor_type':
+                                   self._receive_ports[port_name],
+                                   'delay': simulation_controller.min_delay})
         else:
             # Signals are played into NEST cells include a delay (set to be the
             # minimum), which is is subtracted from the start of the signal so
