@@ -162,6 +162,11 @@ class Comparer(object):
             self._nrn_iclamp_times = h.Vector(pq.Quantity(signal.times, 'ms'))
             self._nrn_iclamp_amps.play(self._nrn_iclamp._ref_amp,
                                        self._nrn_iclamp_times)
+        if event_train is not None:
+            self._vstim = h.VecStim()
+            self._vstim_times = h.Vector(pq.Quantity(signal, 'ms'))
+            self._vstim.play(self._vstim_times)
+            self._vstim_con = h.NetCon(self._vstim, self._hoc, sec=self._sec)
         # Record Time from NEURON (neuron.h._ref_t)
         self._nrn_rec = self.NEURONRecorder(self._nrn_pnn, self._nrn_pnn_cell)
         translations.get(state_variable, state_variable)
@@ -187,8 +192,8 @@ class Comparer(object):
                                      self.min_delay * pq.ms),
                  'start': float(pq.Quantity(analog_signal.t_start, 'ms')),
                  'stop': float(pq.Quantity(analog_signal.t_stop, 'ms'))})
-        nest.Connect(self.nest_iclamp, self.nest_cells,
-                     syn_spec={'delay': self.min_delay})
+            nest.Connect(self.nest_iclamp, self.nest_cells,
+                         syn_spec={'delay': self.min_delay})
         self.nest_multimeter = nest.Create(
             'multimeter', 1, {"interval": self.to_float(self.dt, 'ms')})
         nest.SetStatus(

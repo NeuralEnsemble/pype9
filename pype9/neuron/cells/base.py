@@ -203,12 +203,16 @@ class Cell(base.Cell):
             raise Pype9RuntimeError(
                 "Cannot play into unrecognised port '{}'".format(port_name))
         if isinstance(port, EventPort):
+            if len(list(self.componentclass.event_receive_ports)):
+                raise Pype9RuntimeError(
+                    "Multiple event receive ports '{}'".format("', '".join(
+                        list(self.componentclass.event_receive_ports))))
             vstim = h.VecStim()
             vstim_times = h.Vector(pq.Quantity(signal, 'ms'))
             vstim.play(vstim_times)
             vstim_con = h.NetCon(vstim, self._hoc, sec=self._sec)
             self._inputs['vstim'] = vstim
-            self._input_auxx.extend((vstim_times, vstim_con))
+            self._input_auxs.extend((vstim_times, vstim_con))
         else:
             if port_name not in (p.name for p in ext_is):
                 raise NotImplementedError(
