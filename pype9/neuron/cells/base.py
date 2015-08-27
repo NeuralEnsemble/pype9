@@ -198,23 +198,32 @@ class Cell(base.Cell):
         ext_is = self.build_componentclass.annotations[
             PYPE9_NS][EXTERNAL_CURRENTS]
         try:
-            self.componentclass.port(port_name)
+            port = self.componentclass.port(port_name)
         except KeyError:
             raise Pype9RuntimeError(
                 "Cannot play into unrecognised port '{}'".format(port_name))
-        if port_name not in (p.name for p in ext_is):
-            raise NotImplementedError(
-                "Can only play into external current ports ('{}'), not '{}' "
-                "port.".format("', '".join(p.name for p in ext_is), port_name))
-        iclamp = h.IClamp(0.5, sec=self._sec)
-        iclamp.delay = 0.0
-        iclamp.dur = 1e12
-        iclamp.amp = 0.0
-        iclamp_amps = h.Vector(pq.Quantity(signal, 'nA'))
-        iclamp_times = h.Vector(pq.Quantity(signal.times, 'ms'))
-        iclamp_amps.play(iclamp._ref_amp, iclamp_times)
-        self._inputs['iclamp'] = iclamp
-        self._input_auxs.extend((iclamp_amps, iclamp_times))
+        if isinstance(port, EventPort):
+            vstim = h.VecStim()
+            vstim_times = h.Vector(pq.Quantity(signal, 'ms'))
+            vstim.play(vstim_times)
+            vstim_con = h.NetCon(vstim, self._hoc, sec=self._sec)
+            self._inputs['vstim'] = vstim
+            self._input_auxx.extend((vstim_times, vstim_con))
+        else:
+            if port_name not in (p.name for p in ext_is):
+                raise NotImplementedError(
+                    "Can only play into external current ports ('{}'), not "
+                    "'{}' port.".format("', '".join(p.name for p in ext_is),
+                                        port_name))
+            iclamp = h.IClamp(0.5, sec=self._sec)
+            iclamp.delay = 0.0
+            iclamp.dur = 1e12
+            iclamp.amp = 0.0
+            iclamp_amps = h.Vector(pq.Quantity(signal, 'nA'))
+            iclamp_times = h.Vector(pq.Quantity(signal.times, 'ms'))
+            iclamp_amps.play(iclamp._ref_amp, iclamp_times)
+            self._inputs['iclamp'] = iclamp
+            self._input_auxs.extend((iclamp_amps, iclamp_times))
 
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         """
