@@ -68,8 +68,11 @@ class Cell(base.Cell):
         Return recorded data as a dictionary containing one numpy array for
         each neuron, ids as keys.
         """
-        if port_name == self.componentclass.annotations[
-                PYPE9_NS][MEMBRANE_VOLTAGE]:
+        # Get mapped port name if port corresponds to membrane voltage
+        if (port_name == self.componentclass.annotations[
+                PYPE9_NS][MEMBRANE_VOLTAGE] and
+            MEMBRANE_VOLTAGE in self.build_componentclass.annotations[
+                PYPE9_NS]):
             port_name = self.build_componentclass.annotations[
                 PYPE9_NS][MEMBRANE_VOLTAGE]
         events, interval = nest.GetStatus(self._recorders[port_name],

@@ -3,6 +3,7 @@ Command that compares a 9ML model with an existing version in NEURON and/or
 NEST
 """
 import argparse
+import pyNN.neuron  # @UnusedImport - imports PyNN mechanisms
 import neuron
 import nest
 from neuron import h
@@ -67,6 +68,17 @@ class Comparer(object):
         self.initial_states = initial_states
         self.input_signal = input_signal
         self.input_train = input_train
+        self.nml_cells = {}
+        if self.state_variable in self.nest_translations:
+            self.nest_state_variable = self.nest_translations[
+                self.state_variable][0]
+        else:
+            self.nest_state_variable = self.state_variable
+        if self.state_variable in self.neuron_translations:
+            self.neuron_state_variable = self.neuron_translations[
+                self.state_variable][0]
+        else:
+            self.neuron_state_variable = self.state_variable
 
     def simulate(self, duration):
         """
@@ -75,9 +87,7 @@ class Comparer(object):
         if self.simulate_neuron:
             h.dt = self.dt
         if self.simulate_nest:
-            nest.SetKernelStatus({'resolution': self.dt,
-                                  'min_delay': self.min_delay,
-                                  'max_delay': self.max_delay})
+            nest.SetKernelStatus({'resolution': self.dt})
         for simulator in self.simulators:
             self._create_9ML(nineml_model, simulator)
         if self.neuron_model is not None:
@@ -93,56 +103,58 @@ class Comparer(object):
         legend = []
         for simulator in self.simulators:
             self._plot_9ML(simulator)
-            legend.append('9ML (' + simulator + ')')
+            legend.append('{} (9ML-{})'.format(self.nineml_model.name,
+                                               simulator.upper()))
         if self.neuron_model:
             self._plot_NEURON()
-            legend.append(self.neuron_model[0] + ' (NEURON)')
+            legend.append(self.neuron_model + ' (NEURON)')
         if self.nest_model:
             self._plot_NEST()
-            legend.append(self.nest_model[0] + ' (NEST)')
+            legend.append(self.nest_model + ' (NEST)')
         plt.legend(legend)
         plt.show()
 
-    def _create_9ML(self, model, simulator, initial_states,
-                    input_signal, input_train):
+    def _create_9ML(self, model, simulator):
         # -----------------------------------------------------------------
         # Set up 9MLML cell
         # -----------------------------------------------------------------
-        if simulator == 'NEURON':
+        if simulator.lower() == 'neuron':
             CellMetaClass = CellMetaClassNEURON
-        elif simulator == 'NEST':
+        elif simulator.lower() == 'nest':
             CellMetaClass = CellMetaClassNEST
         else:
             assert False
         self.nml_cells[simulator] = CellMetaClass(model, build_mode='force')()
-        if input_signal is not None:
-            self.nml_cells[simulator].play(*input_signal)
-        if input_train is not None:
-            self.nml_cells[simulator].play(*input_train)
+        if self.input_signal is not None:
+            self.nml_cells[simulator].play(*self.input_signal)
+        if self.input_train is not None:
+            self.nml_cells[simulator].play(*self.input_train)
         self.nml_cells[simulator].record(self.state_variable)
-        self.nml_cells[simulator].update_state(initial_states)
+        self.nml_cells[simulator].update_state(self.initial_states)
 
-    def _create_NEURON(self, neuron_name, parameters, initial_states,
-                       input_signal, input_train):
+    def _create_NEURON(self, neuron_name):
         # -----------------------------------------------------------------
         # Set up NEURON section
         # -----------------------------------------------------------------
-        self._nrn_pnn = h.Section()
+        self.nrn_cell_sec = h.Section()
         try:
-            self._nrn_pnn_cell = eval(
-                'h.{}(0.5, sec=self._nrn_pnn)'.format(neuron_name))
-            self._nrn_pnn.L = 10
-            self._nrn_pnn.diam = 10 / numpy.pi
-            self._nrn_pnn.cm = 1.0
+            self.nrn_cell = eval(
+                'h.{}(0.5, sec=self.nrn_cell_sec)'.format(neuron_name))
+            self.nrn_cell_sec.L = 10
+            self.nrn_cell_sec.diam = 10 / numpy.pi
+            self.nrn_cell_sec.cm = 1.0
         except TypeError:
-            self._nrn_pnn.insert(neuron_name)
-            self._nrn_pnn_cell = self._nrn_pnn(0.5)
-            self._nrn_pnn.L = 100
-            self._nrn_pnn.diam = 1000 / numpy.pi
-            self._nrn_pnn.cm = 0.2
-        if any(v.startswith('pas.') for v in parameters.itervalues()):
-            self._nrn_pnn.insert('pas')
-        for name, value in parameters.iteritems():
+            self.nrn_cell_sec.insert(neuron_name)
+            self.nrn_cell = self.nrn_cell_sec(0.5)
+            self.nrn_cell_sec.L = 100
+            self.nrn_cell_sec.diam = 1000 / numpy.pi
+            self.nrn_cell_sec.cm = 0.2
+        # Check to see if any translated parameter names start with 'pas.' in
+        # which case a passive mechanism needs to be inserted
+        if any(self.neuron_translations.get(k, (k, 1))[0].startswith('pas.')
+               for k in parameters.iterkeys()):
+            self.nrn_cell_sec.insert('pas')
+        for name, value in self.parameters.iteritems():
             try:
                 varname, scale = self.neuron_translations[name]
                 value = value * scale
@@ -150,25 +162,28 @@ class Comparer(object):
                 varname = self.neuron_translations.get(name, name)
                 value = value
             if varname == 'pas.g':
-                self._nrn_pnn(0.5).pas.g = value
+                self.nrn_cell_sec(0.5).pas.g = value
             elif varname == 'pas.e':
-                self._nrn_pnn(0.5).pas.e = value
+                self.nrn_cell_sec(0.5).pas.e = value
             elif varname == 'cm':
-                self._nrn_pnn.cm = value
+                self.nrn_cell_sec.cm = value
             else:
-                setattr(self._nrn_pnn_cell, name, value)
-        for name, value in initial_states.iteritems():
+                setattr(self.nrn_cell, name, value)
+        for name, value in self.initial_states.iteritems():
             try:
                 varname, scale = self.neuron_translations[name]
                 value = value * scale
             except (ValueError, KeyError):
                 varname = self.neuron_translations.get(name, name)
                 value = value
-            setattr(self._nrn_pnn_cell, name, value)
+            try:
+                setattr(self.nrn_cell, name, value)
+            except LookupError:
+                setattr(self.nrn_cell_sec, name, value)
         # Specify current injection
-        if input_signal is not None:
-            _, signal = input_signal
-            self._nrn_iclamp = h.IClamp(0.5, sec=self._nrn_pnn)
+        if self.input_signal is not None:
+            _, signal = self.input_signal
+            self._nrn_iclamp = h.IClamp(0.5, sec=self.nrn_cell_sec)
             self._nrn_iclamp.delay = 0.0
             self._nrn_iclamp.dur = 1e12
             self._nrn_iclamp.amp = 0.0
@@ -176,31 +191,33 @@ class Comparer(object):
             self._nrn_iclamp_times = h.Vector(pq.Quantity(signal.times, 'ms'))
             self._nrn_iclamp_amps.play(self._nrn_iclamp._ref_amp,
                                        self._nrn_iclamp_times)
-        if input_train is not None:
+        if self.input_train is not None:
+            _, train = self.input_train
             self._vstim = h.VecStim()
-            self._vstim_times = h.Vector(pq.Quantity(signal, 'ms'))
+            self._vstim_times = h.Vector(pq.Quantity(train, 'ms'))
             self._vstim.play(self._vstim_times)
             self._vstim_con = h.NetCon(self._vstim, self._hoc, sec=self._sec)
         # Record Time from NEURON (neuron.h._ref_t)
-        self._nrn_rec = self.NEURONRecorder(self._nrn_pnn, self._nrn_pnn_cell)
-        self.neuron_translations.get(self.state_variable, self.state_variable)
-        self._nrn_rec.record()
+        self._nrn_rec = self.NEURONRecorder(self.nrn_cell_sec, self.nrn_cell)
+        self._nrn_rec.record(self.neuron_state_variable)
 
-    def _create_NEST(self, nest_name, parameters, initial_states,
-                     input_signal, input_train):
+    def _create_NEST(self, nest_name):
         trans_params = {}
         for name, value in parameters.iteritems():
             try:
                 varname, scale = self.nest_translations[name]
                 value = value * scale
-            except ValueError:
-                varname = self.nest_translations[name]
+            except (ValueError, KeyError):
+                varname = self.nest_translations.get(name, name)
                 value = value
             trans_params[varname] = value
         self.nest_cell = nest.Create(nest_name, 1, trans_params)
-        receptor_types = nest.GetDefaults(nest_name)['receptor_types']
-        if input_signal is not None:
-            port_name, signal = input_signal
+        try:
+            receptor_types = nest.GetDefaults(nest_name)['receptor_types']
+        except KeyError:
+            receptor_types = None
+        if self.input_signal is not None:
+            port_name, signal = self.input_signal
             generator = nest.Create(
                 'step_current_generator', 1,
                 {'amplitude_values': pq.Quantity(signal, 'pA'),
@@ -209,10 +226,12 @@ class Comparer(object):
                  'start': float(pq.Quantity(signal.t_start, 'ms')),
                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
             nest.Connect(generator, self.nest_cell,
-                         syn_spec={'receptor_type': receptor_types[port_name],
+                         syn_spec={'receptor_type':
+                                   (receptor_types[port_name]
+                                    if receptor_types else 0),
                                    'delay': self.min_delay})
-        if input_train is not None:
-            port_name, signal = input_train
+        if self.input_train is not None:
+            port_name, signal = self.input_train
             spike_times = (pq.Quantity(signal, 'ms') - self.min_delay * pq.ms)
             if any(spike_times < 0.0):
                 raise Pype9RuntimeError(
@@ -222,22 +241,23 @@ class Comparer(object):
             generator = nest.Create(
                 'spike_generator', 1, {'spike_times': spike_times})
             nest.Connect(generator, self.nest_cell,
-                         syn_spec={'receptor_type': receptor_types[port_name],
+                         syn_spec={'receptor_type':
+                                   (receptor_types[port_name]
+                                    if receptor_types else 0),
                                    'delay': self.min_delay})
         self.nest_multimeter = nest.Create(
             'multimeter', 1, {"interval": self.to_float(self.dt, 'ms')})
         nest.SetStatus(
             self.nest_multimeter,
-            {'record_from': self.nest_translations.get(self.state_variable,
-                                                       self.state_variable)})
+            {'record_from': [self.nest_state_variable]})
         nest.Connect(self.nest_multimeter, self.nest_cell)
         trans_states = {}
-        for name, value in initial_states.iteritems():
+        for name, value in self.initial_states.iteritems():
             try:
                 varname, scale = self.nest_translations[name]
                 value = value * scale
-            except ValueError:
-                varname = self.nest_translations[name]
+            except (ValueError, KeyError):
+                varname = self.nest_translations.get(name, name)
                 value = value
             trans_states[varname] = value
         nest.SetStatus(self.nest_cell, trans_states)
@@ -251,7 +271,7 @@ class Comparer(object):
         plt.plot(pq.Quantity(nest_v.times, 'ms'), pq.Quantity(nest_v, 'mV'))
 
     def _plot_9ML(self, sim_name):  # @UnusedVariable
-        nml_v = self.nml_cells[sim_name].recording('v')
+        nml_v = self.nml_cells[sim_name].recording(self.state_variable)
         plt.plot(nml_v.times, nml_v)
 
     def _diff_NEURON(self):  # @UnusedVariable
@@ -261,16 +281,16 @@ class Comparer(object):
 
     def _diff_NEST(self):
         nest_v = self._get_NEST_signal()
-        nml_v = self.nml_cells['NEST'].recording('v')
+        nml_v = self.nml_cells['NEST'].recording(self.nest_state_variable)
         return float(pq.Quantity((nml_v - nest_v * pq.mV).sum(), 'V'))
 
     def _get_NEURON_signal(self):
-        return self._nrn_rec.recording('v')  # @UnusedVariable
+        return self._nrn_rec.recording(self.neuron_state_variable)
 
-    def _get_NEST_signal(self, translations):
+    def _get_NEST_signal(self):
         return neo.AnalogSignal(
             nest.GetStatus(
-                self.nest_multimeter, 'events')[0][translations['v']],
+                self.nest_multimeter, 'events')[0][self.nest_state_variable],
             sampling_period=simulatorNEST.dt * pq.ms, units='mV')  # @UndefinedVariable @IgnorePep8
 
     @classmethod
@@ -372,8 +392,9 @@ if __name__ == '__main__':
                 "specify the --model_name parameter")
     parameters = dict((k, float(v)) for k, v in args.parameter)
     initial_states = dict((k, float(v)) for k, v in args.initial_state)
-    nest_translations = dict((o, (n, s)) for o, n, s in args.nest_trans)
-    neuron_translations = dict((o, (n, s)) for o, n, s in args.neuron_trans)
+    nest_translations = dict((o, (n, float(s))) for o, n, s in args.nest_trans)
+    neuron_translations = dict((o, (n, float(s)))
+                               for o, n, s in args.neuron_trans)
     if args.input_signal is not None:
         if args.input_step is not None:
             raise Pype9RuntimeError(
@@ -385,12 +406,13 @@ if __name__ == '__main__':
     elif args.input_step is not None:
         port_name, start_time, amplitude = args.input_step
         start_time = float(start_time)
+        amplitude = float(amplitude)
         num_preceding = int(numpy.floor(start_time / args.dt))
         num_remaining = int(numpy.ceil((args.duration - start_time) / args.dt))
         signal = neo.AnalogSignal(
-            numpy.concatenate(numpy.zeros(num_preceding),
-                              numpy.ones(num_remaining) * amplitude),
-            sample_period=args.dt * pq.ms, units='nA', time_units='ms')
+            numpy.concatenate((numpy.zeros(num_preceding),
+                               numpy.ones(num_remaining) * amplitude)),
+            sampling_period=args.dt * pq.ms, units='nA', time_units='ms')
         input_signal = (port_name, signal)
     else:
         input_signal = None
