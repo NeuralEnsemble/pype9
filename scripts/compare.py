@@ -3,6 +3,10 @@ Command that compares a 9ML model with an existing version in NEURON and/or
 NEST
 """
 import argparse
+import sys
+import os
+import subprocess as sp
+import tempfile
 import pyNN.neuron  # @UnusedImport - imports PyNN mechanisms
 import neuron
 import nest
@@ -31,38 +35,41 @@ class Comparer(object):
     (or both)
     """
 
-    min_delay = 0.2
-    max_delay = 10.0
-
-    def __init__(self, nineml_model, parameters, state_variable, simulators,
-                 dt, initial_states, neuron_model=None, nest_model=None,
-                 input_signal=None, input_train=None,
+    def __init__(self, state_variable, dt, parameters={}, initial_states={},
+                 nineml_model=None, simulators=[], neuron_ref=None,
+                 nest_ref=None, input_signal=None, input_train=None,
                  neuron_translations={}, nest_translations={},
-                 neuron_build_args={}, nest_build_args={}):
+                 neuron_build_args={}, nest_build_args={},
+                 min_delay=0.02, max_delay=10.0):
         """
         nineml_model   -- 9ML model to compare
         nineml_sims    -- tuple of simulator names to simulate the 9ML model in
         duration       -- simulation duration
         dt             -- simulation time step
         initial_states -- a dictionary of the initial states
-        neuron_model   -- a tuple containing the name of neuron model and a
+        neuron_ref   -- a tuple containing the name of neuron model and a
                           dictionary of parameter and state name mappings
-        nest_model     -- a tuple containing the name of nest model and a
+        nest_ref     -- a tuple containing the name of nest model and a
                           dictionary of parameter and state name mappings
         input_signal  -- tuple containing the analog signal (in Neo format)
                           and the port to play it into
         input_train    -- tuple containing the event train (in Neo format)
                           and the port to play it into
         """
+        if nineml_model is not None and not simulators:
+            raise Pype9RuntimeError(
+                "No simulators specified to simulate the 9ML model '{}'."
+                "Add either 'neuron', 'nest' or both to the positional "
+                "arguments".format(nineml_file))
         self.simulate_neuron = ('neuron' in simulators or
-                                neuron_model is not None)
-        self.simulate_nest = 'nest' in simulators or nest_model is not None
+                                neuron_ref is not None)
+        self.simulate_nest = 'nest' in simulators or nest_ref is not None
         self.dt = self.to_float(dt, 'ms')
         self.state_variable = state_variable
         self.nineml_model = nineml_model
         self.parameters = parameters
-        self.neuron_model = neuron_model
-        self.nest_model = nest_model
+        self.neuron_ref = neuron_ref
+        self.nest_ref = nest_ref
         self.simulators = simulators
         self.neuron_translations = neuron_translations
         self.nest_translations = nest_translations
@@ -82,6 +89,8 @@ class Comparer(object):
                 self.state_variable][0]
         else:
             self.neuron_state_variable = self.state_variable
+        self.min_delay = min_delay
+        self.max_delay = max_delay
 
     def simulate(self, duration):
         """
@@ -93,10 +102,10 @@ class Comparer(object):
             nest.SetKernelStatus({'resolution': self.dt})
         for simulator in self.simulators:
             self._create_9ML(nineml_model, simulator)
-        if self.neuron_model is not None:
-            self._create_NEURON(self.neuron_model)
-        if self.nest_model is not None:
-            self._create_NEST(self.nest_model)
+        if self.neuron_ref is not None:
+            self._create_NEURON(self.neuron_ref)
+        if self.nest_ref is not None:
+            self._create_NEST(self.nest_ref)
         if self.simulate_neuron:
             simulatorNEURON.run(duration)
         if self.simulate_nest:
@@ -108,12 +117,12 @@ class Comparer(object):
             self._plot_9ML(simulator)
             legend.append('{} (9ML-{})'.format(self.nineml_model.name,
                                                simulator.upper()))
-        if self.neuron_model:
+        if self.neuron_ref:
             self._plot_NEURON()
-            legend.append(self.neuron_model + ' (NEURON)')
-        if self.nest_model:
+            legend.append(self.neuron_ref + ' (NEURON)')
+        if self.nest_ref:
             self._plot_NEST()
-            legend.append(self.nest_model + ' (NEST)')
+            legend.append(self.nest_ref + ' (NEST)')
         plt.legend(legend)
         plt.show()
 
@@ -301,6 +310,58 @@ class Comparer(object):
     def to_float(cls, qty, units):
         return float(pq.Quantity(qty, units))
 
+    @classmethod
+    def compare_in_subprocess(
+        self, state_variable, dt, duration, parameters={}, initial_states={},
+        nineml_model=None, simulators=[], neuron_ref=None, nest_ref=None,
+        input_signal=None, input_train=None, neuron_translations={},
+        nest_translations={}, neuron_build_args={}, nest_build_args={},
+            min_delay=0.02, max_delay=10.0):
+        args = [sys.executable, __file__[:-1]]  # To execute the current script
+        if nineml_model is not None:
+            args.append(nineml_model)
+            args.extend(simulators)
+        args.extend(('--state_variable', state_variable))
+        args.extend(('--dt', dt))
+        if neuron_ref is not None:
+            args.extend(('--neuron_ref', neuron_ref))
+        if nest_ref is not None:
+            args.extend(('--neuron_ref', nest_ref))
+        for n, v in parameters.iteritems():
+            args.extend(('-p', n, str(v)))
+        for n, v in initial_states.iteritems():
+            args.extend(('-i', n, str(v)))
+        if input_signal is not None:
+            with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as f:
+                neo.PickleIO(f).write(input_signal)
+                input_signal_path = f.name
+            args.extend(('--input_signal', input_signal_path))
+        if input_train is not None:
+            with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as f:
+                neo.PickleIO(f).write(input_signal)
+                input_train_path = f.name
+            args.extend(('--input_train', input_train_path))
+        for n, (o, v) in neuron_translations.iteritems():
+            args.extend(('-u', n, o, str(v)))
+        for n, (o, v) in nest_translations.iteritems():
+            args.extend(('-s', n, o, str(v)))
+        for k, v in neuron_build_args.iteritems():
+            args.extend(('-b', 'neuron', k, v))
+        for k, v in nest_build_args.iteritems():
+            args.extend(('-b', 'nest', k, v))
+        args.extend(('--duration', duration))
+        args.extend(('--min_delay', min_delay))
+        args.extend(('--max_delay', max_delay))
+        try:
+            pipe = sp.Popen(args, stdout=sp.PIPE, stderr=sp.PIPE)
+            stdout, stderr = pipe.communicate()
+        except sp.CalledProcessError as e:
+            raise Pype9RuntimeError("Error in comparison: {}".format(e))
+        if input_signal is not None:
+            os.remove(input_signal_path)
+        if input_train is not None:
+            os.remove(input_train_path)
+
     class NEURONRecorder(object):
 
         def __init__(self, sec, mech):
@@ -315,8 +376,6 @@ class Comparer(object):
             self.recs[varname] = rec
             if varname == 'v':
                 rec.record(self.sec(0.5)._ref_v)
-            elif varname == 'Cm':
-                rec.record(self.sec(0.5)._ref_cm)
             else:
                 rec.record(getattr(self.mech, '_ref_' + varname))
 
@@ -325,16 +384,15 @@ class Comparer(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(__doc__)
-    parser.add_argument('nineml_file', type=str,
-                        help="The 9ML model to compare")
-    parser.add_argument('--simulator', type=str, action='append',
-                        help="The simulators to run the 9ML model in",
-                        default=[])
+    parser.add_argument('nineml', type=str, nargs="*", default=None,
+                        help=("The 9ML model to compare plus the simulators to"
+                              " simulate it in (path, simulator1, "
+                              "simulator2...)"))
     parser.add_argument('--model_name', type=str, default=None,
                         help="The name of the model to select within the file")
-    parser.add_argument('--nest', type=str, default=None,
+    parser.add_argument('--nest_ref', type=str, default=None,
                         help="The name of the nest model to compare against")
-    parser.add_argument('--neuron', type=str, default=None,
+    parser.add_argument('--neuron_ref', type=str, default=None,
                         help="The name of the NEURON model to compare against")
     parser.add_argument('--dt', type=float, default=0.01,
                         help="The simulation timestep (ms)")
@@ -376,28 +434,41 @@ if __name__ == '__main__':
                         default=[], metavar=('SIMULATOR', 'NAME', 'VALUE'),
                         help=("Any build arg that should be passed to the 9ML"
                               "metaclass (simulator, name, value)"))
+    parser.add_argument('--min_delay', type=float, default=0.2,
+                        help="Minimum delay used for the simulation")
+    parser.add_argument('--max_delay', type=float, default=10.0,
+                        help="Minimum delay used for the simulation")
     args = parser.parse_args()
-    if len(args.simulator) == 0 and args.neuron is None and args.nest is None:
+    if args.nineml is None and args.neuron is None and args.nest is None:
         raise Pype9RuntimeError("No simulations specified")
-    nineml_doc = nineml.read(args.nineml_file)
-    if args.model_name:
-        nineml_model = nineml_doc[args.model_name]
-    else:
-        components = list(nineml_doc.components)
-        if len(components) == 1:
-            nineml_model = components[0]
-        elif len(components) == 0:
-            component_classes = list(nineml_doc.component_classes)
-            if len(component_classes) == 1:
-                nineml_model = component_classes[0]
+    if args.nineml is not None:
+        nineml_file = args.nineml[0]
+        simulators = args.nineml[1:]
+        nineml_doc = nineml.read(nineml_file)
+        if args.model_name:
+            nineml_model = nineml_doc[args.model_name]
+        else:
+            # Guess the desired nineml component from the file (if there is
+            # only one component in the file)
+            components = list(nineml_doc.components)
+            if len(components) == 1:
+                nineml_model = components[0]
+            elif len(components) == 0:
+                component_classes = list(nineml_doc.component_classes)
+                if len(component_classes) == 1:
+                    nineml_model = component_classes[0]
+                else:
+                    raise Pype9RuntimeError(
+                        "Multiple component classes found in '{}' file, need "
+                        "to specify the --model_name parameter")
             else:
                 raise Pype9RuntimeError(
-                    "Multiple component classes found in '{}' file, need to "
+                    "Multiple components found in '{}' file, need to "
                     "specify the --model_name parameter")
-        else:
-            raise Pype9RuntimeError(
-                "Multiple components found in '{}' file, need to "
-                "specify the --model_name parameter")
+    else:
+        # If the user only wants to run the reference model
+        nineml_model = None
+        simulators = []
     parameters = dict((k, float(v)) for k, v in args.parameter)
     initial_states = dict((k, float(v)) for k, v in args.initial_state)
     nest_translations = dict((o, (n, float(s))) for o, n, s in args.nest_trans)
@@ -443,16 +514,17 @@ if __name__ == '__main__':
             units='ms', t_stop=args.duration * pq.ms)
     else:
         input_train = None
-    comparer = Comparer(nineml_model, parameters=parameters,
+    comparer = Comparer(nineml_model=nineml_model, parameters=parameters,
                         state_variable=args.state_variable,
-                        simulators=args.simulator, dt=args.dt,
+                        simulators=simulators, dt=args.dt,
                         initial_states=initial_states,
-                        neuron_model=args.neuron, nest_model=args.nest,
+                        neuron_ref=args.neuron_ref, nest_ref=args.nest_ref,
                         input_signal=input_signal, input_train=input_train,
                         nest_translations=nest_translations,
                         neuron_translations=neuron_translations,
                         neuron_build_args=neuron_build_args,
-                        nest_build_args=nest_build_args)
+                        nest_build_args=nest_build_args,
+                        min_delay=args.min_delay, max_delay=args.max_delay)
     comparer.simulate(args.duration)
     if args.plot:
         comparer.plot()
