@@ -19,15 +19,24 @@ from pype9.nest.cells import (
 import numpy
 import quantities as pq
 import neo
+import nineml
+from pype9.exceptions import Pype9RuntimeError
 
 
 class Comparer(object):
+    """
+    The Comparer class is used to compare the dynamics of a 9ML model simulated
+    in either NEURON or NEST with a native model in either of those simulators
+    (or both)
+    """
 
-    def compare(self, nineml_model, parameters, state_variable, nineml_sims,
-                duration, dt, initial_states, neuron_model=None,
-                nest_model=None, analog_signal=None, event_train=None,
-                plot=True, min_delay=0.2 * pq.ms, max_delay=10.0 * pq.ms,
-                include_passive=False):
+    min_delay = 0.2
+    max_delay = 10.0
+
+    def __init__(self, nineml_model, parameters, state_variable, simulators,
+                 dt, initial_states, neuron_model=None, nest_model=None,
+                 input_signal=None, input_train=None,
+                 neuron_translations={}, nest_translations={}):
         """
         nineml_model   -- 9ML model to compare
         nineml_sims    -- tuple of simulator names to simulate the 9ML model in
@@ -38,58 +47,64 @@ class Comparer(object):
                           dictionary of parameter and state name mappings
         nest_model     -- a tuple containing the name of nest model and a
                           dictionary of parameter and state name mappings
-        analog_signal  -- tuple containing the analog signal (in Neo format)
+        input_signal  -- tuple containing the analog signal (in Neo format)
                           and the port to play it into
-        event_train    -- tuple containing the event train (in Neo format)
+        input_train    -- tuple containing the event train (in Neo format)
                           and the port to play it into
         """
-        simulate_neuron = 'neuron' in nineml_sims or neuron_model is not None
-        simulate_nest = 'nest' in nineml_sims or nest_model is not None
+        self.simulate_neuron = ('neuron' in simulators or
+                                neuron_model is not None)
+        self.simulate_nest = 'nest' in simulators or nest_model is not None
         self.dt = self.to_float(dt, 'ms')
-        self.min_delay = self.to_float(min_delay, 'ms')
-        self.max_delay = self.to_float(max_delay, 'ms')
-        if simulate_neuron:
+        self.state_variable = state_variable
+        self.nineml_model = nineml_model
+        self.parameters = parameters
+        self.neuron_model = neuron_model
+        self.nest_model = nest_model
+        self.simulators = simulators
+        self.neuron_translations = neuron_translations
+        self.nest_translations = nest_translations
+        self.initial_states = initial_states
+        self.input_signal = input_signal
+        self.input_train = input_train
+
+    def simulate(self, duration):
+        """
+        Run and the simulation
+        """
+        if self.simulate_neuron:
             h.dt = self.dt
-        if simulate_nest:
+        if self.simulate_nest:
             nest.SetKernelStatus({'resolution': self.dt,
                                   'min_delay': self.min_delay,
                                   'max_delay': self.max_delay})
-        for simulator in nineml_sims:
-            self._create_9ML(nineml_model, simulator, initial_states,
-                             state_variable, analog_signal, event_train)
-        if neuron_model is not None:
-            neuron_name, translations = neuron_model
-            self._create_NEURON(neuron_name, parameters, initial_states,
-                                state_variable, analog_signal, event_train,
-                                translations, include_passive)
-        if nest_model is not None:
-            nest_name, translations = nest_model
-            self._create_NEST(nest_name, parameters, initial_states,
-                              state_variable, analog_signal, event_train,
-                              translations)
-        # -----------------------------------------------------------------
-        # Run and plot the simulation
-        # -----------------------------------------------------------------
-        if simulate_neuron:
+        for simulator in self.simulators:
+            self._create_9ML(nineml_model, simulator)
+        if self.neuron_model is not None:
+            self._create_NEURON(self.neuron_model)
+        if self.nest_model is not None:
+            self._create_NEST(self.nest_model)
+        if self.simulate_neuron:
             simulatorNEURON.run(duration)
-        if simulate_nest:
+        if self.simulate_nest:
             simulatorNEST.run(duration)
-        if plot:
-            legend = []
-            for simulator in nineml_sims:
-                self._plot_9ML(simulator)
-                legend.append('9ML (' + simulator + ')')
-            if neuron_model:
-                self._plot_NEURON()
-                legend.append(neuron_model[0] + ' (NEURON)')
-            if nest_model:
-                self._plot_NEST()
-                legend.append(nest_model[0] + ' (NEST)')
-            plt.legend(legend)
-            plt.show()
 
-    def _create_9ML(self, model, simulator, initial_states, state_variable,
-                    analog_signal, event_train):
+    def plot(self):
+        legend = []
+        for simulator in self.simulators:
+            self._plot_9ML(simulator)
+            legend.append('9ML (' + simulator + ')')
+        if self.neuron_model:
+            self._plot_NEURON()
+            legend.append(self.neuron_model[0] + ' (NEURON)')
+        if self.nest_model:
+            self._plot_NEST()
+            legend.append(self.nest_model[0] + ' (NEST)')
+        plt.legend(legend)
+        plt.show()
+
+    def _create_9ML(self, model, simulator, initial_states,
+                    input_signal, input_train):
         # -----------------------------------------------------------------
         # Set up 9MLML cell
         # -----------------------------------------------------------------
@@ -100,16 +115,15 @@ class Comparer(object):
         else:
             assert False
         self.nml_cells[simulator] = CellMetaClass(model, build_mode='force')()
-        if analog_signal is not None:
-            self.nml_cells[simulator].play(*analog_signal)
-        if event_train is not None:
-            self.nml_cells[simulator].play(*event_train)
-        self.nml_cells[simulator].record(state_variable)
+        if input_signal is not None:
+            self.nml_cells[simulator].play(*input_signal)
+        if input_train is not None:
+            self.nml_cells[simulator].play(*input_train)
+        self.nml_cells[simulator].record(self.state_variable)
         self.nml_cells[simulator].update_state(initial_states)
 
     def _create_NEURON(self, neuron_name, parameters, initial_states,
-                       state_variable, analog_signal, event_train,
-                       translations, include_passive=False):
+                       input_signal, input_train):
         # -----------------------------------------------------------------
         # Set up NEURON section
         # -----------------------------------------------------------------
@@ -126,14 +140,14 @@ class Comparer(object):
             self._nrn_pnn.L = 100
             self._nrn_pnn.diam = 1000 / numpy.pi
             self._nrn_pnn.cm = 0.2
-        if include_passive:
+        if any(v.startswith('pas.') for v in parameters.itervalues()):
             self._nrn_pnn.insert('pas')
         for name, value in parameters.iteritems():
             try:
-                varname, scale = translations[name]
+                varname, scale = self.neuron_translations[name]
                 value = value * scale
             except (ValueError, KeyError):
-                varname = translations.get(name, name)
+                varname = self.neuron_translations.get(name, name)
                 value = value
             if varname == 'pas.g':
                 self._nrn_pnn(0.5).pas.g = value
@@ -145,15 +159,15 @@ class Comparer(object):
                 setattr(self._nrn_pnn_cell, name, value)
         for name, value in initial_states.iteritems():
             try:
-                varname, scale = translations[name]
+                varname, scale = self.neuron_translations[name]
                 value = value * scale
             except (ValueError, KeyError):
-                varname = translations.get(name, name)
+                varname = self.neuron_translations.get(name, name)
                 value = value
             setattr(self._nrn_pnn_cell, name, value)
         # Specify current injection
-        if analog_signal is not None:
-            _, signal = analog_signal
+        if input_signal is not None:
+            _, signal = input_signal
             self._nrn_iclamp = h.IClamp(0.5, sec=self._nrn_pnn)
             self._nrn_iclamp.delay = 0.0
             self._nrn_iclamp.dur = 1e12
@@ -162,54 +176,71 @@ class Comparer(object):
             self._nrn_iclamp_times = h.Vector(pq.Quantity(signal.times, 'ms'))
             self._nrn_iclamp_amps.play(self._nrn_iclamp._ref_amp,
                                        self._nrn_iclamp_times)
-        if event_train is not None:
+        if input_train is not None:
             self._vstim = h.VecStim()
             self._vstim_times = h.Vector(pq.Quantity(signal, 'ms'))
             self._vstim.play(self._vstim_times)
             self._vstim_con = h.NetCon(self._vstim, self._hoc, sec=self._sec)
         # Record Time from NEURON (neuron.h._ref_t)
         self._nrn_rec = self.NEURONRecorder(self._nrn_pnn, self._nrn_pnn_cell)
-        translations.get(state_variable, state_variable)
+        self.neuron_translations.get(self.state_variable, self.state_variable)
         self._nrn_rec.record()
 
     def _create_NEST(self, nest_name, parameters, initial_states,
-                     state_variable, analog_signal, event_train, translations):
+                     input_signal, input_train):
         trans_params = {}
         for name, value in parameters.iteritems():
             try:
-                varname, scale = translations[name]
+                varname, scale = self.nest_translations[name]
                 value = value * scale
             except ValueError:
-                varname = translations[name]
+                varname = self.nest_translations[name]
                 value = value
             trans_params[varname] = value
-        self.nest_cells = nest.Create(nest_name, 1, trans_params)
-        if analog_signal is not None:
-            nest.Create(
+        self.nest_cell = nest.Create(nest_name, 1, trans_params)
+        receptor_types = nest.GetDefaults(nest_name)['receptor_types']
+        if input_signal is not None:
+            port_name, signal = input_signal
+            generator = nest.Create(
                 'step_current_generator', 1,
-                {'amplitude_values': pq.Quantity(analog_signal, 'pA'),
-                 'amplitude_times': (pq.Quantity(analog_signal.times, 'ms') -
+                {'amplitude_values': pq.Quantity(signal, 'pA'),
+                 'amplitude_times': (pq.Quantity(signal.times, 'ms') -
                                      self.min_delay * pq.ms),
-                 'start': float(pq.Quantity(analog_signal.t_start, 'ms')),
-                 'stop': float(pq.Quantity(analog_signal.t_stop, 'ms'))})
-            nest.Connect(self.nest_iclamp, self.nest_cells,
-                         syn_spec={'delay': self.min_delay})
+                 'start': float(pq.Quantity(signal.t_start, 'ms')),
+                 'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
+            nest.Connect(generator, self.nest_cell,
+                         syn_spec={'receptor_type': receptor_types[port_name],
+                                   'delay': self.min_delay})
+        if input_train is not None:
+            port_name, signal = input_train
+            spike_times = (pq.Quantity(signal, 'ms') - self.min_delay * pq.ms)
+            if any(spike_times < 0.0):
+                raise Pype9RuntimeError(
+                    "Some spike are less than minimum delay and so can't be "
+                    "played into cell ({})".format(
+                        ', '.join(spike_times < self.min_delay)))
+            generator = nest.Create(
+                'spike_generator', 1, {'spike_times': spike_times})
+            nest.Connect(generator, self.nest_cell,
+                         syn_spec={'receptor_type': receptor_types[port_name],
+                                   'delay': self.min_delay})
         self.nest_multimeter = nest.Create(
             'multimeter', 1, {"interval": self.to_float(self.dt, 'ms')})
         nest.SetStatus(
             self.nest_multimeter,
-            {'record_from': translations.get(state_variable, state_variable)})
-        nest.Connect(self.nest_multimeter, self.nest_cells)
+            {'record_from': self.nest_translations.get(self.state_variable,
+                                                       self.state_variable)})
+        nest.Connect(self.nest_multimeter, self.nest_cell)
         trans_states = {}
         for name, value in initial_states.iteritems():
             try:
-                varname, scale = translations[name]
+                varname, scale = self.nest_translations[name]
                 value = value * scale
             except ValueError:
-                varname = translations[name]
+                varname = self.nest_translations[name]
                 value = value
             trans_states[varname] = value
-        nest.SetStatus(self.nest_cells, trans_states)
+        nest.SetStatus(self.nest_cell, trans_states)
 
     def _plot_NEURON(self):  # @UnusedVariable
         pnn_t, pnn_v = self._get_NEURON_signal()
@@ -270,12 +301,182 @@ class Comparer(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(__doc__)
-    parser.add_argument('nineml_model', type=str,
+    parser.add_argument('nineml_file', type=str,
                         help="The 9ML model to compare")
-    parser.add_argument('temp', type=int, help="dummy")
-    parser.add_argument('--nest', type=str,
+    parser.add_argument('--simulators', type=str, action='append',
+                        help="The simulators to run the 9ML model in",
+                        default=[])
+    parser.add_argument('--model_name', type=str, default=None,
+                        help="The name of the model to select within the file")
+    parser.add_argument('--nest', type=str, default=None,
                         help="The name of the nest model to compare against")
-    parser.add_argument('--neuron', type=str,
+    parser.add_argument('--neuron', type=str, default=None,
                         help="The name of the NEURON model to compare against")
+    parser.add_argument('--dt', type=float, default=0.01,
+                        help="The simulation timestep (ms)")
+    parser.add_argument('--state_variable', type=str, default='v',
+                        help="The variable to compare")
+    parser.add_argument('--plot', action='store_true',
+                        help="Plot the simulations")
+    parser.add_argument('--parameter', '-p', nargs=2, action='append',
+                        help="A parameter name/value pair",
+                        metavar=('NAME', 'VALUE'), default=[])
+    parser.add_argument('--initial_state', '-i', nargs=2, action='append',
+                        help="An initial state name/value pair",
+                        metavar=('NAME', 'VALUE'), default=[])
+    parser.add_argument('--duration', type=float, default=100.0,
+                        help="Duration of the simulation (ms)")
+    parser.add_argument('--nest_trans', '-s', nargs=3, action='append',
+                        help=("A translation for a parameter or state to the "
+                              "name/scale used in the nest model"),
+                        metavar=('OLD', 'NEW', 'SCALE'), default=[])
+    parser.add_argument('--neuron_trans', '-u', nargs=3, action='append',
+                        help=("A translation for a parameter or state to the "
+                              "name/scale used in the neuron model"),
+                        metavar=('OLD', 'NEW', 'SCALE'), default=[])
+    parser.add_argument('--input_signal', type=str, nargs=2, default=None,
+                        help=("Port name and path to the analog signal to "
+                              "inject"), metavar=('PORT', 'NEO_FILE'))
+    parser.add_argument('--input_train', type=str, nargs=2, default=None,
+                        help=("Port name and path to the event train to "
+                              "inject"), metavar=('PORT', 'NEO_FILE'))
+    parser.add_argument('--input_step', type=str, nargs=3, default=None,
+                        help=("Instead of a input signal, specify a simple "
+                              "step function (port_name, start, amplitude)"),
+                        metavar=('PORT', 'START_TIME', 'AMPLITUDE'))
+    parser.add_argument('--input_freq', type=str, nargs=2, default=None,
+                        help=("Instead of a input train, specify a simple "
+                              "input event frequency (port_name, frequency)"),
+                        metavar=('PORT', 'FREQUENCY'))
     args = parser.parse_args()
-    print args.nineml_model + ', ' + str(args.temp)
+    nineml_doc = nineml.read(args.nineml_file)
+    if args.model_name:
+        nineml_model = nineml_doc[args.model_name]
+    else:
+        components = list(nineml_doc.components)
+        if len(components) == 1:
+            nineml_model = components[0]
+        elif len(components) == 0:
+            component_classes = list(nineml_doc.component_classes)
+            if len(component_classes) == 1:
+                nineml_model = component_classes[0]
+            else:
+                raise Pype9RuntimeError(
+                    "Multiple component classes found in '{}' file, need to "
+                    "specify the --model_name parameter")
+        else:
+            raise Pype9RuntimeError(
+                "Multiple components found in '{}' file, need to "
+                "specify the --model_name parameter")
+    parameters = dict((k, float(v)) for k, v in args.parameter)
+    initial_states = dict((k, float(v)) for k, v in args.initial_state)
+    nest_translations = dict((o, (n, s)) for o, n, s in args.nest_trans)
+    neuron_translations = dict((o, (n, s)) for o, n, s in args.neuron_trans)
+    if args.input_signal is not None:
+        if args.input_step is not None:
+            raise Pype9RuntimeError(
+                "Cannot use '--input_signal' and '--input_step' "
+                "simultaneously")
+        port_name, fpath = args.input_signal
+        signal = neo.PickleIO(fpath).read()
+        input_signal = (port_name, signal)
+    elif args.input_step is not None:
+        port_name, start_time, amplitude = args.input_step
+        start_time = float(start_time)
+        num_preceding = int(numpy.floor(start_time / args.dt))
+        num_remaining = int(numpy.ceil((args.duration - start_time) / args.dt))
+        signal = neo.AnalogSignal(
+            numpy.concatenate(numpy.zeros(num_preceding),
+                              numpy.ones(num_remaining) * amplitude),
+            sample_period=args.dt * pq.ms, units='nA', time_units='ms')
+        input_signal = (port_name, signal)
+    else:
+        input_signal = None
+    if args.input_train is not None:
+        if args.input_freq is not None:
+            raise Pype9RuntimeError(
+                "Cannot use '--input_train' and '--input_freq' "
+                "simultaneously")
+        port_name, fpath = args.input_train
+        train = neo.PickleIO(fpath).read()
+        input_train = (port_name, train)
+    elif args.input_freq is not None:
+        port_name, freq = args.input_freq
+        train = neo.SpikeTrain(
+            numpy.arange(0.0, args.duration, 1 / float(freq)),
+            units='ms', t_stop=args.duration * pq.ms)
+    else:
+        input_train = None
+    comparer = Comparer(nineml_model, parameters=parameters,
+                        state_variable=args.state_variable,
+                        simulators=args.simulators, dt=args.dt,
+                        initial_states=initial_states,
+                        neuron_model=args.neuron, nest_model=args.nest_model,
+                        input_signal=input_signal, input_train=input_train,
+                        nest_translations=nest_translations,
+                        neuron_translations=neuron_translations)
+    comparer.simulate(args.duration)
+    if args.plot:
+        comparer.plot()
+
+#         models = [('Izhikevich2003', 'Izhikevich', 'izhikevich'),
+#               ('AdExpIaF', 'AdExpIF', 'aeif_cond_alpha'),
+#               ('HodgkinHuxley', 'hh_traub', 'hh_cond_exp_traub'),
+#               ('LeakyIntegrateAndFire', 'ResetRefrac', 'iaf_psc_alpha')]
+# 
+#     initial_states = {'Izhikevich2003': {'u': -14 * pq.mV / pq.ms,
+#                                          'v': -65.0 * pq.mV},
+#                       'AdExpIaF': {'w': 0.0 * pq.nA,
+#                                    'v': -65 * pq.mV},
+#                       'HodgkinHuxley': {'v': -65 * pq.mV,
+#                                         'm': 0, 'h': 1, 'n': 0},
+#                       'LeakyIntegrateAndFire': {'v': -65 * pq.mV,
+#                                                 'end_refractory': 0.0}}
+# 
+#     neuron_pas = {'Izhikevich2003': None,
+#                   'AdExpIaF': None,
+#                   'HodgkinHuxley': None,
+#                   'LeakyIntegrateAndFire': {'g': 0.00025, 'e': -70}}
+#     neuron_params = {'Izhikevich2003': None,
+#                      'AdExpIaF': None,
+#                      'HodgkinHuxley': None,
+#                      'LeakyIntegrateAndFire': {
+#                          'vthresh': -55,
+#                          'vreset': -70,
+#                          'trefrac': 2}}
+# 
+#     nest_states = {'Izhikevich2003': {'u': 'U_m', 'v': 'V_m'},
+#                    'AdExpIaF': {'w': 'w', 'v': 'V_m'},
+#                    'HodgkinHuxley': {'v': 'V_m', 'm': 'Act_m', 'h': 'Act_h',
+#                                      'n': 'Inact_n'},
+#                    'LeakyIntegrateAndFire': {'v': 'V_m',
+#                                              'end_refractory': None}}
+#     nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2,
+#                                       'd': 2.0},
+#                    'AdExpIaF': {},
+#                    'HodgkinHuxley': {},
+#                    'LeakyIntegrateAndFire': {"C_m": 250.0,
+#                                              "tau_m": 20.0,
+#                                              "tau_syn_ex": 0.5,
+#                                              "tau_syn_in": 0.5,
+#                                              "t_ref": 2.0,
+#                                              "E_L": 0.0,
+#                                              "V_reset": 0.0,
+#                                              "V_m": 0.0,
+#                                              "V_th": 20.0}}
+#     paradigms = {'Izhikevich2003': {'duration': 100 * pq.ms,
+#                                     'stim_amp': 0.02 * pq.nA,
+#                                     'stim_start': 20 * pq.ms,
+#                                     'dt': 0.02 * pq.ms},
+#                  'AdExpIaF': {'duration': 50 * pq.ms,
+#                               'stim_amp': 1 * pq.nA,
+#                               'stim_start': 25 * pq.ms,
+#                               'dt': 0.002 * pq.ms},
+#                  'HodgkinHuxley': {'duration': 100 * pq.ms,
+#                                    'stim_amp': 0.5 * pq.nA,
+#                                    'stim_start': 50 * pq.ms,
+#                                    'dt': 0.002 * pq.ms},
+#                  'LeakyIntegrateAndFire': {'duration': 50 * pq.ms,
+#                                            'stim_amp': 1 * pq.nA,
+#                                            'stim_start': 25 * pq.ms,
+#                                            'dt': 0.002 * pq.ms}}
