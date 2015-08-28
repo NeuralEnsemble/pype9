@@ -53,10 +53,7 @@ class Cell(base.Cell):
         if interval is None:
             interval = simulation_controller.dt
         self._initialise_local_recording()
-        if variable == self.componentclass.annotations[
-                PYPE9_NS][MEMBRANE_VOLTAGE]:
-            variable = self.build_componentclass.annotations[
-                PYPE9_NS][MEMBRANE_VOLTAGE]
+        variable = self.build_name(variable)
         self._recorders[variable] = recorder = nest.Create(
             'multimeter', 1, {"interval": interval})
         nest.SetStatus(recorder, {'record_from': [variable]})
@@ -68,13 +65,7 @@ class Cell(base.Cell):
         Return recorded data as a dictionary containing one numpy array for
         each neuron, ids as keys.
         """
-        # Get mapped port name if port corresponds to membrane voltage
-        if (port_name == self.componentclass.annotations[
-                PYPE9_NS][MEMBRANE_VOLTAGE] and
-            MEMBRANE_VOLTAGE in self.build_componentclass.annotations[
-                PYPE9_NS]):
-            port_name = self.build_componentclass.annotations[
-                PYPE9_NS][MEMBRANE_VOLTAGE]
+        port_name = self.build_name(port_name)
         events, interval = nest.GetStatus(self._recorders[port_name],
                                           ('events', 'interval'))[0]
         unit_str = UnitHandler.dimension_to_unit_str(
@@ -83,6 +74,16 @@ class Cell(base.Cell):
             events[port_name], sampling_period=interval * pq.ms,
             t_start=0.0 * pq.ms, units=unit_str, name=port_name)
         return data
+
+    def build_name(self, varname):
+                # Get mapped port name if port corresponds to membrane voltage
+        if (varname == self.componentclass.annotations[
+                PYPE9_NS][MEMBRANE_VOLTAGE] and
+            MEMBRANE_VOLTAGE in self.build_componentclass.annotations[
+                PYPE9_NS]):
+            varname = self.build_componentclass.annotations[
+                PYPE9_NS][MEMBRANE_VOLTAGE]
+        return varname
 
     def reset_recordings(self):
         logger.warning("Haven't worked out how to implement reset recordings "
