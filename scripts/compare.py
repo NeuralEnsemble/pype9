@@ -6,6 +6,7 @@ import argparse
 import sys
 import os
 import subprocess as sp
+from itertools import combinations
 import tempfile
 import pyNN.neuron  # @UnusedImport - imports PyNN mechanisms
 import neuron
@@ -110,6 +111,26 @@ class Comparer(object):
             simulatorNEURON.run(duration)
         if self.simulate_nest:
             simulatorNEST.run(duration)
+        return self  # return self so it can be chained with subsequent methods
+
+    def compare(self):
+        name_n_sigs = [('9ML-' + s,
+                        self.nml_cells[s].recording(self.state_variable))
+                       for s in self.simulators]
+        if self.neuron_ref is not None:
+            name_n_sigs.append(('Ref-neuron',
+                                pq.Quantity(self._get_NEURON_signal()[1][:-1],
+                                            'mV')))
+        if self.nest_ref is not None:
+            name_n_sigs.append(('Ref-nest',
+                                pq.Quantity(self._get_NEST_signal()[1], 'mV')))
+        comparisons = []
+        for (name1, signal1), (name2, signal2) in combinations(name_n_sigs, 2):
+            diff = numpy.asarray(signal1 - signal2)
+            normalised_rms = numpy.sqrt((diff ** 2).sum() /
+                                        numpy.asarray(signal1 * signal1).sum())
+            comparisons.append((name1, name2, normalised_rms))
+        return comparisons
 
     def plot(self):
         legend = []
@@ -312,11 +333,16 @@ class Comparer(object):
 
     @classmethod
     def compare_in_subprocess(
-        self, state_variable, dt, duration, parameters={}, initial_states={},
+        cls, state_variable, dt, duration, parameters={}, initial_states={},
         nineml_model=None, simulators=[], neuron_ref=None, nest_ref=None,
         input_signal=None, input_train=None, neuron_translations={},
         nest_translations={}, neuron_build_args={}, nest_build_args={},
             min_delay=0.02, max_delay=10.0):
+        """
+        This function can be used to perform the comparison within a subprocess
+        so as to quarantine the simulations from subsequent simulations. Can be
+        used if NEURON is failing to exit cleanly
+        """
         args = [sys.executable, __file__[:-1]]  # To execute the current script
         if nineml_model is not None:
             args.append(nineml_model)
@@ -526,5 +552,7 @@ if __name__ == '__main__':
                         nest_build_args=nest_build_args,
                         min_delay=args.min_delay, max_delay=args.max_delay)
     comparer.simulate(args.duration)
+    for comparison in comparer.compare():
+        print "RMS Error between {} and {}: {}".format(*comparison)
     if args.plot:
         comparer.plot()
