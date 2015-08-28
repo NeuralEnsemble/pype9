@@ -37,7 +37,8 @@ class Comparer(object):
     def __init__(self, nineml_model, parameters, state_variable, simulators,
                  dt, initial_states, neuron_model=None, nest_model=None,
                  input_signal=None, input_train=None,
-                 neuron_translations={}, nest_translations={}):
+                 neuron_translations={}, nest_translations={},
+                 neuron_build_args={}, nest_build_args={}):
         """
         nineml_model   -- 9ML model to compare
         nineml_sims    -- tuple of simulator names to simulate the 9ML model in
@@ -68,6 +69,8 @@ class Comparer(object):
         self.initial_states = initial_states
         self.input_signal = input_signal
         self.input_train = input_train
+        self.build_args = {'nest': nest_build_args,
+                           'neuron': neuron_build_args}
         self.nml_cells = {}
         if self.state_variable in self.nest_translations:
             self.nest_state_variable = self.nest_translations[
@@ -124,7 +127,8 @@ class Comparer(object):
             CellMetaClass = CellMetaClassNEST
         else:
             assert False
-        self.nml_cells[simulator] = CellMetaClass(model, build_mode='force')()
+        self.nml_cells[simulator] = CellMetaClass(
+            model, **self.build_args[simulator])()
         if self.input_signal is not None:
             self.nml_cells[simulator].play(*self.input_signal)
         if self.input_train is not None:
@@ -368,6 +372,10 @@ if __name__ == '__main__':
                         help=("Instead of a input train, specify a simple "
                               "input event frequency (port_name, frequency)"),
                         metavar=('PORT', 'FREQUENCY'))
+    parser.add_argument('--build_arg', '-b', nargs=3, action='append',
+                        default=[], metavar=('SIMULATOR', 'NAME', 'VALUE'),
+                        help=("Any build arg that should be passed to the 9ML"
+                              "metaclass (simulator, name, value)"))
     args = parser.parse_args()
     if len(args.simulator) == 0 and args.neuron is None and args.nest is None:
         raise Pype9RuntimeError("No simulations specified")
@@ -395,6 +403,10 @@ if __name__ == '__main__':
     nest_translations = dict((o, (n, float(s))) for o, n, s in args.nest_trans)
     neuron_translations = dict((o, (n, float(s)))
                                for o, n, s in args.neuron_trans)
+    neuron_build_args = dict((k, v) for s, k, v in args.build_arg
+                             if s.lower() == 'neuron')
+    nest_build_args = dict((k, v) for s, k, v in args.build_arg
+                             if s.lower() == 'nest')
     if args.input_signal is not None:
         if args.input_step is not None:
             raise Pype9RuntimeError(
@@ -438,69 +450,9 @@ if __name__ == '__main__':
                         neuron_model=args.neuron, nest_model=args.nest,
                         input_signal=input_signal, input_train=input_train,
                         nest_translations=nest_translations,
-                        neuron_translations=neuron_translations)
+                        neuron_translations=neuron_translations,
+                        neuron_build_args=neuron_build_args,
+                        nest_build_args=nest_build_args)
     comparer.simulate(args.duration)
     if args.plot:
         comparer.plot()
-
-#         models = [('Izhikevich2003', 'Izhikevich', 'izhikevich'),
-#               ('AdExpIaF', 'AdExpIF', 'aeif_cond_alpha'),
-#               ('HodgkinHuxley', 'hh_traub', 'hh_cond_exp_traub'),
-#               ('LeakyIntegrateAndFire', 'ResetRefrac', 'iaf_psc_alpha')]
-# 
-#     initial_states = {'Izhikevich2003': {'u': -14 * pq.mV / pq.ms,
-#                                          'v': -65.0 * pq.mV},
-#                       'AdExpIaF': {'w': 0.0 * pq.nA,
-#                                    'v': -65 * pq.mV},
-#                       'HodgkinHuxley': {'v': -65 * pq.mV,
-#                                         'm': 0, 'h': 1, 'n': 0},
-#                       'LeakyIntegrateAndFire': {'v': -65 * pq.mV,
-#                                                 'end_refractory': 0.0}}
-# 
-#     neuron_pas = {'Izhikevich2003': None,
-#                   'AdExpIaF': None,
-#                   'HodgkinHuxley': None,
-#                   'LeakyIntegrateAndFire': {'g': 0.00025, 'e': -70}}
-#     neuron_params = {'Izhikevich2003': None,
-#                      'AdExpIaF': None,
-#                      'HodgkinHuxley': None,
-#                      'LeakyIntegrateAndFire': {
-#                          'vthresh': -55,
-#                          'vreset': -70,
-#                          'trefrac': 2}}
-# 
-#     nest_states = {'Izhikevich2003': {'u': 'U_m', 'v': 'V_m'},
-#                    'AdExpIaF': {'w': 'w', 'v': 'V_m'},
-#                    'HodgkinHuxley': {'v': 'V_m', 'm': 'Act_m', 'h': 'Act_h',
-#                                      'n': 'Inact_n'},
-#                    'LeakyIntegrateAndFire': {'v': 'V_m',
-#                                              'end_refractory': None}}
-#     nest_params = {'Izhikevich2003': {'a': 0.02, 'c': -65.0, 'b': 0.2,
-#                                       'd': 2.0},
-#                    'AdExpIaF': {},
-#                    'HodgkinHuxley': {},
-#                    'LeakyIntegrateAndFire': {"C_m": 250.0,
-#                                              "tau_m": 20.0,
-#                                              "tau_syn_ex": 0.5,
-#                                              "tau_syn_in": 0.5,
-#                                              "t_ref": 2.0,
-#                                              "E_L": 0.0,
-#                                              "V_reset": 0.0,
-#                                              "V_m": 0.0,
-#                                              "V_th": 20.0}}
-#     paradigms = {'Izhikevich2003': {'duration': 100 * pq.ms,
-#                                     'stim_amp': 0.02 * pq.nA,
-#                                     'stim_start': 20 * pq.ms,
-#                                     'dt': 0.02 * pq.ms},
-#                  'AdExpIaF': {'duration': 50 * pq.ms,
-#                               'stim_amp': 1 * pq.nA,
-#                               'stim_start': 25 * pq.ms,
-#                               'dt': 0.002 * pq.ms},
-#                  'HodgkinHuxley': {'duration': 100 * pq.ms,
-#                                    'stim_amp': 0.5 * pq.nA,
-#                                    'stim_start': 50 * pq.ms,
-#                                    'dt': 0.002 * pq.ms},
-#                  'LeakyIntegrateAndFire': {'duration': 50 * pq.ms,
-#                                            'stim_amp': 1 * pq.nA,
-#                                            'stim_start': 25 * pq.ms,
-#                                            'dt': 0.002 * pq.ms}}
