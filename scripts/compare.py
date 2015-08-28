@@ -303,7 +303,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(__doc__)
     parser.add_argument('nineml_file', type=str,
                         help="The 9ML model to compare")
-    parser.add_argument('--simulators', type=str, action='append',
+    parser.add_argument('--simulator', type=str, action='append',
                         help="The simulators to run the 9ML model in",
                         default=[])
     parser.add_argument('--model_name', type=str, default=None,
@@ -349,6 +349,8 @@ if __name__ == '__main__':
                               "input event frequency (port_name, frequency)"),
                         metavar=('PORT', 'FREQUENCY'))
     args = parser.parse_args()
+    if len(args.simulator) == 0 and args.neuron is None and args.nest is None:
+        raise Pype9RuntimeError("No simulations specified")
     nineml_doc = nineml.read(args.nineml_file)
     if args.model_name:
         nineml_model = nineml_doc[args.model_name]
@@ -409,9 +411,9 @@ if __name__ == '__main__':
         input_train = None
     comparer = Comparer(nineml_model, parameters=parameters,
                         state_variable=args.state_variable,
-                        simulators=args.simulators, dt=args.dt,
+                        simulators=args.simulator, dt=args.dt,
                         initial_states=initial_states,
-                        neuron_model=args.neuron, nest_model=args.nest_model,
+                        neuron_model=args.neuron, nest_model=args.nest,
                         input_signal=input_signal, input_train=input_train,
                         nest_translations=nest_translations,
                         neuron_translations=neuron_translations)
