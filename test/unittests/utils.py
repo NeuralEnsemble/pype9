@@ -24,5 +24,16 @@ class DummyTestCase(object):
                                                            repr(second))
             print message
 
-    def assertAlmostEqual(self, first, second):
-        pass
+    def assertAlmostEqual(self, first, second, message=None):
+        if first != second:
+            if message is None:
+                message = '{} and {} are not equal'.format(repr(first),
+                                                           repr(second))
+            print message
+
+    def assertLess(self, first, second, message=None):
+        if first >= second:
+            if message is None:
+                message = '{} is not less than {}'.format(repr(first),
+                                                          repr(second))
+            print message

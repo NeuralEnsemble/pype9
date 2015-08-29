@@ -427,6 +427,8 @@ class UnitHandler(DynamicsDimensionResolver):
             unit_name = numerator
         elif denominator:
             unit_name = 'per_' + denominator
+        else:
+            unit_name = 'unitless'
         return unit_name
 
     # Override DynamicsDimensionResolver methods to include the scaling of
