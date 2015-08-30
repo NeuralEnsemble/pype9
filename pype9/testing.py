@@ -358,7 +358,6 @@ class Comparer(object):
         used if NEURON is failing to exit cleanly
         """
         temp_dir = tempfile.mkdtemp()
-        print temp_dir
         args = [python_cmd_path, compare_script_path]
         if nineml_model is not None:
             nineml_path = os.path.join(temp_dir, nineml_model.name + '.xml')

@@ -450,7 +450,7 @@ class CodeGenerator(BaseCodeGenerator):
         """
         # Change working directory to model directory
         os.chdir(compile_dir)
-        if verbose:
+        if verbose != 'silent':
             print ("Building NMODL mechanisms in '{}' directory."
                    .format(compile_dir))
         # Check the created units by running modlunit
@@ -468,7 +468,7 @@ class CodeGenerator(BaseCodeGenerator):
                     except sp.CalledProcessError as e:
                         raise Pype9BuildError(
                             "Could not run 'modlunit' to check dimensions in "
-                            "NMODL file".format(stderr))
+                            "NMODL file: {}\n{}".format(stdout, stderr))
         # Run nrnivmodl command in src directory
         try:
             pipe = sp.Popen([self.nrnivmodl_path], stdout=sp.PIPE,
@@ -482,9 +482,12 @@ class CodeGenerator(BaseCodeGenerator):
             raise Pype9BuildError(
                 "Generated mod file failed to compile with output:\n{}\n{}"
                 .format(stdout, stderr))
-        if verbose:
+        if verbose is True:
             print stdout
             print stderr
+        if verbose != 'silent':
+            print ("Compilation of NEURON (NMODL) files for '{}' "
+                   "completed successfully".format(component_name))
 
     def get_install_dir(self, build_dir, install_dir):
         if install_dir:

@@ -89,11 +89,14 @@ class CodeGenerator(BaseCodeGenerator):
                              path.join(src_dir, 'sli'))
 
     def configure_build_files(self, name, src_dir, compile_dir, install_dir,
-                              **kwargs):
+                              verbose=False, **kwargs):
         # Generate Makefile if it is not present
         if not path.exists(path.join(compile_dir, 'Makefile')):
             if not path.exists(compile_dir):
                 os.mkdir(compile_dir)
+            if verbose != 'silent':
+                print ("Configuring build files in '{}' directory"
+                       .format(compile_dir))
             orig_dir = os.getcwd()
             config_args = {'name': name, 'src_dir': src_dir,
                            'ode_solver': kwargs.get('ode_solver',
@@ -107,46 +110,85 @@ class CodeGenerator(BaseCodeGenerator):
                                  'bootstrap.sh', src_dir)
             os.chdir(src_dir)
             try:
-                sp.check_call('sh bootstrap.sh', shell=True)
+                bootstrap = sp.Popen(
+                    ['sh', 'bootstrap.sh'], stdout=sp.PIPE, stderr=sp.PIPE)
+                stdout, stderr = bootstrap.communicate()
             except sp.CalledProcessError as e:
                 raise Pype9BuildError(
-                    "Bootstrapping of '{}' NEST module failed(see src "
-                    "directory '{}'):\n\n {}".format(name or src_dir,
-                                                     src_dir, e))
+                    "Error executing bootstrapping of '{}' NEST module "
+                    "failed (see src directory '{}'):\n\n{}"
+                    .format(name or src_dir, src_dir, e))
+            if not stdout.rstrip().endswith('Done.'):
+                raise Pype9BuildError(
+                    "Bootstrapping of '{}' NEST module failed (see src "
+                    "directory '{}'):\n\n{}\n{}"
+                    .format(name or src_dir, src_dir, stdout, stderr))
+            if verbose is True:
+                print stderr
+                print stdout
             os.chdir(compile_dir)
             env = os.environ.copy()
             env['CXX'] = self._compiler
             try:
-                sp.check_call(
-                    'sh {src_dir}/configure --prefix={install_dir}'
-                    .format(src_dir=src_dir, install_dir=install_dir),
-                    shell=True, env=env)
+                configure = sp.Popen(
+                    ['sh', src_dir + '/configure', '--prefix=' + install_dir],
+                    env=env, stdout=sp.PIPE, stderr=sp.PIPE)
+                stdout, stderr = configure.communicate()
             except sp.CalledProcessError as e:
                 raise Pype9BuildError(
                     "Configuration of '{}' NEST module failed (see src "
                     "directory '{}'):\n\n {}".format(name, src_dir, e))
+            if 'make install' not in stdout:
+                raise Pype9BuildError(
+                    "Configure of '{}' NEST module failed (see src "
+                    "directory '{}'):\n\n{}\n{}"
+                    .format(name or src_dir, src_dir, stdout, stderr))
+            if verbose is True:
+                print stderr
+                print stdout
             os.chdir(orig_dir)
 
     def compile_source_files(self, compile_dir, component_name, verbose):
         # Run configure script, make and make install
         os.chdir(compile_dir)
-        if verbose:
+        if verbose != 'silent':
             print ("Compiling NEST model class in '{}' directory."
                    .format(compile_dir))
         try:
-            sp.check_call('make -j{}'.format(self._build_cores), shell=True)
+            make = sp.Popen(['make', '-j{}'.format(self._build_cores)],
+                            stdout=sp.PIPE, stderr=sp.PIPE)
+            stdout, stderr = make.communicate()
         except sp.CalledProcessError as e:
             raise Pype9BuildError(
                 "Compilation of '{}' NEST module failed (see compile "
-                "directory '{}'):\n\n {}".format(component_name, compile_dir,
-                                                 e))
+                "directory '{}'):\n\n {}"
+                .format(component_name, compile_dir, e))
+        if stderr:
+            raise Pype9BuildError(
+                "Compilation of '{}' NEST module directory failed:\n\n{}\n{}"
+                .format(compile_dir, stdout, stderr))
+        if verbose is True:
+            print stderr
+            print stdout
         try:
-            sp.check_call('make install', shell=True)
+            install = sp.Popen(['make', 'install'], stdout=sp.PIPE,
+                               stderr=sp.PIPE)
+            stdout, stderr = install.communicate()
         except sp.CalledProcessError as e:
             raise Pype9BuildError(
                 "Installation of '{}' NEST module failed (see compile "
-                "directory '{}'):\n\n {}".format(component_name, compile_dir,
-                                                 e))
+                "directory '{}'):\n\n {}"
+                .format(component_name, compile_dir, e))
+        if stderr:
+            raise Pype9BuildError(
+                "Installation of '{}' NEST module directory failed:\n\n{}\n{}"
+                .format(compile_dir, stdout, stderr))
+        if verbose is True:
+            print stderr
+            print stdout
+        if verbose != 'silent':
+            print ("Compilation of '{}' NEST module completed successfully"
+                   .format(component_name))
 
     def clean_src_dir(self, src_dir, component_name):
         # Clean existing src directories from previous builds.
@@ -161,7 +203,9 @@ class CodeGenerator(BaseCodeGenerator):
             remove_ignore_missing(
                 path.join(src_dir, 'sli', component_name + 'Module-init.sli'))
 
-    def clean_compile_dir(self, compile_dir):
+    def clean_compile_dir(self, compile_dir, verbose=False, **kwargs):  # @UnusedVariable @IgnorePep8
+        if verbose != 'silent':
+            print "Cleaning compile directory '{}'".format(compile_dir)
         orig_dir = os.getcwd()
         try:
             if not path.exists(compile_dir):
@@ -172,7 +216,8 @@ class CodeGenerator(BaseCodeGenerator):
                 .format(compile_dir, e))
         try:
             os.chdir(compile_dir)
-            sp.check_call('make clean', shell=True)
+            clean = sp.Popen(['make', 'clean'], stdout=sp.PIPE, stderr=sp.PIPE)
+            stdout, stderr = clean.communicate()
             os.chdir(orig_dir)
         except sp.CalledProcessError or IOError:
             os.chdir(orig_dir)
@@ -184,6 +229,14 @@ class CodeGenerator(BaseCodeGenerator):
                     "Could not create build directory ({}), please check the "
                     "required permissions or specify a different \"parent "
                     "build directory\" ('parent_build_dir') -> {}".format(e))
+        if stderr and stderr.rstrip() != ("make: *** No rule to make target "
+                                           "`clean'.  Stop."):
+            raise Pype9BuildError(
+                "Clean of '{}' NEST module directory failed:\n\n{}\n{}"
+                .format(compile_dir, stdout, stderr))
+        if verbose is True:
+            print stderr
+            print stdout
 
     def simulator_specific_paths(self):
         path = []

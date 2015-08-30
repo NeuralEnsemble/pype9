@@ -8,8 +8,6 @@ try:
     import pylab as plt
 except ImportError:
     plt = None
-import numpy
-import quantities as pq
 import neo
 import nineml
 from pype9.exceptions import Pype9RuntimeError
@@ -116,8 +114,9 @@ if args.input_signal is not None:
         raise Pype9RuntimeError(
             "Cannot use '--input_signal' and '--input_step' simultaneously")
     port_name, fpath = args.input_signal
-    signal = neo.PickleIO(fpath).read()
-    input_signal = (port_name, signal)
+    block = neo.PickleIO(fpath).read()
+    print type(block)
+    input_signal = (port_name, block[0])
 elif args.input_step is not None:
     port_name, start_time, amplitude = args.input_step
     input_signal = Comparer.input_step(port_name, amplitude, start_time,
@@ -129,15 +128,13 @@ if args.input_train is not None:
         raise Pype9RuntimeError(
             "Cannot use '--input_train' and '--input_freq' simultaneously")
     port_name, fpath = args.input_train
-    train = neo.PickleIO(fpath).read()
-    input_train = (port_name, train)
+    block = neo.PickleIO(fpath).read()
+    input_train = (port_name, block[0])
 elif args.input_freq is not None:
-    port_name, freq = args.input_freq
-    train = neo.SpikeTrain(
-        numpy.arange(0.0, args.duration, 1 / float(freq)),
-        units='ms', t_stop=args.duration * pq.ms)
+    train = Comparer.input_train(*args.input_freq)
 else:
     input_train = None
+print input_signal
 comparer = Comparer(nineml_model=nineml_model, parameters=parameters,
                     state_variable=args.state_variable,
                     simulators=simulators, dt=args.dt,
