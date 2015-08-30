@@ -129,8 +129,11 @@ class Comparer(object):
         Run and the simulation
         """
         if self.simulate_neuron:
+            simulatorNEURON.reset()
             neuron.h.dt = self.dt
         if self.simulate_nest:
+            nest.ResetKernel()
+            simulatorNEST.reset()
             nest.SetKernelStatus({'resolution': self.dt})
         for simulator in self.simulators:
             self._create_9ML(self.nineml_model, simulator)
