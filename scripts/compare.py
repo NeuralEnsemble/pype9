@@ -13,7 +13,7 @@ import quantities as pq
 import neo
 import nineml
 from pype9.exceptions import Pype9RuntimeError
-from pype9.comparison import Comparer
+from pype9.testing import Comparer
 
 
 parser = argparse.ArgumentParser(__doc__)

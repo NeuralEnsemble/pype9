@@ -4,11 +4,12 @@ NEST
 """
 from __future__ import absolute_import, division
 import sys
-import os
+import os.path
 import re
 import subprocess as sp
 from itertools import combinations
 import tempfile
+import shutil
 import neuron
 import pyNN.neuron  # @UnusedImport - imports PyNN mechanisms
 import nest
@@ -26,6 +27,19 @@ import numpy
 import quantities as pq
 import neo
 from pype9.exceptions import Pype9RuntimeError
+
+
+compare_script_path = os.path.join(os.path.dirname(__file__), '..', 'scripts',
+                                   'compare.py')
+
+# This finds the python command path from the location of the os module
+# python_cmd_path = os.path.join(os.path.dirname(os.__file__), '..', 'bin',
+#                                'python')
+# However, this will probably only work on *nix systems so a fall back using
+# the sys.executable is used instead in this case (won't work from embedded
+# executions
+# if not os.path.exists(python_cmd_path):
+python_cmd_path = sys.executable
 
 
 class Comparer(object):
@@ -343,12 +357,25 @@ class Comparer(object):
         so as to quarantine the simulations from subsequent simulations. Can be
         used if NEURON is failing to exit cleanly
         """
-        args = [sys.executable, __file__[:-1]]  # To execute the current script
+        temp_dir = tempfile.mkdtemp()
+        print temp_dir
+        args = [python_cmd_path, compare_script_path]
         if nineml_model is not None:
-            args.append(nineml_model)
+            nineml_path = os.path.join(temp_dir, nineml_model.name + '.xml')
+            nineml_model.write(nineml_path)
+            # Pregenerate the code before entering the subprocess to make
+            # debugging easier
+            if 'neuron' in simulators:
+                CellMetaClassNEURON(nineml_path, **neuron_build_args)
+                args.extend(('--build_arg', 'neuron', 'build_mode',
+                             'require'))
+            if 'nest' in simulators:
+                CellMetaClassNEST(nineml_path, **nest_build_args)
+                args.extend(('--build_arg', 'nest', 'build_mode', 'require'))
+            args.append(nineml_path)
             args.extend(simulators)
         args.extend(('--state_variable', state_variable))
-        args.extend(('--dt', dt))
+        args.extend(('--dt', str(dt)))
         if neuron_ref is not None:
             args.extend(('--neuron_ref', neuron_ref))
         if nest_ref is not None:
@@ -358,15 +385,13 @@ class Comparer(object):
         for n, v in initial_states.iteritems():
             args.extend(('-i', n, str(v)))
         if input_signal is not None:
-            with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as f:
-                neo.PickleIO(f).write(input_signal)
-                input_signal_path = f.name
-            args.extend(('--input_signal', input_signal_path))
+            input_signal_path = os.path.join(temp_dir, 'input_signal.neo.pkl')
+            neo.PickleIO(input_signal_path).write(input_signal[1])
+            args.extend(('--input_signal', input_signal[0], input_signal_path))
         if input_train is not None:
-            with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as f:
-                neo.PickleIO(f).write(input_signal)
-                input_train_path = f.name
-            args.extend(('--input_train', input_train_path))
+            input_train_path = os.path.join(temp_dir, 'input_train.neo.pkl')
+            neo.PickleIO(input_train_path).write(input_train[1])
+            args.extend(('--input_train', input_train[0], input_train_path))
         for n, (o, v) in neuron_translations.iteritems():
             args.extend(('-u', n, o, str(v)))
         for n, (o, v) in nest_translations.iteritems():
@@ -375,18 +400,25 @@ class Comparer(object):
             args.extend(('-b', 'neuron', k, v))
         for k, v in nest_build_args.iteritems():
             args.extend(('-b', 'nest', k, v))
-        args.extend(('--duration', duration))
-        args.extend(('--min_delay', min_delay))
-        args.extend(('--max_delay', max_delay))
+        args.extend(('--duration', str(duration)))
+        args.extend(('--min_delay', str(min_delay)))
+        args.extend(('--max_delay', str(max_delay)))
         try:
             pipe = sp.Popen(args, stdout=sp.PIPE, stderr=sp.PIPE)
-            stdout, _ = pipe.communicate()
+            stdout, stderr = pipe.communicate()
         except sp.CalledProcessError as e:
-            raise Pype9RuntimeError("Error in comparison: {}".format(e))
-        if input_signal is not None:
-            os.remove(input_signal_path)
-        if input_train is not None:
-            os.remove(input_train_path)
+            raise Pype9RuntimeError("Error in comparison: {}\n{}\n{}"
+                                    .format(e, stdout, stderr))
+        print stdout
+        print '---'
+        print stderr
+#         shutil.rmtree(temp_dir)
+#         if nineml_model is not None:
+#             os.remove(nineml_path)
+#         if input_signal is not None:
+#             os.remove(input_signal_path)
+#         if input_train is not None:
+#             os.remove(input_train_path)
         return dict((tuple(sorted((m.group(1), m.group(2)))),
                      pq.Quantity(float(m.group(3)), m.group(4)))
                     for m in cls._compare_re.findall(stdout))
