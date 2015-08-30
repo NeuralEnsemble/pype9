@@ -45,10 +45,11 @@ class TestDynamics(TestCase):
             nest_translations={'v': ('V_m', 1), 'm': ('Act_m', 1),
                                'h': ('Act_h', 1), 'n': ('Inact_n', 1)},
             neuron_build_args={'build_mode': 'force'},
-            nest_build_args={'build_mode': 'force'})
+            nest_build_args={'build_mode': 'force'},
+            duration=100.0)
         self.assertLess(
             comparisons[('9ML-neuron', 'Ref-neuron')], 0.0015 * pq.mV,
-            "HH NEURON 9ML simulation (did not match reference PyNN")
+            "HH NEURON 9ML simulation did not match reference PyNN")
         self.assertLess(
             comparisons[('9ML-nest', 'Ref-nest')], 0.00015 * pq.mV,
             "HH NEST 9ML simulation did not match reference built-in")
@@ -63,16 +64,17 @@ class TestDynamics(TestCase):
             parameters={"C_m": 250.0, "tau_m": 20.0, "tau_syn_ex": 0.5,
                         "tau_syn_in": 0.5, "t_ref": 2.0, "E_L": 0.0,
                         "V_reset": 0.0, "V_m": 0.0, "V_th": 20.0},  # {'g': 0.00025, 'e': -70}, { 'vthresh': -55, 'vreset': -70, 'trefrac': 2}
-            initial_states={'v': -65 * pq.mV, 'end_refractory': 0.0},
+            initial_states={'v': -65, 'end_refractory': 0.0},
             neuron_ref='ResetRefrac', nest_ref='iaf_psc_alpha',
             input_signal=Comparer.input_step('iExt', 1, 50, 100, self.dt),
             nest_translations={'v': ('V_m', 1), 'end_refractory': (None, 1)},
             neuron_translations={},
             neuron_build_args={'build_mode': 'force'},
-            nest_build_args={'build_mode': 'force'})
+            nest_build_args={'build_mode': 'force'},
+            duration=100.0)
         self.assertLess(
             comparisons[('9ML-neuron', 'Ref-neuron')], 0.0015 * pq.mV,
-            "LIaF NEURON 9ML simulation (did not match reference PyNN")
+            "LIaF NEURON 9ML simulation did not match reference PyNN")
         self.assertLess(
             comparisons[('9ML-nest', 'Ref-nest')], 0.00015 * pq.mV,
             "LIaF NEST 9ML simulation did not match reference built-in")
@@ -81,7 +83,7 @@ class TestDynamics(TestCase):
         # Perform comparison in subprocess
         comparisons = Comparer.compare_in_subprocess(
             nineml_model=ninemlcatalog.lookup(
-                'neurons/basic/Izhikevich2003/Izhikevich2003Properties'),
+                'neurons/basic/AdExpIaF/AdExpIaFProperties'),
             state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
             neuron_ref='AdExpIF', nest_ref='aeif_cond_alpha',
             input_signal=Comparer.input_step('iExt', 1, 50, 100, self.dt),
@@ -89,10 +91,11 @@ class TestDynamics(TestCase):
             nest_translations={'w': ('w', 1), 'v': ('V_m', 1)},
             neuron_translations={},
             neuron_build_args={'build_mode': 'force'},
-            nest_build_args={'build_mode': 'force'})
+            nest_build_args={'build_mode': 'force'},
+            duration=100.0)
         self.assertLess(
             comparisons[('9ML-neuron', 'Ref-neuron')], 0.0015 * pq.mV,
-            "AdExpIaF NEURON 9ML simulation (did not match reference PyNN")
+            "AdExpIaF NEURON 9ML simulation did not match reference PyNN")
         self.assertLess(
             comparisons[('9ML-nest', 'Ref-nest')], 0.00015 * pq.mV,
             "AdExpIaF NEST 9ML simulation did not match reference built-in")
@@ -161,4 +164,5 @@ class TestDynamics(TestCase):
 
 if __name__ == '__main__':
     tester = TestDynamics()
-    tester.test_izhikevich()
+    tester.test_liaf()
+    print "done"

@@ -362,23 +362,24 @@ class Comparer(object):
         if nineml_model is not None:
             nineml_path = os.path.join(temp_dir, nineml_model.name + '.xml')
             nineml_model.write(nineml_path)
+            # Add path to 9ML file and the required simulators to the argument
+            # list
+            args.append(nineml_path)
+            args.extend(simulators)
             # Pregenerate the code before entering the subprocess to make
             # debugging easier
             if 'neuron' in simulators:
                 CellMetaClassNEURON(nineml_path, **neuron_build_args)
-                args.extend(('--build_arg', 'neuron', 'build_mode',
-                             'require'))
+                args.extend(('--build_arg', 'neuron', 'build_mode', 'require'))
             if 'nest' in simulators:
                 CellMetaClassNEST(nineml_path, **nest_build_args)
                 args.extend(('--build_arg', 'nest', 'build_mode', 'require'))
-            args.append(nineml_path)
-            args.extend(simulators)
         args.extend(('--state_variable', state_variable))
         args.extend(('--dt', str(dt)))
         if neuron_ref is not None:
             args.extend(('--neuron_ref', neuron_ref))
         if nest_ref is not None:
-            args.extend(('--neuron_ref', nest_ref))
+            args.extend(('--nest_ref', nest_ref))
         for n, v in parameters.iteritems():
             args.extend(('-p', n, str(v)))
         for n, v in initial_states.iteritems():
@@ -391,10 +392,14 @@ class Comparer(object):
             input_train_path = os.path.join(temp_dir, 'input_train.neo.pkl')
             neo.PickleIO(input_train_path).write(input_train[1])
             args.extend(('--input_train', input_train[0], input_train_path))
-        for n, (o, v) in neuron_translations.iteritems():
-            args.extend(('-u', n, o, str(v)))
-        for n, (o, v) in nest_translations.iteritems():
-            args.extend(('-s', n, o, str(v)))
+        for o, (n, v) in neuron_translations.iteritems():
+            if n is None:
+                n = '__none__'
+            args.extend(('-u', o, n, str(v)))
+        for o, (n, v) in nest_translations.iteritems():
+            if n is None:
+                n = '__none__'
+            args.extend(('-s', o, n, str(v)))
         for k, v in neuron_build_args.iteritems():
             args.extend(('-b', 'neuron', k, v))
         for k, v in nest_build_args.iteritems():
@@ -408,22 +413,19 @@ class Comparer(object):
         except sp.CalledProcessError as e:
             raise Pype9RuntimeError("Error in comparison: {}\n{}\n{}"
                                     .format(e, stdout, stderr))
-        print stdout
-        print '---'
+        if cls._error_re.search(stderr):
+            raise Pype9RuntimeError(
+                "Error in comparison subprocess: \n\n{}\n{}"
+                .format(stdout, stderr))
+        shutil.rmtree(temp_dir)
         print stderr
-#         shutil.rmtree(temp_dir)
-#         if nineml_model is not None:
-#             os.remove(nineml_path)
-#         if input_signal is not None:
-#             os.remove(input_signal_path)
-#         if input_train is not None:
-#             os.remove(input_train_path)
-        return dict((tuple(sorted((m.group(1), m.group(2)))),
-                     pq.Quantity(float(m.group(3)), m.group(4)))
-                    for m in cls._compare_re.findall(stdout))
+        comparisons = dict(((n1, n2), pq.Quantity(float(v), u))
+                           for n1, n2, v, u in cls._compare_re.findall(stdout))
+        return comparisons
 
     _compare_re = re.compile(r"Average error between ([\w\-]+) and ([\w\-]+): "
-                             "([0-9\.]+) (\w+)$")
+                             r"([0-9\.\-e]+) (\w+)")
+    _error_re = re.compile(r"(\w+)Error:")
 
     @classmethod
     def input_step(cls, port_name, amplitude, start_time, duration, dt):

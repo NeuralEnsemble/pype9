@@ -179,7 +179,7 @@ class CodeGenerator(BaseCodeGenerator):
                 "Installation of '{}' NEST module failed (see compile "
                 "directory '{}'):\n\n {}"
                 .format(component_name, compile_dir, e))
-        if stderr:
+        if not stdout.rstrip().endswith('Done.'):
             raise Pype9BuildError(
                 "Installation of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))
@@ -204,8 +204,6 @@ class CodeGenerator(BaseCodeGenerator):
                 path.join(src_dir, 'sli', component_name + 'Module-init.sli'))
 
     def clean_compile_dir(self, compile_dir, verbose=False, **kwargs):  # @UnusedVariable @IgnorePep8
-        if verbose != 'silent':
-            print "Cleaning compile directory '{}'".format(compile_dir)
         orig_dir = os.getcwd()
         try:
             if not path.exists(compile_dir):

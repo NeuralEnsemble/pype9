@@ -103,8 +103,10 @@ else:
     simulators = []
 parameters = dict((k, float(v)) for k, v in args.parameter)
 initial_states = dict((k, float(v)) for k, v in args.initial_state)
-nest_translations = dict((o, (n, float(s))) for o, n, s in args.nest_trans)
-neuron_translations = dict((o, (n, float(s))) for o, n, s in args.neuron_trans)
+nest_translations = dict((o, ((n if n != '__none__' else None), float(s)))
+                         for o, n, s in args.nest_trans)
+neuron_translations = dict((o, ((n if n != '__none__' else None), float(s)))
+                           for o, n, s in args.neuron_trans)
 neuron_build_args = dict((k, v) for s, k, v in args.build_arg
                          if s.lower() == 'neuron')
 nest_build_args = dict((k, v) for s, k, v in args.build_arg
@@ -115,7 +117,6 @@ if args.input_signal is not None:
             "Cannot use '--input_signal' and '--input_step' simultaneously")
     port_name, fpath = args.input_signal
     block = neo.PickleIO(fpath).read()
-    print type(block)
     input_signal = (port_name, block[0])
 elif args.input_step is not None:
     port_name, start_time, amplitude = args.input_step
@@ -134,7 +135,6 @@ elif args.input_freq is not None:
     train = Comparer.input_train(*args.input_freq)
 else:
     input_train = None
-print input_signal
 comparer = Comparer(nineml_model=nineml_model, parameters=parameters,
                     state_variable=args.state_variable,
                     simulators=simulators, dt=args.dt,
@@ -147,7 +147,7 @@ comparer = Comparer(nineml_model=nineml_model, parameters=parameters,
                     nest_build_args=nest_build_args,
                     min_delay=args.min_delay, max_delay=args.max_delay)
 comparer.simulate(args.duration)
-for comparison in comparer.compare():
-    print "Average error between {} and {}: {}".format(*comparison)
+for (name1, name2), diff in comparer.compare().iteritems():
+    print "Average error between {} and {}: {}".format(name1, name2, diff)
 if args.plot:
     comparer.plot()
