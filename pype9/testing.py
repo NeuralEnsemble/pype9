@@ -42,6 +42,24 @@ compare_script_path = os.path.join(os.path.dirname(__file__), '..', 'scripts',
 python_cmd_path = sys.executable
 
 
+def compare(state_variable, dt, duration, in_subprocess=False, plot=True,
+            **kwargs):
+    if in_subprocess:
+        if plot:
+            raise Pype9RuntimeError(
+                "Cannot plot comparisons from subprocess")
+        comparisons = Comparer.compare_in_subprocess(
+            state_variable=state_variable, dt=dt, duration=duration, **kwargs)
+    else:
+        comparer = Comparer(
+            state_variable=state_variable, dt=dt, **kwargs)
+        comparer.simulate(duration)
+        comparisons = comparer.compare()
+        if plot:
+            comparer.plot()
+    return comparisons
+
+
 class Comparer(object):
     """
     The Comparer class is used to compare the dynamics of a 9ML model simulated
@@ -186,15 +204,15 @@ class Comparer(object):
         try:
             self.nrn_cell = eval(
                 'neuron.h.{}(0.5, sec=self.nrn_cell_sec)'.format(neuron_name))
-            self.nrn_cell_sec.L = 10
-            self.nrn_cell_sec.diam = 10 / numpy.pi
-            self.nrn_cell_sec.cm = 1.0
         except TypeError:
             self.nrn_cell_sec.insert(neuron_name)
             self.nrn_cell = getattr(self.nrn_cell_sec(0.5), neuron_name)
-            self.nrn_cell_sec.L = 100
-            self.nrn_cell_sec.diam = 1000 / numpy.pi
-            self.nrn_cell_sec.cm = 0.2
+#             self.nrn_cell_sec.L = 100
+#             self.nrn_cell_sec.diam = 1000 / numpy.pi
+#             self.nrn_cell_sec.cm = 0.2
+        self.nrn_cell_sec.L = 10
+        self.nrn_cell_sec.diam = 10 / numpy.pi
+        self.nrn_cell_sec.cm = 1.0
         # Check to see if any translated parameter names start with 'pas.' in
         # which case a passive mechanism needs to be inserted
         if any(self.neuron_translations.get(k, (k, 1))[0].startswith('pas.')
@@ -213,8 +231,8 @@ class Comparer(object):
                 self.nrn_cell_sec(0.5).pas.e = value
             elif varname == 'cm':
                 self.nrn_cell_sec.cm = value
-            else:
-                setattr(self.nrn_cell, name, value)
+            elif varname is not None:
+                setattr(self.nrn_cell, varname, value)
         for name, value in self.initial_states.iteritems():
             try:
                 varname, scale = self.neuron_translations[name]
@@ -222,10 +240,11 @@ class Comparer(object):
             except (ValueError, KeyError):
                 varname = self.neuron_translations.get(name, name)
                 value = value
-            try:
-                setattr(self.nrn_cell, name, value)
-            except (AttributeError, LookupError):
-                setattr(self.nrn_cell_sec, name, value)
+            if varname is not None:
+                try:
+                    setattr(self.nrn_cell, varname, value)
+                except (AttributeError, LookupError):
+                    setattr(self.nrn_cell_sec, varname, value)
         # Specify current injection
         if self.input_signal is not None:
             _, signal = self.input_signal
@@ -252,13 +271,15 @@ class Comparer(object):
     def _create_NEST(self, nest_name):
         trans_params = {}
         for name, value in self.parameters.iteritems():
+            value = float(value)
             try:
                 varname, scale = self.nest_translations[name]
                 value = value * scale
             except (ValueError, KeyError):
                 varname = self.nest_translations.get(name, name)
                 value = value
-            trans_params[varname] = value
+            if varname is not None:
+                trans_params[varname] = value
         self.nest_cell = nest.Create(nest_name, 1, trans_params)
         try:
             receptor_types = nest.GetDefaults(nest_name)['receptor_types']
@@ -301,13 +322,15 @@ class Comparer(object):
         nest.Connect(self.nest_multimeter, self.nest_cell)
         trans_states = {}
         for name, value in self.initial_states.iteritems():
+            value = float(value)
             try:
                 varname, scale = self.nest_translations[name]
                 value = value * scale
             except (ValueError, KeyError):
                 varname = self.nest_translations.get(name, name)
                 value = value
-            trans_states[varname] = value
+            if varname is not None:
+                trans_states[varname] = value
         nest.SetStatus(self.nest_cell, trans_states)
 
     def _plot_NEURON(self):  # @UnusedVariable
@@ -427,23 +450,6 @@ class Comparer(object):
                              r"([0-9\.\-e]+) (\w+)")
     _error_re = re.compile(r"(\w+)Error:")
 
-    @classmethod
-    def input_step(cls, port_name, amplitude, start_time, duration, dt):
-        num_preceding = int(numpy.floor(start_time / dt))
-        num_remaining = int(numpy.ceil((duration - start_time) / dt))
-        signal = neo.AnalogSignal(
-            numpy.concatenate((numpy.zeros(num_preceding),
-                               numpy.ones(num_remaining) * amplitude)),
-            sampling_period=dt * pq.ms, units='nA', time_units='ms')
-        return (port_name, signal)
-
-    @classmethod
-    def input_freq(cls, port_name, freq, duration):
-        train = neo.SpikeTrain(
-            numpy.arange(0.0, duration, 1 / float(freq)),
-            units='ms', t_stop=duration * pq.ms)
-        return (port_name, train)
-
     class NEURONRecorder(object):
 
         def __init__(self, sec, mech):
@@ -463,3 +469,20 @@ class Comparer(object):
 
         def recording(self, varname):
             return numpy.array(self.rec_t), numpy.array(self.recs[varname])
+
+
+def input_step(port_name, amplitude, start_time, duration, dt):
+    num_preceding = int(numpy.floor(start_time / dt))
+    num_remaining = int(numpy.ceil((duration - start_time) / dt))
+    signal = neo.AnalogSignal(
+        numpy.concatenate((numpy.zeros(num_preceding),
+                           numpy.ones(num_remaining) * amplitude)),
+        sampling_period=dt * pq.ms, units='nA', time_units='ms')
+    return (port_name, signal)
+
+
+def input_freq(port_name, freq, duration):
+    train = neo.SpikeTrain(
+        numpy.arange(0.0, duration, 1 / float(freq)),
+        units='ms', t_stop=duration * pq.ms)
+    return (port_name, train)
