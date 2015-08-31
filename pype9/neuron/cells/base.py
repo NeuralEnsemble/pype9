@@ -138,7 +138,7 @@ class Cell(base.Cell):
         try:
             setattr(self._hoc, varname, val)
             # If capacitance, also set the section capacitance
-            if varname == self._cm_prop_name:
+            if varname == self.cm_prop_name:
                 # This assumes that the value of the capacitance is in nF
                 # which it should be from the super setattr method
                 self._sec.cm = float(

@@ -20,6 +20,8 @@ except ImportError:
 from pype9.neuron.cells import (
     CellMetaClass as CellMetaClassNEURON,
     simulation_controller as simulatorNEURON)
+from pype9.neuron.units import UnitHandler as UnitHandlerNEURON
+from pype9.nest.units import UnitHandler as UnitHandlerNEST
 from pype9.nest.cells import (
     CellMetaClass as CellMetaClassNEST,
     simulation_controller as simulatorNEST)
@@ -219,10 +221,13 @@ class Comparer(object):
         self.nrn_cell_sec.cm = 1.0
         # Check to see if any translated parameter names start with 'pas.' in
         # which case a passive mechanism needs to be inserted
-        if any(self.neuron_translations.get(k, (k, 1))[0].startswith('pas.')
-               for k in self.properties.iterkeys()):
+        if any(self.neuron_translations.get(p.name,
+                                            (p.name, 1))[0].startswith('pas.')
+               for p in self.properties):
             self.nrn_cell_sec.insert('pas')
-        for name, value in self.properties.iteritems():
+        for prop in self.properties:
+            name = prop.name
+            value = UnitHandlerNEURON.scale_value(prop)
             try:
                 varname, scale = self.neuron_translations[name]
                 value = value * scale
@@ -238,6 +243,8 @@ class Comparer(object):
             elif varname is not None:
                 setattr(self.nrn_cell, varname, value)
         for name, value in self.initial_states.iteritems():
+            value = UnitHandlerNEURON.scale_value(
+                UnitHandlerNEURON.from_pq_quantity(value))
             try:
                 varname, scale = self.neuron_translations[name]
                 value = value * scale
@@ -274,8 +281,9 @@ class Comparer(object):
 
     def _create_NEST(self, nest_name):
         trans_params = {}
-        for name, value in self.properties.iteritems():
-            value = float(value)
+        for prop in self.properties:
+            name = prop.name
+            value = UnitHandlerNEST.scale_value(prop)
             try:
                 varname, scale = self.nest_translations[name]
                 value = value * scale
@@ -326,7 +334,8 @@ class Comparer(object):
         nest.Connect(self.nest_multimeter, self.nest_cell)
         trans_states = {}
         for name, value in self.initial_states.iteritems():
-            value = float(value)
+            value = UnitHandlerNEST.scale_value(
+                UnitHandlerNEST.from_pq_quantity(value))
             try:
                 varname, scale = self.nest_translations[name]
                 value = value * scale
