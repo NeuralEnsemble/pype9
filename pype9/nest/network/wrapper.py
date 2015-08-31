@@ -90,7 +90,7 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
                 if p.reference in ('Diameter', 'Length'):
                     component = 'Geometry'
                 else:
-                    component = p.componentclass
+                    component = p.component_class
                 try:
                     varname = cls._basic_nineml_translations[p.reference]
                 except KeyError:

@@ -13,9 +13,9 @@ TITLE Spiking node generated from 9ML using PyPe9 version {{version}} at '{{time
 NEURON {
 {% if is_subcomponent %}
     SUFFIX {{component_name}}
-    {% for species, ports in componentclass.annotations[PYPE9_NS][ION_SPECIES].iteritems() %}
+    {% for species, ports in component_class.annotations[PYPE9_NS][ION_SPECIES].iteritems() %}
         {% if species == NONSPECIFIC_CURRENT %}
-    NONSPECIFIC_CURRENT {% for port in componentclass.analog_send_ports if port.dimension == units.currentDensity %}{{port.name}}{% if not loop.last %}, {% endif %}{% endfor %}
+    NONSPECIFIC_CURRENT {% for port in component_class.analog_send_ports if port.dimension == units.currentDensity %}{{port.name}}{% if not loop.last %}, {% endif %}{% endfor %}
         {% else %}
     USEION {{species}} 
             {%- for p in ports if p.mode == 'recv' %}
@@ -29,24 +29,24 @@ NEURON {
     {% endfor %}
 {% else %}
     POINT_PROCESS {{component_name}}
-    NONSPECIFIC_CURRENT {% for port in componentclass.analog_send_ports if port.dimension == units.current %}{% if not loop.first %}, {% endif %}{{port.name}}{% endfor %}
+    NONSPECIFIC_CURRENT {% for port in component_class.analog_send_ports if port.dimension == units.current %}{% if not loop.first %}, {% endif %}{{port.name}}{% endfor %}
 {% endif %}
 
     : T
     RANGE regime_
 
     :StateVariables:
-{% for sv in componentclass.state_variables %}
+{% for sv in component_class.state_variables %}
     RANGE {{sv.name}}
 {% endfor %}
 
     :Parameters
-{% for p in componentclass.parameters %}
+{% for p in component_class.parameters %}
     RANGE {{p.name}}
 {% endfor %}
 
     :Aliases
-{% for alias in chain(componentclass.aliases) %}
+{% for alias in chain(component_class.aliases) %}
     RANGE {{alias.name}}
 {% endfor %}
 }
@@ -71,26 +71,26 @@ CONSTANT {
     ON_EVENT = 0
 
     : Regime ids
-{% for regime in componentclass.regimes %}
-    {{regime.name | upper}} = {{componentclass.index_of(regime)}}
+{% for regime in component_class.regimes %}
+    {{regime.name | upper}} = {{component_class.index_of(regime)}}
 {% endfor %}
 
     : Event port ids
-{% for port in componentclass.event_receive_ports %}
-    {{port.name | upper}} = {{componentclass.index_of(port)}}
+{% for port in component_class.event_receive_ports %}
+    {{port.name | upper}} = {{component_class.index_of(port)}}
 {% endfor %}
 
 }
 
 INITIAL {
     : Initialise State Variables:
-{% for sv in componentclass.state_variables %}
+{% for sv in component_class.state_variables %}
     {{sv.name}} = 0
 {% endfor %}
 
     : Initialise Regime:
     {# This should come from the initial state, when we sort out that format #}
-    regime_ = {{next(componentclass.regimes).name | upper}}
+    regime_ = {{next(component_class.regimes).name | upper}}
 
 {% if not is_subcomponent %}
     : Initialise the NET_RECEIVE block by sending appropriate flag to itself
@@ -100,12 +100,12 @@ INITIAL {
 
 PARAMETER {
     : True parameters
-{% for param, units in unit_handler.assign_units_to_variables(componentclass.parameters) %}
+{% for param, units in unit_handler.assign_units_to_variables(component_class.parameters) %}
     {{param.name}} = 0 ({{units}})
 {% endfor %}
 
     : Constants
-{% for const, value, units in unit_handler.assign_units_to_constants(componentclass.constants) %}
+{% for const, value, units in unit_handler.assign_units_to_constants(component_class.constants) %}
     {{const.name}} = {{value}} ({{units}})
 {% endfor %}
 
@@ -114,7 +114,7 @@ PARAMETER {
 }
 
 STATE {
-{% for sv, units in unit_handler.assign_units_to_variables(componentclass.state_variables) if sv.name != 'v' %}
+{% for sv, units in unit_handler.assign_units_to_variables(component_class.state_variables) if sv.name != 'v' %}
     {{sv.name}} ({{units}})
 {% endfor %}
 }
@@ -125,28 +125,28 @@ ASSIGNED {
     : Internal flags
     regime_
     found_transition_
-{% for port, units in unit_handler.assign_units_to_variables(chain(componentclass.analog_receive_ports, componentclass.analog_reduce_ports)) %}
+{% for port, units in unit_handler.assign_units_to_variables(chain(component_class.analog_receive_ports, component_class.analog_reduce_ports)) %}
     {{port.name}} ({{units}}) 
 {% endfor %}
 
-{% if 'v' in componentclass.state_variable_names %}
+{% if 'v' in component_class.state_variable_names %}
     : Membrane voltage
     v (mV)
     
 {% endif %}
     : Aliases
-{% for alias, units in unit_handler.assign_units_to_aliases(componentclass.aliases) %}
+{% for alias, units in unit_handler.assign_units_to_aliases(component_class.aliases) %}
     {{alias.name}} ({{units}})
 {% endfor %}
 }
 
 BREAKPOINT {
-{% if componentclass.annotations[PYPE9_NS][HAS_TIME_DERIVS] %}
+{% if component_class.annotations[PYPE9_NS][HAS_TIME_DERIVS] %}
     SOLVE states METHOD {{ode_solver}}
 {% endif %}
-{% for alias, scaled_expr, _ in unit_handler.scale_aliases(componentclass.required_for(list(componentclass.all_time_derivatives()) + list(componentclass.analog_send_ports)).expressions) %}
-    {% if len(list(componentclass.overridden_in_regimes(alias))) %}
-        {% for regime in componentclass.overridden_in_regimes(alias) %}
+{% for alias, scaled_expr, _ in unit_handler.scale_aliases(component_class.required_for(list(component_class.all_time_derivatives()) + list(component_class.analog_send_ports)).expressions) %}
+    {% if len(list(component_class.overridden_in_regimes(alias))) %}
+        {% for regime in component_class.overridden_in_regimes(alias) %}
             {% set scaled_regime_expr, _ = unit_handler.scale_alias(regime.alias(alias.lhs)) %}
     {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
         {{code_gen.assign_str(alias.lhs, scaled_regime_expr.rhs) | indent(8)}}
@@ -161,21 +161,21 @@ BREAKPOINT {
 }
 
 
-{% if componentclass.annotations[PYPE9_NS][HAS_TIME_DERIVS] %}
+{% if component_class.annotations[PYPE9_NS][HAS_TIME_DERIVS] %}
 DERIVATIVE states {
-    {% for sv in componentclass.state_variables if sv.name not in componentclass.annotations[PYPE9_NS][NO_TIME_DERIVS] %}
-    {{sv.name}}' = deriv_{{sv.name}}({{componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variable_names | join(', ')}})
+    {% for sv in component_class.state_variables if sv.name not in component_class.annotations[PYPE9_NS][NO_TIME_DERIVS] %}
+    {{sv.name}}' = deriv_{{sv.name}}({{component_class.required_for(component_class.all_time_derivatives(sv)).state_variable_names | join(', ')}})
     {% endfor %}
 }
 {% endif %}
 
-{% for sv in componentclass.state_variables if sv.name not in componentclass.annotations[PYPE9_NS][NO_TIME_DERIVS] %}
+{% for sv in component_class.state_variables if sv.name not in component_class.annotations[PYPE9_NS][NO_TIME_DERIVS] %}
 FUNCTION deriv_{{sv.name}}(
-    {%- for sv, units in unit_handler.assign_units_to_variables(componentclass.required_for(componentclass.all_time_derivatives(sv)).state_variables) -%}
+    {%- for sv, units in unit_handler.assign_units_to_variables(component_class.required_for(component_class.all_time_derivatives(sv)).state_variables) -%}
         {{sv.name}} ({{units}}){%- if loop.last %}{% else %}, {% endif -%}
     {%- endfor %}
     ) ({{unit_handler.assign_units_to_variable(sv, derivative_of=True)}}) {
-    {% for regime in componentclass.regimes  if sv.name in regime._time_derivatives %}
+    {% for regime in component_class.regimes  if sv.name in regime._time_derivatives %}
     {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
         {% set scaled_expr, units = unit_handler.scale_time_derivative(regime.time_derivative(sv.name)) %}
         {{code_gen.assign_str('deriv_' + sv.name, scaled_expr.rhs)}}
@@ -193,21 +193,21 @@ NET_RECEIVE(weight_, channel) {
     found_transition_ = -1
     if (flag == INIT) {
         : Set up required watch statements
-    {% for regime in componentclass.regimes %}
+    {% for regime in component_class.regimes %}
         {% for oc in regime.on_conditions %}
-        WATCH ({{oc.trigger.rhs_cstr}}) {{componentclass.index_of(oc.trigger.rhs, key='TriggerRHS') + 1}}  : Watch trigger of on-condition and send appropriate flag
+        WATCH ({{oc.trigger.rhs_cstr}}) {{component_class.index_of(oc.trigger.rhs, key='TriggerRHS') + 1}}  : Watch trigger of on-condition and send appropriate flag
         {% endfor %}
     {% endfor %}
-    {% for regime in componentclass.regimes %}
+    {% for regime in component_class.regimes %}
     } else if (regime_ == {{regime.name | upper}}) {
         {% for trans in regime.transitions %}
             {% if hasattr(trans, 'trigger') %}
-        if (flag == {{componentclass.index_of(trans.trigger.rhs, key='TriggerRHS') + 1}}) {  : Condition '{{trans.trigger.rhs_str}}'
+        if (flag == {{component_class.index_of(trans.trigger.rhs, key='TriggerRHS') + 1}}) {  : Condition '{{trans.trigger.rhs_str}}'
             {% else %}
         if (flag == ON_EVENT && channel == {{trans.src_port_name | upper}}) {
             {% endif %}      
             : Required aliases
-            {% for elem, scaled_expr, _ in unit_handler.scale_aliases(componentclass.required_for(trans.state_assignments).expressions) %}
+            {% for elem, scaled_expr, _ in unit_handler.scale_aliases(component_class.required_for(trans.state_assignments).expressions) %}
             {{code_gen.assign_str(elem.lhs, scaled_expr.rhs)}}
             {% endfor %}
 

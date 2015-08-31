@@ -17,13 +17,10 @@ from itertools import chain
 from copy import deepcopy
 import shutil
 from os.path import join
-from collections import defaultdict
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from itertools import izip
-from runpy import run_path
 from abc import ABCMeta, abstractmethod
 from nineml import units
-from nineml.user import Component
 from pype9.exceptions import Pype9BuildError
 import logging
 import pype9.annotations
@@ -59,7 +56,7 @@ class BaseCodeGenerator(object):
     DEFAULT_UNITS = {}
 
     @abstractmethod
-    def generate_source_files(self, component, initial_state, src_dir,
+    def generate_source_files(self, dynamics, initial_state, src_dir,
                               **kwargs):
         """
         Generates the source files for the relevant simulator
@@ -74,11 +71,12 @@ class BaseCodeGenerator(object):
         pass
 
     @abstractmethod
-    def compile_source_files(self, compile_dir, component_name, verbose):
+    def compile_source_files(self, compile_dir, name, verbose):
         pass
 
-    def generate(self, prototype, initial_state=None, install_dir=None,
-                 build_dir=None, build_mode='lazy', verbose=True, **kwargs):
+    def generate(self, component_class, default_properties=None,
+                 initial_state=None, install_dir=None, build_dir=None,
+                 build_mode='lazy', verbose=True, **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
         NineML cell class
@@ -101,19 +99,15 @@ class BaseCodeGenerator(object):
         # Save original working directory to reinstate it afterwards (just to
         # be polite)
         orig_dir = os.getcwd()
-        if not isinstance(prototype, Component):
-            raise TypeError(
-                "Provided prototype is not a 9ML component ('{}')"
-                .format(prototype))
-        name = prototype.name
+        name = component_class.name
         # Set build dir if not provided
         if build_dir is None:
-            if prototype.url is None:
+            if component_class.url is None:
                 raise Pype9BuildError(
                     "Build directory must be explicitly provided ('build_dir')"
                     " when using generated 9ml components '{}'"
                     .format(name))
-            build_dir = self.get_build_dir(prototype.url, name)
+            build_dir = self.get_build_dir(component_class.url, name)
         # Calculate src directory path within build directory
         src_dir = os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
         # Calculate compile directory path within build directory
@@ -122,8 +116,8 @@ class BaseCodeGenerator(object):
         # provided
         install_dir = self.get_install_dir(build_dir, install_dir)
         # Get the timestamp of the source file
-        if prototype.url:
-            nineml_mod_time = time.ctime(os.path.getmtime(prototype.url))
+        if component_class.url:
+            nineml_mod_time = time.ctime(os.path.getmtime(component_class.url))
         else:
             nineml_mod_time = kwargs.get('mod_time', time.ctime())
         # Path of the file which contains or will contain the source
@@ -175,7 +169,9 @@ class BaseCodeGenerator(object):
         if generate_source:
             self.clean_src_dir(src_dir, name)
             self.generate_source_files(
-                prototype=prototype, initial_state=initial_state,
+                component_class=component_class,
+                default_properties=default_properties,
+                initial_state=initial_state,
                 src_dir=src_dir, compile_dir=compile_dir,
                 install_dir=install_dir, verbose=verbose, **kwargs)
             # Write the timestamp of the 9ML file used to generate the source
@@ -305,48 +301,65 @@ class BaseCodeGenerator(object):
         """
         return []
 
-    def _load_component_translations(self, biophysics_name, params_dir):
+    def transform_for_build(self, component_class, default_properties,
+                            initial_states, **kwargs):  # @UnusedVariable
         """
-        Loads component parameter translations from names to standard reference
-        name (eg. 'e_rev', 'MaximalConductance') dictionary. For each file in
-        the params directory with a '.py' extension starting with the
-        celltype_name assume that it is a parameters file.
+        Copies and transforms the component class and associated properties and
+        states to match the format of the simulator (overridden in derived
+        class)
 
-        `biophysics_name` [str] -- The name of the cell biophysics to load
-                                      the parameter names for
-        `params_dir` [str] -- The path to the directory that contains the
-                                 parameters
+        `component_class`     -- the component class to be transformed
+        `default_properties`  -- the properties to be transformed to match
+        `initial_states`      -- the initial_states to be transformed to match
         """
-        component_translations = defaultdict(dict)
-        # Loop through all the files in the params directory
-        for f_name in os.listdir(params_dir):
-            if f_name.startswith(biophysics_name) and f_name.endswith('.py'):
-                # Load the properties from the parameters file
-                loaded_props = run_path(
-                    join(params_dir, f_name))['properties']
-                # Store in a dictionary of dictionaries indexed by component
-                # and variable names
-                for (comp_name,
-                     var_name), mapped_var in loaded_props.iteritems():
-                    component_translations[comp_name][var_name] = mapped_var
-        return component_translations
+        # ---------------------------------------------------------------------
+        # Clone original component class and properties
+        # ---------------------------------------------------------------------
+        return (deepcopy(component_class), deepcopy(default_properties),
+                deepcopy(initial_states))
+
+#     def _load_component_translations(self, biophysics_name, params_dir):
+#         """
+#         Loads component parameter translations from names to standard reference
+#         name (eg. 'e_rev', 'MaximalConductance') dictionary. For each file in
+#         the params directory with a '.py' extension starting with the
+#         celltype_name assume that it is a parameters file.
+# 
+#         `biophysics_name` [str] -- The name of the cell biophysics to load
+#                                       the parameter names for
+#         `params_dir` [str] -- The path to the directory that contains the
+#                                  parameters
+#         """
+#         component_translations = defaultdict(dict)
+#         # Loop through all the files in the params directory
+#         for f_name in os.listdir(params_dir):
+#             if f_name.startswith(biophysics_name) and f_name.endswith('.py'):
+#                 # Load the properties from the parameters file
+#                 loaded_props = run_path(
+#                     join(params_dir, f_name))['properties']
+#                 # Store in a dictionary of dictionaries indexed by component
+#                 # and variable names
+#                 for (comp_name,
+#                      var_name), mapped_var in loaded_props.iteritems():
+#                     component_translations[comp_name][var_name] = mapped_var
+#         return component_translations
 
 #     @classmethod
 #     def _get_member_from_kwargs_or_guess_via_dimension(
-#             cls, member_name, elements_name, dimension, componentclass,
+#             cls, member_name, elements_name, dimension, component_class,
 #             kwargs):
 #         """
 #         Guess the location of the member from its unit dimension
 #         """
 #         element_descr = elements_name.replace('_', ' ')
 #         member_descr = member_name.replace('_', ' ')
-#         elements = list(getattr(componentclass, elements_name))
+#         elements = list(getattr(component_class, elements_name))
 #         if member_name in kwargs:
 #             # Get specified member
 #             member = kwargs[member_name]
 #             if isinstance(member, Property):
 #                 try:
-#                     member = componentclass.parameter(member.name)
+#                     member = component_class.parameter(member.name)
 #                 except KeyError:
 #                     raise Pype9NoMatchingElementException(
 #                         "Did not find parameter corresponding to kwarg"
@@ -372,13 +385,13 @@ class BaseCodeGenerator(object):
 #             if len(matching) == 1:
 #                 member = matching[0]
 #                 logger.info("Guessed that the {} in component class '{}'"
-#                             "is '{}'".format(member_descr, componentclass.name,
+#                             "is '{}'".format(member_descr, component_class.name,
 #                                              member.name))
 #             elif not matching:
 #                 raise Pype9NoMatchingElementException(
 #                     "Component '{}' does not have a {} with suitable dimension"
 #                     " for the {} ('{}'). Found '{}'"
-#                     .format(componentclass.name, element_descr, member_descr,
+#                     .format(component_class.name, element_descr, member_descr,
 #                             dimension.name,
 #                             "', '".join(e.name for e in elements)))
 #             else:
@@ -386,7 +399,7 @@ class BaseCodeGenerator(object):
 #                     "Could not guess {} in component '{}' from the following "
 #                     "{} with dimension '{}', '{}'. Please specify which one is"
 #                     " the {}" "via the '{}' keyword arg"
-#                     .format(member_descr, componentclass.name, element_descr,
+#                     .format(member_descr, component_class.name, element_descr,
 #                             dimension.name,
 #                             "', '".join(e.name for e in matching),
 #                             member_descr, member_name))

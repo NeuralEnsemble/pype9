@@ -66,12 +66,23 @@ class Cell(base.Cell):
         self._sec.L = 10.0
         self._sec.diam = 10.0 / pi
         # Get the membrane capacitance property
-        self._cm_prop = self.build_prototype.property(
-            self.build_componentclass.annotations[
-                PYPE9_NS][MEMBRANE_CAPACITANCE])
-        cm = pq.Quantity(UnitHandler.to_pq_quantity(self._cm_prop), 'nF')
+        self.cm_prop_name = self.build_component_class.annotations[
+            PYPE9_NS][MEMBRANE_CAPACITANCE]
+        cm_prop = None
+        try:
+            try:
+                cm_prop = properties[0][self.cm_prop_name]
+            except IndexError:
+                cm_prop = kwprops[self.cm_prop_name]
+        except KeyError:
+            if self.build_properties is not None:
+                cm_prop = self.build_properties.property(self.cm_prop_name)
+        if cm_prop is not None:
+            cm = pq.Quantity(UnitHandler.to_pq_quantity(self._cm_prop), 'nF')
+        else:
+            cm = 1.0 * pq.nF
         # Set capacitance in mechanism
-        setattr(self._hoc, self._cm_prop.name, float(cm))
+        setattr(self._hoc, self.cm_prop_name, float(cm))
         # Set capacitance in hoc
         specific_cm = pq.Quantity(cm / self.surface_area, 'uF/cm^2')
         self._sec.cm = float(specific_cm)
@@ -127,7 +138,7 @@ class Cell(base.Cell):
         try:
             setattr(self._hoc, varname, val)
             # If capacitance, also set the section capacitance
-            if varname == self._cm_prop.name:
+            if varname == self._cm_prop_name:
                 # This assumes that the value of the capacitance is in nF
                 # which it should be from the super setattr method
                 self._sec.cm = float(
@@ -159,9 +170,9 @@ class Cell(base.Cell):
         each neuron, ids as keys.
         """
         port = self.component_class[port_name]
-        if port_name == self.componentclass.annotations[
+        if port_name == self.component_class.annotations[
                 PYPE9_NS][MEMBRANE_VOLTAGE]:
-            port_name = self.build_componentclass.annotations[
+            port_name = self.build_component_class.annotations[
                 PYPE9_NS][MEMBRANE_VOLTAGE]
         if isinstance(port, EventPort):
             recording = neo.SpikeTrain(
@@ -195,18 +206,18 @@ class Cell(base.Cell):
 
         `current` -- a vector containing the current [neo.AnalogSignal]
         """
-        ext_is = self.build_componentclass.annotations[
+        ext_is = self.build_component_class.annotations[
             PYPE9_NS][EXTERNAL_CURRENTS]
         try:
-            port = self.componentclass.port(port_name)
+            port = self.component_class.port(port_name)
         except KeyError:
             raise Pype9RuntimeError(
                 "Cannot play into unrecognised port '{}'".format(port_name))
         if isinstance(port, EventPort):
-            if len(list(self.componentclass.event_receive_ports)):
+            if len(list(self.component_class.event_receive_ports)):
                 raise Pype9RuntimeError(
                     "Multiple event receive ports '{}'".format("', '".join(
-                        list(self.componentclass.event_receive_ports))))
+                        list(self.component_class.event_receive_ports))))
             vstim = h.VecStim()
             vstim_times = h.Vector(pq.Quantity(signal, 'ms'))
             vstim.play(vstim_times)

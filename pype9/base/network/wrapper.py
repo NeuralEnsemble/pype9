@@ -68,9 +68,9 @@ class PyNNCellWrapperMetaClass(type):
         default_params = {}
         initial_values = {}
         for p in nineml_model.parameters:
-            if p.componentclass:
+            if p.component_class:
                 component = nineml_model.biophysics.components[
-                    p.componentclass]
+                    p.component_class]
             else:
                 component = nineml_model.biophysics.components[
                     '__NO_COMPONENT__']
@@ -112,7 +112,7 @@ class PyNNCellWrapperMetaClass(type):
         Constructs the dictionary of recordable parameters from the NineML
         model
         """
-        # TODO: Make selected componentclass variables also recordable
+        # TODO: Make selected component_class variables also recordable
         return ['spikes', 'v'] + \
             ['{' + seg + '}v'
              for seg in nineml_model.morphology.segments.keys()]

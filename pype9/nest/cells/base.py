@@ -77,11 +77,11 @@ class Cell(base.Cell):
 
     def build_name(self, varname):
                 # Get mapped port name if port corresponds to membrane voltage
-        if (varname == self.componentclass.annotations[
+        if (varname == self.component_class.annotations[
                 PYPE9_NS][MEMBRANE_VOLTAGE] and
-            MEMBRANE_VOLTAGE in self.build_componentclass.annotations[
+            MEMBRANE_VOLTAGE in self.build_component_class.annotations[
                 PYPE9_NS]):
-            varname = self.build_componentclass.annotations[
+            varname = self.build_component_class.annotations[
                 PYPE9_NS][MEMBRANE_VOLTAGE]
         return varname
 

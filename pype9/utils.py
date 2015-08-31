@@ -77,13 +77,13 @@ def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,
                 prototype = components[0]
             else:
                 if len(components) > 1:
-                    componentclasses = set((c.component_class
+                    component_classes = set((c.component_class
                                             for c in components))
                 else:
-                    componentclasses = list(document.componentclasses)
-                if len(componentclasses) == 1:
-                    prototype = componentclasses[0]
-                elif len(componentclasses) > 1:
+                    component_classes = list(document.component_classes)
+                if len(component_classes) == 1:
+                    prototype = component_classes[0]
+                elif len(component_classes) > 1:
                     raise Pype9RuntimeError(
                         "Multiple component and or classes ('{}') loaded "
                         "from nineml path '{}'"
@@ -94,22 +94,22 @@ def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,
                         "No components or component classes loaded from "
                         "nineml" " path '{}'".format(url))
     elif isinstance(url_or_comp, nineml.abstraction.Dynamics):
-        componentclass = url_or_comp
-        definition = Definition(componentclass)
+        component_class = url_or_comp
+        definition = Definition(component_class)
         properties = []
-        for param in componentclass.parameters:
+        for param in component_class.parameters:
             properties.append(Property(
                 name=param.name, value=default_value,
                 units=Unit(
                     ('unit' + param.dimension.name),
                     dimension=param.dimension, power=0)))
-        if isinstance(componentclass, Dynamics):
+        if isinstance(component_class, Dynamics):
             ComponentType = DynamicsProperties
-        elif isinstance(componentclass, ConnectionRule):
+        elif isinstance(component_class, ConnectionRule):
             ComponentType = ConnectionRuleProperties
-        elif isinstance(componentclass, RandomDistribution):
+        elif isinstance(component_class, RandomDistribution):
             ComponentType = RandomDistributionProperties
-        prototype = ComponentType(name=componentclass.name + 'Properties',
+        prototype = ComponentType(name=component_class.name + 'Properties',
                                   definition=definition,
                                   properties=properties)
     elif isinstance(url_or_comp, nineml.user.Component):

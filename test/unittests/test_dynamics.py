@@ -13,10 +13,11 @@ class TestDynamics(TestCase):
     dt = 0.001
     duration = 100.0
 
-    liaf_parameters = {
-        "Cm": 250.0, "g_leak": 25.0, "refactory_period": 2.0,
-        "e_leak": -70.0, "v_reset": -70.0, "v_threshold": -55}
-    liaf_initial_states = {'v': -65.0, 'end_refractory': 0.0}
+#     liaf_properties = {
+#         "Cm": 250.0 * pq.pF, "g_leak": 25.0 * pq.nS,
+#         "refactory_period": 2.0 * pq.ms, "e_leak": -70.0 * pq.mV,
+#         "v_reset": -70.0 * pq.mV, "v_threshold": -55 * pq.mV}
+    liaf_initial_states = {'v': -65.0 * pq.mV, 'end_refractory': 0.0 * pq.ms}
     liaf_nest_translations = {
         # the conversion to g_leak is a bit of a hack because it is
         # actually Cm / g_leak
@@ -34,14 +35,13 @@ class TestDynamics(TestCase):
         # Perform comparison in subprocess
         comparisons = compare(
             nineml_model=ninemlcatalog.lookup(
-                'neurons/basic/AdExpIaF/AdExpIaFProperties'),
+                'neurons/basic/AdExpIaF/AdExpIaF'),
             state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
             neuron_ref='AdExpIF', nest_ref='aeif_cond_alpha',
             input_signal=input_step('iExt', 1, 50, 100, self.dt),
-            initial_states={'w': 0.0, 'v': -65.0},
-            parameters={'EL': 70.6, 'GL': 0.03, 'a': 0.004, 'b': 0.0805,
-                        'Cm': 1, 'delta': 2.0, 'tauw': 144.0, 'trefrac': 1.0,
-                        'vreset': -60.0, 'vspike': -40.0, 'vthresh': -50.0},
+            initial_states={'w': 0.0 * pq.nA, 'v': -65.0 * pq.mV},
+            properties=ninemlcatalog.lookup(
+                'neurons/basic/AdExpIaF/AdExpIaFProperties'),
             nest_translations={
                 'w': ('w', 1), 'Cm': ('C_m', 1), 'GL': ('g_L', 1000),
                 'trefrac': ('t_ref', 1), 'EL': ('E_L', 1), 'a': ('a', 1000),
@@ -65,10 +65,11 @@ class TestDynamics(TestCase):
         # Perform comparison in subprocess
         comparisons = compare(
             nineml_model=ninemlcatalog.lookup(
-                'neurons/basic/Izhikevich2003/Izhikevich2003Properties'),
+                'neurons/basic/Izhikevich2003/Izhikevich2003'),
             state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
-            parameters={'a': 0.02, 'b': 0.2, 'c': -65.0, 'd': 2.0},
-            initial_states={'u': -14.0, 'v': -65.0},
+            properties=ninemlcatalog.lookup(
+                'neurons/basic/Izhikevich2003/Izhikevich2003Properties'),
+            initial_states={'u': -14.0 * pq.mV / pq.ms, 'v': -65.0 * pq.mV},
             neuron_ref='Izhikevich', nest_ref='izhikevich',
             input_signal=input_step('iExt', 0.02, 50, 100, self.dt),
             nest_translations={'v': ('V_m', 1), 'u': ('U_m', 1)},
@@ -86,9 +87,11 @@ class TestDynamics(TestCase):
         # Perform comparison in subprocess
         comparisons = compare(
             nineml_model=ninemlcatalog.lookup(
-                'neurons/basic/HodgkinHuxley/HodgkinHuxleyProperties'),
+                'neurons/basic/HodgkinHuxley/HodgkinHuxley'),
             state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
-            initial_states={'v': -65.0, 'm': 0.0, 'h': 1.0, 'n': 0.0},
+            initial_states={'v': -65.0 * pq.mV, 'm': 0.0, 'h': 1.0, 'n': 0.0},
+            properties=ninemlcatalog.lookup(
+                'neurons/basic/HodgkinHuxley/HodgkinHuxleyProperties'),
             neuron_ref='hh_traub', nest_ref='hh_cond_exp_traub',
             input_signal=input_step('iExt', 0.5, 50, 100, self.dt),
             nest_translations={'v': ('V_m', 1), 'm': ('Act_m', 1),
@@ -108,10 +111,11 @@ class TestDynamics(TestCase):
         # Perform comparison in subprocess
         comparisons = compare(
             nineml_model=ninemlcatalog.lookup(
+                'neurons/basic/LeakyIntegrateAndFire/LeakyIntegrateAndFire'),
+            state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
+            properties=ninemlcatalog.lookup(
                 'neurons/basic/LeakyIntegrateAndFire/'
                 'LeakyIntegrateAndFireProperties'),
-            state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
-            parameters=self.liaf_parameters,
             initial_states=self.liaf_initial_states,
             neuron_ref='ResetRefrac', nest_ref='iaf_psc_alpha',
             input_signal=input_step('iExt', 1, 50, 100, self.dt),
@@ -136,17 +140,18 @@ class TestDynamics(TestCase):
         iaf_alpha = Dynamics(
             name='iaf_alpha', subnodes={'neuron': iaf, 'psr': alpha_psr})
         alpha_initial_states = {'a': 0.0, 'b': 0.0}
-        alpha_parameters = {'tau_syn': 0.0}
+        alpha_properties = ninemlcatalog.lookup(
+            'postsynapticresponses/Alpha/AlphaProperties')
         alpha_nest_tranlsations = {'tau_syn': ('tau_synE', 1)}
         alpha_neuron_tranlsations = {'tau_syn': ('tau', 1)}
         alpha_initial_states.update(self.liaf_initial_states)
-        alpha_parameters.update(self.liaf_parameters)
+        alpha_properties.update(self.liaf_properties)
         alpha_nest_tranlsations.update(self.liaf_nest_translations)
         alpha_neuron_tranlsations.update(self.liaf_neuron_translations)
         comparisons = compare(
             nineml_model=iaf_alpha,
             state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
-            parameters=alpha_parameters,
+            properties=alpha_properties,
             initial_states=alpha_initial_states,
             neuron_ref='ResetRefrac', nest_ref='iaf_psc_alpha',
             input_train=input_freq('spike', 100, self.duration),

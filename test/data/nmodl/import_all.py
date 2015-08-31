@@ -13,8 +13,8 @@ for fname in os.listdir(in_path):
         importer = NMODLImporter(os.path.join(in_path, fname))
         class_fname = out_path + '/' + fname[:-4] + 'Class.xml'
         comp_fname = out_path + '/' + fname[:-4] + '.xml'
-        componentclass = importer.get_component_class()
-        nineml.write(componentclass, class_fname)
+        component_class = importer.get_component_class()
+        nineml.write(component_class, class_fname)
         component = importer.get_component(class_fname)
         nineml.write(component, comp_fname)
         print "Converted '{}' to '{}'".format(fname, comp_fname)

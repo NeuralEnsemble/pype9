@@ -81,11 +81,11 @@ class TestNMODLImporter(object):
                 class_fname = out_path + '/' + fname[:-4] + 'Class.xml'
                 comp_fname = out_path + '/' + fname[:-4] + '.xml'
                 try:
-                    componentclass = importer.get_component_class()
+                    component_class = importer.get_component_class()
                 except:
                     print "Could not import '{}' mod file".format(fname)
                     raise
-                nineml.write(componentclass, class_fname)
+                nineml.write(component_class, class_fname)
                 component = importer.get_component(class_fname)
                 nineml.write(component, comp_fname)
                 print "Converted '{}' to '{}'".format(fname, comp_fname)

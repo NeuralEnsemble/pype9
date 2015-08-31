@@ -43,7 +43,7 @@ class Connector(object):
                     raise Pype9ProjToCloneNotCreatedException
             elif isinstance(p.value, nineml.user.RandomDistribution):
                 RandomDistribution = getattr(
-                    random, p.value.definition.componentclass.name)
+                    random, p.value.definition.component_class.name)
                 conv_param = RandomDistribution(p.value.parameters, rng)
             elif isinstance(p.value, nineml.user.AnonymousFunction):
                 conv_param = create_anonymous_function(p.value)

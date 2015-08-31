@@ -10,7 +10,7 @@
 from __future__ import absolute_import
 import os.path
 import tempfile
-from copy import copy
+from copy import copy, deepcopy
 import uuid
 from itertools import chain, groupby
 import subprocess as sp
@@ -18,9 +18,8 @@ from collections import defaultdict
 import sympy
 from pype9.base.cells.code_gen import BaseCodeGenerator
 import nineml.units as un
-from nineml.abstraction.expressions import Alias
-from nineml.abstraction.ports import AnalogSendPort
-from pype9.exceptions import Pype9BuildError
+from nineml.abstraction import Alias, AnalogSendPort, Dynamics
+from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import pype9
 from datetime import datetime
 from nineml import Document
@@ -67,8 +66,8 @@ class CodeGenerator(BaseCodeGenerator):
         # NMODL files on the current platform
         self.specials_dir = self._get_specials_dir()
 
-    def generate_source_files(self, prototype, initial_state, src_dir,
-                              **kwargs):
+    def generate_source_files(self, component_class, default_properties,
+                              initial_state, src_dir, **kwargs):
         """
             *KWArgs*
                 `membrane_voltage` -- Specifies the state that represents
@@ -86,54 +85,52 @@ class CodeGenerator(BaseCodeGenerator):
                 `is_subcomponent`  -- Whether to use the 'SUFFIX' tag or not.
                 `ode_solver`       -- specifies the ODE solver to use
         """
-        assert isinstance(prototype, DynamicsProperties), \
-            ("Provided prototype class '{}' is not a Dynamics object"
-             .format(prototype))
-#         if isinstance(prototype, Kinetics):
-#             self.generate_kinetics(name, prototype, initial_state, src_dir,
-#                                    **kwargs)
-#         el
         # Check whether it is a point process or a ion channel
-        cc = prototype.component_class
-        if isinstance(cc[cc.annotations[PYPE9_NS]['MembraneVoltage']],
+        if isinstance(component_class[component_class.annotations[PYPE9_NS]
+                                      ['MembraneVoltage']],
                       StateVariable):
             self.generate_point_process(
-                prototype, initial_state, src_dir, **kwargs)
+                component_class, default_properties, initial_state, src_dir,
+                **kwargs)
         else:
-            self.generate_ion_channel(prototype, initial_state, src_dir,
-                                      **kwargs)
+            self.generate_ion_channel(component_class, default_properties,
+                                      initial_state, src_dir, **kwargs)
 
-    def generate_ion_channel(self, prototype, initial_state, src_dir,
-                             **kwargs):
+    def generate_ion_channel(self, component_class, default_properties,
+                             initial_state, src_dir, **kwargs):
         # Render mod file
-        self.generate_mod_file('main.tmpl', prototype, initial_state, src_dir,
+        self.generate_mod_file('main.tmpl', component_class,
+                               default_properties, initial_state, src_dir,
                                kwargs)
 
-    def generate_kinetics(self, prototype, initial_state, src_dir, **kwargs):
+    def generate_kinetics(self, component_class, default_properties,
+                          initial_state, src_dir, **kwargs):
         # Render mod file
-        self.generate_mod_file('kinetics.tmpl', prototype, initial_state,
-                               src_dir, kwargs)
+        self.generate_mod_file('kinetics.tmpl', component_class,
+                               default_properties, initial_state, src_dir,
+                               kwargs)
 
-    def generate_point_process(self, prototype, initial_state, src_dir,
-                               **kwargs):
+    def generate_point_process(self, component_class, default_properties,
+                               initial_state, src_dir, **kwargs):
         add_tmpl_args = {'is_subcomponent': False}
         template_args = copy(kwargs)
         template_args.update(add_tmpl_args)
         # Render mod file
-        self.generate_mod_file('main.tmpl', prototype, initial_state,
-                               src_dir, template_args)
+        self.generate_mod_file('main.tmpl', component_class,
+                               default_properties, initial_state, src_dir,
+                               template_args)
 
-    def generate_mod_file(self, template, prototype, initial_state, src_dir,
-                          template_args):
+    def generate_mod_file(self, template, component_class, default_properties,
+                          initial_state, src_dir, template_args):
         tmpl_args = {
             'code_gen': self,
-            'component_name': prototype.name,
-            'componentclass': prototype.component_class,
-            'prototype': prototype,
+            'component_name': component_class.name,
+            'component_class': component_class,
+            'prototype': default_properties,
             'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
-            'unit_handler': UnitHandler(prototype.component_class),
+            'unit_handler': UnitHandler(component_class),
             'ode_solver': self.ODE_SOLVER_DEFAULT,
             'external_ports': [],
             'is_subcomponent': True,
@@ -141,10 +138,11 @@ class CodeGenerator(BaseCodeGenerator):
             'weight_variables': []}
         tmpl_args.update(template_args)
         # Render mod file
-        self.render_to_file(template, tmpl_args, prototype.name + '.mod',
-                            src_dir)
+        self.render_to_file(
+            template, tmpl_args, component_class.name + '.mod', src_dir)
 
-    def transform_for_build(self, prototype, **kwargs):
+    def transform_for_build(self, component_class, default_properties,
+                            initial_state, **kwargs):
         """
         Copy the component class to alter it to match NEURON's current
         centric focus
@@ -154,12 +152,20 @@ class CodeGenerator(BaseCodeGenerator):
         `membrane_capacitance` -- the name of the capcitance that represents
                               the membrane capacitance
         """
+        if not isinstance(component_class, Dynamics):
+            raise Pype9RuntimeError(
+                "'component_class' must be a nineml.Dynamics object")
         # ---------------------------------------------------------------------
         # Clone original component class and properties
         # ---------------------------------------------------------------------
-        orig = prototype.component_class
+        name = component_class.name
+        orig = component_class
         trfrm = copy(orig)
-        props = [copy(p) for p in prototype.properties]
+        if default_properties is not None:
+            default_properties = deepcopy(default_properties)
+        if initial_state is not None:
+            raise NotImplementedError(
+                "Haven't implemented transformation of initial states")
         # ---------------------------------------------------------------------
         # Get the membrane voltage and convert it to 'v'
         # ---------------------------------------------------------------------
@@ -243,7 +249,7 @@ class CodeGenerator(BaseCodeGenerator):
                     cm = Parameter("cm_", dimension=un.capacitance)
                     trfrm.add(cm)
                     qty = kwargs.get('default_capacitance', (1.0, un.nF))
-                    props.append(Property('cm_', *qty))
+                    default_properties.append(Property('cm_', *qty))
             cm.annotations[PYPE9_NS][TRANSFORM_SRC] = None
             trfrm.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = cm.name
             # -----------------------------------------------------------------
@@ -429,10 +435,9 @@ class CodeGenerator(BaseCodeGenerator):
         # -----------------------------------------------------------------
         trfrm.validate()
         # Retun a prototype of the transformed class
-        return DynamicsProperties(
-            prototype.name, Definition(trfrm.name, Document(trfrm)), props)
+        return trfrm, default_properties, initial_state
 
-    def compile_source_files(self, compile_dir, component_name, verbose):
+    def compile_source_files(self, compile_dir, name, verbose):
         """
         Builds all NMODL files in a directory
         `src_dir`     -- The path of the directory to build
@@ -477,7 +482,7 @@ class CodeGenerator(BaseCodeGenerator):
         except sp.CalledProcessError as e:
             raise Pype9BuildError(
                 "Compilation of NMODL files for '{}' model failed. See src "
-                "directory '{}':\n\n{}".format(component_name, compile_dir, e))
+                "directory '{}':\n\n{}".format(name, compile_dir, e))
         if stderr.strip().endswith('Error 1'):
             raise Pype9BuildError(
                 "Generated mod file failed to compile with output:\n{}\n{}"
@@ -487,7 +492,7 @@ class CodeGenerator(BaseCodeGenerator):
             print stderr
         if verbose != 'silent':
             print ("Compilation of NEURON (NMODL) files for '{}' "
-                   "completed successfully".format(component_name))
+                   "completed successfully".format(name))
 
     def get_install_dir(self, build_dir, install_dir):
         if install_dir:

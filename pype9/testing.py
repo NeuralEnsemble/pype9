@@ -67,7 +67,7 @@ class Comparer(object):
     (or both)
     """
 
-    def __init__(self, nineml_model=None, parameters={}, initial_states={},
+    def __init__(self, nineml_model=None, properties={}, initial_states={},
                  state_variable='v', dt=0.01, simulators=[], neuron_ref=None,
                  nest_ref=None, input_signal=None, input_train=None,
                  neuron_translations={}, nest_translations={},
@@ -99,7 +99,7 @@ class Comparer(object):
         self.dt = self.to_float(dt, 'ms')
         self.state_variable = state_variable
         self.nineml_model = nineml_model
-        self.parameters = parameters
+        self.properties = properties
         self.neuron_ref = neuron_ref
         self.nest_ref = nest_ref
         self.simulators = simulators
@@ -136,7 +136,7 @@ class Comparer(object):
             simulatorNEST.reset()
             nest.SetKernelStatus({'resolution': self.dt})
         for simulator in self.simulators:
-            self._create_9ML(self.nineml_model, simulator)
+            self._create_9ML(self.nineml_model, self.properties, simulator)
         if self.neuron_ref is not None:
             self._create_NEURON(self.neuron_ref)
         if self.nest_ref is not None:
@@ -180,7 +180,7 @@ class Comparer(object):
         plt.legend(legend)
         plt.show()
 
-    def _create_9ML(self, model, simulator):
+    def _create_9ML(self, model, properties, simulator):
         # -----------------------------------------------------------------
         # Set up 9MLML cell
         # -----------------------------------------------------------------
@@ -191,7 +191,8 @@ class Comparer(object):
         else:
             assert False
         self.nml_cells[simulator] = CellMetaClass(
-            model, **self.build_args[simulator])()
+            model, default_properties=properties,
+            **self.build_args[simulator])()
         if self.input_signal is not None:
             self.nml_cells[simulator].play(*self.input_signal)
         if self.input_train is not None:
@@ -219,9 +220,9 @@ class Comparer(object):
         # Check to see if any translated parameter names start with 'pas.' in
         # which case a passive mechanism needs to be inserted
         if any(self.neuron_translations.get(k, (k, 1))[0].startswith('pas.')
-               for k in self.parameters.iterkeys()):
+               for k in self.properties.iterkeys()):
             self.nrn_cell_sec.insert('pas')
-        for name, value in self.parameters.iteritems():
+        for name, value in self.properties.iteritems():
             try:
                 varname, scale = self.neuron_translations[name]
                 value = value * scale
@@ -273,7 +274,7 @@ class Comparer(object):
 
     def _create_NEST(self, nest_name):
         trans_params = {}
-        for name, value in self.parameters.iteritems():
+        for name, value in self.properties.iteritems():
             value = float(value)
             try:
                 varname, scale = self.nest_translations[name]
@@ -373,7 +374,7 @@ class Comparer(object):
 
     @classmethod
     def compare_in_subprocess(
-        cls, state_variable, dt, duration, parameters={}, initial_states={},
+        cls, state_variable, dt, duration, properties={}, initial_states={},
         nineml_model=None, simulators=[], neuron_ref=None, nest_ref=None,
         input_signal=None, input_train=None, neuron_translations={},
         nest_translations={}, neuron_build_args={}, nest_build_args={},
@@ -406,7 +407,7 @@ class Comparer(object):
             args.extend(('--neuron_ref', neuron_ref))
         if nest_ref is not None:
             args.extend(('--nest_ref', nest_ref))
-        for n, v in parameters.iteritems():
+        for n, v in properties.iteritems():
             args.extend(('-p', n, str(v)))
         for n, v in initial_states.iteritems():
             args.extend(('-i', n, str(v)))

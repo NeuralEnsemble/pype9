@@ -16,14 +16,14 @@ class Projection(object):
 
     def __init__(self, source, target, nineml_model, rng=None):
         ConnectorClass = getattr(
-            connectors, nineml_model.rule.definition.componentclass.name)
+            connectors, nineml_model.rule.definition.component_class.name)
         try:
             connector = ConnectorClass(nineml_model.rule.parameters, rng)
         except Pype9ProjToCloneNotCreatedException:
             raise Pype9ProjToCloneNotCreatedException(nineml_model.name)
         SynapseClass = getattr(
             self._synapses_module,
-            nineml_model.connection_type.definition.componentclass.name)
+            nineml_model.connection_type.definition.component_class.name)
         synapse = SynapseClass(
             nineml_model.connection_type.parameters, self.get_min_delay(), rng)
         receptor = (

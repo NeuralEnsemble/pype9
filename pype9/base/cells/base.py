@@ -12,7 +12,6 @@
            the MIT Licence, see LICENSE for details.
 """
 from pype9.exceptions import Pype9RuntimeError, Pype9AttributeError
-from pype9.utils import load_9ml_prototype
 from itertools import chain
 import time
 import os.path
@@ -28,24 +27,23 @@ class CellMetaClass(type):
     nineml_celltype_from_model
     """
 
-    def __new__(cls, component, name=None, saved_name=None, **kwargs):
+    def __new__(cls, component_class, default_properties=None,
+                initial_states=None, name=None, saved_name=None, **kwargs):
         """
-        `component`  -- Either a parsed lib9ml SpikingNode object or a url
-                        to a 9ml file
-        `name`       -- The name to call the class built with the specified
-                        build options (passed in kwargs).
-        `saved_name` -- The name of a component within the given url
+        `component_class`    -- A nineml.abstraction.Dynamics object
+        `default_properties` -- default properties, if None, then all props = 0
+        `initial_states`     -- initial states, if None, then all states = 0
+        `name`               -- the name for the class
+        `saved_name`         -- the name of the Dynamics object in the document
+                                if diferent from the `name`
         """
         if name is None:
             name = saved_name
         # Extract out build directives
         build_mode = kwargs.pop('build_mode', 'lazy')
         verbose = kwargs.pop('verbose', False)
-        prototype = load_9ml_prototype(component, default_value=0.0,
-                                       override_name=name,
-                                       saved_name=saved_name)
-        name = prototype.name
-        url = prototype.url
+        name = component_class.name
+        url = component_class.url
         try:
             Cell, build_options = cls._built_types[(name, url)]
             if build_options != kwargs:
@@ -58,25 +56,34 @@ class CellMetaClass(type):
         except KeyError:
             # Initialise code generator
             code_gen = cls.CodeGenerator()
-            build_prototype = code_gen.transform_for_build(prototype, **kwargs)
+            (build_component_class, build_properties,
+             build_initial_states) = code_gen.transform_for_build(
+                component_class, default_properties, initial_states, **kwargs)
             # Set build dir default from original prototype url if not
             # explicitly provided
             build_dir = kwargs.pop('build_dir', None)
             if build_dir is None:
-                build_dir = code_gen.get_build_dir(prototype.url, name)
+                if url is None:
+                    raise Pype9RuntimeError(
+                        "'build_dir' must be supplied when using component "
+                        "classes created programmatically ('{}')".format(name))
+                build_dir = code_gen.get_build_dir(url, name)
             mod_time = time.ctime(os.path.getmtime(url))
             instl_dir = code_gen.generate(
-                build_prototype, build_mode=build_mode, verbose=verbose,
+                build_component_class, build_properties, build_initial_states,
+                build_mode=build_mode, verbose=verbose,
                 build_dir=build_dir, mod_time=mod_time, **kwargs)
             # Load newly build model
             cls.load_libraries(name, instl_dir)
             # Create class member dict of new class
             dct = {'name': name,
-                   'componentclass': prototype.component_class,
-                   'prototype': prototype,
+                   'component_class': component_class,
+                   'default_properties': default_properties,
+                   'initial_states': initial_states,
                    'install_dir': instl_dir,
-                   'build_prototype': build_prototype,
-                   'build_componentclass': build_prototype.component_class,
+                   'build_component_class': build_component_class,
+                   'build_default_properties': build_properties,
+                   'build_initial_states': build_initial_states,
                    'build_options': kwargs}
             # Create new class using Type.__new__ method
             Cell = super(CellMetaClass, cls).__new__(
@@ -85,7 +92,8 @@ class CellMetaClass(type):
             cls._built_types[(name, url)] = Cell, kwargs
         return Cell
 
-    def __init__(cls, component, name=None, **kwargs):
+    def __init__(cls, component_class, default_properties=None,
+                 initial_states=None, name=None, saved_name=None, **kwargs):
         """
         This initialiser is empty, but since I have changed the signature of
         the __new__ method in the deriving metaclasses it complains otherwise
@@ -99,14 +107,6 @@ class CellMetaClass(type):
         from compiled external libraries
         """
         pass
-
-    def transform_for_build(self, component, **kwargs):  # @UnusedVariable
-        """
-        To be overridden by derived classes to transform the model into a
-        format that better suits the simulator implementation
-        """
-        transformed_elems = {}
-        return component, transformed_elems
 
 
 class Cell(object):
@@ -122,8 +122,12 @@ class Cell(object):
             qty = self._unit_handler.from_pq_quantity(pq_qty)
             properties.append(Property(name, qty.value, qty.units))
         # Init the 9ML component of the cell
+        if self.default_properties is not None:
+            prototype = self.default_properties
+        else:
+            prototype = self.component_class
         self._nineml = nineml.user.DynamicsProperties(
-            self.prototype.name, self.prototype, properties)
+            prototype.name, prototype, properties)
         # Set up references from parameter names to internal variables and set
         # parameters
         for prop in self.properties:
@@ -147,8 +151,8 @@ class Cell(object):
         super(Cell, self).__setattr__('_created', flag)
 
     def __contains__(self, varname):
-        return varname in chain(self.componentclass.parameter_names,
-                                self.componentclass.state_variable_names)
+        return varname in chain(self.component_class.parameter_names,
+                                self.component_class.state_variable_names)
 
     def __getattr__(self, varname):
         """
@@ -159,10 +163,10 @@ class Cell(object):
                 raise Pype9AttributeError(
                     "'{}' is not a parameter or state variable of the '{}'"
                     " component class ('{}')"
-                    .format(varname, self.componentclass.name,
+                    .format(varname, self.component_class.name,
                             "', '".join(chain(
-                                self.componentclass.parameter_names,
-                                self.componentclass.state_variable_names))))
+                                self.component_class.parameter_names,
+                                self.component_class.state_variable_names))))
             val = self._get(varname)
             qty = self._unit_handler.assign_units(
                 val, self.component_class[varname].dimension)
@@ -180,10 +184,10 @@ class Cell(object):
                 raise Pype9AttributeError(
                     "'{}' is not a parameter or state variable of the '{}'"
                     " component class ('{}')"
-                    .format(varname, self.componentclass.name,
+                    .format(varname, self.component_class.name,
                             "', '".join(chain(
-                                self.componentclass.parameter_names,
-                                self.componentclass.state_variable_names))))
+                                self.component_class.parameter_names,
+                                self.component_class.state_variable_names))))
             # If float, assume it is in the "natural" units of the simulator,
             # i.e. the units that quantities of the variable's dimension will
             # be translated into (e.g. voltage -> mV for NEURON)
@@ -205,7 +209,7 @@ class Cell(object):
                 val = self._unit_handler.scale_value(qty)
             # If varname is a parameter (not a state variable) set in
             # associated 9ML representation
-            if varname in self.componentclass.parameter_names:
+            if varname in self.component_class.parameter_names:
                 self._nineml.set(prop)
             self._set(varname, float(val))
         else:
@@ -235,7 +239,7 @@ class Cell(object):
     @property
     def properties(self):
         """
-        The set of componentclass properties (parameter values).
+        The set of component_class properties (parameter values).
         """
         return self._nineml.properties
 
