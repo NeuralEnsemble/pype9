@@ -223,7 +223,8 @@ class Comparer(object):
         # which case a passive mechanism needs to be inserted
         if any(self.neuron_translations.get(p.name,
                                             (p.name, 1))[0].startswith('pas.')
-               for p in self.properties):
+               for p in self.properties
+               if self.neuron_translations.get(p.name, (1, 1))[0] is not None):
             self.nrn_cell_sec.insert('pas')
         for prop in self.properties:
             name = prop.name

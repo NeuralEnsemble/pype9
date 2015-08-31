@@ -72,7 +72,10 @@ class TestDynamics(TestCase):
             initial_states={'u': -14.0 * pq.mV / pq.ms, 'v': -65.0 * pq.mV},
             neuron_ref='Izhikevich', nest_ref='izhikevich',
             input_signal=input_step('iExt', 0.02, 50, 100, self.dt),
-            nest_translations={'v': ('V_m', 1), 'u': ('U_m', 1)},
+            nest_translations={'v': ('V_m', 1), 'u': ('U_m', 1),
+                               'weight': (None, 1), 'Cm': (None, 1),
+                               'vthresh': ('V_th', 1)},
+            neuron_translations={'Cm': ('cm', 1), 'weight': (None, 1)},
             neuron_build_args={'build_mode': 'force'},
             nest_build_args={'build_mode': 'force'},
             duration=self.duration, in_subprocess=in_subprocess, plot=plot)
@@ -169,5 +172,5 @@ class TestDynamics(TestCase):
 
 if __name__ == '__main__':
     tester = TestDynamics()
-    tester.test_alpha_syn(in_subprocess=False, plot=True)
+    tester.test_izhikevich(in_subprocess=False, plot=True)
     print "done"
