@@ -31,34 +31,34 @@ class TestDynamics(TestCase):
         'v_reset': ('vreset', 1), 'v_threshold': ('vthresh', 1),
         'end_refractory': (None, 1)}
 
-    def test_aeif(self, in_subprocess=False, plot=False):
-        # Perform comparison in subprocess
-        comparisons = compare(
-            nineml_model=ninemlcatalog.lookup(
-                'neurons/basic/AdExpIaF/AdExpIaF'),
-            state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
-            neuron_ref='AdExpIF', nest_ref='aeif_cond_alpha',
-            input_signal=input_step('iExt', 1, 50, 100, self.dt),
-            initial_states={'w': 0.0 * pq.nA, 'v': -65.0 * pq.mV},
-            properties=ninemlcatalog.lookup(
-                'neurons/basic/AdExpIaF/AdExpIaFProperties'),
-            nest_translations={
-                'w': ('w', 1), 'Cm': ('C_m', 1), 'GL': ('g_L', 1000),
-                'trefrac': ('t_ref', 1), 'EL': ('E_L', 1), 'a': ('a', 1000),
-                'tauw': ('tau_w', 1), 'vreset': ('V_reset', 1),
-                'v': ('V_m', 1), 'vthresh': ('V_th', 1), 'b': ('b', 1000),
-                'vspike': ('V_peak', 1), 'delta': ('Delta_T', 1)},
-            neuron_translations={
-                'Cm': ('cm', 1), 'GL': ('pas.g', 0.001), 'EL': ('pas.e', 1)},
-            neuron_build_args={'build_mode': 'force'},
-            nest_build_args={'build_mode': 'force'},
-            duration=self.duration, in_subprocess=in_subprocess, plot=plot)
-        self.assertLess(
-            comparisons[('9ML-neuron', 'Ref-neuron')], 0.0015 * pq.mV,
-            "AdExpIaF NEURON 9ML simulation did not match reference PyNN")
-        self.assertLess(
-            comparisons[('9ML-nest', 'Ref-nest')], 0.00015 * pq.mV,
-            "AdExpIaF NEST 9ML simulation did not match reference built-in")
+#     def test_aeif(self, in_subprocess=False, plot=False):
+#         # Perform comparison in subprocess
+#         comparisons = compare(
+#             nineml_model=ninemlcatalog.lookup(
+#                 'neurons/basic/AdExpIaF/AdExpIaF'),
+#             state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
+#             neuron_ref='AdExpIF', nest_ref='aeif_cond_alpha',
+#             input_signal=input_step('iExt', 1, 50, 100, self.dt),
+#             initial_states={'w': 0.0 * pq.nA, 'v': -65.0 * pq.mV},
+#             properties=ninemlcatalog.lookup(
+#                 'neurons/basic/AdExpIaF/AdExpIaFProperties'),
+#             nest_translations={
+#                 'w': ('w', 1), 'Cm': ('C_m', 1), 'GL': ('g_L', 1000),
+#                 'trefrac': ('t_ref', 1), 'EL': ('E_L', 1), 'a': ('a', 1000),
+#                 'tauw': ('tau_w', 1), 'vreset': ('V_reset', 1),
+#                 'v': ('V_m', 1), 'vthresh': ('V_th', 1), 'b': ('b', 1000),
+#                 'vspike': ('V_peak', 1), 'delta': ('Delta_T', 1)},
+#             neuron_translations={
+#                 'Cm': ('cm', 1), 'GL': ('pas.g', 0.001), 'EL': ('pas.e', 1)},
+#             neuron_build_args={'build_mode': 'force'},
+#             nest_build_args={'build_mode': 'force'},
+#             duration=self.duration, in_subprocess=in_subprocess, plot=plot)
+#         self.assertLess(
+#             comparisons[('9ML-neuron', 'Ref-neuron')], 0.0015 * pq.mV,
+#             "AdExpIaF NEURON 9ML simulation did not match reference PyNN")
+#         self.assertLess(
+#             comparisons[('9ML-nest', 'Ref-nest')], 0.00015 * pq.mV,
+#             "AdExpIaF NEST 9ML simulation did not match reference built-in")
 
     def test_izhikevich(self, in_subprocess=False, plot=False):
         # Force compilation of code generation
