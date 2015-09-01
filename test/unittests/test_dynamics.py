@@ -3,9 +3,11 @@ if __name__ == '__main__':
 else:
     from unittest import TestCase  # @Reimport
 import quantities as pq
-from itertools import chain
+import os.path
+from itertools import chain, repeat
 import ninemlcatalog
 from nineml.abstraction.dynamics import Dynamics
+from nineml.abstraction.dynamics.visitors.flattener import flatten
 from nineml.user import DynamicsProperties
 from pype9.testing import compare, input_step, input_freq
 
@@ -167,38 +169,47 @@ class TestDynamics(TestCase):
             'neurons/basic/LeakyIntegrateAndFire/LeakyIntegrateAndFire')
         alpha_psr = ninemlcatalog.lookup(
             'postsynapticresponses/Alpha/Alpha')
-        iaf_alpha = Dynamics(
-            name='IafAlpha', subnodes={'neuron': iaf, 'psr': alpha_psr})
-        iaf_alpha_flat = iaf_alpha.flatten()
+        iaf_alpha = flatten(Dynamics(
+            name='IafAlpha', subnodes={'neuron': iaf, 'psr': alpha_psr}))
         initial_states = {'a': 0.0 * pq.nA, 'b': 0.0 * pq.nA}
         liaf_properties = ninemlcatalog.lookup(
             'neurons/basic/LeakyIntegrateAndFire/'
             'LeakyIntegrateAndFireProperties')
         alpha_properties = ninemlcatalog.lookup(
             'postsynapticresponses/Alpha/AlphaProperties')
-        nest_tranlsations = {'tau': ('tau_synE', 1)}
-        neuron_tranlsations = {}
+        nest_tranlsations = {'psr_tau': ('tau_synE', 1)}
+        neuron_tranlsations = {'psr_tau': ('AlphaISyn.tau', 1)}
         initial_states.update(self.liaf_initial_states)
         properties = DynamicsProperties(
-            name='IafAlphaProperties', definition=iaf_alpha_flat,
+            name='IafAlphaProperties', definition=iaf_alpha,
             properties=dict(
-                (p.name, (p.value, p.units))
-                for p in chain(liaf_properties.properties,
-                               alpha_properties.properties)))
-        properties.update(self.liaf_properties)
-        nest_tranlsations.update(self.liaf_nest_translations)
-        neuron_tranlsations.update(self.liaf_neuron_translations)
+                (prefix + '_' + p.name, (p.value, p.units))
+                for p, prefix in chain(
+                    zip(liaf_properties.properties, repeat('cell')),
+                    zip(alpha_properties.properties, repeat('psr')))))
+        nest_tranlsations.update(
+            ('cell_' + k, v)
+            for k, v in self.liaf_nest_translations.iteritems())
+        neuron_tranlsations.update(
+            ('cell_' + k, v)
+            for k, v in self.liaf_neuron_translations.iteritems())
+        build_dir = os.path.join(os.path.dirname(iaf.url), '9build')
         comparisons = compare(
-            nineml_model=iaf_alpha_flat,
-            state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
+            nineml_model=iaf_alpha,
+            state_variable='cell_v', dt=self.dt,
+            simulators=['neuron', 'nest'],
             properties=properties,
             initial_states=initial_states,
             neuron_ref='ResetRefrac', nest_ref='iaf_psc_alpha',
-            input_train=input_freq('spike', 100, self.duration),
+            input_train=input_freq('psr_spike', 100, self.duration),
             nest_translations=nest_tranlsations,
             neuron_translations=neuron_tranlsations,
-            neuron_build_args={'build_mode': 'force'},
-            nest_build_args={'build_mode': 'force'},
+            neuron_build_args={
+                'build_mode': 'force',
+                'build_dir': os.path.join(build_dir, 'neuron', 'IaFAlpha')},
+            nest_build_args={
+                'build_mode': 'force',
+                'build_dir': os.path.join(build_dir, 'nest', 'IaFAlpha')},
             duration=self.duration, in_subprocess=in_subprocess, plot=plot)
         self.assertLess(
             comparisons[('9ML-neuron', 'Ref-neuron')], 0.55 * pq.mV,
@@ -209,5 +220,5 @@ class TestDynamics(TestCase):
 
 if __name__ == '__main__':
     tester = TestDynamics()
-    tester.test_alpha_syn(in_subprocess=False, plot=True)
+    tester.test_hh(in_subprocess=False, plot=True)
     print "done"

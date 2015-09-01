@@ -115,7 +115,7 @@ namespace nineml {
 	    enum OnEvents {
     {% for regime in component_class.regimes %}
         {% for oe in regime.on_events %}
-	        {{oe.src_port_name}}_ON_EVENT,
+	        {{regime.name}}_{{oe.src_port_name}}_ON_EVENT,
         {% endfor %}
     {% endfor %}
 	        SUP_ON_EVENT_

@@ -194,15 +194,16 @@ class CodeGenerator(BaseCodeGenerator):
     def clean_src_dir(self, src_dir, name):
         # Clean existing src directories from previous builds.
         prefix = path.join(src_dir, name)
-        if not path.exists(src_dir):
-            os.makedirs(path.join(src_dir, 'sli'))
-        else:
+        if path.exists(src_dir):
             remove_ignore_missing(prefix + '.h')
             remove_ignore_missing(prefix + '.cpp')
             remove_ignore_missing(prefix + 'Module.h')
             remove_ignore_missing(prefix + 'Module.cpp')
             remove_ignore_missing(
                 path.join(src_dir, 'sli', name + 'Module-init.sli'))
+        sli_path = path.join(src_dir, 'sli')
+        if not path.exists(sli_path):
+            os.makedirs(sli_path)
 
     def clean_compile_dir(self, compile_dir, verbose=False, **kwargs):  # @UnusedVariable @IgnorePep8
         orig_dir = os.getcwd()

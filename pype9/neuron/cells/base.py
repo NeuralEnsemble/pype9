@@ -157,10 +157,11 @@ class Cell(base.Cell):
             self._recorders[port_name] = recorder = h.NetCon(
                 self._sec._ref_v, None, self.get_threshold(), 0.0, 1.0,
                 sec=self._sec)
+        escaped_port_name = self._escaped_name(port_name)
         try:
-            recorder = getattr(self._hoc, '_ref_' + port_name)
+            recorder = getattr(self._hoc, '_ref_' + escaped_port_name)
         except AttributeError:
-            recorder = getattr(self._sec(0.5), '_ref_' + port_name)
+            recorder = getattr(self._sec(0.5), '_ref_' + escaped_port_name)
         self._recordings[port_name] = recording = h.Vector()
         recording.record(recorder)
 
@@ -170,10 +171,6 @@ class Cell(base.Cell):
         each neuron, ids as keys.
         """
         port = self.component_class[port_name]
-        if port_name == self.component_class.annotations[
-                PYPE9_NS][MEMBRANE_VOLTAGE]:
-            port_name = self.build_component_class.annotations[
-                PYPE9_NS][MEMBRANE_VOLTAGE]
         if isinstance(port, EventPort):
             recording = neo.SpikeTrain(
                 self._recordings[port_name], t_start=0.0 * pq.ms,
@@ -214,10 +211,12 @@ class Cell(base.Cell):
             raise Pype9RuntimeError(
                 "Cannot play into unrecognised port '{}'".format(port_name))
         if isinstance(port, EventPort):
-            if len(list(self.component_class.event_receive_ports)):
-                raise Pype9RuntimeError(
-                    "Multiple event receive ports '{}'".format("', '".join(
-                        list(self.component_class.event_receive_ports))))
+            if len(list(self.component_class.event_receive_ports)) > 1:
+                raise NotImplementedError(
+                    "Multiple event receive ports ('{}') are not currently "
+                    "supported".format("', '".join(
+                        [p.name
+                         for p in self.component_class.event_receive_ports])))
             vstim = h.VecStim()
             vstim_times = h.Vector(pq.Quantity(signal, 'ms'))
             vstim.play(vstim_times)
@@ -255,6 +254,13 @@ class Cell(base.Cell):
         seclamp_amps.play(seclamp._ref_amp, seclamp_times)
         self._inputs['seclamp'] = seclamp
         self._input_auxs.extend((seclamp_amps, seclamp_times))
+
+    def _escaped_name(self, name):
+        if name == self.component_class.annotations[
+                PYPE9_NS][MEMBRANE_VOLTAGE]:
+            name = self.build_component_class.annotations[
+                PYPE9_NS][MEMBRANE_VOLTAGE]
+        return name
 
 
 class CellMetaClass(base.CellMetaClass):

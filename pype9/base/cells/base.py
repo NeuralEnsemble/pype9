@@ -17,7 +17,8 @@ import time
 import os.path
 import quantities as pq
 import nineml
-from nineml.user import Property
+from nineml.abstraction import Dynamics
+from nineml.user import Property, DynamicsProperties
 
 
 class CellMetaClass(type):
@@ -37,6 +38,15 @@ class CellMetaClass(type):
         `saved_name`         -- the name of the Dynamics object in the document
                                 if diferent from the `name`
         """
+        if not isinstance(component_class, Dynamics):
+            raise Pype9RuntimeError(
+                "Component class ({}) needs to be nineml Dynamics object")
+        if (default_properties is not None and
+                default_properties.component_class != component_class):
+            raise Pype9RuntimeError(
+                "Component class of default properties object ({}) does not "
+                "match provided class ({})".format(
+                    default_properties.component_class, component_class))
         if name is None:
             name = saved_name
         # Extract out build directives
@@ -68,7 +78,10 @@ class CellMetaClass(type):
                         "'build_dir' must be supplied when using component "
                         "classes created programmatically ('{}')".format(name))
                 build_dir = code_gen.get_build_dir(url, name)
-            mod_time = time.ctime(os.path.getmtime(url))
+            if url is not None:
+                mod_time = time.ctime(os.path.getmtime(url))
+            else:
+                mod_time = time.ctime()
             instl_dir = code_gen.generate(
                 build_component_class, build_properties, build_initial_states,
                 build_mode=build_mode, verbose=verbose,

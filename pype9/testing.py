@@ -70,6 +70,8 @@ class Comparer(object):
     (or both)
     """
 
+    specific_params = ('pas.g', 'cm')
+
     def __init__(self, nineml_model=None, properties={}, initial_states={},
                  state_variable='v', dt=0.01, simulators=[], neuron_ref=None,
                  nest_ref=None, input_signal=None, input_train=None,
@@ -214,19 +216,9 @@ class Comparer(object):
         except TypeError:
             self.nrn_cell_sec.insert(neuron_name)
             self.nrn_cell = getattr(self.nrn_cell_sec(0.5), neuron_name)
-#             self.nrn_cell_sec.L = 100
-#             self.nrn_cell_sec.diam = 1000 / numpy.pi
-#             self.nrn_cell_sec.cm = 0.2
         self.nrn_cell_sec.L = 10
         self.nrn_cell_sec.diam = 10 / numpy.pi
         self.nrn_cell_sec.cm = 1.0
-        # Check to see if any translated parameter names start with 'pas.' in
-        # which case a passive mechanism needs to be inserted
-        if any(self.neuron_translations.get(p.name,
-                                            (p.name, 1))[0].startswith('pas.')
-               for p in self.properties
-               if self.neuron_translations.get(p.name, (1, 1))[0] is not None):
-            self.nrn_cell_sec.insert('pas')
         for prop in self.properties:
             name = prop.name
             value = prop.value
@@ -235,25 +227,25 @@ class Comparer(object):
                 value = value * scale
             except (ValueError, KeyError):
                 varname = self.neuron_translations.get(name, name)
-            if varname == 'pas.g':
+            if varname in self.specific_params:
                 specific_value = UnitHandlerNEURON.to_pq_quantity(
                     Quantity(value, prop.units)) / (100 * (pq.um ** 2))
-                scaled_value = UnitHandlerNEURON.scale_value(specific_value)
-                self.nrn_cell_sec(0.5).pas.g = scaled_value
-            elif varname == 'pas.e':
-                self.nrn_cell_sec(0.5).pas.e = value
-            elif varname == 'cm':
-                specific_value = UnitHandlerNEURON.to_pq_quantity(
-                    Quantity(value, prop.units)) / (100 * (pq.um ** 2))
-                scaled_value = UnitHandlerNEURON.scale_value(specific_value)
-                self.nrn_cell_sec.cm = scaled_value
-            elif varname is not None:
-                value = UnitHandlerNEURON.scale_value(Quantity(value,
-                                                               prop.units))
-                try:
-                    setattr(self.nrn_cell, varname, value)
-                except AttributeError:
-                    setattr(self.nrn_cell_sec, varname, value)
+                value = UnitHandlerNEURON.scale_value(specific_value)
+            else:
+                value = UnitHandlerNEURON.scale_value(
+                    Quantity(value, prop.units))
+            if varname is not None:
+                if '.' in varname:
+                    mech, vname = varname
+                    self.nrn_cell_sec.insert(mech)
+                    setattr(getattr(self.nrn_cell, mech), vname, value)
+                elif varname == 'cm':
+                    self.nrn_cell_sec.cm = value
+                else:
+                    try:
+                        setattr(self.nrn_cell, varname, value)
+                    except AttributeError:
+                        setattr(self.nrn_cell_sec, varname, value)
         for name, value in self.initial_states.iteritems():
             try:
                 varname, scale = self.neuron_translations[name]
@@ -504,7 +496,8 @@ def input_step(port_name, amplitude, start_time, duration, dt):
 
 
 def input_freq(port_name, freq, duration):
+    isi = 1 / float(freq)
     train = neo.SpikeTrain(
-        numpy.arange(0.0, duration, 1 / float(freq)),
+        numpy.arange(isi, duration, isi),
         units='ms', t_stop=duration * pq.ms)
     return (port_name, train)

@@ -206,7 +206,7 @@ class CodeGenerator(BaseCodeGenerator):
         # Map voltage to hard-coded 'v' symbol
         if orig_v.name != 'v':
             trfrm.rename_symbol(orig_v.name, 'v')
-            v = ['v']
+            v = trfrm['v']
             v.annotations[PYPE9_NS][TRANSFORM_SRC] = orig_v
         else:
             v = trfrm['v']
