@@ -77,7 +77,8 @@ class Comparer(object):
                  nest_ref=None, input_signal=None, input_train=None,
                  neuron_translations={}, nest_translations={},
                  neuron_build_args={}, nest_build_args={}, min_delay=0.02,
-                 max_delay=10.0):
+                 max_delay=10.0, extra_mechanisms=[],
+                 extra_point_process=None):
         """
         nineml_model   -- 9ML model to compare
         nineml_sims    -- tuple of simulator names to simulate the 9ML model in
@@ -108,6 +109,8 @@ class Comparer(object):
         self.neuron_ref = neuron_ref
         self.nest_ref = nest_ref
         self.simulators = simulators
+        self.extra_mechanisms = extra_mechanisms
+        self.extra_point_process = extra_point_process
         self.neuron_translations = neuron_translations
         self.nest_translations = nest_translations
         self.initial_states = initial_states
@@ -219,6 +222,11 @@ class Comparer(object):
         self.nrn_cell_sec.L = 10
         self.nrn_cell_sec.diam = 10 / numpy.pi
         self.nrn_cell_sec.cm = 1.0
+        for mech_name in self.extra_mechanisms:
+            self.nrn_cell_sec.insert(mech_name)
+        if self.extra_point_process is not None:
+            MechClass = getattr(neuron.h, self.extra_point_process)
+            self.extra_point_process = MechClass(0.5, sec=self.nrn_cell_sec)
         for prop in self.properties:
             name = prop.name
             value = prop.value
@@ -236,9 +244,12 @@ class Comparer(object):
                     Quantity(value, prop.units))
             if varname is not None:
                 if '.' in varname:
-                    mech, vname = varname
-                    self.nrn_cell_sec.insert(mech)
-                    setattr(getattr(self.nrn_cell, mech), vname, value)
+                    mech_name, vname = varname.split('.')
+                    try:
+                        setattr(getattr(self.nrn_cell_sec(0.5), mech_name),
+                                vname, value)
+                    except AttributeError:
+                        setattr(self.extra_point_process, vname, value)
                 elif varname == 'cm':
                     self.nrn_cell_sec.cm = value
                 else:
@@ -255,10 +266,17 @@ class Comparer(object):
             value = UnitHandlerNEURON.scale_value(
                 UnitHandlerNEURON.from_pq_quantity(value))
             if varname is not None:
-                try:
-                    setattr(self.nrn_cell, varname, value)
-                except (AttributeError, LookupError):
-                    setattr(self.nrn_cell_sec, varname, value)
+                if '.' in varname:
+                    try:
+                        setattr(getattr(self.nrn_cell_sec(0.5), mech_name),
+                                vname, value)
+                    except AttributeError:
+                        setattr(self.point_process, vname, value)
+                else:
+                    try:
+                        setattr(self.nrn_cell, varname, value)
+                    except (AttributeError, LookupError):
+                        setattr(self.nrn_cell_sec, varname, value)
         # Specify current injection
         if self.input_signal is not None:
             _, signal = self.input_signal
@@ -276,8 +294,11 @@ class Comparer(object):
             self._vstim = neuron.h.VecStim()
             self._vstim_times = neuron.h.Vector(pq.Quantity(train, 'ms'))
             self._vstim.play(self._vstim_times)
-            self._vstim_con = neuron.h.NetCon(self._vstim, self._hoc,
-                                              sec=self._sec)
+            target = (self.extra_point_process
+                      if self.extra_point_process is not None
+                      else self.nrn_cell)
+            self._vstim_con = neuron.h.NetCon(
+                self._vstim, target, sec=self.nrn_cell_sec)
         # Record Time from NEURON (neuron.h.._ref_t)
         self._nrn_rec = self.NEURONRecorder(self.nrn_cell_sec, self.nrn_cell)
         self._nrn_rec.record(self.neuron_state_variable)
@@ -321,7 +342,8 @@ class Comparer(object):
                 raise Pype9RuntimeError(
                     "Some spike are less than minimum delay and so can't be "
                     "played into cell ({})".format(
-                        ', '.join(spike_times < self.min_delay)))
+                        ', '.join(str(t) for t in
+                                  spike_times[spike_times < self.min_delay])))
             generator = nest.Create(
                 'spike_generator', 1, {'spike_times': spike_times})
             nest.Connect(generator, self.nest_cell,
@@ -496,7 +518,7 @@ def input_step(port_name, amplitude, start_time, duration, dt):
 
 
 def input_freq(port_name, freq, duration):
-    isi = 1 / float(freq)
+    isi = 1 / float(pq.Quantity(freq, 'kHz'))
     train = neo.SpikeTrain(
         numpy.arange(isi, duration, isi),
         units='ms', t_stop=duration * pq.ms)

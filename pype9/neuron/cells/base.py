@@ -135,6 +135,7 @@ class Cell(base.Cell):
                 assert False
 
     def _set(self, varname, val):
+        varname = self._escaped_name(varname)
         try:
             setattr(self._hoc, varname, val)
             # If capacitance, also set the section capacitance

@@ -29,7 +29,7 @@ class TestDynamics(TestCase):
         'Cm': ('cm', 1), 'g_leak': ('pas.g', 1),
         'refactory_period': ('trefrac', 1), 'e_leak': ('pas.e', 1),
         'v_reset': ('vreset', 1), 'v_threshold': ('vthresh', 1),
-        'end_refractory': (None, 1)}
+        'end_refractory': (None, 1), 'v': ('v', 1)}
 
     def test_aeif(self, in_subprocess=False, plot=False):
         # Perform comparison in subprocess
@@ -52,6 +52,7 @@ class TestDynamics(TestCase):
                 'Cm': ('cm', 1), 'GL': ('pas.g', 0.001), 'EL': ('pas.e', 1)},
             neuron_build_args={'build_mode': 'force'},
             nest_build_args={'build_mode': 'force'},
+            extra_mechanisms=['pas'],
             duration=self.duration, in_subprocess=in_subprocess, plot=plot)
         self.assertLess(
             comparisons[('9ML-neuron', 'Ref-neuron')], 0.0015 * pq.mV,
@@ -60,8 +61,7 @@ class TestDynamics(TestCase):
             comparisons[('9ML-nest', 'Ref-nest')], 0.00015 * pq.mV,
             "AdExpIaF NEST 9ML simulation did not match reference built-in")
 
-    def test_izhikevich(self, in_subprocess=False, plot=False,
-                        print_comparisons=False):
+    def test_izhikevich(self, in_subprocess=False, plot=False):
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparisons = compare(
@@ -155,6 +155,7 @@ class TestDynamics(TestCase):
             neuron_translations=self.liaf_neuron_translations,
             neuron_build_args={'build_mode': 'force'},
             nest_build_args={'build_mode': 'force'},
+            extra_mechanisms=['pas'],
             duration=self.duration, in_subprocess=in_subprocess, plot=plot)
         self.assertLess(
             comparisons[('9ML-neuron', 'Ref-neuron')], 0.55 * pq.mV,
@@ -170,16 +171,20 @@ class TestDynamics(TestCase):
         alpha_psr = ninemlcatalog.lookup(
             'postsynapticresponses/Alpha/Alpha')
         iaf_alpha = flatten(Dynamics(
-            name='IafAlpha', subnodes={'neuron': iaf, 'psr': alpha_psr}))
-        initial_states = {'a': 0.0 * pq.nA, 'b': 0.0 * pq.nA}
+            name='IafAlpha', subnodes={'cell': iaf, 'psr': alpha_psr}))
+        initial_states = {'psr_a': 0.0 * pq.nA, 'psr_b': 0.0 * pq.nA}
         liaf_properties = ninemlcatalog.lookup(
             'neurons/basic/LeakyIntegrateAndFire/'
             'LeakyIntegrateAndFireProperties')
         alpha_properties = ninemlcatalog.lookup(
             'postsynapticresponses/Alpha/AlphaProperties')
-        nest_tranlsations = {'psr_tau': ('tau_synE', 1)}
-        neuron_tranlsations = {'psr_tau': ('AlphaISyn.tau', 1)}
-        initial_states.update(self.liaf_initial_states)
+        nest_tranlsations = {'psr_tau': ('tau_syn_ex', 1),
+                             'psr_a': (None, 1), 'psr_b': (None, 1)}
+        neuron_tranlsations = {'psr_tau': ('AlphaISyn.tau', 1),
+                               'psr_a': ('AlphaISyn.a', 1),
+                               'psr_b': ('AlphaISyn.b', 1)}
+        initial_states.update(
+            ('cell_' + k, v) for k, v in self.liaf_initial_states.iteritems())
         properties = DynamicsProperties(
             name='IafAlphaProperties', definition=iaf_alpha,
             properties=dict(
@@ -201,9 +206,11 @@ class TestDynamics(TestCase):
             properties=properties,
             initial_states=initial_states,
             neuron_ref='ResetRefrac', nest_ref='iaf_psc_alpha',
-            input_train=input_freq('psr_spike', 100, self.duration),
+            input_train=input_freq('psr_spike', 100 * pq.Hz, self.duration),
             nest_translations=nest_tranlsations,
             neuron_translations=neuron_tranlsations,
+            extra_mechanisms=['pas'],
+            extra_point_process='AlphaISyn',
             neuron_build_args={
                 'build_mode': 'force',
                 'build_dir': os.path.join(build_dir, 'neuron', 'IaFAlpha')},
@@ -220,5 +227,5 @@ class TestDynamics(TestCase):
 
 if __name__ == '__main__':
     tester = TestDynamics()
-    tester.test_hh(in_subprocess=False, plot=True)
+    tester.test_liaf(in_subprocess=False, plot=True)
     print "done"
