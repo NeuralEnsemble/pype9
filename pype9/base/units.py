@@ -273,6 +273,8 @@ class UnitHandler(DynamicsDimensionResolver):
 
     @classmethod
     def scale_value(cls, qty):
+        if isinstance(qty, pq.Quantity):
+            qty = cls.from_pq_quantity(qty)
         try:
             exponent, _ = cls.dimension_to_units_compound(qty.units.dimension)
             scaled = 10 ** (qty.units.power - exponent) * qty.value

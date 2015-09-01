@@ -25,6 +25,7 @@ from pype9.nest.units import UnitHandler as UnitHandlerNEST
 from pype9.nest.cells import (
     CellMetaClass as CellMetaClassNEST,
     simulation_controller as simulatorNEST)
+from nineml.user import Quantity
 import numpy
 import quantities as pq
 import neo
@@ -228,30 +229,39 @@ class Comparer(object):
             self.nrn_cell_sec.insert('pas')
         for prop in self.properties:
             name = prop.name
-            value = UnitHandlerNEURON.scale_value(prop)
+            value = prop.value
             try:
                 varname, scale = self.neuron_translations[name]
                 value = value * scale
             except (ValueError, KeyError):
                 varname = self.neuron_translations.get(name, name)
-                value = value
             if varname == 'pas.g':
-                self.nrn_cell_sec(0.5).pas.g = value
+                specific_value = UnitHandlerNEURON.to_pq_quantity(
+                    Quantity(value, prop.units)) / (100 * (pq.um ** 2))
+                scaled_value = UnitHandlerNEURON.scale_value(specific_value)
+                self.nrn_cell_sec(0.5).pas.g = scaled_value
             elif varname == 'pas.e':
                 self.nrn_cell_sec(0.5).pas.e = value
             elif varname == 'cm':
-                self.nrn_cell_sec.cm = value
+                specific_value = UnitHandlerNEURON.to_pq_quantity(
+                    Quantity(value, prop.units)) / (100 * (pq.um ** 2))
+                scaled_value = UnitHandlerNEURON.scale_value(specific_value)
+                self.nrn_cell_sec.cm = scaled_value
             elif varname is not None:
-                setattr(self.nrn_cell, varname, value)
+                value = UnitHandlerNEURON.scale_value(Quantity(value,
+                                                               prop.units))
+                try:
+                    setattr(self.nrn_cell, varname, value)
+                except AttributeError:
+                    setattr(self.nrn_cell_sec, varname, value)
         for name, value in self.initial_states.iteritems():
-            value = UnitHandlerNEURON.scale_value(
-                UnitHandlerNEURON.from_pq_quantity(value))
             try:
                 varname, scale = self.neuron_translations[name]
                 value = value * scale
             except (ValueError, KeyError):
                 varname = self.neuron_translations.get(name, name)
-                value = value
+            value = UnitHandlerNEURON.scale_value(
+                UnitHandlerNEURON.from_pq_quantity(value))
             if varname is not None:
                 try:
                     setattr(self.nrn_cell, varname, value)
@@ -284,13 +294,13 @@ class Comparer(object):
         trans_params = {}
         for prop in self.properties:
             name = prop.name
-            value = UnitHandlerNEST.scale_value(prop)
+            value = prop.value
             try:
                 varname, scale = self.nest_translations[name]
                 value = value * scale
             except (ValueError, KeyError):
                 varname = self.nest_translations.get(name, name)
-                value = value
+            value = UnitHandlerNEST.scale_value(Quantity(value, prop.units))
             if varname is not None:
                 trans_params[varname] = value
         self.nest_cell = nest.Create(nest_name, 1, trans_params)
@@ -334,15 +344,13 @@ class Comparer(object):
             {'record_from': [self.nest_state_variable]})
         nest.Connect(self.nest_multimeter, self.nest_cell)
         trans_states = {}
-        for name, value in self.initial_states.iteritems():
-            value = UnitHandlerNEST.scale_value(
-                UnitHandlerNEST.from_pq_quantity(value))
+        for name, qty in self.initial_states.iteritems():
             try:
                 varname, scale = self.nest_translations[name]
-                value = value * scale
+                qty = qty * scale
             except (ValueError, KeyError):
                 varname = self.nest_translations.get(name, name)
-                value = value
+            value = UnitHandlerNEST.scale_value(qty)
             if varname is not None:
                 trans_states[varname] = value
         nest.SetStatus(self.nest_cell, trans_states)
