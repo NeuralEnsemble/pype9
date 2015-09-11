@@ -268,7 +268,7 @@ class Cell(object):
         return '{}(component_class="{}")'.format(
             self.__class__.__name__, self._nineml.component_class.name)
 
-    def to_xml(self):
+    def to_xml(self, **kwargs):  # @UnusedVariable
         return self._nineml.to_xml()
 
     @property
