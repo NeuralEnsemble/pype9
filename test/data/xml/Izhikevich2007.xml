@@ -62,32 +62,50 @@
     </Dynamics>
   <Component name="Izhikevich">
     <Definition name="IzhikevichClass"/>
-    <Property name="a" units="none">
-      <SingleValue>0.02</SingleValue>
+    <Property name="a">
+      <Quantity units="none">
+        <SingleValue>0.02</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="b" units="uS_per_mV2">
-      <SingleValue>0.025</SingleValue>
+    <Property name="b">
+      <Quantity units="uS_per_mV2">
+        <SingleValue>0.025</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="c" units="mV">
-      <SingleValue>-45.0</SingleValue>
+    <Property name="c">
+      <Quantity units="mV">
+        <SingleValue>-45.0</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="k" units="uS_per_mV">
-      <SingleValue>1</SingleValue>
+    <Property name="k">
+      <Quantity units="uS_per_mV">
+        <SingleValue>1</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="Vpeak" units="mV">
-      <SingleValue>25</SingleValue>
+    <Property name="Vpeak">
+      <Quantity units="mV">
+        <SingleValue>25</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="Vr" units="mV">
-      <SingleValue>-55</SingleValue>
+    <Property name="Vr">
+      <Quantity units="mV">
+        <SingleValue>-55</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="Vb" units="mV">
-      <SingleValue>-55</SingleValue>
+    <Property name="Vb">
+      <Quantity units="mV">
+        <SingleValue>-55</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="Vt" units="mV">
-      <SingleValue>-40</SingleValue>
+    <Property name="Vt">
+      <Quantity units="mV">
+        <SingleValue>-40</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="Cm" units="uF">
-      <SingleValue>20</SingleValue>
+    <Property name="Cm">
+      <Quantity units="uF">
+        <SingleValue>20</SingleValue>
+      </Quantity>
     </Property>
   </Component>
   <Dimension name="dimensionless"/>

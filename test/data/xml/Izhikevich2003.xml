@@ -45,23 +45,35 @@
   </Dynamics>
   <DynamicsProperties name="IzhikevichProperties">
     <Definition name="Izhikevich"/>
-    <Property name="a" units="per_ms">
-      <SingleValue>0.02</SingleValue>
+    <Property name="a">
+      <Quantity units="per_ms">
+        <SingleValue>0.02</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="b" units="per_ms">
-      <SingleValue>0.2</SingleValue>
+    <Property name="b">
+      <Quantity units="per_ms">
+        <SingleValue>0.2</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="c" units="mV">
-      <SingleValue>-65.0</SingleValue>
+    <Property name="c">
+      <Quantity units="mV">
+        <SingleValue>-65.0</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="d" units="mV_per_ms">
-      <SingleValue>6</SingleValue>
+    <Property name="d">
+      <Quantity units="mV_per_ms">
+        <SingleValue>6</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="vthresh" units="mV">
-      <SingleValue>30.0</SingleValue>
+    <Property name="vthresh">
+      <Quantity units="mV">
+        <SingleValue>30.0</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="Cm" units="nF">
-      <SingleValue>1.0</SingleValue>
+    <Property name="Cm">
+      <Quantity units="nF">
+        <SingleValue>1.0</SingleValue>
+      </Quantity>
     </Property>
   </DynamicsProperties>
   <Dimension name="voltage" m="1" l="2" t="-3" i="-1"/>

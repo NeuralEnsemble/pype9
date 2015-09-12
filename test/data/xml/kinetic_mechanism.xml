@@ -48,23 +48,35 @@
   </Dynamics>
   <Component name="KineticsTest">
     <Definition name="Kinetic_Class"/>
-    <Property name="d1" units="mV">
-      <SingleValue>-50</SingleValue>
+    <Property name="d1">
+      <Quantity units="mV">
+        <SingleValue>-50</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="d2" units="mV">
-      <SingleValue>-50</SingleValue>
+    <Property name="d2">
+      <Quantity units="mV">
+        <SingleValue>-50</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="k1" units="per_mV">
-      <SingleValue>-50</SingleValue>
+    <Property name="k1">
+      <Quantity units="per_mV">
+        <SingleValue>-50</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="k2" units="per_mV">
-      <SingleValue>-50</SingleValue>
+    <Property name="k2">
+      <Quantity units="per_mV">
+        <SingleValue>-50</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="tau1" units="ms">
-      <SingleValue>10</SingleValue>
+    <Property name="tau1">
+      <Quantity units="ms">
+        <SingleValue>10</SingleValue>
+      </Quantity>
     </Property>
-    <Property name="tau2" units="ms">
-      <SingleValue>10</SingleValue>
+    <Property name="tau2">
+      <Quantity units="ms">
+        <SingleValue>10</SingleValue>
+      </Quantity>
     </Property>
   </Component>
   <Dimension name="time" t="-1"/>
