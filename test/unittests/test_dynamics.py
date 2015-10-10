@@ -136,6 +136,7 @@ class TestDynamics(TestCase):
                 'neurons/basic/LeakyIntegrateAndFire/'
                 'LeakyIntegrateAndFireProperties'),
             initial_states=self.liaf_initial_states,
+            initial_regime='subthresholdregime',
             neuron_ref='ResetRefrac', nest_ref='iaf_psc_alpha',
             input_signal=input_step('iExt', 1, 50, 100, self.dt),
             nest_translations=self.liaf_nest_translations,
