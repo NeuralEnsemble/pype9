@@ -22,6 +22,7 @@ from copy import copy
 from nineml.user import DynamicsProperties, Definition
 from nineml import Document
 from pype9.nest.units import UnitHandler
+from pype9.exceptions import Pype9RuntimeError
 
 
 class CodeGenerator(BaseCodeGenerator):
@@ -47,11 +48,20 @@ class CodeGenerator(BaseCodeGenerator):
     def generate_source_files(self, component_class, default_properties,
                               initial_state, src_dir, **kwargs):
         name = component_class.name
+        initial_regime = kwargs.get('initial_regime', None)
+        if (initial_regime and
+                initial_regime not in component_class.regime_names):
+            raise Pype9RuntimeError(
+                "Initial regime '{}' does not refer to a regime in the given "
+                "component class '{}'"
+                .format(initial_regime,
+                        "', '".join(component_class.regime_names)))
         tmpl_args = {
             'component_name': component_class.name,
             'component_class': component_class,
             'prototype': default_properties,
             'initial_state': initial_state,
+            'initial_regime': initial_regime,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'unit_handler': UnitHandler(component_class),

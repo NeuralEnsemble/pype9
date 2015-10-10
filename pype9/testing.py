@@ -55,12 +55,12 @@ class Comparer(object):
     specific_params = ('pas.g', 'cm')
 
     def __init__(self, nineml_model=None, properties={}, initial_states={},
-                 state_variable='v', dt=0.01, simulators=[], neuron_ref=None,
-                 nest_ref=None, input_signal=None, input_train=None,
-                 neuron_translations={}, nest_translations={},
-                 neuron_build_args={}, nest_build_args={}, min_delay=0.02,
-                 max_delay=10.0, extra_mechanisms=[],
-                 extra_point_process=None):
+                 initial_regime=None, state_variable='v', dt=0.01,
+                 simulators=[], neuron_ref=None, nest_ref=None,
+                 input_signal=None, input_train=None, neuron_translations={},
+                 nest_translations={}, neuron_build_args={},
+                 nest_build_args={}, min_delay=0.02, max_delay=10.0,
+                 extra_mechanisms=[], extra_point_process=None):
         """
         nineml_model   -- 9ML model to compare
         nineml_sims    -- tuple of simulator names to simulate the 9ML model in
@@ -96,6 +96,7 @@ class Comparer(object):
         self.neuron_translations = neuron_translations
         self.nest_translations = nest_translations
         self.initial_states = initial_states
+        self.initial_regime = initial_regime
         self.input_signal = input_signal
         self.input_train = input_train
         self.build_args = {'nest': nest_build_args,
@@ -182,6 +183,7 @@ class Comparer(object):
             assert False
         self.nml_cells[simulator] = CellMetaClass(
             model, default_properties=properties,
+            initial_regime=self.initial_regime,
             **self.build_args[simulator])()
         if self.input_signal is not None:
             self.nml_cells[simulator].play(*self.input_signal)
@@ -208,7 +210,7 @@ class Comparer(object):
             self.nrn_cell_sec.insert(mech_name)
         if self.extra_point_process is not None:
             MechClass = getattr(neuron.h, self.extra_point_process)
-            self.extra_point_process = MechClass(0.5, sec=self.nrn_cell_sec)
+            self.extra_point_process = MechClass(self.nrn_cell_sec(0.5))
         for prop in self.properties:
             name = prop.name
             value = prop.value

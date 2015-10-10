@@ -124,12 +124,21 @@ class CodeGenerator(BaseCodeGenerator):
 
     def generate_mod_file(self, template, component_class, default_properties,
                           initial_state, src_dir, template_args):
+        initial_regime = template_args.get('initial_regime', None)
+        if (initial_regime and
+                initial_regime not in component_class.regime_names):
+            raise Pype9RuntimeError(
+                "Initial regime '{}' does not refer to a regime in the given "
+                "component class '{}'"
+                .format(initial_regime,
+                        "', '".join(component_class.regime_names)))
         tmpl_args = {
             'code_gen': self,
             'component_name': component_class.name,
             'component_class': component_class,
             'prototype': default_properties,
             'initial_state': initial_state,
+            'initial_regime': initial_regime,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'unit_handler': UnitHandler(component_class),

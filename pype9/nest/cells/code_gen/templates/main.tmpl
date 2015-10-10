@@ -247,7 +247,7 @@ void {{component_name}}::State_::set (const DictionaryDatum &d_, const Parameter
 {{component_name}}::Buffers_::Buffers_({{component_name}}& n)
     : logger_(n),
 {% include "buffer_vars.tmpl" %}
-      current_regime(DEFAULT_REGIME_) {
+      current_regime({% if initial_regime %}{{initial_regime}}_REGIME{% else %}DEFAULT_REGIME_{% endif %}) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
@@ -255,7 +255,7 @@ void {{component_name}}::State_::set (const DictionaryDatum &d_, const Parameter
 {{component_name}}::Buffers_::Buffers_(const Buffers_&, {{component_name}}& n)
     : logger_(n),
 {% include "buffer_vars.tmpl" %}
-      current_regime(DEFAULT_REGIME_) {
+      current_regime({% if initial_regime %}{{initial_regime}}_REGIME{% else %}DEFAULT_REGIME_{% endif %}) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }

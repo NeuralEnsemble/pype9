@@ -173,6 +173,7 @@ class TestDynamics(TestCase):
             port_exposures=[('weight', 'psr', 'q'),
                             ('input_spike', 'psr', 'spike')])
         initial_states = {'a__psr': 0.0 * pq.nA, 'b__psr': 0.0 * pq.nA}
+        initial_regime = 'subthresholdregime___default___regime'
         liaf_properties = ninemlcatalog.lookup(
             'neurons/basic/LeakyIntegrateAndFire/'
             'LeakyIntegrateAndFireProperties')
@@ -205,6 +206,7 @@ class TestDynamics(TestCase):
             simulators=['neuron', 'nest'],
             properties=properties,
             initial_states=initial_states,
+            initial_regime=initial_regime,
             neuron_ref='ResetRefrac',
             nest_ref='iaf_psc_alpha',
             input_train=input_freq('input_spike', 100 * pq.Hz, self.duration),

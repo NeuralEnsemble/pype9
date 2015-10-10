@@ -90,7 +90,11 @@ INITIAL {
 
     : Initialise Regime:
     {# This should come from the initial state, when we sort out that format #}
+{% if initial_regime %}
+    regime_ = {{initial_regime | upper}}
+{% else %}
     regime_ = {{next(component_class.regimes).name | upper}}
+{% endif %}
 
 {% if not is_subcomponent %}
     : Initialise the NET_RECEIVE block by sending appropriate flag to itself
