@@ -26,6 +26,7 @@ from nineml import Document
 from nineml.user import DynamicsProperties, Definition, Property
 from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
                                 Constant, Expression)
+from nineml.abstraction.dynamics.visitors.cloner import DynamicsCloner
 from sympy.printing import ccode
 from pype9.neuron.units import UnitHandler
 
@@ -86,9 +87,10 @@ class CodeGenerator(BaseCodeGenerator):
                 `ode_solver`       -- specifies the ODE solver to use
         """
         # Check whether it is a point process or a ion channel
-        if isinstance(component_class[component_class.annotations[PYPE9_NS]
-                                      ['MembraneVoltage']],
-                      StateVariable):
+        if isinstance(component_class.element(
+            component_class.annotations[PYPE9_NS]['MembraneVoltage'],
+            as_class=Dynamics),
+                StateVariable):
             self.generate_point_process(
                 component_class, default_properties, initial_state, src_dir,
                 **kwargs)
@@ -160,7 +162,7 @@ class CodeGenerator(BaseCodeGenerator):
         # ---------------------------------------------------------------------
         name = component_class.name
         orig = component_class
-        trfrm = copy(orig)
+        trfrm = DynamicsCloner().visit(orig)
         if default_properties is not None:
             default_properties = deepcopy(default_properties)
         if initial_state is not None:
@@ -206,10 +208,10 @@ class CodeGenerator(BaseCodeGenerator):
         # Map voltage to hard-coded 'v' symbol
         if orig_v.name != 'v':
             trfrm.rename_symbol(orig_v.name, 'v')
-            v = trfrm['v']
+            v = trfrm.state_variable('v')
             v.annotations[PYPE9_NS][TRANSFORM_SRC] = orig_v
         else:
-            v = trfrm['v']
+            v = trfrm.state_variable('v')
         # Add annotations to the original and build models
         orig.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = orig_v.name
         trfrm.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = 'v'
@@ -238,7 +240,7 @@ class CodeGenerator(BaseCodeGenerator):
                                  if ccm.dimension == un.capacitance]
                 if len(candidate_cms) == 1:
                     orig_cm = candidate_cms[0]
-                    cm = trfrm[orig_cm.name]
+                    cm = trfrm.parameter(orig_cm.name)
                     print ("Guessing that '{}' is the membrane capacitance"
                            .format(orig_cm))
                 elif len(candidate_cms) > 1:
@@ -246,10 +248,10 @@ class CodeGenerator(BaseCodeGenerator):
                         "Could not guess the membrane capacitance, candidates:"
                         " '{}'".format("', '".join(candidate_cms)))
                 else:
-                    cm = Parameter("cm_", dimension=un.capacitance)
+                    cm = Parameter("cm___pype9", dimension=un.capacitance)
                     trfrm.add(cm)
                     qty = kwargs.get('default_capacitance', (1.0, un.nF))
-                    default_properties.append(Property('cm_', *qty))
+                    default_properties.append(Property('cm___pype9', *qty))
             cm.annotations[PYPE9_NS][TRANSFORM_SRC] = None
             trfrm.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = cm.name
             # -----------------------------------------------------------------
@@ -263,7 +265,7 @@ class CodeGenerator(BaseCodeGenerator):
             clamped_regimes = []
             # The voltage clamp equation where v_clamp is the last voltage
             # value and g_clamp_ is a large conductance
-            clamp_i = sympy.sympify('g_clamp_ * (v - v_clamp_)')
+            clamp_i = sympy.sympify('g_clamp___pype9 * (v - v_clamp___pype9)')
             memb_is = []
             for regime in trfrm.regimes:
                 # Add an appropriate membrane current
@@ -277,7 +279,7 @@ class CodeGenerator(BaseCodeGenerator):
                 except KeyError:
                     i = clamp_i
                     clamped_regimes.append(regime)
-                regime.add(Alias('i_', i))
+                regime.add(Alias('i__pype9', i))
                 # Record state vars that have a time deriv. in this regime
                 for var in regime.time_derivative_variables:
                     if var != 'v':
@@ -285,22 +287,22 @@ class CodeGenerator(BaseCodeGenerator):
             # Pick the most popular membrane current to be the alias in
             # the global scope
             assert memb_is, "No regimes contain voltage time derivatives"
-            memb_i = Alias('i_', max(memb_is, key=memb_is.count))
+            memb_i = Alias('i__pype9', max(memb_is, key=memb_is.count))
             # Add membrane current along with a analog send port
             trfrm.add(memb_i)
-            i_port = AnalogSendPort('i_', dimension=un.current)
+            i_port = AnalogSendPort('i__pype9', dimension=un.current)
             i_port.annotations[PYPE9_NS][ION_SPECIES] = NONSPECIFIC_CURRENT
             trfrm.add(i_port)
             # Remove membrane currents that match the membrane current in the
             # outer scope
             for regime in trfrm.regimes:
-                if regime.alias('i_') == memb_i:
-                    regime.remove(regime.alias('i_'))
+                if regime.alias('i__pype9') == memb_i:
+                    regime.remove(regime.alias('i__pype9'))
             # If there are clamped regimes add extra parameters and set the
             # voltage to clamp to in the regimes that trfrmition to them
             if clamped_regimes:
-                trfrm.add(StateVariable('v_clamp_', un.voltage))
-                trfrm.add(Constant('g_clamp_', 1e8, un.uS))
+                trfrm.add(StateVariable('v_clamp___pype9', un.voltage))
+                trfrm.add(Constant('g_clamp___pype9', 1e8, un.uS))
                 for trans in trfrm.transitions:
                     if trans.target_regime in clamped_regimes:
                         # Assign v_clamp_ to the value
@@ -308,7 +310,8 @@ class CodeGenerator(BaseCodeGenerator):
                             v_clamp_rhs = trans.state_assignment('v').rhs
                         except KeyError:
                             v_clamp_rhs = 'v'
-                        trans.add(StateAssignment('v_clamp_', v_clamp_rhs))
+                        trans.add(StateAssignment('v_clamp___pype9',
+                                                  v_clamp_rhs))
             # -----------------------------------------------------------------
             trfrm.annotations[PYPE9_NS][NO_TIME_DERIVS] = (
                 ['v'] + [sv for sv in trfrm.state_variable_names

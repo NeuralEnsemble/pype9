@@ -18,7 +18,7 @@ import os.path
 import quantities as pq
 import nineml
 from nineml.abstraction import Dynamics
-from nineml.user import Property, DynamicsProperties
+from nineml.user import Property, Quantity
 
 
 class CellMetaClass(type):
@@ -205,10 +205,9 @@ class Cell(object):
             # i.e. the units that quantities of the variable's dimension will
             # be translated into (e.g. voltage -> mV for NEURON)
             if isinstance(val, float):
-                prop = Property(
-                    varname, val,
-                    self._unit_handler.dimension_to_units(
-                        self.component_class.dimension_of(varname)))
+                prop = Property(varname, Quantity(
+                    val, self._unit_handler.dimension_to_units(
+                        self.component_class.dimension_of(varname))))
             # If quantity, scale quantity to value in the "natural" units for
             # the simulator
             else:
@@ -268,8 +267,8 @@ class Cell(object):
         return '{}(component_class="{}")'.format(
             self.__class__.__name__, self._nineml.component_class.name)
 
-    def to_xml(self, **kwargs):  # @UnusedVariable
-        return self._nineml.to_xml()
+    def to_xml(self, document, **kwargs):  # @UnusedVariable
+        return self._nineml.to_xml(document, **kwargs)
 
     @property
     def used_units(self):

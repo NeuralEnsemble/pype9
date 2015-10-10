@@ -230,7 +230,7 @@ class CodeGenerator(BaseCodeGenerator):
                     "required permissions or specify a different \"parent "
                     "build directory\" ('parent_build_dir') -> {}".format(e))
         if stderr and stderr.rstrip() != ("make: *** No rule to make target "
-                                           "`clean'.  Stop."):
+                                          "`clean'.  Stop."):
             raise Pype9BuildError(
                 "Clean of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))

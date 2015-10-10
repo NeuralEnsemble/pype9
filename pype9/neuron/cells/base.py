@@ -20,7 +20,7 @@ import os.path
 import quantities as pq
 import neo
 from neuron import h, load_mechanisms
-from nineml.abstraction import EventPort
+from nineml.abstraction import EventPort, Dynamics
 from math import pi
 from .code_gen import CodeGenerator
 from pype9.base.cells.tree import in_units
@@ -149,7 +149,7 @@ class Cell(base.Cell):
 
     def record(self, port_name):
         self._initialise_local_recording()
-        port = self.component_class[port_name]
+        port = self.component_class.element(port_name, as_class=Dynamics)
         if isinstance(port, EventPort):
             logger.warning("Assuming '{}' is voltage threshold crossing"
                            .format(port_name))

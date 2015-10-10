@@ -6,7 +6,6 @@
 """
 import os
 import errno
-import numpy
 from pype9.exceptions import Pype9RuntimeError
 import nineml
 from nineml import (

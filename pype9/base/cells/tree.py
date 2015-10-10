@@ -156,7 +156,7 @@ class Tree(STree2):
                              {'default': []})
 
     def write_9ml(self, filename):
-        xml = etree.ElementTree(self.to_9ml().to_xml())
+        xml = etree.ElementTree(self.to_9ml().to_xml(document, **kwargs))
         xml.write(filename, encoding="UTF-8", pretty_print=True,
                   xml_declaration=True)
 

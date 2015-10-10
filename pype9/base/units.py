@@ -42,7 +42,6 @@ class UnitHandler(DynamicsDimensionResolver):
     _CACHE_FILENAME = '.unit_handler_cache.pkl'
 
     def assign_units_to_alias(self, alias):
-        assert alias in self.component_class
         dims = self._flatten(sympify(alias))[1]
         units = self.dimension_to_units_compound(dims)[1]
         return self._units_for_code_gen(units)
@@ -60,8 +59,6 @@ class UnitHandler(DynamicsDimensionResolver):
     def assign_units_to_constant(self, constant):
         if isinstance(constant, basestring):
             constant = self.component_class[constant]
-        else:
-            assert constant in self.component_class
         exponent, compound = self.dimension_to_units_compound(
             constant.units.dimension)
         scale = constant.units.power - exponent
@@ -75,8 +72,6 @@ class UnitHandler(DynamicsDimensionResolver):
     def assign_units_to_random_variable(self, random_variable):
         if isinstance(random_variable, basestring):
             random_variable = self.component_class[random_variable]
-        else:
-            assert random_variable in self.component_class
         exponent, compound = self.dimension_to_units_compound(
             random_variable.units.dimension)
         scale = random_variable.units.power - exponent
@@ -89,8 +84,6 @@ class UnitHandler(DynamicsDimensionResolver):
     def assign_units_to_variable(self, variable, derivative_of=False):
         if isinstance(variable, basestring):
             variable = self.component_class[variable]
-        else:
-            assert variable in self.component_class
         _, compound = self.dimension_to_units_compound(variable.dimension)
         if derivative_of:
             compound.append((un.ms, -1))
@@ -103,8 +96,6 @@ class UnitHandler(DynamicsDimensionResolver):
     def scale_alias(self, element):
         if isinstance(element, basestring):
             element = self.component_class[element]
-        else:
-            assert element in self.component_class
         scaled, dims = self._flatten(sympify(element.rhs))
         units_str = self._units_for_code_gen(
             self.dimension_to_units_compound(dims)[1])
@@ -122,11 +113,9 @@ class UnitHandler(DynamicsDimensionResolver):
         """
         if isinstance(element, basestring):
             element = self.component_class[element]
-        else:
-            assert element in self.component_class
         expr, dims = self._flatten(sympify(element.rhs))
         state_var_dims = self.component_class.state_variable(
-            element.dependent_variable).dimension
+            element.variable).dimension
         assert dims == state_var_dims / un.time
         exp = self.dimension_to_units_compound(dims)[0]
         target_exp, compound = self.dimension_to_units_compound(state_var_dims)
