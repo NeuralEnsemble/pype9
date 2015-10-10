@@ -279,7 +279,7 @@ class CodeGenerator(BaseCodeGenerator):
                 except KeyError:
                     i = clamp_i
                     clamped_regimes.append(regime)
-                regime.add(Alias('i__pype9', i))
+                regime.add(Alias('i___pype9', i))
                 # Record state vars that have a time deriv. in this regime
                 for var in regime.time_derivative_variables:
                     if var != 'v':
@@ -287,17 +287,17 @@ class CodeGenerator(BaseCodeGenerator):
             # Pick the most popular membrane current to be the alias in
             # the global scope
             assert memb_is, "No regimes contain voltage time derivatives"
-            memb_i = Alias('i__pype9', max(memb_is, key=memb_is.count))
+            memb_i = Alias('i___pype9', max(memb_is, key=memb_is.count))
             # Add membrane current along with a analog send port
             trfrm.add(memb_i)
-            i_port = AnalogSendPort('i__pype9', dimension=un.current)
+            i_port = AnalogSendPort('i___pype9', dimension=un.current)
             i_port.annotations[PYPE9_NS][ION_SPECIES] = NONSPECIFIC_CURRENT
             trfrm.add(i_port)
             # Remove membrane currents that match the membrane current in the
             # outer scope
             for regime in trfrm.regimes:
-                if regime.alias('i__pype9') == memb_i:
-                    regime.remove(regime.alias('i__pype9'))
+                if regime.alias('i___pype9') == memb_i:
+                    regime.remove(regime.alias('i___pype9'))
             # If there are clamped regimes add extra parameters and set the
             # voltage to clamp to in the regimes that trfrmition to them
             if clamped_regimes:
