@@ -3,9 +3,12 @@ import quantities as pq
 import numpy
 import logging
 from pype9.base.cells.controller import SimulationController
+import pyNN.neuron  # @UnusedImport Imported to ensure mod files are imported
 
 logger = logging.getLogger('PyPe9')
 
+
+#TODO: Extend PyNN simulation controller instead of reimplementing it
 
 class _SimulationController(SimulationController):
     """

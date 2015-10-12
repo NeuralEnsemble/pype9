@@ -8,7 +8,6 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from pype9.exceptions import Pype9RuntimeError
 # MPI may not be required but NEURON sometimes needs to be initialised after
 # MPI so I am doing it here just to be safe (and to save me headaches in the
 # future)
@@ -22,6 +21,7 @@ import neo
 from neuron import h, load_mechanisms
 from nineml.abstraction import EventPort, Dynamics
 from math import pi
+import numpy
 from .code_gen import CodeGenerator
 from pype9.base.cells.tree import in_units
 from pype9.base.cells import base
@@ -30,6 +30,8 @@ from .controller import simulation_controller
 from pype9.annotations import (
     PYPE9_NS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
     MEMBRANE_VOLTAGE)
+from pype9.exceptions import Pype9RuntimeError
+
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
 
@@ -78,7 +80,7 @@ class Cell(base.Cell):
             if self.build_properties is not None:
                 cm_prop = self.build_properties.property(self.cm_prop_name)
         if cm_prop is not None:
-            cm = pq.Quantity(UnitHandler.to_pq_quantity(self._cm_prop), 'nF')
+            cm = pq.Quantity(UnitHandler.to_pq_quantity(cm_prop), 'nF')
         else:
             cm = 1.0 * pq.nF
         # Set capacitance in mechanism
@@ -126,6 +128,7 @@ class Cell(base.Cell):
         return in_units(self._model.spike_threshold, 'mV')
 
     def _get(self, varname):
+        varname = self._escaped_name(varname)
         try:
             return getattr(self._hoc, varname)
         except AttributeError:
@@ -166,6 +169,11 @@ class Cell(base.Cell):
         self._recordings[port_name] = recording = h.Vector()
         recording.record(recorder)
 
+    def record_transitions(self):
+        self._initialise_local_recording()
+        self._recordings['__REGIME__'] = recording = h.Vector()
+        recording.record(getattr(self._hoc, '_ref_regime_'))
+
     def recording(self, port_name):
         """
         Return recorded data as a dictionary containing one numpy array for
@@ -182,6 +190,23 @@ class Cell(base.Cell):
                 self._recordings[port_name], sampling_period=h.dt * pq.ms,
                 t_start=0.0 * pq.ms, units=units_str, name=port_name)
         return recording
+
+    def transitions(self):
+        try:
+            recording = numpy.array(self._recordings['__REGIME__'], dtype=int)
+        except KeyError:
+            raise Pype9RuntimeError(
+                "Transitions not recorded, call 'record_transitions' before "
+                "simulation")
+        cc = self.build_component_class
+        index_map = dict((cc.index_of(r), r.name) for r in cc.regimes)
+        transition_inds = (
+            numpy.nonzero((recording[1:] != recording[:-1]))[0]) + 1
+        transitions = [(0 * pq.ms, index_map[recording[0]])]
+        transitions.extend(
+            (i * h.dt * pq.ms, index_map[recording[i]])
+            for i in transition_inds)
+        return transitions
 
     def reset_recordings(self):
         """

@@ -126,21 +126,25 @@ class Cell(object):
 
     def __init__(self, *properties, **kwprops):
         # Combine keyword and non-keyword properties into a single list
-        if len(properties) == 1 and isinstance(properties, dict):
-            kwprops.update(properties)
-            properties = []
+        if len(properties) == 1 and isinstance(properties[0],
+                                               nineml.DynamicsProperties):
+            self._nineml = properties[0]
         else:
-            properties = list(properties)
-        for name, pq_qty in kwprops.iteritems():
-            qty = self._unit_handler.from_pq_quantity(pq_qty)
-            properties.append(Property(name, qty.value, qty.units))
-        # Init the 9ML component of the cell
-        if self.default_properties is not None:
-            prototype = self.default_properties
-        else:
-            prototype = self.component_class
-        self._nineml = nineml.user.DynamicsProperties(
-            prototype.name, prototype, properties)
+            if len(properties) == 1 and isinstance(properties[0], dict):
+                kwprops.update(properties[0])
+                properties = []
+            else:
+                properties = list(properties)
+            for name, pq_qty in kwprops.iteritems():
+                qty = self._unit_handler.from_pq_quantity(pq_qty)
+                properties.append(Property(name, qty.value, qty.units))
+            # Init the 9ML component of the cell
+            if self.default_properties is not None:
+                prototype = self.default_properties
+            else:
+                prototype = self.component_class
+            self._nineml = nineml.user.DynamicsProperties(
+                prototype.name, prototype, properties)
         # Set up references from parameter names to internal variables and set
         # parameters
         for prop in self.properties:
@@ -317,6 +321,9 @@ class Cell(object):
         if not hasattr(self, '_recorders'):
             self.clear_recorders()
             self._controller.register_cell(self)
+
+    def record(self, port_name):
+        raise NotImplementedError("Should be implemented by derived class")
 
     def recording(self, port_name):
         raise NotImplementedError("Should be implemented by derived class")
