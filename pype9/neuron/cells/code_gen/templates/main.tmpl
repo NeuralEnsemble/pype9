@@ -45,10 +45,16 @@ NEURON {
     RANGE {{p.name}}
 {% endfor %}
 
+    : Analog receive ports
+{% for p in component_class.analog_receive_ports if p.name != connection_weight %}
+    RANGE {{p.name}}
+{% endfor %}
+
     :Aliases
 {% for alias in chain(component_class.aliases) %}
     RANGE {{alias.name}}
 {% endfor %}
+
 }
 
 UNITS {
@@ -190,7 +196,7 @@ FUNCTION deriv_{{sv.name}}(
 
 
 {% if not is_subcomponent %}
-NET_RECEIVE(weight_, channel) {
+NET_RECEIVE({% if connection_weight %}{{connection_weight}} ({{unit_handler.assign_units_to_variable(component_class.analog_receive_port(connection_weight))}}){% else %}not_used_{% endif %}, channel) {
     INITIAL {
       : stop channel being set to 0 by default
     }
@@ -209,7 +215,7 @@ NET_RECEIVE(weight_, channel) {
         if (flag == {{component_class.index_of(trans.trigger.rhs, key='TriggerRHS') + 1}}) {  : Condition '{{trans.trigger.rhs_str}}'
             {% else %}
         if (flag == ON_EVENT && channel == {{trans.src_port_name | upper}}) {
-            {% endif %}      
+            {% endif %}                  
             : Required aliases
             {% for elem, scaled_expr, _ in unit_handler.scale_aliases(component_class.required_for(trans.state_assignments).expressions) %}
             {{code_gen.assign_str(elem.lhs, scaled_expr.rhs)}}

@@ -20,6 +20,7 @@ from os.path import join
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from itertools import izip
 from abc import ABCMeta, abstractmethod
+import sympy
 from nineml import units
 from pype9.exceptions import Pype9BuildError
 import logging
@@ -47,7 +48,8 @@ class BaseCodeGenerator(object):
         [('len', len), ('izip', izip), ('enumerate', enumerate),
          ('xrange', xrange), ('next', next), ('chain', chain), ('sorted',
          sorted), ('hash', hash), ('deepcopy', deepcopy), ('units', units),
-         ('hasattr', hasattr), ('set', set), ('list', list), ('None', None)] +
+         ('hasattr', hasattr), ('set', set), ('list', list), ('None', None),
+         ('sympy', sympy)] +
         [(n, v) for n, v in pype9.annotations.__dict__.iteritems()
          if n != '__builtins__'])
 

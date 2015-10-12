@@ -139,6 +139,7 @@ class CodeGenerator(BaseCodeGenerator):
             'prototype': default_properties,
             'initial_state': initial_state,
             'initial_regime': initial_regime,
+            'connection_weight': template_args.get('connection_weight', None),
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'unit_handler': UnitHandler(component_class),

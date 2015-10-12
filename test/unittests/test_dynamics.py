@@ -14,7 +14,7 @@ from pype9.testing import Comparer, input_step, input_freq
 class TestDynamics(TestCase):
 
     dt = 0.001
-    duration = 100.0
+    duration = 100
 
     liaf_initial_states = {'v': -65.0 * pq.mV, 'end_refractory': 0.0 * pq.ms}
     liaf_nest_translations = {
@@ -182,7 +182,8 @@ class TestDynamics(TestCase):
             'postsynapticresponses/Alpha/AlphaProperties')
         nest_tranlsations = {'tau__psr': ('tau_syn_ex', 1),
                              'a__psr': (None, 1), 'b__psr': (None, 1)}
-        neuron_tranlsations = {'tau__psr': (None, 1),
+        neuron_tranlsations = {'tau__psr': ('psr.tau', 1),
+                               'q__psr': ('psr.q', 1),
                                'a__psr': (None, 1),
                                'b__psr': (None, 1)}
         initial_states.update(
@@ -204,13 +205,14 @@ class TestDynamics(TestCase):
         comparer = Comparer(
             nineml_model=iaf_alpha,
             state_variable='v__cell', dt=self.dt,
-            simulators=['neuron', 'nest'],
+            simulators=['nest'],  # ['neuron', 'nest'],
             properties=properties,
             initial_states=initial_states,
             initial_regime=initial_regime,
             neuron_ref='ResetRefrac',
             nest_ref='iaf_psc_alpha',
-            input_train=input_freq('input_spike', 100 * pq.Hz, self.duration),
+            input_train=input_freq('input_spike', 100 * pq.Hz, self.duration,
+                                   'weight', 10),
             nest_translations=nest_tranlsations,
             neuron_translations=neuron_tranlsations,
             extra_mechanisms=['pas'],

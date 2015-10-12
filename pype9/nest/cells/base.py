@@ -89,7 +89,7 @@ class Cell(base.Cell):
         logger.warning("Haven't worked out how to implement reset recordings "
                        "for NEST yet")
 
-    def play(self, port_name, signal):
+    def play(self, port_name, signal, weight_port_name=None, weight=None):
         """
         Injects current into the segment
 

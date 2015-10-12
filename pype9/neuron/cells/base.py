@@ -223,7 +223,7 @@ class Cell(base.Cell):
         super(Cell, self).clear_recorders()
         super(base.Cell, self).__setattr__('_recordings', {})
 
-    def play(self, port_name, signal):
+    def play(self, port_name, signal, weight_port_name=None, weight=None):
         """
         Injects current into the segment
 
@@ -247,6 +247,8 @@ class Cell(base.Cell):
             vstim_times = h.Vector(pq.Quantity(signal, 'ms'))
             vstim.play(vstim_times)
             vstim_con = h.NetCon(vstim, self._hoc, sec=self._sec)
+            if weight is not None:
+                vstim_con.weight[0] = weight
             self._inputs['vstim'] = vstim
             self._input_auxs.extend((vstim_times, vstim_con))
         else:
