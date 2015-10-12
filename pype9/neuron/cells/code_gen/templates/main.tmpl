@@ -209,11 +209,14 @@ NET_RECEIVE({% if connection_weight %}{{connection_weight}} ({{unit_handler.assi
         {% endfor %}
     {% endfor %}
     {% for regime in component_class.regimes %}
+    : All transitions in Regime(name='{{regime.name}}')
     } else if (regime_ == {{regime.name | upper}}) {
         {% for trans in regime.transitions %}
             {% if hasattr(trans, 'trigger') %}
+        : Handle OnCondition(trigger={{trans.trigger.rhs}})
         if (flag == {{component_class.index_of(trans.trigger.rhs, key='TriggerRHS') + 1}}) {  : Condition '{{trans.trigger.rhs_str}}'
             {% else %}
+        : Handle OnEvent(src_port_name={{trans.src_port_name}})
         if (flag == ON_EVENT && channel == {{trans.src_port_name | upper}}) {
             {% endif %}                  
             : Required aliases

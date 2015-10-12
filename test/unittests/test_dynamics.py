@@ -184,6 +184,7 @@ class TestDynamics(TestCase):
                              'a__psr': (None, 1), 'b__psr': (None, 1)}
         neuron_tranlsations = {'tau__psr': ('psr.tau', 1),
                                'q__psr': ('psr.q', 1),
+                               'weight': ('weight', 0.367),
                                'a__psr': (None, 1),
                                'b__psr': (None, 1)}
         initial_states.update(
@@ -205,7 +206,7 @@ class TestDynamics(TestCase):
         comparer = Comparer(
             nineml_model=iaf_alpha,
             state_variable='v__cell', dt=self.dt,
-            simulators=['nest'],  # ['neuron', 'nest'],
+            simulators=['neuron', 'nest'],
             properties=properties,
             initial_states=initial_states,
             initial_regime=initial_regime,
@@ -218,7 +219,7 @@ class TestDynamics(TestCase):
             extra_mechanisms=['pas'],
             extra_point_process='AlphaISyn',
             neuron_build_args={
-                'build_mode': 'lazy',
+                'build_mode': 'force',
                 'build_dir': os.path.join(build_dir, 'neuron', 'IaFAlpha')},
             nest_build_args={
                 'build_mode': 'lazy',

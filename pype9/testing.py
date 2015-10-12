@@ -286,7 +286,12 @@ class Comparer(object):
             self._nrn_iclamp_amps.play(self._nrn_iclamp._ref_amp,
                                        self._nrn_iclamp_times)
         if self.input_train is not None:
-            _, train, _, weight = self.input_train
+            _, train, weight_port_name, weight = self.input_train
+            try:
+                _, scale = self.neuron_translations[weight_port_name]
+            except KeyError:
+                scale = 1.0
+            weight = weight * scale
             self._vstim = neuron.h.VecStim()
             self._vstim_times = neuron.h.Vector(pq.Quantity(train, 'ms'))
             self._vstim.play(self._vstim_times)
