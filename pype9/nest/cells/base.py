@@ -109,7 +109,8 @@ class Cell(base.Cell):
             nest.Connect(self._inputs[port_name], self._cell,
                          syn_spec={'receptor_type':
                                    self._receive_ports[port_name],
-                                   'delay': simulation_controller.min_delay})
+                                   'delay': simulation_controller.min_delay,
+                                   'weight': float(weight)})
         else:
             # Signals are played into NEST cells include a delay (set to be the
             # minimum), which is is subtracted from the start of the signal so

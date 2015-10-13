@@ -339,20 +339,27 @@ class Comparer(object):
                                    'delay': self.min_delay})
         if self.input_train is not None:
             port_name, signal, weight_port_name, weight = self.input_train
-            spike_times = (pq.Quantity(signal, 'ms') - self.min_delay * pq.ms)
-            if any(spike_times < 0.0):
-                raise Pype9RuntimeError(
-                    "Some spike are less than minimum delay and so can't be "
-                    "played into cell ({})".format(
-                        ', '.join(str(t) for t in
-                                  spike_times[spike_times < self.min_delay])))
+            try:
+                _, scale = self.nest_translations[weight_port_name]
+            except KeyError:
+                scale = 1.0
+            weight = weight * scale
+            spike_times = (pq.Quantity(signal, 'ms') +
+                           (pq.ms - self.min_delay * pq.ms))
+#             if any(spike_times < 0.0):
+#                 raise Pype9RuntimeError(
+#                     "Some spike are less than minimum delay and so can't be "
+#                     "played into cell ({})".format(
+#                         ', '.join(str(t) for t in
+#                                   spike_times[spike_times < self.min_delay])))
             generator = nest.Create(
                 'spike_generator', 1, {'spike_times': spike_times})
             nest.Connect(generator, self.nest_cell,
                          syn_spec={'receptor_type':
                                    (receptor_types[port_name]
                                     if receptor_types else 0),
-                                   'delay': self.min_delay})
+                                   'delay': self.min_delay,
+                                   'weight': float(weight)})
         self.nest_multimeter = nest.Create(
             'multimeter', 1, {"interval": self.to_float(self.dt, 'ms')})
         nest.SetStatus(

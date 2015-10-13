@@ -181,10 +181,11 @@ class TestDynamics(TestCase):
         alpha_properties = ninemlcatalog.lookup(
             'postsynapticresponses/Alpha/AlphaProperties')
         nest_tranlsations = {'tau__psr': ('tau_syn_ex', 1),
-                             'a__psr': (None, 1), 'b__psr': (None, 1)}
+                             'a__psr': (None, 1), 'b__psr': (None, 1),
+                             'weight': ('weight', 367.55)}
         neuron_tranlsations = {'tau__psr': ('psr.tau', 1),
                                'q__psr': ('psr.q', 1),
-                               'weight': ('weight', 0.367),
+                               'weight': ('weight', 0.36755),
                                'a__psr': (None, 1),
                                'b__psr': (None, 1)}
         initial_states.update(
@@ -222,7 +223,7 @@ class TestDynamics(TestCase):
                 'build_mode': 'force',
                 'build_dir': os.path.join(build_dir, 'neuron', 'IaFAlpha')},
             nest_build_args={
-                'build_mode': 'lazy',
+                'build_mode': 'force',
                 'build_dir': os.path.join(build_dir, 'nest', 'IaFAlpha')})
         comparer.simulate(self.duration)
         comparisons = comparer.compare()
