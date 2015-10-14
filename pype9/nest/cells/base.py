@@ -106,11 +106,13 @@ class Cell(base.Cell):
                         spike_times < simulation_controller.min_delay)))
             self._inputs[port_name] = nest.Create(
                 'spike_generator', 1, {'spike_times': spike_times})
+            syn_spec = {'receptor_type': self._receive_ports[port_name],
+                        'delay': simulation_controller.min_delay}
+            if weight is not None:
+                syn_spec['weight'] = self._scale_weight(weight,
+                                                        weight_port_name)
             nest.Connect(self._inputs[port_name], self._cell,
-                         syn_spec={'receptor_type':
-                                   self._receive_ports[port_name],
-                                   'delay': simulation_controller.min_delay,
-                                   'weight': float(weight)})
+                         syn_spec=syn_spec)
         else:
             # Signals are played into NEST cells include a delay (set to be the
             # minimum), which is is subtracted from the start of the signal so
