@@ -332,10 +332,11 @@ class Cell(object):
     def property(self, name):
         return self._nineml.property(name)
 
-    def _scale_weight(self, weight, port_name):
+    def _scale_weight(self, weight):
+        port_name, value = weight
         port = self.component_class.analog_receive_port(port_name)
         weight = pq.Quantity(
-            weight, self._unit_handler.dimension_to_unit_str(port.dimension))
+            value, self._unit_handler.dimension_to_unit_str(port.dimension))
         return float(weight)
 
 

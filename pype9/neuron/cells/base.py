@@ -223,11 +223,15 @@ class Cell(base.Cell):
         super(Cell, self).clear_recorders()
         super(base.Cell, self).__setattr__('_recordings', {})
 
-    def play(self, port_name, signal, weight_port_name=None, weight=None):
+    def play(self, port_name, signal, weight=None):
         """
         Injects current into the segment
 
-        `current` -- a vector containing the current [neo.AnalogSignal]
+        `port_name` -- the name of the receive port to play the signal into
+        `signal`    -- a neo.AnalogSignal or neo.SpikeTrain to play into the
+                       port
+        `weight`    -- a tuple of (port_name, value/qty) to set the weight of
+                       the event port.
         """
         ext_is = self.build_component_class.annotations[
             PYPE9_NS][EXTERNAL_CURRENTS]
@@ -248,8 +252,7 @@ class Cell(base.Cell):
             vstim.play(vstim_times)
             vstim_con = h.NetCon(vstim, self._hoc, sec=self._sec)
             if weight is not None:
-                vstim_con.weight[0] = self._scale_weight(weight,
-                                                         weight_port_name)
+                vstim_con.weight[0] = self._scale_weight(weight)
             self._inputs['vstim'] = vstim
             self._input_auxs.extend((vstim_times, vstim_con))
         else:

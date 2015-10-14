@@ -54,14 +54,13 @@ class Comparer(object):
 
     specific_params = ('pas.g', 'cm')
 
-    def __init__(self, nineml_model=None, properties={}, initial_states={},
-                 initial_regime=None, state_variable='v', dt=0.01,
-                 simulators=[], neuron_ref=None, nest_ref=None,
-                 input_signal=None, input_train=None,
-                 neuron_translations=None,
+    def __init__(self, nineml_model=None, properties=None, initial_states=None,
+                 initial_regime=None, event_weights=None, state_variable='v',
+                 dt=0.01, simulators=None, neuron_ref=None, nest_ref=None,
+                 input_signal=None, input_train=None, neuron_translations=None,
                  nest_translations=None, neuron_build_args=None,
                  nest_build_args=None, min_delay=0.02, max_delay=10.0,
-                 extra_mechanisms=[], extra_point_process=None):
+                 extra_mechanisms=None, extra_point_process=None):
         """
         nineml_model   -- 9ML model to compare
         nineml_sims    -- tuple of simulator names to simulate the 9ML model in
@@ -88,18 +87,21 @@ class Comparer(object):
         self.dt = self.to_float(dt, 'ms')
         self.state_variable = state_variable
         self.nineml_model = nineml_model
-        self.properties = properties
+        self.properties = properties if properties is not None else {}
         self.neuron_ref = neuron_ref
         self.nest_ref = nest_ref
-        self.simulators = simulators
-        self.extra_mechanisms = extra_mechanisms
+        self.simulators = simulators if simulators is not None else []
+        self.extra_mechanisms = (extra_mechanisms
+                                 if extra_mechanisms is not None else [])
         self.extra_point_process = extra_point_process
         self.neuron_translations = (neuron_translations
                                     if neuron_translations is not None else {})
         self.nest_translations = (nest_translations
                                   if nest_translations is not None else {})
-        self.initial_states = initial_states
+        self.initial_states = (initial_states
+                               if initial_states is not None else {})
         self.initial_regime = initial_regime
+        self.event_weights = event_weights if event_weights is not None else {}
         self.input_signal = input_signal
         self.input_train = input_train
         self.build_args = {
@@ -188,14 +190,10 @@ class Comparer(object):
             CellMetaClass = CellMetaClassNEST
         else:
             assert False
-        if self.input_train:
-            connection_weight = self.input_train[2]
-        else:
-            connection_weight = None
         self.nml_cells[simulator] = CellMetaClass(
             model, default_properties=properties,
             initial_regime=self.initial_regime,
-            connection_weight=connection_weight,
+            event_weights=self.event_weights,
             **self.build_args[simulator])()
         if self.input_signal is not None:
             self.nml_cells[simulator].play(*self.input_signal)
@@ -286,7 +284,7 @@ class Comparer(object):
             self._nrn_iclamp_amps.play(self._nrn_iclamp._ref_amp,
                                        self._nrn_iclamp_times)
         if self.input_train is not None:
-            _, train, weight_port_name, weight = self.input_train
+            _, train, (weight_port_name, weight) = self.input_train
             try:
                 _, scale = self.neuron_translations[weight_port_name]
             except KeyError:
@@ -338,7 +336,7 @@ class Comparer(object):
                                     if receptor_types else 0),
                                    'delay': self.min_delay})
         if self.input_train is not None:
-            port_name, signal, weight_port_name, weight = self.input_train
+            port_name, signal, (weight_port_name, weight) = self.input_train
             try:
                 _, scale = self.nest_translations[weight_port_name]
             except KeyError:
@@ -346,12 +344,12 @@ class Comparer(object):
             weight = weight * scale
             spike_times = (pq.Quantity(signal, 'ms') +
                            (pq.ms - self.min_delay * pq.ms))
-#             if any(spike_times < 0.0):
-#                 raise Pype9RuntimeError(
-#                     "Some spike are less than minimum delay and so can't be "
-#                     "played into cell ({})".format(
-#                         ', '.join(str(t) for t in
-#                                   spike_times[spike_times < self.min_delay])))
+            if any(spike_times < 0.0):
+                raise Pype9RuntimeError(
+                    "Some spike are less than minimum delay and so can't be "
+                    "played into cell ({})".format(
+                        ', '.join(str(t) for t in
+                                  spike_times[spike_times < self.min_delay])))
             generator = nest.Create(
                 'spike_generator', 1, {'spike_times': spike_times})
             nest.Connect(generator, self.nest_cell,
@@ -449,7 +447,7 @@ def input_freq(port_name, freq, duration, weight_port_name, weight):
     train = neo.SpikeTrain(
         numpy.arange(isi, duration, isi),
         units='ms', t_stop=duration * pq.ms)
-    return (port_name, train, weight_port_name, weight)
+    return (port_name, train, (weight_port_name, weight))
 
 
 def compare_in_subprocess(

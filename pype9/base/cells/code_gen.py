@@ -22,7 +22,7 @@ from itertools import izip
 from abc import ABCMeta, abstractmethod
 import sympy
 from nineml import units
-from pype9.exceptions import Pype9BuildError
+from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import logging
 import pype9.annotations
 
@@ -319,6 +319,56 @@ class BaseCodeGenerator(object):
         # ---------------------------------------------------------------------
         return (deepcopy(component_class), deepcopy(default_properties),
                 deepcopy(initial_states))
+
+    @classmethod
+    def _check_initial_regime(cls, component_class, initial_regime):
+        if (initial_regime and
+                initial_regime not in component_class.regime_names):
+            raise Pype9RuntimeError(
+                "Initial regime '{}' does not refer to a regime in the given "
+                "component class '{}'"
+                .format(initial_regime,
+                        "', '".join(component_class.regime_names)))
+
+    @classmethod
+    def _check_event_weights(cls, component_class, event_weights):
+        """
+        Checks the mapping of event port -> analog receive ports to see whether
+        the analog receive ports can be treated as a weight of the event port
+        (i.e. are not referenced anywhere except within the OnEvent blocks
+        triggered by the event port).
+        """
+        # Get list of ports refereneced (either directly or indirectly) by
+        # time derivatives
+        ports_required_for_derivatives = component_class.required_for(
+            component_class.all_time_derivatives()).ports
+        # Loop through all event port/weight port pairs and check for validity
+        for event_name, weight_name in event_weights.iteritems():
+            event_port = component_class.event_receive_port(event_name)
+            weight_port = component_class.analog_receive_port(weight_name)
+            # Check weight port is not referenced in a time derivative
+            if weight_port in ports_required_for_derivatives:
+                raise Pype9RuntimeError(
+                    "'{}' cannot be interpreted as a weight for event port "
+                    "'{}' as it is referenced in a time derivative"
+                    .format(weight_port, event_port))
+            for transition in component_class.all_transitions():
+                try:
+                    # If the transition is an OnEvent triggered by the event
+                    # port the weight port can be referenced so we can skip
+                    # checking this transition
+                    if transition.port == event_port:
+                        continue
+                except AttributeError:  # for OnCondition transitions
+                    pass
+                ports_required_for_assignments = component_class.required_for(
+                    transition.state_assignments).ports
+                if weight_port in ports_required_for_assignments:
+                    raise Pype9RuntimeError(
+                        "'{}' cannot be interpreted as a weight for event "
+                        "port '{}' as it is referenced in a transition that is"
+                        " not triggered by the event port ({})"
+                        .format(weight_name, event_name, transition))
 
 #     def _load_component_translations(self, biophysics_name, params_dir):
 #         """

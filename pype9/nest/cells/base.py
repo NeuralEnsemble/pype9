@@ -89,11 +89,15 @@ class Cell(base.Cell):
         logger.warning("Haven't worked out how to implement reset recordings "
                        "for NEST yet")
 
-    def play(self, port_name, signal, weight_port_name=None, weight=None):
+    def play(self, port_name, signal, weight=None):
         """
         Injects current into the segment
 
-        `current` -- a vector containing the current [neo.AnalogSignal]
+        `port_name` -- the name of the receive port to play the signal into
+        `signal`    -- a neo.AnalogSignal or neo.SpikeTrain to play into the
+                       port
+        `weight`    -- a tuple of (port_name, value/qty) to set the weight of
+                       the event port.
         """
         if isinstance(self.component_class.receive_port(port_name),
                       nineml.abstraction.EventPort):
@@ -109,8 +113,7 @@ class Cell(base.Cell):
             syn_spec = {'receptor_type': self._receive_ports[port_name],
                         'delay': simulation_controller.min_delay}
             if weight is not None:
-                syn_spec['weight'] = self._scale_weight(weight,
-                                                        weight_port_name)
+                syn_spec['weight'] = self._scale_weight(weight)
             nest.Connect(self._inputs[port_name], self._cell,
                          syn_spec=syn_spec)
         else:

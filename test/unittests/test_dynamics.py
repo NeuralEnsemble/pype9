@@ -211,6 +211,7 @@ class TestDynamics(TestCase):
             properties=properties,
             initial_states=initial_states,
             initial_regime=initial_regime,
+            event_weights={'input_spike': 'weight'},
             neuron_ref='ResetRefrac',
             nest_ref='iaf_psc_alpha',
             input_train=input_freq('input_spike', 100 * pq.Hz, self.duration,
@@ -223,7 +224,7 @@ class TestDynamics(TestCase):
                 'build_mode': 'force',
                 'build_dir': os.path.join(build_dir, 'neuron', 'IaFAlpha')},
             nest_build_args={
-                'build_mode': 'force',
+                'build_mode': 'compile_only',
                 'build_dir': os.path.join(build_dir, 'nest', 'IaFAlpha')})
         comparer.simulate(self.duration)
         comparisons = comparer.compare()
