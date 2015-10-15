@@ -18,7 +18,7 @@ Pre-requisites
  * PyNEST (see http://www.nest-simulator.org/installation/)
  * PyNN v0.8 (see http://neuralensemble.org/docs/PyNN/installation.html)
  * lib9ML (`bleeding_edge` branch at http://github.com/tclose/lib9ML)
- * diophantine (`master` branch at https://github.com/tclose/Diophantine)
+ * Diophantine (`master` branch at https://github.com/tclose/Diophantine)
  * NineMLCatalog (for unit-tests, `develop` branch at http://github.com/tclose/NineMLCatalog)
  
 Installation
