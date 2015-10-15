@@ -101,13 +101,13 @@ class Cell(base.Cell):
         """
         if isinstance(self.component_class.receive_port(port_name),
                       nineml.abstraction.EventPort):
-            spike_times = (pq.Quantity(signal, 'ms') -
+            spike_times = (pq.Quantity(signal, 'ms') + pq.ms -
                            simulation_controller.min_delay * pq.ms)
             if any(spike_times < 0.0):
                 raise Pype9RuntimeError(
                     "Some spike are less than minimum delay and so can't be "
                     "played into cell ({})".format(', '.join(
-                        spike_times < simulation_controller.min_delay)))
+                        spike_times < 1 + simulation_controller.min_delay)))
             self._inputs[port_name] = nest.Create(
                 'spike_generator', 1, {'spike_times': spike_times})
             syn_spec = {'receptor_type': self._receive_ports[port_name],

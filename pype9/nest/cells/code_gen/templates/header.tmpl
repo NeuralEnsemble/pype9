@@ -200,12 +200,12 @@ namespace nineml {
 {% endfor %}
 
             // Analog receive port buffers
-{% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) if port.name not in event_weight.itervalues() %}
+{% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) if port.name not in event_weights.itervalues() %}
             nest::RingBuffer {{port.name}}_analog_port;
 {% endfor %}
 
             // Variables to hold the last value of the analog receive port buffers
-{% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) if port.name not in event_weight.itervalues() %}
+{% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) if port.name not in event_weights.itervalues() %}
             double_t {{port.name}}_value;
 {% endfor %}
 

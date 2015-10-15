@@ -269,7 +269,7 @@ void {{component_name}}::init_buffers_() {
 {% endfor %}
 
     // Clear analog buffers
-{% for p in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
+{% for p in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) if p.name not in event_weights.itervalues() %}
     B_.{{p.name}}_analog_port.clear();
 {% endfor %}
 
@@ -280,7 +280,7 @@ void {{component_name}}::init_buffers_() {
     B_.step_ = nest::Time::get_resolution().get_ms();
     B_.IntegrationStep_ = B_.step_;
 
-{% for p in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
+{% for p in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) if p.name not in event_weights.itervalues() %}
     B_.{{p.name}}_value = 0.0;
 {% endfor %}
 
@@ -405,11 +405,13 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
                     B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active = false;
         {% else %}
             // Check for incoming event
-            if (B_.{{trans.src_port_name}}_event_port.get_value(lag)) {
+            double {{trans.src_port_name}} = B_.{{trans.src_port_name}}_event_port.get_value(lag);
+            
+            if ({{trans.src_port_name}}) {
             {% if trans.src_port_name in event_weights %}
 
                     // Set the weight of the event to the paired analog port (see 'event_weights' dictionary passed to code generator).
-                    const double& {{event_weights[trans.src_port_name]}} = B_.{{trans.src_port_name}}_event_port.get_value(lag);  // ({{unit_handler.dimension_to_unit_str(component_class.analog_receive_port(event_weights[trans.src_port_name]).dimension)}})
+                    double {{event_weights[trans.src_port_name]}} = {{trans.src_port_name}};  // ({{unit_handler.dimension_to_unit_str(component_class.analog_receive_port(event_weights[trans.src_port_name]).dimension)}})
                 {% set event_weight = [sympy.Symbol(event_weights[trans.src_port_name])] %}{# The expression for the event weight is wrapped in a list so it can be chained with the trigger expressions in the 'previous_expressions' argument of the map_vars_locally macro #}
             {% endif %}
         {% endif %}
