@@ -18,12 +18,13 @@ Pre-requisites
  * PyNEST (see http://www.nest-simulator.org/installation/)
  * PyNN (> v0.8, see http://neuralensemble.org/docs/PyNN/installation.html)
  * lib9ML (`bleeding_edge` branch at http://github.com/tclose/lib9ML)
+ * diophantine (`master` branch at https://github.com/tclose/Diophantine)
  * NineMLCatalog (for unit-tests, `develop` branch at http://github.com/tclose/NineMLCatalog)
  
 Installation
 ---
 
-After installing PyNEURON, PyNEST and PyNN via their instructions clone the lib9ML, NineMLCatalog and PyPe9 repositories to somewhere sensible on your local computer (e.g. $HOME/git/nineml, $HOME/git/ninemlcatalog & $HOME/git/pype9). Then add the root directory of each repository to your PYTHONPATH environment variable (see https://docs.python.org/2/using/cmdline.html#envvar-PYTHONPATH).
+After installing PyNEURON, PyNEST and PyNN via their instructions clone the lib9ML, Diophantine, NineMLCatalog and PyPe9 repositories to somewhere sensible on your local computer (e.g. $HOME/git/nineml, $HOME/git/diophantine, $HOME/git/ninemlcatalog & $HOME/git/pype9). Then add the root directory of each repository to your PYTHONPATH environment variable (see https://docs.python.org/2/using/cmdline.html#envvar-PYTHONPATH).
 
 Testing
 ---
