@@ -252,7 +252,7 @@ class Cell(base.Cell):
             vstim.play(vstim_times)
             vstim_con = h.NetCon(vstim, self._hoc, sec=self._sec)
             if weight is not None:
-                vstim_con.weight[0] = self._scale_weight(weight)
+                vstim_con.weight[0] = self._scale_weight(port_name, weight)
             self._inputs['vstim'] = vstim
             self._input_auxs.extend((vstim_times, vstim_con))
         else:

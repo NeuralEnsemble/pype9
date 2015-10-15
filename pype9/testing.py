@@ -284,9 +284,9 @@ class Comparer(object):
             self._nrn_iclamp_amps.play(self._nrn_iclamp._ref_amp,
                                        self._nrn_iclamp_times)
         if self.input_train is not None:
-            _, train, (weight_port_name, weight) = self.input_train
+            port_name, train, weight = self.input_train
             try:
-                _, scale = self.neuron_translations[weight_port_name]
+                _, scale = self.neuron_translations[port_name]
             except KeyError:
                 scale = 1.0
             weight = weight * scale
@@ -336,9 +336,9 @@ class Comparer(object):
                                     if receptor_types else 0),
                                    'delay': self.min_delay})
         if self.input_train is not None:
-            port_name, signal, (weight_port_name, weight) = self.input_train
+            port_name, signal, weight = self.input_train
             try:
-                _, scale = self.nest_translations[weight_port_name]
+                _, scale = self.nest_translations[port_name]
             except KeyError:
                 scale = 1.0
             weight = weight * scale
@@ -442,12 +442,12 @@ def input_step(port_name, amplitude, start_time, duration, dt):
     return (port_name, signal)
 
 
-def input_freq(port_name, freq, duration, weight_port_name, weight):
+def input_freq(port_name, freq, duration, weight):
     isi = 1 / float(pq.Quantity(freq, 'kHz'))
     train = neo.SpikeTrain(
         numpy.arange(isi, duration, isi),
         units='ms', t_stop=duration * pq.ms)
-    return (port_name, train, (weight_port_name, weight))
+    return (port_name, train, weight)
 
 
 def compare_in_subprocess(

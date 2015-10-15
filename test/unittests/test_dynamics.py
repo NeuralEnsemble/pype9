@@ -182,10 +182,10 @@ class TestDynamics(TestCase):
             'postsynapticresponses/Alpha/AlphaProperties')
         nest_tranlsations = {'tau__psr': ('tau_syn_ex', 1),
                              'a__psr': (None, 1), 'b__psr': (None, 1),
-                             'weight': ('weight', 367.55)}
+                             'input_spike': ('input_spike', 367.55)}
         neuron_tranlsations = {'tau__psr': ('psr.tau', 1),
                                'q__psr': ('psr.q', 1),
-                               'weight': ('weight', 0.36755),
+                               'input_spike': ('input_spike', 0.36755),
                                'a__psr': (None, 1),
                                'b__psr': (None, 1)}
         initial_states.update(
@@ -215,7 +215,7 @@ class TestDynamics(TestCase):
             neuron_ref='ResetRefrac',
             nest_ref='iaf_psc_alpha',
             input_train=input_freq('input_spike', 100 * pq.Hz, self.duration,
-                                   'weight', 10 * pq.nA),
+                                   weight=10 * pq.nA),
             nest_translations=nest_tranlsations,
             neuron_translations=neuron_tranlsations,
             extra_mechanisms=['pas'],

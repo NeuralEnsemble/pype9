@@ -113,7 +113,7 @@ class Cell(base.Cell):
             syn_spec = {'receptor_type': self._receive_ports[port_name],
                         'delay': simulation_controller.min_delay}
             if weight is not None:
-                syn_spec['weight'] = self._scale_weight(weight)
+                syn_spec['weight'] = self._scale_weight(port_name, weight)
             nest.Connect(self._inputs[port_name], self._cell,
                          syn_spec=syn_spec)
         else:
