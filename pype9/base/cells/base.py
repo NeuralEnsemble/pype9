@@ -337,13 +337,23 @@ class Cell(object):
             event_weights = self.build_options['event_weights']
             weight_name = event_weights[port_name]
         except KeyError:
+            weight_name = None
+        if weight is not None:
+            if weight_name is None:
+                raise Pype9RuntimeError(
+                    "Weight provided when there is no weight port associated "
+                    "with '{}' event port.".format(port_name))
+            port = self.component_class.analog_receive_port(weight_name)
+            qty = pq.Quantity(
+                weight,
+                self._unit_handler.dimension_to_unit_str(port.dimension))
+            weight = float(qty)
+        elif weight_name is not None:
             raise Pype9RuntimeError(
-                "No weight port associated with '{}' event port."
-                .format(port_name))
-        port = self.component_class.analog_receive_port(weight_name)
-        qty = pq.Quantity(
-            weight, self._unit_handler.dimension_to_unit_str(port.dimension))
-        return float(qty)
+                "No weight provided for the '{}' analog receive port "
+                "associated with the '{}' event port.".format(weight_name,
+                                                              port_name))
+        return weight
 
 
 class DummyNinemlModel(object):
