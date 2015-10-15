@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 if __name__ == '__main__':
     from utils import DummyTestCase as TestCase  # @UnusedImport
 else:
@@ -207,14 +208,14 @@ class TestDynamics(TestCase):
         comparer = Comparer(
             nineml_model=iaf_alpha,
             state_variable='v__cell', dt=self.dt,
-            simulators=['neuron', 'nest'],
+            simulators=['nest'],  # ['neuron', 'nest'],
             properties=properties,
             initial_states=initial_states,
             initial_regime=initial_regime,
             event_weights={'input_spike': 'weight'},
-            neuron_ref='ResetRefrac',
+            # neuron_ref='ResetRefrac',
             nest_ref='iaf_psc_alpha',
-            input_train=input_freq('input_spike', 100 * pq.Hz, self.duration,
+            input_train=input_freq('input_spike', 500 * pq.Hz, self.duration,
                                    weight=10 * pq.nA),
             nest_translations=nest_tranlsations,
             neuron_translations=neuron_tranlsations,
@@ -287,8 +288,13 @@ if __name__ == '__main__':
                         help=("Which test to run, can be one of: 'alpha_syn', "
                               "'izhikevich', 'liaf' or 'hh' "
                               "(default: %(default)s )"))
+    parser.add_argument('--plot', action='store_true',
+                        help="Plot the traces on the same plot")
+    parser.add_argument('--print_comparisons', action='store_true',
+                        help=("Print the differences between the traces summed"
+                              " over every time point"))
     args = parser.parse_args()
     tester = TestDynamics()
     test = getattr(tester, 'test_' + args.test)
-    test(plot=True, print_comparisons=True)
+    test(plot=args.plot, print_comparisons=args.print_comparisons)
     print "done"
