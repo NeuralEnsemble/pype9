@@ -435,6 +435,7 @@ class Comparer(object):
 def input_step(port_name, amplitude, start_time, duration, dt):
     num_preceding = int(numpy.floor(start_time / dt))
     num_remaining = int(numpy.ceil((duration - start_time) / dt))
+    amplitude = float(pq.Quantity(amplitude, 'nA'))
     signal = neo.AnalogSignal(
         numpy.concatenate((numpy.zeros(num_preceding),
                            numpy.ones(num_remaining) * amplitude)),

@@ -31,7 +31,7 @@ class TestDynamics(TestCase):
         'v_reset': ('vreset', 1), 'v_threshold': ('vthresh', 1),
         'end_refractory': (None, 1), 'v': ('v', 1)}
 
-    def test_izhikevich(self, plot=False, print_comparisons=False):
+    def test_izhi(self, plot=False, print_comparisons=False):
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparer = Comparer(
@@ -247,6 +247,32 @@ class TestDynamics(TestCase):
             "LIaF with Alpha syn NEST 9ML simulation did not match reference "
             "built-in")
 
+    def test_izhi2007(self, plot=False, print_comparisons=False):
+        # Force compilation of code generation
+        # Perform comparison in subprocess
+        comparer = Comparer(
+            nineml_model=ninemlcatalog.lookup(
+                'neurons/basic/Izhikevich2007/Izhikevich2007'),
+            state_variable='V', dt=self.dt, simulators=['neuron', 'nest'],
+            properties=ninemlcatalog.lookup(
+                'neurons/basic/Izhikevich2007/Izhikevich2007Properties'),
+            initial_states={'U': -1.625 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
+            input_signal=input_step('iExt', 100 * pq.pA, 0, 100, self.dt),
+            initial_regime='subVbRegime',
+            neuron_build_args={'build_mode': 'force',
+                               'external_currents': ['iExt']},
+            nest_build_args={'build_mode': 'force'})
+        comparer.simulate(self.duration)
+        comparisons = comparer.compare()
+        if print_comparisons:
+            for (name1, name2), diff in comparisons.iteritems():
+                print '{} v {}: {}'.format(name1, name2, diff)
+        if plot:
+            comparer.plot()
+        self.assertLess(
+            comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
+            "Izhikevich 2007 NEURON 9ML simulation did not match NEST 9ML")
+
 #     def test_aeif(self, plot=False, print_comparisons=False):
 #         # Perform comparison in subprocess
 #         comparer = Comparer(
@@ -289,7 +315,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--test', type=str, default='alpha_syn',
                         help=("Which test to run, can be one of: 'alpha_syn', "
-                              "'izhikevich', 'liaf' or 'hh' "
+                              "'izhi', 'izhi2007', 'liaf' or 'hh' "
                               "(default: %(default)s )"))
     parser.add_argument('--plot', action='store_true',
                         help="Plot the traces on the same plot")
