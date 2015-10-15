@@ -3,7 +3,7 @@
    been required for expressions in 'previous_expressions' #}
     {% set required = component_class.required_for(expressions) %}
     {% set previous = component_class.required_for(previous_expressions) %}
-    {% set debug = False %}
+    {% set debug = True %}
 // State Variables
     {% for sv, units in unit_handler.assign_units_to_variables(required.state_variables) if sv not in previous.state_variables %}
 const double_t& {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];  // ({{units}})
@@ -12,7 +12,7 @@ const double_t& {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDE
     {% if debug %}
 std::cout << "-------- time " << t << " ---------" << std::endl;    
 std::cout << "9ML States:"
-        {%- for name in sorted(required.state_variable_names) if sv not in previous.state_variables -%}
+        {%- for name in sorted(required.state_variable_names) if name not in previous.state_variable_names -%}
         << " {{name}}=" << S_.y_[{{component_name}}::State_::{{name}}_INDEX]
         {%- endfor -%}
 << std::endl;
@@ -24,7 +24,7 @@ const double_t& {{param.name}} = P_.{{param.name}};  // ({{units}})
     {% endfor %}
     {% if debug %}
 std::cout << "9ML Parameters:"
-        {%- for name in sorted(required.parameter_names) if param not in previous.parameter_names -%}
+        {%- for name in sorted(required.parameter_names) if name not in previous.parameter_names -%}
         << " {{name}}=" << P_.{{name}}
         {%- endfor -%}
 << std::endl;
@@ -36,7 +36,7 @@ const double_t& {{port.name}} = B_.{{port.name}}_value;  // ({{units}})
     {% endfor %}
     {% if debug %}
 std::cout << "9ML Analog receive ports:"
-        {%- for name in sorted(required.port_names) if port not in previous.port_names -%}
+        {%- for name in sorted(required.port_names) if name not in previous.port_names -%}
         << " {{name}}=" << {{name}}
         {%- endfor -%}
 << std::endl;
@@ -48,7 +48,7 @@ const static double_t {{const.name}} = {{value}};  // ({{units}})
     {% endfor %}
     {% if debug %}
 std::cout << "9ML Constants:"
-        {%- for name in sorted(required.constants) if const not in previous.constant_names -%}
+        {%- for name in sorted(required.constants) if name not in previous.constant_names -%}
         << " {{name}}=" << {{name}}
         {%- endfor -%}
 << std::endl;
@@ -60,7 +60,7 @@ const double_t {{rv.name}} = {{scale}} * {{get_random_function(rv)}}  // ({{unit
     {% endfor %}
     {% if debug %}
 std::cout << "9ML Random variables:"
-        {%- for name in sorted(required.random_variable_names) if rv not in previous.random_variable_names -%}
+        {%- for name in sorted(required.random_variable_names) if name not in previous.random_variable_names -%}
         << " {{name}}=" << {{name}}
         {%- endfor -%}
 << std::endl;
@@ -84,7 +84,7 @@ const double_t {{alias.name}} = {{scaled_rhs.rhs_cstr}};  // ({{units}})
     {% endfor %}
     {% if debug %}
 std::cout << "9ML Aliases:"
-        {%- for name in sorted(required.expression_names) if alias not in previous.expression_names -%}
+        {%- for name in sorted(required.expression_names) if name not in previous.expression_names -%}
         << " {{name}}=" << {{name}}
         {%- endfor -%}
 << std::endl;

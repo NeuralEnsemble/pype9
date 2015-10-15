@@ -43,7 +43,7 @@ namespace nineml {
         ~{{component_name}}();
 	    {{component_name}}(const {{component_name}} &);
 	    {{component_name}}();
-	
+
 	    /**
 	     * Import sets of overloaded virtual functions.
 	     * This is necessary to ensure proper overload and overriding resolution.
@@ -51,25 +51,25 @@ namespace nineml {
 	     */
 	    using nest::Node::handle;
 	    using nest::Node::handles_test_event;
-	
+
 	    nest::port send_test_event(nest::Node&, nest::port, nest::synindex, bool);
-	
+
 	    void handle(nest::SpikeEvent &);
 	    void handle(nest::CurrentEvent &);
 	    void handle(nest::DataLoggingRequest &);
-	
+
 	    nest::port handles_test_event(nest::SpikeEvent &, nest::port);
 	    nest::port handles_test_event(nest::CurrentEvent &, nest::port);
 	    nest::port handles_test_event(nest::DataLoggingRequest &, nest::port);
-	
+
 	    void get_status(DictionaryDatum &) const;
 	    void set_status(const DictionaryDatum &);
-	
+
 	    void init_node_(const nest::Node& proto);
 	    void init_state_(const nest::Node& proto);
 	    void init_buffers_();
 	    void calibrate();
-	
+
 	    void update(nest::Time const &, const nest::long_t, const nest::long_t);
 
     // Set dynamics methods (the ones that actually model the dynamics) as friends
@@ -93,7 +93,6 @@ namespace nineml {
 	        SUP_REGIME_
 	    };
 
-
 {% if component_class.event_receive_ports %}
 	    /* Event port ids
 	     * @note Start with 1 so we can forbid port 0 to avoid accidental
@@ -110,7 +109,7 @@ namespace nineml {
     {% endfor %}
 	        SUP_EVENT_PORT_
 	    };
-	
+
 	    // On event ids
 	    enum OnEvents {
     {% for regime in component_class.regimes %}
@@ -136,7 +135,6 @@ namespace nineml {
             SUP_ANALOG_PORT_
         };
 
-
 {% endif %}
         // Synaptic event function definitions
 {% for regime in component_class.regimes %}
@@ -148,7 +146,7 @@ namespace nineml {
 	    // The next two classes need to be friends to access the State_ class/member
 	    friend class nest::RecordablesMap<{{component_name}}>;
 	    friend class nest::UniversalDataLogger<{{component_name}}>;
-	
+
         struct Parameters_ {
 {% for param in component_class.parameters %}
             double {{param.name}};
@@ -159,7 +157,7 @@ namespace nineml {
 	    }; // end struct Parameters_
 
 	    struct State_ {
-	
+
             enum StateVecElems {
 {% for sv in component_class.state_variables %}
     {% if loop.first %}
@@ -193,7 +191,7 @@ namespace nineml {
 	        // Timesteps
 	        double_t step_;       //!< step size in ms
 	        double   IntegrationStep_;//!< current integration time step, updated by solver
-	
+
 	        // Event receive port buffers
 {% for port in component_class.event_receive_ports %}
             nest::RingBuffer {{port.name}}_event_port;
@@ -221,18 +219,17 @@ namespace nineml {
 
 	    }; // end struct Buffers_
 
-
 		template <State_::StateVecElems elem>
 		double_t get_y_elem_() const { return S_.y_[elem]; }
-	
+
 		Parameters_ P_;
 		State_      S_;
 		Variables_  V_;
 		Buffers_    B_;
-	
+
 	    //! Mapping of recordables names to access functions	
 		static nest::RecordablesMap<{{component_name}}> recordablesMap_;
-	
+
 	}; // end class {{component_name}}
 
     inline nest::port {{component_name}}::send_test_event(nest::Node& target, nest::port receptor_type, nest::synindex, bool) {
@@ -240,7 +237,7 @@ namespace nineml {
 		e.set_sender(*this);
 		return target.handles_test_event(e, receptor_type);
     }
-	
+
     inline nest::port {{component_name}}::handles_test_event(nest::SpikeEvent&, nest::port receptor_type) {
 	    if (receptor_type < 0 || receptor_type >= SUP_EVENT_PORT_)
             throw nest::UnknownReceptorType(receptor_type, this->get_name());
@@ -248,8 +245,7 @@ namespace nineml {
             throw nest::IncompatibleReceptorType(receptor_type, this->get_name(), "SpikeEvent");
 		return receptor_type;
     }
-		
-		
+
     inline nest::port {{component_name}}::handles_test_event(nest::CurrentEvent&, nest::port receptor_type) {
 		if (receptor_type < 0 || receptor_type >= SUP_ANALOG_PORT_)
 		    throw nest::UnknownReceptorType(receptor_type, this->get_name());
@@ -257,15 +253,13 @@ namespace nineml {
 		    throw nest::IncompatibleReceptorType(receptor_type, this->get_name(), "SpikeEvent");
 	    return receptor_type;
 	}
-		
-		
+
 	inline nest::port {{component_name}}::handles_test_event(nest::DataLoggingRequest& dlr, nest::port receptor_type) {
 	    if (receptor_type != 0)
             throw nest::UnknownReceptorType(receptor_type, this->get_name());
 		return B_.logger_.connect_logging_device( dlr, recordablesMap_ );
     }
-		
-		
+
     inline void {{component_name}}::get_status(DictionaryDatum &d) const {
 		P_.get(d);
 		S_.get(d);
@@ -282,7 +276,6 @@ namespace nineml {
 {% endfor %}
         (*d)[nest::names::receptor_types] = receptor_dict_;
     }
-
 
     inline void {{component_name}}::set_status(const DictionaryDatum &d) {
 	    Parameters_ ptmp = P_;  // temporary copy in case of errors
