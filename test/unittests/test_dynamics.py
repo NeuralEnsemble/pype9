@@ -63,7 +63,7 @@ class TestDynamics(TestCase):
             comparisons[('9ML-neuron', 'Ref-neuron')], 0.0015 * pq.mV,
             "Izhikevich NEURON 9ML simulation did not match reference PyNN")
         self.assertLess(
-            comparisons[('9ML-nest', 'Ref-nest')], 0.00015 * pq.mV,
+            comparisons[('9ML-nest', 'Ref-nest')], 0.02 * pq.mV,
             "Izhikevich NEST 9ML simulation did not match reference built-in")
 
     def test_hh(self, plot=False, print_comparisons=False):
@@ -208,12 +208,12 @@ class TestDynamics(TestCase):
         comparer = Comparer(
             nineml_model=iaf_alpha,
             state_variable='v__cell', dt=self.dt,
-            simulators=['nest'],  # ['neuron', 'nest'],
+            simulators=['neuron', 'nest'],
             properties=properties,
             initial_states=initial_states,
             initial_regime=initial_regime,
             event_weights={'input_spike': 'weight'},
-            # neuron_ref='ResetRefrac',
+            neuron_ref='ResetRefrac',
             nest_ref='iaf_psc_alpha',
             input_train=input_freq('input_spike', 500 * pq.Hz, self.duration,
                                    weight=10 * pq.nA),
@@ -235,14 +235,17 @@ class TestDynamics(TestCase):
         if plot:
             comparer.plot()
         self.assertLess(
-            comparisons[('9ML-nest', '9ML-neuron')], 0.0025 * pq.mV,
-            "LIaF NEST 9ML simulation did not match NEURON 9ML simulation")
+            comparisons[('9ML-nest', '9ML-neuron')], 0.015 * pq.mV,
+            "LIaF with Alpha syn NEST 9ML simulation did not match NEURON 9ML "
+            "simulation")
         self.assertLess(
-            comparisons[('9ML-neuron', 'Ref-neuron')], 0.005 * pq.mV,
-            "LIaF NEURON 9ML simulation did not match reference PyNN")
+            comparisons[('9ML-neuron', 'Ref-neuron')], 0.03 * pq.mV,
+            "LIaF with Alpha syn NEURON 9ML simulation did not match reference"
+            " PyNN")
         self.assertLess(
-            comparisons[('9ML-nest', 'Ref-nest')], 0.005 * pq.mV,
-            "LIaF NEST 9ML simulation did not match reference built-in")
+            comparisons[('9ML-nest', 'Ref-nest')], 0.04 * pq.mV,
+            "LIaF with Alpha syn NEST 9ML simulation did not match reference "
+            "built-in")
 
 #     def test_aeif(self, plot=False, print_comparisons=False):
 #         # Perform comparison in subprocess
