@@ -234,10 +234,13 @@ class TestDynamics(TestCase):
         if plot:
             comparer.plot()
         self.assertLess(
-            comparisons[('9ML-neuron', 'Ref-neuron')], 0.55 * pq.mV,
+            comparisons[('9ML-nest', '9ML-neuron')], 0.0025 * pq.mV,
+            "LIaF NEST 9ML simulation did not match NEURON 9ML simulation")
+        self.assertLess(
+            comparisons[('9ML-neuron', 'Ref-neuron')], 0.005 * pq.mV,
             "LIaF NEURON 9ML simulation did not match reference PyNN")
         self.assertLess(
-            comparisons[('9ML-nest', 'Ref-nest')], 0.001 * pq.mV,
+            comparisons[('9ML-nest', 'Ref-nest')], 0.005 * pq.mV,
             "LIaF NEST 9ML simulation did not match reference built-in")
 
 #     def test_aeif(self, plot=False, print_comparisons=False):
@@ -278,6 +281,14 @@ class TestDynamics(TestCase):
 
 
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--test', type=str, default='alpha_syn',
+                        help=("Which test to run, can be one of: 'alpha_syn', "
+                              "'izhikevich', 'liaf' or 'hh' "
+                              "(default: %(default)s )"))
+    args = parser.parse_args()
     tester = TestDynamics()
-    tester.test_alpha_syn(plot=True, print_comparisons=True)
+    test = getattr(tester, 'test_' + args.test)
+    test(plot=True, print_comparisons=True)
     print "done"
