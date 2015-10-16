@@ -36,10 +36,10 @@ class TestDynamics(TestCase):
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.lookup(
-                'neurons/basic/Izhikevich2003/Izhikevich2003'),
+                'neurons/basic/Izhikevich/Izhikevich2003'),
             state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
             properties=ninemlcatalog.lookup(
-                'neurons/basic/Izhikevich2003/Izhikevich2003Properties'),
+                'neurons/basic/Izhikevich/Izhikevich2003Properties'),
             initial_states={'u': -14.0 * pq.mV / pq.ms, 'v': -65.0 * pq.mV},
             neuron_ref='Izhikevich', nest_ref='izhikevich',
             input_signal=input_step('iExt', 0.02, 50, 100, self.dt),
@@ -252,10 +252,10 @@ class TestDynamics(TestCase):
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.lookup(
-                'neurons/basic/Izhikevich2007/Izhikevich2007'),
+                'neurons/basic/Izhikevich/Izhikevich2007'),
             state_variable='V', dt=self.dt, simulators=['neuron', 'nest'],
             properties=ninemlcatalog.lookup(
-                'neurons/basic/Izhikevich2007/Izhikevich2007Properties'),
+                'neurons/basic/Izhikevich/Izhikevich2007Properties'),
             initial_states={'U': -1.625 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
             input_signal=input_step('iExt', 100 * pq.pA, 0, 100, self.dt),
             initial_regime='subVbRegime',
