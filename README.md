@@ -5,7 +5,7 @@ PyPe9
 written in Python to read and simulate networks of detailed
 neuronal models described in NineML in both Neuron and NEST simulators.
 
-CAUTION!: PyPe9 is currently still under development and has not been officially released. Use at your own risk!
+CAUTION: PyPe9 is currently still under development and has not been officially released.
 
 PyPe9 implements syntax that is planned for NineML v2. The closest matching specification can be found under the `refactor_v2` branch at https://github.com/tclose/nineml/, although it is currently lagging the lib9ML implementation as of 15/10/2015.
 
