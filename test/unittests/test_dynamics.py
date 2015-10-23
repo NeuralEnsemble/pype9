@@ -35,11 +35,11 @@ class TestDynamics(TestCase):
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparer = Comparer(
-            nineml_model=ninemlcatalog.lookup(
-                'neurons/basic/Izhikevich/Izhikevich2003'),
+            nineml_model=ninemlcatalog.load(
+                'neurons/basic/Izhikevich', 'Izhikevich2003'),
             state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
-            properties=ninemlcatalog.lookup(
-                'neurons/basic/Izhikevich/Izhikevich2003Properties'),
+            properties=ninemlcatalog.load(
+                'neurons/basic/Izhikevich', 'Izhikevich2003Properties'),
             initial_states={'u': -14.0 * pq.mV / pq.ms, 'v': -65.0 * pq.mV},
             neuron_ref='Izhikevich', nest_ref='izhikevich',
             input_signal=input_step('iExt', 0.02, 50, 100, self.dt),
@@ -69,12 +69,12 @@ class TestDynamics(TestCase):
     def test_hh(self, plot=False, print_comparisons=False):
         # Perform comparison in subprocess
         comparer = Comparer(
-            nineml_model=ninemlcatalog.lookup(
-                'neurons/basic/HodgkinHuxley/HodgkinHuxley'),
+            nineml_model=ninemlcatalog.load(
+                'neurons/basic/HodgkinHuxley', 'HodgkinHuxley'),
             state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
             initial_states={'v': -65.0 * pq.mV, 'm': 0.0, 'h': 1.0, 'n': 0.0},
-            properties=ninemlcatalog.lookup(
-                'neurons/basic/HodgkinHuxley/HodgkinHuxleyProperties'),
+            properties=ninemlcatalog.load(
+                'neurons/basic/HodgkinHuxley', 'HodgkinHuxleyProperties'),
             neuron_ref='hh_traub', nest_ref='hh_cond_exp_traub',
             input_signal=input_step('iExt', 0.5, 50, 100, self.dt),
             nest_translations={
@@ -130,11 +130,12 @@ class TestDynamics(TestCase):
     def test_liaf(self, plot=False, print_comparisons=False):
         # Perform comparison in subprocess
         comparer = Comparer(
-            nineml_model=ninemlcatalog.lookup(
-                'neurons/basic/LeakyIntegrateAndFire/LeakyIntegrateAndFire'),
+            nineml_model=ninemlcatalog.load(
+                'neurons/basic/LeakyIntegrateAndFire',
+                'LeakyIntegrateAndFire'),
             state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
-            properties=ninemlcatalog.lookup(
-                'neurons/basic/LeakyIntegrateAndFire/'
+            properties=ninemlcatalog.load(
+                'neurons/basic/LeakyIntegrateAndFire',
                 'LeakyIntegrateAndFireProperties'),
             initial_states=self.liaf_initial_states,
             initial_regime='subthreshold',
@@ -164,10 +165,10 @@ class TestDynamics(TestCase):
 
     def test_alpha_syn(self, plot=False, print_comparisons=False):
         # Perform comparison in subprocess
-        iaf = ninemlcatalog.lookup(
-            'neurons/basic/LeakyIntegrateAndFire/LeakyIntegrateAndFire')
-        alpha_psr = ninemlcatalog.lookup(
-            'postsynapticresponses/Alpha/Alpha')
+        iaf = ninemlcatalog.load(
+            'neurons/basic/LeakyIntegrateAndFire', 'LeakyIntegrateAndFire')
+        alpha_psr = ninemlcatalog.load(
+            'postsynapticresponses/Alpha', 'Alpha')
         iaf_alpha = MultiDynamics(
             name='IafAlpha',
             sub_components={'cell': iaf, 'psr': alpha_psr},
@@ -176,10 +177,10 @@ class TestDynamics(TestCase):
                             ('input_spike', 'psr', 'spike')])
         initial_states = {'a__psr': 0.0 * pq.nA, 'b__psr': 0.0 * pq.nA}
         initial_regime = 'subthreshold___sole___regime'
-        liaf_properties = ninemlcatalog.lookup(
+        liaf_properties = ninemlcatalog.load(
             'neurons/basic/LeakyIntegrateAndFire/'
             'LeakyIntegrateAndFireProperties')
-        alpha_properties = ninemlcatalog.lookup(
+        alpha_properties = ninemlcatalog.load(
             'postsynapticresponses/Alpha/AlphaProperties')
         nest_tranlsations = {'tau__psr': ('tau_syn_ex', 1),
                              'a__psr': (None, 1), 'b__psr': (None, 1),
@@ -251,11 +252,11 @@ class TestDynamics(TestCase):
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparer = Comparer(
-            nineml_model=ninemlcatalog.lookup(
-                'neurons/basic/Izhikevich/Izhikevich2007'),
+            nineml_model=ninemlcatalog.load(
+                'neurons/basic/Izhikevich', 'Izhikevich2007'),
             state_variable='V', dt=self.dt, simulators=['neuron', 'nest'],
-            properties=ninemlcatalog.lookup(
-                'neurons/basic/Izhikevich/Izhikevich2007Properties'),
+            properties=ninemlcatalog.load(
+                'neurons/basic/Izhikevich', 'Izhikevich2007Properties'),
             initial_states={'U': -1.625 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
             input_signal=input_step('iExt', 100 * pq.pA, 0, 100, self.dt),
             initial_regime='subVbRegime',
@@ -276,13 +277,13 @@ class TestDynamics(TestCase):
 #     def test_aeif(self, plot=False, print_comparisons=False):
 #         # Perform comparison in subprocess
 #         comparer = Comparer(
-#             nineml_model=ninemlcatalog.lookup(
+#             nineml_model=ninemlcatalog.load(
 #                 'neurons/basic/AdExpIaF/AdExpIaF'),
 #             state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
 #             neuron_ref='AdExpIF', nest_ref='aeif_cond_alpha',
 #             input_signal=input_step('iExt', 1, 50, 100, self.dt),
 #             initial_states={'w': 0.0 * pq.nA, 'v': -65.0 * pq.mV},
-#             properties=ninemlcatalog.lookup(
+#             properties=ninemlcatalog.load(
 #                 'neurons/basic/AdExpIaF/AdExpIaFProperties'),
 #             nest_translations={
 #                 'w': ('w', 1), 'Cm': ('C_m', 1), 'GL': ('g_L', 1000),
