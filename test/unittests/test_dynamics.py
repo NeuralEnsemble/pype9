@@ -40,10 +40,10 @@ class TestDynamics(TestCase):
             state_variable='V', dt=self.dt, simulators=['neuron', 'nest'],
             properties=ninemlcatalog.load(
                 'neuron/Izhikevich', 'SampleIzhikevich'),
-            initial_states={'V': -14.0 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
+            initial_states={'U': -14.0 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
             neuron_ref='Izhikevich', nest_ref='izhikevich',
             input_signal=input_step('Isyn', 0.02, 50, 100, self.dt),
-            nest_translations={'V': ('V_m', 1), 'V': ('U_m', 1),
+            nest_translations={'V': ('V_m', 1), 'U': ('U_m', 1),
                                'weight': (None, 1), 'C_m': (None, 1),
                                'theta': ('V_th', 1),
                                'alpha': (None, 1), 'beta': (None, 1),
