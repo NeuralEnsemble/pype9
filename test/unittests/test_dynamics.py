@@ -254,7 +254,7 @@ class TestDynamics(TestCase):
             "LIaF with Alpha syn NEST 9ML simulation did not match reference "
             "built-in")
 
-    def test_izhi2007(self, plot=False, print_comparisons=False):
+    def test_izhiFS(self, plot=False, print_comparisons=False):
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparer = Comparer(
@@ -268,7 +268,8 @@ class TestDynamics(TestCase):
             initial_regime='subVb',
             neuron_build_args={'build_mode': 'force',
                                'external_currents': ['iSyn']},
-            nest_build_args={'build_mode': 'force'})
+            nest_build_args={'build_mode': 'force'},
+            auxiliary_states=['U'])
         comparer.simulate(self.duration)
         comparisons = comparer.compare()
         if print_comparisons:
@@ -322,7 +323,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--test', type=str, default='alpha_syn',
                         help=("Which test to run, can be one of: 'alpha_syn', "
-                              "'izhi', 'izhi2007', 'liaf' or 'hh' "
+                              "'izhi', 'izhiFS', 'liaf' or 'hh' "
                               "(default: %(default)s )"))
     parser.add_argument('--plot', action='store_true',
                         help="Plot the traces on the same plot")

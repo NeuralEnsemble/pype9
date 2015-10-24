@@ -61,7 +61,7 @@ class Comparer(object):
                  nest_translations=None, neuron_build_args=None,
                  nest_build_args=None, min_delay=0.02, max_delay=10.0,
                  extra_mechanisms=None, extra_point_process=None,
-                 build_name=None):
+                 build_name=None, auxiliary_states=None):
         """
         nineml_model   -- 9ML model to compare
         nineml_sims    -- tuple of simulator names to simulate the 9ML model in
@@ -105,6 +105,8 @@ class Comparer(object):
         self.event_weights = event_weights if event_weights is not None else {}
         self.build_name = (build_name
                            if build_name is not None else nineml_model.name)
+        self.auxiliary_states = (auxiliary_states
+                                 if auxiliary_states is not None else [])
         self.input_signal = input_signal
         self.input_train = input_train
         self.build_args = {
@@ -203,6 +205,8 @@ class Comparer(object):
         if self.input_train is not None:
             self.nml_cells[simulator].play(*self.input_train)
         self.nml_cells[simulator].record(self.state_variable)
+        for state_var in self.auxiliary_states:
+            self.nml_cells[simulator].record(state_var)
         self.nml_cells[simulator].update_state(self.initial_states)
 
     def _create_NEURON(self, neuron_name):
@@ -390,6 +394,9 @@ class Comparer(object):
     def _plot_9ML(self, sim_name):  # @UnusedVariable
         nml_v = self.nml_cells[sim_name].recording(self.state_variable)
         plt.plot(nml_v.times, nml_v)
+        for state_var in self.auxiliary_states:
+            s = self.nml_cells[sim_name].recording(state_var)
+            plt.plot(s.times, s)
 
     def _diff_NEURON(self):  # @UnusedVariable
         _, pnn_v = self._get_NEURON_signal()
