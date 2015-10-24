@@ -68,7 +68,7 @@ class CodeGenerator(BaseCodeGenerator):
         self.specials_dir = self._get_specials_dir()
 
     def generate_source_files(self, component_class, default_properties,
-                              initial_state, src_dir, **kwargs):
+                              initial_state, src_dir, name=None, **kwargs):
         """
             *KWArgs*
                 `membrane_voltage` -- Specifies the state that represents
@@ -86,6 +86,8 @@ class CodeGenerator(BaseCodeGenerator):
                 `is_subcomponent`  -- Whether to use the 'SUFFIX' tag or not.
                 `ode_solver`       -- specifies the ODE solver to use
         """
+        if name is None:
+            name = component_class.name
         # Check whether it is a point process or a ion channel
         if isinstance(component_class.element(
             component_class.annotations[PYPE9_NS]['MembraneVoltage'],
@@ -93,37 +95,37 @@ class CodeGenerator(BaseCodeGenerator):
                 StateVariable):
             self.generate_point_process(
                 component_class, default_properties, initial_state, src_dir,
-                **kwargs)
+                name, **kwargs)
         else:
             self.generate_ion_channel(component_class, default_properties,
-                                      initial_state, src_dir, **kwargs)
+                                      initial_state, src_dir, name, **kwargs)
 
     def generate_ion_channel(self, component_class, default_properties,
-                             initial_state, src_dir, **kwargs):
+                             initial_state, src_dir, name, **kwargs):
         # Render mod file
         self.generate_mod_file('main.tmpl', component_class,
                                default_properties, initial_state, src_dir,
-                               kwargs)
+                               name, kwargs)
 
     def generate_kinetics(self, component_class, default_properties,
-                          initial_state, src_dir, **kwargs):
+                          initial_state, src_dir, name, **kwargs):
         # Render mod file
         self.generate_mod_file('kinetics.tmpl', component_class,
                                default_properties, initial_state, src_dir,
-                               kwargs)
+                               name, kwargs)
 
     def generate_point_process(self, component_class, default_properties,
-                               initial_state, src_dir, **kwargs):
+                               initial_state, src_dir, name, **kwargs):
         add_tmpl_args = {'is_subcomponent': False}
         template_args = copy(kwargs)
         template_args.update(add_tmpl_args)
         # Render mod file
         self.generate_mod_file('main.tmpl', component_class,
                                default_properties, initial_state, src_dir,
-                               template_args)
+                               name, template_args)
 
     def generate_mod_file(self, template, component_class, default_properties,
-                          initial_state, src_dir, template_args):
+                          initial_state, src_dir, name, template_args):
         # Get the initial regime and check that it refers to a regime in the
         # component class
         initial_regime = template_args.get('initial_regime', None)
@@ -134,7 +136,7 @@ class CodeGenerator(BaseCodeGenerator):
         self._check_event_weights(component_class, event_weights)
         tmpl_args = {
             'code_gen': self,
-            'component_name': component_class.name,
+            'component_name': name,
             'component_class': component_class,
             'prototype': default_properties,
             'initial_state': initial_state,
@@ -260,8 +262,8 @@ class CodeGenerator(BaseCodeGenerator):
                 else:
                     cm = Parameter("cm___pype9", dimension=un.capacitance)
                     trfrm.add(cm)
-                    qty = kwargs.get('default_capacitance', (1.0, un.nF))
-                    default_properties.append(Property('cm___pype9', *qty))
+                    qty = kwargs.get('default_capacitance', 1.0 * un.nF)
+                    default_properties.add(Property('cm___pype9', qty))
             cm.annotations[PYPE9_NS][TRANSFORM_SRC] = None
             trfrm.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = cm.name
             # -----------------------------------------------------------------

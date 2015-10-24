@@ -58,7 +58,7 @@ class BaseCodeGenerator(object):
     DEFAULT_UNITS = {}
 
     @abstractmethod
-    def generate_source_files(self, dynamics, initial_state, src_dir,
+    def generate_source_files(self, dynamics, initial_state, src_dir, name,
                               **kwargs):
         """
         Generates the source files for the relevant simulator
@@ -76,7 +76,7 @@ class BaseCodeGenerator(object):
     def compile_source_files(self, compile_dir, name, verbose):
         pass
 
-    def generate(self, component_class, default_properties=None,
+    def generate(self, component_class, name=None, default_properties=None,
                  initial_state=None, install_dir=None, build_dir=None,
                  build_mode='lazy', verbose=True, **kwargs):
         """
@@ -101,14 +101,14 @@ class BaseCodeGenerator(object):
         # Save original working directory to reinstate it afterwards (just to
         # be polite)
         orig_dir = os.getcwd()
-        name = component_class.name
+        if name is None:
+            name = component_class.name
         # Set build dir if not provided
         if build_dir is None:
             if component_class.url is None:
                 raise Pype9BuildError(
                     "Build directory must be explicitly provided ('build_dir')"
-                    " when using generated 9ml components '{}'"
-                    .format(name))
+                    " when using generated 9ml components '{}'".format(name))
             build_dir = self.get_build_dir(component_class.url, name)
         # Calculate src directory path within build directory
         src_dir = os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
@@ -171,6 +171,7 @@ class BaseCodeGenerator(object):
         if generate_source:
             self.clean_src_dir(src_dir, name)
             self.generate_source_files(
+                name=name,
                 component_class=component_class,
                 default_properties=default_properties,
                 initial_state=initial_state,

@@ -46,8 +46,9 @@ class CodeGenerator(BaseCodeGenerator):
         self._compiler = compiler[:-1]  # strip trailing \n
 
     def generate_source_files(self, component_class, default_properties,
-                              initial_state, src_dir, **kwargs):
-        name = component_class.name
+                              initial_state, src_dir, name=None, **kwargs):
+        if name is None:
+            name = component_class.name
         # Get the initial regime and check that it refers to a regime in the
         # component class
         initial_regime = kwargs.get('initial_regime', None)
@@ -57,7 +58,7 @@ class CodeGenerator(BaseCodeGenerator):
         event_weights = kwargs.get('event_weights', {})
         self._check_event_weights(component_class, event_weights)
         tmpl_args = {
-            'component_name': component_class.name,
+            'component_name': name,
             'component_class': component_class,
             'prototype': default_properties,
             'initial_state': initial_state,

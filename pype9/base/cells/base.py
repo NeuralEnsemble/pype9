@@ -47,12 +47,14 @@ class CellMetaClass(type):
                 "Component class of default properties object ({}) does not "
                 "match provided class ({})".format(
                     default_properties.component_class, component_class))
-        if name is None:
-            name = saved_name
         # Extract out build directives
         build_mode = kwargs.pop('build_mode', 'lazy')
         verbose = kwargs.pop('verbose', False)
-        name = component_class.name
+        if name is None:
+            if saved_name is not None:
+                name = saved_name
+            else:
+                name = component_class.name
         url = component_class.url
         try:
             Cell, build_options = cls._built_types[(name, url)]
@@ -83,8 +85,10 @@ class CellMetaClass(type):
             else:
                 mod_time = time.ctime()
             instl_dir = code_gen.generate(
-                build_component_class, build_properties, build_initial_states,
-                build_mode=build_mode, verbose=verbose,
+                component_class=build_component_class,
+                default_properties=build_properties,
+                initial_state=build_initial_states,
+                build_mode=build_mode, verbose=verbose, name=name,
                 build_dir=build_dir, mod_time=mod_time, **kwargs)
             # Load newly build model
             cls.load_libraries(name, instl_dir)

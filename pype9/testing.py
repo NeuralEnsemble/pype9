@@ -60,7 +60,8 @@ class Comparer(object):
                  input_signal=None, input_train=None, neuron_translations=None,
                  nest_translations=None, neuron_build_args=None,
                  nest_build_args=None, min_delay=0.02, max_delay=10.0,
-                 extra_mechanisms=None, extra_point_process=None):
+                 extra_mechanisms=None, extra_point_process=None,
+                 build_name=None):
         """
         nineml_model   -- 9ML model to compare
         nineml_sims    -- tuple of simulator names to simulate the 9ML model in
@@ -102,6 +103,8 @@ class Comparer(object):
                                if initial_states is not None else {})
         self.initial_regime = initial_regime
         self.event_weights = event_weights if event_weights is not None else {}
+        self.build_name = (build_name
+                           if build_name is not None else nineml_model.name)
         self.input_signal = input_signal
         self.input_train = input_train
         self.build_args = {
@@ -191,7 +194,7 @@ class Comparer(object):
         else:
             assert False
         self.nml_cells[simulator] = CellMetaClass(
-            model, default_properties=properties,
+            model, name=self.build_name, default_properties=properties,
             initial_regime=self.initial_regime,
             event_weights=self.event_weights,
             **self.build_args[simulator])()
