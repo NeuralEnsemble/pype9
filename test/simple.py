@@ -9,15 +9,15 @@ from matplotlib import pyplot as plt
 import quantities as pq
 
 
-liaf = ninemlcatalog.lookup(
-    '/neurons/basic/LeakyIntegrateAndFire/LeakyIntegrateAndFire')
-liaf_props = ninemlcatalog.lookup(
-    '/neurons/basic/LeakyIntegrateAndFire/LeakyIntegrateAndFireProperties')
+liaf = ninemlcatalog.load(
+    '/neurons/LeakyIntegrateAndFire/LeakyIntegrateAndFire')
+liaf_props = ninemlcatalog.load(
+    '/neurons/LeakyIntegrateAndFire/SampleLeakyIntegrateAndFire')
 
-alpha = ninemlcatalog.lookup(
+alpha = ninemlcatalog.load(
     'postsynapticresponses/Alpha/Alpha')
-alpha_props = ninemlcatalog.lookup(
-    'postsynapticresponses/Alpha/AlphaProperties')
+alpha_props = ninemlcatalog.load(
+    'postsynapticresponses/Alpha/SampleAlpha')
 
 dyn_props = MultiDynamicsProperties(
     'LiafAlpha',

@@ -16,15 +16,15 @@ from nineml.abstraction.dynamics import (
     TimeDerivative, StateAssignment, Dynamics)
 from nineml.abstraction.dynamics import (Regime, StateVariable, OnEvent,
                                                OutputEvent, OnCondition)
-from nineml.abstraction.expressions import Alias
+from nineml.abstraction.expressions import Alias, Constant
 from nineml.abstraction.ports import (
     AnalogReceivePort, AnalogReducePort, AnalogSendPort, EventReceivePort)
 import nineml.units as un
+from nineml.document import Document
 from nineml.user import Definition
 from nineml.user import DynamicsProperties
-from nineml.abstraction.expressions import Constant, Parser
+from nineml.abstraction.expressions.parser import Parser
 from pype9.exceptions import Pype9ImportError
-from pype9.utils import pq29_quantity
 
 # from nineml.user.dynamics import IonDynamics
 from collections import defaultdict
@@ -581,7 +581,7 @@ class NMODLImporter(object):
             if name not in self.all_rhs_symbols:
                 self.parameters.pop(name)
                 value, unit_str = self.properties.pop(name)
-                units = pq29_quantity(pq.Quantity(1.0, unit_str)).units
+                units = un.Quantity.parse(pq.Quantity(1.0, unit_str)).units
                 self.init_statements[name] = Constant(name, value, units)
 
     def _flatten_kinetics(self):
@@ -936,7 +936,7 @@ class NMODLImporter(object):
                 name = match.group(1)
                 dimension_name = match.group(2)
                 if dimension_name is not None:
-                    dim = pq29_quantity(
+                    dim = un.Quantity.parse(
                         pq.Quantity(1.0, dimension_name)).units.dimension
                 else:
                     dim = un.dimensionless

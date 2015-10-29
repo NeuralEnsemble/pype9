@@ -79,7 +79,7 @@ class TestUnitAssignment(TestCase):
             state_variables=[StateVariable('SV1', dimension=un.dimensionless),
                              StateVariable('SV2', dimension=un.voltage),
                              StateVariable('SV3',
-                                           dimension=un.voltage_per_time)],
+                                           dimension=un.voltage / un.time)],
             analog_ports=[AnalogReceivePort('ARP1', dimension=un.resistance),
                           AnalogReceivePort('ARP2', dimension=un.charge),
                           AnalogReceivePort('ARP3',
