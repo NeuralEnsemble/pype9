@@ -14,7 +14,7 @@ from nineml import (
     RandomDistributionProperties, Definition)
 from nineml.user import Property
 from copy import copy
-from nineml.exceptions import NineMLMissingElementError
+from nineml.exceptions import NineMLNameError
 
 
 def remove_ignore_missing(path):
@@ -64,7 +64,7 @@ def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,
         if saved_name is not None:
             try:
                 prototype = document[saved_name]
-            except NineMLMissingElementError:
+            except NineMLNameError:
                 raise Pype9RuntimeError(
                     "Could not find a component named '{}' at the url '{}' "
                     "(found '{}')."
