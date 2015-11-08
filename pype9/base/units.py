@@ -267,9 +267,17 @@ class UnitHandler(DynamicsDimensionResolver):
         try:
             exponent, _ = cls.dimension_to_units_compound(qty.units.dimension)
             scaled = 10 ** (qty.units.power - exponent) * qty.value
+            # FIMXE: Should be updated to following but not testing at the
+            #        moment so scared it will break something
+            # scaled = qty.value * cls.scalar(qty.units)
         except AttributeError:  # Float or int value quantity
             scaled = qty
         return scaled
+
+    @classmethod
+    def scalar(cls, units):
+        exponent, _ = cls.dimension_to_units_compound(units.dimension)
+        return 10 ** (units.power - exponent)
 
     @classmethod
     def assign_units(cls, value, dimension):

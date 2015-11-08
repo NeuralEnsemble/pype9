@@ -6,81 +6,45 @@
 """
 from __future__ import absolute_import
 import numpy
-import pyNN.parameters
-from pype9.pynn_interface.structure import Structurepype9.basefrom . import random
+from itertools import chain
+from nineml.user import DynamicsArray, Initial
 from pyNN.random import RandomDistribution
-from nineml.abstraction.dynamics import Dynamics
-import nineml.extensions.biophysical_cells
-import nineml.user
+import pyNN.parameters
+from pype9.exceptions import Pype9RuntimeError
+from .values import nineml_qty_to_pyNN_value
 
 _pyNN_standard_class_translations = {}
 
 
 class Population(object):
 
-    def __init__(self, nineml_model, rng, build_mode='lazy',
-                 silent_build=False, solver_name='cvode'):
-        celltype_model = nineml_model.prototype.definition.component_class
-        celltype_name = (nineml_model.prototype.name
-                         if nineml_model.prototype.name else
-                         celltype_model.name)
+    def __init__(self, dynamics_array, rng, build_mode='lazy', **kwargs):  # @UnusedVariable @IgnorePep8
+        if not isinstance(dynamics_array, DynamicsArray):
+            raise Pype9RuntimeError(
+                "Expected a dynamics array, found {}".format(dynamics_array))
         # Store the definition url inside the cell type for use when checking
         # reloading of cell model
-        celltype_model.url = nineml_model.prototype.definition.url
-        if isinstance(celltype_model, Dynamics):
-            celltype = self._pyNN_standard_celltypes[celltype_model.name]
-        elif isinstance(celltype_model,
-                        nineml.extensions.biophysical_cells.Dynamics):
-            celltype = self._CellMetaClass(
-                celltype_model, celltype_name, build_mode=build_mode,
-                silent=silent_build, solver_name=solver_name)
-        else:
-            raise Exception("'{}' component_class type is not supported yet"
-                            .format(type(celltype_model)))
+        dynamics = dynamics_array.dynamics
         if build_mode not in ('build_only', 'compile_only'):
             # Set default for populations without morphologies
-            self.structures = {}
-            for struct_model in nineml_model.structures:
-                if struct_model.name:
-                    struct_name = struct_model.name
-                else:
-                    struct_name = 'structure_' + len(self.structures)
-                self.structures[struct_name] = Structure(struct_name,
-                                                         nineml_model.size,
-                                                         struct_model, rng)
             cellparams = {}
             initial_values = {}
-            for param_definition in nineml_model.prototype.definition.\
-                    component_class.parameters:
-                p = nineml_model.prototype.parameters[param_definition.name]
-                if isinstance(p.value, float):
-                    param = p.value
-                elif isinstance(p.value, nineml.user.RandomDistribution):
-                    RandomDistribution = getattr(
-                        pype9.pynn_interface.random,
-                        p.value.definition.component_class.name)
-                    param = RandomDistribution(
-                        p.value.parameters, rng, use_units=False)
-                elif isinstance(p.value, nineml.user.values.ArrayValue):
-                    param = pyNN.parameters.Sequence(p.value)
+            for prop in chain(dynamics.properties, dynamics.initial_values):
+                val = nineml_qty_to_pyNN_value(prop, self._unit_handler, rng)
+                if isinstance(prop, Initial):
+                    initial_values[prop.name] = val
                 else:
-                    raise Exception("Unrecognised parameter type '{}'"
-                                    .format(type(p.value)))
-                if (hasattr(param_definition, 'type') and
-                        param_definition.type == 'initialState'):
-                    initial_values[p.name] = param
-                else:
-                    cellparams[p.name] = param
+                    cellparams[prop.name] = val
             # Sorry if this feels a bit hacky (i.e. relying on the pyNN class
             # being the third class in the MRO), I thought of a few ways to do
             # this but none were completely satisfactory.
             PyNNClass = self.__class__.__mro__[2]
             assert PyNNClass.__module__.startswith(
                 'pyNN') and PyNNClass.__name__ == 'Population'
-            PyNNClass.__init__(self, nineml_model.size, celltype,
+            PyNNClass.__init__(self, dynamics_array.size, celltype,
                                cellparams=cellparams,
                                initial_values=initial_values, structure=None,
-                               label=nineml_model.name)
+                               label=dynamics_array.name)
 
     @property
     def positions(self):
@@ -189,7 +153,3 @@ class Population(object):
         Returns the cell type of the population
         """
         return type(self.celltype)
-
-    def _set_positions(self, positions, morphologies=None):
-        super(Population, self)._set_positions(positions)
-        self.morphologies = morphologies

@@ -15,6 +15,7 @@ from pype9.exceptions import Pype9ProjToCloneNotCreatedException
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
 
+
 class Network(object):
 
     def __init__(self, filename, network_name=None, build_mode='lazy',

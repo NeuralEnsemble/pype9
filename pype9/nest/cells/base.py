@@ -15,6 +15,7 @@ import neo
 import nest
 import quantities as pq
 import nineml
+from nineml.exceptions import NineMLNameError
 from .code_gen import CodeGenerator
 from .controller import simulation_controller
 from pype9.base.cells import base
@@ -68,8 +69,11 @@ class Cell(base.Cell):
         port_name = self.build_name(port_name)
         events, interval = nest.GetStatus(self._recorders[port_name],
                                           ('events', 'interval'))[0]
-        unit_str = UnitHandler.dimension_to_unit_str(
-            self._nineml.component_class[port_name].dimension)
+        try:
+            port = self._nineml.component_class.port(port_name)
+        except NineMLNameError:
+            port = self._nineml.component_class.state_variable(port_name)
+        unit_str = UnitHandler.dimension_to_unit_str(port.dimension)
         data = neo.AnalogSignal(
             events[port_name], sampling_period=interval * pq.ms,
             t_start=0.0 * pq.ms, units=unit_str, name=port_name)

@@ -20,6 +20,7 @@ import quantities as pq
 import neo
 from neuron import h, load_mechanisms
 from nineml.abstraction import EventPort, Dynamics
+from nineml.exceptions import NineMLNameError
 from math import pi
 import numpy
 from .code_gen import CodeGenerator
@@ -179,7 +180,10 @@ class Cell(base.Cell):
         Return recorded data as a dictionary containing one numpy array for
         each neuron, ids as keys.
         """
-        port = self.component_class[port_name]
+        try:
+            port = self.component_class.port(port_name)
+        except NineMLNameError:
+            port = self.component_class.state_variable(port_name)
         if isinstance(port, EventPort):
             recording = neo.SpikeTrain(
                 self._recordings[port_name], t_start=0.0 * pq.ms,

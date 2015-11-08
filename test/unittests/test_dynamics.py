@@ -179,8 +179,8 @@ class TestDynamics(TestCase):
             name='IafAlpha',
             sub_components={'cell': iaf, 'psr': alpha_psr},
             port_connections=[('psr', 'i_synaptic', 'cell', 'i_synaptic')],
-            port_exposures=[('weight', 'psr', 'q'),
-                            ('input_spike', 'psr', 'spike')])
+            port_exposures=[('psr', 'q', 'weight'),
+                            ('psr', 'spike', 'input_spike')])
         initial_states = {'a__psr': 0.0 * pq.nA, 'b__psr': 0.0 * pq.nA}
         initial_regime = 'subthreshold___sole___regime'
         liaf_properties = ninemlcatalog.load(

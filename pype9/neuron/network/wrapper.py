@@ -29,7 +29,6 @@ class PyNNCellWrapper(BasePyNNCellWrapper, pyNN.models.BaseCellType):
 
 class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
 
-    _basic_nineml_translations = basic_nineml_translations
     loaded_celltypes = {}
 
     def __new__(cls, nineml_model, name, build_mode='lazy', silent=False,
@@ -39,9 +38,9 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
                 (nineml_model.name, nineml_model.url)]
         except KeyError:
             model = CellMetaClass(nineml_model, name,
-                                       build_mode=build_mode, silent=silent,
-                                       solver_name=solver_name,
-                                       standalone=False)
+                                  build_mode=build_mode, silent=silent,
+                                  solver_name=solver_name,
+                                  standalone=False)
             dct = {'model': model}
             celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
                 cls, name, (PyNNCellWrapper,), dct)
