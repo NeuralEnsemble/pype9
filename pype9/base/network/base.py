@@ -5,74 +5,42 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from itertools import chain
+from nineml.user import DynamicsArray, Initial
+from pype9.exceptions import Pype9RuntimeError
+from .values import nineml_qty_to_pyNN_value
 import os.path
+import nineml
 from pyNN.random import NumpyRNG
 import pyNN.standardmodels
-import nineml
 import quantities as pq
-from pype9.exceptions import Pype9ProjToCloneNotCreatedException
+from nineml.user.projection import Connectivity
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
 
-
 class Network(object):
 
-    def __init__(self, filename, network_name=None, build_mode='lazy',
-                 verbose=False, timestep=None, min_delay=None, max_delay=None,   # @UnusedVariable @IgnorePep8
-                 temperature=None, silent_build=False, flags=[],  # @UnusedVariable @IgnorePep8
-                 rng=None, solver_name='cvode'):
-        parsed_nineml = nineml.read(filename)
-        if network_name:
-            try:
-                self.nineml_model = parsed_nineml.groups[network_name]
-            except KeyError:
-                raise Exception("Nineml file '{}' does not contain network "
-                                "named '{}'" .format(filename, network_name))
-        else:
-            try:
-                self.nineml_model = parsed_nineml.groups.values()[0]
-            except IndexError:
-                raise Exception("No network objects loaded from NineMl file "
-                                 "'{}'".format(filename))
+    def __init__(self, nineml_model, build_mode='lazy',
+                 timestep=None, min_delay=None, max_delay=None,
+                 temperature=None, rng=None, **kwargs):
+        if isinstance(nineml_model, basestring):
+            nineml_model = nineml.read(nineml_model).as_network()
         self._set_simulation_params(timestep=timestep, min_delay=min_delay,
                                     max_delay=max_delay,
                                     temperature=temperature)
-        self.dirname = os.path.dirname(filename)
-        self.label = self.nineml_model.name
         self._rng = rng if rng else NumpyRNG()
-        self._populations = {}
-        PopulationClass = self._PopulationClass
-        for name, model in self.nineml_model.populations.iteritems():
-            self._populations[name] = PopulationClass(model, self._rng,
-                                                      build_mode, silent_build,
-                                                      solver_name=solver_name)
+        self._dynamics_arrays = {}
+        for name, dyn_array in self.nineml_model.dynamics_arrays.iteritems():
+            self._dynamics_arrays[name] = self._DynamicsArrayClass(
+                dyn_array, rng=self._rng, build_mode=build_mode, **kwargs)
         if build_mode not in ('build_only', 'compile_only'):
-            self._projections = {}
-            ProjectionClass = self._ProjectionClass
-            projection_models = self.nineml_model.projections.values()
-            num_projections = len(projection_models)
-            for model in projection_models:
-                try:
-                    self._projections[model.name] = ProjectionClass(
-                        self._populations[model.source.population.name],
-                        self._populations[model.target.population.name],
-                        model, rng=self._rng)
-                except Pype9ProjToCloneNotCreatedException as e:
-                    if e.orig_proj_id in self.nineml_model.projections.keys():
-                        projection_models.append(model)
-                        # I think this is the theoretical limit for the number
-                        # of iterations this loop will have to make for the
-                        # worst ordering of cloned projections
-                        if ((len(projection_models) - num_projections) >
-                                (num_projections * (num_projections + 1) / 2)):
-                            raise Exception("Projections using 'Clone' pattern"
-                                            "form a circular reference")
-                    else:
-                        raise Exception("Projection '{}' attempted to clone "
-                                        "connectivity patterns from '{}', "
-                                        "which was not found in network."
-                                        .format(name, e.orig_proj_id))
+            self._connection_groups = {}
+            for conn_group in nineml_model.connection_groups:
+                self._connection_groups[
+                    conn_group.name] = self._ConnectionGroupClass(
+                        conn_group, rng=self._rng,
+                        connectivity_cls=Connectivity)
             self._finalise_construction()
 
     def _finalise_construction(self):
@@ -83,24 +51,12 @@ class Network(object):
         pass
 
     @property
-    def populations(self):
-        return self._populations
+    def dynamics_arrays(self):
+        return self._dynamics_arrays
 
     @property
-    def projections(self):
-        return self._projections
-
-    def describe(self):
-        """
-        Describes all populations and projections within the network
-        """
-        print "Populations:"
-        for pop in self.populations.itervalues():
-            print pop.describe()
-
-        print "Projections:"
-        for proj in self.projections.itervalues():
-            print proj.describe()
+    def connection_groups(self):
+        return self._connection_groups
 
     def save_connections(self, output_dir):
         """
@@ -108,30 +64,22 @@ class Network(object):
 
         @param output_dir:
         """
-        for proj in self.projections.itervalues():
-            if isinstance(proj.synapse_type,
+        for conn_grp in self.connection_groups.itervalues():
+            if isinstance(conn_grp.synapse_type,
                           pyNN.standardmodels.synapses.ElectricalSynapse):
                 attributes = 'weight'
             else:
                 attributes = 'all'
-            proj.save(attributes, os.path.join(
-                output_dir, proj.label + '.proj'), format='list', gather=True)
-
-    def save_positions(self, output_dir):
-        """
-        Saves generated cell positions to output directory
-
-        @param output_dir:
-        """
-        for pop in self.populations.itervalues():
-            pop.save_positions(os.path.join(output_dir, pop.label) + '.pop')
+            conn_grp.save(attributes, os.path.join(
+                output_dir, conn_grp.label + '.proj'), format='list',
+                gather=True)
 
     def record(self, variable):
         """
         Record variable from complete network
         """
-        for pop in self.populations.itervalues():
-            pop.record(variable)
+        for dyn_array in self.dynamics_arrays.itervalues():
+            dyn_array.record(variable)
 
     def write_data(self, file_prefix, **kwargs):
         """
@@ -146,9 +94,10 @@ class Network(object):
         if (not os.path.isdir(file_prefix) and not file_prefix.endswith('.')
                 and not file_prefix.endswith(os.path.sep)):
             file_prefix += '.'
-        for pop in self.populations.itervalues():
+        for dyn_array in self.dynamics_arrays.itervalues():
             # @UndefinedVariable
-            pop.write_data(file_prefix + pop.label + '.pkl', **kwargs)
+            dyn_array.write_data(file_prefix + dyn_array.name + '.pkl',
+                                 **kwargs)
 
     def _get_simulation_params(self, **params):
         sim_params = dict([(p.name, pq.Quantity(p.value, p.unit))
@@ -161,3 +110,71 @@ class Network(object):
                                 "Network initialisation or NetworkML "
                                 "specification".format(key))
         return sim_params
+
+
+class DynamicsArray(object):
+
+    def __init__(self, nineml_model, rng, build_mode='lazy', **kwargs):
+        if not isinstance(nineml_model, DynamicsArray):
+            raise Pype9RuntimeError(
+                "Expected a dynamics array, found {}".format(nineml_model))
+        # Store the definition url inside the cell type for use when checking
+        # reloading of cell model
+        dynamics = nineml_model.dynamics
+        celltype = self._PyNNCellWrapperMetaClass(
+            dynamics, nineml_model.name, build_mode=build_mode, **kwargs)
+        if build_mode not in ('build_only', 'compile_only'):
+            # Set default for populations without morphologies
+            cellparams = {}
+            initial_values = {}
+            for prop in chain(dynamics.properties, dynamics.initial_values):
+                val = nineml_qty_to_pyNN_value(prop, self._unit_handler, rng)
+                if isinstance(prop, Initial):
+                    initial_values[prop.name] = val
+                else:
+                    cellparams[prop.name] = val
+            # Sorry if this feels a bit hacky (i.e. relying on the pyNN class
+            # being the third class in the MRO), I thought of a few ways to do
+            # this but none were completely satisfactory.
+            PyNNClass = self.__class__.__mro__[2]
+            assert PyNNClass.__module__.startswith(
+                'pyNN') and PyNNClass.__name__ == 'Population'
+            PyNNClass.__init__(self, nineml_model.size, celltype,
+                               cellparams=cellparams,
+                               initial_values=initial_values, structure=None,
+                               label=nineml_model.name)
+
+
+class ConnectionGroup(object):
+
+    created_projections = {}
+
+    def __init__(self, source, target, nineml_model, rng=None):
+        SynapseClass = getattr(
+            self._synapses_module,
+            nineml_model.connection_type.definition.component_class.name)
+        synapse = SynapseClass(
+            nineml_model.connection_type.parameters, self.get_min_delay(), rng)
+        receptor = (
+            '{' + nineml_model.target.segment + '}' +
+            nineml_model.synaptic_response.parameters['responseName'].value)
+        # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being
+        # the third class in the MRO), I thought of a few ways to do this but
+        # none were completely satisfactory.
+        PyNNClass = self.__class__.__mro__[2]
+        assert (PyNNClass.__module__.startswith('pyNN') and
+                PyNNClass.__module__.endswith('projections'))
+        PyNNClass.__init__(self, source, target, connector,
+                           synapse_type=synapse,
+                           source=nineml_model.source.segment,
+                           receptor_type=receptor,
+                           label=nineml_model.name)
+        # This is used in the clone connectors, there should be a better way
+        # than this though I reckon
+        self.created_projections[nineml_model.name] = self
+
+    @classmethod
+    def _get_target_str(cls, synapse, segment=None):
+        if not segment:
+            segment = "source_section"
+        return segment + "." + synapse

@@ -119,3 +119,10 @@ def load_9ml_prototype(url_or_comp, default_value=0.0, override_name=None,
     if override_name is not None:
         prototype.name = override_name
     return prototype
+
+
+def set_spike_array(spike_array, spike_times):
+    if spike_array.celltype.__name__ != 'SpikeSourceArray':
+        raise Exception("'set_poisson_spikes' method can only be used for "
+                        "'SpikeSourceArray' populations.")
+    spike_array.tset('spike_times', spike_times)
