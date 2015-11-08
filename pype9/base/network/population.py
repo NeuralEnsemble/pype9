@@ -18,13 +18,15 @@ _pyNN_standard_class_translations = {}
 
 class Population(object):
 
-    def __init__(self, dynamics_array, rng, build_mode='lazy', **kwargs):  # @UnusedVariable @IgnorePep8
+    def __init__(self, dynamics_array, rng, build_mode='lazy', **kwargs):
         if not isinstance(dynamics_array, DynamicsArray):
             raise Pype9RuntimeError(
                 "Expected a dynamics array, found {}".format(dynamics_array))
         # Store the definition url inside the cell type for use when checking
         # reloading of cell model
         dynamics = dynamics_array.dynamics
+        celltype = self._PyNNCellWrapperMetaClass(
+            dynamics, dynamics_array.name, build_mode=build_mode, **kwargs)
         if build_mode not in ('build_only', 'compile_only'):
             # Set default for populations without morphologies
             cellparams = {}
