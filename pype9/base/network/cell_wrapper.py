@@ -5,7 +5,6 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from pype9 import DEFAULT_V_INIT
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
@@ -79,7 +78,7 @@ class PyNNCellWrapperMetaClass(type):
             except KeyError:
                 reference = p.reference
             if p.reference == 'Voltage':
-                parameter = DEFAULT_V_INIT
+                parameter = -65.0
             else:
                 parameter = component.parameters[reference].value
             default_params[p.name] = parameter

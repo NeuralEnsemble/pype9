@@ -6,52 +6,13 @@
 """
 from __future__ import absolute_import
 from abc import ABCMeta
-import quantities
-import nineml.user
-import pyNN.connectorspype9.basefrom . import random
-# import pype9.pynn_interface.projections
-# from pype9.pynn_interface.expression import create_anonymous_function
-# from pype9.pynn_interface.expression.structure import _PositionBasedExpression
-from pype9.exceptions import Pype9ProjToCloneNotCreatedException
-from pype9.base import Projection
+import pyNN.connectors
+from .values import get_pyNN_value
 
 
 class Connector(object):
 
     __metaclass__ = ABCMeta
-
-    @classmethod
-    def _convert_params(cls, nineml_params, rng):
-        """
-        Converts parameters from lib9ml objects into values with 'quantities'
-        units and or random distributions
-        """
-        converted_params = {}
-        for name, p in nineml_params.iteritems():
-            if p.unit == 'dimensionless':
-                conv_param = p.value
-            elif p.unit:
-                conv_param = quantities.Quantity(p.value, p.unit)
-            elif p.value in ('True', 'False'):
-                conv_param = bool(p.value)
-            elif isinstance(p.value, str):
-                conv_param = p.value
-            elif isinstance(p.value, nineml.user.Reference):
-                try:
-                    conv_param = Projection.created_projections[p.value.name]
-                except KeyError:
-                    raise Pype9ProjToCloneNotCreatedException
-            elif isinstance(p.value, nineml.user.RandomDistribution):
-                RandomDistribution = getattr(
-                    random, p.value.definition.component_class.name)
-                conv_param = RandomDistribution(p.value.parameters, rng)
-            elif isinstance(p.value, nineml.user.AnonymousFunction):
-                conv_param = create_anonymous_function(p.value)
-            else:
-                raise Exception("Unrecognised child '{}' of type '{}'"
-                                .format(p.value, type(p.value)))
-            converted_params[cls.nineml_translations[name]] = conv_param
-        return converted_params
 
     def __init__(self, nineml_params, rng=None):
         # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being
@@ -62,62 +23,38 @@ class Connector(object):
                 PyNNClass.__module__.endswith('connectors'))
         PyNNClass.__init__(self, **self._convert_params(nineml_params, rng))
 
+    @classmethod
+    def _convert_params(cls, nineml_props, rng):
+        """
+        Converts parameters from lib9ml objects into values with 'quantities'
+        units and or random distributions
+        """
+        converted_params = {}
+        for prop in nineml_props.properties:
+            val = get_pyNN_value(prop, cls._unit_handler, rng)
+            converted_params[cls.translate(prop.name)] = val
+        return converted_params
 
-class PositionBasedProbabilityConnector(
-        Connector, pyNN.connectors.IndexBasedProbabilityConnector):
+    @classmethod
+    def translate(cls, name):
+        return cls.nineml_translations[name]
 
-    """
-    For each pair of pre-post cells, the connection probability depends on an
-    function of the displacement between them.
 
-    Takes any of the standard :class:`Connector` optional arguments and, in
-    addition:
+class OneToOneConnector(Connector, pyNN.connectors.OneToOneConnector):
 
-        `expression`:
-            a function that takes a source position and a target position array
-            and calculates a probability matrix from them.
-        `source_structure`, `target_structure`:
-            the part of the source and target cells to use as the reference
-            points. This allows multiple reference points on the cell to be
-            used, eg. soma, dendritic/axonal branch points.  If a cell only has
-            one set of positions then they do not need to be specified
-            (typically a soma)
-        `allow_self_connections`:
-            if the connector is used to connect a Population to itself, this
-            flag determines whether a neuron is allowed to connect to itself,
-            or only to other neurons in the Population.
-        `rng`:
-            an :class:`RNG` instance used to evaluate whether connections exist
-    """
-
-    nineml_translations = {'allowSelfConnections': 'allow_self_connections',
-                           'probabilityExpression': 'expression',
-                           'sourceStructure': 'source_structure',
-                           'targetStructure': 'target_structure'}
-
-    parameter_names = ('allow_self_connections', 'expression',
-                       'source_structure', 'target_structure')
-
-    def __init__(self, nineml_params, rng):
-        conv_params = self._convert_params(nineml_params, rng)
-        # The branch names are not actually needed here but are just included
-        # for the automatic PyNN description function.
-        self.source_structure = conv_params['source_structure']
-        self.target_structure = conv_params['source_structure']
-        # Initialise the index-based probability connector with position-based
-        # expression
-        pyNN.connectors.IndexBasedProbabilityConnector.__init__(self,
-            _PositionBasedExpression(
-                expression=conv_params['expression'],
-                source_structure=conv_params['source_structure'],
-                target_structure=conv_params['target_structure']),
-            allow_self_connections=conv_params['allow_self_connections'],
-            rng=rng)
+    nineml_translations = {}
 
 
 class AllToAllConnector(Connector, pyNN.connectors.AllToAllConnector):
 
     nineml_translations = {'allowSelfConnections': 'allow_self_connections'}
+
+
+class ExplicitConnectionListConnector(Connector,
+                                      pyNN.connectors.FromListConnector):
+
+    nineml_translations = {'allowSelfConnections': 'allow_self_connections',
+                           'probability': 'p_connect'}
 
 
 class FixedProbabilityConnector(Connector,
@@ -139,20 +76,3 @@ class FixedNumberPreConnector(
 
     nineml_translations = {
         'allowSelfConnections': 'allow_self_connections', 'number': 'n'}
-
-
-class OneToOneConnector(Connector, pyNN.connectors.OneToOneConnector):
-
-    nineml_translations = {}
-
-
-class SmallWorldConnector(Connector, pyNN.connectors.SmallWorldConnector):
-
-    nineml_translations = {'allowSelfConnections': 'allow_self_connections',
-                           'degree': 'degree', 'rewiring': 'rewiring',
-                           'numberOfConnections': 'n_connections'}
-
-
-class CloneConnector(Connector, pyNN.connectors.CloneConnector):
-
-    nineml_translations = {'projection': 'reference_projection'}

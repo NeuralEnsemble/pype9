@@ -19,7 +19,7 @@ random_value_map = {
     ('lognormal', ('mu', 'sigma'))}
 
 
-def nineml_qty_to_pyNN_value(qty, unit_handler, rng):
+def get_pyNN_value(qty, unit_handler, rng):
     if isinstance(qty.value, SingleValue):
         val = unit_handler.scale(qty.quantity)
     elif isinstance(qty.value, ArrayValue):

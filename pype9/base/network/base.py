@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from itertools import chain
 from nineml.user import DynamicsArray, Initial
 from pype9.exceptions import Pype9RuntimeError
-from .values import nineml_qty_to_pyNN_value
+from .values import get_pyNN_value
 import os.path
 import nineml
 from pyNN.random import NumpyRNG
@@ -128,7 +128,7 @@ class DynamicsArray(object):
             cellparams = {}
             initial_values = {}
             for prop in chain(dynamics.properties, dynamics.initial_values):
-                val = nineml_qty_to_pyNN_value(prop, self._unit_handler, rng)
+                val = get_pyNN_value(prop, self._unit_handler, rng)
                 if isinstance(prop, Initial):
                     initial_values[prop.name] = val
                 else:
@@ -149,29 +149,28 @@ class ConnectionGroup(object):
 
     created_projections = {}
 
-    def __init__(self, source, target, nineml_model, rng=None):
+    def __init__(self, nineml_model, dynamics_arrays, rng=None):
         SynapseClass = getattr(
             self._synapses_module,
             nineml_model.connection_type.definition.component_class.name)
         synapse = SynapseClass(
-            nineml_model.connection_type.parameters, self.get_min_delay(), rng)
-        receptor = (
-            '{' + nineml_model.target.segment + '}' +
-            nineml_model.synaptic_response.parameters['responseName'].value)
+            nineml_model.connectivity.parameters, self.get_min_delay(), rng)
+        receptor = nineml_model.receive_port
         # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being
         # the third class in the MRO), I thought of a few ways to do this but
         # none were completely satisfactory.
         PyNNClass = self.__class__.__mro__[2]
         assert (PyNNClass.__module__.startswith('pyNN') and
                 PyNNClass.__module__.endswith('projections'))
-        PyNNClass.__init__(self, source, target, connector,
-                           synapse_type=synapse,
-                           source=nineml_model.source.segment,
-                           receptor_type=receptor,
-                           label=nineml_model.name)
-        # This is used in the clone connectors, there should be a better way
-        # than this though I reckon
-        self.created_projections[nineml_model.name] = self
+        PyNNClass.__init__(
+            self,
+            source=dynamics_arrays[nineml_model.source.name],
+            target=dynamics_arrays[nineml_model.destination.name],
+            connector,
+            synapse_type=synapse,
+            source=nineml_model.source.segment,
+            receptor_type=receptor,
+            label=nineml_model.name)
 
     @classmethod
     def _get_target_str(cls, synapse, segment=None):
