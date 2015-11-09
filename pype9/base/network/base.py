@@ -5,6 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from abc import ABCMeta, abstractmethod
 from itertools import chain
 from nineml.user import DynamicsArray, Initial
 from pype9.exceptions import Pype9RuntimeError
@@ -32,13 +33,13 @@ class Network(object):
         self._rng = rng if rng else NumpyRNG()
         self._dynamics_arrays = {}
         for name, dyn_array in self.nineml_model.dynamics_arrays.iteritems():
-            self._dynamics_arrays[name] = self._DynamicsArrayClass(
+            self._dynamics_arrays[name] = self.DynamicsArrayClass(
                 dyn_array, rng=self._rng, build_mode=build_mode, **kwargs)
         if build_mode not in ('build_only', 'compile_only'):
             self._connection_groups = {}
             for conn_group in nineml_model.connection_groups:
                 self._connection_groups[
-                    conn_group.name] = self._ConnectionGroupClass(
+                    conn_group.name] = self.ConnectionGroupClass(
                         conn_group, rng=self._rng,
                         connectivity_cls=Connectivity)
             self._finalise_construction()
@@ -114,35 +115,35 @@ class Network(object):
 
 class DynamicsArray(object):
 
+    __metaclass__ = ABCMeta
+
     def __init__(self, nineml_model, rng, build_mode='lazy', **kwargs):
         if not isinstance(nineml_model, DynamicsArray):
             raise Pype9RuntimeError(
                 "Expected a dynamics array, found {}".format(nineml_model))
-        # Store the definition url inside the cell type for use when checking
-        # reloading of cell model
         dynamics = nineml_model.dynamics
-        celltype = self._PyNNCellWrapperMetaClass(
+        celltype = self._pynn_cell_wrapper_class()(
             dynamics, nineml_model.name, build_mode=build_mode, **kwargs)
         if build_mode not in ('build_only', 'compile_only'):
-            # Set default for populations without morphologies
             cellparams = {}
             initial_values = {}
             for prop in chain(dynamics.properties, dynamics.initial_values):
-                val = get_pyNN_value(prop, self._unit_handler, rng)
+                val = get_pyNN_value(prop, self.UnitHandler, rng)
                 if isinstance(prop, Initial):
                     initial_values[prop.name] = val
                 else:
                     cellparams[prop.name] = val
-            # Sorry if this feels a bit hacky (i.e. relying on the pyNN class
-            # being the third class in the MRO), I thought of a few ways to do
-            # this but none were completely satisfactory.
-            PyNNClass = self.__class__.__mro__[2]
-            assert PyNNClass.__module__.startswith(
-                'pyNN') and PyNNClass.__name__ == 'Population'
-            PyNNClass.__init__(self, nineml_model.size, celltype,
-                               cellparams=cellparams,
-                               initial_values=initial_values, structure=None,
-                               label=nineml_model.name)
+            self._pynn_population_class().__init__(
+                self, nineml_model.size, celltype, cellparams=cellparams,
+                initial_values=initial_values, label=nineml_model.name)
+
+    @abstractmethod
+    def _pynn_population_class(self):
+        pass
+
+    @abstractmethod
+    def _pynn_cell_wrapper_meta_class(self):
+        pass
 
 
 class ConnectionGroup(object):
@@ -155,22 +156,24 @@ class ConnectionGroup(object):
             nineml_model.connection_type.definition.component_class.name)
         synapse = SynapseClass(
             nineml_model.connectivity.parameters, self.get_min_delay(), rng)
-        receptor = nineml_model.receive_port
-        # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being
-        # the third class in the MRO), I thought of a few ways to do this but
-        # none were completely satisfactory.
-        PyNNClass = self.__class__.__mro__[2]
-        assert (PyNNClass.__module__.startswith('pyNN') and
-                PyNNClass.__module__.endswith('projections'))
-        PyNNClass.__init__(
+        # FIXME: Ignores send_port
+        self._pynn_projection_class().__init__(
             self,
             source=dynamics_arrays[nineml_model.source.name],
             target=dynamics_arrays[nineml_model.destination.name],
-            connector,
+            self._pynn_connector_class(nineml_model.connectivity),
             synapse_type=synapse,
             source=nineml_model.source.segment,
-            receptor_type=receptor,
+            receptor_type=nineml_model.receive_port,
             label=nineml_model.name)
+
+    @abstractmethod
+    def _pynn_projection_class(self):
+        pass
+
+    @abstractmethod
+    def _pynn_connector_class(self):
+        pass
 
     @classmethod
     def _get_target_str(cls, synapse, segment=None):

@@ -5,7 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from pype9.base.network.wrapper import (
+from pype9.base.network.cell_wrapper import (
     PyNNCellWrapper as BasePyNNCellWrapper,
     PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
 from pyNN.parameters import ParameterSpace
@@ -55,7 +55,6 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
     nineml_celltype_from_model
     """
 
-    _basic_nineml_translations = basic_nineml_translations
     loaded_celltypes = {}
 
     def __new__(cls, nineml_model, name, build_mode='lazy', silent=False,
