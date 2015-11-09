@@ -5,7 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 import pyNN.connectors
 from .values import get_pyNN_value
 
@@ -15,12 +15,7 @@ class Connector(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, nineml_params, rng=None):
-        # Sorry if this feels a bit hacky (i.e. relying on the pyNN class being
-        # the third class in the MRO), I thought of a few ways to do this but
-        # none were completely satisfactory.
-        PyNNClass = self.__class__.__mro__[2]
-        assert (PyNNClass.__module__.startswith('pyNN') and
-                PyNNClass.__module__.endswith('connectors'))
+        PyNNClass = getattr(self._pynn_module(), self.pyNN_name)
         PyNNClass.__init__(self, **self._convert_params(nineml_params, rng))
 
     @classmethod
@@ -39,20 +34,27 @@ class Connector(object):
     def translate(cls, name):
         return cls.nineml_translations[name]
 
+    @abstractmethod
+    def _pynn_module(self):
+        pass
+
 
 class OneToOneConnector(Connector, pyNN.connectors.OneToOneConnector):
 
+    pyNN_name = 'OneToOneConnector'
     nineml_translations = {}
 
 
 class AllToAllConnector(Connector, pyNN.connectors.AllToAllConnector):
 
+    pyNN_name = 'AllToAllConnector'
     nineml_translations = {'allowSelfConnections': 'allow_self_connections'}
 
 
 class ExplicitConnectionListConnector(Connector,
                                       pyNN.connectors.FromListConnector):
 
+    pyNN_name = 'FromListConnector'
     nineml_translations = {'allowSelfConnections': 'allow_self_connections',
                            'probability': 'p_connect'}
 
@@ -60,6 +62,7 @@ class ExplicitConnectionListConnector(Connector,
 class FixedProbabilityConnector(Connector,
                                 pyNN.connectors.FixedProbabilityConnector):
 
+    pyNN_name = 'FixedProbabilityConnector'
     nineml_translations = {'allowSelfConnections': 'allow_self_connections',
                            'probability': 'p_connect'}
 
@@ -67,6 +70,7 @@ class FixedProbabilityConnector(Connector,
 class FixedNumberPostConnector(
         Connector, pyNN.connectors.FixedNumberPostConnector):
 
+    pyNN_name = 'FixedNumberPostConnector'
     nineml_translations = {
         'allowSelfConnections': 'allow_self_connections', 'number': 'n'}
 
@@ -74,5 +78,6 @@ class FixedNumberPostConnector(
 class FixedNumberPreConnector(
         Connector, pyNN.connectors.FixedNumberPreConnector):
 
+    pyNN_name = 'FixedNumberPreConnector'
     nineml_translations = {
         'allowSelfConnections': 'allow_self_connections', 'number': 'n'}

@@ -23,7 +23,7 @@ from pype9.base.network.base import (
     Network as BaseNetwork, DynamicsArray as BaseDynamicsArray,
     ConnectionGroup as BaseConnectionGroup)
 from .cell_wrapper import PyNNCellWrapperMetaClass
-from . import synapses as synapses_module
+from pype9.neuron.network import synapses as synapses_module
 from .connectors import Connector
 
 
@@ -33,7 +33,7 @@ get_current_time, get_time_step, get_min_delay, \
     get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 
-class DynamicsArray(BaseDynamicsArray):
+class DynamicsArray(BaseDynamicsArray, pyNN.neuron.Population):
 
     def _pynn_cell_wrapper_meta_class(self):
         return PyNNCellWrapperMetaClass
@@ -42,7 +42,7 @@ class DynamicsArray(BaseDynamicsArray):
         return pyNN.neuron.Population
 
 
-class ConnectionGroup(BaseConnectionGroup):
+class ConnectionGroup(BaseConnectionGroup, pyNN.neuron.Projection):
 
     _synapses_module = synapses_module
 
@@ -58,6 +58,9 @@ class ConnectionGroup(BaseConnectionGroup):
 
 
 class Network(BaseNetwork):
+
+    DynamicsArrayClass = DynamicsArray
+    ConnectionGroupClass = ConnectionGroup
 
     def __init__(self, nineml_model, min_delay=None, temperature=None,
                  **kwargs):
