@@ -5,31 +5,32 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from nineml.user.projection import Connectivity
+from nineml.user.projection import BaseConnectivity
 from pyNN.parameters import LazyArray
 import numpy
+from pype9.exceptions import Pype9RuntimeError
 
 
-class PyNNConnectivity(Connectivity):
+class PyNNConnectivity(BaseConnectivity):
 
     def __init__(self, *args, **kwargs):
         super(PyNNConnectivity, self).__init__(*args, **kwargs)
         self._prev_connected = None
 
     def connections(self):
-        super(PyNNConnectivity, self).connections
+        if not self.has_been_sampled():
+            raise Pype9RuntimeError(
+                "Connections have not been generated for PyNNConnectivity "
+                "object (they are only generated during network construction "
+                "for efficiency")
+        raise NotImplementedError(
+            "Need to work out connection list from connection map")
 
     def connect(self, projection):
-        if self._cache:
-            connector = self._pyNN_module.FromListConnector(self._cache)
-            connector.connect(projection)
-        elif self._prev_connected:
+        if self.has_been_sampled():
             # Get connection from previously connected projection
-            connection_map = LazyArray(~numpy.isnan(
-                self.reference_projection.get(
-                    ['weight'], 'array', gather='all')[0]))
             connector = self._pyNN_module.MapConnector()
-            connector._connect_with_map(projection, connection_map)
+            connector._connect_with_map(projection, self._connection_map)
         else:
             if self._rule_props.lib_type == 'AllToAll':
                 connector_cls = self._pyNN_module.AllToAllConnector
@@ -56,3 +57,11 @@ class PyNNConnectivity(Connectivity):
             connector = connector_cls(**params)
             connector.connect(projection)
             self._prev_connected = projection
+
+    def has_been_sampled(self):
+        return self._prev_connected is not None
+
+    @property
+    def _connection_map(self):
+        return LazyArray(~numpy.isnan(
+            self._prev_connected.get(['weight'], 'array', gather='all')[0]))
