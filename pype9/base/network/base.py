@@ -49,8 +49,7 @@ class Network(object):
             for conn_group in nineml_model.connection_groups:
                 self._connection_groups[
                     conn_group.name] = self.ConnectionGroupClass(
-                        conn_group, rng=self._rng,
-                        connectivity_cls=Connectivity)
+                        conn_group, rng=self._rng)
             self._finalise_construction()
 
     def _finalise_construction(self):
@@ -170,7 +169,7 @@ class ConnectionGroup(object):
             self,
             source=dynamics_arrays[nineml_model.source.name],
             target=dynamics_arrays[nineml_model.destination.name],
-            self._pynn_connector_class(nineml_model.connectivity),
+            nineml_model.connectivity,
             synapse_type=synapse,
             source=nineml_model.source.segment,
             receptor_type=nineml_model.receive_port,
