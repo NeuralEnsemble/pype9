@@ -6,7 +6,7 @@
 """
 from __future__ import absolute_import
 import pyNN.neuron.connectors
-from pype9.base.network.connectors import (
+from pype9.base.network.connectivity import (
     PyNNConnectivity as BasePyNNConnectivity)
 
 

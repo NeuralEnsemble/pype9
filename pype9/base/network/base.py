@@ -15,7 +15,6 @@ import nineml
 from pyNN.random import NumpyRNG
 import pyNN.standardmodels
 import quantities as pq
-from nineml.user.projection import Connectivity
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
@@ -158,7 +157,7 @@ class ConnectionGroup(object):
 
     created_projections = {}
 
-    def __init__(self, nineml_model, dynamics_arrays, rng=None):
+    def __init__(self, nineml_model, dynamics_arrays):
         SynapseClass = getattr(
             self._synapses_module,
             nineml_model.connection_type.definition.component_class.name)

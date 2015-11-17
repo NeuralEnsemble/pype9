@@ -23,8 +23,8 @@ from pype9.base.network.base import (
     ConnectionGroup as BaseConnectionGroup)
 import pyNN.nest.simulator as simulator
 from .cell_wrapper import PyNNCellWrapperMetaClass
-from pype9.nest.network import synapses as synapses_module
-from .connectors import PyNNConnectivity
+from pype9.nest.network.synapses import StaticSynapse
+from .connectivity import PyNNConnectivity
 
 
 (get_current_time, get_time_step,
@@ -33,6 +33,9 @@ from .connectors import PyNNConnectivity
 
 
 class DynamicsArray(BaseDynamicsArray, pyNN.nest.Population):
+
+    PyNNCellWrapperMetaClass = PyNNCellWrapperMetaClass
+    PyNNPopulationClass = pyNN.nest.Population
 
     @classmethod
     def _translate_variable(cls, variable):
@@ -80,24 +83,16 @@ class DynamicsArray(BaseDynamicsArray, pyNN.nest.Population):
             translated_initial_values[translated_name] = value
         super(DynamicsArray, self).initialize(**translated_initial_values)
 
-    def _pynn_cell_wrapper_meta_class(self):
-        return PyNNCellWrapperMetaClass
-
-    def _pynn_population_class(self):
-        return pyNN.nest.Population
-
 
 class ConnectionGroup(BaseConnectionGroup, pyNN.nest.Projection):
 
-    _synapses_module = synapses_module
+    SynapseClass = StaticSynapse
     ConnectivityClass = PyNNConnectivity
+    PyNNProjectionClass = pyNN.nest.Projection
 
     @classmethod
     def get_min_delay(self):
         return get_min_delay()
-
-    def _pynn_projection_class(self):
-        return pyNN.nest.Projection
 
 
 class Network(BaseNetwork):

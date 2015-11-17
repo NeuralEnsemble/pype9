@@ -24,7 +24,7 @@ from pype9.base.network.base import (
     ConnectionGroup as BaseConnectionGroup)
 from .cell_wrapper import PyNNCellWrapperMetaClass
 from pype9.neuron.network import synapses as synapses_module
-from .connectors import PyNNConnectivity
+from .connectivity import PyNNConnectivity
 
 
 logger = logging.getLogger("PyPe9")
