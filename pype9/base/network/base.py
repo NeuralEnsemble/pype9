@@ -36,6 +36,15 @@ class Network(object):
             self._dynamics_arrays[name] = self.DynamicsArrayClass(
                 dyn_array, rng=self._rng, build_mode=build_mode, **kwargs)
         if build_mode not in ('build_only', 'compile_only'):
+            # Set the connectivity objects of the projections to the
+            # PyNNConnectivity class
+            if nineml_model.connectivity_has_been_sampled():
+                raise Pype9RuntimeError(
+                    "Connections have already been sampled, please reset them"
+                    " using 'resample_connectivity' before constructing "
+                    "network")
+            nineml_model.resample_connectivity(
+                connectivity_class=self.ConnetivityClass)
             self._connection_groups = {}
             for conn_group in nineml_model.connection_groups:
                 self._connection_groups[

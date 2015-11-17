@@ -24,7 +24,7 @@ from pype9.base.network.base import (
 import pyNN.nest.simulator as simulator
 from .cell_wrapper import PyNNCellWrapperMetaClass
 from pype9.nest.network import synapses as synapses_module
-from .connectors import Connector
+from .connectors import PyNNConnectivity
 
 
 (get_current_time, get_time_step,
@@ -90,13 +90,11 @@ class DynamicsArray(BaseDynamicsArray, pyNN.nest.Population):
 class ConnectionGroup(BaseConnectionGroup, pyNN.nest.Projection):
 
     _synapses_module = synapses_module
+    ConnectivityClass = PyNNConnectivity
 
     @classmethod
     def get_min_delay(self):
         return get_min_delay()
-
-    def _pynn_connector_class(self):
-        raise Connector
 
     def _pynn_projection_class(self):
         return pyNN.nest.Projection

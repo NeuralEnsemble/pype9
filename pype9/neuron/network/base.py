@@ -24,7 +24,7 @@ from pype9.base.network.base import (
     ConnectionGroup as BaseConnectionGroup)
 from .cell_wrapper import PyNNCellWrapperMetaClass
 from pype9.neuron.network import synapses as synapses_module
-from .connectors import Connector
+from .connectors import PyNNConnectivity
 
 
 logger = logging.getLogger("PyPe9")
@@ -45,13 +45,11 @@ class DynamicsArray(BaseDynamicsArray, pyNN.neuron.Population):
 class ConnectionGroup(BaseConnectionGroup, pyNN.neuron.Projection):
 
     _synapses_module = synapses_module
+    ConnectivityClass = PyNNConnectivity
 
     @classmethod
     def get_min_delay(self):
         return get_min_delay()
-
-    def _pynn_connector_class(self):
-        raise Connector
 
     def _pynn_projection_class(self):
         return pyNN.neuron.Projection
