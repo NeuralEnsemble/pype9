@@ -6,38 +6,10 @@
 """
 from __future__ import absolute_import
 import pyNN.nest.connectors
-from pype9.base.network.connectors import Connector as BaseConnector
+from pype9.base.network.connectors import (
+    PyNNConnectivity as BasePyNNConnectivity)
 
 
-class Connector(BaseConnector):
+class PyNNConnectivity(BasePyNNConnectivity):
 
-    def _pynn_module(self):
-        return pyNN.nest.connectors
-
-
-class OneToOneConnector(Connector, pyNN.connectors.OneToOneConnector):
-    pass
-
-
-class AllToAllConnector(Connector, pyNN.connectors.AllToAllConnector):
-    pass
-
-
-class ExplicitConnectionListConnector(Connector,
-                                      pyNN.connectors.FromListConnector):
-    pass
-
-
-class FixedProbabilityConnector(Connector,
-                                pyNN.connectors.FixedProbabilityConnector):
-    pass
-
-
-class FixedNumberPostConnector(
-        Connector, pyNN.connectors.FixedNumberPostConnector):
-    pass
-
-
-class FixedNumberPreConnector(
-        Connector, pyNN.connectors.FixedNumberPreConnector):
-    pass
+    _pyNN_module = pyNN.nest.connectors

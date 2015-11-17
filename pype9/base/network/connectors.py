@@ -5,79 +5,54 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from abc import ABCMeta, abstractmethod
-import pyNN.connectors
-from .values import get_pyNN_value
+from nineml.user.projection import Connectivity
+from pyNN.parameters import LazyArray
+import numpy
 
 
-class Connector(object):
+class PyNNConnectivity(Connectivity):
 
-    __metaclass__ = ABCMeta
+    def __init__(self, *args, **kwargs):
+        super(PyNNConnectivity, self).__init__(*args, **kwargs)
+        self._prev_connected = None
 
-    def __init__(self, nineml_params, rng=None):
-        PyNNClass = getattr(self._pynn_module(), self.pyNN_name)
-        PyNNClass.__init__(self, **self._convert_params(nineml_params, rng))
+    def connections(self):
+        super(PyNNConnectivity, self).connections
 
-    @classmethod
-    def _convert_params(cls, nineml_props, rng):
-        """
-        Converts parameters from lib9ml objects into values with 'quantities'
-        units and or random distributions
-        """
-        converted_params = {}
-        for prop in nineml_props.properties:
-            val = get_pyNN_value(prop, cls._unit_handler, rng)
-            converted_params[cls.translate(prop.name)] = val
-        return converted_params
-
-    @classmethod
-    def translate(cls, name):
-        return cls.nineml_translations[name]
-
-    @abstractmethod
-    def _pynn_module(self):
-        pass
-
-
-class OneToOneConnector(Connector, pyNN.connectors.OneToOneConnector):
-
-    pyNN_name = 'OneToOneConnector'
-    nineml_translations = {}
-
-
-class AllToAllConnector(Connector, pyNN.connectors.AllToAllConnector):
-
-    pyNN_name = 'AllToAllConnector'
-    nineml_translations = {'allowSelfConnections': 'allow_self_connections'}
-
-
-class ExplicitConnectionListConnector(Connector,
-                                      pyNN.connectors.FromListConnector):
-
-    pyNN_name = 'FromListConnector'
-    nineml_translations = {'allowSelfConnections': 'allow_self_connections',
-                           'probability': 'p_connect'}
-
-
-class FixedProbabilityConnector(Connector,
-                                pyNN.connectors.FixedProbabilityConnector):
-
-    pyNN_name = 'FixedProbabilityConnector'
-    nineml_translations = {'allowSelfConnections': 'allow_self_connections',
-                           'probability': 'p_connect'}
-
-
-class FixedNumberPostConnector(
-        Connector, pyNN.connectors.FixedNumberPostConnector):
-
-    pyNN_name = 'FixedNumberPostConnector'
-    nineml_translations = {
-        'allowSelfConnections': 'allow_self_connections', 'number': 'n'}
-
-
-class FixedNumberPreConnector(
-        Connector, pyNN.connectors.FixedNumberPreConnector):
-
-    pyNN_name = 'FixedNumberPreConnector'
-    nineml_translations = {
-        'allowSelfConnections': 'allow_self_connections', 'number': 'n'}
+    def connect(self, projection):
+        if self._cache:
+            connector = self._pyNN_module.FromListConnector(self._cache)
+            connector.connect(projection)
+        elif self._prev_connected:
+            # Get connection from previously connected projection
+            connection_map = LazyArray(~numpy.isnan(
+                self.reference_projection.get(
+                    ['weight'], 'array', gather='all')[0]))
+            connector = self._pyNN_module.MapConnector()
+            connector._connect_with_map(projection, connection_map)
+        else:
+            if self._rule_props.lib_type == 'AllToAll':
+                connector_cls = self._pyNN_module.AllToAllConnector
+                params = {}
+            elif self._rule_props.lib_type == 'OneToOne':
+                connector_cls = self._pyNN_module.OneToOneConnector
+                params = {}
+            elif self._rule_props.lib_type == 'ExplicitConnectionList':
+                connector_cls = self._pyNN_module.FromListConnector
+                params = {}
+            elif self._rule_props.lib_type == 'ProbabilisticConnectivity':
+                connector_cls = self._pyNN_module.FixedProbabilityConnector
+                params = {'p_connect',
+                          int(self._rule_props.property('probability').value)}
+            elif self._rule_props.lib_type == 'RandomFanIn':
+                connector_cls = self._pyNN_module.FixedNumberPostConnector
+                params = {'n', int(self._rule_props.property('number').value)}
+            elif self._rule_props.lib_type == 'RandomFanOut':
+                connector_cls = self._pyNN_module.FixedNumberPreConnector
+                params = {'n', int(self._rule_props.property('number').value)}
+            else:
+                assert False
+            params.update(self._kwargs)
+            connector = connector_cls(**params)
+            connector.connect(projection)
+            self._prev_connected = projection
