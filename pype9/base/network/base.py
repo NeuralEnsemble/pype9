@@ -5,7 +5,6 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from abc import ABCMeta, abstractmethod
 from itertools import chain
 from nineml.user import DynamicsArray, Initial
 from pype9.exceptions import Pype9RuntimeError
@@ -43,7 +42,7 @@ class Network(object):
                     " using 'resample_connectivity' before constructing "
                     "network")
             nineml_model.resample_connectivity(
-                connectivity_class=self.ConnetivityClass)
+                connectivity_class=self.ConnectivityClass)
             self._connection_groups = {}
             for conn_group in nineml_model.connection_groups:
                 self._connection_groups[
@@ -122,14 +121,12 @@ class Network(object):
 
 class DynamicsArray(object):
 
-    __metaclass__ = ABCMeta
-
     def __init__(self, nineml_model, rng, build_mode='lazy', **kwargs):
         if not isinstance(nineml_model, DynamicsArray):
             raise Pype9RuntimeError(
                 "Expected a dynamics array, found {}".format(nineml_model))
         dynamics = nineml_model.dynamics
-        celltype = self._pynn_cell_wrapper_class()(
+        celltype = self.PyNNCellWrapperClass.__init__(
             dynamics, nineml_model.name, build_mode=build_mode, **kwargs)
         if build_mode not in ('build_only', 'compile_only'):
             cellparams = {}
@@ -140,50 +137,26 @@ class DynamicsArray(object):
                     initial_values[prop.name] = val
                 else:
                     cellparams[prop.name] = val
-            self._pynn_population_class().__init__(
+            self.PyNNPopulationClass.__init__(
                 self, nineml_model.size, celltype, cellparams=cellparams,
                 initial_values=initial_values, label=nineml_model.name)
-
-    @abstractmethod
-    def _pynn_population_class(self):
-        pass
-
-    @abstractmethod
-    def _pynn_cell_wrapper_meta_class(self):
-        pass
 
 
 class ConnectionGroup(object):
 
-    created_projections = {}
-
-    def __init__(self, nineml_model, dynamics_arrays):
-        SynapseClass = getattr(
-            self._synapses_module,
-            nineml_model.connection_type.definition.component_class.name)
-        synapse = SynapseClass(
-            nineml_model.connectivity.parameters, self.get_min_delay(), rng)
-        # FIXME: Ignores send_port
-        self._pynn_projection_class().__init__(
+    def __init__(self, nineml_model, dynamics_arrays, **kwargs):
+        # FIXME: Should read the weight from somewhere, if 'connection_weight'
+        #        is used in the code generation.
+        weight = 1.0
+        delay = get_pyNN_value(nineml_model.delay, self.unit_handler,
+                               **kwargs)
+        # FIXME: Ignores send_port, assumes there is only one...
+        self.PyNNProjectionClass.__init__(
             self,
             source=dynamics_arrays[nineml_model.source.name],
             target=dynamics_arrays[nineml_model.destination.name],
             nineml_model.connectivity,
-            synapse_type=synapse,
+            synapse_type=self.SynapseClass(weight=weight, delay=delay),
             source=nineml_model.source.segment,
             receptor_type=nineml_model.receive_port,
             label=nineml_model.name)
-
-    @abstractmethod
-    def _pynn_projection_class(self):
-        pass
-
-    @abstractmethod
-    def _pynn_connector_class(self):
-        pass
-
-    @classmethod
-    def _get_target_str(cls, synapse, segment=None):
-        if not segment:
-            segment = "source_section"
-        return segment + "." + synapse

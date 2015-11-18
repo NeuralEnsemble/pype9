@@ -23,7 +23,7 @@ from pype9.base.network.base import (
     Network as BaseNetwork, DynamicsArray as BaseDynamicsArray,
     ConnectionGroup as BaseConnectionGroup)
 from .cell_wrapper import PyNNCellWrapperMetaClass
-from pype9.neuron.network import synapses as synapses_module
+from pype9.nest.network.synapses import StaticSynapse
 from .connectivity import PyNNConnectivity
 
 
@@ -35,30 +35,25 @@ get_current_time, get_time_step, get_min_delay, \
 
 class DynamicsArray(BaseDynamicsArray, pyNN.neuron.Population):
 
-    def _pynn_cell_wrapper_meta_class(self):
-        return PyNNCellWrapperMetaClass
-
-    def _pynn_population_class(self):
-        return pyNN.neuron.Population
+    PyNNCellWrapperMetaClass = PyNNCellWrapperMetaClass
+    PyNNPopulationClass = pyNN.neuron.Population
 
 
 class ConnectionGroup(BaseConnectionGroup, pyNN.neuron.Projection):
 
-    _synapses_module = synapses_module
-    ConnectivityClass = PyNNConnectivity
+    SynapseClass = StaticSynapse
+    PyNNProjectionClass = pyNN.neuron.Projection
 
     @classmethod
     def get_min_delay(self):
         return get_min_delay()
-
-    def _pynn_projection_class(self):
-        return pyNN.neuron.Projection
 
 
 class Network(BaseNetwork):
 
     DynamicsArrayClass = DynamicsArray
     ConnectionGroupClass = ConnectionGroup
+    ConnectivityClass = PyNNConnectivity
 
     def __init__(self, nineml_model, min_delay=None, temperature=None,
                  **kwargs):

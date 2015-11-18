@@ -6,14 +6,17 @@
 """
 from __future__ import absolute_import
 import pyNN.neuron.standardmodels.synapses
-from pype9.base.network.synapses import StaticSynapse, ElectricalSynapse
+from pype9.base.network.synapses import StaticSynapse  # , ElectricalSynapse
 
 
 class StaticSynapse(StaticSynapse,
                     pyNN.neuron.standardmodels.synapses.StaticSynapse):
-    pass
+
+    PyNNStaticSynapseClass = pyNN.neuron.standardmodels.synapses.StaticSynapse
 
 
-class ElectricalSynapse(ElectricalSynapse,
-                        pyNN.neuron.standardmodels.synapses.ElectricalSynapse):
-    pass
+# class ElectricalSynapse(ElectricalSynapse,
+#                         pyNN.neuron.standardmodels.synapses.ElectricalSynapse):
+#
+#     PyNNElectricalSynapseClass = (
+#         pyNN.neuron.standardmodels.synapses.ElectricalSynapse)

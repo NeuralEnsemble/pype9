@@ -87,7 +87,6 @@ class DynamicsArray(BaseDynamicsArray, pyNN.nest.Population):
 class ConnectionGroup(BaseConnectionGroup, pyNN.nest.Projection):
 
     SynapseClass = StaticSynapse
-    ConnectivityClass = PyNNConnectivity
     PyNNProjectionClass = pyNN.nest.Projection
 
     @classmethod
@@ -99,6 +98,7 @@ class Network(BaseNetwork):
 
     DynamicsArrayClass = DynamicsArray
     ConnectionGroupClass = ConnectionGroup
+    ConnectivityClass = PyNNConnectivity
 
     def __init__(self, nineml_model, min_delay=None, temperature=None,
                  **kwargs):
