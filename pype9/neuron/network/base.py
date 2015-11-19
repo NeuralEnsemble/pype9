@@ -20,7 +20,7 @@ import pyNN.neuron.simulator as simulator
 import neuron
 import logging
 from pype9.base.network.base import (
-    Network as BaseNetwork, DynamicsArray as BaseDynamicsArray,
+    Network as BaseNetwork, ComponentArray as BaseComponentArray,
     ConnectionGroup as BaseConnectionGroup)
 from .cell_wrapper import PyNNCellWrapperMetaClass
 from pype9.nest.network.synapses import StaticSynapse
@@ -33,7 +33,7 @@ get_current_time, get_time_step, get_min_delay, \
     get_max_delay, num_processes, rank = build_state_queries(simulator)
 
 
-class DynamicsArray(BaseDynamicsArray, pyNN.neuron.Population):
+class ComponentArray(BaseComponentArray, pyNN.neuron.Population):
 
     PyNNCellWrapperMetaClass = PyNNCellWrapperMetaClass
     PyNNPopulationClass = pyNN.neuron.Population
@@ -51,7 +51,7 @@ class ConnectionGroup(BaseConnectionGroup, pyNN.neuron.Projection):
 
 class Network(BaseNetwork):
 
-    DynamicsArrayClass = DynamicsArray
+    ComponentArrayClass = ComponentArray
     ConnectionGroupClass = ConnectionGroup
     ConnectivityClass = PyNNConnectivity
 

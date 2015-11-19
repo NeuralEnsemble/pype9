@@ -19,7 +19,7 @@ import pyNN.nest
 from nest.hl_api import NESTError
 from pyNN.common.control import build_state_queries
 from pype9.base.network.base import (
-    Network as BaseNetwork, DynamicsArray as BaseDynamicsArray,
+    Network as BaseNetwork, ComponentArray as BaseComponentArray,
     ConnectionGroup as BaseConnectionGroup)
 import pyNN.nest.simulator as simulator
 from .cell_wrapper import PyNNCellWrapperMetaClass
@@ -32,7 +32,7 @@ from .connectivity import PyNNConnectivity
  num_processes, rank) = build_state_queries(simulator)
 
 
-class DynamicsArray(BaseDynamicsArray, pyNN.nest.Population):
+class ComponentArray(BaseComponentArray, pyNN.nest.Population):
 
     PyNNCellWrapperMetaClass = PyNNCellWrapperMetaClass
     PyNNPopulationClass = pyNN.nest.Population
@@ -49,11 +49,11 @@ class DynamicsArray(BaseDynamicsArray, pyNN.nest.Population):
 
     def record(self, variable, to_file=None):
         variable = self._translate_variable(variable)
-        super(DynamicsArray, self).record(variable, to_file)
+        super(ComponentArray, self).record(variable, to_file)
 
     def _get_cell_initial_value(self, id, variable):  # @ReservedAssignment
         """Get the initial value of a state variable of the cell."""
-        return super(DynamicsArray, self)._get_cell_initial_value(
+        return super(ComponentArray, self)._get_cell_initial_value(
             id, self._translate_variable(variable))
 
     def initialize(self, **initial_values):
@@ -81,7 +81,7 @@ class DynamicsArray(BaseDynamicsArray, pyNN.nest.Population):
             translated_name = self.celltype.translations[
                 name]['reverse_transform']
             translated_initial_values[translated_name] = value
-        super(DynamicsArray, self).initialize(**translated_initial_values)
+        super(ComponentArray, self).initialize(**translated_initial_values)
 
 
 class ConnectionGroup(BaseConnectionGroup, pyNN.nest.Projection):
@@ -96,7 +96,7 @@ class ConnectionGroup(BaseConnectionGroup, pyNN.nest.Projection):
 
 class Network(BaseNetwork):
 
-    DynamicsArrayClass = DynamicsArray
+    ComponentArrayClass = ComponentArray
     ConnectionGroupClass = ConnectionGroup
     ConnectivityClass = PyNNConnectivity
 
