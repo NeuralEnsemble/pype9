@@ -18,6 +18,7 @@ from nineml.user.multi import (
     MultiDynamics, append_namespace, AnalogReceivePortExposure,
     EventReceivePortExposure, AnalogSendPortExposure, EventSendPortExposure)
 from nineml.user.port_connections import EventPortConnection
+from nineml.user.multi.port_exposures import BasePortExposure
 from nineml.user.network import EventConnectionGroup, AnalogConnectionGroup
 
 
@@ -125,7 +126,7 @@ class Network(object):
                                 "specification".format(key))
         return sim_params
 
-    def _comp_array_from_pop(self, nineml_population):
+    def _flatten_synapses(self, nineml_population):
         """
         Returns a multi-dynamics object containing the cell and all
         post-synaptic response/plasticity dynamics
@@ -135,76 +136,56 @@ class Network(object):
                      if p.post == nineml_population]
         sending = [p for p in self._nineml.projections
                    if p.pre == nineml_population]
-        # Get all sub-dynamics, port connections and port exposures
-        sub_dynamics = {'cell': nineml_population.cell.component_class}
         # =====================================================================
         # Get all the port connections between Response, Plasticity and Post
         # nodes and convert them to MultiDynamics port connections (i.e.
         # referring to sub-component names instead of projection roles)
         # =====================================================================
-        port_connections = []
         for proj in receiving:
-            sub_dynamics[proj.name + '_psr'] = proj.response.component_class
-            sub_dynamics[proj.name + '_pls'] = proj.plasticity.component_class
+            name_dict = {'response': (proj.name + '_psr'),
+                         'plasticty': (proj.name + '_pls')}
+            synapse_components = {
+                name_dict['response']: proj.response.component_class,
+                name_dict['plasticity']: proj.plasticity.component_class}
             # Get all projection port connections that don't project to/from
             # the "pre" population and convert them into local MultiDynamics
             # port connections
-            port_connections.extend(
+            syn_conns = (
                 pc.__class__(
-                    sender_name=self._role2dyn(proj.name, pc.sender_role),
-                    receiver_name=self._role2dyn(proj.name, pc.receiver_role),
+                    sender_name=name_dict[pc.sender_role],
+                    receiver_name=name_dict[pc.receiver_role],
                     send_port=pc.send_port, receive_port=pc.receive_port)
                 for pc in proj.port_connections
-                if 'pre' not in (pc.sender_role, pc.receiver_role))
-        # =====================================================================
-        # Get all the ports that are connected to/from the Pre node and insert
-        # a port exposure to handle them
-        # =====================================================================
-        port_exposures = []
-        for proj in sending:
-            port_exposures.extend(
-                AnalogSendPortExposure(component='cell', port=pc.send_port)
-                for pc in proj.analog_port_connections
-                if 'pre' == pc.sender_role)
-            port_exposures.extend(
-                EventSendPortExposure(component='cell', port=pc.send_port)
-                for pc in proj.event_port_connections
-                if 'pre' == pc.sender_role)
-            port_exposures.extend(
-                AnalogReceivePortExposure(component='cell',
-                                          port=pc.receive_port)
-                for pc in proj.analog_port_connections
-                if 'pre' == pc.receiver_role)
-            port_exposures.extend(
-                EventReceivePortExposure(component='cell',
-                                         port=pc.receive_port)
-                for pc in proj.event_port_connections
-                if 'pre' == pc.receiver_role)
+                if (pc.sender_role in ('plasticity', 'response') and
+                    pc.receiver_role in ('plasticity', 'response')))
+            receive_pre_conns = [pc for pc in proj.port_connections
+                                 if pc.sender_role == 'pre']
+            send_pre_conns = [pc for pc in proj.port_connections
+                              if pc.receiver_role == 'pre']
+            receive_post_conns = [pc for pc in proj.port_connections
+                                  if pc.sender_role == 'post']
+            send_post_conns = [pc for pc in proj.port_connections
+                               if pc.receiver_role == 'post']
+            synapse_exposures = chain(
+                (BasePortExposure.from_port(pc.send_port,
+                                            name_dict[pc.sender_role])
+                 for pc in chain(receive_pre_conns, receive_post_conns)
+                 if pc.sender_role in ('response', 'plasticity')),
+                (BasePortExposure.from_port(pc.receive_port,
+                                            name_dict[pc.receiver_role])
+                 for pc in chain(send_pre_conns, send_post_conns)))
+            synapse = MultiDynamics(
+                name=(proj.name + '_syn'),
+                sub_components=synapse_components,
+                port_connections=synapse_conns,
+                port_exposures=synapse_exposures)
         for proj in receiving:
-            port_exposures.extend(
-                AnalogReceivePortExposure(
-                    component=self._role2dyn(proj.name, pc.receiver_role),
-                    port=pc.receive_port)
-                for pc in proj.analog_port_connections
-                if 'pre' == pc.sender_role)
-            port_exposures.extend(
-                EventReceivePortExposure(
-                    component=self._role2dyn(proj.name, pc.receiver_role),
-                    port=pc.receive_port)
-                for pc in proj.event_port_connections
-                if 'pre' == pc.sender_role)
-            port_exposures.extend(
-                AnalogSendPortExposure(
-                    component=self._role2dyn(proj.name, pc.sender_role),
-                    port=pc.send_port)
-                for pc in proj.analog_port_connections
-                if 'pre' == pc.receiver_role)
-            port_exposures.extend(
-                EventSendPortExposure(
-                    component=self._role2dyn(proj.name, pc.sender_role),
-                    port=pc.send_port)
-                for pc in proj.event_port_connections
-                if 'pre' == pc.receiver_role)
+            name_dict = {'post': 'cell',
+                         'response': append_namespace(proj.name + '_psr', 
+                                                      'syn'),
+                         'plasticty': append_namespace(proj.name + '_pls',
+                                                       'syn')}
+            
         comp = MultiDynamics(
             name=nineml_population.name + 'Dynamics',
             sub_components=sub_dynamics, port_connections=port_connections,
@@ -272,6 +253,9 @@ class ConnectionGroup(object):
             source=nineml_model.source.segment,
             receptor_type=nineml_model.receive_port,
             label=nineml_model.name)
+
+_pc2conn_group = {EventPortConnection, EventConnectionGroup,
+                  }
 
 
 def _conn_group_cls_from_port_connection(port_connection):
