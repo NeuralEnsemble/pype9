@@ -165,7 +165,7 @@ class Network(object):
             sub_components=syn_comps,
             port_connections=syn_internal_conns,
             port_exposures=syn_exps)
-        port_connections = list(chain(
+        port_connections = chain(
             (pc.__class__(sender_role=pc.sender_role,
                           receiver_role='synapse',
                           send_port=pc.send_port,
@@ -177,12 +177,12 @@ class Network(object):
                           receiver_role=pc.receiver_role,
                           send_port=append_namespace(
                               pc.send_port_name,
-                              role2name[pc.sender_role])),
-                          receive_port=pc.receive_port
+                              role2name[pc.sender_role]),
+                          receive_port=pc.receive_port)
              for pc in send_conns),
             (pc for pc in nineml_projection.port_connections
-             if (p.sender_role in ('pre', 'post') and
-                 p.receiver_role in ('pre', 'post')))))
+             if (pc.sender_role in ('pre', 'post') and
+                 pc.receiver_role in ('pre', 'post'))))
         return synapse, port_connections
 
     def _sort_syns_into_single_multi(self):
@@ -230,18 +230,17 @@ class Network(object):
         connection_groups = {}
         for pop in self._nineml.populations:
             # Get all the projections that project to/from the given population
-            receiving = [p for p in self._nineml.projections
-                         if p.post == nineml_population]
-            sending = [p for p in self._nineml.projections
-                       if p.pre == nineml_population]
+            receiving = [p for p in self._nineml.projections if p.post == pop]
+            sending = [p for p in self._nineml.projections if p.pre == pop]
             sub_components = {'cell': pop.cell}
             internal_conns = []
             exposures = []
+            syn_to_post_conns = []  # holds connections from synapse to post.
             for proj in receiving:
                 if proj.name in single_synapses:
                     role2name = {'synapse': proj.name,
                                  'post': 'cell'}
-                    synapse, proj_conns = single_synapse[proj.name]
+                    synapse, proj_conns = single_synapses[proj.name]
                     sub_components[proj.name] = synapse
                     internal_conns.extend(chain(
                         (pc.__class__(sender_name=proj.name,
@@ -262,6 +261,7 @@ class Network(object):
                             pc.send_port, role2name[pc.sender_role])
                          for pc in proj_conns if pc.receiver_role == 'pre')))
                 else:
+                    synapse, proj_conns = multi_synapses[proj.name]
                     raise NotImplementedError(
                         "Cannot convert population '{}' to component array as "
                         "it has a non-linear synapse or multiple non-single "
@@ -298,7 +298,7 @@ class Network(object):
                             connectivity=proj.connectivity,
                             delay=proj.delay)
             component = MultiDynamicsProperties(
-                name=nineml_population.name, sub_components=sub_components,
+                name=pop.name, sub_components=sub_components,
                 port_connections=internal_conns, port_exposures=exposures)
             component_arrays[pop.name] = ComponentArray(pop.name, pop.size,
                                                         component)
