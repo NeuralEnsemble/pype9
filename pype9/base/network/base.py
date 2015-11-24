@@ -15,7 +15,8 @@ from pyNN.random import NumpyRNG
 import pyNN.standardmodels
 import quantities as pq
 from nineml.user.multi import (
-    MultiDynamicsProperties, append_namespace, BasePortExposure)
+    MultiDynamics, MultiDynamicsProperties, append_namespace, BasePortExposure,
+    SubDynamics, SubDynamicsProperties, DynamicsProperties)
 from nineml.user.port_connections import EventPortConnection
 from nineml.user.network import EventConnectionGroup, AnalogConnectionGroup
 from nineml.values import SingleValue
@@ -235,7 +236,7 @@ class Network(object):
             sub_components = {'cell': pop.cell}
             internal_conns = []
             exposures = []
-            syn_to_post_conns = []  # holds connections from synapse to post.
+            pop_multi_syns = []  # holds connections from synapse to post.
             for proj in receiving:
                 if proj.name in single_synapses:
                     role2name = {'synapse': proj.name,
@@ -303,6 +304,46 @@ class Network(object):
             component_arrays[pop.name] = ComponentArray(pop.name, pop.size,
                                                         component)
         return component_arrays, connection_groups
+
+
+class MultiDynamicsWithSynapses(MultiDynamics):
+
+    def __init__(self, name, sub_components, port_connections,
+                 port_exposures, synapses, synapse_connections):
+        super(MultiDynamicsWithSynapses, self).__init__(
+            name=name, sub_components=sub_components,
+            port_connections=port_connections, port_exposures=port_exposures)
+        self._synapses = synapses
+        self._synapse_connections = synapse_connections
+
+    @property
+    def synapses(self):
+        return self._synapses
+
+    @property
+    def synapse_connections(self):
+        return self._synapse_connections
+
+
+class MultiDynamicsWithSynapsesProperties(MultiDynamicsProperties):
+
+    def __init__(self, name, sub_dynamics_properties, port_connections,
+                 port_exposures, synapses, synapse_connections):
+        sub_dynamics = [
+            SubDynamics(n, sc.component_class)
+            for n, sc in sub_dynamics_properties.iteritems()]
+        sub_dynamics_properties = [
+            SubDynamicsProperties(n, p)
+            for n, p in sub_dynamics_properties.iteritems()]
+        component_class = MultiDynamicsWithSynapses(
+            name + '_Dynamics', sub_dynamics,
+            port_exposures=port_exposures, port_connections=port_connections,
+            synapses=synapses, synapse_connections=synapse_connections)
+        DynamicsProperties.__init__(
+            name, definition=component_class,
+            properties=chain(*[p.properties for p in sub_dynamics_properties]))
+        self._sub_component_properties = dict(
+            (p.name, p) for p in sub_dynamics_properties)
 
 
 class ComponentArray(object):
