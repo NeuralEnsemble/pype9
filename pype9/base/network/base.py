@@ -15,11 +15,10 @@ from pyNN.random import NumpyRNG
 import pyNN.standardmodels
 import quantities as pq
 from nineml.user.multi import (
-    MultiDynamics, append_namespace, AnalogReceivePortExposure,
-    EventReceivePortExposure, AnalogSendPortExposure, EventSendPortExposure)
+    MultiDynamicsProperties, append_namespace, BasePortExposure)
 from nineml.user.port_connections import EventPortConnection
-from nineml.user.multi.port_exposures import BasePortExposure
 from nineml.user.network import EventConnectionGroup, AnalogConnectionGroup
+from nineml.values import SingleValue
 
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
@@ -126,12 +125,69 @@ class Network(object):
                                 "specification".format(key))
         return sim_params
 
-    def _flatten_synapses(self, nineml_population):
+    def _flatten_synapse(self, nineml_projection):
         """
         Returns a multi-dynamics object containing the cell and all
         post-synaptic response/plasticity dynamics
         """
+        name_dict = {'response': (nineml_projection.name + '_psr'),
+                     'plasticty': (nineml_projection.name + '_pls')}
+        syn_comps = {
+            name_dict['response']: nineml_projection.response,
+            name_dict['plasticity']: nineml_projection.plasticity}
+        # Get all projection port connections that don't project to/from
+        # the "pre" population and convert them into local MultiDynamics
+        # port connections of the synapse
+        syn_internal_conns = (
+            pc.__class__(
+                sender_name=name_dict[pc.sender_role],
+                receiver_name=name_dict[pc.receiver_role],
+                send_port=pc.send_port, receive_port=pc.receive_port)
+            for pc in nineml_projection.port_connections
+            if (pc.sender_role in ('plasticity', 'response') and
+                pc.receiver_role in ('plasticity', 'response')))
+        receive_conns = [pc for pc in nineml_projection.port_connections
+                         if (pc.sender_role in ('pre', 'post') and
+                             pc.receiver_role in ('plasticity', 'response'))]
+        send_conns = [pc for pc in nineml_projection.port_connections
+                      if (pc.sender_role in ('plasticity', 'response') and
+                          pc.receiver_role in ('pre', 'post'))]
+        syn_exps = chain(
+            (BasePortExposure.from_port(pc.send_port,
+                                        name_dict[pc.sender_role])
+             for pc in receive_conns),
+            (BasePortExposure.from_port(pc.receive_port,
+                                        name_dict[pc.receiver_role])
+             for pc in send_conns))
+        synapse = MultiDynamicsProperties(
+            name=(nineml_projection.name + '_syn'),
+            sub_components=syn_comps,
+            port_connections=syn_internal_conns,
+            port_exposures=syn_exps)
+        port_connections = list(chain(
+            (pc.__class__(sender_role=pc.sender_role,
+                          receiver_role='synapse',
+                          send_port=pc.send_port,
+                          receive_port=append_namespace(
+                              pc.receive_port_name,
+                              name_dict[pc.receiver_role]))
+             for pc in receive_conns),
+            (pc.__class__(sender_role='synapse',
+                          receiver_role=pc.receiver_role,
+                          send_port=append_namespace(
+                              pc.send_port_name,
+                              name_dict[pc.sender_role])),
+                          receive_port=pc.receive_port
+             for pc in send_conns),
+            (pc for pc in nineml_projection.port_connections
+             if (p.sender_role in ('pre', 'post') and
+                 p.receiver_role in ('pre', 'post')))))
+        return synapse, port_connections
+
+    def _pop_to_comp_array(self, nineml_population):
+        """
         # Get all the projections that project to/from the given population
+        """
         receiving = [p for p in self._nineml.projections
                      if p.post == nineml_population]
         sending = [p for p in self._nineml.projections
@@ -142,50 +198,24 @@ class Network(object):
         # referring to sub-component names instead of projection roles)
         # =====================================================================
         for proj in receiving:
-            name_dict = {'response': (proj.name + '_psr'),
-                         'plasticty': (proj.name + '_pls')}
-            synapse_components = {
-                name_dict['response']: proj.response.component_class,
-                name_dict['plasticity']: proj.plasticity.component_class}
-            # Get all projection port connections that don't project to/from
-            # the "pre" population and convert them into local MultiDynamics
-            # port connections
-            syn_conns = (
-                pc.__class__(
-                    sender_name=name_dict[pc.sender_role],
-                    receiver_name=name_dict[pc.receiver_role],
-                    send_port=pc.send_port, receive_port=pc.receive_port)
-                for pc in proj.port_connections
-                if (pc.sender_role in ('plasticity', 'response') and
-                    pc.receiver_role in ('plasticity', 'response')))
-            receive_pre_conns = [pc for pc in proj.port_connections
-                                 if pc.sender_role == 'pre']
-            send_pre_conns = [pc for pc in proj.port_connections
-                              if pc.receiver_role == 'pre']
-            receive_post_conns = [pc for pc in proj.port_connections
-                                  if pc.sender_role == 'post']
-            send_post_conns = [pc for pc in proj.port_connections
-                               if pc.receiver_role == 'post']
-            synapse_exposures = chain(
-                (BasePortExposure.from_port(pc.send_port,
-                                            name_dict[pc.sender_role])
-                 for pc in chain(receive_pre_conns, receive_post_conns)
-                 if pc.sender_role in ('response', 'plasticity')),
-                (BasePortExposure.from_port(pc.receive_port,
-                                            name_dict[pc.receiver_role])
-                 for pc in chain(send_pre_conns, send_post_conns)))
-            synapse = MultiDynamics(
-                name=(proj.name + '_syn'),
-                sub_components=synapse_components,
-                port_connections=synapse_conns,
-                port_exposures=synapse_exposures)
-        for proj in receiving:
+            synapse, port_connections = self._flatten_synapse(proj)
+            non_single_props = [
+                p for p in synapse.properties
+                if not isinstance(p, SingleValue)]
+            # Can we collapse the synapse into 
+            if (synapse.component_class.is_linear() and
+                    len(non_single_props) < 2):
+                raise NotImplementedError
+            else:
+                raise NotImplementedError(
+                    "Cannot convert population '{}' to component array as it "
+                    "either has a non-linear synapse or multiple non-single "
+                    "properties")
             name_dict = {'post': 'cell',
-                         'response': append_namespace(proj.name + '_psr', 
+                         'response': append_namespace(proj.name + '_psr',
                                                       'syn'),
                          'plasticty': append_namespace(proj.name + '_pls',
                                                        'syn')}
-            
         comp = MultiDynamics(
             name=nineml_population.name + 'Dynamics',
             sub_components=sub_dynamics, port_connections=port_connections,
