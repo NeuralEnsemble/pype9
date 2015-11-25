@@ -134,8 +134,7 @@ class Network(object):
         element (will be 9MLv2 format) and updates the port connections
         to match the changed object.
         """
-        role2name = {'response': (projection_model.name + '_psr'),
-                     'plasticty': (projection_model.name + '_pls')}
+        role2name = {'response': 'psr', 'plasticity': 'pls'}
         syn_comps = {
             role2name['response']: projection_model.response,
             role2name['plasticity']: projection_model.plasticity}
@@ -159,13 +158,13 @@ class Network(object):
         syn_exps = chain(
             (BasePortExposure.from_port(pc.send_port,
                                         role2name[pc.sender_role])
-             for pc in receive_conns),
+             for pc in send_conns),
             (BasePortExposure.from_port(pc.receive_port,
                                         role2name[pc.receiver_role])
-             for pc in send_conns))
+             for pc in receive_conns))
         synapse = MultiDynamicsProperties(
             name=(projection_model.name + '_syn'),
-            sub_components=syn_comps,
+            sub_dynamics_properties=syn_comps,
             port_connections=syn_internal_conns,
             port_exposures=syn_exps)
         port_connections = chain(
@@ -200,15 +199,20 @@ class Network(object):
             # Get all the projections that project to/from the given population
             receiving = [p for p in network_model.projections if p.post == pop]
             sending = [p for p in network_model.projections if p.pre == pop]
+            # Create a dictionary to hold the cell dynamics and any synapse
+            # dynamics that can be flattened into the cell dynamics
+            # (i.e. linear ones).
             sub_components = {'cell': pop.cell}
+            # All port connections between post-synaptic cell and linear
+            # synapses and port exposures to pre-synaptic cell
             internal_conns = []
             exposures = []
-            multi_synapses = {}  # holds connections from synapse to post.
+            nonlinear_synapses = {}  # holds connections from synapse to post.
             for proj in receiving:
                 role2name = {'synapse': proj.name,
                              'post': 'cell'}
                 # Flatten response and plasticity into single dynamics class.
-                # NB: this should no longer be necessary when we move to
+                # TODO: this should be no longer necessary when we move to
                 # version 2 as response and plasticity elements will be
                 # replaced by a synapse element in the standard.
                 synapse, proj_conns = cls._flatten_synapse(proj)
@@ -248,7 +252,8 @@ class Network(object):
                             pc.send_port, role2name[pc.sender_role])
                          for pc in proj_conns if pc.receiver_role == 'pre')))
                 else:
-                    multi_synapses[proj.name] = (synapse, synapse_post_conns)
+                    nonlinear_synapses[proj.name] = (synapse,
+                                                     synapse_post_conns)
                     # Add exposures for direct connections between pre and post
                     # synaptic cells
                     exposures.extend(chain(
@@ -296,6 +301,8 @@ class Network(object):
             # Add exposures for connections to/from the pre-synaptic cell in
             # populations.
             for proj in sending:
+                # Not required after transition to version 2 syntax
+                synapse, proj_conns = cls._flatten_synapse(proj)
                 exposures.extend(chain(
                     (BasePortExposure.from_port(
                         pc.send_port, 'cell')
@@ -303,10 +310,10 @@ class Network(object):
                     (BasePortExposure.from_port(
                         pc.receive_port, 'cell')
                      for pc in proj_conns if pc.receiver_role == 'pre')))
-            component = MultiDynamicsWithDiscreteSynapsesProperties(
+            component = MultiDynamicsWithSeparateSynapsesProperties(
                 name=pop.name, sub_components=sub_components,
                 port_connections=internal_conns, port_exposures=exposures,
-                synapses=multi_synapses)
+                synapses=nonlinear_synapses)
             component_arrays[pop.name] = ComponentArray(pop.name, pop.size,
                                                         component)
         return component_arrays, connection_groups
@@ -324,11 +331,11 @@ class Network(object):
 #                         "post-synaptic cell to pre-synaptic at this stage")
 
 
-class MultiDynamicsWithDiscreteSynapses(MultiDynamics):
+class MultiDynamicsWithSeparateSynapses(MultiDynamics):
 
     def __init__(self, name, sub_components, port_connections,
                  port_exposures, synapses):
-        super(MultiDynamicsWithDiscreteSynapses, self).__init__(
+        super(MultiDynamicsWithSeparateSynapses, self).__init__(
             name=name, sub_components=sub_components,
             port_connections=port_connections, port_exposures=port_exposures)
         self._synapses = synapses
@@ -349,7 +356,7 @@ class MultiDynamicsWithDiscreteSynapses(MultiDynamics):
         return self._synapses.iterkeys()
 
 
-class MultiDynamicsWithDiscreteSynapsesProperties(MultiDynamicsProperties):
+class MultiDynamicsWithSeparateSynapsesProperties(MultiDynamicsProperties):
 
     def __init__(self, name, sub_dynamics_properties, port_connections,
                  port_exposures, synapses, synapse_connections):
@@ -359,7 +366,7 @@ class MultiDynamicsWithDiscreteSynapsesProperties(MultiDynamicsProperties):
         sub_dynamics_properties = [
             SubDynamicsProperties(n, p)
             for n, p in sub_dynamics_properties.iteritems()]
-        component_class = MultiDynamicsWithDiscreteSynapses(
+        component_class = MultiDynamicsWithSeparateSynapses(
             name + '_Dynamics', sub_dynamics,
             port_exposures=port_exposures, port_connections=port_connections,
             synapses=(s.component_class for s in synapses),
@@ -423,8 +430,8 @@ class ConnectionGroup(object):
             self,
             source=component_arrays[nineml_model.source.name],
             target=component_arrays[nineml_model.destination.name],
-            nineml_model.connectivity,
+            connectivity=nineml_model.connectivity,
             synapse_type=self.SynapseClass(weight=weight, delay=delay),
-            source=nineml_model.source.segment,
+#             source=nineml_model.source.segment,
             receptor_type=nineml_model.receive_port,
             label=nineml_model.name)
