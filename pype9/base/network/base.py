@@ -5,6 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from collections import namedtuple
 from itertools import chain
 from nineml.user import ComponentArray, Initial
 from pype9.exceptions import Pype9RuntimeError
@@ -19,7 +20,10 @@ from nineml.user.multi import (
     SubDynamics, SubDynamicsProperties)
 from nineml.user import DynamicsProperties
 from nineml.user.port_connections import EventPortConnection
-from nineml.user.network import EventConnectionGroup, AnalogConnectionGroup
+from nineml.user.network import (
+    ComponentArray as ComponentArray9ML,
+    EventConnectionGroup as EventConnectionGroup9ML,
+    AnalogConnectionGroup as AnalogConnectionGroup9ML)
 from nineml.values import SingleValue
 
 
@@ -145,7 +149,7 @@ class Network(object):
             pc.__class__(
                 sender_name=role2name[pc.sender_role],
                 receiver_name=role2name[pc.receiver_role],
-                send_port=pc.send_port, receive_port=pc.receive_port)
+                send_port=pc.send_port_name, receive_port=pc.receive_port_name)
             for pc in projection_model.port_connections
             if (pc.sender_role in ('plasticity', 'response') and
                 pc.receiver_role in ('plasticity', 'response')))
@@ -164,13 +168,13 @@ class Network(object):
              for pc in receive_conns))
         synapse = MultiDynamicsProperties(
             name=(projection_model.name + '_syn'),
-            sub_dynamics_properties=syn_comps,
+            sub_components=syn_comps,
             port_connections=syn_internal_conns,
             port_exposures=syn_exps)
-        port_connections = chain(
+        port_connections = list(chain(
             (pc.__class__(sender_role=pc.sender_role,
                           receiver_role='synapse',
-                          send_port=pc.send_port,
+                          send_port=pc.send_port_name,
                           receive_port=append_namespace(
                               pc.receive_port_name,
                               role2name[pc.receiver_role]))
@@ -180,11 +184,16 @@ class Network(object):
                           send_port=append_namespace(
                               pc.send_port_name,
                               role2name[pc.sender_role]),
-                          receive_port=pc.receive_port)
+                          receive_port=pc.receive_port_name)
              for pc in send_conns),
             (pc for pc in projection_model.port_connections
              if (pc.sender_role in ('pre', 'post') and
-                 pc.receiver_role in ('pre', 'post'))))
+                 pc.receiver_role in ('pre', 'post')))))
+        # A bit of a hack in order to bind the port_connections
+        dummy_container = namedtuple('DummyContainer', 'pre post synapse')(
+            projection_model.pre, projection_model.post, synapse)
+        for port_connection in port_connections:
+            port_connection.bind(dummy_container, to_roles=True)
         return synapse, port_connections
 
     @classmethod
@@ -273,17 +282,17 @@ class Network(object):
                     if 'pre' in (port_conn.sender_role,
                                  port_conn.receiver_role):
                         if isinstance(port_conn, EventPortConnection):
-                            conn_grp_cls = EventConnectionGroup
+                            conn_grp_cls = EventConnectionGroup9ML
                         else:
-                            conn_grp_cls = AnalogConnectionGroup
+                            conn_grp_cls = AnalogConnectionGroup9ML
                         if port_conn.sender_role == 'pre':
-                            source_port = port_conn.send_port
+                            source_port = port_conn.send_port_name
                             destination_port = append_namespace(
-                                port_conn.receive_port, 'cell')
+                                port_conn.receive_port_name, 'cell')
                         else:
                             source_port = append_namespace(
-                                port_conn.send_port, 'cell')
-                            destination_port = port_conn.receive_port
+                                port_conn.send_port_name, 'cell')
+                            destination_port = port_conn.receive_port_name
                         name = ('{}__{}'
                                 .format(
                                     proj.name,
@@ -314,8 +323,8 @@ class Network(object):
                 name=pop.name, sub_components=sub_components,
                 port_connections=internal_conns, port_exposures=exposures,
                 synapses=nonlinear_synapses)
-            component_arrays[pop.name] = ComponentArray(pop.name, pop.size,
-                                                        component)
+            component_arrays[pop.name] = ComponentArray9ML(pop.name, pop.size,
+                                                           component)
         return component_arrays, connection_groups
 
 
@@ -358,24 +367,23 @@ class MultiDynamicsWithSeparateSynapses(MultiDynamics):
 
 class MultiDynamicsWithSeparateSynapsesProperties(MultiDynamicsProperties):
 
-    def __init__(self, name, sub_dynamics_properties, port_connections,
-                 port_exposures, synapses, synapse_connections):
+    def __init__(self, name, sub_components, port_connections,
+                 port_exposures, synapses):
         sub_dynamics = [
             SubDynamics(n, sc.component_class)
-            for n, sc in sub_dynamics_properties.iteritems()]
-        sub_dynamics_properties = [
+            for n, sc in sub_components.iteritems()]
+        sub_components = [
             SubDynamicsProperties(n, p)
-            for n, p in sub_dynamics_properties.iteritems()]
+            for n, p in sub_components.iteritems()]
         component_class = MultiDynamicsWithSeparateSynapses(
             name + '_Dynamics', sub_dynamics,
             port_exposures=port_exposures, port_connections=port_connections,
-            synapses=(s.component_class for s in synapses),
-            synapse_connections=synapse_connections)
+            synapses=(s.component_class for s in synapses))
         DynamicsProperties.__init__(
-            name, definition=component_class,
-            properties=chain(*[p.properties for p in sub_dynamics_properties]))
+            self, name, definition=component_class,
+            properties=chain(*[p.properties for p in sub_components]))
         self._sub_component_properties = dict(
-            (p.name, p) for p in sub_dynamics_properties)
+            (p.name, p) for p in sub_components)
         self._synapses = synapses
 
     def synapse(self, name):
