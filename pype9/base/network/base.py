@@ -238,7 +238,7 @@ class Network(object):
                 # synapses into a single dynamics object
                 non_single_props = [
                     p for p in synapse.properties
-                    if not isinstance(p, SingleValue)]
+                    if not isinstance(p.value, SingleValue)]
                 # If there is only one non-SingleValue property and the synapse
                 # is non-linear it can be combined into the dynamics of the
                 # post-synaptic cell.
