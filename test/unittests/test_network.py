@@ -272,42 +272,66 @@ class TestNetwork(unittest.TestCase):
             "Pop1", pop1.size,
             MultiDynamicsProperties(
                 "Pop1",
-                sub_components={'cell': cell1,
-                                'Proj2_psr': exc,
-                                'Proj4_psr': exc,
-                                'Proj2_pls': static,
-                                'Proj4_pls': static},
+                sub_components={
+                    'cell': cell1,
+                    'Proj2': MultiDynamicsProperties(
+                        name='Proj2_syn',
+                        sub_components={'psr': exc, 'pls': static},
+                        port_connections=[
+                            ('pls', 'fixed_weight', 'psr', 'weight')],
+                        port_exposures=[
+                            ('psr', 'i'),
+                            ('psr', 'spike'),
+                            ('psr', 'double_spike')]),
+                    'Proj4': MultiDynamicsProperties(
+                        name='Proj4_syn',
+                        sub_components={'psr': exc, 'pls': static},
+                        port_connections=[
+                            ('pls', 'fixed_weight', 'psr', 'weight')],
+                        port_exposures=[
+                            ('psr', 'i'),
+                            ('psr', 'spike')])},
                 port_connections=[
-                    ('Proj2_psr', 'i', 'cell', 'i_ext'),
-                    ('Proj2_pls', 'fixed_weight', 'Proj2_psr', 'weight'),
-                    ('Proj4_psr', 'i', 'cell', 'i_ext'),
-                    ('Proj4_pls', 'fixed_weight', 'Proj4_psr', 'weight')],
+                    ('Proj2', 'i__psr', 'cell', 'i_ext'),
+                    ('Proj4', 'i__psr', 'cell', 'i_ext')],
                 port_exposures=[
                     ('cell', 'spike'),
-                    ('Proj2_psr', 'double_spike'),
-                    ('Proj2_psr', 'spike'),
-                    ('Proj4_psr', 'spike')]))
+                    ('Proj2', 'double_spike__psr'),
+                    ('Proj2', 'spike__psr'),
+                    ('Proj4', 'spike__psr')]))
 
         dyn_array2 = ComponentArray(
             "Pop2", pop2.size,
             MultiDynamicsProperties(
                 "Pop2",
-                sub_components={'cell': cell2,
-                                'Proj1_psr': inh,
-                                'Proj3_psr': exc,
-                                'Proj1_pls': static,
-                                'Proj3_pls': stdp},
+                sub_components={
+                    'cell': cell2,
+                    'Proj1': MultiDynamicsProperties(
+                        name='Proj1_syn',
+                        sub_components={'psr': inh, 'pls': static},
+                        port_connections=[
+                            ('pls', 'fixed_weight', 'psr', 'weight')],
+                        port_exposures=[
+                            ('psr', 'i'),
+                            ('psr', 'spike')]),
+                    'Proj3': MultiDynamicsProperties(
+                        name='Proj3_syn',
+                        sub_components={'psr': exc, 'pls': stdp},
+                        port_connections=[
+                            ('pls', 'wsyn_current', 'psr', 'weight')],
+                        port_exposures=[
+                            ('psr', 'i'),
+                            ('psr', 'spike'),
+                            ('pls', 'incoming_spike')])},
                 port_connections=[
-                    ('Proj1_psr', 'i', 'cell', 'i_ext'),
-                    ('Proj1_pls', 'fixed_weight', 'Proj1_psr', 'weight'),
-                    ('Proj3_psr', 'i', 'cell', 'i_ext'),
-                    ('Proj3_pls', 'wsyn_current', 'Proj3_psr', 'weight')],
+                    ('Proj1', 'i__psr', 'cell', 'i_ext'),
+                    ('Proj3', 'i__psr', 'cell', 'i_ext')],
                 port_exposures=[
                     ('cell', 'spike'),
                     ('cell', 'double_spike'),
-                    ('Proj1_psr', 'spike'),
-                    ('Proj3_psr', 'spike'),
-                    ('Proj3_pls', 'incoming_spike')]))
+                    ('Proj1', 'spike__psr'),
+                    ('Proj3', 'spike__psr'),
+                    ('Proj3', 'incoming_spike__pls')]))
 
         dyn_array3 = ComponentArray(
             "Pop3", pop3.size, MultiDynamicsProperties(
@@ -316,35 +340,34 @@ class TestNetwork(unittest.TestCase):
                 port_exposures=[('cell', 'spike')]))
 
         conn_group1 = EventConnectionGroup(
-            'Proj1__pre_spike__response_spike___connection_group', 'Pop1',
-            'Pop2', 'spike__cell', 'spike__Proj1_psr',
+            'Proj1__pre__spike__synapse__spike__psr', 'Pop1',
+            'Pop2', 'spike__cell', 'spike__psr__Proj1',
             Connectivity(self.all_to_all, pop1, pop2), self.delay)
 
         conn_group2 = EventConnectionGroup(
-            'Proj2__pre_spike__response_spike___connection_group', 'Pop2',
-            'Pop1', 'spike__cell', 'spike__Proj2_psr',
+            'Proj2__pre__spike__synapse__spike__psr', 'Pop2',
+            'Pop1', 'spike__cell', 'spike__psr__Proj2',
             Connectivity(self.all_to_all, pop2, pop1), self.delay)
 
         conn_group3 = EventConnectionGroup(
-            'Proj2__pre_double_spike__response_double_spike'
-            '___connection_group',
+            'Proj2__pre__double_spike__synapse__double_spike__psr',
             'Pop2', 'Pop1', 'double_spike__cell',
-            'double_spike__Proj2_psr',
+            'double_spike__psr__Proj2',
             Connectivity(self.all_to_all, pop2, pop1), self.delay)
 
         conn_group4 = EventConnectionGroup(
-            'Proj3__pre_spike__response_spike___connection_group', 'Pop3',
-            'Pop2', 'spike__cell', 'spike__Proj3_psr',
+            'Proj3__pre__spike__synapse__spike__psr', 'Pop3',
+            'Pop2', 'spike__cell', 'spike__psr__Proj3',
             Connectivity(self.all_to_all, pop3, pop2), self.delay)
 
         conn_group5 = EventConnectionGroup(
-            'Proj3__pre_spike__plasticity_incoming_spike___connection_group',
-            'Pop3', 'Pop2', 'spike__cell', 'incoming_spike__Proj3_pls',
+            'Proj3__pre__spike__synapse__incoming_spike__pls',
+            'Pop3', 'Pop2', 'spike__cell', 'incoming_spike__pls__Proj3',
             Connectivity(self.all_to_all, pop3, pop2), self.delay)
 
         conn_group6 = EventConnectionGroup(
-            'Proj4__pre_spike__response_spike___connection_group', 'Pop3',
-            'Pop1', 'spike__cell', 'spike__Proj4_psr',
+            'Proj4__pre__spike__synapse__spike__psr', 'Pop3',
+            'Pop1', 'spike__cell', 'spike__psr__Proj4',
             Connectivity(self.all_to_all, pop3, pop1), self.delay)
 
         # =====================================================================
@@ -355,7 +378,6 @@ class TestNetwork(unittest.TestCase):
          connection_groups) = BaseNetwork.nineml_comp_arrays_and_conn_groups(
             network)
 
-#         self.assertEqual(network., 3)
         self.assertEqual(
             component_arrays['Pop1'], dyn_array1,
             "Mismatch between generated and expected dynamics arrays:\n {}"
@@ -372,62 +394,55 @@ class TestNetwork(unittest.TestCase):
         # Test equality between network automatically generated connection
         # groups and manually generated expected ones
         # =====================================================================
-        self.assertEqual(network.num_connection_groups, 6)
+        print connection_groups.keys()
         self.assertEqual(
             connection_groups[
-                'Proj1__pre_spike__response_spike___connection_group'],
+                'Proj1__pre__spike__synapse__spike__psr'],
             conn_group1,
             "Mismatch between generated and expected connection groups:\n {}"
             .format(
-                connection_groups[
-                    'Proj1__pre_spike__response_spike___connection_group']
+                connection_groups['Proj1__pre__spike__synapse__spike__psr']
                 .find_mismatch(conn_group1)))
         self.assertEqual(
-            connection_groups[
-                'Proj2__pre_spike__response_spike___connection_group'],
+            connection_groups['Proj2__pre__spike__synapse__spike__psr'],
             conn_group2,
             "Mismatch between generated and expected connection groups:\n {}"
             .format(
-                connection_groups[
-                    'Proj2__pre_spike__response_spike___connection_group']
+                connection_groups['Proj2__pre__spike__synapse__spike__psr']
                 .find_mismatch(conn_group2)))
         self.assertEqual(
             connection_groups[
-                'Proj2__pre_double_spike__response_double_spike'
-                '___connection_group'],
+                'Proj2__pre__double_spike__synapse__double_spike__psr'],
             conn_group3,
             "Mismatch between generated and expected connection groups:\n {}"
             .format(
                 connection_groups[
-                    'Proj2__pre_double_spike__response_double_spike'
-                    '___connection_group']
+                    'Proj2__pre__double_spike__synapse__double_spike__psr']
                 .find_mismatch(conn_group3)))
         self.assertEqual(
             connection_groups[
-                'Proj3__pre_spike__response_spike___connection_group'],
+                'Proj3__pre__spike__synapse__spike__psr'],
             conn_group4,
             "Mismatch between generated and expected connection groups:\n {}"
             .format(
                 connection_groups[
-                    'Proj3__pre_spike__response_spike___connection_group']
+                    'Proj3__pre__spike__synapse__spike__psr']
                 .find_mismatch(conn_group4)))
         self.assertEqual(
             connection_groups[
-                'Proj3__pre_spike__plasticity_incoming_spike'
-                '___connection_group'],
+                'Proj3__pre__spike__synapse__incoming_spike__pls'],
             conn_group5,
             "Mismatch between generated and expected connection groups:\n {}"
             .format(
                 connection_groups[
-                    'Proj3__pre_spike__plasticity_incoming_spike'
-                    '___connection_group']
+                    'Proj3__pre__spike__synapse__incoming_spike__pls']
                 .find_mismatch(conn_group5)))
         self.assertEqual(
             connection_groups[
-                'Proj4__pre_spike__response_spike___connection_group'],
+                'Proj4__pre__spike__synapse__spike__psr'],
             conn_group6,
             "Mismatch between generated and expected connection groups:\n {}"
             .format(
                 connection_groups[
-                    'Proj4__pre_spike__response_spike___connection_group']
+                    'Proj4__pre__spike__synapse__spike__psr']
                 .find_mismatch(conn_group6)))

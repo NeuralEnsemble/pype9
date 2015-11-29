@@ -286,27 +286,28 @@ class Network(object):
                         else:
                             conn_grp_cls = AnalogConnectionGroup9ML
                         if port_conn.sender_role == 'pre':
-                            source_port = port_conn.send_port_name
-                            destination_port = append_namespace(
-                                port_conn.receive_port_name, 'cell')
-                        else:
                             source_port = append_namespace(
                                 port_conn.send_port_name, 'cell')
-                            destination_port = port_conn.receive_port_name
-                        name = ('{}__{}'
-                                .format(
-                                    proj.name,
-                                    port_conn.sender_role,
-                                    port_conn.send_port_name,
-                                    port_conn.receiver_role,
-                                    port_conn.receive_port_name))
-                        connection_groups[proj.name] = conn_grp_cls(
+                            destination_port = append_namespace(
+                                port_conn.receive_port_name, proj.name)
+                        else:
+                            source_port = append_namespace(
+                                port_conn.send_port_name, proj.name)
+                            destination_port = append_namespace(
+                                port_conn.receive_port_name, 'cell')
+                        name = ('__'.join((proj.name,
+                                           port_conn.sender_role,
+                                           port_conn.send_port_name,
+                                           port_conn.receiver_role,
+                                           port_conn.receive_port_name)))
+                        conn_group = conn_grp_cls(
                             name,
                             proj.pre.name, proj.post.name,
                             source_port=source_port,
                             destination_port=destination_port,
                             connectivity=proj.connectivity,
                             delay=proj.delay)
+                        connection_groups[conn_group.name] = conn_group
             # Add exposures for connections to/from the pre-synaptic cell in
             # populations.
             for proj in sending:
