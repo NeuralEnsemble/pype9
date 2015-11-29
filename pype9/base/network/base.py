@@ -25,6 +25,7 @@ from nineml.user.network import (
     EventConnectionGroup as EventConnectionGroup9ML,
     AnalogConnectionGroup as AnalogConnectionGroup9ML)
 from nineml.values import SingleValue
+from .connectivity import InversePyNNConnectivity
 
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
@@ -300,12 +301,17 @@ class Network(object):
                                            port_conn.send_port_name,
                                            port_conn.receiver_role,
                                            port_conn.receive_port_name)))
+                        if port_conn.receiver_role == 'pre':
+                            connectivity = InversePyNNConnectivity(
+                                proj.connectivity)
+                        else:
+                            connectivity = proj.connectivity
                         conn_group = conn_grp_cls(
                             name,
                             proj.pre.name, proj.post.name,
                             source_port=source_port,
                             destination_port=destination_port,
-                            connectivity=proj.connectivity,
+                            connectivity=connectivity,
                             delay=proj.delay)
                         connection_groups[conn_group.name] = conn_group
             # Add exposures for connections to/from the pre-synaptic cell in
@@ -333,12 +339,6 @@ class Network(object):
 #                 "Cannot convert population '{}' to component array as "
 #                 "it has a non-linear synapse or multiple non-single "
 #                 "properties")
-
-#                 if any(1 for pc in proj_conns
-#                        if pc.receiver_role == 'pre'):
-#                     raise NotImplementedError(
-#                         "Cannot handle reverse connections from synapse/"
-#                         "post-synaptic cell to pre-synaptic at this stage")
 
 
 class MultiDynamicsWithSeparateSynapses(MultiDynamics):

@@ -5,7 +5,8 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from nineml.user.projection import BaseConnectivity
+from nineml.user.projection import (
+    BaseConnectivity, InverseConnectivity as BaseInverseConnectivity)
 from pyNN.parameters import LazyArray
 import numpy
 from pype9.exceptions import Pype9RuntimeError
@@ -26,11 +27,11 @@ class PyNNConnectivity(BaseConnectivity):
         raise NotImplementedError(
             "Need to work out connection list from connection map")
 
-    def connect(self, projection):
+    def connect(self, connection_group):
         if self.has_been_sampled():
             # Get connection from previously connected projection
             connector = self._pyNN_module.MapConnector()
-            connector._connect_with_map(projection, self._connection_map)
+            connector._connect_with_map(connection_group, self._connection_map)
         else:
             if self._rule_props.lib_type == 'AllToAll':
                 connector_cls = self._pyNN_module.AllToAllConnector
@@ -55,8 +56,8 @@ class PyNNConnectivity(BaseConnectivity):
                 assert False
             params.update(self._kwargs)
             connector = connector_cls(**params)
-            connector.connect(projection)
-            self._prev_connected = projection
+            connector.connect(connection_group)
+            self._prev_connected = connection_group
 
     def has_been_sampled(self):
         return self._prev_connected is not None
@@ -65,3 +66,11 @@ class PyNNConnectivity(BaseConnectivity):
     def _connection_map(self):
         return LazyArray(~numpy.isnan(
             self._prev_connected.get(['weight'], 'array', gather='all')[0]))
+
+
+class InversePyNNConnectivity(BaseInverseConnectivity):
+
+    def connect(self, connection_group):
+        raise NotImplementedError(
+            "Inverse connectivity from post-synaptic/synapse dynamics to "
+            "pre-synaptic dynamics has not been implemented yet.")
