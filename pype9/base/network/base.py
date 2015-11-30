@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 from collections import namedtuple
 from itertools import chain
-from nineml.user import ComponentArray, Initial
+from nineml.user import ComponentArray, Initial, Property
 from pype9.exceptions import Pype9RuntimeError
 from .values import get_pyNN_value
 import os.path
@@ -217,7 +217,7 @@ class Network(object):
             # synapses and port exposures to pre-synaptic cell
             internal_conns = []
             exposures = []
-            nonlinear_synapses = {}  # holds connections from synapse to post.
+            synapses = {}  # holds connections from synapse to post.
             for proj in receiving:
                 role2name = {'synapse': proj.name,
                              'post': 'cell'}
@@ -232,20 +232,47 @@ class Network(object):
                     pc for pc in proj_conns
                     if (pc.receiver_role in ('post', 'synapse') and
                         pc.sender_role in ('post', 'synapse'))]
-                # Get the properties, which are not single values, as they will
-                # have to be varied with each synapse. If there is only one it
-                # the weight of the synapse in NEURON and NEST can be used to
-                # hold it otherwise it won't be possible to collapse the
-                # synapses into a single dynamics object
-                non_single_props = [
-                    p for p in synapse.properties
-                    if not isinstance(p.value, SingleValue)]
-                # If there is only one non-SingleValue property and the synapse
-                # is non-linear it can be combined into the dynamics of the
-                # post-synaptic cell.
-                if (synapse.component_class.is_linear() and
-                        len(non_single_props) < 2):
-                    sub_components[proj.name] = synapse
+                # If the synapse is non-linear it can be combined into the
+                # dynamics of the post-synaptic cell.
+                if synapse.component_class.is_linear():
+                    # Create a copy of the synapse within only the non-varying
+                    # properties and initial values
+                    non_var_synapse = DynamicsProperties(
+                        name=(synapse.name + 'Base'),
+                        definition=synapse.definition,
+                        properties=(
+                            (p if isinstance(p.value, SingleValue)
+                             else Property(p.name, 0.0, p.units))
+                            for p in synapse.properties),
+                        initial_values=(
+                            (i if isinstance(i.value, SingleValue)
+                             else Initial(i.name, 0.0, i.units))
+                            for i in synapse.initial_values))
+                    # Create a copy of the synapse with only the varying
+                    # properties and initial values, using the non-varying
+                    # properties as a prototype
+                    # FIXME: These properties, which are mapped to 'weight'
+                    #        parameters should only checked that they are only
+                    #        referred to in on-event transitions.
+                    synapse = DynamicsProperties(
+                        name=synapse.name,
+                        definition=non_var_synapse,
+                        properties=(
+                            p for p in synapse.properties
+                            if not isinstance(p.value, SingleValue)),
+                        initial_values=(
+                            i for i in synapse.initial_values
+                            if not isinstance(i.value, SingleValue)))
+                    # Save the synapse for the projection, with the connections
+                    # between the synapse and the post-synaptic cell set to
+                    # None signifying that the synapse has already been
+                    # included in the post-synaptic cell dynamics and only
+                    # certain properties (e.g. weights need to be varied per
+                    # synapse)
+                    synapses[proj.name] = (synapse, None)
+                    # Add the non-varying synapse as a sub_component of the
+                    # post-synaptic cell dynamics
+                    sub_components[proj.name] = non_var_synapse
                     # Convert port connections between synpase and post-
                     # synaptic cell into internal port connections of a multi-
                     # dynamics object
@@ -262,8 +289,7 @@ class Network(object):
                             pc.send_port, role2name[pc.sender_role])
                          for pc in proj_conns if pc.receiver_role == 'pre')))
                 else:
-                    nonlinear_synapses[proj.name] = (synapse,
-                                                     synapse_post_conns)
+                    synapses[proj.name] = (synapse, synapse_post_conns)
                     # Add exposures for direct connections between pre and post
                     # synaptic cells
                     exposures.extend(chain(
@@ -306,13 +332,17 @@ class Network(object):
                                 proj.connectivity)
                         else:
                             connectivity = proj.connectivity
+                        if port_conn.sender_role == 'pre':
+                            delay = proj.delay
+                        else:
+                            delay = None
                         conn_group = conn_grp_cls(
                             name,
                             proj.pre.name, proj.post.name,
                             source_port=source_port,
                             destination_port=destination_port,
                             connectivity=connectivity,
-                            delay=proj.delay)
+                            delay=delay)
                         connection_groups[conn_group.name] = conn_group
             # Add exposures for connections to/from the pre-synaptic cell in
             # populations.
@@ -326,10 +356,10 @@ class Network(object):
                     (BasePortExposure.from_port(
                         pc.receive_port, 'cell')
                      for pc in proj_conns if pc.receiver_role == 'pre')))
-            component = MultiDynamicsWithSeparateSynapsesProperties(
+            component = MultiDynamicsWithSynapsesProperties(
                 name=pop.name, sub_components=sub_components,
                 port_connections=internal_conns, port_exposures=exposures,
-                synapses=nonlinear_synapses)
+                synapses=synapses)
             component_arrays[pop.name] = ComponentArray9ML(pop.name, pop.size,
                                                            component)
         return component_arrays, connection_groups
@@ -340,12 +370,20 @@ class Network(object):
 #                 "it has a non-linear synapse or multiple non-single "
 #                 "properties")
 
+#         # Get the properties, which are not single values, as they
+#         # will have to be varied with each synapse. If there is
+#         # only one it the weight of the synapse in NEURON and NEST
+#         # can be used to hold it otherwise it won't be possible to
+#         # collapse the synapses into a single dynamics object
+#         non_single_props = [
+#             p for p in synapse.properties
+#             if not isinstance(p.value, SingleValue)]
 
-class MultiDynamicsWithSeparateSynapses(MultiDynamics):
+class MultiDynamicsWithSynapses(MultiDynamics):
 
     def __init__(self, name, sub_components, port_connections,
                  port_exposures, synapses):
-        super(MultiDynamicsWithSeparateSynapses, self).__init__(
+        super(MultiDynamicsWithSynapses, self).__init__(
             name=name, sub_components=sub_components,
             port_connections=port_connections, port_exposures=port_exposures)
         self._synapses = synapses
@@ -366,7 +404,7 @@ class MultiDynamicsWithSeparateSynapses(MultiDynamics):
         return self._synapses.iterkeys()
 
 
-class MultiDynamicsWithSeparateSynapsesProperties(MultiDynamicsProperties):
+class MultiDynamicsWithSynapsesProperties(MultiDynamicsProperties):
 
     def __init__(self, name, sub_components, port_connections,
                  port_exposures, synapses):
@@ -376,7 +414,7 @@ class MultiDynamicsWithSeparateSynapsesProperties(MultiDynamicsProperties):
         sub_components = [
             SubDynamicsProperties(n, p)
             for n, p in sub_components.iteritems()]
-        component_class = MultiDynamicsWithSeparateSynapses(
+        component_class = MultiDynamicsWithSynapses(
             name + '_Dynamics', sub_dynamics,
             port_exposures=port_exposures, port_connections=port_connections,
             synapses=(s.component_class for s in synapses))
@@ -429,18 +467,31 @@ class ComponentArray(object):
 class ConnectionGroup(object):
 
     def __init__(self, nineml_model, component_arrays, **kwargs):
-        # FIXME: Should read the weight from somewhere, if 'connection_weight'
-        #        is used in the code generation.
-        weight = 1.0
+        (synapse, conns) = component_arrays[nineml_model.destination].synapse(
+            nineml_model.name)
+        if conns is not None:
+            raise NotImplementedError(
+                "Nonlinear synapses, as used in '{}' are not currently "
+                "supported".format(nineml_model.name))
+        if synapse.num_local_properties > 1:
+            raise NotImplementedError(
+                "Currently only supports one property that varies with each "
+                "synapse")
+        # Get the only local property that varies with the synapse, assumed to
+        # be the synaptic weight
+        # FIXME: This will only work if the weight parameter is only used in
+        #        the corresponding on-event. This should be checked when
+        #        creating the synapse
+        weight = get_pyNN_value(next(synapse.local_properties),
+                                self.unit_handler, **kwargs)
         delay = get_pyNN_value(nineml_model.delay, self.unit_handler,
                                **kwargs)
         # FIXME: Ignores send_port, assumes there is only one...
         self.PyNNProjectionClass.__init__(
             self,
-            source=component_arrays[nineml_model.source.name],
-            target=component_arrays[nineml_model.destination.name],
+            source=component_arrays[nineml_model.source],
+            target=component_arrays[nineml_model.destination],
             connectivity=nineml_model.connectivity,
             synapse_type=self.SynapseClass(weight=weight, delay=delay),
-#             source=nineml_model.source.segment,
             receptor_type=nineml_model.receive_port,
             label=nineml_model.name)

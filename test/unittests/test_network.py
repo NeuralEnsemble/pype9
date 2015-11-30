@@ -394,7 +394,6 @@ class TestNetwork(unittest.TestCase):
         # Test equality between network automatically generated connection
         # groups and manually generated expected ones
         # =====================================================================
-        print connection_groups.keys()
         self.assertEqual(
             connection_groups[
                 'Proj1__pre__spike__synapse__spike__psr'],
