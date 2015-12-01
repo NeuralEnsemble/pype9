@@ -91,7 +91,7 @@ class CodeGenerator(BaseCodeGenerator):
         # Check whether it is a point process or a ion channel
         if isinstance(component_class.element(
             component_class.annotations[PYPE9_NS]['MembraneVoltage'],
-            as_class=Dynamics),
+            class_map=Dynamics.class_to_member),
                 StateVariable):
             self.generate_point_process(
                 component_class, default_properties, initial_state, src_dir,

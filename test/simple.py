@@ -28,7 +28,7 @@ dyn_props = MultiDynamicsProperties(
 
 Cell = CellMetaClass(dyn_props.component_class,
                      build_dir=os.path.dirname(os.path.realpath(__file__)),
-                     initial_regime='subthreshold___sole___regime',
+                     initial_regime='subthreshold___sole',
                      build_mode='force',
                      connection_weight='weight')
 cell = Cell(dyn_props)

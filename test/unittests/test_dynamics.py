@@ -182,7 +182,7 @@ class TestDynamics(TestCase):
             port_exposures=[('psr', 'q', 'weight'),
                             ('psr', 'spike', 'input_spike')])
         initial_states = {'a__psr': 0.0 * pq.nA, 'b__psr': 0.0 * pq.nA}
-        initial_regime = 'subthreshold___sole___regime'
+        initial_regime = 'subthreshold___sole'
         liaf_properties = ninemlcatalog.load(
             'neuron/LeakyIntegrateAndFire/',
             'PyNNLeakyIntegrateAndFireProperties')

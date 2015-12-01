@@ -153,7 +153,8 @@ class Cell(base.Cell):
 
     def record(self, port_name):
         self._initialise_local_recording()
-        port = self.component_class.element(port_name, as_class=Dynamics)
+        port = self.component_class.element(
+            port_name, class_map=Dynamics.class_to_member)
         if isinstance(port, EventPort):
             logger.warning("Assuming '{}' is voltage threshold crossing"
                            .format(port_name))
