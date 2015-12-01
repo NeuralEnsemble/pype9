@@ -3,7 +3,7 @@ import unittest
 from nineml.user import (
     Projection, Network, DynamicsProperties,
     Population, ComponentArray, EventConnectionGroup,
-    MultiDynamicsProperties)
+    MultiDynamicsProperties, Property, RandomDistributionProperties)
 from nineml.user.projection import Connectivity
 from nineml.abstraction import (
     Parameter, Dynamics, Regime, On, OutputEvent, StateVariable,
@@ -13,7 +13,10 @@ from nineml.abstraction.ports import (
     EventReceivePort)
 from nineml import units as un
 from nineml.units import ms
-from pype9.base.network import Network as BaseNetwork
+from nineml.values import RandomValue
+from pype9.base.network import (
+    Network as BaseNetwork, MultiDynamicsWithSynapsesProperties,
+    LinearSynapse)
 import ninemlcatalog
 
 
@@ -160,14 +163,29 @@ class TestNetwork(unittest.TestCase):
             name="ExcProps",
             definition=inh_cls, properties={'tau': 1 * ms})
 
-        static = DynamicsProperties(name="StaticProps",
-                                    definition=static_cls,
-                                    properties={'weight': 1 * un.nA})
+        random_weight = un.Quantity(RandomValue(
+            RandomDistributionProperties(
+                name="normal",
+                definition=ninemlcatalog.load(
+                    'randomdistribution/Normal', 'NormalDistribution'),
+                properties={'mean': 1.0, 'variance': 0.25})), un.nA)
+
+        random_wmax = un.Quantity(RandomValue(
+            RandomDistributionProperties(
+                name="normal",
+                definition=ninemlcatalog.load(
+                    'randomdistribution/Normal', 'NormalDistribution'),
+                properties={'mean': 2.0, 'variance': 0.5})))
+
+        static = DynamicsProperties(
+            name="StaticProps",
+            definition=static_cls,
+            properties={'weight': random_weight})
 
         stdp = DynamicsProperties(name="StdpProps", definition=stdp_cls,
                                   properties={'tauLTP': 10 * un.ms,
                                               'aLTD': 1,
-                                              'wmax': 2,
+                                              'wmax': random_wmax,
                                               'muLTP': 3,
                                               'tauLTD': 20 * un.ms,
                                               'aLTP': 4})
@@ -270,7 +288,7 @@ class TestNetwork(unittest.TestCase):
 
         dyn_array1 = ComponentArray(
             "Pop1", pop1.size,
-            MultiDynamicsProperties(
+            MultiDynamicsWithSynapsesProperties(
                 "Pop1",
                 sub_components={
                     'cell': cell1,
@@ -298,11 +316,20 @@ class TestNetwork(unittest.TestCase):
                     ('cell', 'spike'),
                     ('Proj2', 'double_spike__psr'),
                     ('Proj2', 'spike__psr'),
-                    ('Proj4', 'spike__psr')]))
+                    ('Proj4', 'spike__psr')],
+                synapses={
+                    'Proj2': LinearSynapse(
+                        {'spike__psr':
+                         [Property('weight__pls', random_weight)],
+                         'double_spike__psr':
+                         [Property('weight__pls', random_weight)]}),
+                    'Proj4': LinearSynapse(
+                        {'spike__psr':
+                         [Property('weight__pls', random_weight)]})}))
 
         dyn_array2 = ComponentArray(
             "Pop2", pop2.size,
-            MultiDynamicsProperties(
+            MultiDynamicsWithSynapsesProperties(
                 "Pop2",
                 sub_components={
                     'cell': cell2,
@@ -331,13 +358,24 @@ class TestNetwork(unittest.TestCase):
                     ('cell', 'double_spike'),
                     ('Proj1', 'spike__psr'),
                     ('Proj3', 'spike__psr'),
-                    ('Proj3', 'incoming_spike__pls')]))
+                    ('Proj3', 'incoming_spike__pls')],
+                synapses={
+                    'Proj1': LinearSynapse(
+                        {'spike__psr':
+                         [Property('weight__pls', random_weight)]}),
+                    'Proj3': LinearSynapse(
+                        {'spike__psr':
+                         [Property('wmax__pls', random_wmax)],
+                         'incoming_spike__pls':
+                         [Property('wmax__pls', random_wmax)]})}))
 
         dyn_array3 = ComponentArray(
-            "Pop3", pop3.size, MultiDynamicsProperties(
+            "Pop3", pop3.size, MultiDynamicsWithSynapsesProperties(
                 'Pop3',
                 sub_components={'cell': cell1},
-                port_exposures=[('cell', 'spike')]))
+                port_exposures=[('cell', 'spike')],
+                port_connections=[],
+                synapses={}))
 
         conn_group1 = EventConnectionGroup(
             'Proj1__pre__spike__synapse__spike__psr', 'Pop1',

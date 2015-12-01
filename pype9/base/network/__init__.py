@@ -1,1 +1,3 @@
-from .base import Network
+from .base import (
+    Network, MultiDynamicsWithSynapsesProperties, MultiDynamicsWithSynapses,
+    LinearSynapse, NonlinearSynapse)

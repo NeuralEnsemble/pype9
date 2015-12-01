@@ -5,7 +5,8 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from collections import namedtuple
+from copy import copy
+from collections import namedtuple, defaultdict
 from itertools import chain
 from nineml.user import ComponentArray, Initial, Property
 from pype9.exceptions import Pype9RuntimeError
@@ -29,6 +30,10 @@ from .connectivity import InversePyNNConnectivity
 
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
+
+
+LinearSynapse = namedtuple('LinearSynapse', 'connection_weights')
+NonlinearSynapse = namedtuple('NonLinearSynapse', 'dynamics port_connections')
 
 
 class Network(object):
@@ -218,6 +223,7 @@ class Network(object):
             internal_conns = []
             exposures = []
             synapses = {}  # holds connections from synapse to post.
+            conn_weights = {}
             for proj in receiving:
                 role2name = {'synapse': proj.name,
                              'post': 'cell'}
@@ -235,50 +241,39 @@ class Network(object):
                 # If the synapse is non-linear it can be combined into the
                 # dynamics of the post-synaptic cell.
                 if synapse.component_class.is_linear():
-                    # Create a copy of the synapse within only the non-varying
-                    # properties and initial values
-                    non_var_synapse = DynamicsProperties(
+                    # Extract "connection weights" (any non-singular property
+                    # value) from the synapse properties
+                    conn_weights = defaultdict(set)
+                    for prop in synapse.properties:
+                        # SingleValue properties can be set as a constant but
+                        # any that vary between synapses will need to be
+                        # treated as a connection "weight"
+                        if not isinstance(prop.value, SingleValue):
+                            # FIXME: Need to check whether the property is
+                            #        used in this on event and not in the
+                            #        time derivatives or on conditions
+                            for on_event in (synapse.component_class.
+                                             all_on_events()):
+                                conn_weights[
+                                    on_event.src_port_name].add(prop)
+                    synapses[proj.name] = LinearSynapse(dict(
+                        (k, list(v)) for k, v in conn_weights.iteritems()))
+                    # Add the non-varying synapse properties as a sub_component
+                    # of the post-synaptic cell dynamics, with the varying
+                    # properties set to zero
+                    sub_components[proj.name] = DynamicsProperties(
                         name=(synapse.name + 'Base'),
                         definition=synapse.definition,
                         properties=(
-                            (p if isinstance(p.value, SingleValue)
-                             else Property(p.name, 0.0, p.units))
+                            (p if p not in chain(*conn_weights.itervalues())
+                             else Property(p.name, 0.0 * p.units))
                             for p in synapse.properties),
-                        initial_values=(
-                            (i if isinstance(i.value, SingleValue)
-                             else Initial(i.name, 0.0, i.units))
-                            for i in synapse.initial_values))
-                    # Create a copy of the synapse with only the varying
-                    # properties and initial values, using the non-varying
-                    # properties as a prototype
-                    # FIXME: These properties, which are mapped to 'weight'
-                    #        parameters should only checked that they are only
-                    #        referred to in on-event transitions.
-                    synapse = DynamicsProperties(
-                        name=synapse.name,
-                        definition=non_var_synapse,
-                        properties=(
-                            p for p in synapse.properties
-                            if not isinstance(p.value, SingleValue)),
-                        initial_values=(
-                            i for i in synapse.initial_values
-                            if not isinstance(i.value, SingleValue)))
-                    # Save the synapse for the projection, with the connections
-                    # between the synapse and the post-synaptic cell set to
-                    # None signifying that the synapse has already been
-                    # included in the post-synaptic cell dynamics and only
-                    # certain properties (e.g. weights need to be varied per
-                    # synapse)
-                    synapses[proj.name] = (synapse, None)
-                    # Add the non-varying synapse as a sub_component of the
-                    # post-synaptic cell dynamics
-                    sub_components[proj.name] = non_var_synapse
+                        initial_values=synapse.initial_values)
                     # Convert port connections between synpase and post-
                     # synaptic cell into internal port connections of a multi-
                     # dynamics object
-                    internal_conns.extend(
-                        pc.assign_roles(role2name)
-                        for pc in synapse_post_conns)
+                    internal_conns.extend(pc.assign_roles(role2name)
+                                          for pc in synapse_post_conns)
                     # Expose ports that are needed for the pre-synaptic
                     # connections
                     exposures.extend(chain(
@@ -289,7 +284,8 @@ class Network(object):
                             pc.send_port, role2name[pc.sender_role])
                          for pc in proj_conns if pc.receiver_role == 'pre')))
                 else:
-                    synapses[proj.name] = (synapse, synapse_post_conns)
+                    synapses[proj.name] = NonlinearSynapse(synapse,
+                                                           synapse_post_conns)
                     # Add exposures for direct connections between pre and post
                     # synaptic cells
                     exposures.extend(chain(
@@ -381,12 +377,15 @@ class Network(object):
 
 class MultiDynamicsWithSynapses(MultiDynamics):
 
+    defining_attributes = MultiDynamics.defining_attributes + ('_synapses',)
+
     def __init__(self, name, sub_components, port_connections,
                  port_exposures, synapses):
+        assert isinstance(synapses, dict)
+        self._synapses = copy(synapses)
         super(MultiDynamicsWithSynapses, self).__init__(
             name=name, sub_components=sub_components,
             port_connections=port_connections, port_exposures=port_exposures)
-        self._synapses = synapses
 
     def synapse(self, name):
         return self._synapses[name]
@@ -408,6 +407,8 @@ class MultiDynamicsWithSynapsesProperties(MultiDynamicsProperties):
 
     def __init__(self, name, sub_components, port_connections,
                  port_exposures, synapses):
+        assert isinstance(synapses, dict)
+        self._synapses = synapses
         sub_dynamics = [
             SubDynamics(n, sc.component_class)
             for n, sc in sub_components.iteritems()]
@@ -417,13 +418,12 @@ class MultiDynamicsWithSynapsesProperties(MultiDynamicsProperties):
         component_class = MultiDynamicsWithSynapses(
             name + '_Dynamics', sub_dynamics,
             port_exposures=port_exposures, port_connections=port_connections,
-            synapses=(s.component_class for s in synapses))
+            synapses=synapses)
         DynamicsProperties.__init__(
             self, name, definition=component_class,
             properties=chain(*[p.properties for p in sub_components]))
         self._sub_component_properties = dict(
             (p.name, p) for p in sub_components)
-        self._synapses = synapses
 
     def synapse(self, name):
         return self._synapses[name]
