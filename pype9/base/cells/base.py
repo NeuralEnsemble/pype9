@@ -13,12 +13,23 @@
 """
 from pype9.exceptions import Pype9RuntimeError, Pype9AttributeError
 from itertools import chain
+from collections import namedtuple
 import time
 import os.path
 import quantities as pq
 import nineml
-from nineml.abstraction import Dynamics
-from nineml.user import Property, Quantity
+from nineml.abstraction import Dynamics, Parameter
+from nineml.user import Property, Quantity, Definition
+from nineml.user.multi import (
+    MultiDynamics as MultiDynamics,
+    MultiDynamicsProperties as MultiDynamicsProperties, SubDynamics)
+
+
+ConnectionParameter = namedtuple('ConnectionParameter', 'port parameters')
+ConnectionProperty = namedtuple('ConnectionProperty', 'port properties')
+Synapse = namedtuple('Synapse', 'name dynamics port_connections')
+SynapseProperties = namedtuple('SynapseProperties',
+                               'name properties port_connections')
 
 
 class CellMetaClass(type):
@@ -360,10 +371,116 @@ class Cell(object):
         return weight
 
 
-class DummyNinemlModel(object):
+class MultiDynamicsWithSynapses(MultiDynamics):
 
-    def __init__(self, name, url, model):
-        self.name = name
-        self.url = url
-        self.model = model
-        self.parameters = []
+    defining_attributes = (MultiDynamics.defining_attributes +
+                           ('_synapses', '_connection_parameters'))
+    class_to_member = dict(
+        MultiDynamics.class_to_member.items() +
+        [('Synapse', 'synapse'),
+         ('ConnectionParameter', 'connection_parameter')])
+
+    def __init__(self, name, sub_components, port_connections,
+                 port_exposures, synapses, connection_parameters):
+        self._synapses = dict((s.name, s) for s in synapses)
+        self._connection_parameters = dict((pw.port, pw)
+                                           for pw in connection_parameters)
+        super(MultiDynamicsWithSynapses, self).__init__(
+            name=name, sub_components=sub_components,
+            port_connections=port_connections, port_exposures=port_exposures)
+
+    def synapse(self, name):
+        return self._synapses[name]
+
+    def connection_paramter(self, name):
+        return self._connection_parameters[name]
+
+    @property
+    def synapses(self):
+        return self._synapses.itervalues()
+
+    @property
+    def connection_parameters(self):
+        return self._connection_parameters.itervalues()
+
+    @property
+    def num_synapses(self):
+        return len(self._synapses)
+
+    @property
+    def num_connection_parameters(self):
+        return len(self._connection_parameters)
+
+    @property
+    def synapse_names(self):
+        return self._synapses.iterkeys()
+
+    @property
+    def connection_paramter_names(self):
+        return self._connection_parameters.iterkeys()
+
+
+class MultiDynamicsWithSynapsesProperties(MultiDynamicsProperties):
+
+    defining_attributes = (MultiDynamicsProperties.defining_attributes +
+                           ('_synapses', '_connection_properties'))
+    class_to_member = dict(
+        MultiDynamics.class_to_member.items() +
+        [('SynapseProperties', 'synapse'),
+         ('ConnectionProperty', 'connection_property')])
+
+    def __init__(self, name, sub_components, port_connections=[],
+                 port_exposures=[], synapses=[], connection_properties=[]):
+        self._synapses = dict((s.name, s) for s in synapses)
+        self._connection_properties = dict((cp.port, cp)
+                                           for cp in connection_properties)
+        MultiDynamicsProperties.__init__(
+            self, name, sub_components, port_connections, port_exposures)
+
+    def _extract_definition(self, sub_components, port_exposures,
+                            port_connections):
+        sub_dynamics = [
+            SubDynamics(sc.name, sc.component.component_class)
+            for sc in sub_components]
+        synapses = (Synapse(s.name, s.dynamics.component_class,
+                            s.port_connections)
+                    for s in self.synapses)
+        connection_parameters = (
+            ConnectionParameter(cp.port, [Parameter(p.name, p.units.dimension)
+                                           for p in cp.properties])
+            for cp in self.connection_properties)
+        # Construct component class definition
+        return Definition(MultiDynamicsWithSynapses(
+            self.name + '_Dynamics', sub_dynamics,
+            port_exposures=port_exposures, port_connections=port_connections,
+            synapses=synapses, connection_parameters=connection_parameters))
+
+    def synapse(self, name):
+        return self._synapses[name]
+
+    def connection_property(self, name):
+        return self._connection_properties[name]
+
+    @property
+    def synapses(self):
+        return self._synapses.itervalues()
+
+    @property
+    def connection_properties(self):
+        return self._connection_properties.itervalues()
+
+    @property
+    def num_synapses(self):
+        return len(self._synapses)
+
+    @property
+    def num_connection_properties(self):
+        return len(self._connection_properties)
+
+    @property
+    def synapse_names(self):
+        return self._synapses.iterkeys()
+
+    @property
+    def connection_property_names(self):
+        return self._connection_properties.iterkeys()

@@ -10,6 +10,7 @@ import ninemlcatalog
 from nineml.user.multi.component import MultiDynamics
 from nineml.user import DynamicsProperties
 from pype9.testing import Comparer, input_step, input_freq
+from pype9.base.cells import MultiDynamicsWithSynapses, LinearSynapse
 
 
 class TestDynamics(TestCase):
@@ -175,12 +176,22 @@ class TestDynamics(TestCase):
             'neuron/LeakyIntegrateAndFire', 'PyNNLeakyIntegrateAndFire')
         alpha_psr = ninemlcatalog.load(
             'postsynapticresponse/Alpha', 'Alpha')
-        iaf_alpha = MultiDynamics(
+        static = ninemlcatalog.load(
+            'plasticity/Static', 'Static')
+        iaf_alpha = MultiDynamicsWithSynapses(
             name='IafAlpha',
-            sub_components={'cell': iaf, 'psr': alpha_psr},
-            port_connections=[('psr', 'i_synaptic', 'cell', 'i_synaptic')],
-            port_exposures=[('psr', 'q', 'weight'),
-                            ('psr', 'spike', 'input_spike')])
+            sub_components={
+                'cell': iaf,
+                'syn': MultiDynamics(
+                    sub_components={'psr': alpha_psr, 'pls': static},
+                    port_connections=[
+                        ('pls', 'fixed_weight', 'psr', 'weight')],
+                    port_exposures=[('psr', 'i_synaptic'), ('psr', 'spike')])},
+            port_connections=[
+                ('syn', 'i_synaptic__psr', 'cell', 'i_synaptic')],
+            port_exposures=[('syn', 'spike__psr', 'input_spike')],
+            synapses=[
+                LinearSynapse({'input_spike': ['weight__pls']})])
         initial_states = {'a__psr': 0.0 * pq.nA, 'b__psr': 0.0 * pq.nA}
         initial_regime = 'subthreshold___sole'
         liaf_properties = ninemlcatalog.load(
@@ -219,7 +230,7 @@ class TestDynamics(TestCase):
             properties=properties,
             initial_states=initial_states,
             initial_regime=initial_regime,
-            event_weights={'input_spike': 'weight'},
+#             event_weights={'input_spike': 'weight'},
             neuron_ref='ResetRefrac',
             nest_ref='iaf_psc_alpha',
             input_train=input_freq('input_spike', 500 * pq.Hz, self.duration,

@@ -5,7 +5,6 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from copy import copy
 from collections import namedtuple, defaultdict
 from itertools import chain
 from nineml.user import ComponentArray, Initial, Property
@@ -13,30 +12,31 @@ from pype9.exceptions import Pype9RuntimeError
 from .values import get_pyNN_value
 import os.path
 import nineml
+from nineml import units as un
 from pyNN.random import NumpyRNG
 import pyNN.standardmodels
 import quantities as pq
 from nineml.user.multi import (
-    MultiDynamics, MultiDynamicsProperties, append_namespace, BasePortExposure,
-    SubDynamics, SubDynamicsProperties)
-from nineml.user import DynamicsProperties
-from nineml.user.port_connections import EventPortConnection
+    MultiDynamicsProperties, append_namespace, BasePortExposure)
 from nineml.user.network import (
     ComponentArray as ComponentArray9ML,
-    EventConnectionGroup as EventConnectionGroup9ML,
-    AnalogConnectionGroup as AnalogConnectionGroup9ML)
+    EventConnectionGroup as EventConnGroup9ML,
+    AnalogConnectionGroup as AnalogConnGroup9ML)
 from nineml.values import SingleValue
 from .connectivity import InversePyNNConnectivity
+from ..cells import (
+    MultiDynamicsWithSynapsesProperties, ConnectionProperty,
+    SynapseProperties)
 
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
 
-LinearSynapse = namedtuple('LinearSynapse', 'connection_weights')
-NonlinearSynapse = namedtuple('NonLinearSynapse', 'dynamics port_connections')
-
-
 class Network(object):
+
+    # Name given to the "cell" component of the cell dynamics + linear synapse
+    # dynamics multi-dynamics
+    cell_dyn_name = 'cell'
 
     def __init__(self, nineml_model, build_mode='lazy',
                  timestep=None, min_delay=None, max_delay=None,
@@ -203,7 +203,7 @@ class Network(object):
         return synapse, port_connections
 
     @classmethod
-    def nineml_comp_arrays_and_conn_groups(cls, network_model):
+    def _flatten_to_arrays_and_conns(cls, network_model):
         """
         Convert populations and projections into component arrays and
         connection groups
@@ -217,33 +217,39 @@ class Network(object):
             # Create a dictionary to hold the cell dynamics and any synapse
             # dynamics that can be flattened into the cell dynamics
             # (i.e. linear ones).
-            sub_components = {'cell': pop.cell}
+            sub_components = {cls.cell_dyn_name: pop.cell}
             # All port connections between post-synaptic cell and linear
             # synapses and port exposures to pre-synaptic cell
             internal_conns = []
             exposures = []
-            synapses = {}  # holds connections from synapse to post.
-            conn_weights = {}
+            synapses = []
+            connection_properties = []
+            if any(p.name == cls.cell_dyn_name for p in receiving):
+                raise Pype9RuntimeError(
+                    "Cannot handle projections named '{}' (why would you "
+                    "choose such a silly name?;)".format(cls.cell_dyn_name))
             for proj in receiving:
-                role2name = {'synapse': proj.name,
-                             'post': 'cell'}
                 # Flatten response and plasticity into single dynamics class.
                 # TODO: this should be no longer necessary when we move to
                 # version 2 as response and plasticity elements will be
-                # replaced by a synapse element in the standard.
+                # replaced by a synapse element in the standard. It will need
+                # be copied at this point though as it is modified
                 synapse, proj_conns = cls._flatten_synapse(proj)
+                # Get all connections to/from the pre-synaptic cell
+                pre_conns = [pc for pc in proj_conns
+                             if 'pre' in (pc.receiver_role, pc.sender_role)]
                 # Get all connections between the synapse and the post-synaptic
                 # cell
-                synapse_post_conns = [
-                    pc for pc in proj_conns
-                    if (pc.receiver_role in ('post', 'synapse') and
-                        pc.sender_role in ('post', 'synapse'))]
+                post_conns = [pc for pc in proj_conns if pc not in pre_conns]
+                # Mapping of port connection role to sub-component name
+                role2name = {'post': cls.cell_dyn_name}
                 # If the synapse is non-linear it can be combined into the
                 # dynamics of the post-synaptic cell.
                 if synapse.component_class.is_linear():
+                    role2name['synapse'] = proj.name
                     # Extract "connection weights" (any non-singular property
                     # value) from the synapse properties
-                    conn_weights = defaultdict(set)
+                    proj_props = defaultdict(set)
                     for prop in synapse.properties:
                         # SingleValue properties can be set as a constant but
                         # any that vary between synapses will need to be
@@ -254,108 +260,107 @@ class Network(object):
                             #        time derivatives or on conditions
                             for on_event in (synapse.component_class.
                                              all_on_events()):
-                                conn_weights[
-                                    on_event.src_port_name].add(prop)
-                    synapses[proj.name] = LinearSynapse(dict(
-                        (k, list(v)) for k, v in conn_weights.iteritems()))
-                    # Add the non-varying synapse properties as a sub_component
-                    # of the post-synaptic cell dynamics, with the varying
-                    # properties set to zero
-                    sub_components[proj.name] = DynamicsProperties(
-                        name=(synapse.name + 'Base'),
-                        definition=synapse.definition,
-                        properties=(
-                            (p if p not in chain(*conn_weights.itervalues())
-                             else Property(p.name, 0.0 * p.units))
-                            for p in synapse.properties),
-                        initial_values=synapse.initial_values)
+                                proj_props[on_event.src_port_name].add(prop)
+                    # Add port weights for this projection to combined list
+                    for port, props in proj_props.iteritems():
+                        ns_props = [
+                            Property(append_namespace(p.name, proj.name),
+                                     p.quantity) for p in props]
+                        connection_properties.append(
+                            ConnectionProperty(
+                                append_namespace(port, proj.name), ns_props))
+                    # Add the flattened synapse to the multi-dynamics sub
+                    # components
+                    sub_components[proj.name] = synapse
                     # Convert port connections between synpase and post-
                     # synaptic cell into internal port connections of a multi-
                     # dynamics object
-                    internal_conns.extend(pc.assign_roles(role2name)
-                                          for pc in synapse_post_conns)
+                    internal_conns.extend(pc.assign_roles(name_map=role2name)
+                                          for pc in post_conns)
                     # Expose ports that are needed for the pre-synaptic
                     # connections
-                    exposures.extend(chain(
-                        (BasePortExposure.from_port(
-                            pc.receive_port, role2name[pc.receiver_role])
-                         for pc in proj_conns if pc.sender_role == 'pre'),
-                        (BasePortExposure.from_port(
-                            pc.send_port, role2name[pc.sender_role])
-                         for pc in proj_conns if pc.receiver_role == 'pre')))
+#                     exposures.extend(chain(
+#                         (BasePortExposure.from_port(
+#                             pc.receive_port, role2name[pc.receiver_role])
+#                          for pc in proj_conns if pc.sender_role == 'pre'),
+#                         (BasePortExposure.from_port(
+#                             pc.send_port, role2name[pc.sender_role])
+#                          for pc in proj_conns if pc.receiver_role == 'pre')))
                 else:
-                    synapses[proj.name] = NonlinearSynapse(synapse,
-                                                           synapse_post_conns)
-                    # Add exposures for direct connections between pre and post
-                    # synaptic cells
-                    exposures.extend(chain(
-                        (BasePortExposure.from_port(
-                            pc.receive_port, 'cell')
-                         for pc in proj_conns
-                         if (pc.sender_role == 'pre' and
-                             pc.receiver_role == 'post')),
-                        (BasePortExposure.from_port(
-                            pc.send_port, 'cell')
-                         for pc in proj_conns
-                         if (pc.receiver_role == 'pre' and
-                             pc.sender_role == 'post'))))
+                    # All synapses (of this type) connected to a single post-
+                    # synaptic cell cannot be flattened into a single component
+                    # of a multi- dynamics object so an individual synapses
+                    # must be created for each connection.
+                    synapses.append(SynapseProperties(proj.name, synapse,
+                                                      post_conns))
+                    # Add exposures to the post-synaptic cell for connections
+                    # from the synapse
+                    exposures.extend(
+                        chain(*(pc.expose_ports({'post': cls.cell_dyn_name})
+                                for pc in post_conns)))
+                # Add exposures for connections to/from the pre synaptic cell
+                exposures.extend(
+                    chain(*(pc.expose_ports(role2name) for pc in pre_conns)))
+
+#                         (BasePortExposure.from_port(
+#                             pc.receive_port, 'cell')
+#                          for pc in proj_conns
+#                          if (pc.sender_role == 'pre' and
+#                              pc.receiver_role == 'post')),
+#                         (BasePortExposure.from_port(
+#                             pc.send_port, 'cell')
+#                          for pc in proj_conns
+#                          if (pc.receiver_role == 'pre' and
+#                              pc.sender_role == 'post'))))
+                role2name['pre'] = cls.cell_dyn_name
                 # Create a connection group for each port connection of the
                 # projection to/from the pre-synaptic cell
-                for port_conn in proj_conns:
-                    if 'pre' in (port_conn.sender_role,
-                                 port_conn.receiver_role):
-                        if isinstance(port_conn, EventPortConnection):
-                            conn_grp_cls = EventConnectionGroup9ML
-                        else:
-                            conn_grp_cls = AnalogConnectionGroup9ML
-                        if port_conn.sender_role == 'pre':
-                            source_port = append_namespace(
-                                port_conn.send_port_name, 'cell')
-                            destination_port = append_namespace(
-                                port_conn.receive_port_name, proj.name)
-                        else:
-                            source_port = append_namespace(
-                                port_conn.send_port_name, proj.name)
-                            destination_port = append_namespace(
-                                port_conn.receive_port_name, 'cell')
-                        name = ('__'.join((proj.name,
-                                           port_conn.sender_role,
-                                           port_conn.send_port_name,
-                                           port_conn.receiver_role,
-                                           port_conn.receive_port_name)))
-                        if port_conn.receiver_role == 'pre':
-                            connectivity = InversePyNNConnectivity(
-                                proj.connectivity)
-                        else:
-                            connectivity = proj.connectivity
-                        if port_conn.sender_role == 'pre':
-                            delay = proj.delay
-                        else:
-                            delay = None
-                        conn_group = conn_grp_cls(
-                            name,
-                            proj.pre.name, proj.post.name,
-                            source_port=source_port,
-                            destination_port=destination_port,
-                            connectivity=connectivity,
-                            delay=delay)
-                        connection_groups[conn_group.name] = conn_group
+                for port_conn in pre_conns:
+                    connection_group_cls = (
+                        EventConnGroup9ML if port_conn.communicates == 'event'
+                        else AnalogConnGroup9ML)
+                    name = ('__'.join((proj.name,
+                                       port_conn.sender_role,
+                                       port_conn.send_port_name,
+                                       port_conn.receiver_role,
+                                       port_conn.receive_port_name)))
+                    if port_conn.sender_role == 'pre':
+                        connectivity = proj.connectivity
+                        # If a connection from the pre-synaptic cell the delay
+                        # is included
+                        # TODO: In version 2 all port-connections will have
+                        # their own delays
+                        delay = proj.delay
+                    else:
+                        # If a "reverse connection" to the pre-synaptic cell
+                        # the connectivity needs to be inverted
+                        connectivity = InversePyNNConnectivity(
+                            proj.connectivity)
+                        delay = 0.0 * un.s
+                    # Append sub-component namespaces to the source/receive
+                    # ports
+                    ns_port_conn = port_conn.assign_roles(
+                        port_namespaces=role2name)
+                    conn_group = connection_group_cls(
+                        name,
+                        proj.pre.name, proj.post.name,
+                        source_port=ns_port_conn.send_port_name,
+                        destination_port=ns_port_conn.receive_port_name,
+                        connectivity=connectivity,
+                        delay=delay)
+                    connection_groups[conn_group.name] = conn_group
             # Add exposures for connections to/from the pre-synaptic cell in
             # populations.
             for proj in sending:
                 # Not required after transition to version 2 syntax
                 synapse, proj_conns = cls._flatten_synapse(proj)
-                exposures.extend(chain(
-                    (BasePortExposure.from_port(
-                        pc.send_port, 'cell')
-                     for pc in proj_conns if pc.sender_role == 'pre'),
-                    (BasePortExposure.from_port(
-                        pc.receive_port, 'cell')
-                     for pc in proj_conns if pc.receiver_role == 'pre')))
+                exposures.extend(chain(*(
+                    pc.expose_ports({'pre': cls.cell_dyn_name})
+                    for pc in proj_conns)))
             component = MultiDynamicsWithSynapsesProperties(
                 name=pop.name, sub_components=sub_components,
                 port_connections=internal_conns, port_exposures=exposures,
-                synapses=synapses)
+                synapses=synapses, connection_properties=connection_properties)
             component_arrays[pop.name] = ComponentArray9ML(pop.name, pop.size,
                                                            component)
         return component_arrays, connection_groups
@@ -374,71 +379,6 @@ class Network(object):
 #         non_single_props = [
 #             p for p in synapse.properties
 #             if not isinstance(p.value, SingleValue)]
-
-class MultiDynamicsWithSynapses(MultiDynamics):
-
-    defining_attributes = MultiDynamics.defining_attributes + ('_synapses',)
-
-    def __init__(self, name, sub_components, port_connections,
-                 port_exposures, synapses):
-        assert isinstance(synapses, dict)
-        self._synapses = copy(synapses)
-        super(MultiDynamicsWithSynapses, self).__init__(
-            name=name, sub_components=sub_components,
-            port_connections=port_connections, port_exposures=port_exposures)
-
-    def synapse(self, name):
-        return self._synapses[name]
-
-    @property
-    def synapses(self):
-        return self._synapses.itervalues()
-
-    @property
-    def num_synapses(self):
-        return len(self._synapses)
-
-    @property
-    def synapse_names(self):
-        return self._synapses.iterkeys()
-
-
-class MultiDynamicsWithSynapsesProperties(MultiDynamicsProperties):
-
-    def __init__(self, name, sub_components, port_connections,
-                 port_exposures, synapses):
-        assert isinstance(synapses, dict)
-        self._synapses = synapses
-        sub_dynamics = [
-            SubDynamics(n, sc.component_class)
-            for n, sc in sub_components.iteritems()]
-        sub_components = [
-            SubDynamicsProperties(n, p)
-            for n, p in sub_components.iteritems()]
-        component_class = MultiDynamicsWithSynapses(
-            name + '_Dynamics', sub_dynamics,
-            port_exposures=port_exposures, port_connections=port_connections,
-            synapses=synapses)
-        DynamicsProperties.__init__(
-            self, name, definition=component_class,
-            properties=chain(*[p.properties for p in sub_components]))
-        self._sub_component_properties = dict(
-            (p.name, p) for p in sub_components)
-
-    def synapse(self, name):
-        return self._synapses[name]
-
-    @property
-    def synapses(self):
-        return self._synapses.itervalues()
-
-    @property
-    def num_synapses(self):
-        return len(self._synapses)
-
-    @property
-    def synapse_names(self):
-        return self._synapses.iterkeys()
 
 
 class ComponentArray(object):

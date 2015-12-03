@@ -14,9 +14,9 @@ from nineml.abstraction.ports import (
 from nineml import units as un
 from nineml.units import ms
 from nineml.values import RandomValue
+from pype9.base.cells import ConnectionProperty
 from pype9.base.network import (
-    Network as BaseNetwork, MultiDynamicsWithSynapsesProperties,
-    LinearSynapse)
+    Network as BaseNetwork, MultiDynamicsWithSynapsesProperties)
 import ninemlcatalog
 
 
@@ -317,15 +317,16 @@ class TestNetwork(unittest.TestCase):
                     ('Proj2', 'double_spike__psr'),
                     ('Proj2', 'spike__psr'),
                     ('Proj4', 'spike__psr')],
-                synapses={
-                    'Proj2': LinearSynapse(
-                        {'spike__psr':
-                         [Property('weight__pls', random_weight)],
-                         'double_spike__psr':
-                         [Property('weight__pls', random_weight)]}),
-                    'Proj4': LinearSynapse(
-                        {'spike__psr':
-                         [Property('weight__pls', random_weight)]})}))
+                connection_properties=[
+                    ConnectionProperty(
+                        'spike__psr__Proj2',
+                        [Property('weight__pls__Proj2', random_weight)]),
+                    ConnectionProperty(
+                        'double_spike__psr__Proj2',
+                        [Property('weight__pls__Proj2', random_weight)]),
+                    ConnectionProperty(
+                        'spike__psr__Proj4',
+                        [Property('weight__pls__Proj4', random_weight)])]))
 
         dyn_array2 = ComponentArray(
             "Pop2", pop2.size,
@@ -359,20 +360,21 @@ class TestNetwork(unittest.TestCase):
                     ('Proj1', 'spike__psr'),
                     ('Proj3', 'spike__psr'),
                     ('Proj3', 'incoming_spike__pls')],
-                synapses={
-                    'Proj1': LinearSynapse(
-                        {'spike__psr':
-                         [Property('weight__pls', random_weight)]}),
-                    'Proj3': LinearSynapse(
-                        {'spike__psr':
-                         [Property('wmax__pls', random_wmax)],
-                         'incoming_spike__pls':
-                         [Property('wmax__pls', random_wmax)]})}))
+                connection_properties=[
+                    ConnectionProperty(
+                        'spike__psr__Proj1',
+                        [Property('weight__pls__Proj1', random_weight)]),
+                    ConnectionProperty(
+                        'spike__psr__Proj3',
+                        [Property('wmax__pls__Proj3', random_wmax)]),
+                    ConnectionProperty(
+                        'incoming_spike__pls__Proj3',
+                        [Property('wmax__pls__Proj3', random_wmax)])]))
 
         dyn_array3 = ComponentArray(
             "Pop3", pop3.size, MultiDynamicsWithSynapsesProperties(
                 'Pop3',
-                sub_components={'cell': cell1},
+                sub_components={'cell': cell3},
                 port_exposures=[('cell', 'spike')],
                 port_connections=[],
                 synapses={}))
@@ -413,13 +415,11 @@ class TestNetwork(unittest.TestCase):
         # and manually generated expected one
         # =====================================================================
         (component_arrays,
-         connection_groups) = BaseNetwork.nineml_comp_arrays_and_conn_groups(
-            network)
+         connection_groups) = BaseNetwork._flatten_to_arrays_and_conns(network)
 
         self.assertEqual(
             component_arrays['Pop1'], dyn_array1,
-            "Mismatch between generated and expected dynamics arrays:\n {}"
-            .format(component_arrays['Pop1'].find_mismatch(dyn_array1)))
+            "Mismatch between generated and expected dynamics arrays:\n {}")
         self.assertEqual(
             component_arrays['Pop2'], dyn_array2,
             "Mismatch between generated and expected dynamics arrays:\n {}"
