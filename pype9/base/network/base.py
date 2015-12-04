@@ -25,8 +25,7 @@ from nineml.user.network import (
 from nineml.values import SingleValue
 from .connectivity import InversePyNNConnectivity
 from ..cells import (
-    MultiDynamicsWithSynapsesProperties, ConnectionProperty,
-    SynapseProperties)
+    DynamicsWithSynapsesProperties, ConnectionProperty, SynapseProperties)
 
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
@@ -357,10 +356,12 @@ class Network(object):
                 exposures.extend(chain(*(
                     pc.expose_ports({'pre': cls.cell_dyn_name})
                     for pc in proj_conns)))
-            component = MultiDynamicsWithSynapsesProperties(
+            dynamics_properties = MultiDynamicsProperties(
                 name=pop.name, sub_components=sub_components,
-                port_connections=internal_conns, port_exposures=exposures,
-                synapses=synapses, connection_properties=connection_properties)
+                port_connections=internal_conns, port_exposures=exposures)
+            component = DynamicsWithSynapsesProperties(
+                dynamics_properties, synapse_properties=synapses,
+                connection_properties=connection_properties)
             component_arrays[pop.name] = ComponentArray9ML(pop.name, pop.size,
                                                            component)
         return component_arrays, connection_groups

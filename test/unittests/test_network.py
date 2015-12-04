@@ -14,9 +14,9 @@ from nineml.abstraction.ports import (
 from nineml import units as un
 from nineml.units import ms
 from nineml.values import RandomValue
-from pype9.base.cells import ConnectionProperty
-from pype9.base.network import (
-    Network as BaseNetwork, MultiDynamicsWithSynapsesProperties)
+from pype9.base.cells import (
+    ConnectionProperty, DynamicsWithSynapsesProperties)
+from pype9.base.network import Network as BaseNetwork
 import ninemlcatalog
 
 
@@ -288,35 +288,36 @@ class TestNetwork(unittest.TestCase):
 
         dyn_array1 = ComponentArray(
             "Pop1", pop1.size,
-            MultiDynamicsWithSynapsesProperties(
-                "Pop1",
-                sub_components={
-                    'cell': cell1,
-                    'Proj2': MultiDynamicsProperties(
-                        name='Proj2_syn',
-                        sub_components={'psr': exc, 'pls': static},
-                        port_connections=[
-                            ('pls', 'fixed_weight', 'psr', 'weight')],
-                        port_exposures=[
-                            ('psr', 'i'),
-                            ('psr', 'spike'),
-                            ('psr', 'double_spike')]),
-                    'Proj4': MultiDynamicsProperties(
-                        name='Proj4_syn',
-                        sub_components={'psr': exc, 'pls': static},
-                        port_connections=[
-                            ('pls', 'fixed_weight', 'psr', 'weight')],
-                        port_exposures=[
-                            ('psr', 'i'),
-                            ('psr', 'spike')])},
-                port_connections=[
-                    ('Proj2', 'i__psr', 'cell', 'i_ext'),
-                    ('Proj4', 'i__psr', 'cell', 'i_ext')],
-                port_exposures=[
-                    ('cell', 'spike'),
-                    ('Proj2', 'double_spike__psr'),
-                    ('Proj2', 'spike__psr'),
-                    ('Proj4', 'spike__psr')],
+            DynamicsWithSynapsesProperties(
+                MultiDynamicsProperties(
+                    "Pop1",
+                    sub_components={
+                        'cell': cell1,
+                        'Proj2': MultiDynamicsProperties(
+                            name='Proj2_syn',
+                            sub_components={'psr': exc, 'pls': static},
+                            port_connections=[
+                                ('pls', 'fixed_weight', 'psr', 'weight')],
+                            port_exposures=[
+                                ('psr', 'i'),
+                                ('psr', 'spike'),
+                                ('psr', 'double_spike')]),
+                        'Proj4': MultiDynamicsProperties(
+                            name='Proj4_syn',
+                            sub_components={'psr': exc, 'pls': static},
+                            port_connections=[
+                                ('pls', 'fixed_weight', 'psr', 'weight')],
+                            port_exposures=[
+                                ('psr', 'i'),
+                                ('psr', 'spike')])},
+                    port_connections=[
+                        ('Proj2', 'i__psr', 'cell', 'i_ext'),
+                        ('Proj4', 'i__psr', 'cell', 'i_ext')],
+                    port_exposures=[
+                        ('cell', 'spike'),
+                        ('Proj2', 'double_spike__psr'),
+                        ('Proj2', 'spike__psr'),
+                        ('Proj4', 'spike__psr')]),
                 connection_properties=[
                     ConnectionProperty(
                         'spike__psr__Proj2',
@@ -330,36 +331,37 @@ class TestNetwork(unittest.TestCase):
 
         dyn_array2 = ComponentArray(
             "Pop2", pop2.size,
-            MultiDynamicsWithSynapsesProperties(
-                "Pop2",
-                sub_components={
-                    'cell': cell2,
-                    'Proj1': MultiDynamicsProperties(
-                        name='Proj1_syn',
-                        sub_components={'psr': inh, 'pls': static},
-                        port_connections=[
-                            ('pls', 'fixed_weight', 'psr', 'weight')],
-                        port_exposures=[
-                            ('psr', 'i'),
-                            ('psr', 'spike')]),
-                    'Proj3': MultiDynamicsProperties(
-                        name='Proj3_syn',
-                        sub_components={'psr': exc, 'pls': stdp},
-                        port_connections=[
-                            ('pls', 'wsyn_current', 'psr', 'weight')],
-                        port_exposures=[
-                            ('psr', 'i'),
-                            ('psr', 'spike'),
-                            ('pls', 'incoming_spike')])},
-                port_connections=[
-                    ('Proj1', 'i__psr', 'cell', 'i_ext'),
-                    ('Proj3', 'i__psr', 'cell', 'i_ext')],
-                port_exposures=[
-                    ('cell', 'spike'),
-                    ('cell', 'double_spike'),
-                    ('Proj1', 'spike__psr'),
-                    ('Proj3', 'spike__psr'),
-                    ('Proj3', 'incoming_spike__pls')],
+            DynamicsWithSynapsesProperties(
+                MultiDynamicsProperties(
+                    "Pop2",
+                    sub_components={
+                        'cell': cell2,
+                        'Proj1': MultiDynamicsProperties(
+                            name='Proj1_syn',
+                            sub_components={'psr': inh, 'pls': static},
+                            port_connections=[
+                                ('pls', 'fixed_weight', 'psr', 'weight')],
+                            port_exposures=[
+                                ('psr', 'i'),
+                                ('psr', 'spike')]),
+                        'Proj3': MultiDynamicsProperties(
+                            name='Proj3_syn',
+                            sub_components={'psr': exc, 'pls': stdp},
+                            port_connections=[
+                                ('pls', 'wsyn_current', 'psr', 'weight')],
+                            port_exposures=[
+                                ('psr', 'i'),
+                                ('psr', 'spike'),
+                                ('pls', 'incoming_spike')])},
+                    port_connections=[
+                        ('Proj1', 'i__psr', 'cell', 'i_ext'),
+                        ('Proj3', 'i__psr', 'cell', 'i_ext')],
+                    port_exposures=[
+                        ('cell', 'spike'),
+                        ('cell', 'double_spike'),
+                        ('Proj1', 'spike__psr'),
+                        ('Proj3', 'spike__psr'),
+                        ('Proj3', 'incoming_spike__pls')]),
                 connection_properties=[
                     ConnectionProperty(
                         'spike__psr__Proj1',
@@ -372,12 +374,13 @@ class TestNetwork(unittest.TestCase):
                         [Property('wmax__pls__Proj3', random_wmax)])]))
 
         dyn_array3 = ComponentArray(
-            "Pop3", pop3.size, MultiDynamicsWithSynapsesProperties(
-                'Pop3',
-                sub_components={'cell': cell3},
-                port_exposures=[('cell', 'spike')],
-                port_connections=[],
-                synapses={}))
+            "Pop3", pop3.size,
+            DynamicsWithSynapsesProperties(
+                MultiDynamicsProperties(
+                    'Pop3',
+                    sub_components={'cell': cell3},
+                    port_exposures=[('cell', 'spike')],
+                    port_connections=[])))
 
         conn_group1 = EventConnectionGroup(
             'Proj1__pre__spike__synapse__spike__psr', 'Pop1',

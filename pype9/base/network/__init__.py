@@ -1,2 +1,1 @@
-from .base import (
-    Network, MultiDynamicsWithSynapsesProperties)
+from .base import Network

@@ -12,7 +12,7 @@ from nineml import units as un
 from nineml.user.multi.component import MultiDynamics
 from nineml.user import DynamicsProperties
 from pype9.testing import Comparer, input_step, input_freq
-from pype9.base.cells import MultiDynamicsWithSynapses, ConnectionParameter
+from pype9.base.cells import DynamicsWithSynapses, ConnectionParameter
 
 
 class TestDynamics(TestCase):
@@ -180,19 +180,21 @@ class TestDynamics(TestCase):
             'postsynapticresponse/Alpha', 'Alpha')
         static = ninemlcatalog.load(
             'plasticity/Static', 'Static')
-        iaf_alpha = MultiDynamicsWithSynapses(
-            name='IafAlpha',
-            sub_components={
-                'cell': iaf,
-                'syn': MultiDynamics(
-                    name="IafAlaphSyn",
-                    sub_components={'psr': alpha_psr, 'pls': static},
-                    port_connections=[
-                        ('pls', 'fixed_weight', 'psr', 'q')],
-                    port_exposures=[('psr', 'i_synaptic'), ('psr', 'spike')])},
-            port_connections=[
-                ('syn', 'i_synaptic__psr', 'cell', 'i_synaptic')],
-            port_exposures=[('syn', 'spike__psr', 'input_spike')],
+        iaf_alpha = DynamicsWithSynapses(
+            MultiDynamics(
+                name='IafAlpha',
+                sub_components={
+                    'cell': iaf,
+                    'syn': MultiDynamics(
+                        name="IafAlaphSyn",
+                        sub_components={'psr': alpha_psr, 'pls': static},
+                        port_connections=[
+                            ('pls', 'fixed_weight', 'psr', 'q')],
+                        port_exposures=[('psr', 'i_synaptic'),
+                                        ('psr', 'spike')])},
+                port_connections=[
+                    ('syn', 'i_synaptic__psr', 'cell', 'i_synaptic')],
+                port_exposures=[('syn', 'spike__psr', 'input_spike')]),
             connection_parameters=[
                 ConnectionParameter(
                     'input_spike',
