@@ -10,7 +10,7 @@ import ninemlcatalog
 from nineml.user.multi.component import MultiDynamics
 from nineml.user import DynamicsProperties
 from pype9.testing import Comparer, input_step, input_freq
-from pype9.base.cells import MultiDynamicsWithSynapses, LinearSynapse
+from pype9.base.cells import MultiDynamicsWithSynapses, ConnectionParameter
 
 
 class TestDynamics(TestCase):
@@ -183,30 +183,33 @@ class TestDynamics(TestCase):
             sub_components={
                 'cell': iaf,
                 'syn': MultiDynamics(
+                    name="IafAlaphSyn",
                     sub_components={'psr': alpha_psr, 'pls': static},
                     port_connections=[
-                        ('pls', 'fixed_weight', 'psr', 'weight')],
+                        ('pls', 'fixed_weight', 'psr', 'q')],
                     port_exposures=[('psr', 'i_synaptic'), ('psr', 'spike')])},
             port_connections=[
                 ('syn', 'i_synaptic__psr', 'cell', 'i_synaptic')],
             port_exposures=[('syn', 'spike__psr', 'input_spike')],
-            synapses=[
-                LinearSynapse({'input_spike': ['weight__pls']})])
-        initial_states = {'a__psr': 0.0 * pq.nA, 'b__psr': 0.0 * pq.nA}
+            connection_parameters=[
+                ConnectionParameter('input_spike', ['weight__pls__syn'])])
+        initial_states = {'a__psr__syn': 0.0 * pq.nA,
+                          'b__psr__syn': 0.0 * pq.nA}
         initial_regime = 'subthreshold___sole'
         liaf_properties = ninemlcatalog.load(
             'neuron/LeakyIntegrateAndFire/',
             'PyNNLeakyIntegrateAndFireProperties')
         alpha_properties = ninemlcatalog.load(
             'postsynapticresponse/Alpha', 'AlphaProperties')
-        nest_tranlsations = {'tau__psr': ('tau_syn_ex', 1),
-                             'a__psr': (None, 1), 'b__psr': (None, 1),
+        nest_tranlsations = {'tau__psr__syn': ('tau_syn_ex', 1),
+                             'a__psr__syn': (None, 1),
+                             'b__psr__syn': (None, 1),
                              'input_spike': ('input_spike', 367.55)}
-        neuron_tranlsations = {'tau__psr': ('psr.tau', 1),
-                               'q__psr': ('psr.q', 1),
+        neuron_tranlsations = {'tau__psr__syn': ('psr.tau', 1),
+                               'q__psr__syn': ('psr.q', 1),
                                'input_spike': ('input_spike', 0.36755),
-                               'a__psr': (None, 1),
-                               'b__psr': (None, 1)}
+                               'a__psr__syn': (None, 1),
+                               'b__psr__syn': (None, 1)}
         initial_states.update(
             (k + '__cell', v) for k, v in self.liaf_initial_states.iteritems())
         properties = DynamicsProperties(
@@ -215,7 +218,7 @@ class TestDynamics(TestCase):
                 (p.name + '__' + suffix, p.quantity)
                 for p, suffix in chain(
                     zip(liaf_properties.properties, repeat('cell')),
-                    zip(alpha_properties.properties, repeat('psr')))))
+                    zip(alpha_properties.properties, repeat('psr__syn')))))
         nest_tranlsations.update(
             (k + '__cell', v)
             for k, v in self.liaf_nest_translations.iteritems())

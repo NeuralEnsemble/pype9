@@ -23,6 +23,7 @@ from nineml.user import Property, Quantity, Definition
 from nineml.user.multi import (
     MultiDynamics as MultiDynamics,
     MultiDynamicsProperties as MultiDynamicsProperties, SubDynamics)
+from nineml.exceptions import name_error
 
 
 ConnectionParameter = namedtuple('ConnectionParameter', 'port parameters')
@@ -380,18 +381,46 @@ class MultiDynamicsWithSynapses(MultiDynamics):
         [('Synapse', 'synapse'),
          ('ConnectionParameter', 'connection_parameter')])
 
-    def __init__(self, name, sub_components, port_connections,
-                 port_exposures, synapses, connection_parameters):
+    def __init__(self, name, sub_components, port_connections=[],
+                 port_exposures=[], synapses=[], connection_parameters=[]):
         self._synapses = dict((s.name, s) for s in synapses)
         self._connection_parameters = dict((pw.port, pw)
                                            for pw in connection_parameters)
         super(MultiDynamicsWithSynapses, self).__init__(
             name=name, sub_components=sub_components,
-            port_connections=port_connections, port_exposures=port_exposures)
+            port_connections=port_connections, port_exposures=port_exposures,
+            additional_symbols=self._all_connection_parameters())
+        super_parameters = set(
+            super(MultiDynamicsWithSynapses, self).parameters)
+        for parameter in self._all_connection_parameters():
+            if parameter not in super_parameters:
+                raise Pype9RuntimeError(
+                    "Connection parameter {} does not refer to a parameter "
+                    "in the base MultiDynamics class ({})"
+                    .format(parameter,
+                            ", ".join(str(sp) for sp in super_parameters)))
 
+    def _all_connection_parameters(self):
+        return set(chain(*(
+            cp.parameters for cp in self.connection_parameters)))
+
+    @property
+    def parameters(self):
+        return (p for p in super(MultiDynamicsWithSynapses, self).parameters
+                if p.name not in self._all_connection_parameters())
+
+    @name_error
+    def parameter(self, name):
+        if name in self._all_connection_parameters():
+            raise KeyError(name)
+        else:
+            return super(MultiDynamicsWithSynapses, self).parameter(name)
+
+    @name_error
     def synapse(self, name):
         return self._synapses[name]
 
+    @name_error
     def connection_paramter(self, name):
         return self._connection_parameters[name]
 
