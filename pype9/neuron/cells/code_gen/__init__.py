@@ -174,7 +174,8 @@ class CodeGenerator(BaseCodeGenerator):
         # ---------------------------------------------------------------------
         name = component_class.name
         orig = component_class
-        trfrm = DynamicsCloner().visit(orig)
+#         trfrm = DynamicsCloner().visit(orig)
+        trfrm = deepcopy(orig)
         if default_properties is not None:
             default_properties = deepcopy(default_properties)
         if initial_state is not None:

@@ -7,6 +7,8 @@ import quantities as pq
 import os.path
 from itertools import chain, repeat
 import ninemlcatalog
+from nineml.abstraction import Parameter
+from nineml import units as un
 from nineml.user.multi.component import MultiDynamics
 from nineml.user import DynamicsProperties
 from pype9.testing import Comparer, input_step, input_freq
@@ -192,7 +194,9 @@ class TestDynamics(TestCase):
                 ('syn', 'i_synaptic__psr', 'cell', 'i_synaptic')],
             port_exposures=[('syn', 'spike__psr', 'input_spike')],
             connection_parameters=[
-                ConnectionParameter('input_spike', ['weight__pls__syn'])])
+                ConnectionParameter(
+                    'input_spike',
+                    [Parameter('weight__pls__syn', un.current)])])
         initial_states = {'a__psr__syn': 0.0 * pq.nA,
                           'b__psr__syn': 0.0 * pq.nA}
         initial_regime = 'subthreshold___sole'

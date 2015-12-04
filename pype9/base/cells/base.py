@@ -23,14 +23,8 @@ from nineml.user import Property, Quantity, Definition
 from nineml.user.multi import (
     MultiDynamics as MultiDynamics,
     MultiDynamicsProperties as MultiDynamicsProperties, SubDynamics)
-from nineml.exceptions import name_error
-
-
-ConnectionParameter = namedtuple('ConnectionParameter', 'port parameters')
-ConnectionProperty = namedtuple('ConnectionProperty', 'port properties')
-Synapse = namedtuple('Synapse', 'name dynamics port_connections')
-SynapseProperties = namedtuple('SynapseProperties',
-                               'name properties port_connections')
+from nineml.exceptions import name_error, NineMLNameError
+from nineml.base import BaseNineMLObject
 
 
 class CellMetaClass(type):
@@ -389,29 +383,40 @@ class MultiDynamicsWithSynapses(MultiDynamics):
         super(MultiDynamicsWithSynapses, self).__init__(
             name=name, sub_components=sub_components,
             port_connections=port_connections, port_exposures=port_exposures,
-            additional_symbols=self._all_connection_parameters())
-        super_parameters = set(
-            super(MultiDynamicsWithSynapses, self).parameters)
-        for parameter in self._all_connection_parameters():
-            if parameter not in super_parameters:
+            additional_parameters=self._all_connection_parameters())
+        for param in self._all_connection_parameters():
+            try:
+                super_param = super(
+                    MultiDynamicsWithSynapses, self).parameter(param.name)
+                if param.dimension != super_param.dimension:
+                    raise Pype9RuntimeError(
+                        "Inconsistent dimensions between connection parameter"
+                        " '{}' ({}) and parameter of the same name ({})"
+                        .format(param.name, param.dimension,
+                                super_param.dimension))
+            except NineMLNameError:
                 raise Pype9RuntimeError(
-                    "Connection parameter {} does not refer to a parameter "
-                    "in the base MultiDynamics class ({})"
-                    .format(parameter,
-                            ", ".join(str(sp) for sp in super_parameters)))
+                    "Connection parameter '{}' does not refer to a parameter "
+                    "in the base MultiDynamics class ('{}')"
+                    .format(param, "', '".join(
+                        sp.name for sp in super(
+                            MultiDynamicsWithSynapses, self).parameters)))
 
     def _all_connection_parameters(self):
         return set(chain(*(
             cp.parameters for cp in self.connection_parameters)))
 
+    def _all_connection_parameter_names(self):
+        return (p.name for p in self._all_connection_parameters())
+
     @property
     def parameters(self):
         return (p for p in super(MultiDynamicsWithSynapses, self).parameters
-                if p.name not in self._all_connection_parameters())
+                if p.name not in self._all_connection_parameter_names())
 
     @name_error
     def parameter(self, name):
-        if name in self._all_connection_parameters():
+        if name in self._all_connection_parameter_names():
             raise KeyError(name)
         else:
             return super(MultiDynamicsWithSynapses, self).parameter(name)
@@ -513,3 +518,81 @@ class MultiDynamicsWithSynapsesProperties(MultiDynamicsProperties):
     @property
     def connection_property_names(self):
         return self._connection_properties.iterkeys()
+
+
+class ConnectionParameter(BaseNineMLObject):
+
+    nineml_type = 'ConnectionParameter'
+
+    def __init__(self, port, parameters):
+        self._port = port
+        self._parameters = parameters
+
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def parameters(self):
+        return self._parameters
+
+
+class ConnectionProperty(BaseNineMLObject):
+
+    nineml_type = 'ConnectionProperty'
+
+    def __init__(self, port, properties):
+        self._port = port
+        self._properties = properties
+
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def properties(self):
+        return self._properties
+
+
+class Synapse(BaseNineMLObject):
+
+    nineml_type = 'Synapse'
+
+    def __init__(self, name, dynamics, port_connections):
+        self._name = name
+        self._dynamics = dynamics
+        self._port_connections = port_connections
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def dynamics(self):
+        return self._dynamics
+
+    @property
+    def port_connections(self):
+        return self._port_connections
+
+
+class SynapseProperties(BaseNineMLObject):
+
+    nineml_type = 'SynapseProperties'
+
+    def __init__(self, name, properties, port_connections):
+        self._name = name
+        self._properties = properties
+        self._port_connections = port_connections
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def properties(self):
+        return self._properties
+
+    @property
+    def port_connections(self):
+        return self._port_connections
