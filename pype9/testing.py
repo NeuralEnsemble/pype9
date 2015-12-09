@@ -55,7 +55,7 @@ class Comparer(object):
     specific_params = ('pas.g', 'cm')
 
     def __init__(self, nineml_model=None, properties=None, initial_states=None,
-                 initial_regime=None, event_weights=None, state_variable='v',
+                 initial_regime=None, state_variable='v',
                  dt=0.01, simulators=None, neuron_ref=None, nest_ref=None,
                  input_signal=None, input_train=None, neuron_translations=None,
                  nest_translations=None, neuron_build_args=None,
@@ -102,7 +102,6 @@ class Comparer(object):
         self.initial_states = (initial_states
                                if initial_states is not None else {})
         self.initial_regime = initial_regime
-        self.event_weights = event_weights if event_weights is not None else {}
         self.build_name = (build_name
                            if build_name is not None else nineml_model.name)
         self.auxiliary_states = (auxiliary_states
@@ -198,7 +197,6 @@ class Comparer(object):
         self.nml_cells[simulator] = CellMetaClass(
             model, name=self.build_name, default_properties=properties,
             initial_regime=self.initial_regime,
-            event_weights=self.event_weights,
             **self.build_args[simulator])()
         if self.input_signal is not None:
             self.nml_cells[simulator].play(*self.input_signal)

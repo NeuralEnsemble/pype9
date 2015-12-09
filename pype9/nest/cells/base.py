@@ -93,7 +93,7 @@ class Cell(base.Cell):
         logger.warning("Haven't worked out how to implement reset recordings "
                        "for NEST yet")
 
-    def play(self, port_name, signal, weight=None):
+    def play(self, port_name, signal, properties=[]):
         """
         Injects current into the segment
 
@@ -116,9 +116,13 @@ class Cell(base.Cell):
                 'spike_generator', 1, {'spike_times': spike_times})
             syn_spec = {'receptor_type': self._receive_ports[port_name],
                         'delay': simulation_controller.min_delay}
-            weight = self._scale_weight(port_name, weight)
-            if weight is not None:
-                syn_spec['weight'] = weight
+            self._check_connection_properties(port_name, properties)
+            if len(properties) > 1:
+                raise NotImplementedError(
+                    "Cannot handle more than one connection property per port")
+            elif properties:
+                syn_spec['weight'] = self._unit_handler.scale_value(
+                    properties[0].quantity)
             nest.Connect(self._inputs[port_name], self._cell,
                          syn_spec=syn_spec)
         else:

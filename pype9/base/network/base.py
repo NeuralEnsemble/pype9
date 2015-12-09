@@ -22,6 +22,7 @@ from nineml.user.network import (
     ComponentArray as ComponentArray9ML,
     EventConnectionGroup as EventConnGroup9ML,
     AnalogConnectionGroup as AnalogConnGroup9ML)
+from pype9.exceptions import Pype9UnflattenableException
 from nineml.values import SingleValue
 from .connectivity import InversePyNNConnectivity
 from ..cells import (
@@ -248,26 +249,28 @@ class Network(object):
                     role2name['synapse'] = proj.name
                     # Extract "connection weights" (any non-singular property
                     # value) from the synapse properties
-                    proj_props = defaultdict(set)
-                    for prop in synapse.properties:
-                        # SingleValue properties can be set as a constant but
-                        # any that vary between synapses will need to be
-                        # treated as a connection "weight"
-                        if not isinstance(prop.value, SingleValue):
-                            # FIXME: Need to check whether the property is
-                            #        used in this on event and not in the
-                            #        time derivatives or on conditions
-                            for on_event in (synapse.component_class.
-                                             all_on_events()):
-                                proj_props[on_event.src_port_name].add(prop)
-                    # Add port weights for this projection to combined list
-                    for port, props in proj_props.iteritems():
-                        ns_props = [
-                            Property(append_namespace(p.name, proj.name),
-                                     p.quantity) for p in props]
-                        connection_properties.append(
-                            ConnectionProperty(
-                                append_namespace(port, proj.name), ns_props))
+#                     proj_props = defaultdict(set)
+#                     for prop in synapse.properties:
+#                         # SingleValue properties can be set as a constant but
+#                         # any that vary between synapses will need to be
+#                         # treated as a connection "weight"
+#                         if not isinstance(prop.value, SingleValue):
+#                             # FIXME: Need to check whether the property is
+#                             #        used in this on event and not in the
+#                             #        time derivatives or on conditions
+#                             for on_event in (synapse.component_class.
+#                                              all_on_events()):
+#                                 proj_props[on_event.src_port_name].add(prop)
+#                     # Add port weights for this projection to combined list
+#                     for port, props in proj_props.iteritems():
+#                         ns_props = [
+#                             Property(append_namespace(p.name, proj.name),
+#                                      p.quantity) for p in props]
+#                         connection_properties.append(
+#                             ConnectionProperty(
+#                                 append_namespace(port, proj.name), ns_props))
+                    connection_properties = cls._extract_connection_properties(
+                        synapse, proj.name)
                     # Add the flattened synapse to the multi-dynamics sub
                     # components
                     sub_components[proj.name] = synapse
@@ -366,6 +369,37 @@ class Network(object):
                                                            component)
         return component_arrays, connection_groups
 
+    @classmethod
+    def _extract_connection_properties(cls, dynamics_properties, namespace):
+        """
+        Checks the mapping of event port -> analog receive ports to see whether
+        the analog receive ports can be treated as a weight of the event port
+        (i.e. are not referenced anywhere except within the OnEvent blocks
+        triggered by the event port).
+        """
+        component_class = dynamics_properties.component_class
+        varying_props = [
+            p for p in dynamics_properties.properties
+            if p.value.nineml_type == 'SingleValue']
+        # Get list of ports refereneced (either directly or indirectly) by
+        # time derivatives and on-conditions
+        not_permitted = set(p.name for p in component_class.required_for(
+            chain(component_class.all_time_derivatives(),
+                  component_class.all_on_conditions())).parameters)
+        intersection = set(p.name for p in varying_props) & not_permitted
+        if intersection:
+            raise Pype9UnflattenableException(intersection)
+        conn_params = defaultdict(set)
+        for on_event in component_class.on_events:
+            on_event_params = component_class.required_for(on_event).parameters
+            conn_params[on_event.src_port_name] |= set(on_event_params)
+        return [
+            ConnectionProperty(
+                append_namespace(prt, namespace),
+                [Property(append_namespace(p.name, namespace),
+                          dynamics_properties.property(p.name).quantity)
+                 for p in params])
+            for prt, params in conn_params.iteritems()]
 
 #             raise NotImplementedError(
 #                 "Cannot convert population '{}' to component array as "

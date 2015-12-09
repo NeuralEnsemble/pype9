@@ -342,28 +342,24 @@ class Cell(object):
     def property(self, name):
         return self._nineml.property(name)
 
-    def _scale_weight(self, port_name, weight):
-        try:
-            event_weights = self.build_options['event_weights']
-            weight_name = event_weights[port_name]
-        except KeyError:
-            weight_name = None
-        if weight is not None:
-            if weight_name is None:
-                raise Pype9RuntimeError(
-                    "Weight provided when there is no weight port associated "
-                    "with '{}' event port.".format(port_name))
-            port = self.component_class.analog_receive_port(weight_name)
-            qty = pq.Quantity(
-                weight,
-                self._unit_handler.dimension_to_unit_str(port.dimension))
-            weight = float(qty)
-        elif weight_name is not None:
+    def _check_connection_properties(self, port_name, properties):
+        props_dict = dict((p.name, p) for p in properties)
+        params_dict = dict(
+            (p.name, p) for p in
+            self._nineml.connection_parameters(port_name).parameters)
+        if set(props_dict.iterkeys()) != set(params_dict.iterkeys()):
             raise Pype9RuntimeError(
-                "No weight provided for the '{}' analog receive port "
-                "associated with the '{}' event port.".format(weight_name,
-                                                              port_name))
-        return weight
+                "Mismatch between provided property and parameter names:"
+                "\nParameters: '{}'\nProperties: '{}'"
+                .format("', '".join(params_dict.iterkeys()),
+                        "', '".join(props_dict.iterkeys())))
+        for prop in properties:
+            if params_dict[prop.name].dimension != prop.units.dimension:
+                raise Pype9RuntimeError(
+                    "Dimension of property '{}' ({}) does not match that of "
+                    "the corresponding parameter ({})"
+                    .format(prop.name, prop.units.dimension,
+                            params_dict[prop.name].dimension))
 
 
 class DynamicsWithSynapses(BaseALObject):

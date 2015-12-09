@@ -228,7 +228,7 @@ class Cell(base.Cell):
         super(Cell, self).clear_recorders()
         super(base.Cell, self).__setattr__('_recordings', {})
 
-    def play(self, port_name, signal, weight=None):
+    def play(self, port_name, signal, properties=[]):
         """
         Injects current into the segment
 
@@ -256,9 +256,13 @@ class Cell(base.Cell):
             vstim_times = h.Vector(pq.Quantity(signal, 'ms'))
             vstim.play(vstim_times)
             vstim_con = h.NetCon(vstim, self._hoc, sec=self._sec)
-            weight = self._scale_weight(port_name, weight)
-            if weight is not None:
-                vstim_con.weight[0] = weight
+            self._check_connection_properties(port_name, properties)
+            if len(properties) > 1:
+                raise NotImplementedError(
+                    "Cannot handle more than one connection property per port")
+            elif properties:
+                vstim_con.weight[0] = self._unit_handler.scale_value(
+                    properties[0].quantity)
             self._inputs['vstim'] = vstim
             self._input_auxs.extend((vstim_times, vstim_con))
         else:

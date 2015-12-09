@@ -53,17 +53,12 @@ class CodeGenerator(BaseCodeGenerator):
         # component class
         initial_regime = kwargs.get('initial_regime', None)
         self._check_initial_regime(component_class, initial_regime)
-        # Get any mappings of event ports to analog receive ports to be
-        # interpreted as event weights
-        event_weights = kwargs.get('event_weights', {})
-        self._check_event_weights(component_class, event_weights)
         tmpl_args = {
             'component_name': name,
             'component_class': component_class,
             'prototype': default_properties,
             'initial_state': initial_state,
             'initial_regime': initial_regime,
-            'event_weights': event_weights,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'unit_handler': UnitHandler(component_class),

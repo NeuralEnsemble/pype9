@@ -239,7 +239,6 @@ class TestDynamics(TestCase):
             properties=properties,
             initial_states=initial_states,
             initial_regime=initial_regime,
-#             event_weights={'input_spike': 'weight'},
             neuron_ref='ResetRefrac',
             nest_ref='iaf_psc_alpha',
             input_train=input_freq('input_spike', 500 * pq.Hz, self.duration,

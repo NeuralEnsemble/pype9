@@ -4,7 +4,7 @@ class Pype9RuntimeError(Exception):
     pass
 
 
-class Pype9TypeError(TypeError):
+class Pype9TypeError(TypeError, Pype9RuntimeError):
     pass
 
 
@@ -16,27 +16,33 @@ class Pype9AttributeError(AttributeError, Pype9RuntimeError):
     pass
 
 
-class Pype9IrreducibleMorphException(Exception):
+class Pype9IrreducibleMorphException(Pype9RuntimeError):
     pass
 
 
-class Pype9BuildError(Exception):
+class Pype9BuildError(Pype9RuntimeError):
     pass
 
 
-class Pype9CouldNotGuessFromDimensionException(Exception):
+class Pype9UnflattenableException(Exception):
+
+    def __init__(self, properties):
+        self._properties = properties
+
+
+class Pype9CouldNotGuessFromDimensionException(Pype9RuntimeError):
     pass
 
 
-class Pype9NoMatchingElementException(Exception):
+class Pype9NoMatchingElementException(Pype9RuntimeError):
     pass
 
 
-class Pype9MemberNameClashException(Exception):
+class Pype9MemberNameClashException(Pype9RuntimeError):
     pass
 
 
-class Pype9ProjToCloneNotCreatedException(Exception):
+class Pype9ProjToCloneNotCreatedException(Pype9RuntimeError):
 
     def __init__(self, orig_proj_id=None):
         self.orig_proj_id = orig_proj_id
