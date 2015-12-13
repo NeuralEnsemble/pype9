@@ -386,7 +386,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 
             int transition = -1;
     {% for trans in regime.transitions %}
-        {% set event_weight = [] %}{# passed to the previous_expressions argument of map_required_vars_locally #}
+        {% set connection_parameters = [] %}{# passed to the previous_expressions argument of map_required_vars_locally #}
         {% if hasattr(trans, 'trigger') %}
             // Check trigger condition
             if ({{trans.trigger.rhs_cstr}}) {
@@ -399,17 +399,18 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
             double {{trans.src_port_name}} = B_.{{trans.src_port_name}}_event_port.get_value(lag);
 
             if ({{trans.src_port_name}}) {
-            {% if trans.src_port_name in component_class.connection_weights %}
+            {% if trans.src_port_name in component_class.connection_parameter_names %}
                     // Set the "weight" of the event to the connection parameters paired to the analog port.
                 {% for connection_param in component_class.connection_parameters[trans.src_port_name] %}
                     double {{connection_param.name}} = {{trans.src_port_name}};  // ({{unit_handler.dimension_to_unit_str(connection_param.dimension)}})
                 {% endfor %}
+                {% set connection_parameters = component_class.connection_parameters %}
             {% endif %}
         {% endif %}
 
                     // Map all variables/expressions to the local namespace that are required to evaluate the state assignments that were not required for the triggers
 
-                    {{macros.map_required_vars_locally(trans.state_assignments, component_class, component_name, unit_handler, chain(regime.all_triggers(), regime.all_target_triggers(), event_weight)) | indent(20)}}
+                    {{macros.map_required_vars_locally(trans.state_assignments, component_class, component_name, unit_handler, chain(regime.all_triggers(), regime.all_target_triggers(), connection_parameters)) | indent(20)}}
 
 				    // State assignments
         {% for sa, scaled_expr, units in unit_handler.scale_aliases(trans.state_assignments) %}
@@ -460,7 +461,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         }
 
         /***** Get analog port values *****/
-{% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) if port.name not in event_weights.itervalues() %}
+{% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
         B_.{{port.name}}_value = B_.{{port.name}}_analog_port.get_value(lag);
 {% endfor %}
 
@@ -491,7 +492,7 @@ void {{component_name}}::handle(nest::CurrentEvent& e) {
     const double_t c = e.get_current();
     const double_t w = e.get_weight();    
     // Loop through analog receive ports
-{% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) if port.name not in event_weights.itervalues() %}
+{% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
     {{elseif(loop.first)}} (e.get_rport() == {{port.name}}_ANALOG_PORT) {
         B_.{{port.name}}_analog_port.add_value(
             e.get_rel_delivery_steps(network()->get_slice_origin()), w * c);

@@ -46,7 +46,7 @@ NEURON {
 {% endfor %}
 
     : Analog receive ports
-{% for p in component_class.analog_receive_ports if p.name not in event_weights.itervalues() %}
+{% for p in component_class.analog_receive_ports %}
     RANGE {{p.name}}
 {% endfor %}
 
@@ -119,9 +119,11 @@ PARAMETER {
     {{const.name}} = {{value}} ({{units}})
 {% endfor %}
 
-    : Units for event weights
-{% for weight_name in event_weights.itervalues() %}
-    {{weight_name | upper}}_UNITS_ = 1 ({{unit_handler.dimension_to_unit_str(component_class.analog_receive_port(weight_name).dimension)}})
+    : Units for connection properties
+{% for connection_parameter in component_class.connection_parameters.itervalues() %}
+    {% if connection_parameter.parameters %} 
+    {{connection_parameter.port + '_WEIGHT' | upper}}_UNITS_ = 1 ({{unit_handler.dimension_to_unit_str(connection_parameter.parameters[0].dimension)}})
+    {% endif %}
 {% endfor %} 
 
     : Unit correction for 't' used in printf in order to get modlunit to work.
@@ -203,7 +205,7 @@ FUNCTION deriv_{{sv.name}}(
 
 
 {% if not is_subcomponent %}
-NET_RECEIVE(event_weight_, channel) {
+NET_RECEIVE(connection_weight_, channel) {
     INITIAL {
       : stop channel being set to 0 by default
     }
@@ -222,10 +224,10 @@ NET_RECEIVE(event_weight_, channel) {
         if (flag == {{component_class.index_of(trans.trigger.rhs, key='TriggerRHS') + 1}}) {  : Condition '{{trans.trigger.rhs_str}}'
             {% else %}
         if (flag == ON_EVENT && channel == {{trans.src_port_name | upper}}) {
-                {% if trans.src_port_name in event_weights %}
+                {% if trans.src_port_name in component_class.connection_parameter_names %}
             
             : Assign event weight to paired analog receive port 
-            {{event_weights[trans.src_port_name]}} = event_weight_ * {{event_weights[trans.src_port_name] | upper}}_UNITS_
+            {{component_class.connection_parameter(trans.src_port_name).parameters[0]}} = connection_weight_ * {{trans.src_port_name + '_WEIGHT' | upper}}_UNITS_
                 {% endif %}
             {% endif %}                  
             : Required aliases
