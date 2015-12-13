@@ -24,10 +24,8 @@ class Pype9BuildError(Pype9RuntimeError):
     pass
 
 
-class Pype9UnflattenableException(Exception):
-
-    def __init__(self, properties):
-        self._properties = properties
+class Pype9UnflattenableSynapseException(Exception):
+    pass
 
 
 class Pype9CouldNotGuessFromDimensionException(Pype9RuntimeError):

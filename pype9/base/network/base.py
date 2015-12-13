@@ -22,7 +22,7 @@ from nineml.user.network import (
     ComponentArray as ComponentArray9ML,
     EventConnectionGroup as EventConnGroup9ML,
     AnalogConnectionGroup as AnalogConnGroup9ML)
-from pype9.exceptions import Pype9UnflattenableException
+from pype9.exceptions import Pype9UnflattenableSynapseException
 from nineml.values import SingleValue
 from .connectivity import InversePyNNConnectivity
 from ..cells import (
@@ -245,7 +245,9 @@ class Network(object):
                 role2name = {'post': cls.cell_dyn_name}
                 # If the synapse is non-linear it can be combined into the
                 # dynamics of the post-synaptic cell.
-                if synapse.component_class.is_linear():
+                try:
+                    if synapse.component_class.is_linear():
+                        raise Pype9UnflattenableSynapseException()
                     role2name['synapse'] = proj.name
                     # Extract "connection weights" (any non-singular property
                     # value) from the synapse properties
@@ -288,7 +290,7 @@ class Network(object):
 #                         (BasePortExposure.from_port(
 #                             pc.send_port, role2name[pc.sender_role])
 #                          for pc in proj_conns if pc.receiver_role == 'pre')))
-                else:
+                except Pype9UnflattenableSynapseException:
                     # All synapses (of this type) connected to a single post-
                     # synaptic cell cannot be flattened into a single component
                     # of a multi- dynamics object so an individual synapses
@@ -372,10 +374,9 @@ class Network(object):
     @classmethod
     def _extract_connection_properties(cls, dynamics_properties, namespace):
         """
-        Checks the mapping of event port -> analog receive ports to see whether
-        the analog receive ports can be treated as a weight of the event port
-        (i.e. are not referenced anywhere except within the OnEvent blocks
-        triggered by the event port).
+        Identifies properties in the provided DynmaicsProperties that can be
+        treated as a property of the connection (i.e. are not referenced
+        anywhere except within the OnEvent blocks event port).
         """
         component_class = dynamics_properties.component_class
         varying_props = [
@@ -386,9 +387,8 @@ class Network(object):
         not_permitted = set(p.name for p in component_class.required_for(
             chain(component_class.all_time_derivatives(),
                   component_class.all_on_conditions())).parameters)
-        intersection = set(p.name for p in varying_props) & not_permitted
-        if intersection:
-            raise Pype9UnflattenableException(intersection)
+        if any(p.name in not_permitted for p in varying_props):
+            raise Pype9UnflattenableSynapseException()
         conn_params = defaultdict(set)
         for on_event in component_class.on_events:
             on_event_params = component_class.required_for(on_event).parameters
