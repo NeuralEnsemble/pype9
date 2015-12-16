@@ -364,6 +364,9 @@ class Cell(object):
 
 class DynamicsWithSynapses(BaseALObject):
 
+    nineml_type = 'Dynamics'
+    defining_attributes = ('_dynmaics', '_synapses', '_connection_parameters')
+
     def __init__(self, dynamics, synapses=[], connection_parameters=[]):
         self._dynamics = dynamics
         self._synapses = dict((s.name, s) for s in synapses)
@@ -454,6 +457,10 @@ class DynamicsWithSynapses(BaseALObject):
 
 class DynamicsWithSynapsesProperties(BaseULObject):
 
+    nineml_type = 'DynamicsProperties'
+    defining_attributes = ('_dynamics_properties', '_synapses',
+                           '_connection_properties')
+
     def __init__(self, dynamics_properties, synapse_properties=[],
                  connection_properties=[]):
         self._dynamics_properties = dynamics_properties
@@ -461,7 +468,7 @@ class DynamicsWithSynapsesProperties(BaseULObject):
         self._connection_properties = dict((cp.port, cp)
                                            for cp in connection_properties)
         # Extract the AL objects for the definition
-        synapses = (Synapse(s.name, s.dynamics.component_class,
+        synapses = (Synapse(s.name, s.dynamics_properties.component_class,
                             s.port_connections)
                     for s in synapse_properties)
         connection_parameters = (

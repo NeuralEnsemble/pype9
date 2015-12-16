@@ -422,7 +422,8 @@ class TestNetwork(unittest.TestCase):
 
         self.assertEqual(
             component_arrays['Pop1'], dyn_array1,
-            "Mismatch between generated and expected dynamics arrays:\n {}")
+            "Mismatch between generated and expected dynamics arrays:\n {}"
+            .format(component_arrays['Pop1'].find_mismatch(dyn_array1)))
         self.assertEqual(
             component_arrays['Pop2'], dyn_array2,
             "Mismatch between generated and expected dynamics arrays:\n {}"
