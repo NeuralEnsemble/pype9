@@ -246,7 +246,7 @@ class Network(object):
                 # If the synapse is non-linear it can be combined into the
                 # dynamics of the post-synaptic cell.
                 try:
-                    if synapse.component_class.is_linear():
+                    if not synapse.component_class.is_linear():
                         raise Pype9UnflattenableSynapseException()
                     role2name['synapse'] = proj.name
                     # Extract "connection weights" (any non-singular property
@@ -363,7 +363,7 @@ class Network(object):
                     for pc in proj_conns)))
             dynamics_properties = MultiDynamicsProperties(
                 name=pop.name, sub_components=sub_components,
-                port_connections=internal_conns, port_exposures=exposures)
+                port_connections=internal_conns, port_exposures=set(exposures))
             component = DynamicsWithSynapsesProperties(
                 dynamics_properties, synapse_properties=synapses,
                 connection_properties=connection_properties)
@@ -381,7 +381,7 @@ class Network(object):
         component_class = dynamics_properties.component_class
         varying_props = [
             p for p in dynamics_properties.properties
-            if p.value.nineml_type == 'SingleValue']
+            if p.value.nineml_type != 'SingleValue']
         # Get list of ports refereneced (either directly or indirectly) by
         # time derivatives and on-conditions
         not_permitted = set(p.name for p in component_class.required_for(
@@ -390,8 +390,9 @@ class Network(object):
         if any(p.name in not_permitted for p in varying_props):
             raise Pype9UnflattenableSynapseException()
         conn_params = defaultdict(set)
-        for on_event in component_class.on_events:
-            on_event_params = component_class.required_for(on_event).parameters
+        for on_event in component_class.all_on_events():
+            on_event_params = component_class.required_for(
+                on_event.state_assignments).parameters
             conn_params[on_event.src_port_name] |= set(on_event_params)
         return [
             ConnectionProperty(
