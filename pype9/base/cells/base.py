@@ -19,9 +19,6 @@ import quantities as pq
 import nineml
 from nineml.abstraction import Dynamics, Parameter
 from nineml.user import Property, Quantity, Definition
-from nineml.user.multi import (
-    MultiDynamics as MultiDynamics,
-    MultiDynamicsProperties as MultiDynamicsProperties, SubDynamics)
 from nineml.exceptions import name_error, NineMLNameError
 from nineml.abstraction import BaseALObject
 from nineml.user import BaseULObject
@@ -396,6 +393,14 @@ class DynamicsWithSynapses(BaseALObject):
             [('Synapse', 'synapse'),
              ('ConnectionParameter', 'connection_parameter')])
 
+    def __repr__(self):
+        return ("DynamicsWithSynapses(dynamics={}, synapses=[{}], "
+                "connection_parameters=[{}])"
+                .format(self._dynamics,
+                        ', '.format(repr(s) for s in self.synapses),
+                        ', '.format(repr(cp)
+                                    for cp in self.connection_parameters)))
+
     def __getattr__(self, name):
         """
         If an attribute isn't pass it on to the dynamics class so the class can
@@ -488,6 +493,14 @@ class DynamicsWithSynapsesProperties(BaseULObject):
             [('Synapse', 'synapse'),
              ('ConnectionProperty', 'connection_property')])
 
+    def __repr__(self):
+        return ("DynamicsWithSynapsesProperties(dynamics_properties={}, "
+                "synapses=[{}], connection_properties=[{}])"
+                .format(self._dynamics_properties,
+                        ', '.format(repr(s) for s in self.synapses),
+                        ', '.format(repr(cp)
+                                    for cp in self.connection_properties)))
+
     def __getattr__(self, name):
         """
         If an attribute isn't pass it on to the dynamics class so the class can
@@ -529,160 +542,6 @@ class DynamicsWithSynapsesProperties(BaseULObject):
     def connection_property_names(self):
         return self._connection_properties.iterkeys()
 
-# 
-# class MultiDynamicsWithSynapses(MultiDynamics):
-# 
-#     defining_attributes = (MultiDynamics.defining_attributes +
-#                            ('_synapses', '_connection_parameters'))
-#     class_to_member = dict(
-#         MultiDynamics.class_to_member.items() +
-#         [('Synapse', 'synapse'),
-#          ('ConnectionParameter', 'connection_parameter')])
-# 
-#     def __init__(self, name, sub_components, port_connections=[],
-#                  port_exposures=[], synapses=[], connection_parameters=[]):
-#         self._synapses = dict((s.name, s) for s in synapses)
-#         self._connection_parameters = dict((pw.port, pw)
-#                                            for pw in connection_parameters)
-#         super(MultiDynamicsWithSynapses, self).__init__(
-#             name=name, sub_components=sub_components,
-#             port_connections=port_connections, port_exposures=port_exposures,
-#             additional_parameters=self._all_connection_parameters())
-#         for param in self._all_connection_parameters():
-#             try:
-#                 super_param = super(
-#                     MultiDynamicsWithSynapses, self).parameter(param.name)
-#                 if param.dimension != super_param.dimension:
-#                     raise Pype9RuntimeError(
-#                         "Inconsistent dimensions between connection parameter"
-#                         " '{}' ({}) and parameter of the same name ({})"
-#                         .format(param.name, param.dimension,
-#                                 super_param.dimension))
-#             except NineMLNameError:
-#                 raise Pype9RuntimeError(
-#                     "Connection parameter '{}' does not refer to a parameter "
-#                     "in the base MultiDynamics class ('{}')"
-#                     .format(param, "', '".join(
-#                         sp.name for sp in super(
-#                             MultiDynamicsWithSynapses, self).parameters)))
-# 
-#     def _all_connection_parameters(self):
-#         return set(chain(*(
-#             cp.parameters for cp in self.connection_parameters)))
-# 
-#     def _all_connection_parameter_names(self):
-#         return (p.name for p in self._all_connection_parameters())
-# 
-#     @property
-#     def parameters(self):
-#         return (p for p in super(MultiDynamicsWithSynapses, self).parameters
-#                 if p.name not in self._all_connection_parameter_names())
-# 
-#     @name_error
-#     def parameter(self, name):
-#         if name in self._all_connection_parameter_names():
-#             raise KeyError(name)
-#         else:
-#             return super(MultiDynamicsWithSynapses, self).parameter(name)
-# 
-#     @name_error
-#     def synapse(self, name):
-#         return self._synapses[name]
-# 
-#     @name_error
-#     def connection_paramter(self, name):
-#         return self._connection_parameters[name]
-# 
-#     @property
-#     def synapses(self):
-#         return self._synapses.itervalues()
-# 
-#     @property
-#     def connection_parameters(self):
-#         return self._connection_parameters.itervalues()
-# 
-#     @property
-#     def num_synapses(self):
-#         return len(self._synapses)
-# 
-#     @property
-#     def num_connection_parameters(self):
-#         return len(self._connection_parameters)
-# 
-#     @property
-#     def synapse_names(self):
-#         return self._synapses.iterkeys()
-# 
-#     @property
-#     def connection_paramter_names(self):
-#         return self._connection_parameters.iterkeys()
-# 
-# 
-# class MultiDynamicsWithSynapsesProperties(MultiDynamicsProperties):
-# 
-#     defining_attributes = (MultiDynamicsProperties.defining_attributes +
-#                            ('_synapses', '_connection_properties'))
-#     class_to_member = dict(
-#         MultiDynamics.class_to_member.items() +
-#         [('SynapseProperties', 'synapse'),
-#          ('ConnectionProperty', 'connection_property')])
-# 
-#     def __init__(self, name, sub_components, port_connections=[],
-#                  port_exposures=[], synapses=[], connection_properties=[]):
-#         self._synapses = dict((s.name, s) for s in synapses)
-#         self._connection_properties = dict((cp.port, cp)
-#                                            for cp in connection_properties)
-#         MultiDynamicsProperties.__init__(
-#             self, name, sub_components, port_connections, port_exposures)
-# 
-#     def _extract_definition(self, sub_components, port_exposures,
-#                             port_connections):
-#         sub_dynamics = [
-#             SubDynamics(sc.name, sc.component.component_class)
-#             for sc in sub_components]
-#         synapses = (Synapse(s.name, s.dynamics.component_class,
-#                             s.port_connections)
-#                     for s in self.synapses)
-#         connection_parameters = (
-#             ConnectionParameter(cp.port, [Parameter(p.name, p.units.dimension)
-#                                            for p in cp.properties])
-#             for cp in self.connection_properties)
-#         # Construct component class definition
-#         return Definition(MultiDynamicsWithSynapses(
-#             self.name + '_Dynamics', sub_dynamics,
-#             port_exposures=port_exposures, port_connections=port_connections,
-#             synapses=synapses, connection_parameters=connection_parameters))
-# 
-#     def synapse(self, name):
-#         return self._synapses[name]
-# 
-#     def connection_property(self, name):
-#         return self._connection_properties[name]
-# 
-#     @property
-#     def synapses(self):
-#         return self._synapses.itervalues()
-# 
-#     @property
-#     def connection_properties(self):
-#         return self._connection_properties.itervalues()
-# 
-#     @property
-#     def num_synapses(self):
-#         return len(self._synapses)
-# 
-#     @property
-#     def num_connection_properties(self):
-#         return len(self._connection_properties)
-# 
-#     @property
-#     def synapse_names(self):
-#         return self._synapses.iterkeys()
-# 
-#     @property
-#     def connection_property_names(self):
-#         return self._connection_properties.iterkeys()
-
 
 class ConnectionParameter(BaseALObject):
 
@@ -692,6 +551,11 @@ class ConnectionParameter(BaseALObject):
     def __init__(self, port, parameters):
         self._port = port
         self._parameters = parameters
+
+    def __repr__(self):
+        return ("ConnectionParameter(port={}, parameters=[{}])"
+                .format(self.port,
+                        ', '.join(repr(p) for p in self.parameters)))
 
     @property
     def port(self):
@@ -711,6 +575,11 @@ class ConnectionProperty(BaseULObject):
         self._port = port
         self._properties = properties
 
+    def __repr__(self):
+        return ("ConnectionProperty(port={}, properties=[{}])"
+                .format(self.port,
+                        ', '.join(repr(p) for p in self.properties)))
+
     @property
     def port(self):
         return self._port
@@ -729,6 +598,11 @@ class Synapse(BaseALObject):
         self._name = name
         self._dynamics = dynamics
         self._port_connections = port_connections
+
+    def __repr__(self):
+        return ("Synapse(name='{}', dynamics={}, port_connections=[{}])"
+                .format(self.name, self.dynamics,
+                        ', '.join(repr(p) for p in self.port_connections)))
 
     @property
     def name(self):
@@ -752,6 +626,12 @@ class SynapseProperties(BaseULObject):
         self._name = name
         self._dynamics_properties = dynamics_properties
         self._port_connections = port_connections
+
+    def __repr__(self):
+        return ("Synapse(name='{}', dynamics_properties={}, "
+                "port_connections=[{}])"
+                .format(self.name, self.dynamics_properties,
+                        ', '.join(repr(p) for p in self.port_connections)))
 
     @property
     def name(self):

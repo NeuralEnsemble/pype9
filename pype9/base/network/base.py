@@ -271,8 +271,8 @@ class Network(object):
 #                         connection_properties.append(
 #                             ConnectionProperty(
 #                                 append_namespace(port, proj.name), ns_props))
-                    connection_properties = cls._extract_connection_properties(
-                        synapse, proj.name)
+                    connection_properties.extend(
+                        cls._extract_connection_properties(synapse, proj.name))
                     # Add the flattened synapse to the multi-dynamics sub
                     # components
                     sub_components[proj.name] = synapse
