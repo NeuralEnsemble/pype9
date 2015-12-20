@@ -120,7 +120,7 @@ PARAMETER {
 {% endfor %}
 
     : Units for connection properties
-{% for connection_parameter in component_class.connection_parameters.itervalues() %}
+{% for connection_parameter in component_class.connection_parameters %}
     {% if connection_parameter.parameters %} 
     {{connection_parameter.port + '_WEIGHT' | upper}}_UNITS_ = 1 ({{unit_handler.dimension_to_unit_str(connection_parameter.parameters[0].dimension)}})
     {% endif %}

@@ -43,12 +43,16 @@ class CellMetaClass(type):
         """
         if not isinstance(component_class, DynamicsWithSynapses):
             component_class = DynamicsWithSynapses(component_class)
-        if (default_properties is not None and
-                default_properties.component_class != component_class):
-            raise Pype9RuntimeError(
-                "Component class of default properties object ({}) does not "
-                "match provided class ({})".format(
-                    default_properties.component_class, component_class))
+        if default_properties is not None:
+            if not isinstance(default_properties,
+                              DynamicsWithSynapsesProperties):
+                default_properties = DynamicsWithSynapsesProperties(
+                    default_properties)
+            if default_properties.component_class != component_class:
+                raise Pype9RuntimeError(
+                    "Component class of default properties object ({}) does "
+                    "not match provided class ({})".format(
+                        default_properties.component_class, component_class))
         # Extract out build directives
         build_mode = kwargs.pop('build_mode', 'lazy')
         verbose = kwargs.pop('verbose', False)
@@ -464,6 +468,9 @@ class DynamicsWithSynapses(BaseALObject):
     @property
     def connection_paramter_names(self):
         return self._connection_parameters.iterkeys()
+
+    def accept_visitor(self, visitor):
+        self.dynamics.accept_visitor(visitor)
 
 
 class DynamicsWithSynapsesProperties(BaseULObject):

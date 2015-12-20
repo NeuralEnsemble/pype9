@@ -202,7 +202,7 @@ class TestDynamics(TestCase):
                     [Parameter('weight__pls__syn', un.current)])])
         initial_states = {'a__psr__syn': 0.0 * pq.nA,
                           'b__psr__syn': 0.0 * pq.nA}
-        initial_regime = 'subthreshold___sole'
+        initial_regime = 'subthreshold___sole_____sole'
         liaf_properties = ninemlcatalog.load(
             'neuron/LeakyIntegrateAndFire/',
             'PyNNLeakyIntegrateAndFireProperties')
