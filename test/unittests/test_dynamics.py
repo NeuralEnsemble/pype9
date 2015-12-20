@@ -13,7 +13,8 @@ from nineml.user import Property
 from nineml.user.multi.component import MultiDynamics
 from nineml.user import DynamicsProperties
 from pype9.testing import Comparer, input_step, input_freq
-from pype9.base.cells import DynamicsWithSynapses, ConnectionParameterSet
+from pype9.base.cells import (
+    DynamicsWithSynapses, ConnectionParameterSet, ConnectionPropertySet)
 
 
 class TestDynamics(TestCase):
@@ -219,14 +220,18 @@ class TestDynamics(TestCase):
                                'b__psr__syn': (None, 1)}
         initial_states.update(
             (k + '__cell', v) for k, v in self.liaf_initial_states.iteritems())
-        properties = DynamicsProperties(
-            name='IafAlphaProperties', definition=iaf_alpha,
-            properties=dict(
-                (p.name + '__' + suffix, p.quantity)
-                for p, suffix in chain(
-                    zip(liaf_properties.properties, repeat('cell')),
-                    zip(alpha_properties.properties, repeat('psr__syn')),
-                    [(Property('weight', 10.0 * un.nA), 'pls__syn')])))
+        properties = DynamicsWithSynapses(
+            DynamicsProperties(
+                name='IafAlphaProperties', definition=iaf_alpha,
+                properties=dict(
+                    (p.name + '__' + suffix, p.quantity)
+                    for p, suffix in chain(
+                        zip(liaf_properties.properties, repeat('cell')),
+                        zip(alpha_properties.properties, repeat('psr__syn'))))),  # @IgnorePep8
+            connection_property_sets=[
+                ConnectionPropertySet(
+                    'incoming_spike',
+                    [Property('weight__pls__syn', 10.0 * un.nA)])])
         nest_tranlsations.update(
             (k + '__cell', v)
             for k, v in self.liaf_nest_translations.iteritems())
