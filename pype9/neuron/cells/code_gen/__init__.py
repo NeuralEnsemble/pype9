@@ -16,9 +16,11 @@ from itertools import chain, groupby
 import subprocess as sp
 from collections import defaultdict
 import sympy
-from pype9.base.cells.code_gen import BaseCodeGenerator
 import nineml.units as un
 from nineml.abstraction import Alias, AnalogSendPort, Dynamics
+from pype9.base.cells.code_gen import BaseCodeGenerator
+from pype9.base.cells import (
+    DynamicsWithSynapses, DynamicsWithSynapsesProperties)
 from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import pype9
 from datetime import datetime
@@ -142,9 +144,9 @@ class CodeGenerator(BaseCodeGenerator):
             'unit_handler': UnitHandler(component_class),
             'ode_solver': self.ODE_SOLVER_DEFAULT,
             'external_ports': [],
-            'is_subcomponent': True,
-            # FIXME: weight_vars needs to be removed or implmented properly
-            'weight_variables': []}
+            'is_subcomponent': True}
+#             # FIXME: weight_vars needs to be removed or implemented properly
+#             'weight_variables': []}
         tmpl_args.update(template_args)
         # Render mod file
         self.render_to_file(
@@ -161,18 +163,21 @@ class CodeGenerator(BaseCodeGenerator):
         `membrane_capacitance` -- the name of the capcitance that represents
                               the membrane capacitance
         """
-        if not isinstance(component_class, Dynamics):
+        if not isinstance(component_class, DynamicsWithSynapses):
             raise Pype9RuntimeError(
-                "'component_class' must be a nineml.Dynamics object")
+                "'component_class' must be a DynamicsWithSynapses object")
         # ---------------------------------------------------------------------
         # Clone original component class and properties
         # ---------------------------------------------------------------------
         name = component_class.name
-        orig = component_class
-#         trfrm = DynamicsCloner().visit(orig)
-        trfrm = deepcopy(orig)
+#         orig = component_class
+        trfrm = DynamicsCloner().visit(component_class.dynamics)
+#         trfrm = deepcopy(orig)
         if default_properties is not None:
-            default_properties = deepcopy(default_properties)
+            trfrm_properties = deepcopy(
+                default_properties.dynamics_properties)
+        else:
+            trfrm_properties = None
         if initial_state is not None:
             raise NotImplementedError(
                 "Haven't implemented transformation of initial states")
@@ -182,17 +187,19 @@ class CodeGenerator(BaseCodeGenerator):
         try:
             name = kwargs['membrane_voltage']
             try:
-                orig_v = orig[name]
+                orig_v = component_class.element(
+                    name, class_map=Dynamics.class_to_member)
             except KeyError:
                 raise Pype9BuildError(
                     "Could not find specified membrane voltage '{}'"
                     .format(name))
         except KeyError:  # Guess voltage from its dimension if not supplied
-            candidate_vs = [cv for cv in orig.state_variables
+            candidate_vs = [cv for cv in component_class.state_variables
                             if cv.dimension == un.voltage]
             if len(candidate_vs) == 0:
-                candidate_vs = [cv for cv in orig.analog_receive_ports
-                                if cv.dimension == un.voltage]
+                candidate_vs = [
+                    cv for cv in component_class.analog_receive_ports
+                    if cv.dimension == un.voltage]
             if len(candidate_vs) == 1:
                 orig_v = candidate_vs[0]
                 print ("Guessing that '{}' is the membrane voltage"
@@ -211,8 +218,8 @@ class CodeGenerator(BaseCodeGenerator):
                 raise Pype9BuildError(
                     "No candidates for the membrane voltage, "
                     "state_variables '{}', analog_receive_ports '{}'"
-                    .format("', '".join(orig.state_variables),
-                            "', '".join(orig.analog_receive_ports)))
+                    .format("', '".join(component_class.state_variables),
+                            "', '".join(component_class.analog_receive_ports)))
         # Map voltage to hard-coded 'v' symbol
         if orig_v.name != 'v':
             trfrm.rename_symbol(orig_v.name, 'v')
@@ -221,7 +228,7 @@ class CodeGenerator(BaseCodeGenerator):
         else:
             v = trfrm.state_variable('v')
         # Add annotations to the original and build models
-        orig.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = orig_v.name
+        component_class.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = orig_v.name
         trfrm.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = 'v'
         # Remove associated analog send port if present
         try:
@@ -237,14 +244,14 @@ class CodeGenerator(BaseCodeGenerator):
             try:
                 name = kwargs['membrane_capacitance']
                 try:
-                    orig_cm = orig.parameter(name)
+                    orig_cm = component_class.parameter(name)
                 except KeyError:
                     raise Pype9BuildError(
                         "Could not find specified membrane capacitance '{}'"
                         .format(name))
                 cm = trfrm.parameter(orig_cm.name)
             except KeyError:  # 'membrane_capacitance' was not specified
-                candidate_cms = [ccm for ccm in orig.parameters
+                candidate_cms = [ccm for ccm in component_class.parameters
                                  if ccm.dimension == un.capacitance]
                 if len(candidate_cms) == 1:
                     orig_cm = candidate_cms[0]
@@ -259,7 +266,8 @@ class CodeGenerator(BaseCodeGenerator):
                     cm = Parameter("cm___pype9", dimension=un.capacitance)
                     trfrm.add(cm)
                     qty = kwargs.get('default_capacitance', 1.0 * un.nF)
-                    default_properties.add(Property('cm___pype9', qty))
+                    if trfrm_properties:
+                        trfrm_properties.add(Property('cm___pype9', qty))
             cm.annotations[PYPE9_NS][TRANSFORM_SRC] = None
             trfrm.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = cm.name
             # -----------------------------------------------------------------
@@ -351,11 +359,11 @@ class CodeGenerator(BaseCodeGenerator):
                     ext_is.append(ext_i)
             except KeyError:
                 ext_is = [
-                    i for i in chain(orig.analog_receive_ports,
-                                     orig.analog_reduce_ports)
+                    i for i in chain(component_class.analog_receive_ports,
+                                     component_class.analog_reduce_ports)
                     if (i.dimension == un.current and
                         i.name in memb_i.rhs_symbol_names and
-                        len([e for e in orig.all_expressions
+                        len([e for e in component_class.all_expressions
                              if i.symbol in e.free_symbols]) == 1)]
                 print ("Guessing '{}' external currents to be removed"
                        .format("', '".join(i.name for i in ext_is)))
@@ -445,8 +453,15 @@ class CodeGenerator(BaseCodeGenerator):
         # Validate the transformed component class and construct prototype
         # -----------------------------------------------------------------
         trfrm.validate()
+        trfrm_with_syn = DynamicsWithSynapses(
+            trfrm, component_class.synapses,
+            component_class.connection_parameters)
+        if trfrm_properties:
+            trfrm_props_with_syn = DynamicsWithSynapsesProperties(
+                trfrm_properties, default_properties.synapses,
+                default_properties.connection_properties)
         # Retun a prototype of the transformed class
-        return trfrm, default_properties, initial_state
+        return trfrm_with_syn, trfrm_props_with_syn, initial_state
 
     def compile_source_files(self, compile_dir, name, verbose):
         """

@@ -41,9 +41,8 @@ class CellMetaClass(type):
         `saved_name`         -- the name of the Dynamics object in the document
                                 if diferent from the `name`
         """
-        if not isinstance(component_class, Dynamics):
-            raise Pype9RuntimeError(
-                "Component class ({}) needs to be nineml Dynamics object")
+        if not isinstance(component_class, DynamicsWithSynapses):
+            component_class = DynamicsWithSynapses(component_class)
         if (default_properties is not None and
                 default_properties.component_class != component_class):
             raise Pype9RuntimeError(
@@ -365,6 +364,9 @@ class DynamicsWithSynapses(BaseALObject):
     defining_attributes = ('_dynmaics', '_synapses', '_connection_parameters')
 
     def __init__(self, dynamics, synapses=[], connection_parameters=[]):
+        if dynamics.nineml_type not in ('Dynamics', 'MultiDynamics'):
+            raise Pype9RuntimeError(
+                "Component class ({}) needs to be nineml Dynamics object")
         self._dynamics = dynamics
         self._synapses = dict((s.name, s) for s in synapses)
         self._connection_parameters = dict((pw.port, pw)
@@ -414,6 +416,10 @@ class DynamicsWithSynapses(BaseALObject):
 
     def _all_connection_parameter_names(self):
         return (p.name for p in self._all_connection_parameters())
+
+    @property
+    def dynamics(self):
+        return self._dynamics
 
     @property
     def parameters(self):
@@ -511,6 +517,10 @@ class DynamicsWithSynapsesProperties(BaseULObject):
     @property
     def definition(self):
         return self._definition
+
+    @property
+    def dynamics_properties(self):
+        return self._dynamics_properties
 
     def synapse(self, name):
         return self._synapses[name]

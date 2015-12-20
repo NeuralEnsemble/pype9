@@ -225,8 +225,8 @@ class TestDynamics(TestCase):
                 (p.name + '__' + suffix, p.quantity)
                 for p, suffix in chain(
                     zip(liaf_properties.properties, repeat('cell')),
-                    zip(alpha_properties.properties, repeat('psr__syn'))
-                    [Property('weight__pls__syn', 1.0, un.nA)])))
+                    zip(alpha_properties.properties, repeat('psr__syn')),
+                    [(Property('weight', 10.0 * un.nA), 'pls__syn')])))
         nest_tranlsations.update(
             (k + '__cell', v)
             for k, v in self.liaf_nest_translations.iteritems())
