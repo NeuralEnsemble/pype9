@@ -51,8 +51,15 @@ NEURON {
 {% endfor %}
 
     :Aliases
-{% for alias in chain(component_class.aliases) %}
+{% for alias in component_class.aliases %}
     RANGE {{alias.name}}
+{% endfor %}
+
+    :Connection Parameters
+{% for conn_param_set in component_class.connection_parameter_sets %}
+    {% for parameter in conn_param_set.parameters %}
+    RANGE {{parameter.name}}
+    {% endfor %}
 {% endfor %}
 
 }
@@ -120,9 +127,9 @@ PARAMETER {
 {% endfor %}
 
     : Units for connection properties
-{% for connection_parameter in component_class.connection_parameters %}
-    {% if connection_parameter.parameters %} 
-    {{connection_parameter.port + '_WEIGHT' | upper}}_UNITS_ = 1 ({{unit_handler.dimension_to_unit_str(connection_parameter.parameters[0].dimension)}})
+{% for connection_parameter_set in component_class.connection_parameter_sets %}
+    {% if connection_parameter_set.parameters %} 
+    {{connection_parameter_set.port | upper}}_WEIGHT_UNITS_ = 1 ({{unit_handler.dimension_to_unit_str(connection_parameter_set.parameters[0].dimension)}})
     {% endif %}
 {% endfor %} 
 
@@ -156,7 +163,14 @@ ASSIGNED {
     : State variables without explicit derivatives
 {% for sv, units in unit_handler.assign_units_to_variables(component_class.state_variables) if len(list(component_class.all_time_derivatives(state_variable=sv))) == 0 %}
     {{sv.name}} ({{units}})
-{% endfor %}    
+{% endfor %}
+
+    :Connection Parameters
+{% for conn_param_set in component_class.connection_parameter_sets %}
+    {% for parameter, units in unit_handler.assign_units_to_variables(conn_param_set.parameters) %}
+    {{parameter.name}} ({{units}})
+    {% endfor %}
+{% endfor %}
 }
 
 BREAKPOINT {
@@ -224,10 +238,10 @@ NET_RECEIVE(connection_weight_, channel) {
         if (flag == {{component_class.index_of(trans.trigger.rhs, key='TriggerRHS') + 1}}) {  : Condition '{{trans.trigger.rhs_str}}'
             {% else %}
         if (flag == ON_EVENT && channel == {{trans.src_port_name | upper}}) {
-                {% if trans.src_port_name in component_class.connection_parameter_names %}
+                {% if trans.src_port_name in component_class.connection_parameter_set_names %}
             
             : Assign event weight to paired analog receive port 
-            {{component_class.connection_parameter(trans.src_port_name).parameters[0]}} = connection_weight_ * {{trans.src_port_name + '_WEIGHT' | upper}}_UNITS_
+            {{component_class.connection_parameter_set(trans.src_port_name).parameters[0].name}} = connection_weight_ * {{trans.src_port_name | upper}}_WEIGHT_UNITS_
                 {% endif %}
             {% endif %}                  
             : Required aliases

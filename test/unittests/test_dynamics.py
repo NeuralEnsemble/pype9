@@ -13,7 +13,7 @@ from nineml.user import Property
 from nineml.user.multi.component import MultiDynamics
 from nineml.user import DynamicsProperties
 from pype9.testing import Comparer, input_step, input_freq
-from pype9.base.cells import DynamicsWithSynapses, ConnectionParameter
+from pype9.base.cells import DynamicsWithSynapses, ConnectionParameterSet
 
 
 class TestDynamics(TestCase):
@@ -196,8 +196,8 @@ class TestDynamics(TestCase):
                 port_connections=[
                     ('syn', 'i_synaptic__psr', 'cell', 'i_synaptic')],
                 port_exposures=[('syn', 'spike__psr', 'input_spike')]),
-            connection_parameters=[
-                ConnectionParameter(
+            connection_parameter_sets=[
+                ConnectionParameterSet(
                     'input_spike',
                     [Parameter('weight__pls__syn', un.current)])])
         initial_states = {'a__psr__syn': 0.0 * pq.nA,

@@ -15,7 +15,7 @@ from nineml import units as un
 from nineml.units import ms
 from nineml.values import RandomValue
 from pype9.base.cells import (
-    ConnectionProperty, DynamicsWithSynapsesProperties)
+    ConnectionPropertySet, DynamicsWithSynapsesProperties)
 from pype9.base.network import Network as BaseNetwork
 import ninemlcatalog
 
@@ -318,14 +318,14 @@ class TestNetwork(unittest.TestCase):
                         ('Proj2', 'double_spike__psr'),
                         ('Proj2', 'spike__psr'),
                         ('Proj4', 'spike__psr')]),
-                connection_properties=[
-                    ConnectionProperty(
+                connection_property_sets=[
+                    ConnectionPropertySet(
                         'spike__psr__Proj2',
                         [Property('weight__pls__Proj2', random_weight)]),
-                    ConnectionProperty(
+                    ConnectionPropertySet(
                         'double_spike__psr__Proj2',
                         [Property('weight__pls__Proj2', random_weight)]),
-                    ConnectionProperty(
+                    ConnectionPropertySet(
                         'spike__psr__Proj4',
                         [Property('weight__pls__Proj4', random_weight)])]))
 
@@ -362,14 +362,14 @@ class TestNetwork(unittest.TestCase):
                         ('Proj1', 'spike__psr'),
                         ('Proj3', 'spike__psr'),
                         ('Proj3', 'incoming_spike__pls')]),
-                connection_properties=[
-                    ConnectionProperty(
+                connection_property_sets=[
+                    ConnectionPropertySet(
                         'spike__psr__Proj1',
                         [Property('weight__pls__Proj1', random_weight)]),
-#                     ConnectionProperty(
+#                     ConnectionPropertySet(
 #                         'spike__psr__Proj3',
 #                         [Property('weight__pls__Proj3', random_wmax)]),
-                    ConnectionProperty(
+                    ConnectionPropertySet(
                         'incoming_spike__pls__Proj3',
                         [Property('wmax__pls__Proj3', random_wmax)])]))
 

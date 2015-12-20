@@ -346,7 +346,7 @@ class Cell(object):
         props_dict = dict((p.name, p) for p in properties)
         params_dict = dict(
             (p.name, p) for p in
-            self._nineml.connection_parameters(port_name).parameters)
+            self._nineml.connection_parameter_sets(port_name).parameters)
         if set(props_dict.iterkeys()) != set(params_dict.iterkeys()):
             raise Pype9RuntimeError(
                 "Mismatch between provided property and parameter names:"
@@ -365,17 +365,17 @@ class Cell(object):
 class DynamicsWithSynapses(BaseALObject):
 
     nineml_type = 'Dynamics'
-    defining_attributes = ('_dynmaics', '_synapses', '_connection_parameters')
+    defining_attributes = ('_dynmaics', '_synapses', '_connection_parameter_sets')
 
-    def __init__(self, dynamics, synapses=[], connection_parameters=[]):
+    def __init__(self, dynamics, synapses=[], connection_parameter_sets=[]):
         if dynamics.nineml_type not in ('Dynamics', 'MultiDynamics'):
             raise Pype9RuntimeError(
                 "Component class ({}) needs to be nineml Dynamics object")
         self._dynamics = dynamics
         self._synapses = dict((s.name, s) for s in synapses)
-        self._connection_parameters = dict((pw.port, pw)
-                                           for pw in connection_parameters)
-        for conn_param in self._all_connection_parameters():
+        self._connection_parameter_sets = dict((pw.port, pw)
+                                           for pw in connection_parameter_sets)
+        for conn_param in self._all_connection_parameter_sets():
             try:
                 dyn_param = self._dynamics.parameter(conn_param.name)
                 if conn_param.dimension != dyn_param.dimension:
@@ -393,19 +393,19 @@ class DynamicsWithSynapses(BaseALObject):
         # Copy what would be class members in the dynamics class so it will
         # appear like an object of that class
         self.defining_attributes = (dynamics.defining_attributes +
-                                    ('_synapses', '_connection_parameters'))
+                                    ('_synapses', '_connection_parameter_sets'))
         self.class_to_member = dict(
             dynamics.class_to_member.items() +
             [('Synapse', 'synapse'),
-             ('ConnectionParameter', 'connection_parameter')])
+             ('ConnectionParameterSet', 'connection_parameter_set')])
 
     def __repr__(self):
         return ("DynamicsWithSynapses(dynamics={}, synapses=[{}], "
-                "connection_parameters=[{}])"
+                "connection_parameter_sets=[{}])"
                 .format(self._dynamics,
                         ', '.format(repr(s) for s in self.synapses),
                         ', '.format(repr(cp)
-                                    for cp in self.connection_parameters)))
+                                    for cp in self.connection_parameter_sets)))
 
     def __getattr__(self, name):
         """
@@ -414,12 +414,12 @@ class DynamicsWithSynapses(BaseALObject):
         """
         return getattr(self._dynamics, name)
 
-    def _all_connection_parameters(self):
+    def _all_connection_parameter_sets(self):
         return set(chain(*(
-            cp.parameters for cp in self.connection_parameters)))
+            cp.parameters for cp in self.connection_parameter_sets)))
 
-    def _all_connection_parameter_names(self):
-        return (p.name for p in self._all_connection_parameters())
+    def _all_connection_parameter_set_names(self):
+        return (p.name for p in self._all_connection_parameter_sets())
 
     @property
     def dynamics(self):
@@ -428,11 +428,11 @@ class DynamicsWithSynapses(BaseALObject):
     @property
     def parameters(self):
         return (p for p in self._dynamics.parameters
-                if p.name not in self._all_connection_parameter_names())
+                if p.name not in self._all_connection_parameter_set_names())
 
     @name_error
     def parameter(self, name):
-        if name in self._all_connection_parameter_names():
+        if name in self._all_connection_parameter_set_names():
             raise KeyError(name)
         else:
             return self._dynamics.parameter(name)
@@ -442,32 +442,32 @@ class DynamicsWithSynapses(BaseALObject):
         return self._synapses[name]
 
     @name_error
-    def connection_paramter(self, name):
-        return self._connection_parameters[name]
+    def connection_parameter_set(self, name):
+        return self._connection_parameter_sets[name]
 
     @property
     def synapses(self):
         return self._synapses.itervalues()
 
     @property
-    def connection_parameters(self):
-        return self._connection_parameters.itervalues()
+    def connection_parameter_sets(self):
+        return self._connection_parameter_sets.itervalues()
 
     @property
     def num_synapses(self):
         return len(self._synapses)
 
     @property
-    def num_connection_parameters(self):
-        return len(self._connection_parameters)
+    def num_connection_parameter_sets(self):
+        return len(self._connection_parameter_sets)
 
     @property
     def synapse_names(self):
         return self._synapses.iterkeys()
 
     @property
-    def connection_paramter_names(self):
-        return self._connection_parameters.iterkeys()
+    def connection_parameter_set_names(self):
+        return self._connection_parameter_sets.iterkeys()
 
     def accept_visitor(self, visitor):
         self.dynamics.accept_visitor(visitor)
@@ -477,42 +477,42 @@ class DynamicsWithSynapsesProperties(BaseULObject):
 
     nineml_type = 'DynamicsProperties'
     defining_attributes = ('_dynamics_properties', '_synapses',
-                           '_connection_properties')
+                           '_connection_property_sets')
 
     def __init__(self, dynamics_properties, synapse_properties=[],
-                 connection_properties=[]):
+                 connection_property_sets=[]):
         self._dynamics_properties = dynamics_properties
         self._synapses = dict((s.name, s) for s in synapse_properties)
-        self._connection_properties = dict((cp.port, cp)
-                                           for cp in connection_properties)
+        self._connection_property_sets = dict((cp.port, cp)
+                                           for cp in connection_property_sets)
         # Extract the AL objects for the definition
         synapses = (Synapse(s.name, s.dynamics_properties.component_class,
                             s.port_connections)
                     for s in synapse_properties)
-        connection_parameters = (
-            ConnectionParameter(
+        connection_parameter_sets = (
+            ConnectionParameterSet(
                 cp.port,
                 [Parameter(p.name, p.units.dimension) for p in cp.properties])
-            for cp in connection_properties)
+            for cp in connection_property_sets)
         self._definition = Definition(
             DynamicsWithSynapses(dynamics_properties.component_class,
-                                 synapses, connection_parameters))
+                                 synapses, connection_parameter_sets))
         # Copy what would be class members in the dynamics class so it will
         # appear like an object of that class
         self.defining_attributes = (dynamics_properties.defining_attributes +
-                                    ('_synapses', '_connection_properties'))
+                                    ('_synapses', '_connection_property_sets'))
         self.class_to_member = dict(
             dynamics_properties.class_to_member.items() +
             [('Synapse', 'synapse'),
-             ('ConnectionProperty', 'connection_property')])
+             ('ConnectionPropertySet', 'connection_property_set')])
 
     def __repr__(self):
         return ("DynamicsWithSynapsesProperties(dynamics_properties={}, "
-                "synapses=[{}], connection_properties=[{}])"
+                "synapses=[{}], connection_property_sets=[{}])"
                 .format(self._dynamics_properties,
                         ', '.format(repr(s) for s in self.synapses),
                         ', '.format(repr(cp)
-                                    for cp in self.connection_properties)))
+                                    for cp in self.connection_property_sets)))
 
     def __getattr__(self, name):
         """
@@ -532,37 +532,37 @@ class DynamicsWithSynapsesProperties(BaseULObject):
     def synapse(self, name):
         return self._synapses[name]
 
-    def connection_property(self, name):
-        return self._connection_properties[name]
+    def connection_property_set(self, name):
+        return self._connection_property_sets[name]
 
     @property
     def synapses(self):
         return self._synapses.itervalues()
 
     @property
-    def connection_properties(self):
-        return self._connection_properties.itervalues()
+    def connection_property_sets(self):
+        return self._connection_property_sets.itervalues()
 
     @property
     def num_synapses(self):
         return len(self._synapses)
 
     @property
-    def num_connection_properties(self):
-        return len(self._connection_properties)
+    def num_connection_property_sets(self):
+        return len(self._connection_property_sets)
 
     @property
     def synapse_names(self):
         return self._synapses.iterkeys()
 
     @property
-    def connection_property_names(self):
-        return self._connection_properties.iterkeys()
+    def connection_property_set_names(self):
+        return self._connection_property_sets.iterkeys()
 
 
-class ConnectionParameter(BaseALObject):
+class ConnectionParameterSet(BaseALObject):
 
-    nineml_type = 'ConnectionParameter'
+    nineml_type = 'ConnectionParameterSet'
     defining_attributes = ('port', 'parameters')
 
     def __init__(self, port, parameters):
@@ -570,7 +570,7 @@ class ConnectionParameter(BaseALObject):
         self._parameters = parameters
 
     def __repr__(self):
-        return ("ConnectionParameter(port={}, parameters=[{}])"
+        return ("ConnectionParameterSet(port={}, parameters=[{}])"
                 .format(self.port,
                         ', '.join(repr(p) for p in self.parameters)))
 
@@ -583,9 +583,9 @@ class ConnectionParameter(BaseALObject):
         return self._parameters
 
 
-class ConnectionProperty(BaseULObject):
+class ConnectionPropertySet(BaseULObject):
 
-    nineml_type = 'ConnectionProperty'
+    nineml_type = 'ConnectionPropertySet'
     defining_attributes = ('port', 'properties')
 
     def __init__(self, port, properties):
@@ -593,7 +593,7 @@ class ConnectionProperty(BaseULObject):
         self._properties = properties
 
     def __repr__(self):
-        return ("ConnectionProperty(port={}, properties=[{}])"
+        return ("ConnectionPropertySet(port={}, properties=[{}])"
                 .format(self.port,
                         ', '.join(repr(p) for p in self.properties)))
 

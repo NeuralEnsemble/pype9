@@ -26,7 +26,7 @@ from pype9.exceptions import Pype9UnflattenableSynapseException
 from nineml.values import SingleValue
 from .connectivity import InversePyNNConnectivity
 from ..cells import (
-    DynamicsWithSynapsesProperties, ConnectionProperty, SynapseProperties)
+    DynamicsWithSynapsesProperties, ConnectionPropertySet, SynapseProperties)
 
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
@@ -223,7 +223,7 @@ class Network(object):
             internal_conns = []
             exposures = []
             synapses = []
-            connection_properties = []
+            connection_property_sets = []
             if any(p.name == cls.cell_dyn_name for p in receiving):
                 raise Pype9RuntimeError(
                     "Cannot handle projections named '{}' (why would you "
@@ -268,11 +268,11 @@ class Network(object):
 #                         ns_props = [
 #                             Property(append_namespace(p.name, proj.name),
 #                                      p.quantity) for p in props]
-#                         connection_properties.append(
-#                             ConnectionProperty(
+#                         connection_property_sets.append(
+#                             ConnectionPropertySet(
 #                                 append_namespace(port, proj.name), ns_props))
-                    connection_properties.extend(
-                        cls._extract_connection_properties(synapse, proj.name))
+                    connection_property_sets.extend(
+                        cls._extract_connection_property_sets(synapse, proj.name))
                     # Add the flattened synapse to the multi-dynamics sub
                     # components
                     sub_components[proj.name] = synapse
@@ -366,13 +366,13 @@ class Network(object):
                 port_connections=internal_conns, port_exposures=set(exposures))
             component = DynamicsWithSynapsesProperties(
                 dynamics_properties, synapse_properties=synapses,
-                connection_properties=connection_properties)
+                connection_property_sets=connection_property_sets)
             component_arrays[pop.name] = ComponentArray9ML(pop.name, pop.size,
                                                            component)
         return component_arrays, connection_groups
 
     @classmethod
-    def _extract_connection_properties(cls, dynamics_properties, namespace):
+    def _extract_connection_property_sets(cls, dynamics_properties, namespace):
         """
         Identifies properties in the provided DynmaicsProperties that can be
         treated as a property of the connection (i.e. are not referenced
@@ -399,7 +399,7 @@ class Network(object):
             conn_params[on_event.src_port_name] |= (varying_params &
                                                     on_event_params)
         return [
-            ConnectionProperty(
+            ConnectionPropertySet(
                 append_namespace(prt, namespace),
                 [Property(append_namespace(p.name, namespace),
                           dynamics_properties.property(p.name).quantity)

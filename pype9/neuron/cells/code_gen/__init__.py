@@ -455,11 +455,11 @@ class CodeGenerator(BaseCodeGenerator):
         trfrm.validate()
         trfrm_with_syn = DynamicsWithSynapses(
             trfrm, component_class.synapses,
-            component_class.connection_parameters)
+            component_class.connection_parameter_sets)
         if trfrm_properties:
             trfrm_props_with_syn = DynamicsWithSynapsesProperties(
                 trfrm_properties, default_properties.synapses,
-                default_properties.connection_properties)
+                default_properties.connection_property_sets)
         # Retun a prototype of the transformed class
         return trfrm_with_syn, trfrm_props_with_syn, initial_state
 
