@@ -9,6 +9,7 @@ from itertools import chain, repeat
 import ninemlcatalog
 from nineml.abstraction import Parameter
 from nineml import units as un
+from nineml.user import Property
 from nineml.user.multi.component import MultiDynamics
 from nineml.user import DynamicsProperties
 from pype9.testing import Comparer, input_step, input_freq
@@ -224,7 +225,8 @@ class TestDynamics(TestCase):
                 (p.name + '__' + suffix, p.quantity)
                 for p, suffix in chain(
                     zip(liaf_properties.properties, repeat('cell')),
-                    zip(alpha_properties.properties, repeat('psr__syn')))))
+                    zip(alpha_properties.properties, repeat('psr__syn'))
+                    [Property('weight__pls__syn', 1.0, un.nA)])))
         nest_tranlsations.update(
             (k + '__cell', v)
             for k, v in self.liaf_nest_translations.iteritems())
