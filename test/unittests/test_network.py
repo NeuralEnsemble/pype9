@@ -366,9 +366,9 @@ class TestNetwork(unittest.TestCase):
                     ConnectionProperty(
                         'spike__psr__Proj1',
                         [Property('weight__pls__Proj1', random_weight)]),
-                    ConnectionProperty(
-                        'spike__psr__Proj3',
-                        [Property('wmax__pls__Proj3', random_wmax)]),
+#                     ConnectionProperty(
+#                         'spike__psr__Proj3',
+#                         [Property('weight__pls__Proj3', random_wmax)]),
                     ConnectionProperty(
                         'incoming_spike__pls__Proj3',
                         [Property('wmax__pls__Proj3', random_wmax)])]))
