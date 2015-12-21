@@ -379,7 +379,7 @@ class DynamicsWithSynapses(BaseALObject):
         self._synapses = dict((s.name, s) for s in synapses)
         self._connection_parameter_sets = dict(
             (pw.port, pw) for pw in connection_parameter_sets)
-        for conn_param in self._all_connection_parameter_sets():
+        for conn_param in self._all_connection_parameters():
             try:
                 dyn_param = self._dynamics.parameter(conn_param.name)
                 if conn_param.dimension != dyn_param.dimension:
@@ -419,12 +419,12 @@ class DynamicsWithSynapses(BaseALObject):
         """
         return getattr(self._dynamics, name)
 
-    def _all_connection_parameter_sets(self):
+    def _all_connection_parameters(self):
         return set(chain(*(
             cp.parameters for cp in self.connection_parameter_sets)))
 
-    def _all_connection_parameter_set_names(self):
-        return (p.name for p in self._all_connection_parameter_sets())
+    def _all_connection_parameter_names(self):
+        return (p.name for p in self._all_connection_parameters())
 
     @property
     def dynamics(self):
@@ -433,14 +433,22 @@ class DynamicsWithSynapses(BaseALObject):
     @property
     def parameters(self):
         return (p for p in self._dynamics.parameters
-                if p.name not in self._all_connection_parameter_set_names())
+                if p.name not in self._all_connection_parameter_names())
+
+    @property
+    def parameter_names(self):
+        return (p.name for p in self.parameters)
 
     @name_error
     def parameter(self, name):
-        if name in self._all_connection_parameter_set_names():
+        if name in self._all_connection_parameter_names():
             raise KeyError(name)
         else:
             return self._dynamics.parameter(name)
+
+    @property
+    def num_parameters(self):
+        return len(list(self.parameters))
 
     @name_error
     def synapse(self, name):
@@ -538,6 +546,20 @@ class DynamicsWithSynapsesProperties(BaseULObject):
     def dynamics_properties(self):
         return self._dynamics_properties
 
+    @property
+    def properties(self):
+        return (p for p in self._dynamics_properties.properties
+                if p.name not in self._all_connection_property_names())
+
+    @property
+    def property_names(self):
+        return (p.name for p in self.properties)
+
+    @property
+    def num_properties(self):
+        return len(list(self.properties))
+
+    @name_error
     def synapse(self, name):
         return self._synapses[name]
 
@@ -567,6 +589,21 @@ class DynamicsWithSynapsesProperties(BaseULObject):
     @property
     def connection_property_set_names(self):
         return self._connection_property_sets.iterkeys()
+
+    def _all_connection_properties(self):
+        return set(chain(*(
+            cp.properties for cp in self.connection_property_sets)))
+
+    def _all_connection_property_names(self):
+        return (p.name for p in self._all_connection_properties())
+
+    # NB: Has to be defined last to avoid overriding the in-built decorator
+    @name_error
+    def property(self, name):
+        if name in self._all_connection_property_names():
+            raise KeyError(name)
+        else:
+            return self._dynamics_properties.property(name)
 
 
 class ConnectionParameterSet(BaseALObject):
