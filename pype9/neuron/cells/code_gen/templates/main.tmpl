@@ -128,9 +128,9 @@ PARAMETER {
 
     : Units for connection properties
 {% for connection_parameter_set in component_class.connection_parameter_sets %}
-    {% if connection_parameter_set.parameters %} 
-    {{connection_parameter_set.port | upper}}_WEIGHT_UNITS_ = 1 ({{unit_handler.dimension_to_unit_str(connection_parameter_set.parameters[0].dimension)}})
-    {% endif %}
+    {% for parameter in connection_parameter_set.parameters %} 
+    {{parameter.name | upper}}_UNITS_ = 1 ({{unit_handler.dimension_to_unit_str(parameter.dimension)}})
+    {% endfor %}
 {% endfor %} 
 
     : Unit correction for 't' used in printf in order to get modlunit to work.
@@ -239,9 +239,10 @@ NET_RECEIVE(connection_weight_, channel) {
             {% else %}
         if (flag == ON_EVENT && channel == {{trans.src_port_name | upper}}) {
                 {% if trans.src_port_name in component_class.connection_parameter_set_names %}
-            
-            : Assign event weight to paired analog receive port 
-            {{component_class.connection_parameter_set(trans.src_port_name).parameters[0].name}} = connection_weight_ * {{trans.src_port_name | upper}}_WEIGHT_UNITS_
+                    {% set connection_parameter =  component_class.connection_parameter_set(trans.src_port_name).parameters[0]%}
+                    {# FIXME: Need to check that there is only one connection parameter per input channel #}
+            : Assign event weight to paired analog receive port
+            {{connection_parameter.name}} = connection_weight_ * {{connection_parameter.name | upper}}_UNITS_
                 {% endif %}
             {% endif %}                  
             : Required aliases

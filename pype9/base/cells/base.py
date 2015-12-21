@@ -50,9 +50,12 @@ class CellMetaClass(type):
                     default_properties)
             if default_properties.component_class != component_class:
                 raise Pype9RuntimeError(
-                    "Component class of default properties object ({}) does "
-                    "not match provided class ({})".format(
-                        default_properties.component_class, component_class))
+                    "Component class of default properties object, {}, does "
+                    "not match provided class, {}:\n{}".format(
+                        default_properties.component_class.name,
+                        component_class.name,
+                        default_properties.component_class.find_mismatch(
+                            component_class)))
         # Extract out build directives
         build_mode = kwargs.pop('build_mode', 'lazy')
         verbose = kwargs.pop('verbose', False)
@@ -365,7 +368,8 @@ class Cell(object):
 class DynamicsWithSynapses(BaseALObject):
 
     nineml_type = 'Dynamics'
-    defining_attributes = ('_dynmaics', '_synapses', '_connection_parameter_sets')
+#     defining_attributes = ('_dynamics', '_synapses',
+#                            '_connection_parameter_sets')
 
     def __init__(self, dynamics, synapses=[], connection_parameter_sets=[]):
         if dynamics.nineml_type not in ('Dynamics', 'MultiDynamics'):
@@ -373,8 +377,8 @@ class DynamicsWithSynapses(BaseALObject):
                 "Component class ({}) needs to be nineml Dynamics object")
         self._dynamics = dynamics
         self._synapses = dict((s.name, s) for s in synapses)
-        self._connection_parameter_sets = dict((pw.port, pw)
-                                           for pw in connection_parameter_sets)
+        self._connection_parameter_sets = dict(
+            (pw.port, pw) for pw in connection_parameter_sets)
         for conn_param in self._all_connection_parameter_sets():
             try:
                 dyn_param = self._dynamics.parameter(conn_param.name)
@@ -392,8 +396,9 @@ class DynamicsWithSynapses(BaseALObject):
                         sp.name for sp in self._dynamics.parameters)))
         # Copy what would be class members in the dynamics class so it will
         # appear like an object of that class
-        self.defining_attributes = (dynamics.defining_attributes +
-                                    ('_synapses', '_connection_parameter_sets'))
+        self.defining_attributes = (
+            dynamics.defining_attributes +
+            ('_synapses', '_connection_parameter_sets'))
         self.class_to_member = dict(
             dynamics.class_to_member.items() +
             [('Synapse', 'synapse'),
@@ -476,15 +481,15 @@ class DynamicsWithSynapses(BaseALObject):
 class DynamicsWithSynapsesProperties(BaseULObject):
 
     nineml_type = 'DynamicsProperties'
-    defining_attributes = ('_dynamics_properties', '_synapses',
-                           '_connection_property_sets')
+#     defining_attributes = ('_dynamics_properties', '_synapses',
+#                            '_connection_property_sets')
 
     def __init__(self, dynamics_properties, synapse_properties=[],
                  connection_property_sets=[]):
         self._dynamics_properties = dynamics_properties
         self._synapses = dict((s.name, s) for s in synapse_properties)
-        self._connection_property_sets = dict((cp.port, cp)
-                                           for cp in connection_property_sets)
+        self._connection_property_sets = dict(
+            (cp.port, cp) for cp in connection_property_sets)
         # Extract the AL objects for the definition
         synapses = (Synapse(s.name, s.dynamics_properties.component_class,
                             s.port_connections)
@@ -524,6 +529,10 @@ class DynamicsWithSynapsesProperties(BaseULObject):
     @property
     def definition(self):
         return self._definition
+
+    @property
+    def component_class(self):
+        return self.definition.component_class
 
     @property
     def dynamics_properties(self):

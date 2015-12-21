@@ -7,14 +7,14 @@ import quantities as pq
 import os.path
 from itertools import chain, repeat
 import ninemlcatalog
-from nineml.abstraction import Parameter
 from nineml import units as un
 from nineml.user import Property
 from nineml.user.multi.component import MultiDynamics
 from nineml.user import DynamicsProperties
 from pype9.testing import Comparer, input_step, input_freq
 from pype9.base.cells import (
-    DynamicsWithSynapses, ConnectionParameterSet, ConnectionPropertySet)
+    DynamicsWithSynapses, DynamicsWithSynapsesProperties,
+    ConnectionParameterSet, ConnectionPropertySet)
 
 
 class TestDynamics(TestCase):
@@ -182,25 +182,25 @@ class TestDynamics(TestCase):
             'postsynapticresponse/Alpha', 'Alpha')
         static = ninemlcatalog.load(
             'plasticity/Static', 'Static')
-        iaf_alpha = DynamicsWithSynapses(
-            MultiDynamics(
-                name='IafAlpha',
-                sub_components={
-                    'cell': iaf,
-                    'syn': MultiDynamics(
-                        name="IafAlaphSyn",
-                        sub_components={'psr': alpha_psr, 'pls': static},
-                        port_connections=[
-                            ('pls', 'fixed_weight', 'psr', 'q')],
-                        port_exposures=[('psr', 'i_synaptic'),
-                                        ('psr', 'spike')])},
-                port_connections=[
-                    ('syn', 'i_synaptic__psr', 'cell', 'i_synaptic')],
-                port_exposures=[('syn', 'spike__psr', 'input_spike')]),
+        iaf_alpha = MultiDynamics(
+            name='IafAlpha',
+            sub_components={
+                'cell': iaf,
+                'syn': MultiDynamics(
+                    name="IafAlaphSyn",
+                    sub_components={'psr': alpha_psr, 'pls': static},
+                    port_connections=[
+                        ('pls', 'fixed_weight', 'psr', 'q')],
+                    port_exposures=[('psr', 'i_synaptic'),
+                                    ('psr', 'spike')])},
+            port_connections=[
+                ('syn', 'i_synaptic__psr', 'cell', 'i_synaptic')],
+            port_exposures=[('syn', 'spike__psr', 'input_spike')])
+        iaf_alpha_with_syn = DynamicsWithSynapses(
+            iaf_alpha,
             connection_parameter_sets=[
                 ConnectionParameterSet(
-                    'input_spike',
-                    [Parameter('weight__pls__syn', un.current)])])
+                    'input_spike', [iaf_alpha.parameter('weight__pls__syn')])])
         initial_states = {'a__psr__syn': 0.0 * pq.nA,
                           'b__psr__syn': 0.0 * pq.nA}
         initial_regime = 'subthreshold___sole_____sole'
@@ -220,18 +220,20 @@ class TestDynamics(TestCase):
                                'b__psr__syn': (None, 1)}
         initial_states.update(
             (k + '__cell', v) for k, v in self.liaf_initial_states.iteritems())
-        properties = DynamicsWithSynapses(
-            DynamicsProperties(
-                name='IafAlphaProperties', definition=iaf_alpha,
-                properties=dict(
-                    (p.name + '__' + suffix, p.quantity)
-                    for p, suffix in chain(
-                        zip(liaf_properties.properties, repeat('cell')),
-                        zip(alpha_properties.properties, repeat('psr__syn'))))),  # @IgnorePep8
+        properties = DynamicsProperties(
+            name='IafAlphaProperties', definition=iaf_alpha,
+            properties=dict(
+                (p.name + '__' + suffix, p.quantity)
+                for p, suffix in chain(
+                    zip(liaf_properties.properties, repeat('cell')),
+                    zip(alpha_properties.properties, repeat('psr__syn')),
+                    [(Property('weight', 10 * un.nA), 'pls__syn')])))
+        properties_with_syn = DynamicsWithSynapsesProperties(
+            properties,  # @IgnorePep8
             connection_property_sets=[
                 ConnectionPropertySet(
-                    'incoming_spike',
-                    [Property('weight__pls__syn', 10.0 * un.nA)])])
+                    'input_spike',
+                    [properties.property('weight__pls__syn')])])
         nest_tranlsations.update(
             (k + '__cell', v)
             for k, v in self.liaf_nest_translations.iteritems())
@@ -240,10 +242,10 @@ class TestDynamics(TestCase):
             for k, v in self.liaf_neuron_translations.iteritems())
         build_dir = os.path.join(os.path.dirname(iaf.url), '9build')
         comparer = Comparer(
-            nineml_model=iaf_alpha,
+            nineml_model=iaf_alpha_with_syn,
             state_variable='v__cell', dt=self.dt,
             simulators=['neuron', 'nest'],
-            properties=properties,
+            properties=properties_with_syn,
             initial_states=initial_states,
             initial_regime=initial_regime,
             neuron_ref='ResetRefrac',
