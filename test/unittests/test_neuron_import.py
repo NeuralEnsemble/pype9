@@ -17,7 +17,7 @@ from pype9.exceptions import Pype9ImportError
 if __name__ == '__main__':
     from utils import DummyTestCase as TestCase  # @UnusedImport
 else:
-    from unittest import TestCase  # @Reimport
+    from unittest import TestCase  # @Reimport @UnusedImport
 
 
 test_cn_dir = os.path.join(os.path.dirname(__file__), '..', '..', '..',

@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-if __name__ == '__main__':
-    from utils import DummyTestCase as TestCase  # @UnusedImport
-else:
-    from unittest import TestCase  # @Reimport
 import quantities as pq
 import os.path
 from itertools import chain, repeat
@@ -15,6 +10,10 @@ from pype9.testing import Comparer, input_step, input_freq
 from pype9.base.cells import (
     DynamicsWithSynapses, DynamicsWithSynapsesProperties,
     ConnectionParameterSet, ConnectionPropertySet)
+if __name__ == '__main__':
+    from utils import DummyTestCase as TestCase  # @UnusedImport
+else:
+    from unittest import TestCase  # @Reimport
 
 
 class TestDynamics(TestCase):

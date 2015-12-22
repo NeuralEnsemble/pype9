@@ -1,7 +1,4 @@
-if __name__ == '__main__':
-    from utils import DummyTestCase as TestCase  # @UnusedImport
-else:
-    from unittest import TestCase  # @Reimport
+#!/usr/bin/env python
 import os.path
 import math
 from nineml import units as un
@@ -12,6 +9,10 @@ from nineml.abstraction import (
     StateVariable)
 import numpy
 from nineml.user import Quantity
+if __name__ == '__main__':
+    from utils import DummyTestCase as TestCase  # @UnusedImport
+else:
+    from unittest import TestCase  # @Reimport
 
 
 class TestUnitHandler1(BaseUnitHandler):
