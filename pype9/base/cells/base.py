@@ -13,6 +13,7 @@
 """
 from pype9.exceptions import Pype9RuntimeError, Pype9AttributeError
 from itertools import chain
+from copy import deepcopy
 import time
 import os.path
 import quantities as pq
@@ -143,21 +144,31 @@ class Cell(object):
                                                nineml.DynamicsProperties):
             self._nineml = properties[0]
         else:
+            # Check to see if properties is a dictionary of name/quantity pairs
             if len(properties) == 1 and isinstance(properties[0], dict):
                 kwprops.update(properties[0])
                 properties = []
             else:
                 properties = list(properties)
+            # Convert "Python-Quantities" quantities into 9ML quantities
             for name, pq_qty in kwprops.iteritems():
                 qty = self._unit_handler.from_pq_quantity(pq_qty)
                 properties.append(Property(name, qty.value, qty.units))
-            # Init the 9ML component of the cell
-            if self.default_properties is not None:
-                prototype = self.default_properties
+            # If default properties not provided create a Dynamics Properties
+            # from the provided properties
+            if self.default_properties is None:
+                self._nineml = nineml.user.DynamicsProperties(
+                    self.component_class.name + 'Properties',
+                    self.component_class, properties)
+            # If no properties provided use the default properties
+            elif not properties:
+                self._nineml = deepcopy(self.default_properties)
+            # Otherwise use the default properties as a prototype and override
+            # where specific properties are provided
             else:
-                prototype = self.component_class
-            self._nineml = nineml.user.DynamicsProperties(
-                prototype.name, prototype, properties)
+                self._nineml = type(self.default_properties)(
+                    self.default_properties.name, self.default_properties,
+                    properties)
         # Set up references from parameter names to internal variables and set
         # parameters
         for prop in self.properties:
@@ -349,7 +360,8 @@ class Cell(object):
         props_dict = dict((p.name, p) for p in properties)
         params_dict = dict(
             (p.name, p) for p in
-            self._nineml.connection_parameter_sets(port_name).parameters)
+            self._nineml.component_class.connection_parameter_set(
+                port_name).parameters)
         if set(props_dict.iterkeys()) != set(params_dict.iterkeys()):
             raise Pype9RuntimeError(
                 "Mismatch between provided property and parameter names:"
