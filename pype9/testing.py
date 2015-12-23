@@ -226,7 +226,7 @@ class Comparer(object):
         if self.extra_point_process is not None:
             MechClass = getattr(neuron.h, self.extra_point_process)
             self.extra_point_process = MechClass(self.nrn_cell_sec(0.5))
-        for prop in self.properties:
+        for prop in self.properties.properties:
             name = prop.name
             value = prop.value
             try:
@@ -289,12 +289,13 @@ class Comparer(object):
             self._nrn_iclamp_amps.play(self._nrn_iclamp._ref_amp,
                                        self._nrn_iclamp_times)
         if self.input_train is not None:
-            port_name, train, weight = self.input_train
+            port_name, train, connection_properties = self.input_train
             try:
                 _, scale = self.neuron_translations[port_name]
             except KeyError:
                 scale = 1.0
-            weight = weight * scale
+            # FIXME: Should scale units
+            weight = connection_properties[0].value * scale
             self._vstim = neuron.h.VecStim()
             self._vstim_times = neuron.h.Vector(pq.Quantity(train, 'ms'))
             self._vstim.play(self._vstim_times)
@@ -310,7 +311,7 @@ class Comparer(object):
 
     def _create_NEST(self, nest_name):
         trans_params = {}
-        for prop in self.properties:
+        for prop in self.properties.properties:
             name = prop.name
             value = prop.value
             try:
@@ -341,12 +342,13 @@ class Comparer(object):
                                     if receptor_types else 0),
                                    'delay': self.min_delay})
         if self.input_train is not None:
-            port_name, signal, weight = self.input_train
+            port_name, signal, connection_properties = self.input_train
             try:
                 _, scale = self.nest_translations[port_name]
             except KeyError:
                 scale = 1.0
-            weight = weight * scale
+            # FIXME: Should scale units
+            weight = connection_properties[0].value * scale
             spike_times = (pq.Quantity(signal, 'ms') +
                            (pq.ms - self.min_delay * pq.ms))
             if any(spike_times < 0.0):
