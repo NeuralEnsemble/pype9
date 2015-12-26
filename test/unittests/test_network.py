@@ -366,9 +366,6 @@ class TestNetwork(unittest.TestCase):
                     ConnectionPropertySet(
                         'spike__psr__Proj1',
                         [Property('weight__pls__Proj1', random_weight)]),
-#                     ConnectionPropertySet(
-#                         'spike__psr__Proj3',
-#                         [Property('weight__pls__Proj3', random_wmax)]),
                     ConnectionPropertySet(
                         'incoming_spike__pls__Proj3',
                         [Property('wmax__pls__Proj3', random_wmax)])]))
@@ -487,3 +484,23 @@ class TestNetwork(unittest.TestCase):
                 connection_groups[
                     'Proj4__pre__spike__synapse__spike__psr']
                 .find_mismatch(conn_group6)))
+
+    def test_brunel_flatten(self):
+        brunel_network = ninemlcatalog.load('network/Brunel2000/AI/')
+        (component_arrays,
+         connection_groups) = BaseNetwork._flatten_to_arrays_and_conns(
+            brunel_network)
+        self.assertEqual(len(component_arrays), 2)
+        self.assertEqual(len(connection_groups), 4)
+        print component_arrays
+        print connection_groups
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--test', type=str, default='test_brunel_flatten',
+                        help="Switch between different tests to run")
+    args = parser.parse_args()
+    tester = TestNetwork(args.test)
+    getattr(tester, args.test)()
