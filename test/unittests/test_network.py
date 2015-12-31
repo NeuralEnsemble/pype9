@@ -490,7 +490,7 @@ class TestNetwork(unittest.TestCase):
         (component_arrays,
          connection_groups) = BaseNetwork._flatten_to_arrays_and_conns(
             brunel_network)
-        self.assertEqual(len(component_arrays), 2)
+        self.assertEqual(len(component_arrays), 3)
         self.assertEqual(len(connection_groups), 4)
         print component_arrays
         print connection_groups

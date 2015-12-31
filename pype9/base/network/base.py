@@ -23,7 +23,6 @@ from nineml.user.network import (
     EventConnectionGroup as EventConnGroup9ML,
     AnalogConnectionGroup as AnalogConnGroup9ML)
 from pype9.exceptions import Pype9UnflattenableSynapseException
-from nineml.values import SingleValue
 from .connectivity import InversePyNNConnectivity
 from ..cells import (
     DynamicsWithSynapsesProperties, ConnectionPropertySet, SynapseProperties)
@@ -117,8 +116,9 @@ class Network(object):
         """
         # Add a dot to separate the prefix from the population label if it
         # doesn't already have one and isn't a directory
-        if (not os.path.isdir(file_prefix) and not file_prefix.endswith('.')
-                and not file_prefix.endswith(os.path.sep)):
+        if (not os.path.isdir(file_prefix) and
+            not file_prefix.endswith('.') and
+                not file_prefix.endswith(os.path.sep)):
             file_prefix += '.'
         for comp_array in self.component_arrays.itervalues():
             # @UndefinedVariable
@@ -212,8 +212,14 @@ class Network(object):
         connection_groups = {}
         for pop in network_model.populations:
             # Get all the projections that project to/from the given population
-            receiving = [p for p in network_model.projections if p.post == pop]
-            sending = [p for p in network_model.projections if p.pre == pop]
+            receiving = [p for p in network_model.projections
+                         if (pop == p.post or
+                             (p.post.nineml_type == 'Selection' and
+                              pop in p.post.populations))]
+            sending = [p for p in network_model.projections
+                       if (pop == p.pre or
+                           (p.pre.nineml_type == 'Selection' and
+                            pop in p.pre.populations))]
             # Create a dictionary to hold the cell dynamics and any synapse
             # dynamics that can be flattened into the cell dynamics
             # (i.e. linear ones).
@@ -272,7 +278,8 @@ class Network(object):
 #                             ConnectionPropertySet(
 #                                 append_namespace(port, proj.name), ns_props))
                     connection_property_sets.extend(
-                        cls._extract_connection_property_sets(synapse, proj.name))
+                        cls._extract_connection_property_sets(synapse,
+                                                              proj.name))
                     # Add the flattened synapse to the multi-dynamics sub
                     # components
                     sub_components[proj.name] = synapse
