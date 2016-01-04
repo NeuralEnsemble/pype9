@@ -194,10 +194,10 @@ class BaseCodeGenerator(object):
         os.chdir(orig_dir)
         return install_dir
 
-    def get_build_dir(self, url, name):
+    def get_build_dir(self, url, name, group=''):
         return os.path.abspath(os.path.join(
             os.path.dirname(url), self.BUILD_DIR_DEFAULT,
-            self.SIMULATOR_NAME, name))
+            self.SIMULATOR_NAME, group, name))
 
     def get_install_dir(self, build_dir, install_dir):
         """

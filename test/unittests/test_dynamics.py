@@ -10,6 +10,8 @@ from pype9.testing import Comparer, input_step, input_freq
 from pype9.base.cells import (
     DynamicsWithSynapses, DynamicsWithSynapsesProperties,
     ConnectionParameterSet, ConnectionPropertySet)
+from pype9.nest.cells import CellMetaClass as CellMetaClassNEST
+from pype9.neuron.cells import CellMetaClass as CellMetaClassNEURON
 if __name__ == '__main__':
     from utils import DummyTestCase as TestCase  # @UnusedImport
 else:
@@ -344,6 +346,33 @@ class TestDynamics(TestCase):
 #         self.assertLess(
 #             comparisons[('9ML-nest', 'Ref-nest')], 0.00015 * pq.mV,
 #             "AdExpIaF NEST 9ML simulation did not match reference built-in")
+
+    def test_poisson_generator(self, plot=False, print_comparisons=False):
+        nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
+        build_args = {'neuron': {'build_mode': 'force',
+                                 'external_currents': ['iSyn']},
+                      'nest': {'build_mode': 'force'}}
+        gens = {}
+        for sim_name, CellMetaClass in (('neuron', CellMetaClassNEURON),
+                                        ('nest', CellMetaClassNEST)):
+            gens[sim_name] = CellMetaClass(
+                nineml_model, name=self.build_name,
+                initial_regime=self.initial_regime,
+                **self.build_args[sim_name])()
+            gens[sim_name].record('spike')
+            for state_var in self.auxiliary_states:
+                gens[sim_name].record(state_var)
+            gens[sim_name].update_state(self.initial_states)
+        comparer.simulate(self.duration)
+        comparisons = comparer.compare()
+        if print_comparisons:
+            for (name1, name2), diff in comparisons.iteritems():
+                print '{} v {}: {}'.format(name1, name2, diff)
+        if plot:
+            comparer.plot()
+        self.assertLess(
+            comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
+            "Izhikevich 2007 NEURON 9ML simulation did not match NEST 9ML")
 
 
 if __name__ == '__main__':

@@ -54,7 +54,8 @@ class Network(object):
             self._component_arrays[name] = self.ComponentArrayClass(
                 comp_array, rng=self._rng, build_mode=build_mode,
                 build_dir=self.CellCodeGenerator().get_build_dir(
-                    nineml_model.url, name), **kwargs)
+                    nineml_model.url, name, group=nineml_model.name),
+                **kwargs)
         if build_mode not in ('build_only', 'compile_only'):
             # Set the connectivity objects of the projections to the
             # PyNNConnectivity class
