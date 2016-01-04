@@ -36,9 +36,8 @@ class Network(object):
     # dynamics multi-dynamics
     cell_dyn_name = 'cell'
 
-    def __init__(self, nineml_model, build_mode='lazy',
-                 timestep=None, min_delay=None, max_delay=None, rng=None,
-                 **kwargs):
+    def __init__(self, nineml_model, build_mode='lazy', timestep=None,
+                 min_delay=None, max_delay=None, rng=None, **kwargs):
         self._nineml = nineml_model
         if isinstance(nineml_model, basestring):
             nineml_model = nineml.read(nineml_model).as_network()
@@ -53,7 +52,9 @@ class Network(object):
         self._component_arrays = {}
         for name, comp_array in flat_comp_arrays.iteritems():
             self._component_arrays[name] = self.ComponentArrayClass(
-                comp_array, rng=self._rng, build_mode=build_mode, **kwargs)
+                comp_array, rng=self._rng, build_mode=build_mode,
+                build_dir=self.CellCodeGenerator().get_build_dir(
+                    nineml_model.url, name), **kwargs)
         if build_mode not in ('build_only', 'compile_only'):
             # Set the connectivity objects of the projections to the
             # PyNNConnectivity class
@@ -435,13 +436,15 @@ class ComponentArray(object):
         if not isinstance(nineml_model, ComponentArray9ML):
             raise Pype9RuntimeError(
                 "Expected a component array, found {}".format(nineml_model))
-        dynamics = nineml_model.dynamics
+        dynamics_properties = nineml_model.dynamics_properties
+        dynamics = dynamics_properties.component_class
         celltype = self.PyNNCellWrapperMetaClass(
             dynamics, nineml_model.name, build_mode=build_mode, **kwargs)
         if build_mode not in ('build_only', 'compile_only'):
             cellparams = {}
             initial_values = {}
-            for prop in chain(dynamics.properties, dynamics.initial_values):
+            for prop in chain(dynamics_properties.properties,
+                              dynamics_properties.initial_values):
                 val = get_pyNN_value(prop, self.UnitHandler, rng)
                 if isinstance(prop, Initial):
                     initial_values[prop.name] = val

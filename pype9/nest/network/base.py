@@ -25,6 +25,7 @@ import pyNN.nest.simulator as simulator  # @IgnorePep8
 from .cell_wrapper import PyNNCellWrapperMetaClass  # @IgnorePep8
 from pype9.nest.network.synapses import StaticSynapse  # @IgnorePep8
 from .connectivity import PyNNConnectivity  # @IgnorePep8
+from ..cells.code_gen import CodeGenerator as CellCodeGenerator  # @IgnorePep8
 
 
 (get_current_time, get_time_step,
@@ -99,6 +100,7 @@ class Network(BaseNetwork):
     ComponentArrayClass = ComponentArray
     ConnectionGroupClass = ConnectionGroup
     ConnectivityClass = PyNNConnectivity
+    CellCodeGenerator = CellCodeGenerator
 
     def _set_simulation_params(self, timestep, min_delay, max_delay, **kwargs):  # @UnusedVariable @IgnorePep8
         """

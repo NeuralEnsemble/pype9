@@ -8,6 +8,7 @@ from __future__ import absolute_import
 from pype9.base.network.cell_wrapper import (
     PyNNCellWrapper as BasePyNNCellWrapper,
     PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
+from pype9.exceptions import Pype9BuildOptionMismatchException
 from pyNN.parameters import ParameterSpace
 import pyNN.standardmodels
 import nest
@@ -57,15 +58,15 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
 
     loaded_celltypes = {}
 
-    def __new__(cls, nineml_model, name, build_mode='lazy', silent=False,
-                solver_name='cvode'):  # @UnusedVariable
+    def __new__(cls, nineml_model, name, **kwargs):  # @UnusedVariable
         try:
-            celltype = cls.loaded_celltypes[
+            celltype, build_options = cls.loaded_celltypes[
                 (nineml_model.name, nineml_model.url)]
-        except KeyError:
-            dct = {'model': CellMetaClass(
-                nineml_model, name, build_mode=build_mode, silent=silent,
-                solver_name='cvode')}
+            if build_options != kwargs:
+                raise Pype9BuildOptionMismatchException()
+        except (KeyError, Pype9BuildOptionMismatchException):
+            dct = {'model': CellMetaClass(component_class=nineml_model,
+                                          name=name, **kwargs)}
             dct['nest_name'] = {"on_grid": name, "off_grid": name}
             dct['nest_model'] = name
             dct['translations'] = cls._construct_translations(
@@ -75,7 +76,8 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
             # If the url where the celltype is defined is specified save the
             # celltype to be retried later
             if nineml_model.url is not None:
-                cls.loaded_celltypes[(name, nineml_model.url)] = celltype
+                cls.loaded_celltypes[(name, nineml_model.url)] = (celltype,
+                                                                  kwargs)
         return celltype
 
     @classmethod

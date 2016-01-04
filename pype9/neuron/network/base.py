@@ -25,6 +25,7 @@ from pype9.base.network.base import (
 from .cell_wrapper import PyNNCellWrapperMetaClass
 from pype9.nest.network.synapses import StaticSynapse
 from .connectivity import PyNNConnectivity
+from ..cells.code_gen import CodeGenerator as CellCodeGenerator  # @IgnorePep8
 
 
 logger = logging.getLogger("PyPe9")
@@ -54,6 +55,7 @@ class Network(BaseNetwork):
     ComponentArrayClass = ComponentArray
     ConnectionGroupClass = ConnectionGroup
     ConnectivityClass = PyNNConnectivity
+    CellCodeGenerator = CellCodeGenerator
 
     def _set_simulation_params(self, **params):
         """

@@ -40,6 +40,10 @@ class Pype9MemberNameClashException(Pype9RuntimeError):
     pass
 
 
+class Pype9BuildOptionMismatchException(Pype9RuntimeError):
+    pass
+
+
 class Pype9ProjToCloneNotCreatedException(Pype9RuntimeError):
 
     def __init__(self, orig_proj_id=None):
