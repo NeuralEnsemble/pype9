@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 from collections import namedtuple, defaultdict
 from itertools import chain
-from nineml.user import ComponentArray, Initial, Property
+from nineml.user import Initial, Property
 from pype9.exceptions import Pype9RuntimeError
 from .values import get_pyNN_value
 import os.path
@@ -15,13 +15,12 @@ import nineml
 from nineml import units as un
 from pyNN.random import NumpyRNG
 import pyNN.standardmodels
-import quantities as pq
 from nineml.user.multi import (
     MultiDynamicsProperties, append_namespace, BasePortExposure)
 from nineml.user.network import (
     ComponentArray as ComponentArray9ML,
-    EventConnectionGroup as EventConnGroup9ML,
-    AnalogConnectionGroup as AnalogConnGroup9ML)
+    EventConnectionGroup as EventConnectionGroup9ML,
+    AnalogConnectionGroup as AnalogConnectionGroup9ML)
 from pype9.exceptions import Pype9UnflattenableSynapseException
 from .connectivity import InversePyNNConnectivity
 from ..cells import (
@@ -38,17 +37,21 @@ class Network(object):
     cell_dyn_name = 'cell'
 
     def __init__(self, nineml_model, build_mode='lazy',
-                 timestep=None, min_delay=None, max_delay=None,
-                 temperature=None, rng=None, **kwargs):
+                 timestep=None, min_delay=None, max_delay=None, rng=None,
+                 **kwargs):
         self._nineml = nineml_model
         if isinstance(nineml_model, basestring):
             nineml_model = nineml.read(nineml_model).as_network()
+        timestep = timestep if timestep is not None else self.time_step
+        min_delay = min_delay if min_delay is not None else self.min_delay
+        max_delay = max_delay if max_delay is not None else self.max_delay
         self._set_simulation_params(timestep=timestep, min_delay=min_delay,
-                                    max_delay=max_delay,
-                                    temperature=temperature)
+                                    max_delay=max_delay, **kwargs)
         self._rng = rng if rng else NumpyRNG()
+        flat_comp_arrays, flat_conn_groups = self._flatten_to_arrays_and_conns(
+            self._nineml)
         self._component_arrays = {}
-        for name, comp_array in self.nineml_model.component_arrays.iteritems():
+        for name, comp_array in flat_comp_arrays.iteritems():
             self._component_arrays[name] = self.ComponentArrayClass(
                 comp_array, rng=self._rng, build_mode=build_mode, **kwargs)
         if build_mode not in ('build_only', 'compile_only'):
@@ -62,10 +65,9 @@ class Network(object):
             nineml_model.resample_connectivity(
                 connectivity_class=self.ConnectivityClass)
             self._connection_groups = {}
-            for conn_group in nineml_model.connection_groups:
-                self._connection_groups[
-                    conn_group.name] = self.ConnectionGroupClass(
-                        conn_group, rng=self._rng)
+            for name, conn_group in flat_conn_groups.iteritems():
+                self._connection_groups[name] = self.ConnectionGroupClass(
+                    conn_group, rng=self._rng)
             self._finalise_construction()
 
     def _finalise_construction(self):
@@ -125,17 +127,15 @@ class Network(object):
             comp_array.write_data(file_prefix + comp_array.name + '.pkl',
                                   **kwargs)
 
-    def _get_simulation_params(self, **params):
-        sim_params = dict([(p.name, pq.Quantity(p.value, p.unit))
-                           for p in self.nineml_model.parameters.values()])
-        for key in _REQUIRED_SIM_PARAMS:
-            if key in params and params[key]:
-                sim_params[key] = params[key]
-            elif key not in sim_params or not sim_params[key]:
-                raise Exception("'{}' parameter was not specified either in "
-                                "Network initialisation or NetworkML "
-                                "specification".format(key))
-        return sim_params
+#     def _get_simulation_params(self, **kwargs):
+#         for key in _REQUIRED_SIM_PARAMS:
+#             if key in kwargs and kwargs[key]:
+#                 sim_params[key] = kwargs[key]
+#             elif key not in sim_params or not sim_params[key]:
+#                 raise Exception("'{}' parameter was not specified either in "
+#                                 "Network initialisation or NetworkML "
+#                                 "specification".format(key))
+#         return sim_params
 
     @classmethod
     def _flatten_synapse(cls, projection_model):
@@ -328,8 +328,9 @@ class Network(object):
                 # projection to/from the pre-synaptic cell
                 for port_conn in pre_conns:
                     connection_group_cls = (
-                        EventConnGroup9ML if port_conn.communicates == 'event'
-                        else AnalogConnGroup9ML)
+                        EventConnectionGroup9ML
+                        if port_conn.communicates == 'event'
+                        else AnalogConnectionGroup9ML)
                     name = ('__'.join((proj.name,
                                        port_conn.sender_role,
                                        port_conn.send_port_name,
@@ -431,11 +432,11 @@ class Network(object):
 class ComponentArray(object):
 
     def __init__(self, nineml_model, rng, build_mode='lazy', **kwargs):
-        if not isinstance(nineml_model, ComponentArray):
+        if not isinstance(nineml_model, ComponentArray9ML):
             raise Pype9RuntimeError(
                 "Expected a component array, found {}".format(nineml_model))
         dynamics = nineml_model.dynamics
-        celltype = self.PyNNCellWrapperClass.__init__(
+        celltype = self.PyNNCellWrapperMetaClass(
             dynamics, nineml_model.name, build_mode=build_mode, **kwargs)
         if build_mode not in ('build_only', 'compile_only'):
             cellparams = {}
@@ -446,6 +447,8 @@ class ComponentArray(object):
                     initial_values[prop.name] = val
                 else:
                     cellparams[prop.name] = val
+            # NB: Simulator-specific derived classes extend the corresponding
+            # PyNN population class
             self.PyNNPopulationClass.__init__(
                 self, nineml_model.size, celltype, cellparams=cellparams,
                 initial_values=initial_values, label=nineml_model.name)
@@ -454,6 +457,10 @@ class ComponentArray(object):
 class ConnectionGroup(object):
 
     def __init__(self, nineml_model, component_arrays, **kwargs):
+        if not isinstance(nineml_model, EventConnectionGroup9ML):
+            raise Pype9RuntimeError(
+                "Expected a connection group model, found {}"
+                .format(nineml_model))
         (synapse, conns) = component_arrays[nineml_model.destination].synapse(
             nineml_model.name)
         if conns is not None:
@@ -474,6 +481,8 @@ class ConnectionGroup(object):
         delay = get_pyNN_value(nineml_model.delay, self.unit_handler,
                                **kwargs)
         # FIXME: Ignores send_port, assumes there is only one...
+        # NB: Simulator-specific derived classes extend the corresponding
+        # PyNN population class
         self.PyNNProjectionClass.__init__(
             self,
             source=component_arrays[nineml_model.source],

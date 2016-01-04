@@ -1,7 +1,7 @@
 from __future__ import division
 import unittest
 from math import exp
-import time
+from collections import namedtuple
 import nest
 from nineml.user import (
     Projection, Network, DynamicsProperties,
@@ -19,7 +19,8 @@ from nineml.units import ms
 from nineml.values import RandomValue
 from pype9.base.cells import (
     ConnectionPropertySet, DynamicsWithSynapsesProperties)
-from pype9.base.network import Network as BaseNetwork
+from pype9.base.network import Network as BasePype9Network
+from pype9.nest.network import Network as NestPype9Network
 import ninemlcatalog
 
 
@@ -37,6 +38,8 @@ class TestNetwork(unittest.TestCase):
         "SIslow": {"g": 4.5, "eta": 0.95}}
 
     dt = 0.1 * un.ms    # the resolution in ms
+
+    BrunelNetwork = namedtuple('BrunelNetwork', 'exc inh ext')
 
     def setUp(self):
         self.all_to_all = ninemlcatalog.load('/connectionrule/AllToAll',
@@ -429,7 +432,8 @@ class TestNetwork(unittest.TestCase):
         # and manually generated expected one
         # =====================================================================
         (component_arrays,
-         connection_groups) = BaseNetwork._flatten_to_arrays_and_conns(network)
+         connection_groups) = BasePype9Network._flatten_to_arrays_and_conns(
+            network)
 
         self.assertEqual(
             component_arrays['Pop1'], dyn_array1,
@@ -502,27 +506,31 @@ class TestNetwork(unittest.TestCase):
     def test_brunel_flatten(self):
         brunel_network = ninemlcatalog.load('network/Brunel2000/AI/')
         (component_arrays,
-         connection_groups) = BaseNetwork._flatten_to_arrays_and_conns(
+         connection_groups) = BasePype9Network._flatten_to_arrays_and_conns(
             brunel_network)
         self.assertEqual(len(component_arrays), 3)
         self.assertEqual(len(connection_groups), 3)
 
     def test_compare_brunel(self):
-        nest.ResetKernel()
 
-        nest.SetKernelStatus(
-            {"resolution": float(self.dt), "print_time": True,
-             'local_num_threads': 1})
+        for case in self.brunel_parameters.iterkeys():
+            nest.ResetKernel()
+            nest.SetKernelStatus(
+                {"resolution": float(self.dt.value), "print_time": True,
+                 'local_num_threads': 1})
+            network9ML = ninemlcatalog.load('network/Brunel2000/' + case)
+            pype9_network = NestPype9Network(Network.from_document(network9ML),
+                                             min_delay=0.1, max_delay=2.0)
+            ref_network = self._reference_nest_brunel(case)
+            self.assertEqual(pype9_network.component_array('Exc').size,
+                             nest.GetStatus(ref_network.exc, 'size'))
+#             print("Number of neurons : {0}".format(N_neurons))
+#             print("Number of synapses: {0}".format(num_synapses))
+#             print("       Exitatory  : {0}".format(
+#                 int(CE * N_neurons) + N_neurons))
+#             print("       Inhibitory : {0}".format(int(CI * N_neurons)))
 
-        brunel_network = ninemlcatalog.load('network/Brunel2000/AI/')
-
-        print("Number of neurons : {0}".format(N_neurons))
-        print("Number of synapses: {0}".format(num_synapses))
-        print("       Exitatory  : {0}".format(
-            int(CE * N_neurons) + N_neurons))
-        print("       Inhibitory : {0}".format(int(CI * N_neurons)))
-
-    def _construct_reference_nest_brunel(self, case):
+    def _reference_nest_brunel(self, case):
         """
         The model in this file has been adapted from the brunel-alpha-nest.py
         model that is part of NEST.
@@ -610,10 +618,10 @@ class TestNetwork(unittest.TestCase):
 
         nest.CopyModel(
             "static_synapse", "excitatory", {
-                "weight": J_ex, "delay": float(self.delay)})
+                "weight": J_ex, "delay": float(self.delay.value)})
         nest.CopyModel(
             "static_synapse", "inhibitory", {
-                "weight": J_in, "delay": float(self.delay)})
+                "weight": J_in, "delay": float(self.delay.value)})
 
         nest.Connect(noise, nodes_ex, 'all_to_all', "excitatory")
         nest.Connect(noise, nodes_in, 'all_to_all', "excitatory")
@@ -644,6 +652,7 @@ class TestNetwork(unittest.TestCase):
             nodes_in,
             conn_params_in,
             "inhibitory")
+        return (nodes_ex, nodes_in, noise)
 
     def _compute_normalised_psr(self, tauMem, CMem, tauSyn):
         """Compute the maximum of postsynaptic potential
@@ -666,7 +675,7 @@ class TestNetwork(unittest.TestCase):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test', type=str, default='test_brunel_flatten',
+    parser.add_argument('--test', type=str, default='test_compare_brunel',
                         help="Switch between different tests to run")
     args = parser.parse_args()
     tester = TestNetwork(args.test)

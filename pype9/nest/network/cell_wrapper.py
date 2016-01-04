@@ -63,10 +63,9 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
             celltype = cls.loaded_celltypes[
                 (nineml_model.name, nineml_model.url)]
         except KeyError:
-            dct = {'model': CellMetaClass(nineml_model, name,
-                                               build_mode=build_mode,
-                                               silent=silent,
-                                               solver_name='cvode')}
+            dct = {'model': CellMetaClass(
+                nineml_model, name, build_mode=build_mode, silent=silent,
+                solver_name='cvode')}
             dct['nest_name'] = {"on_grid": name, "off_grid": name}
             dct['nest_model'] = name
             dct['translations'] = cls._construct_translations(

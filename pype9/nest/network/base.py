@@ -15,16 +15,16 @@ if '--debug' in sys.argv:
     raise Pype9RuntimeError(
         "'--debug' argument passed to script conflicts with an argument to "
         "nest, causing the import to stop at the NEST prompt")
-import pyNN.nest
-from nest.hl_api import NESTError
-from pyNN.common.control import build_state_queries
-from pype9.base.network.base import (
+import pyNN.nest  # @IgnorePep8
+from nest.hl_api import NESTError  # @IgnorePep8
+from pyNN.common.control import build_state_queries  # @IgnorePep8
+from pype9.base.network.base import (  # @IgnorePep8
     Network as BaseNetwork, ComponentArray as BaseComponentArray,
     ConnectionGroup as BaseConnectionGroup)
-import pyNN.nest.simulator as simulator
-from .cell_wrapper import PyNNCellWrapperMetaClass
-from pype9.nest.network.synapses import StaticSynapse
-from .connectivity import PyNNConnectivity
+import pyNN.nest.simulator as simulator  # @IgnorePep8
+from .cell_wrapper import PyNNCellWrapperMetaClass  # @IgnorePep8
+from pype9.nest.network.synapses import StaticSynapse  # @IgnorePep8
+from .connectivity import PyNNConnectivity  # @IgnorePep8
 
 
 (get_current_time, get_time_step,
@@ -100,16 +100,7 @@ class Network(BaseNetwork):
     ConnectionGroupClass = ConnectionGroup
     ConnectivityClass = PyNNConnectivity
 
-    def __init__(self, nineml_model, min_delay=None, temperature=None,
-                 **kwargs):
-        # Sets the 'get_min_delay' function for use in the network init
-        self.get_min_delay = get_min_delay
-        self.temperature = None
-        BaseNetwork.__init__(
-            self, nineml_model, min_delay=min_delay, temperature=temperature,
-            **kwargs)
-
-    def _set_simulation_params(self, **params):
+    def _set_simulation_params(self, timestep, min_delay, max_delay, **kwargs):  # @UnusedVariable @IgnorePep8
         """
         Sets the simulation parameters either from the passed parameters or
         from the nineml description
@@ -117,13 +108,34 @@ class Network(BaseNetwork):
         @param params[**kwargs]: Parameters that are either passed to the pyNN
                                  setup method or set explicitly
         """
-        p = self._get_simulation_params(**params)
         try:
-            pyNN.nest.setup(p['timestep'], p['min_delay'], p['max_delay'])
-        except NESTError as e:
+            pyNN.nest.setup(timestep, min_delay, max_delay)
+        except (NESTError, TypeError) as e:
             raise Exception("There was an error setting the min_delay of the "
                             "simulation, try changing the values for timestep "
                             "({time}) and min_delay ({delay}). (Message - {e})"
-                            .format(time=p['timestep'], delay=p['min_delay'],
-                                    e=e))
-        self.temperature = p['temperature']
+                            .format(time=timestep, delay=min_delay, e=e))
+
+    @property
+    def min_delay(self):
+        return get_min_delay()
+
+    @property
+    def time_step(self):
+        return get_time_step()
+
+    @property
+    def max_delay(self):
+        return get_max_delay()
+
+    @property
+    def num_processes(self):
+        return num_processes()
+
+    @property
+    def rank(self):
+        return rank()
+
+    @property
+    def current_time(self):
+        return get_current_time()

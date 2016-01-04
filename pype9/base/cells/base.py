@@ -386,7 +386,8 @@ class DynamicsWithSynapses(BaseALObject):
     def __init__(self, dynamics, synapses=[], connection_parameter_sets=[]):
         if dynamics.nineml_type not in ('Dynamics', 'MultiDynamics'):
             raise Pype9RuntimeError(
-                "Component class ({}) needs to be nineml Dynamics object")
+                "Component class ({}) needs to be nineml Dynamics object"
+                .format(dynamics.nineml_type))
         self._dynamics = dynamics
         self._synapses = dict((s.name, s) for s in synapses)
         self._connection_parameter_sets = dict(

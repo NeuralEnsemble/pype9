@@ -1,4 +1,5 @@
 from .cells import Cell, CellMetaClass  # @UnusedImport
+from .network import Network
 # from .pynn_interface.network import Network  # @UnusedImport
 # from .pynn_interface.population import Population  # @UnusedImport
 # from .pynn_interface.projection import Projection  # @UnusedImport

@@ -55,14 +55,6 @@ class Network(BaseNetwork):
     ConnectionGroupClass = ConnectionGroup
     ConnectivityClass = PyNNConnectivity
 
-    def __init__(self, nineml_model, min_delay=None, temperature=None,
-                 **kwargs):
-        # Sets the 'get_min_delay' function for use in the network init
-        self.get_min_delay = get_min_delay
-        BaseNetwork.__init__(
-            self, nineml_model, min_delay=min_delay, temperature=temperature,
-            **kwargs)
-
     def _set_simulation_params(self, **params):
         """
         Sets the simulation parameters either from the passed parameters or
@@ -74,3 +66,27 @@ class Network(BaseNetwork):
         p = self._get_simulation_params(**params)
         pyNN.neuron.setup(p['timestep'], p['min_delay'], p['max_delay'])
         neuron.h.celsius = p['temperature']
+
+    @property
+    def min_delay(self):
+        return get_min_delay()
+
+    @property
+    def time_step(self):
+        return get_time_step()
+
+    @property
+    def max_delay(self):
+        return get_max_delay()
+
+    @property
+    def num_processes(self):
+        return num_processes()
+
+    @property
+    def rank(self):
+        return rank()
+
+    @property
+    def current_time(self):
+        return get_current_time()
