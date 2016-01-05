@@ -246,7 +246,8 @@ class BaseCodeGenerator(object):
                 "required permissions or specify a different \"parent build "
                 "directory\" ('parent_build_dir') -> {}".format(e))
 
-    def render_to_file(self, template, args, filename, directory, switches={}):
+    def render_to_file(self, template, args, filename, directory, switches={},
+                       post_hoc_subs={}):
         # Initialise the template loader to include the flag directories
         template_paths = [
             self.BASE_TMPL_PATH,
@@ -267,6 +268,8 @@ class BaseCodeGenerator(object):
         jinja_env.globals.update(**self._globals)
         # Actually render the contents
         contents = jinja_env.get_template(template).render(**args)
+        for old, new in post_hoc_subs.iteritems():
+            contents = contents.replace(old, new)
         # Write the contents to file
         with open(os.path.join(directory, filename), 'w') as f:
             f.write(contents)

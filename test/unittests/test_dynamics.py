@@ -354,30 +354,28 @@ class TestDynamics(TestCase):
 #             comparisons[('9ML-nest', 'Ref-nest')], 0.00015 * pq.mV,
 #             "AdExpIaF NEST 9ML simulation did not match reference built-in")
 
-    def test_poisson_generator(self, duration=100 * un.s, rate=100 * un.Hz):
-        poisson = ninemlcatalog.load('input/Poisson', 'Poisson')
-        nineml_model = DynamicsProperties(
-            'Poisson100Hz', poisson, properties={'rate': rate})
+    def test_poisson(self, duration=100 * un.s, rate=100 * un.Hz, **kwargs):  # @UnusedVariable @IgnorePep8
+        nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': 'force',
                                  'external_currents': ['iSyn']},
                       'nest': {'build_mode': 'force'}}
         cells = {}
-        for sim_name, CellMetaClass in (('neuron', CellMetaClassNEURON),
-                                        ('nest', CellMetaClassNEST)):
+        for sim_name, CellMetaClass in (('nest', CellMetaClassNEST),):  #, ('neuron', CellMetaClassNEURON)): @IgnorePep8
             cells[sim_name] = CellMetaClass(
-                nineml_model, name=self.build_name,
-                initial_regime=self.initial_regime, **build_args[sim_name])()
+                nineml_model, name=nineml_model.name,
+                **build_args[sim_name])()
             cells[sim_name].record('spike_output')
             cells[sim_name].update_state(self.initial_states)
+            cells[sim_name].rate = rate
         # Run NEURON simulation
-        simulatorNEURON.reset()
-        neuron.h.dt = self.dt
-        simulatorNEURON.run(duration.in_units(un.ms))
+#         simulatorNEURON.reset()
+#         neuron.h.dt = self.dt
+#         simulatorNEURON.run(duration.in_units(un.ms))
         # Run NEST simulation
         simulatorNEST.reset()
         nest.SetKernelStatus({'resolution': self.dt})
         simulatorNEST.run(duration.in_units(un.ms))
-        for sim_name in ('neuron', 'nest'):
+        for sim_name in ('nest',):  # ('neuron', 'nest'):
             spikes = cells[sim_name].recording('spike_output')
             recorded_rate = np.sum(spikes) / (spikes.t_stop - spikes.t_start)
             self.assertAlmostEqual(
@@ -389,9 +387,9 @@ class TestDynamics(TestCase):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test', type=str, default='alpha_syn',
+    parser.add_argument('--test', type=str, default='poisson',
                         help=("Which test to run, can be one of: 'alpha_syn', "
-                              "'izhi', 'izhiFS', 'liaf' or 'hh' "
+                              "'izhi', 'izhiFS', 'liaf', 'poisson' or 'hh' "
                               "(default: %(default)s )"))
     parser.add_argument('--plot', action='store_true',
                         help="Plot the traces on the same plot")

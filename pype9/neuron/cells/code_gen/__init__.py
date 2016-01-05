@@ -218,8 +218,12 @@ class CodeGenerator(BaseCodeGenerator):
                 raise Pype9BuildError(
                     "No candidates for the membrane voltage, "
                     "state_variables '{}', analog_receive_ports '{}'"
-                    .format("', '".join(component_class.state_variables),
-                            "', '".join(component_class.analog_receive_ports)))
+                    .format(
+                        "', '".join(
+                            sv.name for sv in component_class.state_variables),
+                        "', '".join(
+                            p.name
+                            for p in component_class.analog_receive_ports)))
         # Map voltage to hard-coded 'v' symbol
         if orig_v.name != 'v':
             trfrm.rename_symbol(orig_v.name, 'v')

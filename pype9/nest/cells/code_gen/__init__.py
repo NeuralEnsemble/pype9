@@ -37,6 +37,8 @@ class CodeGenerator(BaseCodeGenerator):
     V_THRESHOLD_DEFAULT = 0.0
     BASE_TMPL_PATH = path.join(path.dirname(__file__), 'templates')
 
+    _inline_random_implementations = {}
+
     def __init__(self, build_cores=1):
         super(CodeGenerator, self).__init__()
         self._build_cores = build_cores
@@ -81,10 +83,11 @@ class CodeGenerator(BaseCodeGenerator):
         switches = {'ode_solver': ode_solver, 'ss_solver': ss_solver}
         # Render C++ header file
         self.render_to_file('header.tmpl', tmpl_args,
-                             name + '.h', src_dir, switches)
+                             name + '.h', src_dir, switches=switches)
         # Render C++ class file
         self.render_to_file('main.tmpl', tmpl_args, name + '.cpp',
-                             src_dir, switches)
+                             src_dir, switches=switches,
+                             post_hoc_subs=self._inline_random_implementations)
         # Render Loader header file
         self.render_to_file('module-header.tmpl', tmpl_args,
                              name + 'Module.h', src_dir)
