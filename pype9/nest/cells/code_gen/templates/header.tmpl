@@ -63,6 +63,11 @@ namespace nineml {
 	    void init_state_(const nest::Node& proto);
 	    void init_buffers_();
 	    void calibrate();
+	    
+	    /* Inline random distribution methods */
+        float random_uniform_(float low, float high);
+        float random_normal_(float mu, float sigma);
+        float random_exponential_(float lambda);   
 
 	    void update(nest::Time const &, const nest::long_t, const nest::long_t);
 
@@ -172,7 +177,9 @@ namespace nineml {
 	        void set(const DictionaryDatum&, const Parameters_&);
 	    }; // end struct State_
 
-        struct Variables_ {};
+        struct Variables_ {
+		    librandom::RngPtr rng_;           // random number generator of thread
+        };
 
         struct Buffers_ {
 	        Buffers_({{component_name}}&);
@@ -223,7 +230,7 @@ namespace nineml {
 
 	    //! Mapping of recordables names to access functions	
 		static nest::RecordablesMap<{{component_name}}> recordablesMap_;
-
+    
 	}; // end class {{component_name}}
 
     inline nest::port {{component_name}}::send_test_event(nest::Node& target, nest::port receptor_type, nest::synindex, bool) {
@@ -286,6 +293,37 @@ namespace nineml {
 		S_ = stmp;	
 	    calibrate();
     }
+    
+    /* Inline random distributions (for deprecated format random.*), copied
+       from the corresponding NEST random deviate implementations in librandom
+       but stripped from RandomDeviate boiler plate */
+    
+    inline float {{component_name}}::random_uniform_(float low, float high) {
+        return low + (high - low) * V_.rng_->drand();
+    }
+
+    inline float {{component_name}}::random_normal_(float mu, float sigma) {
+        // Box-Muller algorithm, see Knuth TAOCP, vol 2, 3rd ed, p 122
+        // we waste one number
+        double V1;
+        double V2;
+        double S;
+
+        do {
+            V1 = 2 * V_.rng_->drand() - 1;
+            V2 = 2 * V_.rng_->drand() - 1;
+            S = V1 * V1 + V2 * V2;
+        } while ( S >= 1 );
+
+        if ( S != 0 )
+            S = V1 * std::sqrt( -2 * std::log( S ) / S );
+        return mu + sigma * S;
+    }
+    
+    inline float {{component_name}}::random_exponential_(float lambda) {
+        return -std::log(V_.rng_->drandpos()) / lambda;
+    }   
+    
 
 } // end namespace nest
 
