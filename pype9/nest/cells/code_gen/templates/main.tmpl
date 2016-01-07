@@ -411,7 +411,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 
 				    // State assignments
         {% for sa, scaled_expr, units in unit_handler.scale_aliases(trans.state_assignments) %}
-				    S_.y_[{{component_name}}::State_::{{sa.name}}_INDEX] = {{scaled_expr}};  // ({{units}})
+				    S_.y_[{{component_name}}::State_::{{sa.name}}_INDEX] = {{scaled_expr.rhs_cstr}};  // ({{units}})
         {% endfor %}
 
 				    // FIXME: Need to specify different output ports in a way that can be read by the receiving nodes

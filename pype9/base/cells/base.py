@@ -18,7 +18,7 @@ import time
 import os.path
 import quantities as pq
 import nineml
-from nineml.abstraction import Dynamics, Parameter
+from nineml.abstraction import Parameter
 from nineml.user import Property, Quantity, Definition
 from nineml.exceptions import name_error, NineMLNameError
 from nineml.abstraction import BaseALObject
@@ -153,7 +153,7 @@ class Cell(object):
             # Convert "Python-Quantities" quantities into 9ML quantities
             for name, pq_qty in kwprops.iteritems():
                 qty = self._unit_handler.from_pq_quantity(pq_qty)
-                properties.append(Property(name, qty.value, qty.units))
+                properties.append(Property(name, qty.value * qty.units))
             # If default properties not provided create a Dynamics Properties
             # from the provided properties
             if self.default_properties is None:

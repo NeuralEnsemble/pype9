@@ -294,7 +294,9 @@ class UnitHandler(DynamicsDimensionResolver):
 
     @classmethod
     def from_pq_quantity(cls, qty):
-        if isinstance(qty, (int, float)):
+        if isinstance(qty, Quantity):
+            return qty  # If already a 9ML quantity
+        elif isinstance(qty, (int, float)):
             units = un.unitless
         elif isinstance(qty, pq.Quantity):
             unit_name = str(qty.units).split()[1].replace(

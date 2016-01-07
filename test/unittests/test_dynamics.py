@@ -360,13 +360,13 @@ class TestDynamics(TestCase):
                                  'external_currents': ['iSyn']},
                       'nest': {'build_mode': 'force'}}
         cells = {}
-        for sim_name, CellMetaClass in (('nest', CellMetaClassNEST),):  #, ('neuron', CellMetaClassNEURON)): @IgnorePep8
-            cells[sim_name] = CellMetaClass(
+        for sim_name, meta_class in (('nest', CellMetaClassNEST),):  #, ('neuron', CellMetaClassNEURON)): @IgnorePep8
+            celltype = meta_class(
                 nineml_model, name=nineml_model.name,
-                **build_args[sim_name])()
-            cells[sim_name].record('spike_output')
+                **build_args[sim_name])
+            cells[sim_name] = celltype(rate=rate)
+            cells[sim_name].record('spikes')
             cells[sim_name].update_state(self.initial_states)
-            cells[sim_name].rate = rate
         # Run NEURON simulation
 #         simulatorNEURON.reset()
 #         neuron.h.dt = self.dt
