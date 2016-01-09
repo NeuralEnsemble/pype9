@@ -14,7 +14,7 @@ import logging
 import neo
 import nest
 import quantities as pq
-import nineml
+from nineml.abstraction import Dynamics
 from nineml.exceptions import NineMLNameError
 from .code_gen import CodeGenerator
 from .controller import simulation_controller
@@ -49,34 +49,62 @@ class Cell(base.Cell):
     def _set(self, varname, value):
         nest.SetStatus(self._cell, varname, value)
 
-    def record(self, variable, interval=None):
-        # TODO: Need to translate variable to port
-        if interval is None:
-            interval = simulation_controller.dt
+    def record(self, port_name, interval=None):
+        # Create dictionaries for storing local recordings. These are not
+        # created initially to save memory if recordings are not required or
+        # handled externally
         self._initialise_local_recording()
-        variable = self.build_name(variable)
-        self._recorders[variable] = recorder = nest.Create(
-            'multimeter', 1, {"interval": interval})
-        nest.SetStatus(recorder, {'record_from': [variable]})
-        nest.Connect(recorder, self._cell,
-                     syn_spec={'delay': simulation_controller.min_delay})
+        try:
+            port = self.component_class.send_port(port_name)
+        except NineMLNameError:
+            # For convenient access to state variables
+            port = self.component_class.state_variable(port_name)
+        if port.nineml_type == 'EventSendPort':
+            # FIXME: This assumes that all event send port are spikes, which
+            #        I think is currently a limitation of NEST
+            self._recorders[port_name] = recorder = nest.Create(
+                "spike_detector", params={"precise_times": True})
+            nest.Connect(self._cell, recorder)
+        else:
+            if interval is None:
+                interval = simulation_controller.dt
+            variable_name = self.build_name(port_name)
+            self._recorders[port_name] = recorder = nest.Create(
+                'multimeter', 1, {"interval": interval})
+            nest.SetStatus(recorder, {'record_from': [variable_name]})
+            nest.Connect(recorder, self._cell,
+                         syn_spec={'delay': simulation_controller.min_delay})
 
     def recording(self, port_name):
         """
         Return recorded data as a dictionary containing one numpy array for
         each neuron, ids as keys.
         """
-        port_name = self.build_name(port_name)
-        events, interval = nest.GetStatus(self._recorders[port_name],
-                                          ('events', 'interval'))[0]
+        # NB: Port could also be a state variable
         try:
-            port = self._nineml.component_class.port(port_name)
+            port = self.component_class.send_port(port_name)
         except NineMLNameError:
-            port = self._nineml.component_class.state_variable(port_name)
-        unit_str = UnitHandler.dimension_to_unit_str(port.dimension)
-        data = neo.AnalogSignal(
-            events[port_name], sampling_period=interval * pq.ms,
-            t_start=0.0 * pq.ms, units=unit_str, name=port_name)
+            # For convenient access to state variables
+            port = self.component_class.state_variable(port_name)
+        if port.nineml_type == 'EventSendPort':
+            spikes = nest.GetStatus(
+                self._recorders[port_name], 'events')[0]['times']
+            data = neo.SpikeTrain(spikes, t_start=0.0 * pq.ms,
+                                  t_stop=simulation_controller.t * pq.ms,
+                                  name=port_name)
+        else:
+            port_name = self.build_name(port_name)
+            events, interval = nest.GetStatus(self._recorders[port_name],
+                                              ('events', 'interval'))[0]
+            try:
+                port = self._nineml.component_class.port(port_name)
+            except NineMLNameError:
+                port = self._nineml.component_class.state_variable(port_name)
+            unit_str = UnitHandler.dimension_to_unit_str(port.dimension)
+            variable_name = self.build_name(port_name)
+            data = neo.AnalogSignal(
+                events[variable_name], sampling_period=interval * pq.ms,
+                t_start=0.0 * pq.ms, units=unit_str, name=port_name)
         return data
 
     def build_name(self, varname):
@@ -103,8 +131,10 @@ class Cell(base.Cell):
         `weight`    -- a tuple of (port_name, value/qty) to set the weight of
                        the event port.
         """
-        if isinstance(self.component_class.receive_port(port_name),
-                      nineml.abstraction.EventPort):
+        port = self.component_class.receive_port(port_name)
+        if port.nineml_type == 'EventReceivePort':
+            # Shift the signal times to account for the minimum delay and
+            # match the NEURON implementation
             spike_times = (pq.Quantity(signal, 'ms') + pq.ms -
                            simulation_controller.min_delay * pq.ms)
             if any(spike_times < 0.0):
