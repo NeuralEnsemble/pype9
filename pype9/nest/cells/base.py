@@ -91,7 +91,7 @@ class Cell(base.Cell):
                 self._recorders[port_name], 'events')[0]['times']
             data = neo.SpikeTrain(spikes, t_start=0.0 * pq.ms,
                                   t_stop=simulation_controller.t * pq.ms,
-                                  name=port_name)
+                                  name=port_name, units=pq.ms)
         else:
             port_name = self.build_name(port_name)
             events, interval = nest.GetStatus(self._recorders[port_name],

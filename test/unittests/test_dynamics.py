@@ -15,10 +15,10 @@ import nest
 import neuron
 from pype9.nest.cells import (
     CellMetaClass as CellMetaClassNEST,
-    simulation_controller as simulatorNEURON)
+    simulation_controller as simulatorNEST)
 from pype9.neuron.cells import (
     CellMetaClass as CellMetaClassNEURON,
-    simulation_controller as simulatorNEST)
+    simulation_controller as simulatorNEURON)
 if __name__ == '__main__':
     from utils import DummyTestCase as TestCase  # @UnusedImport
 else:
@@ -373,7 +373,7 @@ class TestDynamics(TestCase):
 #         simulatorNEURON.run(duration.in_units(un.ms))
         # Run NEST simulation
         simulatorNEST.reset()
-        nest.SetKernelStatus({'resolution': self.dt})
+#         nest.SetKernelStatus({'resolution': self.dt})
         simulatorNEST.run(duration.in_units(un.ms))
         for sim_name in ('nest',):  # ('neuron', 'nest'):
             spikes = cells[sim_name].recording('spike_output')
