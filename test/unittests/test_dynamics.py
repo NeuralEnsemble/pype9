@@ -1,7 +1,6 @@
 import quantities as pq
 import os.path
 from itertools import chain, repeat
-import numpy as np
 import ninemlcatalog
 from nineml import units as un
 from nineml.user import Property
@@ -11,8 +10,6 @@ from pype9.testing import Comparer, input_step, input_freq
 from pype9.base.cells import (
     DynamicsWithSynapses, DynamicsWithSynapsesProperties,
     ConnectionParameterSet, ConnectionPropertySet)
-import nest
-import neuron
 from pype9.nest.cells import (
     CellMetaClass as CellMetaClassNEST,
     simulation_controller as simulatorNEST)
@@ -377,11 +374,13 @@ class TestDynamics(TestCase):
         simulatorNEST.run(duration.in_units(un.ms))
         for sim_name in ('nest',):  # ('neuron', 'nest'):
             spikes = cells[sim_name].recording('spike_output')
-            recorded_rate = np.sum(spikes) / (spikes.t_stop - spikes.t_start)
+            recorded_rate = len(spikes) / (spikes.t_stop - spikes.t_start)
             self.assertAlmostEqual(
                 rate, recorded_rate,
-                ("Recorded rate of {} poisson generator, {} did not match "
-                 "desired {}".format(sim_name, recorded_rate, rate)))
+                ("Recorded rate of {} poisson generator ({}) did not match "
+                 "desired ({} {})".format(
+                     sim_name, pq.Quantity(recorded_rate, 'Hz'), rate.value,
+                     rate.units.name)))
 
 
 if __name__ == '__main__':
