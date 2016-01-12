@@ -431,10 +431,11 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
                         std::cout << "Transitioned to regime: {{trans.target_regime.name}} at time " << t << std::endl;
             {% endif %}
                     } else 
-                        std::cout << "Warning!: multiple transitions in the same time step. Transition to 'Regime " << transition << "' was ignored in favour of transition " << {{trans.target_regime.name}}_REGIME << "." << std::endl;
-
-                    {{macros.set_triggers(trans.target_regime, component_class, component_name, unit_handler) | indent(20)}}               
+                        std::cout << "Warning!: multiple transitions in the same time step. Transition to 'Regime " << transition << "' was ignored in favour of transition " << {{trans.target_regime.name}}_REGIME << "." << std::endl;               
         {% endif %}
+        
+                    {{macros.set_triggers(trans.target_regime, component_class, component_name, unit_handler) | indent(20)}}
+        
                     // Flag the solver to be reset if required        
                     reset_solver = true;        
         {% if hasattr(trans, 'trigger') %}

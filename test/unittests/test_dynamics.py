@@ -355,7 +355,7 @@ class TestDynamics(TestCase):
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': 'force',
                                  'external_currents': ['iSyn']},
-                      'nest': {'build_mode': 'compile_only'}}
+                      'nest': {'build_mode': 'force'}}
         initial_states = {'t_next': 0.0 * un.ms}
         cells = {}
         for sim_name, meta_class in (('nest', CellMetaClassNEST),):  #, ('neuron', CellMetaClassNEURON)): @IgnorePep8
@@ -371,6 +371,7 @@ class TestDynamics(TestCase):
         # Run NEST simulation
         simulatorNEST.reset()
 #         nest.SetKernelStatus({'resolution': self.dt})
+        print duration.in_units(un.ms)
         simulatorNEST.run(duration.in_units(un.ms))
         for sim_name in ('nest',):  # ('neuron', 'nest'):
             spikes = cells[sim_name].recording('spike_output')
