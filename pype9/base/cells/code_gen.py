@@ -21,13 +21,28 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from itertools import izip
 from abc import ABCMeta, abstractmethod
 import sympy
+from sympy.solvers import solve
 from nineml import units
+from nineml.abstraction.expressions import t
 from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import logging
 import pype9.annotations
 
 
 logger = logging.getLogger('PyPe9')
+
+
+def exact_trigger_time(trigger):
+    """
+    Tries to solve for 't' in the RHS expression, returning None if the RHS
+    doesn't include t or Sympy can't find a solution to it
+    """
+    solutions = solve(trigger.rhs, t)
+    if len(solutions) == 1:
+        solution = solutions[0]
+    else:
+        solution = None
+    return solution
 
 
 class BaseCodeGenerator(object):
@@ -49,7 +64,7 @@ class BaseCodeGenerator(object):
          ('xrange', xrange), ('next', next), ('chain', chain), ('sorted',
          sorted), ('hash', hash), ('deepcopy', deepcopy), ('units', units),
          ('hasattr', hasattr), ('set', set), ('list', list), ('None', None),
-         ('sympy', sympy)] +
+         ('sympy', sympy), ('exact_trigger_time', exact_trigger_time)] +
         [(n, v) for n, v in pype9.annotations.__dict__.iteritems()
          if n != '__builtins__'])
 
@@ -333,6 +348,7 @@ class BaseCodeGenerator(object):
                 "component class '{}'"
                 .format(initial_regime,
                         "', '".join(component_class.regime_names)))
+
 
 #     def _load_component_translations(self, biophysics_name, params_dir):
 #         """

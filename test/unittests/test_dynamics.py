@@ -13,9 +13,11 @@ from pype9.base.cells import (
 from pype9.nest.cells import (
     CellMetaClass as CellMetaClassNEST,
     simulation_controller as simulatorNEST)
+from pype9.nest.units import UnitHandler as UnitHandlerNEST
 from pype9.neuron.cells import (
     CellMetaClass as CellMetaClassNEURON,
     simulation_controller as simulatorNEURON)
+from pype9.neuron.units import UnitHandler as UnitHandlerNEURON
 if __name__ == '__main__':
     from utils import DummyTestCase as TestCase  # @UnusedImport
 else:
@@ -351,11 +353,11 @@ class TestDynamics(TestCase):
 #             comparisons[('9ML-nest', 'Ref-nest')], 0.00015 * pq.mV,
 #             "AdExpIaF NEST 9ML simulation did not match reference built-in")
 
-    def test_poisson(self, duration=100 * un.s, rate=100 * un.Hz, **kwargs):  # @UnusedVariable @IgnorePep8
+    def test_poisson(self, duration=1000 * un.s, rate=100 * un.Hz, **kwargs):  # @UnusedVariable @IgnorePep8
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': 'force',
                                  'external_currents': ['iSyn']},
-                      'nest': {'build_mode': 'force'}}
+                      'nest': {'build_mode': 'compile_only'}}
         initial_states = {'t_next': 0.0 * un.ms}
         cells = {}
         for sim_name, meta_class in (('nest', CellMetaClassNEST),):  #, ('neuron', CellMetaClassNEURON)): @IgnorePep8
@@ -371,17 +373,18 @@ class TestDynamics(TestCase):
         # Run NEST simulation
         simulatorNEST.reset()
 #         nest.SetKernelStatus({'resolution': self.dt})
-        print duration.in_units(un.ms)
         simulatorNEST.run(duration.in_units(un.ms))
         for sim_name in ('nest',):  # ('neuron', 'nest'):
             spikes = cells[sim_name].recording('spike_output')
-            recorded_rate = len(spikes) / (spikes.t_stop - spikes.t_start)
+            recorded_rate = pq.Quantity(
+                len(spikes) / (spikes.t_stop - spikes.t_start), 'Hz')
+            ref_rate = pq.Quantity(UnitHandlerNEST.to_pq_quantity(rate), 'Hz')
             self.assertAlmostEqual(
-                rate, recorded_rate,
+                ref_rate, recorded_rate,
                 ("Recorded rate of {} poisson generator ({}) did not match "
-                 "desired ({} {})".format(
-                     sim_name, pq.Quantity(recorded_rate, 'Hz'), rate.value,
-                     rate.units.name)))
+                 "desired ({}): difference {}".format(
+                     sim_name, recorded_rate, ref_rate,
+                     recorded_rate - ref_rate)))
 
 
 if __name__ == '__main__':
