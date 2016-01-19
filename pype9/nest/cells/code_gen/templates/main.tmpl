@@ -372,33 +372,38 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 
         /***** Transition handling *****/
         int transition_count = 0;
+        double prev_t = origin.get_ms();  // The time at the start of the current step.
         
         do {
 {% for regime in component_class.regimes %}
+                
 	        {{elseif(loop.first)}} (B_.current_regime == {{regime.name}}_REGIME) {
 	            // Map all variables/expressions to the local namespace that are required to evaluate the triggers
 	            {{macros.map_required_vars_locally(chain(regime.all_triggers(), regime.all_target_triggers()), component_class, component_name, unit_handler, []) | indent(12)}}
 	            
 	            int transitioned_to = -1;
-	                     
-		        // Get the simulation time in case it is needed in the triggers or assignments
-		        double t = origin.get_ms() + lag * dt; {# FIXME: Should evaluate the time crossings for each transition and choose the one with the earliest time #}
+		        
+		        // FIXME: The transitions should be ordered by the exact time they occur to determine which should be executed first.
 
     {% for trans in regime.transitions %}
         {% set connection_parameters = [] %}{# passed to the previous_expressions argument of map_required_vars_locally #}
+                // Get the time after the current step to test the trigger against
+                double t = origin.get_ms() + lag * dt;        
         {% if hasattr(trans, 'trigger') %}{# OnCondition transition #}
 	            // Check trigger condition
 	            if ({{trans.trigger.rhs_cstr}}) {
+           {% set exact_time_expr = trans.trigger.crossing_time_expr %}
+           {% if exact_time_expr is not None %}
+                    // The trigger expression depends on 't' so determine the exact time that the threshold was crossed.
+                    t = {{exact_time_expr.rhs_cstr}};
+           {% endif %}
 	            
 	                // Check to see if trigger is active (i.e. was false since on the change from false->true triggers a transition)
-	                if (B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active) {
+	                if (B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active{% if exact_time_expr is not None %} && t > prev_t{% endif %}) {
 	                    // Deactivate the trigger (triggers are only triggered when the change from false -> true)
 	                    B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active = false;
-	                                   
-	       {% if exact_trigger_time(trans.trigger) %}
-                        // The trigger expression depends on 't' so determine the exact time that the threshold was crossed.
-                        t = {{exact_trigger_time(trans.trigger)}};
-		   {% endif %}
+	                    
+	                    prev_t = t;  // Update the previous t to prevent going backwards in time within the current step 
         {% else %}
 	            // Check for incoming event
 	            double {{trans.src_port_name}} = B_.{{trans.src_port_name}}_event_port.get_value(lag);

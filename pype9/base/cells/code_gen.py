@@ -32,19 +32,6 @@ import pype9.annotations
 logger = logging.getLogger('PyPe9')
 
 
-def exact_trigger_time(trigger):
-    """
-    Tries to solve for 't' in the RHS expression, returning None if the RHS
-    doesn't include t or Sympy can't find a solution to it
-    """
-    solutions = solve(trigger.rhs, t)
-    if len(solutions) == 1:
-        solution = solutions[0]
-    else:
-        solution = None
-    return solution
-
-
 class BaseCodeGenerator(object):
 
     __metaclass__ = ABCMeta
@@ -64,7 +51,7 @@ class BaseCodeGenerator(object):
          ('xrange', xrange), ('next', next), ('chain', chain), ('sorted',
          sorted), ('hash', hash), ('deepcopy', deepcopy), ('units', units),
          ('hasattr', hasattr), ('set', set), ('list', list), ('None', None),
-         ('sympy', sympy), ('exact_trigger_time', exact_trigger_time)] +
+         ('sympy', sympy)] +
         [(n, v) for n, v in pype9.annotations.__dict__.iteritems()
          if n != '__builtins__'])
 
