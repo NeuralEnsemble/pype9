@@ -35,6 +35,7 @@ class CodeGenerator(BaseCodeGenerator):
     REL_TOLERANCE_DEFAULT = 0.0
     GSL_JACOBIAN_APPROX_STEP_DEFAULT = 0.01
     V_THRESHOLD_DEFAULT = 0.0
+    MAX_SIMULTANEOUS_TRANSITIONS = 1000
     BASE_TMPL_PATH = path.join(path.dirname(__file__), 'templates')
 
     _inline_random_implementations = {}
@@ -74,6 +75,9 @@ class CodeGenerator(BaseCodeGenerator):
                                         self.ABS_TOLERANCE_DEFAULT),
             'rel_tolerance': kwargs.get('max_step_size',
                                         self.REL_TOLERANCE_DEFAULT),
+            'max_simultaneous_transitions': kwargs.get(
+                'max_simultaneous_transitions',
+                self.MAX_SIMULTANEOUS_TRANSITIONS),
             'parameter_scales': [],
             'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT)}
         ode_solver = kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT)

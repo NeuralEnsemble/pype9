@@ -348,40 +348,37 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         /***** Solve ODE over timestep *****/
 
 {% for regime in component_class.regimes %}
-    {% if regime.num_time_derivatives %}
         {{elseif(loop.first)}} (B_.current_regime == {{regime.name}}_REGIME) {
 
             /***** Set clamp vars for state variables that don't have a time derivative in this regime *****/
-        {% for sv in regime.no_time_derivatives(component_class.state_variables) %}
+    {% for sv in regime.no_time_derivatives(component_class.state_variables) %}
             double {{sv.name}}_clamp_ = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];
-        {% endfor %} 
+    {% endfor %} 
 
 	        {% include "update_step.tmpl" %}
     
             /***** Reset state variables from clamp vars for state variables that don't have a time derivative in this regime *****/
-        {% for sv in regime.no_time_derivatives(component_class.state_variables) %}
+    {% for sv in regime.no_time_derivatives(component_class.state_variables) %}
             S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX] = {{sv.name}}_clamp_;
-        {% endfor %}    
+    {% endfor %}    
 
-        {% if debug %}
+    {% if debug %}
             std::cout << "Regime: {{regime.name}} at time " << t << std::endl;
-        {% endif %}
-   {% endif %}
-        {{endif(loop.last)}}   
+    {% endif %}
+        {{endif(loop.last)}} 
 {% endfor %}
 
         /***** Transition handling *****/
         int transition_count = 0;
-        double prev_t = origin.get_ms();  // The time at the start of the current step.
+
+        int transitioned_to;
         
         do {
 {% for regime in component_class.regimes %}
-                
+            transitioned_to = -1;
 	        {{elseif(loop.first)}} (B_.current_regime == {{regime.name}}_REGIME) {
 	            // Map all variables/expressions to the local namespace that are required to evaluate the triggers
-	            {{macros.map_required_vars_locally(chain(regime.all_triggers(), regime.all_target_triggers()), component_class, component_name, unit_handler, []) | indent(12)}}
-	            
-	            int transitioned_to = -1;
+	            {{macros.map_required_vars_locally(chain(regime.all_triggers(), regime.all_target_triggers()), component_class, component_name, unit_handler, []) | indent(16)}}
 		        
 		        // FIXME: The transitions should be ordered by the exact time they occur to determine which should be executed first.
 
@@ -393,17 +390,15 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 	            // Check trigger condition
 	            if ({{trans.trigger.rhs_cstr}}) {
            {% set exact_time_expr = trans.trigger.crossing_time_expr %}
-           {% if exact_time_expr is not None %}
+           {% if exact_time_expr %}
                     // The trigger expression depends on 't' so determine the exact time that the threshold was crossed.
                     t = {{exact_time_expr.rhs_cstr}};
            {% endif %}
 	            
 	                // Check to see if trigger is active (i.e. was false since on the change from false->true triggers a transition)
-	                if (B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active{% if exact_time_expr is not None %} && t > prev_t{% endif %}) {
+	                if (B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active) {
 	                    // Deactivate the trigger (triggers are only triggered when the change from false -> true)
-	                    B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active = false;
-	                    
-	                    prev_t = t;  // Update the previous t to prevent going backwards in time within the current step 
+	                    B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active = false; 
         {% else %}
 	            // Check for incoming event
 	            double {{trans.src_port_name}} = B_.{{trans.src_port_name}}_event_port.get_value(lag);
@@ -419,7 +414,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
             {% endif %}
         {% endif %}
                         // Map all variables/expressions to the local namespace that are required to evaluate the state assignments that were not required for the triggers
-                        {{macros.map_required_vars_locally(trans.state_assignments, component_class, component_name, unit_handler, chain(regime.all_triggers(), regime.all_target_triggers(), connection_parameters)) | indent(20)}}
+                        {{macros.map_required_vars_locally(trans.state_assignments, component_class, component_name, unit_handler, chain(regime.all_triggers(), regime.all_target_triggers(), connection_parameters)) | indent(24)}}
 
 				        // State assignments
         {% for sa, scaled_expr, units in unit_handler.scale_aliases(trans.state_assignments) %}
@@ -441,36 +436,35 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         {% endif %}
                         // FIXME: Need to work out the best way to emit a warning in NEST.                                    
                         if (transitioned_to != -1)  // If have already transitioned to a new regime, emit a warning. FIXME: This should be an error.
-	                        std::cout << "Warning!: multiple transitions in the same time step. Transition to 'Regime " << transition << "' was ignored in favour of transition " << {{trans.target_regime.name}}_REGIME << "." << std::endl;
+	                        std::cout << "Warning!: multiple transitions in the same time step. Transition to 'Regime " << transitioned_to << "' was ignored in favour of transition " << {{trans.target_regime.name}}_REGIME << "." << std::endl;
         
                         {{macros.set_triggers(trans.target_regime, component_class, component_name, unit_handler) | indent(20)}}
                         
-                        # Increment the number of transitions that have occurred in this time step.
+                        // Increment the number of transitions that have occurred in this time step.
                         ++transition_count;
                                 
         {% if hasattr(trans, 'trigger') %}
-		                }
-		            } else
-	                    // Activate the trigger
-	                    B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active = true;
+	                }
+	            } else
+                    // Activate the trigger
+                    B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active = true;
         {% else %}
-                    }
-        {% endif %}
-                } while (transitioned_to != -1 && transition_count < {{max_simultaneous_transitions}});
-                
-                if (transition_count >= {{max_simultaneous_transitions}})
-                    //FIXME: This should be an error not a warning.
-                    std::cout << "Warning!: Number of instantaneous transitions exceeds maxiumum number set by 'max_simultaneous_transitions' template parameter ({{max_simultaneous_transitions}})" << std::endl; 
-                
+                }
+        {% endif %} 
+            {{endif(loop.last)}}            
     {% endfor %}
-            {{endif(loop.last)}}
 {% endfor %}
-
-        if (transition_count > 0) {
+        } while (transitioned_to != -1 && transition_count < {{max_simultaneous_transitions}});
+            
+        if (transition_count >= {{max_simultaneous_transitions}}) {
+            //FIXME: This should be an error not a warning.
+            std::cout << "Warning!: Number of instantaneous transitions exceeds maxiumum number set by 'max_simultaneous_transitions' template parameter ({{max_simultaneous_transitions}})" << std::endl;
+        } else if (transition_count > 0) {
 {% include "reset_solver.tmpl" %}
 {% if debug %}
             std::cout << "reset" << std::endl;
 {% endif %}
+
         }
 
         /***** Get analog port values *****/
