@@ -23,8 +23,16 @@ namespace nineml {
 {% include "solver_preludes.tmpl" %}
 {% include "ss_solver_preludes.tmpl" %}
 
+    /**
+     * Create a typedef for the function that represents the system of ODEs
+     */ 
+    typedef int (dynamics_function_type*){% include "dynamics_signature.tmpl" %};
+
+    /**
+     * Declaration of dynamics and residual signatures
+     */
 {% for regime in component_class.regimes %}
-    extern "C" {% include "dynamics_signature.tmpl" %};
+    extern "C" int {{component_name}}_dynamics{% include "dynamics_signature.tmpl" %};
     {% include "residual_signature.tmpl" %}
     {% include "event_signature.tmpl" %}
     {% include "ss_signature.tmpl" %}
@@ -73,7 +81,7 @@ namespace nineml {
 
     // Set dynamics methods (the ones that actually model the dynamics) as friends
 {% for regime in component_class.regimes %}
-	    friend {% include "dynamics_signature.tmpl" %};
+	    friend int {{component_name}}_dynamics{% include "dynamics_signature.tmpl" %};
 	    {% include "residual_friend.tmpl" %}
 	    {% include "event_friend.tmpl" %}
 	    {% include "ss_friend.tmpl" %}
@@ -219,6 +227,86 @@ namespace nineml {
             int current_regime;
 
 	    }; // end struct Buffers_
+	    
+	    class Regime_ {
+	     
+	     public:
+	       dynamics_function_type get_dynamics_function();
+	       boolean transition(**current_regime, State_& state, Buffer_& buffer, Variables_& variables, double t);
+	       void set_triggers(State& state);
+	       
+	     protected:
+	       dynamics_function_type dynamics_function;
+           std::vector<Transition*> transitions;
+           std::vector<Transition*> active;
+           std::vector<Transition*> inactive;
+	    
+	    };
+	    
+	    /**
+	     * Set up an abstract base class to define a common interface for all
+	     * transitions (both OnEvent and OnCondition).
+	     */
+	    class Transition_ {
+
+	      public:
+	        virtual bool triggered(State_& state, double t) = 0;
+	        virtual void trigger_time(State_& state, double t) = 0;
+	        virtual void state_assignments(State_& state, Variables_& variables) = 0;
+	        virtual void output_events({{component_name}}* cell, double t) = 0;
+	        virtual void set_triggers(State_& state, double t);
+	        Regime_* get_target_regime();
+
+	      protected:
+	        Regime_* target_regime;
+	    };
+	    
+	    /*
+	     * Create a specific class for each transition
+	     */
+{% for regime in component_class.regimes %}
+    {% for transition in regime.transitions %}
+        {% if transition.nineml_type == 'OnCondition' %}
+            {% set TransitionClassName = regime.name + 'OnCondition' + str(component_class.index_of(transition)) %}
+        {% else %}
+            {% set TransitionClassName = regime.name + 'On' + transition.src_port_name + 'Event' %}
+        {% endif %}        
+        class {{TransitionClassName}} : Transition_ {
+
+          public:
+            bool triggered(State_& state, t);
+            void trigger_time(State_& state, t);
+            void state_assignments(State_& state, Variables_& variables);
+            void output_events({{component_name}}* cell, double t);
+     
+        };
+
+    {% endfor %}
+{% endfor %}
+
+        /*
+         * Create a specific class for each regime in order to override the 
+         * default constructor.
+         */
+{% for regime in component_class.regimes %}
+        class {{regime.name}}Regime : Regime_ {
+            
+            {{regime.name}}Regime() :
+              dynamics_function({{regime.name}}_dynamics) {
+    {% for on_condition in regime.on_conditions %}
+                this->transitions.push_back(new {{regime.name}}OnCondition{{component_class.index_of(transition)}}());
+    {% endfor %}
+    {% for on_event in regime.on_events %}
+                this->transitions.push_back(new {{regime.name}}On{{on_event.src_port_name}}Event());              
+    {% endfor %}
+            }
+            
+            ~{{regime.name}}Regime() {
+                for (std::vector<Transition*>::iterator it = this->transitions.begin(); it != this->transitions.end(); ++it)
+                    free(*it);
+            }
+        };
+{% endfor %}
 
 		template <State_::StateVecElems elem>
 		double_t get_y_elem_() const { return S_.y_[elem]; }
@@ -232,6 +320,15 @@ namespace nineml {
 		static nest::RecordablesMap<{{component_name}}> recordablesMap_;
     
 	}; // end class {{component_name}}
+	
+	inline {{component_name}}::Regime_::get_dynamics_function() {
+	    return this->dynamics_function
+    }
+    
+    inline void set_triggers {{component_name}}::Regime_::set_triggers(State& state) {
+        for (std::vector<Transition*>::iterator it = myvector.begin() ; it != myvector.end(); ++it)
+            it->set_trigger(state);
+    }
 
     inline nest::port {{component_name}}::send_test_event(nest::Node& target, nest::port receptor_type, nest::synindex, bool) {
 		nest::SpikeEvent e;

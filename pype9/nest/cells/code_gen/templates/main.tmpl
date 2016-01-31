@@ -43,7 +43,7 @@ namespace nest{
 
 namespace nineml {
 
-extern "C" {% include "dynamics_signature.tmpl" %} {
+extern "C" int {{component_name}}_dynamics{% include "dynamics_signature.tmpl" %} {
 
 	// Get references to the members of the model
 	assert(pnode_);
