@@ -274,8 +274,8 @@ namespace nineml {
         class {{TransitionClassName}} : Transition_ {
 
           public:
-            bool triggered(State_& state, t);
-            void trigger_time(State_& state, t);
+            bool triggered(State_& state, double t);
+            void trigger_time(State_& state, double t);
             void state_assignments(State_& state, Variables_& variables);
             void output_events({{component_name}}* cell, double t);
      
