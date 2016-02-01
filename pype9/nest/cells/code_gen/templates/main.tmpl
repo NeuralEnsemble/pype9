@@ -88,7 +88,7 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
 
     // Evaluate differential equations
         {% for td, scaled_expr, units in unit_handler.scale_time_derivatives(regime.time_derivatives) %}
-        ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
+    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
         {% endfor %}
 
     //std::cout << "Success at t=" << t << ": " << GSL_SUCCESS << std::endl;
@@ -123,7 +123,7 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
             {% set TransitionClassName = regime.name + 'On' + transition.src_port_name + 'Event' %}
         {% endif %}
 
-{{component_name}}::{{TransitionClassName}}::triggered({{component_name}}::State_& state, {{component_name}}::Buffer_& buffer, double t) {
+{{component_name}}::{{TransitionClassName}}::trigger_condition({{component_name}}::State_& state, {{component_name}}::Buffer_& buffer, double t) {
 
 
 }
@@ -145,6 +145,18 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
 
 	{% endfor %}
 {% endfor %}
+
+{{component_name}}::Regime_* {{component_name}}::Regime_::transition({{component_name}}::State_& state, {{component_name}}::Buffer_& buffer, {{component_name}}::Variables_& variables, double t)) {
+
+}
+
+
+void {{component_name}}::Regime_::set_triggers({{component_name}}::State_& state, {{component_name}}::Buffer_& buffer, double t)) {
+    for (std::vector<Transition_*>::iterator it = this->transitions.begin(); it != this->transitions.end(); ++it)
+        if (!(*it)->trigger_condition(state, buffer, t))
+            this->active.push_back(*it);
+}
+
 
 /**********************************************
  * Calculation of the residual for IDA solver *
