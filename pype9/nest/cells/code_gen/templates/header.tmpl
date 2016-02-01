@@ -274,7 +274,7 @@ namespace nineml {
         class {{TransitionClassName}} : Transition_ {
 
           public:
-            bool triggered(State_& state, double t);
+            bool triggered(State_& state, Buffer_& buffer, double t);
             void trigger_time(State_& state, double t);
             void state_assignments(State_& state, Variables_& variables);
             void output_events({{component_name}}* cell, double t);
@@ -291,20 +291,8 @@ namespace nineml {
 {% for regime in component_class.regimes %}
         class {{regime.name}}Regime : Regime_ {
             
-            {{regime.name}}Regime() :
-              dynamics_function({{regime.name}}_dynamics) {
-    {% for on_condition in regime.on_conditions %}
-                this->transitions.push_back(new {{regime.name}}OnCondition{{component_class.index_of(transition)}}());
-    {% endfor %}
-    {% for on_event in regime.on_events %}
-                this->transitions.push_back(new {{regime.name}}On{{on_event.src_port_name}}Event());              
-    {% endfor %}
-            }
-            
-            ~{{regime.name}}Regime() {
-                for (std::vector<Transition*>::iterator it = this->transitions.begin(); it != this->transitions.end(); ++it)
-                    free(*it);
-            }
+            {{regime.name}}Regime();
+            ~{{regime.name}}Regime();
         };
 {% endfor %}
 

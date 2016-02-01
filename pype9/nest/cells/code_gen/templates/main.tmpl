@@ -68,6 +68,84 @@ extern "C" int {{component_name}}_dynamics{% include "dynamics_signature.tmpl" %
 
 }
 
+{% for regime in component_class.regimes %}
+
+/**
+ *  Dynamics and transitions for {{regime.name}} regime
+ */
+
+    {% if regime.num_time_derivatives %}
+extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_signature.tmpl" %} {
+
+    // Get references to the members of the model
+    assert(pnode_);
+    const {{component_name}}& node_ = *(reinterpret_cast<{{component_name}}*>(pnode_));
+    const {{component_name}}::Parameters_& P_ = node_.P_;
+    const {{component_name}}::State_& S_ = node_.S_;
+    const {{component_name}}::Buffers_& B_ = node_.B_;
+
+    {{macros.map_required_vars_locally(regime.time_derivatives, component_class, component_name, unit_handler, []) | indent(8)}}
+
+    // Evaluate differential equations
+        {% for td, scaled_expr, units in unit_handler.scale_time_derivatives(regime.time_derivatives) %}
+        ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
+        {% endfor %}
+
+    //std::cout << "Success at t=" << t << ": " << GSL_SUCCESS << std::endl;
+    {% include "dynamics_return.tmpl" %}
+    {% endif %}
+
+}
+
+{{component_name}}::{{regime.name}}Regime::{{regime.name}}Regime()
+  : dynamics_function({{component_name}}_{{regime.name}}_dynamics) {
+  
+    // Populate transitions specific to the regime.
+    {% for on_condition in regime.on_conditions %}
+    this->transitions.push_back(new {{regime.name}}OnCondition{{component_class.index_of(transition)}}());
+    {% endfor %}
+    {% for on_event in regime.on_events %}
+    this->transitions.push_back(new {{regime.name}}On{{on_event.src_port_name}}Event());              
+    {% endfor %}
+}
+
+{{component_name}}::{{regime.name}}Regime::~{{regime.name}}Regime() {
+    for (std::vector<Transition*>::iterator it = this->transitions.begin(); it != this->transitions.end(); ++it)
+        delete *it;
+}
+
+// Transition methods for {{regime.name}} regime
+
+    {% for transition in regime.transitions %}
+        {% if transition.nineml_type == 'OnCondition' %}
+            {% set TransitionClassName = regime.name + 'OnCondition' + str(component_class.index_of(transition)) %}
+        {% else %}
+            {% set TransitionClassName = regime.name + 'On' + transition.src_port_name + 'Event' %}
+        {% endif %}
+
+{{component_name}}::{{TransitionClassName}}::triggered({{component_name}}::State_& state, {{component_name}}::Buffer_& buffer, double t) {
+
+
+}
+
+{{component_name}}::{{TransitionClassName}}::trigger_time({{component_name}}::State_& state, double t) {
+
+
+}
+
+{{component_name}}::{{TransitionClassName}}::state_assignments({{component_name}}::State_& state, {{component_name}}::Variables_& variables, double t) {
+
+
+}
+
+{{component_name}}::{{TransitionClassName}}::output_events({{component_name}}* cell, double t) {
+
+
+}
+
+	{% endfor %}
+{% endfor %}
+
 /**********************************************
  * Calculation of the residual for IDA solver *
  **********************************************/
