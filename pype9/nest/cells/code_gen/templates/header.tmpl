@@ -26,7 +26,7 @@ namespace nineml {
     /**
      * Create a typedef for the function that represents the system of ODEs
      */ 
-    typedef int (dynamics_function_type*){% include "dynamics_signature.tmpl" %};
+    typedef int (*dynamics_function_type){% include "dynamics_signature.tmpl" %};
 
     /**
      * Declaration of dynamics and residual signatures
@@ -41,6 +41,11 @@ namespace nineml {
     class {{component_name}} : public nest::Archiving_Node {
 
       public:
+
+        class Regime_;
+        class Transition_;
+        class OnEvent_;
+        class OnCondition_;                 
 
         ~{{component_name}}();
 	    {{component_name}}(const {{component_name}} &);
@@ -71,11 +76,6 @@ namespace nineml {
 	    void init_state_(const nest::Node& proto);
 	    void init_buffers_();
 	    void calibrate();
-	    
-	    /* Inline random distribution methods */
-        float random_uniform_(float low, float high);
-        float random_normal_(float mu, float sigma);
-        float random_exponential_(float lambda);   
 
 	    void update(nest::Time const &, const nest::long_t, const nest::long_t);
 
@@ -232,12 +232,13 @@ namespace nineml {
 	     
 	     public:
 	       dynamics_function_type get_dynamics_function();
-	       Regime_* transition(State_& state, Buffer_& buffer, Variables_& variables, double t);
-	       void set_triggers(State& state, double t);
+	       Transition_* transition(State_& state, Buffers_& buffers, double t, const nest::long_t& lag);
+	       void set_triggers(State_& state, double t);
 	       
 	     protected:
 	       dynamics_function_type dynamics_function;
-           std::vector<Transition_*> transitions;
+           std::vector<OnCondition_*> on_conditions;
+           std::vector<OnEvent_*> on_events;
            std::vector<Transition_*> active;
 	    
 	    };
@@ -253,7 +254,6 @@ namespace nineml {
             {{regime.name}}Regime();
             ~{{regime.name}}Regime();
 
-    {% for on_condititon
         };
 {% endfor %}	    
 	    
@@ -264,16 +264,42 @@ namespace nineml {
 	    class Transition_ {
 
 	      public:
-	        virtual bool trigger_condition(State_& state, double t) = 0;
-	        virtual void trigger_time(State_& state, double t) = 0;
-	        virtual void state_assignments(State_& state, Variables_& variables) = 0;
-	        virtual void output_events({{component_name}}* cell, double t) = 0;
-	        void set_target_regime(*Regime_ target_regime);
+	        virtual ~Transition_() {}
+	        virtual bool trigger_condition({{component_name}}::State_& state, double t, const nest::long_t& lag) = 0;
+	        virtual double trigger_time(State_& state, double t) = 0;
+	        virtual void body({{component_name}}* node, double t, nest::Time const& origin, nest::long_t& lag) = 0;
+	        void set_target_regime(Regime_* target_regime);
 	        Regime_* get_target_regime();
+	        
+            /* Inline random distribution methods */
+	        double random_uniform_(double low, double high);
+	        double random_normal_(double mu, double sigma);
+	        double random_exponential_(double lambda);   
 
 	      protected:
 	        Regime_* target_regime;
 	    };
+	    
+	    
+	    /**
+	     * The base OnEvent class from which all OnEvent classes are derived
+	     */
+	    class OnEvent_ : public Transition_ {
+	    
+	      public:
+	        OnEvent_(nest::RingBuffer* event_port);     
+	        bool trigger_condition({{component_name}}::State_& state, double t, const nest::long_t& lag);
+	        double trigger_time(State_& state, double t);
+	        
+	      protected:
+	        nest::RingBuffer* event_port;
+	    
+	    };
+
+        /**
+         * The base OnCondition class from which all OnCondition classes are derived
+         */
+	    class OnCondition_ : public Transition_ {};
 	    
 	    /*
 	     * Create a specific class for each OnEvent and OnCondition that will
@@ -281,25 +307,23 @@ namespace nineml {
 	     */
 {% for regime in component_class.regimes %}
     {% for on_event in regime.on_events %}
-        class {{regime.name}}On{{transition.src_port_name}}Event : Transition_ {
+        class {{regime.name}}On{{transition.src_port_name}}Event : public OnEvent_ {
 
           public:
-            bool triggered(State_& state, Buffer_& buffer, double t);
-            void trigger_time(State_& state, double t);
-            void state_assignments(State_& state, Variables_& variables);
-            void output_events({{component_name}}* cell, double t);
+            bool trigger_condition(State_& state, double t, const nest::long_t& lag);
+            double trigger_time(State_& state, double t);
+            void body({{component_name}}* node, double t);
      
         };
 
     {% endfor %}
     {% for on_condition in regime.on_conditions %}
-        class {{regime.name}}OnCondition{{component_class.index_of(transition)}} : Transition_ {
+        class {{regime.name}}OnCondition{{regime.index_of(on_condition)}} : public OnCondition_ {
 
           public:
-            bool triggered(State_& state, Buffer_& buffer, double t);
-            void trigger_time(State_& state, double t);
-            void state_assignments(State_& state, Variables_& variables);
-            void output_events({{component_name}}* cell, double t);
+            bool trigger_condition(State_& state, double t, const nest::long_t& lag);
+            double trigger_time(State_& state, double t);
+            void body({{component_name}}* node, double t, nest::Time const& origin, nest::long_t& lag);
      
         };
 
@@ -320,21 +344,20 @@ namespace nineml {
 	}; // end class {{component_name}}
 	
 	inline dynamics_function_type {{component_name}}::Regime_::get_dynamics_function() {
-	    return this->dynamics_function
-    }
-    
-    inline void set_triggers {{component_name}}::Regime_::set_triggers(State& state) {
-        for (std::vector<Transition*>::iterator it = myvector.begin() ; it != myvector.end(); ++it)
-            it->set_trigger(state);
+	    return this->dynamics_function;
     }
 
     inline void {{component_name}}::Transition_::set_target_regime({{component_name}}::Regime_* target_regime) {
         this->target_regime = target_regime;   
     }
 
-    inline {{component_name}}::Regime_* {{component_name}}::Transition_::set_target_regime() {
+    inline {{component_name}}::Regime_* {{component_name}}::Transition_::get_target_regime() {
         return this->target_regime;   
     }
+    
+    inline {{component_name}}::OnEvent_::OnEvent_(nest::RingBuffer* event_port) {
+        this->event_port = event_port;
+    }    
 
     inline nest::port {{component_name}}::send_test_event(nest::Node& target, nest::port receptor_type, nest::synindex, bool) {
 		nest::SpikeEvent e;
@@ -401,11 +424,11 @@ namespace nineml {
        from the corresponding NEST random deviate implementations in librandom
        but stripped from RandomDeviate boiler plate */
     
-    inline float {{component_name}}::random_uniform_(float low, float high) {
+    inline double {{component_name}}::Transition_::random_uniform_(double low, double high) {
         return low + (high - low) * V_.rng_->drand();
     }
 
-    inline float {{component_name}}::random_normal_(float mu, float sigma) {
+    inline double {{component_name}}::Transition_::random_normal_(double mu, double sigma) {
         // Box-Muller algorithm, see Knuth TAOCP, vol 2, 3rd ed, p 122
         // we waste one number
         double V1;
@@ -423,7 +446,7 @@ namespace nineml {
         return mu + sigma * S;
     }
     
-    inline float {{component_name}}::random_exponential_(float lambda) {
+    inline double {{component_name}}::Transition_::random_exponential_(double lambda) {
         return -std::log(V_.rng_->drandpos()) / lambda;
     }   
     
