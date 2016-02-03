@@ -148,8 +148,8 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
 
 }
 
-{{component_name}}::{{regime.name}}Regime::{{regime.name}}Regime()
-  : dynamics_function({{component_name}}_{{regime.name}}_dynamics) {
+{{component_name}}::{{regime.name}}Regime::{{regime.name}}Regime({{component_name}}* cell)
+  : Regime_(cell), dynamics_function({{component_name}}_{{regime.name}}_dynamics) {
   
     // Construct OnConditions specific to the regime.
     {% for on_condition in regime.on_conditions %}
