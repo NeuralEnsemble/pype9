@@ -45,7 +45,15 @@ namespace nineml {
         class Regime_;
         class Transition_;
         class OnEvent_;
-        class OnCondition_;                 
+        class OnCondition_;
+{% for regime in component_class.regimes %}
+    {% for on_event in regime.on_events %}
+        class {{regime.name}}On{{transition.src_port_name}}Event;
+    {% endfor %}
+    {% for on_condition in regime.on_conditions %}
+        class {{regime.name}}OnCondition{{regime.index_of(on_condition)}};
+    {% endfor %}
+{% endfor %}      
 
         ~{{component_name}}();
 	    {{component_name}}(const {{component_name}} &);
@@ -76,6 +84,13 @@ namespace nineml {
 	    void init_state_(const nest::Node& proto);
 	    void init_buffers_();
 	    void calibrate();
+	    
+	    void reset_events();
+	    
+        /* Inline random distribution methods */
+        double random_uniform_(double low, double high);
+        double random_normal_(double mu, double sigma);
+        double random_exponential_(double lambda); 
 
 	    void update(nest::Time const &, const nest::long_t, const nest::long_t);
 
@@ -204,6 +219,11 @@ namespace nineml {
 	        // Event receive port buffers
 {% for port in component_class.event_receive_ports %}
             nest::RingBuffer {{port.name}}_event_port;
+            int num_unprocessed_{{port.name}}_events;
+{% endfor %}
+
+{% for port in component_class.event_send_ports %}
+            int num_{{port.name}}_events;
 {% endfor %}
 
             // Analog receive port buffers
@@ -230,20 +250,30 @@ namespace nineml {
 	    
 	    class Regime_ {
 	     
-	     public:
-	       Regime_({{component_name}}* cell) : cell(cell) {}
-	       dynamics_function_type get_dynamics_function();
-	       Transition_* transition(nest::Time const & origin, const nest::long_t& lag);
-	       void set_triggers(nest::Time const & origin, const nest::long_t& lag);
+	      public:
+	        Regime_({{component_name}}* cell, dynamics_function_type dynamics_function=NULL) : cell(cell), dynamics_function(dynamics_function) {}
+	        dynamics_function_type get_dynamics_function();
+	        Transition_* transition(nest::Time const & origin, const nest::long_t& lag);
+	        void set_triggers(nest::Time const & origin, const nest::long_t& lag);
 	       
-	     protected:
-	       {{component_name}}* cell;
-	       dynamics_function_type dynamics_function;
-           std::vector<OnCondition_*> on_conditions;
-           std::vector<OnEvent_*> on_events;
-           std::vector<Transition_*> active;
+	      protected:
+	        {{component_name}}* cell;
+	        dynamics_function_type dynamics_function;
+            std::vector<OnCondition_*> on_conditions;
+            std::vector<OnEvent_*> on_events;
+            std::vector<OnCondition_*> active_on_conditions;
            
-         friend class Transition_;
+          friend class Transition_;
+          friend class OnEvent_;
+          friend class OnCondition_;
+{% for regime in component_class.regimes %}
+    {% for on_event in regime.on_events %}
+          friend class {{regime.name}}On{{transition.src_port_name}}Event;
+    {% endfor %}
+    {% for on_condition in regime.on_conditions %}
+          friend class {{regime.name}}OnCondition{{regime.index_of(on_condition)}};
+    {% endfor %}
+{% endfor %}         
 	    
 	    };
 	    
@@ -270,8 +300,7 @@ namespace nineml {
 	      public:
 	        Transition_(Regime_* regime);
 	        virtual ~Transition_() {}
-	        virtual bool trigger_condition(nest::Time const & origin, const nest::long_t& lag) = 0;
-	        virtual double trigger_time(nest::Time const & origin, const nest::long_t& lag) = 0;
+	        virtual double time_occurred(nest::Time const & origin, const nest::long_t& lag) = 0;
 	        virtual void body(nest::Time const & origin, const nest::long_t& lag) = 0;
 	        void set_target_regime(Regime_* target_regime);
 	        Regime_* get_target_regime();
@@ -293,13 +322,8 @@ namespace nineml {
 	    class OnEvent_ : public Transition_ {
 	    
 	      public:
-	        OnEvent_(Regime_* regime, nest::RingBuffer* event_port)
-              : Transition_(regime), event_port(event_port) {}  
-	        bool trigger_condition(nest::Time const & origin, const nest::long_t& lag);
-	        double trigger_time(nest::Time const & origin, const nest::long_t& lag);
-	        
-	      protected:
-	        nest::RingBuffer* event_port;
+	        OnEvent_(Regime_* regime) : Transition_(regime) {}
+            virtual bool received(nest::Time const & origin, const nest::long_t& lag) = 0;
 	    
 	    };
 
@@ -309,6 +333,7 @@ namespace nineml {
 	    class OnCondition_ : public Transition_ {
 	      public:
 	        OnCondition_(Regime_* regime) : Transition_(regime) {}
+            virtual bool condition(nest::Time const & origin, const nest::long_t& lag) = 0;
 	    };
 	    
 	    /*
@@ -321,9 +346,9 @@ namespace nineml {
         class {{ClassName}} : public OnEvent_ {
 
           public:
-//            {{ClassName}}(Regime_* regime, nest::RingBuffer* event_port) : OnEvent_(regime, event_port) {}            
-            bool trigger_condition(nest::Time const & origin, const nest::long_t& lag);
-            double trigger_time(nest::Time const & origin, const nest::long_t& lag);
+            {{ClassName}}(Regime_* regime, nest::RingBuffer* event_port) : OnEvent_(regime, event_port) {}
+            bool received(nest::Time const & origin, const nest::long_t& lag);                        
+            double time_occurred(nest::Time const & origin, const nest::long_t& lag);
             void body(nest::Time const & origin, const nest::long_t& lag);
      
         };
@@ -334,9 +359,9 @@ namespace nineml {
         class {{ClassName}} : public OnCondition_ {
 
           public:
-//            {{ClassName}}(Regime_* regime) : OnCondition_(regime) {}
-            bool trigger_condition(nest::Time const & origin, const nest::long_t& lag);
-            double trigger_time(nest::Time const & origin, const nest::long_t& lag);
+            {{ClassName}}(Regime_* regime) : OnCondition_(regime) {}
+            bool condition(nest::Time const & origin, const nest::long_t& lag);
+            double time_occurred(nest::Time const & origin, const nest::long_t& lag);
             void body(nest::Time const & origin, const nest::long_t& lag);
      
         };
@@ -434,6 +459,33 @@ namespace nineml {
        from the corresponding NEST random deviate implementations in librandom
        but stripped from RandomDeviate boiler plate */
     
+    inline double {{component_name}}::random_uniform_(double low, double high) {
+        return low + (high - low) * V_.rng_->drand();
+    }
+
+    inline double {{component_name}}::random_normal_(double mu, double sigma) {
+        // Box-Muller algorithm, see Knuth TAOCP, vol 2, 3rd ed, p 122
+        // we waste one number
+        double V1;
+        double V2;
+        double S;
+
+        do {
+            V1 = 2 * V_.rng_->drand() - 1;
+            V2 = 2 * V_.rng_->drand() - 1;
+            S = V1 * V1 + V2 * V2;
+        } while ( S >= 1 );
+
+        if ( S != 0 )
+            S = V1 * std::sqrt( -2 * std::log( S ) / S );
+        return mu + sigma * S;
+    }
+    
+    inline double {{component_name}}::random_exponential_(double lambda) {
+        return -std::log(V_.rng_->drandpos()) / lambda;
+    }
+    
+    
     inline double {{component_name}}::Transition_::random_uniform_(double low, double high) {
         return low + (high - low) * this->regime->cell->V_.rng_->drand();
     }
@@ -458,7 +510,7 @@ namespace nineml {
     
     inline double {{component_name}}::Transition_::random_exponential_(double lambda) {
         return -std::log(this->regime->cell->V_.rng_->drandpos()) / lambda;
-    }   
+    }
     
 
 } // end namespace nest

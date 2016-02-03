@@ -43,133 +43,121 @@ namespace nest{
 
 namespace nineml {
 
-extern "C" int {{component_name}}_dynamics{% include "dynamics_signature.tmpl" %} {
-
-	// Get references to the members of the model
-	assert(pnode_);
-	const {{component_name}}& node_ = *(reinterpret_cast<{{component_name}}*>(pnode_));
-	const {{component_name}}::Parameters_& P_ = node_.P_;
-	const {{component_name}}::State_& S_ = node_.S_;
-	const {{component_name}}::Buffers_& B_ = node_.B_;
-
+	extern "C" int {{component_name}}_dynamics{% include "dynamics_signature.tmpl" %} {
+	
+		// Get references to the members of the model
+		assert(pnode_);
+		const {{component_name}}& node_ = *(reinterpret_cast<{{component_name}}*>(pnode_));
+		const {{component_name}}::Parameters_& P_ = node_.P_;
+		const {{component_name}}::State_& S_ = node_.S_;
+		const {{component_name}}::Buffers_& B_ = node_.B_;
+	
 {% for regime in component_class.regimes %}
-    {{elseif(loop.first)}} (B_.current_regime == {{component_name}}::{{regime.name}}_REGIME) {
-	    {{macros.map_required_vars_locally(regime.time_derivatives, component_class, component_name, unit_handler, []) | indent(8)}}
-	    // Evaluate differential equations
+	    {{elseif(loop.first)}} (B_.current_regime == {{component_name}}::{{regime.name}}_REGIME) {
+		    {{macros.map_required_vars_locally(regime.time_derivatives, component_class, component_name, unit_handler, []) | indent(8)}}
+		    // Evaluate differential equations
 	{% for td, scaled_expr, units in unit_handler.scale_time_derivatives(regime.time_derivatives) %}
-	    //std::cout << "{{td.dependent_variable}}=" << {{scaled_expr.rhs_cstr}};
-	    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
+		    //std::cout << "{{td.dependent_variable}}=" << {{scaled_expr.rhs_cstr}};
+		    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
 	{% endfor %}
-    {{endif(loop.last)}}
+	    {{endif(loop.last)}}
 {% endfor %}
-
-    //std::cout << "Success at t=" << t << ": " << GSL_SUCCESS << std::endl;
-    {% include "dynamics_return.tmpl" %}
-
-}
-
-
-{{component_name}}::Transition_* {{component_name}}::Regime_::transition({{component_name}}::State_& state, double t, const nest::long_t& lag) {
-    // Get vector of transitions (both OnConditions and OnEvents) that are triggered in the current timestep
-    std::vector<Transition_*> triggered;
-    for (std::vector<Transition_*>::iterator it = this->active.begin(); it != this->active.end(); ++it)
-        if ((*it)->trigger_condition(state, t, lag))
-            triggered.push_back(*it);
-
-    // Get the earliest transition to be triggered
-    Transition_* transition;
-    if (!triggered.size())
-        transition = NULL;
-    else if (triggered.size() == 1)
-        transition = triggered[0];
-    else {
-        std::vector<double> times;
-        for (std::vector<Transition_*>::iterator it = triggered.begin(); it != triggered.end(); ++it) 
-            times.push_back((*it)->trigger_time(state, t));
-        int min_index = std::min_element(times.begin(), times.end()) - times.begin();
-        transition = triggered[min_index];
-    }
-    return transition;
-}
+	
+	    //std::cout << "Success at t=" << t << ": " << GSL_SUCCESS << std::endl;
+	    {% include "dynamics_return.tmpl" %}
+	
+	}
 
 
-void {{component_name}}::Regime_::set_triggers({{component_name}}::State_& state, double t, const nest::long_t& lag) {
-    // Reset the vector of active transitions
-    this->active.clear();
-    
-    // Add OnConditions to the list of active transitions if their trigger condition evaluates to false
-    for (std::vector<OnCondition_*>::iterator it = this->on_conditions.begin(); it != this->on_conditions.end(); ++it)
-        if (!(*it)->trigger_condition(state, t, lag))
-            this->active.push_back(*it);
-            
-    // Add all OnEvents to the list of active transitions    
-    for (std::vector<OnEvent_*>::iterator it = this->on_events.begin(); it != this->on_events.end(); ++it)
-        this->active.push_back(*it);
-        
-}
+	{{component_name}}::Transition_* {{component_name}}::Regime_::transition(nest::Time const& origin, const nest::long_t& lag) {
+	    // Get vector of transitions (both OnConditions and OnEvents) that are triggered in the current timestep
+	    std::vector<Transition_*> occurred;
+	    for (std::vector<OnCondition_*>::iterator it = this->active_on_conditions.begin(); it != this->active_on_conditions.end(); ++it)
+	        if ((*it)->condition(origin, lag))
+	            occurred.push_back(*it);
+	            
+	    for (std::vector<OnEvent_*>::iterator it = this->on_events.begin(); it != this->on_events.end(); ++it)
+	        if ((*it)->received(origin, lag))
+	            occurred.push_back(*it);
+	
+	    // Get the earliest transition to be triggered
+	    Transition_* transition;
+	    if (!occurred.size())
+	        transition = NULL;
+	    else if (occurred.size() == 1)
+	        transition = occurred[0];
+	    else {
+	        std::vector<double> times;
+	        for (std::vector<Transition_*>::iterator it = occurred.begin(); it != occurred.end(); ++it) 
+	            times.push_back((*it)->time_occurred(origin, lag));
+	        int min_index = std::min_element(times.begin(), times.end()) - times.begin();
+	        transition = occurred[min_index];
+	    }
+	    return transition;
+	}
 
 
-double {{component_name}}::OnEvent_::trigger_time({{component_name}}::State_& state, double t) {
-    return t;
-}
-
-
-bool {{component_name}}::OnEvent_::trigger_condition({{component_name}}::State_& state, double t, const nest::long_t& lag) {
-    return (bool)this->event_port->get_value(lag);
-}
-
+	void {{component_name}}::Regime_::set_triggers(nest::Time const& origin, const nest::long_t& lag) {
+	    // Reset the vector of active transitions
+	    this->active_on_conditions.clear();
+	    
+	    // Add OnConditions to the list of active transitions if their trigger condition evaluates to false
+	    for (std::vector<OnCondition_*>::iterator it = this->on_conditions.begin(); it != this->on_conditions.end(); ++it)
+	        if (!(*it)->condition(origin, lag))
+	            this->active_on_conditions.push_back(*it);
+	        
+	}
 
 {% for regime in component_class.regimes %}
 
-/**
- *  Dynamics and transitions for {{regime.name}} regime
- */
+	/**
+	 *  Dynamics and transitions for {{regime.name}} regime
+	 */
 
     {% if regime.num_time_derivatives %}
-extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_signature.tmpl" %} {
-
-    // Get references to the members of the model
-    assert(pnode_);
-    const {{component_name}}& node_ = *(reinterpret_cast<{{component_name}}*>(pnode_));
-    const {{component_name}}::Parameters_& P_ = node_.P_;
-    const {{component_name}}::State_& S_ = node_.S_;
-    const {{component_name}}::Buffers_& B_ = node_.B_;
-
-    {{macros.map_required_vars_locally(regime.time_derivatives, component_class, component_name, unit_handler, []) | indent(8)}}
-
-    // Evaluate differential equations
+	extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_signature.tmpl" %} {
+	
+	    // Get references to the members of the model
+	    assert(pnode_);
+	    const {{component_name}}& node_ = *(reinterpret_cast<{{component_name}}*>(pnode_));
+	    const {{component_name}}::Parameters_& P_ = node_.P_;
+	    const {{component_name}}::State_& S_ = node_.S_;
+	    const {{component_name}}::Buffers_& B_ = node_.B_;
+	
+	    {{macros.map_required_vars_locally(regime.time_derivatives, component_class, component_name, unit_handler, []) | indent(8)}}
+	
+	    // Evaluate differential equations
         {% for td, scaled_expr, units in unit_handler.scale_time_derivatives(regime.time_derivatives) %}
-    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
+	    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
         {% endfor %}
-
-    //std::cout << "Success at t=" << t << ": " << GSL_SUCCESS << std::endl;
-    {% include "dynamics_return.tmpl" %}
+	
+	    //std::cout << "Success at t=" << t << ": " << GSL_SUCCESS << std::endl;
+        {% include "dynamics_return.tmpl" %}
+    }        
     {% endif %}
 
-}
-
-{{component_name}}::{{regime.name}}Regime::{{regime.name}}Regime({{component_name}}* cell)
-  : Regime_(cell), dynamics_function({{component_name}}_{{regime.name}}_dynamics) {
-  
-    // Construct OnConditions specific to the regime.
+	{{component_name}}::{{regime.name}}Regime::{{regime.name}}Regime({{component_name}}* cell)
+	  : Regime_(cell{% if regime.num_time_derivatives %}, {{component_name}}_{{regime.name}}_dynamics{% endif %}) {
+	  
+	    // Construct OnConditions specific to the regime.
     {% for on_condition in regime.on_conditions %}
-    this->on_conditions.push_back(new {{regime.name}}OnCondition{{regime.index_of(on_condition)}}());
+	    this->on_conditions.push_back(new {{regime.name}}OnCondition{{regime.index_of(on_condition)}}(this));
     {% endfor %}
-
-    // Construct OnConditions specific to the regime.
+	
+	    // Construct OnConditions specific to the regime.
     {% for on_event in regime.on_events %}
-    this->on_events.push_back(new {{regime.name}}On{{on_event.src_port_name}}Event());              
+	    this->on_events.push_back(new {{regime.name}}On{{on_event.src_port_name}}Event(this, this->cell->B_.{{on_event.src_port_name}}_event_port));              
     {% endfor %}
-}
+	}
 
-{{component_name}}::{{regime.name}}Regime::~{{regime.name}}Regime() {
-    for (std::vector<OnCondition_*>::iterator it = this->on_conditions.begin(); it != this->on_conditions.end(); ++it)
-        delete *it;
-    for (std::vector<OnEvent_*>::iterator it = this->on_events.begin(); it != this->on_events.end(); ++it)
-        delete *it;        
-}
+	{{component_name}}::{{regime.name}}Regime::~{{regime.name}}Regime() {
+	    for (std::vector<OnCondition_*>::iterator it = this->on_conditions.begin(); it != this->on_conditions.end(); ++it)
+	        delete *it;
+	    for (std::vector<OnEvent_*>::iterator it = this->on_events.begin(); it != this->on_events.end(); ++it)
+	        delete *it;        
+	}
 
-// Transition methods for {{regime.name}} regime
+    // Transition methods for {{regime.name}} regime
 
     {% for transition in regime.transitions %}
         {% if transition.nineml_type == 'OnCondition' %}
@@ -178,46 +166,78 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
             {% set TransitionClassName = '{}On{}Event'.format(regime.name, transition.src_port_name) %}
         {% endif %}
 
-{{component_name}}::{{TransitionClassName}}::body({{component_name}}* node, double t, nest::Time const& origin, nest::long_t& lag) {
-    // Map all variables/expressions to the local namespace that are required to evaluate the state assignments that were not required for the triggers
-    {{macros.map_required_vars_locally(transition.state_assignments, component_class, component_name, unit_handler, []) | indent(4)}}
-
-    // State assignments
+	void {{component_name}}::{{TransitionClassName}}::body(nest::Time const& origin, const nest::long_t& lag) {
+	    // Map all variables/expressions to the local namespace that are required to evaluate the state assignments that were not required for the triggers
+	
+	
+	    State_& S_ = this->regime->cell->S_;
+	    const Buffers_& B_ = this->regime->cell->B_;
+	    const Parameters_& P_ = this->regime->cell->P_;
+	    Variables_& V_ = this->regime->cell->V_;
+	    
+	    {{macros.map_required_vars_locally(transition.state_assignments, component_class, component_name, unit_handler, []) | indent(8)}}
+	
+	    // State assignments
         {% for sa, scaled_expr, units in unit_handler.scale_aliases(transition.state_assignments) %}
-    node.S_.y_[{{component_name}}::State_::{{sa.name}}_INDEX] = {{scaled_expr.rhs_cstr}};  // ({{units}})
+	    S_.y_[{{component_name}}::State_::{{sa.name}}_INDEX] = {{scaled_expr.rhs_cstr}};  // ({{units}})
         {% endfor %}
-        
-    // Output events 
-
-    // FIXME: Need to specify different output ports in a way that can be read by the receiving nodes
-    // Output events
+	        
+	    // Output events 
+	
+	    // FIXME: Need to specify different output ports in a way that can be read by the receiving nodes
+	    // Output events
         {% for output_event in transition.output_events %}
-    set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
-    nest::SpikeEvent se;
-    node.network()->send(*this, se, lag);
+	    this->regime->cell->set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
+	    nest::SpikeEvent se;
+	    this->regime->cell->network()->send(*this->regime->cell, se, lag);
         {% endfor %}
-}
+	}
+
+    {% endfor %}
+    {% for on_event in regime.on_events %}
+            {% set TransitionClassName = '{}On{}Event'.format(regime.name, transition.src_port_name) %}
+    
+    double {{component_name}}::{{TransitionClassName}}::OnEvent_::time_occurred(nest::Time const& origin, const nest::long_t& lag) {
+        //FIXME: Should use the exact spike time specified in the spike event
+        return origin.get_ms() + lag * nest::Time::get_resolution().get_ms();
+    }
+    
+    
+    bool {{component_name}}::OnEvent_::{{TransitionClassName}}::received(nest::Time const& origin, const nest::long_t& lag) {
+        return (bool)this->regime->cell->B_.num_unprocessed_{{on_event.src_port_name}}_events;
+    }
 
     {% endfor %}
     {% for on_condition in regime.on_conditions %}
         {% set TransitionClassName = '{}OnCondition{}'.format(regime.name, regime.index_of(on_condition)) %}
-{{component_name}}::{{TransitionClassName}}::trigger_condition({{component_name}}::State_& state, {{component_name}}::Buffers_& buffers, double t, const nest::long_t& lag) {
-    {{macros.map_required_vars_locally(on_condition.state_assignments, component_class, component_name, unit_handler, []) | indent(4)}}
-
-    return {{on_condition.trigger.rhs_cstr}};
-
-}
-
-{{component_name}}::{{TransitionClassName}}::trigger_time({{component_name}}::State_& state, double t const nest::long_t& lag) {
+	bool {{component_name}}::{{TransitionClassName}}::condition(nest::Time const& origin, const nest::long_t& lag) {
+	    
+	    const State_& S_ = this->regime->cell->S_;
+	    const Buffers_& B_ = this->regime->cell->B_;
+	    const Parameters_& P_ = this->regime->cell->P_;
+	    double t = origin.get_ms() + lag * nest::Time::get_resolution().get_ms();
+	        
+	    {{macros.map_required_vars_locally(on_condition.trigger, component_class, component_name, unit_handler, []) | indent(8)}}
+	
+	    return {{on_condition.trigger.rhs_cstr}};
+	
+	}
+	
+	double {{component_name}}::{{TransitionClassName}}::time_occurred(nest::Time const& origin, const nest::long_t& lag) {
        {% set exact_time_expr = on_condition.trigger.crossing_time_expr %}
        {% if exact_time_expr %}
-    {{macros.map_required_vars_locally(on_condition.state_assignments, component_class, component_name, unit_handler, []) | indent(4)}}       
-    // The trigger expression depends on 't' so determine the exact time that the threshold was crossed.
-    return {{exact_time_expr.rhs_cstr}};
+	
+	    const State_& S_ = this->regime->cell->S_;
+	    const Buffers_& B_ = this->regime->cell->B_;
+	    const Parameters_& P_ = this->regime->cell->P_;
+	       
+	    {{macros.map_required_vars_locally(exact_time_expr, component_class, component_name, unit_handler, []) | indent(8)}}       
+	    // The trigger expression depends on 't' so determine the exact time that the threshold was crossed.
+	    return {{exact_time_expr.rhs_cstr}};
        {% else %}
-    return t;
+	    return origin.get_ms() + lag * nest::Time::get_resolution().get_ms();
        {% endif %}
-}
+	}
 
 	{% endfor %}
 {% endfor %}
@@ -425,6 +445,16 @@ void {{component_name}}::init_buffers_() {
 {% include "init_solver.tmpl" %}
 }
 
+
+void {{component_name}}::reset_events() {
+{% for port in component_class.event_send_ports %}
+    B_.num_{{port.name}}_events = 0;
+{% endfor %}
+{% for port in component_class.event_receive_ports %}
+    B_.num_unprocessed_{{port.name}}_events = B_.{{port.name}}_event_port.get_multiplicity();
+{% endfor %}
+}
+
 /****************
  * Constructors *
  ****************/
@@ -438,9 +468,9 @@ void {{component_name}}::init_buffers_() {
     recordablesMap_.create();
 
     double t = 0.0;
-    {{macros.map_required_vars_locally(component_class.regime(default_regime).all_triggers(), component_class, component_name, unit_handler, []) | indent(4)}}
+    {{macros.map_required_vars_locally(component_class.regime(default_regime).all_triggers(), component_class, component_name, unit_handler, []) | indent(8)}}
 
-    {{macros.set_triggers(component_class.regime(default_regime), component_class, component_name, unit_handler) | indent}}
+    {{macros.set_triggers(component_class.regime(default_regime), component_class, component_name, unit_handler) | indent(8)}}
 }
 
 {{component_name}}::{{component_name}}(const {{component_name}}& n)
@@ -455,7 +485,7 @@ void {{component_name}}::init_node_(const Node& proto) {
     S_ = State_(P_);
 
     double t = 0.0;
-    {{macros.map_required_vars_locally(component_class.regime(default_regime).all_triggers(), component_class, component_name, unit_handler, []) | indent(4)}}
+    {{macros.map_required_vars_locally(component_class.regime(default_regime).all_triggers(), component_class, component_name, unit_handler, []) | indent(8)}}
 
     {{macros.set_triggers(component_class.regime(default_regime), component_class, component_name, unit_handler) | indent}}    
 }
@@ -465,7 +495,7 @@ void {{component_name}}::init_state_(const Node& proto) {
     S_ = State_(pr.P_);
 
     double t = 0.0;
-    {{macros.map_required_vars_locally(component_class.regime(default_regime).all_triggers(), component_class, component_name, unit_handler, []) | indent(4)}}
+    {{macros.map_required_vars_locally(component_class.regime(default_regime).all_triggers(), component_class, component_name, unit_handler, []) | indent(8)}}
 
     {{macros.set_triggers(component_class.regime(default_regime), component_class, component_name, unit_handler) | indent}}    
 }

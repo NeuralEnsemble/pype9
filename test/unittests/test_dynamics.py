@@ -366,6 +366,8 @@ class TestDynamics(TestCase):
             cells[sim_name] = celltype(rate=rate)
             cells[sim_name].record('spike_output')
             cells[sim_name].update_state(initial_states)
+        print "Exiting after successful compilation"
+        return
         # Run NEURON simulation
 #         simulatorNEURON.reset()
 #         neuron.h.dt = self.dt
