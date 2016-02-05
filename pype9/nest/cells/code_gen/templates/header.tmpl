@@ -236,15 +236,7 @@ namespace nineml {
             double_t {{port.name}}_value;
 {% endfor %}
 
-            // Flags to signify whether the triggers are active (i.e. evaluated to false in the last time step)
-{% for regime in component_class.regimes %}
-    {% for oc in regime.on_conditions %}
-            bool {{regime.name}}_trigger_{{regime.index_of(oc)}}_active;
-    {% endfor %}
-{% endfor %}
-
-            // Holds the id of the current regime
-            int current_regime;
+            Regime_* current_regime;
 
 	    }; // end struct Buffers_
 	    
@@ -298,11 +290,11 @@ namespace nineml {
 	    class Transition_ {
 
 	      public:
-	        Transition_(Regime_* regime);
+	        Transition_(Regime_* regime, const std::string& target_regime_name);
 	        virtual ~Transition_() {}
 	        virtual double time_occurred(nest::Time const & origin, const nest::long_t& lag) = 0;
 	        virtual void body(nest::Time const & origin, const nest::long_t& lag) = 0;
-	        void set_target_regime(Regime_* target_regime);
+	        void set_target_regime(const std::map<std::string, Regime_*>& regimes);
 	        Regime_* get_target_regime();
 	        
             /* Inline random distribution methods */
@@ -313,6 +305,7 @@ namespace nineml {
 	      protected:
 	        Regime_* regime;
 	        Regime_* target_regime;
+	        std::string target_regime_name;
 	    };
 	    
 	    
@@ -322,7 +315,7 @@ namespace nineml {
 	    class OnEvent_ : public Transition_ {
 	    
 	      public:
-	        OnEvent_(Regime_* regime) : Transition_(regime) {}
+	        OnEvent_(Regime_* regime, const std::string& target_regime_name) : Transition_(regime, target_regime_name) {}
             virtual bool received(nest::Time const & origin, const nest::long_t& lag) = 0;
 	    
 	    };
@@ -332,7 +325,7 @@ namespace nineml {
          */
 	    class OnCondition_ : public Transition_ {
 	      public:
-	        OnCondition_(Regime_* regime) : Transition_(regime) {}
+	        OnCondition_(Regime_* regime, const std::string& target_regime_name) : Transition_(regime, target_regime_name) {}
             virtual bool condition(nest::Time const & origin, const nest::long_t& lag) = 0;
 	    };
 	    
@@ -346,7 +339,7 @@ namespace nineml {
         class {{ClassName}} : public OnEvent_ {
 
           public:
-            {{ClassName}}(Regime_* regime, nest::RingBuffer* event_port) : OnEvent_(regime, event_port) {}
+            {{ClassName}}(Regime_* regime, const std::string& target_regime_name) : OnEvent_(regime, target_regime_name) {}
             bool received(nest::Time const & origin, const nest::long_t& lag);                        
             double time_occurred(nest::Time const & origin, const nest::long_t& lag);
             void body(nest::Time const & origin, const nest::long_t& lag);
@@ -359,7 +352,7 @@ namespace nineml {
         class {{ClassName}} : public OnCondition_ {
 
           public:
-            {{ClassName}}(Regime_* regime) : OnCondition_(regime) {}
+            {{ClassName}}(Regime_* regime, const std::string& target_regime_name) : OnCondition_(regime, target_regime_name) {}
             bool condition(nest::Time const & origin, const nest::long_t& lag);
             double time_occurred(nest::Time const & origin, const nest::long_t& lag);
             void body(nest::Time const & origin, const nest::long_t& lag);
@@ -379,6 +372,10 @@ namespace nineml {
 
 	    //! Mapping of recordables names to access functions	
 		static nest::RecordablesMap<{{component_name}}> recordablesMap_;
+		
+	  protected:
+	    void construct_regimes();
+        std::map<std::string, Regime_*> regimes;		
     
 	}; // end class {{component_name}}
 	
@@ -386,8 +383,8 @@ namespace nineml {
 	    return this->dynamics_function;
     }
 
-    inline void {{component_name}}::Transition_::set_target_regime({{component_name}}::Regime_* target_regime) {
-        this->target_regime = target_regime;   
+    inline void {{component_name}}::Transition_::set_target_regime(std::map<std::string, {{component_name}}::Regime_*>& regimes) {
+        this->target_regime = regimes[this->target_regime_name];   
     }
 
     inline {{component_name}}::Regime_* {{component_name}}::Transition_::get_target_regime() {

@@ -297,6 +297,61 @@ namespace nineml {
 
 {% include "jacobian.tmpl" %}
 
+
+/****************
+ * Constructors *
+ ****************/
+
+{{component_name}}::{{component_name}}()
+    : Archiving_Node(),
+      P_(),
+      S_(P_),
+      B_(*this) {
+
+    recordablesMap_.create();
+    
+    // Construct all regimes
+{% for regime in component_class.regimes %}
+    this->regimes[{{regime.name}}] = new {{regime.name}}Regime_(this);
+{% endfor %}
+{% for regime in component_class.regimes %}
+    {% for transition in regime.transitions %}
+    this->regimes[{{regime.name}}].set_target_regime({regime.name}}Regime_(this);
+    {% endfor %}
+{% endfor %}        
+}
+
+{{component_name}}::{{component_name}}(const {{component_name}}& n)
+    : Archiving_Node(n),
+      P_(n.P_),
+      S_(n.S_),
+      B_(n.B_, *this),
+      regimes(n.regimes) {}
+
+void {{component_name}}::init_node_(const Node& proto) {
+    const {{component_name}}& pr = downcast<{{component_name}}>(proto);
+    P_ = pr.P_;
+    S_ = State_(P_);
+}
+
+void {{component_name}}::init_state_(const Node& proto) {
+    const {{component_name}}& pr = downcast<{{component_name}}>(proto);
+    S_ = State_(pr.P_);
+}
+
+/**************
+ * Destructor *
+ **************/
+
+{{component_name}}::~{{component_name}} () {
+    // Destruct all regimes
+    for (std::map<std::string, Regime_*>::iterator it = this->regimes.begin(); it != this->regimes.end(); ++it)
+        delete it->second;
+
+{% include "destructor.tmpl" %}
+}
+
+
 /**********************************
  * Define parameters of the model *
  **********************************/
@@ -442,6 +497,8 @@ void {{component_name}}::init_buffers_() {
     B_.{{p.name}}_value = 0.0;
 {% endfor %}
 
+    B_.current_regime = n.regimes[{{default_regime}}];
+
 {% include "init_solver.tmpl" %}
 }
 
@@ -453,59 +510,6 @@ void {{component_name}}::reset_events() {
 {% for port in component_class.event_receive_ports %}
     B_.num_unprocessed_{{port.name}}_events = B_.{{port.name}}_event_port.get_multiplicity();
 {% endfor %}
-}
-
-/****************
- * Constructors *
- ****************/
-
-{{component_name}}::{{component_name}}()
-    : Archiving_Node(),
-      P_(),
-      S_(P_),
-      B_(*this) {
-
-    recordablesMap_.create();
-
-    double t = 0.0;
-    {{macros.map_required_vars_locally(component_class.regime(default_regime).all_triggers(), component_class, component_name, unit_handler, []) | indent(8)}}
-
-    {{macros.set_triggers(component_class.regime(default_regime), component_class, component_name, unit_handler) | indent(8)}}
-}
-
-{{component_name}}::{{component_name}}(const {{component_name}}& n)
-    : Archiving_Node(n),
-      P_(n.P_),
-      S_(n.S_),
-      B_(n.B_, *this) {}
-
-void {{component_name}}::init_node_(const Node& proto) {
-    const {{component_name}}& pr = downcast<{{component_name}}>(proto);
-    P_ = pr.P_;
-    S_ = State_(P_);
-
-    double t = 0.0;
-    {{macros.map_required_vars_locally(component_class.regime(default_regime).all_triggers(), component_class, component_name, unit_handler, []) | indent(8)}}
-
-    {{macros.set_triggers(component_class.regime(default_regime), component_class, component_name, unit_handler) | indent}}    
-}
-
-void {{component_name}}::init_state_(const Node& proto) {
-    const {{component_name}}& pr = downcast<{{component_name}}>(proto);
-    S_ = State_(pr.P_);
-
-    double t = 0.0;
-    {{macros.map_required_vars_locally(component_class.regime(default_regime).all_triggers(), component_class, component_name, unit_handler, []) | indent(8)}}
-
-    {{macros.set_triggers(component_class.regime(default_regime), component_class, component_name, unit_handler) | indent}}    
-}
-
-/**************
- * Destructor *
- **************/
-
-{{component_name}}::~{{component_name}} () {
-{% include "destructor.tmpl" %}
 }
 
 /************************************************************************
