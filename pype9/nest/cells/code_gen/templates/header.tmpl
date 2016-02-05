@@ -23,6 +23,8 @@ namespace nineml {
 {% include "solver_preludes.tmpl" %}
 {% include "ss_solver_preludes.tmpl" %}
 
+    class {{component_name}};
+
     /**
      * Create a typedef for the function that represents the system of ODEs
      */ 
@@ -96,24 +98,12 @@ namespace nineml {
 
     // Set dynamics methods (the ones that actually model the dynamics) as friends
 {% for regime in component_class.regimes %}
-	    friend int {{component_name}}_dynamics{% include "dynamics_signature.tmpl" %};
-	    {% include "residual_friend.tmpl" %}
-	    {% include "event_friend.tmpl" %}
-	    {% include "ss_friend.tmpl" %}
+	    friend int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_signature.tmpl" %};
 {% endfor %}
+        {% include "residual_friend.tmpl" %}
+        {% include "event_friend.tmpl" %}
+        {% include "ss_friend.tmpl" %}
 
-	    // Regime ids
-	    static const int DEFAULT_REGIME_ = 0;
-	    enum Regimes {
-	        {% for regime in component_class.regimes %}
-	            {% if loop.first %}
-	        {{regime.name}}_REGIME = DEFAULT_REGIME_,
-	            {% else %}
-	        {{regime.name}}_REGIME,
-	            {% endif -%}
-	        {% endfor %}
-	        SUP_REGIME_
-	    };
 
 {% if component_class.event_receive_ports %}
 	    /* Event port ids
@@ -255,6 +245,7 @@ namespace nineml {
             std::vector<OnEvent_*> on_events;
             std::vector<OnCondition_*> active_on_conditions;
            
+          friend class {{component_name}};
           friend class Transition_;
           friend class OnEvent_;
           friend class OnCondition_;
@@ -274,11 +265,11 @@ namespace nineml {
          * default constructor and initialise its transitions
          */
 {% for regime in component_class.regimes %}
-        class {{regime.name}}Regime : Regime_ {
+        class {{regime.name}}Regime_ : public Regime_ {
             
           public:
-            {{regime.name}}Regime({{component_name}}* cell);
-            ~{{regime.name}}Regime();
+            {{regime.name}}Regime_({{component_name}}* cell);
+            ~{{regime.name}}Regime_();
 
         };
 {% endfor %}	    
@@ -294,7 +285,7 @@ namespace nineml {
 	        virtual ~Transition_() {}
 	        virtual double time_occurred(nest::Time const & origin, const nest::long_t& lag) = 0;
 	        virtual void body(nest::Time const & origin, const nest::long_t& lag) = 0;
-	        void set_target_regime(const std::map<std::string, Regime_*>& regimes);
+	        void set_target_regime(std::map<std::string, Regime_*>& regimes);
 	        Regime_* get_target_regime();
 	        
             /* Inline random distribution methods */
