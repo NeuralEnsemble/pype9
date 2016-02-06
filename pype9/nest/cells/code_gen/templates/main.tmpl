@@ -107,12 +107,12 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
         {% endfor %}
 	
     //std::cout << "Success at t=" << t << ": " << GSL_SUCCESS << std::endl;
-        {% include "dynamics_return.tmpl" %}
+        {% include "solver_return.tmpl" %}
 }        
     {% endif %}
 
 {{component_name}}::{{regime.name}}Regime_::{{regime.name}}Regime_({{component_name}}* cell)
-  : Regime_(cell{% if regime.num_time_derivatives %}, {{component_name}}_{{regime.name}}_dynamics{% endif %}) {
+  : Regime_(cell){% if regime.num_time_derivatives %}{% include "solver_construct.tmpl" %}{% endif %}) {
   
     // Construct OnConditions specific to the regime.
     {% for on_condition in regime.on_conditions %}
@@ -123,13 +123,42 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
     {% for on_event in regime.on_events %}
     this->on_events.push_back(new {{regime.name}}On{{on_event.src_port_name}}Event(this, "{{on_event.target_regime.name}}"));              
     {% endfor %}
+
 }
 
 {{component_name}}::{{regime.name}}Regime_::~{{regime.name}}Regime_() {
     for (std::vector<OnCondition_*>::iterator it = this->on_conditions.begin(); it != this->on_conditions.end(); ++it)
         delete *it;
     for (std::vector<OnEvent_*>::iterator it = this->on_events.begin(); it != this->on_events.end(); ++it)
-        delete *it;        
+        delete *it;
+    {% if regime.num_time_derivatives %}    
+    {% include "solver_destruct.tmpl" %}
+    {% endif %}
+}
+
+void {{component_name}}::{{regime.name}}Regime_::init_solver() {
+    {% if regime.num_time_derivatives %}    
+    {% include "solver_init.tmpl" %}
+    {% endif %}
+}
+
+int {{component_name}}::{{regime.name}}Regime_::step_ode() {
+
+    //FIXME: Clamping of vars should be replaced by the resizing of the state
+    //       vector that is solved to only the states that have time-derivatives
+    //       in the regime.
+    /***** Set clamp vars for state variables that don't have a time derivative in this regime *****/
+    {% for sv in regime.no_time_derivatives(component_class.state_variables) %}
+    double {{sv.name}}_clamp_ = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];
+    {% endfor %}
+
+    // Step ODE solver
+{% include "solver_update.tmpl" %}
+    
+    /***** Reset state variables from clamp vars for state variables that don't have a time derivative in this regime *****/
+    {% for sv in regime.no_time_derivatives(component_class.state_variables) %}
+            S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX] = {{sv.name}}_clamp_;
+    {% endfor %}    
 }
 
 // Transition methods for {{regime.name}} regime
@@ -271,7 +300,7 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(nest::Time con
  * Diagonal Jacobian approximation if required *
  ***********************************************/
 
-{% include "jacobian.tmpl" %}
+{% include "solver_jacobian.tmpl" %}
 
 
 /****************
@@ -329,8 +358,6 @@ void {{component_name}}::init_state_(const Node& proto) {
     // Destruct all regimes
     for (std::map<std::string, Regime_*>::iterator it = this->regimes.begin(); it != this->regimes.end(); ++it)
         delete it->second;
-
-{% include "destructor.tmpl" %}
 }
 
 
@@ -441,15 +468,13 @@ void {{component_name}}::State_::set (const DictionaryDatum &d_, const Parameter
  ***********/
 
 {{component_name}}::Buffers_::Buffers_({{component_name}}& n)
-    : logger_(n),
-{% include "buffer_vars.tmpl" %} {
+    : logger_(n) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
 
 {{component_name}}::Buffers_::Buffers_(const Buffers_&, {{component_name}}& n)
-    : logger_(n),
-{% include "buffer_vars.tmpl" %} {
+    : logger_(n) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
@@ -478,8 +503,8 @@ void {{component_name}}::init_buffers_() {
 {% endfor %}
 
     B_.current_regime = this->regimes["{{default_regime}}"];
+    B_.current_regime.init_solver();
 
-{% include "init_solver.tmpl" %}
 }
 
 
@@ -515,32 +540,18 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
     for (nest::long_t lag = from; lag < to; ++lag) {
 
         /***** Solve ODE over timestep *****/
-
-{% for regime in component_class.regimes %}
-        {{elseif(loop.first)}} (B_.current_regime == {{regime.name}}_REGIME) {
-
-            /***** Set clamp vars for state variables that don't have a time derivative in this regime *****/
-    {% for sv in regime.no_time_derivatives(component_class.state_variables) %}
-            double {{sv.name}}_clamp_ = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];
-    {% endfor %} 
-
-	        {% include "update_step.tmpl" %}
-    
-            /***** Reset state variables from clamp vars for state variables that don't have a time derivative in this regime *****/
-    {% for sv in regime.no_time_derivatives(component_class.state_variables) %}
-            S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX] = {{sv.name}}_clamp_;
-    {% endfor %}    
-
-    {% if debug %}
-            std::cout << "Regime: {{regime.name}} at time " << t << std::endl;
-    {% endif %}
-        {{endif(loop.last)}} 
-{% endfor %}
+        this->current_regime->step_ode();
 
         /***** Transition handling *****/
         int transition_count = 0;
-        double prev_t = -std::numeric_limits<double>::infinity();
-        int transitioned_to;
+        
+        
+        
+        while (transition = this->current_regime->transition(origin, lag)) {
+            
+        
+            ++transition_count;
+        }
         
         do {
 {% for regime in component_class.regimes %}

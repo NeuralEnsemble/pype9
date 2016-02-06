@@ -1,0 +1,14 @@
+	{# Performs the update step for the GSL solver #}
+	        double dt = nest::Time::get_resolution().get_ms();
+	        double tt = 0.0;
+	        while (tt < dt) {
+	            const int status =  gsl_odeiv2_evolve_apply(
+	                e_, c_, s_,
+	                &sys_, // system of ODE
+	                &tt, // from t...
+	                dt, // ...to t= t + dt
+	                &IntegrationStep_, // integration window (written on!)
+	                this->cell->S_.y_); // neuron state
+	            if (status != GSL_SUCCESS)
+	              throw nest::GSLSolverFailure(this->cell->get_name(), status);
+	        }

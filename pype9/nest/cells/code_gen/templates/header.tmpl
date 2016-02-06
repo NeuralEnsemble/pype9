@@ -87,7 +87,7 @@ namespace nineml {
 	    void init_buffers_();
 	    void calibrate();
 	    
-	    void reset_events();
+	    void refresh_events();
 	    
         /* Inline random distribution methods */
         double random_uniform_(double low, double high);
@@ -199,9 +199,6 @@ namespace nineml {
 	        Buffers_(const Buffers_&, {{component_name}}&);
 	        nest::UniversalDataLogger<{{component_name}}> logger_;
 
-            // Structures required by the solver
-{% include "solver_work_vars.tmpl" %}
-
 	        // Timesteps
 	        double_t step_;       //!< step size in ms
 	        double   IntegrationStep_;//!< current integration time step, updated by solver
@@ -233,10 +230,13 @@ namespace nineml {
 	    class Regime_ {
 	     
 	      public:
-	        Regime_({{component_name}}* cell, dynamics_function_type dynamics_function=NULL) : cell(cell), dynamics_function(dynamics_function) {}
+	        Regime_({{component_name}}* cell) : cell(cell) {}
 	        dynamics_function_type get_dynamics_function();
 	        Transition_* transition(nest::Time const & origin, const nest::long_t& lag);
 	        void set_triggers(nest::Time const & origin, const nest::long_t& lag);
+	        virtual void init_solver();
+	        virtual int step_ode();
+	        
 	       
 	      protected:
 	        {{component_name}}* cell;
@@ -270,6 +270,14 @@ namespace nineml {
           public:
             {{regime.name}}Regime_({{component_name}}* cell);
             ~{{regime.name}}Regime_();
+            void init_solver();
+            int step_ode();
+            
+          protected:
+    {% if regime.num_time_derivatives %}
+            // Structures required by the solver
+{% include "solver_structs.tmpl" %}
+    {% endif %}
 
         };
 {% endfor %}	    

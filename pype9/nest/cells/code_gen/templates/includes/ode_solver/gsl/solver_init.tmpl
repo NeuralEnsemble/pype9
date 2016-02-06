@@ -1,0 +1,31 @@
+    static const gsl_odeiv2_step_type* T1 = gsl_odeiv2_step_rk2;
+    //FIXME: Could be reduced to include only the states which have a time
+    //       derivative
+    N = {{component_class.num_state_variables}};
+
+    if ( s_ == 0 )
+        s_ = gsl_odeiv2_step_alloc (T1, N);
+    else
+        gsl_odeiv2_step_reset(s_);
+
+    if ( c_ == 0 )
+        c_ = gsl_odeiv2_control_standard_new ({{abs_tolerance}}, {{rel_tolerance}}, 1.0, 0.0);
+    else
+        gsl_odeiv2_control_init(c_, {{abs_tolerance}}, {{rel_tolerance}}, 1.0, 0.0);
+
+    if ( e_ == 0 )
+        e_ = gsl_odeiv2_evolve_alloc(N);
+    else
+        gsl_odeiv2_evolve_reset(e_);
+
+    sys_.function  = {{component_name}}_{{regime.name}}_dynamics;
+    sys_.jacobian  = {{component_name}}_jacobian;
+    sys_.dimension = N;
+    sys_.params    = reinterpret_cast<void*>(this);
+
+    if (u == 0)
+        u = (double *)malloc(sizeof(double) * N);
+        assert (u);
+    if (jac == 0)
+        jac = (double *)malloc(sizeof(double) * N);
+        assert (jac);
