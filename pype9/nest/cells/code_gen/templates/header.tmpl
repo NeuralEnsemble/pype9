@@ -49,7 +49,7 @@ namespace nineml {
      * Declaration of dynamics and residual signatures
      */
 {% for regime in component_class.regimes %}
-    extern "C" int {{component_name}}_dynamics{% include "dynamics_signature.tmpl" %};
+    extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_signature.tmpl" %};
     {% include "residual_signature.tmpl" %}
     {% include "event_signature.tmpl" %}
     {% include "ss_signature.tmpl" %}
