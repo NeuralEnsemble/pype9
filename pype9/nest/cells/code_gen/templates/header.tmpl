@@ -11,6 +11,7 @@
 #include "connection.h"
 #include "universal_data_logger.h"
 #include "recordables_map.h"
+#include "exceptions.h"
 
 {% include "solver_includes.tmpl" %}
 
@@ -19,6 +20,20 @@
 {% include "item_macro.tmpl" %}
 
 namespace nineml {
+
+    class ExceededMaximumSimultaneousTransitions : public nest::KernelException {
+    
+      public:
+        ExceededMaximumSimultaneousTransitions(const std::string& model, int num_transitions, double t)
+          : KernelException("ExceededMaximumSimultaneousTransitions"), model(model), num_transitions(num_transitions), t(t) {}
+        ~ExceededMaximumSimultaneousTransitions() throw () {}
+        std::string message();
+      protected:
+         const std::string& model;
+         int num_transitions;
+         double t;
+    };
+    
 
 {% include "solver_preludes.tmpl" %}
 {% include "ss_solver_preludes.tmpl" %}
@@ -43,6 +58,8 @@ namespace nineml {
     class {{component_name}} : public nest::Archiving_Node {
 
       public:
+
+        static const int MAX_SIMULTANEOUS_TRANSITIONS = {{max_simultaneous_transitions}};
 
         class Regime_;
         class Transition_;
@@ -86,8 +103,9 @@ namespace nineml {
 	    void init_state_(const nest::Node& proto);
 	    void init_buffers_();
 	    void calibrate();
+	    Regime_* get_regime(const std::string& regime_name);
 	    
-	    void refresh_events();
+	    void refresh_events(const nest::long_t& lag);
 	    
         /* Inline random distribution methods */
         double random_uniform_(double low, double high);
@@ -235,7 +253,7 @@ namespace nineml {
 	        Transition_* transition(nest::Time const & origin, const nest::long_t& lag);
 	        void set_triggers(nest::Time const & origin, const nest::long_t& lag);
 	        virtual void init_solver();
-	        virtual int step_ode();
+	        virtual void step_ode();
 	        
 	       
 	      protected:
@@ -271,7 +289,7 @@ namespace nineml {
             {{regime.name}}Regime_({{component_name}}* cell);
             ~{{regime.name}}Regime_();
             void init_solver();
-            int step_ode();
+            void step_ode();
             
           protected:
     {% if regime.num_time_derivatives %}
@@ -292,7 +310,7 @@ namespace nineml {
 	        Transition_(Regime_* regime, const std::string& target_regime_name);
 	        virtual ~Transition_() {}
 	        virtual double time_occurred(nest::Time const & origin, const nest::long_t& lag) = 0;
-	        virtual void body(nest::Time const & origin, const nest::long_t& lag) = 0;
+	        virtual bool body(nest::Time const & origin, const nest::long_t& lag) = 0;
 	        void set_target_regime(std::map<std::string, Regime_*>& regimes);
 	        Regime_* get_target_regime();
 	        
@@ -341,7 +359,7 @@ namespace nineml {
             {{ClassName}}(Regime_* regime, const std::string& target_regime_name) : OnEvent_(regime, target_regime_name) {}
             bool received(nest::Time const & origin, const nest::long_t& lag);                        
             double time_occurred(nest::Time const & origin, const nest::long_t& lag);
-            void body(nest::Time const & origin, const nest::long_t& lag);
+            bool body(nest::Time const & origin, const nest::long_t& lag);
      
         };
 
@@ -354,7 +372,7 @@ namespace nineml {
             {{ClassName}}(Regime_* regime, const std::string& target_regime_name) : OnCondition_(regime, target_regime_name) {}
             bool condition(nest::Time const & origin, const nest::long_t& lag);
             double time_occurred(nest::Time const & origin, const nest::long_t& lag);
-            void body(nest::Time const & origin, const nest::long_t& lag);
+            bool body(nest::Time const & origin, const nest::long_t& lag);
      
         };
 
@@ -377,6 +395,10 @@ namespace nineml {
         std::map<std::string, Regime_*> regimes;		
     
 	}; // end class {{component_name}}
+	
+	inline {{component_name}}::Regime_* {{component_name}}::get_regime(const std::string& regime_name) {
+	   return regimes[regime_name];
+	}
 	
 	inline dynamics_function_type {{component_name}}::Regime_::get_dynamics_function() {
 	    return this->dynamics_function;

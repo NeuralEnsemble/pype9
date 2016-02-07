@@ -43,15 +43,22 @@ namespace nest{
 
 namespace nineml {
 
+std::string ExceededMaximumSimultaneousTransitions::message() {
+    std::ostringstream msg;
+    msg << "Exceeded maxium number of simultaneous transitions (" << num_transitions << ")";
+    msg << " in " << model << " at " << t << " ms. Probable infinite loop.";
+    return msg.str();
+}
+
 
 {{component_name}}::Transition_* {{component_name}}::Regime_::transition(nest::Time const& origin, const nest::long_t& lag) {
     // Get vector of transitions (both OnConditions and OnEvents) that are triggered in the current timestep
     std::vector<Transition_*> occurred;
-    for (std::vector<OnCondition_*>::iterator it = this->active_on_conditions.begin(); it != this->active_on_conditions.end(); ++it)
+    for (std::vector<OnCondition_*>::iterator it = active_on_conditions.begin(); it != active_on_conditions.end(); ++it)
         if ((*it)->condition(origin, lag))
             occurred.push_back(*it);
             
-    for (std::vector<OnEvent_*>::iterator it = this->on_events.begin(); it != this->on_events.end(); ++it)
+    for (std::vector<OnEvent_*>::iterator it = on_events.begin(); it != on_events.end(); ++it)
         if ((*it)->received(origin, lag))
             occurred.push_back(*it);
 
@@ -74,12 +81,12 @@ namespace nineml {
 
 void {{component_name}}::Regime_::set_triggers(nest::Time const& origin, const nest::long_t& lag) {
     // Reset the vector of active transitions
-    this->active_on_conditions.clear();
+    active_on_conditions.clear();
     
     // Add OnConditions to the list of active transitions if their trigger condition evaluates to false
-    for (std::vector<OnCondition_*>::iterator it = this->on_conditions.begin(); it != this->on_conditions.end(); ++it)
+    for (std::vector<OnCondition_*>::iterator it = on_conditions.begin(); it != on_conditions.end(); ++it)
         if (!(*it)->condition(origin, lag))
-            this->active_on_conditions.push_back(*it);
+            active_on_conditions.push_back(*it);
         
 }
 
@@ -110,26 +117,31 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
         {% include "solver_return.tmpl" %}
 }        
     {% endif %}
+    
+/* Jacobian for the {{regime.name}} regime if required by the solver */
+    {% if regime.num_time_derivatives %}
+{% include "solver_jacobian.tmpl" %}
+    {% endif %}
 
 {{component_name}}::{{regime.name}}Regime_::{{regime.name}}Regime_({{component_name}}* cell)
-  : Regime_(cell){% if regime.num_time_derivatives %}{% include "solver_construct.tmpl" %}{% endif %}) {
+  : Regime_(cell){% if regime.num_time_derivatives %}{% include "solver_construct.tmpl" %}{% endif %} {
   
     // Construct OnConditions specific to the regime.
     {% for on_condition in regime.on_conditions %}
-    this->on_conditions.push_back(new {{regime.name}}OnCondition{{regime.index_of(on_condition)}}(this, "{{on_condition.target_regime.name}}"));
+    on_conditions.push_back(new {{regime.name}}OnCondition{{regime.index_of(on_condition)}}(this, "{{on_condition.target_regime.name}}"));
     {% endfor %}
 	
     // Construct OnConditions specific to the regime.
     {% for on_event in regime.on_events %}
-    this->on_events.push_back(new {{regime.name}}On{{on_event.src_port_name}}Event(this, "{{on_event.target_regime.name}}"));              
+    on_events.push_back(new {{regime.name}}On{{on_event.src_port_name}}Event(this, "{{on_event.target_regime.name}}"));              
     {% endfor %}
 
 }
 
 {{component_name}}::{{regime.name}}Regime_::~{{regime.name}}Regime_() {
-    for (std::vector<OnCondition_*>::iterator it = this->on_conditions.begin(); it != this->on_conditions.end(); ++it)
+    for (std::vector<OnCondition_*>::iterator it = on_conditions.begin(); it != on_conditions.end(); ++it)
         delete *it;
-    for (std::vector<OnEvent_*>::iterator it = this->on_events.begin(); it != this->on_events.end(); ++it)
+    for (std::vector<OnEvent_*>::iterator it = on_events.begin(); it != on_events.end(); ++it)
         delete *it;
     {% if regime.num_time_derivatives %}    
     {% include "solver_destruct.tmpl" %}
@@ -142,23 +154,25 @@ void {{component_name}}::{{regime.name}}Regime_::init_solver() {
     {% endif %}
 }
 
-int {{component_name}}::{{regime.name}}Regime_::step_ode() {
-
+void {{component_name}}::{{regime.name}}Regime_::step_ode() {
+    {% if regime.num_time_derivatives %}
+    {{component_name}}::State_& S_ = cell->S_;
     //FIXME: Clamping of vars should be replaced by the resizing of the state
     //       vector that is solved to only the states that have time-derivatives
     //       in the regime.
     /***** Set clamp vars for state variables that don't have a time derivative in this regime *****/
-    {% for sv in regime.no_time_derivatives(component_class.state_variables) %}
+        {% for sv in regime.no_time_derivatives(component_class.state_variables) %}
     double {{sv.name}}_clamp_ = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];
-    {% endfor %}
+        {% endfor %}
 
     // Step ODE solver
 {% include "solver_update.tmpl" %}
     
     /***** Reset state variables from clamp vars for state variables that don't have a time derivative in this regime *****/
-    {% for sv in regime.no_time_derivatives(component_class.state_variables) %}
-            S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX] = {{sv.name}}_clamp_;
-    {% endfor %}    
+        {% for sv in regime.no_time_derivatives(component_class.state_variables) %}
+    S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX] = {{sv.name}}_clamp_;
+        {% endfor %}
+    {% endif %}
 }
 
 // Transition methods for {{regime.name}} regime
@@ -170,14 +184,20 @@ int {{component_name}}::{{regime.name}}Regime_::step_ode() {
             {% set TransitionClassName = '{}On{}Event'.format(regime.name, transition.src_port_name) %}
         {% endif %}
 
-void {{component_name}}::{{TransitionClassName}}::body(nest::Time const& origin, const nest::long_t& lag) {
+bool {{component_name}}::{{TransitionClassName}}::body(nest::Time const& origin, const nest::long_t& lag) {
     // Map all variables/expressions to the local namespace that are required to evaluate the state assignments that were not required for the triggers
 
 
-    State_& S_ = this->regime->cell->S_;
-    Buffers_& B_ = this->regime->cell->B_;
-    const Parameters_& P_ = this->regime->cell->P_;
-    Variables_& V_ = this->regime->cell->V_;
+    State_& S_ = regime->cell->S_;
+    Buffers_& B_ = regime->cell->B_;
+    const Parameters_& P_ = regime->cell->P_;
+    Variables_& V_ = regime->cell->V_;
+    
+        {% if transition.nineml_type == 'OnEvent' %}
+    // Decrement the number of remaining events
+    assert(B_.num_unprocessed_{{transition.src_port_name}}_events);
+    --B_.num_unprocessed_{{transition.src_port_name}}_events;
+        {% endif %}
     
     {{macros.map_required_vars_locally(transition.state_assignments, component_class, component_name, unit_handler, []) | indent(4)}}
 
@@ -186,16 +206,17 @@ void {{component_name}}::{{TransitionClassName}}::body(nest::Time const& origin,
     S_.y_[{{component_name}}::State_::{{sa.name}}_INDEX] = {{scaled_expr.rhs_cstr}};  // ({{units}})
         {% endfor %}
 	        
-    // Output events 
-	
-    // FIXME: Need to specify different output ports in a way that can be read by the receiving nodes
     // Output events
         {% for output_event in transition.output_events %}
     ++B_.num_{{output_event.port.name}}_events;
-//    this->regime->cell->set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
-//    nest::SpikeEvent se;
-//    this->regime->cell->network()->send(*this->regime->cell, se, lag);
+
         {% endfor %}
+        
+        {% if transition.num_state_assignments %}
+    return true;  // Transition contains discontinuous changes in state
+        {% else %}
+    return false;  // Transition doesn't contain discontinuous changes in state
+        {% endif %}
 }
 
     {% endfor %}
@@ -209,7 +230,7 @@ double {{component_name}}::{{TransitionClassName}}::OnEvent_::time_occurred(nest
 
 
 bool {{component_name}}::OnEvent_::{{TransitionClassName}}::received(nest::Time const& origin, const nest::long_t& lag) {
-    return (bool)this->regime->cell->B_.num_unprocessed_{{on_event.src_port_name}}_events;
+    return (bool)regime->cell->B_.num_unprocessed_{{on_event.src_port_name}}_events;
 }
 
     {% endfor %}
@@ -217,9 +238,9 @@ bool {{component_name}}::OnEvent_::{{TransitionClassName}}::received(nest::Time 
         {% set TransitionClassName = '{}OnCondition{}'.format(regime.name, regime.index_of(on_condition)) %}
 bool {{component_name}}::{{TransitionClassName}}::condition(nest::Time const& origin, const nest::long_t& lag) {
 	    
-    const State_& S_ = this->regime->cell->S_;
-    const Buffers_& B_ = this->regime->cell->B_;
-    const Parameters_& P_ = this->regime->cell->P_;
+    const State_& S_ = regime->cell->S_;
+    const Buffers_& B_ = regime->cell->B_;
+    const Parameters_& P_ = regime->cell->P_;
     double t = origin.get_ms() + lag * nest::Time::get_resolution().get_ms();
         
     {{macros.map_required_vars_locally(on_condition.trigger, component_class, component_name, unit_handler, []) | indent(4)}}
@@ -232,9 +253,9 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(nest::Time con
        {% set exact_time_expr = on_condition.trigger.crossing_time_expr %}
        {% if exact_time_expr %}
 
-    const State_& S_ = this->regime->cell->S_;
-    const Buffers_& B_ = this->regime->cell->B_;
-    const Parameters_& P_ = this->regime->cell->P_;
+    const State_& S_ = regime->cell->S_;
+    const Buffers_& B_ = regime->cell->B_;
+    const Parameters_& P_ = regime->cell->P_;
        
     {{macros.map_required_vars_locally(exact_time_expr, component_class, component_name, unit_handler, []) | indent(4)}}       
     // The trigger expression depends on 't' so determine the exact time that the threshold was crossed.
@@ -296,12 +317,6 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(nest::Time con
 {% endfor %}
 ***************************#}
 
-/***********************************************
- * Diagonal Jacobian approximation if required *
- ***********************************************/
-
-{% include "solver_jacobian.tmpl" %}
-
 
 /****************
  * Constructors *
@@ -317,18 +332,18 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(nest::Time con
     
     // Construct all regimes
 {% for regime in component_class.regimes %}
-    this->regimes["{{regime.name}}"] = new {{regime.name}}Regime_(this);
+    regimes["{{regime.name}}"] = new {{regime.name}}Regime_(this);
 {% endfor %}
 
     // Set target regimes in all transitions
     Regime_* regime;
 
 {% for regime in component_class.regimes %}
-    regime = this->regimes["{{regime.name}}"];
+    regime = get_regime("{{regime.name}}");
     for (std::vector<OnEvent_*>::iterator it = regime->on_events.begin(); it != regime->on_events.end(); ++it)
-        (*it)->set_target_regime(this->regimes);
+        (*it)->set_target_regime(regimes);
     for (std::vector<OnCondition_*>::iterator it = regime->on_conditions.begin(); it != regime->on_conditions.end(); ++it)
-        (*it)->set_target_regime(this->regimes);   
+        (*it)->set_target_regime(regimes);   
 {% endfor %}        
 }
 
@@ -356,7 +371,7 @@ void {{component_name}}::init_state_(const Node& proto) {
 
 {{component_name}}::~{{component_name}} () {
     // Destruct all regimes
-    for (std::map<std::string, Regime_*>::iterator it = this->regimes.begin(); it != this->regimes.end(); ++it)
+    for (std::map<std::string, Regime_*>::iterator it = regimes.begin(); it != regimes.end(); ++it)
         delete it->second;
 }
 
@@ -502,18 +517,18 @@ void {{component_name}}::init_buffers_() {
     B_.{{p.name}}_value = 0.0;
 {% endfor %}
 
-    B_.current_regime = this->regimes["{{default_regime}}"];
-    B_.current_regime.init_solver();
+    B_.current_regime = get_regime("{{default_regime}}");
+    B_.current_regime->init_solver();
 
 }
 
 
-void {{component_name}}::reset_events() {
+void {{component_name}}::refresh_events(const nest::long_t& lag) {
 {% for port in component_class.event_send_ports %}
     B_.num_{{port.name}}_events = 0;
 {% endfor %}
 {% for port in component_class.event_receive_ports %}
-    B_.num_unprocessed_{{port.name}}_events = B_.{{port.name}}_event_port.get_multiplicity();
+    B_.num_unprocessed_{{port.name}}_events = B_.{{port.name}}_event_port.get_multiplicity(lag);
 {% endfor %}
 }
 
@@ -540,113 +555,36 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
     for (nest::long_t lag = from; lag < to; ++lag) {
 
         /***** Solve ODE over timestep *****/
-        this->current_regime->step_ode();
+        B_.current_regime->step_ode();
 
         /***** Transition handling *****/
+        // Get multiplicity incoming events for the current lag and reset multiplicity of outgoing events
+        refresh_events(lag);
+        
+        Transition_* transition;
         int transition_count = 0;
-        
-        
-        
-        while (transition = this->current_regime->transition(origin, lag)) {
-            
-        
-            ++transition_count;
+        while ((transition = B_.current_regime->transition(origin, lag))) {  // Check for a transition (i.e. the output of current_regime->transition is not NULL) and record it in the 'transition' variable.
+            if (++transition_count > MAX_SIMULTANEOUS_TRANSITIONS)
+                throw ExceededMaximumSimultaneousTransitions("{{component_name}}", transition_count, origin.get_ms() + lag * nest::Time::get_resolution().get_ms());
+            bool discontinuous = transition->body(origin, lag) || (transition->get_target_regime() != B_.current_regime);
+            B_.current_regime = transition->get_target_regime();
+            B_.current_regime->set_triggers(origin, lag);
+            if (discontinuous)
+                B_.current_regime->init_solver();  // Reset the solver if the transition contains state assignments or switches to a new regime.
         }
         
-        do {
-{% for regime in component_class.regimes %}
-            transitioned_to = -1;
-	        {{elseif(loop.first)}} (B_.current_regime == {{regime.name}}_REGIME) {
-	            // Map all variables/expressions to the local namespace that are required to evaluate the triggers
-	            {{macros.map_required_vars_locally(chain(regime.all_triggers(), regime.all_target_triggers()), component_class, component_name, unit_handler, []) | indent(16)}}
-		        
-		        // FIXME: The transitions should be ordered by the exact time they occur to determine which should be executed first.
-
-    {% for trans in regime.transitions %}
-        {% set connection_parameters = [] %}{# passed to the previous_expressions argument of map_required_vars_locally #}
-                // Get the time after the current step to test the trigger against
-                double t = origin.get_ms() + lag * dt;        
-        {% if hasattr(trans, 'trigger') %}{# OnCondition transition #}
-	            // Check trigger condition
-	            if ({{trans.trigger.rhs_cstr}}) {
-           {% set exact_time_expr = trans.trigger.crossing_time_expr %}
-           {% if exact_time_expr %}
-                    // The trigger expression depends on 't' so determine the exact time that the threshold was crossed.
-                    t = {{exact_time_expr.rhs_cstr}};
-           {% endif %}
-	            
-	                // Check to see if trigger is active (i.e. was false since on the change from false->true triggers a transition)
-	                if (B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active{% if exact_time_expr %} && t > prev_t{% endif %}) {
-	                    // Deactivate the trigger (triggers are only triggered when the change from false -> true)
-	                    B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active = false; 
-	                    prev_t = t;
-        {% else %}
-	            // Check for incoming event
-	            double {{trans.src_port_name}} = B_.{{trans.src_port_name}}_event_port.get_value(lag);
-	
-	            if ({{trans.src_port_name}}) {
-            {% if trans.src_port_name in component_class.connection_parameter_set_names %}
-                        // Set the "weight" of the event to the connection parameters paired to the analog port.
-                {% for connection_param in component_class.connection_parameter_set(trans.src_port_name).parameters %}
-                        double {{connection_param.name}} = {{trans.src_port_name}};  // ({{unit_handler.dimension_to_unit_str(connection_param.dimension)}})
-                {% endfor %}
-                {# Set the connection parameter sets to pass to the previously defined variables in the map_required_vars_locally macro #}
-                {% set connection_parameters = component_class.connection_parameter_set(trans.src_port_name).parameters %}
-            {% endif %}
-        {% endif %}
-                        // Map all variables/expressions to the local namespace that are required to evaluate the state assignments that were not required for the triggers
-                        {{macros.map_required_vars_locally(trans.state_assignments, component_class, component_name, unit_handler, chain(regime.all_triggers(), regime.all_target_triggers(), connection_parameters)) | indent(24)}}
-
-				        // State assignments
-        {% for sa, scaled_expr, units in unit_handler.scale_aliases(trans.state_assignments) %}
-				        S_.y_[{{component_name}}::State_::{{sa.name}}_INDEX] = {{scaled_expr.rhs_cstr}};  // ({{units}})
-        {% endfor %}
-
-					    // FIXME: Need to specify different output ports in a way that can be read by the receiving nodes
-					    // Output events
-        {% for output_event in trans.output_events %}
-					    set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
-					    nest::SpikeEvent se;
-					    network()->send(*this, se, lag);
-        {% endfor %}
         
-                        // Set transition to new regime
-                        B_.current_regime = transitioned_to = {{trans.target_regime.name}}_REGIME;
-        {% if debug %}
-                        std::cout << "Transitioned from {{regime.name}} to regime: {{trans.target_regime.name}} at time " << t << std::endl;
-        {% endif %}
-                        // FIXME: Need to work out the best way to emit a warning in NEST.                                    
-                        if (transitioned_to != -1)  // If have already transitioned to a new regime, emit a warning. FIXME: This should be an error.
-	                        std::cout << "Warning!: multiple transitions in the same time step. Transition to 'Regime " << transitioned_to << "' was ignored in favour of transition " << {{trans.target_regime.name}}_REGIME << "." << std::endl;
-        
-                        {{macros.set_triggers(trans.target_regime, component_class, component_name, unit_handler) | indent(20)}}
-                        
-                        // Increment the number of transitions that have occurred in this time step.
-                        ++transition_count;
-                                
-        {% if hasattr(trans, 'trigger') %}
-	                }
-	            } else
-                    // Activate the trigger
-                    B_.{{regime.name}}_trigger_{{regime.index_of(trans)}}_active = true;
-        {% else %}
-                }
-        {% endif %} 
-            {{endif(loop.last)}}            
-    {% endfor %}
+        /***** Send output events for each event send port *****/
+        // FIXME: Need to specify different output ports in a way that can be read by the receiving nodes
+        // Output events        
+{% for port in component_class.event_send_ports %}
+        if (B_.num_{{port.name}}_events) {
+		    set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
+		    nest::SpikeEvent se;
+		    se.set_multiplicity(B_.num_{{port.name}}_events);
+		    network()->send(*this, se, lag); 
+        }
 {% endfor %}
-        } while (transitioned_to != -1 && transition_count < {{max_simultaneous_transitions}});
-            
-        if (transition_count >= {{max_simultaneous_transitions}}) {
-            //FIXME: This should be an error not a warning.
-            std::cout << "Warning!: Number of instantaneous transitions exceeds maxiumum number set by 'max_simultaneous_transitions' template parameter ({{max_simultaneous_transitions}})" << std::endl;
-        } else if (transition_count > 0) {
-{% include "reset_solver.tmpl" %}
-{% if debug %}
-            std::cout << "reset" << std::endl;
-{% endif %}
-
-        }
 
         /***** Get analog port values *****/
 {% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
