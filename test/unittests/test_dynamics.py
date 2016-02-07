@@ -357,7 +357,7 @@ class TestDynamics(TestCase):
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': 'force',
                                  'external_currents': ['iSyn']},
-                      'nest': {'build_mode': 'force'}}
+                      'nest': {'build_mode': 'force', 'verbose': True}}
         initial_states = {'t_next': 0.0 * un.ms}
         cells = {}
         for sim_name, meta_class in (('nest', CellMetaClassNEST),):  #, ('neuron', CellMetaClassNEURON)): @IgnorePep8
