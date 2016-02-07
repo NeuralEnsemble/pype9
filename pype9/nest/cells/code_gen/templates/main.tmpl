@@ -51,6 +51,13 @@ std::string ExceededMaximumSimultaneousTransitions::message() {
 }
 
 
+{{component_name}}::Regime_::~Regime_() {
+    for (std::vector<OnCondition_*>::iterator it = on_conditions.begin(); it != on_conditions.end(); ++it)
+        delete *it;
+    for (std::vector<OnEvent_*>::iterator it = on_events.begin(); it != on_events.end(); ++it)
+        delete *it;
+}
+
 {{component_name}}::Transition_* {{component_name}}::Regime_::transition(nest::Time const& origin, const nest::long_t& lag) {
     // Get vector of transitions (both OnConditions and OnEvents) that are triggered in the current timestep
     std::vector<Transition_*> occurred;
@@ -139,10 +146,6 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
 }
 
 {{component_name}}::{{regime.name}}Regime_::~{{regime.name}}Regime_() {
-    for (std::vector<OnCondition_*>::iterator it = on_conditions.begin(); it != on_conditions.end(); ++it)
-        delete *it;
-    for (std::vector<OnEvent_*>::iterator it = on_events.begin(); it != on_events.end(); ++it)
-        delete *it;
     {% if regime.num_time_derivatives %}    
     {% include "solver_destruct.tmpl" %}
     {% endif %}

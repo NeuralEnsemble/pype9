@@ -249,6 +249,7 @@ namespace nineml {
 	     
 	      public:
 	        Regime_({{component_name}}* cell) : cell(cell) {}
+	        virtual ~Regime_();
 	        dynamics_function_type get_dynamics_function();
 	        Transition_* transition(nest::Time const & origin, const nest::long_t& lag);
 	        void set_triggers(nest::Time const & origin, const nest::long_t& lag);
@@ -287,9 +288,9 @@ namespace nineml {
             
           public:
             {{regime.name}}Regime_({{component_name}}* cell);
-            ~{{regime.name}}Regime_();
-            void init_solver();
-            void step_ode();
+            virtual ~{{regime.name}}Regime_();
+            virtual void init_solver();
+            virtual void step_ode();
             
           protected:
     {% if regime.num_time_derivatives %}
@@ -309,10 +310,10 @@ namespace nineml {
 	      public:
 	        Transition_(Regime_* regime, const std::string& target_regime_name);
 	        virtual ~Transition_() {}
+            void set_target_regime(std::map<std::string, Regime_*>& regimes);
+            Regime_* get_target_regime();	        
 	        virtual double time_occurred(nest::Time const & origin, const nest::long_t& lag) = 0;
 	        virtual bool body(nest::Time const & origin, const nest::long_t& lag) = 0;
-	        void set_target_regime(std::map<std::string, Regime_*>& regimes);
-	        Regime_* get_target_regime();
 	        
             /* Inline random distribution methods */
 	        double random_uniform_(double low, double high);
@@ -333,6 +334,7 @@ namespace nineml {
 	    
 	      public:
 	        OnEvent_(Regime_* regime, const std::string& target_regime_name) : Transition_(regime, target_regime_name) {}
+            virtual ~OnEvent_() {}	        
             virtual bool received(nest::Time const & origin, const nest::long_t& lag) = 0;
 	    
 	    };
@@ -343,6 +345,7 @@ namespace nineml {
 	    class OnCondition_ : public Transition_ {
 	      public:
 	        OnCondition_(Regime_* regime, const std::string& target_regime_name) : Transition_(regime, target_regime_name) {}
+	        virtual ~OnCondition_() {}
             virtual bool condition(nest::Time const & origin, const nest::long_t& lag) = 0;
 	    };
 	    
@@ -357,9 +360,10 @@ namespace nineml {
 
           public:
             {{ClassName}}(Regime_* regime, const std::string& target_regime_name) : OnEvent_(regime, target_regime_name) {}
+            virtual ~{{ClassName}}() {}
             bool received(nest::Time const & origin, const nest::long_t& lag);                        
-            double time_occurred(nest::Time const & origin, const nest::long_t& lag);
-            bool body(nest::Time const & origin, const nest::long_t& lag);
+            virtual double time_occurred(nest::Time const & origin, const nest::long_t& lag);
+            virtual bool body(nest::Time const & origin, const nest::long_t& lag);
      
         };
 
@@ -370,9 +374,10 @@ namespace nineml {
 
           public:
             {{ClassName}}(Regime_* regime, const std::string& target_regime_name) : OnCondition_(regime, target_regime_name) {}
-            bool condition(nest::Time const & origin, const nest::long_t& lag);
-            double time_occurred(nest::Time const & origin, const nest::long_t& lag);
-            bool body(nest::Time const & origin, const nest::long_t& lag);
+            virtual ~{{ClassName}}() {}            
+            virtual bool condition(nest::Time const & origin, const nest::long_t& lag);
+            virtual double time_occurred(nest::Time const & origin, const nest::long_t& lag);
+            virtual bool body(nest::Time const & origin, const nest::long_t& lag);
      
         };
 
