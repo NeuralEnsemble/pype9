@@ -19,7 +19,7 @@
         gsl_odeiv2_evolve_reset(e_);
 
     sys_.function  = {{component_name}}_{{regime.name}}_dynamics;
-    sys_.jacobian  = {{component_name}}_jacobian;
+    sys_.jacobian  = {{component_name}}_{{regime.name}}_jacobian;
     sys_.dimension = N;
     sys_.params    = reinterpret_cast<void*>(this);
 

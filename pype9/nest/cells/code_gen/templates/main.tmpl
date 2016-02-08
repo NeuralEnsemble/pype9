@@ -59,10 +59,13 @@ std::string ExceededMaximumSimultaneousTransitions::message() {
 }
 
 {{component_name}}::Transition_* {{component_name}}::Regime_::transition(nest::Time const& origin, const nest::long_t& lag) {
+    // Set the time to the end of the current timestep
+    double t = origin.get_ms() + lag * nest::Time::get_resolution().get_ms();
+
     // Get vector of transitions (both OnConditions and OnEvents) that are triggered in the current timestep
     std::vector<Transition_*> occurred;
     for (std::vector<OnCondition_*>::iterator it = active_on_conditions.begin(); it != active_on_conditions.end(); ++it)
-        if ((*it)->condition(origin, lag))
+        if ((*it)->condition(t))
             occurred.push_back(*it);
             
     for (std::vector<OnEvent_*>::iterator it = on_events.begin(); it != on_events.end(); ++it)
@@ -86,13 +89,13 @@ std::string ExceededMaximumSimultaneousTransitions::message() {
 }
 
 
-void {{component_name}}::Regime_::set_triggers(nest::Time const& origin, const nest::long_t& lag) {
+void {{component_name}}::Regime_::set_triggers(double t) {
     // Reset the vector of active transitions
     active_on_conditions.clear();
     
     // Add OnConditions to the list of active transitions if their trigger condition evaluates to false
     for (std::vector<OnCondition_*>::iterator it = on_conditions.begin(); it != on_conditions.end(); ++it)
-        if (!(*it)->condition(origin, lag))
+        if (!(*it)->condition(t))
             active_on_conditions.push_back(*it);
         
 }
@@ -188,7 +191,7 @@ void {{component_name}}::{{regime.name}}Regime_::step_ode() {
             {% set TransitionClassName = '{}On{}Event'.format(regime.name, transition.src_port_name) %}
         {% endif %}
 
-bool {{component_name}}::{{TransitionClassName}}::body(nest::Time const& origin, const nest::long_t& lag) {
+bool {{component_name}}::{{TransitionClassName}}::body(double t) {
     // Map all variables/expressions to the local namespace that are required to evaluate the state assignments that were not required for the triggers
 
 
@@ -240,12 +243,11 @@ bool {{component_name}}::OnEvent_::{{TransitionClassName}}::received(nest::Time 
     {% endfor %}
     {% for on_condition in regime.on_conditions %}
         {% set TransitionClassName = '{}OnCondition{}'.format(regime.name, regime.index_of(on_condition)) %}
-bool {{component_name}}::{{TransitionClassName}}::condition(nest::Time const& origin, const nest::long_t& lag) {
+bool {{component_name}}::{{TransitionClassName}}::condition(double t) {
 	    
     const State_& S_ = regime->cell->S_;
     const Buffers_& B_ = regime->cell->B_;
     const Parameters_& P_ = regime->cell->P_;
-    double t = origin.get_ms() + lag * nest::Time::get_resolution().get_ms();
         
     {{macros.map_required_vars_locally(on_condition.trigger, component_class, component_name, unit_handler, []) | indent(4)}}
 
@@ -533,6 +535,7 @@ void {{component_name}}::init_buffers_() {
 {% endfor %}
 
     B_.current_regime = get_regime("{{default_regime}}");
+    B_.current_regime->set_triggers(0);
     B_.current_regime->init_solver();
 
 }
@@ -577,13 +580,19 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         refresh_events(lag);
         
         Transition_* transition;
-        int transition_count = 0;
+        int simultaneous_transition_count = 0;
+        double prev_t = origin.get_ms();
         while ((transition = B_.current_regime->transition(origin, lag))) {  // Check for a transition (i.e. the output of current_regime->transition is not NULL) and record it in the 'transition' variable.
-            if (++transition_count > MAX_SIMULTANEOUS_TRANSITIONS)
-                throw ExceededMaximumSimultaneousTransitions("{{component_name}}", transition_count, origin.get_ms() + lag * nest::Time::get_resolution().get_ms());
-            bool discontinuous = transition->body(origin, lag) || (transition->get_target_regime() != B_.current_regime);
+            double t = transition->time_occurred(origin, lag);  // Get the exact time the transition occurred.
+            if (t == prev_t)
+                ++simultaneous_transition_count;
+            else
+                simultaneous_transition_count = 0;
+            if (simultaneous_transition_count > MAX_SIMULTANEOUS_TRANSITIONS)
+                throw ExceededMaximumSimultaneousTransitions("{{component_name}}", simultaneous_transition_count, t);
+            bool discontinuous = transition->body(t) || (transition->get_target_regime() != B_.current_regime);
             B_.current_regime = transition->get_target_regime();
-            B_.current_regime->set_triggers(origin, lag);
+            B_.current_regime->set_triggers(t);
             if (discontinuous)
                 B_.current_regime->init_solver();  // Reset the solver if the transition contains state assignments or switches to a new regime.
         }

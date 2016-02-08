@@ -357,7 +357,7 @@ class TestDynamics(TestCase):
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': 'force',
                                  'external_currents': ['iSyn']},
-                      'nest': {'build_mode': 'force', 'verbose': True}}
+                      'nest': {'build_mode': 'force'}}
         initial_states = {'t_next': 0.0 * un.ms}
         cells = {}
         for sim_name, meta_class in (('nest', CellMetaClassNEST),):  #, ('neuron', CellMetaClassNEURON)): @IgnorePep8
@@ -366,8 +366,6 @@ class TestDynamics(TestCase):
             cells[sim_name] = celltype(rate=rate)
             cells[sim_name].record('spike_output')
             cells[sim_name].update_state(initial_states)
-        print "Exiting after successful compilation"
-        return
         # Run NEURON simulation
 #         simulatorNEURON.reset()
 #         neuron.h.dt = self.dt
@@ -378,6 +376,7 @@ class TestDynamics(TestCase):
         simulatorNEST.run(duration.in_units(un.ms))
         for sim_name in ('nest',):  # ('neuron', 'nest'):
             spikes = cells[sim_name].recording('spike_output')
+            # Calculate the rate of the modelled process
             recorded_rate = pq.Quantity(
                 len(spikes) / (spikes.t_stop - spikes.t_start), 'Hz')
             ref_rate = pq.Quantity(UnitHandlerNEST.to_pq_quantity(rate), 'Hz')
@@ -387,12 +386,23 @@ class TestDynamics(TestCase):
                  "desired ({}): difference {}".format(
                      sim_name, recorded_rate, ref_rate,
                      recorded_rate - ref_rate)))
+            # Calculate the absolute deviation
+#             isi_avg = pq.Quantity(1.0 / recorded_rate, 'ms')
+#             isi_std_dev = (abs((spikes[1:] - spikes[:-1]) - isi_avg) /
+#                            (len(spikes) - 1))
+#             recorded_cv = isi_std_dev / isi_avg
+#             ref_cv = 1.0 / ref_rate ** 2.0
+#             self.assertAlmostEqual(
+#                 recorded_cv, ref_cv,
+#                 "Recorded coefficient of variation ({}) did not match the "
+#                 "expected ({}): difference"
+#                 .format(recorded_cv, ref_cv, recorded_cv - ref_cv))
 
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test', type=str, default='poisson',
+    parser.add_argument('--test', type=str, default='liaf',
                         help=("Which test to run, can be one of: 'alpha_syn', "
                               "'izhi', 'izhiFS', 'liaf', 'poisson' or 'hh' "
                               "(default: %(default)s )"))

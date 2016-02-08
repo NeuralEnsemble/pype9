@@ -1,5 +1,5 @@
 /** Diagonal Jacobian approximation (for GSL): (f(s+.01) - f(s))/.001 */
-extern "C" int {{component_name}}_{{regime.name}}_jacobian (double t, const double y[], double *dfdy, double dfdt[], void* node) {
+extern "C" int {{component_name}}_{{regime.name}}_jacobian(double t, const double y[], double *dfdy, double dfdt[], void* node) {
     // cast the node ptr to {{component_name}} object
     assert(node);
     {{component_name}}& cell =    *(reinterpret_cast<{{component_name}}*>(node));

@@ -1,12 +1,12 @@
     // GSL structs only allocated by init_nodes_(),
     // so we need to protect destruction
-    if ( B_.s_ != NULL)
-        gsl_odeiv2_step_free (B_.s_);
-    if ( B_.c_ != NULL)
-        gsl_odeiv2_control_free (B_.c_);
-    if ( B_.e_ != NULL)
-        gsl_odeiv2_evolve_free (B_.e_);
-    if ( B_.u != NULL)
-        free (B_.u);
-    if ( B_.jac != NULL)
-        free (B_.jac);
+    if ( s_ != NULL)
+        gsl_odeiv2_step_free (s_);
+    if ( c_ != NULL)
+        gsl_odeiv2_control_free (c_);
+    if ( e_ != NULL)
+        gsl_odeiv2_evolve_free (e_);
+    if ( u != NULL)
+        free (u);
+    if ( jac != NULL)
+        free (jac);
