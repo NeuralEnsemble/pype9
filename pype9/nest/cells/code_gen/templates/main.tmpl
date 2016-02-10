@@ -159,6 +159,7 @@ void {{component_name}}::{{regime.name}}Regime_::init_solver() {
     {% if regime.num_time_derivatives %}    
     {% include "solver_init.tmpl" %}
     {% endif %}
+    
 }
 
 void {{component_name}}::{{regime.name}}Regime_::step_ode() {
@@ -528,7 +529,6 @@ void {{component_name}}::init_buffers_() {
     B_.logger_.reset();
 
     B_.step_ = nest::Time::get_resolution().get_ms();
-    B_.IntegrationStep_ = B_.step_;
 
 {% for p in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
     B_.{{p.name}}_value = 0.0;
