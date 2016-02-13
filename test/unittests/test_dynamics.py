@@ -53,7 +53,7 @@ class TestDynamics(TestCase):
             properties=ninemlcatalog.load(
                 'neuron/Izhikevich', 'SampleIzhikevich'),
             initial_states={'U': -14.0 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
-            neuron_ref='Izhikevich', nest_ref='izhikevich',
+#             neuron_ref='Izhikevich', nest_ref='izhikevich',
             input_signal=input_step('Isyn', 0.02, 50, 100, self.dt),
             nest_translations={'V': ('V_m', 1), 'U': ('U_m', 1),
                                'weight': (None, 1), 'C_m': (None, 1),
@@ -65,8 +65,8 @@ class TestDynamics(TestCase):
                                  'alpha': (None, 1), 'beta': (None, 1),
                                  'zeta': (None, 1), 'theta': ('vthresh', 1)},
             neuron_build_args={'build_mode': 'force'},
-            nest_build_args={'build_mode': 'compile_only'},
-            build_name='Izhikevich_')
+            nest_build_args={'build_mode': 'force'},
+            build_name='IzhikevichBranch')
 #             build_name='IzhikevichMaster')
         comparer.simulate(self.duration)
         comparisons = comparer.compare()

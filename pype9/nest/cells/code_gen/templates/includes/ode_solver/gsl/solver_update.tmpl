@@ -8,7 +8,7 @@
             &tt, // from t...
             dt, // ...to t= t + dt
             &IntegrationStep_, // integration window (written on!)
-            this->cell->S_.y_); // neuron state
+            cell->S_.y_); // neuron state
         if (status != GSL_SUCCESS)
-          throw nest::GSLSolverFailure(this->cell->get_name(), status);
+          throw nest::GSLSolverFailure(cell->get_name(), status);
     }

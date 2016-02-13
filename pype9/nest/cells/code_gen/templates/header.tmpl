@@ -227,6 +227,7 @@ namespace nineml {
             int num_unprocessed_{{port.name}}_events;
 {% endfor %}
 
+            // Event send port count
 {% for port in component_class.event_send_ports %}
             int num_{{port.name}}_events;
 {% endfor %}
@@ -248,9 +249,9 @@ namespace nineml {
 	    class Regime_ {
 	     
 	      public:
-	        Regime_({{component_name}}* cell) : cell(cell) {}
-	        virtual ~Regime_();    
-	        dynamics_function_type get_dynamics_function();
+	        Regime_({{component_name}}* cell, dynamics_function_type dynamics_function)
+	          : cell(cell), dynamics_function(dynamics_function) {}
+	        virtual ~Regime_();
 	        Transition_* transition(nest::Time const & origin, const nest::long_t& lag);
 	        void set_triggers(double t);
 	        virtual void init_solver() = 0;
@@ -311,7 +312,7 @@ namespace nineml {
 
 	      public:
 	        Transition_(Regime_* regime, const std::string& target_regime_name)
-	          : regime(regime), target_regime_name(target_regime_name) {}
+	          : regime(regime), target_regime(NULL), target_regime_name(target_regime_name) {}
 	        virtual ~Transition_() {}
             void set_target_regime(std::map<std::string, Regime_*>& regimes);
             Regime_* get_target_regime();	        
@@ -407,10 +408,6 @@ namespace nineml {
 	inline {{component_name}}::Regime_* {{component_name}}::get_regime(const std::string& regime_name) {
 	   return regimes[regime_name];
 	}
-	
-	inline dynamics_function_type {{component_name}}::Regime_::get_dynamics_function() {
-	    return this->dynamics_function;
-    }
 
     inline void {{component_name}}::Transition_::set_target_regime(std::map<std::string, {{component_name}}::Regime_*>& regimes) {
         this->target_regime = regimes[this->target_regime_name];   

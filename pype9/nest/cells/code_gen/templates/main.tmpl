@@ -135,7 +135,7 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
     {% endif %}
 
 {{component_name}}::{{regime.name}}Regime_::{{regime.name}}Regime_({{component_name}}* cell)
-  : Regime_(cell){% if regime.num_time_derivatives %}{% include "solver_construct.tmpl" %}{% endif %} {
+  : Regime_(cell{% if regime.num_time_derivatives %}, {{component_name}}_{{regime.name}}_dynamics){% include "solver_construct.tmpl" %}{% else %}){% endif %} {
   
     // Construct OnConditions specific to the regime.
     {% for on_condition in regime.on_conditions %}
