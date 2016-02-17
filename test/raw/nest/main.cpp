@@ -20,6 +20,7 @@ int main(void) {
     // Initialise network
     SLIInterpreter sli;
     nest::Network network(sli);
+    network.reset_kernel();
 
     // Initialise models
     nineml::IzhikevichMaster reference;
