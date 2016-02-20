@@ -16,11 +16,6 @@
 
 int main(void) {
 
-    // Initialise network
-    SLIInterpreter sli;
-    nest::Network network(sli);
-    network.reset_kernel();
-
     // Initialise models
     nineml::IzhikevichMaster reference;
     nineml::IzhikevichBranch generated;
@@ -31,12 +26,12 @@ int main(void) {
 
     reference_status.insert(Name("test"), Token(1.0));
 
-    DictionaryDatum reference_datum(reference_status);
-    DictionaryDatum generated_datum(generated_status);
+    DictionaryDatum reference_datum(&reference_status);
+    DictionaryDatum generated_datum(&generated_status);
 
     // Init Buffers of models
-    reference.init_buffers();
-    generated.init_buffers();
+    reference.init_buffers_();
+    generated.init_buffers_();
 
     std::cout << "Hello Nest 3" << std::endl; /* prints Hello World */
 
