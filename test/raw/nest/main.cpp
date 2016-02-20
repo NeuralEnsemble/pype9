@@ -9,8 +9,7 @@
  */
 
 #include <iostream>
-#include "dictdatum.h"
-#include "network.h"
+#include "mock_nest.h"
 #include "IzhikevichMaster.h"
 #include "IzhikevichBranch.h"
 
