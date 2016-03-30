@@ -21,62 +21,11 @@
  */
 
 
-#include "config.h"
 #include "numerics.h"
-
-
-#ifndef HAVE_M_E
-
-#ifdef HAVE_CMATH_MAKROS_IGNORED
-#define M_E_OK
-#undef __PURE_CNAME
-#include <cmath>
-#define __PURE_CNAME
-#else
-#include <cmath>
-#endif
-
-#else
-#define M_E_OK
-#include <cmath>
-#endif
-
-
-#ifndef HAVE_M_PI
-
-#ifdef HAVE_CMATH_MAKROS_IGNORED
-#define M_PI_OK
-#endif
-
-#else
-#define M_PI_OK
-#endif
-
-
-//
-//   e
-//
-#ifdef HAVE_GSL_1_2
-
 #include <gsl/gsl_math.h>
+
 const double numerics::e = M_E;
 const double numerics::pi = M_PI;
-
-#else
-
-#ifdef M_E_OK
-const double numerics::e = M_E;
-#else
-const double numerics::e = 2.71828182845904523536028747135;
-#endif
-
-#ifdef M_PI_OK
-const double numerics::pi = M_PI;
-#else
-const double numerics::pi = 3.14159265358979323846264338328;
-#endif
-
-#endif
 
 
 // later also in namespace

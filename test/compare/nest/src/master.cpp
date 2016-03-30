@@ -25,12 +25,12 @@
  * Template specialization that needs to be in the nest namesapce *
  ******************************************************************/
 
-nest::RecordablesMap<nineml::IzhikevichMaster> nineml::IzhikevichMaster::recordablesMap_;
+nest::RecordablesMap<nineml::Master> nineml::Master::recordablesMap_;
 
 namespace nest{
-  template <> void RecordablesMap<nineml::IzhikevichMaster>::create() {
-    insert_("U", &nineml::IzhikevichMaster::get_y_elem_<nineml::IzhikevichMaster::State_::U_INDEX>);
-    insert_("V", &nineml::IzhikevichMaster::get_y_elem_<nineml::IzhikevichMaster::State_::V_INDEX>);
+  template <> void RecordablesMap<nineml::Master>::create() {
+    insert_("U", &nineml::Master::get_y_elem_<nineml::Master::State_::U_INDEX>);
+    insert_("V", &nineml::Master::get_y_elem_<nineml::Master::State_::V_INDEX>);
   }
 }
 
@@ -40,19 +40,19 @@ namespace nest{
 
 namespace nineml {
 
-extern "C" int IzhikevichMaster_dynamics(double t, const double y_[], double f_[], void* pnode_) {
+extern "C" int Master_dynamics(double t, const double y_[], double f_[], void* pnode_) {
 
 	// Get references to the members of the model
 	assert(pnode_);
-	const IzhikevichMaster& node_ = *(reinterpret_cast<IzhikevichMaster*>(pnode_));
-	const IzhikevichMaster::Parameters_& P_ = node_.P_;
-	const IzhikevichMaster::State_& S_ = node_.S_;
-	const IzhikevichMaster::Buffers_& B_ = node_.B_;
+	const Master& node_ = *(reinterpret_cast<Master*>(pnode_));
+	const Master::Parameters_& P_ = node_.P_;
+	const Master::State_& S_ = node_.S_;
+	const Master::Buffers_& B_ = node_.B_;
 
-    if (B_.current_regime == IzhikevichMaster::subthreshold_regime_REGIME) {
+    if (B_.current_regime == Master::subthreshold_regime_REGIME) {
 	    // State Variables
-        const double_t& V = S_.y_[IzhikevichMaster::State_::V_INDEX];  // (mV)
-        const double_t& U = S_.y_[IzhikevichMaster::State_::U_INDEX];  // (mV/ms)
+        const double_t& V = S_.y_[Master::State_::V_INDEX];  // (mV)
+        const double_t& U = S_.y_[Master::State_::U_INDEX];  // (mV/ms)
             
         
         // Parameters
@@ -74,9 +74,9 @@ extern "C" int IzhikevichMaster_dynamics(double t, const double y_[], double f_[
         
 	    // Evaluate differential equations
 	    //std::cout << "U=" << a*(-U + V*b);
-	    ITEM(f_, IzhikevichMaster::State_::U_INDEX) = a*(-U + V*b);  // (mV/ms^2)
+	    ITEM(f_, Master::State_::U_INDEX) = a*(-U + V*b);  // (mV/ms^2)
 	    //std::cout << "V=" << -U + V*beta + alpha*(V*V) + zeta + Isyn/C_m;
-	    ITEM(f_, IzhikevichMaster::State_::V_INDEX) = -U + V*beta + alpha*(V*V) + zeta + Isyn/C_m;  // (mV/ms)
+	    ITEM(f_, Master::State_::V_INDEX) = -U + V*beta + alpha*(V*V) + zeta + Isyn/C_m;  // (mV/ms)
     }
 
     //std::cout << "Success at t=" << t << ": " << GSL_SUCCESS << std::endl;
@@ -99,20 +99,20 @@ extern "C" int IzhikevichMaster_dynamics(double t, const double y_[], double f_[
  ***********************************************/
 
 /** Diagonal Jacobian approximation (for GSL): (f(s+.01) - f(s))/.001 */
-extern "C" int IzhikevichMaster_jacobian (double t, const double y[], double *dfdy, double dfdt[], void* pnode) {
+extern "C" int Master_jacobian (double t, const double y[], double *dfdy, double dfdt[], void* pnode) {
     // cast the node ptr to an object of the proper type
     assert(pnode);
-    const IzhikevichMaster & node = *(reinterpret_cast<IzhikevichMaster*>(pnode));
-    IzhikevichMaster & vnode =    *(reinterpret_cast<IzhikevichMaster*>(pnode));
+    const Master & node = *(reinterpret_cast<Master*>(pnode));
+    Master & vnode =    *(reinterpret_cast<Master*>(pnode));
 
     // state is a reference to the model state
-    struct IzhikevichMaster::Buffers_ *b;
+    struct Master::Buffers_ *b;
     b = &(vnode.B_);
 
     for (int i = 0; i < b->N; i++)
         b->u[i] = y[i] + 0.01;
 
-    IzhikevichMaster_dynamics(t, b->u, b->jac, pnode);
+    Master_dynamics(t, b->u, b->jac, pnode);
     for (int i = 0; i < b->N; i++)
         dfdt[i*b->N + i] = (b->jac[i] - dfdy[i]) / .001;
     return 0;
@@ -121,7 +121,7 @@ extern "C" int IzhikevichMaster_jacobian (double t, const double y[], double *df
  * Define parameters of the model *
  **********************************/
 
-IzhikevichMaster::Parameters_::Parameters_():
+Master::Parameters_::Parameters_():
     a (0.0),
     c (0.0),
     b (0.0),
@@ -138,7 +138,7 @@ IzhikevichMaster::Parameters_::Parameters_():
  * Construct state from parameters.
  ************************************/
 
-IzhikevichMaster::State_::State_(const Parameters_& p) {
+Master::State_::State_(const Parameters_& p) {
 
     const Parameters_ *params = &p;
 
@@ -151,7 +151,7 @@ IzhikevichMaster::State_::State_(const Parameters_& p) {
 /***********************************
  * Copy constructor for State class
  ***********************************/
-IzhikevichMaster::State_::State_(const State_& s) {
+Master::State_::State_(const State_& s) {
   for (int i = 0 ; i < 2 ; ++i)
       y_[i] = s.y_[i];
 }
@@ -160,7 +160,7 @@ IzhikevichMaster::State_::State_(const State_& s) {
  * Assignment of a State from another State *
  ********************************************/
 
-IzhikevichMaster::State_& IzhikevichMaster::State_::operator=(const State_& s) {
+Master::State_& Master::State_::operator=(const State_& s) {
   assert(this != &s);
   for (size_t i = 0 ; i < 2 ; ++i)
        y_[i] = s.y_[i];
@@ -168,7 +168,7 @@ IzhikevichMaster::State_& IzhikevichMaster::State_::operator=(const State_& s) {
   return *this;
 }
 
-void IzhikevichMaster::calibrate() {
+void Master::calibrate() {
     B_.logger_.init();
     V_.rng_ = net_->get_rng( get_thread() );
 }
@@ -177,7 +177,7 @@ void IzhikevichMaster::calibrate() {
  * Accessors and Modifiers *
  ***************************/
 
-void IzhikevichMaster::Parameters_::get (DictionaryDatum &d_) const {
+void Master::Parameters_::get (DictionaryDatum &d_) const {
 
     // Update dictionary from internal parameters, scaling if required.
     def<double_t>(d_, "a", a);
@@ -192,7 +192,7 @@ void IzhikevichMaster::Parameters_::get (DictionaryDatum &d_) const {
 
 }
 
-void IzhikevichMaster::Parameters_::set (const DictionaryDatum &d_) {
+void Master::Parameters_::set (const DictionaryDatum &d_) {
 
     // Update internal parameters from dictionary
     updateValue<double_t>(d_, "a", a);
@@ -208,13 +208,13 @@ void IzhikevichMaster::Parameters_::set (const DictionaryDatum &d_) {
     // Scale parameters as required
 }
 
-void IzhikevichMaster::State_::get (DictionaryDatum &d_) const {
+void Master::State_::get (DictionaryDatum &d_) const {
     // Get states from internal variables
     def<double_t>(d_, "U", y_[0]);
     def<double_t>(d_, "V", y_[1]);
 }
 
-void IzhikevichMaster::State_::set (const DictionaryDatum &d_, const Parameters_&) {
+void Master::State_::set (const DictionaryDatum &d_, const Parameters_&) {
     // Set internal state variables from dictionary values
     updateValue<double_t>(d_, "U", y_[0]);
     updateValue<double_t>(d_, "V", y_[1]);
@@ -224,7 +224,7 @@ void IzhikevichMaster::State_::set (const DictionaryDatum &d_, const Parameters_
  * Buffers *
  ***********/
 
-IzhikevichMaster::Buffers_::Buffers_(IzhikevichMaster& n)
+Master::Buffers_::Buffers_(Master& n)
     : logger_(n),
       s_(0),
       c_(0),
@@ -236,7 +236,7 @@ IzhikevichMaster::Buffers_::Buffers_(IzhikevichMaster& n)
     // init_buffers_().
 }
 
-IzhikevichMaster::Buffers_::Buffers_(const Buffers_&, IzhikevichMaster& n)
+Master::Buffers_::Buffers_(const Buffers_&, Master& n)
     : logger_(n),
       s_(0),
       c_(0),
@@ -248,7 +248,7 @@ IzhikevichMaster::Buffers_::Buffers_(const Buffers_&, IzhikevichMaster& n)
     // init_buffers_().
 }
 
-void IzhikevichMaster::init_buffers_() {
+void Master::init_buffers_() {
 
     // Clear event buffers
 
@@ -282,8 +282,8 @@ void IzhikevichMaster::init_buffers_() {
     else
         gsl_odeiv2_evolve_reset(B_.e_);
 
-    B_.sys_.function  = IzhikevichMaster_dynamics;
-    B_.sys_.jacobian  = IzhikevichMaster_jacobian;
+    B_.sys_.function  = Master_dynamics;
+    B_.sys_.jacobian  = Master_jacobian;
     B_.sys_.dimension = B_.N;
     B_.sys_.params    = reinterpret_cast<void*>(this);
 
@@ -296,7 +296,7 @@ void IzhikevichMaster::init_buffers_() {
  * Constructors *
  ****************/
 
-IzhikevichMaster::IzhikevichMaster()
+Master::Master()
     : Archiving_Node(),
       P_(),
       S_(P_),
@@ -306,7 +306,7 @@ IzhikevichMaster::IzhikevichMaster()
 
     double t = 0.0;
     // State Variables
-    const double_t& V = S_.y_[IzhikevichMaster::State_::V_INDEX];  // (mV)
+    const double_t& V = S_.y_[Master::State_::V_INDEX];  // (mV)
         
     
     // Parameters
@@ -324,20 +324,20 @@ IzhikevichMaster::IzhikevichMaster()
     B_.subthreshold_regime_trigger_0_active = !(V > theta);
 }
 
-IzhikevichMaster::IzhikevichMaster(const IzhikevichMaster& n)
+Master::Master(const Master& n)
     : Archiving_Node(n),
       P_(n.P_),
       S_(n.S_),
       B_(n.B_, *this) {}
 
-void IzhikevichMaster::init_node_(const Node& proto) {
-    const IzhikevichMaster& pr = downcast<IzhikevichMaster>(proto);
+void Master::init_node_(const Node& proto) {
+    const Master& pr = downcast<Master>(proto);
     P_ = pr.P_;
     S_ = State_(P_);
 
     double t = 0.0;
     // State Variables
-    const double_t& V = S_.y_[IzhikevichMaster::State_::V_INDEX];  // (mV)
+    const double_t& V = S_.y_[Master::State_::V_INDEX];  // (mV)
         
     
     // Parameters
@@ -355,13 +355,13 @@ void IzhikevichMaster::init_node_(const Node& proto) {
     B_.subthreshold_regime_trigger_0_active = !(V > theta);    
 }
 
-void IzhikevichMaster::init_state_(const Node& proto) {
-    const IzhikevichMaster& pr = downcast<IzhikevichMaster>(proto);
+void Master::init_state_(const Node& proto) {
+    const Master& pr = downcast<Master>(proto);
     S_ = State_(pr.P_);
 
     double t = 0.0;
     // State Variables
-    const double_t& V = S_.y_[IzhikevichMaster::State_::V_INDEX];  // (mV)
+    const double_t& V = S_.y_[Master::State_::V_INDEX];  // (mV)
         
     
     // Parameters
@@ -383,7 +383,7 @@ void IzhikevichMaster::init_state_(const Node& proto) {
  * Destructor *
  **************/
 
-IzhikevichMaster::~IzhikevichMaster () {
+Master::~Master () {
     // GSL structs only allocated by init_nodes_(),
     // so we need to protect destruction
     if ( B_.s_ != NULL)
@@ -406,7 +406,7 @@ IzhikevichMaster::~IzhikevichMaster () {
  * Evaluate the update *
  ***********************/
 
-void IzhikevichMaster::update(nest::Time const & origin, const nest::long_t from, const nest::long_t to) {
+void Master::update(nest::Time const & origin, const nest::long_t from, const nest::long_t to) {
 
     assert(to >= 0 && (nest::delay) from < nest::Scheduler::get_min_delay());
     assert(from < to);
@@ -414,11 +414,11 @@ void IzhikevichMaster::update(nest::Time const & origin, const nest::long_t from
     double dt = nest::Time::get_resolution().get_ms();
     nest::long_t current_steps = origin.get_steps();
 
-    double f_[IzhikevichMaster::State_::STATE_VEC_SIZE_];  // Vector to hold the time derivatives
+    double f_[Master::State_::STATE_VEC_SIZE_];  // Vector to hold the time derivatives
 
     if (origin.get_ms() < 10) {
         std::cout << "State: ";
-        for (int i = 0; i < IzhikevichMaster::State_::STATE_VEC_SIZE_; ++i)
+        for (int i = 0; i < Master::State_::STATE_VEC_SIZE_; ++i)
             std::cout << S_.y_[i] << ", ";
         std::cout << std::endl;
         std::cout << "IntegrationStep_: " << B_.IntegrationStep_ << std::endl;
@@ -464,7 +464,7 @@ void IzhikevichMaster::update(nest::Time const & origin, const nest::long_t from
 	        if (B_.current_regime == subthreshold_regime_REGIME) {
 	            // Map all variables/expressions to the local namespace that are required to evaluate the triggers
 	            // State Variables
-                const double_t& V = S_.y_[IzhikevichMaster::State_::V_INDEX];  // (mV)
+                const double_t& V = S_.y_[Master::State_::V_INDEX];  // (mV)
                     
                 
                 // Parameters
@@ -493,7 +493,7 @@ void IzhikevichMaster::update(nest::Time const & origin, const nest::long_t from
 	                    prev_t = t;
                         // Map all variables/expressions to the local namespace that are required to evaluate the state assignments that were not required for the triggers
                         // State Variables
-                        const double_t& U = S_.y_[IzhikevichMaster::State_::U_INDEX];  // (mV/ms)
+                        const double_t& U = S_.y_[Master::State_::U_INDEX];  // (mV/ms)
                             
                         
                         // Parameters
@@ -510,8 +510,8 @@ void IzhikevichMaster::update(nest::Time const & origin, const nest::long_t from
                         
 
 				        // State assignments
-				        S_.y_[IzhikevichMaster::State_::U_INDEX] = U + d;  // (mV/ms)
-				        S_.y_[IzhikevichMaster::State_::V_INDEX] = c;  // (mV)
+				        S_.y_[Master::State_::U_INDEX] = U + d;  // (mV/ms)
+				        S_.y_[Master::State_::V_INDEX] = c;  // (mV)
 
 					    // FIXME: Need to specify different output ports in a way that can be read by the receiving nodes
 					    // Output events
@@ -559,12 +559,12 @@ void IzhikevichMaster::update(nest::Time const & origin, const nest::long_t from
  * Event Handles *
  *****************/
 
-void IzhikevichMaster::handle(nest::SpikeEvent & e) {
+void Master::handle(nest::SpikeEvent & e) {
     assert(e.get_delay() > 0);
     // Loop through event receive ports
 }
 
-void IzhikevichMaster::handle(nest::CurrentEvent& e) {
+void Master::handle(nest::CurrentEvent& e) {
     assert(e.get_delay() > 0);
 
     const double_t c = e.get_current();
@@ -576,7 +576,7 @@ void IzhikevichMaster::handle(nest::CurrentEvent& e) {
     }
 }
 
-void IzhikevichMaster::handle(nest::DataLoggingRequest& e) {
+void Master::handle(nest::DataLoggingRequest& e) {
     B_.logger_.handle(e);
 }
 

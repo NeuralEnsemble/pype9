@@ -12,26 +12,25 @@
 //#include "universal_data_logger.h"
 //#include "recordables_map.h"
 
-#include "mock_nest.h"
-
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_sf_exp.h>
 #include <gsl/gsl_odeiv2.h>
+#include "mock_nest.h"
 
 #define ITEM(v,i)  (v[i])
 namespace nineml {
 
 
-    extern "C" int IzhikevichMaster_dynamics(double t, const double y_[], double f_[], void* pnode_);
+    extern "C" int Master_dynamics(double t, const double y_[], double f_[], void* pnode_);
 
-    class IzhikevichMaster : public nest::Archiving_Node {
+    class Master : public nest::Archiving_Node {
 
       public:
 
-        ~IzhikevichMaster();
-	    IzhikevichMaster(const IzhikevichMaster &);
-	    IzhikevichMaster();
+        ~Master();
+	    Master(const Master &);
+	    Master();
 
 	    /**
 	     * Import sets of overloaded virtual functions.
@@ -67,7 +66,7 @@ namespace nineml {
 	    void update(nest::Time const &, const nest::long_t, const nest::long_t);
 
     // Set dynamics methods (the ones that actually model the dynamics) as friends
-	    friend int IzhikevichMaster_dynamics(double t, const double y_[], double f_[], void* pnode_);
+	    friend int Master_dynamics(double t, const double y_[], double f_[], void* pnode_);
 
 	    // Regime ids
 	    static const int DEFAULT_REGIME_ = 0;
@@ -100,8 +99,8 @@ namespace nineml {
         // Synaptic event function definitions
 
 	    // The next two classes need to be friends to access the State_ class/member
-	    friend class nest::RecordablesMap<IzhikevichMaster>;
-	    friend class nest::UniversalDataLogger<IzhikevichMaster>;
+	    friend class nest::RecordablesMap<Master>;
+	    friend class nest::UniversalDataLogger<Master>;
 
         struct Parameters_ {
             double a;
@@ -140,9 +139,9 @@ namespace nineml {
         };
 
         struct Buffers_ {
-	        Buffers_(IzhikevichMaster&);
-	        Buffers_(const Buffers_&, IzhikevichMaster&);
-	        nest::UniversalDataLogger<IzhikevichMaster> logger_;
+	        Buffers_(Master&);
+	        Buffers_(const Buffers_&, Master&);
+	        nest::UniversalDataLogger<Master> logger_;
 
             // Structures required by the solver
 	        gsl_odeiv2_step*  s_;  //!< stepping function
@@ -180,17 +179,17 @@ namespace nineml {
 		Buffers_    B_;
 
 	    //! Mapping of recordables names to access functions	
-		static nest::RecordablesMap<IzhikevichMaster> recordablesMap_;
+		static nest::RecordablesMap<Master> recordablesMap_;
     
-	}; // end class IzhikevichMaster
+	}; // end class Master
 
-    inline nest::port IzhikevichMaster::send_test_event(nest::Node& target, nest::port receptor_type, nest::synindex, bool) {
+    inline nest::port Master::send_test_event(nest::Node& target, nest::port receptor_type, nest::synindex, bool) {
 		nest::SpikeEvent e;
 		e.set_sender(*this);
 		return target.handles_test_event(e, receptor_type);
     }
 
-    inline nest::port IzhikevichMaster::handles_test_event(nest::SpikeEvent&, nest::port receptor_type) {
+    inline nest::port Master::handles_test_event(nest::SpikeEvent&, nest::port receptor_type) {
 	    if (receptor_type < 0 || receptor_type >= SUP_EVENT_PORT_)
             throw nest::UnknownReceptorType(receptor_type, this->get_name());
         else if (receptor_type < MIN_EVENT_PORT_)
@@ -198,7 +197,7 @@ namespace nineml {
 		return receptor_type;
     }
 
-    inline nest::port IzhikevichMaster::handles_test_event(nest::CurrentEvent&, nest::port receptor_type) {
+    inline nest::port Master::handles_test_event(nest::CurrentEvent&, nest::port receptor_type) {
 		if (receptor_type < 0 || receptor_type >= SUP_ANALOG_PORT_)
 		    throw nest::UnknownReceptorType(receptor_type, this->get_name());
 		else if (receptor_type < MIN_ANALOG_PORT_)
@@ -206,13 +205,13 @@ namespace nineml {
 	    return receptor_type;
 	}
 
-	inline nest::port IzhikevichMaster::handles_test_event(nest::DataLoggingRequest& dlr, nest::port receptor_type) {
+	inline nest::port Master::handles_test_event(nest::DataLoggingRequest& dlr, nest::port receptor_type) {
 	    if (receptor_type != 0)
             throw nest::UnknownReceptorType(receptor_type, this->get_name());
 		return B_.logger_.connect_logging_device( dlr, recordablesMap_ );
     }
 
-    inline void IzhikevichMaster::get_status(DictionaryDatum &d) const {
+    inline void Master::get_status(DictionaryDatum &d) const {
 		P_.get(d);
 		S_.get(d);
 		nest::Archiving_Node::get_status(d);
@@ -224,7 +223,7 @@ namespace nineml {
         (*d)[nest::names::receptor_types] = receptor_dict_;
     }
 
-    inline void IzhikevichMaster::set_status(const DictionaryDatum &d) {
+    inline void Master::set_status(const DictionaryDatum &d) {
 	    Parameters_ ptmp = P_;  // temporary copy in case of errors
 	    ptmp.set(d);             // throws if BadProperty
 	    State_    stmp = S_;  // temporary copy in case of errors
@@ -244,11 +243,11 @@ namespace nineml {
        from the corresponding NEST random deviate implementations in librandom
        but stripped from RandomDeviate boiler plate */
     
-    inline float IzhikevichMaster::random_uniform_(float low, float high) {
+    inline float Master::random_uniform_(float low, float high) {
         return low + (high - low) * V_.rng_->drand();
     }
 
-    inline float IzhikevichMaster::random_normal_(float mu, float sigma) {
+    inline float Master::random_normal_(float mu, float sigma) {
         // Box-Muller algorithm, see Knuth TAOCP, vol 2, 3rd ed, p 122
         // we waste one number
         double V1;
@@ -266,7 +265,7 @@ namespace nineml {
         return mu + sigma * S;
     }
     
-    inline float IzhikevichMaster::random_exponential_(float lambda) {
+    inline float Master::random_exponential_(float lambda) {
         return -std::log(V_.rng_->drandpos()) / lambda;
     }   
     

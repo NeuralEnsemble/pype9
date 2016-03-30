@@ -27,7 +27,7 @@
 #include <climits>
 #include <cfloat>
 #include <limits>
-#include "config.h"
+
 
 /**
  * @mainpage NEST: Neural Simulation Tool
@@ -79,15 +79,10 @@ namespace nest
  * Type for Time tics.
  */
 
-#ifdef HAVE_LONG_LONG
-typedef long long tic_t;
-const tic_t tic_t_max = LONG_LONG_MAX;
-const tic_t tic_t_min = LONG_LONG_MIN;
-#else
+
 typedef long tic_t;
 const tic_t tic_t_max = LONG_MAX;
 const tic_t tic_t_min = LONG_MIN;
-#endif
 
 using std::size_t;
 

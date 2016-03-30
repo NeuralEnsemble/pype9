@@ -21,10 +21,6 @@
  */
 
 #include "tokenarray.h"
-#include "integerdatum.h"
-#include "doubledatum.h"
-#include "stringdatum.h"
-#include "tokenutils.h"
 
 
 const TokenArray& TokenArray::operator=( const TokenArray& a )

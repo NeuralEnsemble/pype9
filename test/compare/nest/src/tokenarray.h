@@ -30,8 +30,10 @@
 #include <cstddef>
 #include <vector>
 #include <valarray>
+
+#include "mock_sli.h"
 #include "tarrayobj.h"
-#include "sliexceptions.h"
+
 
 // class Tokenarray uses reference counting and lazy evaluation.
 // This means that only a pointer
@@ -476,12 +478,6 @@ TokenArray::rotate( long n = 1 )
 
 
 std::ostream& operator<<( std::ostream&, const TokenArray& );
-
-
-#ifdef TokenArray_H_DEBUG
-#undef TokenArray_H_DEBUG
-#undef NDEBUG
-#endif
 
 
 #endif

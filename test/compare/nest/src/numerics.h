@@ -26,9 +26,6 @@
 #include <limits>
 #include <cmath>
 
-#if HAVE_EXPM1
-#include <math.h>
-#endif
 
 namespace numerics
 {
@@ -42,9 +39,7 @@ extern const double pi;
 inline double
 expm1( double x )
 {
-#if HAVE_EXPM1
-  return ::expm1( x ); // use library implementation if available
-#else
+
   // compute using Taylor series, see GSL
   // e^x-1 = x + x^2/2! + x^3/3! + ...
   if ( x == 0 )
@@ -66,7 +61,6 @@ expm1( double x )
 
     return sum;
   }
-#endif
 }
 }
 

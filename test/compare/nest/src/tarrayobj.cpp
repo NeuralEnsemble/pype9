@@ -21,8 +21,6 @@
  */
 
 #include "tarrayobj.h"
-#include "datum.h"
-#include "token.h"
 
 #ifdef assert
 #undef assert
