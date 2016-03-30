@@ -151,11 +151,11 @@ extern "C" int IzhikevichBranch_subthreshold_regime_jacobian(double t, const dou
     IzhikevichBranch& cell =    *(reinterpret_cast<IzhikevichBranch*>(node));
     IzhikevichBranch::subthreshold_regimeRegime_& regime = *(reinterpret_cast<IzhikevichBranch::subthreshold_regimeRegime_*>(cell.get_regime("subthreshold_regime")));
 
-    for (int i = 0; i < regime.N; i++)
+    for (unsigned int i = 0; i < regime.N; i++)
         regime.u[i] = y[i] + 0.01;
 
     IzhikevichBranch_subthreshold_regime_dynamics(t, regime.u, regime.jac, node);
-    for (int i = 0; i < regime.N; i++)
+    for (unsigned int i = 0; i < regime.N; i++)
         dfdt[i*regime.N + i] = (regime.jac[i] - dfdy[i]) / .001;
     return 0;
 }

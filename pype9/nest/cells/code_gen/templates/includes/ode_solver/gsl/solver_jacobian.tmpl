@@ -5,11 +5,11 @@ extern "C" int {{component_name}}_{{regime.name}}_jacobian(double t, const doubl
     {{component_name}}& cell =    *(reinterpret_cast<{{component_name}}*>(node));
     {{component_name}}::{{regime.name}}Regime_& regime = *(reinterpret_cast<{{component_name}}::{{regime.name}}Regime_*>(cell.get_regime("{{regime.name}}")));
 
-    for (int i = 0; i < regime.N; i++)
+    for (unsigned int i = 0; i < regime.N; i++)
         regime.u[i] = y[i] + 0.01;
 
     {{component_name}}_{{regime.name}}_dynamics(t, regime.u, regime.jac, node);
-    for (int i = 0; i < regime.N; i++)
+    for (unsigned int i = 0; i < regime.N; i++)
         dfdt[i*regime.N + i] = (regime.jac[i] - dfdy[i]) / .001;
     return 0;
 }

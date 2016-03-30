@@ -565,10 +565,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
     assert(to >= 0 && (nest::delay) from < nest::Scheduler::get_min_delay());
     assert(from < to);
 
-    double dt = nest::Time::get_resolution().get_ms();
     nest::long_t current_steps = origin.get_steps();
-
-    double f_[{{component_name}}::State_::STATE_VEC_SIZE_];  // Vector to hold the time derivatives
 
     for (nest::long_t lag = from; lag < to; ++lag) {
 
@@ -584,19 +581,25 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         double prev_t = origin.get_ms();
         while ((transition = B_.current_regime->transition(origin, lag))) {  // Check for a transition (i.e. the output of current_regime->transition is not NULL) and record it in the 'transition' variable.
             double t = transition->time_occurred(origin, lag);  // Get the exact time the transition occurred.
-            if (t == prev_t)
+            if (t == prev_t) {
                 ++simultaneous_transition_count;
-            else
+                if (simultaneous_transition_count > MAX_SIMULTANEOUS_TRANSITIONS)
+                    throw ExceededMaximumSimultaneousTransitions("{{component_name}}", simultaneous_transition_count, t);
+            } else
                 simultaneous_transition_count = 0;
-            if (simultaneous_transition_count > MAX_SIMULTANEOUS_TRANSITIONS)
-                throw ExceededMaximumSimultaneousTransitions("{{component_name}}", simultaneous_transition_count, t);
+            // Execute body of transition, flagging a discontinuity in the ODE system
+            // if either the body contains state assignments (i.e. not just output
+            // events) or the regime changes
             bool discontinuous = transition->body(t) || (transition->get_target_regime() != B_.current_regime);
+            // Update the current regime
             B_.current_regime = transition->get_target_regime();
+            // Set all triggers, i.e. activate all triggers for which their trigger condition 
+            // evaluates to false.
             B_.current_regime->set_triggers(t);
+            // Reinitialise the solve if the is a discontinuity in the ODE system
             if (discontinuous)
                 B_.current_regime->init_solver();  // Reset the solver if the transition contains state assignments or switches to a new regime.
         }
-        
         
         /***** Send output events for each event send port *****/
         // FIXME: Need to specify different output ports in a way that can be read by the receiving nodes

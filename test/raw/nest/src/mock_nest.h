@@ -11,6 +11,12 @@
 #include "name.h"
 
 #define ARRAY_ALLOC_SIZE 64
+#define LONG_MAX  __LONG_MAX__
+#define LONG_MIN  (-__LONG_MAX__ -1L)
+#define DBL_MAX __DBL_MAX__
+#define LDBL_MAX __LDBL_MAX__
+#define double_t_max ( DBL_MAX ) // because C++ language designers are apes
+#define double_t_min ( DBL_MIN ) // (only integral consts are compile time)
 
 const Name DOUBLE_TYPE("double");
 const Name LONG_TYPE("long");
@@ -29,6 +35,20 @@ const long_t long_t_min = (-__LONG_MAX__ -1L);
 const long_t delay_max = long_t_max;
 const long_t delay_min = long_t_min;
 const rport invalid_port_ = -1;
+
+typedef long tic_t;
+const tic_t tic_t_max = LONG_MAX;
+const tic_t tic_t_min = LONG_MIN;
+
+namespace nest {
+    class Time;
+}
+
+std::ostream& operator<<( std::ostream&, const nest::Time& );
+
+long ld_round( double x ) {
+  return ( long ) std::floor((long double)(x + 0.5));
+}
 
 class Datum {
 
@@ -1138,6 +1158,7 @@ namespace librandom {
 
 namespace nest {
 
+    typedef double double_t;
     typedef double delay;
 
     namespace names {
@@ -1184,39 +1205,480 @@ namespace nest {
         static double min_delay;
     };
 
-    class Time {
+    template < class N > inline N time_abs( const N n ) {
+      return std::abs( n );
+    }
 
-      public:
+    template <> inline long long time_abs( long long n ) {
+      return llabs( n );
+    }
 
-        struct ms {
-          double_t t;
-          explicit ms(double_t t) : t(t) {}
-          explicit ms(long_t t) : t(static_cast< double_t >(t)) {}
-          static double_t fromtoken(const Token& t);
-          explicit ms(const Token& t) : t(fromtoken(t)){};
-        };
+    class Time
+    {
+      // tic_t: tics in  a step, signed long or long long
+      // delay: steps, signed long
+      // double_t: milliseconds (double!)
 
-        Time(ms ms_) : ms_(ms_) {}
-        Time(double t) : ms_(t) {}
+      /////////////////////////////////////////////////////////////
+      // Range: Limits & conversion factors for different types
+      /////////////////////////////////////////////////////////////
 
-        ms get_ms() const { return ms_; }
+    protected:
+      struct Range
+      {
+        static tic_t TICS_PER_STEP;
+        static tic_t TICS_PER_STEP_RND;
+        static tic_t OLD_TICS_PER_STEP;
 
-        static void set_resolution(double_t t) {
-            resolution = t;
+        static double_t TICS_PER_MS;
+        static double_t MS_PER_TIC;
+        static double_t STEPS_PER_MS;
+        static double_t MS_PER_STEP;
+
+        static const tic_t TICS_PER_STEP_DEFAULT;
+        static const double_t TICS_PER_MS_DEFAULT;
+
+        static const long_t INF_MARGIN = 8;
+      };
+
+    public:
+      static tic_t compute_max();
+
+      /////////////////////////////////////////////////////////////
+      // The data: longest integer for tics
+      /////////////////////////////////////////////////////////////
+
+    protected:
+      tic_t tics;
+
+      /////////////////////////////////////////////////////////////
+      // Friend declaration for units and binary operators
+      /////////////////////////////////////////////////////////////
+
+      friend struct step;
+      friend struct tic;
+      friend struct ms;
+      friend struct ms_stamp;
+
+      friend bool operator==( const Time& t1, const Time& t2 );
+      friend bool operator!=( const Time& t1, const Time& t2 );
+      friend bool operator<( const Time& t1, const Time& t2 );
+      friend bool operator>( const Time& t1, const Time& t2 );
+      friend bool operator<=( const Time& t1, const Time& t2 );
+      friend bool operator>=( const Time& t1, const Time& t2 );
+      friend Time operator+( const Time& t1, const Time& t2 );
+      friend Time operator-( const Time& t1, const Time& t2 );
+      friend Time operator*( const long_t factor, const Time& t );
+      friend Time operator*( const Time& t, long_t factor );
+      friend std::ostream&(::operator<<)( std::ostream&, const Time& );
+
+      /////////////////////////////////////////////////////////////
+      // Limits for time, including infinity definitions
+      /////////////////////////////////////////////////////////////
+
+    protected:
+      struct Limit
+      {
+        tic_t tics;
+        delay steps;
+        double_t ms;
+
+        Limit( tic_t tics, delay steps, double_t ms )
+          : tics( tics )
+          , steps( steps )
+          , ms( ms )
+        {
+        }
+        Limit( const tic_t& );
+      };
+      static Limit LIM_MAX;
+      static Limit LIM_MIN;
+      Time::Limit limit( const tic_t& );
+
+      // max is never larger than tics/INF_MARGIN, and we can use INF_MARGIN
+      // to minimize range checks on +/- operations
+      static struct LimitPosInf
+      {
+        static const tic_t tics = tic_t_max / Range::INF_MARGIN + 1;
+        static const delay steps = delay_max;
+    #define LIM_POS_INF_ms double_t_max // because C++ bites
+      } LIM_POS_INF;
+
+      static struct LimitNegInf
+      {
+        static const tic_t tics = -tic_t_max / Range::INF_MARGIN - 1;
+        static const delay steps = -delay_max;
+    #define LIM_NEG_INF_ms ( -double_t_max ) // c++ bites
+      } LIM_NEG_INF;
+
+      /////////////////////////////////////////////////////////////
+      // Unit class for constructors
+      /////////////////////////////////////////////////////////////
+
+    public:
+      struct tic
+      {
+        tic_t t;
+        explicit tic( tic_t t )
+          : t( t ){};
+      };
+
+      struct step
+      {
+        delay t;
+        explicit step( delay t )
+          : t( t )
+        {
+        }
+      };
+
+      struct ms
+      {
+        double_t t;
+
+        explicit ms( double_t t )
+          : t( t )
+        {
+        }
+        explicit ms( long_t t )
+          : t( static_cast< double_t >( t ) )
+        {
         }
 
-        static Time get_resolution() {
-            return Time(resolution);
+        static double_t fromtoken( const Token& t );
+        explicit ms( const Token& t )
+          : t( fromtoken( t ) ){};
+      };
+
+      struct ms_stamp
+      {
+        double_t t;
+        explicit ms_stamp( double_t t )
+          : t( t )
+        {
         }
+        explicit ms_stamp( long_t t )
+          : t( static_cast< double_t >( t ) )
+        {
+        }
+      };
 
-        static double_t step(long_t step) { return (double_t)step * resolution; }
-        long_t get_steps() const { return 1; }
+      /////////////////////////////////////////////////////////////
+      // Constructors
+      /////////////////////////////////////////////////////////////
 
-      protected:
-        static double resolution;
-        ms ms_;
+    protected:
+      explicit Time( tic_t tics )
+        : tics( tics )
+      {
+      } // This doesn't check ranges.
+      // Ergo: LIM_MAX.tics >= tics >= LIM_MIN.tics or
+      //       tics == LIM_POS_INF.tics or LIM_NEG_INF.tics
 
+    public:
+      Time()
+        : tics( 0 ){};
+
+      // Default copy constructor: assumes legal time object
+      // Defined by compiler.
+      // Time(const Time& t);
+
+      Time( tic t )
+        : tics( ( time_abs( t.t ) < LIM_MAX.tics ) ? t.t : ( t.t < 0 ) ? LIM_NEG_INF.tics
+                                                                       : LIM_POS_INF.tics )
+      {
+      }
+
+      Time( step t )
+        : tics( ( time_abs( t.t ) < LIM_MAX.steps ) ? t.t * Range::TICS_PER_STEP : ( t.t < 0 )
+                ? LIM_NEG_INF.tics
+                : LIM_POS_INF.tics )
+      {
+      }
+
+      Time( ms t )
+        : tics( ( time_abs( t.t ) < LIM_MAX.ms )
+              ? static_cast< tic_t >( t.t * Range::TICS_PER_MS + 0.5 )
+              : ( t.t < 0 ) ? LIM_NEG_INF.tics : LIM_POS_INF.tics )
+      {
+      }
+
+      static tic_t fromstamp( ms_stamp );
+      Time( ms_stamp t )
+        : tics( fromstamp( t ) )
+      {
+      }
+
+      /////////////////////////////////////////////////////////////
+      // Resolution: set tics per ms, steps per ms
+      /////////////////////////////////////////////////////////////
+
+      static void set_resolution( double_t tics_per_ms );
+      static void set_resolution( double_t tics_per_ms, double_t ms_per_step );
+      static void reset_resolution();
+      static void reset_to_defaults();
+
+      static Time
+      get_resolution()
+      {
+        return Time( Range::TICS_PER_STEP );
+      }
+
+      static bool
+      resolution_is_default()
+      {
+        return Range::TICS_PER_STEP == Range::TICS_PER_STEP_DEFAULT;
+      }
+
+      /////////////////////////////////////////////////////////////
+      // Common zero-ary or unary operations
+      /////////////////////////////////////////////////////////////
+
+      void
+      set_to_zero()
+      {
+        tics = 0;
+      }
+
+      void
+      advance()
+      {
+        tics += Range::TICS_PER_STEP;
+        range();
+      }
+
+      Time
+      succ() const
+      {
+        return tic( tics + Range::TICS_PER_STEP );
+      } // check range
+      Time
+      pred() const
+      {
+        return tic( tics - Range::TICS_PER_STEP );
+      } // check range
+
+      /////////////////////////////////////////////////////////////
+      // Subtypes of Time (bool tests)
+      /////////////////////////////////////////////////////////////
+
+      bool
+      is_finite() const
+      {
+        return tics != LIM_POS_INF.tics && tics != LIM_NEG_INF.tics;
+      }
+
+      bool
+      is_neg_inf() const
+      {
+        return tics == LIM_NEG_INF.tics;
+      }
+
+      bool
+      is_grid_time() const
+      {
+        return ( tics % Range::TICS_PER_STEP ) == 0;
+      }
+      bool
+      is_step() const
+      {
+        return tics > 0 && is_grid_time();
+      }
+
+      bool
+      is_multiple_of( const Time& divisor ) const
+      {
+        assert( divisor.tics > 0 );
+        return ( tics % divisor.tics ) == 0;
+      }
+
+      /////////////////////////////////////////////////////////////
+      // Singleton'ish types
+      /////////////////////////////////////////////////////////////
+
+      static Time
+      max()
+      {
+        return Time( LIM_MAX.tics );
+      }
+      static Time
+      min()
+      {
+        return Time( LIM_MIN.tics );
+      }
+      static double_t
+      get_ms_per_tic()
+      {
+        return Range::MS_PER_TIC;
+      }
+      static Time
+      neg_inf()
+      {
+        return Time( LIM_NEG_INF.tics );
+      }
+      static Time
+      pos_inf()
+      {
+        return Time( LIM_POS_INF.tics );
+      }
+
+      /////////////////////////////////////////////////////////////
+      // Overflow checks & recalibrate after resolution setting
+      /////////////////////////////////////////////////////////////
+
+      void
+      range()
+      {
+        if ( time_abs( tics ) < LIM_MAX.tics )
+          return;
+        tics = ( tics < 0 ) ? LIM_NEG_INF.tics : LIM_POS_INF.tics;
+      }
+
+      void
+      calibrate()
+      {
+        range();
+      }
+
+      /////////////////////////////////////////////////////////////
+      // Unary operators
+      /////////////////////////////////////////////////////////////
+
+      Time& operator+=( const Time& t )
+      {
+        tics += t.tics;
+        range();
+        return *this;
+      }
+
+      /////////////////////////////////////////////////////////////
+      // Convert to external units
+      /////////////////////////////////////////////////////////////
+
+      tic_t
+      get_tics() const
+      {
+        return tics;
+      }
+      static tic_t
+      get_tics_per_step()
+      {
+        return Range::TICS_PER_STEP;
+      }
+      static double_t
+      get_tics_per_ms()
+      {
+        return Range::TICS_PER_MS;
+      }
+
+      double_t
+      get_ms() const
+      {
+        if ( tics == LIM_POS_INF.tics )
+          return LIM_POS_INF_ms;
+        if ( tics == LIM_NEG_INF.tics )
+          return LIM_NEG_INF_ms;
+        return Range::MS_PER_TIC * tics;
+      }
+
+      delay
+      get_steps() const
+      {
+        if ( tics == LIM_POS_INF.tics )
+          return LIM_POS_INF.steps;
+        if ( tics == LIM_NEG_INF.tics )
+          return LIM_NEG_INF.steps;
+
+        // round tics up to nearest step
+        // by adding TICS_PER_STEP-1 before division
+        return ( tics + Range::TICS_PER_STEP_RND ) / Range::TICS_PER_STEP;
+      }
+
+      /**
+       * Convert between delays given in steps and milliseconds.
+       * This is not a reversible operation, since steps have a finite
+       * rounding resolution. This is not a truncation, but rounding as per ld_round,
+       * which is different from ms_stamp --> Time mapping, which rounds
+       * up. See #903.
+       */
+      static double_t
+      delay_steps_to_ms( delay steps )
+      {
+        return steps * Range::MS_PER_STEP;
+      }
+
+      static delay
+      delay_ms_to_steps( double_t ms )
+      {
+        return ld_round( ms * Range::STEPS_PER_MS );
+      }
     };
+
+    /////////////////////////////////////////////////////////////
+    // Non-class definitions
+    /////////////////////////////////////////////////////////////
+
+    // Needs to be outside the class to get internal linkage to
+    // maybe make the zero visible for optimization.
+    const Time TimeZero;
+
+    /////////////////////////////////////////////////////////////
+    // Binary operators
+    /////////////////////////////////////////////////////////////
+
+    inline bool operator==( const Time& t1, const Time& t2 )
+    {
+      return t1.tics == t2.tics;
+    }
+
+    inline bool operator!=( const Time& t1, const Time& t2 )
+    {
+      return t1.tics != t2.tics;
+    }
+
+    inline bool operator<( const Time& t1, const Time& t2 )
+    {
+      return t1.tics < t2.tics;
+    }
+
+    inline bool operator>( const Time& t1, const Time& t2 )
+    {
+      return t1.tics > t2.tics;
+    }
+
+    inline bool operator<=( const Time& t1, const Time& t2 ) {
+      return t1.tics <= t2.tics;
+    }
+
+    inline bool operator>=( const Time& t1, const Time& t2 ) {
+      return t1.tics >= t2.tics;
+    }
+
+    inline Time operator+( const Time& t1, const Time& t2 ) {
+      return Time::tic( t1.tics + t2.tics ); // check range
+    }
+
+    inline Time operator-( const Time& t1, const Time& t2 ) {
+      return Time::tic( t1.tics - t2.tics ); // check range
+    }
+
+    inline Time operator*( const long_t factor, const Time& t ) {
+      const tic_t n = factor * t.tics;
+      // if no overflow:
+      if ( t.tics == 0 || n / t.tics == factor )
+        return Time::tic( n ); // check range
+
+      if ( ( t.tics > 0 && factor > 0 ) || ( t.tics < 0 && factor < 0 ) )
+        return Time( Time::LIM_POS_INF.tics );
+      else
+        return Time( Time::LIM_NEG_INF.tics );
+    }
+
+    inline Time operator*( const Time& t, long_t factor ) {
+      return factor * t;
+    }
+
+
 
     class Event {
       public:
@@ -1321,7 +1783,7 @@ namespace nest {
         port handles_test_event(nest::CurrentEvent& event, nest::port receptor_type);
 
         std::string get_name() { return "TestNode"; }
-        void set_spiketime(double t) {}
+        void set_spiketime(Time const& t_sp ) {}
         int get_thread() const { return 0; }
 
         template < typename ConcreteNode > const ConcreteNode& downcast( const Node& n ) {
@@ -1352,5 +1814,6 @@ namespace nest {
     };
 
 }
+
 
 #endif
