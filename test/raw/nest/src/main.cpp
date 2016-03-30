@@ -8,10 +8,10 @@
  ============================================================================
  */
 
+#include <src/branch.h>
+#include <src/master.h>
 #include <iostream>
 #include "mock_nest.h"
-#include "IzhikevichMaster.h"
-#include "IzhikevichBranch.h"
 
 
 int main(void) {
