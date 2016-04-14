@@ -13,7 +13,7 @@ const Name t_spike( "t_spike" );
 
 const unsigned long librandom::RandomGen::DefaultSeed = 0xd37ca59fUL;
 
-delay nest::Scheduler::min_delay = 1;
+delay nest::Scheduler::min_delay = 1000;
 delay nest::Scheduler::max_delay = 10000;
 unsigned int moduli_size = 100;
 
@@ -96,14 +96,42 @@ nest::Time const& nest::Network::get_slice_origin() const {
   return TimeZero;
 }
 
-nest::Network::Network() {
-    rng_ = librandom::RandomGen::create_knuthlfg_rng(librandom::RandomGen::DefaultSeed);
-}
+nest::Network::Network(long seed) :
+   rng_(new librandom::GslRandomGen(gsl_rng_knuthran2002, seed)) {}
 
 
 librandom::RngPtr librandom::RandomGen::create_knuthlfg_rng( unsigned long seed ) {
   return librandom::RngPtr( new librandom::KnuthLFG( seed ) );
 }
+
+
+librandom::GslRandomGen::GslRandomGen( const gsl_rng_type* type, unsigned long seed )
+  : RandomGen()
+{
+  rng_ = gsl_rng_alloc( type );
+  rng_type_ = type;
+  assert( rng_ != NULL );
+  gsl_rng_set( rng_, seed );
+}
+
+librandom::GslRandomGen::~GslRandomGen()
+{
+  gsl_rng_free( rng_ );
+}
+
+
+librandom::GslRNGFactory::GslRNGFactory( gsl_rng_type const* const t )
+  : gsl_rng_( t )
+{
+  assert( t != 0 );
+}
+
+librandom::RngPtr
+librandom::GslRNGFactory::create( unsigned long s ) const
+{
+  return RngPtr( new GslRandomGen( gsl_rng_, s ) );
+}
+
 
 long_t nest::Event::get_rel_delivery_steps( const nest::Time& t ) const
 {

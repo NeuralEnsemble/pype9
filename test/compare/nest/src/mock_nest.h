@@ -11,8 +11,10 @@
 #include <unistd.h>
 #include <iostream>
 #include <fstream>
+#include <gsl/gsl_rng.h>
 #include "nest_time.h"
 #include "nest.h"
+#include "lockptr.h"
 #include "mock_sli.h"
 #include "arraydatum.h"
 
@@ -23,7 +25,7 @@
 #define LDBL_MAX __LDBL_MAX__
 #define double_t_max ( DBL_MAX ) // because C++ language designers are apes
 #define double_t_min ( DBL_MIN ) // (only integral consts are compile time)
-
+#define MAX_PATH_LENGTH 10000
 
 typedef long long_t;
 typedef long_t rport;
@@ -50,8 +52,10 @@ typedef double double_t;
 
 
 namespace librandom {
+    
+    class RandomGen;
 
-    class RngPtr;
+    typedef lockPTR< RandomGen > RngPtr;
 
     class RandomGen {
       public:
@@ -79,31 +83,6 @@ namespace librandom {
         static RngPtr create_knuthlfg_rng(const unsigned long seed);
 
         const static unsigned long DefaultSeed;
-
-    };
-
-    class RngPtr {
-      public:
-
-        RngPtr() : rng(new RandomGen()) {}
-
-        RngPtr(RandomGen* rng)
-          : rng(rng) {}
-
-        RandomGen* operator->() const {
-            return rng;
-        }
-
-        RandomGen* operator->() {
-            return rng;
-        }
-
-        RandomGen& operator*() {
-            return *rng;
-        }
-
-      protected:
-        RandomGen* rng;
 
     };
 
@@ -201,6 +180,54 @@ namespace librandom {
       return *next_++; // return next and increment
     }
 
+    class GslRandomGen : public RandomGen
+    {
+      friend class GSL_BinomialRandomDev;
+
+    public:
+      explicit GslRandomGen( const gsl_rng_type*, //!< given RNG, given seed
+        unsigned long );
+
+      ~GslRandomGen();
+
+      RngPtr
+      clone( unsigned long s )
+      {
+        return RngPtr( new GslRandomGen( rng_type_, s ) );
+      }
+
+
+    private:
+      void seed_( unsigned long );
+      double drand_( void );
+
+    private:
+      gsl_rng_type const* rng_type_;
+      gsl_rng* rng_;
+    };
+
+    inline void
+    GslRandomGen::seed_( unsigned long s )
+    {
+      gsl_rng_set( rng_, s );
+    }
+
+    inline double
+    GslRandomGen::drand_( void )
+    {
+      return gsl_rng_uniform( rng_ );
+    }
+
+    //! Factory class for GSL-based random generators
+    class GslRNGFactory {
+      public:
+        GslRNGFactory( gsl_rng_type const* const );
+        RngPtr create( unsigned long ) const;
+
+      private:
+        //! GSL generator type information
+        gsl_rng_type const* const gsl_rng_;
+    };
 
 }
 
@@ -319,6 +346,7 @@ namespace nest {
 
     template <class NodeType> class UniversalDataLogger {
       public:
+        UniversalDataLogger() {}
         UniversalDataLogger(NodeType& node);
         ~UniversalDataLogger();
         port connect_logging_device(DataLoggingRequest& request,
@@ -328,7 +356,7 @@ namespace nest {
         void record_data(long_t step);
         void handle(const DataLoggingRequest& dlr) {}
       private:
-        std::ofstream output_file;
+        std::ofstream* output_file;
         NodeType* node_;
     };
 
@@ -363,16 +391,19 @@ namespace nest {
 
     class Network {
       public:
-        Network();
+        Network(long seed=1234567890);
+        Network(const Network& net) : rng_(net.rng_) {}
         void send(Node& node, SpikeEvent& se, long_t lag) {}
         librandom::RngPtr get_rng(int dummy) { return rng_; }
         const Time& get_slice_origin() const;
+      private:
         librandom::RngPtr rng_;
     };
 
     class Node {
       public:
         Node() : net_(new Network()) {}
+        Node(const Node& node) : net_(node.net_) {}
         virtual ~Node() { delete net_; }
         void handle(SpikeEvent& event);
         void handle(CurrentEvent& event);
@@ -391,14 +422,15 @@ namespace nest {
 
         Network* network() { return net_; }
 
-      protected:
+      public:
         Network *net_;
 
     };
 
-    class Archiving_Node: public Node {
+    class Archiving_Node : public Node {
       public:
         Archiving_Node() : last_spike_(-1.0) {}
+        Archiving_Node(const Archiving_Node& node) : Node(node), last_spike_(node.last_spike_) {}
         virtual ~Archiving_Node() {}
         virtual void get_status(DictionaryDatum& d) const = 0;
         virtual void set_status(const DictionaryDatum& d) = 0;
@@ -410,30 +442,31 @@ namespace nest {
 
     };
     
-    template <class NodeType> UniversalDataLogger<NodeType>::UniversalDataLogger(NodeType& node) {
-        node_ = &node;
+    template <class NodeType> UniversalDataLogger<NodeType>::UniversalDataLogger(NodeType& node)
+      : node_(&node) {
         // Get the current working directory in which to create the data files
-        char cwd[5000];
-        getcwd(cwd, sizeof(cwd));
+        char* cwd_buffer = (char*)malloc(sizeof(char) * MAX_PATH_LENGTH);
+        char* cwd = getcwd(cwd_buffer, MAX_PATH_LENGTH);
         std::ostringstream path;
         // Append the name of the NodeType type to the file path
         path << cwd << "/" << typeid(NodeType).name() << ".dat";
-        std::cout << path.str() << std::endl;
-        output_file.open(path.str());
-        output_file << "# ";
+        free(cwd_buffer);
+        std::cout << "Writing output to " << path.str() << std::endl;
+        output_file = new std::ofstream(path.str());
+        (*output_file) << "# ";
         for (typename RecordablesMap<NodeType>::iterator it = node.recordablesMap_.begin(); it != node.recordablesMap_.end(); ++it)
-            output_file << it->first << " ";
-        output_file << std::endl;
+            (*output_file) << it->first << " ";
+        (*output_file) << std::endl;
     }
     
     template <class NodeType> UniversalDataLogger<NodeType>::~UniversalDataLogger() {
-        output_file.close();
+        delete output_file;
     }
     
     template <class NodeType> void UniversalDataLogger<NodeType>::record_data(long_t step) {
         for (typename RecordablesMap<NodeType>::iterator it = node_->recordablesMap_.begin(); it != node_->recordablesMap_.end(); ++it)
-            output_file << ((*node_).*(it->second))()  << " ";
-        output_file << std::endl;
+            (*output_file) << ((*node_).*(it->second))()  << " ";
+        (*output_file) << std::endl;
     }
 
 }

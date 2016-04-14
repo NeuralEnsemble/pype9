@@ -511,7 +511,7 @@ void Branch::State_::set (const DictionaryDatum &d_, const Parameters_&) {
  ***********/
 
 Branch::Buffers_::Buffers_(Branch& n)
-    : logger_(n) {
+  : logger_(n) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }

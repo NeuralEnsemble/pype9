@@ -416,16 +416,6 @@ void Master::update(nest::Time const & origin, const nest::long_t from, const ne
 
     double f_[Master::State_::STATE_VEC_SIZE_];  // Vector to hold the time derivatives
 
-    if (origin.get_ms() < 10) {
-        std::cout << "State: ";
-        for (int i = 0; i < Master::State_::STATE_VEC_SIZE_; ++i)
-            std::cout << S_.y_[i] << ", ";
-        std::cout << std::endl;
-        std::cout << "IntegrationStep_: " << B_.IntegrationStep_ << std::endl;
-    }
-
-
-
     for (nest::long_t lag = from; lag < to; ++lag) {
 
         /***** Solve ODE over timestep *****/
@@ -437,8 +427,6 @@ void Master::update(nest::Time const & origin, const nest::long_t from, const ne
 
 	        double tt = 0.0;
 	        while (tt < dt) {
-	            if (origin.get_ms() < 10)
-	                std::cout << "tt: " << tt << std::endl;
 	            const int status =  gsl_odeiv2_evolve_apply(
 	                B_.e_, B_.c_, B_.s_,
 	                &B_.sys_, // system of ODE
