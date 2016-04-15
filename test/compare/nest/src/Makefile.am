@@ -8,5 +8,5 @@ compare_SOURCES =  main.cpp branch.h branch.cpp master.cpp master.h \
                    tarraryobj.h tarrayobj.cpp tokenarray.h tokenarray.cpp \
                    name.h name.cpp nest_time.h nest_time.cpp nest.h \
                    numerics.h numerics.cpp arraydatum.h nest_names.h nest_names.cpp \
-                   status.h \ lockptr.h
+                   conditions.h \ lockptr.h
 

@@ -1,6 +1,15 @@
 #ifndef MOCK_NEST_H
 #define MOCK_NEST_H
 
+#define ARRAY_ALLOC_SIZE 64
+#define LONG_MAX  __LONG_MAX__
+#define DBL_MAX __DBL_MAX__
+#define LDBL_MAX __LDBL_MAX__
+#define double_t_max ( DBL_MAX ) // because C++ language designers are apes
+#define double_t_min ( DBL_MIN ) // (only integral consts are compile time)
+#define MAX_PATH_LENGTH 10000
+#define NUM_SLICES 100
+
 #include <cmath>
 #include <vector>
 #include <map>
@@ -18,14 +27,6 @@
 #include "mock_sli.h"
 #include "arraydatum.h"
 
-
-#define ARRAY_ALLOC_SIZE 64
-#define LONG_MAX  __LONG_MAX__
-#define DBL_MAX __DBL_MAX__
-#define LDBL_MAX __LDBL_MAX__
-#define double_t_max ( DBL_MAX ) // because C++ language designers are apes
-#define double_t_min ( DBL_MIN ) // (only integral consts are compile time)
-#define MAX_PATH_LENGTH 10000
 
 typedef long long_t;
 typedef long_t rport;
@@ -243,8 +244,6 @@ namespace nest {
         extern const Name receptor_types;
     }
 
-
-
     class Node;
     class Archiving_Node;
 
@@ -332,7 +331,7 @@ namespace nest {
         ArrayDatum get_list() const {
           ArrayDatum recordables;
           for ( typename Base_::const_iterator it = this->begin(); it != this->end(); ++it )
-            recordables.push_back( new LiteralDatum( it->first ) );
+              recordables.push_back( new LiteralDatum( it->first ) );
           return recordables;
 
           // the entire function should just be
