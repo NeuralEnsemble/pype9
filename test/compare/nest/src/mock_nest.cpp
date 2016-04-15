@@ -17,32 +17,34 @@ delay nest::Scheduler::min_delay = 1000;
 delay nest::Scheduler::max_delay = 10000;
 unsigned int moduli_size = 100;
 
-void nest::RingBuffer::add_value( const long_t offs, const double_t v ) {
-  buffer_[ get_index_( offs ) ] += v;
-}
+//void nest::RingBuffer::add_value( const long_t offs, const double_t v ) {
+//  buffer_[ get_index_( offs ) ] += v;
+//}
 
 void nest::RingBuffer::set_value( const long_t offs, const double_t v ) {
-  buffer_[ get_index_( offs ) ] = v;
+//  buffer_[ get_index_( offs ) ] = v;
+    buffer_[offs] = v;
 }
 
 double nest::RingBuffer::get_value( const long_t offs ) {
-  assert( 0 <= offs && ( size_t ) offs < buffer_.size() );
-  assert( ( delay ) offs < nest::Scheduler::min_delay );
+    return buffer_[offs];
+  //assert( 0 <= offs && ( size_t ) offs < buffer_.size() );
+  //assert( ( delay ) offs < nest::Scheduler::min_delay );
 
   // offs == 0 is beginning of slice, but we have to
   // take modulo into account when indexing
-  long_t idx = get_index_( offs );
-  double_t val = buffer_[ idx ];
-  buffer_[ idx ] = 0.0; // clear buffer after reading
-  return val;
+  //long_t idx = get_index_( offs );
+  //double_t val = buffer_[ idx ];
+  //buffer_[ idx ] = 0.0; // clear buffer after reading
+  //return val;
 }
 
-size_t nest::RingBuffer::get_index_( const delay d ) const {
-  const long_t idx = get_modulo( d );
-  assert( 0 <= idx );
-  assert( ( size_t ) idx < buffer_.size() );
-  return idx;
-}
+//size_t nest::RingBuffer::get_index_( const delay d ) const {
+//  const long_t idx = get_modulo( d );
+//  assert( 0 <= idx );
+//  assert( ( size_t ) idx < buffer_.size() );
+//  return idx;
+//}
 
 delay nest::RingBuffer::get_modulo( delay d ) {
 
@@ -55,21 +57,21 @@ delay nest::RingBuffer::get_modulo( delay d ) {
 }
 
 nest::RingBuffer::RingBuffer()
-  : buffer_( 0.0, nest::Scheduler::min_delay + nest::Scheduler::max_delay ) {}
+  : buffer_( 0.0, nest::Scheduler::min_delay * NUM_SLICES) {}
 
-void nest::RingBuffer::resize() {
-  size_t size = nest::Scheduler::min_delay + nest::Scheduler::max_delay;
-  if ( buffer_.size() != size )
-  {
-    buffer_.resize( size );
-    buffer_ = 0.0;
-  }
-}
+//void nest::RingBuffer::resize() {
+//  size_t size = nest::Scheduler::min_delay + nest::Scheduler::max_delay;
+//  if ( buffer_.size() != size )
+//  {
+//    buffer_.resize( size );
+//    buffer_ = 0.0;
+//  }
+//}
 
-void nest::RingBuffer::clear() {
-  resize();      // does nothing if size is fine
-  buffer_ = 0.0; // clear all elements
-}
+//void nest::RingBuffer::clear() {
+//  resize();      // does nothing if size is fine
+//  buffer_ = 0.0; // clear all elements
+//}
 
 void nest::Archiving_Node::set_status( const DictionaryDatum& d ) {
 //
