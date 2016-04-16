@@ -13,10 +13,7 @@
 #include "branch.h"
 #include "master.h"
 #include "mock_nest.h"
-#include "conditions.h"
-
-#define MASTER
-#define BRANCH
+#include "setup.h"
 
 int main(void) {
 

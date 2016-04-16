@@ -4,7 +4,7 @@
 AC_PREREQ([2.69])
 AC_INIT([compare], [0.1])
 AC_CONFIG_SRCDIR([src/main.cpp])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])
 
