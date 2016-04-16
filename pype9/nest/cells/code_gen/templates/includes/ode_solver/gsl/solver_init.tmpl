@@ -24,7 +24,7 @@
     sys_.function  = {{component_name}}_{{regime.name}}_dynamics;
     sys_.jacobian  = {{component_name}}_{{regime.name}}_jacobian;
     sys_.dimension = N;
-    sys_.params    = reinterpret_cast<void*>(this);
+    sys_.params    = reinterpret_cast<void*>(this->cell);
 
     if (u == 0)
         u = (double *)malloc(sizeof(double) * N);

@@ -229,7 +229,7 @@ bool {{component_name}}::{{TransitionClassName}}::body(double t) {
 
     {% endfor %}
     {% for on_event in regime.on_events %}
-            {% set TransitionClassName = '{}On{}Event'.format(regime.name, transition.src_port_name) %}
+            {% set TransitionClassName = '{}On{}Event'.format(regime.name, on_event.src_port_name) %}
     
 double {{component_name}}::{{TransitionClassName}}::OnEvent_::time_occurred(nest::Time const& origin, const nest::long_t& lag) {
     //FIXME: Should use the exact spike time specified in the spike event
@@ -546,7 +546,7 @@ void {{component_name}}::refresh_events(const nest::long_t& lag) {
     B_.num_{{port.name}}_events = 0;
 {% endfor %}
 {% for port in component_class.event_receive_ports %}
-    B_.num_unprocessed_{{port.name}}_events = B_.{{port.name}}_event_port.get_multiplicity(lag);
+    B_.num_unprocessed_{{port.name}}_events = B_.{{port.name}}_event_port.get_value(lag);
 {% endfor %}
 }
 

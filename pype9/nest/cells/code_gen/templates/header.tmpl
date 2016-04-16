@@ -68,7 +68,7 @@ namespace nineml {
         class OnCondition_;
 {% for regime in component_class.regimes %}
     {% for on_event in regime.on_events %}
-        class {{regime.name}}On{{transition.src_port_name}}Event;
+        class {{regime.name}}On{{on_event.src_port_name}}Event;
     {% endfor %}
     {% for on_condition in regime.on_conditions %}
         class {{regime.name}}OnCondition{{regime.index_of(on_condition)}};
@@ -249,7 +249,7 @@ namespace nineml {
 	    class Regime_ {
 	     
 	      public:
-	        Regime_({{component_name}}* cell, dynamics_function_type dynamics_function)
+	        Regime_({{component_name}}* cell, dynamics_function_type dynamics_function=NULL)
 	          : cell(cell), dynamics_function(dynamics_function) {}
 	        virtual ~Regime_();
 	        Transition_* transition(nest::Time const & origin, const nest::long_t& lag);
@@ -271,7 +271,7 @@ namespace nineml {
           friend class OnCondition_;
 {% for regime in component_class.regimes %}
     {% for on_event in regime.on_events %}
-          friend class {{regime.name}}On{{transition.src_port_name}}Event;
+          friend class {{regime.name}}On{{on_event.src_port_name}}Event;
     {% endfor %}
     {% for on_condition in regime.on_conditions %}
           friend class {{regime.name}}OnCondition{{regime.index_of(on_condition)}};
@@ -359,7 +359,7 @@ namespace nineml {
 	     */
 {% for regime in component_class.regimes %}
     {% for on_event in regime.on_events %}
-        {% set ClassName = '{}On{}Event'.format(regime.name, transition.src_port_name) %}
+        {% set ClassName = '{}On{}Event'.format(regime.name, on_event.src_port_name) %}
         class {{ClassName}} : public OnEvent_ {
 
           public:

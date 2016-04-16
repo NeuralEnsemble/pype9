@@ -17,7 +17,8 @@ from pype9.nest.units import UnitHandler as UnitHandlerNEST
 from pype9.neuron.cells import (
     CellMetaClass as CellMetaClassNEURON,
     simulation_controller as simulatorNEURON)
-from pype9.neuron.units import UnitHandler as UnitHandlerNEURON
+import neuron
+import nest
 if __name__ == '__main__':
     from utils import DummyTestCase as TestCase  # @UnusedImport
 else:
@@ -53,7 +54,7 @@ class TestDynamics(TestCase):
             properties=ninemlcatalog.load(
                 'neuron/Izhikevich', 'SampleIzhikevich'),
             initial_states={'U': -14.0 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
-#             neuron_ref='Izhikevich', nest_ref='izhikevich',
+            neuron_ref='Izhikevich', nest_ref='izhikevich',
             input_signal=input_step('Isyn', 0.02, 50, 100, self.dt),
             nest_translations={'V': ('V_m', 1), 'U': ('U_m', 1),
                                'weight': (None, 1), 'C_m': (None, 1),
@@ -66,8 +67,7 @@ class TestDynamics(TestCase):
                                  'zeta': (None, 1), 'theta': ('vthresh', 1)},
             neuron_build_args={'build_mode': 'force'},
             nest_build_args={'build_mode': 'force'},
-            build_name='IzhikevichBranch')
-#             build_name='IzhikevichMaster')
+            build_name='Izhikevich9ML')
         comparer.simulate(self.duration)
         comparisons = comparer.compare()
         if print_comparisons:
@@ -283,13 +283,13 @@ class TestDynamics(TestCase):
             "LIaF with Alpha syn NEST 9ML simulation did not match NEURON 9ML "
             "simulation")
         self.assertLess(
-            comparisons[('9ML-neuron', 'Ref-neuron')], 0.03 * pq.mV,
-            "LIaF with Alpha syn NEURON 9ML simulation did not match reference"
-            " PyNN")
-        self.assertLess(
             comparisons[('9ML-nest', 'Ref-nest')], 0.04 * pq.mV,
             "LIaF with Alpha syn NEST 9ML simulation did not match reference "
             "built-in")
+        self.assertLess(
+            comparisons[('9ML-neuron', 'Ref-neuron')], 0.03 * pq.mV,
+            "LIaF with Alpha syn NEURON 9ML simulation did not match reference"
+            " PyNN")
 
     def test_izhiFS(self, plot=False, print_comparisons=False):
         # Force compilation of code generation
@@ -360,23 +360,38 @@ class TestDynamics(TestCase):
                                  'external_currents': ['iSyn']},
                       'nest': {'build_mode': 'force'}}
         initial_states = {'t_next': 0.0 * un.ms}
-        cells = {}
-        for sim_name, meta_class in (('nest', CellMetaClassNEST),):  #, ('neuron', CellMetaClassNEURON)): @IgnorePep8
+        for sim_name, meta_class in (('nest', CellMetaClassNEST),
+                                     ):
+                                     # ('neuron', CellMetaClassNEURON)):
+            # Build celltype
             celltype = meta_class(
                 nineml_model, name=nineml_model.name, **build_args[sim_name])
-            cells[sim_name] = celltype(rate=rate)
-            cells[sim_name].record('spike_output')
-            cells[sim_name].update_state(initial_states)
-        # Run NEURON simulation
-#         simulatorNEURON.reset()
-#         neuron.h.dt = self.dt
-#         simulatorNEURON.run(duration.in_units(un.ms))
-        # Run NEST simulation
-        simulatorNEST.reset()
-#         nest.SetKernelStatus({'resolution': self.dt})
-        simulatorNEST.run(duration.in_units(un.ms))
-        for sim_name in ('nest',):  # ('neuron', 'nest'):
-            spikes = cells[sim_name].recording('spike_output')
+            # Initialise simulator
+            if sim_name == 'neuron':
+                # Run NEURON simulation
+                simulatorNEURON.reset()
+                neuron.h.dt = self.dt
+                simulatorNEURON.run(duration.in_units(un.ms))
+            elif sim_name == 'nest':
+                # Run NEST simulation
+                simulatorNEST.reset()
+                nest.SetKernelStatus({'resolution': self.dt})
+                simulatorNEST.run(duration.in_units(un.ms))
+            else:
+                assert False
+            # Create and initialise cell
+            cell = celltype(rate=rate)
+            cell.record('spike_output')
+            cell.update_state(initial_states)
+            # Run simulation
+            if sim_name == 'neuron':
+                simulatorNEURON.run(duration.in_units(un.ms))
+            elif sim_name == 'nest':
+                simulatorNEST.run(duration.in_units(un.ms))
+            else:
+                assert False
+            # Get recording
+            spikes = cell.recording('spike_output')
             # Calculate the rate of the modelled process
             recorded_rate = pq.Quantity(
                 len(spikes) / (spikes.t_stop - spikes.t_start), 'Hz')
@@ -388,16 +403,16 @@ class TestDynamics(TestCase):
                      sim_name, recorded_rate, ref_rate,
                      recorded_rate - ref_rate)))
             # Calculate the absolute deviation
-#             isi_avg = pq.Quantity(1.0 / recorded_rate, 'ms')
-#             isi_std_dev = (abs((spikes[1:] - spikes[:-1]) - isi_avg) /
-#                            (len(spikes) - 1))
-#             recorded_cv = isi_std_dev / isi_avg
-#             ref_cv = 1.0 / ref_rate ** 2.0
-#             self.assertAlmostEqual(
-#                 recorded_cv, ref_cv,
-#                 "Recorded coefficient of variation ({}) did not match the "
-#                 "expected ({}): difference"
-#                 .format(recorded_cv, ref_cv, recorded_cv - ref_cv))
+            isi_avg = pq.Quantity(1.0 / recorded_rate, 'ms')
+            isi_std_dev = (abs((spikes[1:] - spikes[:-1]) - isi_avg) /
+                           (len(spikes) - 1))
+            recorded_cv = isi_std_dev / isi_avg
+            ref_cv = 1.0 / ref_rate ** 2.0
+            self.assertAlmostEqual(
+                recorded_cv, ref_cv,
+                "Recorded coefficient of variation ({}) did not match the "
+                "expected ({}): difference"
+                .format(recorded_cv, ref_cv, recorded_cv - ref_cv))
 
 
 if __name__ == '__main__':

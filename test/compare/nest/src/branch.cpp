@@ -219,7 +219,7 @@ void Branch::subthreshold_regimeRegime_::init_solver() {
     sys_.function  = Branch_subthreshold_regime_dynamics;
     sys_.jacobian  = Branch_subthreshold_regime_jacobian;
     sys_.dimension = N;
-    sys_.params    = reinterpret_cast<void*>(this);
+    sys_.params    = reinterpret_cast<void*>(this->cell);
 
     if (u == 0)
         u = (double *)malloc(sizeof(double) * N);

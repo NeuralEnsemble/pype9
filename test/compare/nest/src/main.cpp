@@ -15,9 +15,8 @@
 #include "mock_nest.h"
 #include "conditions.h"
 
-//#define MASTER
+#define MASTER
 #define BRANCH
-
 
 int main(void) {
 
