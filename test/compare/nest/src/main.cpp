@@ -10,8 +10,6 @@
 
 #include <iostream>
 
-#include "branch.h"
-#include "master.h"
 #include "mock_nest.h"
 #include "setup.h"
 
@@ -21,10 +19,10 @@ int main(void) {
     
     // Initialise models
 #ifdef MASTER
-    nineml::Master master;
+    nineml::MASTER master;
 #endif
 #ifdef BRANCH
-    nineml::Branch branch;
+    nineml::BRANCH branch;
 #endif
     
     std::cout << "Set Status" << std::endl;
@@ -62,10 +60,10 @@ int main(void) {
     std::cout << "Set current and event buffers" << std::endl;
     
 #ifdef MASTER
-    set_ring_buffers<nineml::Master>(master);
+    set_ring_buffers<nineml::MASTER>(master);
 #endif
 #ifdef BRANCH
-    set_ring_buffers<nineml::Branch>(branch);
+    set_ring_buffers<nineml::BRANCH>(branch);
 #endif
     
     std::cout << "Run update steps" << std::endl;
@@ -86,10 +84,10 @@ int main(void) {
     std::cout << "To plot comparison:" << std::endl;
     std::cout << "plot_comparison.py";
 #ifdef MASTER
-    std::cout << " " << get_data_path<nineml::Master>();
+    std::cout << " " << get_data_path<nineml::MASTER>();
 #endif
 #ifdef BRANCH
-    std::cout << " " << get_data_path<nineml::Branch>();
+    std::cout << " " << get_data_path<nineml::BRANCH>();
 #endif
     std::cout << std::endl;
     

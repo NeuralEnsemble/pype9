@@ -5,11 +5,20 @@
 //  Copyright © 2016 Tom Close. All rights reserved.
 //
 
-#ifndef conditions_h
-#define conditions_h
+#ifndef setup_h
+#define setup_h
 
 #include "mock_nest.h"
 
+
+#define MASTER PyNNLeakyIntegrateAndFire
+
+//#define MASTER IzhikevichMaster
+//#define BRANCH IzhikevichBranch
+
+#if MASTER == IzhikevichMaster
+
+#include "models/IzhikevichMaster.h"
 #define INJECTION_AMPLITUDE 20 // pA
 
 inline void set_status(Dictionary& status) {
@@ -26,11 +35,36 @@ inline void set_status(Dictionary& status) {
     status.insert(Name("V"), Token(-65.0));
 }
 
+#elif MASTER == PyNNLeakyIntegrateAndFire
+
+#include "models/PyNNLeakyIntegrateAndFire.h"
+#define INJECTION_AMPLITUDE 20 // pA
+
+inline void set_status(Dictionary& status) {
+    status.insert(Name("v_reset"), Token(-70.0));
+    status.insert(Name("refractory_period"), Token(2));
+    status.insert(Name("Cm"), Token(250));
+    status.insert(Name("g_leak"), Token(25));
+    status.insert(Name("v_threshold"), Token(-55.0));
+    status.insert(Name("e_leak"), Token(-70));
+}
+
+#endif
+
+#ifdef BRANCH
+
+#if BRANCH == IzhikevichBranch
+#include "models/IzhikevichBranch.h"
+#endif
+
+#endif
+
+
 template <class NodeType> void set_ring_buffers(NodeType& node) {
-    
+
     long_t buffer_length = NUM_SLICES * nest::Scheduler::min_delay;
     nest::RingBuffer& isyn = node.B_.Isyn_analog_port;
-    
+
     for (long_t i = 0; i < buffer_length; ++i)
         if (i < buffer_length / 2)
             isyn.set_value(i, 0.0);
@@ -38,4 +72,4 @@ template <class NodeType> void set_ring_buffers(NodeType& node) {
             isyn.set_value(i, INJECTION_AMPLITUDE);
 }
 
-#endif /* status_h */
+#endif /* setup_h */
