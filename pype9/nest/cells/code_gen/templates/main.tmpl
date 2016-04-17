@@ -231,13 +231,13 @@ bool {{component_name}}::{{TransitionClassName}}::body(double t) {
     {% for on_event in regime.on_events %}
             {% set TransitionClassName = '{}On{}Event'.format(regime.name, on_event.src_port_name) %}
     
-double {{component_name}}::{{TransitionClassName}}::OnEvent_::time_occurred(nest::Time const& origin, const nest::long_t& lag) {
+double {{component_name}}::{{TransitionClassName}}::time_occurred(nest::Time const& origin, const nest::long_t& lag) {
     //FIXME: Should use the exact spike time specified in the spike event
     return origin.get_ms() + lag * nest::Time::get_resolution().get_ms();
 }
 
 
-bool {{component_name}}::OnEvent_::{{TransitionClassName}}::received(nest::Time const& origin, const nest::long_t& lag) {
+bool {{component_name}}::{{TransitionClassName}}::received(nest::Time const& origin, const nest::long_t& lag) {
     return (bool)regime->cell->B_.num_unprocessed_{{on_event.src_port_name}}_events;
 }
 

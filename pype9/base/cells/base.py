@@ -21,8 +21,8 @@ import nineml
 from nineml.abstraction import Parameter
 from nineml.user import Property, Quantity, Definition
 from nineml.exceptions import name_error, NineMLNameError
-from nineml.abstraction import BaseALObject
-from nineml.user import BaseULObject
+from nineml.abstraction import BaseALObject, Dynamics
+from nineml.user import BaseULObject, MultiDynamics
 
 
 class CellMetaClass(type):
@@ -377,14 +377,14 @@ class Cell(object):
                             params_dict[prop.name].dimension))
 
 
-class DynamicsWithSynapses(BaseALObject):
+class DynamicsWithSynapses(MultiDynamics):
 
     nineml_type = 'Dynamics'
 #     defining_attributes = ('_dynamics', '_synapses',
 #                            '_connection_parameter_sets')
 
     def __init__(self, dynamics, synapses=[], connection_parameter_sets=[]):
-        if dynamics.nineml_type not in ('Dynamics', 'MultiDynamics'):
+        if not isinstance(dynamics, (Dynamics, MultiDynamics)):
             raise Pype9RuntimeError(
                 "Component class ({}) needs to be nineml Dynamics object"
                 .format(dynamics.nineml_type))
@@ -425,12 +425,35 @@ class DynamicsWithSynapses(BaseALObject):
                         ', '.format(repr(cp)
                                     for cp in self.connection_parameter_sets)))
 
-    def __getattr__(self, name):
+    def __getattribute__(self, name):
         """
-        If an attribute isn't pass it on to the dynamics class so the class can
-        be ducked-typed with the Dynamics class
+        If an attribute isn't overloaded in this class pass it on to the
+        dynamics class so the class can be ducked-typed with the Dynamics
+        or MultiDynamics class it wraps.
         """
-        return getattr(self._dynamics, name)
+        # if name is defined in this class or object use that version
+        if (name in object.__getattribute__(self, '__dict__') or
+                name in object.__getattribute__(self, '__class__').__dict__):
+            return object.__getattribute__(self, name)
+        # Check to see whether name refers to a method or property of _dynamics
+        # binding the referred method/property to the DynamicsWithSynapses
+        # object if it does
+        attr = None
+        for cls in self._dynamics.__class__.__mro__:
+            try:
+                attr = cls.__dict__[name]
+                break
+            except KeyError:
+                pass
+        if attr is not None:
+            if callable(attr) or isinstance(attr, property):
+                # Bind the method or property to the DynamicsWithSynapses
+                # object
+                attr = attr.__get__(self)
+        else:
+            # Try to get a member variable of Dynamics/MultiDynamics object
+            attr = getattr(self._dynamics, name)
+        return attr
 
     def _all_connection_parameters(self):
         return set(chain(*(

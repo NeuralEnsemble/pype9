@@ -249,6 +249,9 @@ class TestDynamics(TestCase):
             (k + '__cell', v)
             for k, v in self.liaf_neuron_translations.iteritems())
         build_dir = os.path.join(os.path.dirname(iaf.url), '9build')
+        from nineml.abstraction import StateAssignment
+        required = iaf_alpha_with_syn.required_for(
+            [StateAssignment('b__psr__syn', 'b__psr__syn + q__psr__syn')])
         comparer = Comparer(
             nineml_model=iaf_alpha_with_syn,
             state_variable='v__cell', dt=self.dt,
