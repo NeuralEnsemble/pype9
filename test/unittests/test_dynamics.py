@@ -8,7 +8,7 @@ from nineml.user.multi.component import MultiDynamics
 from nineml.user import DynamicsProperties
 from pype9.testing import Comparer, input_step, input_freq
 from pype9.base.cells import (
-    DynamicsWithSynapses, DynamicsWithSynapsesProperties,
+    MultiDynamicsWithSynapses, DynamicsWithSynapsesProperties,
     ConnectionParameterSet, ConnectionPropertySet)
 from pype9.nest.cells import (
     CellMetaClass as CellMetaClassNEST,
@@ -204,7 +204,7 @@ class TestDynamics(TestCase):
             port_connections=[
                 ('syn', 'i_synaptic__psr', 'cell', 'i_synaptic')],
             port_exposures=[('syn', 'spike__psr', 'input_spike')])
-        iaf_alpha_with_syn = DynamicsWithSynapses(
+        iaf_alpha_with_syn = MultiDynamicsWithSynapses(
             iaf_alpha,
             connection_parameter_sets=[
                 ConnectionParameterSet(

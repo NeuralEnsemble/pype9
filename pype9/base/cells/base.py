@@ -11,18 +11,20 @@
   License: This file is part of the "NineLine" package, which is released under
            the MIT Licence, see LICENSE for details.
 """
-from pype9.exceptions import Pype9RuntimeError, Pype9AttributeError
 from itertools import chain
 from copy import deepcopy
 import time
 import os.path
+from abc import ABCMeta
 import quantities as pq
 import nineml
-from nineml.abstraction import Parameter
-from nineml.user import Property, Quantity, Definition
+from nineml.abstraction import BaseALObject, Dynamics, Parameter
+from nineml.user import (
+    BaseULObject, DynamicsProperties, MultiDynamics, MultiDynamicsProperties,
+    Property, Quantity, Definition)
+from nineml.base import ContainerObject, DocumentLevelObject
 from nineml.exceptions import name_error, NineMLNameError
-from nineml.abstraction import BaseALObject, Dynamics
-from nineml.user import BaseULObject, MultiDynamics
+from pype9.exceptions import Pype9RuntimeError, Pype9AttributeError
 
 
 class CellMetaClass(type):
@@ -42,12 +44,17 @@ class CellMetaClass(type):
         `saved_name`         -- the name of the Dynamics object in the document
                                 if diferent from the `name`
         """
-        if not isinstance(component_class, DynamicsWithSynapses):
-            component_class = DynamicsWithSynapses(component_class)
+        # If the component class is not already wrapped in a WithSynapses
+        # object, wrap it in one before passing to the code template generator
+        if not isinstance(component_class, WithSynapses):
+            component_class = WithSynapses.wrap(component_class)
         if default_properties is not None:
+            # If default properties is not already wrapped in a
+            # WithSynapseProperties object, wrap it in one before passing to
+            # the code template generator
             if not isinstance(default_properties,
-                              DynamicsWithSynapsesProperties):
-                default_properties = DynamicsWithSynapsesProperties(
+                              WithSynapsesProperties):
+                default_properties = WithSynapsesProperties.wrap(
                     default_properties)
             if default_properties.component_class != component_class:
                 raise Pype9RuntimeError(
@@ -377,17 +384,17 @@ class Cell(object):
                             params_dict[prop.name].dimension))
 
 
-class DynamicsWithSynapses(MultiDynamics):
+class WithSynapses(object):
+    """
+    Mixin class to be mixed with Dynamics and MultiDynamics classes in order
+    to handle synapses (and their potential flattening to weights)
+    """
 
-    nineml_type = 'Dynamics'
-#     defining_attributes = ('_dynamics', '_synapses',
-#                            '_connection_parameter_sets')
+    __metaclass__ = ABCMeta
 
-    def __init__(self, dynamics, synapses=[], connection_parameter_sets=[]):
-        if not isinstance(dynamics, (Dynamics, MultiDynamics)):
-            raise Pype9RuntimeError(
-                "Component class ({}) needs to be nineml Dynamics object"
-                .format(dynamics.nineml_type))
+    def __init__(self, dynamics, synapses, connection_parameter_sets):
+        assert isinstance(dynamics, (Dynamics, MultiDynamics))
+        # Initialise Dynamics/MultiDynamics base classes
         self._dynamics = dynamics
         self._synapses = dict((s.name, s) for s in synapses)
         self._connection_parameter_sets = dict(
@@ -418,46 +425,12 @@ class DynamicsWithSynapses(MultiDynamics):
              ('ConnectionParameterSet', 'connection_parameter_set')])
 
     def __repr__(self):
-        return ("DynamicsWithSynapses(dynamics={}, synapses=[{}], "
+        return ("{}WithSynapses(dynamics={}, synapses=[{}], "
                 "connection_parameter_sets=[{}])"
-                .format(self._dynamics,
+                .format(self._dynamics.__class__.__name__, self._dynamics,
                         ', '.format(repr(s) for s in self.synapses),
                         ', '.format(repr(cp)
                                     for cp in self.connection_parameter_sets)))
-
-    def __getattribute__(self, name):
-        """
-        If an attribute isn't overloaded in this class pass it on to the
-        dynamics class so the class can be ducked-typed with the Dynamics
-        or MultiDynamics class it wraps.
-        """
-        # If name is defined in this DynamicsWithSynapse class/object use it.
-        # We go to the effort of doing this instead of just using __getattr__
-        # to avoid calling methods of MultiDynamics (which is only inherited
-        # from to get super methods to work with the redirection of the bound
-        # method
-        if (name in object.__getattribute__(self, '__dict__') or
-                name in object.__getattribute__(self, '__class__').__dict__):
-            return object.__getattribute__(self, name)
-        # Check to see whether name refers to a method or property of _dynamics
-        # binding the referred method/property to the DynamicsWithSynapses
-        # object if it does
-        attr = None
-        for cls in self._dynamics.__class__.__mro__:
-            try:
-                attr = cls.__dict__[name]
-                break
-            except KeyError:
-                pass
-        if attr is not None:
-            if callable(attr) or isinstance(attr, property):
-                # Bind the method or property to the DynamicsWithSynapses
-                # object
-                attr = attr.__get__(self)
-        else:
-            # Try to get a member variable of Dynamics/MultiDynamics object
-            attr = getattr(self._dynamics, name)
-        return attr
 
     def _all_connection_parameters(self):
         return set(chain(*(
@@ -525,12 +498,75 @@ class DynamicsWithSynapses(MultiDynamics):
     def accept_visitor(self, visitor):
         self.dynamics.accept_visitor(visitor)
 
+    @classmethod
+    def wrap(cls, dynamics, synapses=[], connection_parameter_sets=[]):
+        if isinstance(dynamics, MultiDynamics):
+            wrapped = MultiDynamicsWithSynapses(dynamics, synapses,
+                                                connection_parameter_sets)
+        elif isinstance(dynamics, Dynamics):
+            wrapped = DynamicsWithSynapses(dynamics, synapses,
+                                           connection_parameter_sets)
+        else:
+            raise Pype9RuntimeError(
+                "Cannot wrap '{}' class with WithSynapses, only Dynamics and "
+                "MultiDynamics".format(type(dynamics)))
+        return wrapped
 
-class DynamicsWithSynapsesProperties(BaseULObject):
 
-    nineml_type = 'DynamicsProperties'
-#     defining_attributes = ('_dynamics_properties', '_synapses',
-#                            '_connection_property_sets')
+class DynamicsWithSynapses(WithSynapses, Dynamics):
+
+    def __init__(self, dynamics, synapses=[], connection_parameter_sets=[]):
+        WithSynapses.__init__(self, dynamics, synapses,
+                              connection_parameter_sets)
+        BaseALObject.__init__(self)
+        DocumentLevelObject.__init__(self, dynamics.document)
+        ContainerObject.__init__(self)
+        # Create references to all dynamics member variables so that inherited
+        # Dynamics properties and methods can find them.
+        self._name = dynamics.name
+        self._annotations = dynamics._annotations
+        self._parameters = dynamics._parameters
+        self._aliases = dynamics._aliases
+        self._constants = dynamics._constants
+        self._state_variables = dynamics._state_variables
+        self._regimes = dynamics._regimes
+        self._state_variables = dynamics._state_variables
+        self._analog_send_ports = dynamics._analog_send_ports
+        self._analog_receive_ports = dynamics._analog_receive_ports
+        self._analog_reduce_ports = dynamics._analog_reduce_ports
+        self._event_receive_ports = dynamics._event_receive_ports
+        self._event_send_ports = dynamics._event_send_ports
+
+
+class MultiDynamicsWithSynapses(WithSynapses, MultiDynamics):
+    def __init__(self, dynamics, synapses=[], connection_parameter_sets=[]):
+        WithSynapses.__init__(self, dynamics, synapses,
+                              connection_parameter_sets)
+        BaseALObject.__init__(self)
+        DocumentLevelObject.__init__(self, dynamics.document)
+        ContainerObject.__init__(self)
+        # Create references to all dynamics member variables so that inherited
+        # Dynamics properties and methods can find them.
+        self._name = dynamics.name
+        self._annotations = dynamics._annotations
+        self._sub_components = dynamics._sub_components
+        self._analog_send_ports = dynamics._analog_send_ports
+        self._analog_receive_ports = dynamics._analog_receive_ports
+        self._analog_reduce_ports = dynamics._analog_reduce_ports
+        self._event_send_ports = dynamics._event_send_ports
+        self._event_receive_ports = dynamics._event_receive_ports
+        self._analog_port_connections = dynamics._analog_port_connections
+        self._event_port_connections = dynamics._event_port_connections
+
+
+class WithSynapsesProperties(object):
+    """
+    Mixin class to be mixed with DynamicsProperties and MultiDynamicsProperties
+    classes in order to handle synapses (and their potential flattening to
+    weights)
+    """
+
+    __metaclass__ = ABCMeta
 
     def __init__(self, dynamics_properties, synapse_properties=[],
                  connection_property_sets=[]):
@@ -548,8 +584,8 @@ class DynamicsWithSynapsesProperties(BaseULObject):
                 [Parameter(p.name, p.units.dimension) for p in cp.properties])
             for cp in connection_property_sets)
         self._definition = Definition(
-            DynamicsWithSynapses(dynamics_properties.component_class,
-                                 synapses, connection_parameter_sets))
+            WithSynapses.wrap(dynamics_properties.component_class,
+                              synapses, connection_parameter_sets))
         # Copy what would be class members in the dynamics class so it will
         # appear like an object of that class
         self.defining_attributes = (dynamics_properties.defining_attributes +
@@ -566,13 +602,6 @@ class DynamicsWithSynapsesProperties(BaseULObject):
                         ', '.format(repr(s) for s in self.synapses),
                         ', '.format(repr(cp)
                                     for cp in self.connection_property_sets)))
-
-    def __getattr__(self, name):
-        """
-        If an attribute isn't pass it on to the dynamics class so the class can
-        be ducked-typed with the Dynamics class
-        """
-        return getattr(self._dynamics_properties, name)
 
     @property
     def definition(self):
@@ -638,12 +667,68 @@ class DynamicsWithSynapsesProperties(BaseULObject):
         return (p.name for p in self._all_connection_properties())
 
     # NB: Has to be defined last to avoid overriding the in-built decorator
+    # named 'property' as used above
     @name_error
     def property(self, name):
         if name in self._all_connection_property_names():
             raise KeyError(name)
         else:
             return self._dynamics_properties.property(name)
+
+    @classmethod
+    def wrap(cls, dynamics_properties, synapses_properties=[],
+             connection_property_sets=[]):
+        if isinstance(dynamics_properties, MultiDynamics):
+            wrapped = MultiDynamicsWithSynapsesProperties(
+                dynamics_properties, synapses_properties,
+                connection_property_sets)
+        elif isinstance(dynamics_properties, Dynamics):
+            wrapped = DynamicsWithSynapsesProperties(
+                dynamics_properties, synapses_properties,
+                connection_property_sets)
+        else:
+            raise Pype9RuntimeError(
+                "Cannot wrap '{}' class with WithSynapses, only Dynamics and "
+                "MultiDynamics".format(type(dynamics_properties)))
+        return wrapped
+
+
+class DynamicsWithSynapsesProperties(WithSynapsesProperties,
+                                     DynamicsProperties):
+
+    def __init__(self, dynamics_properties, synapses_properties=[],
+                 connection_property_sets=[]):
+        WithSynapsesProperties.__init__(self, dynamics_properties,
+                                        synapses_properties,
+                                        connection_property_sets)
+        # Initiate inherited base classes
+        BaseULObject.__init__(self)
+        DocumentLevelObject.__init__(self, dynamics_properties.document)
+        ContainerObject.__init__(self)
+        # Create references to all dynamics member variables so that inherited
+        # DynamicsProperties properties and methods can find them.
+        self._name = dynamics_properties._name
+        self._annotations = dynamics_properties._annotations
+        self._properties = dynamics_properties._properties
+
+
+class MultiDynamicsWithSynapsesProperties(WithSynapsesProperties,
+                                          MultiDynamicsProperties):
+
+    def __init__(self, dynamics_properties, synapses_properties=[],
+                 connection_property_sets=[]):
+        WithSynapsesProperties.__init__(self, dynamics_properties,
+                                        synapses_properties,
+                                        connection_property_sets)
+        # Initiate inherited base classes
+        BaseULObject.__init__(self)
+        DocumentLevelObject.__init__(self, dynamics_properties.document)
+        ContainerObject.__init__(self)
+        # Create references to all dynamics member variables so that inherited
+        # MultiDynamicsProperties properties and methods can find them.
+        self._name = dynamics_properties._name
+        self._annotations = dynamics_properties._annotations
+        self._sub_components = dynamics_properties._sub_components
 
 
 class ConnectionParameterSet(BaseALObject):

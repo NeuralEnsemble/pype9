@@ -440,7 +440,12 @@ class UnitHandler(DynamicsDimensionResolver):
             dims = self._dims[sym]
         except KeyError:
             element = self._find_element(sym)
-            dims = self._flatten(element.rhs)[1]
+            try:
+                dims = self._flatten(element.rhs)[1]
+            except AttributeError:
+                assert False, (
+                    "Dimensions or units of {} were not set in __init__ "
+                    "method".format(element))
             self._dims[sym] = dims
         return sym, dims
 

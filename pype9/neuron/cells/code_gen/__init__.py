@@ -20,7 +20,7 @@ import nineml.units as un
 from nineml.abstraction import Alias, AnalogSendPort, Dynamics
 from pype9.base.cells.code_gen import BaseCodeGenerator
 from pype9.base.cells import (
-    DynamicsWithSynapses, DynamicsWithSynapsesProperties)
+    WithSynapses, DynamicsWithSynapses, DynamicsWithSynapsesProperties)
 from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import pype9
 from datetime import datetime
@@ -163,7 +163,7 @@ class CodeGenerator(BaseCodeGenerator):
         `membrane_capacitance` -- the name of the capcitance that represents
                               the membrane capacitance
         """
-        if not isinstance(component_class, DynamicsWithSynapses):
+        if not isinstance(component_class, WithSynapses):
             raise Pype9RuntimeError(
                 "'component_class' must be a DynamicsWithSynapses object")
         # ---------------------------------------------------------------------

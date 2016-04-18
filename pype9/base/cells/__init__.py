@@ -1,3 +1,4 @@
 from .base import (
-    DynamicsWithSynapses, DynamicsWithSynapsesProperties,
+    DynamicsWithSynapses, DynamicsWithSynapsesProperties, WithSynapses,
+    MultiDynamicsWithSynapses, MultiDynamicsWithSynapsesProperties,
     ConnectionParameterSet, ConnectionPropertySet, Synapse, SynapseProperties)
