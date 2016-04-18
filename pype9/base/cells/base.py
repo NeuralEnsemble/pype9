@@ -500,9 +500,6 @@ class WithSynapses(object):
     def connection_parameter_set_names(self):
         return self._connection_parameter_sets.iterkeys()
 
-    def accept_visitor(self, visitor):
-        self.dynamics.accept_visitor(visitor)
-
     @classmethod
     def wrap(cls, dynamics, synapses=[], connection_parameter_sets=[]):
         if isinstance(dynamics, MultiDynamics):
