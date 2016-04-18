@@ -449,6 +449,11 @@ class WithSynapses(object):
                 if p.name not in self._all_connection_parameter_names())
 
     @property
+    def attributes_with_dimension(self):
+        return chain(self._dynamics.attributes_with_dimension,
+                     self._all_connection_parameters())
+
+    @property
     def parameter_names(self):
         return (p.name for p in self.parameters)
 
