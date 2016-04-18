@@ -431,7 +431,11 @@ class DynamicsWithSynapses(MultiDynamics):
         dynamics class so the class can be ducked-typed with the Dynamics
         or MultiDynamics class it wraps.
         """
-        # if name is defined in this class or object use that version
+        # If name is defined in this DynamicsWithSynapse class/object use it.
+        # We go to the effort of doing this instead of just using __getattr__
+        # to avoid calling methods of MultiDynamics (which is only inherited
+        # from to get super methods to work with the redirection of the bound
+        # method
         if (name in object.__getattribute__(self, '__dict__') or
                 name in object.__getattribute__(self, '__class__').__dict__):
             return object.__getattribute__(self, name)
