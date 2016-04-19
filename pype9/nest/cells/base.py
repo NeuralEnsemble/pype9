@@ -14,7 +14,6 @@ import logging
 import neo
 import nest
 import quantities as pq
-from nineml.abstraction import Dynamics
 from nineml.exceptions import NineMLNameError
 from .code_gen import CodeGenerator
 from .controller import simulation_controller
@@ -132,7 +131,8 @@ class Cell(base.Cell):
                        the event port.
         """
         port = self.component_class.receive_port(port_name)
-        if port.nineml_type == 'EventReceivePort':
+        if port.nineml_type in ('EventReceivePort',
+                                'EventReceivePortExposure'):
             # Shift the signal times to account for the minimum delay and
             # match the NEURON implementation
             spike_times = (pq.Quantity(signal, 'ms') + pq.ms -
@@ -155,7 +155,9 @@ class Cell(base.Cell):
                     properties[0].quantity)
             nest.Connect(self._inputs[port_name], self._cell,
                          syn_spec=syn_spec)
-        else:
+        elif port.nineml_type in ('AnalogReceivePort', 'AnalogReducePort',
+                                  'AnalogReceivePortExposure',
+                                  'AnalogReducePortExposure'):
             # Signals are played into NEST cells include a delay (set to be the
             # minimum), which is is subtracted from the start of the signal so
             # that the effect of the signal aligns with other simulators
@@ -170,6 +172,9 @@ class Cell(base.Cell):
                          syn_spec={"receptor_type":
                                    self._receive_ports[port_name],
                                    'delay': simulation_controller.min_delay})
+        else:
+            raise Pype9RuntimeError(
+                "Unrecognised port type '{}' to play signal into".format(port))
 
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         raise NotImplementedError("voltage clamps are not supported for "

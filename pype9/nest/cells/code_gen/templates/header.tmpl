@@ -223,8 +223,8 @@ namespace nineml {
 
 	        // Event receive port buffers
 {% for port in component_class.event_receive_ports %}
-            nest::RingBuffer {{port.name}}_event_port;
-            int num_unprocessed_{{port.name}}_events;
+            nest::ListRingBuffer {{port.name}}_event_port;
+            std::list<double_t> unprocessed_{{port.name}}_events;
 {% endfor %}
 
             // Event send port count

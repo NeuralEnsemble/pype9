@@ -202,9 +202,13 @@ bool {{component_name}}::{{TransitionClassName}}::body(double t) {
     Variables_& V_ = regime->cell->V_;
     
         {% if transition.nineml_type == 'OnEvent' %}
-    // Decrement the number of remaining events
-    assert(B_.num_unprocessed_{{transition.src_port_name}}_events);
-    --B_.num_unprocessed_{{transition.src_port_name}}_events;
+    // Get the next weight and remove it from the unprocessed list
+    double_t weight_ = B_.unprocessed_{{transition.src_port_name}}_events.front();
+    B_.unprocessed_{{transition.src_port_name}}_events.pop_front();
+            {# Need to check there is only one connection parameter for this source port (current limitaiton of NEST) #}
+            {% for connection_param in component_class.connection_parameter_set(transition.src_port_name).parameters %}
+                double_t {{connection_param.name}} = weight_;
+            {% endfor %}
         {% endif %}
     
     {{macros.map_required_vars_locally(transition.state_assignments, component_class, component_name, unit_handler, []) | indent(4)}}
@@ -238,7 +242,7 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(nest::Time con
 
 
 bool {{component_name}}::{{TransitionClassName}}::received(nest::Time const& origin, const nest::long_t& lag) {
-    return (bool)regime->cell->B_.num_unprocessed_{{on_event.src_port_name}}_events;
+    return (bool)regime->cell->B_.unprocessed_{{on_event.src_port_name}}_events.size();
 }
 
     {% endfor %}
@@ -546,7 +550,7 @@ void {{component_name}}::refresh_events(const nest::long_t& lag) {
     B_.num_{{port.name}}_events = 0;
 {% endfor %}
 {% for port in component_class.event_receive_ports %}
-    B_.num_unprocessed_{{port.name}}_events = B_.{{port.name}}_event_port.get_value(lag);
+    B_.unprocessed_{{port.name}}_events = B_.{{port.name}}_event_port.get_list(lag);
 {% endfor %}
 }
 
@@ -632,9 +636,11 @@ void {{component_name}}::handle(nest::SpikeEvent & e) {
     // Loop through event receive ports
 {% for port in component_class.event_receive_ports %}
     {{elseif(loop.first)}} (e.get_rport() == {{port.name}}_EVENT_PORT) {
-        B_.{{port.name}}_event_port.add_value(
-            e.get_rel_delivery_steps(network()->get_slice_origin()),
-            fabs(e.get_weight()) * e.get_multiplicity());
+        for (unsigned int i = 0; i < e.get_multiplicity(); ++i) {
+            B_.{{port.name}}_event_port.append_value(
+                e.get_rel_delivery_steps(network()->get_slice_origin()),
+                e.get_weight());
+        }
     {{endif(loop.last)}}
 {% endfor %}
 }
