@@ -11,14 +11,19 @@
 #include "mock_nest.h"
 
 
-#define MASTER PyNNLeakyIntegrateAndFire
+#define _Izhikevich_ 1
+#define _PyNNLeakyIntegrateAndFire_ 2
+
+#define MASTER_CHOICE _PyNNLeakyIntegrateAndFire_
+//#define BRANCH_CHOICE _Izhikevich_
 
 //#define MASTER IzhikevichMaster
 //#define BRANCH IzhikevichBranch
 
-#if MASTER == IzhikevichMaster
+#if MASTER_CHOICE == _Izhikevich_
 
 #include "models/IzhikevichMaster.h"
+#define MASTER PyNNLeakyIntegrateAndFire
 #define INJECTION_AMPLITUDE 20 // pA
 
 inline void set_status(Dictionary& status) {
@@ -35,7 +40,7 @@ inline void set_status(Dictionary& status) {
     status.insert(Name("V"), Token(-65.0));
 }
 
-#elif MASTER == PyNNLeakyIntegrateAndFire
+#elif MASTER_CHOICE == _PyNNLeakyIntegrateAndFire_
 
 #include "models/PyNNLeakyIntegrateAndFire.h"
 #define INJECTION_AMPLITUDE 20 // pA
@@ -51,10 +56,13 @@ inline void set_status(Dictionary& status) {
 
 #endif
 
-#ifdef BRANCH
+#ifdef BRANCH_CHOICE
 
-#if BRANCH == IzhikevichBranch
+#if BRANCH_CHOICE == _Izhikevich_
+
+#define BRANCH IzhikevichBranch
 #include "models/IzhikevichBranch.h"
+
 #endif
 
 #endif
