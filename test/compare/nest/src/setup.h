@@ -23,7 +23,8 @@
 #if MASTER_CHOICE == _Izhikevich_
 
 #include "models/IzhikevichMaster.h"
-#define MASTER PyNNLeakyIntegrateAndFire
+#define MASTER IzhikevichMaster
+#define INJECTION_PORT Isyn_analog_port
 #define INJECTION_AMPLITUDE 20 // pA
 
 inline void set_status(Dictionary& status) {
@@ -43,6 +44,8 @@ inline void set_status(Dictionary& status) {
 #elif MASTER_CHOICE == _PyNNLeakyIntegrateAndFire_
 
 #include "models/PyNNLeakyIntegrateAndFire.h"
+#define MASTER PyNNLeakyIntegrateAndFire
+#define INJECTION_PORT i_synaptic_analog_port
 #define INJECTION_AMPLITUDE 20 // pA
 
 inline void set_status(Dictionary& status) {
@@ -71,7 +74,7 @@ inline void set_status(Dictionary& status) {
 template <class NodeType> void set_ring_buffers(NodeType& node) {
 
     long_t buffer_length = NUM_SLICES * nest::Scheduler::min_delay;
-    nest::RingBuffer& isyn = node.B_.Isyn_analog_port;
+    nest::RingBuffer& isyn = node.B_.INJECTION_PORT;
 
     for (long_t i = 0; i < buffer_length; ++i)
         if (i < buffer_length / 2)
