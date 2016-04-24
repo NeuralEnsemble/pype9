@@ -26,9 +26,13 @@
     sys_.dimension = N;
     sys_.params    = reinterpret_cast<void*>(this->cell);
 
-    if (u == 0)
+    if (u == 0) {
         u = (double *)malloc(sizeof(double) * N);
         assert (u);
-    if (jac == 0)
+        memset(u, 0, sizeof(double) * N);
+    }    
+    if (jac == 0) {
         jac = (double *)malloc(sizeof(double) * N);
         assert (jac);
+        memset(jac, 0, sizeof(double) * N);
+    }

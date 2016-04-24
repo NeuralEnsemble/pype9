@@ -680,11 +680,11 @@ class WithSynapsesProperties(object):
     @classmethod
     def wrap(cls, dynamics_properties, synapses_properties=[],
              connection_property_sets=[]):
-        if isinstance(dynamics_properties, MultiDynamics):
+        if isinstance(dynamics_properties, MultiDynamicsProperties):
             wrapped = MultiDynamicsWithSynapsesProperties(
                 dynamics_properties, synapses_properties,
                 connection_property_sets)
-        elif isinstance(dynamics_properties, Dynamics):
+        elif isinstance(dynamics_properties, DynamicsProperties):
             wrapped = DynamicsWithSynapsesProperties(
                 dynamics_properties, synapses_properties,
                 connection_property_sets)

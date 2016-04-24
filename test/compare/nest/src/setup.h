@@ -46,15 +46,17 @@ inline void set_status(Dictionary& status) {
 #include "models/PyNNLeakyIntegrateAndFire.h"
 #define MASTER PyNNLeakyIntegrateAndFire
 #define INJECTION_PORT i_synaptic_analog_port
-#define INJECTION_AMPLITUDE 20 // pA
+#define INJECTION_AMPLITUDE 500 // pA
 
 inline void set_status(Dictionary& status) {
     status.insert(Name("v_reset"), Token(-70.0));
-    status.insert(Name("refractory_period"), Token(2));
-    status.insert(Name("Cm"), Token(250));
-    status.insert(Name("g_leak"), Token(25));
+    status.insert(Name("refractory_period"), Token(2.0));
+    status.insert(Name("Cm"), Token(250.0));
+    status.insert(Name("g_leak"), Token(25.0));
     status.insert(Name("v_threshold"), Token(-55.0));
-    status.insert(Name("e_leak"), Token(-70));
+    status.insert(Name("e_leak"), Token(-70.0));
+    status.insert(Name("v"), Token(-65.0));
+    status.insert(Name("end_refractory"), Token(0.0));
 }
 
 #endif
