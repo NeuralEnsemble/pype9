@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-#include "mock_nest.h"
+#include "../../src/random.h"
 #include "setup.h"
 
 int main(void) {

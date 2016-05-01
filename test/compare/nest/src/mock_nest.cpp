@@ -1,4 +1,3 @@
-#include "mock_nest.h"
 #include "nest_time.h"
 #include "nest_names.h"
 
@@ -6,6 +5,7 @@
 #include <iomanip>
 #include <vector>
 #include <list>
+#include "../../src/random.h"
 
 const Name receptor_type( "receptor_type" );
 const Name receptor_types( "receptor_types" );

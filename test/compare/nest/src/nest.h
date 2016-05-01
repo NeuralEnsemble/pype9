@@ -28,6 +28,14 @@
 #include <cfloat>
 #include <limits>
 
+#define ARRAY_ALLOC_SIZE 64
+#define LONG_MAX  __LONG_MAX__
+#define DBL_MAX __DBL_MAX__
+#define LDBL_MAX __LDBL_MAX__
+#define double_t_max ( DBL_MAX ) // because C++ language designers are apes
+#define double_t_min ( DBL_MIN ) // (only integral consts are compile time)
+#define MAX_PATH_LENGTH 10000
+#define NUM_SLICES 10
 
 /**
  * @mainpage NEST: Neural Simulation Tool
@@ -95,6 +103,30 @@ typedef unsigned long ulong_t; ///< Unsigned long_t.
 
 const long_t long_t_max = LONG_MAX;
 const long_t long_t_min = LONG_MIN;
+
+//
+//typedef long_t rport;
+//typedef long_t port;
+//typedef double_t weight;
+//typedef long_t delay;
+//
+//const long_t long_t_max = __LONG_MAX__;
+//const long_t long_t_min = (-__LONG_MAX__ -1L);
+//const long_t delay_max = long_t_max;
+//const long_t delay_min = long_t_min;
+//const rport invalid_port_ = -1;
+//
+//typedef long tic_t;
+//const tic_t tic_t_max = LONG_MAX;
+//const tic_t tic_t_min = LONG_MIN;
+
+namespace nest {
+    class Time;
+}
+
+std::ostream& operator<<( std::ostream&, const nest::Time& );
+typedef double double_t;
+
 
 #define double_t_max ( DBL_MAX ) // because C++ language designers are apes
 #define double_t_min ( DBL_MIN ) // (only integral consts are compile time)
@@ -174,6 +206,27 @@ typedef double_t weight;
 typedef long_t delay;
 const long_t delay_max = long_t_max;
 const long_t delay_min = long_t_min;
+
+
+    namespace names {
+        extern const Name receptor_type;
+        extern const Name t_spike;
+        extern const Name recordables;
+        extern const Name receptor_types;
+    }
+
+}
+
+
+template <class NodeType> std::string get_data_path() {
+    // Get the current working directory in which to create the data files
+    char* cwd_buffer = (char*)malloc(sizeof(char) * MAX_PATH_LENGTH);
+    char* cwd = getcwd(cwd_buffer, MAX_PATH_LENGTH);
+    std::ostringstream path;
+    // Append the name of the NodeType type to the file path
+    path << cwd << "/" << typeid(NodeType).name() << ".dat";
+    free(cwd_buffer);
+    return path.str();
 }
 
 #endif

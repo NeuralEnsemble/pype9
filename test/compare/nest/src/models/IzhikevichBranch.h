@@ -17,7 +17,8 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_sf_exp.h>
 #include <gsl/gsl_odeiv2.h>
-#include "mock_nest.h"
+
+#include "../random.h"
 
 #define ITEM(v,i)  (v[i])
 namespace nineml {

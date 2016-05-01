@@ -10,13 +10,13 @@
 #include <cmath>
 
 #include "PyNNLeakyIntegrateAndFire.h"
-//#include "exceptions.h"
-//#include "network.h"
+#include "exceptions.h"
+#include "network.h"
 //#include "dict.h"
 //#include "integerdatum.h"
 //#include "doubledatum.h"
 //#include "dictutils.h"
-//#include "numerics.h"
+#include "numerics.h"
 //#include "universal_data_logger_impl.h"
 
 /******************************************************************

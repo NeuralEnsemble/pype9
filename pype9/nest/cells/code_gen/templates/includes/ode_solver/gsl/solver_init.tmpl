@@ -26,13 +26,17 @@
     sys_.dimension = N;
     sys_.params    = reinterpret_cast<void*>(this->cell);
 
+    // Initialise 
     if (u == 0) {
         u = (double *)malloc(sizeof(double) * N);
         assert (u);
-        memset(u, 0, sizeof(double) * N);
     }    
+    memset(u, 0, sizeof(double) * N);
+    
+    // Initialise Jacobian matrix approximation vector
     if (jac == 0) {
         jac = (double *)malloc(sizeof(double) * N);
         assert (jac);
-        memset(jac, 0, sizeof(double) * N);
+        
     }
+    memset(jac, 0, sizeof(double) * N);

@@ -354,7 +354,8 @@ class TestDynamics(TestCase):
 #             comparisons[('9ML-nest', 'Ref-nest')], 0.00015 * pq.mV,
 #             "AdExpIaF NEST 9ML simulation did not match reference built-in")
 
-    def test_poisson(self, duration=1000 * un.s, rate=100 * un.Hz, **kwargs):  # @UnusedVariable @IgnorePep8
+    def test_poisson(self, duration=1000 * un.s, rate=100 * un.Hz,
+                     print_comparisons=False, **kwargs):  # @UnusedVariable @IgnorePep8
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': 'force',
                                  'external_currents': ['iSyn']},
@@ -408,6 +409,8 @@ class TestDynamics(TestCase):
                            (len(spikes) - 1))
             recorded_cv = isi_std_dev / isi_avg
             ref_cv = 1.0 / ref_rate ** 2.0
+            if print_comparisons:
+                print "ref cv: {}, recorded cv {}".format(ref_cv, recorded_cv)
             self.assertAlmostEqual(
                 recorded_cv, ref_cv,
                 "Recorded coefficient of variation ({}) did not match the "
