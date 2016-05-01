@@ -1,5 +1,5 @@
-#ifndef UNIVERSAL_DATA_LOGGER_H
-#define UNIVERSAL_DATA_LOGGER_H
+#ifndef UNIVERSAL_DATA_LOGGER_IMPL_H
+#define UNIVERSAL_DATA_LOGGER_IMPL_H
 
 #include "universal_data_logger.h"
 

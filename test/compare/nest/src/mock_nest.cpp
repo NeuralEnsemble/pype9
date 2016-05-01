@@ -5,17 +5,18 @@
 #include <iomanip>
 #include <vector>
 #include <list>
-#include "../../src/random.h"
+#include "nest.h"
+#include "random.h"
+#include "ring_buffer.h"
+#include "network.h"
+#include "archiving_node.h"
+#include "dictutils.h"
 
-const Name receptor_type( "receptor_type" );
-const Name receptor_types( "receptor_types" );
-const Name recordables( "recordables" );
-const Name t_spike( "t_spike" );
 
 const unsigned long librandom::RandomGen::DefaultSeed = 0xd37ca59fUL;
 
-delay nest::Scheduler::min_delay = 1000;
-delay nest::Scheduler::max_delay = 10000;
+nest::delay nest::Scheduler::min_delay = 1000;
+nest::delay nest::Scheduler::max_delay = 10000;
 unsigned int moduli_size = 100;
 
 
@@ -28,16 +29,16 @@ double nest::RingBuffer::get_value( const long_t offs ) {
 }
 
 
-delay nest::RingBuffer::get_modulo( delay d ) {
+nest::delay nest::RingBuffer::get_modulo( delay d ) {
   return d;
 }
 
 nest::RingBuffer::RingBuffer()
-  : buffer_( 0.0, nest::Scheduler::min_delay * NUM_SLICES) {}
+  : buffer_( 0.0, Scheduler::min_delay * NUM_SLICES) {}
 
 
 nest::ListRingBuffer::ListRingBuffer()
-  : buffer_(nest::Scheduler::min_delay * NUM_SLICES) {}
+  : buffer_(Scheduler::min_delay * NUM_SLICES) {}
 
 
 void nest::ListRingBuffer::append_value( const long_t offs, const double_t v ) {
@@ -111,7 +112,7 @@ librandom::GslRNGFactory::create( unsigned long s ) const
 }
 
 
-long_t nest::Event::get_rel_delivery_steps( const nest::Time& t ) const
+nest::long_t nest::Event::get_rel_delivery_steps( const Time& t ) const
 {
   return d_ - 1 - t.get_steps();
 }

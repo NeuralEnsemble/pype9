@@ -1,7 +1,7 @@
 #ifndef RECORDABLES_MAP_H
 #define RECORDABLES_MAP_H
 
-#include "mock_sli.h"
+#include "arraydatum.h"
 
 namespace nest {
 

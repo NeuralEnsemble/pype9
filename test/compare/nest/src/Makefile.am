@@ -3,7 +3,7 @@ LDADD = -L/Users/tclose/git/debug/gsl/1.16/lib -lgsl -lgslcblas -lm
 
 bin_PROGRAMS = compare
 
-compare_SOURCES =  mock_nest.cpp mock_sli.h mock_sli.cpp \
+compare_SOURCES =  mock_nest.cpp mock_sli.h mock_sli.cpp dict.h dictutils.h\
 									 archiving_node.h ring_buffer.h connection.h universal_data_logger.h \
 									 exceptions.h recordables_map.h random.h network.h \
                    tarraryobj.h tarrayobj.cpp tokenarray.h tokenarray.cpp \

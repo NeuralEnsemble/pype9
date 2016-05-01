@@ -1,6 +1,26 @@
 #ifndef EXCEPTIONS_H
 #define EXCEPTIONS_H
 
+#include "nest.h"
+
+class TypeMismatch : public std::exception {
+  std::string expected_;
+  std::string provided_;
+
+public:
+  ~TypeMismatch() throw() {}
+
+  TypeMismatch() {}
+
+  TypeMismatch(const std::string& expectedType)
+    : expected_(expectedType) { }
+
+  TypeMismatch(const std::string& expectedType, const std::string& providedType)
+    : expected_( expectedType ), provided_( providedType ) {}
+
+  std::string message();
+};
+
 namespace nest {
 
     class KernelException: public std::exception {

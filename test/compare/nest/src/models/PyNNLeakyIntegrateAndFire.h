@@ -3,15 +3,15 @@
 #ifndef PYNNLEAKYINTEGRATEANDFIRE_H
 #define PYNNLEAKYINTEGRATEANDFIRE_H
 
-//#include "nest.h"
-//#include "event.h"
-////#include "node.h"
-//#include "archiving_node.h"
-//#include "ring_buffer.h"
-//#include "connection.h"
-//#include "universal_data_logger.h"
-//#include "recordables_map.h"
-//#include "exceptions.h"
+#include "nest.h"
+#include "event.h"
+#include "archiving_node.h"
+#include "ring_buffer.h"
+#include "connection.h"
+#include "universal_data_logger.h"
+#include "recordables_map.h"
+#include "exceptions.h"
+#include "dictutils.h"
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_sf_exp.h>

@@ -1,4 +1,4 @@
-#include "mock_sli.h"
+#include "dict.h"
 
 const Token Dictionary::VoidToken;
 

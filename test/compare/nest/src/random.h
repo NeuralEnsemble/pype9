@@ -12,11 +12,11 @@
 #include <iostream>
 #include <fstream>
 #include <gsl/gsl_rng.h>
-#include "nest_time.h"
-#include "nest.h"
+//#include "nest_time.h"
+//#include "nest.h"
 #include "lockptr.h"
-#include "mock_sli.h"
-#include "arraydatum.h"
+//#include "mock_sli.h"
+//#include "arraydatum.h"
 
 namespace librandom {
     

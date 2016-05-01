@@ -1,8 +1,10 @@
 #ifndef ARCHIVING_NODE_H
 #define ARCHIVING_NODE_H
 
-#include "mock_sli.h"
+#include "dict.h"
 #include "network.h"
+#include "event.h"
+#include "nest_names.h"
 
 namespace nest {
 
@@ -13,8 +15,7 @@ namespace nest {
         virtual ~Node() { delete net_; }
         void handle(SpikeEvent& event);
         void handle(CurrentEvent& event);
-        port handles_test_event(nest::SpikeEvent& event, nest::port receptor_type);
-        port handles_test_event(nest::CurrentEvent& event, nest::port receptor_type);
+        port handles_test_event(SpikeEvent& event, port receptor_type);
 
         std::string get_name() { return "TestNode"; }
         void set_spiketime(Time const& t_sp ) {}

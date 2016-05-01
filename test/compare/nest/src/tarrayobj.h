@@ -28,7 +28,9 @@
 
 #include <typeinfo>
 #include <cstddef>
-#include "mock_sli.h"
+
+#include "datum.h"
+#include "token.h"
 
 #define ARRAY_ALLOC_SIZE 64
 

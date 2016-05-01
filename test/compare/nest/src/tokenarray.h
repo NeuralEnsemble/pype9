@@ -31,7 +31,7 @@
 #include <vector>
 #include <valarray>
 
-#include "mock_sli.h"
+#include "datum.h"
 #include "tarrayobj.h"
 
 

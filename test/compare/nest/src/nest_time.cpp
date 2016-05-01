@@ -25,7 +25,6 @@
 #include <string>
 
 #include "numerics.h"
-#include "mock_nest.h"
 
 using namespace nest;
 
@@ -37,19 +36,23 @@ using namespace nest;
 
 #define CONFIG_TICS_PER_STEP 100
 
+#include "integerdatum.h"
+#include "doubledatum.h"
+#include "exceptions.h"
+#include "token.h"
 
-const nest::double_t Time::Range::TICS_PER_MS_DEFAULT = CONFIG_TICS_PER_MS;
+const double_t Time::Range::TICS_PER_MS_DEFAULT = CONFIG_TICS_PER_MS;
 const tic_t Time::Range::TICS_PER_STEP_DEFAULT = CONFIG_TICS_PER_STEP;
 
 tic_t Time::Range::OLD_TICS_PER_STEP = Time::Range::TICS_PER_STEP_DEFAULT;
 tic_t Time::Range::TICS_PER_STEP = Time::Range::TICS_PER_STEP_DEFAULT;
 tic_t Time::Range::TICS_PER_STEP_RND = Time::Range::TICS_PER_STEP - 1;
 
-nest::double_t Time::Range::TICS_PER_MS = Time::Range::TICS_PER_MS_DEFAULT;
-nest::double_t Time::Range::MS_PER_TIC = 1 / Time::Range::TICS_PER_MS;
+double_t Time::Range::TICS_PER_MS = Time::Range::TICS_PER_MS_DEFAULT;
+double_t Time::Range::MS_PER_TIC = 1 / Time::Range::TICS_PER_MS;
 
-nest::double_t Time::Range::MS_PER_STEP = TICS_PER_STEP / TICS_PER_MS;
-nest::double_t Time::Range::STEPS_PER_MS = 1 / Time::Range::MS_PER_STEP;
+double_t Time::Range::MS_PER_STEP = TICS_PER_STEP / TICS_PER_MS;
+double_t Time::Range::STEPS_PER_MS = 1 / Time::Range::MS_PER_STEP;
 
 tic_t
 Time::compute_max()
@@ -118,8 +121,7 @@ Time::reset_resolution()
   LIM_MIN = -max;
 }
 
-nest::double_t
-Time::ms::fromtoken( const Token& t )
+double_t Time::ms::fromtoken( const Token& t )
 {
   IntegerDatum* idat = dynamic_cast< IntegerDatum* >( t.datum() );
   if ( idat )

@@ -1,6 +1,8 @@
 #ifndef UNIVERSAL_DATA_LOGGER_H
 #define UNIVERSAL_DATA_LOGGER_H
 
+#include "recordables_map.h"
+
 namespace nest {
 
     class DataLoggingRequest {

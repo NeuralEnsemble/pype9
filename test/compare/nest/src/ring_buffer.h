@@ -1,9 +1,9 @@
 #ifndef RING_BUFFER_H
 #define RING_BUFFER_H
 
-#include "nest.h"
 #include <valarray>
 #include <vector>
+#include "nest.h"
 
 namespace nest {
 

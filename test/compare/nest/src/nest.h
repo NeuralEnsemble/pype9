@@ -27,6 +27,9 @@
 #include <climits>
 #include <cfloat>
 #include <limits>
+#include <unistd.h>
+#include <sstream>
+#include <typeinfo>
 
 #define ARRAY_ALLOC_SIZE 64
 #define LONG_MAX  __LONG_MAX__
@@ -206,14 +209,6 @@ typedef double_t weight;
 typedef long_t delay;
 const long_t delay_max = long_t_max;
 const long_t delay_min = long_t_min;
-
-
-    namespace names {
-        extern const Name receptor_type;
-        extern const Name t_spike;
-        extern const Name recordables;
-        extern const Name receptor_types;
-    }
 
 }
 

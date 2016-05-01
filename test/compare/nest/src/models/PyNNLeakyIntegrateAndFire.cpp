@@ -12,12 +12,12 @@
 #include "PyNNLeakyIntegrateAndFire.h"
 #include "exceptions.h"
 #include "network.h"
-//#include "dict.h"
-//#include "integerdatum.h"
-//#include "doubledatum.h"
-//#include "dictutils.h"
+#include "dict.h"
+#include "integerdatum.h"
+#include "doubledatum.h"
+#include "dictutils.h"
 #include "numerics.h"
-//#include "universal_data_logger_impl.h"
+#include "universal_data_logger_impl.h"
 
 /******************************************************************
  * Template specialization that needs to be in the nest namesapce *
