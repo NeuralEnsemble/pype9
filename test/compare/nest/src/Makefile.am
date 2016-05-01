@@ -11,7 +11,6 @@ compare_SOURCES =  mock_nest.cpp mock_sli.h mock_sli.cpp dict.h dictutils.h\
                    numerics.h numerics.cpp arraydatum.h nest_names.h \
                    nest_names.cpp lockptr.h setup.h main.cpp \
                    models/PyNNLeakyIntegrateAndFire.cpp models/PyNNLeakyIntegrateAndFire.h \
-                   models/IafAlpha.cpp models/IafAlpha.h
-
-#                   models/IzhikevichMaster.h models/IzhikevichMaster.cpp \
-#                   models/IzhikevichBranch.h models/IzhikevichBranch.cpp
+                   models/IafAlpha.cpp models/IafAlpha.h \
+                   models/IzhikevichMaster.h models/IzhikevichMaster.cpp \
+                   models/IzhikevichBranch.h models/IzhikevichBranch.cpp

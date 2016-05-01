@@ -23,21 +23,6 @@
 #define ITEM(v,i)  (v[i])
 namespace nineml {
 
-    class ExceededMaximumSimultaneousTransitions : public nest::KernelException {
-    
-      public:
-        ExceededMaximumSimultaneousTransitions(const std::string& model, int num_transitions, double t)
-          : KernelException("ExceededMaximumSimultaneousTransitions"), model(model), num_transitions(num_transitions), t(t) {}
-        ~ExceededMaximumSimultaneousTransitions() throw () {}
-        std::string message();
-      protected:
-         const std::string& model;
-         int num_transitions;
-         double t;
-    };
-    
-
-
     class IzhikevichBranch;
 
     /**
@@ -53,6 +38,19 @@ namespace nineml {
     class IzhikevichBranch : public nest::Archiving_Node {
 
       public:
+
+        class ExceededMaximumSimultaneousTransitions : public nest::KernelException {
+
+          public:
+            ExceededMaximumSimultaneousTransitions(const std::string& model, int num_transitions, double t)
+              : KernelException("ExceededMaximumSimultaneousTransitions"), model(model), num_transitions(num_transitions), t(t) {}
+            ~ExceededMaximumSimultaneousTransitions() throw () {}
+            std::string message();
+          protected:
+             const std::string& model;
+             int num_transitions;
+             double t;
+        };
 
         static const int MAX_SIMULTANEOUS_TRANSITIONS = 1000;
 

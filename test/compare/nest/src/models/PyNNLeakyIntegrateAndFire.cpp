@@ -38,7 +38,7 @@ namespace nest{
 
 namespace nineml {
 
-std::string ExceededMaximumSimultaneousTransitions::message() {
+std::string PyNNLeakyIntegrateAndFire::ExceededMaximumSimultaneousTransitions::message() {
     std::ostringstream msg;
     msg << "Exceeded maxium number of simultaneous transitions (" << num_transitions << ")";
     msg << " in " << model << " at " << t << " ms. Probable infinite loop.";

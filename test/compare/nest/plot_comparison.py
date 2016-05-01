@@ -16,14 +16,14 @@ all_data = defaultdict(list)
 for pth in args.recorded_data_paths:
     with open(pth, 'r') as f:
         line = f.readline().strip()
-        new_header = set(line[2:].split(' '))
+        new_header = line[2:].split(' ')
     if header is None:
-        header = new_header
-    elif new_header != header:
-        raise Exception("Mismatching headers, {} and {}".format(header, new_header))
+        header = set(new_header)
+    elif set(new_header) != header:
+        raise Exception("Mismatching headers, {} and {}".format(header, set(new_header)))
     data = np.loadtxt(pth)
-    for i, var in enumerate(header):
-        all_data[var].append(data[:,i])
+    for i, var in enumerate(new_header):
+        all_data[var].append(data[:, i])
 # Plot figures
 for var in header:
     data = np.concatenate(all_data[var])
