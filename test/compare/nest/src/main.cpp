@@ -13,6 +13,8 @@
 #include "../../src/random.h"
 #include "setup.h"
 
+dt = 0.25;
+
 int main(void) {
 
     std::cout << "Create model objects" << std::endl;

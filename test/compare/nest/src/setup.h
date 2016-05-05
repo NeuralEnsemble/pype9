@@ -10,19 +10,25 @@
 
 #include "random.h"
 
+#include "models/IzhikevichMaster.h"
+#include "models/PyNNLeakyIntegrateAndFire.h"
+#include "models/IafAlpha.h"
+#include "models/IzhikevichBranch.h"
 
 #define _Izhikevich_ 1
 #define _PyNNLeakyIntegrateAndFire_ 2
 #define _IafAlpha_ 3
+#define _Poisson_ 4
 
 //#define MASTER_CHOICE _PyNNLeakyIntegrateAndFire_
 #define MASTER_CHOICE _IafAlpha_
 //#define MASTER_CHOICE _Izhikevich_
 //#define BRANCH_CHOICE _Izhikevich_
 
+double dt;
+
 #if MASTER_CHOICE == _Izhikevich_
 
-#include "models/IzhikevichMaster.h"
 #define MASTER IzhikevichMaster
 #define CURRENT_INJECTION
 #define INJECTION_PORT Isyn_analog_port
@@ -44,7 +50,6 @@ inline void set_status(Dictionary& status) {
 
 #elif MASTER_CHOICE == _PyNNLeakyIntegrateAndFire_
 
-#include "models/PyNNLeakyIntegrateAndFire.h"
 #define MASTER PyNNLeakyIntegrateAndFire
 #define CURRENT_INJECTION
 #define INJECTION_PORT i_synaptic_analog_port
@@ -63,7 +68,6 @@ inline void set_status(Dictionary& status) {
 
 #elif MASTER_CHOICE == _IafAlpha_
 
-#include "models/IafAlpha.h"
 #define MASTER IafAlpha
 #define INCOMING_SPIKES
 #define INCOMING_SPIKE_PORT input_spike_event_port
@@ -84,6 +88,16 @@ inline void set_status(Dictionary& status) {
     status.insert(Name("b__psr__syn"), Token(0.0));
 }
 
+#elif MASTER_CHOICE == _Poisson_
+
+#define MASTER Poisson
+
+inline void set_status(Dictionary& status) {
+    status.insert(Name("per_time"), Token(100.0));
+    status.insert(Name("t_next"), Token(0.0));
+}
+
+
 #endif
 
 #ifdef BRANCH_CHOICE
@@ -91,7 +105,6 @@ inline void set_status(Dictionary& status) {
 #if BRANCH_CHOICE == _Izhikevich_
 
 #define BRANCH IzhikevichBranch
-#include "models/IzhikevichBranch.h"
 
 #endif
 
@@ -99,6 +112,11 @@ inline void set_status(Dictionary& status) {
 
 template <class NodeType> void set_ring_buffers(NodeType& node) {
 #ifdef INCOMING_SPIKES
+    double total_time = NUM_SLICES * nest::Scheduler::min_delay * dt;
+    nest::ListRingBuffer& input = node.B_.INCOMING_SPIKE_PORT;
+
+    for (double t = 0.0; t < total_time; t += 1.0 / (INCOMING_SPIKE_FREQUENCY * dt)
+        input.append_value((long_t)floor(t), INCOMING_SPIKE_WEIGHT);
 
 #endif
 
