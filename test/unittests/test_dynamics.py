@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import quantities as pq
 import os.path
 from itertools import chain, repeat
@@ -17,8 +18,6 @@ from pype9.nest.units import UnitHandler as UnitHandlerNEST
 from pype9.neuron.cells import (
     CellMetaClass as CellMetaClassNEURON,
     simulation_controller as simulatorNEURON)
-import neuron
-import nest
 if __name__ == '__main__':
     from utils import DummyTestCase as TestCase  # @UnusedImport
 else:
@@ -30,8 +29,9 @@ cell_metaclasses = {'neuron': CellMetaClassNEURON,
 
 class TestDynamics(TestCase):
 
-    dt = 0.001
-    duration = 100
+    def __init__(self, dt=0.001, duration=100.0):
+        self.dt = dt
+        self.duration = duration
 
     liaf_initial_states = {'v': -65.0 * pq.mV, 'end_refractory': 0.0 * pq.ms}
     liaf_nest_translations = {
@@ -48,7 +48,7 @@ class TestDynamics(TestCase):
         'end_refractory': (None, 1), 'v': ('v', 1)}
 
     def test_izhi(self, plot=False, print_comparisons=False,
-                  simulators=['neuron', 'nest']):
+                  simulators=['nest', 'neuron']):
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparer = Comparer(
@@ -95,7 +95,7 @@ class TestDynamics(TestCase):
                 "built-in")
 
     def test_hh(self, plot=False, print_comparisons=False,
-                  simulators=['neuron', 'nest']):
+                  simulators=['nest', 'neuron']):
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
@@ -160,7 +160,7 @@ class TestDynamics(TestCase):
                 "HH NEST 9ML simulation did not match reference built-in")
 
     def test_liaf(self, plot=False, print_comparisons=False,
-                  simulators=['neuron', 'nest']):
+                  simulators=['nest', 'neuron']):
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
@@ -200,7 +200,7 @@ class TestDynamics(TestCase):
                 "LIaF NEURON 9ML simulation did not match NEST 9ML simulation")
 
     def test_alpha_syn(self, plot=False, print_comparisons=False,
-                       simulators=['neuron', 'nest']):
+                       simulators=['nest', 'neuron']):
         # Perform comparison in subprocess
         iaf = ninemlcatalog.load(
             'neuron/LeakyIntegrateAndFire', 'PyNNLeakyIntegrateAndFire')
@@ -313,7 +313,7 @@ class TestDynamics(TestCase):
                 "reference PyNN")
 
     def test_izhiFS(self, plot=False, print_comparisons=False,
-                    simulators=['neuron', 'nest']):
+                    simulators=['nest', 'neuron']):
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparer = Comparer(
@@ -346,7 +346,7 @@ class TestDynamics(TestCase):
 #         comparer = Comparer(
 #             nineml_model=ninemlcatalog.load(
 #                 'neuron/AdExpIaF/AdExpIaF'),
-#             state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
+#             state_variable='v', dt=self.dt, simulators=['nest', 'neuron'],
 #             neuron_ref='AdExpIF', nest_ref='aeif_cond_alpha',
 #             input_signal=input_step('iExt', 1, 50, 100, self.dt),
 #             initial_states={'w': 0.0 * pq.nA, 'v': -65.0 * pq.mV},
@@ -393,11 +393,13 @@ class TestDynamics(TestCase):
             # Initialise simulator
             if sim_name == 'neuron':
                 # Run NEURON simulation
+                import neuron
                 simulatorNEURON.reset()
                 neuron.h.dt = self.dt
                 simulatorNEURON.run(duration.in_units(un.ms))
             elif sim_name == 'nest':
                 # Run NEST simulation
+                import nest
                 simulatorNEST.reset()
                 nest.SetKernelStatus({'resolution': self.dt})
                 simulatorNEST.run(duration.in_units(un.ms))
@@ -453,10 +455,13 @@ if __name__ == '__main__':
     parser.add_argument('--print_comparisons', action='store_true',
                         help=("Print the differences between the traces summed"
                               " over every time point"))
-    parser.add_argument('--simulators', nargs='+', default=['neuron', 'nest'],
-                        help="Which simulators to run the test for")
+    parser.add_argument('--simulators', nargs='+', default=['nest', 'neuron'],
+                        help="Which simulators to run the test for "
+                        "(default %(default)s)")
+    parser.add_argument('--duration', type=float, default=100.0,
+                        help="The duration of the test (default: %(default)s)")
     args = parser.parse_args()
-    tester = TestDynamics()
+    tester = TestDynamics(duration=args.duration)
     test = getattr(tester, 'test_' + args.test)
     test(plot=args.plot, print_comparisons=args.print_comparisons,
          simulators=args.simulators)

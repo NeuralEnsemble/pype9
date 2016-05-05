@@ -6,9 +6,9 @@
     //       derivative
     N = {{component_class.num_state_variables}};
 
-    if ( s_ == 0 )
+    if ( s_ == 0 ) {
         s_ = gsl_odeiv2_step_alloc (T1, N);
-    else
+    } else
         gsl_odeiv2_step_reset(s_);
 
     if ( c_ == 0 )
@@ -16,9 +16,14 @@
     else
         gsl_odeiv2_control_init(c_, {{abs_tolerance}}, {{rel_tolerance}}, 1.0, 0.0);
 
-    if ( e_ == 0 )
+    if ( e_ == 0 ) {
         e_ = gsl_odeiv2_evolve_alloc(N);
-    else
+        // Probably not necessary to set these working variables as it is not
+        // done in GSL examples but squashes the valgrind error
+        // "Conditional jump or move depends on uninitialised value(s)"
+        memset(e_->dydt_in, 0.0, (N * sizeof(double)));
+        memset(e_->dydt_out, 0.0, (N * sizeof(double)));
+    } else
         gsl_odeiv2_evolve_reset(e_);
 
     sys_.function  = {{component_name}}_{{regime.name}}_dynamics;

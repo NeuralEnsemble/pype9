@@ -131,24 +131,25 @@ class Comparer(object):
         """
         Run and the simulation
         """
-        if self.simulate_neuron:
-            simulatorNEURON.reset()
-            neuron.h.dt = self.dt
         if self.simulate_nest:
             nest.ResetKernel()
             simulatorNEST.reset()
             nest.SetKernelStatus({'resolution': self.dt})
+        if self.simulate_neuron:
+            simulatorNEURON.reset()
+            neuron.h.dt = self.dt
         for simulator in self.simulators:
             self._create_9ML(self.nineml_model, self.properties, simulator)
-        if self.neuron_ref is not None:
-            self._create_NEURON(self.neuron_ref)
         if self.nest_ref is not None:
             self._create_NEST(self.nest_ref)
-        if self.simulate_neuron:
-            simulatorNEURON.run(duration)
+        if self.neuron_ref is not None:
+            self._create_NEURON(self.neuron_ref)
         if self.simulate_nest:
             simulatorNEST.reset()
             simulatorNEST.run(duration)
+        if self.simulate_neuron:
+            simulatorNEURON.run(duration)
+
         return self  # return self so it can be chained with subsequent methods
 
     def compare(self):
@@ -164,7 +165,11 @@ class Comparer(object):
                                 pq.Quantity(self._get_NEST_signal(), 'mV')))
         comparisons = {}
         for (name1, signal1), (name2, signal2) in combinations(name_n_sigs, 2):
-            avg_diff = numpy.sum(numpy.abs(signal1 - signal2)) / len(signal1)
+            if len(signal1):
+                avg_diff = (numpy.sum(numpy.abs(signal1 - signal2)) /
+                            len(signal1))
+            else:
+                avg_diff = 0.0
             comparisons[tuple(sorted((name1, name2)))] = avg_diff
         return comparisons
 
