@@ -25,7 +25,7 @@
 //#define MASTER_CHOICE _Izhikevich_
 //#define BRANCH_CHOICE _Izhikevich_
 
-double dt;
+double dt = 0.25;
 
 #if MASTER_CHOICE == _Izhikevich_
 
@@ -111,17 +111,24 @@ inline void set_status(Dictionary& status) {
 #endif
 
 template <class NodeType> void set_ring_buffers(NodeType& node) {
+
+    unsigned int buffer_length = NUM_SLICES * nest::Scheduler::min_delay;
+    double total_time = buffer_length * dt;
+
 #ifdef INCOMING_SPIKES
-    double total_time = NUM_SLICES * nest::Scheduler::min_delay * dt;
     nest::ListRingBuffer& input = node.B_.INCOMING_SPIKE_PORT;
 
-    for (double t = 0.0; t < total_time; t += 1.0 / (INCOMING_SPIKE_FREQUENCY * dt)
-        input.append_value((long_t)floor(t), INCOMING_SPIKE_WEIGHT);
+    double spike_period = 1000.0 / INCOMING_SPIKE_FREQUENCY;
 
+    std::cout << "total time: " << total_time << std::endl;
+    std::cout << "spike period: " << spike_period << std::endl;
+
+    for (double t = 0.0; t < total_time; t += spike_period)
+        if (t > total_time / 2.0)
+            input.append_value((int)floor(t/dt), INCOMING_SPIKE_WEIGHT);
 #endif
 
 #ifdef CURRENT_INJECTION
-    long_t buffer_length = NUM_SLICES * nest::Scheduler::min_delay;
     nest::RingBuffer& isyn = node.B_.INJECTION_PORT;
 
     for (long_t i = 0; i < buffer_length; ++i)

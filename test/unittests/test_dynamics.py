@@ -24,6 +24,9 @@ if __name__ == '__main__':
 else:
     from unittest import TestCase  # @Reimport
 
+cell_metaclasses = {'neuron': CellMetaClassNEURON,
+                    'nest': CellMetaClassNEST}
+
 
 class TestDynamics(TestCase):
 
@@ -44,13 +47,14 @@ class TestDynamics(TestCase):
         'v_reset': ('vreset', 1), 'v_threshold': ('vthresh', 1),
         'end_refractory': (None, 1), 'v': ('v', 1)}
 
-    def test_izhi(self, plot=False, print_comparisons=False):
+    def test_izhi(self, plot=False, print_comparisons=False,
+                  simulators=['neuron', 'nest']):
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
                 'neuron/Izhikevich', 'Izhikevich'),
-            state_variable='V', dt=self.dt, simulators=['neuron', 'nest'],
+            state_variable='V', dt=self.dt, simulators=simulators,
             properties=ninemlcatalog.load(
                 'neuron/Izhikevich', 'SampleIzhikevich'),
             initial_states={'U': -14.0 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
@@ -75,22 +79,28 @@ class TestDynamics(TestCase):
                 print '{} v {}: {}'.format(name1, name2, diff)
         if plot:
             comparer.plot()
-        self.assertLess(
-            comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
-            "Izhikevich NEURON 9ML simulation did not match NEST 9ML")
-        self.assertLess(
-            comparisons[('9ML-neuron', 'Ref-neuron')], 0.0015 * pq.mV,
-            "Izhikevich NEURON 9ML simulation did not match reference PyNN")
-        self.assertLess(
-            comparisons[('9ML-nest', 'Ref-nest')], 0.02 * pq.mV,
-            "Izhikevich NEST 9ML simulation did not match reference built-in")
+        if 'nest' in simulators and 'neuron' in simulators:
+            self.assertLess(
+                comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
+                "Izhikevich NEURON 9ML simulation did not match NEST 9ML")
+        if 'neuron' in simulators:
+            self.assertLess(
+                comparisons[('9ML-neuron', 'Ref-neuron')], 0.0015 * pq.mV,
+                "Izhikevich NEURON 9ML simulation did not match reference "
+                "PyNN")
+        if 'nest' in simulators:
+            self.assertLess(
+                comparisons[('9ML-nest', 'Ref-nest')], 0.02 * pq.mV,
+                "Izhikevich NEST 9ML simulation did not match reference "
+                "built-in")
 
-    def test_hh(self, plot=False, print_comparisons=False):
+    def test_hh(self, plot=False, print_comparisons=False,
+                  simulators=['neuron', 'nest']):
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
                 'neuron/HodgkinHuxley', 'PyNNHodgkinHuxley'),
-            state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
+            state_variable='v', dt=self.dt, simulators=simulators,
             initial_states={'v': -65.0 * pq.mV, 'm': 0.0, 'h': 1.0, 'n': 0.0},
             properties=ninemlcatalog.load(
                 'neuron/HodgkinHuxley', 'PyNNHodgkinHuxleyProperties'),
@@ -136,23 +146,27 @@ class TestDynamics(TestCase):
         if plot:
             comparer.plot()
         # FIXME: Need to work out what is happening with the reference NEURON
-        self.assertLess(
-            comparisons[('9ML-nest', '9ML-neuron')], 0.15 * pq.mV,
-            "HH NEURON 9ML simulation did not match reference PyNN")
-        self.assertLess(
-            comparisons[('9ML-neuron', 'Ref-neuron')], 0.55 * pq.mV,
-            "HH NEST 9ML simulation did not match reference built-in")
-        self.assertLess(
-            comparisons[('9ML-nest', 'Ref-nest')], 0.3 * pq.mV,
-            "HH NEST 9ML simulation did not match reference built-in")
+        if 'nest' in simulators and 'neuron' in simulators:
+            self.assertLess(
+                comparisons[('9ML-nest', '9ML-neuron')], 0.15 * pq.mV,
+                "HH NEURON 9ML simulation did not match reference PyNN")
+        if 'neuron' in simulators:
+            self.assertLess(
+                comparisons[('9ML-neuron', 'Ref-neuron')], 0.55 * pq.mV,
+                "HH NEST 9ML simulation did not match reference built-in")
+        if 'nest' in simulators:
+            self.assertLess(
+                comparisons[('9ML-nest', 'Ref-nest')], 0.3 * pq.mV,
+                "HH NEST 9ML simulation did not match reference built-in")
 
-    def test_liaf(self, plot=False, print_comparisons=False):
+    def test_liaf(self, plot=False, print_comparisons=False,
+                  simulators=['neuron', 'nest']):
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
                 'neuron/LeakyIntegrateAndFire',
                 'PyNNLeakyIntegrateAndFire'),
-            state_variable='v', dt=self.dt, simulators=['neuron', 'nest'],
+            state_variable='v', dt=self.dt, simulators=simulators,
             properties=ninemlcatalog.load(
                 'neuron/LeakyIntegrateAndFire',
                 'PyNNLeakyIntegrateAndFireProperties'),
@@ -172,17 +186,21 @@ class TestDynamics(TestCase):
                 print '{} v {}: {}'.format(name1, name2, diff)
         if plot:
             comparer.plot()
-        self.assertLess(
-            comparisons[('9ML-neuron', 'Ref-neuron')], 0.55 * pq.mV,
-            "LIaF NEURON 9ML simulation did not match reference PyNN")
-        self.assertLess(
-            comparisons[('9ML-nest', 'Ref-nest')], 0.001 * pq.mV,
-            "LIaF NEST 9ML simulation did not match reference built-in")
-        self.assertLess(
-            comparisons[('9ML-nest', '9ML-neuron')], 0.55 * pq.mV,
-            "LIaF NEURON 9ML simulation did not match NEST 9ML simulation")
+        if 'neuron' in simulators:
+            self.assertLess(
+                comparisons[('9ML-neuron', 'Ref-neuron')], 0.55 * pq.mV,
+                "LIaF NEURON 9ML simulation did not match reference PyNN")
+        if 'neuron' in simulators:
+            self.assertLess(
+                comparisons[('9ML-nest', 'Ref-nest')], 0.001 * pq.mV,
+                "LIaF NEST 9ML simulation did not match reference built-in")
+        if 'nest' in simulators and 'neuron' in simulators:
+            self.assertLess(
+                comparisons[('9ML-nest', '9ML-neuron')], 0.55 * pq.mV,
+                "LIaF NEURON 9ML simulation did not match NEST 9ML simulation")
 
-    def test_alpha_syn(self, plot=False, print_comparisons=False):
+    def test_alpha_syn(self, plot=False, print_comparisons=False,
+                       simulators=['neuron', 'nest']):
         # Perform comparison in subprocess
         iaf = ninemlcatalog.load(
             'neuron/LeakyIntegrateAndFire', 'PyNNLeakyIntegrateAndFire')
@@ -252,7 +270,7 @@ class TestDynamics(TestCase):
         comparer = Comparer(
             nineml_model=iaf_alpha_with_syn,
             state_variable='v__cell', dt=self.dt,
-            simulators=['neuron', 'nest'],
+            simulators=simulators,
             properties=properties_with_syn,
             initial_states=initial_states,
             initial_regime=initial_regime,
@@ -278,26 +296,30 @@ class TestDynamics(TestCase):
                 print '{} v {}: {}'.format(name1, name2, diff)
         if plot:
             comparer.plot()
-        self.assertLess(
-            comparisons[('9ML-nest', '9ML-neuron')], 0.015 * pq.mV,
-            "LIaF with Alpha syn NEST 9ML simulation did not match NEURON 9ML "
-            "simulation")
-        self.assertLess(
-            comparisons[('9ML-nest', 'Ref-nest')], 0.04 * pq.mV,
-            "LIaF with Alpha syn NEST 9ML simulation did not match reference "
-            "built-in")
-        self.assertLess(
-            comparisons[('9ML-neuron', 'Ref-neuron')], 0.03 * pq.mV,
-            "LIaF with Alpha syn NEURON 9ML simulation did not match reference"
-            " PyNN")
+        if 'nest' in simulators and 'neuron' in simulators:
+            self.assertLess(
+                comparisons[('9ML-nest', '9ML-neuron')], 0.015 * pq.mV,
+                "LIaF with Alpha syn NEST 9ML simulation did not match NEURON "
+                "9ML simulation")
+        if 'nest' in simulators:
+            self.assertLess(
+                comparisons[('9ML-nest', 'Ref-nest')], 0.04 * pq.mV,
+                "LIaF with Alpha syn NEST 9ML simulation did not match "
+                "reference built-in")
+        if 'neuron' in simulators:
+            self.assertLess(
+                comparisons[('9ML-neuron', 'Ref-neuron')], 0.03 * pq.mV,
+                "LIaF with Alpha syn NEURON 9ML simulation did not match "
+                "reference PyNN")
 
-    def test_izhiFS(self, plot=False, print_comparisons=False):
+    def test_izhiFS(self, plot=False, print_comparisons=False,
+                    simulators=['neuron', 'nest']):
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
                 'neuron/Izhikevich', 'IzhikevichFastSpiking'),
-            state_variable='V', dt=self.dt, simulators=['neuron', 'nest'],
+            state_variable='V', dt=self.dt, simulators=simulators,
             properties=ninemlcatalog.load(
                 'neuron/Izhikevich', 'SampleIzhikevichFastSpiking'),
             initial_states={'U': -1.625 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
@@ -314,9 +336,10 @@ class TestDynamics(TestCase):
                 print '{} v {}: {}'.format(name1, name2, diff)
         if plot:
             comparer.plot()
-        self.assertLess(
-            comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
-            "Izhikevich 2007 NEURON 9ML simulation did not match NEST 9ML")
+        if 'nest' in simulators and 'neuron' in simulators:
+            self.assertLess(
+                comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
+                "Izhikevich 2007 NEURON 9ML simulation did not match NEST 9ML")
 
 #     def test_aeif(self, plot=False, print_comparisons=False):
 #         # Perform comparison in subprocess
@@ -355,15 +378,15 @@ class TestDynamics(TestCase):
 #             "AdExpIaF NEST 9ML simulation did not match reference built-in")
 
     def test_poisson(self, duration=1000 * un.s, rate=100 * un.Hz,
-                     print_comparisons=False, **kwargs):  # @UnusedVariable @IgnorePep8
+                     print_comparisons=False, simulators=['nest'],  # , 'neuron'] @IgnorePep8
+                     **kwargs ):  # @UnusedVariable @IgnorePep8
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': 'force',
                                  'external_currents': ['iSyn']},
                       'nest': {'build_mode': 'force'}}
         initial_states = {'t_next': 0.0 * un.ms}
-        for sim_name, meta_class in (('nest', CellMetaClassNEST),
-                                     ):
-                                     # ('neuron', CellMetaClassNEURON)):
+        for sim_name in simulators:
+            meta_class = cell_metaclasses[sim_name]
             # Build celltype
             celltype = meta_class(
                 nineml_model, name=nineml_model.name, **build_args[sim_name])
@@ -430,8 +453,11 @@ if __name__ == '__main__':
     parser.add_argument('--print_comparisons', action='store_true',
                         help=("Print the differences between the traces summed"
                               " over every time point"))
+    parser.add_argument('--simulators', nargs='+', default=['neuron', 'nest'],
+                        help="Which simulators to run the test for")
     args = parser.parse_args()
     tester = TestDynamics()
     test = getattr(tester, 'test_' + args.test)
-    test(plot=args.plot, print_comparisons=args.print_comparisons)
+    test(plot=args.plot, print_comparisons=args.print_comparisons,
+         simulators=args.simulators)
     print "done"
