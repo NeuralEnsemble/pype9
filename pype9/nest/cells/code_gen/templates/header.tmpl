@@ -288,12 +288,31 @@ namespace nineml {
         class {{regime.name}}Regime_ : public Regime_ {
             
           public:
+          
+            // Regime-specifc indices for states that are updated by its ODE
+            // system, so the regime-specifi state vector can be trunctated to
+            // exclude states that aren't updated.
+            enum ODEStateElem {
+    {% for td in regime.time_derivatives %}
+        {% if loop.first %}
+             {{td.dependent_variable}}_INDEX = 0,
+        {% else %}
+             {{td.dependent_variable}}_INDEX,
+        {% endif %}
+    {% endfor %}
+                ODE_STATE_VEC_SIZE_
+            };
+          
             {{regime.name}}Regime_({{component_name}}* cell);
             virtual ~{{regime.name}}Regime_();
             virtual void init_solver();
             virtual void step_ode();
             
           protected:
+
+            // Array containg the values for the states for the set of ODEs
+            // FIXME: This should be a generic vector macro to support CVODE, etc...
+            double ode_y_[ODE_STATE_VEC_SIZE_];
     {% if regime.num_time_derivatives %}
             // Structures required by the solver
 {% include "solver_structs.tmpl" %}

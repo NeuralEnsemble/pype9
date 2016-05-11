@@ -43,6 +43,34 @@ namespace nest{
 
 namespace nineml {
 
+extern "C" void {{component_name}}_dump_gsl_state(gsl_odeiv2_evolve * e, double y[]) {
+
+    std::cout << "y0:";
+    for (unsigned int i = 0; i < e->dimension; ++i)
+        std::cout << e->y0[i] << " ";
+    std::cout << std::endl;
+    std::cout << "yerr:";
+    for (unsigned int i = 0; i < e->dimension; ++i)
+        std::cout << e->yerr[i] << " ";
+    std::cout << std::endl;
+    std::cout << "dydt_in:";
+    for (unsigned int i = 0; i < e->dimension; ++i)
+        std::cout << e->dydt_in[i] << " ";
+    std::cout << std::endl;
+    std::cout << "dydt_out:";
+    for (unsigned int i = 0; i < e->dimension; ++i)
+        std::cout << e->dydt_out[i] << " ";
+    std::cout << std::endl;
+    std::cout << "last_step:" << e->last_step << std::endl;
+    std::cout << "count:" << e->count << std::endl;
+    std::cout << "failed_steps:" << e->failed_steps << std::endl;
+    std::cout << "y:";
+    for (unsigned int i = 0; i < e->dimension; ++i)
+        std::cout << y[i] << " ";
+    std::cout << std::endl;
+
+}
+
 std::string {{component_name}}::ExceededMaximumSimultaneousTransitions::message() {
     std::ostringstream msg;
     msg << "Exceeded maxium number of simultaneous transitions (" << num_transitions << ")";
@@ -116,12 +144,16 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
     const {{component_name}}::Parameters_& P_ = node_.P_;
     const {{component_name}}::State_& S_ = node_.S_;
     const {{component_name}}::Buffers_& B_ = node_.B_;
+    
+        {% for td in regime.time_derivatives %}
+    double {{td.dependent_variable}} = ITEM(y_, {{component_name}}::{{regime.name}}Regime_::{{td.dependent_variable}}_INDEX);
+        {% endfor %}
 
-    {{macros.map_required_vars_locally(regime.time_derivatives, component_class, component_name, unit_handler, []) | indent(4)}}
+    {{macros.map_required_vars_locally(regime.time_derivatives, component_class, component_name, unit_handler, [], list(regime.time_derivative_variables)) | indent(4)}}
 
     // Evaluate differential equations
         {% for td, scaled_expr, units in unit_handler.scale_time_derivatives(regime.time_derivatives) %}
-    ITEM(f_, {{component_name}}::State_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
+    ITEM(f_, {{component_name}}::{{regime.name}}Regime_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
         {% endfor %}
 	
     //std::cout << "Success at t=" << t << ": " << GSL_SUCCESS << std::endl;
@@ -164,21 +196,20 @@ void {{component_name}}::{{regime.name}}Regime_::init_solver() {
 
 void {{component_name}}::{{regime.name}}Regime_::step_ode() {
     {% if regime.num_time_derivatives %}
-    {{component_name}}::State_& S_ = cell->S_;
-    //FIXME: Clamping of vars should be replaced by the resizing of the state
-    //       vector that is solved to only the states that have time-derivatives
-    //       in the regime.
-    /***** Set clamp vars for state variables that don't have a time derivative in this regime *****/
-        {% for sv in regime.no_time_derivatives(component_class.state_variables) %}
-    double {{sv.name}}_clamp_ = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];
+    // Copy states from cell state vector to the (potentially) truncated
+    // regime-specific state vector (i.e. containing only the states that
+    // have a derivative in the regime)
+        {% for td in regime.time_derivatives %}
+    ITEM(ode_y_, {{td.dependent_variable}}_INDEX) = cell->S_.y_[{{component_name}}::State_::{{td.dependent_variable}}_INDEX];
         {% endfor %}
 
     // Step ODE solver
 {% include "solver_update.tmpl" %}
     
-    /***** Reset state variables from clamp vars for state variables that don't have a time derivative in this regime *****/
-        {% for sv in regime.no_time_derivatives(component_class.state_variables) %}
-    S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX] = {{sv.name}}_clamp_;
+    // Copy states back from the regime-specific state vector to the cell
+    // state vector
+        {% for td in regime.time_derivatives %}
+    cell->S_.y_[{{component_name}}::State_::{{td.dependent_variable}}_INDEX] = ITEM(ode_y_, {{td.dependent_variable}}_INDEX);
         {% endfor %}
     {% endif %}
 }
@@ -211,7 +242,7 @@ bool {{component_name}}::{{TransitionClassName}}::body(double t) {
             {% endfor %}
         {% endif %}
     
-    {{macros.map_required_vars_locally(transition.state_assignments, component_class, component_name, unit_handler, []) | indent(4)}}
+    {{macros.map_required_vars_locally(transition.state_assignments, component_class, component_name, unit_handler, [], []) | indent(4)}}
 
     // State assignments
         {% for sa, scaled_expr, units in unit_handler.scale_aliases(transition.state_assignments) %}
@@ -254,7 +285,7 @@ bool {{component_name}}::{{TransitionClassName}}::condition(double t) {
     const Buffers_& B_ = regime->cell->B_;
     const Parameters_& P_ = regime->cell->P_;
         
-    {{macros.map_required_vars_locally(on_condition.trigger, component_class, component_name, unit_handler, []) | indent(4)}}
+    {{macros.map_required_vars_locally(on_condition.trigger, component_class, component_name, unit_handler, [], []) | indent(4)}}
 
     return {{on_condition.trigger.rhs_cstr}};
 
@@ -268,7 +299,7 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(nest::Time con
     const Buffers_& B_ = regime->cell->B_;
     const Parameters_& P_ = regime->cell->P_;
        
-    {{macros.map_required_vars_locally(exact_time_expr, component_class, component_name, unit_handler, []) | indent(4)}}       
+    {{macros.map_required_vars_locally(exact_time_expr, component_class, component_name, unit_handler, [], []) | indent(4)}}       
     // The trigger expression depends on 't' so determine the exact time that the threshold was crossed.
     return {{exact_time_expr.rhs_cstr}};
        {% else %}
@@ -662,5 +693,6 @@ void {{component_name}}::handle(nest::CurrentEvent& e) {
 void {{component_name}}::handle(nest::DataLoggingRequest& e) {
     B_.logger_.handle(e);
 }
+
 
 }  // End 'nineml' namespace
