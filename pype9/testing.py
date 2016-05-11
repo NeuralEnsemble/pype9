@@ -59,7 +59,7 @@ class Comparer(object):
                  dt=0.01, simulators=None, neuron_ref=None, nest_ref=None,
                  input_signal=None, input_train=None, neuron_translations=None,
                  nest_translations=None, neuron_build_args=None,
-                 nest_build_args=None, min_delay=0.02, max_delay=10.0,
+                 nest_build_args=None, min_delay=0.1, max_delay=10.0,
                  extra_mechanisms=None, extra_point_process=None,
                  build_name=None, auxiliary_states=None):
         """
@@ -82,15 +82,14 @@ class Comparer(object):
                 "No simulators specified to simulate the 9ML model '{}'."
                 "Add either 'neuron', 'nest' or both to the positional "
                 "arguments".format(nineml_model.name))
-        self.simulate_neuron = ('neuron' in simulators or
-                                neuron_ref is not None)
-        self.simulate_nest = 'nest' in simulators or nest_ref is not None
+        self.simulate_neuron = 'neuron' in simulators
+        self.simulate_nest = 'nest' in simulators
         self.dt = self.to_float(dt, 'ms')
         self.state_variable = state_variable
         self.nineml_model = nineml_model
         self.properties = properties if properties is not None else {}
-        self.neuron_ref = neuron_ref
-        self.nest_ref = nest_ref
+        self.neuron_ref = neuron_ref if self.simulate_neuron else None
+        self.nest_ref = nest_ref if self.simulate_nest else None
         self.simulators = simulators if simulators is not None else []
         self.extra_mechanisms = (extra_mechanisms
                                  if extra_mechanisms is not None else [])
@@ -145,7 +144,6 @@ class Comparer(object):
         if self.neuron_ref is not None:
             self._create_NEURON(self.neuron_ref)
         if self.simulate_nest:
-            simulatorNEST.reset()
             simulatorNEST.run(duration)
         if self.simulate_neuron:
             simulatorNEURON.run(duration)
@@ -471,7 +469,7 @@ def compare_in_subprocess(
     nineml_model=None, simulators=[], neuron_ref=None, nest_ref=None,
     input_signal=None, input_train=None, neuron_translations={},
     nest_translations={}, neuron_build_args={}, nest_build_args={},
-        min_delay=0.02, max_delay=10.0):
+        min_delay=0.1, max_delay=10.0):
     """
     This function can be used to perform the comparison within a subprocess
     so as to quarantine the simulations from subsequent simulations. Can be

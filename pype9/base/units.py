@@ -83,7 +83,7 @@ class UnitHandler(DynamicsDimensionResolver):
 
     def assign_units_to_variable(self, variable, derivative_of=False):
         if isinstance(variable, basestring):
-            variable = self.component_class[variable]
+            variable = self.component_class.element(variable)
         _, compound = self.dimension_to_units_compound(variable.dimension)
         if derivative_of:
             compound.append((un.ms, -1))
@@ -95,7 +95,7 @@ class UnitHandler(DynamicsDimensionResolver):
 
     def scale_alias(self, element):
         if isinstance(element, basestring):
-            element = self.component_class[element]
+            element = self.component_class.element(element)
         scaled, dims = self._flatten(sympify(element.rhs))
         units_str = self._units_for_code_gen(
             self.dimension_to_units_compound(dims)[1])

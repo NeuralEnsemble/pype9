@@ -601,11 +601,24 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
     assert(from < to);
 
     nest::long_t current_steps = origin.get_steps();
+    
+    std::cout << "min_delay: " << nest::Scheduler::get_min_delay() << std::endl;
+    std::cout << "from: " << from << std::endl;
+    std::cout << "to: " << to << std::endl;
 
     for (nest::long_t lag = from; lag < to; ++lag) {
 
         /***** Solve ODE over timestep *****/
         B_.current_regime->step_ode();
+        
+        std::cout << "lag: " << lag << std::endl;
+{% for port in component_class.event_receive_ports %}
+        const std::list<double_t>& event_list = B_.{{port.name}}_event_port.get_list(lag);
+        std::cout << "{{port.name}}: ";
+        for (std::list<double_t>::const_iterator it = event_list.begin(); it != event_list.end(); ++it)
+            std::cout << *it << " ";
+        std::cout << std::endl;
+{% endfor %}
 
         /***** Transition handling *****/
         // Get multiplicity incoming events for the current lag and reset multiplicity of outgoing events

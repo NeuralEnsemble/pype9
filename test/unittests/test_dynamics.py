@@ -29,10 +29,6 @@ cell_metaclasses = {'neuron': CellMetaClassNEURON,
 
 class TestDynamics(TestCase):
 
-    def __init__(self, dt=0.001, duration=100.0):
-        self.dt = dt
-        self.duration = duration
-
     liaf_initial_states = {'v': -65.0 * pq.mV, 'end_refractory': 0.0 * pq.ms}
     liaf_nest_translations = {
         # the conversion to g_leak is a bit of a hack because it is
@@ -48,18 +44,19 @@ class TestDynamics(TestCase):
         'end_refractory': (None, 1), 'v': ('v', 1)}
 
     def test_izhi(self, plot=False, print_comparisons=False,
-                  simulators=['nest', 'neuron']):
+                  simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
+                  **kwargs):  # @UnusedVariable
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
                 'neuron/Izhikevich', 'Izhikevich'),
-            state_variable='V', dt=self.dt, simulators=simulators,
+            state_variable='V', dt=dt, simulators=simulators,
             properties=ninemlcatalog.load(
                 'neuron/Izhikevich', 'SampleIzhikevich'),
             initial_states={'U': -14.0 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
             neuron_ref='Izhikevich', nest_ref='izhikevich',
-            input_signal=input_step('Isyn', 0.02, 50, 100, self.dt),
+            input_signal=input_step('Isyn', 0.02, 50, 100, dt),
             nest_translations={'V': ('V_m', 1), 'U': ('U_m', 1),
                                'weight': (None, 1), 'C_m': (None, 1),
                                'theta': ('V_th', 1),
@@ -72,7 +69,7 @@ class TestDynamics(TestCase):
             neuron_build_args={'build_mode': 'force'},
             nest_build_args={'build_mode': 'force'},
             build_name='Izhikevich9ML')
-        comparer.simulate(self.duration)
+        comparer.simulate(duration)
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
@@ -95,17 +92,18 @@ class TestDynamics(TestCase):
                 "built-in")
 
     def test_hh(self, plot=False, print_comparisons=False,
-                  simulators=['nest', 'neuron']):
+                simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
+                **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
                 'neuron/HodgkinHuxley', 'PyNNHodgkinHuxley'),
-            state_variable='v', dt=self.dt, simulators=simulators,
+            state_variable='v', dt=dt, simulators=simulators,
             initial_states={'v': -65.0 * pq.mV, 'm': 0.0, 'h': 1.0, 'n': 0.0},
             properties=ninemlcatalog.load(
                 'neuron/HodgkinHuxley', 'PyNNHodgkinHuxleyProperties'),
             neuron_ref='hh_traub', nest_ref='hh_cond_exp_traub',
-            input_signal=input_step('iExt', 0.5, 50, 100, self.dt),
+            input_signal=input_step('iExt', 0.5, 50, 100, dt),
             nest_translations={
                 'v': ('V_m', 1), 'm': ('Act_m', 1),
                 'h': ('Act_h', 1), 'n': ('Inact_n', 1),
@@ -138,7 +136,7 @@ class TestDynamics(TestCase):
                 'n_beta_V0': (None, 1), 'n_beta_K': (None, 1)},
             neuron_build_args={'build_mode': 'force'},
             nest_build_args={'build_mode': 'force'})
-        comparer.simulate(self.duration)
+        comparer.simulate(duration)
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
@@ -148,38 +146,39 @@ class TestDynamics(TestCase):
         # FIXME: Need to work out what is happening with the reference NEURON
         if 'nest' in simulators and 'neuron' in simulators:
             self.assertLess(
-                comparisons[('9ML-nest', '9ML-neuron')], 0.15 * pq.mV,
-                "HH NEURON 9ML simulation did not match reference PyNN")
+                comparisons[('9ML-nest', '9ML-neuron')], 0.5 * pq.mV,
+                "HH 9ML NEURON and NEST simulation did not match each other")
         if 'neuron' in simulators:
             self.assertLess(
                 comparisons[('9ML-neuron', 'Ref-neuron')], 0.55 * pq.mV,
-                "HH NEST 9ML simulation did not match reference built-in")
+                "HH 9ML NEURON simulation did not match reference built-in")
         if 'nest' in simulators:
             self.assertLess(
-                comparisons[('9ML-nest', 'Ref-nest')], 0.3 * pq.mV,
-                "HH NEST 9ML simulation did not match reference built-in")
+                comparisons[('9ML-nest', 'Ref-nest')], 0.0015 * pq.mV,
+                "HH 9ML NEST simulation did not match reference built-in")
 
     def test_liaf(self, plot=False, print_comparisons=False,
-                  simulators=['nest', 'neuron']):
+                  simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
+                  **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
                 'neuron/LeakyIntegrateAndFire',
                 'PyNNLeakyIntegrateAndFire'),
-            state_variable='v', dt=self.dt, simulators=simulators,
+            state_variable='v', dt=dt, simulators=simulators,
             properties=ninemlcatalog.load(
                 'neuron/LeakyIntegrateAndFire',
                 'PyNNLeakyIntegrateAndFireProperties'),
             initial_states=self.liaf_initial_states,
             initial_regime='subthreshold',
             neuron_ref='ResetRefrac', nest_ref='iaf_psc_alpha',
-            input_signal=input_step('i_synaptic', 1, 50, 100, self.dt),
+            input_signal=input_step('i_synaptic', 1, 50, 100, dt),
             nest_translations=self.liaf_nest_translations,
             neuron_translations=self.liaf_neuron_translations,
             neuron_build_args={'build_mode': 'force'},
             nest_build_args={'build_mode': 'force'},
             extra_mechanisms=['pas'])
-        comparer.simulate(self.duration)
+        comparer.simulate(duration)
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
@@ -190,9 +189,9 @@ class TestDynamics(TestCase):
             self.assertLess(
                 comparisons[('9ML-neuron', 'Ref-neuron')], 0.55 * pq.mV,
                 "LIaF NEURON 9ML simulation did not match reference PyNN")
-        if 'neuron' in simulators:
+        if 'nest' in simulators:
             self.assertLess(
-                comparisons[('9ML-nest', 'Ref-nest')], 0.001 * pq.mV,
+                comparisons[('9ML-nest', 'Ref-nest')], 0.01 * pq.mV,
                 "LIaF NEST 9ML simulation did not match reference built-in")
         if 'nest' in simulators and 'neuron' in simulators:
             self.assertLess(
@@ -200,7 +199,8 @@ class TestDynamics(TestCase):
                 "LIaF NEURON 9ML simulation did not match NEST 9ML simulation")
 
     def test_alpha_syn(self, plot=False, print_comparisons=False,
-                       simulators=['nest', 'neuron']):
+                       simulators=['nest', 'neuron'], dt=0.001,
+                       duration=100.0, **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
         iaf = ninemlcatalog.load(
             'neuron/LeakyIntegrateAndFire', 'PyNNLeakyIntegrateAndFire')
@@ -269,14 +269,14 @@ class TestDynamics(TestCase):
         build_dir = os.path.join(os.path.dirname(iaf.url), '9build')
         comparer = Comparer(
             nineml_model=iaf_alpha_with_syn,
-            state_variable='v__cell', dt=self.dt,
+            state_variable='v__cell', dt=dt,
             simulators=simulators,
             properties=properties_with_syn,
             initial_states=initial_states,
             initial_regime=initial_regime,
             neuron_ref='ResetRefrac',
             nest_ref='iaf_psc_alpha',
-            input_train=input_freq('input_spike', 500 * pq.Hz, self.duration,
+            input_train=input_freq('input_spike', 500 * pq.Hz, duration,
                                    weight=[Property('weight__pls__syn',
                                                     10 * pq.nA)]),
             nest_translations=nest_tranlsations,
@@ -289,7 +289,7 @@ class TestDynamics(TestCase):
             nest_build_args={
                 'build_mode': 'force',
                 'build_dir': os.path.join(build_dir, 'nest', 'IaFAlpha')})
-        comparer.simulate(self.duration)
+        comparer.simulate(duration)
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
@@ -313,23 +313,24 @@ class TestDynamics(TestCase):
                 "reference PyNN")
 
     def test_izhiFS(self, plot=False, print_comparisons=False,
-                    simulators=['nest', 'neuron']):
+                    simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
+                    **kwargs):  # @UnusedVariable
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
                 'neuron/Izhikevich', 'IzhikevichFastSpiking'),
-            state_variable='V', dt=self.dt, simulators=simulators,
+            state_variable='V', dt=dt, simulators=simulators,
             properties=ninemlcatalog.load(
                 'neuron/Izhikevich', 'SampleIzhikevichFastSpiking'),
             initial_states={'U': -1.625 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
-            input_signal=input_step('iSyn', 100 * pq.pA, 0, 100, self.dt),
+            input_signal=input_step('iSyn', 100 * pq.pA, 0, 100, dt),
             initial_regime='subVb',
             neuron_build_args={'build_mode': 'force',
                                'external_currents': ['iSyn']},
             nest_build_args={'build_mode': 'force'},
             auxiliary_states=['U'])
-        comparer.simulate(self.duration)
+        comparer.simulate(duration)
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
@@ -346,9 +347,9 @@ class TestDynamics(TestCase):
 #         comparer = Comparer(
 #             nineml_model=ninemlcatalog.load(
 #                 'neuron/AdExpIaF/AdExpIaF'),
-#             state_variable='v', dt=self.dt, simulators=['nest', 'neuron'],
+#             state_variable='v', dt=dt, simulators=['nest', 'neuron'],
 #             neuron_ref='AdExpIF', nest_ref='aeif_cond_alpha',
-#             input_signal=input_step('iExt', 1, 50, 100, self.dt),
+#             input_signal=input_step('iExt', 1, 50, 100, dt),
 #             initial_states={'w': 0.0 * pq.nA, 'v': -65.0 * pq.mV},
 #             properties=ninemlcatalog.load(
 #                 'neuron/AdExpIaF/AdExpIaFProperties'),
@@ -363,7 +364,7 @@ class TestDynamics(TestCase):
 #             neuron_build_args={'build_mode': 'force'},
 #             nest_build_args={'build_mode': 'force'},
 #             extra_mechanisms=['pas'])
-#         comparer.simulate(self.duration)
+#         comparer.simulate(duration)
 #         comparisons = comparer.compare()
 #         if print_comparisons:
 #             for (name1, name2), diff in comparisons.iteritems():
@@ -379,7 +380,7 @@ class TestDynamics(TestCase):
 
     def test_poisson(self, duration=1000 * un.s, rate=100 * un.Hz,
                      print_comparisons=False, simulators=['nest'],  # , 'neuron'] @IgnorePep8
-                     **kwargs ):  # @UnusedVariable @IgnorePep8
+                     dt=0.001, **kwargs):  # @UnusedVariable @IgnorePep8
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': 'force',
                                  'external_currents': ['iSyn']},
@@ -395,13 +396,13 @@ class TestDynamics(TestCase):
                 # Run NEURON simulation
                 import neuron
                 simulatorNEURON.reset()
-                neuron.h.dt = self.dt
+                neuron.h.dt = dt
                 simulatorNEURON.run(duration.in_units(un.ms))
             elif sim_name == 'nest':
                 # Run NEST simulation
                 import nest
                 simulatorNEST.reset()
-                nest.SetKernelStatus({'resolution': self.dt})
+                nest.SetKernelStatus({'resolution': dt})
                 simulatorNEST.run(duration.in_units(un.ms))
             else:
                 assert False
@@ -458,11 +459,18 @@ if __name__ == '__main__':
     parser.add_argument('--simulators', nargs='+', default=['nest', 'neuron'],
                         help="Which simulators to run the test for "
                         "(default %(default)s)")
-    parser.add_argument('--duration', type=float, default=100.0,
-                        help="The duration of the test (default: %(default)s)")
+    parser.add_argument('--duration', type=float,
+                        help="Override the duration of the test")
+    parser.add_argument('--dt', type=float,
+                        help="Override the dt of the test")
     args = parser.parse_args()
-    tester = TestDynamics(duration=args.duration)
+    kwargs = {}
+    if args.duration:
+        kwargs['duration'] = args.duration
+    if args.dt:
+        kwargs['dt'] = args.dt
+    tester = TestDynamics()
     test = getattr(tester, 'test_' + args.test)
     test(plot=args.plot, print_comparisons=args.print_comparisons,
-         simulators=args.simulators)
+         simulators=args.simulators, **kwargs)
     print "done"

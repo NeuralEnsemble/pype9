@@ -153,11 +153,11 @@ class TestUnitAssignment(TestCase):
         self.assertEqual(handler1.scale_alias('A6'),
                          (Expression('1e-3 * P9/P10'), 'ms'))
         self.assertEqual(
-            handler2.scale_time_derivative(self.a.regime('R1')['SV2']),
+            handler2.scale_time_derivative(self.a.regime('R1').element('SV2')),
             (Expression('C1 * SV2 ** 2 + C2 * SV2 + C3 + SV3 + '
                         'ARP4 / P11'), 'mV/ms'))
         self.assertEqual(
-            handler2.scale_time_derivative(self.a.regime('R1')['SV3']),
+            handler2.scale_time_derivative(self.a.regime('R1').element('SV3')),
             (Expression('P12*(SV2*P13 - SV3)'), 'mV/ms^2'))
         self.assertEqual(handler1.assign_units_to_variable('P2'), '1/uS')
         self.assertEqual(handler1.assign_units_to_variable('P6'), 'um^2')

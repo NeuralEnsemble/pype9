@@ -18,11 +18,6 @@
 
     if ( e_ == 0 ) {
         e_ = gsl_odeiv2_evolve_alloc(N);
-        // Probably not necessary to set these working variables as it is not
-        // done in GSL examples but squashes the valgrind error
-        // "Conditional jump or move depends on uninitialised value(s)"
-        memset(e_->dydt_in, 0.0, (N * sizeof(double)));
-        memset(e_->dydt_out, 0.0, (N * sizeof(double)));
     } else
         gsl_odeiv2_evolve_reset(e_);
 
