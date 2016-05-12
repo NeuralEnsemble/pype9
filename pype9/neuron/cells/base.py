@@ -159,7 +159,7 @@ class Cell(base.Cell):
         self._initialise_local_recording()
         try:
             port = self.component_class.send_port(port_name)
-        except NameError:
+        except NineMLNameError:
             port = self.component_class.state_variable(port_name)
         if isinstance(port, EventPort):
             logger.warning("Assuming '{}' is voltage threshold crossing"

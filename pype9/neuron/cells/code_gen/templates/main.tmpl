@@ -111,7 +111,7 @@ INITIAL {
     regime_ = {{next(component_class.regimes).name | upper}}
 {% endif %}
 
-{% if not is_subcomponent %}
+{% if component_class.annotations[PYPE9_NS][MECH_TYPE] != SUB_COMPONENT_MECH %}
     : Initialise the NET_RECEIVE block by sending appropriate flag to itself
     net_send(0, INIT)
 {% endif %}
@@ -221,7 +221,7 @@ FUNCTION deriv_{{sv.name}}(
     {% endfor %}
 {% endif %}
 
-{% if not is_subcomponent %}
+{% if component_class.annotations[PYPE9_NS][MECH_TYPE] != SUB_COMPONENT_MECH %}
 NET_RECEIVE(connection_weight_, channel) {
     INITIAL {
       : stop channel being set to 0 by default
