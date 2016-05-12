@@ -24,7 +24,8 @@ from nineml.user import (
     Property, Quantity, Definition)
 from nineml.base import ContainerObject, DocumentLevelObject
 from nineml.exceptions import name_error, NineMLNameError
-from pype9.exceptions import Pype9RuntimeError, Pype9AttributeError
+from pype9.exceptions import (
+    Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError)
 
 
 class CellMetaClass(type):
@@ -250,10 +251,16 @@ class Cell(object):
                     qty = self._unit_handler.from_pq_quantity(val)
                 else:
                     qty = val
-                if varname in self.component_class.parameter_names:
-                    prop = self._nineml.set(
-                        Property(varname, qty.value, qty.units))
+                if qty.units.dimension != self.component_class.dimension_of(
+                        varname):
+                    raise Pype9DimensionError(
+                        "Attempting so set '{}', which has dimension {} to "
+                        "{}, which has dimension {}".format(
+                            varname,
+                            self.component_class.dimension_of(varname), qty,
+                            qty.units.dimension))
                 val = self._unit_handler.scale_value(qty)
+                prop = Property(varname, qty)
             # If varname is a parameter (not a state variable) set in
             # associated 9ML representation
             if varname in self.component_class.parameter_names:

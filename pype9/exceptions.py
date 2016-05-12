@@ -4,6 +4,10 @@ class Pype9RuntimeError(Exception):
     pass
 
 
+class Pype9DimensionError(Pype9RuntimeError):
+    pass
+
+
 class Pype9TypeError(TypeError, Pype9RuntimeError):
     pass
 
