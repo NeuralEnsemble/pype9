@@ -11,7 +11,7 @@
 TITLE Spiking node generated from 9ML using PyPe9 version {{version}} at '{{timestamp}}'
 
 NEURON {
-{% if is_subcomponent %}
+{% if component_class.annotations[PYPE9_NS][MECH_TYPE] == SUB_COMPONENT_MECH %}
     SUFFIX {{component_name}}
     {% for species, ports in component_class.annotations[PYPE9_NS][ION_SPECIES].iteritems() %}
         {% if species == NONSPECIFIC_CURRENT %}
@@ -27,9 +27,11 @@ NEURON {
         {% endif %}
 
     {% endfor %}
-{% else %}
+{% elif component_class.annotations[PYPE9_NS][MECH_TYPE] == FULL_CELL_MECH  %}
     POINT_PROCESS {{component_name}}
     NONSPECIFIC_CURRENT {% for port in component_class.analog_send_ports if port.dimension == units.current %}{% if not loop.first %}, {% endif %}{{port.name}}{% endfor %}
+{% elif component_class.annotations[PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH  %}
+    ARTIFICIAL_CELL {{component_name}}
 {% endif %}
 
     : T
@@ -137,13 +139,6 @@ PARAMETER {
     PER_MS = 1 (/ms)
 }
 
-STATE {
-{% for sv, units in unit_handler.assign_units_to_variables(component_class.state_variables) if sv.name != 'v' and len(list(component_class.all_time_derivatives(state_variable=sv))) %}
-    {{sv.name}} ({{units}})
-{% endfor %}
-}
-
-
 
 ASSIGNED {
     : Internal flags
@@ -173,50 +168,58 @@ ASSIGNED {
 {% endfor %}
 }
 
+{% if component_class.annotations[PYPE9_NS][MECH_TYPE] != ARTIFICIAL_CELL_MECH  %}
+STATE {
+    {% for sv, units in unit_handler.assign_units_to_variables(component_class.state_variables) if sv.name != 'v' and len(list(component_class.all_time_derivatives(state_variable=sv))) %}
+    {{sv.name}} ({{units}})
+    {% endfor %}
+}
+
+
 BREAKPOINT {
-{% if component_class.annotations[PYPE9_NS][HAS_TIME_DERIVS] %}
+    {% if component_class.annotations[PYPE9_NS][HAS_TIME_DERIVS] %}
     SOLVE states METHOD {{ode_solver}}
-{% endif %}
-{% for alias, scaled_expr, _ in unit_handler.scale_aliases(component_class.required_for(list(component_class.all_time_derivatives()) + list(component_class.analog_send_ports)).expressions) %}
-    {% if len(list(component_class.overridden_in_regimes(alias))) %}
-        {% for regime in component_class.overridden_in_regimes(alias) %}
-            {% set scaled_regime_expr, _ = unit_handler.scale_alias(regime.alias(alias.lhs)) %}
+    {% endif %}
+    {% for alias, scaled_expr, _ in unit_handler.scale_aliases(component_class.required_for(list(component_class.all_time_derivatives()) + list(component_class.analog_send_ports)).expressions) %}
+        {% if len(list(component_class.overridden_in_regimes(alias))) %}
+            {% for regime in component_class.overridden_in_regimes(alias) %}
+                {% set scaled_regime_expr, _ = unit_handler.scale_alias(regime.alias(alias.lhs)) %}
     {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
         {{code_gen.assign_str(alias.lhs, scaled_regime_expr.rhs) | indent(8)}}
-        {% endfor %}
+            {% endfor %}
     } else {
         {{code_gen.assign_str(alias.lhs, scaled_expr.rhs) | indent(8)}}
     }
-    {% else %}
+        {% else %}
     {{code_gen.assign_str(alias.lhs, scaled_expr.rhs) | indent(4)}}
-    {% endif %}
-{% endfor %}
-}
-
-
-{% if component_class.annotations[PYPE9_NS][HAS_TIME_DERIVS] %}
-DERIVATIVE states {
-    {% for sv in component_class.state_variables if sv.name not in component_class.annotations[PYPE9_NS][NO_TIME_DERIVS] %}
-    {{sv.name}}' = deriv_{{sv.name}}({{component_class.required_for(component_class.all_time_derivatives(sv)).state_variable_names | join(', ')}})
+        {% endif %}
     {% endfor %}
 }
-{% endif %}
 
-{% for sv in component_class.state_variables if sv.name not in component_class.annotations[PYPE9_NS][NO_TIME_DERIVS] %}
+
+    {% if component_class.annotations[PYPE9_NS][HAS_TIME_DERIVS] %}
+DERIVATIVE states {
+        {% for sv in component_class.state_variables if sv.name not in component_class.annotations[PYPE9_NS][NO_TIME_DERIVS] %}
+    {{sv.name}}' = deriv_{{sv.name}}({{component_class.required_for(component_class.all_time_derivatives(sv)).state_variable_names | join(', ')}})
+        {% endfor %}
+}
+    {% endif %}
+
+    {% for sv in component_class.state_variables if sv.name not in component_class.annotations[PYPE9_NS][NO_TIME_DERIVS] %}
 FUNCTION deriv_{{sv.name}}(
-    {%- for sv, units in unit_handler.assign_units_to_variables(component_class.required_for(component_class.all_time_derivatives(sv)).state_variables) -%}
+        {%- for sv, units in unit_handler.assign_units_to_variables(component_class.required_for(component_class.all_time_derivatives(sv)).state_variables) -%}
         {{sv.name}} ({{units}}){%- if loop.last %}{% else %}, {% endif -%}
-    {%- endfor %}
+        {%- endfor %}
     ) ({{unit_handler.assign_units_to_variable(sv, derivative_of=True)}}) {
-    {% for regime in component_class.regimes  if sv.name in regime._time_derivatives %}
+        {% for regime in component_class.regimes  if sv.name in regime._time_derivatives %}
     {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
-        {% set scaled_expr, units = unit_handler.scale_time_derivative(regime.time_derivative(sv.name)) %}
+            {% set scaled_expr, units = unit_handler.scale_time_derivative(regime.time_derivative(sv.name)) %}
         {{code_gen.assign_str('deriv_' + sv.name, scaled_expr.rhs)}}
     {{endif(loop.last)}}
-    {% endfor %}
+        {% endfor %}
 }
-{% endfor %}
-
+    {% endfor %}
+{% endif %}
 
 {% if not is_subcomponent %}
 NET_RECEIVE(connection_weight_, channel) {

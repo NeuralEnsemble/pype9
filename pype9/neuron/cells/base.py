@@ -19,7 +19,7 @@ import os.path
 import quantities as pq
 import neo
 from neuron import h, load_mechanisms
-from nineml.abstraction import EventPort, Dynamics
+from nineml.abstraction import EventPort, Dynamics, AnalogPort, StateVariable
 from nineml.exceptions import NineMLNameError
 from math import pi
 import numpy
@@ -30,7 +30,7 @@ from pype9.neuron.units import UnitHandler
 from .controller import simulation_controller
 from pype9.annotations import (
     PYPE9_NS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
-    MEMBRANE_VOLTAGE)
+    MEMBRANE_VOLTAGE, MECH_TYPE, ARTIFICIAL_CELL_MECH)
 from pype9.exceptions import Pype9RuntimeError
 
 
@@ -62,35 +62,39 @@ class Cell(base.Cell):
         # Insert dynamics mechanism (the built component class)
         HocClass = getattr(h, self.__class__.name)
         self._hoc = HocClass(0.5, sec=self._sec)
-        # In order to scale the distributed current to the same units as point
-        # process current, i.e. mA/cm^2 -> nA the surface area needs to be
-        # 100um. mA/cm^2 = -3-(-2^2) = 10^1, 100um^2 = 2 + -6^2 = 10^(-10), nA
-        # = 10^(-9). 1 - 10 = - 9. (see PyNN Izhikevich neuron implementation)
-        self._sec.L = 10.0
-        self._sec.diam = 10.0 / pi
-        # Get the membrane capacitance property
-        self.cm_prop_name = self.build_component_class.annotations[
-            PYPE9_NS][MEMBRANE_CAPACITANCE]
-        cm_prop = None
-        try:
+        self.recordable = {'spikes': None}
+        # Get the membrane capacitance property if not an artificial cell
+        if self.build_component_class.annotations[
+                PYPE9_NS][MECH_TYPE] != ARTIFICIAL_CELL_MECH:
+            # In order to scale the distributed current to the same units as
+            # point process current, i.e. mA/cm^2 -> nA the surface area needs
+            # to be 100um. mA/cm^2 = -3-(-2^2) = 10^1, 100um^2 = 2 + -6^2 =
+            # 10^(-10), nA = 10^(-9). 1 - 10 = - 9. (see PyNN Izhikevich neuron
+            # implementation)
+            self._sec.L = 10.0
+            self._sec.diam = 10.0 / pi
+            self.cm_prop_name = self.build_component_class.annotations[
+                PYPE9_NS][MEMBRANE_CAPACITANCE]
+            cm_prop = None
             try:
-                cm_prop = properties[0][self.cm_prop_name]
-            except IndexError:
-                cm_prop = kwprops[self.cm_prop_name]
-        except KeyError:
-            if self.build_properties is not None:
-                cm_prop = self.build_properties.property(self.cm_prop_name)
-        if cm_prop is not None:
-            cm = pq.Quantity(UnitHandler.to_pq_quantity(cm_prop), 'nF')
-        else:
-            cm = 1.0 * pq.nF
-        # Set capacitance in mechanism
-        setattr(self._hoc, self.cm_prop_name, float(cm))
-        # Set capacitance in hoc
-        specific_cm = pq.Quantity(cm / self.surface_area, 'uF/cm^2')
-        self._sec.cm = float(specific_cm)
+                try:
+                    cm_prop = properties[0][self.cm_prop_name]
+                except IndexError:
+                    cm_prop = kwprops[self.cm_prop_name]
+            except KeyError:
+                if self.build_properties is not None:
+                    cm_prop = self.build_properties.property(self.cm_prop_name)
+            if cm_prop is not None:
+                cm = pq.Quantity(UnitHandler.to_pq_quantity(cm_prop), 'nF')
+            else:
+                cm = 1.0 * pq.nF
+            # Set capacitance in mechanism
+            setattr(self._hoc, self.cm_prop_name, float(cm))
+            # Set capacitance in hoc
+            specific_cm = pq.Quantity(cm / self.surface_area, 'uF/cm^2')
+            self._sec.cm = float(specific_cm)
+            self.recordable['v'] = self.source
         # Set up members required for PyNN
-        self.recordable = {'spikes': None, 'v': self.source}
         self.spike_times = h.Vector(0)
         self.traces = {}
         self.gsyn_trace = {}
@@ -153,23 +157,31 @@ class Cell(base.Cell):
 
     def record(self, port_name):
         self._initialise_local_recording()
-        port = self.component_class.element(
-            port_name, class_map=Dynamics.class_to_member)
+        try:
+            port = self.component_class.send_port(port_name)
+        except NameError:
+            port = self.component_class.state_variable(port_name)
         if isinstance(port, EventPort):
             logger.warning("Assuming '{}' is voltage threshold crossing"
                            .format(port_name))
-            # FIXME: This assumes that all event ports are voltage threshold
-            #        crossings
-            self._recorders[port_name] = recorder = h.NetCon(
-                self._sec._ref_v, None, self.get_threshold(), 0.0, 1.0,
-                sec=self._sec)
-        escaped_port_name = self._escaped_name(port_name)
-        try:
-            recorder = getattr(self._hoc, '_ref_' + escaped_port_name)
-        except AttributeError:
-            recorder = getattr(self._sec(0.5), '_ref_' + escaped_port_name)
-        self._recordings[port_name] = recording = h.Vector()
-        recording.record(recorder)
+            if self.build_component_class.annotations[
+                    PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH:
+                self._recorders[port_name] = recorder = h.NetCon(
+                    self._hoc, None, sec=self._sec)
+            else:
+                self._recorders[port_name] = recorder = h.NetCon(
+                    self._sec._ref_v, None, self.get_threshold(), 0.0, 1.0,
+                    sec=self._sec)
+        else:
+            escaped_port_name = self._escaped_name(port_name)
+            try:
+                self._recorders[port_name] = recorder = getattr(
+                    self._hoc, '_ref_' + escaped_port_name)
+            except AttributeError:
+                self._recorders[port_name] = recorder = getattr(
+                    self._sec(0.5), '_ref_' + escaped_port_name)
+            self._recordings[port_name] = recording = h.Vector()
+            recording.record(recorder)
 
     def record_transitions(self):
         self._initialise_local_recording()

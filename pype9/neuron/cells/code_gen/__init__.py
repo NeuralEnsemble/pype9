@@ -91,41 +91,9 @@ class CodeGenerator(BaseCodeGenerator):
         """
         if name is None:
             name = component_class.name
-        # Check whether it is a point process or a ion channel
-        if isinstance(component_class.element(
-            component_class.annotations[PYPE9_NS]['MembraneVoltage'],
-            class_map=Dynamics.class_to_member),
-                StateVariable):
-            self.generate_point_process(
-                component_class, default_properties, initial_state, src_dir,
-                name, **kwargs)
-        else:
-            self.generate_ion_channel(component_class, default_properties,
-                                      initial_state, src_dir, name, **kwargs)
-
-    def generate_ion_channel(self, component_class, default_properties,
-                             initial_state, src_dir, name, **kwargs):
-        # Render mod file
-        self.generate_mod_file('main.tmpl', component_class,
-                               default_properties, initial_state, src_dir,
-                               name, kwargs)
-
-    def generate_kinetics(self, component_class, default_properties,
-                          initial_state, src_dir, name, **kwargs):
-        # Render mod file
-        self.generate_mod_file('kinetics.tmpl', component_class,
-                               default_properties, initial_state, src_dir,
-                               name, kwargs)
-
-    def generate_point_process(self, component_class, default_properties,
-                               initial_state, src_dir, name, **kwargs):
-        add_tmpl_args = {'is_subcomponent': False}
-        template_args = copy(kwargs)
-        template_args.update(add_tmpl_args)
-        # Render mod file
-        self.generate_mod_file('main.tmpl', component_class,
-                               default_properties, initial_state, src_dir,
-                               name, template_args)
+        template = 'main.tmpl'
+        self.generate_mod_file(template, component_class, default_properties,
+                               initial_state, src_dir, name, kwargs)
 
     def generate_mod_file(self, template, component_class, default_properties,
                           initial_state, src_dir, name, template_args):
@@ -259,10 +227,12 @@ class CodeGenerator(BaseCodeGenerator):
         trfrm_with_syn = DynamicsWithSynapses(
             trfrm, component_class.synapses,
             component_class.connection_parameter_sets)
-        if trfrm_properties:
+        if trfrm_properties is not None:
             trfrm_props_with_syn = DynamicsWithSynapsesProperties(
                 trfrm_properties, default_properties.synapses,
                 default_properties.connection_property_sets)
+        else:
+            trfrm_props_with_syn = None
         # Retun a prototype of the transformed class
         return trfrm_with_syn, trfrm_props_with_syn, initial_state
 
