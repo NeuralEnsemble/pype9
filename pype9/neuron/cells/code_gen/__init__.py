@@ -242,6 +242,13 @@ class CodeGenerator(BaseCodeGenerator):
         # Need to convert to AnalogReceivePort if v is a StateVariable
         if isinstance(v, StateVariable):
             # -----------------------------------------------------------------
+            # Remove all current analog send ports so they don't get confused
+            # with the converted voltage time derivative expression
+            # -----------------------------------------------------------------
+            for port in list(trfrm.analog_send_ports):
+                if port.dimension == un.current:
+                    trfrm.remove(port)
+            # -----------------------------------------------------------------
             # Insert membrane capacitance if not present
             # -----------------------------------------------------------------
             # Get or guess the location of the membrane capacitance
@@ -338,7 +345,7 @@ class CodeGenerator(BaseCodeGenerator):
                          if sv not in has_td])
             trfrm.annotations[PYPE9_NS][HAS_TIME_DERIVS] = bool(len(has_td))
             # -----------------------------------------------------------------
-            # Get the external input currents
+            # Remove the external input currents
             # -----------------------------------------------------------------
             # Analog receive or reduce ports that are of dimension current and
             # are purely additive to the membrane current and nothing else

@@ -382,8 +382,8 @@ class TestDynamics(TestCase):
 #             "AdExpIaF NEST 9ML simulation did not match reference built-in")
 
     def test_poisson(self, duration=100 * un.s, rate=100 * un.Hz,
-                     print_comparisons=False, dt=0.001, simulators=['nest'],  # , 'neuron'] @IgnorePep8
-                     **kwargs):  # @UnusedVariable @IgnorePep8
+                     print_comparisons=False, dt=0.001,
+                     simulators=['nest', 'neuron'], **kwargs):  # @UnusedVariable @IgnorePep8
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': 'force',
                                  'external_currents': ['iSyn']},
