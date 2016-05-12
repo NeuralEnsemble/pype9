@@ -278,3 +278,33 @@ NET_RECEIVE(connection_weight_, channel) {
     }
 }
 {% endif %}
+
+FUNCTION _random_normal_(m,s) {
+VERBATIM
+    _l_random_normal_ = nineml_gsl_normal(_lm,_ls);
+ENDVERBATIM
+}
+
+FUNCTION _random_uniform_(m,s) {
+VERBATIM
+    _l_random_uniform_ = nineml_gsl_uniform(_lm,_ls);
+ENDVERBATIM
+}
+
+FUNCTION _random_binomial_(m,s) {
+VERBATIM
+    _l_random_binomial_ = nineml_gsl_binomial(_lm,_ls);
+ENDVERBATIM
+}
+
+FUNCTION _random_poisson_(m) {
+VERBATIM
+    _l_random_poisson_ = nineml_gsl_poisson(_lm);
+ENDVERBATIM
+}
+
+FUNCTION _random_exponential_(m) {
+VERBATIM
+    _l_random_exponential_ = nineml_gsl_exponential(_lm);
+ENDVERBATIM
+} 

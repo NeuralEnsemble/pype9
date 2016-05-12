@@ -19,7 +19,7 @@ import os.path
 import quantities as pq
 import neo
 from neuron import h, load_mechanisms
-from nineml.abstraction import EventPort, Dynamics, AnalogPort, StateVariable
+from nineml.abstraction import EventPort
 from nineml.exceptions import NineMLNameError
 from math import pi
 import numpy
@@ -32,13 +32,12 @@ from pype9.annotations import (
     PYPE9_NS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
     MEMBRANE_VOLTAGE, MECH_TYPE, ARTIFICIAL_CELL_MECH)
 from pype9.exceptions import Pype9RuntimeError
-
+import logging
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
 
 NEURON_NS = 'NEURON'
 
-import logging
 
 logger = logging.getLogger("PyPe9")
 
