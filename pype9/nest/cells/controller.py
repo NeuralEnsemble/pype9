@@ -39,6 +39,7 @@ class _SimulationController(SimulationController):
         self.recording_devices = []
         self.populations = []
         self.segment_counter = 0
+        self._device_delay = None
 
     @property
     def t(self):
@@ -63,7 +64,8 @@ class _SimulationController(SimulationController):
         else:
             return max(kernel_delay, syn_delay)
 
-    def set_delays(self, min_delay, max_delay):
+    def set_delays(self, min_delay, max_delay, device_delay):
+        self._device_delay = float(device_delay)
         if min_delay != 'auto':
             min_delay = float(min_delay)
             max_delay = float(max_delay)
@@ -75,6 +77,13 @@ class _SimulationController(SimulationController):
     @property
     def max_delay(self):
         return nest.GetDefaults('static_synapse')['max_delay']
+
+    @property
+    def device_delay(self):
+        if self._device_delay is None:
+            return self.min_delay
+        else:
+            return self._device_delay
 
     @property
     def num_processes(self):

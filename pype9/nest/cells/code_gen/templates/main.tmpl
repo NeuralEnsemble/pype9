@@ -234,11 +234,11 @@ bool {{component_name}}::{{TransitionClassName}}::body(double t) {
     
         {% if transition.nineml_type == 'OnEvent' %}
     // Get the next weight and remove it from the unprocessed list
-    double_t weight_ = B_.unprocessed_{{transition.src_port_name}}_events.front();
-    B_.unprocessed_{{transition.src_port_name}}_events.pop_front();
+    double_t weight_ = B_.{{transition.src_port_name}}_events->front();
+    B_.{{transition.src_port_name}}_events->pop_front();
             {# Need to check there is only one connection parameter for this source port (current limitaiton of NEST) #}
             {% for connection_param in component_class.connection_parameter_set(transition.src_port_name).parameters %}
-                double_t {{connection_param.name}} = weight_;
+    double_t {{connection_param.name}} = weight_;
             {% endfor %}
         {% endif %}
     
@@ -273,7 +273,7 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(nest::Time con
 
 
 bool {{component_name}}::{{TransitionClassName}}::received(nest::Time const& origin, const nest::long_t& lag) {
-    return (bool)regime->cell->B_.unprocessed_{{on_event.src_port_name}}_events.size();
+    return (bool)regime->cell->B_.{{on_event.src_port_name}}_events->size();
 }
 
     {% endfor %}
@@ -581,7 +581,7 @@ void {{component_name}}::refresh_events(const nest::long_t& lag) {
     B_.num_{{port.name}}_events = 0;
 {% endfor %}
 {% for port in component_class.event_receive_ports %}
-    B_.unprocessed_{{port.name}}_events = B_.{{port.name}}_event_port.get_list(lag);
+    B_.{{port.name}}_events = &B_.{{port.name}}_event_port.get_list(lag);
 {% endfor %}
 }
 
@@ -601,24 +601,11 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
     assert(from < to);
 
     nest::long_t current_steps = origin.get_steps();
-    
-    std::cout << "min_delay: " << nest::Scheduler::get_min_delay() << std::endl;
-    std::cout << "from: " << from << std::endl;
-    std::cout << "to: " << to << std::endl;
 
     for (nest::long_t lag = from; lag < to; ++lag) {
 
         /***** Solve ODE over timestep *****/
         B_.current_regime->step_ode();
-        
-        std::cout << "lag: " << lag << std::endl;
-{% for port in component_class.event_receive_ports %}
-        const std::list<double_t>& event_list = B_.{{port.name}}_event_port.get_list(lag);
-        std::cout << "{{port.name}}: ";
-        for (std::list<double_t>::const_iterator it = event_list.begin(); it != event_list.end(); ++it)
-            std::cout << *it << " ";
-        std::cout << std::endl;
-{% endfor %}
 
         /***** Transition handling *****/
         // Get multiplicity incoming events for the current lag and reset multiplicity of outgoing events
@@ -628,6 +615,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         int simultaneous_transition_count = 0;
         double prev_t = origin.get_ms();
         while ((transition = B_.current_regime->transition(origin, lag))) {  // Check for a transition (i.e. the output of current_regime->transition is not NULL) and record it in the 'transition' variable.
+                    
             double t = transition->time_occurred(origin, lag);  // Get the exact time the transition occurred.
             if (t == prev_t) {
                 ++simultaneous_transition_count;
@@ -676,8 +664,8 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
  *****************/
 
 void {{component_name}}::handle(nest::SpikeEvent & e) {
-    assert(e.get_delay() > 0);
-    // Loop through event receive ports
+    assert(e.get_delay() > 0);   
+    // Loop through event receive ports   
 {% for port in component_class.event_receive_ports %}
     {{elseif(loop.first)}} (e.get_rport() == {{port.name}}_EVENT_PORT) {
         for (unsigned int i = 0; i < e.get_multiplicity(); ++i) {

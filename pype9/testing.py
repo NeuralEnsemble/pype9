@@ -30,6 +30,7 @@ import numpy
 import quantities as pq
 import neo
 from pype9.exceptions import Pype9RuntimeError
+from pype9.nest.cells import simulation_controller
 
 
 compare_script_path = os.path.join(os.path.dirname(__file__), '..', 'scripts',
@@ -59,9 +60,10 @@ class Comparer(object):
                  dt=0.01, simulators=None, neuron_ref=None, nest_ref=None,
                  input_signal=None, input_train=None, neuron_translations=None,
                  nest_translations=None, neuron_build_args=None,
-                 nest_build_args=None, min_delay=0.1, max_delay=10.0,
-                 extra_mechanisms=None, extra_point_process=None,
-                 build_name=None, auxiliary_states=None):
+                 nest_build_args=None, min_delay=0.1, device_delay=0.1,
+                 max_delay=10.0, extra_mechanisms=None,
+                 extra_point_process=None, build_name=None,
+                 auxiliary_states=None):
         """
         nineml_model   -- 9ML model to compare
         nineml_sims    -- tuple of simulator names to simulate the 9ML model in
@@ -124,6 +126,7 @@ class Comparer(object):
         else:
             self.neuron_state_variable = self.state_variable
         self.min_delay = min_delay
+        self.device_delay = device_delay
         self.max_delay = max_delay
 
     def simulate(self, duration):
@@ -134,6 +137,8 @@ class Comparer(object):
             nest.ResetKernel()
             simulatorNEST.reset()
             nest.SetKernelStatus({'resolution': self.dt})
+            simulation_controller.set_delays(self.min_delay, self.max_delay,
+                                             self.device_delay)
         if self.simulate_neuron:
             simulatorNEURON.reset()
             neuron.h.dt = self.dt
@@ -336,14 +341,14 @@ class Comparer(object):
                 'step_current_generator', 1,
                 {'amplitude_values': pq.Quantity(signal, 'pA'),
                  'amplitude_times': (pq.Quantity(signal.times, 'ms') -
-                                     self.min_delay * pq.ms),
+                                     self.device_delay * pq.ms),
                  'start': float(pq.Quantity(signal.t_start, 'ms')),
                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
             nest.Connect(generator, self.nest_cell,
                          syn_spec={'receptor_type':
                                    (receptor_types[port_name]
                                     if receptor_types else 0),
-                                   'delay': self.min_delay})
+                                   'delay': self.device_delay})
         if self.input_train is not None:
             port_name, signal, connection_properties = self.input_train
             try:
@@ -353,20 +358,20 @@ class Comparer(object):
             # FIXME: Should scale units
             weight = connection_properties[0].value * scale
             spike_times = (pq.Quantity(signal, 'ms') +
-                           (pq.ms - self.min_delay * pq.ms))
+                           (pq.ms - self.device_delay * pq.ms))
             if any(spike_times < 0.0):
                 raise Pype9RuntimeError(
                     "Some spike are less than minimum delay and so can't be "
                     "played into cell ({})".format(
                         ', '.join(str(t) for t in
-                                  spike_times[spike_times < self.min_delay])))
+                                  spike_times[spike_times < self.device_delay])))
             generator = nest.Create(
                 'spike_generator', 1, {'spike_times': spike_times})
             nest.Connect(generator, self.nest_cell,
                          syn_spec={'receptor_type':
                                    (receptor_types[port_name]
                                     if receptor_types else 0),
-                                   'delay': self.min_delay,
+                                   'delay': float(self.device_delay),
                                    'weight': float(weight)})
         self.nest_multimeter = nest.Create(
             'multimeter', 1, {"interval": self.to_float(self.dt, 'ms')})
@@ -456,10 +461,12 @@ def input_step(port_name, amplitude, start_time, duration, dt):
     return (port_name, signal)
 
 
-def input_freq(port_name, freq, duration, weight):
+def input_freq(port_name, freq, duration, weight, offset=None):
     isi = 1 / float(pq.Quantity(freq, 'kHz'))
+    if offset is None:
+        isi = offset
     train = neo.SpikeTrain(
-        numpy.arange(isi, duration, isi),
+        numpy.arange(offset, duration, isi),
         units='ms', t_stop=duration * pq.ms)
     return (port_name, train, weight)
 

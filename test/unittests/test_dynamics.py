@@ -200,7 +200,8 @@ class TestDynamics(TestCase):
 
     def test_alpha_syn(self, plot=False, print_comparisons=False,
                        simulators=['nest', 'neuron'], dt=0.001,
-                       duration=100.0, **kwargs):  # @UnusedVariable
+                       duration=100.0, min_delay=5.0, device_delay=5.0,
+                       **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
         iaf = ninemlcatalog.load(
             'neuron/LeakyIntegrateAndFire', 'PyNNLeakyIntegrateAndFire')
@@ -276,9 +277,10 @@ class TestDynamics(TestCase):
             initial_regime=initial_regime,
             neuron_ref='ResetRefrac',
             nest_ref='iaf_psc_alpha',
-            input_train=input_freq('input_spike', 500 * pq.Hz, duration,
+            input_train=input_freq('input_spike', 450 * pq.Hz, duration,
                                    weight=[Property('weight__pls__syn',
-                                                    10 * pq.nA)]),
+                                                    10 * pq.nA)],
+                                   offset=duration / 2.0),
             nest_translations=nest_tranlsations,
             neuron_translations=neuron_tranlsations,
             extra_mechanisms=['pas'],
@@ -288,7 +290,9 @@ class TestDynamics(TestCase):
                 'build_dir': os.path.join(build_dir, 'neuron', 'IaFAlpha')},
             nest_build_args={
                 'build_mode': 'force',
-                'build_dir': os.path.join(build_dir, 'nest', 'IaFAlpha')})
+                'build_dir': os.path.join(build_dir, 'nest', 'IaFAlpha')},
+            min_delay=min_delay,
+            device_delay=device_delay)
         comparer.simulate(duration)
         comparisons = comparer.compare()
         if print_comparisons:
@@ -328,8 +332,7 @@ class TestDynamics(TestCase):
             initial_regime='subVb',
             neuron_build_args={'build_mode': 'force',
                                'external_currents': ['iSyn']},
-            nest_build_args={'build_mode': 'force'},
-            auxiliary_states=['U'])
+            nest_build_args={'build_mode': 'force'}, auxiliary_states=['U']) # @IgnorePep8
         comparer.simulate(duration)
         comparisons = comparer.compare()
         if print_comparisons:
@@ -378,9 +381,9 @@ class TestDynamics(TestCase):
 #             comparisons[('9ML-nest', 'Ref-nest')], 0.00015 * pq.mV,
 #             "AdExpIaF NEST 9ML simulation did not match reference built-in")
 
-    def test_poisson(self, duration=1000 * un.s, rate=100 * un.Hz,
-                     print_comparisons=False, simulators=['nest'],  # , 'neuron'] @IgnorePep8
-                     dt=0.001, **kwargs):  # @UnusedVariable @IgnorePep8
+    def test_poisson(self, duration=100 * un.s, rate=100 * un.Hz,
+                     print_comparisons=False, dt=0.001, simulators=['nest'],  # , 'neuron'] @IgnorePep8
+                     **kwargs):  # @UnusedVariable @IgnorePep8
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': 'force',
                                  'external_currents': ['iSyn']},
@@ -397,13 +400,11 @@ class TestDynamics(TestCase):
                 import neuron
                 simulatorNEURON.reset()
                 neuron.h.dt = dt
-                simulatorNEURON.run(duration.in_units(un.ms))
             elif sim_name == 'nest':
                 # Run NEST simulation
-                import nest
+#                 import nest
                 simulatorNEST.reset()
-                nest.SetKernelStatus({'resolution': dt})
-                simulatorNEST.run(duration.in_units(un.ms))
+#                 nest.SetKernelStatus({'resolution': dt})
             else:
                 assert False
             # Create and initialise cell
@@ -423,25 +424,30 @@ class TestDynamics(TestCase):
             recorded_rate = pq.Quantity(
                 len(spikes) / (spikes.t_stop - spikes.t_start), 'Hz')
             ref_rate = pq.Quantity(UnitHandlerNEST.to_pq_quantity(rate), 'Hz')
-            self.assertAlmostEqual(
-                ref_rate, recorded_rate,
+            rate_difference = abs(ref_rate - recorded_rate)
+            if print_comparisons:
+                print "Reference rate: {}".format(ref_rate)
+                print "{} recorded rate: {}".format(sim_name, recorded_rate)
+                print "{} difference: {}".format(sim_name, rate_difference)
+            self.assertLess(
+                rate_difference, 0.5 * pq.Hz,
                 ("Recorded rate of {} poisson generator ({}) did not match "
                  "desired ({}): difference {}".format(
                      sim_name, recorded_rate, ref_rate,
                      recorded_rate - ref_rate)))
             # Calculate the absolute deviation
-            isi_avg = pq.Quantity(1.0 / recorded_rate, 'ms')
-            isi_std_dev = (abs((spikes[1:] - spikes[:-1]) - isi_avg) /
-                           (len(spikes) - 1))
-            recorded_cv = isi_std_dev / isi_avg
-            ref_cv = 1.0 / ref_rate ** 2.0
-            if print_comparisons:
-                print "ref cv: {}, recorded cv {}".format(ref_cv, recorded_cv)
-            self.assertAlmostEqual(
-                recorded_cv, ref_cv,
-                "Recorded coefficient of variation ({}) did not match the "
-                "expected ({}): difference"
-                .format(recorded_cv, ref_cv, recorded_cv - ref_cv))
+#             isi_avg = pq.Quantity(1.0 / recorded_rate, 'ms')
+#             isi_std_dev = (abs((spikes[1:] - spikes[:-1]) - isi_avg) /
+#                            (len(spikes) - 1))
+#             recorded_cv = isi_std_dev / isi_avg
+#             ref_cv = 1.0 / ref_rate ** 2.0
+#             if print_comparisons:
+#                 print "ref cv: {}, recorded cv {}".format(ref_cv, recorded_cv)
+#             self.assertAlmostEqual(
+#                 recorded_cv, ref_cv,
+#                 "Recorded coefficient of variation ({}) did not match the "
+#                 "expected ({}): difference"
+#                 .format(recorded_cv, ref_cv, recorded_cv - ref_cv))
 
 
 if __name__ == '__main__':
@@ -466,9 +472,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     kwargs = {}
     if args.duration:
-        kwargs['duration'] = args.duration
+        kwargs['duration'] = args.duration * un.ms
     if args.dt:
-        kwargs['dt'] = args.dt
+        kwargs['dt'] = args.dt * un.ms
     tester = TestDynamics()
     test = getattr(tester, 'test_' + args.test)
     test(plot=args.plot, print_comparisons=args.print_comparisons,
