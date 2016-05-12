@@ -404,7 +404,8 @@ class Comparer(object):
         plt.plot(nml_v.times, nml_v)
         for state_var in self.auxiliary_states:
             s = self.nml_cells[sim_name].recording(state_var)
-            plt.plot(s.times, s)
+            scaled = UnitHandlerNEURON.scale_value(s)
+            plt.plot(s.times, scaled)
 
     def _diff_NEURON(self):  # @UnusedVariable
         _, pnn_v = self._get_NEURON_signal()

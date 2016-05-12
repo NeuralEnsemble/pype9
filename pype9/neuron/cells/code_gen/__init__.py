@@ -430,7 +430,8 @@ class CodeGenerator(BaseCodeGenerator):
                         trfrm.rename_symbol(port.name, new_name)
                     port.annotations[PYPE9_NS][ION_SPECIES] = species
             # Collate all ports relating to each ion species
-            key_func = lambda p: p.annotations[PYPE9_NS][ION_SPECIES]
+            def key_func(p):  # @IgnorePep8
+                return p.annotations[PYPE9_NS][ION_SPECIES]
             sorted_ion_ports = sorted(
                 (p for p in trfrm.analog_ports
                  if ION_SPECIES in p.annotations[PYPE9_NS]), key=key_func)
@@ -482,6 +483,7 @@ class CodeGenerator(BaseCodeGenerator):
                            and 'build_only' removes existing library if found,
                            recompile and then exit
         `verbose`     -- Prints out verbose debugging messages
+        `ignore_units`-- Prints a warning when units don't match
         """
         # Change working directory to model directory
         os.chdir(compile_dir)

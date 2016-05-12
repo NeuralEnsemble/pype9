@@ -263,15 +263,20 @@ class UnitHandler(DynamicsDimensionResolver):
     @classmethod
     def scale_value(cls, qty):
         if isinstance(qty, pq.Quantity):
-            qty = cls.from_pq_quantity(qty)
-        try:
-            exponent, _ = cls.dimension_to_units_compound(qty.units.dimension)
-            scaled = 10 ** (qty.units.power - exponent) * qty.value
-            # FIMXE: Should be updated to following but not testing at the
-            #        moment so scared it will break something
-            # scaled = qty.value * cls.scalar(qty.units)
-        except AttributeError:  # Float or int value quantity
-            scaled = qty
+            value = numpy.asarray(qty)
+            # Get the first or only value of the quantity
+            try:
+                elem = qty[0]
+            except IndexError:
+                elem = qty
+            units = cls.from_pq_quantity(elem).units
+        else:
+            try:
+                value = qty.value
+                units = qty.units
+            except AttributeError:
+                return qty  # Float or int value quantity
+        scaled = value * cls.scalar(units)
         return scaled
 
     @classmethod
