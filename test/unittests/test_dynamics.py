@@ -328,7 +328,7 @@ class TestDynamics(TestCase):
             properties=ninemlcatalog.load(
                 'neuron/Izhikevich', 'SampleIzhikevichFastSpiking'),
             initial_states={'U': -1.625 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
-            input_signal=input_step('iSyn', 100 * pq.pA, 0, 100, dt),
+            input_signal=input_step('iSyn', 100 * pq.pA, 50.0, 100, dt),
             initial_regime='subVb',
             neuron_build_args={'build_mode': 'force',
                                'external_currents': ['iSyn']},

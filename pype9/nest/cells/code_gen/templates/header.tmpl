@@ -249,8 +249,8 @@ namespace nineml {
 	    class Regime_ {
 	     
 	      public:
-	        Regime_({{component_name}}* cell, const std::string& name) //  dynamics_function_type dynamics_function=NULL, 
-	          : cell(cell), name(name) {} // , dynamics_function(dynamics_function)
+	        Regime_({{component_name}}* cell, const std::string& name) 
+	          : cell(cell), name(name) {}
 	        virtual ~Regime_();
 	        Transition_* transition(nest::Time const & origin, const nest::long_t& lag);
 	        void set_triggers(double t);
@@ -262,7 +262,6 @@ namespace nineml {
 	      protected:
 	        {{component_name}}* cell;
 	        std::string name;
-	        //dynamics_function_type dynamics_function;
             std::vector<OnCondition_*> on_conditions;
             std::vector<OnEvent_*> on_events;
             std::vector<OnCondition_*> active_on_conditions;
