@@ -54,6 +54,7 @@ class CodeGenerator(BaseCodeGenerator):
     SIMULATOR_NAME = 'neuron'
     ODE_SOLVER_DEFAULT = 'derivimplicit'
     BASE_TMPL_PATH = os.path.join(os.path.dirname(__file__), 'templates')
+    LIBNINEMLNRN_PATH = os.path.join(os.path.dirname(__file__), 'libninemlnrn')
 
     _neuron_units = {un.mV: 'millivolt',
                      un.S: 'siemens',
@@ -61,11 +62,32 @@ class CodeGenerator(BaseCodeGenerator):
 
     _inbuilt_ions = ['na', 'k', 'ca']
 
-    def __init__(self):
+# flgs = ["-L%s"% get_ninemlnrnlibdir(), "-L/opt/gsl-1.15/lib", "-lninemlnrn -lgsl -lgslcblas"]
+# '-loadflags','"%s"'%(' '.join(flgs) ) ] )
+
+    def __init__(self, gsl_path=None):
         super(CodeGenerator, self).__init__()
         # Find the path to nrnivmodl
         self.nrnivmodl_path = self.path_to_exec('nrnivmodl')
         self.modlunit_path = self.path_to_exec('modlunit')
+        self.nrnivmodl_flags = ['-L' + self.LIBNINEMLNRN_PATH, '-lninemlnrn',
+                                '-lgsl', '-lgslcblas']
+        if gsl_path is not None:
+            self.nrnivmodl_path.append('-L' + gsl_path)
+        else:
+            try:
+                # Check nest-config (if installed) to get any paths needed for
+                # gsl
+                nest_config_path = self.path_to_exec('nest-config')
+                nest_lflags = sp.Popen(
+                    [nest_config_path, '--libs'], stdout=sp.PIPE).communicate()
+                self.nrnivmodl_flags.extend(
+                    f for f in nest_lflags if f.startswith('-L'))
+            except:
+                logger.warning(
+                    "Could not run nest-config to check the path for gsl. You"
+                    " may need to supply the gsl path to the CodeGenerator "
+                    "__init__ directly")
         # Work out the name of the installation directory for the compiled
         # NMODL files on the current platform
         self.specials_dir = self._get_specials_dir()
@@ -186,14 +208,15 @@ class CodeGenerator(BaseCodeGenerator):
             else:
                 orig_v = None
                 print (
-                    "Can't find candidate for the membrane voltage, "
-                    "state_variables '{}', analog_receive_ports '{}', "
-                    "assuming \"artificial\" cell".format(
+                    "Can't find candidate for the membrane voltage in "
+                    "state_variables '{}' or analog_receive_ports '{}', "
+                    "treating '{}' as an \"artificial cell\"".format(
                         "', '".join(
                             sv.name for sv in component_class.state_variables),
                         "', '".join(
                             p.name
-                            for p in component_class.analog_receive_ports)))
+                            for p in component_class.analog_receive_ports),
+                        component_class.name))
         if orig_v is not None:
             # Map voltage to hard-coded 'v' symbol
             if orig_v.name != 'v':
@@ -501,8 +524,9 @@ class CodeGenerator(BaseCodeGenerator):
                             "NMODL file: {}\n{}".format(stdout, stderr))
         # Run nrnivmodl command in src directory
         try:
-            pipe = sp.Popen([self.nrnivmodl_path], stdout=sp.PIPE,
-                            stderr=sp.PIPE)
+            pipe = sp.Popen([self.nrnivmodl_path, '-loadflags',
+                             ' '.join(self.nrnivmodl_flags)],
+                            stdout=sp.PIPE, stderr=sp.PIPE)
             stdout, stderr = pipe.communicate()
         except sp.CalledProcessError as e:
             raise Pype9BuildError(
