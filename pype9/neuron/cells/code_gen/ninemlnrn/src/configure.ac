@@ -18,6 +18,8 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_MKDIR_P
 
+AC_CONFIG_MACRO_DIR([m4])
+
 # Checks for libraries.
 AC_CHECK_LIB([m],[cos])
 AC_CHECK_LIB([gslcblas],[cblas_dgemm])
