@@ -80,9 +80,11 @@ class CodeGenerator(BaseCodeGenerator):
                 # gsl
                 nest_config_path = self.path_to_exec('nest-config')
                 nest_lflags = sp.Popen(
-                    [nest_config_path, '--libs'], stdout=sp.PIPE).communicate()
+                    [nest_config_path, '--libs'],
+                    stdout=sp.PIPE).communicate()[0].split()
                 self.nrnivmodl_flags.extend(
-                    f for f in nest_lflags if f.startswith('-L'))
+                    f for f in nest_lflags
+                    if f.startswith('-L') and 'gsl' in f)
             except:
                 logger.warning(
                     "Could not run nest-config to check the path for gsl. You"
