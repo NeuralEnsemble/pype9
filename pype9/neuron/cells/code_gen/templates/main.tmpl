@@ -233,7 +233,7 @@ NET_RECEIVE(connection_weight_, channel) {
         {% for regime in component_class.regimes %}        
             {% for oc in regime.on_conditions %}
                 {% if oc.trigger.crossing_time_expr %}
-        net_send({{unit_handler.scale_alias(oc.trigger.crossing_time_expr)[0].rhs}}, {{component_class.index_of(oc.trigger.rhs, key='TriggerRHS') + 1}})
+        net_send({{unit_handler.scale_expr(oc.trigger.crossing_time_expr.rhs - sympy.Symbol('t'))[0].rhs}}, {{component_class.index_of(oc.trigger.rhs, key='TriggerRHS') + 1}})
                 {% endif %}
             {% endfor %}
         {% endfor %}
@@ -283,10 +283,11 @@ NET_RECEIVE(connection_weight_, channel) {
             regime_ = {{trans.target_regime.name | upper}}
 
             {% if component_class.annotations[PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH %}
+            printf("MAIN BLOCK: t=%f, t_next=%f, diff=%f\n", t * PER_MS, t_next * PER_MS, (t_next - t) * PER_MS)
             : Use net_send for transitions triggers that depend on t
                 {% for oc in trans.target_regime.on_conditions %}
                     {% if oc.trigger.crossing_time_expr %}
-            net_send({{unit_handler.scale_alias(oc.trigger.crossing_time_expr)[0].rhs}}, {{component_class.index_of(oc.trigger.rhs, key='TriggerRHS') + 1}})
+            net_send({{unit_handler.scale_expr(oc.trigger.crossing_time_expr.rhs - sympy.Symbol('t'))[0].rhs}}, {{component_class.index_of(oc.trigger.rhs, key='TriggerRHS') + 1}})
                     {% endif %}
                 {% endfor %}
             {% endif %}

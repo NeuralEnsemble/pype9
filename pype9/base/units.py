@@ -93,6 +93,12 @@ class UnitHandler(DynamicsDimensionResolver):
         for param in parameters:
             yield param, self.assign_units_to_variable(param)
 
+    def scale_expr(self, expr):
+        scaled, dims = self._flatten(sympify(expr))
+        units_str = self._units_for_code_gen(
+            self.dimension_to_units_compound(dims)[1])
+        return Expression(scaled), units_str
+
     def scale_alias(self, element):
         if isinstance(element, basestring):
             element = self.component_class.element(element)

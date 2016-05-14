@@ -79,10 +79,10 @@ double nineml_gsl_binomial(double p, int n)
        
        
 extern "C"
-double nineml_gsl_exponential(double mu)
+double nineml_gsl_exponential(double lambda)
 {
     gsl_rng* r = get_gsl_rng();
-    return gsl_ran_exponential(r,mu);
+    return gsl_ran_exponential(r,1.0/lambda);
 }
        
        
