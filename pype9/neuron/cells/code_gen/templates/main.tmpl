@@ -228,12 +228,23 @@ NET_RECEIVE(connection_weight_, channel) {
     }
     found_transition_ = -1
     if (flag == INIT) {
-        : Set up required watch statements
-    {% for regime in component_class.regimes %}
-        {% for oc in regime.on_conditions %}
-        WATCH ({{oc.trigger.rhs_cstr}}) {{component_class.index_of(oc.trigger.rhs, key='TriggerRHS') + 1}}  : Watch trigger of on-condition and send appropriate flag
+    {% if component_class.annotations[PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH %}
+        : Use net_send for transitions triggers that depend on t
+        {% for regime in component_class.regimes %}        
+            {% for oc in regime.on_conditions %}
+                {% if oc.trigger.crossing_time_expr %}
+        net_send({{unit_handler.scale_alias(oc.trigger.crossing_time_expr)[0].rhs}}, {{component_class.index_of(oc.trigger.rhs, key='TriggerRHS') + 1}})
+                {% endif %}
+            {% endfor %}
         {% endfor %}
-    {% endfor %}
+    {% else %}
+        : Set up required watch statements
+        {% for regime in component_class.regimes %}
+            {% for oc in regime.on_conditions %}
+        WATCH ({{oc.trigger.rhs_cstr}}) {{component_class.index_of(oc.trigger.rhs, key='TriggerRHS') + 1}}  : Watch trigger of on-condition and send appropriate flag
+            {% endfor %}
+        {% endfor %}
+    {% endif %}
     {% for regime in component_class.regimes %}
     } else if (regime_ == {{regime.name | upper}}) {
         {% for trans in regime.transitions %}
@@ -270,6 +281,15 @@ NET_RECEIVE(connection_weight_, channel) {
                 printf("WARNING!! Found multiple transitions %f and %f at time %f", found_transition_, flag, t * PER_MS)
             }
             regime_ = {{trans.target_regime.name | upper}}
+
+            {% if component_class.annotations[PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH %}
+            : Use net_send for transitions triggers that depend on t
+                {% for oc in trans.target_regime.on_conditions %}
+                    {% if oc.trigger.crossing_time_expr %}
+            net_send({{unit_handler.scale_alias(oc.trigger.crossing_time_expr)[0].rhs}}, {{component_class.index_of(oc.trigger.rhs, key='TriggerRHS') + 1}})
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
         }
         {% endfor %}
     {% endfor %}

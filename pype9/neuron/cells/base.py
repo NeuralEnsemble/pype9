@@ -64,7 +64,9 @@ class Cell(base.Cell):
         self.recordable = {'spikes': None}
         # Get the membrane capacitance property if not an artificial cell
         if self.build_component_class.annotations[
-                PYPE9_NS][MECH_TYPE] != ARTIFICIAL_CELL_MECH:
+                PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH:
+            self.cm_prop_name = None
+        else:
             # In order to scale the distributed current to the same units as
             # point process current, i.e. mA/cm^2 -> nA the surface area needs
             # to be 100um. mA/cm^2 = -3-(-2^2) = 10^1, 100um^2 = 2 + -6^2 =

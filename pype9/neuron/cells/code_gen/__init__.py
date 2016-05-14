@@ -527,7 +527,7 @@ class CodeGenerator(BaseCodeGenerator):
         # Run nrnivmodl command in src directory
         try:
             pipe = sp.Popen([self.nrnivmodl_path, '-loadflags',
-                             ' '.join(self.nrnivmodl_flags)],
+                             '"{}"'.format(' '.join(self.nrnivmodl_flags))],
                             stdout=sp.PIPE, stderr=sp.PIPE)
             stdout, stderr = pipe.communicate()
         except sp.CalledProcessError as e:
