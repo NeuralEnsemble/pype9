@@ -283,7 +283,6 @@ NET_RECEIVE(connection_weight_, channel) {
             regime_ = {{trans.target_regime.name | upper}}
 
             {% if component_class.annotations[PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH %}
-            printf("MAIN BLOCK: t=%f, t_next=%f, diff=%f\n", t * PER_MS, t_next * PER_MS, (t_next - t) * PER_MS)
             : Use net_send for transitions triggers that depend on t
                 {% for oc in trans.target_regime.on_conditions %}
                     {% if oc.trigger.crossing_time_expr %}

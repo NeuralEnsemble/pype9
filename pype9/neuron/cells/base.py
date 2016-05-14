@@ -163,13 +163,13 @@ class Cell(base.Cell):
         except NineMLNameError:
             port = self.component_class.state_variable(port_name)
         if isinstance(port, EventPort):
-            logger.warning("Assuming '{}' is voltage threshold crossing"
-                           .format(port_name))
             if self.build_component_class.annotations[
                     PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH:
                 self._recorders[port_name] = recorder = h.NetCon(
                     self._hoc, None, sec=self._sec)
             else:
+                logger.warning("Assuming '{}' is voltage threshold crossing"
+                               .format(port_name))
                 self._recorders[port_name] = recorder = h.NetCon(
                     self._sec._ref_v, None, self.get_threshold(), 0.0, 1.0,
                     sec=self._sec)

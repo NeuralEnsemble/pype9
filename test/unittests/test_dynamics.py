@@ -345,42 +345,6 @@ class TestDynamics(TestCase):
                 comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
                 "Izhikevich 2007 NEURON 9ML simulation did not match NEST 9ML")
 
-#     def test_aeif(self, plot=False, print_comparisons=False):
-#         # Perform comparison in subprocess
-#         comparer = Comparer(
-#             nineml_model=ninemlcatalog.load(
-#                 'neuron/AdExpIaF/AdExpIaF'),
-#             state_variable='v', dt=dt, simulators=['nest', 'neuron'],
-#             neuron_ref='AdExpIF', nest_ref='aeif_cond_alpha',
-#             input_signal=input_step('iExt', 1, 50, 100, dt),
-#             initial_states={'w': 0.0 * pq.nA, 'v': -65.0 * pq.mV},
-#             properties=ninemlcatalog.load(
-#                 'neuron/AdExpIaF/AdExpIaFProperties'),
-#             nest_translations={
-#                 'w': ('w', 1), 'Cm': ('C_m', 1), 'GL': ('g_L', 1000),
-#                 'trefrac': ('t_ref', 1), 'EL': ('E_L', 1), 'a': ('a', 1000),
-#                 'tauw': ('tau_w', 1), 'vreset': ('V_reset', 1),
-#                 'v': ('V_m', 1), 'vthresh': ('V_th', 1), 'b': ('b', 1000),
-#                 'vspike': ('V_peak', 1), 'delta': ('Delta_T', 1)},
-#             neuron_translations={
-#                 'Cm': ('cm', 1), 'GL': ('pas.g', 0.001), 'EL': ('pas.e', 1)},
-#             neuron_build_args={'build_mode': 'force'},
-#             nest_build_args={'build_mode': 'force'},
-#             extra_mechanisms=['pas'])
-#         comparer.simulate(duration)
-#         comparisons = comparer.compare()
-#         if print_comparisons:
-#             for (name1, name2), diff in comparisons.iteritems():
-#                 print '{} v {}: {}'.format(name1, name2, diff)
-#         if plot:
-#             comparer.plot()
-#         self.assertLess(
-#             comparisons[('9ML-neuron', 'Ref-neuron')], 0.0015 * pq.mV,
-#             "AdExpIaF NEURON 9ML simulation did not match reference PyNN")
-#         self.assertLess(
-#             comparisons[('9ML-nest', 'Ref-nest')], 0.00015 * pq.mV,
-#             "AdExpIaF NEST 9ML simulation did not match reference built-in")
-
     def test_poisson(self, duration=100 * un.s, rate=100 * un.Hz,
                      print_comparisons=False, dt=0.001,
                      simulators=['nest', 'neuron'], **kwargs):  # @UnusedVariable @IgnorePep8
