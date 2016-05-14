@@ -158,10 +158,13 @@ class Cell(base.Cell):
 
     def record(self, port_name):
         self._initialise_local_recording()
+        # Get the port or state variable to record
         try:
             port = self.component_class.send_port(port_name)
         except NineMLNameError:
             port = self.component_class.state_variable(port_name)
+        # Set up Hoc vector to hold the recording
+        self._recordings[port_name] = recording = h.Vector()
         if isinstance(port, EventPort):
             if self.build_component_class.annotations[
                     PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH:
@@ -173,6 +176,7 @@ class Cell(base.Cell):
                 self._recorders[port_name] = recorder = h.NetCon(
                     self._sec._ref_v, None, self.get_threshold(), 0.0, 1.0,
                     sec=self._sec)
+            recorder.record(recording)
         else:
             escaped_port_name = self._escaped_name(port_name)
             try:
@@ -181,7 +185,6 @@ class Cell(base.Cell):
             except AttributeError:
                 self._recorders[port_name] = recorder = getattr(
                     self._sec(0.5), '_ref_' + escaped_port_name)
-            self._recordings[port_name] = recording = h.Vector()
             recording.record(recorder)
 
     def record_transitions(self):
