@@ -291,6 +291,10 @@ NET_RECEIVE(connection_weight_, channel) {
 }
 {% endif %}
 
+{# FIXME: These random distributions should also be included with FULL_CELL_MECHs
+          but for some reason it leads to a C compile error. Need to look into this #}
+          
+{% if component_class.annotations[PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH %}
 VERBATIM
 extern double nineml_gsl_normal(double, double);
 extern double nineml_gsl_uniform(double, double);
@@ -327,4 +331,5 @@ FUNCTION random_exponential_(m) {
 VERBATIM
     _lrandom_exponential_ = nineml_gsl_exponential(_lm);
 ENDVERBATIM
-} 
+}
+{% endif %}

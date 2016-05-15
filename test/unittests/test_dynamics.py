@@ -345,7 +345,7 @@ class TestDynamics(TestCase):
                 comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
                 "Izhikevich 2007 NEURON 9ML simulation did not match NEST 9ML")
 
-    def test_poisson(self, duration=100 * un.s, rate=100 * un.Hz,
+    def test_poisson(self, duration=10 * un.s, rate=100 * un.Hz,
                      print_comparisons=False, dt=0.001,
                      simulators=['nest', 'neuron'], build_mode='force',
                      **kwargs):  # @UnusedVariable @IgnorePep8
@@ -366,9 +366,10 @@ class TestDynamics(TestCase):
                 simulatorNEURON.reset()
                 neuron.h.dt = dt
             elif sim_name == 'nest':
+                pass
                 # Run NEST simulation
 #                 import nest
-                simulatorNEST.reset()
+#                 simulatorNEST.reset()
 #                 nest.SetKernelStatus({'resolution': dt})
             else:
                 assert False
@@ -395,7 +396,7 @@ class TestDynamics(TestCase):
                 print "{} recorded rate: {}".format(sim_name, recorded_rate)
                 print "{} difference: {}".format(sim_name, rate_difference)
             self.assertLess(
-                rate_difference, 1 * pq.Hz,
+                rate_difference, 1.75 * pq.Hz,
                 ("Recorded rate of {} poisson generator ({}) did not match "
                  "desired ({}): difference {}".format(
                      sim_name, recorded_rate, ref_rate,
