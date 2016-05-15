@@ -45,7 +45,7 @@ class TestDynamics(TestCase):
 
     def test_izhi(self, plot=False, print_comparisons=False,
                   simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
-                  **kwargs):  # @UnusedVariable
+                  build_mode='force', **kwargs):  # @UnusedVariable
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparer = Comparer(
@@ -66,8 +66,8 @@ class TestDynamics(TestCase):
                                  'V': ('v', 1), 'U': ('u', 1),
                                  'alpha': (None, 1), 'beta': (None, 1),
                                  'zeta': (None, 1), 'theta': ('vthresh', 1)},
-            neuron_build_args={'build_mode': 'force'},
-            nest_build_args={'build_mode': 'force'},
+            neuron_build_args={'build_mode': build_mode},
+            nest_build_args={'build_mode': build_mode},
             build_name='Izhikevich9ML')
         comparer.simulate(duration)
         comparisons = comparer.compare()
@@ -93,7 +93,7 @@ class TestDynamics(TestCase):
 
     def test_hh(self, plot=False, print_comparisons=False,
                 simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
-                **kwargs):  # @UnusedVariable
+                build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
@@ -134,8 +134,8 @@ class TestDynamics(TestCase):
                 'n_alpha_A': (None, 1), 'n_alpha_V0': (None, 1),
                 'n_alpha_K': (None, 1), 'n_beta_A': (None, 1),
                 'n_beta_V0': (None, 1), 'n_beta_K': (None, 1)},
-            neuron_build_args={'build_mode': 'force'},
-            nest_build_args={'build_mode': 'force'})
+            neuron_build_args={'build_mode': build_mode},
+            nest_build_args={'build_mode': build_mode})
         comparer.simulate(duration)
         comparisons = comparer.compare()
         if print_comparisons:
@@ -159,7 +159,7 @@ class TestDynamics(TestCase):
 
     def test_liaf(self, plot=False, print_comparisons=False,
                   simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
-                  **kwargs):  # @UnusedVariable
+                  build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
@@ -175,8 +175,8 @@ class TestDynamics(TestCase):
             input_signal=input_step('i_synaptic', 1, 50, 100, dt),
             nest_translations=self.liaf_nest_translations,
             neuron_translations=self.liaf_neuron_translations,
-            neuron_build_args={'build_mode': 'force'},
-            nest_build_args={'build_mode': 'force'},
+            neuron_build_args={'build_mode': build_mode},
+            nest_build_args={'build_mode': build_mode},
             extra_mechanisms=['pas'])
         comparer.simulate(duration)
         comparisons = comparer.compare()
@@ -201,7 +201,7 @@ class TestDynamics(TestCase):
     def test_alpha_syn(self, plot=False, print_comparisons=False,
                        simulators=['nest', 'neuron'], dt=0.001,
                        duration=100.0, min_delay=5.0, device_delay=5.0,
-                       **kwargs):  # @UnusedVariable
+                       build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
         iaf = ninemlcatalog.load(
             'neuron/LeakyIntegrateAndFire', 'PyNNLeakyIntegrateAndFire')
@@ -286,10 +286,10 @@ class TestDynamics(TestCase):
             extra_mechanisms=['pas'],
             extra_point_process='AlphaISyn',
             neuron_build_args={
-                'build_mode': 'force',
+                'build_mode': build_mode,
                 'build_dir': os.path.join(build_dir, 'neuron', 'IaFAlpha')},
             nest_build_args={
-                'build_mode': 'force',
+                'build_mode': build_mode,
                 'build_dir': os.path.join(build_dir, 'nest', 'IaFAlpha')},
             min_delay=min_delay,
             device_delay=device_delay)
@@ -318,7 +318,7 @@ class TestDynamics(TestCase):
 
     def test_izhiFS(self, plot=False, print_comparisons=False,
                     simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
-                    **kwargs):  # @UnusedVariable
+                    build_mode='force', **kwargs):  # @UnusedVariable
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparer = Comparer(
@@ -330,9 +330,9 @@ class TestDynamics(TestCase):
             initial_states={'U': -1.625 * pq.pA, 'V': -65.0 * pq.mV},
             input_signal=input_step('iSyn', 100 * pq.pA, 25.0, 100, dt),
             initial_regime='subVb',
-            neuron_build_args={'build_mode': 'force',
+            neuron_build_args={'build_mode': build_mode,
                                'external_currents': ['iSyn']},
-            nest_build_args={'build_mode': 'force'}) #, auxiliary_states=['U']) # @IgnorePep8
+            nest_build_args={'build_mode': build_mode}) #, auxiliary_states=['U']) # @IgnorePep8
         comparer.simulate(duration)
         comparisons = comparer.compare()
         if print_comparisons:
@@ -347,11 +347,12 @@ class TestDynamics(TestCase):
 
     def test_poisson(self, duration=100 * un.s, rate=100 * un.Hz,
                      print_comparisons=False, dt=0.001,
-                     simulators=['nest', 'neuron'], **kwargs):  # @UnusedVariable @IgnorePep8
+                     simulators=['nest', 'neuron'], build_mode='force',
+                     **kwargs):  # @UnusedVariable @IgnorePep8
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
-        build_args = {'neuron': {'build_mode': 'force',
+        build_args = {'neuron': {'build_mode': build_mode,
                                  'external_currents': ['iSyn']},
-                      'nest': {'build_mode': 'force'}}
+                      'nest': {'build_mode': build_mode}}
         initial_states = {'t_next': 0.0 * un.ms}
         for sim_name in simulators:
             meta_class = cell_metaclasses[sim_name]
@@ -433,6 +434,10 @@ if __name__ == '__main__':
                         help="Override the duration of the test")
     parser.add_argument('--dt', type=float,
                         help="Override the dt of the test")
+    parser.add_argument('--build_mode', type=str, default='force',
+                        help=("the build mode used to run the test (typically "
+                              "'force' is used to regenerate the code but "
+                              "'compile_only' can be useful in debugging)"))
     args = parser.parse_args()
     kwargs = {}
     if args.duration:
@@ -442,5 +447,5 @@ if __name__ == '__main__':
     tester = TestDynamics()
     test = getattr(tester, 'test_' + args.test)
     test(plot=args.plot, print_comparisons=args.print_comparisons,
-         simulators=args.simulators, **kwargs)
+         simulators=args.simulators, build_mode=args.build_mode, **kwargs)
     print "done"
