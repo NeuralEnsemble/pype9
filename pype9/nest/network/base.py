@@ -59,33 +59,6 @@ class ComponentArray(BaseComponentArray, pyNN.nest.Population):
         return super(ComponentArray, self)._get_cell_initial_value(
             id, self._translate_variable(variable))
 
-    def initialize(self, **initial_values):
-        """
-        Set initial values of state variables, e.g. the membrane potential.
-
-        Values passed to initialize() may be:
-            (1) single numeric values (all neurons set to the same value)
-            (2) RandomDistribution objects
-            (3) lists/arrays of numbers of the same size as the population
-            (4) mapping functions, where a mapping function accepts a single
-                argument (the cell index) and returns a single number.
-
-        Values should be expressed in the standard PyNN units (i.e. millivolts,
-        nanoamps, milliseconds, microsiemens, nanofarads, event per second).
-
-        Examples::
-
-            p.initialize(v=-70.0)
-            p.initialize(v=rand_distr, gsyn_exc=0.0)
-            p.initialize(v=lambda i: -65 + i/10.0)
-        """
-        translated_initial_values = {}
-        for name, value in initial_values.iteritems():
-            translated_name = self.celltype.translations[
-                name]['reverse_transform']
-            translated_initial_values[translated_name] = value
-        super(ComponentArray, self).initialize(**translated_initial_values)
-
 
 class ConnectionGroup(BaseConnectionGroup, pyNN.nest.Projection):
 

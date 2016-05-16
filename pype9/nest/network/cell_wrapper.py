@@ -9,11 +9,13 @@ from pype9.base.network.cell_wrapper import (
     PyNNCellWrapper as BasePyNNCellWrapper,
     PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
 from pype9.exceptions import Pype9BuildOptionMismatchException
-from pyNN.parameters import ParameterSpace
 import pyNN.standardmodels
-import nest
 from pype9.nest.cells import CellMetaClass
 from ..units import UnitHandler
+from logging import Logger
+
+
+logger = Logger('Pype9')
 
 
 class PyNNCellWrapper(BasePyNNCellWrapper,
@@ -28,27 +30,8 @@ class PyNNCellWrapper(BasePyNNCellWrapper,
 
     def memb_init(self):
         # Initialisation of member states goes here
-        print ("WARNING, membrane initialization function has not been "
-               "implemented")
-
-    def translate(self, parameters):
-        """
-        Translate standardized model parameters to simulator-specific
-        parameters. Overrides the the method in StandardModelType to provide a
-        simpler translation that avoids the evaluation of the 'dots' in the
-        standard name
-        """
-        native_parameters = {}
-        for name in parameters.keys():
-            native_parameters[
-                self.translations[name]['translated_name']] = parameters[name]
-        return ParameterSpace(
-            native_parameters, schema=None, shape=parameters.shape)
-
-    def get_receptor_type(self, name):
-        if name.startswith('{'):
-            name = name[name.find('}') + 1:]
-        return nest.GetDefaults(self.nest_model)["receptor_types"][name]
+        logger.warning("Membrane initialization function has not been "
+                       "implemented")
 
 
 class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):

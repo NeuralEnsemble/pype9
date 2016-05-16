@@ -446,15 +446,12 @@ class ComponentArray(object):
             initial_state=dynamics_properties.initial_values,
             build_mode=build_mode, **kwargs)
         if build_mode not in ('build_only', 'compile_only'):
-            cellparams = {}
-            initial_values = {}
-            for prop in chain(dynamics_properties.properties,
-                              dynamics_properties.initial_values):
-                val = get_pyNN_value(prop, self.UnitHandler, rng)
-                if isinstance(prop, Initial):
-                    initial_values[prop.name] = val
-                else:
-                    cellparams[prop.name] = val
+            cellparams = dict(
+                (p.name, get_pyNN_value(p, self.UnitHandler, rng))
+                for p in dynamics_properties.properties)
+            initial_values = dict(
+                (i.name, get_pyNN_value(i, self.UnitHandler, rng))
+                for i in dynamics_properties.initial_values)
             # NB: Simulator-specific derived classes extend the corresponding
             # PyNN population class
             self.PyNNPopulationClass.__init__(

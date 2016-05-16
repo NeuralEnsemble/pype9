@@ -46,10 +46,14 @@ class PyNNCellWrapperMetaClass(type):
                                         component_class.state_variable_names))
         dct['receptor_types'] = tuple(component_class.event_receive_ports)
         dct["default_parameters"] = dict(
-            (p.name, cls.UnitHandler.scale_value(p.quantity))
+            (p.name, (
+                cls.UnitHandler.scale_value(p.quantity)
+                if p.value.nineml_type == 'SingleValue' else float('nan')))
             for p in default_properties)
         dct["default_initial_values"] = dict(
-            (i.name, cls.UnitHandler.scale_value(i.quantity))
+            (i.name, (
+                cls.UnitHandler.scale_value(i.quantity)
+                if i.value.nineml_type == 'SingleValue' else float('nan')))
             for i in initial_state)
         dct["weight_variables"] = (
             component_class.all_connection_parameter_names())
