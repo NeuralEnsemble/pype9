@@ -36,7 +36,7 @@ class PyNNCellWrapperMetaClass(type):
         # Retrieved parsed model (it is placed in dct to conform with
         # with the standard structure for the "__new__" function of
         # metaclasses).
-        nineml_model = dct['model'].nineml_model
+        nineml_model = dct['model'].component_class
         (dct["default_parameters"],
          dct["default_initial_values"]) = cls._construct_default_parameters(
              nineml_model)

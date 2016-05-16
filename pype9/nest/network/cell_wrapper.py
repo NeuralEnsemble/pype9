@@ -69,8 +69,6 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
                                           name=name, **kwargs)}
             dct['nest_name'] = {"on_grid": name, "off_grid": name}
             dct['nest_model'] = name
-            dct['translations'] = cls._construct_translations(
-                dct['model'].nineml_model, dct['model'].component_translations)
             celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
                 cls, name, (PyNNCellWrapper,), dct)
             # If the url where the celltype is defined is specified save the
