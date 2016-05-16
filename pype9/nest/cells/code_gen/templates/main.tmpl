@@ -237,10 +237,13 @@ bool {{component_name}}::{{TransitionClassName}}::body(double t) {
     // Get the next weight and remove it from the unprocessed list
     double_t weight_ = B_.{{transition.src_port_name}}_events->front();
     B_.{{transition.src_port_name}}_events->pop_front();
-            {# Need to check there is only one connection parameter for this source port (current limitaiton of NEST) #}
-            {% for connection_param in component_class.connection_parameter_set(transition.src_port_name).parameters %}
-    double_t {{connection_param.name}} = weight_;
-            {% endfor %}
+            {% if transition.src_port_name in component_class.connection_parameter_set_names %}
+    // FIXME: Need to properly check beforehand that there is only one 
+    //        connection parameter for this source port (which is a current
+    //        limitaiton of NEST) before rendering the template. The following
+    //        code will at least cause a compile error if there is
+    double_t {{' '.join(component_class.connection_parameter_set(transition.src_port_name).parameter_names)}} = weight_;
+            {% endif %}
         {% endif %}
     
     {{macros.map_required_vars_locally(transition.state_assignments, component_class, component_name, unit_handler, [], []) | indent(4)}}
