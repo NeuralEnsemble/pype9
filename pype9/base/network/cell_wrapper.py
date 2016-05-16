@@ -45,12 +45,16 @@ class PyNNCellWrapperMetaClass(type):
         dct['recordable'] = tuple(chain(component_class.send_port_names,
                                         component_class.state_variable_names))
         dct['receptor_types'] = tuple(component_class.event_receive_ports)
-        # TODO: Extract default parameters and initial_values and convert to
-        #       PyNN units
-        dct["default_parameters"] = None
-        dct["default_initial_values"] = None
+        dct["default_parameters"] = dict(
+            (p.name, cls.UnitHandler.scale_value(p.quantity))
+            for p in default_properties)
+        dct["default_initial_values"] = dict(
+            (i.name, cls.UnitHandler.scale_value(i.quantity))
+            for i in initial_state)
         dct["weight_variables"] = (
             component_class.all_connection_parameter_names())
+        # TODO: Need to determine whether cell is "injectable" and/or
+        #       conductance-based
         dct["injectable"] = True
         dct["conductance_based"] = True
         return super(PyNNCellWrapperMetaClass, cls).__new__(
@@ -59,6 +63,6 @@ class PyNNCellWrapperMetaClass(type):
     def __init__(cls, *args, **kwargs):
         """
         Not required, but since I have changed the signature of the new method
-        Python complains otherwise
+        in the derived simulator-specific classes Python complains otherwise
         """
         pass

@@ -13,12 +13,14 @@ from pyNN.parameters import ParameterSpace
 import pyNN.standardmodels
 import nest
 from pype9.nest.cells import CellMetaClass
+from ..units import UnitHandler
 
 
 class PyNNCellWrapper(BasePyNNCellWrapper,
                       pyNN.standardmodels.StandardCellType):
 
     standard_receptor_type = None
+    UnitHandler = UnitHandler
 
     def __init__(self, **parameters):
         BasePyNNCellWrapper.__init__(self)
@@ -57,6 +59,7 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
     """
 
     loaded_celltypes = {}
+    UnitHandler = UnitHandler
 
     def __new__(cls, name, component_class, default_properties=None,
                 initial_state=None, **kwargs):  # @UnusedVariable

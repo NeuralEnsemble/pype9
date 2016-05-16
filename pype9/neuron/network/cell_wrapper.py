@@ -15,6 +15,7 @@ import logging
 from pype9.base.network.cell_wrapper import (
     PyNNCellWrapper as BasePyNNCellWrapper,
     PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
+from ..units import UnitHandler
 
 logger = logging.getLogger("PyNN")
 
@@ -24,12 +25,13 @@ class PyNNCellWrapper(BasePyNNCellWrapper, pyNN.models.BaseCellType):
     """
     Extends the vanilla Cell to include all the PyNN requirements
     """
-    pass
+    UnitHandler = UnitHandler
 
 
 class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
 
     loaded_celltypes = {}
+    UnitHandler = UnitHandler
 
     def __new__(cls, name, component_class, default_properties=None,
                 initial_state=None, build_mode='lazy', silent=False,
