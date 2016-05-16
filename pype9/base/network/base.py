@@ -504,7 +504,7 @@ class Selection(object):
             synapses = set(ca.nineml.dynamics_properties.synapse(name)
                            for ca in self.component_arrays)
         except NineMLNameError:
-            raise Pype9RuntimeError(
+            raise NineMLNameError(
                 "Could not return synapse '{}' because it is missing from "
                 "one or more of the component arrays in '{}' Selection"
                 .format(name, self.name))

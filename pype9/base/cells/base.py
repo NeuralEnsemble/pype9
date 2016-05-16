@@ -605,9 +605,10 @@ class WithSynapsesProperties(object):
              ('ConnectionPropertySet', 'connection_property_set')])
 
     def __repr__(self):
-        return ("DynamicsWithSynapsesProperties(dynamics_properties={}, "
+        return ("{}WithSynapsesProperties(dynamics_properties={}, "
                 "synapses=[{}], connection_property_sets=[{}])"
-                .format(self._dynamics_properties,
+                .format(self._dynamics_properties.__class__.__name__,
+                        self._dynamics_properties,
                         ', '.format(repr(s) for s in self.synapses),
                         ', '.format(repr(cp)
                                     for cp in self.connection_property_sets)))
