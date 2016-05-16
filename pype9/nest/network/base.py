@@ -20,7 +20,7 @@ from nest.hl_api import NESTError  # @IgnorePep8
 from pyNN.common.control import build_state_queries  # @IgnorePep8
 from pype9.base.network.base import (  # @IgnorePep8
     Network as BaseNetwork, ComponentArray as BaseComponentArray,
-    ConnectionGroup as BaseConnectionGroup)
+    ConnectionGroup as BaseConnectionGroup, Selection as BaseSelection)
 import pyNN.nest.simulator as simulator  # @IgnorePep8
 from .cell_wrapper import PyNNCellWrapperMetaClass  # @IgnorePep8
 from .synapses import StaticSynapse  # @IgnorePep8
@@ -41,6 +41,11 @@ class ComponentArray(BaseComponentArray, pyNN.nest.Population):
     UnitHandler = UnitHandler
 
 
+class Selection(BaseSelection, pyNN.nest.Assembly):
+
+    PyNNAssemblyClass = pyNN.nest.Assembly
+
+
 class ConnectionGroup(BaseConnectionGroup, pyNN.nest.Projection):
 
     SynapseClass = StaticSynapse
@@ -54,6 +59,7 @@ class ConnectionGroup(BaseConnectionGroup, pyNN.nest.Projection):
 class Network(BaseNetwork):
 
     ComponentArrayClass = ComponentArray
+    SelectionClass = Selection
     ConnectionGroupClass = ConnectionGroup
     ConnectivityClass = PyNNConnectivity
     CellCodeGenerator = CellCodeGenerator

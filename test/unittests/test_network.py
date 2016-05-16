@@ -45,7 +45,7 @@ class TestNetwork(unittest.TestCase):
         self.all_to_all = ninemlcatalog.load('/connectionrule/AllToAll',
                                              'AllToAll')
 
-    def test_component_arrays_and_connection_groups(self):
+    def test_component_arrays_and_connection_groups(self, **kwargs):  # @UnusedVariable
 
         # =====================================================================
         # Dynamics components
@@ -503,7 +503,7 @@ class TestNetwork(unittest.TestCase):
                     'Proj4__pre__spike__synapse__spike__psr']
                 .find_mismatch(conn_group6)))
 
-    def test_brunel_flatten(self):
+    def test_brunel_flatten(self, **kwargs):  # @UnusedVariable
         brunel_network = ninemlcatalog.load('network/Brunel2000/AI/')
         (component_arrays,
          connection_groups) = BasePype9Network._flatten_to_arrays_and_conns(
@@ -511,7 +511,7 @@ class TestNetwork(unittest.TestCase):
         self.assertEqual(len(component_arrays), 3)
         self.assertEqual(len(connection_groups), 3)
 
-    def test_compare_brunel(self):
+    def test_compare_brunel(self, build_mode='force', **kwargs):  # @UnusedVariable
 
         for case in self.brunel_parameters.iterkeys():
             nest.ResetKernel()
@@ -520,7 +520,8 @@ class TestNetwork(unittest.TestCase):
                  'local_num_threads': 1})
             network9ML = ninemlcatalog.load('network/Brunel2000/' + case)
             pype9_network = NestPype9Network(Network.from_document(network9ML),
-                                             min_delay=0.1, max_delay=2.0)
+                                             min_delay=0.1, max_delay=2.0,
+                                             build_mode=build_mode)
             ref_network = self._reference_nest_brunel(case)
             self.assertEqual(pype9_network.component_array('Exc').size,
                              nest.GetStatus(ref_network.exc, 'size'))
@@ -677,6 +678,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--test', type=str, default='test_compare_brunel',
                         help="Switch between different tests to run")
+    parser.add_argument('--build_mode', type=str, default='force',
+                        help="The build mode with which to construct the "
+                        "network")
     args = parser.parse_args()
     tester = TestNetwork(args.test)
-    getattr(tester, args.test)()
+    getattr(tester, args.test)(build_mode=args.build_mode)

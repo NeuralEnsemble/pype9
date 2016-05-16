@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 from collections import namedtuple, defaultdict
 from itertools import chain
-from nineml.user import Initial, Property
+from nineml.user import Property
 from pype9.exceptions import Pype9RuntimeError
 from .values import get_pyNN_value
 import os.path
@@ -15,6 +15,7 @@ import nineml
 from nineml import units as un
 from pyNN.random import NumpyRNG
 import pyNN.standardmodels
+from nineml.exceptions import NineMLNameError
 from nineml.user.multi import (
     MultiDynamicsProperties, append_namespace, BasePortExposure)
 from nineml.user.network import (
@@ -57,6 +58,12 @@ class Network(object):
                 build_dir=self.CellCodeGenerator().get_build_dir(
                     nineml_model.url, name, group=nineml_model.name),
                 **kwargs)
+        for selection in nineml_model.selections:
+            # TODO: Assumes that selections are only concatenations (which is
+            #       true for 9MLv1.0 but not v2.0)
+            self._component_arrays[selection.name] = self.SelectionClass(
+                selection, *(self.component_arrays[p.name]
+                             for p in selection.populations))
         if build_mode not in ('build_only', 'compile_only'):
             # Set the connectivity objects of the projections to the
             # PyNNConnectivity class
@@ -70,7 +77,8 @@ class Network(object):
             self._connection_groups = {}
             for name, conn_group in flat_conn_groups.iteritems():
                 self._connection_groups[name] = self.ConnectionGroupClass(
-                    conn_group, self._component_arrays)
+                    conn_group, self._component_arrays[conn_group.source],
+                    self._component_arrays[conn_group.destination])
             self._finalise_construction()
 
     def _finalise_construction(self):
@@ -438,6 +446,7 @@ class ComponentArray(object):
         if not isinstance(nineml_model, ComponentArray9ML):
             raise Pype9RuntimeError(
                 "Expected a component array, found {}".format(nineml_model))
+        self._nineml = nineml_model
         dynamics_properties = nineml_model.dynamics_properties
         dynamics = dynamics_properties.component_class
         celltype = self.PyNNCellWrapperMetaClass(
@@ -458,16 +467,62 @@ class ComponentArray(object):
                 self, nineml_model.size, celltype, cellparams=cellparams,
                 initial_values=initial_values, label=nineml_model.name)
 
+    @property
+    def name(self):
+        return self._nineml.name
+
+    @property
+    def nineml(self):
+        return self._nineml
+
+    def synapse(self, name):
+        return self.nineml.dynamics_properties.synapse(name)
+
+
+class Selection(object):
+
+    def __init__(self, nineml_model, *component_arrays):
+        self._nineml = nineml_model
+        self._component_arrays = component_arrays
+        self.PyNNAssemblyClass.__init__(
+            self, *component_arrays, label=nineml_model.name)
+
+    @property
+    def name(self):
+        return self.nineml.name
+
+    @property
+    def nineml(self):
+        return self._nineml
+
+    @property
+    def component_arrays(self):
+        return self._component_arrays
+
+    def synapse(self, name):
+        try:
+            synapses = set(ca.nineml.dynamics_properties.synapse(name)
+                           for ca in self.component_arrays)
+        except NineMLNameError:
+            raise Pype9RuntimeError(
+                "Could not return synapse '{}' because it is missing from "
+                "one or more of the component arrays in '{}' Selection"
+                .format(name, self.name))
+        if len(synapses) > 1:
+            raise Pype9RuntimeError(
+                "'{}' varies ({}) between component arrays in '{}' Selection"
+                .format(name, ', '.join(str(s) for s in synapses), self.name))
+        return next(iter(synapses))  # Return the only synapse
+
 
 class ConnectionGroup(object):
 
-    def __init__(self, nineml_model, component_arrays, **kwargs):
+    def __init__(self, nineml_model, source, destination, **kwargs):
         if not isinstance(nineml_model, EventConnectionGroup9ML):
             raise Pype9RuntimeError(
                 "Expected a connection group model, found {}"
                 .format(nineml_model))
-        (synapse, conns) = component_arrays[nineml_model.destination].synapse(
-            nineml_model.name)
+        (synapse, conns) = destination.synapse(nineml_model.name)
         if conns is not None:
             raise NotImplementedError(
                 "Nonlinear synapses, as used in '{}' are not currently "
@@ -490,9 +545,14 @@ class ConnectionGroup(object):
         # PyNN population class
         self.PyNNProjectionClass.__init__(
             self,
-            source=component_arrays[nineml_model.source],
-            target=component_arrays[nineml_model.destination],
+            source=source,
+            target=destination,
             connectivity=nineml_model.connectivity,
             synapse_type=self.SynapseClass(weight=weight, delay=delay),
             receptor_type=nineml_model.receive_port,
             label=nineml_model.name)
+
+    @property
+    def name(self):
+        return self._nineml.name
+

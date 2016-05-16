@@ -21,7 +21,7 @@ import neuron
 import logging
 from pype9.base.network.base import (
     Network as BaseNetwork, ComponentArray as BaseComponentArray,
-    ConnectionGroup as BaseConnectionGroup)
+    ConnectionGroup as BaseConnectionGroup, Selection as BaseSelection)
 from .cell_wrapper import PyNNCellWrapperMetaClass
 from .synapses import StaticSynapse
 from .connectivity import PyNNConnectivity
@@ -41,6 +41,11 @@ class ComponentArray(BaseComponentArray, pyNN.neuron.Population):
     UnitHandler = UnitHandler
 
 
+class Selection(BaseSelection, pyNN.neuron.Assembly):
+
+    PyNNAssemblyClass = pyNN.neuron.Assembly
+
+
 class ConnectionGroup(BaseConnectionGroup, pyNN.neuron.Projection):
 
     SynapseClass = StaticSynapse
@@ -54,6 +59,7 @@ class ConnectionGroup(BaseConnectionGroup, pyNN.neuron.Projection):
 class Network(BaseNetwork):
 
     ComponentArrayClass = ComponentArray
+    SelectionClass = Selection
     ConnectionGroupClass = ConnectionGroup
     ConnectivityClass = PyNNConnectivity
     CellCodeGenerator = CellCodeGenerator
