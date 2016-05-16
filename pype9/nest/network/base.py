@@ -40,25 +40,6 @@ class ComponentArray(BaseComponentArray, pyNN.nest.Population):
     PyNNPopulationClass = pyNN.nest.Population
     UnitHandler = UnitHandler
 
-    @classmethod
-    def _translate_variable(cls, variable):
-        # FIXME: This is a bit of a hack until I coordinate with Ivan about the
-        # naming of variables in NEST
-        if variable.startswith('{'):
-            variable = variable[variable.find('}') + 1:]
-        if variable == 'v':
-            variable = 'V_m'
-        return variable
-
-    def record(self, variable, to_file=None):
-        variable = self._translate_variable(variable)
-        super(ComponentArray, self).record(variable, to_file)
-
-    def _get_cell_initial_value(self, id, variable):  # @ReservedAssignment
-        """Get the initial value of a state variable of the cell."""
-        return super(ComponentArray, self)._get_cell_initial_value(
-            id, self._translate_variable(variable))
-
 
 class ConnectionGroup(BaseConnectionGroup, pyNN.nest.Projection):
 
