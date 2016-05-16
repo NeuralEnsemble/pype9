@@ -31,17 +31,20 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
 
     loaded_celltypes = {}
 
-    def __new__(cls, nineml_model, name, build_mode='lazy', silent=False,
+    def __new__(cls, name, component_class, default_properties=None,
+                initial_state=None, build_mode='lazy', silent=False,
                 solver_name=None, standalone=False):  # @UnusedVariable
         try:
             celltype = cls.loaded_celltypes[
-                (nineml_model.name, nineml_model.url)]
+                (component_class.name, component_class.url)]
         except KeyError:
-            model = CellMetaClass(nineml_model, name,
+            model = CellMetaClass(component_class, name,
                                   build_mode=build_mode, silent=silent,
                                   solver_name=solver_name,
                                   standalone=False)
-            dct = {'model': model}
+            dct = {'model': model,
+                   'default_properties': default_properties,
+                   'initial_state': initial_state}
             celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
                 cls, name, (PyNNCellWrapper,), dct)
             assert sorted(celltype.recordable) == sorted(
@@ -50,6 +53,6 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
                  "Cell class '{}'".format(name))
             # If the url where the celltype is defined is specified save the
             # celltype to be retried later
-            if nineml_model.url is not None:
-                cls.loaded_celltypes[(name, nineml_model.url)] = celltype
+            if component_class.url is not None:
+                cls.loaded_celltypes[(name, component_class.url)] = celltype
         return celltype

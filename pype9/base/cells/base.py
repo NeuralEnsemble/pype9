@@ -406,7 +406,7 @@ class WithSynapses(object):
         self._synapses = dict((s.name, s) for s in synapses)
         self._connection_parameter_sets = dict(
             (pw.port, pw) for pw in connection_parameter_sets)
-        for conn_param in self._all_connection_parameters():
+        for conn_param in self.all_connection_parameters():
             try:
                 dyn_param = self._dynamics.parameter(conn_param.name)
                 if conn_param.dimension != dyn_param.dimension:
@@ -439,12 +439,12 @@ class WithSynapses(object):
                         ', '.format(repr(cp)
                                     for cp in self.connection_parameter_sets)))
 
-    def _all_connection_parameters(self):
+    def all_connection_parameters(self):
         return set(chain(*(
             cp.parameters for cp in self.connection_parameter_sets)))
 
-    def _all_connection_parameter_names(self):
-        return (p.name for p in self._all_connection_parameters())
+    def all_connection_parameter_names(self):
+        return (p.name for p in self.all_connection_parameters())
 
     @property
     def dynamics(self):
@@ -453,12 +453,12 @@ class WithSynapses(object):
     @property
     def parameters(self):
         return (p for p in self._dynamics.parameters
-                if p.name not in self._all_connection_parameter_names())
+                if p.name not in self.all_connection_parameter_names())
 
     @property
     def attributes_with_dimension(self):
         return chain(self._dynamics.attributes_with_dimension,
-                     self._all_connection_parameters())
+                     self.all_connection_parameters())
 
     @property
     def parameter_names(self):
@@ -466,7 +466,7 @@ class WithSynapses(object):
 
     @name_error
     def parameter(self, name):
-        if name in self._all_connection_parameter_names():
+        if name in self.all_connection_parameter_names():
             raise KeyError(name)
         else:
             return self._dynamics.parameter(name)

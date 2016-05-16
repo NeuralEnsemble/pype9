@@ -441,7 +441,10 @@ class ComponentArray(object):
         dynamics_properties = nineml_model.dynamics_properties
         dynamics = dynamics_properties.component_class
         celltype = self.PyNNCellWrapperMetaClass(
-            dynamics, nineml_model.name, build_mode=build_mode, **kwargs)
+            name=nineml_model.name, component_class=dynamics,
+            default_properties=dynamics_properties,
+            initial_state=dynamics_properties.initial_values,
+            build_mode=build_mode, **kwargs)
         if build_mode not in ('build_only', 'compile_only'):
             cellparams = {}
             initial_values = {}

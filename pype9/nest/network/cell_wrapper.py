@@ -58,41 +58,25 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
 
     loaded_celltypes = {}
 
-    def __new__(cls, nineml_model, name, **kwargs):  # @UnusedVariable
+    def __new__(cls, name, component_class, default_properties=None,
+                initial_state=None, **kwargs):  # @UnusedVariable
         try:
             celltype, build_options = cls.loaded_celltypes[
-                (nineml_model.name, nineml_model.url)]
+                (component_class.name, component_class.url)]
             if build_options != kwargs:
                 raise Pype9BuildOptionMismatchException()
         except (KeyError, Pype9BuildOptionMismatchException):
-            dct = {'model': CellMetaClass(component_class=nineml_model,
+            dct = {'model': CellMetaClass(component_class=component_class,
                                           name=name, **kwargs)}
             dct['nest_name'] = {"on_grid": name, "off_grid": name}
             dct['nest_model'] = name
+            dct['default_properties'] = default_properties
+            dct['initial_state'] = initial_state
             celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
                 cls, name, (PyNNCellWrapper,), dct)
             # If the url where the celltype is defined is specified save the
             # celltype to be retried later
-            if nineml_model.url is not None:
-                cls.loaded_celltypes[(name, nineml_model.url)] = (celltype,
-                                                                  kwargs)
+            if component_class.url is not None:
+                cls.loaded_celltypes[(name, component_class.url)] = (celltype,
+                                                                     kwargs)
         return celltype
-
-    @classmethod
-    def _construct_translations(cls, nineml_model, component_translations):
-        translations = []
-        for p in nineml_model.parameters:
-            if p.reference == 'Voltage':
-                translations.append((p.name, 'V_m'))
-            else:
-                if p.reference in ('Diameter', 'Length'):
-                    component = 'Geometry'
-                else:
-                    component = p.component_class
-                try:
-                    varname = cls._basic_nineml_translations[p.reference]
-                except KeyError:
-                    varname = p.reference
-                translations.append(
-                    (p.name, component_translations[component][varname][0]))
-        return pyNN.standardmodels.build_translations(*translations)

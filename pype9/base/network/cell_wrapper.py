@@ -5,6 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from itertools import chain
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
@@ -36,91 +37,28 @@ class PyNNCellWrapperMetaClass(type):
         # Retrieved parsed model (it is placed in dct to conform with
         # with the standard structure for the "__new__" function of
         # metaclasses).
-        nineml_model = dct['model'].component_class
-        (dct["default_parameters"],
-         dct["default_initial_values"]) = cls._construct_default_parameters(
-             nineml_model)
-        dct["receptor_types"] = cls._construct_receptor_types(nineml_model)
-        dct['recordable'] = cls._construct_recordable(nineml_model)
+        component_class = dct['model'].component_class
+        default_properties = dct['default_properties']  # @UnusedVariable
+        initial_state = dct['initial_state']  # @UnusedVariable
+        dct['model_name'] = celltype_id
+        dct['parameter_names'] = tuple(component_class.parameter_names)
+        dct['recordable'] = tuple(chain(component_class.send_port_names,
+                                        component_class.state_variable_names))
+        dct['receptor_types'] = tuple(component_class.event_receive_ports)
+        # TODO: Extract default parameters and initial_values and convert to
+        #       PyNN units
+        dct["default_parameters"] = None
+        dct["default_initial_values"] = None
+        dct["weight_variables"] = (
+            component_class.all_connection_parameter_names())
         dct["injectable"] = True
         dct["conductance_based"] = True
-        dct["model_name"] = celltype_id
-        dct["weight_variables"] = cls._construct_weight_variables()
-        dct["parameter_names"] = dct['default_parameters'].keys()
         return super(PyNNCellWrapperMetaClass, cls).__new__(
             cls, celltype_id + 'PyNN', bases, dct)
 
-    def __init__(self, celltype_name, nineml_model, build_mode='lazy',
-                 silent=False, solver_name=None, standalone=False):
+    def __init__(cls, *args, **kwargs):
         """
         Not required, but since I have changed the signature of the new method
-        it otherwise complains
+        Python complains otherwise
         """
         pass
-
-    @classmethod
-    def _construct_default_parameters(cls, nineml_model):  # @UnusedVariable
-        """
-        Constructs the default parameters of the 9ML class from the nineml
-        model
-        """
-        default_params = {}
-        initial_values = {}
-        for p in nineml_model.parameters:
-            if p.component_class:
-                component = nineml_model.biophysics.components[
-                    p.component_class]
-            else:
-                component = nineml_model.biophysics.components[
-                    '__NO_COMPONENT__']
-            try:
-                reference = cls._basic_nineml_translations[p.reference]
-            except KeyError:
-                reference = p.reference
-            if p.reference == 'Voltage':
-                parameter = -65.0
-            else:
-                parameter = component.parameters[reference].value
-            default_params[p.name] = parameter
-            if p.type == 'initialState':
-                initial_values[p.name] = parameter
-        return default_params, initial_values
-
-    @classmethod
-    def _construct_receptor_types(cls, nineml_model):
-        """
-        Constructs the dictionary of recordable parameters from the NineML
-        model
-        """
-        receptors = []
-        for mapping in nineml_model.mappings:
-            for comp_name in mapping.components:
-                component = nineml_model.biophysics.components[comp_name]
-                if component.type == 'post-synaptic-conductance':
-                    clsfctn = nineml_model.morphology.classifications[
-                        mapping.segments.classification]
-                    for seg_cls in mapping.segments:
-                        for member in clsfctn[seg_cls]:
-                            receptors.append(
-                                '{' + str(member) + '}' + component.name)
-        return receptors
-
-    @classmethod
-    def _construct_recordable(cls, nineml_model):
-        """
-        Constructs the dictionary of recordable parameters from the NineML
-        model
-        """
-        # TODO: Make selected component_class variables also recordable
-        return ['spikes', 'v'] + \
-            ['{' + seg + '}v'
-             for seg in nineml_model.morphology.segments.keys()]
-
-    @classmethod
-    def _construct_weight_variables(cls):
-        """
-        Constructs the dictionary of weight variables from the NineML model
-        """
-        # TODO: When weights are included into the NineML model, they should be
-        # added to the list here
-        return {}

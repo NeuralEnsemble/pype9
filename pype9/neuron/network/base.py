@@ -23,10 +23,10 @@ from pype9.base.network.base import (
     Network as BaseNetwork, ComponentArray as BaseComponentArray,
     ConnectionGroup as BaseConnectionGroup)
 from .cell_wrapper import PyNNCellWrapperMetaClass
-from pype9.nest.network.synapses import StaticSynapse
+from .synapses import StaticSynapse
 from .connectivity import PyNNConnectivity
 from ..cells.code_gen import CodeGenerator as CellCodeGenerator  # @IgnorePep8
-
+from ..units import UnitHandler  # @IgnorePep8
 
 logger = logging.getLogger("PyPe9")
 
@@ -38,6 +38,7 @@ class ComponentArray(BaseComponentArray, pyNN.neuron.Population):
 
     PyNNCellWrapperMetaClass = PyNNCellWrapperMetaClass
     PyNNPopulationClass = pyNN.neuron.Population
+    UnitHandler = UnitHandler
 
 
 class ConnectionGroup(BaseConnectionGroup, pyNN.neuron.Projection):

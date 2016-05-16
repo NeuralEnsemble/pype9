@@ -23,9 +23,10 @@ from pype9.base.network.base import (  # @IgnorePep8
     ConnectionGroup as BaseConnectionGroup)
 import pyNN.nest.simulator as simulator  # @IgnorePep8
 from .cell_wrapper import PyNNCellWrapperMetaClass  # @IgnorePep8
-from pype9.nest.network.synapses import StaticSynapse  # @IgnorePep8
+from .synapses import StaticSynapse  # @IgnorePep8
 from .connectivity import PyNNConnectivity  # @IgnorePep8
 from ..cells.code_gen import CodeGenerator as CellCodeGenerator  # @IgnorePep8
+from ..units import UnitHandler  # @IgnorePep8
 
 
 (get_current_time, get_time_step,
@@ -37,6 +38,7 @@ class ComponentArray(BaseComponentArray, pyNN.nest.Population):
 
     PyNNCellWrapperMetaClass = PyNNCellWrapperMetaClass
     PyNNPopulationClass = pyNN.nest.Population
+    UnitHandler = UnitHandler
 
     @classmethod
     def _translate_variable(cls, variable):
