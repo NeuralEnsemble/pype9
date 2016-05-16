@@ -472,17 +472,17 @@ class ConnectionGroup(object):
             raise NotImplementedError(
                 "Nonlinear synapses, as used in '{}' are not currently "
                 "supported".format(nineml_model.name))
-        if synapse.num_local_properties > 1:
+        if synapse.num_local_properties == 1:
+            # Get the only local property that varies with the synapse
+            # (typically the synaptic weight but does not have to be)
+            weight = get_pyNN_value(next(synapse.local_properties),
+                                    self.unit_handler, **kwargs)
+        elif not synapse.num_local_properties:
+            weight = 1.0
+        else:
             raise NotImplementedError(
                 "Currently only supports one property that varies with each "
                 "synapse")
-        # Get the only local property that varies with the synapse, assumed to
-        # be the synaptic weight
-        # FIXME: This will only work if the weight parameter is only used in
-        #        the corresponding on-event. This should be checked when
-        #        creating the synapse
-        weight = get_pyNN_value(next(synapse.local_properties),
-                                self.unit_handler, **kwargs)
         delay = get_pyNN_value(nineml_model.delay, self.unit_handler,
                                **kwargs)
         # FIXME: Ignores send_port, assumes there is only one...
