@@ -24,7 +24,8 @@ from nineml.user.network import (
 from pype9.exceptions import Pype9UnflattenableSynapseException
 from .connectivity import InversePyNNConnectivity
 from ..cells import (
-    DynamicsWithSynapsesProperties, ConnectionPropertySet, SynapseProperties)
+    MultiDynamicsWithSynapsesProperties, ConnectionPropertySet,
+    SynapseProperties)
 
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
@@ -374,8 +375,8 @@ class Network(object):
             dynamics_properties = MultiDynamicsProperties(
                 name=pop.name, sub_components=sub_components,
                 port_connections=internal_conns, port_exposures=set(exposures))
-            component = DynamicsWithSynapsesProperties(
-                dynamics_properties, synapse_properties=synapses,
+            component = MultiDynamicsWithSynapsesProperties(
+                dynamics_properties, synapses_properties=synapses,
                 connection_property_sets=connection_property_sets)
             component_arrays[pop.name] = ComponentArray9ML(pop.name, pop.size,
                                                            component)
