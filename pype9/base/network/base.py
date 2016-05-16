@@ -70,7 +70,7 @@ class Network(object):
             self._connection_groups = {}
             for name, conn_group in flat_conn_groups.iteritems():
                 self._connection_groups[name] = self.ConnectionGroupClass(
-                    conn_group, rng=self._rng)
+                    conn_group, self._component_arrays)
             self._finalise_construction()
 
     def _finalise_construction(self):
