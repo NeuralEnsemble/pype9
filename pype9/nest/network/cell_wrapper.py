@@ -34,8 +34,9 @@ class PyNNCellWrapper(BasePyNNCellWrapper,
         logger.warning("Membrane initialization function has not been "
                        "implemented")
 
-    def get_receptor_type(self, model_name):
-        return list(nest.GetDefaults(model_name)['receptor_types'])
+    def get_receptor_type(self, receptor_name):
+        return nest.GetDefaults(
+            self.nest_model)["receptor_types"][receptor_name]
 
 
 class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):

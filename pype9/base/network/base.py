@@ -63,10 +63,11 @@ class Network(object):
                 build_dir=self.CellCodeGenerator().get_build_dir(
                     self.nineml.url, name, group=self.nineml.name),
                 **kwargs)
+        self._selections = {}
         for selection in self.nineml.selections:
             # TODO: Assumes that selections are only concatenations (which is
             #       true for 9MLv1.0 but not v2.0)
-            self._component_arrays[selection.name] = self.SelectionClass(
+            self._selections[selection.name] = self.SelectionClass(
                 selection, *(self.component_arrays[p.name]
                              for p in selection.populations))
         if build_mode not in ('build_only', 'compile_only'):
@@ -79,10 +80,17 @@ class Network(object):
                     "network")
             self._connection_groups = {}
             for name, conn_group in flat_conn_groups.iteritems():
+                try:
+                    source = self._component_arrays[conn_group.source]
+                except KeyError:
+                    source = self._selections[conn_group.source]
+                try:
+                    destination = self._component_arrays[
+                        conn_group.destination]
+                except KeyError:
+                    destination = self._selections[conn_group.destination]
                 self._connection_groups[name] = self.ConnectionGroupClass(
-                    conn_group,
-                    source=self._component_arrays[conn_group.source],
-                    destination=self._component_arrays[conn_group.destination],
+                    conn_group, source=source, destination=destination,
                     rng=self._rng)
             self._finalise_construction()
 
@@ -99,11 +107,48 @@ class Network(object):
 
     @property
     def component_arrays(self):
-        return self._component_arrays
+        return self._component_arrays.itervalues()
 
     @property
     def connection_groups(self):
-        return self._connection_groups
+        return self._connection_groups.itervalues()
+
+    @property
+    def selections(self):
+        return self._selections.itervalues()
+
+    def component_array(self, name):
+        return self._component_array[name]
+
+    def connection_group(self, name):
+        return self._connection_groups[name]
+
+    def selection(self, name):
+        return self._selections[name]
+
+    @property
+    def num_component_arrays(self):
+        return len(self._component_arrays)
+
+    @property
+    def num_connection_groups(self):
+        return len(self._connection_groups)
+
+    @property
+    def num_selections(self):
+        return len(self._selections)
+
+    @property
+    def component_array_names(self):
+        return self._component_arrays.keys()
+
+    @property
+    def connection_group_names(self):
+        return self._connection_groups.keys()
+
+    @property
+    def selection_names(self):
+        return self._selections.keys()
 
     def save_connections(self, output_dir):
         """
@@ -140,22 +185,12 @@ class Network(object):
         # doesn't already have one and isn't a directory
         if (not os.path.isdir(file_prefix) and
             not file_prefix.endswith('.') and
-                not file_prefix.endswith(os.path.sep)):
+              not file_prefix.endswith(os.path.sep)):
             file_prefix += '.'
         for comp_array in self.component_arrays.itervalues():
             # @UndefinedVariable
             comp_array.write_data(file_prefix + comp_array.name + '.pkl',
                                   **kwargs)
-
-#     def _get_simulation_params(self, **kwargs):
-#         for key in _REQUIRED_SIM_PARAMS:
-#             if key in kwargs and kwargs[key]:
-#                 sim_params[key] = kwargs[key]
-#             elif key not in sim_params or not sim_params[key]:
-#                 raise Exception("'{}' parameter was not specified either in "
-#                                 "Network initialisation or NetworkML "
-#                                 "specification".format(key))
-#         return sim_params
 
     @classmethod
     def _flatten_synapse(cls, projection_model):
@@ -348,15 +383,18 @@ class Network(object):
                 # Create a connection group for each port connection of the
                 # projection to/from the pre-synaptic cell
                 for port_conn in pre_conns:
-                    connection_group_cls = (
+                    ConnectionGroupClass = (
                         EventConnectionGroup9ML
                         if port_conn.communicates == 'event'
                         else AnalogConnectionGroup9ML)
-                    name = ('__'.join((proj.name,
-                                       port_conn.sender_role,
-                                       port_conn.send_port_name,
-                                       port_conn.receiver_role,
-                                       port_conn.receive_port_name)))
+                    if len(pre_conns) > 1:
+                        name = ('__'.join((proj.name,
+                                           port_conn.sender_role,
+                                           port_conn.send_port_name,
+                                           port_conn.receiver_role,
+                                           port_conn.receive_port_name)))
+                    else:
+                        name = proj.name
                     if port_conn.sender_role == 'pre':
                         connectivity = proj.connectivity
                         # If a connection from the pre-synaptic cell the delay
@@ -374,7 +412,7 @@ class Network(object):
                     # ports
                     ns_port_conn = port_conn.assign_roles(
                         port_namespaces=role2name)
-                    conn_group = connection_group_cls(
+                    conn_group = ConnectionGroupClass(
                         name,
                         proj.pre.name, proj.post.name,
                         source_port=ns_port_conn.send_port_name,
@@ -488,6 +526,9 @@ class ComponentArray(object):
     def synapse(self, name):
         return self.nineml.dynamics_properties.synapse(name)
 
+    def __repr__(self):
+        return "ComponentArray('{}', size={})".format(self.name, self.size)
+
 
 class Selection(object):
 
@@ -509,6 +550,17 @@ class Selection(object):
     def component_arrays(self):
         return self._component_arrays
 
+    def component_array(self, name):
+        return self._component_array[name]
+
+    @property
+    def num_component_arrays(self):
+        return len(self._component_arrays)
+
+    @property
+    def component_array_names(self):
+        return self._component_arrays.keys()
+
     def synapse(self, name):
         try:
             synapses = set(ca.nineml.dynamics_properties.synapse(name)
@@ -524,10 +576,14 @@ class Selection(object):
                 .format(name, ', '.join(str(s) for s in synapses), self.name))
         return next(iter(synapses))  # Return the only synapse
 
+    def __repr__(self):
+        return "Selection('{}', component_arrays=('{}')".format(
+            self.name, "', '".join(self.component_array_names))
+
 
 class ConnectionGroup(object):
 
-    def __init__(self, nineml_model, source, destination, rng, **kwargs):
+    def __init__(self, nineml_model, source, destination, rng):
         if not isinstance(nineml_model, EventConnectionGroup9ML):
             raise Pype9RuntimeError(
                 "Expected a connection group model, found {}"
@@ -574,3 +630,20 @@ class ConnectionGroup(object):
     def name(self):
         return self._nineml.name
 
+    @property
+    def source(self):
+        return self.ore
+
+    @property
+    def destination(self):
+        return self.post
+
+    @property
+    def connectivity(self):
+        return self._connector
+
+    def __repr__(self):
+        return ("ConnectionGroup('{}', source='{}', destination='{}', "
+                "connectivity='{}')".format(self.name, self.source.name,
+                                            self.destination.name,
+                                            self.connectivity))

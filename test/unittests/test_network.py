@@ -45,7 +45,7 @@ class TestNetwork(unittest.TestCase):
         self.all_to_all = ninemlcatalog.load('/connectionrule/AllToAll',
                                              'AllToAll')
 
-    def test_component_arrays_and_connection_groups(self, **kwargs):  # @UnusedVariable
+    def test_component_arrays_and_connection_groups(self, **kwargs):  # @UnusedVariable @IgnorePep8
 
         # =====================================================================
         # Dynamics components
@@ -675,6 +675,18 @@ class TestNetwork(unittest.TestCase):
 
 if __name__ == '__main__':
     import argparse
+    import logging
+    import sys
+
+    pyNN_logger = logging.Logger('PyNN')
+    pyNN_logger.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    pyNN_logger.addHandler(ch)
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--test', type=str, default='test_compare_brunel',
                         help="Switch between different tests to run")
