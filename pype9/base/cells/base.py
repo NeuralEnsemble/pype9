@@ -98,16 +98,16 @@ class CellMetaClass(type):
                         "'build_dir' must be supplied when using component "
                         "classes created programmatically ('{}')".format(name))
                 build_dir = code_gen.get_build_dir(url, name)
-            if url is not None:
-                mod_time = time.ctime(os.path.getmtime(url))
-            else:
-                mod_time = time.ctime()
+#             if url is not None:
+#                 mod_time = time.ctime(os.path.getmtime(url))
+#             else:
+#                 mod_time = time.ctime()
             instl_dir = code_gen.generate(
                 component_class=build_component_class,
                 default_properties=build_properties,
                 initial_state=build_initial_states,
                 build_mode=build_mode, verbose=verbose, name=name,
-                build_dir=build_dir, mod_time=mod_time, **kwargs)
+                build_dir=build_dir, **kwargs)
             # Load newly build model
             cls.load_libraries(name, instl_dir)
             # Create class member dict of new class
@@ -762,6 +762,10 @@ class ConnectionParameterSet(BaseALObject):
     @property
     def parameters(self):
         return self._parameters
+
+    @property
+    def parameter_names(self):
+        return (p.name for p in self.parameters)
 
 
 class ConnectionPropertySet(BaseULObject):

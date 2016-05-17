@@ -120,10 +120,8 @@ class BaseCodeGenerator(object):
         # provided
         install_dir = self.get_install_dir(build_dir, install_dir)
         # Get the timestamp of the source file
-        if component_class.url:
-            nineml_mod_time = time.ctime(os.path.getmtime(component_class.url))
-        else:
-            nineml_mod_time = kwargs.get('mod_time', time.ctime())
+        nineml_mod_time = kwargs.get('mod_time',
+                                     self.get_mod_time(component_class.url))
         # Path of the file which contains or will contain the source
         # modification timestamp in the installation directory
         nineml_mod_time_path = os.path.join(src_dir, self._9ML_MOD_TIME_FILE)
@@ -181,8 +179,9 @@ class BaseCodeGenerator(object):
                 install_dir=install_dir, verbose=verbose, **kwargs)
             # Write the timestamp of the 9ML file used to generate the source
             # files
-            with open(nineml_mod_time_path, 'w') as f:
-                f.write(nineml_mod_time)
+            if nineml_mod_time is not None:
+                with open(nineml_mod_time_path, 'w') as f:
+                    f.write(nineml_mod_time)
         if compile_source:
             # Clean existing compile & install directories from previous builds
             self.clean_compile_dir(compile_dir)
@@ -325,6 +324,14 @@ class BaseCodeGenerator(object):
         # ---------------------------------------------------------------------
         return (deepcopy(component_class), deepcopy(default_properties),
                 deepcopy(initial_states))
+
+    @classmethod
+    def get_mod_time(cls, url):
+        if url is None:
+            mod_time = time.ctime(0)  # Return the earliest date if no url
+        else:
+            mod_time = time.ctime(os.path.getmtime(url))
+        return mod_time
 
     @classmethod
     def _check_initial_regime(cls, component_class, initial_regime):

@@ -57,19 +57,32 @@ class Network(object):
         flat_comp_arrays, flat_conn_groups = self._flatten_to_arrays_and_conns(
             self._nineml)
         self._component_arrays = {}
+        code_gen = self.CellCodeGenerator()
+        # Get the modification time of the nineml_model
+        network_mod_time = code_gen.get_mod_time(nineml_model.url)
         for name, comp_array in flat_comp_arrays.iteritems():
+            # Get the latest modification time between the cell dynamics and
+            # the network configuration (if the network changes the synapses
+            # may change
+            # FIXME: This isn't a very satisfying way to detect changes. Perhaps
+            #        a better way is just to save the XML the code is generated
+            #        from.
+            mod_time = max(
+                code_gen.get_mod_time(
+                    nineml_model.population(name).component_class.url),
+                network_mod_time)
             self._component_arrays[name] = self.ComponentArrayClass(
                 comp_array, rng=self._rng, build_mode=build_mode,
-                build_dir=self.CellCodeGenerator().get_build_dir(
+                build_dir=code_gen.get_build_dir(
                     self.nineml.url, name, group=self.nineml.name),
-                **kwargs)
+                mod_time=mod_time, **kwargs)
         self._selections = {}
         for selection in self.nineml.selections:
             # TODO: Assumes that selections are only concatenations (which is
             #       true for 9MLv1.0 but not v2.0)
             self._selections[selection.name] = self.SelectionClass(
-                selection, *(self.component_arrays[p.name]
-                             for p in selection.populations))
+                selection, *[self.component_array(p.name)
+                             for p in selection.populations])
         if build_mode not in ('build_only', 'compile_only'):
             # Set the connectivity objects of the projections to the
             # PyNNConnectivity class
@@ -118,7 +131,7 @@ class Network(object):
         return self._selections.itervalues()
 
     def component_array(self, name):
-        return self._component_array[name]
+        return self._component_arrays[name]
 
     def connection_group(self, name):
         return self._connection_groups[name]
@@ -631,19 +644,11 @@ class ConnectionGroup(object):
         return self._nineml.name
 
     @property
-    def source(self):
-        return self.ore
-
-    @property
-    def destination(self):
-        return self.post
-
-    @property
     def connectivity(self):
         return self._connector
 
     def __repr__(self):
         return ("ConnectionGroup('{}', source='{}', destination='{}', "
-                "connectivity='{}')".format(self.name, self.source.name,
-                                            self.destination.name,
+                "connectivity='{}')".format(self.name, self.pre.name,
+                                            self.post.name,
                                             self.connectivity))
