@@ -17,13 +17,13 @@ except:
 import pyNN.neuron
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
+from pyNN.neuron.standardmodels.synapses import StaticSynapse
 import neuron
 import logging
 from pype9.base.network.base import (
     Network as BaseNetwork, ComponentArray as BaseComponentArray,
     ConnectionGroup as BaseConnectionGroup, Selection as BaseSelection)
 from .cell_wrapper import PyNNCellWrapperMetaClass
-from .synapses import StaticSynapse
 from .connectivity import PyNNConnectivity
 from ..cells.code_gen import CodeGenerator as CellCodeGenerator  # @IgnorePep8
 from ..units import UnitHandler  # @IgnorePep8
@@ -50,6 +50,7 @@ class ConnectionGroup(BaseConnectionGroup, pyNN.neuron.Projection):
 
     SynapseClass = StaticSynapse
     PyNNProjectionClass = pyNN.neuron.Projection
+    UnitHandler = UnitHandler
 
     @classmethod
     def get_min_delay(self):

@@ -44,14 +44,15 @@ class PyNNConnectivity(BaseConnectivity):
                 params = {}
             elif self._rule_props.lib_type == 'ProbabilisticConnectivity':
                 connector_cls = self._pyNN_module.FixedProbabilityConnector
-                params = {'p_connect',
-                          int(self._rule_props.property('probability').value)}
+                params = {
+                    'p_connect':
+                    float(self._rule_props.property('probability').value)}
             elif self._rule_props.lib_type == 'RandomFanIn':
                 connector_cls = self._pyNN_module.FixedNumberPostConnector
-                params = {'n', int(self._rule_props.property('number').value)}
+                params = {'n': int(self._rule_props.property('number').value)}
             elif self._rule_props.lib_type == 'RandomFanOut':
                 connector_cls = self._pyNN_module.FixedNumberPreConnector
-                params = {'n', int(self._rule_props.property('number').value)}
+                params = {'n': int(self._rule_props.property('number').value)}
             else:
                 assert False
             params.update(self._kwargs)

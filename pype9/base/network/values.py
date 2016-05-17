@@ -19,7 +19,7 @@ random_value_map = {
 
 def get_pyNN_value(qty, unit_handler, rng):
     if isinstance(qty.value, SingleValue):
-        val = unit_handler.scale_value(qty.quantity)
+        val = unit_handler.scale_value(qty)
     elif isinstance(qty.value, ArrayValue):
         scalar = unit_handler.scalar(qty.units)
         val = Sequence(v * scalar for v in qty.value)

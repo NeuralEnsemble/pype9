@@ -5,6 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+import nest
 from pype9.base.network.cell_wrapper import (
     PyNNCellWrapper as BasePyNNCellWrapper,
     PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
@@ -32,6 +33,9 @@ class PyNNCellWrapper(BasePyNNCellWrapper,
         # Initialisation of member states goes here
         logger.warning("Membrane initialization function has not been "
                        "implemented")
+
+    def get_receptor_type(self, model_name):
+        return list(nest.GetDefaults(model_name)['receptor_types'])
 
 
 class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):

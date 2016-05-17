@@ -12,7 +12,7 @@ from pype9.base.network.synapses import StaticSynapse  # , ElectricalSynapse
 class StaticSynapse(StaticSynapse,
                     pyNN.neuron.standardmodels.synapses.StaticSynapse):
 
-    PyNNStaticSynapseClass = pyNN.neuron.standardmodels.synapses.StaticSynapse
+    PyNNClass = pyNN.neuron.standardmodels.synapses.StaticSynapse
 
 
 # class ElectricalSynapse(ElectricalSynapse,

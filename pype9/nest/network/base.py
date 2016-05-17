@@ -18,12 +18,12 @@ if '--debug' in sys.argv:
 import pyNN.nest  # @IgnorePep8
 from nest.hl_api import NESTError  # @IgnorePep8
 from pyNN.common.control import build_state_queries  # @IgnorePep8
+from pyNN.nest.standardmodels.synapses import StaticSynapse  # @IgnorePep8
 from pype9.base.network.base import (  # @IgnorePep8
     Network as BaseNetwork, ComponentArray as BaseComponentArray,
     ConnectionGroup as BaseConnectionGroup, Selection as BaseSelection)
 import pyNN.nest.simulator as simulator  # @IgnorePep8
 from .cell_wrapper import PyNNCellWrapperMetaClass  # @IgnorePep8
-from .synapses import StaticSynapse  # @IgnorePep8
 from .connectivity import PyNNConnectivity  # @IgnorePep8
 from ..cells.code_gen import CodeGenerator as CellCodeGenerator  # @IgnorePep8
 from ..units import UnitHandler  # @IgnorePep8
@@ -50,6 +50,7 @@ class ConnectionGroup(BaseConnectionGroup, pyNN.nest.Projection):
 
     SynapseClass = StaticSynapse
     PyNNProjectionClass = pyNN.nest.Projection
+    UnitHandler = UnitHandler
 
     @classmethod
     def get_min_delay(self):

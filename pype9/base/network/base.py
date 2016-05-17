@@ -5,6 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from copy import deepcopy
 from collections import namedtuple, defaultdict
 from itertools import chain
 from nineml.user import Property
@@ -40,15 +41,19 @@ class Network(object):
 
     def __init__(self, nineml_model, build_mode='lazy', timestep=None,
                  min_delay=None, max_delay=None, rng=None, **kwargs):
-        self._nineml = nineml_model
         if isinstance(nineml_model, basestring):
             nineml_model = nineml.read(nineml_model).as_network()
+        self._nineml = deepcopy(nineml_model)
         timestep = timestep if timestep is not None else self.time_step
         min_delay = min_delay if min_delay is not None else self.min_delay
         max_delay = max_delay if max_delay is not None else self.max_delay
         self._set_simulation_params(timestep=timestep, min_delay=min_delay,
                                     max_delay=max_delay, **kwargs)
         self._rng = rng if rng else NumpyRNG()
+        if build_mode not in ('build_only', 'compile_only'):
+            # Convert
+            self.nineml.resample_connectivity(
+                connectivity_class=self.ConnectivityClass)
         flat_comp_arrays, flat_conn_groups = self._flatten_to_arrays_and_conns(
             self._nineml)
         self._component_arrays = {}
@@ -56,9 +61,9 @@ class Network(object):
             self._component_arrays[name] = self.ComponentArrayClass(
                 comp_array, rng=self._rng, build_mode=build_mode,
                 build_dir=self.CellCodeGenerator().get_build_dir(
-                    nineml_model.url, name, group=nineml_model.name),
+                    self.nineml.url, name, group=self.nineml.name),
                 **kwargs)
-        for selection in nineml_model.selections:
+        for selection in self.nineml.selections:
             # TODO: Assumes that selections are only concatenations (which is
             #       true for 9MLv1.0 but not v2.0)
             self._component_arrays[selection.name] = self.SelectionClass(
@@ -67,18 +72,18 @@ class Network(object):
         if build_mode not in ('build_only', 'compile_only'):
             # Set the connectivity objects of the projections to the
             # PyNNConnectivity class
-            if nineml_model.connectivity_has_been_sampled():
+            if self.nineml.connectivity_has_been_sampled():
                 raise Pype9RuntimeError(
                     "Connections have already been sampled, please reset them"
                     " using 'resample_connectivity' before constructing "
                     "network")
-            nineml_model.resample_connectivity(
-                connectivity_class=self.ConnectivityClass)
             self._connection_groups = {}
             for name, conn_group in flat_conn_groups.iteritems():
                 self._connection_groups[name] = self.ConnectionGroupClass(
-                    conn_group, self._component_arrays[conn_group.source],
-                    self._component_arrays[conn_group.destination])
+                    conn_group,
+                    source=self._component_arrays[conn_group.source],
+                    destination=self._component_arrays[conn_group.destination],
+                    rng=self._rng)
             self._finalise_construction()
 
     def _finalise_construction(self):
@@ -87,6 +92,10 @@ class Network(object):
         finalisation that is required
         """
         pass
+
+    @property
+    def nineml(self):
+        return self._nineml
 
     @property
     def component_arrays(self):
@@ -241,6 +250,7 @@ class Network(object):
             exposures = []
             synapses = []
             connection_property_sets = []
+            # FIXME: There has to be a way of avoiding this name clash
             if any(p.name == cls.cell_dyn_name for p in receiving):
                 raise Pype9RuntimeError(
                     "Cannot handle projections named '{}' (why would you "
@@ -517,39 +527,47 @@ class Selection(object):
 
 class ConnectionGroup(object):
 
-    def __init__(self, nineml_model, source, destination, **kwargs):
+    def __init__(self, nineml_model, source, destination, rng, **kwargs):
         if not isinstance(nineml_model, EventConnectionGroup9ML):
             raise Pype9RuntimeError(
                 "Expected a connection group model, found {}"
                 .format(nineml_model))
-        (synapse, conns) = destination.synapse(nineml_model.name)
-        if conns is not None:
-            raise NotImplementedError(
-                "Nonlinear synapses, as used in '{}' are not currently "
-                "supported".format(nineml_model.name))
-        if synapse.num_local_properties == 1:
-            # Get the only local property that varies with the synapse
-            # (typically the synaptic weight but does not have to be)
-            weight = get_pyNN_value(next(synapse.local_properties),
-                                    self.unit_handler, **kwargs)
-        elif not synapse.num_local_properties:
+        try:
+            (synapse, conns) = destination.synapse(nineml_model.name)
+            if conns is not None:
+                raise NotImplementedError(
+                    "Nonlinear synapses, as used in '{}' are not currently "
+                    "supported".format(nineml_model.name))
+            if synapse.num_local_properties == 1:
+                # Get the only local property that varies with the synapse
+                # (typically the synaptic weight but does not have to be)
+                weight = get_pyNN_value(next(synapse.local_properties),
+                                        self.UnitHandler, rng)
+            elif not synapse.num_local_properties:
+                weight = 1.0
+            else:
+                raise NotImplementedError(
+                    "Currently only supports one property that varies with "
+                    "each synapse")
+        except NineMLNameError:
+            # FIXME: Should refactor "WithSynapses" code to "CellAndSynapses"
+            #        class which inherits most of its functionality from
+            #        MultiDynamics to ensure that every connection has a
+            #        "synapse" even if it is just a simple port exposure
+            # Synapse dynamics properties didn't have any properties that vary
+            # between synapses so wasn't included
             weight = 1.0
-        else:
-            raise NotImplementedError(
-                "Currently only supports one property that varies with each "
-                "synapse")
-        delay = get_pyNN_value(nineml_model.delay, self.unit_handler,
-                               **kwargs)
+        delay = get_pyNN_value(nineml_model.delay, self.UnitHandler, rng)
         # FIXME: Ignores send_port, assumes there is only one...
         # NB: Simulator-specific derived classes extend the corresponding
         # PyNN population class
         self.PyNNProjectionClass.__init__(
             self,
-            source=source,
-            target=destination,
-            connectivity=nineml_model.connectivity,
+            presynaptic_population=source,
+            postsynaptic_population=destination,
+            connector=nineml_model.connectivity,
             synapse_type=self.SynapseClass(weight=weight, delay=delay),
-            receptor_type=nineml_model.receive_port,
+            receptor_type=nineml_model.destination_port,
             label=nineml_model.name)
 
     @property
