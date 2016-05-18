@@ -16,6 +16,8 @@ from pype9.base.network.cell_wrapper import (
     PyNNCellWrapper as BasePyNNCellWrapper,
     PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
 from ..units import UnitHandler
+from pype9.annotations import (
+    PYPE9_NS, MEMBRANE_VOLTAGE, MECH_TYPE, FULL_CELL_MECH)
 
 logger = logging.getLogger("PyNN")
 
@@ -51,10 +53,21 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
                    'initial_state': initial_state}
             celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
                 cls, name, (PyNNCellWrapper,), dct)
-            assert sorted(celltype.recordable) == sorted(
+            # Replace membrane voltage in recordables with 'v'
+            # FIXME: This is a bit messy but has to do with conventions used in
+            #        PyNN. Ideally I think that I will cherry pick the parts of
+            #        PyNN I need and change the conventions so that they work
+            #        with 9ML.
+            annots = model.build_component_class.annotations[PYPE9_NS]
+            if annots[MECH_TYPE] == FULL_CELL_MECH:
+                celltype.recordable.remove(annots[MEMBRANE_VOLTAGE])
+                celltype.recordable.append('v')
+            assert set(celltype.recordable) == set(
                 model().recordable.keys()), \
-                ("Mismatch of recordable keys between CellPyNN and "
-                 "Cell class '{}'".format(name))
+                ("Mismatch of recordable keys between CellPyNN ('{}') and "
+                 "Cell class '{}' ('{}')".format(
+                     "', '".join(sorted(celltype.recordable)), name,
+                     "', '".join(sorted(model().recordable.keys()))))
             # If the url where the celltype is defined is specified save the
             # celltype to be retried later
             if component_class.url is not None:

@@ -42,7 +42,7 @@ class PyNNCellWrapperMetaClass(type):
         initial_state = dct['initial_state']  # @UnusedVariable
         dct['model_name'] = celltype_id
         dct['parameter_names'] = tuple(component_class.parameter_names)
-        dct['recordable'] = tuple(chain(('spikes',),
+        dct['recordable'] = list(chain(('spikes',),
                                         component_class.send_port_names,
                                         component_class.state_variable_names))
         dct['receptor_types'] = tuple(component_class.event_receive_port_names)

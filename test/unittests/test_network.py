@@ -514,7 +514,7 @@ class TestNetwork(unittest.TestCase):
 
     def test_compare_brunel(self, build_mode='force', **kwargs):  # @UnusedVariable
 
-        for case in self.brunel_parameters.iterkeys():
+        for case in ('small_SR3',):  # self.brunel_parameters.iterkeys():
             nest.ResetKernel()
             nest.SetKernelStatus(
                 {"resolution": float(self.dt.value), "print_time": True,

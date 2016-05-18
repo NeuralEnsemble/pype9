@@ -165,12 +165,13 @@ class CodeGenerator(BaseCodeGenerator):
         # Clone original component class and properties
         # ---------------------------------------------------------------------
         name = component_class.name
-#         orig = component_class
         trfrm = DynamicsCloner().visit(component_class.dynamics)
-#         trfrm = deepcopy(orig)
         if default_properties is not None:
-            trfrm_properties = deepcopy(
-                default_properties.dynamics_properties)
+            props = default_properties.dynamics_properties
+            trfrm_properties = DynamicsProperties(
+                name=(props.name + 'Build'), definition=trfrm,
+                properties=props.properties,
+                initial_values=props.initial_values)
         else:
             trfrm_properties = None
         if initial_state is not None:

@@ -72,9 +72,10 @@ class Cell(base.Cell):
             self.recordable[port.name] = None
         for port in chain(self.component_class.analog_send_ports,
                           self.component_class.state_variables):
-            if port.name != 'v':
-                self.recordable[port.name] = getattr(self._hoc,
-                                                     '_ref_' + port.name)
+            if (port.name != self.component_class.annotations[
+                    PYPE9_NS][MEMBRANE_VOLTAGE]):
+                self.recordable[port.name] = getattr(
+                    self._hoc, '_ref_' + port.name)
         # Get the membrane capacitance property if not an artificial cell
         if self.build_component_class.annotations[
                 PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH:
