@@ -13,8 +13,6 @@
 """
 from itertools import chain
 from copy import deepcopy
-import time
-import os.path
 from abc import ABCMeta
 import quantities as pq
 import nineml
@@ -26,6 +24,10 @@ from nineml.base import ContainerObject, DocumentLevelObject
 from nineml.exceptions import name_error, NineMLNameError
 from pype9.exceptions import (
     Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError)
+import logging
+
+logger = logging.Logger("Pype9")
+
 
 
 class CellMetaClass(type):
@@ -176,9 +178,16 @@ class Cell(object):
             # Otherwise use the default properties as a prototype and override
             # where specific properties are provided
             else:
-                self._nineml = type(self.default_properties)(
-                    self.default_properties.name, self.default_properties,
-                    properties)
+                if isinstance(self.default_properties,
+                              MultiDynamicsProperties):
+                    logger.warning("Unable to set default properties for '{}' "
+                                   "cell as it is MultiDynamicsProperties"
+                                   .format(self.name))
+                    self._nineml = deepcopy(self.default_properties)
+                else:
+                    self._nineml = type(self.default_properties)(
+                        self.default_properties.name, self.default_properties,
+                        properties)
         # Set up references from parameter names to internal variables and set
         # parameters
         for prop in self.properties:

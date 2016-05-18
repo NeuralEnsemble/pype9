@@ -16,6 +16,7 @@ try:
 except ImportError:
     pass
 import os.path
+from itertools import chain
 import quantities as pq
 import neo
 from neuron import h, load_mechanisms
@@ -24,9 +25,9 @@ from nineml.exceptions import NineMLNameError
 from math import pi
 import numpy
 from .code_gen import CodeGenerator
-from pype9.base.cells.tree import in_units
 from pype9.base.cells import base
 from pype9.neuron.units import UnitHandler
+from pype9.exceptions import Pype9AttributeError
 from .controller import simulation_controller
 from pype9.annotations import (
     PYPE9_NS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
@@ -61,6 +62,19 @@ class Cell(base.Cell):
         # Insert dynamics mechanism (the built component class)
         HocClass = getattr(h, self.__class__.name)
         self._hoc = HocClass(0.5, sec=self._sec)
+        # A recordable of 'spikes' is needed for PyNN compatibility
+        self.recordable = {'spikes': None}
+        # Add a recordable entry for each event send ports
+        # TODO: These ports aren't able to be recorded from at present because
+        #       different event ports are not distinguishable in Neuron (well
+        #       not easily anyway). Users should use 'spikes' instead for now
+        for port in chain(self.component_class.event_send_ports):
+            self.recordable[port.name] = None
+        for port in chain(self.component_class.analog_send_ports,
+                          self.component_class.state_variables):
+            if port.name != 'v':
+                self.recordable[port.name] = getattr(self._hoc,
+                                                     '_ref_' + port.name)
         # Get the membrane capacitance property if not an artificial cell
         if self.build_component_class.annotations[
                 PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH:
@@ -93,10 +107,7 @@ class Cell(base.Cell):
             # Set capacitance in hoc
             specific_cm = pq.Quantity(cm / self.surface_area, 'uF/cm^2')
             self._sec.cm = float(specific_cm)
-        # Set up recordable dictionary
-        self.recordable = {'spikes': None}
-        self.recordable['v'] = self.source
-        assert False
+            self.recordable['v'] = self.source
         # Set up members required for PyNN
         self.spike_times = h.Vector(0)
         self.traces = {}
@@ -105,6 +116,7 @@ class Cell(base.Cell):
         self.rec = h.NetCon(self.source, None, sec=self._sec)
         self._inputs = {}
         self._input_auxs = []
+        self.initial_states = {}
         self.initial_v = self.V_INIT_DEFAULT
         # Call base init (needs to be after 9ML init)
         super(Cell, self).__init__(*properties, **kwprops)
@@ -128,12 +140,25 @@ class Cell(base.Cell):
         """
         return self._hoc
 
+    def __setattr__(self, varname, val):
+        # Capture attributes ending with '_init' (the convention PyNN uses to
+        # specify initial conditions of state variables) and save them in
+        # initial states
+        if (varname.endswith('_init') and
+              varname[:-5] in self.component_class.state_variable_names):
+            if varname in chain(self.component_class.state_variable_names,
+                                self.component_class.parameter_names):
+                raise Pype9RuntimeError(
+                    "Ambiguous variable '{}' can either be the initial state "
+                    "of '{}' or a parameter/state-variable"
+                    .format(varname, varname[:-5]))
+            self.initial_states[varname] = val
+        else:
+            super(Cell, self).__setattr__(varname, val)
+
     @property
     def surface_area(self):
         return (self._sec.L * pq.um) * (self._sec.diam * pi * pq.um)
-
-    def get_threshold(self):
-        return in_units(self._model.spike_threshold, 'mV')
 
     def _get(self, varname):
         varname = self._escaped_name(varname)
