@@ -61,7 +61,6 @@ class Cell(base.Cell):
         # Insert dynamics mechanism (the built component class)
         HocClass = getattr(h, self.__class__.name)
         self._hoc = HocClass(0.5, sec=self._sec)
-        self.recordable = {'spikes': None}
         # Get the membrane capacitance property if not an artificial cell
         if self.build_component_class.annotations[
                 PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH:
@@ -94,7 +93,10 @@ class Cell(base.Cell):
             # Set capacitance in hoc
             specific_cm = pq.Quantity(cm / self.surface_area, 'uF/cm^2')
             self._sec.cm = float(specific_cm)
-            self.recordable['v'] = self.source
+        # Set up recordable dictionary
+        self.recordable = {'spikes': None}
+        self.recordable['v'] = self.source
+        assert False
         # Set up members required for PyNN
         self.spike_times = h.Vector(0)
         self.traces = {}

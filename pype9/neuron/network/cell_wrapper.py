@@ -35,15 +35,17 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
 
     def __new__(cls, name, component_class, default_properties=None,
                 initial_state=None, build_mode='lazy', silent=False,
-                solver_name=None, standalone=False):  # @UnusedVariable
+                solver_name=None, standalone=False, **kwargs):  # @UnusedVariable @IgnorePep8
         try:
             celltype = cls.loaded_celltypes[
                 (component_class.name, component_class.url)]
         except KeyError:
-            model = CellMetaClass(component_class, name,
+            model = CellMetaClass(component_class=component_class,
+                                  default_properties=default_properties,
+                                  initial_state=initial_state, name=name,
                                   build_mode=build_mode, silent=silent,
                                   solver_name=solver_name,
-                                  standalone=False)
+                                  standalone=False, **kwargs)
             dct = {'model': model,
                    'default_properties': default_properties,
                    'initial_state': initial_state}

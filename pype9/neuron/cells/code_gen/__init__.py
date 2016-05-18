@@ -20,12 +20,14 @@ import nineml.units as un
 from nineml.abstraction import Alias, AnalogSendPort, Dynamics
 from pype9.base.cells.code_gen import BaseCodeGenerator
 from pype9.base.cells import (
-    WithSynapses, DynamicsWithSynapses, DynamicsWithSynapsesProperties)
+    WithSynapses, DynamicsWithSynapses, DynamicsWithSynapsesProperties,
+    MultiDynamicsWithSynapsesProperties)
 from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import pype9
 from datetime import datetime
 from nineml import Document
-from nineml.user import DynamicsProperties, Definition, Property
+from nineml.user import (
+    MultiDynamicsProperties, DynamicsProperties, Definition, Property)
 from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
                                 Constant, Expression)
 from nineml.abstraction.dynamics.visitors.cloner import DynamicsCloner
@@ -172,8 +174,8 @@ class CodeGenerator(BaseCodeGenerator):
         else:
             trfrm_properties = None
         if initial_state is not None:
-            raise NotImplementedError(
-                "Haven't implemented transformation of initial states")
+            logger.warning("Initial states passed to code generator will be "
+                           "ignored (not implemented yet).")
         # ---------------------------------------------------------------------
         # Get the membrane voltage and convert it to 'v'
         # ---------------------------------------------------------------------
@@ -253,7 +255,11 @@ class CodeGenerator(BaseCodeGenerator):
             trfrm, component_class.synapses,
             component_class.connection_parameter_sets)
         if trfrm_properties is not None:
-            trfrm_props_with_syn = DynamicsWithSynapsesProperties(
+            if isinstance(trfrm_properties, MultiDynamicsProperties):
+                WithSynapsesClass = MultiDynamicsWithSynapsesProperties
+            else:
+                WithSynapsesClass = DynamicsWithSynapsesProperties
+            trfrm_props_with_syn = WithSynapsesClass(
                 trfrm_properties, default_properties.synapses,
                 default_properties.connection_property_sets)
         else:

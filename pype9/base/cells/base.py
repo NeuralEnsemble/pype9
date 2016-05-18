@@ -36,7 +36,7 @@ class CellMetaClass(type):
     """
 
     def __new__(cls, component_class, default_properties=None,
-                initial_states=None, name=None, saved_name=None, **kwargs):
+                initial_state=None, name=None, saved_name=None, **kwargs):
         """
         `component_class`    -- A nineml.abstraction.Dynamics object
         `default_properties` -- default properties, if None, then all props = 0
@@ -88,7 +88,9 @@ class CellMetaClass(type):
             code_gen = cls.CodeGenerator()
             (build_component_class, build_properties,
              build_initial_states) = code_gen.transform_for_build(
-                component_class, default_properties, initial_states, **kwargs)
+                component_class=component_class,
+                default_properties=default_properties,
+                initial_state=initial_state, **kwargs)
             # Set build dir default from original prototype url if not
             # explicitly provided
             build_dir = kwargs.pop('build_dir', None)
@@ -114,7 +116,7 @@ class CellMetaClass(type):
             dct = {'name': name,
                    'component_class': component_class,
                    'default_properties': default_properties,
-                   'initial_states': initial_states,
+                   'initial_state': initial_state,
                    'install_dir': instl_dir,
                    'build_component_class': build_component_class,
                    'build_default_properties': build_properties,
@@ -273,7 +275,10 @@ class Cell(object):
         """
         Sets the properties of the cell given a 9ML property
         """
-        self._nineml.set(prop)
+        # FIXME: Need to reevaluate whether this should be updating the nineml
+        #        object. Currently it is difficult to set a property in the
+        #        if it is a MultiDynamics object (but not impossible)
+#         self._nineml.set(prop)
         self._set(prop.name, float(self._unit_handler.scale_value(prop)))
 
     def get(self, varname):

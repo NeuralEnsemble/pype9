@@ -20,6 +20,7 @@ from nineml.values import RandomValue
 from pype9.base.cells import (
     ConnectionPropertySet, DynamicsWithSynapsesProperties)
 from pype9.base.network import Network as BasePype9Network
+from pype9.neuron.network import Network as NeuronPype9Network
 from pype9.nest.network import Network as NestPype9Network
 import ninemlcatalog
 
@@ -519,12 +520,13 @@ class TestNetwork(unittest.TestCase):
                 {"resolution": float(self.dt.value), "print_time": True,
                  'local_num_threads': 1})
             network9ML = ninemlcatalog.load('network/Brunel2000/' + case)
-            pype9_network = NestPype9Network(Network.from_document(network9ML),
-                                             min_delay=0.1, max_delay=2.0,
-                                             build_mode=build_mode)
-            ref_network = self._reference_nest_brunel(case)
-            self.assertEqual(pype9_network.component_array('Exc').size,
-                             nest.GetStatus(ref_network.exc, 'size'))
+#             ref_network = self._reference_nest_brunel(case)
+            network_nineml = Network.from_document(network9ML)
+            for NetworkClass in (NeuronPype9Network, NestPype9Network):
+                network = NetworkClass(network_nineml, min_delay=0.1,
+                                       max_delay=2.0, build_mode=build_mode)
+#                 self.assertEqual(network.component_array('Exc').size,
+#                                  nest.GetStatus(ref_network.exc, 'size'))
 #             print("Number of neurons : {0}".format(N_neurons))
 #             print("Number of synapses: {0}".format(num_synapses))
 #             print("       Exitatory  : {0}".format(
