@@ -53,15 +53,6 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
                    'initial_state': initial_state}
             celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
                 cls, name, (PyNNCellWrapper,), dct)
-            # Replace membrane voltage in recordables with 'v'
-            # FIXME: This is a bit messy but has to do with conventions used in
-            #        PyNN. Ideally I think that I will cherry pick the parts of
-            #        PyNN I need and change the conventions so that they work
-            #        with 9ML.
-            annots = model.build_component_class.annotations[PYPE9_NS]
-            if annots[MECH_TYPE] == FULL_CELL_MECH:
-                celltype.recordable.remove(annots[MEMBRANE_VOLTAGE])
-                celltype.recordable.append('v')
             assert set(celltype.recordable) == set(
                 model().recordable.keys()), \
                 ("Mismatch of recordable keys between CellPyNN ('{}') and "

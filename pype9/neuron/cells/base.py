@@ -16,18 +16,19 @@ try:
 except ImportError:
     pass
 import os.path
+import collections
 from itertools import chain
+import operator
 import quantities as pq
 import neo
 from neuron import h, load_mechanisms
-from nineml.abstraction import EventPort
+from nineml.abstraction import Dynamics, EventPort
 from nineml.exceptions import NineMLNameError
 from math import pi
 import numpy
 from .code_gen import CodeGenerator
 from pype9.base.cells import base
 from pype9.neuron.units import UnitHandler
-from pype9.exceptions import Pype9AttributeError
 from .controller import simulation_controller
 from pype9.annotations import (
     PYPE9_NS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
@@ -108,7 +109,8 @@ class Cell(base.Cell):
             # Set capacitance in hoc
             specific_cm = pq.Quantity(cm / self.surface_area, 'uF/cm^2')
             self._sec.cm = float(specific_cm)
-            self.recordable['v'] = self.source
+            self.recordable[self.component_class.annotations[
+                PYPE9_NS][MEMBRANE_VOLTAGE]] = self.source
         # Set up members required for PyNN
         self.spike_times = h.Vector(0)
         self.traces = {}
@@ -119,6 +121,25 @@ class Cell(base.Cell):
         self._input_auxs = []
         self.initial_states = {}
         self.initial_v = self.V_INIT_DEFAULT
+        # Get a mapping of receptor names to NMODL indices for PyNN projection
+        # connection
+        assert (set(self.build_component_class.event_receive_port_names) ==
+                set(self.component_class.event_receive_port_names))
+        # Need to use the build_component_class to get the same index as was
+        # used to construct the indices
+        # FIXME: These indices will need to be saved somewhere in the
+        #        annotations of the build class so they can be reloaded
+        if self.build_component_class.num_event_receive_ports:
+            ports_n_indices = [
+                (self.build_component_class.index_of(p), p.name)
+                for p in self.build_component_class.event_receive_ports]
+            # Get event receive ports sorted by the indices
+            sorted_ports = zip(
+                *sorted(ports_n_indices, key=operator.itemgetter(0)))[1]
+        else:
+            sorted_ports = []
+        self.type = collections.namedtuple('Type', 'receptor_types')(
+            sorted_ports)
         # Call base init (needs to be after 9ML init)
         super(Cell, self).__init__(*properties, **kwprops)
         self._flag_created(True)
@@ -141,6 +162,10 @@ class Cell(base.Cell):
         """
         return self._hoc
 
+    def __dir__(self):
+        return (super(Cell, self).__dir__() +
+                list(self.event_receive_port_names))
+
     def __setattr__(self, varname, val):
         # Capture attributes ending with '_init' (the convention PyNN uses to
         # specify initial conditions of state variables) and save them in
@@ -156,6 +181,13 @@ class Cell(base.Cell):
             self.initial_states[varname] = val
         else:
             super(Cell, self).__setattr__(varname, val)
+
+    def __getattr__(self, varname):
+        if varname in self.event_receive_port_names:
+            # Return the hoc object for projection connections
+            return self._hoc
+        else:
+            return super(Cell, self).__getattr__(varname)
 
     @property
     def surface_area(self):

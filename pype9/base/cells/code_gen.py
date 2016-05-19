@@ -309,7 +309,7 @@ class BaseCodeGenerator(object):
         return []
 
     def transform_for_build(self, component_class, default_properties,
-                            initial_states, **kwargs):  # @UnusedVariable
+                            initial_state, **kwargs):  # @UnusedVariable
         """
         Copies and transforms the component class and associated properties and
         states to match the format of the simulator (overridden in derived
@@ -323,7 +323,7 @@ class BaseCodeGenerator(object):
         # Clone original component class and properties
         # ---------------------------------------------------------------------
         return (deepcopy(component_class), deepcopy(default_properties),
-                deepcopy(initial_states))
+                deepcopy(initial_state))
 
     @classmethod
     def get_mod_time(cls, url):

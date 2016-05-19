@@ -29,7 +29,6 @@ import logging
 logger = logging.Logger("Pype9")
 
 
-
 class CellMetaClass(type):
 
     """
@@ -317,7 +316,11 @@ class Cell(object):
 
     @property
     def state_variable_names(self):
-        return self._nineml.component_class.state_variable_names
+        return self.component_class.state_variable_names
+
+    @property
+    def event_receive_port_names(self):
+        return self.component_class.event_receive_port_names
 
     def __repr__(self):
         return '{}(component_class="{}")'.format(
