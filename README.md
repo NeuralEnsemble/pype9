@@ -37,7 +37,7 @@ common neuron models (_see_ test_dynamics.py) as well as the random balanced
 network (_see_ test_network.py) published in
 Brunel N, Dynamics of Sparsely Connected Networks of Excitatory and Inhibitory Spiking Neurons, _Journal of Computational Neuroscience_ 8, 183–208 (2000).
 
-Note that the neuron (NMODL/Hoc) import functionality is still experimental and
+Note that the Neuron (NMODL/Hoc) import functionality is still experimental and
 requires proper unit-tests to be written.
 
 Documentation
