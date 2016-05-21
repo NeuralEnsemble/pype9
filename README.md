@@ -2,14 +2,13 @@ PyPe9
 ========
 
 "PYthon PipelinEs for NineML (PyPe9)" is a collection of software pipelines
-written in Python to read and simulate networks of detailed
-neuronal models described in NineML in both Neuron and NEST simulators.
+written in Python to read and simulate networks of neuronal models
+described in NineML (http://nineml.net) in both Neuron and NEST simulators.
 
-CAUTION: PyPe9 is currently still under development and has not been officially released.
+PyPe9 is still under development so please submit bug reports to the GitHub
+issue tracker (http://github.com/CNS-OIST/PyPe9/issues).
 
-PyPe9 implements syntax that is planned for NineML v2. The closest matching specification can be found under the `refactor_v2` branch at https://github.com/tclose/nineml/, although it is currently lagging the lib9ML implementation as of 15/10/2015.
-
-Author: Thomas G. Close (tclose@oist.jp)
+Author: Tom G. Close (tom.close@monash.edu)
 
 Pre-requisites
 ---
@@ -24,13 +23,40 @@ Pre-requisites
 Installation
 ---
 
-After installing PyNEURON, PyNEST and PyNN via their instructions clone the lib9ML, Diophantine, NineMLCatalog and PyPe9 repositories to somewhere sensible on your local computer (e.g. $HOME/git/nineml, $HOME/git/diophantine, $HOME/git/ninemlcatalog & $HOME/git/pype9). Then add the root directory of each repository to your PYTHONPATH environment variable (see https://docs.python.org/2/using/cmdline.html#envvar-PYTHONPATH).
+After installing PyNEURON, PyNEST and PyNN via their instructions clone the 
+lib9ML, Diophantine, NineMLCatalog and PyPe9 repositories to somewhere sensible
+on your local computer (e.g. $HOME/git/nineml, $HOME/git/diophantine,
+$HOME/git/ninemlcatalog & $HOME/git/pype9). Then add the root directory of 
+each repository to your PYTHONPATH environment variable
+(see https://docs.python.org/2/using/cmdline.html#envvar-PYTHONPATH).
 
 Testing
 ---
-PyPe9 is currently still under heavy development, however there are some unit-tests in the <pype9-home>/tests/unittests directory that should work. In particular try the `test_dynamics.py` unit tests to see if it has been installed properly.
+There are unit-tests in the <pype9-home>/tests/unittests directory to run
+common neuron models (_see_ test_dynamics.py) as well as the random balanced
+network (_see_ test_network.py) published in
+Brunel N, Dynamics of Sparsely Connected Networks of Excitatory and Inhibitory Spiking Neurons, _Journal of Computational Neuroscience_ 8, 183–208 (2000).
+
+Note that the neuron (NMODL/Hoc) import functionality is still experimental and
+requires proper unit-tests to be written.
 
 Documentation
 ---
-There is the skeleton documentation in the <pype9-home>/doc directory, which can be built with Sphynx. However, it still needs a lot of work at this stage.
+There is the skeleton documentation in the <pype9-home>/doc directory, which
+can be built with Sphynx. However, it still needs a lot of work at this stage.
 
+Known Limitations
+---
+
+9ML aims to be a comprehensive description language for neural simulation. This
+means that it allows the expression of some uncommon configurations, which are
+difficult to implement in NEURON and NEST. Work is planned to make the NEURON
+and NEST pipelines in Pype9 support 9ML fully, however until then the following
+restrictions apply to network models
+
+* synapses must be linear (to be implemented in v0.2)
+* synapses can only have one variable that varies over a projection
+  (e.g. weight) (to be implemented in v0.2)
+* no analog connections between populations (i.e. gap junctions)
+  (to be implemented in v0.2)
+* only one event send port per cell (current limitation of NEURON/NEST)
