@@ -1,12 +1,12 @@
 from __future__ import division
-from unittest import TestCase
 from math import exp
-import neo
-from collections import namedtuple, defaultdict
-from itertools import groupby
+from collections import namedtuple
+from itertools import groupby, izip
 from operator import itemgetter
+import numpy
 import pyNN.neuron
 import pyNN.nest
+from neo import Block, Segment, SpikeTrain
 import nest
 from nineml.user import (
     Projection, Network, DynamicsProperties,
@@ -29,9 +29,14 @@ from pype9.neuron.network import Network as NeuronPype9Network
 from pype9.nest.network import Network as NestPype9Network
 import ninemlcatalog
 try:
-    from matplotlib.pyplot import plt
+    from matplotlib import pyplot as plt
 except ImportError:
     pass
+if __name__ == '__main__':
+    # Import dummy test case
+    from utils import DummyTestCase as TestCase  # @UnusedImport
+else:
+    from unittest import TestCase  # @Reimport
 
 
 class TestNetwork(TestCase):
@@ -535,11 +540,11 @@ class TestBrunel2000(TestCase):
         'BrunelNetwork',
         'exc inh ext espikes ispikes xspikes N_rec N_neurons CE CI')
 
-    def setUp(self):
-        self.ref_network = self._construct_ref_nest_brunel('small_SR3',
-                                                           order=self.order)
-        self.ref_spikes = self._simulate_ref_brunel(self.ref_network,
-                                                    simtime=self.simttime)
+#     def setUp(self):
+#         self.ref_network = self._construct_ref_nest_brunel('small_SR3',
+#                                                            order=self.order)
+#         self.ref_spikes = self._simulate_ref_brunel(self.ref_network,
+#                                                     simtime=self.simtime)
 
     def test_flatten(self, **kwargs):  # @UnusedVariable
         brunel_network = ninemlcatalog.load('network/Brunel2000/AI/')
@@ -560,17 +565,46 @@ class TestBrunel2000(TestCase):
         network_nineml = Network.from_document(network9ML)
         network = NestPype9Network(network_nineml, min_delay=0.1,
                                    max_delay=2.0, build_mode=build_mode)
+        params = {}
+        means = {}
+        std_devs = {}
         for pop_name in self.pop_names:
-            network.component_array(pop_name).record('spikes')
+            pop = network.component_array(pop_name)
+            pop.record('spikes')
+            param_names = [
+                n for n in nest.GetStatus([pop.last_id])[0].keys()
+                if n not in (
+                    'element_type', 'global_id', 'local_id', 'receptor_types',
+                    'thread_local_id', 'frozen', 'thread', 'model',
+                    'archiver_length', 'recordables', 'parent', 'local')]
+            params[pop_name] = dict(
+                izip(param_names, izip(*nest.GetStatus(list(pop.all_cells),
+                                                       keys=param_names))))
+            means[pop_name] = {}
+            std_devs[pop_name] = {}
+            for name, values in params[pop_name].iteritems():
+                vals = numpy.asarray(values)
+                means[pop_name][name] = numpy.mean(vals)
+                std_devs[pop_name][name] = numpy.std(vals)
         pyNN.nest.run(self.simtime)
-        spikes = {}
+        gen_spikes = {}
         for pop_name in self.pop_names:
-            spikes[pop_name] = network.component_array(pop_name).get_data()
+            gen_spikes[pop_name] = network.component_array(
+                pop_name).get_data()
             if plot:
-                fig = plt.figure()
-                fig.plot(ts1, gids, 'blue')
-                plt.xlabel('Times (ms)')
-                plt.ylabel('Cell Indices')
+                for name, block in (('Reference', self.ref_spikes[pop_name]),
+                                    ('Generated', gen_spikes[pop_name])):
+                    plt.figure()
+                    spiketrains = block.segments[0].spiketrains
+                    times = []
+                    ids = []
+                    for i, spiketrain in enumerate(spiketrains):
+                        times.extend(spiketrain)
+                        ids.extend([i] * len(spiketrain))
+                    plt.scatter(times, ids)
+                    plt.xlabel('Times (ms)')
+                    plt.ylabel('Cell Indices')
+                    plt.title("{} - {}".format(name, pop_name))
         if plot:
             plt.show()
 
@@ -737,14 +771,18 @@ class TestBrunel2000(TestCase):
 #             int(network.CI * network.N_neurons)))
 #         print("Excitatory rate   : %.2f Hz" % rate_ex)
 #         print("Inhibitory rate   : %.2f Hz" % rate_in)
-        spikes = defaultdict(dict)
-        for pop_name in ('espikes', 'ispikes', 'xspikes'):
-            events = nest.GetStatus(getattr(network, pop_name), "events")[0]
-            for sender, sender_time_pairs in groupby(
-                sorted(zip(events['senders'], events['times']),
-                       key=itemgetter(0)), key=itemgetter(0)):
-                spikes[pop_name][sender] = neo.SpikeTrain(
-                    zip(*sender_time_pairs)[1], units='ms', t_stop=simtime)
+        spikes = {'Exc': Block(), 'Inh': Block(), 'Ext': Block()}
+        for pop_name, spike_name in (('Exc', 'espikes'), ('Inh', 'ispikes'),
+                                     ('Ext', 'xspikes')):
+            events = nest.GetStatus(getattr(network, spike_name), "events")[0]
+            sorted_spikes = sorted(zip(events['senders'], events['times']),
+                                   key=itemgetter(0))
+            grouped_spikes = groupby(sorted_spikes, key=itemgetter(0))
+            seg = Segment()
+            seg.spiketrains.extend(
+                SpikeTrain(zip(*t)[1], units='ms', t_stop=cls.simtime, name=s)
+                for s, t in grouped_spikes)
+            spikes[pop_name].segments.append(seg)
         return spikes
 
     @classmethod
@@ -793,9 +831,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     options = dict(args.option)
     if args.tester == 'network':
-        tester = TestNetwork(args.test)
+        tester = TestNetwork()
     elif args.tester == 'brunel':
-        tester = TestBrunel2000(args.test)
+        tester = TestBrunel2000()
     else:
         raise Exception("Unrecognised tester '{}'".format(args.tester))
     getattr(tester, args.test)(build_mode=args.build_mode, **options)
