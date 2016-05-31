@@ -46,6 +46,11 @@ class PyNNCellWrapperMetaClass(type):
                                         component_class.send_port_names,
                                         component_class.state_variable_names))
         dct['receptor_types'] = tuple(component_class.event_receive_port_names)
+        # List units for each state variable
+        dct['units'] = dict(
+            (sv.name, cls.UnitHandler.to_pq_quantity(
+                1 * cls.UnitHandler.dimension_to_units(sv.dimension)))
+            for sv in component_class.state_variables)
         dct["default_parameters"] = dict(
             (p.name, (
                 cls.UnitHandler.scale_value(p.quantity)
