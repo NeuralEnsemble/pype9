@@ -542,11 +542,14 @@ class TestBrunel2000(TestCase):
         'exc inh ext espikes ispikes xspikes evolts ivolts N_rec N_neurons CE '
         'CI')
 
-    def setUp(self):
+    def setUp(self, simulate=False):
+        self.simulate = simulate
         self.ref_network = self._construct_ref_nest_brunel('small_SR3',
                                                            order=self.order)
-        self.ref_spikes = self._simulate_ref_brunel(self.ref_network,
-                                                    simtime=self.simtime)
+        self._ref_params = self._get_ref_parameters(self.ref_network)
+        if simulate:
+            self.ref_spikes = self._simulate_ref_brunel(self.ref_network,
+                                                        simtime=self.simtime)
 
     def test_flatten(self, **kwargs):  # @UnusedVariable
         brunel_network = ninemlcatalog.load('network/Brunel2000/AI/')
@@ -570,7 +573,7 @@ class TestBrunel2000(TestCase):
         params = {}
         means = {}
         std_devs = {}
-        for pop_name in self.pop_names:
+        for pop_name in network.component_array_names:
             pop = network.component_array(pop_name)
             pop.record('spikes')
             if pop_name != 'Ext':
@@ -591,33 +594,40 @@ class TestBrunel2000(TestCase):
                 vals = numpy.asarray(values)
                 means[pop_name][name] = numpy.mean(vals)
                 std_devs[pop_name][name] = numpy.std(vals)
-        pyNN.nest.run(self.simtime)
-        gen_data = {}
-        for pop_name in self.pop_names:
-            gen_data[pop_name] = network.component_array(pop_name).get_data()
-            if plot:
-                for name, block in (('Generated', gen_data[pop_name]),
-#                                     ('Reference', self.ref_spikes[pop_name]),
-                                    ):
-                    plt.figure()
-                    spiketrains = block.segments[0].spiketrains
-                    times = []
-                    ids = []
-                    for i, spiketrain in enumerate(spiketrains):
-                        times.extend(spiketrain)
-                        ids.extend([i] * len(spiketrain))
-                    plt.scatter(times, ids)
-                    plt.xlabel('Times (ms)')
-                    plt.ylabel('Cell Indices')
-                    plt.title("{} - {}".format(name, pop_name))
-                if pop_name != 'Ext':
-                    traces = gen_data[pop_name].segments[0].analogsignalarrays
-                    plt.figure()
-                    legend = []
-                    for trace in traces:
-                        plt.plot(trace.times, trace)
-                        legend.append(trace.name)
-                    plt.legend(legend)
+        for proj_name in network.connection_group_names:
+            proj = network.connection_group(proj_name)
+            weight, delay = proj.get(["weight", "delay"], format="array")
+            params[proj_name] = {'weight': weight, 'delay': delay}
+        if self.simulate:
+            pyNN.nest.run(self.simtime)
+            gen_data = {}
+            for pop_name in self.pop_names:
+                gen_data[pop_name] = network.component_array(
+                    pop_name).get_data()
+                if plot:
+                    for name, block in (
+                        ('Generated', gen_data[pop_name]),
+                            ('Reference', self.ref_spikes[pop_name])):
+                        plt.figure()
+                        spiketrains = block.segments[0].spiketrains
+                        times = []
+                        ids = []
+                        for i, spiketrain in enumerate(spiketrains):
+                            times.extend(spiketrain)
+                            ids.extend([i] * len(spiketrain))
+                        plt.scatter(times, ids)
+                        plt.xlabel('Times (ms)')
+                        plt.ylabel('Cell Indices')
+                        plt.title("{} - {}".format(name, pop_name))
+                    if pop_name != 'Ext':
+                        traces = gen_data[
+                            pop_name].segments[0].analogsignalarrays
+                        plt.figure()
+                        legend = []
+                        for trace in traces:
+                            plt.plot(trace.times, trace)
+                            legend.append(trace.name)
+                        plt.legend(legend)
         if plot:
             plt.show()
             print "done"
@@ -773,6 +783,18 @@ class TestBrunel2000(TestCase):
             nodes_ex, nodes_in, noise, espikes, ispikes, xspikes, evolts,
             ivolts, N_rec, N_neurons, CE, CI)
 
+    def _get_ref_parameters(self, network):
+        combined = network.exc + network.inh
+        external = nest.GetConnections(network.ext, combined, 'excitatory')
+        excitation = nest.GetConnections(network.exc, combined, 'excitatory')
+        inhibition = nest.GetConnections(network.inh, combined, 'inhibitory')
+        params = {}
+        for name, conns in (('Excitation', excitation),
+                            ('Inhibition', inhibition),
+                            ('External', external)):
+            params[name] = nest.GetStatus(conns, ['weight', 'delay'])
+        return params
+
     @classmethod
     def _simulate_ref_brunel(cls, network, simtime=1000.0):
         print("Simulating")
@@ -798,8 +820,10 @@ class TestBrunel2000(TestCase):
         for pop_name, spike_name, vname in (('Exc', 'espikes', 'evolts'),
                                             ('Inh', 'ispikes', 'ivolts'),
                                             ('Ext', 'xspikes', None)):
-            events = nest.GetStatus(getattr(network, spike_name), "events")[0]
-            sorted_spikes = sorted(zip(events['senders'], events['times']),
+            spike_events = nest.GetStatus(getattr(network, spike_name),
+                                          "events")[0]
+            sorted_spikes = sorted(zip(spike_events['senders'],
+                                       spike_events['times']),
                                    key=itemgetter(0))
             grouped_spikes = groupby(sorted_spikes, key=itemgetter(0))
             seg = Segment()
@@ -807,10 +831,10 @@ class TestBrunel2000(TestCase):
                 SpikeTrain(zip(*t)[1], units='ms', t_stop=cls.simtime, name=s)
                 for s, t in grouped_spikes)
             if vname is not None:
-                events, interval = nest.GetStatus(
+                var_events, interval = nest.GetStatus(
                     getattr(network, vname), ('events', 'interval'))[0]
                 sorted_vs = sorted(
-                    zip(events['senders'], events['V_m']),
+                    zip(var_events['senders'], var_events['V_m']),
                     key=itemgetter(0))
                 group_vs = groupby(sorted_vs, key=itemgetter(0))
                 seg.analogsignals.extend(
