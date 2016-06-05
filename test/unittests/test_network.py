@@ -542,15 +542,6 @@ class TestBrunel2000(TestCase):
         'exc inh ext espikes ispikes xspikes evolts ivolts N_rec N_neurons CE '
         'CI')
 
-    def setUp(self, simulate=False):
-        self.simulate = simulate
-        self.ref_network = self._construct_ref_nest_brunel('small_SR3',
-                                                           order=self.order)
-        self._ref_params = self._get_ref_parameters(self.ref_network)
-        if simulate:
-            self.ref_spikes = self._simulate_ref_brunel(self.ref_network,
-                                                        simtime=self.simtime)
-
     def test_flatten(self, **kwargs):  # @UnusedVariable
         brunel_network = ninemlcatalog.load('network/Brunel2000/AI/')
         (component_arrays,
@@ -559,41 +550,64 @@ class TestBrunel2000(TestCase):
         self.assertEqual(len(component_arrays), 3)
         self.assertEqual(len(connection_groups), 3)
 
+    def test_population_params(self, case='AI', order=10,
+                               simulators=['nest']):
+        ref = self._construct_ref_nest_brunel(case, order)
+#         ref_params = self._pop_params_reference(ref_network)
+        pop_inds = {}
+        params = {}
+        stddevs = {}
+        means = {}
+        pop_inds['reference'] = {'Exc': ref.exc, 'Inh': ref.inh,
+                                 'Ext': ref.ext}
+        for simulator in simulators:
+            network = self._construct_nineml(case, order, simulator)
+            pop_inds[simulator] = dict(
+                (p.name, p.cells) for p in network.component_arrays)
+        for name, inds in pop_inds.iteritems():
+            params[name] = {}
+            stddevs[name] = {}
+            means[name] = {}
+            for pop_name in network.component_array_names:
+                pop = network.component_array(pop_name)
+                pop.record('spikes')
+                if pop_name != 'Ext':
+                    incr = pop.size // 10
+                    pop.record('v__cell')
+                param_names = [
+                    n for n in nest.GetStatus([pop.last_id])[0].keys()
+                    if n not in (
+                        'element_type', 'global_id', 'local_id', 'receptor_types',
+                        'thread_local_id', 'frozen', 'thread', 'model',
+                        'archiver_length', 'recordables', 'parent', 'local')]
+                params[pop_name] = dict(
+                    izip(param_names, izip(*nest.GetStatus(list(pop.all_cells),
+                                                           keys=param_names))))
+                means[pop_name] = {}
+                stddevs[pop_name] = {}
+                for name, values in params[pop_name].iteritems():
+                    vals = numpy.asarray(values)
+                    means[pop_name][name] = numpy.mean(vals)
+                    stddevs[pop_name][name] = numpy.std(vals)
+            
+
+    def test_connection_params(self, case='AI', order=10):
+        raise NotImplementedError
+
+    def test_activity(self, case='AI', order=1000):
+        ref_network = self._construct_ref_nest_brunel(case, order)
+        ref_spikes = self._simulate_reference(ref_network,
+                                               simtime=self.simtime)
+
     def test_nest(self, build_mode='force', case='small_SR3', plot=False,
                   **kwargs):  # @UnusedVariable @IgnorePep8
-        pyNN.nest.setup(timestep=0.1, min_delay=0.1, max_delay=10.0)
-        nest.ResetKernel()
-        nest.SetKernelStatus(
-            {"resolution": float(self.dt.value), "print_time": True,
-             'local_num_threads': 1})
-        network9ML = ninemlcatalog.load('network/Brunel2000/' + case)
         network_nineml = Network.from_document(network9ML)
         network = NestPype9Network(network_nineml, min_delay=0.1,
                                    max_delay=2.0, build_mode=build_mode)
         params = {}
         means = {}
         std_devs = {}
-        for pop_name in network.component_array_names:
-            pop = network.component_array(pop_name)
-            pop.record('spikes')
-            if pop_name != 'Ext':
-                incr = pop.size // 10
-                pop.record('v__cell')
-            param_names = [
-                n for n in nest.GetStatus([pop.last_id])[0].keys()
-                if n not in (
-                    'element_type', 'global_id', 'local_id', 'receptor_types',
-                    'thread_local_id', 'frozen', 'thread', 'model',
-                    'archiver_length', 'recordables', 'parent', 'local')]
-            params[pop_name] = dict(
-                izip(param_names, izip(*nest.GetStatus(list(pop.all_cells),
-                                                       keys=param_names))))
-            means[pop_name] = {}
-            std_devs[pop_name] = {}
-            for name, values in params[pop_name].iteritems():
-                vals = numpy.asarray(values)
-                means[pop_name][name] = numpy.mean(vals)
-                std_devs[pop_name][name] = numpy.std(vals)
+        
         for proj_name in network.connection_group_names:
             proj = network.connection_group(proj_name)
             weight, delay = proj.get(["weight", "delay"], format="array")
@@ -643,8 +657,29 @@ class TestBrunel2000(TestCase):
 #                 int(CE * N_neurons) + N_neurons))
 #             print("       Inhibitory : {0}".format(int(CI * N_neurons)))
 
+    def _reset_nest(self):
+        pyNN.nest.setup(timestep=0.1, min_delay=0.1, max_delay=10.0)
+        nest.ResetKernel()
+        nest.SetKernelStatus(
+            {"resolution": float(self.dt.value), "print_time": True,
+             'local_num_threads': 1})
+
     @classmethod
-    def _construct_ref_nest_brunel(cls, case, order=2500):
+    def _construct_nineml(cls, case, order, simulator):
+        model = ninemlcatalog.load('network/Brunel2000/' + case)
+        # rescale populations
+        for pop in model.populations:
+            pop.size = order // 1000
+        if simulator == 'nest':
+            NetworkClass = NestPype9Network
+        elif simulator == 'neuron':
+            NetworkClass = NeuronPype9Network
+        else:
+            assert False
+        return NetworkClass(model)
+
+    @classmethod
+    def _construct_reference(cls, case, order):
         """
         The model in this file has been adapted from the brunel-alpha-nest.py
         model that is part of NEST.
@@ -783,11 +818,15 @@ class TestBrunel2000(TestCase):
             nodes_ex, nodes_in, noise, espikes, ispikes, xspikes, evolts,
             ivolts, N_rec, N_neurons, CE, CI)
 
-    def _get_ref_parameters(self, network):
-        combined = network.exc + network.inh
-        external = nest.GetConnections(network.ext, combined, 'excitatory')
-        excitation = nest.GetConnections(network.exc, combined, 'excitatory')
-        inhibition = nest.GetConnections(network.inh, combined, 'inhibitory')
+    @classmethod
+    def _projection_params_reference(self, network, incr=100):
+        combined = (network.exc + network.inh)[::incr]
+        external = nest.GetConnections(network.ext[::incr], combined,
+                                       'excitatory')
+        excitation = nest.GetConnections(network.exc[::incr], combined,
+                                         'excitatory')
+        inhibition = nest.GetConnections(network.inh[::incr], combined,
+                                         'inhibitory')
         params = {}
         for name, conns in (('Excitation', excitation),
                             ('Inhibition', inhibition),
@@ -795,8 +834,11 @@ class TestBrunel2000(TestCase):
             params[name] = nest.GetStatus(conns, ['weight', 'delay'])
         return params
 
+    def _pop_params_nineml(self, network):
+
+
     @classmethod
-    def _simulate_ref_brunel(cls, network, simtime=1000.0):
+    def _simulate_reference(cls, network, simtime=1000.0):
         print("Simulating")
         nest.Simulate(simtime)
         events_espikes = nest.GetStatus(network.espikes, "n_events")[0]
