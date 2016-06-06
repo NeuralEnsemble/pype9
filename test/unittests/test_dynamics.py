@@ -164,11 +164,11 @@ class TestDynamics(TestCase):
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
                 'neuron/LeakyIntegrateAndFire',
-                'PyNNLeakyIntegrateAndFire'),
+                'LeakyIntegrateAndFire'),
             state_variable='v', dt=dt, simulators=simulators,
             properties=ninemlcatalog.load(
                 'neuron/LeakyIntegrateAndFire',
-                'PyNNLeakyIntegrateAndFireProperties'),
+                'LeakyIntegrateAndFireProperties'),
             initial_states=self.liaf_initial_states,
             initial_regime='subthreshold',
             neuron_ref='ResetRefrac', nest_ref='iaf_psc_alpha',
@@ -204,7 +204,7 @@ class TestDynamics(TestCase):
                        build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
         iaf = ninemlcatalog.load(
-            'neuron/LeakyIntegrateAndFire', 'PyNNLeakyIntegrateAndFire')
+            'neuron/LeakyIntegrateAndFire', 'LeakyIntegrateAndFire')
         alpha_psr = ninemlcatalog.load(
             'postsynapticresponse/Alpha', 'Alpha')
         static = ninemlcatalog.load(
@@ -233,7 +233,7 @@ class TestDynamics(TestCase):
         initial_regime = 'subthreshold___sole_____sole'
         liaf_properties = ninemlcatalog.load(
             'neuron/LeakyIntegrateAndFire/',
-            'PyNNLeakyIntegrateAndFireProperties')
+            'LeakyIntegrateAndFireProperties')
         alpha_properties = ninemlcatalog.load(
             'postsynapticresponse/Alpha', 'AlphaProperties')
         nest_tranlsations = {'tau__psr__syn': ('tau_syn_ex', 1),
