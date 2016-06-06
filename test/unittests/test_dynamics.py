@@ -164,11 +164,11 @@ class TestDynamics(TestCase):
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
                 'neuron/LeakyIntegrateAndFire',
-                'LeakyIntegrateAndFire'),
+                'PyNNLeakyIntegrateAndFire'),
             state_variable='v', dt=dt, simulators=simulators,
             properties=ninemlcatalog.load(
                 'neuron/LeakyIntegrateAndFire',
-                'LeakyIntegrateAndFireProperties'),
+                'PyNNLeakyIntegrateAndFireProperties'),
             initial_states=self.liaf_initial_states,
             initial_regime='subthreshold',
             neuron_ref='ResetRefrac', nest_ref='iaf_psc_alpha',
