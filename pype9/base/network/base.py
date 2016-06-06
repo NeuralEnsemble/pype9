@@ -16,6 +16,7 @@ import nineml
 from nineml import units as un
 from pyNN.random import NumpyRNG
 import pyNN.standardmodels
+from nineml import Document
 from nineml.exceptions import NineMLNameError
 from nineml.user.multi import (
     MultiDynamicsProperties, append_namespace, BasePortExposure)
@@ -42,7 +43,14 @@ class Network(object):
     def __init__(self, nineml_model, build_mode='lazy', timestep=None,
                  min_delay=None, max_delay=None, rng=None, **kwargs):
         if isinstance(nineml_model, basestring):
-            nineml_model = nineml.read(nineml_model).as_network()
+            nineml_model = nineml.read(nineml_model).as_network(
+                name=os.path.splitext(os.path.basename(nineml_model))[0])
+        elif isinstance(nineml_model, Document):
+            if nineml_model.url is not None:
+                name = os.path.splitext(os.path.basename(nineml_model.url))[0]
+            else:
+                name = "Anonymous"
+            nineml_model = nineml_model.as_network(name=name)
         self._nineml = deepcopy(nineml_model)
         timestep = timestep if timestep is not None else self.time_step
         min_delay = min_delay if min_delay is not None else self.min_delay
