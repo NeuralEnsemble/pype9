@@ -33,12 +33,12 @@ class TestDynamics(TestCase):
     liaf_nest_translations = {
         # the conversion to g_leak is a bit of a hack because it is
         # actually Cm / g_leak
-        'Cm': ('C_m', 1), 'tau_m': ('tau_m', 1),
+        'Cm': ('C_m', 1), 'tau': ('tau_m', 1),
         'refractory_period': ('t_ref', 1), 'e_leak': ('E_L', 1),
         'v_reset': ('V_reset', 1), 'v': ('V_m', 1),
         'v_threshold': ('V_th', 1), 'end_refractory': (None, 1)}
     liaf_neuron_translations = {
-        'tau_m': ('pas.g', 0.25),  # Hack to translate tau_m to g_leak
+        'tau': ('pas.g', 0.25),  # Hack to translate tau_m to g_leak
         'Cm': ('cm', 1),
         'refractory_period': ('trefrac', 1), 'e_leak': ('pas.e', 1),
         'v_reset': ('vreset', 1), 'v_threshold': ('vthresh', 1),
