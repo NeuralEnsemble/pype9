@@ -1,6 +1,6 @@
 from __future__ import division
 from math import exp
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from itertools import groupby, izip
 from operator import itemgetter
 import numpy
@@ -42,7 +42,8 @@ else:
 nest_bookkeeping = (
     'element_type', 'global_id', 'local_id', 'receptor_types',
     'thread_local_id', 'frozen', 'thread', 'model',
-    'archiver_length', 'recordables', 'parent', 'local')
+    'archiver_length', 'recordables', 'parent', 'local', 'vp',
+    'tau_minus', 'tau_minus_triplet', 't_spike')
 
 
 class TestNetwork(TestCase):
@@ -527,8 +528,12 @@ class TestBrunel2000(TestCase):
         "SIslow": {"g": 4.5, "eta": 0.9},
         "SIslow": {"g": 4.5, "eta": 0.95}}
 
+    translations = {
+        'vp': None, 'origin': None, 'stop': None, 'start': None,
+        'rate': 'rate_cell', 'tau_m': 'tau__cell', 'V_th': 'v_threshold__cell',
+        'E_L': 0.0, 'I_e': 0.0}
+
     simtime = 100.0
-    order = 2500
 
     pop_names = ('Exc', 'Inh', 'Ext')
 
@@ -536,45 +541,64 @@ class TestBrunel2000(TestCase):
 
     BrunelNetwork = namedtuple(
         'BrunelNetwork',
-        'exc inh ext espikes ispikes xspikes evolts ivolts N_rec N_neurons CE '
+        'Exc Inh Ext espikes ispikes xspikes evolts ivolts N_rec N_neurons CE '
         'CI')
 
     def test_nest_population_params(self, case='AI', order=10):
         self._reset_nest()
-        ref = self._construct_reference(case, order)
         nml = self._construct_nineml(case, order, 'nest')
-        nest_inds = {'Exc': {'reference': ref.exc},
-                     'Inh': {'reference': ref.inh},
-                     'Ext': {'reference': ref.ext}}
-        for ca in nml.component_arrays:
-            nest_inds[ca.name]['nineml'] = list(ca.all_cells)
-        for name, inds_dict in nest_inds.iteritems():
+        ref = self._construct_reference(case, order)
+        for pop_name in ('Exc', 'Inh'):
             params = {}
             means = {}
             stdevs = {}
             for model_ver in ('nineml', 'reference'):
-                inds = inds_dict[model_ver]
+                if model_ver == 'nineml':
+                    inds = list(nml.component_array(pop_name).all_cells)
+                else:
+                    inds = getattr(ref, pop_name)
                 param_names = [
                     n for n in nest.GetStatus([inds[0]])[0].keys()
                     if n not in nest_bookkeeping]
+                print "{}: {}".format(model_ver, ', '.join(param_names))
                 params[model_ver] = dict(
                     izip(param_names, izip(*nest.GetStatus(inds,
                                                            keys=param_names))))
                 means[model_ver] = {}
                 stdevs[model_ver] = {}
-                for name, values in params[model_ver].iteritems():
+                for param_name, values in params[model_ver].iteritems():
                     vals = numpy.asarray(values)
-                    means[model_ver][name] = numpy.mean(vals)
-                    stdevs[model_ver][name] = numpy.std(vals)
+                    try:
+                        means[model_ver][param_name] = numpy.mean(vals)
+                    except:
+                        means[model_ver][param_name] = None
+                    try:
+                        stdevs[model_ver][param_name] = numpy.std(vals)
+                    except:
+                        stdevs[model_ver][param_name] = None
             for stat_name, stat in (('mean', means),
                                     ('standard deviation', stdevs)):
                 for param_name in stat['reference']:
-                    self.assertAlmostEqual(
-                        means['reference'][param_name],
-                        means['nineml'][param_name],
-                        msg=("{} is not almost equal between reference and "
-                             "nineml for '{}' parameter").format(stat_name,
-                                                                  param_name))
+                    nml_param_name = self.translations.get(param_name,
+                                                           param_name)
+                    if nml_param_name is not None:  # No equivalent parameter
+                        if isinstance(nml_param_name, (float, int)):
+                            if stat_name == 'mean':
+                                nineml_stat = nml_param_name
+                            else:
+                                nineml_stat = 0.0
+                        else:
+                            nineml_stat = stat['nineml'][nml_param_name]
+                        try:
+                            self.assertAlmostEqual(
+                                stat['reference'][param_name], nineml_stat,
+                                msg=("{} is not almost equal between reference"
+                                     " and nineml for '{}' parameter in '{}'"
+                                     .format(stat_name, param_name, pop_name)))
+                        except:
+                            print "Reference: " + ", ".join(means['reference'].keys())
+                            print "NineML: " + ", ".join(means['nineml'].keys())
+                            raise
 
     def test_connection_params(self, case='AI', order=10):
         raise NotImplementedError
