@@ -75,6 +75,7 @@ class TestBrunel2000(TestCase):
     simtime = 100.0
 
     pop_names = ('Exc', 'Inh', 'Ext')
+    conn_param_names = ['weight', 'delay']
 
     dt = 0.1 * un.ms    # the resolution in ms
 
@@ -137,7 +138,34 @@ class TestBrunel2000(TestCase):
                                          pop_name)))
 
     def test_connection_params(self, case='AI', order=10):
-        raise NotImplementedError
+        self._reset_nest()
+        nml = self._construct_nineml(case, order, 'nest')
+        ref = self._construct_reference(case, order)
+        ref_params_dict = self._projection_params_reference(ref)
+        for conn_group in nml.connection_groups:
+            nest_conns = conn_group.nest_connections
+            nml_params = dict(izip(
+                self.conn_param_names, izip(
+                    *nest.GetStatus(nest_conns, self.conn_param_names))))
+            nml_params['weight'] = nest.GetStatus(
+                list(conn_group.post.all_cells),
+                'weight__pls__{}'.format(conn_group.name))
+            ref_params = ref_params_dict[conn_group.name]
+            for attr in self.conn_param_names:
+                ref_mean = numpy.mean(ref_params[attr])
+                ref_stdev = numpy.std(ref_params[attr])
+                nml_mean = numpy.mean(nml_params[attr])
+                nml_stdev = numpy.std(nml_params[attr])
+                self.assertAlmostEqual(
+                    ref_mean, nml_mean,
+                    msg=("'{}' mean is not almost equal between "
+                         "reference ({}) and nineml ({})  in '{}'"
+                         .format(attr, ref_mean, nml_mean, conn_group.name)))
+                self.assertAlmostEqual(
+                    ref_stdev, nml_stdev,
+                    msg=("'{}' mean is not almost equal between "
+                         "reference ({}) and nineml ({})  in '{}'"
+                         .format(attr, ref_stdev, nml_stdev, conn_group.name)))
 
     def test_activity(self, case='AI', order=1000):
         ref = self._construct_reference(case, order)
@@ -380,19 +408,21 @@ class TestBrunel2000(TestCase):
             ivolts, N_rec, N_neurons, CE, CI)
 
     @classmethod
-    def _projection_params_reference(self, network, incr=100):
-        combined = (network.exc + network.inh)[::incr]
-        external = nest.GetConnections(network.ext[::incr], combined,
+    def _projection_params_reference(self, network, incr=1):
+        combined = (network.Exc + network.Inh)[::incr]
+        external = nest.GetConnections(network.Ext[::incr], combined,
                                        'excitatory')
-        excitation = nest.GetConnections(network.exc[::incr], combined,
+        excitation = nest.GetConnections(network.Exc[::incr], combined,
                                          'excitatory')
-        inhibition = nest.GetConnections(network.inh[::incr], combined,
+        inhibition = nest.GetConnections(network.Inh[::incr], combined,
                                          'inhibitory')
         params = {}
         for name, conns in (('Excitation', excitation),
                             ('Inhibition', inhibition),
                             ('External', external)):
-            params[name] = nest.GetStatus(conns, ['weight', 'delay'])
+            params[name] = dict(izip(
+                self.conn_param_names, izip(
+                    *nest.GetStatus(conns, self.conn_param_names))))
         return params
 
     def _pop_params_nineml(self, network):

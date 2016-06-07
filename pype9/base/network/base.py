@@ -634,6 +634,7 @@ class ConnectionGroup(object):
             # Synapse dynamics properties didn't have any properties that vary
             # between synapses so wasn't included
             weight = 1.0
+        self._nineml = nineml_model
         delay = get_pyNN_value(nineml_model.delay, self.UnitHandler, rng)
         # FIXME: Ignores send_port, assumes there is only one...
         # NB: Simulator-specific derived classes extend the corresponding
