@@ -633,7 +633,7 @@ class ConnectionGroup(object):
             #        "synapse" even if it is just a simple port exposure
             # Synapse dynamics properties didn't have any properties that vary
             # between synapses so wasn't included
-            weight = 1.0
+            weight = 0.0
         self._nineml = nineml_model
         delay = get_pyNN_value(nineml_model.delay, self.UnitHandler, rng)
         # FIXME: Ignores send_port, assumes there is only one...

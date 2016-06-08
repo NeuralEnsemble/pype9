@@ -84,7 +84,7 @@ class TestBrunel2000(TestCase):
         'Exc Inh Ext espikes ispikes xspikes evolts ivolts N_rec N_neurons CE '
         'CI')
 
-    def test_nest_population_params(self, case='AI', order=10):
+    def test_population_params(self, case='AI', order=10):
         self._reset_nest()
         nml = self._construct_nineml(case, order, 'nest')
         ref = self._construct_reference(case, order)
@@ -141,16 +141,21 @@ class TestBrunel2000(TestCase):
         self._reset_nest()
         nml = self._construct_nineml(case, order, 'nest')
         ref = self._construct_reference(case, order)
-        ref_params_dict = self._projection_params_reference(ref)
+        ref_conns = self._reference_projections(ref)
         for conn_group in nml.connection_groups:
-            nest_conns = conn_group.nest_connections
+            nml_conns = conn_group.nest_connections
             nml_params = dict(izip(
                 self.conn_param_names, izip(
-                    *nest.GetStatus(nest_conns, self.conn_param_names))))
+                    *nest.GetStatus(nml_conns, self.conn_param_names))))
+            # Since the weight is constant it is set as a parameter of the
+            # cell class not a connection parameter
             nml_params['weight'] = nest.GetStatus(
                 list(conn_group.post.all_cells),
                 'weight__pls__{}'.format(conn_group.name))
-            ref_params = ref_params_dict[conn_group.name]
+            ref_params = dict(izip(
+                self.conn_param_names, izip(
+                    *nest.GetStatus(ref_conns[conn_group.name],
+                                    self.conn_param_names))))
             for attr in self.conn_param_names:
                 ref_mean = numpy.mean(ref_params[attr])
                 ref_stdev = numpy.std(ref_params[attr])
@@ -166,6 +171,27 @@ class TestBrunel2000(TestCase):
                     msg=("'{}' mean is not almost equal between "
                          "reference ({}) and nineml ({})  in '{}'"
                          .format(attr, ref_stdev, nml_stdev, conn_group.name)))
+
+    def test_sizes(self, case='AI', order=100):
+        self._reset_nest()
+        nml = self._construct_nineml(case, order, 'nest')
+        ref = self._construct_reference(case, order)
+        # Test sizes of component arrays
+        for name in ('Exc', 'Inh'):
+            nml_size = nml.component_array(name).size
+            ref_size = len(getattr(ref, name))
+            self.assertEqual(
+                nml_size, ref_size,
+                "Size of '{}' component array ({}) does not match reference "
+                "({})".format(name, nml_size, ref_size))
+        ref_conns = self._reference_projections(ref)
+        for conn_group in nml.connection_groups:
+            nml_size = len(conn_group)
+            ref_size = len(ref_conns[conn_group.name])
+            self.assertEqual(
+                nml_size, ref_size,
+                "Number of connections in '{}' ({}) does not match reference "
+                "({})".format(conn_group.name, nml_size, ref_size))
 
     def test_activity(self, case='AI', order=1000):
         ref = self._construct_reference(case, order)
@@ -255,10 +281,18 @@ class TestBrunel2000(TestCase):
 
     @classmethod
     def _construct_nineml(cls, case, order, simulator):
-        model = ninemlcatalog.load('network/Brunel2000/' + case)
+        model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
+            'Brunel_{}'.format(case))
         # rescale populations
         for pop in model.populations:
             pop.size = int(numpy.ceil((pop.size / 1000) * order))
+        for proj in (model.projection('Excitation'),
+                     model.projection('Inhibition')):
+            props = proj.connectivity.rule_properties
+            number = props.property('number')
+            props.set(Property(
+                number.name,
+                int(numpy.ceil((number.value / 1000) * order)) * un.unitless))
         if simulator == 'nest':
             NetworkClass = NestPype9Network
         elif simulator == 'neuron':
@@ -408,22 +442,16 @@ class TestBrunel2000(TestCase):
             ivolts, N_rec, N_neurons, CE, CI)
 
     @classmethod
-    def _projection_params_reference(self, network, incr=1):
-        combined = (network.Exc + network.Inh)[::incr]
-        external = nest.GetConnections(network.Ext[::incr], combined,
-                                       'excitatory')
-        excitation = nest.GetConnections(network.Exc[::incr], combined,
-                                         'excitatory')
-        inhibition = nest.GetConnections(network.Inh[::incr], combined,
-                                         'inhibitory')
-        params = {}
-        for name, conns in (('Excitation', excitation),
-                            ('Inhibition', inhibition),
-                            ('External', external)):
-            params[name] = dict(izip(
-                self.conn_param_names, izip(
-                    *nest.GetStatus(conns, self.conn_param_names))))
-        return params
+    def _reference_projections(self, network):
+        combined = (network.Exc + network.Inh)
+        projs = {}
+        projs['External'] = nest.GetConnections(network.Ext, combined,
+                                                'excitatory')
+        projs['Excitation'] = nest.GetConnections(network.Exc, combined,
+                                                  'excitatory')
+        projs['Inhibition'] = nest.GetConnections(network.Inh,
+                                                  combined, 'inhibitory')
+        return projs
 
     def _pop_params_nineml(self, network):
         raise NotImplementedError
