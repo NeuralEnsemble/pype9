@@ -54,9 +54,9 @@ difficult to implement in NEURON and NEST. Work is planned to make the NEURON
 and NEST pipelines in Pype9 support 9ML fully, however until then the following
 restrictions apply to network models
 
-* synapses must be linear (to be implemented in v0.2)
+* synapses must be linear (to be relaxed in v0.2)
 * synapses can only have one variable that varies over a projection
-  (e.g. weight) (to be implemented in v0.2)
+  (e.g. weight) (to be relaxed in v0.2)
 * no analog connections between populations (i.e. gap junctions)
-  (to be implemented in v0.2)
+  (gap junctions to be implemented in v0.2)
 * only one event send port per cell (current limitation of NEURON/NEST)

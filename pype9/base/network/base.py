@@ -622,7 +622,7 @@ class ConnectionGroup(object):
                 weight = get_pyNN_value(next(synapse.local_properties),
                                         self.UnitHandler, rng)
             elif not synapse.num_local_properties:
-                weight = 1.0
+                weight = 0.0
             else:
                 raise NotImplementedError(
                     "Currently only supports one property that varies with "
