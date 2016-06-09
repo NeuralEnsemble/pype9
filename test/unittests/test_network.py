@@ -49,10 +49,10 @@ nest_bookkeeping = (
 
 class TestBrunel2000(TestCase):
 
-    delay = 1.5 * un.ms
     timestep = 0.1
     min_delay = 0.1
     max_delay = 10.0
+    delay = 1.5 * un.ms
 
     brunel_parameters = {
         "SR": {"g": 3.0, "eta": 2.0},
@@ -72,17 +72,11 @@ class TestBrunel2000(TestCase):
         't_ref': 'refractory_period__cell',
         'V_m': None}  # 'v__cell'}
 
-    simtime = 100.0
-
     pop_names = ('Exc', 'Inh', 'Ext')
+    proj_names = ('Excitation', 'Inhibition', 'External')
     conn_param_names = ['weight', 'delay']
 
     dt = 0.1 * un.ms    # the resolution in ms
-
-    BrunelNetwork = namedtuple(
-        'BrunelNetwork',
-        'Exc Inh Ext espikes ispikes xspikes evolts ivolts N_rec N_neurons CE '
-        'CI')
 
     def test_population_params(self, case='AI', order=10):
         self._reset_nest()
@@ -174,12 +168,13 @@ class TestBrunel2000(TestCase):
 
     def test_sizes(self, case='AI', order=100):
         self._reset_nest()
-        nml = self._construct_nineml(case, order, 'nest')
+        nml_network = self._construct_nineml(case, order, 'nest')
+        nml = dict((p.name, p.all_cells) for p in nml_network.component_arrays)
         ref = self._construct_reference(case, order)
         # Test sizes of component arrays
         for name in ('Exc', 'Inh'):
-            nml_size = nml.component_array(name).size
-            ref_size = len(getattr(ref, name))
+            nml_size = len(nml[name])
+            ref_size = len(ref[name])
             self.assertEqual(
                 nml_size, ref_size,
                 "Size of '{}' component array ({}) does not match reference "
@@ -193,16 +188,57 @@ class TestBrunel2000(TestCase):
                 "Number of connections in '{}' ({}) does not match reference "
                 "({})".format(conn_group.name, nml_size, ref_size))
 
-    def test_activity(self, case='AI', order=1000):
+    def test_activity(self, case='AI', order=1000, simtime=100.0):
+        # Construct 9ML network
+        nml_network = self._construct_nineml(case, order, 'nest')
+        nml = dict((p.name, p.all_cells) for p in nml_network.component_arrays)
+        # Construct reference network
         ref = self._construct_reference(case, order)
+        # Set up spike recorders for reference network
+        pops = {'nineml': nml, 'reference': ref}
+        spikes = {}
+        volts = {}
+        for model_ver in ('nineml', 'reference'):
+            spikes[model_ver] = {}
+            volts[model_ver] = {}
+            for pop_name in self.pop_names:
+                spikes[model_ver][pop_name] = nest.Create("spike_detector")
+                nest.SetStatus(spikes[model_ver][pop_name],
+                               [{"label": "brunel-py-" + pop_name,
+                                 "withtime": True, "withgid": True}])
+                nest.Connect(pops[model_ver][pop_name],
+                             spikes[model_ver][pop_name],
+                             syn_spec="excitatory")
+                # Set up voltage traces recorders for reference network
+                if pop_name != 'Ext':
+                    volts[model_ver][pop_name] = nest.Create(
+                        'multimeter', params={'record_from': ['V_m']})
+                    nest.Connect(volts, pops[model_ver][pop_name])
+        # Simulate the network
+        nest.Simulate(simtime)
+        for model_ver in ('nineml', 'reference'):
+            for pop_name in self.pop_names:
+                events = nest.GetStatus(spikes[model_ver][pop_name],
+                                        "n_events")[0]
+                if pop_name != 'Ext':
+                    vevents, interval = nest.GetStatus(
+                        volts[model_ver][pop_name], ('events', 'interval'))[0]
+                    sorted_vs = sorted(zip(vevents['senders'], vevents['V_m']),
+                                       key=itemgetter(0))
+                    for sender, (_, v) in groupby(sorted_vs,
+                                                  key=itemgetter(0)):
+                        
+                
+
+    def test_activity_neuron(self, case='AI', order=1000, simtime=100.0):
+        # Construct 9ML network
         nml = self._construct_nineml(case, order, 'nest')
+        # Set up recorders for 9ML network
         for pop_name in nml.component_array_names:
             pop = nml.component_array(pop_name)
             pop.record('spikes')
             if pop_name != 'Ext':
-                incr = pop.size // 10
                 pop.record('v__cell')
-        ref_spikes = self._simulate_reference(ref, simtime=self.simtime)
 
     def test_nest(self, build_mode='force', case='small_SR3', plot=False,
                   **kwargs):  # @UnusedVariable @IgnorePep8
@@ -234,10 +270,7 @@ class TestBrunel2000(TestCase):
                         for i, spiketrain in enumerate(spiketrains):
                             times.extend(spiketrain)
                             ids.extend([i] * len(spiketrain))
-                        plt.scatter(times, ids)
-                        plt.xlabel('Times (ms)')
-                        plt.ylabel('Cell Indices')
-                        plt.title("{} - {}".format(name, pop_name))
+                        
                     if pop_name != 'Ext':
                         traces = gen_data[
                             pop_name].segments[0].analogsignalarrays
@@ -274,13 +307,8 @@ class TestBrunel2000(TestCase):
     def _reset_nest(self):
         pyNN.nest.setup(timestep=self.timestep, min_delay=self.min_delay,
                         max_delay=self.max_delay)
-#         nest.ResetKernel()
-#         nest.SetKernelStatus(
-#             {"resolution": float(self.dt.value), "print_time": True,
-#              'local_num_threads': 1})
 
-    @classmethod
-    def _construct_nineml(cls, case, order, simulator):
+    def _construct_nineml(self, case, order, simulator):
         model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
             'Brunel_{}'.format(case))
         # rescale populations
@@ -301,8 +329,7 @@ class TestBrunel2000(TestCase):
             assert False
         return NetworkClass(model)
 
-    @classmethod
-    def _construct_reference(cls, case, order):
+    def _construct_reference(self, case, order):
         """
         The model in this file has been adapted from the brunel-alpha-nest.py
         model that is part of NEST.
@@ -325,8 +352,8 @@ class TestBrunel2000(TestCase):
         """
 
         # Parameters for asynchronous irregular firing
-        g = cls.brunel_parameters[case]["g"]
-        eta = cls.brunel_parameters[case]["eta"]
+        g = self.brunel_parameters[case]["g"]
+        eta = self.brunel_parameters[case]["eta"]
         epsilon = 0.1  # connection probability
 
         NE = 4 * order
@@ -346,7 +373,7 @@ class TestBrunel2000(TestCase):
         J = 0.1  # postsynaptic amplitude in mV
 
         # normalize synaptic current so that amplitude of a PSP is J
-        J_unit = cls._compute_normalised_psr(tauMem, CMem, tauSyn)
+        J_unit = self._compute_normalised_psr(tauMem, CMem, tauSyn)
         J_ex = J / J_unit
         J_in = -g * J_ex
 
@@ -374,51 +401,16 @@ class TestBrunel2000(TestCase):
         nest.SetDefaults("poisson_generator", {"rate": p_rate})
         noise = nest.Create("poisson_generator")
 
-        espikes = nest.Create("spike_detector")
-        ispikes = nest.Create("spike_detector")
-        xspikes = nest.Create("spike_detector")
-
-        evolts = nest.Create('multimeter', params={'record_from': ['V_m']})
-        ivolts = nest.Create('multimeter', params={'record_from': ['V_m']})
-
-        nest.SetStatus(espikes, [{"label": "brunel-py-exc",
-                                  "withtime": True,
-                                  "withgid": True}])
-
-        nest.SetStatus(ispikes, [{"label": "brunel-py-in",
-                                  "withtime": True,
-                                  "withgid": True}])
-
-        nest.SetStatus(xspikes, [{"label": "brunel-py-ext",
-                                  "withtime": True,
-                                  "withgid": True}])
-
-        print("Connecting devices")
-
         nest.CopyModel(
             "static_synapse", "excitatory", {
-                "weight": J_ex, "delay": float(cls.delay.value)})
+                "weight": J_ex, "delay": float(self.delay.value)})
         nest.CopyModel(
             "static_synapse", "inhibitory", {
-                "weight": J_in, "delay": float(cls.delay.value)})
+                "weight": J_in, "delay": float(self.delay.value)})
 
         nest.Connect(noise, nodes_ex, 'all_to_all', "excitatory")
         nest.Connect(noise, nodes_in, 'all_to_all', "excitatory")
 
-        nest.Connect(nodes_ex[:N_rec], espikes, syn_spec="excitatory")
-        nest.Connect(nodes_in[:N_rec], ispikes, syn_spec="excitatory")
-        nest.Connect(noise[:N_rec], xspikes, syn_spec="excitatory")
-
-        nest.Connect(evolts, nodes_ex)
-        nest.Connect(ivolts, nodes_in)
-
-        nest.Connect(
-            range(
-                NE + 1,
-                NE + 1 + N_rec),
-            ispikes,
-            'all_to_all',
-            "excitatory")
         # We now iterate over all neuron IDs, and connect the neuron to the
         # sources from our array. The first loop connects the excitatory
         # neurons and the second loop the inhibitory neurons.
@@ -437,11 +429,8 @@ class TestBrunel2000(TestCase):
             nodes_in,
             conn_params_in,
             "inhibitory")
-        return cls.BrunelNetwork(
-            nodes_ex, nodes_in, noise, espikes, ispikes, xspikes, evolts,
-            ivolts, N_rec, N_neurons, CE, CI)
+        return {'Exc': nodes_ex, 'Inh': nodes_in, 'Ext': noise}
 
-    @classmethod
     def _reference_projections(self, network):
         combined = (network.Exc + network.Inh)
         projs = {}
@@ -455,56 +444,6 @@ class TestBrunel2000(TestCase):
 
     def _pop_params_nineml(self, network):
         raise NotImplementedError
-
-    @classmethod
-    def _simulate_reference(cls, network, simtime=1000.0):
-        print("Simulating")
-        nest.Simulate(simtime)
-        events_espikes = nest.GetStatus(network.espikes, "n_events")[0]
-        events_ispikes = nest.GetStatus(network.ispikes, "n_events")[0]
-        events_evolts = nest.GetStatus(network.evolts, "n_events")[0]
-        events_ivolts = nest.GetStatus(network.ivolts, "n_events")[0]
-#         rate_ex = events_ex / simtime * 1000.0 / network.N_rec
-#         rate_in = events_in / simtime * 1000.0 / network.N_rec
-#         num_synapses = (nest.GetDefaults("excitatory")["num_connections"] +
-#                         nest.GetDefaults("inhibitory")["num_connections"])
-#         print("Brunel network simulation (Python)")
-#         print("Number of neurons : {0}".format(network.N_neurons))
-#         print("Number of synapses: {0}".format(num_synapses))
-#         print("       Exitatory  : {0}".format(
-#             int(network.CE * network.N_neurons) + network.N_neurons))
-#         print("       Inhibitory : {0}".format(
-#             int(network.CI * network.N_neurons)))
-#         print("Excitatory rate   : %.2f Hz" % rate_ex)
-#         print("Inhibitory rate   : %.2f Hz" % rate_in)
-        recordings = {'Exc': Block(), 'Inh': Block(), 'Ext': Block()}
-        for pop_name, spike_name, vname in (('Exc', 'espikes', 'evolts'),
-                                            ('Inh', 'ispikes', 'ivolts'),
-                                            ('Ext', 'xspikes', None)):
-            spike_events = nest.GetStatus(getattr(network, spike_name),
-                                          "events")[0]
-            sorted_spikes = sorted(zip(spike_events['senders'],
-                                       spike_events['times']),
-                                   key=itemgetter(0))
-            grouped_spikes = groupby(sorted_spikes, key=itemgetter(0))
-            seg = Segment()
-            seg.spiketrains.extend(
-                SpikeTrain(zip(*t)[1], units='ms', t_stop=cls.simtime, name=s)
-                for s, t in grouped_spikes)
-            if vname is not None:
-                var_events, interval = nest.GetStatus(
-                    getattr(network, vname), ('events', 'interval'))[0]
-                sorted_vs = sorted(
-                    zip(var_events['senders'], var_events['V_m']),
-                    key=itemgetter(0))
-                group_vs = groupby(sorted_vs, key=itemgetter(0))
-                seg.analogsignals.extend(
-                    AnalogSignal(
-                        zip(*v)[1], sampling_period=interval * pq.ms, name=s,
-                        t_start=0.0 * pq.ms, units='mV', t_stop=cls.simtime)
-                    for s, v in group_vs)
-            recordings[pop_name].segments.append(seg)
-        return recordings
 
     @classmethod
     def _compute_normalised_psr(cls, tauMem, CMem, tauSyn):
