@@ -76,7 +76,17 @@ class TestBrunel2000(TestCase):
     pop_names = ('Exc', 'Inh', 'Ext')
     proj_names = ('Excitation', 'Inhibition', 'External')
     conn_param_names = ['weight', 'delay']
-    v_param = {'nineml': 'v__cell', 'reference': 'V_m'}
+    record_params = {'Exc': {'nineml': ['v__cell',
+                                        'b__psr__Excitation',
+                                        'b__psr__Inhibition',
+                                        'b__psr__External'],
+                             'reference': ['V_m']},
+                     'Inh': {'nineml': ['v__cell',
+                                        'b__psr__Excitation',
+                                        'b__psr__Inhibition',
+                                        'b__psr__External'],
+                             'reference': ['V_m']},
+                     'Ext': {'nineml': [], 'reference': []}}
 
     dt = timestep * un.ms    # the resolution in ms
 
@@ -201,10 +211,10 @@ class TestBrunel2000(TestCase):
         # Set up spike recorders for reference network
         pops = {'nineml': nml, 'reference': ref}
         spikes = {}
-        volts = {}
+        multi = {}
         for model_ver in ('nineml', 'reference'):
             spikes[model_ver] = {}
-            volts[model_ver] = {}
+            multi[model_ver] = {}
             for pop_name in self.pop_names:
                 spikes[model_ver][pop_name] = nest.Create("spike_detector")
                 nest.SetStatus(spikes[model_ver][pop_name],
@@ -214,11 +224,12 @@ class TestBrunel2000(TestCase):
                              spikes[model_ver][pop_name],
                              syn_spec="excitatory")
                 # Set up voltage traces recorders for reference network
-                if pop_name != 'Ext':
-                    volts[model_ver][pop_name] = nest.Create(
+                if self.record_params[pop_name][model_ver]:
+                    multi[model_ver][pop_name] = nest.Create(
                         'multimeter',
-                        params={'record_from': [self.v_param[model_ver]]})
-                    nest.Connect(volts[model_ver][pop_name],
+                        params={'record_from':
+                                self.record_params[pop_name][model_ver]})
+                    nest.Connect(multi[model_ver][pop_name],
                                  pops[model_ver][pop_name])
         # Simulate the network
         nest.Simulate(simtime)
@@ -231,12 +242,12 @@ class TestBrunel2000(TestCase):
                 plt.xlabel('Times (ms)')
                 plt.ylabel('Cell Indices')
                 plt.title("{} - {} Spikes".format(model_ver, pop_name))
-                if pop_name != 'Ext':
+                for param in self.record_params[pop_name][model_ver]:
                     events = nest.GetStatus(
-                        volts[model_ver][pop_name], "events")[0]
+                        multi[model_ver][pop_name], "events")[0]
                     sorted_vs = sorted(zip(events['senders'],
                                            events['times'],
-                                           events[self.v_param[model_ver]]),
+                                           events[param]),
                                        key=itemgetter(0))
                     plt.figure()
                     legend = []
@@ -246,9 +257,8 @@ class TestBrunel2000(TestCase):
                         plt.plot(numpy.array(t) * self.timestep, v)
                         legend.append(sender)
                     plt.xlabel('Time (ms)')
-                    plt.ylabel('Membrane Voltage (mV)')
-                    plt.title("{} - {} Membrane Voltage".format(model_ver,
-                                                                pop_name))
+                    plt.ylabel(param)
+                    plt.title("{} - {} {}".format(model_ver, pop_name, param))
                     plt.legend(legend)
         plt.show()
 
@@ -277,6 +287,9 @@ class TestBrunel2000(TestCase):
                     ids.extend([i] * len(spiketrain))
                 plt.figure()
                 plt.scatter(times, ids)
+                plt.xlabel('Times (ms)')
+                plt.ylabel('Cell Indices')
+                plt.title("{} - {} Spikes".format(simulator, pop.name))
                 if pop.name != 'Ext':
                     traces = segment.analogsignalarrays
                     plt.figure()
@@ -284,6 +297,10 @@ class TestBrunel2000(TestCase):
                     for trace in traces:
                         plt.plot(trace.times, trace)
                         legend.append(trace.name)
+                        plt.xlabel('Time (ms)')
+                        plt.ylabel('Membrane Voltage (mV)')
+                        plt.title("{} - {} Membrane Voltage".format(simulator,
+                                                                    pop.name))
                     plt.legend(legend)
         plt.show()
 

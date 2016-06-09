@@ -446,6 +446,7 @@ class Network(object):
             for proj in sending:
                 # Not required after transition to version 2 syntax
                 synapse, proj_conns = cls._flatten_synapse(proj)
+                # Add send and receive exposures to list
                 exposures.extend(chain(*(
                     pc.expose_ports({'pre': cls.cell_dyn_name})
                     for pc in proj_conns)))
