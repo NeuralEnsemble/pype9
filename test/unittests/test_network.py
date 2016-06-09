@@ -1,13 +1,10 @@
 from __future__ import division
 from math import exp
-from collections import namedtuple, defaultdict
 from itertools import groupby, izip
 from operator import itemgetter
 import numpy
 import pyNN.neuron
 import pyNN.nest
-from neo import Block, Segment, SpikeTrain, AnalogSignal
-import quantities as pq
 import nest
 from nineml.user import (
     Projection, Network, DynamicsProperties,
@@ -28,6 +25,10 @@ from pype9.base.cells import (
 from pype9.base.network import Network as BasePype9Network
 from pype9.neuron.network import Network as NeuronPype9Network
 from pype9.nest.network import Network as NestPype9Network
+from pype9.neuron.cells import (
+    simulation_controller as simulation_contoller_neuron)
+from pype9.nest.cells import (
+    simulation_controller as simulation_controller_nest)
 import ninemlcatalog
 try:
     from matplotlib import pyplot as plt
@@ -75,12 +76,12 @@ class TestBrunel2000(TestCase):
     pop_names = ('Exc', 'Inh', 'Ext')
     proj_names = ('Excitation', 'Inhibition', 'External')
     conn_param_names = ['weight', 'delay']
-    v_param = {'nineml': 'v', 'reference': 'V_m'}
+    v_param = {'nineml': 'v__cell', 'reference': 'V_m'}
 
-    dt = 0.1 * un.ms    # the resolution in ms
+    dt = timestep * un.ms    # the resolution in ms
 
     def test_population_params(self, case='AI', order=10):
-        self._reset_nest()
+        self._setup('nest')
         nml = self._construct_nineml(case, order, 'nest')
         ref = self._construct_reference(case, order)
         for pop_name in ('Exc', 'Inh'):
@@ -133,7 +134,7 @@ class TestBrunel2000(TestCase):
                                          pop_name)))
 
     def test_connection_params(self, case='AI', order=10):
-        self._reset_nest()
+        self._setup('nest')
         nml = self._construct_nineml(case, order, 'nest')
         ref = self._construct_reference(case, order)
         ref_conns = self._reference_projections(ref)
@@ -168,7 +169,7 @@ class TestBrunel2000(TestCase):
                          .format(attr, ref_stdev, nml_stdev, conn_group.name)))
 
     def test_sizes(self, case='AI', order=100):
-        self._reset_nest()
+        self._setup('nest')
         nml_network = self._construct_nineml(case, order, 'nest')
         nml = dict((p.name, p.all_cells) for p in nml_network.component_arrays)
         ref = self._construct_reference(case, order)
@@ -189,9 +190,9 @@ class TestBrunel2000(TestCase):
                 "Number of connections in '{}' ({}) does not match reference "
                 "({})".format(conn_group.name, nml_size, ref_size))
 
-    def test_activity(self, case='AI', order=10, simtime=10.0):  # order=1000, simtime=100.0):
+    def test_activity(self, case='AI', order=10, simtime=100.0):
         # Construct 9ML network
-        self._reset_nest()
+        self._setup('nest')
         nml_network = self._construct_nineml(case, order, 'nest')
         nml = dict((p.name, list(p.all_cells))
                    for p in nml_network.component_arrays)
@@ -216,104 +217,75 @@ class TestBrunel2000(TestCase):
                 if pop_name != 'Ext':
                     volts[model_ver][pop_name] = nest.Create(
                         'multimeter',
-                        params={'record_from': self.v_param[model_ver]})
+                        params={'record_from': [self.v_param[model_ver]]})
                     nest.Connect(volts[model_ver][pop_name],
                                  pops[model_ver][pop_name])
         # Simulate the network
         nest.Simulate(simtime)
-        for model_ver in ('nineml', 'reference'):
+        for model_ver in ('reference', 'nineml'):
             for pop_name in self.pop_names:
                 events = nest.GetStatus(spikes[model_ver][pop_name],
-                                        "n_events")[0]
+                                        "events")[0]
                 plt.figure()
-                plt.scatter(*events)
+                plt.scatter(events['times'], events['senders'])
                 plt.xlabel('Times (ms)')
                 plt.ylabel('Cell Indices')
                 plt.title("{} - {} Spikes".format(model_ver, pop_name))
                 if pop_name != 'Ext':
-                    vevents, interval = nest.GetStatus(
-                        volts[model_ver][pop_name], ('events', 'interval'))[0]
-                    times = numpy.arange(0, len(vevents) * interval, interval)
-                    sorted_vs = sorted(zip(vevents['senders'], vevents['V_m']),
+                    events = nest.GetStatus(
+                        volts[model_ver][pop_name], "events")[0]
+                    sorted_vs = sorted(zip(events['senders'],
+                                           events['times'],
+                                           events[self.v_param[model_ver]]),
                                        key=itemgetter(0))
                     plt.figure()
                     legend = []
-                    for sender, (_, v) in groupby(sorted_vs,
-                                                  key=itemgetter(0)):
-                        plt.plot(times, v)
+                    for sender, group in groupby(sorted_vs,
+                                                 key=itemgetter(0)):
+                        _, t, v = zip(*group)
+                        plt.plot(numpy.array(t) * self.timestep, v)
                         legend.append(sender)
-                    plt.scatter(*events)
                     plt.xlabel('Time (ms)')
                     plt.ylabel('Membrane Voltage (mV)')
                     plt.title("{} - {} Membrane Voltage".format(model_ver,
                                                                 pop_name))
                     plt.legend(legend)
+        plt.show()
 
     def test_activity_neuron(self, case='AI', order=1000, simtime=100.0):
-        # Construct 9ML network
-        nml = self._construct_nineml(case, order, 'nest')
+        data = {}
+        controllers = {'nest': simulation_controller_nest,
+                       'neuron': simulation_contoller_neuron}
         # Set up recorders for 9ML network
-        for pop_name in nml.component_array_names:
-            pop = nml.component_array(pop_name)
-            pop.record('spikes')
-            if pop_name != 'Ext':
-                pop.record('v__cell')
-
-    def test_nest(self, build_mode='force', case='small_SR3', plot=False,
-                  **kwargs):  # @UnusedVariable @IgnorePep8
-        network_nineml = Network.from_document(network9ML)
-        network = NestPype9Network(network_nineml, min_delay=0.1,
-                                   max_delay=2.0, build_mode=build_mode)
-        params = {}
-        means = {}
-        std_devs = {}
-
-        for proj_name in network.connection_group_names:
-            proj = network.connection_group(proj_name)
-            weight, delay = proj.get(["weight", "delay"], format="array")
-            params[proj_name] = {'weight': weight, 'delay': delay}
-        if self.simulate:
-            pyNN.nest.run(self.simtime)
-            gen_data = {}
-            for pop_name in self.pop_names:
-                gen_data[pop_name] = network.component_array(
-                    pop_name).get_data()
-                if plot:
-                    for name, block in (
-                        ('Generated', gen_data[pop_name]),
-                            ('Reference', self.ref_spikes[pop_name])):
-                        plt.figure()
-                        spiketrains = block.segments[0].spiketrains
-                        times = []
-                        ids = []
-                        for i, spiketrain in enumerate(spiketrains):
-                            times.extend(spiketrain)
-                            ids.extend([i] * len(spiketrain))
-                        
-                    if pop_name != 'Ext':
-                        traces = gen_data[
-                            pop_name].segments[0].analogsignalarrays
-                        plt.figure()
-                        legend = []
-                        for trace in traces:
-                            plt.plot(trace.times, trace)
-                            legend.append(trace.name)
-                        plt.legend(legend)
-        if plot:
-            plt.show()
-            print "done"
-
-    def test_neuron(self):
-        pyNN.neuron.setup(timestep=self.timestep, min_delay=self.min_delay,
-                          max_delay=self.max_delay)
-
-#                 self.assertEqual(network.component_array('Exc').size,
-#                                  nest.GetStatus(ref_network.exc, 'size'))
-#             print("Number of neurons : {0}".format(N_neurons))
-#             print("Number of synapses: {0}".format(num_synapses))
-#             print("       Exitatory  : {0}".format(
-#                 int(CE * N_neurons) + N_neurons))
-#             print("       Inhibitory : {0}".format(int(CI * N_neurons)))
+        for simulator in ('nest', 'neuron'):
+            data[simulator] = {}
+            self._setup(simulator)
+            network = self._construct_nineml(case, order, 'nest')
+            for pop in network.component_arrays:
+                pop.record('spikes')
+                if pop.name != 'Ext':
+                    pop.record('v__cell')
+            controllers[simulator].simulate(simtime)
+            for pop in network.component_arrays:
+                block = data[simulator][pop.name] = pop.get_data()
+                segment = block.segments[0]
+                spiketrains = segment.spiketrains
+                times = []
+                ids = []
+                for i, spiketrain in enumerate(spiketrains):
+                    times.extend(spiketrain)
+                    ids.extend([i] * len(spiketrain))
+                plt.figure()
+                plt.scatter(times, ids)
+                if pop.name != 'Ext':
+                    traces = segment.analogsignalarrays
+                    plt.figure()
+                    legend = []
+                    for trace in traces:
+                        plt.plot(trace.times, trace)
+                        legend.append(trace.name)
+                    plt.legend(legend)
+        plt.show()
 
     def test_flatten(self, **kwargs):  # @UnusedVariable
         brunel_network = ninemlcatalog.load('network/Brunel2000/AI/')
@@ -323,9 +295,15 @@ class TestBrunel2000(TestCase):
         self.assertEqual(len(component_arrays), 3)
         self.assertEqual(len(connection_groups), 3)
 
-    def _reset_nest(self):
-        pyNN.nest.setup(timestep=self.timestep, min_delay=self.min_delay,
-                        max_delay=self.max_delay)
+    def _setup(self, simulator):
+        if simulator == 'nest':
+            pyNN.nest.setup(timestep=self.timestep, min_delay=self.min_delay,
+                            max_delay=self.max_delay)
+        elif simulator == 'neuron':
+            pyNN.neuron.setup(timestep=self.timestep, min_delay=self.min_delay,
+                              ax_delay=self.max_delay)
+        else:
+            assert False
 
     def _construct_nineml(self, case, order, simulator):
         model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
@@ -377,12 +355,9 @@ class TestBrunel2000(TestCase):
 
         NE = 4 * order
         NI = 1 * order
-        N_neurons = NE + NI
-        N_rec = order
 
         CE = int(epsilon * NE)  # number of excitatory synapses per neuron
         CI = int(epsilon * NI)  # number of inhibitory synapses per neuron
-        C_tot = int(CI + CE)  # total number of synapses per neuron
 
         # Initialize the parameters of the integrate and fire neuron
         tauSyn = 0.5
