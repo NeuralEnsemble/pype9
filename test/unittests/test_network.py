@@ -75,6 +75,7 @@ class TestBrunel2000(TestCase):
     pop_names = ('Exc', 'Inh', 'Ext')
     proj_names = ('Excitation', 'Inhibition', 'External')
     conn_param_names = ['weight', 'delay']
+    v_param = {'nineml': 'v', 'reference': 'V_m'}
 
     dt = 0.1 * un.ms    # the resolution in ms
 
@@ -188,10 +189,12 @@ class TestBrunel2000(TestCase):
                 "Number of connections in '{}' ({}) does not match reference "
                 "({})".format(conn_group.name, nml_size, ref_size))
 
-    def test_activity(self, case='AI', order=1000, simtime=100.0):
+    def test_activity(self, case='AI', order=10, simtime=10.0):  # order=1000, simtime=100.0):
         # Construct 9ML network
+        self._reset_nest()
         nml_network = self._construct_nineml(case, order, 'nest')
-        nml = dict((p.name, p.all_cells) for p in nml_network.component_arrays)
+        nml = dict((p.name, list(p.all_cells))
+                   for p in nml_network.component_arrays)
         # Construct reference network
         ref = self._construct_reference(case, order)
         # Set up spike recorders for reference network
@@ -212,23 +215,39 @@ class TestBrunel2000(TestCase):
                 # Set up voltage traces recorders for reference network
                 if pop_name != 'Ext':
                     volts[model_ver][pop_name] = nest.Create(
-                        'multimeter', params={'record_from': ['V_m']})
-                    nest.Connect(volts, pops[model_ver][pop_name])
+                        'multimeter',
+                        params={'record_from': self.v_param[model_ver]})
+                    nest.Connect(volts[model_ver][pop_name],
+                                 pops[model_ver][pop_name])
         # Simulate the network
         nest.Simulate(simtime)
         for model_ver in ('nineml', 'reference'):
             for pop_name in self.pop_names:
                 events = nest.GetStatus(spikes[model_ver][pop_name],
                                         "n_events")[0]
+                plt.figure()
+                plt.scatter(*events)
+                plt.xlabel('Times (ms)')
+                plt.ylabel('Cell Indices')
+                plt.title("{} - {} Spikes".format(model_ver, pop_name))
                 if pop_name != 'Ext':
                     vevents, interval = nest.GetStatus(
                         volts[model_ver][pop_name], ('events', 'interval'))[0]
+                    times = numpy.arange(0, len(vevents) * interval, interval)
                     sorted_vs = sorted(zip(vevents['senders'], vevents['V_m']),
                                        key=itemgetter(0))
+                    plt.figure()
+                    legend = []
                     for sender, (_, v) in groupby(sorted_vs,
                                                   key=itemgetter(0)):
-                        
-                
+                        plt.plot(times, v)
+                        legend.append(sender)
+                    plt.scatter(*events)
+                    plt.xlabel('Time (ms)')
+                    plt.ylabel('Membrane Voltage (mV)')
+                    plt.title("{} - {} Membrane Voltage".format(model_ver,
+                                                                pop_name))
+                    plt.legend(legend)
 
     def test_activity_neuron(self, case='AI', order=1000, simtime=100.0):
         # Construct 9ML network
