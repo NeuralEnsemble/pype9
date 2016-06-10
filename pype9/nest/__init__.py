@@ -4,3 +4,4 @@
 # from .pynn_interface.synapses.nest import StaticSynapse  # @UnusedImport
 from .cells import Cell, CellMetaClass, simulation_controller
 from .network import Network
+from .units import UnitHandler

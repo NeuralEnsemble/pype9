@@ -1,5 +1,6 @@
 from .cells import Cell, CellMetaClass, simulation_controller  # @UnusedImport
 from .network import Network
+from .units import UnitHandler
 # from .pynn_interface.network import Network  # @UnusedImport
 # from .pynn_interface.population import Population  # @UnusedImport
 # from .pynn_interface.projection import Projection  # @UnusedImport
