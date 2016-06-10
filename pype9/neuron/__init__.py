@@ -1,4 +1,4 @@
-from .cells import Cell, CellMetaClass  # @UnusedImport
+from .cells import Cell, CellMetaClass, simulation_controller  # @UnusedImport
 from .network import Network
 # from .pynn_interface.network import Network  # @UnusedImport
 # from .pynn_interface.population import Population  # @UnusedImport

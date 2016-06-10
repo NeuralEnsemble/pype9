@@ -50,7 +50,7 @@ nest_bookkeeping = (
 
 class TestBrunel2000(TestCase):
 
-    timestep = 0.1
+    timestep = 0.001
     min_delay = 0.1
     max_delay = 10.0
     delay = 1.5 * un.ms
@@ -62,6 +62,7 @@ class TestBrunel2000(TestCase):
         "small_SR3": {"g": 0.0, "eta": 2.0},
         "SIfast": {"g": 6.0, "eta": 4.0},
         "AI": {"g": 5.0, "eta": 2.0},
+        "AI_nest": {"g": 5.0, "eta": 2.0},
         "SIslow": {"g": 4.5, "eta": 0.9},
         "SIslow": {"g": 4.5, "eta": 0.95}}
 
@@ -90,7 +91,7 @@ class TestBrunel2000(TestCase):
 
     dt = timestep * un.ms    # the resolution in ms
 
-    def test_population_params(self, case='AI', order=10):
+    def test_population_params(self, case='AI', order=10, **kwargs):
         self._setup('nest')
         nml = self._construct_nineml(case, order, 'nest')
         ref = self._construct_reference(case, order)
@@ -143,7 +144,7 @@ class TestBrunel2000(TestCase):
                                          reference_stat, nineml_stat,
                                          pop_name)))
 
-    def test_connection_params(self, case='AI', order=10):
+    def test_connection_params(self, case='AI', order=10, **kwargs):
         self._setup('nest')
         nml = self._construct_nineml(case, order, 'nest')
         ref = self._construct_reference(case, order)
@@ -178,7 +179,7 @@ class TestBrunel2000(TestCase):
                          "reference ({}) and nineml ({})  in '{}'"
                          .format(attr, ref_stdev, nml_stdev, conn_group.name)))
 
-    def test_sizes(self, case='AI', order=100):
+    def test_sizes(self, case='AI', order=100, **kwargs):
         self._setup('nest')
         nml_network = self._construct_nineml(case, order, 'nest')
         nml = dict((p.name, p.all_cells) for p in nml_network.component_arrays)
@@ -200,7 +201,8 @@ class TestBrunel2000(TestCase):
                 "Number of connections in '{}' ({}) does not match reference "
                 "({})".format(conn_group.name, nml_size, ref_size))
 
-    def test_activity(self, case='AI', order=10, simtime=100.0):
+    def test_activity(self, case='AI_nest', order=10, simtime=100.0,
+                      to_record=None, **kwargs):
         # Construct 9ML network
         self._setup('nest')
         nml_network = self._construct_nineml(case, order, 'nest')
@@ -262,20 +264,21 @@ class TestBrunel2000(TestCase):
                     plt.legend(legend)
         plt.show()
 
-    def test_activity_neuron(self, case='AI', order=1000, simtime=100.0):
+    def test_activity_neuron(self, case='AI', order=10, simtime=100.0,
+                             simulators=['nest'], **kwargs):  # simulators=['nest', 'neuron']):
         data = {}
         controllers = {'nest': simulation_controller_nest,
                        'neuron': simulation_contoller_neuron}
         # Set up recorders for 9ML network
-        for simulator in ('nest', 'neuron'):
+        for simulator in simulators:
             data[simulator] = {}
             self._setup(simulator)
-            network = self._construct_nineml(case, order, 'nest')
+            network = self._construct_nineml(case, order, simulator)
             for pop in network.component_arrays:
                 pop.record('spikes')
                 if pop.name != 'Ext':
                     pop.record('v__cell')
-            controllers[simulator].simulate(simtime)
+            controllers[simulator].run(simtime)
             for pop in network.component_arrays:
                 block = data[simulator][pop.name] = pop.get_data()
                 segment = block.segments[0]
@@ -388,11 +391,15 @@ class TestBrunel2000(TestCase):
         J_ex = J / J_unit
         J_in = -g * J_ex
 
+        print "Excitatory weight: {}".format(J_ex)
+        print "Inhibitory weight: {}".format(J_in)
+
         # threshold rate, equivalent rate of events needed to
         # have mean input current equal to threshold
         nu_th = (theta * CMem) / (J_ex * CE * exp(1) * tauMem * tauSyn)
         nu_ex = eta * nu_th
-        p_rate = 1000.0 * nu_ex * CE
+#         p_rate = 1000.0 * nu_ex * CE
+        p_rate = 10.0
 
         neuron_params = {"C_m": CMem,
                          "tau_m": tauMem,
@@ -963,6 +970,7 @@ if __name__ == '__main__':
                         help="The build mode with which to construct the "
                         "network")
     parser.add_argument('--option', nargs=2, type=str, action='append',
+                        default=[],
                         help="Extra options that are passed to the test")
     args = parser.parse_args()
     options = dict(args.option)

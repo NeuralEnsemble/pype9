@@ -56,8 +56,14 @@ class Cell(base.Cell):
         try:
             port = self.component_class.send_port(port_name)
         except NineMLNameError:
-            # For convenient access to state variables
-            port = self.component_class.state_variable(port_name)
+            try:
+                # For convenient access to state variables
+                port = self.component_class.state_variable(port_name)
+            except NameError:
+                raise NineMLNameError(
+                    "No matching state variable or event send port matching "
+                    "port name '{}' in component class '{}'".format(
+                        port_name, self.component_class.name))
         if port.nineml_type == 'EventSendPort':
             # FIXME: This assumes that all event send port are spikes, which
             #        I think is currently a limitation of NEST

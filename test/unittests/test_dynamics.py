@@ -255,7 +255,7 @@ class TestDynamics(TestCase):
                 for p, suffix in chain(
                     zip(liaf_properties.properties, repeat('cell')),
                     zip(alpha_properties.properties, repeat('psr__syn')),
-                    [(Property('weight', 10 * un.nA), 'pls__syn')])))
+                    [(Property('weight', 2.4 * un.nA), 'pls__syn')])))
         properties_with_syn = DynamicsWithSynapsesProperties(
             properties,  # @IgnorePep8
             connection_property_sets=[
