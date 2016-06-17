@@ -91,7 +91,7 @@ class TestBrunel2000(TestCase):
 
     dt = timestep * un.ms    # the resolution in ms
 
-    def test_population_params(self, case='AI', order=10, **kwargs):
+    def test_population_params(self, case='AI', order=10, **kwargs):  # @UnusedVariable @IgnorePep8
         self._setup('nest')
         nml = self._construct_nineml(case, order, 'nest')
         ref = self._construct_reference(case, order)
@@ -144,7 +144,7 @@ class TestBrunel2000(TestCase):
                                          reference_stat, nineml_stat,
                                          pop_name)))
 
-    def test_connection_params(self, case='AI', order=10, **kwargs):
+    def test_connection_params(self, case='AI', order=10, **kwargs):  # @UnusedVariable @IgnorePep8
         self._setup('nest')
         nml = self._construct_nineml(case, order, 'nest')
         ref = self._construct_reference(case, order)
@@ -179,7 +179,7 @@ class TestBrunel2000(TestCase):
                          "reference ({}) and nineml ({})  in '{}'"
                          .format(attr, ref_stdev, nml_stdev, conn_group.name)))
 
-    def test_sizes(self, case='AI', order=100, **kwargs):
+    def test_sizes(self, case='AI', order=100, **kwargs):  # @UnusedVariable @IgnorePep8
         self._setup('nest')
         nml_network = self._construct_nineml(case, order, 'nest')
         nml = dict((p.name, p.all_cells) for p in nml_network.component_arrays)
@@ -201,11 +201,10 @@ class TestBrunel2000(TestCase):
                 "Number of connections in '{}' ({}) does not match reference "
                 "({})".format(conn_group.name, nml_size, ref_size))
 
-    def test_activity(self, case='AI_nest', order=10, simtime=100.0,
-                      to_record=None, **kwargs):
+    def test_activity(self, case='AI', order=10, simtime=100.0, **kwargs):
         # Construct 9ML network
         self._setup('nest')
-        nml_network = self._construct_nineml(case, order, 'nest')
+        nml_network = self._construct_nineml(case, order, 'nest', **kwargs)
         nml = dict((p.name, list(p.all_cells))
                    for p in nml_network.component_arrays)
         # Construct reference network
@@ -265,7 +264,7 @@ class TestBrunel2000(TestCase):
         plt.show()
 
     def test_activity_neuron(self, case='AI', order=10, simtime=100.0,
-                             simulators=['nest'], **kwargs):  # simulators=['nest', 'neuron']):
+                             simulators=['nest'], **kwargs):  # simulators=['nest', 'neuron']): @IgnorePep8
         data = {}
         controllers = {'nest': simulation_controller_nest,
                        'neuron': simulation_contoller_neuron}
@@ -325,7 +324,7 @@ class TestBrunel2000(TestCase):
         else:
             assert False
 
-    def _construct_nineml(self, case, order, simulator):
+    def _construct_nineml(self, case, order, simulator, **kwargs):
         model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
             'Brunel_{}'.format(case))
         # rescale populations
@@ -344,7 +343,7 @@ class TestBrunel2000(TestCase):
             NetworkClass = NeuronPype9Network
         else:
             assert False
-        return NetworkClass(model)
+        return NetworkClass(model, **kwargs)
 
     def _construct_reference(self, case, order):
         """
@@ -380,7 +379,7 @@ class TestBrunel2000(TestCase):
         CI = int(epsilon * NI)  # number of inhibitory synapses per neuron
 
         # Initialize the parameters of the integrate and fire neuron
-        tauSyn = 0.5
+        tauSyn = 0.1
         tauMem = 20.0
         CMem = 250.0
         theta = 20.0
@@ -391,15 +390,13 @@ class TestBrunel2000(TestCase):
         J_ex = J / J_unit
         J_in = -g * J_ex
 
-        print "Excitatory weight: {}".format(J_ex)
-        print "Inhibitory weight: {}".format(J_in)
 
         # threshold rate, equivalent rate of events needed to
         # have mean input current equal to threshold
         nu_th = (theta * CMem) / (J_ex * CE * exp(1) * tauMem * tauSyn)
         nu_ex = eta * nu_th
-#         p_rate = 1000.0 * nu_ex * CE
-        p_rate = 10.0
+        p_rate = 1000.0 * nu_ex * CE
+#         p_rate = 10.0
 
         neuron_params = {"C_m": CMem,
                          "tau_m": tauMem,

@@ -255,7 +255,7 @@ class TestDynamics(TestCase):
                 for p, suffix in chain(
                     zip(liaf_properties.properties, repeat('cell')),
                     zip(alpha_properties.properties, repeat('psr__syn')),
-                    [(Property('weight', 2.4 * un.nA), 'pls__syn')])))
+                    [(Property('weight', 10 * un.nA), 'pls__syn')])))
         properties_with_syn = DynamicsWithSynapsesProperties(
             properties,  # @IgnorePep8
             connection_property_sets=[
@@ -280,7 +280,7 @@ class TestDynamics(TestCase):
             nest_ref='iaf_psc_alpha',
             input_train=input_freq('input_spike', 450 * pq.Hz, duration,
                                    weight=[Property('weight__pls__syn',
-                                                    10 * pq.nA)],
+                                                    10 * un.nA)],  # 20.680155243 * un.pA
                                    offset=duration / 2.0),
             nest_translations=nest_tranlsations,
             neuron_translations=neuron_tranlsations,

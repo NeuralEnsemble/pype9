@@ -58,7 +58,7 @@ class Network(object):
         self._set_simulation_params(timestep=timestep, min_delay=min_delay,
                                     max_delay=max_delay, **kwargs)
         self._rng = rng if rng else NumpyRNG()
-        if build_mode not in ('build_only', 'compile_only'):
+        if build_mode != 'build_only':
             # Convert
             self.nineml.resample_connectivity(
                 connectivity_class=self.ConnectivityClass)
@@ -91,7 +91,7 @@ class Network(object):
             self._selections[selection.name] = self.SelectionClass(
                 selection, *[self.component_array(p.name)
                              for p in selection.populations])
-        if build_mode not in ('build_only', 'compile_only'):
+        if build_mode != 'build_only':
             # Set the connectivity objects of the projections to the
             # PyNNConnectivity class
             if self.nineml.connectivity_has_been_sampled():
@@ -524,7 +524,7 @@ class ComponentArray(object):
             default_properties=dynamics_properties,
             initial_state=list(dynamics_properties.initial_values),
             build_mode=build_mode, **kwargs)
-        if build_mode not in ('build_only', 'compile_only'):
+        if build_mode != 'build_only':
             cellparams = dict(
                 (p.name, get_pyNN_value(p, self.UnitHandler, rng))
                 for p in dynamics_properties.properties)

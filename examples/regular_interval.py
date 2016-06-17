@@ -37,8 +37,8 @@ w_syn_model = WithSynapses.wrap(multi_model,
 Input = CellMetaClass(input_model)
 Cell = CellMetaClass(w_syn_model, build_dir=build_dir, build_mode='force')
 # Create instances
-rate = 100.0 * un.Hz
-weight = 50 * un.pA  # 20.6801552437 * un.pA
+rate = 20.0 * un.Hz
+weight = 56.2184675063 * un.pA  # 20.6801552437 * un.pA
 input = Input(rate=rate)  # @ReservedAssignment
 cell_params = {
     'tau__cell': 20.0 * un.ms, 'e_leak__cell': 0.0 * un.mV,
@@ -68,6 +68,8 @@ simulation_controller.run(100.0)
 # Get recordings
 spikes = input.recording('spike_output')
 v = cell.recording('v__cell')
+max_v = float(numpy.max(v))
+print "required weight: {}".format((0.1 / max_v) * weight)
 # Plot recordings
 plt.plot(v.times, v)
 plt.figure()
