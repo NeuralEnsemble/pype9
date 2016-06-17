@@ -37,7 +37,7 @@ class BaseCodeGenerator(object):
     __metaclass__ = ABCMeta
 
     BUILD_MODE_OPTIONS = ['lazy', 'force', 'require', 'build_only',
-                          'generate_only', 'compile_only']
+                          'generate_only', 'recompile']
     BUILD_DIR_DEFAULT = '9build'
     _PARAMS_DIR = 'params'
     _SRC_DIR = 'src'
@@ -95,7 +95,7 @@ class BaseCodeGenerator(object):
                             require - require built binaries are present
                             build_only - build and then quit
                             generate_only - generate src and then quit
-                            compile_only - don't generate src but compile
+                            recompile - don't generate src but compile
         `verbose` [bool]: Whether the build output is shown or not
         `kwargs` [dict]: A dictionary of (potentially simulator-
                                 specific) template arguments
@@ -131,11 +131,11 @@ class BaseCodeGenerator(object):
             generate_source = compile_source = True
         elif build_mode == 'require':  # Just check that prebuild is present
             generate_source = compile_source = False
-        elif build_mode == 'compile_only':  # Don't regenerate, just compile
+        elif build_mode == 'recompile':  # Don't regenerate, just compile
             if not os.path.exists(src_dir):
                 raise Pype9BuildError(
                     "Source directory '{src}' is not present, which is "
-                    "required for 'compile_only' build " "option"
+                    "required for 'recompile' build " "option"
                     .format(src=src_dir))
             generate_source = False
             compile_source = True

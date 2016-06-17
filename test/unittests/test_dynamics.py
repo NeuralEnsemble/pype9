@@ -439,7 +439,7 @@ if __name__ == '__main__':
     parser.add_argument('--build_mode', type=str, default='force',
                         help=("the build mode used to run the test (typically "
                               "'force' is used to regenerate the code but "
-                              "'compile_only' can be useful in debugging)"))
+                              "'recompile' can be useful in debugging)"))
     args = parser.parse_args()
     kwargs = {}
     if args.duration:
