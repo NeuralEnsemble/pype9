@@ -145,6 +145,7 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
     const {{component_name}}::State_& S_ = node_.S_;
     const {{component_name}}::Buffers_& B_ = node_.B_;
     
+    // State Variables from y_ vector
         {% for td in regime.time_derivatives %}
     double {{td.dependent_variable}} = ITEM(y_, {{component_name}}::{{regime.name}}Regime_::{{td.dependent_variable}}_INDEX);
         {% endfor %}
@@ -669,30 +670,51 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 
 void {{component_name}}::handle(nest::SpikeEvent & e) {
     assert(e.get_delay() > 0);   
-    // Loop through event receive ports   
+    
+    //std::cout << "spike time: " << network()->get_slice_origin().get_ms() + e.get_rel_delivery_steps(network()->get_slice_origin()) * nest::Time::get_resolution().get_ms() << std::endl;
+
+    // Get buffer for event receive port
+    nest::ListRingBuffer* event_buffer;
 {% for port in component_class.event_receive_ports %}
-    {{elseif(loop.first)}} (e.get_rport() == {{port.name}}_EVENT_PORT) {
-        for (unsigned int i = 0; i < e.get_multiplicity(); ++i) {
-            B_.{{port.name}}_event_port.append_value(
-                e.get_rel_delivery_steps(network()->get_slice_origin()),
-                e.get_weight());
-        }
-    {{endif(loop.last)}}
+    {{elseif(loop.first)}} (e.get_rport() == {{port.name}}_EVENT_PORT)
+        event_buffer = &B_.{{port.name}}_event_port;
+    {% if loop.last %}
+    else
+    {% endif %}
 {% endfor %}
+        assert(false);  // Unrecognised port 
+    
+    const unsigned int multiplicity = e.get_multiplicity();
+    const unsigned int lag = e.get_rel_delivery_steps(network()->get_slice_origin()); 
+    const double_t weight = e.get_weight();
+
+    // Append received events to buffer
+    for (unsigned int i = 0; i < multiplicity; ++i)
+        event_buffer->append_value(lag, weight);
+
 }
 
 void {{component_name}}::handle(nest::CurrentEvent& e) {
     assert(e.get_delay() > 0);
 
-    const double_t c = e.get_current();
-    const double_t w = e.get_weight();    
-    // Loop through analog receive ports
+    //Get buffer for current receive port
+    nest::RingBuffer* current_buffer;
 {% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
-    {{elseif(loop.first)}} (e.get_rport() == {{port.name}}_ANALOG_PORT) {
-        B_.{{port.name}}_analog_port.add_value(
-            e.get_rel_delivery_steps(network()->get_slice_origin()), w * c);
-    {{endif(loop.last)}}
+    {{elseif(loop.first)}} (e.get_rport() == {{port.name}}_ANALOG_PORT)
+        current_buffer = &B_.{{port.name}}_analog_port;
+    {% if loop.last %}
+    else
+    {% endif %}        
 {% endfor %}
+        assert(false);  // Unrecognised port
+
+    const double_t c = e.get_current();
+    const double_t w = e.get_weight();
+    const unsigned int lag = e.get_rel_delivery_steps(network()->get_slice_origin());
+
+    // Append current value for lag
+    current_buffer->add_value(lag, w * c);
+
 }
 
 void {{component_name}}::handle(nest::DataLoggingRequest& e) {
