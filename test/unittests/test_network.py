@@ -201,7 +201,7 @@ class TestBrunel2000(TestCase):
                 "Number of connections in '{}' ({}) does not match reference "
                 "({})".format(conn_group.name, nml_size, ref_size))
 
-    def test_activity(self, case='AI', order=10, simtime=100.0, **kwargs):
+    def test_activity(self, case='AI_nest', order=10, simtime=100.0, **kwargs):
         # Construct 9ML network
         self._setup('nest')
         nml_network = self._construct_nineml(case, order, 'nest', **kwargs)
@@ -244,8 +244,8 @@ class TestBrunel2000(TestCase):
                 plt.ylabel('Cell Indices')
                 plt.title("{} - {} Spikes".format(model_ver, pop_name))
                 for param in self.record_params[pop_name][model_ver]:
-                    events = nest.GetStatus(
-                        multi[model_ver][pop_name], "events")[0]
+                    events, interval = nest.GetStatus(
+                        multi[model_ver][pop_name], ["events", 'interval'])[0]
                     sorted_vs = sorted(zip(events['senders'],
                                            events['times'],
                                            events[param]),
@@ -255,7 +255,7 @@ class TestBrunel2000(TestCase):
                     for sender, group in groupby(sorted_vs,
                                                  key=itemgetter(0)):
                         _, t, v = zip(*group)
-                        plt.plot(numpy.array(t) * self.timestep, v)
+                        plt.plot(numpy.array(t) * interval, v)
                         legend.append(sender)
                     plt.xlabel('Time (ms)')
                     plt.ylabel(param)

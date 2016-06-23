@@ -240,10 +240,10 @@ class TestDynamics(TestCase):
         nest_tranlsations = {'tau__psr__syn': ('tau_syn_ex', 1),
                              'a__psr__syn': (None, 1),
                              'b__psr__syn': (None, 1),
-                             'input_spike': ('input_spike', 367.55)}
+                             'input_spike': ('input_spike', 1000.0)}
         neuron_tranlsations = {'tau__psr__syn': ('psr.tau', 1),
                                'q__psr__syn': ('psr.q', 1),
-                               'input_spike': ('input_spike', 0.36755),
+                               'input_spike': ('input_spike', 1),
                                'a__psr__syn': (None, 1),
                                'b__psr__syn': (None, 1)}
         initial_states.update(

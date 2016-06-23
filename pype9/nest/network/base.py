@@ -16,7 +16,7 @@ if '--debug' in sys.argv:
         "'--debug' argument passed to script conflicts with an argument to "
         "nest, causing the import to stop at the NEST prompt")
 import pyNN.nest  # @IgnorePep8
-from nest.hl_api import NESTError  # @IgnorePep8
+from nest import NESTError  # @IgnorePep8
 from pyNN.common.control import build_state_queries  # @IgnorePep8
 from pyNN.nest.standardmodels.synapses import StaticSynapse  # @IgnorePep8
 from pype9.base.network.base import (  # @IgnorePep8
