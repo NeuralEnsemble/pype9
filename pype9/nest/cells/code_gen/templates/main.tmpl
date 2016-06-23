@@ -676,10 +676,10 @@ void {{component_name}}::handle(nest::SpikeEvent & e) {
     // Get buffer for event receive port
     nest::ListRingBuffer* event_buffer;
 {% for port in component_class.event_receive_ports %}
-    {{elseif(loop.first)}} (e.get_rport() == {{port.name}}_EVENT_PORT)
+    {{elseif(loop.first)}} (e.get_rport() == {{port.name}}_EVENT_PORT) {
         event_buffer = &B_.{{port.name}}_event_port;
     {% if loop.last %}
-    else
+    } else
     {% endif %}
 {% endfor %}
         assert(false);  // Unrecognised port 
@@ -700,10 +700,10 @@ void {{component_name}}::handle(nest::CurrentEvent& e) {
     //Get buffer for current receive port
     nest::RingBuffer* current_buffer;
 {% for port in chain(component_class.analog_receive_ports, component_class.analog_reduce_ports) %}
-    {{elseif(loop.first)}} (e.get_rport() == {{port.name}}_ANALOG_PORT)
+    {{elseif(loop.first)}} (e.get_rport() == {{port.name}}_ANALOG_PORT) {
         current_buffer = &B_.{{port.name}}_analog_port;
     {% if loop.last %}
-    else
+    } else
     {% endif %}        
 {% endfor %}
         assert(false);  // Unrecognised port
