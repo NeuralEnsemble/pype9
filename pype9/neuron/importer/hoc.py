@@ -15,6 +15,20 @@ from pype9.base.cells.tree import (Tree, SegmentModel, AxialResistanceModel,
 
 class HocImporter(object):
 
+    def __init__(self, import_dir, model_files=['main.hoc'], hoc_cmds=[]):
+        self.import_dir = import_dir
+        self.hoc_cmds = hoc_cmds
+        if isinstance(model_files, str):
+            model_files = [model_files]
+        self.hoc_files = [f for f in model_files if f.endswith('.hoc')]
+        self.python_files = [f[:-3] for f in model_files if f.endswith('.py')]
+        self._run_model_printouts()
+        self._extract_morph_print()
+        self._extract_psections()
+        self._extract_modelview()
+        self._map_segments_to_components()
+        self.model.url = None
+
     @classmethod
     def strip_comp(cls, param_name, comp_name):
         if param_name.endswith(comp_name):
@@ -63,20 +77,6 @@ class HocImporter(object):
             # Yield the component name and dictionary for the current
             # combination
             yield comp_name, vals
-
-    def __init__(self, import_dir, model_files=['main.hoc'], hoc_cmds=[]):
-        self.import_dir = import_dir
-        self.hoc_cmds = hoc_cmds
-        if isinstance(model_files, str):
-            model_files = [model_files]
-        self.hoc_files = [f for f in model_files if f.endswith('.hoc')]
-        self.python_files = [f[:-3] for f in model_files if f.endswith('.py')]
-        self._run_model_printouts()
-        self._extract_morph_print()
-        self._extract_psections()
-        self._extract_modelview()
-        self._map_segments_to_components()
-        self.model.url = None
 
     def _run_model_printouts(self):
         # Create the python commands to load the model and then run the print
