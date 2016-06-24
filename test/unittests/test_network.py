@@ -37,6 +37,7 @@ except ImportError:
 if __name__ == '__main__':
     # Import dummy test case
     from utils import DummyTestCase as TestCase  # @UnusedImport
+    import nest.raster_plot
 else:
     from unittest import TestCase  # @Reimport
 
@@ -57,14 +58,9 @@ class TestBrunel2000(TestCase):
 
     brunel_parameters = {
         "SR": {"g": 3.0, "eta": 2.0},
-        "SR2": {"g": 2.0, "eta": 2.0},
-        "SR3": {"g": 0.0, "eta": 2.0},
-        "small_SR3": {"g": 0.0, "eta": 2.0},
-        "SIfast": {"g": 6.0, "eta": 4.0},
         "AI": {"g": 5.0, "eta": 2.0},
-        "AI_nest": {"g": 5.0, "eta": 2.0},
-        "SIslow": {"g": 4.5, "eta": 0.9},
-        "SIslow": {"g": 4.5, "eta": 0.95}}
+        "SIfast": {"g": 6.0, "eta": 4.0},
+        "SIslow": {"g": 4.5, "eta": 0.9}}
 
     translations = {
         'tau_m': 'tau__cell', 'V_th': 'v_threshold__cell',
@@ -201,7 +197,9 @@ class TestBrunel2000(TestCase):
                 "Number of connections in '{}' ({}) does not match reference "
                 "({})".format(conn_group.name, nml_size, ref_size))
 
-    def test_activity(self, case='AI_nest', order=10, simtime=100.0, **kwargs):
+    def test_activity(self, case='AI', order=200, simtime=1200.0,
+                      record_size=100, plot_pops=('Exc', 'Inh'),
+                      plot_states=False, **kwargs):
         # Construct 9ML network
         self._setup('nest')
         nml_network = self._construct_nineml(case, order, 'nest', **kwargs)
@@ -216,51 +214,59 @@ class TestBrunel2000(TestCase):
         for model_ver in ('nineml', 'reference'):
             spikes[model_ver] = {}
             multi[model_ver] = {}
-            for pop_name in self.pop_names:
+            for pop_name in plot_pops:
+                pop = numpy.asarray(pops[model_ver][pop_name], dtype=int)
+                record_inds = numpy.asarray(numpy.unique(numpy.floor(
+                    numpy.arange(start=0, stop=len(pop),
+                                 step=len(pop) / record_size))), dtype=int)
                 spikes[model_ver][pop_name] = nest.Create("spike_detector")
                 nest.SetStatus(spikes[model_ver][pop_name],
                                [{"label": "brunel-py-" + pop_name,
                                  "withtime": True, "withgid": True}])
-                nest.Connect(pops[model_ver][pop_name],
+                nest.Connect(list(pop[record_inds]),
                              spikes[model_ver][pop_name],
                              syn_spec="excitatory")
-                # Set up voltage traces recorders for reference network
-                if self.record_params[pop_name][model_ver]:
-                    multi[model_ver][pop_name] = nest.Create(
-                        'multimeter',
-                        params={'record_from':
-                                self.record_params[pop_name][model_ver]})
-                    nest.Connect(multi[model_ver][pop_name],
-                                 pops[model_ver][pop_name])
+                if plot_states:
+                    # Set up voltage traces recorders for reference network
+                    if self.record_params[pop_name][model_ver]:
+                        multi[model_ver][pop_name] = nest.Create(
+                            'multimeter',
+                            params={'record_from':
+                                    self.record_params[pop_name][model_ver]})
+                        nest.Connect(multi[model_ver][pop_name],
+                                     list(pop[record_inds]))
+        print "Starting simulation"
         # Simulate the network
         nest.Simulate(simtime)
+        print "Finished simulation"
         for model_ver in ('reference', 'nineml'):
-            for pop_name in self.pop_names:
-                events = nest.GetStatus(spikes[model_ver][pop_name],
-                                        "events")[0]
-                plt.figure()
-                plt.scatter(events['times'], events['senders'])
+            for pop_name in plot_pops:
+                nest.raster_plot.from_device(spikes[model_ver][pop_name],
+                                             hist=True)
                 plt.xlabel('Times (ms)')
                 plt.ylabel('Cell Indices')
                 plt.title("{} - {} Spikes".format(model_ver, pop_name))
-                for param in self.record_params[pop_name][model_ver]:
-                    events, interval = nest.GetStatus(
-                        multi[model_ver][pop_name], ["events", 'interval'])[0]
-                    sorted_vs = sorted(zip(events['senders'],
-                                           events['times'],
-                                           events[param]),
-                                       key=itemgetter(0))
-                    plt.figure()
-                    legend = []
-                    for sender, group in groupby(sorted_vs,
-                                                 key=itemgetter(0)):
-                        _, t, v = zip(*group)
-                        plt.plot(numpy.array(t) * interval, v)
-                        legend.append(sender)
-                    plt.xlabel('Time (ms)')
-                    plt.ylabel(param)
-                    plt.title("{} - {} {}".format(model_ver, pop_name, param))
-                    plt.legend(legend)
+                if plot_states:
+                    for param in self.record_params[pop_name][model_ver]:
+                        events, interval = nest.GetStatus(
+                            multi[model_ver][pop_name], ["events",
+                                                         'interval'])[0]
+                        sorted_vs = sorted(zip(events['senders'],
+                                               events['times'],
+                                               events[param]),
+                                           key=itemgetter(0))
+                        plt.figure()
+                        legend = []
+                        for sender, group in groupby(sorted_vs,
+                                                     key=itemgetter(0)):
+                            _, t, v = zip(*group)
+                            plt.plot(numpy.array(t) * interval, v)
+                            legend.append(sender)
+                        plt.xlabel('Time (ms)')
+                        plt.ylabel(param)
+                        plt.title("{} - {} {}".format(model_ver, pop_name,
+                                                      param))
+                        plt.legend(legend)
         plt.show()
 
     def test_activity_neuron(self, case='AI', order=10, simtime=100.0,
@@ -389,7 +395,9 @@ class TestBrunel2000(TestCase):
         J_unit = self._compute_normalised_psr(tauMem, CMem, tauSyn)
         J_ex = J / J_unit
         J_in = -g * J_ex
-
+        print "Case: {}".format(case)
+        print "Reference J_ex: {}".format(J_ex)
+        print "Reference J_in: {}".format(J_in)
 
         # threshold rate, equivalent rate of events needed to
         # have mean input current equal to threshold
