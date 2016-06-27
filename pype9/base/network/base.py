@@ -556,7 +556,8 @@ class Selection(object):
 
     def __init__(self, nineml_model, *component_arrays):
         self._nineml = nineml_model
-        self._component_arrays = component_arrays
+        self._component_arrays = dict(
+            (ca.name, ca) for ca in component_arrays)
         self.PyNNAssemblyClass.__init__(
             self, *component_arrays, label=nineml_model.name)
 
@@ -570,10 +571,10 @@ class Selection(object):
 
     @property
     def component_arrays(self):
-        return self._component_arrays
+        return self._component_arrays.itervalues()
 
     def component_array(self, name):
-        return self._component_array[name]
+        return self._component_arrays[name]
 
     @property
     def num_component_arrays(self):
@@ -581,7 +582,7 @@ class Selection(object):
 
     @property
     def component_array_names(self):
-        return self._component_arrays.keys()
+        return self._component_arrays.iterkeys()
 
     def synapse(self, name):
         try:

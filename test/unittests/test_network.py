@@ -142,6 +142,24 @@ class TestBrunel2000(TestCase):
                                          reference_stat, nineml_stat,
                                          pop_name)))
 
+    def test_connection_degrees(self, case='AI', order=10, **kwargs):  # @UnusedVariable @IgnorePep8
+        self._setup('nest')
+        nml = self._construct_nineml(case, order, 'nest')
+        ref = self._construct_reference(case, order)
+        ref_conns = self._reference_projections(ref)
+        for conn_group in nml.connection_groups:
+            nml_conns = conn_group.nest_connections
+            in_degree = {}
+            out_degree = {}
+            for ver, pre, post, conns in [
+                ('nineml', conn_group.pre.all_cells, conn_group.post.all_cells,
+                 numpy.asarray(nml_conns)),
+                ('reference', numpy.asarray(ref[conn_group.pre.name]),
+                 numpy.asarray(ref[conn_group.pre.name]),
+                 numpy.asarray(ref_conns[conn_group.name]))]:
+                in_degree[ver] = None
+                out_degree[ver] = None
+
     def test_connection_params(self, case='AI', order=10, **kwargs):  # @UnusedVariable @IgnorePep8
         self._setup('nest')
         nml = self._construct_nineml(case, order, 'nest')
@@ -517,13 +535,13 @@ class TestBrunel2000(TestCase):
         return {'Exc': nodes_exc, 'Inh': nodes_inh, 'Ext': nodes_ext}
 
     def _reference_projections(self, network):
-        combined = (network.Exc + network.Inh)
+        combined = (network['Exc'] + network['Inh'])
         projs = {}
-        projs['External'] = nest.GetConnections(network.Ext, combined,
+        projs['External'] = nest.GetConnections(network['Ext'], combined,
                                                 'excitatory')
-        projs['Excitation'] = nest.GetConnections(network.Exc, combined,
+        projs['Excitation'] = nest.GetConnections(network['Exc'], combined,
                                                   'excitatory')
-        projs['Inhibition'] = nest.GetConnections(network.Inh,
+        projs['Inhibition'] = nest.GetConnections(network['Inh'],
                                                   combined, 'inhibitory')
         return projs
 
