@@ -86,6 +86,8 @@ class TestBrunel2000(TestCase):
                      'Ext': {'nineml': [], 'reference': []}}
 
     dt = timestep * un.ms    # the resolution in ms
+    psth_percent_error = {'Exc': 1.0, 'Inh': 1.0, 'Ext': 1.0}
+    rate_percent_error = {'Exc': 1.0, 'Inh': 1.0, 'Ext': 1.0}
 
     def test_population_params(self, case='AI', order=10, **kwargs):  # @UnusedVariable @IgnorePep8
         self._setup('nest')
@@ -197,9 +199,14 @@ class TestBrunel2000(TestCase):
                 "Number of connections in '{}' ({}) does not match reference "
                 "({})".format(conn_group.name, nml_size, ref_size))
 
-    def test_activity(self, case='AI', order=200, simtime=1200.0,
-                      record_size=100, plot_pops=('Exc', 'Inh'),
-                      plot_states=False, **kwargs):
+
+#     cases = ["SR", "AI", "SIfast", "SIslow"]
+
+    def test_activity(self, case='SIslow', order=100, simtime=1200.0, plot=True,
+                      record_size=50, record_pops=('Exc', 'Inh', 'Ext'),
+                      record_states=False, record_start=1000.0, bin_width=2.5,
+                      **kwargs):
+        record_duration = simtime - record_start
         # Construct 9ML network
         self._setup('nest')
         nml_network = self._construct_nineml(case, order, 'nest', **kwargs)
@@ -214,7 +221,7 @@ class TestBrunel2000(TestCase):
         for model_ver in ('nineml', 'reference'):
             spikes[model_ver] = {}
             multi[model_ver] = {}
-            for pop_name in plot_pops:
+            for pop_name in record_pops:
                 pop = numpy.asarray(pops[model_ver][pop_name], dtype=int)
                 record_inds = numpy.asarray(numpy.unique(numpy.floor(
                     numpy.arange(start=0, stop=len(pop),
@@ -226,7 +233,7 @@ class TestBrunel2000(TestCase):
                 nest.Connect(list(pop[record_inds]),
                              spikes[model_ver][pop_name],
                              syn_spec="excitatory")
-                if plot_states:
+                if record_states:
                     # Set up voltage traces recorders for reference network
                     if self.record_params[pop_name][model_ver]:
                         multi[model_ver][pop_name] = nest.Create(
@@ -239,35 +246,89 @@ class TestBrunel2000(TestCase):
         # Simulate the network
         nest.Simulate(simtime)
         print "Finished simulation"
+        rates = {'reference': {}, 'nineml': {}}
+        psth = {'reference': {}, 'nineml': {}}
         for model_ver in ('reference', 'nineml'):
-            for pop_name in plot_pops:
-                nest.raster_plot.from_device(spikes[model_ver][pop_name],
-                                             hist=True)
-                plt.xlabel('Times (ms)')
-                plt.ylabel('Cell Indices')
-                plt.title("{} - {} Spikes".format(model_ver, pop_name))
-                if plot_states:
-                    for param in self.record_params[pop_name][model_ver]:
-                        events, interval = nest.GetStatus(
-                            multi[model_ver][pop_name], ["events",
-                                                         'interval'])[0]
-                        sorted_vs = sorted(zip(events['senders'],
-                                               events['times'],
-                                               events[param]),
-                                           key=itemgetter(0))
-                        plt.figure()
-                        legend = []
-                        for sender, group in groupby(sorted_vs,
-                                                     key=itemgetter(0)):
-                            _, t, v = zip(*group)
-                            plt.plot(numpy.array(t) * interval, v)
-                            legend.append(sender)
-                        plt.xlabel('Time (ms)')
-                        plt.ylabel(param)
-                        plt.title("{} - {} {}".format(model_ver, pop_name,
-                                                      param))
-                        plt.legend(legend)
-        plt.show()
+            for pop_name in record_pops:
+#                 nest.raster_plot.from_device(spikes[model_ver][pop_name],
+#                                              hist=True)
+                events = nest.GetStatus(spikes[model_ver][pop_name],
+                                        "events")[0]
+                spike_times = numpy.asarray(events['times'])
+                senders = numpy.asarray(events['senders'])
+                inds = spike_times > record_start
+                spike_times = spike_times[inds]
+                senders = senders[inds]
+                rates[model_ver][pop_name] = (
+                    1000.0 * len(spike_times) / record_duration)
+                psth[model_ver][pop_name] = (
+                    numpy.histogram(
+                        spike_times,
+                        bins=numpy.floor(record_duration / bin_width))[0] /
+                    bin_width)
+                if plot:
+                    plt.figure()
+                    plt.scatter(spike_times, senders)
+                    plt.xlabel('Time (ms)')
+                    plt.ylabel('Cell Indices')
+                    plt.title("{} - {} Spikes".format(model_ver, pop_name))
+                    plt.figure()
+                    plt.hist(spike_times,
+                             bins=numpy.floor(record_duration / bin_width))
+                    plt.xlabel('Time (ms)')
+                    plt.ylabel('Rate')
+                    plt.title("{} - {} PSTH".format(model_ver, pop_name))
+                    if record_states:
+                        for param in self.record_params[pop_name][model_ver]:
+                            events, interval = nest.GetStatus(
+                                multi[model_ver][pop_name], ["events",
+                                                             'interval'])[0]
+                            sorted_vs = sorted(zip(events['senders'],
+                                                   events['times'],
+                                                   events[param]),
+                                               key=itemgetter(0))
+                            plt.figure()
+                            legend = []
+                            for sender, group in groupby(sorted_vs,
+                                                         key=itemgetter(0)):
+                                _, t, v = zip(*group)
+                                t = numpy.asarray(t)
+                                v = numpy.asarray(v)
+                                inds = t > record_start
+                                plt.plot(t[inds] * interval, v[inds])
+                                legend.append(sender)
+                            plt.xlabel('Time (ms)')
+                            plt.ylabel(param)
+                            plt.title("{} - {} {}".format(model_ver, pop_name,
+                                                          param))
+                            plt.legend(legend)
+        for pop_name in record_pops:
+            percent_rate_error = abs(rates['nineml'][pop_name] /
+                                     rates['reference'][pop_name] - 1.0) * 100
+            self.assertLess(
+                percent_rate_error,
+                self.rate_percent_error[pop_name], message=(
+                    "Rate of '{}' ({}) doesn't match reference ({}) within {}%"
+                    " ({}%)".format(pop_name, rates['nineml'][pop_name],
+                                    rates['reference'][pop_name],
+                                    self.rate_percent_error[pop_name],
+                                    percent_rate_error)))
+            percent_psth_stdev_error = abs(
+                numpy.std(psth['nineml'][pop_name]) /
+                numpy.std(psth['reference'][pop_name]) - 1.0) * 100
+            self.assertLess(
+                percent_psth_stdev_error,
+                self.psth_percent_error[pop_name],
+                message=(
+                    "Std. Dev. of PSTH for '{}' ({}) doesn't match "
+                    "reference ({}) within {}% ({}%)".format(
+                        pop_name,
+                        numpy.std(psth['nineml'][pop_name]) / bin_width,
+                        numpy.std(psth['reference'][pop_name]) / bin_width,
+                        self.psth_percent_error[pop_name],
+                        percent_psth_stdev_error)))
+        if plot:
+            plt.show()
 
     def test_activity_neuron(self, case='AI', order=10, simtime=100.0,
                              simulators=['nest'], **kwargs):  # simulators=['nest', 'neuron']): @IgnorePep8
@@ -417,11 +478,11 @@ class TestBrunel2000(TestCase):
                          "V_th": theta}
 
         nest.SetDefaults("iaf_psc_alpha", neuron_params)
-
-        nodes_ex = nest.Create("iaf_psc_alpha", NE)
-        nodes_in = nest.Create("iaf_psc_alpha", NI)
-
         nest.SetDefaults("poisson_generator", {"rate": p_rate})
+
+        nodes_exc = nest.Create("iaf_psc_alpha", NE)
+        nodes_inh = nest.Create("iaf_psc_alpha", NI)
+        nodes_ext = nest.Create('parrot_neuron', NE + NI)
         noise = nest.Create("poisson_generator")
 
         nest.CopyModel(
@@ -431,28 +492,29 @@ class TestBrunel2000(TestCase):
             "static_synapse", "inhibitory", {
                 "weight": J_in, "delay": float(self.delay.value)})
 
-        nest.Connect(noise, nodes_ex, 'all_to_all', "excitatory")
-        nest.Connect(noise, nodes_in, 'all_to_all', "excitatory")
+        nest.Connect(noise, nodes_ext)
+        nest.Connect(nodes_ext, nodes_exc + nodes_inh, 'one_to_one',
+                     "excitatory")
 
         # We now iterate over all neuron IDs, and connect the neuron to the
         # sources from our array. The first loop connects the excitatory
         # neurons and the second loop the inhibitory neurons.
         conn_params_ex = {'rule': 'fixed_indegree', 'indegree': CE}
         nest.Connect(
-            nodes_ex,
-            nodes_ex +
-            nodes_in,
+            nodes_exc,
+            nodes_exc +
+            nodes_inh,
             conn_params_ex,
             "excitatory")
 
         conn_params_in = {'rule': 'fixed_indegree', 'indegree': CI}
         nest.Connect(
-            nodes_in,
-            nodes_ex +
-            nodes_in,
+            nodes_inh,
+            nodes_exc +
+            nodes_inh,
             conn_params_in,
             "inhibitory")
-        return {'Exc': nodes_ex, 'Inh': nodes_in, 'Ext': noise}
+        return {'Exc': nodes_exc, 'Inh': nodes_inh, 'Ext': nodes_ext}
 
     def _reference_projections(self, network):
         combined = (network.Exc + network.Inh)

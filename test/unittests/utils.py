@@ -24,8 +24,10 @@ class DummyTestCase(object):
                                                            repr(second))
             print message
 
-    def assertAlmostEqual(self, first, second, message=None):
-        if first != second:
+    def assertAlmostEqual(self, first, second, places=None, message=None):
+        if places is None:
+            places = 7
+        if abs(first - second) > 10 ** -places:
             if message is None:
                 message = '{} and {} are not equal'.format(repr(first),
                                                            repr(second))
