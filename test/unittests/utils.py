@@ -39,3 +39,10 @@ class DummyTestCase(object):
                 message = '{} is not less than {}'.format(repr(first),
                                                           repr(second))
             print message
+
+    def assertLessEqual(self, first, second, message=None):
+        if first > second:
+            if message is None:
+                message = '{} is not less than or equal to {}'.format(
+                    repr(first), repr(second))
+            print message

@@ -88,6 +88,22 @@ class TestBrunel2000(TestCase):
     dt = timestep * un.ms    # the resolution in ms
     psth_percent_error = {'Exc': 1.0, 'Inh': 1.0, 'Ext': 1.0}
     rate_percent_error = {'Exc': 1.0, 'Inh': 1.0, 'Ext': 1.0}
+    out_mean_error = {('Exc', 'Exc'): 0.0, ('Exc', 'Inh'): 0.0,
+                      ('Inh', 'Exc'): 0.0, ('Inh', 'Inh'): 0.0,
+                      ('Ext', 'Exc'): 0.0, ('Ext', 'Inh'): 0.0}
+    in_mean_error = {('Exc', 'Exc'): 0.0, ('Exc', 'Inh'): 0.0,
+                     ('Inh', 'Exc'): 0.0, ('Inh', 'Inh'): 0.0,
+                     ('Ext', 'Exc'): 0.0, ('Ext', 'Inh'): 0.0}
+    out_stdev_error = {('Exc', 'Exc'): 0.0, ('Exc', 'Inh'): 0.0,
+                       ('Exc', 'Ext'): 0.0, ('Inh', 'Exc'): 0.0,
+                       ('Inh', 'Inh'): 0.0, ('Inh', 'Ext'): 0.0,
+                       ('Ext', 'Exc'): 0.0, ('Ext', 'Inh'): 0.0,
+                       ('Ext', 'Ext'): 0.0}
+    in_stdev_error = {('Exc', 'Exc'): 0.0, ('Exc', 'Inh'): 0.0,
+                      ('Exc', 'Ext'): 0.0, ('Inh', 'Exc'): 0.0,
+                      ('Inh', 'Inh'): 0.0, ('Inh', 'Ext'): 0.0,
+                      ('Ext', 'Exc'): 0.0, ('Ext', 'Inh'): 0.0,
+                      ('Ext', 'Ext'): 0.0}
 
     def test_population_params(self, case='AI', order=10, **kwargs):  # @UnusedVariable @IgnorePep8
         self._setup('nest')
@@ -142,23 +158,60 @@ class TestBrunel2000(TestCase):
                                          reference_stat, nineml_stat,
                                          pop_name)))
 
-    def test_connection_degrees(self, case='AI', order=10, **kwargs):  # @UnusedVariable @IgnorePep8
+    def test_connection_degrees(self, case='AI', order=200, **kwargs):  # @UnusedVariable @IgnorePep8
         self._setup('nest')
         nml = self._construct_nineml(case, order, 'nest')
         ref = self._construct_reference(case, order)
-        ref_conns = self._reference_projections(ref)
-        for conn_group in nml.connection_groups:
-            nml_conns = conn_group.nest_connections
+        for pop1_name, pop2_name in self.out_mean_error:
             in_degree = {}
             out_degree = {}
-            for ver, pre, post, conns in [
-                ('nineml', conn_group.pre.all_cells, conn_group.post.all_cells,
-                 numpy.asarray(nml_conns)),
-                ('reference', numpy.asarray(ref[conn_group.pre.name]),
-                 numpy.asarray(ref[conn_group.pre.name]),
-                 numpy.asarray(ref_conns[conn_group.name]))]:
-                in_degree[ver] = None
-                out_degree[ver] = None
+            for model_ver, pop1, pop2 in [
+                ('nineml', nml.component_array(pop1_name).all_cells,
+                 nml.component_array(pop2_name).all_cells),
+                ('reference', numpy.asarray(ref[pop1_name]),
+                 numpy.asarray(ref[pop2_name]))]:
+                conns = numpy.asarray(nest.GetConnections(list(pop1),
+                                                          list(pop2)))
+                out_degree[model_ver] = numpy.array(
+                    [numpy.count_nonzero(conns[:, 0] == i) for i in pop1])
+                in_degree[model_ver] = numpy.array(
+                    [numpy.count_nonzero(conns[:, 1] == i) for i in pop2])
+            nineml_out_mean = numpy.mean(out_degree['nineml'])
+            ref_out_mean = numpy.mean(out_degree['reference'])
+            self.assertLessEqual(
+                abs(nineml_out_mean - ref_out_mean),
+                self.out_mean_error[(pop1_name, pop2_name)],
+                "Mean out degree of '{}' to '{}' projection ({}) doesn't "
+                "match reference ({}) within {}".format(
+                    pop1_name, pop2_name, nineml_out_mean, ref_out_mean,
+                    self.out_mean_error[(pop1_name, pop2_name)]))
+            nineml_in_mean = numpy.mean(in_degree['nineml'])
+            ref_in_mean = numpy.mean(in_degree['reference'])
+            self.assertLessEqual(
+                abs(nineml_in_mean - ref_in_mean),
+                self.in_mean_error[(pop1_name, pop2_name)],
+                "Mean in degree of '{}' to '{}' projection ({}) doesn't "
+                "match reference ({}) within {}".format(
+                    pop1_name, pop2_name, nineml_in_mean, ref_in_mean,
+                    self.in_mean_error[(pop1_name, pop2_name)]))
+            nineml_out_stdev = numpy.std(out_degree['nineml'])
+            ref_out_stdev = numpy.std(out_degree['reference'])
+            self.assertLessEqual(
+                abs(nineml_out_stdev - ref_out_stdev),
+                self.out_stdev_error[(pop1_name, pop2_name)],
+                "Std. of out degree of '{}' to '{}' projection ({}) doesn't "
+                "match reference ({}) within {}".format(
+                    pop1_name, pop2_name, nineml_out_stdev, ref_out_stdev,
+                    self.out_stdev_error[(pop1_name, pop2_name)]))
+            nineml_in_stdev = numpy.std(in_degree['nineml'])
+            ref_in_stdev = numpy.std(in_degree['reference'])
+            self.assertLessEqual(
+                abs(nineml_in_stdev - ref_in_stdev),
+                self.in_stdev_error[(pop1_name, pop2_name)],
+                "Std. of in degree of '{}' to '{}' projection ({}) doesn't "
+                "match reference ({}) within {}".format(
+                    pop1_name, pop2_name, nineml_in_stdev, ref_in_stdev,
+                    self.in_stdev_error[(pop1_name, pop2_name)]))
 
     def test_connection_params(self, case='AI', order=10, **kwargs):  # @UnusedVariable @IgnorePep8
         self._setup('nest')
