@@ -256,9 +256,9 @@ class TestBrunel2000(TestCase):
 
 #     cases = ["SR", "AI", "SIfast", "SIslow"]
 
-    def test_activity(self, case='SIslow', order=100, simtime=1200.0, plot=True,
+    def test_activity(self, case='AI', order=50, simtime=1200.0, plot=True,
                       record_size=50, record_pops=('Exc', 'Inh', 'Ext'),
-                      record_states=False, record_start=1000.0, bin_width=2.5,
+                      record_states=True, record_start=1000.0, bin_width=2.5,
                       **kwargs):
         record_duration = simtime - record_start
         # Construct 9ML network
@@ -304,8 +304,6 @@ class TestBrunel2000(TestCase):
         psth = {'reference': {}, 'nineml': {}}
         for model_ver in ('reference', 'nineml'):
             for pop_name in record_pops:
-#                 nest.raster_plot.from_device(spikes[model_ver][pop_name],
-#                                              hist=True)
                 events = nest.GetStatus(spikes[model_ver][pop_name],
                                         "events")[0]
                 spike_times = numpy.asarray(events['times'])
@@ -519,7 +517,6 @@ class TestBrunel2000(TestCase):
         nu_th = (theta * CMem) / (J_ex * CE * exp(1) * tauMem * tauSyn)
         nu_ex = eta * nu_th
         p_rate = 1000.0 * nu_ex * CE
-#         p_rate = 10.0
 
         neuron_params = {"C_m": CMem,
                          "tau_m": tauMem,
@@ -538,6 +535,9 @@ class TestBrunel2000(TestCase):
         nodes_inh = nest.Create("iaf_psc_alpha", NI)
         nodes_ext = nest.Create('parrot_neuron', NE + NI)
         noise = nest.Create("poisson_generator")
+
+        nest.SetStatus(nodes_exc + nodes_inh, 'V_m',
+                       list(numpy.random.rand(NE + NI) * 20.0))
 
         nest.CopyModel(
             "static_synapse", "excitatory", {
