@@ -8,6 +8,7 @@ from __future__ import absolute_import
 from copy import deepcopy
 from collections import namedtuple, defaultdict
 from itertools import chain
+import quantities as pq
 from nineml.user import Property
 from pype9.exceptions import Pype9RuntimeError
 from .values import get_pyNN_value
@@ -15,6 +16,7 @@ import os.path
 import nineml
 from nineml import units as un
 from pyNN.random import NumpyRNG
+from pyNN.parameters import Sequence
 import pyNN.standardmodels
 from nineml import Document
 from nineml.exceptions import NineMLNameError
@@ -334,26 +336,6 @@ class Network(object):
                     role2name['synapse'] = proj.name
                     # Extract "connection weights" (any non-singular property
                     # value) from the synapse properties
-#                     proj_props = defaultdict(set)
-#                     for prop in synapse.properties:
-#                         # SingleValue properties can be set as a constant but
-#                         # any that vary between synapses will need to be
-#                         # treated as a connection "weight"
-#                         if not isinstance(prop.value, SingleValue):
-#                             # FIXME: Need to check whether the property is
-#                             #        used in this on event and not in the
-#                             #        time derivatives or on conditions
-#                             for on_event in (synapse.component_class.
-#                                              all_on_events()):
-#                                 proj_props[on_event.src_port_name].add(prop)
-#                     # Add port weights for this projection to combined list
-#                     for port, props in proj_props.iteritems():
-#                         ns_props = [
-#                             Property(append_namespace(p.name, proj.name),
-#                                      p.quantity) for p in props]
-#                         connection_property_sets.append(
-#                             ConnectionPropertySet(
-#                                 append_namespace(port, proj.name), ns_props))
                     connection_property_sets.extend(
                         cls._extract_connection_property_sets(synapse,
                                                               proj.name))
@@ -367,13 +349,6 @@ class Network(object):
                                           for pc in post_conns)
                     # Expose ports that are needed for the pre-synaptic
                     # connections
-#                     exposures.extend(chain(
-#                         (BasePortExposure.from_port(
-#                             pc.receive_port, role2name[pc.receiver_role])
-#                          for pc in proj_conns if pc.sender_role == 'pre'),
-#                         (BasePortExposure.from_port(
-#                             pc.send_port, role2name[pc.sender_role])
-#                          for pc in proj_conns if pc.receiver_role == 'pre')))
                 except Pype9UnflattenableSynapseException:
                     # All synapses (of this type) connected to a single post-
                     # synaptic cell cannot be flattened into a single component
@@ -389,17 +364,6 @@ class Network(object):
                 # Add exposures for connections to/from the pre synaptic cell
                 exposures.extend(
                     chain(*(pc.expose_ports(role2name) for pc in pre_conns)))
-
-#                         (BasePortExposure.from_port(
-#                             pc.receive_port, 'cell')
-#                          for pc in proj_conns
-#                          if (pc.sender_role == 'pre' and
-#                              pc.receiver_role == 'post')),
-#                         (BasePortExposure.from_port(
-#                             pc.send_port, 'cell')
-#                          for pc in proj_conns
-#                          if (pc.receiver_role == 'pre' and
-#                              pc.sender_role == 'post'))))
                 role2name['pre'] = cls.cell_dyn_name
                 # Create a connection group for each port connection of the
                 # projection to/from the pre-synaptic cell
@@ -536,6 +500,7 @@ class ComponentArray(object):
             self.PyNNPopulationClass.__init__(
                 self, nineml_model.size, celltype, cellparams=cellparams,
                 initial_values=initial_values, label=nineml_model.name)
+            self._inputs = {}
 
     @property
     def name(self):
@@ -551,6 +516,68 @@ class ComponentArray(object):
     def __repr__(self):
         return "ComponentArray('{}', size={})".format(self.name, self.size)
 
+    def play(self, port_name, signal, properties=[]):
+        port = self.component_class.receive_port(port_name)
+        if port.nineml_type in ('EventReceivePort',
+                                'EventReceivePortExposure'):
+            # Shift the signal times to account for the minimum delay and
+            # match the NEURON implementation
+            try:
+                spike_trains = Sequence(pq.Quantity(signal, 'ms') + pq.ms -
+                                        self._min_delay * pq.ms)
+                source_size = 1
+            except TypeError:  # Assume multiple signals
+                spike_trains = []
+                for spike_train in signal:
+                    spike_train = (pq.Quantity(spike_train, 'ms') + pq.ms -
+                                   self._min_delay * pq.ms)
+                    if any(spike_train <= 0.0):
+                        raise Pype9RuntimeError(
+                            "Some spike times are less than device delay and "
+                            "so can't be played into cell ({})".format(
+                                ', '.join(spike_train < 1 + self._min_delay)))
+                    spike_trains.append(Sequence(spike_train))
+                source_size = len(spike_trains)
+            input_pop = self.PyNNPopulationClass(
+                source_size, self.SpikeSourceArray,
+                cellparams={'spike_times': spike_train},
+                label='{}-{}-input'.format(self.name, port_name))
+            self._check_connection_properties(port_name, properties)
+            if len(properties) > 1:
+                raise NotImplementedError(
+                    "Cannot handle more than one connection property per port")
+            elif properties:
+                weight = self._unit_handler.scale_value(properties[0].quantity)
+            connector = (self.OneToOneConnector
+                         if source_size > 1 else self.AllToAllConnector)
+            input_proj = self.PyNNProjectionClass(
+                input_pop, self, connector,
+                self.SynapseClass(weight=weight, delay=self._min_delay),
+                receptor_type=port,
+                label='{}-{}-input_projection'.format(self.name, port_name))
+            self._inputs[port_name] = (input_pop, input_proj)
+        elif port.nineml_type in ('AnalogReceivePort', 'AnalogReducePort',
+                                  'AnalogReceivePortExposure',
+                                  'AnalogReducePortExposure'):
+            raise NotImplementedError
+#             # Signals are played into NEST cells include a delay (set to be the
+#             # minimum), which is is subtracted from the start of the signal so
+#             # that the effect of the signal aligns with other simulators
+#             self._inputs[port_name] = nest.Create(
+#                 'step_current_generator', 1,
+#                 {'amplitude_values': pq.Quantity(signal, 'pA'),
+#                  'amplitude_times': (
+#                     pq.Quantity(signal.times, 'ms') -
+#                     simulation_controller.device_delay * pq.ms),
+#                  'start': float(pq.Quantity(signal.t_start, 'ms')),
+#                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
+#             nest.Connect(self._inputs[port_name], self._cell,
+#                          syn_spec={
+#                              "receptor_type": self._receive_ports[port_name],
+#                              'delay': simulation_controller.device_delay})
+        else:
+            raise Pype9RuntimeError(
+                "Unrecognised port type '{}' to play signal into".format(port))
 
 class Selection(object):
 

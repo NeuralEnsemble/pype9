@@ -443,7 +443,8 @@ class TestBrunel2000(TestCase):
         else:
             assert False
 
-    def _construct_nineml(self, case, order, simulator, **kwargs):
+    def _construct_nineml(self, case, order, simulator, external_input=None,
+                          **kwargs):
         model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
             'Brunel_{}'.format(case))
         # rescale populations
@@ -462,9 +463,11 @@ class TestBrunel2000(TestCase):
             NetworkClass = NeuronPype9Network
         else:
             assert False
-        return NetworkClass(model, **kwargs)
+        network = NetworkClass(model, **kwargs)
+        if external_input is not None:
+            network.component_array('Ext').play('spike_input', external_input)
 
-    def _construct_reference(self, case, order):
+    def _construct_reference(self, case, order, external_input=None):
         """
         The model in this file has been adapted from the brunel-alpha-nest.py
         model that is part of NEST.
@@ -529,15 +532,21 @@ class TestBrunel2000(TestCase):
                          "V_th": theta}
 
         nest.SetDefaults("iaf_psc_alpha", neuron_params)
-        nest.SetDefaults("poisson_generator", {"rate": p_rate})
-
         nodes_exc = nest.Create("iaf_psc_alpha", NE)
         nodes_inh = nest.Create("iaf_psc_alpha", NI)
-        nodes_ext = nest.Create('parrot_neuron', NE + NI)
-        noise = nest.Create("poisson_generator")
 
         nest.SetStatus(nodes_exc + nodes_inh, 'V_m',
                        list(numpy.random.rand(NE + NI) * 20.0))
+
+        if external_input is None:
+            nest.SetDefaults("poisson_generator", {"rate": p_rate})
+            noise = nest.Create("poisson_generator")
+            nodes_ext = nest.Create('parrot_neuron', NE + NI)
+            nest.Connect(noise, nodes_ext)
+        else:
+            nodes_ext = nest.Create(
+                "spike_generator", NE + NI,
+                params=[{'spike_times': r} for r in external_input])
 
         nest.CopyModel(
             "static_synapse", "excitatory", {
@@ -546,7 +555,6 @@ class TestBrunel2000(TestCase):
             "static_synapse", "inhibitory", {
                 "weight": J_in, "delay": float(self.delay.value)})
 
-        nest.Connect(noise, nodes_ext)
         nest.Connect(nodes_ext, nodes_exc + nodes_inh, 'one_to_one',
                      "excitatory")
 

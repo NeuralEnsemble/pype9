@@ -38,7 +38,16 @@ class ComponentArray(BaseComponentArray, pyNN.neuron.Population):
 
     PyNNCellWrapperMetaClass = PyNNCellWrapperMetaClass
     PyNNPopulationClass = pyNN.neuron.Population
+    PyNNProjectionClass = pyNN.neuron.Projection
+    SynapseClass = StaticSynapse
+    SpikeSourceArray = pyNN.neuron.SpikeSourceArray
+    AllToAllConnector = pyNN.neuron.AllToAllConnector
+    OneToOneConnector = pyNN.neuron.OneToOneConnector
     UnitHandler = UnitHandler
+
+    @property
+    def _min_delay(self):
+        return get_min_delay()
 
 
 class Selection(BaseSelection, pyNN.neuron.Assembly):
