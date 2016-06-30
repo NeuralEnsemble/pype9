@@ -40,7 +40,7 @@ class Network(object):
 
     # Name given to the "cell" component of the cell dynamics + linear synapse
     # dynamics multi-dynamics
-    cell_dyn_name = 'cell'
+    CELL_COMP_NAME = 'cell'
 
     def __init__(self, nineml_model, build_mode='lazy', timestep=None,
                  min_delay=None, max_delay=None, rng=None, **kwargs):
@@ -301,18 +301,18 @@ class Network(object):
             # Create a dictionary to hold the cell dynamics and any synapse
             # dynamics that can be flattened into the cell dynamics
             # (i.e. linear ones).
-            sub_components = {cls.cell_dyn_name: pop.cell}
+            sub_components = {cls.CELL_COMP_NAME: pop.cell}
             # All port connections between post-synaptic cell and linear
             # synapses and port exposures to pre-synaptic cell
             internal_conns = []
-            exposures = []
+            exposures = set()
             synapses = []
             connection_property_sets = []
             # FIXME: There has to be a way of avoiding this name clash
-            if any(p.name == cls.cell_dyn_name for p in receiving):
+            if any(p.name == cls.CELL_COMP_NAME for p in receiving):
                 raise Pype9RuntimeError(
                     "Cannot handle projections named '{}' (why would you "
-                    "choose such a silly name?;)".format(cls.cell_dyn_name))
+                    "choose such a silly name?;)".format(cls.CELL_COMP_NAME))
             for proj in receiving:
                 # Flatten response and plasticity into single dynamics class.
                 # TODO: this should be no longer necessary when we move to
@@ -327,7 +327,7 @@ class Network(object):
                 # cell
                 post_conns = [pc for pc in proj_conns if pc not in pre_conns]
                 # Mapping of port connection role to sub-component name
-                role2name = {'post': cls.cell_dyn_name}
+                role2name = {'post': cls.CELL_COMP_NAME}
                 # If the synapse is non-linear it can be combined into the
                 # dynamics of the post-synaptic cell.
                 try:
@@ -358,13 +358,13 @@ class Network(object):
                                                       post_conns))
                     # Add exposures to the post-synaptic cell for connections
                     # from the synapse
-                    exposures.extend(
-                        chain(*(pc.expose_ports({'post': cls.cell_dyn_name})
+                    exposures.update(
+                        chain(*(pc.expose_ports({'post': cls.CELL_COMP_NAME})
                                 for pc in post_conns)))
                 # Add exposures for connections to/from the pre synaptic cell
-                exposures.extend(
+                exposures.update(
                     chain(*(pc.expose_ports(role2name) for pc in pre_conns)))
-                role2name['pre'] = cls.cell_dyn_name
+                role2name['pre'] = cls.CELL_COMP_NAME
                 # Create a connection group for each port connection of the
                 # projection to/from the pre-synaptic cell
                 for port_conn in pre_conns:
@@ -411,12 +411,23 @@ class Network(object):
                 # Not required after transition to version 2 syntax
                 synapse, proj_conns = cls._flatten_synapse(proj)
                 # Add send and receive exposures to list
-                exposures.extend(chain(*(
-                    pc.expose_ports({'pre': cls.cell_dyn_name})
+                exposures.update(chain(*(
+                    pc.expose_ports({'pre': cls.CELL_COMP_NAME})
                     for pc in proj_conns)))
+            # Add all cell ports as multi-component exposures that aren't
+            # connected internally in case the user would like to save them or
+            # play data into them
+            internal_cell_ports = set(chain(
+                (pc.send_port_name for pc in internal_conns
+                 if pc.sender_name == cls.CELL_COMP_NAME),
+                (pc.receive_port_name for pc in internal_conns
+                 if pc.receiver_name == cls.CELL_COMP_NAME)))
+            exposures.update(
+                BasePortExposure.from_port(p, cls.CELL_COMP_NAME)
+                for p in pop.cell.ports if p.name not in internal_cell_ports)
             dynamics_properties = MultiDynamicsProperties(
                 name=pop.name, sub_components=sub_components,
-                port_connections=internal_conns, port_exposures=set(exposures))
+                port_connections=internal_conns, port_exposures=exposures)
             component = MultiDynamicsWithSynapsesProperties(
                 dynamics_properties, synapses_properties=synapses,
                 connection_property_sets=connection_property_sets)
