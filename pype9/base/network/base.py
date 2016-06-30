@@ -528,43 +528,48 @@ class ComponentArray(object):
         return "ComponentArray('{}', size={})".format(self.name, self.size)
 
     def play(self, port_name, signal, properties=[]):
-        port = self.component_class.receive_port(port_name)
+        port = self.celltype.model.component_class.receive_port(port_name)
         if port.nineml_type in ('EventReceivePort',
                                 'EventReceivePortExposure'):
             # Shift the signal times to account for the minimum delay and
             # match the NEURON implementation
             try:
-                spike_trains = Sequence(pq.Quantity(signal, 'ms') + pq.ms -
+                spike_trains = Sequence(pq.Quantity(signal, 'ms') -
                                         self._min_delay * pq.ms)
                 source_size = 1
-            except TypeError:  # Assume multiple signals
+            except ValueError:  # Assume multiple signals
                 spike_trains = []
                 for spike_train in signal:
-                    spike_train = (pq.Quantity(spike_train, 'ms') + pq.ms -
+                    spike_train = (pq.Quantity(spike_train, 'ms') -
                                    self._min_delay * pq.ms)
                     if any(spike_train <= 0.0):
                         raise Pype9RuntimeError(
-                            "Some spike times are less than device delay and "
-                            "so can't be played into cell ({})".format(
-                                ', '.join(spike_train < 1 + self._min_delay)))
+                            "Some spike times are less than device delay ({}) "
+                            "and so can't be played into cell ({})".format(
+                                self._min_delay,
+                                ', '.join(str(st) for st in spike_train[
+                                    spike_train < self._min_delay])))
                     spike_trains.append(Sequence(spike_train))
                 source_size = len(spike_trains)
             input_pop = self.PyNNPopulationClass(
                 source_size, self.SpikeSourceArray,
-                cellparams={'spike_times': spike_train},
+                cellparams={'spike_times': spike_trains},
                 label='{}-{}-input'.format(self.name, port_name))
-            self._check_connection_properties(port_name, properties)
+#             self.celltype.model()._check_connection_properties(port_name,
+#                                                                properties)
             if len(properties) > 1:
                 raise NotImplementedError(
                     "Cannot handle more than one connection property per port")
             elif properties:
                 weight = self._unit_handler.scale_value(properties[0].quantity)
-            connector = (self.OneToOneConnector
-                         if source_size > 1 else self.AllToAllConnector)
+            else:
+                weight = 1.0  # The weight var is not used
+            connector = (self.OneToOneConnector()
+                         if source_size > 1 else self.AllToAllConnector())
             input_proj = self.PyNNProjectionClass(
                 input_pop, self, connector,
                 self.SynapseClass(weight=weight, delay=self._min_delay),
-                receptor_type=port,
+                receptor_type=port_name,
                 label='{}-{}-input_projection'.format(self.name, port_name))
             self._inputs[port_name] = (input_pop, input_proj)
         elif port.nineml_type in ('AnalogReceivePort', 'AnalogReducePort',

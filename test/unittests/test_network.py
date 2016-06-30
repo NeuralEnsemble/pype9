@@ -3,9 +3,10 @@ from math import exp
 from itertools import groupby, izip
 from operator import itemgetter
 import numpy
+import quantities as pq
+import neo
 import pyNN.neuron
 import pyNN.nest
-import nest
 from nineml.user import (
     Projection, Network, DynamicsProperties,
     Population, ComponentArray, EventConnectionGroup,
@@ -55,6 +56,15 @@ class TestBrunel2000(TestCase):
     min_delay = 0.1
     max_delay = 10.0
     delay = 1.5 * un.ms
+
+    # Initialize the parameters of the integrate and fire neuron
+    theta = 20.0
+    J = 0.1  # postsynaptic amplitude in mV
+    tauSyn = 0.1
+    tauMem = 20.0
+    CMem = 250.0
+    
+    epsilon = 0.1  # connection probability
 
     brunel_parameters = {
         "SR": {"g": 3.0, "eta": 2.0},
@@ -256,18 +266,46 @@ class TestBrunel2000(TestCase):
 
 #     cases = ["SR", "AI", "SIfast", "SIslow"]
 
-    def test_activity(self, case='AI', order=50, simtime=1200.0, plot=True,
+    def test_activity(self, case='AI', order=50, simtime=100.0, plot=True,
                       record_size=50, record_pops=('Exc', 'Inh', 'Ext'),
-                      record_states=True, record_start=1000.0, bin_width=2.5,
-                      **kwargs):
+                      record_states=True, record_start=0.0, bin_width=2.5,
+                      identical_input=True, **kwargs):
+        if identical_input:
+            mean_isi = 1000.0 / self._calculate_parameters(case, order)[-1]
+            external_input = []
+            for _ in xrange(order * 5):
+                # Generate poisson spike trains using numpy
+                spike_times = numpy.cumsum(numpy.random.exponential(
+                    mean_isi, int(numpy.floor(1.5 * simtime / mean_isi))))
+                # Trim spikes outside the simulation time
+                spike_times = spike_times[numpy.logical_and(
+                    spike_times < simtime, spike_times > self.min_delay)]
+                # Append a Neo SpikeTrain input to the external input
+                external_input.append(
+                    neo.SpikeTrain(spike_times, units='ms',
+                                   t_stop=simtime * pq.ms))
+        else:
+            external_input = None
         record_duration = simtime - record_start
         # Construct 9ML network
         self._setup('nest')
-        nml_network = self._construct_nineml(case, order, 'nest', **kwargs)
+        nml_network = self._construct_nineml(case, order, 'nest',
+                                             external_input=external_input,
+                                             **kwargs)
+        # START DEBUGGING #
+        ipt = nml_network.component_array('Ext')._inputs['spike_input__cell'][0]
+        ipt_source = ipt.all_cells
+        ipt_detector = nest.Create("spike_detector")
+        nest.SetStatus(ipt_detector,
+                       [{"label": "ipt_detector", "withtime": True,
+                         "withgid": True}])
+        nest.Connect(list(ipt_source), ipt_detector)
+        # END DEBUGGING #
         nml = dict((p.name, list(p.all_cells))
                    for p in nml_network.component_arrays)
         # Construct reference network
-        ref = self._construct_reference(case, order)
+        ref = self._construct_reference(case, order,
+                                        external_input=external_input)
         # Set up spike recorders for reference network
         pops = {'nineml': nml, 'reference': ref}
         spikes = {}
@@ -300,6 +338,17 @@ class TestBrunel2000(TestCase):
         # Simulate the network
         nest.Simulate(simtime)
         print "Finished simulation"
+        # START DEBUGGING #
+        plt.figure()
+        events = nest.GetStatus(ipt_detector, "events")[0]
+        spike_times = numpy.asarray(events['times'])
+        senders = numpy.asarray(events['senders'])
+        plt.scatter(spike_times, senders)
+        plt.xlabel('Time (ms)')
+        plt.ylabel('Cell Indices')
+        plt.title("Input Spikes".format(model_ver, pop_name))
+        plt.show()
+        # END DEBUGGING #
         rates = {'reference': {}, 'nineml': {}}
         psth = {'reference': {}, 'nineml': {}}
         for model_ver in ('reference', 'nineml'):
@@ -465,7 +514,9 @@ class TestBrunel2000(TestCase):
             assert False
         network = NetworkClass(model, **kwargs)
         if external_input is not None:
-            network.component_array('Ext').play('spike_input', external_input)
+            network.component_array('Ext').play('spike_input__cell',
+                                                external_input)
+        return network
 
     def _construct_reference(self, case, order, external_input=None):
         """
@@ -489,47 +540,8 @@ class TestBrunel2000(TestCase):
         This version uses NEST's Connect functions.
         """
 
-        # Parameters for asynchronous irregular firing
-        g = self.brunel_parameters[case]["g"]
-        eta = self.brunel_parameters[case]["eta"]
-        epsilon = 0.1  # connection probability
-
-        NE = 4 * order
-        NI = 1 * order
-
-        CE = int(epsilon * NE)  # number of excitatory synapses per neuron
-        CI = int(epsilon * NI)  # number of inhibitory synapses per neuron
-
-        # Initialize the parameters of the integrate and fire neuron
-        tauSyn = 0.1
-        tauMem = 20.0
-        CMem = 250.0
-        theta = 20.0
-        J = 0.1  # postsynaptic amplitude in mV
-
-        # normalize synaptic current so that amplitude of a PSP is J
-        J_unit = self._compute_normalised_psr(tauMem, CMem, tauSyn)
-        J_ex = J / J_unit
-        J_in = -g * J_ex
-        print "Case: {}".format(case)
-        print "Reference J_ex: {}".format(J_ex)
-        print "Reference J_in: {}".format(J_in)
-
-        # threshold rate, equivalent rate of events needed to
-        # have mean input current equal to threshold
-        nu_th = (theta * CMem) / (J_ex * CE * exp(1) * tauMem * tauSyn)
-        nu_ex = eta * nu_th
-        p_rate = 1000.0 * nu_ex * CE
-
-        neuron_params = {"C_m": CMem,
-                         "tau_m": tauMem,
-                         "tau_syn_ex": tauSyn,
-                         "tau_syn_in": tauSyn,
-                         "t_ref": 2.0,
-                         "E_L": 0.0,
-                         "V_reset": 0.0,
-                         "V_m": 0.0,
-                         "V_th": theta}
+        (NE, NI, CE, CI, J_ex,
+         J_in, neuron_params, p_rate) = self._calculate_parameters(case, order)
 
         nest.SetDefaults("iaf_psc_alpha", neuron_params)
         nodes_exc = nest.Create("iaf_psc_alpha", NE)
@@ -609,6 +621,42 @@ class TestBrunel2000(TestCase):
         return (exp(1.0) / (tauSyn * CMem * b) *
                 ((exp(-t_max / tauMem) -
                   exp(-t_max / tauSyn)) / b - t_max * exp(-t_max / tauSyn)))
+
+    @classmethod
+    def _calculate_parameters(cls, case, order):
+        # Parameters for asynchronous irregular firing
+        g = cls.brunel_parameters[case]["g"]
+        eta = cls.brunel_parameters[case]["eta"]
+
+        NE = 4 * order
+        NI = 1 * order
+
+        CE = int(cls.epsilon * NE)  # number of excitatory synapses per neuron
+        CI = int(cls.epsilon * NI)  # number of inhibitory synapses per neuron
+
+        # normalize synaptic current so that amplitude of a PSP is J
+        J_unit = cls._compute_normalised_psr(cls.tauMem, cls.CMem,
+                                             cls.tauSyn)
+        J_ex = cls.J / J_unit
+        J_in = -g * J_ex
+
+        # threshold rate, equivalent rate of events needed to
+        # have mean input current equal to threshold
+        nu_th = ((cls.theta * cls.CMem) /
+                 (J_ex * CE * exp(1) * cls.tauMem * cls.tauSyn))
+        nu_ex = eta * nu_th
+        p_rate = 1000.0 * nu_ex * CE
+
+        neuron_params = {"C_m": cls.CMem,
+                         "tau_m": cls.tauMem,
+                         "tau_syn_ex": cls.tauSyn,
+                         "tau_syn_in": cls.tauSyn,
+                         "t_ref": 2.0,
+                         "E_L": 0.0,
+                         "V_reset": 0.0,
+                         "V_m": 0.0,
+                         "V_th": cls.theta}
+        return NE, NI, CE, CI, J_ex, J_in, neuron_params, p_rate
 
 
 class TestNetwork(TestCase):
