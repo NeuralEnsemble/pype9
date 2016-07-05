@@ -7,6 +7,7 @@ import quantities as pq
 import neo
 import pyNN.neuron
 import pyNN.nest
+import nest
 from nineml.user import (
     Projection, Network, DynamicsProperties,
     Population, ComponentArray, EventConnectionGroup,
@@ -38,7 +39,6 @@ except ImportError:
 if __name__ == '__main__':
     # Import dummy test case
     from utils import DummyTestCase as TestCase  # @UnusedImport
-    import nest.raster_plot
 else:
     from unittest import TestCase  # @Reimport
 
@@ -57,13 +57,15 @@ class TestBrunel2000(TestCase):
     max_delay = 10.0
     delay = 1.5 * un.ms
 
+    # Parameters used to construct the reference network
+
     # Initialize the parameters of the integrate and fire neuron
     theta = 20.0
     J = 0.1  # postsynaptic amplitude in mV
     tauSyn = 0.1
     tauMem = 20.0
     CMem = 250.0
-    
+
     epsilon = 0.1  # connection probability
 
     brunel_parameters = {
@@ -156,6 +158,10 @@ class TestBrunel2000(TestCase):
                                          pop_name)))
 
     def test_connection_degrees(self, case='AI', order=500, **kwargs):  # @UnusedVariable @IgnorePep8
+        """
+        Compares the in/out degree of all projections in the 9ML network with
+        the corresponding projections in the reference network
+        """
         self._setup('nest')
         nml = self._construct_nineml(case, order, 'nest')
         ref = self._construct_reference(case, order)
@@ -269,7 +275,8 @@ class TestBrunel2000(TestCase):
     def test_activity(self, case='AI', order=50, simtime=100.0, plot=True,
                       record_size=50, record_pops=('Exc', 'Inh', 'Ext'),
                       record_states=True, record_start=0.0, bin_width=2.5,
-                      identical_input=True, **kwargs):
+                      identical_input=True, identical_connections=True,
+                      identical_initialisation=True, **kwargs):
         if identical_input:
             mean_isi = 1000.0 / self._calculate_parameters(case, order)[-1]
             external_input = []
@@ -289,23 +296,53 @@ class TestBrunel2000(TestCase):
         record_duration = simtime - record_start
         # Construct 9ML network
         self._setup('nest')
-        nml_network = self._construct_nineml(case, order, 'nest',
-                                             external_input=external_input,
-                                             **kwargs)
+        nml_network = self._construct_nineml(
+            case, order, 'nest', external_input=external_input, **kwargs)
         # START DEBUGGING #
-        ipt = nml_network.component_array('Ext')._inputs['spike_input__cell'][0]
-        ipt_source = ipt.all_cells
+        ipt = nest.Create(
+            "spike_generator", len(external_input),
+            params=[{'spike_times': r} for r in external_input])
+        ipt_parrot = nest.Create(
+            'parrot_neuron_ps', len(external_input))
+        nest.Connect(ipt, ipt_parrot, 'one_to_one')
+        exc = nml_network.component_array('Exc')
+        inh = nml_network.component_array('Inh')
+        nest.CopyModel(
+            "static_synapse", "ipt_syn", {
+                "weight": self._calculate_parameters(case, order)[-3],
+                "delay": float(self.delay.value),
+                "receptor_type":
+                    nest.GetDefaults(exc.celltype.model.name)[
+                        'receptor_types']['spike__psr__External']})
+        nest.Connect(ipt_parrot, list(exc.all_cells) + list(inh.all_cells),
+                     'one_to_one', "ipt_syn")
         ipt_detector = nest.Create("spike_detector")
         nest.SetStatus(ipt_detector,
                        [{"label": "ipt_detector", "withtime": True,
                          "withgid": True}])
-        nest.Connect(list(ipt_source), ipt_detector)
+        nest.Connect(ipt, ipt_detector)
         # END DEBUGGING #
         nml = dict((p.name, list(p.all_cells))
                    for p in nml_network.component_arrays)
+        if identical_connections:
+            connections = {}
+            for p1_name, p2_name in self.out_stdev_error:
+                p1 = list(nml_network.component_array(p1_name).all_cells)
+                p2 = list(nml_network.component_array(p2_name).all_cells)
+                connections[(p1_name, p2_name)] = nest.GetConnections(p1, p2)
+        else:
+            connections = None
+        if identical_initialisation:
+            init_v = {}
+            for p_name in ('Exc', 'Inh'):
+                pop = list(nml_network.component_array(p_name).all_cells)
+                init_v[p_name] = nest.GetStatus(pop, 'V_m')
+        else:
+            init_v = None
         # Construct reference network
-        ref = self._construct_reference(case, order,
-                                        external_input=external_input)
+        ref = self._construct_reference(
+            case, order, external_input=external_input,
+            connections=connections, init_v=init_v)
         # Set up spike recorders for reference network
         pops = {'nineml': nml, 'reference': ref}
         spikes = {}
@@ -347,7 +384,6 @@ class TestBrunel2000(TestCase):
         plt.xlabel('Time (ms)')
         plt.ylabel('Cell Indices')
         plt.title("Input Spikes".format(model_ver, pop_name))
-        plt.show()
         # END DEBUGGING #
         rates = {'reference': {}, 'nineml': {}}
         psth = {'reference': {}, 'nineml': {}}
@@ -430,6 +466,7 @@ class TestBrunel2000(TestCase):
                         percent_psth_stdev_error)))
         if plot:
             plt.show()
+        print "done"
 
     def test_activity_neuron(self, case='AI', order=10, simtime=100.0,
                              simulators=['nest'], **kwargs):  # simulators=['nest', 'neuron']): @IgnorePep8
@@ -518,7 +555,8 @@ class TestBrunel2000(TestCase):
                                                 external_input)
         return network
 
-    def _construct_reference(self, case, order, external_input=None):
+    def _construct_reference(self, case, order, external_input=None,
+                             connections=None, init_v=None):
         """
         The model in this file has been adapted from the brunel-alpha-nest.py
         model that is part of NEST.
@@ -540,15 +578,19 @@ class TestBrunel2000(TestCase):
         This version uses NEST's Connect functions.
         """
 
-        (NE, NI, CE, CI, J_ex,
-         J_in, neuron_params, p_rate) = self._calculate_parameters(case, order)
+        (NE, NI, CE, CI, neuron_params,
+         J_ex, J_in, p_rate) = self._calculate_parameters(case, order)
 
         nest.SetDefaults("iaf_psc_alpha", neuron_params)
         nodes_exc = nest.Create("iaf_psc_alpha", NE)
         nodes_inh = nest.Create("iaf_psc_alpha", NI)
 
-        nest.SetStatus(nodes_exc + nodes_inh, 'V_m',
-                       list(numpy.random.rand(NE + NI) * 20.0))
+        if init_v is not None:
+            nest.SetStatus(nodes_exc, 'V_m', init_v['Exc'])
+            nest.SetStatus(nodes_inh, 'V_m', init_v['Inh'])
+        else:
+            nest.SetStatus(nodes_exc + nodes_inh, 'V_m',
+                           list(numpy.random.rand(NE + NI) * 20.0))
 
         if external_input is None:
             nest.SetDefaults("poisson_generator", {"rate": p_rate})
@@ -560,6 +602,10 @@ class TestBrunel2000(TestCase):
                 "spike_generator", NE + NI,
                 params=[{'spike_times': r} for r in external_input])
 
+        all_nodes = {'Exc': nodes_exc, 'Inh': nodes_inh, 'Ext': nodes_ext}
+
+        # Set up connections
+
         nest.CopyModel(
             "static_synapse", "excitatory", {
                 "weight": J_ex, "delay": float(self.delay.value)})
@@ -570,25 +616,30 @@ class TestBrunel2000(TestCase):
         nest.Connect(nodes_ext, nodes_exc + nodes_inh, 'one_to_one',
                      "excitatory")
 
-        # We now iterate over all neuron IDs, and connect the neuron to the
-        # sources from our array. The first loop connects the excitatory
-        # neurons and the second loop the inhibitory neurons.
-        conn_params_ex = {'rule': 'fixed_indegree', 'indegree': CE}
-        nest.Connect(
-            nodes_exc,
-            nodes_exc +
-            nodes_inh,
-            conn_params_ex,
-            "excitatory")
+        if connections is not None:
+            for conns in connections.itervalues():
+                for i in numpy.unique(conns[:, 1]):
+                    nest.Connect(list(conns[(conns[:, 1] == i), 0], [i]))
+        else:
+            # We now iterate over all neuron IDs, and connect the neuron to the
+            # sources from our array. The first loop connects the excitatory
+            # neurons and the second loop the inhibitory neurons.
+            conn_params_ex = {'rule': 'fixed_indegree', 'indegree': CE}
+            nest.Connect(
+                nodes_exc,
+                nodes_exc +
+                nodes_inh,
+                conn_params_ex,
+                "excitatory")
 
-        conn_params_in = {'rule': 'fixed_indegree', 'indegree': CI}
-        nest.Connect(
-            nodes_inh,
-            nodes_exc +
-            nodes_inh,
-            conn_params_in,
-            "inhibitory")
-        return {'Exc': nodes_exc, 'Inh': nodes_inh, 'Ext': nodes_ext}
+            conn_params_in = {'rule': 'fixed_indegree', 'indegree': CI}
+            nest.Connect(
+                nodes_inh,
+                nodes_exc +
+                nodes_inh,
+                conn_params_in,
+                "inhibitory")
+        return all_nodes
 
     def _reference_projections(self, network):
         combined = (network['Exc'] + network['Inh'])
@@ -656,7 +707,7 @@ class TestBrunel2000(TestCase):
                          "V_reset": 0.0,
                          "V_m": 0.0,
                          "V_th": cls.theta}
-        return NE, NI, CE, CI, J_ex, J_in, neuron_params, p_rate
+        return NE, NI, CE, CI, neuron_params, J_ex, J_in, p_rate
 
 
 class TestNetwork(TestCase):
