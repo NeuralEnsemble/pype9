@@ -2,6 +2,8 @@ from __future__ import division
 from math import exp
 from itertools import groupby, izip
 from operator import itemgetter
+from copy import copy
+import itertools
 import numpy
 import quantities as pq
 import neo
@@ -272,13 +274,15 @@ class TestBrunel2000(TestCase):
 
 #     cases = ["SR", "AI", "SIfast", "SIslow"]
 
-    def test_activity(self, case='AI', order=50, simtime=100.0, plot=True,
+    def test_activity(self, case='AI', order=1, simtime=1000.0, plot=True,
                       record_size=50, record_pops=('Exc', 'Inh', 'Ext'),
                       record_states=True, record_start=0.0, bin_width=2.5,
-                      identical_input=True, identical_connections=True,
-                      identical_initialisation=True, **kwargs):
+                      identical_input=2, identical_connections=True,
+                      identical_initialisation='zero', **kwargs):
         if identical_input:
             mean_isi = 1000.0 / self._calculate_parameters(case, order)[-1]
+            if isinstance(identical_input, int):
+                mean_isi *= identical_input
             external_input = []
             for _ in xrange(order * 5):
                 # Generate poisson spike trains using numpy
@@ -326,17 +330,29 @@ class TestBrunel2000(TestCase):
                    for p in nml_network.component_arrays)
         if identical_connections:
             connections = {}
-            for p1_name, p2_name in self.out_stdev_error:
+            for p1_name, p2_name in itertools.product(*([('Exc', 'Inh')] * 2)):
                 p1 = list(nml_network.component_array(p1_name).all_cells)
                 p2 = list(nml_network.component_array(p2_name).all_cells)
-                connections[(p1_name, p2_name)] = nest.GetConnections(p1, p2)
+                conns = numpy.asarray(nest.GetConnections(p1, p2))
+                conns[:, 0] -= p1[0]
+                conns[:, 1] -= p2[0]
+                assert numpy.all(conns[0:2, :] >= 0)
+                connections[(p1_name, p2_name)] = conns
         else:
             connections = None
-        if identical_initialisation:
+        if identical_initialisation == 'zero':
+            init_v = {}
+            for pname in ('Exc', 'Inh'):
+                pop = list(nml_network.component_array(pname).all_cells)
+                zeros = list(
+                    numpy.zeros(len(nml_network.component_array(pname))))
+                nest.SetStatus(pop, 'v__cell', zeros)
+                init_v[pname] = zeros
+        elif identical_initialisation:
             init_v = {}
             for p_name in ('Exc', 'Inh'):
                 pop = list(nml_network.component_array(p_name).all_cells)
-                init_v[p_name] = nest.GetStatus(pop, 'V_m')
+                init_v[p_name] = nest.GetStatus(pop, 'v__cell')
         else:
             init_v = None
         # Construct reference network
@@ -440,8 +456,14 @@ class TestBrunel2000(TestCase):
                                                           param))
                             plt.legend(legend)
         for pop_name in record_pops:
-            percent_rate_error = abs(rates['nineml'][pop_name] /
-                                     rates['reference'][pop_name] - 1.0) * 100
+            if rates['reference'][pop_name]:
+                percent_rate_error = abs(
+                    rates['nineml'][pop_name] /
+                    rates['reference'][pop_name] - 1.0) * 100
+            elif not rates['nineml'][pop_name]:
+                percent_rate_error = 0.0
+            else:
+                percent_rate_error = float('inf')
             self.assertLess(
                 percent_rate_error,
                 self.rate_percent_error[pop_name], message=(
@@ -450,9 +472,14 @@ class TestBrunel2000(TestCase):
                                     rates['reference'][pop_name],
                                     self.rate_percent_error[pop_name],
                                     percent_rate_error)))
-            percent_psth_stdev_error = abs(
-                numpy.std(psth['nineml'][pop_name]) /
-                numpy.std(psth['reference'][pop_name]) - 1.0) * 100
+            if numpy.std(psth['reference'][pop_name]):
+                percent_psth_stdev_error = abs(
+                    numpy.std(psth['nineml'][pop_name]) /
+                    numpy.std(psth['reference'][pop_name]) - 1.0) * 100
+            elif not numpy.std(psth['nineml'][pop_name]):
+                percent_psth_stdev_error = 0.0
+            else:
+                percent_psth_stdev_error = float('inf')
             self.assertLess(
                 percent_psth_stdev_error,
                 self.psth_percent_error[pop_name],
@@ -592,15 +619,15 @@ class TestBrunel2000(TestCase):
             nest.SetStatus(nodes_exc + nodes_inh, 'V_m',
                            list(numpy.random.rand(NE + NI) * 20.0))
 
-        if external_input is None:
+        if external_input is not None:
+            nodes_ext = nest.Create(
+                "spike_generator", NE + NI,
+                params=[{'spike_times': r} for r in external_input])
+        else:
             nest.SetDefaults("poisson_generator", {"rate": p_rate})
             noise = nest.Create("poisson_generator")
             nodes_ext = nest.Create('parrot_neuron', NE + NI)
             nest.Connect(noise, nodes_ext)
-        else:
-            nodes_ext = nest.Create(
-                "spike_generator", NE + NI,
-                params=[{'spike_times': r} for r in external_input])
 
         all_nodes = {'Exc': nodes_exc, 'Inh': nodes_inh, 'Ext': nodes_ext}
 
@@ -617,9 +644,20 @@ class TestBrunel2000(TestCase):
                      "excitatory")
 
         if connections is not None:
-            for conns in connections.itervalues():
+            for (p1_name, p2_name), conns in connections.iteritems():
+                if p1_name == 'Exc':
+                    p1 = nodes_exc
+                    syn = 'excitatory'
+                else:
+                    p1 = nodes_inh
+                    syn = 'inhibitory'
+                p2 = nodes_exc if p2_name == 'Exc' else nodes_inh
+                conns = copy(conns)
+                conns[:, 0] += p1[0]
+                conns[:, 1] += p2[0]
                 for i in numpy.unique(conns[:, 1]):
-                    nest.Connect(list(conns[(conns[:, 1] == i), 0], [i]))
+                    nest.Connect(list(conns[(conns[:, 1] == i), 0]), [i],
+                                 'all_to_all', syn)
         else:
             # We now iterate over all neuron IDs, and connect the neuron to the
             # sources from our array. The first loop connects the excitatory
@@ -684,6 +722,8 @@ class TestBrunel2000(TestCase):
 
         CE = int(cls.epsilon * NE)  # number of excitatory synapses per neuron
         CI = int(cls.epsilon * NI)  # number of inhibitory synapses per neuron
+        if not CE:
+            CE = 1
 
         # normalize synaptic current so that amplitude of a PSP is J
         J_unit = cls._compute_normalised_psr(cls.tauMem, cls.CMem,
