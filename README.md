@@ -1,7 +1,7 @@
 PyPe9
 ========
 
-"PYthon PipelinEs for NineML (PyPe9)" is a collection of software pipelines
+"PYthon PipelinEs for 9ml (PyPe9)" is a collection of software pipelines
 written in Python to read and simulate networks of neuronal models
 described in NineML (http://nineml.net) in both Neuron and NEST simulators.
 
