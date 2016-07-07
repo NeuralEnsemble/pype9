@@ -274,11 +274,11 @@ class TestBrunel2000(TestCase):
 
 #     cases = ["SR", "AI", "SIfast", "SIslow"]
 
-    def test_activity(self, case='AI', order=1, simtime=1000.0, plot=True,
+    def test_activity(self, case='AI', order=50, simtime=250.0, plot=True,
                       record_size=50, record_pops=('Exc', 'Inh', 'Ext'),
                       record_states=True, record_start=0.0, bin_width=2.5,
-                      identical_input=2, identical_connections=True,
-                      identical_initialisation='zero', **kwargs):
+                      identical_input=False, identical_connections=False,
+                      identical_initialisation=False, **kwargs):
         if identical_input:
             mean_isi = 1000.0 / self._calculate_parameters(case, order)[-1]
             if isinstance(identical_input, int):
@@ -302,30 +302,30 @@ class TestBrunel2000(TestCase):
         self._setup('nest')
         nml_network = self._construct_nineml(
             case, order, 'nest', external_input=external_input, **kwargs)
-        # START DEBUGGING #
-        ipt = nest.Create(
-            "spike_generator", len(external_input),
-            params=[{'spike_times': r} for r in external_input])
-        ipt_parrot = nest.Create(
-            'parrot_neuron_ps', len(external_input))
-        nest.Connect(ipt, ipt_parrot, 'one_to_one')
-        exc = nml_network.component_array('Exc')
-        inh = nml_network.component_array('Inh')
-        nest.CopyModel(
-            "static_synapse", "ipt_syn", {
-                "weight": self._calculate_parameters(case, order)[-3],
-                "delay": float(self.delay.value),
-                "receptor_type":
-                    nest.GetDefaults(exc.celltype.model.name)[
-                        'receptor_types']['spike__psr__External']})
-        nest.Connect(ipt_parrot, list(exc.all_cells) + list(inh.all_cells),
-                     'one_to_one', "ipt_syn")
-        ipt_detector = nest.Create("spike_detector")
-        nest.SetStatus(ipt_detector,
-                       [{"label": "ipt_detector", "withtime": True,
-                         "withgid": True}])
-        nest.Connect(ipt, ipt_detector)
-        # END DEBUGGING #
+#         # START DEBUGGING #
+#         ipt = nest.Create(
+#             "spike_generator", len(external_input),
+#             params=[{'spike_times': r} for r in external_input])
+#         ipt_parrot = nest.Create(
+#             'parrot_neuron_ps', len(external_input))
+#         nest.Connect(ipt, ipt_parrot, 'one_to_one')
+#         exc = nml_network.component_array('Exc')
+#         inh = nml_network.component_array('Inh')
+#         nest.CopyModel(
+#             "static_synapse", "ipt_syn", {
+#                 "weight": self._calculate_parameters(case, order)[-3],
+#                 "delay": float(self.delay.value),
+#                 "receptor_type":
+#                     nest.GetDefaults(exc.celltype.model.name)[
+#                         'receptor_types']['spike__psr__External']})
+#         nest.Connect(ipt_parrot, list(exc.all_cells) + list(inh.all_cells),
+#                      'one_to_one', "ipt_syn")
+#         ipt_detector = nest.Create("spike_detector")
+#         nest.SetStatus(ipt_detector,
+#                        [{"label": "ipt_detector", "withtime": True,
+#                          "withgid": True}])
+#         nest.Connect(ipt, ipt_detector)
+#         # END DEBUGGING #
         nml = dict((p.name, list(p.all_cells))
                    for p in nml_network.component_arrays)
         if identical_connections:
@@ -391,16 +391,16 @@ class TestBrunel2000(TestCase):
         # Simulate the network
         nest.Simulate(simtime)
         print "Finished simulation"
-        # START DEBUGGING #
-        plt.figure()
-        events = nest.GetStatus(ipt_detector, "events")[0]
-        spike_times = numpy.asarray(events['times'])
-        senders = numpy.asarray(events['senders'])
-        plt.scatter(spike_times, senders)
-        plt.xlabel('Time (ms)')
-        plt.ylabel('Cell Indices')
-        plt.title("Input Spikes".format(model_ver, pop_name))
-        # END DEBUGGING #
+#         # START DEBUGGING #
+#         plt.figure()
+#         events = nest.GetStatus(ipt_detector, "events")[0]
+#         spike_times = numpy.asarray(events['times'])
+#         senders = numpy.asarray(events['senders'])
+#         plt.scatter(spike_times, senders)
+#         plt.xlabel('Time (ms)')
+#         plt.ylabel('Cell Indices')
+#         plt.title("Input Spikes".format(model_ver, pop_name))
+#         # END DEBUGGING #
         rates = {'reference': {}, 'nineml': {}}
         psth = {'reference': {}, 'nineml': {}}
         for model_ver in ('reference', 'nineml'):
