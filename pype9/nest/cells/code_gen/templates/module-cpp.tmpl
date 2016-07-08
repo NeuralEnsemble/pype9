@@ -47,7 +47,7 @@ nineml::{{component_name}}Module::{{component_name}}Module() {
 nineml::{{component_name}}Module::~{{component_name}}Module() {}
 
 const std::string nineml::{{component_name}}Module::name(void) const {
-    return std::string("Auto-generated module for {{component_name}} class"); // Return name of the module
+    return std::string("PyPe9-generated module for {{component_name}} class"); // Return name of the module
 }
 
 const std::string nineml::{{component_name}}Module::commandstring(void) const {
@@ -62,7 +62,7 @@ const std::string nineml::{{component_name}}Module::commandstring(void) const {
 
 //-------------------------------------------------------------------------------------
 
-void nineml::{{component_name}}Module::init(SLIInterpreter *i, nest::Network*) {
+void nineml::{{component_name}}Module::init( SLIInterpreter* i ) {
     /* Register a neuron or device model.
        Give node type as template argument and the name as second argument.
        The first argument is always a reference to the network.
