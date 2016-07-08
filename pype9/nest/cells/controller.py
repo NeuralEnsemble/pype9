@@ -62,13 +62,13 @@ class _SimulationController(SimulationController):
 
     def set_delays(self, min_delay, max_delay, device_delay):
         self._device_delay = float(device_delay)
-        if min_delay != 'auto':
-            min_delay = float(min_delay)
-            max_delay = float(max_delay)
-            for synapse_model in nest.Models(mtype='synapses'):
-                nest.SetDefaults(synapse_model, {'delay': min_delay,
-                                                 'min_delay': min_delay,
-                                                 'max_delay': max_delay})
+#         if min_delay != 'auto':
+#             min_delay = float(min_delay)
+#             max_delay = float(max_delay)
+#             for synapse_model in nest.Models(mtype='synapses'):
+#                 nest.SetDefaults(synapse_model, {'delay': min_delay,
+#                                                  'min_delay': min_delay,
+#                                                  'max_delay': max_delay})
 
     @property
     def max_delay(self):
