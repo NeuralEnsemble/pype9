@@ -274,14 +274,12 @@ class TestBrunel2000(TestCase):
                 "Number of connections in '{}' ({}) does not match reference "
                 "({})".format(conn_group.name, nml_size, ref_size))
 
-
-#     cases = ["SR", "AI", "SIfast", "SIslow"]
-
     def test_activity(self, case='AI', order=50, simtime=250.0, plot=False,
                       record_size=50, record_pops=('Exc', 'Inh', 'Ext'),
                       record_states=False, record_start=0.0, bin_width=4.0,
                       identical_input=False, identical_connections=False,
-                      identical_initialisation=False, **kwargs):
+                      identical_initialisation=False, build_mode='force',
+                      **kwargs):
         if identical_input:
             mean_isi = 1000.0 / self._calculate_parameters(case, order)[-1]
             if isinstance(identical_input, int):
@@ -304,7 +302,8 @@ class TestBrunel2000(TestCase):
         # Construct 9ML network
         self._setup('nest')
         nml_network = self._construct_nineml(
-            case, order, 'nest', external_input=external_input, **kwargs)
+            case, order, 'nest', external_input=external_input,
+            build_mode=build_mode, **kwargs)
         nml = dict((p.name, list(p.all_cells))
                    for p in nml_network.component_arrays)
         if identical_connections:
@@ -435,7 +434,7 @@ class TestBrunel2000(TestCase):
                 percent_rate_error = float('inf')
             self.assertLess(
                 percent_rate_error,
-                self.rate_percent_error[pop_name], message=(
+                self.rate_percent_error[pop_name], msg=(
                     "Rate of '{}' ({}) doesn't match reference ({}) within {}%"
                     " ({}%)".format(pop_name, rates['nineml'][pop_name],
                                     rates['reference'][pop_name],
@@ -452,7 +451,7 @@ class TestBrunel2000(TestCase):
             self.assertLess(
                 percent_psth_stdev_error,
                 self.psth_percent_error[pop_name],
-                message=(
+                msg=(
                     "Std. Dev. of PSTH for '{}' ({}) doesn't match "
                     "reference ({}) within {}% ({}%)".format(
                         pop_name,
@@ -724,6 +723,8 @@ class TestBrunel2000(TestCase):
 
 
 class TestNetwork(TestCase):
+
+    delay = 1.5 * un.ms
 
     def setUp(self):
         self.all_to_all = ninemlcatalog.load('/connectionrule/AllToAll',

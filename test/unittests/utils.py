@@ -17,32 +17,32 @@ class DummyTestCase(object):
     def __del__(self):
         self.tearDown()
 
-    def assertEqual(self, first, second, message=None):
+    def assertEqual(self, first, second, msg=None):
         if first != second:
-            if message is None:
-                message = '{} and {} are not equal'.format(repr(first),
-                                                           repr(second))
-            print message
+            if msg is None:
+                msg = '{} and {} are not equal'.format(repr(first),
+                                                       repr(second))
+            print msg
 
-    def assertAlmostEqual(self, first, second, places=None, message=None):
+    def assertAlmostEqual(self, first, second, places=None, msg=None):
         if places is None:
             places = 7
         if abs(first - second) > 10 ** -places:
-            if message is None:
-                message = '{} and {} are not equal'.format(repr(first),
-                                                           repr(second))
-            print message
+            if msg is None:
+                msg = '{} and {} are not equal'.format(repr(first),
+                                                       repr(second))
+            print msg
 
-    def assertLess(self, first, second, message=None):
+    def assertLess(self, first, second, msg=None):
         if first >= second:
-            if message is None:
-                message = '{} is not less than {}'.format(repr(first),
-                                                          repr(second))
-            print message
+            if msg is None:
+                msg = '{} is not less than {}'.format(repr(first),
+                                                      repr(second))
+            print msg
 
-    def assertLessEqual(self, first, second, message=None):
+    def assertLessEqual(self, first, second, msg=None):
         if first > second:
-            if message is None:
-                message = '{} is not less than or equal to {}'.format(
+            if msg is None:
+                msg = '{} is not less than or equal to {}'.format(
                     repr(first), repr(second))
-            print message
+            print msg

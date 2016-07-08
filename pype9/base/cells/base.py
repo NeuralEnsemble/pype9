@@ -12,7 +12,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from itertools import chain
-from copy import deepcopy
+from copy import deepcopy, copy
 from abc import ABCMeta
 import quantities as pq
 import nineml
@@ -77,13 +77,17 @@ class CellMetaClass(type):
         url = component_class.url
         try:
             Cell, build_options = cls._built_types[(name, url)]
-            if build_options != kwargs:
+            # FIXME: Need to look into dropping the build_dir from
+            #        build_options is appropriate here
+            bo = copy(build_options)
+            bo.pop('build_dir')
+            if bo != kwargs:
                 raise Pype9RuntimeError(
                     "Build options '{}' do not match previously built '{}' "
                     "cell class with same name ('{}'). Please specify a "
                     "different name (using a loaded nineml.Component instead "
                     "of a URL)."
-                    .format(kwargs, name, build_options))
+                    .format(kwargs, name, bo))
         except KeyError:
             # Initialise code generator
             code_gen = cls.CodeGenerator()
