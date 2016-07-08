@@ -25,6 +25,9 @@ class _SimulationController(SimulationController):
     def __init__(self):
         """Initialize the simulator."""
         super(_SimulationController, self).__init__()
+        self.tempdirs = []
+        self._cache_num_processes = nest.GetKernelStatus()['num_processes']
+        self.clear()
         self.t_start = 0
         self.write_on_end = []
         self.recorders = set([])
@@ -32,14 +35,6 @@ class _SimulationController(SimulationController):
         self.optimize = False
         self.spike_precision = "off_grid"
         self.verbosity = "warning"
-        self._cache_num_processes = nest.GetKernelStatus()['num_processes']
-        # allow NEST to erase previously written files
-        # (defaut with all the other simulators)
-        nest.SetKernelStatus({'overwrite_files': True})
-        self.tempdirs = []
-        self.recording_devices = []
-        self.populations = []
-        self.segment_counter = 0
         self._device_delay = None
 
     @property
@@ -132,6 +127,7 @@ class _SimulationController(SimulationController):
         self.run(tstop - self.t)
 
     def reset(self):
+        nest.SetKernelStatus({'time': 0.0})
         for p in self.populations:
             for variable, initial_value in p.initial_values.items():
                 p._set_initial_value_array(variable, initial_value)
@@ -152,10 +148,15 @@ class _SimulationController(SimulationController):
         tempdir = tempfile.mkdtemp()
         self.tempdirs.append(tempdir)  # append tempdir to tempdirs list
         nest.SetKernelStatus({'data_path': tempdir})
-        self.segment_counter = -1
+        self.segment_counter = 0
+        # Get values before they are reset
+        dt = kwargs.get('dt', self.dt)
+        num_processes = self.num_processes
+        threads = self.threads
+        # Reset network and kernel
         nest.ResetKernel()
         nest.ResetNetwork()
-        nest.SetKernelStatus({'time': 0.0})
+        nest.SetKernelStatus({'overwrite_files': True, 'resolution': dt})
         if 'dt' in kwargs:
             self.dt = kwargs['dt']
         # set kernel RNG seeds
@@ -167,7 +168,7 @@ class _SimulationController(SimulationController):
         else:
             rng = numpy.random.RandomState(kwargs.get('rng_seed',
                                                       int(time.time())))
-            n = self.num_processes * self.threads
+            n = num_processes * threads
             self.rng_seeds = list(
                 numpy.asarray(rng.uniform(low=0, high=100000, size=n),
                               dtype=int))
