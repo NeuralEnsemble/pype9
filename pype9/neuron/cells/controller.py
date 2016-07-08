@@ -62,5 +62,8 @@ class _SimulationController(SimulationController):
         self.reset_cells()
         self.tstop = 0.0
 
+    def clear(self, **kwargs):  # @UnusedVariable
+        pass  # TODO: Need to look into whether it is possible to remove cells
+
 # Make a singleton instantiation of the simulation controller
 simulation_controller = _SimulationController()

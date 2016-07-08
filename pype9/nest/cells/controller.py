@@ -1,6 +1,7 @@
-import nest
+import time
 import tempfile
 import numpy
+import nest
 from pype9.base.cells.controller import SimulationController
 
 
@@ -131,8 +132,6 @@ class _SimulationController(SimulationController):
         self.run(tstop - self.t)
 
     def reset(self):
-        nest.ResetNetwork()
-        nest.SetKernelStatus({'time': 0.0})
         for p in self.populations:
             for variable, initial_value in p.initial_values.items():
                 p._set_initial_value_array(variable, initial_value)
@@ -141,20 +140,37 @@ class _SimulationController(SimulationController):
         self.segment_counter += 1
         self.reset_cells()
 
-    def clear(self):
+    def clear(self, **kwargs):
+        # Set initial values
         self.populations = []
         self.recording_devices = []
         self.recorders = set()
         # clear the sli stack, if this is not done --> memory leak cause the
         # stack increases
         nest.sr('clear')
-        # reset the simulation kernel
-        nest.ResetKernel()
         # set tempdir
         tempdir = tempfile.mkdtemp()
         self.tempdirs.append(tempdir)  # append tempdir to tempdirs list
         nest.SetKernelStatus({'data_path': tempdir})
         self.segment_counter = -1
+        nest.ResetKernel()
+        nest.ResetNetwork()
+        nest.SetKernelStatus({'time': 0.0})
+        if 'dt' in kwargs:
+            self.dt = kwargs['dt']
+        # set kernel RNG seeds
+        self.num_threads = kwargs.get('threads', 1)
+        if 'grng_seed' in kwargs:
+            self.grng_seed = kwargs['grng_seed']
+        if 'rng_seeds' in kwargs:
+            self.rng_seeds = kwargs['rng_seeds']
+        else:
+            rng = numpy.random.RandomState(kwargs.get('rng_seed',
+                                                      int(time.time())))
+            n = self.num_processes * self.threads
+            self.rng_seeds = list(
+                numpy.asarray(rng.uniform(low=0, high=100000, size=n),
+                              dtype=int))
         self.reset()
 
 simulation_controller = _SimulationController()

@@ -26,6 +26,9 @@ else:
 cell_metaclasses = {'neuron': CellMetaClassNEURON,
                     'nest': CellMetaClassNEST}
 
+NEST_RNG_SEED = 12345
+NEURON_RNG_SEED = 54321
+
 
 class TestDynamics(TestCase):
 
@@ -70,7 +73,8 @@ class TestDynamics(TestCase):
             neuron_build_args={'build_mode': build_mode},
             nest_build_args={'build_mode': build_mode},
             build_name='Izhikevich9ML')
-        comparer.simulate(duration)
+        comparer.simulate(duration, nest_rng_seed=NEST_RNG_SEED,
+                          neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
@@ -137,7 +141,8 @@ class TestDynamics(TestCase):
                 'n_beta_V0': (None, 1), 'n_beta_K': (None, 1)},
             neuron_build_args={'build_mode': build_mode},
             nest_build_args={'build_mode': build_mode})
-        comparer.simulate(duration)
+        comparer.simulate(duration, nest_rng_seed=NEST_RNG_SEED,
+                          neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
@@ -179,7 +184,8 @@ class TestDynamics(TestCase):
             neuron_build_args={'build_mode': build_mode},
             nest_build_args={'build_mode': build_mode},
             extra_mechanisms=['pas'])
-        comparer.simulate(duration)
+        comparer.simulate(duration, nest_rng_seed=NEST_RNG_SEED,
+                          neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
@@ -294,7 +300,8 @@ class TestDynamics(TestCase):
                 'build_dir': os.path.join(build_dir, 'nest', 'IaFAlpha')},
             min_delay=min_delay,
             device_delay=device_delay)
-        comparer.simulate(duration)
+        comparer.simulate(duration, nest_rng_seed=NEST_RNG_SEED,
+                          neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
@@ -334,7 +341,8 @@ class TestDynamics(TestCase):
             neuron_build_args={'build_mode': build_mode,
                                'external_currents': ['iSyn']},
             nest_build_args={'build_mode': build_mode}) #, auxiliary_states=['U']) # @IgnorePep8
-        comparer.simulate(duration)
+        comparer.simulate(duration, nest_rng_seed=NEST_RNG_SEED,
+                          neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
@@ -364,14 +372,16 @@ class TestDynamics(TestCase):
             if sim_name == 'neuron':
                 # Run NEURON simulation
                 import neuron
-                simulatorNEURON.reset()
+                simulatorNEURON.clear(rng_seed=NEURON_RNG_SEED)
                 neuron.h.dt = dt
             elif sim_name == 'nest':
                 pass
-                # Run NEST simulation
+#                 Run NEST simulation
 #                 import nest
-#                 simulatorNEST.reset()
+#                 nest.ResetKernel()
+#                 nest.ResetNetwork()
 #                 nest.SetKernelStatus({'resolution': dt})
+                simulatorNEST.clear(rng_seed=NEST_RNG_SEED, dt=dt)
             else:
                 assert False
             # Create and initialise cell
@@ -399,8 +409,8 @@ class TestDynamics(TestCase):
             self.assertLess(
                 rate_difference, 1.75 * pq.Hz,
                 ("Recorded rate of {} poisson generator ({}) did not match "
-                 "desired ({}): difference {}".format(
-                     sim_name, recorded_rate, ref_rate,
+                 "desired ({}) within {}: difference {}".format(
+                     sim_name, recorded_rate, ref_rate, 1.75 * pq.Hz,
                      recorded_rate - ref_rate)))
             # Calculate the absolute deviation
 #             isi_avg = pq.Quantity(1.0 / recorded_rate, 'ms')

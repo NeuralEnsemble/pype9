@@ -129,18 +129,17 @@ class Comparer(object):
         self.device_delay = device_delay
         self.max_delay = max_delay
 
-    def simulate(self, duration):
+    def simulate(self, duration, nest_rng_seed=12345, neuron_rng_seed=54321):
         """
         Run and the simulation
         """
         if self.simulate_nest:
             nest.ResetKernel()
-            simulatorNEST.reset()
-            nest.SetKernelStatus({'resolution': self.dt})
+            simulatorNEST.clear(rng_seed=nest_rng_seed, dt=self.dt)
             simulation_controller.set_delays(self.min_delay, self.max_delay,
                                              self.device_delay)
         if self.simulate_neuron:
-            simulatorNEURON.reset()
+            simulatorNEURON.clear(rng_seed=neuron_rng_seed)
             neuron.h.dt = self.dt
         for simulator in self.simulators:
             self._create_9ML(self.nineml_model, self.properties, simulator)
