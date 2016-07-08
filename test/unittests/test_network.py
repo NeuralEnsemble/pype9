@@ -1,4 +1,5 @@
 from __future__ import division
+import nest
 from math import exp
 from itertools import groupby, izip
 from operator import itemgetter
