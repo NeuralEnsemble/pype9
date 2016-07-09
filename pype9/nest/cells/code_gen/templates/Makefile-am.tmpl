@@ -33,6 +33,7 @@ if BUILD_DYNAMIC_USER_MODULES
   {{name}}Module_la_CXXFLAGS= @AM_CXXFLAGS@
   {{name}}Module_la_SOURCES=  $(source_files)
   {{name}}Module_la_LDFLAGS=  -module{% if ode_solver in ('cvode', 'ida') %} @SUNDIALS_LDFLAGS@{% endif %}
+
 else
   lib_LTLIBRARIES= lib{{name}}Module.la
 endif
