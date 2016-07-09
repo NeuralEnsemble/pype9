@@ -25,6 +25,12 @@ class PyNNCellWrapper(object):
         """
         return cls.parameter_names
 
+    def translate(self, parameters):
+        """
+        No need to translate parameter space as names of parameters will match
+        """
+        return parameters
+
 
 class PyNNCellWrapperMetaClass(type):
 

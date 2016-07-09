@@ -1,5 +1,5 @@
+#!/usr/bin/env python
 from __future__ import division
-import nest
 from math import exp
 from itertools import groupby, izip
 from operator import itemgetter
@@ -8,9 +8,6 @@ import itertools
 import numpy
 import quantities as pq
 import neo
-import pyNN.neuron
-import pyNN.nest
-import nest
 from nineml.user import (
     Projection, Network, DynamicsProperties,
     Population, ComponentArray, EventConnectionGroup,
@@ -29,12 +26,17 @@ from pype9.base.cells import (
     ConnectionPropertySet, DynamicsWithSynapsesProperties)
 from pype9.base.network import Network as BasePype9Network
 from pype9.neuron.network import Network as NeuronPype9Network
-from pype9.nest.network import Network as NestPype9Network
 from pype9.neuron.cells import (
     simulation_controller as simulation_contoller_neuron)
-from pype9.nest.cells import (
-    simulation_controller as simulation_controller_nest)
 import ninemlcatalog
+import pyNN.neuron
+import sys
+argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
+import nest  # @IgnorePep8
+import pyNN.nest  # @IgnorePep8
+from pype9.nest.network import Network as NestPype9Network  # @IgnorePep8
+from pype9.nest.cells import (  # @IgnorePep8
+    simulation_controller as simulation_controller_nest)
 try:
     from matplotlib import pyplot as plt
 except ImportError:
@@ -1193,7 +1195,6 @@ class TestNetwork(TestCase):
 if __name__ == '__main__':
     import argparse
     import logging
-    import sys
 
     pyNN_logger = logging.Logger('PyNN')
     pyNN_logger.setLevel(logging.DEBUG)
@@ -1215,7 +1216,7 @@ if __name__ == '__main__':
     parser.add_argument('--option', nargs=2, type=str, action='append',
                         default=[],
                         help="Extra options that are passed to the test")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     options = dict(args.option)
     if args.tester == 'network':
         tester = TestNetwork()
