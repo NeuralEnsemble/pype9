@@ -120,8 +120,7 @@ class Cell(base.Cell):
         self.rec = h.NetCon(self.source, None, sec=self._sec)
         self._inputs = {}
         self._input_auxs = []
-        self.initial_states = {}
-        self.initial_v = self.V_INIT_DEFAULT
+#         self.initial_v = self.V_INIT_DEFAULT
         # Get a mapping of receptor names to NMODL indices for PyNN projection
         # connection
         assert (set(self.build_component_class.event_receive_port_names) ==
@@ -179,9 +178,14 @@ class Cell(base.Cell):
                     "Ambiguous variable '{}' can either be the initial state "
                     "of '{}' or a parameter/state-variable"
                     .format(varname, varname[:-5]))
-            self.initial_states[varname] = val
+            if self._initial_state is None:
+                object.__setattr__(self, '_initial_state', {})
+            self._initial_state[varname[:-5]] = val
         else:
-            super(Cell, self).__setattr__(varname, val)
+            try:
+                super(Cell, self).__setattr__(varname, val)
+            except:
+                raise
 
     def __getattr__(self, varname):
         if varname in self.event_receive_port_names:
@@ -189,6 +193,9 @@ class Cell(base.Cell):
             return self._hoc
         else:
             return super(Cell, self).__getattr__(varname)
+# 
+#     def memb_init(self):
+#         self.initialize()
 
     @property
     def surface_area(self):

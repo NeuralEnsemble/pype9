@@ -465,13 +465,16 @@ class TestBrunel2000(TestCase):
         if plot:
             plt.show()
 
-    def test_activity_with_neuron(self, case='AI', order=10, simtime=100.0,
-                                  simulators=['neuron', 'nest'],
-                                  record_states=False, **kwargs):  # @IgnorePep8 @UnusedVariable
+    def test_activity_with_neuron(self, case='AI', order=50, simtime=1000.0,
+                                  simulators=['neuron', 'nest'], plot=True,
+                                  record_states=False, bin_width=4.0,
+                                  **kwargs):  # @IgnorePep8 @UnusedVariable
         data = {}
         pyNN_simulators = {'nest': pyNN.nest.simulator.state,
                            'neuron': pyNN.neuron.simulator.state}
         # Set up recorders for 9ML network
+        rates = {}
+        psth = {}
         for simulator in simulators:
             data[simulator] = {}
             self._setup(simulator)
@@ -481,33 +484,80 @@ class TestBrunel2000(TestCase):
                 if record_states and pop.name != 'Ext':
                     pop.record('v__cell')
             pyNN_simulators[simulator].run(simtime)
+            rates[simulator] = {}
+            psth[simulator] = {}
             for pop in network.component_arrays:
                 block = data[simulator][pop.name] = pop.get_data()
                 segment = block.segments[0]
                 spiketrains = segment.spiketrains
-                times = []
+                spike_times = []
                 ids = []
                 for i, spiketrain in enumerate(spiketrains):
-                    times.extend(spiketrain)
+                    spike_times.extend(spiketrain)
                     ids.extend([i] * len(spiketrain))
-                plt.figure()
-                plt.scatter(times, ids)
-                plt.xlabel('Times (ms)')
-                plt.ylabel('Cell Indices')
-                plt.title("{} - {} Spikes".format(simulator, pop.name))
-                if record_states and pop.name != 'Ext':
-                    traces = segment.analogsignalarrays
+                rates[simulator][pop.name] = len(spike_times) / (simtime *
+                                                                 pq.ms)
+                psth[simulator][pop.name] = numpy.histogram(
+                    spike_times,
+                    bins=int(numpy.floor(simtime /
+                                         bin_width)))[0] / bin_width
+                if plot:
                     plt.figure()
-                    legend = []
-                    for trace in traces:
-                        plt.plot(trace.times, trace)
-                        legend.append(trace.name)
-                        plt.xlabel('Time (ms)')
-                        plt.ylabel('Membrane Voltage (mV)')
-                        plt.title("{} - {} Membrane Voltage".format(simulator,
-                                                                    pop.name))
-                    plt.legend(legend)
-        plt.show()
+                    plt.scatter(spike_times, ids)
+                    plt.xlabel('Times (ms)')
+                    plt.ylabel('Cell Indices')
+                    plt.title("{} - {} Spikes".format(simulator, pop.name))
+                    if record_states and pop.name != 'Ext':
+                        traces = segment.analogsignalarrays
+                        plt.figure()
+                        legend = []
+                        for trace in traces:
+                            plt.plot(trace.times, trace)
+                            legend.append(trace.name)
+                            plt.xlabel('Time (ms)')
+                            plt.ylabel('Membrane Voltage (mV)')
+                            plt.title("{} - {} Membrane Voltage".format(
+                                simulator, pop.name))
+                        plt.legend(legend)
+        for pop in network.component_arrays:
+            if rates['nest'][pop.name]:
+                percent_rate_error = abs(
+                    rates['neuron'][pop.name] /
+                    rates['nest'][pop.name] - 1.0) * 100
+            elif not rates['neuron'][pop.name]:
+                percent_rate_error = 0.0
+            else:
+                percent_rate_error = float('inf')
+            self.assertLess(
+                percent_rate_error,
+                self.rate_percent_error[pop.name], msg=(
+                    "Rate of NEURON '{}' ({}) doesn't match NEST ({}) within "
+                    "{}% ({}%)".format(pop.name, rates['neuron'][pop.name],
+                                       rates['nest'][pop.name],
+                                       self.rate_percent_error[pop.name],
+                                       percent_rate_error)))
+            if numpy.std(psth['nest'][pop.name]):
+                percent_psth_stdev_error = abs(
+                    numpy.std(psth['neuron'][pop.name]) /
+                    numpy.std(psth['nest'][pop.name]) - 1.0) * 100
+            elif not numpy.std(psth['neuron'][pop.name]):
+                percent_psth_stdev_error = 0.0
+            else:
+                percent_psth_stdev_error = float('inf')
+            self.assertLess(
+                percent_psth_stdev_error,
+                self.psth_percent_error[pop.name],
+                msg=(
+                    "Std. Dev. of PSTH for NEURON '{}' ({}) doesn't match "
+                    "NEST ({}) within {}% ({}%)".format(
+                        pop.name,
+                        numpy.std(psth['neuron'][pop.name]) / bin_width,
+                        numpy.std(psth['nest'][pop.name]) / bin_width,
+                        self.psth_percent_error[pop.name],
+                        percent_psth_stdev_error)))
+        if plot:
+            plt.show()
+        print "done"
 
     def test_flatten(self, **kwargs):  # @UnusedVariable
         brunel_network = ninemlcatalog.load('network/Brunel2000/AI/')

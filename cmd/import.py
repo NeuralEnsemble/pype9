@@ -1,3 +1,7 @@
+"""
+Imports a model in HOC and/or NMODL into the 9ML format
+"""
+raise NotImplementedError
 import os.path
 from pype9.neuron.importer.hoc import HocImporter
 

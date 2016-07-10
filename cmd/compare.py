@@ -2,6 +2,7 @@
 Command that compares a 9ML model with an existing version in NEURON and/or
 NEST
 """
+raise NotImplementedError
 import argparse
 import pyNN.neuron  # @UnusedImport - imports PyNN mechanisms
 try:

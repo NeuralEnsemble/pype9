@@ -483,8 +483,9 @@ class CodeGenerator(BaseCodeGenerator):
                     i.name in memb_i.rhs_symbol_names and
                     len([e for e in component_class.all_expressions
                          if i.symbol in e.free_symbols]) == 1)]
-            print ("Guessing '{}' external currents to be removed"
-                   .format("', '".join(i.name for i in ext_is)))
+            if ext_is:
+                print ("Guessing '{}' external currents to be removed"
+                       .format("', '".join(i.name for i in ext_is)))
         trfrm.annotations[PYPE9_NS][EXTERNAL_CURRENTS] = ext_is
         # Remove external input current ports (as NEURON handles them)
         for ext_i in ext_is:

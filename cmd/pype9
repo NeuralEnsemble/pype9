@@ -1,0 +1,33 @@
+#!/usr/bin/env python
+"""
+Main command for PyPe9 package, which can be used to invoke all PyPe9
+functionality in a similar style to the 'git' or 'svn' commands, e.g.
+
+    pype9 simulate <simulation.xml>
+
+or
+
+    pype9 import <some-mod-file.mod> <nineml-file.xml>
+"""
+import sys
+import os.path
+from argparse import ArgumentParser
+import subprocess as sp
+cmd_dir = os.path.dirname(__file__)
+
+cmds = [s[:-3] for s in os.listdir(cmd_dir)
+           if s.endswith('.py') and s != 'pype9.py'] + ['help']
+
+parser = ArgumentParser()
+parser.add_argument("command",
+                    help=("The name of the pype9 command to run (available {})"
+                          .format(' '.join(cmds))))
+parser.add_argument("command_args", nargs='*',
+                    help="Arguments passed to the command")
+args = parser.parse_args()
+
+if args.command == 'help':
+    raise NotImplementedError
+else:
+    sp.check_call("{} {} {}".format(sys.executable, args.command,
+                                    ' '.join(args.command_args)))
