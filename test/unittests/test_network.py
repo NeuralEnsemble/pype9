@@ -466,11 +466,11 @@ class TestBrunel2000(TestCase):
             plt.show()
 
     def test_activity_with_neuron(self, case='AI', order=10, simtime=100.0,
-                                  simulators=['nest', 'neuron'],
+                                  simulators=['neuron', 'nest'],
                                   record_states=False, **kwargs):  # @IgnorePep8 @UnusedVariable
         data = {}
-        controllers = {'nest': simulation_controller_nest,
-                       'neuron': simulation_contoller_neuron}
+        pyNN_simulators = {'nest': pyNN.nest.simulator.state,
+                           'neuron': pyNN.neuron.simulator.state}
         # Set up recorders for 9ML network
         for simulator in simulators:
             data[simulator] = {}
@@ -480,7 +480,7 @@ class TestBrunel2000(TestCase):
                 pop.record('spikes')
                 if record_states and pop.name != 'Ext':
                     pop.record('v__cell')
-            controllers[simulator].run(simtime)
+            pyNN_simulators[simulator].run(simtime)
             for pop in network.component_arrays:
                 block = data[simulator][pop.name] = pop.get_data()
                 segment = block.segments[0]

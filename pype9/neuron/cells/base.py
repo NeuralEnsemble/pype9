@@ -22,7 +22,8 @@ import operator
 import quantities as pq
 import neo
 from neuron import h, load_mechanisms
-from nineml.abstraction import Dynamics, EventPort
+from nineml import units as un
+from nineml.abstraction import EventPort
 from nineml.exceptions import NineMLNameError
 from math import pi
 import numpy
@@ -96,7 +97,7 @@ class Cell(base.Cell):
                 try:
                     cm_prop = properties[0][self.cm_prop_name]
                 except IndexError:
-                    cm_prop = kwprops[self.cm_prop_name]
+                    cm_prop = kwprops[self.cm_prop_name] * un.nF
             except KeyError:
                 if self.build_properties is not None:
                     cm_prop = self.build_properties.property(self.cm_prop_name)
