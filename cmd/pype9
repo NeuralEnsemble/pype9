@@ -13,7 +13,16 @@ import sys
 import os.path
 from argparse import ArgumentParser
 import subprocess as sp
+
 cmd_dir = os.path.dirname(__file__)
+
+
+def get_parser(cmd):
+    sys.path.insert(0, cmd_dir)
+    parser = __import__(cmd).parser
+    sys.path.pop(0)
+    return parser
+
 
 cmds = [s[:-3] for s in os.listdir(cmd_dir)
            if s.endswith('.py') and s != 'pype9.py'] + ['help']
@@ -27,7 +36,12 @@ parser.add_argument("command_args", nargs='*',
 args = parser.parse_args()
 
 if args.command == 'help':
-    raise NotImplementedError
+    if args.command_args:
+        cmd = args.command_args[0]
+        cmd_parser = get_parser(cmd)
+        cmd_parser.print_help()
+    else:
+        parser.print_help()
 else:
     sp.check_call("{} {} {}".format(sys.executable, args.command,
                                     ' '.join(args.command_args)))

@@ -16,9 +16,9 @@ Prerequisites
  * PyNEURON 7.4 (see
    http://www.davison.webfactional.com/notes/installation-neuron-python/)
  * PyNEST 2.10.0 (see http://www.nest-simulator.org/installation/)
- * PyNN v0.8.1 (see http://neuralensemble.org/docs/PyNN/installation.html)
+ * PyNN 0.8.1 (see http://neuralensemble.org/docs/PyNN/installation.html)
  * lib9ML (`bleeding_edge` branch at http://github.com/tclose/lib9ML)
- * Diophantine (`master` branch at https://github.com/tclose/Diophantine)
+ * Diophantine 0.1 (`v0.1` tag at http://github.com/tclose/Diophantine)
  * NineMLCatalog (for unit-tests,`develop` branch at
    http://github.com/tclose/NineMLCatalog)
  
@@ -64,5 +64,6 @@ restrictions apply to models that can be used with PyPe9.
   (gap junctions to be implemented in v0.2)
 * only one event send port per cell (current limitation of NEURON/NEST)
 * names given to 9ML elements are not escaped and therefore can clash with
-  built-in keywords and some method names (e.g. 'lambda' is a reserved keyword
-  in Python). (all 9ML names will be escaped in v0.2)
+  built-in keywords and some PyPe9 method names (e.g. 'lambda' is a reserved
+  keyword in Python). Please avoid using names that clash with C++ or Python
+  keywords (all 9ML names will be escaped in PyPe9 v0.2).
