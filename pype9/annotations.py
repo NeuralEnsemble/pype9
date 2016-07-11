@@ -24,7 +24,11 @@ NONSPECIFIC_CURRENT = 'nonSpecific'
 INTERNAL_CONCENTRATION = 'InternalConcentration'
 EXTERNAL_CONCENTRATION = 'ExternalConcentration'
 
+# NEURON NMODL type
 MECH_TYPE = 'MechType'
 FULL_CELL_MECH = 'FullCellMech'
 SUB_COMPONENT_MECH = 'SubComponentMech'
 ARTIFICIAL_CELL_MECH = 'ArtificialCellMech'
+
+# Build properties
+BUILD_PROPS = 'BuildProperties'

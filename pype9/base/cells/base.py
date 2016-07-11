@@ -24,6 +24,7 @@ from nineml.base import ContainerObject, DocumentLevelObject
 from nineml.exceptions import name_error, NineMLNameError
 from pype9.exceptions import (
     Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError)
+from pype9.annotations import PYPE9_NS, BUILD_PROPS
 import logging
 
 logger = logging.Logger("Pype9")
@@ -37,7 +38,8 @@ class CellMetaClass(type):
     """
 
     def __new__(cls, component_class, default_properties=None,
-                initial_state=None, name=None, saved_name=None, **kwargs):
+                initial_state=None, name=None, saved_name=None,
+                build_dir=None, build_mode='lazy', verbose=False, **kwargs):
         """
         `component_class`    -- A nineml.abstraction.Dynamics object
         `default_properties` -- default properties, if None, then all props = 0
@@ -67,8 +69,6 @@ class CellMetaClass(type):
                         default_properties.component_class.find_mismatch(
                             component_class)))
         # Extract out build directives
-        build_mode = kwargs.pop('build_mode', 'lazy')
-        verbose = kwargs.pop('verbose', False)
         if name is None:
             if saved_name is not None:
                 name = saved_name
@@ -77,17 +77,13 @@ class CellMetaClass(type):
         url = component_class.url
         try:
             Cell, build_options = cls._built_types[(name, url)]
-            # FIXME: Need to look into dropping the build_dir from
-            #        build_options is appropriate here
-            bo = copy(build_options)
-            bo.pop('build_dir')
-            if bo != kwargs:
+            if build_options != kwargs:
                 raise Pype9RuntimeError(
                     "Build options '{}' do not match previously built '{}' "
                     "cell class with same name ('{}'). Please specify a "
                     "different name (using a loaded nineml.Component instead "
                     "of a URL)."
-                    .format(kwargs, name, bo))
+                    .format(kwargs, name, build_options))
         except KeyError:
             # Initialise code generator
             code_gen = cls.CodeGenerator()
@@ -98,7 +94,6 @@ class CellMetaClass(type):
                 initial_state=initial_state, **kwargs)
             # Set build dir default from original prototype url if not
             # explicitly provided
-            build_dir = kwargs.pop('build_dir', None)
             if build_dir is None:
                 if url is None:
                     raise Pype9RuntimeError(

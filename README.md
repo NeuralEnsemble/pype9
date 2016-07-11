@@ -2,20 +2,20 @@ PyPe9
 ========
 
 "PYthon PipelinEs for 9ml (PyPe9)" is a collection of software pipelines
-written in Python to read and simulate networks of neuronal models
+written in Python to read and simulate networks of neuron models
 described in NineML (http://nineml.net) in both Neuron and NEST simulators.
 
-PyPe9 is still under development so please submit bug reports to the GitHub
-issue tracker (http://github.com/CNS-OIST/PyPe9/issues).
+PyPe9 is still under major development so please submit bug reports to the
+GitHub issue tracker (http://github.com/CNS-OIST/PyPe9/issues).
 
 Author: Tom G. Close (tom.close@monash.edu)
 
 Pre-requisites
 ---
- * Python 2.7
- * PyNEURON (see http://www.davison.webfactional.com/notes/installation-neuron-python/)
- * PyNEST (see http://www.nest-simulator.org/installation/)
- * PyNN v0.8 (see http://neuralensemble.org/docs/PyNN/installation.html)
+ * Python 2.7.11
+ * PyNEURON 7.4 (see http://www.davison.webfactional.com/notes/installation-neuron-python/)
+ * PyNEST 2.10.0 (see http://www.nest-simulator.org/installation/)
+ * PyNN v0.8.1 (see http://neuralensemble.org/docs/PyNN/installation.html)
  * lib9ML (`bleeding_edge` branch at http://github.com/tclose/lib9ML)
  * Diophantine (`master` branch at https://github.com/tclose/Diophantine)
  * NineMLCatalog (for unit-tests, `develop` branch at http://github.com/tclose/NineMLCatalog)
@@ -49,10 +49,10 @@ Known Limitations
 ---
 
 9ML aims to be a comprehensive description language for neural simulation. This
-means that it allows the expression of some uncommon configurations, which are
+means that it allows the expression of some uncommon configurations that are
 difficult to implement in NEURON and NEST. Work is planned to make the NEURON
 and NEST pipelines in Pype9 support 9ML fully, however until then the following
-restrictions apply to network models
+restrictions apply to models that can be used with PyPe9.
 
 * synapses must be linear (to be relaxed in v0.2)
 * synapses can only have one variable that varies over a projection
@@ -60,3 +60,6 @@ restrictions apply to network models
 * no analog connections between populations (i.e. gap junctions)
   (gap junctions to be implemented in v0.2)
 * only one event send port per cell (current limitation of NEURON/NEST)
+* names given to 9ML elements are not escaped and therefore can clash with
+  built-in keywords and some method names (e.g. 'lambda' is a reserved keyword
+  in Python). (all 9ML names will be escaped in v0.2)

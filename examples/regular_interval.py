@@ -1,3 +1,7 @@
+"""
+Constructs a leaky integrate and fire model with an alpha synapse and connects
+it to an input source that fires spikes at regular intervals
+"""
 import os
 import nest
 from nineml import units as un, MultiDynamics
@@ -38,7 +42,7 @@ Input = CellMetaClass(input_model)
 Cell = CellMetaClass(w_syn_model, build_dir=build_dir, build_mode='force')
 # Create instances
 rate = 20.0 * un.Hz
-weight = 56.2184675063 * un.pA  # 20.6801552437 * un.pA
+weight = 56.2184675063 * un.pA
 input = Input(rate=rate)  # @ReservedAssignment
 cell_params = {
     'tau__cell': 20.0 * un.ms, 'e_leak__cell': 0.0 * un.mV,
