@@ -11,7 +11,6 @@ or
 """
 import sys
 import os.path
-from argparse import ArgumentParser
 import subprocess as sp
 
 cmd_dir = os.path.dirname(__file__)
@@ -25,23 +24,26 @@ def get_parser(cmd):
 
 
 cmds = [s[:-3] for s in os.listdir(cmd_dir)
-           if s.endswith('.py') and s != 'pype9.py'] + ['help']
+           if s.endswith('.py') and s != 'pype9.py']
 
-parser = ArgumentParser()
-parser.add_argument("command",
-                    help=("The name of the pype9 command to run (available {})"
-                          .format(' '.join(cmds))))
-parser.add_argument("command_args", nargs='*',
-                    help="Arguments passed to the command")
-args = parser.parse_args()
+if len(sys.argv) < 2:
+    print "Please provide a command. Available PyPe9 commands are:\n".format(
+        "\n".join('  {}'.format(s) for s in cmds + ['help']))
 
-if args.command == 'help':
-    if args.command_args:
-        cmd = args.command_args[0]
-        cmd_parser = get_parser(cmd)
+command = sys.argv[1]
+
+if command == 'help':
+    if len(sys.argv) > 2:
+        help_cmd = sys.argv[2]
+        cmd_parser = get_parser(help_cmd)
         cmd_parser.print_help()
     else:
-        parser.print_help()
+        print "\nAvailable PyPe9 commands:\n\n{}".format(
+            "\n".join('  {}:{}'.format(s, get_parser(s).description)
+                      for s in cmds))
+        print ("  help:\nPrints this message or specific help information for "
+               "a given command")
 else:
-    sp.check_call("{} {} {}".format(sys.executable, args.command,
-                                    ' '.join(args.command_args)))
+    sp.check_call("{} {} {}".format(
+        sys.executable, os.path.join(cmd_dir, command + '.py'),
+        ' '.join(sys.argv[2:])), shell=True)

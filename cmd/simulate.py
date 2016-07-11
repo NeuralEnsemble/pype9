@@ -1,4 +1,6 @@
 """
 Runs a simulation described by an Experiment layer 9ML file
 """
-raise NotImplementedError
+from argparse import ArgumentParser
+
+parser = ArgumentParser(description=__doc__)
