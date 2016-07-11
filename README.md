@@ -10,15 +10,17 @@ GitHub issue tracker (http://github.com/CNS-OIST/PyPe9/issues).
 
 Author: Tom G. Close (tom.close@monash.edu)
 
-Pre-requisites
+Prerequisites
 ---
  * Python 2.7.11
- * PyNEURON 7.4 (see http://www.davison.webfactional.com/notes/installation-neuron-python/)
+ * PyNEURON 7.4 (see
+   http://www.davison.webfactional.com/notes/installation-neuron-python/)
  * PyNEST 2.10.0 (see http://www.nest-simulator.org/installation/)
  * PyNN v0.8.1 (see http://neuralensemble.org/docs/PyNN/installation.html)
  * lib9ML (`bleeding_edge` branch at http://github.com/tclose/lib9ML)
  * Diophantine (`master` branch at https://github.com/tclose/Diophantine)
- * NineMLCatalog (for unit-tests, `develop` branch at http://github.com/tclose/NineMLCatalog)
+ * NineMLCatalog (for unit-tests,`develop` branch at
+   http://github.com/tclose/NineMLCatalog)
  
 Installation
 ---
@@ -35,7 +37,8 @@ Testing
 There are unit-tests in the <pype9-home>/tests/unittests directory to run
 common neuron models (_see_ test_dynamics.py) as well as the random balanced
 network (_see_ test_network.py) published in
-Brunel N, Dynamics of Sparsely Connected Networks of Excitatory and Inhibitory Spiking Neurons, _Journal of Computational Neuroscience_ 8, 183–208 (2000).
+Brunel N, Dynamics of Sparsely Connected Networks of Excitatory and Inhibitory
+Spiking Neurons, _Journal of Computational Neuroscience_ 8, 183–208 (2000).
 
 Note that the Neuron (NMODL/Hoc) import functionality is still experimental and
 requires proper unit-tests to be written.
