@@ -4,7 +4,7 @@ from setuptools import setup, find_packages  # @UnresolvedImport
 
 setup(
     name="PyPe9",
-    version="0.1dev",
+    version="0.1",
     package_data={'pype9': ['pype9', 'pype9/*.py', 'pype9/cells',
                             'pype9/cells/code_gen', 'pype9/cells/build',
                             'pype9/importer', 'pype9/pyNN', 'pype9/hpc',
@@ -14,8 +14,8 @@ setup(
     author="Thomas G. Close",
     # add your name here if you contribute to the code
     author_email="tom.g.close@gmail.com",
-    description=("A NINEml software pipeLINE that reads and simulates networks"
-                 " of detailed neuronal models described in 9ml."),
+    description=("Python PipelinEs for 9ML (PyPe9) for reading and simulating "
+                 "neurons and neuron networks models described in 9ML."),
     long_description=open("README.md").read(),
     license="The MIT License (MIT)",
     keywords=("Python pipeline NineML computational neuroscience modeling "
@@ -29,6 +29,6 @@ setup(
                  'Operating System :: OS Independent',
                  'Programming Language :: Python :: 2',
                  'Topic :: Scientific/Engineering'],
-    install_requires=['nineml', 'pyNN'],
-    tests_require=['nose']
+    install_requires=['nineml', 'pyNN', 'lxml'],
+    tests_require=['nose', 'ninemlcatalog']
 )

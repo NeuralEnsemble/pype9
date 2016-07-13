@@ -20,15 +20,17 @@ USER root
 RUN apt-get update; apt-get install -y python-lxml
 USER docker
 
+WORKDIR $HOME
+
+# Install NineMLCatalog
+RUN git clone https://github.com/tclose/NineMLCatalog.git ninemlcatalog
+RUN cd ./ninemlcatalog; git checkout develop_backport; $VENV/bin/pip install .
+
 WORKDIR $HOME/packages
 
 # Install lib9ML libraries
 RUN git clone https://github.com/tclose/lib9ML.git lib9ml
 RUN cd ./lib9ml; git checkout dyn_arrays_conn_groups; $VENV/bin/pip install .
-
-# Install NineMLCatalog
-RUN git clone https://github.com/tclose/NineMLCatalog.git ninemlcatalog
-RUN cd ./ninemlcatalog; git checkout develop_backport; $VENV/bin/pip install .
 
 # Install PyPe9
 RUN git clone https://github.com/tclose/PyPe9.git pype9
