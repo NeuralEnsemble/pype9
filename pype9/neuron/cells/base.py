@@ -111,7 +111,7 @@ class Cell(base.Cell):
             specific_cm = pq.Quantity(cm / self.surface_area, 'uF/cm^2')
             self._sec.cm = float(specific_cm)
             self.recordable[self.component_class.annotations[
-                PYPE9_NS][MEMBRANE_VOLTAGE]] = self.source
+                PYPE9_NS][MEMBRANE_VOLTAGE]] = self.source_section(0.5)._ref_v
         # Set up members required for PyNN
         self.spike_times = h.Vector(0)
         self.traces = {}
@@ -181,6 +181,10 @@ class Cell(base.Cell):
             if self._initial_state is None:
                 object.__setattr__(self, '_initial_state', {})
             self._initial_state[varname[:-5]] = val
+        elif varname in ('record_times', 'recording_time'):
+            # PyNN needs to be able to set these variables to record state
+            # variables
+            object.__setattr__(self, varname, val)
         else:
             try:
                 super(Cell, self).__setattr__(varname, val)
