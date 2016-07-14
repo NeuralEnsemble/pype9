@@ -342,12 +342,6 @@ class Cell(object):
         for k, q in state.iteritems():
             setattr(self, k, q)  # FIXME: Need to convert units
 
-    def memb_init(self):
-        """
-        Wrapper to redirect PyNN initialisation to the 'initialize' method
-        """
-        self.initialize()
-
     def initialize(self):
         if self._initial_state is None:
             raise Pype9RuntimeError("Initial state not set for '{}' cell"

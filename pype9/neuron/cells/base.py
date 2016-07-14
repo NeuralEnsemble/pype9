@@ -197,9 +197,12 @@ class Cell(base.Cell):
             return self._hoc
         else:
             return super(Cell, self).__getattr__(varname)
-# 
-#     def memb_init(self):
-#         self.initialize()
+
+    def memb_init(self):
+        """
+        Wrapper to redirect PyNN initialisation to the 'initialize' method
+        """
+        self.initialize()
 
     @property
     def surface_area(self):
@@ -216,7 +219,6 @@ class Cell(base.Cell):
                 assert False
 
     def _set(self, varname, val):
-        varname = self._escaped_name(varname)
         try:
             setattr(self._hoc, varname, val)
             # If capacitance, also set the section capacitance
@@ -226,6 +228,7 @@ class Cell(base.Cell):
                 self._sec.cm = float(
                     pq.Quantity(val * pq.nF / self.surface_area, 'uF/cm^2'))
         except LookupError:
+            varname = self._escaped_name(varname)            
             setattr(self._sec, varname, val)
 
     def record(self, port_name):
