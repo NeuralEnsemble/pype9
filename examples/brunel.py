@@ -186,6 +186,29 @@ def construct_reference(case, order):
         nodes_inh,
         conn_params_in,
         "inhibitory")
+
+    for pop_name in record_pops:
+        pop = np.asarray(pops[model_ver][pop_name], dtype=int)
+        record_inds = np.asarray(np.unique(np.floor(
+            np.arange(start=0, stop=len(pop),
+                         step=len(pop) / record_size))), dtype=int)
+        spikes[model_ver][pop_name] = nest.Create("spike_detector")
+        nest.SetStatus(spikes[model_ver][pop_name],
+                       [{"label": "brunel-py-" + pop_name,
+                         "withtime": True, "withgid": True}])
+        nest.Connect(list(pop[record_inds]),
+                     spikes[model_ver][pop_name],
+                     syn_spec="excitatory")
+        if record_states:
+            # Set up voltage traces recorders for reference network
+            if self.record_params[pop_name][model_ver]:
+                multi[model_ver][pop_name] = nest.Create(
+                    'multimeter',
+                    params={'record_from':
+                            self.record_params[pop_name][model_ver]})
+                nest.Connect(multi[model_ver][pop_name],
+                             list(pop[record_inds]))
+
     return all_nodes
 
 
@@ -223,9 +246,9 @@ for case in args.cases:
     models[case] = model
 
 # Create dictionaries to hold the simulation results
-spikes = defaultdict(defaultdict(dict))
+spikes = defaultdict(lambda: defaultdict(dict))
 if args.record_v:
-    vs = defaultdict(defaultdict(dict))
+    vs = defaultdict(lambda: defaultdict(dict))
 ref_recorders = {}
 
 # Create the network and run the simulations for each simulator
@@ -252,32 +275,40 @@ for simulator, seed in zip(args.simulators, seeds):
             if args.record_v:
                 vs[case][pop.name][simulator] = segment.analogsignalarrays
 
+num_subplots = len(args.simulators) + int(args.reference)
+num_rows = 2 if num_subplots > 1 else 1
+num_cols = 2 if num_subplots > 2 else 1
+
 # Plot the results
 for case in args.cases:
     for pop_name in network.component_array_names:
         spike_fig = plt.figure()
-        plt.xlabel('Times (ms)')
-        plt.ylabel('Cell Indices')
-        plt.title("{} - {} Spikes".format(case, pop.name))
         if args.record_v:
             v_fig = plt.figure()
-            plt.xlabel('Time (ms)')
-            plt.ylabel('Membrane Voltage (mV)')
-            plt.title("{} - {} Membrane Voltage".format(case, pop.name))
-        for simulator in args.simulators:
+        for sim_index, simulator in enumerate(args.simulators):
             spiketrains = spikes[case][pop_name][simulator]
             spike_times = []
             ids = []
             for i, spiketrain in enumerate(spiketrains):
                 spike_times.extend(spiketrain)
                 ids.extend([i] * len(spiketrain))
+            spike_fig.add_subplot(num_rows, num_cols, sim_index)
             plt.scatter(spike_times, ids)
+            plt.xlabel('Times (ms)')
+            plt.ylabel('Cell Indices')
+            plt.title("{} - PyPe9 {} - {} Spikes".format(
+                case, simulator.upper(), pop.name))
             if args.record_v and pop_name != 'Ext':
                 traces = vs[case][pop_name][simulator]
                 legend = []
+                v_fig.add_subplot(num_rows, num_cols, sim_index)
                 for trace in traces:
                     plt.plot(trace.times, trace)
                     legend.append(trace.name)
+                plt.xlabel('Time (ms)')
+                plt.ylabel('Membrane Voltage (mV)')
+                plt.title("{} - {} - {} Membrane Voltage".format(
+                    case, simulator, pop.name))
                 plt.legend(legend)
         if args.reference:
             for pop_name in network.component_array_names:
@@ -288,7 +319,13 @@ for case in args.cases:
                 inds = np.asarray(spike_times > args.plot_start, dtype=bool)
                 spike_times = spike_times[inds]
                 senders = senders[inds]
+                spike_fig.add_subplot(num_rows, num_cols,
+                                      len(args.simulators) + 1)
                 plt.scatter(spike_times, senders)
+                plt.xlabel('Times (ms)')
+                plt.ylabel('Cell Indices')
+                plt.title("{} - Reference NEST - {} Spikes".format(case,
+                                                                   pop.name))
                 if args.record_v:
                     events, interval = nest.GetStatus(
                         ref_recorders[pop_name]['v'],
@@ -304,6 +341,12 @@ for case in args.cases:
                         t = np.asarray(t)
                         v = np.asarray(v)
                         inds = t > args.plot_start
+                        v_fig.add_subplot(num_rows, num_cols,
+                                          len(args.simulators) + 1)
                         plt.plot(t[inds] * interval, v[inds])
                         legend.append(sender)
+                    plt.xlabel('Time (ms)')
+                    plt.ylabel('Membrane Voltage (mV)')
+                    plt.title("{} - Reference NEST - {} Membrane Voltage"
+                              .format(case, simulator, pop.name))
                     plt.legend(legend)
