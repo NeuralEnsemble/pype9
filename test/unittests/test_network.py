@@ -465,9 +465,9 @@ class TestBrunel2000(TestCase):
         if plot:
             plt.show()
 
-    def test_activity_with_neuron(self, case='AI', order=10, simtime=1000.0,
-                                  simulators=['neuron', 'nest'], plot=True,
-                                  record_states=True, bin_width=4.0,
+    def test_activity_with_neuron(self, case='AI', order=10, simtime=100.0,
+                                  bin_width=4.0, simulators=['neuron'], #, 'nest'],
+                                  record_states=True, plot=True,
                                   **kwargs):  # @IgnorePep8 @UnusedVariable
         data = {}
         pyNN_simulators = {'nest': pyNN.nest.simulator.state,
