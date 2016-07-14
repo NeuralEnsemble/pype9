@@ -2,6 +2,7 @@ from __future__ import division
 import sys
 from itertools import groupby
 from operator import itemgetter
+from collections import defaultdict
 import ninemlcatalog
 import numpy as np
 from nineml import units as un, Property
@@ -32,6 +33,8 @@ parser.add_argument('--simulators', type=str, nargs='+',
                     help="Which simulators to simulate the 9ML network")
 parser.add_argument('--record_v', action='store_true', default=False,
                     help=("Whether to record and plot the voltages"))
+parser.add_argument('--plot_start', type=float, default=0.0,
+                    help=("The time to start plotting from"))
 parser.add_argument('--build_mode', type=str, default='force',
                     help="The build mode with which to construct the "
                     "network")
@@ -48,7 +51,7 @@ args = parser.parse_args(argv)
 # Construct reference NEST network
 def construct_reference(case, order):
     """
-    The model in this file has been adapted from the brunel-alpha-nest.py
+    The model has been adapted from the brunel-alpha-nest.py
     model that is part of NEST.
 
     Copyright (C) 2004 The NEST Initiative
@@ -219,6 +222,12 @@ for case in args.cases:
                  un.unitless)))
     models[case] = model
 
+# Create dictionaries to hold the simulation results
+spikes = defaultdict(defaultdict(dict))
+if args.record_v:
+    vs = defaultdict(defaultdict(dict))
+ref_recorders = {}
+
 # Create the network and run the simulations for each simulator
 for simulator, seed in zip(args.simulators, seeds):
     # Reset the simulator
@@ -231,72 +240,70 @@ for simulator, seed in zip(args.simulators, seeds):
             pop.record('spikes')
             if args.record_v and pop.name != 'Ext':
                 pop.record('v__cell')
-        if args.reference:
-            ref_nodes = construct_reference(case, args.order)
+        if args.reference and simulator == 'nest':
+            ref_recorders[case] = construct_reference(case, args.order)
         # Run the simulation
         pyNN_states[simulator].run(args.simtime)
         # Plot the results of the simulation
         for pop in network.component_arrays:
             block = pop.get_data()
             segment = block.segments[0]
-            spiketrains = segment.spiketrains
+            spikes[case][pop.name][simulator] = segment.spiketrains
+            if args.record_v:
+                vs[case][pop.name][simulator] = segment.analogsignalarrays
+
+# Plot the results
+for case in args.cases:
+    for pop_name in network.component_array_names:
+        spike_fig = plt.figure()
+        plt.xlabel('Times (ms)')
+        plt.ylabel('Cell Indices')
+        plt.title("{} - {} Spikes".format(case, pop.name))
+        if args.record_v:
+            v_fig = plt.figure()
+            plt.xlabel('Time (ms)')
+            plt.ylabel('Membrane Voltage (mV)')
+            plt.title("{} - {} Membrane Voltage".format(case, pop.name))
+        for simulator in args.simulators:
+            spiketrains = spikes[case][pop_name][simulator]
             spike_times = []
             ids = []
             for i, spiketrain in enumerate(spiketrains):
                 spike_times.extend(spiketrain)
                 ids.extend([i] * len(spiketrain))
-            plt.figure()
             plt.scatter(spike_times, ids)
-            plt.xlabel('Times (ms)')
-            plt.ylabel('Cell Indices')
-            plt.title("{} - {} Spikes".format(simulator, pop.name))
-            if args.record_v and pop.name != 'Ext':
-                traces = segment.analogsignalarrays
-                plt.figure()
+            if args.record_v and pop_name != 'Ext':
+                traces = vs[case][pop_name][simulator]
                 legend = []
                 for trace in traces:
                     plt.plot(trace.times, trace)
                     legend.append(trace.name)
-                    plt.xlabel('Time (ms)')
-                    plt.ylabel('Membrane Voltage (mV)')
-                    plt.title("{} - {} Membrane Voltage".format(
-                        simulator, pop.name))
                 plt.legend(legend)
         if args.reference:
             for pop_name in network.component_array_names:
-                events = nest.GetStatus(spikes[model_ver][pop_name],
+                events = nest.GetStatus(ref_recorders[pop_name]['spikes'],
                                         "events")[0]
                 spike_times = np.asarray(events['times'])
                 senders = np.asarray(events['senders'])
-                inds = np.asarray(spike_times > record_start, dtype=bool)
+                inds = np.asarray(spike_times > args.plot_start, dtype=bool)
                 spike_times = spike_times[inds]
                 senders = senders[inds]
-                plt.figure()
                 plt.scatter(spike_times, senders)
-                plt.xlabel('Time (ms)')
-                plt.ylabel('Cell Indices')
-                plt.title("Reference - {} Spikes".format(pop_name))
                 if args.record_v:
-                    for param in self.record_params[pop_name][model_ver]:
-                        events, interval = nest.GetStatus(
-                            multi[model_ver][pop_name], ["events",
-                                                         'interval'])[0]
-                        sorted_vs = sorted(zip(events['senders'],
-                                               events['times'],
-                                               events[param]),
-                                           key=itemgetter(0))
-                        plt.figure()
-                        legend = []
-                        for sender, group in groupby(sorted_vs,
-                                                     key=itemgetter(0)):
-                            _, t, v = zip(*group)
-                            t = np.asarray(t)
-                            v = np.asarray(v)
-                            inds = t > record_start
-                            plt.plot(t[inds] * interval, v[inds])
-                            legend.append(sender)
-                        plt.xlabel('Time (ms)')
-                        plt.ylabel(param)
-                        plt.title("{} - {} {}".format(model_ver, pop_name,
-                                                      param))
-                        plt.legend(legend)
+                    events, interval = nest.GetStatus(
+                        ref_recorders[pop_name]['v'],
+                        ["events", 'interval'])[0]
+                    sorted_vs = sorted(zip(events['senders'],
+                                           events['times'],
+                                           events['v']),
+                                       key=itemgetter(0))
+                    legend = []
+                    for sender, group in groupby(sorted_vs,
+                                                 key=itemgetter(0)):
+                        _, t, v = zip(*group)
+                        t = np.asarray(t)
+                        v = np.asarray(v)
+                        inds = t > args.plot_start
+                        plt.plot(t[inds] * interval, v[inds])
+                        legend.append(sender)
+                    plt.legend(legend)
