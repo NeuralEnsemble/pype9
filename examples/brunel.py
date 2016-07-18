@@ -281,11 +281,15 @@ if __name__ == '__main__':
         # Construct the network
         networks[simulator] = pype9_network_classes[simulator](
             model, build_mode=args.build_mode)
-        # Record spikes and voltages
-        for pop in networks[simulator].component_arrays:
-            pop[:args.num_record].record('spikes')
-            if args.num_record_v and pop.name != 'Ext':
-                pop[:args.num_record_v].record('v__cell')
+        if args.build_mode != 'build_only':
+            # Record spikes and voltages
+            for pop in networks[simulator].component_arrays:
+                pop[:args.num_record].record('spikes')
+                if args.num_record_v and pop.name != 'Ext':
+                    pop[:args.num_record_v].record('v__cell')
+
+    if args.build_mode == 'build_only':
+        exit()
 
     # Set of simulators to run
     simulator_to_run = set(args.simulators)
