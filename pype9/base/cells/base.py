@@ -227,7 +227,8 @@ class Cell(object):
                                 self.component_class.state_variable_names))))
             val = self._get(varname)
             qty = self._unit_handler.assign_units(
-                val, self.component_class[varname].dimension)
+                val, self.component_class.element(
+                    varname, class_map=Dynamics.class_to_member).dimension)
             return qty
 
     def __setattr__(self, varname, val):

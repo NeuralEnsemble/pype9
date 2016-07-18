@@ -327,7 +327,8 @@ if __name__ == '__main__':
             for i, spiketrain in enumerate(spiketrains):
                 spike_times.extend(spiketrain)
                 ids.extend([i] * len(spiketrain))
-            plt.sca(spike_subplots[subplot_index])
+            plt.sca(spike_subplots[subplot_index]
+                    if num_subplots > 1 else spike_subplots)
             plt.scatter(spike_times, ids)
             plt.xlim((args.plot_start, args.simtime))
             plt.ylim((-1, len(spiketrains)))
@@ -337,7 +338,8 @@ if __name__ == '__main__':
             if args.num_record_v and pop_name != 'Ext':
                 traces = segment.analogsignalarrays
                 legend = []
-                plt.sca(v_subplots[subplot_index])
+                plt.sca(v_subplots[subplot_index]
+                        if num_subplots > 1 else v_subplots)
                 for trace in traces:
                     plt.plot(trace.times, trace)
                 plt.xlim((args.plot_start, args.simtime))
@@ -353,7 +355,7 @@ if __name__ == '__main__':
             inds = np.asarray(spike_times > args.plot_start, dtype=bool)
             spike_times = spike_times[inds]
             senders = senders[inds] - senders.min()
-            plt.sca(spike_subplots[-1])
+            plt.sca(spike_subplots[-1] if num_subplots > 1 else spike_subplots)
             plt.scatter(spike_times, senders)
             plt.xlim((args.plot_start, args.simtime))
             plt.ylim((-1, senders.max() + 1))
@@ -366,7 +368,7 @@ if __name__ == '__main__':
                 sorted_vs = sorted(zip(events['senders'], events['times'],
                                        events['V_m']), key=itemgetter(0))
                 legend = []
-                plt.sca(v_subplots[-1])
+                plt.sca(v_subplots[-1] if num_subplots > 1 else v_subplots)
                 for sender, group in groupby(sorted_vs, key=itemgetter(0)):
                     _, t, v = zip(*group)
                     t = np.asarray(t)
