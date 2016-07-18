@@ -1,5 +1,4 @@
 from __future__ import division
-import sys
 import os.path
 from itertools import groupby
 from operator import itemgetter
@@ -7,27 +6,9 @@ from collections import defaultdict
 import ninemlcatalog
 import numpy as np
 from nineml import units as un, Property
-import pyNN.neuron
-import pype9.neuron
 import argparse
 import logging
 from matplotlib import pyplot as plt
-argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
-import nest  # @IgnorePep8
-import pyNN.nest  # @IgnorePep8
-import pype9.nest  # @IgnorePep8
-
-
-# Basic network params
-min_delay = 0.1
-max_delay = 10.0
-
-# Dictionaries to look up simulator specific objects/classes
-pyNN_states = {'nest': pyNN.nest.simulator.state,
-               'neuron': pyNN.neuron.simulator.state}
-pyNN_setup = {'nest': pyNN.nest.setup, 'neuron': pyNN.neuron.setup}
-pype9_network_classes = {'nest': pype9.nest.Network,
-                         'neuron': pype9.neuron.Network}
 
 
 # Construct reference NEST network
@@ -229,8 +210,24 @@ parser.add_argument('--save_fig', type=str, default=None,
                     help=("Location to save the generated figures"))
 parser.add_argument('--figsize', nargs=2, type=float, default=(10, 15),
                     help="The size of the figures")
-args = parser.parse_args(argv)
+args = parser.parse_args()
 
+import pyNN.neuron  # @IgnorePep8
+import pype9.neuron  # @IgnorePep8
+import nest  # @IgnorePep8
+import pyNN.nest  # @IgnorePep8
+import pype9.nest  # @IgnorePep8
+
+# Basic network params
+min_delay = 0.1
+max_delay = 10.0
+
+# Dictionaries to look up simulator specific objects/classes
+pyNN_states = {'nest': pyNN.nest.simulator.state,
+               'neuron': pyNN.neuron.simulator.state}
+pyNN_setup = {'nest': pyNN.nest.setup, 'neuron': pyNN.neuron.setup}
+pype9_network_classes = {'nest': pype9.nest.Network,
+                         'neuron': pype9.neuron.Network}
 
 if __name__ == '__main__':
 
