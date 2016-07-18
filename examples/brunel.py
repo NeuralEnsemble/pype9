@@ -1,5 +1,6 @@
 from __future__ import division
 import sys
+import os.path
 from itertools import groupby
 from operator import itemgetter
 from collections import defaultdict
@@ -30,7 +31,8 @@ pype9_network_classes = {'nest': pype9.nest.Network,
 
 
 # Construct reference NEST network
-def construct_reference(case, order, num_record, num_record_v, pops_to_plot):
+def construct_reference(case, order, num_record, num_record_v, pops_to_plot,
+                        timestep):
     """
     The model has been adapted from the brunel-alpha-nest.py
     model that is part of NEST.
@@ -178,7 +180,8 @@ def construct_reference(case, order, num_record, num_record_v, pops_to_plot):
         if num_record_v:
             # Set up voltage traces recorders for reference network
             multi = recorders[pop_name]['V_m'] = nest.Create(
-                'multimeter', params={'record_from': ['V_m']})
+                'multimeter', params={'record_from': ['V_m'],
+                                      'interval': timestep})
             nest.Connect(multi, list(pop[:num_record_v]))
     return all_nodes, recorders
 
@@ -222,10 +225,21 @@ parser.add_argument('--seed', type=int, default=None,
                     help="Random seed passed to the simulators")
 parser.add_argument('--reference', action='store_true', default=False,
                     help="Plot a reference NEST implementation alongside")
+parser.add_argument('--save_fig', type=str, default=None,
+                    help=("Location to save the generated figures"))
+parser.add_argument('--figsize', nargs=2, type=float, default=(10, 15),
+                    help="The size of the figures")
 args = parser.parse_args(argv)
 
 
 if __name__ == '__main__':
+
+    if args.save_fig is not None:
+        save_path = os.path.abspath(args.save_fig)
+        if not os.path.exists(save_path):
+            os.mkdir(save_path)
+    else:
+        save_path = None
 
     # Get the list of populations to record and plot from
     pops_to_plot = ['Exc', 'Inh']
@@ -280,7 +294,7 @@ if __name__ == '__main__':
     if args.reference:
         _, ref_recorders = construct_reference(
             args.case, args.order, args.num_record, args.num_record_v,
-            pops_to_plot)
+            pops_to_plot, args.timestep)
         simulator_to_run.add('nest')
 
     # Run the simulation(s)
@@ -290,11 +304,13 @@ if __name__ == '__main__':
     # Plot the results
     num_subplots = len(args.simulators) + int(args.reference)
     for pop_name in pops_to_plot:
-        spike_fig, spike_subplots = plt.subplots(num_subplots, 1)
+        spike_fig, spike_subplots = plt.subplots(num_subplots, 1,
+                                                 figsize=args.figsize)
         spike_fig.suptitle("{} - {} Spike Times".format(args.case, pop_name),
                            fontsize=14)
         if args.num_record_v:
-            v_fig, v_subplots = plt.subplots(num_subplots, 1)
+            v_fig, v_subplots = plt.subplots(num_subplots, 1,
+                                             figsize=args.figsize)
             v_fig.suptitle("{} - {} Membrane Voltage".format(args.case,
                                                              pop_name),
                            fontsize=14)
@@ -313,6 +329,7 @@ if __name__ == '__main__':
             plt.sca(spike_subplots[subplot_index])
             plt.scatter(spike_times, ids)
             plt.xlim((args.plot_start, args.simtime))
+            plt.ylim((-1, len(spiketrains)))
             plt.xlabel('Times (ms)')
             plt.ylabel('Cell Indices')
             plt.title("PyPe9 {}".format(simulator.upper()), fontsize=12)
@@ -322,12 +339,11 @@ if __name__ == '__main__':
                 plt.sca(v_subplots[subplot_index])
                 for trace in traces:
                     plt.plot(trace.times, trace)
-                    legend.append(trace.name)
                 plt.xlim((args.plot_start, args.simtime))
+                plt.ylim([0.0, 20.0])
                 plt.xlabel('Time (ms)')
                 plt.ylabel('Membrane Voltage (mV)')
                 plt.title("Pype9 {}".format(simulator.upper()), fontsize=12)
-                plt.legend(legend)
         if args.reference:
             events = nest.GetStatus(ref_recorders[pop_name]['spikes'],
                                     "events")[0]
@@ -335,10 +351,11 @@ if __name__ == '__main__':
             senders = np.asarray(events['senders'])
             inds = np.asarray(spike_times > args.plot_start, dtype=bool)
             spike_times = spike_times[inds]
-            senders = senders[inds]
+            senders = senders[inds] - senders.min()
             plt.sca(spike_subplots[-1])
             plt.scatter(spike_times, senders)
             plt.xlim((args.plot_start, args.simtime))
+            plt.ylim((-1, senders.max() + 1))
             plt.xlabel('Times (ms)')
             plt.ylabel('Cell Indices')
             plt.title("Ref. NEST", fontsize=12)
@@ -354,12 +371,18 @@ if __name__ == '__main__':
                     t = np.asarray(t)
                     v = np.asarray(v)
                     inds = t > args.plot_start
-                    plt.plot(t[inds] * interval, v[inds])
-                    legend.append(sender)
+                    plt.plot(t[inds], v[inds])
                 plt.xlim((args.plot_start, args.simtime))
+                plt.ylim([0.0, 20.0])
                 plt.xlabel('Time (ms)')
                 plt.ylabel('Membrane Voltage (mV)')
                 plt.title("Ref. NEST", fontsize=12)
-                plt.legend(legend)
-    plt.show()
+        if save_path is not None:
+            spike_fig.savefig(os.path.join(save_path,
+                                           '{}_spikes'.format(pop_name)))
+            if args.num_record_v:
+                v_fig.savefig(os.path.join(save_path,
+                                           '{}_v'.format(pop_name)))
+    if save_path is None:
+        plt.show()
     print "done"
