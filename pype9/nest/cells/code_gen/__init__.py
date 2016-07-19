@@ -195,7 +195,8 @@ class CodeGenerator(BaseCodeGenerator):
                 .format(component_name, compile_dir, e))
         # FIXME: At some point I should try to work out why building the SLI
         #        documentation fails so I can just check stderr here
-        if 'Libraries have been installed in:' not in stdout:
+        if ('Libraries have been installed in:' not in stdout or
+              not stdout.rstrip().endswith('Done.')):
             raise Pype9BuildError(
                 "Installation of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))

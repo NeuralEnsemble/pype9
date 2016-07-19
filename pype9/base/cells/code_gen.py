@@ -202,7 +202,6 @@ class BaseCodeGenerator(object):
                 name=name, src_dir=src_dir, compile_dir=compile_dir,
                 install_dir=install_dir, **kwargs)
             self.clean_install_dir(install_dir)
-            # Compile source files
             self.compile_source_files(compile_dir, name, verbose=verbose)
         # Switch back to original dir
         os.chdir(orig_dir)
