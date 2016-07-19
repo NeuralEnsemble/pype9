@@ -211,8 +211,9 @@ parser.add_argument('--save_fig', type=str, default=None,
                     help=("Location to save the generated figures"))
 parser.add_argument('--figsize', nargs=2, type=float, default=(10, 15),
                     help="The size of the figures")
-parser.add_argument('--progress_bar', action='store_true', default=False,
-                    help="Show a progress bar for the simulation time")
+parser.add_argument('--hide_progress_bar', action='store_true', default=False,
+                    help=("Hide the progress bar for the simulation time (Can "
+                          "cause difficulties in some IDEs)"))
 args = parser.parse_args()
 
 # Basic network params
@@ -312,7 +313,7 @@ if __name__ == '__main__':
     # Run the simulation(s)
     for simulator in simulator_to_run:
         print "Running {} simulation".format(simulator.upper())
-        if args.progress_bar:
+        if not args.hide_progress_bar:
             kwargs = {'callbacks': [
                 SimulationProgressBar(args.timestep, args.simtime)]}
         else:
