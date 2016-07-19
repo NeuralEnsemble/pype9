@@ -228,7 +228,7 @@ class Cell(base.Cell):
                 self._sec.cm = float(
                     pq.Quantity(val * pq.nF / self.surface_area, 'uF/cm^2'))
         except LookupError:
-            varname = self._escaped_name(varname)            
+            varname = self._escaped_name(varname)
             setattr(self._sec, varname, val)
 
     def record(self, port_name):

@@ -97,7 +97,8 @@ class CodeGenerator(BaseCodeGenerator):
         self.specials_dir = self._get_specials_dir()
 
     def generate_source_files(self, component_class, default_properties,
-                              initial_state, src_dir, name=None, **kwargs):
+                              initial_state, src_dir, initial_regime,
+                              name=None, **kwargs):
         """
             *KWArgs*
                 `membrane_voltage` -- Specifies the state that represents
@@ -119,14 +120,12 @@ class CodeGenerator(BaseCodeGenerator):
             name = component_class.name
         template = 'main.tmpl'
         self.generate_mod_file(template, component_class, default_properties,
-                               initial_state, src_dir, name, kwargs)
+                               initial_state, src_dir, name, initial_regime,
+                               kwargs)
 
     def generate_mod_file(self, template, component_class, default_properties,
-                          initial_state, src_dir, name, template_args):
-        # Get the initial regime and check that it refers to a regime in the
-        # component class
-        initial_regime = template_args.get('initial_regime', None)
-        self._check_initial_regime(component_class, initial_regime)
+                          initial_state, src_dir, name, initial_regime,
+                          template_args):
         tmpl_args = {
             'code_gen': self,
             'component_name': name,

@@ -49,13 +49,12 @@ class CodeGenerator(BaseCodeGenerator):
         self._compiler = compiler[:-1]  # strip trailing \n
 
     def generate_source_files(self, component_class, default_properties,
-                              initial_state, src_dir, name=None, **kwargs):
+                              initial_state, src_dir, initial_regime,
+                              name=None, **kwargs):
         if name is None:
             name = component_class.name
         # Get the initial regime and check that it refers to a regime in the
         # component class
-        initial_regime = kwargs.get('initial_regime', None)
-        self._check_initial_regime(component_class, initial_regime)
         tmpl_args = {
             'component_name': name,
             'component_class': component_class,
