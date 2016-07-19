@@ -286,8 +286,10 @@ if __name__ == '__main__':
                                      timestep=args.timestep,
                                      rng_seeds_seed=seed)
         # Construct the network
+        print "Constructing the network in {}".format(simulator.upper())
         networks[simulator] = pype9_network_classes[simulator](
             model, build_mode=args.build_mode)
+        print "Finished constructing the network in {}".format(simulator.upper())
         if args.build_mode != 'build_only':
             # Record spikes and voltages
             for pop in networks[simulator].component_arrays:
@@ -296,6 +298,7 @@ if __name__ == '__main__':
                     pop[:args.num_record_v].record('v__cell')
 
     if args.build_mode == 'build_only':
+        print "build_mode argument was set to 'build_only' so exiting!"
         exit()
 
     # Set of simulators to run
@@ -303,6 +306,7 @@ if __name__ == '__main__':
 
     # Create the reference simulation if required
     if args.reference:
+        print "Constructing the reference NEST implementation"
         _, ref_recorders = construct_reference(
             args.case, args.order, args.num_record, args.num_record_v,
             pops_to_plot, args.timestep)
@@ -310,7 +314,7 @@ if __name__ == '__main__':
 
     # Run the simulation(s)
     for simulator in simulator_to_run:
-        print "Running {} simulation".format(simulator.upper())
+        print "Running the simulation in {}".format(simulator.upper())
         if not args.hide_progress_bar:
             kwargs = {'callbacks': [
                 SimulationProgressBar(args.timestep, args.simtime)]}
@@ -319,6 +323,7 @@ if __name__ == '__main__':
         pyNN_module[simulator].run(args.simtime, **kwargs)
 
     # Plot the results
+    print "Plotting the results"
     num_subplots = len(args.simulators) + int(args.reference)
     for pop_name in pops_to_plot:
         spike_fig, spike_subplots = plt.subplots(num_subplots, 1,
