@@ -200,9 +200,6 @@ parser.add_argument('--build_mode', type=str, default='lazy',
 parser.add_argument('--plot_input', action='store_true',
                     help=("Plots the external Poisson input in addition to the"
                           "excitatory and inhibitory cells"))
-parser.add_argument('--option', nargs=2, type=str, action='append',
-                    default=[],
-                    help="Extra options that are passed to the test")
 parser.add_argument('--seed', type=int, default=None,
                     help="Random seed passed to the simulators")
 parser.add_argument('--reference', action='store_true', default=False,
@@ -289,7 +286,8 @@ if __name__ == '__main__':
         print "Constructing the network in {}".format(simulator.upper())
         networks[simulator] = pype9_network_classes[simulator](
             model, build_mode=args.build_mode)
-        print "Finished constructing the network in {}".format(simulator.upper())
+        print "Finished constructing the network in {}".format(
+            simulator.upper())
         if args.build_mode != 'build_only':
             # Record spikes and voltages
             for pop in networks[simulator].component_arrays:
