@@ -233,21 +233,18 @@ if __name__ == '__main__':
     # allow the backend to be set
     from matplotlib import pyplot as plt  # @IgnorePep8
 
-    pyNN_run = {}
-    pyNN_setup = {}
+    pyNN_module = {}
     pype9_network_classes = {}
     if 'neuron' in args.simulators:
         import pyNN.neuron  # @IgnorePep8
         import pype9.neuron  # @IgnorePep8
-        pyNN_run['neuron'] = pyNN.neuron.run
-        pyNN_setup['neuron'] = pyNN.neuron.setup
+        pyNN_module['neuron'] = pyNN.neuron
         pype9_network_classes['neuron'] = pype9.neuron.Network
     if 'nest' in args.simulators or args.reference:
         import nest  # @IgnorePep8
         import pyNN.nest  # @IgnorePep8
         import pype9.nest  # @IgnorePep8
-        pyNN_run['nest'] = pyNN.nest.run,
-        pyNN_setup['nest'] = pyNN.nest.setup
+        pyNN_module['nest'] = pyNN.nest
         pype9_network_classes['nest'] = pype9.nest.Network
 
     # Get the list of populations to record and plot from
@@ -285,8 +282,9 @@ if __name__ == '__main__':
     networks = {}
     for simulator, seed in zip(args.simulators, seeds):
         # Reset the simulator
-        pyNN_setup[simulator](min_delay=min_delay, max_delay=max_delay,
-                              timestep=args.timestep, rng_seeds_seed=seed)
+        pyNN_module[simulator].setup(min_delay=min_delay, max_delay=max_delay,
+                                     timestep=args.timestep,
+                                     rng_seeds_seed=seed)
         # Construct the network
         networks[simulator] = pype9_network_classes[simulator](
             model, build_mode=args.build_mode)
@@ -318,7 +316,7 @@ if __name__ == '__main__':
                 SimulationProgressBar(args.timestep, args.simtime)]}
         else:
             kwargs = {}
-        pyNN_run[simulator](args.simtime, **kwargs)
+        pyNN_module[simulator].run(args.simtime, **kwargs)
 
     # Plot the results
     num_subplots = len(args.simulators) + int(args.reference)
