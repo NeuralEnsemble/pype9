@@ -9,6 +9,11 @@ from nineml import units as un, Property
 import argparse
 import logging
 from matplotlib import pyplot as plt
+try:
+    from mpi4py import MPI #@UnresolvedImport @UnusedImport
+    from neuron import h, load_mechanisms
+except ImportError:
+    pass
 
 
 # Construct reference NEST network
@@ -170,7 +175,7 @@ def construct_reference(case, order, num_record, num_record_v, pops_to_plot,
 pyNN_logger = logging.Logger('PyNN')
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--case', type=str, nargs='+', default='AI',
+parser.add_argument('--case', type=str, default='AI',
                     help=("Which Brunel network parameterisation to run, "
                           "one of 'AI', 'SIFast', 'SISlow' or 'SR'"))
 parser.add_argument('--order', type=int, default=10,
@@ -352,11 +357,16 @@ if __name__ == '__main__':
             senders = np.asarray(events['senders'])
             inds = np.asarray(spike_times > args.plot_start, dtype=bool)
             spike_times = spike_times[inds]
-            senders = senders[inds] - senders.min()
+            senders = senders[inds]
+            if len(senders):
+                senders -= senders.min()
+                max_y = senders.max() + 1
+            else:
+                max_y = args.num_record
             plt.sca(spike_subplots[-1])
             plt.scatter(spike_times, senders)
             plt.xlim((args.plot_start, args.simtime))
-            plt.ylim((-1, senders.max() + 1))
+            plt.ylim((-1, max_y))
             plt.xlabel('Times (ms)')
             plt.ylabel('Cell Indices')
             plt.title("Ref. NEST", fontsize=12)
