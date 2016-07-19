@@ -21,9 +21,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from itertools import izip
 from abc import ABCMeta, abstractmethod
 import sympy
-from sympy.solvers import solve
 from nineml import units
-from nineml.abstraction.expressions import t
 from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import logging
 import pype9.annotations

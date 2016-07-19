@@ -9,6 +9,8 @@ from nineml import units as un, Property
 import argparse
 import logging
 import matplotlib
+from pyNN.utility import SimulationProgressBar
+
 
 # Construct reference NEST network
 def construct_reference(case, order, num_record, num_record_v, pops_to_plot,
@@ -209,6 +211,8 @@ parser.add_argument('--save_fig', type=str, default=None,
                     help=("Location to save the generated figures"))
 parser.add_argument('--figsize', nargs=2, type=float, default=(10, 15),
                     help="The size of the figures")
+parser.add_argument('--progress_bar', action='store_true', default=False,
+                    help="Show a progress bar for the simulation time")
 args = parser.parse_args()
 
 # Basic network params
@@ -228,20 +232,20 @@ if __name__ == '__main__':
     # allow the backend to be set
     from matplotlib import pyplot as plt  # @IgnorePep8
 
-    pyNN_states = {}
+    pyNN_run = {}
     pyNN_setup = {}
     pype9_network_classes = {}
     if 'neuron' in args.simulators:
         import pyNN.neuron  # @IgnorePep8
         import pype9.neuron  # @IgnorePep8
-        pyNN_states['neuron'] = pyNN.neuron.simulator.state
+        pyNN_run['neuron'] = pyNN.neuron.run
         pyNN_setup['neuron'] = pyNN.neuron.setup
         pype9_network_classes['neuron'] = pype9.neuron.Network
     if 'nest' in args.simulators or args.reference:
         import nest  # @IgnorePep8
         import pyNN.nest  # @IgnorePep8
         import pype9.nest  # @IgnorePep8
-        pyNN_states['nest'] = pyNN.nest.simulator.state,
+        pyNN_run['nest'] = pyNN.nest.run,
         pyNN_setup['nest'] = pyNN.nest.setup
         pype9_network_classes['nest'] = pype9.nest.Network
 
@@ -253,7 +257,7 @@ if __name__ == '__main__':
     # Set the random seed
     np.random.seed(args.seed)
     seeds = np.asarray(
-        np.floor(np.random.random(len(args.simulators) * 1e5)), dtype=int)
+        np.floor(np.random.random(len(args.simulators)) * 1e5), dtype=int)
 
     # Load the Brunel model corresponding to the 'case' argument from the
     # nineml catalog and scale the model according to the 'order' argument
@@ -307,7 +311,13 @@ if __name__ == '__main__':
 
     # Run the simulation(s)
     for simulator in simulator_to_run:
-        pyNN_states[simulator].run(args.simtime)
+        print "Running {} simulation".format(simulator.upper())
+        if args.progress_bar:
+            kwargs = {'callbacks': [
+                SimulationProgressBar(args.timestep, args.simtime)]}
+        else:
+            kwargs = {}
+        pyNN_run[simulator](args.simtime, **kwargs)
 
     # Plot the results
     num_subplots = len(args.simulators) + int(args.reference)
