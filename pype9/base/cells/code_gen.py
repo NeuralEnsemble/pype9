@@ -80,7 +80,8 @@ class BaseCodeGenerator(object):
 
     def generate(self, component_class, name=None, default_properties=None,
                  initial_state=None, install_dir=None, build_dir=None,
-                 build_mode='lazy', verbose=True, **kwargs):
+                 build_mode='lazy', verbose=True, initial_regime=None,
+                 **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
         NineML cell class
@@ -167,6 +168,19 @@ class BaseCodeGenerator(object):
             raise Pype9BuildError(
                 "Unrecognised build option '{}', must be one of ('{}')"
                 .format(build_mode, "', '".join(self.BUILD_MODE_OPTIONS)))
+        # FIXME: The 'initial_regime' argument will no longer necessary
+        #        when it is incorporated into the initial_state object.
+        #        If initial_regime is not specified pick the regime with
+        #        the most time derivatives to avoid refractory regimes.
+        #        Sorry if this seems hacky, it will be fixed soon.
+        if initial_regime is not None:
+            self._check_initial_regime(component_class, initial_regime)
+        else:
+            max_num_tds = 0
+            for regime in component_class.regimes:
+                if initial_regime is None or (regime.num_time_derivatives >
+                                              max_num_tds):
+                    initial_regime = regime.name
         # Generate source files from NineML code
         if generate_source:
             self.clean_src_dir(src_dir, name)
@@ -176,7 +190,8 @@ class BaseCodeGenerator(object):
                 default_properties=default_properties,
                 initial_state=initial_state,
                 src_dir=src_dir, compile_dir=compile_dir,
-                install_dir=install_dir, verbose=verbose, **kwargs)
+                install_dir=install_dir, verbose=verbose,
+                initial_regime=initial_regime, **kwargs)
             # Write the timestamp of the 9ML file used to generate the source
             # files
             if nineml_mod_time is not None:
