@@ -8,6 +8,8 @@ import numpy as np
 from nineml import units as un, Property
 import argparse
 import logging
+import matplotlib
+matplotlib.use('pdf')
 from matplotlib import pyplot as plt
 try:
     from mpi4py import MPI #@UnresolvedImport @UnusedImport
