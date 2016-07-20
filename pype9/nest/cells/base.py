@@ -64,7 +64,7 @@ class Cell(base.Cell):
                     "No matching state variable or event send port matching "
                     "port name '{}' in component class '{}'".format(
                         port_name, self.component_class.name))
-        if port.nineml_type == 'EventSendPort':
+        if port.nineml_type in ('EventSendPort', 'EventSendPortExposure'):
             # FIXME: This assumes that all event send port are spikes, which
             #        I think is currently a limitation of NEST
             self._recorders[port_name] = recorder = nest.Create(
@@ -92,7 +92,7 @@ class Cell(base.Cell):
         except NineMLNameError:
             # For convenient access to state variables
             port = self.component_class.state_variable(port_name)
-        if port.nineml_type == 'EventSendPort':
+        if port.nineml_type in ('EventSendPort', 'EventSendPortExposure'):
             spikes = nest.GetStatus(
                 self._recorders[port_name], 'events')[0]['times']
             data = neo.SpikeTrain(spikes, t_start=0.0 * pq.ms,

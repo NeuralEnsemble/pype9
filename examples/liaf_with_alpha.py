@@ -4,13 +4,33 @@ it to an input source that fires spikes at a constant rate
 """
 import os
 import nest
+from argparse import ArgumentParser
 from nineml import units as un, MultiDynamics
 from pype9.base.cells import WithSynapses, ConnectionParameterSet
-from pype9.nest import CellMetaClass, simulation_controller, UnitHandler
 import ninemlcatalog
 import numpy
 from matplotlib import pyplot as plt
-build_dir = os.path.join(os.getcwd(), '9build', 'regular_interval')
+
+parser = ArgumentParser(__doc__)
+parser.add_argument('--weight', type=float, default=3.0,
+                    help=("Weight of the synapse (nA)"))
+parser.add_argument('--rate', type=float, default=40.0,
+                    help=("Rate of the input spike train (Hz)"))
+parser.add_argument('--tau', type=float, default=20,
+                    help=("Tau parameter of the LIAF model (ms)"))
+parser.add_argument('--simtime', type=float, default=200.0,
+                    help=("Simulation time (ms)"))
+parser.add_argument('--build_mode', type=str, default='lazy',
+                    help=("The build mode to apply when creating the cell "
+                          "class"))
+args = parser.parse_args()
+
+# Import of nest needs to be after arguments have been passed as it kills them
+# before the SLI interpreter tries to read them.
+from pype9.nest import CellMetaClass, simulation_controller, UnitHandler  # @IgnorePep8
+
+
+build_dir = os.path.join(os.getcwd(), '9build', 'liaf_with_alpha')
 # Whether weight should be a parameter of the cell or passed as a weight
 # parameter
 connection_weight = False
@@ -29,7 +49,7 @@ multi_model = MultiDynamics(
                     'pls': weight_model},
     port_connections=[('psr', 'i_synaptic', 'cell', 'i_synaptic'),
                       ('pls', 'fixed_weight', 'psr', 'q')],
-    port_exposures=[('psr', 'spike')])
+    port_exposures=[('psr', 'spike'), ('cell', 'spike_output')])
 conn_params = []
 if connection_weight:
     # FIXME: Need to check that the spike port corresponds to a proper port
@@ -41,14 +61,15 @@ if connection_weight:
 w_syn_model = WithSynapses.wrap(multi_model,
                                 connection_parameter_sets=conn_params)
 # Generate Pype9 classes
-Input = CellMetaClass(input_model)
-Cell = CellMetaClass(w_syn_model, build_dir=build_dir, build_mode='force')
+Input = CellMetaClass(input_model, build_mode=args.build_mode)
+Cell = CellMetaClass(w_syn_model, build_dir=build_dir,
+                     build_mode=args.build_mode)
 # Create instances
-rate = 20.0 * un.Hz
-weight = 56.2184675063 * un.pA
+rate = args.rate * un.Hz
+weight = args.weight * un.nA
 input = Input(rate=rate)  # @ReservedAssignment
 cell_params = {
-    'tau__cell': 20.0 * un.ms, 'e_leak__cell': 0.0 * un.mV,
+    'tau__cell': args.tau * un.ms, 'e_leak__cell': 0.0 * un.mV,
     'refractory_period__cell': 2.0 * un.ms,
     'Cm__cell': 250.0 * un.pF, 'v_threshold__cell': 20.0 * un.mV,
     'v_reset__cell': 0.0 * un.mV, 'tau__psr': 0.5 * un.ms}
@@ -68,17 +89,22 @@ cell.update_state({
     'end_refractory__cell': 0.0 * un.ms,
     'v__cell': 0.0 * un.mV})
 # Set up recorders
-input.record('spike_output')
+cell.record('spike_output__cell')
 cell.record('v__cell')
 # Run simulation
-simulation_controller.run(100.0)
+simulation_controller.run(args.simtime)
 # Get recordings
-spikes = input.recording('spike_output')
+spikes = cell.recording('spike_output__cell')
 v = cell.recording('v__cell')
 max_v = float(numpy.max(v))
-print "required weight: {}".format((0.1 / max_v) * weight)
 # Plot recordings
 plt.plot(v.times, v)
+plt.title("LIAF with Alpha Syn - Membrane Potential")
+plt.ylabel("Membrane Voltage (mV)")
+plt.xlabel("Time (ms)")
 plt.figure()
 plt.scatter(spikes, numpy.ones(len(spikes)))
+plt.title('LIAF with Alpha Syn - Output spikes')
+plt.xlabel("Time (ms)")
+plt.ylabel("Cell Index")
 plt.show()
