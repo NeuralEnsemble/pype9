@@ -13,8 +13,6 @@ RUN apt-get update; apt-get install -y python-lxml
 RUN pip install sympy
 USER docker
 
-WORKDIR $HOME
-
 # Clone the required repositories
 RUN git clone https://github.com/tclose/NineMLCatalog.git $HOME/packages/ninemlcatalog
 RUN git clone https://github.com/tclose/lib9ML.git $HOME/packages/lib9ml
