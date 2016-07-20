@@ -21,7 +21,7 @@ RUN git clone https://github.com/tclose/PyPe9.git $HOME/packages/pype9
 
 # Checkout appropriate branches of the git repos
 RUN cd $HOME/packages/ninemlcatalog; git checkout develop
-RUN cd $HOME/packages/lib9ml; git checkout dyn_arrays_conn_groups
+RUN cd $HOME/packages/lib9ml; git checkout develop
 
 # Set the PYTHONPATH to look at the git repos
 ENV PYTHONPATH $HOME/packages/ninemlcatalog:$PYTHONPATH
@@ -34,4 +34,4 @@ RUN ln -s $HOME/packages/pype9/examples $HOME/examples
 WORKDIR $HOME/examples
 
 # Welcome message
-RUN echo 'echo "Docker container for running PyPe9 examples. See the $HOME/examples directory for the example python scripts."' >> $HOME/.bashrc
+RUN echo 'echo "Docker container for running PyPe9 examples. See the $HOME/examples directory for the example python scripts (supply the '--help' option to see usage)."' >> $HOME/.bashrc
