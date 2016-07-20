@@ -13,10 +13,10 @@
 #
 #        docker run -v `pwd`/<your-local-output-dir>:/home/docker/output -t -i tclose/pype9 /bin/bash
 #
-#    (this will create a folder called <your-local-output-dir> in the
-#     directory you are running the docker container, which you can access
-#     from your host computer (i.e. outside of the container and view the
-#     output figures from)
+#    This will create a folder called <your-local-output-dir> in the
+#    directory you are running the docker container, which you can access
+#    from your host computer (i.e. outside of the container and view the
+#    output figures from.
 #
 #  4. From inside the running container run the examples with
 #
@@ -26,7 +26,7 @@
 #
 #        python ~/examples/brunel.py --save_fig ~/output/<output-dir>
 #
-#    (use the '--help' option to see a full list of options for each example)
+#    Supply the '--help' option to see a full list of options for each example.
 #
 
 FROM neuralensemble/simulation:py2
