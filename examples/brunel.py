@@ -315,7 +315,7 @@ if __name__ == '__main__':
         print "Running the simulation in {}".format(simulator.upper())
         if args.progress_bar:
             kwargs = {'callbacks': [
-                SimulationProgressBar(args.timestep, args.simtime)]}
+                SimulationProgressBar(args.simtime / 77, args.simtime)]}
         else:
             kwargs = {}
         pyNN_module[simulator].run(args.simtime, **kwargs)
