@@ -117,6 +117,7 @@ if __name__ == "__main__":
     if args.fast_spiking:
         model = ninemlcatalog.load('neuron/Izhikevich',
                                    'IzhikevichFastSpiking')
+        name = 'IzhikevichFastSpiking'
         properties = ninemlcatalog.load('neuron/Izhikevich',
                                         'SampleIzhikevichFastSpiking')
         initial_regime = 'subVb'
@@ -126,7 +127,9 @@ if __name__ == "__main__":
             input_amp = 100 * pq.pA
         else:
             input_amp = args.input_amplitude * pq.pA
+        cell_kwargs = {'external_currents': ['iSyn']}
     else:
+        name = 'IzhikevichOriginal'
         model = ninemlcatalog.load('neuron/Izhikevich', 'Izhikevich')
         properties = ninemlcatalog.load('neuron/Izhikevich',
                                         'SampleIzhikevich')
@@ -137,6 +140,7 @@ if __name__ == "__main__":
             input_amp = 15 * pq.pA
         else:
             input_amp = args.input_amplitude * pq.pA
+        cell_kwargs = {}  # Isyn should be guessed as an external current
 
     # Create an input step current
     num_preceding = int(np.floor(args.input_start / args.timestep))
@@ -157,8 +161,8 @@ if __name__ == "__main__":
     cells = {}
     for simulator in args.simulators:
         cells[simulator] = pype9_metaclass[simulator](
-            model, name=model.name + 'Custom', default_properties=properties,
-            initial_regime=initial_regime)()
+            model, name=name, default_properties=properties,
+            initial_regime=initial_regime, **cell_kwargs)()
         # Play input current into cell
         cells[simulator].play(input_port_name, input_signal)
         # Record voltage
