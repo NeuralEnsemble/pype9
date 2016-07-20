@@ -300,7 +300,7 @@ if __name__ == '__main__':
         exit()
 
     # Set of simulators to run
-    simulator_to_run = set(args.simulators)
+    simulators_to_run = set(args.simulators)
 
     # Create the reference simulation if required
     if args.reference:
@@ -308,10 +308,10 @@ if __name__ == '__main__':
         _, ref_recorders = construct_reference(
             args.case, args.order, args.num_record, args.num_record_v,
             pops_to_plot, args.timestep)
-        simulator_to_run.add('nest')
+        simulators_to_run.add('nest')
 
     # Run the simulation(s)
-    for simulator in simulator_to_run:
+    for simulator in simulators_to_run:
         print "Running the simulation in {}".format(simulator.upper())
         if not args.hide_progress_bar:
             kwargs = {'callbacks': [

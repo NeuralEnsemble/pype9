@@ -6,31 +6,28 @@ import numpy as np
 import neo
 import matplotlib
 
-device_delay = 0.1
+min_delay = 0.1
+max_delay = 10.0
 
 
 def construct_reference(input_signal, dt):
     params = {
-        'C_m': 1.0,
         'a': 0.2,
-        'alpha': 0.04,
         'b': 0.025,
-        'beta': 5.0,
         'c': -75.0,
         'd': 0.2,
-        'theta': -50.0,
-        'zeta': 140.0,
-        'U': -1.625,
-        'V': -70.0}
+        'V_th': -50.0,
+        'U_m': -14.0,
+        'V_m': -70.0}
     cell = nest.Create('izhikevich', 1, params)
     generator = nest.Create(
         'step_current_generator', 1,
         {'amplitude_values': pq.Quantity(input_signal, 'pA'),
          'amplitude_times': (pq.Quantity(input_signal.times, 'ms') -
-                             device_delay * pq.ms),
+                             min_delay * pq.ms),
          'start': float(pq.Quantity(input_signal.t_start, 'ms')),
          'stop': float(pq.Quantity(input_signal.t_stop, 'ms'))})
-    nest.Connect(generator, cell, syn_spec={'delay': device_delay})
+    nest.Connect(generator, cell, syn_spec={'delay': min_delay})
     multimeter = nest.Create('multimeter', 1, {"interval": dt})
     nest.SetStatus(multimeter, {'record_from': ['V_m']})
     nest.Connect(multimeter, cell)
@@ -41,7 +38,7 @@ parser = ArgumentParser()
 parser.add_argument('--fast_spiking', action='store_true', default=False,
                     help=("Whether to use the \"fast-spiking\" version of the "
                           "Izhikevich neuron or not"))
-parser.add_argument('--simtime', type=float, default=100.0,
+parser.add_argument('--simtime', type=float, default=200.0,
                     help="The length of the simulation in ms")
 parser.add_argument('--timestep', type=float, default=0.001,
                     help="Simulation timestep")
@@ -72,6 +69,11 @@ args = parser.parse_args()
 
 if __name__ == "__main__":
 
+    if args.reference and args.fast_spiking:
+        raise Exception(
+            "--reference and --fast_spiking options cannot be used together as"
+            " there is no reference implementation for the fast-spiking model")
+
     if args.save_fig is not None:
         matplotlib.use('pdf')
         save_path = os.path.abspath(args.save_fig)
@@ -83,17 +85,27 @@ if __name__ == "__main__":
     # allow the backend to be set
     from matplotlib import pyplot as plt  # @IgnorePep8
 
+    # Set the random seed
+    np.random.seed(args.seed)
+    seeds = np.asarray(
+        np.floor(np.random.random(len(args.simulators)) * 1e5), dtype=int)
+
+    # Set of simulators to run
+    simulators_to_run = set(args.simulators)
+    if args.reference:
+        simulators_to_run.add('nest')
+
     pyNN_module = {}
     pype9_metaclass = {}
     pype9_controller = {}
-    if 'neuron' in args.simulators:
+    if 'neuron' in simulators_to_run:
         import pyNN.neuron  # @IgnorePep8
         from pype9.neuron import (CellMetaClass as CellMetaClassNEURON,
                                   simulation_controller as controllerNEURON)
         pyNN_module['neuron'] = pyNN.neuron
         pype9_controller['neuron'] = controllerNEURON
         pype9_metaclass['neuron'] = CellMetaClassNEURON
-    if 'nest' in args.simulators or args.reference:
+    if 'nest' in simulators_to_run:
         import nest  # @IgnorePep8
         import pyNN.nest  # @IgnorePep8
         from pype9.nest import (CellMetaClass as CellMetaClassNEST,
@@ -108,10 +120,10 @@ if __name__ == "__main__":
         properties = ninemlcatalog.load('neuron/Izhikevich',
                                         'SampleIzhikevichFastSpiking')
         initial_regime = 'subVb'
-        initial_states = {'U': -1.625 * pq.pA, 'V': -65.0 * pq.mV}
+        initial_states = {'U': -1.625 * pq.pA, 'V': -70.0 * pq.mV}
         input_port_name = 'iSyn'
         if args.input_amplitude is None:
-            input_amp = 200 * pq.pA
+            input_amp = 100 * pq.pA
         else:
             input_amp = args.input_amplitude * pq.pA
     else:
@@ -119,10 +131,10 @@ if __name__ == "__main__":
         properties = ninemlcatalog.load('neuron/Izhikevich',
                                         'SampleIzhikevich')
         initial_regime = 'subthreshold_regime'
-        initial_states = {'U': -14.0 * pq.mV / pq.ms, 'V': -65.0 * pq.mV}
+        initial_states = {'U': -14.0 * pq.mV / pq.ms, 'V': -70.0 * pq.mV}
         input_port_name = 'Isyn'
         if args.input_amplitude is None:
-            input_amp = 100 * pq.pA
+            input_amp = 15 * pq.pA
         else:
             input_amp = args.input_amplitude * pq.pA
 
@@ -135,6 +147,11 @@ if __name__ == "__main__":
         np.concatenate((np.zeros(num_preceding),
                         np.ones(num_remaining) * amplitude)),
         sampling_period=args.timestep * pq.ms, units='nA', time_units='ms')
+
+    for simulator, seed in zip(simulators_to_run, seeds):
+        pyNN_module[simulator].setup(min_delay=min_delay, max_delay=max_delay,
+                                     timestep=args.timestep,
+                                     rng_seeds_seed=seed)
 
     # Construct the cells and set up recordings and input plays
     cells = {}
@@ -149,17 +166,13 @@ if __name__ == "__main__":
         # Set initial state
         cells[simulator].update_state(initial_states)
 
-    # Set of simulators to run
-    simulators_to_run = set(args.simulators)
-
     if args.reference:
         ref_cell, ref_multi, ref_input = construct_reference(input_signal,
                                                              args.timestep)
-        simulators_to_run.add('nest')
 
     # Run the simulation(s)
     for simulator in simulators_to_run:
-        pyNN_module[simulator].run(args.simtime)
+        pype9_controller[simulator].run(args.simtime)
 
     # Plot the results
     print "Plotting the results"
@@ -177,7 +190,7 @@ if __name__ == "__main__":
         legend.append(simulator.upper())
     if args.reference:
         events, interval = nest.GetStatus(
-            ref_multi['V_m'], ["events", 'interval'])[0]
+            ref_multi, ["events", 'interval'])[0]
         t, v = np.asarray(events['times']), np.asarray(events['V_m'])
         inds = t > args.plot_start
         plt.plot(t[inds], v[inds])

@@ -1,6 +1,6 @@
 """
 Constructs a leaky integrate and fire model with an alpha synapse and connects
-it to an input source that fires spikes at regular intervals
+it to an input source that fires spikes at a constant rate
 """
 import os
 import nest
@@ -16,7 +16,7 @@ build_dir = os.path.join(os.getcwd(), '9build', 'regular_interval')
 connection_weight = False
 # Get and combine 9ML models
 input_model = ninemlcatalog.load(
-    'input/RegularInterval', 'RegularInterval')
+    'input/ConstantRate', 'ConstantRate')
 liaf_model = ninemlcatalog.load(
     'neuron/LeakyIntegrateAndFire', 'LeakyIntegrateAndFire')
 alpha_model = ninemlcatalog.load(
@@ -35,6 +35,9 @@ if connection_weight:
     # FIXME: Need to check that the spike port corresponds to a proper port
     conn_params.append(ConnectionParameterSet(
         'spike__psr', [multi_model.parameter('weight__pls')]))
+
+# Reinterpret the multi-component model as one containing synapses that can
+# be set by connection weights
 w_syn_model = WithSynapses.wrap(multi_model,
                                 connection_parameter_sets=conn_params)
 # Generate Pype9 classes
