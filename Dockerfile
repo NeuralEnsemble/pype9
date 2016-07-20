@@ -27,13 +27,9 @@ ENV PYTHONPATH $HOME/packages/ninemlcatalog/python:$PYTHONPATH
 ENV PYTHONPATH $HOME/packages/lib9ml:$PYTHONPATH
 ENV PYTHONPATH $HOME/packages/diophantine:$PYTHONPATH
 
-# Create a link to the examples
-RUN ln -s $HOME/packages/pype9/examples $HOME/examples
-WORKDIR $HOME/examples
-
 # Set up bashrc and add welcome message
-RUN sed 's/#force_color_prompt/force_color_prompt/' .bashrc > tmp; mv tmp .bashrc
-RUN echo "source /home/docker/env/neurosci/bin/activate" >> .bashrc
+RUN sed 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc > $HOME/tmp; mv $HOME/tmp $HOME/.bashrc
+RUN echo "source /home/docker/env/neurosci/bin/activate" >> $HOME/.bashrc
 RUN echo 'echo "Docker container for running PyPe9 examples."' >> $HOME/.bashrc
 RUN echo 'echo "See the $HOME/examples directory for the example "' >> $HOME/.bashrc
 RUN echo 'echo "python scripts (supply the '--help' option to see usage)."' >> $HOME/.bashrc
@@ -46,3 +42,8 @@ ENV PYTHONPATH $HOME/packages/pype9:$PYTHONPATH
 WORKDIR $HOME/packages/pype9/pype9/neuron/cells/code_gen/libninemlnrn
 RUN make
 ENV LD_LIBRARY_PATH $HOME/packages/pype9/pype9/neuron/cells/code_gen/libninemlnrn:$LD_LIBRARY_PATH
+
+# Create a link to the examples
+RUN ln -s $HOME/packages/pype9/examples $HOME/examples
+
+WORKDIR $HOME
