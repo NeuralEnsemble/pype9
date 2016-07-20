@@ -2,17 +2,14 @@
 # A Docker image for running PyPe9 examples
 #
 
-FROM neuralensemble/simulation:py2
+FROM neuralensemble/simulationx:py2
 MAINTAINER tom.g.close@gmail.com
-
-RUN sed 's/#force_color_prompt/force_color_prompt/' .bashrc > tmp; mv tmp .bashrc
-RUN echo "source /home/docker/env/neurosci/bin/activate" >> .bashrc
 
 USER root
 RUN apt-get update; apt-get install -y python-lxml
 RUN pip install sympy
-USER docker
 
+USER docker
 # Add a symbolic link to the modlunit command into the virtual env bin dir
 RUN ln -s $HOME/env/neurosci/x86_64/bin/modlunit $VENV/bin
 
@@ -41,5 +38,7 @@ ENV LD_LIBRARY_PATH $HOME/packages/pype9/pype9/neuron/cells/code_gen/libninemlnr
 RUN ln -s $HOME/packages/pype9/examples $HOME/examples
 WORKDIR $HOME/examples
 
-# Welcome message
+# Set up bashrc and add welcome message
+RUN sed 's/#force_color_prompt/force_color_prompt/' .bashrc > tmp; mv tmp .bashrc
+RUN echo "source /home/docker/env/neurosci/bin/activate" >> .bashrc
 RUN echo 'echo "Docker container for running PyPe9 examples. See the $HOME/examples directory for the example python scripts (supply the '--help' option to see usage)."' >> $HOME/.bashrc

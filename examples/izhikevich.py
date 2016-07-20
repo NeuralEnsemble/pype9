@@ -76,11 +76,7 @@ if __name__ == "__main__":
 
     if args.save_fig is not None:
         matplotlib.use('pdf')
-        save_path = os.path.abspath(args.save_fig)
-        if not os.path.exists(save_path):
-            os.mkdir(save_path)
-    else:
-        save_path = None
+
     # Needs to be imported after the args.save_fig argument is parsed to
     # allow the backend to be set
     from matplotlib import pyplot as plt  # @IgnorePep8
@@ -202,8 +198,8 @@ if __name__ == "__main__":
     plt.xlabel('Time (ms)')
     plt.ylabel('Membrane Voltage (mV)')
     plt.legend(legend)
-    if save_path is not None:
-        plt.savefig(save_path)
+    if args.save_fig is not None:
+        plt.savefig(args.save_fig)
     else:
         plt.show()
     print "done"
