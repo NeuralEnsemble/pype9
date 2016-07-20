@@ -13,6 +13,9 @@ RUN apt-get update; apt-get install -y python-lxml
 RUN pip install sympy
 USER docker
 
+# Add a symbolic link to the modlunit command into the virtual env bin dir
+RUN ln -s $HOME/env/neurosci/x86_64/bin/modlunit $VENV/bin
+
 # Clone the required repositories
 RUN git clone https://github.com/tclose/NineMLCatalog.git $HOME/packages/ninemlcatalog
 RUN git clone https://github.com/tclose/lib9ML.git $HOME/packages/lib9ml
@@ -24,10 +27,15 @@ RUN cd $HOME/packages/ninemlcatalog; git checkout develop
 RUN cd $HOME/packages/lib9ml; git checkout develop
 
 # Set the PYTHONPATH to look at the git repos
-ENV PYTHONPATH $HOME/packages/ninemlcatalog:$PYTHONPATH
+ENV PYTHONPATH $HOME/packages/ninemlcatalog/python:$PYTHONPATH
 ENV PYTHONPATH $HOME/packages/lib9ml:$PYTHONPATH
 ENV PYTHONPATH $HOME/packages/diophantine:$PYTHONPATH
 ENV PYTHONPATH $HOME/packages/pype9:$PYTHONPATH
+
+# Compile the libninemlnrn shared library (with the random distributions in it)
+WORKDIR $HOME/packages/pype9/pype9/neuron/cells/code_gen/libninemlnrn
+RUN make
+ENV LD_LIBRARY_PATH $HOME/packages/pype9/pype9/neuron/cells/code_gen/libninemlnrn:$LD_LIBRARY_PATH
 
 # Create a link to the examples
 RUN ln -s $HOME/packages/pype9/examples $HOME/examples

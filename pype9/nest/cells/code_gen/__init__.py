@@ -12,6 +12,7 @@ import os
 from os import path
 from copy import deepcopy
 import subprocess as sp
+import re
 from pype9.base.cells.code_gen import BaseCodeGenerator
 from pype9.utils import remove_ignore_missing
 from pype9.exceptions import Pype9BuildError
@@ -245,8 +246,7 @@ class CodeGenerator(BaseCodeGenerator):
                     "Could not create build directory ({}), please check the "
                     "required permissions or specify a different \"parent "
                     "build directory\" ('parent_build_dir') -> {}".format(e))
-        if stderr and stderr.rstrip() != ("make: *** No rule to make target "
-                                          "`clean'.  Stop."):
+        if stderr and self._no_makefile_re.match(stderr) is None:
             raise Pype9BuildError(
                 "Clean of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))
@@ -259,3 +259,6 @@ class CodeGenerator(BaseCodeGenerator):
         if 'NEST_INSTALL_DIR' in os.environ:
             path.append(path.join(os.environ['NEST_INSTALL_DIR'], 'bin'))
         return path
+
+    _no_makefile_re = re.compile(r"make: \*\*\* No rule to make target .clean."
+                                 r"\.  Stop\.")
