@@ -2,7 +2,7 @@
 # A Docker image for running PyPe9 examples
 #
 
-FROM neuralensemble/simulationx:py2
+FROM neuralensemble/simulation:py2
 MAINTAINER tom.g.close@gmail.com
 
 USER root
@@ -41,4 +41,7 @@ WORKDIR $HOME/examples
 # Set up bashrc and add welcome message
 RUN sed 's/#force_color_prompt/force_color_prompt/' .bashrc > tmp; mv tmp .bashrc
 RUN echo "source /home/docker/env/neurosci/bin/activate" >> .bashrc
-RUN echo 'echo "Docker container for running PyPe9 examples. See the $HOME/examples directory for the example python scripts (supply the '--help' option to see usage)."' >> $HOME/.bashrc
+RUN echo 'echo "Docker container for running PyPe9 examples."' >> $HOME/.bashrc
+RUN echo 'echo "See the $HOME/examples directory for the example "' >> $HOME/.bashrc
+RUN echo 'echo "python scripts (supply the '--help' option to see usage)."' >> $HOME/.bashrc
+
