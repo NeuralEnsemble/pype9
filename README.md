@@ -17,7 +17,7 @@ Prerequisites
    http://www.davison.webfactional.com/notes/installation-neuron-python/)
  * PyNEST 2.10.0 (see http://www.nest-simulator.org/installation/)
  * PyNN 0.8.1 (see http://neuralensemble.org/docs/PyNN/installation.html)
- * lib9ML (`bleeding_edge` branch at http://github.com/tclose/lib9ML)
+ * lib9ML (`develop` branch at http://github.com/tclose/lib9ML)
  * Diophantine 0.1 (`v0.1` tag at http://github.com/tclose/Diophantine)
  * NineMLCatalog (for unit-tests,`develop` branch at
    http://github.com/tclose/NineMLCatalog)
