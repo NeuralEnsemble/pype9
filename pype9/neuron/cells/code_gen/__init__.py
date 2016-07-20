@@ -475,16 +475,30 @@ class CodeGenerator(BaseCodeGenerator):
                         "({})".format(ext_i.name, ext_i.dimension))
                 ext_is.append(ext_i)
         except KeyError:
-            ext_is = [
-                i for i in chain(component_class.analog_receive_ports,
-                                 component_class.analog_reduce_ports)
-                if (i.dimension == un.current and
-                    i.name in memb_i.rhs_symbol_names and
-                    len([e for e in component_class.all_expressions
-                         if i.symbol in e.free_symbols]) == 1)]
+            ext_is = []
+            for port in chain(component_class.analog_receive_ports,
+                              component_class.analog_reduce_ports):
+                # Check to see if the receive/reduce port has current dimension
+                if port.dimension != un.current:
+                    continue
+                # Check to see if the current appears in the membrane current
+                # expression
+                # FIXME: This test should check to to see if the port is
+                #        additive to the membrane current
+                if port.name not in memb_i.rhs_symbol_names:
+                    continue
+                # Get the number of expressions the receive port appears in
+                # an expression
+                if len([e for e in component_class.all_expressions
+                        if port.symbol in e.free_symbols]) > 1:
+                    continue
+                # If all those conditions are met guess that port is a external
+                # current that can be removed (ports that don't meet these
+                # conditions will have to be specified separately)
+                ext_is.append(port)
             if ext_is:
-                print ("Guessing '{}' external currents to be removed"
-                       .format("', '".join(i.name for i in ext_is)))
+                print ("Guessing '{}' are external currents to be removed"
+                       .format(ext_is))
         trfrm.annotations[PYPE9_NS][EXTERNAL_CURRENTS] = ext_is
         # Remove external input current ports (as NEURON handles them)
         for ext_i in ext_is:
