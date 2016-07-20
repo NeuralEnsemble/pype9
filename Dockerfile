@@ -17,7 +17,7 @@ USER docker
 RUN git clone https://github.com/tclose/NineMLCatalog.git $HOME/packages/ninemlcatalog
 RUN git clone https://github.com/tclose/lib9ML.git $HOME/packages/lib9ml
 RUN git clone https://github.com/tclose/Diophantine.git $HOME/packages/diophantine
-RUN git clone https://github.com/tclose/PyPe9.git $HOME/packages/pype9
+RUN git clone https://github.com/CNS-OIST/PyPe9.git $HOME/packages/pype9
 
 # Checkout appropriate branches of the git repos
 RUN cd $HOME/packages/ninemlcatalog; git checkout develop
