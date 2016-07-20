@@ -1,6 +1,23 @@
 #
 # A Docker image for running PyPe9 examples
 #
+#
+# Create a Docker container from the Docker image and open a shell on it with
+# the command
+#
+#    docker run -v `pwd`/<your-local-output-dir>:/home/docker/output -t -i tclose/pype9 /bin/bash
+#
+# then from inside the container run the examples in /home/docker/examples with
+# the commands
+#
+#    python izhikevich.py --save_fig ~/output/<output-name>.pdf
+#
+# or 
+#
+#    python brunel.py --save_fig ~/output/<output-dir>
+#
+# (see '--help' option for a full list of options for each example)
+#
 
 FROM neuralensemble/simulation:py2
 MAINTAINER tom.g.close@gmail.com
