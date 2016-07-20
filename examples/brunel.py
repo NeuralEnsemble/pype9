@@ -219,10 +219,28 @@ max_delay = 10.0
 
 if __name__ == '__main__':
 
+    if not args.simulators and not args.reference:
+        raise Exception("No simulations requested "
+                        "(see --simulators and --reference options)")
+
+    # Get MPI rank and number of processes
+    if 'neuron' in args.simulators:
+        import pyNN.neuron.simulator
+        mpi_rank = pyNN.neuron.simulator.state.mpi_rank
+        num_processes = pyNN.neuron.simulator.state.mpi_rank
+    else:
+        import pyNN.nest.simulator
+        mpi_rank = pyNN.nest.simulator.state.mpi_rank
+        num_processes = pyNN.nest.simulator.state.mpi_rank
+
+    if num_processes > 1 and args.build_mode != 'require':
+        raise Exception(
+            "Build mode must be 'require' when running on multiple processes")
+
     if args.save_fig is not None:
         matplotlib.use('pdf')
         save_path = os.path.abspath(args.save_fig)
-        if not os.path.exists(save_path):
+        if not os.path.exists(save_path) and mpi_rank == 0:
             os.mkdir(save_path)
     else:
         save_path = None
@@ -233,13 +251,13 @@ if __name__ == '__main__':
     pyNN_module = {}
     pype9_network_classes = {}
     if 'neuron' in args.simulators:
-        import pyNN.neuron  # @IgnorePep8
+        import pyNN.neuron  # @IgnorePep8 @Reimport
         import pype9.neuron  # @IgnorePep8
         pyNN_module['neuron'] = pyNN.neuron
         pype9_network_classes['neuron'] = pype9.neuron.Network
     if 'nest' in args.simulators or args.reference:
         import nest  # @IgnorePep8
-        import pyNN.nest  # @IgnorePep8
+        import pyNN.nest  # @IgnorePep8 @Reimport
         import pype9.nest  # @IgnorePep8
         pyNN_module['nest'] = pyNN.nest
         pype9_network_classes['nest'] = pype9.nest.Network
@@ -320,96 +338,101 @@ if __name__ == '__main__':
             kwargs = {}
         pyNN_module[simulator].run(args.simtime, **kwargs)
 
-    # Plot the results
-    print "Plotting the results"
-    num_subplots = len(args.simulators) + int(args.reference)
-    for pop_name in pops_to_plot:
-        spike_fig, spike_subplots = plt.subplots(num_subplots, 1,
+    if mpi_rank == 0:
+        # Plot the results
+        print "Plotting the results"
+        num_subplots = len(args.simulators) + int(args.reference)
+        for pop_name in pops_to_plot:
+            spike_fig, spike_subplots = plt.subplots(num_subplots, 1,
+                                                     figsize=args.figsize)
+            spike_fig.suptitle("{} - {} Spike Times".format(args.case,
+                                                            pop_name),
+                               fontsize=14)
+            if args.num_record_v:
+                v_fig, v_subplots = plt.subplots(num_subplots, 1,
                                                  figsize=args.figsize)
-        spike_fig.suptitle("{} - {} Spike Times".format(args.case, pop_name),
-                           fontsize=14)
-        if args.num_record_v:
-            v_fig, v_subplots = plt.subplots(num_subplots, 1,
-                                             figsize=args.figsize)
-            v_fig.suptitle("{} - {} Membrane Voltage".format(args.case,
-                                                             pop_name),
-                           fontsize=14)
-        for subplot_index, simulator in enumerate(args.simulators):
-            # Get the recordings for the population
-            pop = networks[simulator].component_array(pop_name)
-            block = pop.get_data()
-            segment = block.segments[0]
-            # Plot the spike trains
-            spiketrains = segment.spiketrains
-            spike_times = []
-            ids = []
-            for i, spiketrain in enumerate(spiketrains):
-                spike_times.extend(spiketrain)
-                ids.extend([i] * len(spiketrain))
-            plt.sca(spike_subplots[subplot_index]
-                    if num_subplots > 1 else spike_subplots)
-            plt.scatter(spike_times, ids)
-            plt.xlim((args.plot_start, args.simtime))
-            plt.ylim((-1, len(spiketrains)))
-            plt.xlabel('Times (ms)')
-            plt.ylabel('Cell Indices')
-            plt.title("PyPe9 {}".format(simulator.upper()), fontsize=12)
-            if args.num_record_v and pop_name != 'Ext':
-                traces = segment.analogsignalarrays
-                legend = []
-                plt.sca(v_subplots[subplot_index]
-                        if num_subplots > 1 else v_subplots)
-                for trace in traces:
-                    plt.plot(trace.times, trace)
+                v_fig.suptitle("{} - {} Membrane Voltage".format(args.case,
+                                                                 pop_name),
+                               fontsize=14)
+            for subplot_index, simulator in enumerate(args.simulators):
+                # Get the recordings for the population
+                pop = networks[simulator].component_array(pop_name)
+                block = pop.get_data()
+                segment = block.segments[0]
+                # Plot the spike trains
+                spiketrains = segment.spiketrains
+                spike_times = []
+                ids = []
+                for i, spiketrain in enumerate(spiketrains):
+                    spike_times.extend(spiketrain)
+                    ids.extend([i] * len(spiketrain))
+                plt.sca(spike_subplots[subplot_index]
+                        if num_subplots > 1 else spike_subplots)
+                plt.scatter(spike_times, ids)
                 plt.xlim((args.plot_start, args.simtime))
-                plt.ylim([0.0, 20.0])
-                plt.xlabel('Time (ms)')
-                plt.ylabel('Membrane Voltage (mV)')
-                plt.title("Pype9 {}".format(simulator.upper()), fontsize=12)
-        if args.reference:
-            events = nest.GetStatus(ref_recorders[pop_name]['spikes'],
-                                    "events")[0]
-            spike_times = np.asarray(events['times'])
-            senders = np.asarray(events['senders'])
-            inds = np.asarray(spike_times > args.plot_start, dtype=bool)
-            spike_times = spike_times[inds]
-            senders = senders[inds]
-            if len(senders):
-                senders -= senders.min()
-                max_y = senders.max() + 1
-            else:
-                max_y = args.num_record
-            plt.sca(spike_subplots[-1] if num_subplots > 1 else spike_subplots)
-            plt.scatter(spike_times, senders)
-            plt.xlim((args.plot_start, args.simtime))
-            plt.ylim((-1, max_y))
-            plt.xlabel('Times (ms)')
-            plt.ylabel('Cell Indices')
-            plt.title("Ref. NEST", fontsize=12)
-            if args.num_record_v:
-                events, interval = nest.GetStatus(
-                    ref_recorders[pop_name]['V_m'], ["events", 'interval'])[0]
-                sorted_vs = sorted(zip(events['senders'], events['times'],
-                                       events['V_m']), key=itemgetter(0))
-                legend = []
-                plt.sca(v_subplots[-1] if num_subplots > 1 else v_subplots)
-                for sender, group in groupby(sorted_vs, key=itemgetter(0)):
-                    _, t, v = zip(*group)
-                    t = np.asarray(t)
-                    v = np.asarray(v)
-                    inds = t > args.plot_start
-                    plt.plot(t[inds], v[inds])
+                plt.ylim((-1, len(spiketrains)))
+                plt.xlabel('Times (ms)')
+                plt.ylabel('Cell Indices')
+                plt.title("PyPe9 {}".format(simulator.upper()), fontsize=12)
+                if args.num_record_v and pop_name != 'Ext':
+                    traces = segment.analogsignalarrays
+                    legend = []
+                    plt.sca(v_subplots[subplot_index]
+                            if num_subplots > 1 else v_subplots)
+                    for trace in traces:
+                        plt.plot(trace.times, trace)
+                    plt.xlim((args.plot_start, args.simtime))
+                    plt.ylim([0.0, 20.0])
+                    plt.xlabel('Time (ms)')
+                    plt.ylabel('Membrane Voltage (mV)')
+                    plt.title("Pype9 {}".format(simulator.upper()),
+                              fontsize=12)
+            if args.reference:
+                events = nest.GetStatus(ref_recorders[pop_name]['spikes'],
+                                        "events")[0]
+                spike_times = np.asarray(events['times'])
+                senders = np.asarray(events['senders'])
+                inds = np.asarray(spike_times > args.plot_start, dtype=bool)
+                spike_times = spike_times[inds]
+                senders = senders[inds]
+                if len(senders):
+                    senders -= senders.min()
+                    max_y = senders.max() + 1
+                else:
+                    max_y = args.num_record
+                plt.sca(spike_subplots[-1]
+                        if num_subplots > 1 else spike_subplots)
+                plt.scatter(spike_times, senders)
                 plt.xlim((args.plot_start, args.simtime))
-                plt.ylim([0.0, 20.0])
-                plt.xlabel('Time (ms)')
-                plt.ylabel('Membrane Voltage (mV)')
+                plt.ylim((-1, max_y))
+                plt.xlabel('Times (ms)')
+                plt.ylabel('Cell Indices')
                 plt.title("Ref. NEST", fontsize=12)
-        if save_path is not None:
-            spike_fig.savefig(os.path.join(save_path,
-                                           '{}_spikes'.format(pop_name)))
-            if args.num_record_v:
-                v_fig.savefig(os.path.join(save_path,
-                                           '{}_v'.format(pop_name)))
-    if save_path is None:
-        plt.show()
-    print "done"
+                if args.num_record_v:
+                    events, interval = nest.GetStatus(
+                        ref_recorders[pop_name]['V_m'],
+                        ["events", 'interval'])[0]
+                    sorted_vs = sorted(zip(events['senders'], events['times'],
+                                           events['V_m']), key=itemgetter(0))
+                    legend = []
+                    plt.sca(v_subplots[-1] if num_subplots > 1 else v_subplots)
+                    for sender, group in groupby(sorted_vs, key=itemgetter(0)):
+                        _, t, v = zip(*group)
+                        t = np.asarray(t)
+                        v = np.asarray(v)
+                        inds = t > args.plot_start
+                        plt.plot(t[inds], v[inds])
+                    plt.xlim((args.plot_start, args.simtime))
+                    plt.ylim([0.0, 20.0])
+                    plt.xlabel('Time (ms)')
+                    plt.ylabel('Membrane Voltage (mV)')
+                    plt.title("Ref. NEST", fontsize=12)
+            if save_path is not None:
+                spike_fig.savefig(os.path.join(save_path,
+                                               '{}_spikes'.format(pop_name)))
+                if args.num_record_v:
+                    v_fig.savefig(os.path.join(save_path,
+                                               '{}_v'.format(pop_name)))
+        if save_path is None:
+            plt.show()
+        print "done"
