@@ -28,6 +28,9 @@
 #
 #    Supply the '--help' option to see a full list of options for each example.
 #
+#  5. Edit the xml descriptions in the ~/catalog directory to alter the
+#     simulated models as desired.
+#
 
 FROM neuralensemble/simulation:py2
 MAINTAINER tom.g.close@gmail.com
@@ -70,7 +73,8 @@ WORKDIR $HOME/packages/pype9/pype9/neuron/cells/code_gen/libninemlnrn
 RUN make
 ENV LD_LIBRARY_PATH $HOME/packages/pype9/pype9/neuron/cells/code_gen/libninemlnrn:$LD_LIBRARY_PATH
 
-# Create a link to the examples
+# Create a link to the examples and catalog directories
 RUN ln -s $HOME/packages/pype9/examples $HOME/examples
+RUN ln -s $HOME/packages/ninemlcatalog/xml $HOME/catalog
 
 WORKDIR $HOME
