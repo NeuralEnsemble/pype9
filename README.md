@@ -18,7 +18,7 @@ Prerequisites
  * PyNEST 2.10.0 (see http://www.nest-simulator.org/installation/)
  * PyNN 0.8.1 (see http://neuralensemble.org/docs/PyNN/installation.html)
  * lib9ML (`develop` branch at http://github.com/tclose/lib9ML)
- * Diophantine 0.1 (`v0.1` tag at http://github.com/tclose/Diophantine)
+ * Diophantine 0.1 (`master` branch http://github.com/tclose/Diophantine)
  * NineMLCatalog (for unit-tests,`develop` branch at
    http://github.com/tclose/NineMLCatalog)
 
@@ -31,12 +31,28 @@ Installation
 After installing PyNEURON, PyNEST and PyNN via the linked instructions clone the 
 lib9ML, Diophantine, NineMLCatalog and PyPe9 repositories to somewhere sensible
 on your local computer (e.g. $HOME/git/nineml, $HOME/git/diophantine,
-$HOME/git/ninemlcatalog & $HOME/git/pype9). Then either add the root directory of 
-each repository (except NineMLCatalog where you will need to add the 'python'
-sub directory) to your PYTHONPATH environment variable
-(see https://docs.python.org/2/using/cmdline.html#envvar-PYTHONPATH) or create
-a symbolic link to the python package root inside each repo in the site-packages
-directory of your python distribution.
+$HOME/git/ninemlcatalog & $HOME/git/pype9). Then add the python package root
+in each directory the python path of your python distribution for each repo (e.g.
+$HOME/git/nineml/nineml, $HOME/git/diophantine/diophantine, $HOME/git/ninemlcatalog/python/ninemlcatalog.py and $HOME/git/pype9/pype9), which can be done by adding the
+containing directory to the PYTHONPATH environment variable (see
+https://docs.python.org/2/using/cmdline.html#envvar-PYTHONPATH).
+
+Finally, there is a shared library containing wrappers for GSL random distribution
+functions to allow them to be called from the generated NEURON NMODL mechanisms, which
+needs to be built. 
+
+cd <pype9-install-dir>/pype9/neuron/cells/code_gen/libninemlnrn
+make
+
+Then add the following line (substituting DYLD_LIBRARY_PATH for LD_LIBRARY_PATH on OSX) to
+your ~/.bashrc (~/.bash_profile or ~/.profile, etc)
+
+export LD_LIBRARY_PATH=<pype9-install-dir>/pype9/neuron/cells/code_gen/libninemlnrn:$LD_LIBRARY_PATH
+
+Alternatively, there is a Docker image located at https://hub.docker.com/r/tclose/pype9/
+that you can pull to run the simulations within a Docker container. See the instructions
+in the comments of the Dockerfile in the PyPe9 repo for instructions on how to do this.
+
 
 Testing
 ---
