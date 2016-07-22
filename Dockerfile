@@ -15,7 +15,7 @@
 #
 #    This will create a folder called <your-local-output-dir> in the
 #    directory you are running the docker container, which you can access
-#    from your host computer (i.e. outside of the container and view the
+#    from your host computer (i.e. outside of the container) and view the
 #    output figures from.
 #
 #  4. From inside the running container run the examples with

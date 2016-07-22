@@ -12,8 +12,8 @@ Author: Tom G. Close (tom.close@monash.edu)
 
 Prerequisites
 ---
- * Python 2.7.11
- * PyNEURON 7.4 (see
+ * >= Python 2.7.11
+ * >= PyNEURON 7.3 (see
    http://www.davison.webfactional.com/notes/installation-neuron-python/)
  * PyNEST 2.10.0 (see http://www.nest-simulator.org/installation/)
  * PyNN 0.8.1 (see http://neuralensemble.org/docs/PyNN/installation.html)
@@ -21,16 +21,22 @@ Prerequisites
  * Diophantine 0.1 (`v0.1` tag at http://github.com/tclose/Diophantine)
  * NineMLCatalog (for unit-tests,`develop` branch at
    http://github.com/tclose/NineMLCatalog)
+
+ NB: PyPe9 may work with earlier versions of the packages listed but it 
+     has not been tested.
  
 Installation
 ---
 
-After installing PyNEURON, PyNEST and PyNN via their instructions clone the 
+After installing PyNEURON, PyNEST and PyNN via the linked instructions clone the 
 lib9ML, Diophantine, NineMLCatalog and PyPe9 repositories to somewhere sensible
 on your local computer (e.g. $HOME/git/nineml, $HOME/git/diophantine,
-$HOME/git/ninemlcatalog & $HOME/git/pype9). Then add the root directory of 
-each repository to your PYTHONPATH environment variable
-(see https://docs.python.org/2/using/cmdline.html#envvar-PYTHONPATH).
+$HOME/git/ninemlcatalog & $HOME/git/pype9). Then either add the root directory of 
+each repository (except NineMLCatalog where you will need to add the 'python'
+sub directory) to your PYTHONPATH environment variable
+(see https://docs.python.org/2/using/cmdline.html#envvar-PYTHONPATH) or create
+a symbolic link to the python package root inside each repo in the site-packages
+directory of your python distribution.
 
 Testing
 ---
