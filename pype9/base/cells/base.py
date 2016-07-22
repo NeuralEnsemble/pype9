@@ -12,7 +12,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from itertools import chain
-from copy import deepcopy, copy
+from copy import deepcopy
 from abc import ABCMeta
 import quantities as pq
 import nineml
@@ -24,7 +24,6 @@ from nineml.base import ContainerObject, DocumentLevelObject
 from nineml.exceptions import name_error, NineMLNameError
 from pype9.exceptions import (
     Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError)
-from pype9.annotations import PYPE9_NS, BUILD_PROPS
 import logging
 
 logger = logging.Logger("Pype9")
@@ -544,12 +543,12 @@ class DynamicsWithSynapses(WithSynapses, Dynamics):
     def __init__(self, dynamics, synapses=[], connection_parameter_sets=[]):
         WithSynapses.__init__(self, dynamics, synapses,
                               connection_parameter_sets)
+        self._name = dynamics.name
         BaseALObject.__init__(self)
         DocumentLevelObject.__init__(self, dynamics.document)
         ContainerObject.__init__(self)
         # Create references to all dynamics member variables so that inherited
         # Dynamics properties and methods can find them.
-        self._name = dynamics.name
         self._annotations = dynamics._annotations
         self._parameters = dynamics._parameters
         self._aliases = dynamics._aliases
@@ -568,12 +567,12 @@ class MultiDynamicsWithSynapses(WithSynapses, MultiDynamics):
     def __init__(self, dynamics, synapses=[], connection_parameter_sets=[]):
         WithSynapses.__init__(self, dynamics, synapses,
                               connection_parameter_sets)
+        self._name = dynamics.name
         BaseALObject.__init__(self)
         DocumentLevelObject.__init__(self, dynamics.document)
         ContainerObject.__init__(self)
         # Create references to all dynamics member variables so that inherited
         # Dynamics properties and methods can find them.
-        self._name = dynamics.name
         self._annotations = dynamics._annotations
         self._sub_components = dynamics._sub_components
         self._analog_send_ports = dynamics._analog_send_ports
@@ -728,13 +727,13 @@ class DynamicsWithSynapsesProperties(WithSynapsesProperties,
         WithSynapsesProperties.__init__(self, dynamics_properties,
                                         synapses_properties,
                                         connection_property_sets)
+        self._name = dynamics_properties._name
         # Initiate inherited base classes
         BaseULObject.__init__(self)
         DocumentLevelObject.__init__(self, dynamics_properties.document)
         ContainerObject.__init__(self)
         # Create references to all dynamics member variables so that inherited
         # DynamicsProperties properties and methods can find them.
-        self._name = dynamics_properties._name
         self._annotations = dynamics_properties._annotations
         self._properties = dynamics_properties._properties
 
@@ -747,13 +746,13 @@ class MultiDynamicsWithSynapsesProperties(WithSynapsesProperties,
         WithSynapsesProperties.__init__(self, dynamics_properties,
                                         synapses_properties,
                                         connection_property_sets)
+        self._name = dynamics_properties._name
         # Initiate inherited base classes
         BaseULObject.__init__(self)
         DocumentLevelObject.__init__(self, dynamics_properties.document)
         ContainerObject.__init__(self)
         # Create references to all dynamics member variables so that inherited
         # MultiDynamicsProperties properties and methods can find them.
-        self._name = dynamics_properties._name
         self._annotations = dynamics_properties._annotations
         self._sub_components = dynamics_properties._sub_components
 
