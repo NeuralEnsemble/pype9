@@ -466,7 +466,7 @@ class TestBrunel2000(TestCase):
             plt.show()
 
     def test_activity_with_neuron(self, case='AI', order=10, simtime=100.0,
-                                  bin_width=4.0, simulators=['neuron'], #, 'nest'],
+                                  bin_width=4.0, simulators=['neuron', 'nest'],
                                   record_states=True, plot=True,
                                   **kwargs):  # @IgnorePep8 @UnusedVariable
         data = {}

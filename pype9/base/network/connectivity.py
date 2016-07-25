@@ -33,24 +33,24 @@ class PyNNConnectivity(BaseConnectivity):
             connector = self._pyNN_module.MapConnector()
             connector._connect_with_map(connection_group, self._connection_map)
         else:
-            if self._rule_props.lib_type == 'alltoall':
+            if self._rule_props.lib_type == 'AllToAll':
                 connector_cls = self._pyNN_module.AllToAllConnector
                 params = {}
-            elif self._rule_props.lib_type == 'onetoone':
+            elif self._rule_props.lib_type == 'OneToOne':
                 connector_cls = self._pyNN_module.OneToOneConnector
                 params = {}
-            elif self._rule_props.lib_type == 'explicitconnectionlist':
+            elif self._rule_props.lib_type == 'Explicit':
                 connector_cls = self._pyNN_module.FromListConnector
                 params = {}
-            elif self._rule_props.lib_type == 'probabilistic':
+            elif self._rule_props.lib_type == 'Probabilistic':
                 connector_cls = self._pyNN_module.FixedProbabilityConnector
                 params = {
                     'p_connect':
                     float(self._rule_props.property('probability').value)}
-            elif self._rule_props.lib_type == 'randomfanin':
+            elif self._rule_props.lib_type == 'RandomFanIn':
                 connector_cls = self._pyNN_module.FixedNumberPreConnector
                 params = {'n': int(self._rule_props.property('number').value)}
-            elif self._rule_props.lib_type == 'randomfanout':
+            elif self._rule_props.lib_type == 'RandomFanOut':
                 connector_cls = self._pyNN_module.FixedNumberPostConnector
                 params = {'n': int(self._rule_props.property('number').value)}
             else:
