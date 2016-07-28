@@ -1,0 +1,6 @@
+prune .deprecated
+recursive-include pype9 *.tmpl
+recursive-include pype9 *.cpp
+recursive-include pype9 Makefile
+recursive-exclude * .gitignore
+recursive-exclude * .DS_Store

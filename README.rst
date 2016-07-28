@@ -1,5 +1,5 @@
 PyPe9
-========
+=====
 
 "PYthon PipelinEs for 9ml (PyPe9)" is a collection of software pipelines
 written in Python to read and simulate networks of neuron models
@@ -8,10 +8,10 @@ described in NineML (http://nineml.net) in both Neuron and NEST simulators.
 PyPe9 is still under major development so please submit bug reports to the
 GitHub issue tracker (http://github.com/CNS-OIST/PyPe9/issues).
 
-Author: Tom G. Close (tom.close@monash.edu)
+Author: Tom G. Close (tom.g.close@gmail.com)
 
 Prerequisites
----
+-------------
  * >= Python 2.7.11
  * >= PyNEURON 7.3 (see
    http://www.davison.webfactional.com/notes/installation-neuron-python/)
@@ -26,16 +26,17 @@ Prerequisites
      has not been tested.
  
 Installation
----
+------------
 
 After installing PyNEURON, PyNEST and PyNN via the linked instructions clone the 
 lib9ML, Diophantine, NineMLCatalog and PyPe9 repositories to somewhere sensible
 on your local computer (e.g. $HOME/git/nineml, $HOME/git/diophantine,
 $HOME/git/ninemlcatalog & $HOME/git/pype9). Then add the python package root
 in each directory the python path of your python distribution for each repo (e.g.
-$HOME/git/nineml/nineml, $HOME/git/diophantine/diophantine, $HOME/git/ninemlcatalog/python/ninemlcatalog.py and $HOME/git/pype9/pype9), which can be done by adding the
-containing directory to the PYTHONPATH environment variable (see
-https://docs.python.org/2/using/cmdline.html#envvar-PYTHONPATH).
+$HOME/git/nineml/nineml, $HOME/git/diophantine/diophantine,
+$HOME/git/ninemlcatalog/python/ninemlcatalog.py and $HOME/git/pype9/pype9),
+which can be done by adding the containing directory to the PYTHONPATH
+environment variable (see https://docs.python.org/2/using/cmdline.html#envvar-PYTHONPATH).
 
 Finally, there is a shared library containing wrappers for GSL random distribution
 functions to allow them to be called from the generated NEURON NMODL mechanisms, which
@@ -55,7 +56,7 @@ in the comments of the Dockerfile in the PyPe9 repo for instructions on how to d
 
 
 Testing
----
+-------
 There are unit-tests in the <pype9-home>/tests/unittests directory to run
 common neuron models (_see_ test_dynamics.py) as well as the random balanced
 network (_see_ test_network.py) published in
@@ -66,12 +67,12 @@ Note that the Neuron (NMODL/Hoc) import functionality is still experimental and
 requires proper unit-tests to be written.
 
 Documentation
----
+-------------
 There is the skeleton documentation in the <pype9-home>/doc directory, which
 can be built with Sphynx. However, it still needs a lot of work at this stage.
 
 Known Limitations
----
+-----------------
 
 9ML aims to be a comprehensive description language for neural simulation. This
 means that it allows the expression of some uncommon configurations that are
