@@ -3,18 +3,22 @@ import os.path
 from setuptools import setup, find_packages  # @UnresolvedImport
 
 # Generate the package data
-package_dir = os.path.join(os.path.dirname(__file__), 'pype9')
+package_name = 'pype9'
+package_dir = os.path.join(os.path.dirname(__file__), package_name)
 package_data = []
+prefix_len = len(package_dir) + 1
 for path, dirs, files in os.walk(package_dir, topdown=True):
     package_data.extend(
-        (os.path.join(path, f) for f in files
+        (os.path.join(path, f)[prefix_len:] for f in files
          if os.path.splitext(f)[1] in ('.tmpl', '.cpp') or f == 'Makefile'))
+
+packages = [p for p in find_packages() if p != 'test']
 
 setup(
     name="pype9",
     version="0.1alpha",
-    package_data={'pype9': package_data},
-    packages=find_packages(),
+    package_data={package_name: package_data},
+    packages=packages,
     author="Thomas G. Close",
     # add your name here if you contribute to the code
     author_email="tom.g.close@gmail.com",
@@ -34,6 +38,6 @@ setup(
                  'Operating System :: OS Independent',
                  'Programming Language :: Python :: 2',
                  'Topic :: Scientific/Engineering'],
-    install_requires=['nineml', 'pyNN'],
+    install_requires=['pyNN'],  # 'nineml',
     tests_require=['nose', 'ninemlcatalog']
 )

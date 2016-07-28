@@ -4,7 +4,6 @@ import ninemlcatalog
 import quantities as pq
 import numpy as np
 import neo
-import matplotlib
 
 min_delay = 0.1
 max_delay = 10.0
@@ -74,14 +73,8 @@ if __name__ == "__main__":
             "--reference and --fast_spiking options cannot be used together as"
             " there is no reference implementation for the fast-spiking model")
 
-    if args.save_fig is not None:
-        matplotlib.use('pdf')
 
-    # Needs to be imported after the args.save_fig argument is parsed to
-    # allow the backend to be set
-    from matplotlib import pyplot as plt  # @IgnorePep8
-
-    # Set the random seed
+   # Set the random seed
     np.random.seed(args.seed)
     seeds = np.asarray(
         np.floor(np.random.random(len(args.simulators)) * 1e5), dtype=int)
@@ -175,6 +168,13 @@ if __name__ == "__main__":
         pype9_controller[simulator].run(args.simtime)
 
     # Plot the results
+    if args.save_fig is not None:
+        import matplotlib
+        matplotlib.use('pdf')
+    # Needs to be imported after the args.save_fig argument is parsed to
+    # allow the backend to be set
+    from matplotlib import pyplot as plt  # @IgnorePep8
+ 
     print "Plotting the results"
     plt.figure(figsize=args.figsize)
     if args.fast_spiking:
