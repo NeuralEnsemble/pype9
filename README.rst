@@ -12,18 +12,18 @@ Author: Tom G. Close (tom.g.close@gmail.com)
 
 Prerequisites
 -------------
- * >= Python 2.7.11
- * >= PyNEURON 7.3 (see
-   http://www.davison.webfactional.com/notes/installation-neuron-python/)
- * PyNEST 2.10.0 (see http://www.nest-simulator.org/installation/)
- * PyNN 0.8.1 (see http://neuralensemble.org/docs/PyNN/installation.html)
- * lib9ML (`develop` branch at http://github.com/tclose/lib9ML)
- * Diophantine 0.1 (`master` branch http://github.com/tclose/Diophantine)
- * NineMLCatalog (for unit-tests,`develop` branch at
-   http://github.com/tclose/NineMLCatalog)
+* Python >= 2.7.11
+* PyNEURON >= 7.3 (see
+  http://www.davison.webfactional.com/notes/installation-neuron-python/)
+* PyNEST 2.10.0 (see http://www.nest-simulator.org/installation/)
+* PyNN 0.8.1 (see http://neuralensemble.org/docs/PyNN/installation.html)
+* lib9ML (`develop` branch at http://github.com/tclose/lib9ML)
+* Diophantine 0.1 (`master` branch http://github.com/tclose/Diophantine)
+* NineMLCatalog (for unit-tests,`develop` branch at
+  http://github.com/tclose/NineMLCatalog)
 
- NB: PyPe9 may work with earlier versions of the packages listed but it 
-     has not been tested.
+NB: PyPe9 may work with earlier versions of the packages listed but it 
+    has not been tested.
  
 Installation
 ------------
