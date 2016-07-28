@@ -1,5 +1,5 @@
 #!/bin/bash
-# Adapted from install scritp in pyNN
+# Adapted from similar install script in pyNN (https://github.com/NeuralEnsemble/PyNN)
 
 set -e  # stop execution in case of errors
 

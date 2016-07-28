@@ -1,5 +1,5 @@
 #!/bin/bash
-# Adapted from install scritp in pyNN
+# Adapted from similar install script in pyNN (https://github.com/NeuralEnsemble/PyNN)
 
 set -e  # stop execution in case of errors
 
@@ -31,9 +31,6 @@ pip install nrnutils  # must be installed after NEURON
 cd $VENV/bin;
 ls -l;
 ln -sf ../x86_64/bin/nrnivmodl;
-
-echo $TRAVIS_BUILD_DIR
-cd $TRAVIS_BUILD_DIR/pyNN/neuron/nmodl
-nrnivmodl
+ln -sf ../x86_64/bin/modlunit;
 
 popd
