@@ -1,8 +1,13 @@
 language: python
+sudo: false
 python:
   - "2.7"
 # command to install dependencies
 install:
+  - wget https://github.com/NeuralEnsemble/PyNN/archive/0.8.1.zip
+  - unzip 0.8.1.zip
+  - source ./PyNN-0.8.1/ci/install_nest.sh
+  - source ./PyNN-0.8.1/ci/install_neuron.sh
   - wget https://github.com/tclose/lib9ML/archive/develop.zip
   - unzip develop.zip
   - pip install ./lib9ML-develop
