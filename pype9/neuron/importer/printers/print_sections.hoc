@@ -1,5 +1,0 @@
-/* This file just calls psection for all sections */
-forall {
-    printf("__newsection__\n")
-    psection()
-}
