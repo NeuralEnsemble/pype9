@@ -311,7 +311,8 @@ class UnitHandler(DynamicsDimensionResolver):
             units = un.unitless
         elif isinstance(qty, pq.Quantity):
             unit_name = str(qty.units).split()[1].replace(
-                '/', '_per_').replace('**', '').replace('*', '_')
+                '/', '_per_').replace('**', '').replace('*', '_').replace(
+                    '(', '').replace(')', '')
             if unit_name.startswith('_per_'):
                 unit_name = unit_name[1:]  # strip leading underscore
             powers = dict(
