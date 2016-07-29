@@ -16,7 +16,7 @@ packages = [p for p in find_packages() if p != 'test']
 
 setup(
     name="pype9",
-    version="0.1alpha",
+    version="0.1a",
     package_data={package_name: package_data},
     packages=packages,
     author="Thomas G. Close",
