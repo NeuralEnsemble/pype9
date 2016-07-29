@@ -349,8 +349,8 @@ class UnitHandler(DynamicsDimensionResolver):
                 if (loaded_A != A).all():
                     cache = {}
         except (IOError, EOFError):
-            logger.warning("Could not load unit conversion cache from file "
-                           "'{}'".format(cache_path))
+            logger.info("Building unit conversion cache in file '{}'"
+                        .format(cache_path))
             cache = cls._init_cache(basis, compounds)
         def save_cache():  # @IgnorePep8
             try:

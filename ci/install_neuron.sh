@@ -27,10 +27,14 @@ python setup.py install
 
 pip install nrnutils  # must be installed after NEURON
 
-# compile PyNN NMODL mechanisms
+# Create links to required NEURON utilities
 cd $VENV/bin;
 ls -l;
 ln -sf ../x86_64/bin/nrnivmodl;
 ln -sf ../x86_64/bin/modlunit;
+
+# compile PyNN NMODL mechanisms
+cd $VENV/lib/python2.7/site-packages/pyNN/neuron/nmodl
+nrnivmodl
 
 popd
