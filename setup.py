@@ -38,6 +38,6 @@ setup(
                  'Operating System :: OS Independent',
                  'Programming Language :: Python :: 2',
                  'Topic :: Scientific/Engineering'],
-    install_requires=['pyNN'],  # 'nineml',
+    install_requires=['pyNN', 'diophantine', 'neo'],  # 'nineml',
     tests_require=['nose', 'ninemlcatalog']
 )
