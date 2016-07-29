@@ -6,3 +6,4 @@ quantities>=0.10
 lazyarray>=0.2.6
 neo>=0.3
 pyNN>=0.8.1
+diophantine
