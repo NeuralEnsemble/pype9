@@ -44,7 +44,7 @@ except ImportError:
     pass
 if __name__ == '__main__':
     # Import dummy test case
-    from utils import DummyTestCase as TestCase  # @UnusedImport
+    from utils import DummyTestCase as TestCase  # @UnusedImport @UnresolvedImport @IgnorePep8
 else:
     from unittest import TestCase  # @Reimport
 
@@ -53,7 +53,8 @@ nest_bookkeeping = (
     'thread_local_id', 'frozen', 'thread', 'model',
     'archiver_length', 'recordables', 'parent', 'local', 'vp',
     'tau_minus', 'tau_minus_triplet', 't_spike', 'origin', 'stop', 'start',
-    'V_min', 'synaptic_elements')
+    'V_min', 'synaptic_elements', 'needs_prelim_update', 'beta_Ca',
+    'tau_Ca', 'Ca')
 
 NEST_RNG_SEED = 12345
 NEURON_RNG_SEED = 54321
@@ -71,7 +72,7 @@ class TestBrunel2000(TestCase):
     # Initialize the parameters of the integrate and fire neuron
     theta = 20.0
     J = 0.1  # postsynaptic amplitude in mV
-    tauSyn = 0.1
+    tauSyn = 0.5
     tauMem = 20.0
     CMem = 250.0
 
@@ -1139,32 +1140,32 @@ class TestNetwork(TestCase):
 
         conn_group1 = EventConnectionGroup(
             'Proj1', 'Pop1', 'Pop2', 'spike__cell', 'spike__psr__Proj1',
-            Connectivity(self.all_to_all, pop1, pop2), self.delay)
+            Connectivity(self.all_to_all, pop1.size, pop2.size), self.delay)
 
         conn_group2 = EventConnectionGroup(
             'Proj2__pre__spike__synapse__spike__psr', 'Pop2',
             'Pop1', 'spike__cell', 'spike__psr__Proj2',
-            Connectivity(self.all_to_all, pop2, pop1), self.delay)
+            Connectivity(self.all_to_all, pop2.size, pop1.size), self.delay)
 
         conn_group3 = EventConnectionGroup(
             'Proj2__pre__double_spike__synapse__double_spike__psr',
             'Pop2', 'Pop1', 'double_spike__cell',
             'double_spike__psr__Proj2',
-            Connectivity(self.all_to_all, pop2, pop1), self.delay)
+            Connectivity(self.all_to_all, pop2.size, pop1.size), self.delay)
 
         conn_group4 = EventConnectionGroup(
             'Proj3__pre__spike__synapse__spike__psr', 'Pop3',
             'Pop2', 'spike__cell', 'spike__psr__Proj3',
-            Connectivity(self.all_to_all, pop3, pop2), self.delay)
+            Connectivity(self.all_to_all, pop3.size, pop2.size), self.delay)
 
         conn_group5 = EventConnectionGroup(
             'Proj3__pre__spike__synapse__incoming_spike__pls',
             'Pop3', 'Pop2', 'spike__cell', 'incoming_spike__pls__Proj3',
-            Connectivity(self.all_to_all, pop3, pop2), self.delay)
+            Connectivity(self.all_to_all, pop3.size, pop2.size), self.delay)
 
         conn_group6 = EventConnectionGroup(
             'Proj4', 'Pop3', 'Pop1', 'spike__cell', 'spike__psr__Proj4',
-            Connectivity(self.all_to_all, pop3, pop1), self.delay)
+            Connectivity(self.all_to_all, pop3.size, pop1.size), self.delay)
 
         # =====================================================================
         # Test equality between network automatically generated dynamics arrays
