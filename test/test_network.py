@@ -3,7 +3,7 @@ from __future__ import division
 from math import exp
 from itertools import groupby, izip
 from operator import itemgetter
-from copy import copy
+from copy import copy, deepcopy
 import itertools
 import numpy
 import quantities as pq
@@ -11,7 +11,8 @@ import neo
 from nineml.user import (
     Projection, Network, DynamicsProperties,
     Population, ComponentArray, EventConnectionGroup,
-    MultiDynamicsProperties, Property, RandomDistributionProperties)
+    MultiDynamicsProperties,
+    Property, RandomDistributionProperties)
 from nineml.user.projection import Connectivity
 from nineml.abstraction import (
     Parameter, Dynamics, Regime, On, OutputEvent, StateVariable,
@@ -23,7 +24,7 @@ from nineml import units as un
 from nineml.units import ms
 from nineml.values import RandomValue
 from pype9.base.cells import (
-    ConnectionPropertySet, DynamicsWithSynapsesProperties)
+    ConnectionPropertySet, MultiDynamicsWithSynapsesProperties)
 from pype9.base.network import Network as BasePype9Network
 from pype9.neuron.network import Network as NeuronPype9Network
 from pype9.neuron.cells import (
@@ -52,7 +53,7 @@ nest_bookkeeping = (
     'thread_local_id', 'frozen', 'thread', 'model',
     'archiver_length', 'recordables', 'parent', 'local', 'vp',
     'tau_minus', 'tau_minus_triplet', 't_spike', 'origin', 'stop', 'start',
-    'V_min')
+    'V_min', 'synaptic_elements')
 
 NEST_RNG_SEED = 12345
 NEURON_RNG_SEED = 54321
@@ -106,7 +107,7 @@ class TestBrunel2000(TestCase):
                      'Ext': {'nineml': [], 'reference': []}}
 
     dt = timestep * un.ms    # the resolution in ms
-    psth_percent_error = {'Exc': 50.0, 'Inh': 50.0, 'Ext': 1.0}
+    psth_percent_error = {'Exc': 50.0, 'Inh': 50.0, 'Ext': 50.0}
     rate_percent_error = {'Exc': 10.0, 'Inh': 10.0, 'Ext': 1.0}
     out_stdev_error = {('Exc', 'Exc'): 7.0, ('Exc', 'Inh'): 6.0,
                        ('Inh', 'Exc'): 1.5, ('Inh', 'Inh'): 5.0,
@@ -124,7 +125,7 @@ class TestBrunel2000(TestCase):
                 if model_ver == 'nineml':
                     inds = list(nml.component_array(pop_name).all_cells)
                 else:
-                    inds = getattr(ref, pop_name)
+                    inds = ref[pop_name]
                 param_names = [
                     n for n in nest.GetStatus([inds[0]])[0].keys()
                     if n not in nest_bookkeeping]
@@ -148,7 +149,7 @@ class TestBrunel2000(TestCase):
                 for param_name in stat['reference']:
                     nml_param_name = self.translations.get(
                         param_name, param_name + '__cell')
-                    if nml_param_name is not None:  # No equivalent parameter
+                    if nml_param_name is not None:  # Equivalent parameter
                         if isinstance(nml_param_name, (float, int)):
                             if stat_name == 'mean':
                                 nineml_stat = nml_param_name
@@ -269,7 +270,7 @@ class TestBrunel2000(TestCase):
                 "Size of '{}' component array ({}) does not match reference "
                 "({})".format(name, nml_size, ref_size))
         ref_conns = self._reference_projections(ref)
-        for conn_group in nml.connection_groups:
+        for conn_group in nml_network.connection_groups:
             nml_size = len(conn_group)
             ref_size = len(ref_conns[conn_group.name])
             self.assertEqual(
@@ -467,7 +468,7 @@ class TestBrunel2000(TestCase):
 
     def test_activity_with_neuron(self, case='AI', order=10, simtime=100.0,
                                   bin_width=4.0, simulators=['neuron', 'nest'],
-                                  record_states=True, plot=True,
+                                  record_states=True, plot=False,
                                   **kwargs):  # @IgnorePep8 @UnusedVariable
         data = {}
         pyNN_simulators = {'nest': pyNN.nest.simulator.state,
@@ -583,8 +584,9 @@ class TestBrunel2000(TestCase):
 
     def _construct_nineml(self, case, order, simulator, external_input=None,
                           **kwargs):
-        model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
+        model = ninemlcatalog.load('network/brunel2000/' + case).as_network(
             'Brunel_{}'.format(case))
+        model = deepcopy(model)
         # rescale populations
         for pop in model.populations:
             pop.size = int(numpy.ceil((pop.size / 1000) * order))
@@ -1043,7 +1045,7 @@ class TestNetwork(TestCase):
 
         dyn_array1 = ComponentArray(
             "Pop1", pop1.size,
-            DynamicsWithSynapsesProperties(
+            MultiDynamicsWithSynapsesProperties(
                 MultiDynamicsProperties(
                     "Pop1",
                     sub_components={
@@ -1086,7 +1088,7 @@ class TestNetwork(TestCase):
 
         dyn_array2 = ComponentArray(
             "Pop2", pop2.size,
-            DynamicsWithSynapsesProperties(
+            MultiDynamicsWithSynapsesProperties(
                 MultiDynamicsProperties(
                     "Pop2",
                     sub_components={
@@ -1127,16 +1129,16 @@ class TestNetwork(TestCase):
 
         dyn_array3 = ComponentArray(
             "Pop3", pop3.size,
-            DynamicsWithSynapsesProperties(
+            MultiDynamicsWithSynapsesProperties(
                 MultiDynamicsProperties(
                     'Pop3',
                     sub_components={'cell': cell3},
-                    port_exposures=[('cell', 'spike')],
+                    port_exposures=[('cell', 'spike'),
+                                    ('cell', 'i_ext')],
                     port_connections=[])))
 
         conn_group1 = EventConnectionGroup(
-            'Proj1__pre__spike__synapse__spike__psr', 'Pop1',
-            'Pop2', 'spike__cell', 'spike__psr__Proj1',
+            'Proj1', 'Pop1', 'Pop2', 'spike__cell', 'spike__psr__Proj1',
             Connectivity(self.all_to_all, pop1, pop2), self.delay)
 
         conn_group2 = EventConnectionGroup(
@@ -1161,8 +1163,7 @@ class TestNetwork(TestCase):
             Connectivity(self.all_to_all, pop3, pop2), self.delay)
 
         conn_group6 = EventConnectionGroup(
-            'Proj4__pre__spike__synapse__spike__psr', 'Pop3',
-            'Pop1', 'spike__cell', 'spike__psr__Proj4',
+            'Proj4', 'Pop3', 'Pop1', 'spike__cell', 'spike__psr__Proj4',
             Connectivity(self.all_to_all, pop3, pop1), self.delay)
 
         # =====================================================================
@@ -1190,13 +1191,10 @@ class TestNetwork(TestCase):
         # groups and manually generated expected ones
         # =====================================================================
         self.assertEqual(
-            connection_groups[
-                'Proj1__pre__spike__synapse__spike__psr'],
-            conn_group1,
+            connection_groups['Proj1'], conn_group1,
             "Mismatch between generated and expected connection groups:\n {}"
             .format(
-                connection_groups['Proj1__pre__spike__synapse__spike__psr']
-                .find_mismatch(conn_group1)))
+                connection_groups['Proj1'].find_mismatch(conn_group1)))
         self.assertEqual(
             connection_groups['Proj2__pre__spike__synapse__spike__psr'],
             conn_group2,
@@ -1232,14 +1230,10 @@ class TestNetwork(TestCase):
                     'Proj3__pre__spike__synapse__incoming_spike__pls']
                 .find_mismatch(conn_group5)))
         self.assertEqual(
-            connection_groups[
-                'Proj4__pre__spike__synapse__spike__psr'],
-            conn_group6,
+            connection_groups['Proj4'], conn_group6,
             "Mismatch between generated and expected connection groups:\n {}"
             .format(
-                connection_groups[
-                    'Proj4__pre__spike__synapse__spike__psr']
-                .find_mismatch(conn_group6)))
+                connection_groups['Proj4'] .find_mismatch(conn_group6)))
 
 
 if __name__ == '__main__':
