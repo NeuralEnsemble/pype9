@@ -3,9 +3,9 @@
 
 set -e  # stop execution in case of errors
 
-export NRN_VERSION="nrn-7.4"
+export NRN_VERSION="nrn-7.3"
 if [ ! -f "$HOME/$NRN_VERSION/configure" ]; then
-    wget http://www.neuron.yale.edu/ftp/neuron/versions/v7.4/$NRN_VERSION.tar.gz -O $HOME/$NRN_VERSION.tar.gz;
+    wget http://www.neuron.yale.edu/ftp/neuron/versions/v7.3/$NRN_VERSION.tar.gz -O $HOME/$NRN_VERSION.tar.gz;
     pushd $HOME;
     tar xzf $NRN_VERSION.tar.gz;
     popd;
