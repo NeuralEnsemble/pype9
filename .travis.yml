@@ -19,12 +19,12 @@ addons:
       - openmpi-bin
       - libopenmpi-dev
 install:
+  - pip install -r requirements.txt
   - source ci/install_nest.sh
   - source ci/install_neuron.sh
   - wget https://github.com/sympy/sympy/archive/master.zip && unzip master.zip && pip install ./sympy-master
   - wget https://github.com/tclose/lib9ML/archive/develop.zip && unzip develop.zip && pip install ./lib9ML-develop
   - wget https://github.com/tclose/NineMLCatalog/archive/develop_backport.zip && unzip develop_backport.zip && pip install ./NineMLCatalog-develop_backport  
-  - pip install -r requirements.txt
   - pip install coveralls --use-mirrors
   - pip install .
 script:
@@ -33,8 +33,8 @@ after_success:
   coveralls
 cache:
   directories:
-    - $HOME/nest-2.6.0
-    - $HOME/nrn-7.3
-    - $HOME/build/nest-2.6.0
-    - $HOME/build/nrn-7.3
+    - $HOME/nest-2.10.0
+    - $HOME/nrn-7.4
+    - $HOME/build/nest-2.10.0
+    - $HOME/build/nrn-7.4
     - $HOME/.cache/pip

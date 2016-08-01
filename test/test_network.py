@@ -72,7 +72,7 @@ class TestBrunel2000(TestCase):
     # Initialize the parameters of the integrate and fire neuron
     theta = 20.0
     J = 0.1  # postsynaptic amplitude in mV
-    tauSyn = 0.5
+    tauSyn = 0.1
     tauMem = 20.0
     CMem = 250.0
 
