@@ -32,7 +32,8 @@ install:
   - make
   - export LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/pype9/neuroon/cells/code_gen/libninemlnrn:$LD_LIBRARY_PATH
 script:
-  nosetests test/test_*.py --with-coverage --cover-package=pype9
+  - cd $TRAVIS_BUILD_DIR
+  - nosetests test/test_*.py --with-coverage --cover-package=pype9
 after_success:
   coveralls
 cache:
