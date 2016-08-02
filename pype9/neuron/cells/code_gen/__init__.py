@@ -243,8 +243,8 @@ class CodeGenerator(BaseCodeGenerator):
                                                trfrm_properties, v, **kwargs)
                 trfrm.annotations[PYPE9_NS][MECH_TYPE] = FULL_CELL_MECH
             else:
-                self._transform_sub_component(trfrm, **kwargs)
-                trfrm.annotations[PYPE9_NS][MECH_TYPE] = SUB_COMPONENT_MECH
+                raise NotImplementedError(
+                    "Build sub-components is not supported in PyPe9 v0.1")
         else:
             trfrm.annotations[PYPE9_NS][MECH_TYPE] = ARTIFICIAL_CELL_MECH
         # -----------------------------------------------------------------
@@ -266,83 +266,6 @@ class CodeGenerator(BaseCodeGenerator):
             trfrm_props_with_syn = None
         # Retun a prototype of the transformed class
         return trfrm_with_syn, trfrm_props_with_syn, initial_state
-
-    def _transform_sub_component(self, trfrm, **kwargs):
-        # -----------------------------------------------------------------
-        # Sort out different analog ports into ionic species
-        # -----------------------------------------------------------------
-        assigned_species = kwargs.get('ion_species', {})
-        for port in trfrm.analog_ports:
-            # TODO: Need to check for temperature analog ports or more
-            #       general analog ports (i.e. POINTERS)
-            if port.name != 'v':
-                try:
-                    species = assigned_species[port.name]
-                    if species is None:
-                        if port.dimension not in (un.current,
-                                                  un.currentDensity):
-                            raise Pype9BuildError(
-                                "Only current ports can be ion "
-                                "non-specific {}".format(port))
-                        species = NONSPECIFIC_CURRENT
-                except KeyError:
-                    if ION_SPECIES not in port.annotations[PYPE9_NS]:
-                        raise Pype9BuildError(
-                            "'{}' port was not assigned a ionic species"
-                            .format(port.name))
-                    species = port.annotations[PYPE9_NS][ION_SPECIES]
-                if species != NONSPECIFIC_CURRENT:
-                    if port.dimension == un.voltage:
-                        new_name = 'e' + species
-                    elif port.dimension == un.currentDensity:
-                        new_name = 'i' + species
-                    elif port.dimension == un.concentration:
-                        try:
-                            if species[1] == INTERNAL_CONCENTRATION:
-                                new_name = species[0] + 'i'
-                            elif species[1] == EXTERNAL_CONCENTRATION:
-                                new_name = species[0] + 'o'
-                            else:
-                                raise Pype9BuildError(
-                                    "Concentration receive ports must "
-                                    "specify whether they are internal or "
-                                    "external")
-                        except IndexError:
-                            raise Pype9BuildError(
-                                "Concentration receive ports must specify "
-                                "whether they are internal or external")
-                    else:
-                        raise Pype9BuildError(
-                            "Unrecognised dimension of analog receive port"
-                            " '{}', can only be voltage or current density"
-                            .format(port.dimension))
-                    trfrm.rename_symbol(port.name, new_name)
-                port.annotations[PYPE9_NS][ION_SPECIES] = species
-        # Collate all ports relating to each ion species
-        def key_func(p):  # @IgnorePep8
-            return p.annotations[PYPE9_NS][ION_SPECIES]
-        sorted_ion_ports = sorted(
-            (p for p in trfrm.analog_ports
-             if ION_SPECIES in p.annotations[PYPE9_NS]), key=key_func)
-        trfrm.annotations[PYPE9_NS][ION_SPECIES] = dict(
-            (s, list(ps)) for s, ps in groupby(sorted_ion_ports,
-                                               key=key_func))
-        try:
-            non_specifics = trfrm.annotations[
-                PYPE9_NS][ION_SPECIES][NONSPECIFIC_CURRENT]
-            if len(non_specifics) != 1:
-                raise Pype9BuildError(
-                    "More than one non-specific current port found ('{}')"
-                    .format("', '".join(p.name for p in non_specifics)))
-            non_spec = non_specifics[0]
-            if not (isinstance(non_spec, AnalogSendPort) and
-                    non_spec.dimension in (un.current, un.currentDensity)):
-                raise Pype9BuildError(
-                    "Only analog send ports with current or current "
-                    "density dimensiones can be non-specific ({})"
-                    .format(non_spec))
-        except KeyError:
-            pass  # No non-specific currents
 
     def _transform_full_component(self, trfrm, component_class,
                                   trfrm_properties, v, **kwargs):
