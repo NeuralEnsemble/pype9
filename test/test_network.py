@@ -108,7 +108,7 @@ class TestBrunel2000(TestCase):
                      'Ext': {'nineml': [], 'reference': []}}
 
     dt = timestep * un.ms    # the resolution in ms
-    psth_percent_error = {'Exc': 50.0, 'Inh': 50.0, 'Ext': 50.0}
+    psth_percent_error = {'Exc': 100.0, 'Inh': 100.0, 'Ext': 100.0}
     rate_percent_error = {'Exc': 10.0, 'Inh': 10.0, 'Ext': 1.0}
     out_stdev_error = {('Exc', 'Exc'): 7.0, ('Exc', 'Inh'): 6.0,
                        ('Inh', 'Exc'): 1.5, ('Inh', 'Inh'): 5.0,
