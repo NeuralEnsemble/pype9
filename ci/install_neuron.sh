@@ -32,9 +32,4 @@ cd $VENV/bin;
 ls -l;
 ln -sf ../x86_64/bin/nrnivmodl;
 ln -sf ../x86_64/bin/modlunit;
-
-# compile PyNN NMODL mechanisms
-cd $VENV/lib/python2.7/site-packages/pyNN/neuron/nmodl
-nrnivmodl
-
 popd
