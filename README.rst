@@ -2,7 +2,7 @@ PyPe9
 =====
 .. image:: https://travis-ci.org/CNS-OIST/PyPe9.svg?branch=master
     :target: https://travis-ci.org/CNS-OIST/PyPe9
-.. image:: https://coveralls.io/repos/github/CNS-OIST/PyPe9/badge.svg?branch=master
+.. image:: https://coveralls.io/repos/github/CNS-OIST/PyPe9/badge.png?branch=master
     :target: https://coveralls.io/github/CNS-OIST/PyPe9?branch=master
 
 "PYthon PipelinEs for 9ml (PyPe9)" is a collection of software pipelines
