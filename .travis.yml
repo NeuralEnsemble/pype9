@@ -30,9 +30,9 @@ install:
   - pip install .
   - cd ./pype9/neuron/cells/code_gen/libninemlnrn
   - make
-  - export LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/pype9/neuroon/cells/code_gen/libninemlnrn:$LD_LIBRARY_PATH
-script:
+  - export LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/pype9/neuron/cells/code_gen/libninemlnrn:$LD_LIBRARY_PATH
   - cd $TRAVIS_BUILD_DIR
+script:
   - nosetests test/test_*.py --with-coverage --cover-package=pype9
 after_success:
   coveralls
