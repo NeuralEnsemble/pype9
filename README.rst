@@ -1,5 +1,9 @@
 PyPe9
 =====
+.. image:: https://travis-ci.org/CNS-OIST/PyPe9.svg?branch=master
+    :target: https://travis-ci.org/CNS-OIST/PyPe9
+.. image:: https://coveralls.io/repos/github/CNS-OIST/PyPe9/badge.svg?branch=master
+    :target: https://coveralls.io/github/CNS-OIST/PyPe9?branch=master
 
 "PYthon PipelinEs for 9ml (PyPe9)" is a collection of software pipelines
 written in Python to read and simulate networks of neuron models
@@ -90,10 +94,3 @@ restrictions apply to models that can be used with PyPe9.
   built-in keywords and some PyPe9 method names (e.g. 'lambda' is a reserved
   keyword in Python). Please avoid using names that clash with C++ or Python
   keywords (all 9ML names will be escaped in PyPe9 v0.2).
-
-.. image:: https://travis-ci.org/CNS-OIST/PyPe9.svg?branch=master
-    :target: https://travis-ci.org/CNS-OIST/PyPe9
-.. image:: https://coveralls.io/repos/github/CNS-OIST/PyPe9/badge.svg?branch=master
-    :target: https://coveralls.io/github/CNS-OIST/PyPe9?branch=master
-
-
