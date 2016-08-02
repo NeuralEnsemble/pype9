@@ -562,7 +562,7 @@ class TestBrunel2000(TestCase):
         print "done"
 
     def test_flatten(self, **kwargs):  # @UnusedVariable
-        brunel_network = ninemlcatalog.load('network/Brunel2000/AI/')
+        brunel_network = ninemlcatalog.load('network/brunel2000/AI/')
         (component_arrays,
          connection_groups) = BasePype9Network._flatten_to_arrays_and_conns(
             brunel_network)
