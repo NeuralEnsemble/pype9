@@ -133,7 +133,8 @@ class CodeGenerator(BaseCodeGenerator):
                     "Error executing bootstrapping of '{}' NEST module "
                     "failed (see src directory '{}'):\n\n{}"
                     .format(name or src_dir, src_dir, e))
-            if not stdout.rstrip().endswith('Done.'):
+            if (re.search(r'error', stdout + stderr, re.IGNORECASE) or
+                    not stdout.rstrip().endswith('Done.')):
                 raise Pype9BuildError(
                     "Bootstrapping of '{}' NEST module failed (see src "
                     "directory '{}'):\n\n{}\n{}"
@@ -178,7 +179,7 @@ class CodeGenerator(BaseCodeGenerator):
                 "Compilation of '{}' NEST module failed (see compile "
                 "directory '{}'):\n\n {}"
                 .format(component_name, compile_dir, e))
-        if re.match(r'error', stderr, re.IGNORECASE):
+        if re.search(r'error', stdout + stderr, re.IGNORECASE):
             raise Pype9BuildError(
                 "Compilation of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))
