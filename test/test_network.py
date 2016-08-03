@@ -562,7 +562,7 @@ class TestBrunel2000(TestCase):
         print "done"
 
     def test_flatten(self, **kwargs):  # @UnusedVariable
-        brunel_network = ninemlcatalog.load('network/brunel2000/AI/')
+        brunel_network = ninemlcatalog.load('network/Brunel2000/AI/')
         (component_arrays,
          connection_groups) = BasePype9Network._flatten_to_arrays_and_conns(
             brunel_network)
@@ -585,7 +585,7 @@ class TestBrunel2000(TestCase):
 
     def _construct_nineml(self, case, order, simulator, external_input=None,
                           **kwargs):
-        model = ninemlcatalog.load('network/brunel2000/' + case).as_network(
+        model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
             'Brunel_{}'.format(case))
         model = deepcopy(model)
         # rescale populations

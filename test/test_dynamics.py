@@ -11,13 +11,15 @@ from pype9.testing import Comparer, input_step, input_freq
 from pype9.base.cells import (
     MultiDynamicsWithSynapses, DynamicsWithSynapsesProperties,
     ConnectionParameterSet, ConnectionPropertySet)
-from pype9.nest.cells import (
-    CellMetaClass as CellMetaClassNEST,
-    simulation_controller as simulatorNEST)
-from pype9.nest.units import UnitHandler as UnitHandlerNEST
 from pype9.neuron.cells import (
     CellMetaClass as CellMetaClassNEURON,
     simulation_controller as simulatorNEURON)
+import sys
+argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
+from pype9.nest.cells import (  # @IgnorePep8
+    CellMetaClass as CellMetaClassNEST,
+    simulation_controller as simulatorNEST)
+from pype9.nest.units import UnitHandler as UnitHandlerNEST  # @IgnorePep8
 if __name__ == '__main__':
     from utils import DummyTestCase as TestCase  # @UnusedImport
 else:
@@ -170,11 +172,11 @@ class TestDynamics(TestCase):
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
                 'neuron/LeakyIntegrateAndFire',
-                'LeakyIntegrateAndFire'),
+                'PyNNLeakyIntegrateAndFire'),
             state_variable='v', dt=dt, simulators=simulators,
             properties=ninemlcatalog.load(
                 'neuron/LeakyIntegrateAndFire',
-                'LeakyIntegrateAndFireProperties'),
+                'PyNNLeakyIntegrateAndFireProperties'),
             initial_states=self.liaf_initial_states,
             initial_regime='subthreshold',
             neuron_ref='ResetRefrac', nest_ref='iaf_psc_alpha',
@@ -211,7 +213,7 @@ class TestDynamics(TestCase):
                        build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
         iaf = ninemlcatalog.load(
-            'neuron/LeakyIntegrateAndFire', 'LeakyIntegrateAndFire')
+            'neuron/LeakyIntegrateAndFire', 'PyNNLeakyIntegrateAndFire')
         alpha_psr = ninemlcatalog.load(
             'postsynapticresponse/Alpha', 'Alpha')
         static = ninemlcatalog.load(
@@ -240,7 +242,7 @@ class TestDynamics(TestCase):
         initial_regime = 'subthreshold___sole_____sole'
         liaf_properties = ninemlcatalog.load(
             'neuron/LeakyIntegrateAndFire/',
-            'LeakyIntegrateAndFireProperties')
+            'PyNNLeakyIntegrateAndFireProperties')
         alpha_properties = ninemlcatalog.load(
             'postsynapticresponse/Alpha', 'AlphaProperties')
         nest_tranlsations = {'tau__psr__syn': ('tau_syn_ex', 1),
@@ -450,7 +452,7 @@ if __name__ == '__main__':
                         help=("the build mode used to run the test (typically "
                               "'force' is used to regenerate the code but "
                               "'recompile' can be useful in debugging)"))
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     kwargs = {}
     if args.duration:
         kwargs['duration'] = args.duration * un.ms
