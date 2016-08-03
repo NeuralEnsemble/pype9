@@ -108,8 +108,8 @@ class TestBrunel2000(TestCase):
                      'Ext': {'nineml': [], 'reference': []}}
 
     dt = timestep * un.ms    # the resolution in ms
+    rate_percent_error = {'Exc': 5.0, 'Inh': 5.0, 'Ext': 5.0}
     psth_percent_error = {'Exc': 100.0, 'Inh': 100.0, 'Ext': 100.0}
-    rate_percent_error = {'Exc': 10.0, 'Inh': 10.0, 'Ext': 1.0}
     out_stdev_error = {('Exc', 'Exc'): 7.0, ('Exc', 'Inh'): 6.0,
                        ('Inh', 'Exc'): 1.5, ('Inh', 'Inh'): 5.0,
                        ('Ext', 'Exc'): 0.0, ('Ext', 'Inh'): 0.0}
@@ -1261,6 +1261,8 @@ if __name__ == '__main__':
     parser.add_argument('--option', nargs=2, type=str, action='append',
                         default=[],
                         help="Extra options that are passed to the test")
+    parser.add_argument('--plot', action='store_true', default=False,
+                        help=("Plot the activity"))
     args = parser.parse_args(argv)
     options = dict(args.option)
     if args.tester == 'network':
@@ -1269,4 +1271,5 @@ if __name__ == '__main__':
         tester = TestBrunel2000()
     else:
         raise Exception("Unrecognised tester '{}'".format(args.tester))
-    getattr(tester, args.test)(build_mode=args.build_mode, **options)
+    getattr(tester, args.test)(build_mode=args.build_mode, plot=args.plot,
+                               **options)
