@@ -70,6 +70,7 @@ class TestBrunel2000(TestCase):
         't_ref': 'refractory_period__cell',
         'V_m': None}  # 'v__cell'}
 
+    timestep = 0.1
     pop_names = ('Exc', 'Inh', 'Ext')
     proj_names = ('Excitation', 'Inhibition', 'External')
     conn_param_names = ['weight', 'delay']
@@ -85,9 +86,7 @@ class TestBrunel2000(TestCase):
                              'reference': ['V_m']},
                      'Ext': {'nineml': [], 'reference': []}}
 
-    timestep = 0.001
-    dt = timestep * un.ms    # the resolution in ms
-    rate_percent_error = {'Exc': 5.0, 'Inh': 5.0, 'Ext': 5.0}
+    rate_percent_error = {'Exc': 0.0, 'Inh': 0.0, 'Ext': 0.0}
     psth_percent_error = {'Exc': 100.0, 'Inh': 100.0, 'Ext': 100.0}
     out_stdev_error = {('Exc', 'Exc'): 7.0, ('Exc', 'Inh'): 6.0,
                        ('Inh', 'Exc'): 1.5, ('Inh', 'Inh'): 5.0,
@@ -557,7 +556,8 @@ class TestBrunel2000(TestCase):
                             rng_seeds_seed=NEST_RNG_SEED)
         elif simulator == 'neuron':
             simulation_contoller_neuron.clear(rng_seed=NEURON_RNG_SEED)
-            pyNN.neuron.setup(timestep=self.timestep, min_delay=self.min_delay,
+            pyNN.neuron.setup(timestep=self.timestep,
+                              min_delay=self.min_delay,
                               ax_delay=self.max_delay,
                               rng_seeds_seed=NEURON_RNG_SEED)
         else:

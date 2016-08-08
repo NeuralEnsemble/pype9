@@ -666,7 +666,7 @@ class ReferenceBrunel2000(object):
                          "V_th": cls.theta}
         return NE, NI, CE, CI, neuron_params, J_ex, J_in, p_rate
 
-    def record(self, num_record=50, num_record_v=2, timestep=0.001,
+    def record(self, num_record=50, num_record_v=2, timestep=0.1,
                to_plot=('Exc', 'Inh')):
         self._recorders = defaultdict(dict)
         for pop_name in to_plot:
