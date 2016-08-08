@@ -508,7 +508,13 @@ class ReferenceBrunel2000(object):
     J = 0.1  # postsynaptic amplitude in mV
     tauSyn = 0.1
     tauMem = 20.0
-    CMem = 250.0
+    tau_refrac = 2.0
+    v_reset = 10.0
+    # v_reset = 0.0
+    R = 1.5
+
+    CMem = 1000 * tauMem / R
+#     CMem = 250.0
 
     epsilon = 0.1  # connection probability
 
@@ -659,11 +665,12 @@ class ReferenceBrunel2000(object):
                          "tau_m": cls.tauMem,
                          "tau_syn_ex": cls.tauSyn,
                          "tau_syn_in": cls.tauSyn,
-                         "t_ref": 2.0,
+                         "t_ref": cls.tau_refrac,
                          "E_L": 0.0,
-                         "V_reset": 0.0,
+                         "V_reset": cls.v_reset,
                          "V_m": 0.0,
                          "V_th": cls.theta}
+
         return NE, NI, CE, CI, neuron_params, J_ex, J_in, p_rate
 
     def record(self, num_record=50, num_record_v=2, timestep=0.1,
