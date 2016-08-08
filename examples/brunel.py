@@ -10,162 +10,9 @@ import argparse
 import logging
 import matplotlib
 from pyNN.utility import SimulationProgressBar
-
-
-# Construct reference NEST network
-def construct_reference(case, order, num_record, num_record_v, pops_to_plot,
-                        timestep):
-    """
-    The model has been adapted from the brunel-alpha-nest.py
-    model that is part of NEST.
-
-    Copyright (C) 2004 The NEST Initiative
-
-    NEST is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 2 of the License, or
-    (at your option) any later version.
-
-    NEST is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with NEST.  If not, see <http://www.gnu.org/licenses/>.
-    This version uses NEST's Connect functions.
-    """
-
-    # Parameters used to construct the reference network
-    delay = 1.5 * un.ms
-
-    # Initialize the parameters of the integrate and fire neuron
-    theta = 20.0
-    J = 0.1  # postsynaptic amplitude in mV
-    tauSyn = 0.1
-    tauMem = 20.0
-    CMem = 250.0
-
-    epsilon = 0.1  # connection probability
-
-    brunel_parameters = {
-        "SR": {"g": 3.0, "eta": 2.0},
-        "AI": {"g": 5.0, "eta": 2.0},
-        "SIfast": {"g": 6.0, "eta": 4.0},
-        "SIslow": {"g": 4.5, "eta": 0.9}}
-
-    # Parameters for asynchronous irregular firing
-    g = brunel_parameters[case]["g"]
-    eta = brunel_parameters[case]["eta"]
-
-    NE = 4 * order
-    NI = 1 * order
-
-    CE = int(epsilon * NE)  # number of excitatory synapses per neuron
-    CI = int(epsilon * NI)  # number of inhibitory synapses per neuron
-    if not CE:
-        CE = 1
-
-    def compute_normalised_psr(tauMem, CMem, tauSyn):
-        """Compute the maximum of postsynaptic potential
-           for a synaptic input current of unit amplitude
-           (1 pA)
-        """
-
-        a = (tauMem / tauSyn)
-        b = (1.0 / tauSyn - 1.0 / tauMem)
-
-        # time of maximum
-        t_max = 1.0 / b * \
-            (-nest.sli_func('LambertWm1', -np.exp(-1.0 / a) / a) - 1.0 / a)
-
-        # maximum of PSP for current of unit amplitude
-        return (np.exp(1.0) / (tauSyn * CMem * b) *
-                ((np.exp(-t_max / tauMem) -
-                  np.exp(-t_max / tauSyn)) / b - t_max *
-                 np.exp(-t_max / tauSyn)))
-
-    # normalize synaptic current so that amplitude of a PSP is J
-    J_unit = compute_normalised_psr(tauMem, CMem, tauSyn)
-    J_ex = J / J_unit
-    J_in = -g * J_ex
-
-    # threshold rate, equivalent rate of events needed to
-    # have mean input current equal to threshold
-    nu_th = ((theta * CMem) /
-             (J_ex * CE * np.exp(1) * tauMem * tauSyn))
-    nu_ex = eta * nu_th
-    p_rate = 1000.0 * nu_ex * CE
-
-    neuron_params = {"C_m": CMem,
-                     "tau_m": tauMem,
-                     "tau_syn_ex": tauSyn,
-                     "tau_syn_in": tauSyn,
-                     "t_ref": 2.0,
-                     "E_L": 0.0,
-                     "V_reset": 0.0,
-                     "V_m": 0.0,
-                     "V_th": theta}
-
-    nest.SetDefaults("iaf_psc_alpha", neuron_params)
-    nodes_exc = nest.Create("iaf_psc_alpha", NE)
-    nodes_inh = nest.Create("iaf_psc_alpha", NI)
-
-    nest.SetStatus(nodes_exc + nodes_inh, 'V_m',
-                   list(np.random.rand(NE + NI) * 20.0))
-
-    nest.SetDefaults("poisson_generator", {"rate": p_rate})
-    noise = nest.Create("poisson_generator")
-    nodes_ext = nest.Create('parrot_neuron', NE + NI)
-    nest.Connect(noise, nodes_ext)
-
-    all_nodes = {'Exc': nodes_exc, 'Inh': nodes_inh, 'Ext': nodes_ext}
-
-    # Set up connections
-
-    nest.CopyModel(
-        "static_synapse", "excitatory", {
-            "weight": J_ex, "delay": float(delay.value)})
-    nest.CopyModel(
-        "static_synapse", "inhibitory", {
-            "weight": J_in, "delay": float(delay.value)})
-
-    nest.Connect(nodes_ext, nodes_exc + nodes_inh, 'one_to_one',
-                 "excitatory")
-
-    # We now iterate over all neuron IDs, and connect the neuron to the
-    # sources from our array. The first loop connects the excitatory
-    # neurons and the second loop the inhibitory neurons.
-    conn_params_ex = {'rule': 'fixed_indegree', 'indegree': CE}
-    nest.Connect(
-        nodes_exc,
-        nodes_exc +
-        nodes_inh,
-        conn_params_ex,
-        "excitatory")
-
-    conn_params_in = {'rule': 'fixed_indegree', 'indegree': CI}
-    nest.Connect(
-        nodes_inh,
-        nodes_exc +
-        nodes_inh,
-        conn_params_in,
-        "inhibitory")
-
-    recorders = defaultdict(dict)
-    for pop_name in pops_to_plot:
-        pop = np.asarray(all_nodes[pop_name], dtype=int)
-        spikes = recorders[pop_name]['spikes'] = nest.Create("spike_detector")
-        nest.SetStatus(spikes, [{"label": "brunel-py-" + pop_name,
-                                 "withtime": True, "withgid": True}])
-        nest.Connect(list(pop[:num_record]), spikes, syn_spec="excitatory")
-        if num_record_v:
-            # Set up voltage traces recorders for reference network
-            multi = recorders[pop_name]['V_m'] = nest.Create(
-                'multimeter', params={'record_from': ['V_m'],
-                                      'interval': timestep})
-            nest.Connect(multi, list(pop[:num_record_v]))
-    return all_nodes, recorders
+import sys
+argv = sys.argv[1:]
+from pype9.testing import ReferenceBrunel2000  # @IgnorePep8
 
 
 pyNN_logger = logging.Logger('PyNN')
@@ -211,228 +58,223 @@ parser.add_argument('--figsize', nargs=2, type=float, default=(10, 15),
 parser.add_argument('--hide_progress_bar', action='store_true', default=False,
                     help=("Show a progress bar for the simulation time (Can "
                           "cause difficulties in some displays)"))
-args = parser.parse_args()
+args = parser.parse_args(argv)
 
-# Basic network params
-min_delay = 0.1
-max_delay = 10.0
+if not args.simulators and not args.reference:
+    raise Exception("No simulations requested "
+                    "(see --simulators and --reference options)")
 
-if __name__ == '__main__':
+# Get MPI rank and number of processes
+if 'neuron' in args.simulators:
+    import pyNN.neuron.simulator
+    mpi_rank = pyNN.neuron.simulator.state.mpi_rank
+    num_processes = pyNN.neuron.simulator.state.mpi_rank
+else:
+    import pyNN.nest.simulator
+    mpi_rank = pyNN.nest.simulator.state.mpi_rank
+    num_processes = pyNN.nest.simulator.state.mpi_rank
 
-    if not args.simulators and not args.reference:
-        raise Exception("No simulations requested "
-                        "(see --simulators and --reference options)")
+if num_processes > 1 and args.build_mode != 'require':
+    raise Exception(
+        "Build mode must be 'require' when running on multiple processes")
 
-    # Get MPI rank and number of processes
-    if 'neuron' in args.simulators:
-        import pyNN.neuron.simulator
-        mpi_rank = pyNN.neuron.simulator.state.mpi_rank
-        num_processes = pyNN.neuron.simulator.state.mpi_rank
+if args.save_fig is not None:
+    matplotlib.use('pdf')
+    save_path = os.path.abspath(args.save_fig)
+    if not os.path.exists(save_path) and mpi_rank == 0:
+        os.mkdir(save_path)
+else:
+    save_path = None
+# Needs to be imported after the args.save_fig argument is parsed to
+# allow the backend to be set
+from matplotlib import pyplot as plt  # @IgnorePep8
+
+pyNN_module = {}
+pype9_network_classes = {}
+if 'neuron' in args.simulators:
+    import pyNN.neuron  # @IgnorePep8 @Reimport
+    import pype9.neuron  # @IgnorePep8
+    pyNN_module['neuron'] = pyNN.neuron
+    pype9_network_classes['neuron'] = pype9.neuron.Network
+if 'nest' in args.simulators or args.reference:
+    import nest  # @IgnorePep8
+    import pyNN.nest  # @IgnorePep8 @Reimport
+    import pype9.nest  # @IgnorePep8
+    pyNN_module['nest'] = pyNN.nest
+    pype9_network_classes['nest'] = pype9.nest.Network
+
+# Get the list of populations to record and plot from
+pops_to_plot = ['Exc', 'Inh']
+if args.plot_input:
+    pops_to_plot.append('Ext')
+
+# Set the random seed
+np.random.seed(args.seed)
+seeds = np.asarray(
+    np.floor(np.random.random(len(args.simulators)) * 1e5), dtype=int)
+
+# Load the Brunel model corresponding to the 'case' argument from the
+# nineml catalog and scale the model according to the 'order' argument
+model = ninemlcatalog.load('network/Brunel2000/' + args.case).as_network(
+    'Brunel_{}'.format(args.case))
+if args.order != 1000:
+    for pop in model.populations:
+        pop.size = int(np.ceil((pop.size / 1000) * args.order))
+    for proj in (model.projection('Excitation'),
+                 model.projection('Inhibition')):
+        props = proj.connectivity.rule_properties
+        number = props.property('number')
+        props.set(Property(
+            number.name,
+            (int(np.ceil((number.value / 1000) * args.order)) *
+             un.unitless)))
+
+# Create dictionaries to hold the simulation results
+spikes = defaultdict(dict)
+if args.num_record_v:
+    vs = defaultdict(dict)
+
+# Create the network for each simulator and set recorders
+networks = {}
+for simulator, seed in zip(args.simulators, seeds):
+    # Reset the simulator
+    pyNN_module[simulator].setup(min_delay=ReferenceBrunel2000.min_delay,
+                                 max_delay=ReferenceBrunel2000.max_delay,
+                                 timestep=args.timestep,
+                                 rng_seeds_seed=seed)
+    # Construct the network
+    print "Constructing the network in {}".format(simulator.upper())
+    networks[simulator] = pype9_network_classes[simulator](
+        model, build_mode=args.build_mode)
+    print "Finished constructing the network in {}".format(
+        simulator.upper())
+    if args.build_mode != 'build_only':
+        # Record spikes and voltages
+        for pop in networks[simulator].component_arrays:
+            pop[:args.num_record].record('spikes')
+            if args.num_record_v and pop.name != 'Ext':
+                pop[:args.num_record_v].record('v__cell')
+
+if args.build_mode == 'build_only':
+    print "build_mode argument was set to 'build_only' so exiting!"
+    exit()
+
+# Set of simulators to run
+simulators_to_run = set(args.simulators)
+
+# Create the reference simulation if required
+if args.reference:
+    print "Constructing the reference NEST implementation"
+    ref = ReferenceBrunel2000(args.case, args.order)
+    ref.record(num_record=args.num_record, num_record_v=args.num_record_v,
+               to_plot=pops_to_plot, timestep=args.timestep)
+    simulators_to_run.add('nest')
+
+# Run the simulation(s)
+for simulator in simulators_to_run:
+    print "Running the simulation in {}".format(simulator.upper())
+    if not args.hide_progress_bar:
+        kwargs = {'callbacks': [
+            SimulationProgressBar(args.simtime / 77, args.simtime)]}
     else:
-        import pyNN.nest.simulator
-        mpi_rank = pyNN.nest.simulator.state.mpi_rank
-        num_processes = pyNN.nest.simulator.state.mpi_rank
+        kwargs = {}
+    pyNN_module[simulator].run(args.simtime, **kwargs)
 
-    if num_processes > 1 and args.build_mode != 'require':
-        raise Exception(
-            "Build mode must be 'require' when running on multiple processes")
-
-    if args.save_fig is not None:
-        matplotlib.use('pdf')
-        save_path = os.path.abspath(args.save_fig)
-        if not os.path.exists(save_path) and mpi_rank == 0:
-            os.mkdir(save_path)
-    else:
-        save_path = None
-    # Needs to be imported after the args.save_fig argument is parsed to
-    # allow the backend to be set
-    from matplotlib import pyplot as plt  # @IgnorePep8
-
-    pyNN_module = {}
-    pype9_network_classes = {}
-    if 'neuron' in args.simulators:
-        import pyNN.neuron  # @IgnorePep8 @Reimport
-        import pype9.neuron  # @IgnorePep8
-        pyNN_module['neuron'] = pyNN.neuron
-        pype9_network_classes['neuron'] = pype9.neuron.Network
-    if 'nest' in args.simulators or args.reference:
-        import nest  # @IgnorePep8
-        import pyNN.nest  # @IgnorePep8 @Reimport
-        import pype9.nest  # @IgnorePep8
-        pyNN_module['nest'] = pyNN.nest
-        pype9_network_classes['nest'] = pype9.nest.Network
-
-    # Get the list of populations to record and plot from
-    pops_to_plot = ['Exc', 'Inh']
-    if args.plot_input:
-        pops_to_plot.append('Ext')
-
-    # Set the random seed
-    np.random.seed(args.seed)
-    seeds = np.asarray(
-        np.floor(np.random.random(len(args.simulators)) * 1e5), dtype=int)
-
-    # Load the Brunel model corresponding to the 'case' argument from the
-    # nineml catalog and scale the model according to the 'order' argument
-    model = ninemlcatalog.load('network/Brunel2000/' + args.case).as_network(
-        'Brunel_{}'.format(args.case))
-    if args.order != 1000:
-        for pop in model.populations:
-            pop.size = int(np.ceil((pop.size / 1000) * args.order))
-        for proj in (model.projection('Excitation'),
-                     model.projection('Inhibition')):
-            props = proj.connectivity.rule_properties
-            number = props.property('number')
-            props.set(Property(
-                number.name,
-                (int(np.ceil((number.value / 1000) * args.order)) *
-                 un.unitless)))
-
-    # Create dictionaries to hold the simulation results
-    spikes = defaultdict(dict)
-    if args.num_record_v:
-        vs = defaultdict(dict)
-
-    # Create the network for each simulator and set recorders
-    networks = {}
-    for simulator, seed in zip(args.simulators, seeds):
-        # Reset the simulator
-        pyNN_module[simulator].setup(min_delay=min_delay, max_delay=max_delay,
-                                     timestep=args.timestep,
-                                     rng_seeds_seed=seed)
-        # Construct the network
-        print "Constructing the network in {}".format(simulator.upper())
-        networks[simulator] = pype9_network_classes[simulator](
-            model, build_mode=args.build_mode)
-        print "Finished constructing the network in {}".format(
-            simulator.upper())
-        if args.build_mode != 'build_only':
-            # Record spikes and voltages
-            for pop in networks[simulator].component_arrays:
-                pop[:args.num_record].record('spikes')
-                if args.num_record_v and pop.name != 'Ext':
-                    pop[:args.num_record_v].record('v__cell')
-
-    if args.build_mode == 'build_only':
-        print "build_mode argument was set to 'build_only' so exiting!"
-        exit()
-
-    # Set of simulators to run
-    simulators_to_run = set(args.simulators)
-
-    # Create the reference simulation if required
-    if args.reference:
-        print "Constructing the reference NEST implementation"
-        _, ref_recorders = construct_reference(
-            args.case, args.order, args.num_record, args.num_record_v,
-            pops_to_plot, args.timestep)
-        simulators_to_run.add('nest')
-
-    # Run the simulation(s)
-    for simulator in simulators_to_run:
-        print "Running the simulation in {}".format(simulator.upper())
-        if not args.hide_progress_bar:
-            kwargs = {'callbacks': [
-                SimulationProgressBar(args.simtime / 77, args.simtime)]}
-        else:
-            kwargs = {}
-        pyNN_module[simulator].run(args.simtime, **kwargs)
-
-    if mpi_rank == 0:
-        # Plot the results
-        print "Plotting the results"
-        num_subplots = len(args.simulators) + int(args.reference)
-        for pop_name in pops_to_plot:
-            spike_fig, spike_subplots = plt.subplots(num_subplots, 1,
-                                                     figsize=args.figsize)
-            spike_fig.suptitle("{} - {} Spike Times".format(args.case,
-                                                            pop_name),
-                               fontsize=14)
-            if args.num_record_v:
-                v_fig, v_subplots = plt.subplots(num_subplots, 1,
+if mpi_rank == 0:
+    # Plot the results
+    print "Plotting the results"
+    num_subplots = len(args.simulators) + int(args.reference)
+    for pop_name in pops_to_plot:
+        spike_fig, spike_subplots = plt.subplots(num_subplots, 1,
                                                  figsize=args.figsize)
-                v_fig.suptitle("{} - {} Membrane Voltage".format(args.case,
-                                                                 pop_name),
-                               fontsize=14)
-            for subplot_index, simulator in enumerate(args.simulators):
-                # Get the recordings for the population
-                pop = networks[simulator].component_array(pop_name)
-                block = pop.get_data()
-                segment = block.segments[0]
-                # Plot the spike trains
-                spiketrains = segment.spiketrains
-                spike_times = []
-                ids = []
-                for i, spiketrain in enumerate(spiketrains):
-                    spike_times.extend(spiketrain)
-                    ids.extend([i] * len(spiketrain))
-                plt.sca(spike_subplots[subplot_index]
-                        if num_subplots > 1 else spike_subplots)
-                plt.scatter(spike_times, ids)
+        spike_fig.suptitle("{} - {} Spike Times".format(args.case,
+                                                        pop_name),
+                           fontsize=14)
+        if args.num_record_v:
+            v_fig, v_subplots = plt.subplots(num_subplots, 1,
+                                             figsize=args.figsize)
+            v_fig.suptitle("{} - {} Membrane Voltage".format(args.case,
+                                                             pop_name),
+                           fontsize=14)
+        for subplot_index, simulator in enumerate(args.simulators):
+            # Get the recordings for the population
+            pop = networks[simulator].component_array(pop_name)
+            block = pop.get_data()
+            segment = block.segments[0]
+            # Plot the spike trains
+            spiketrains = segment.spiketrains
+            spike_times = []
+            ids = []
+            for i, spiketrain in enumerate(spiketrains):
+                spike_times.extend(spiketrain)
+                ids.extend([i] * len(spiketrain))
+            plt.sca(spike_subplots[subplot_index]
+                    if num_subplots > 1 else spike_subplots)
+            plt.scatter(spike_times, ids)
+            plt.xlim((args.plot_start, args.simtime))
+            plt.ylim((-1, len(spiketrains)))
+            plt.xlabel('Times (ms)')
+            plt.ylabel('Cell Indices')
+            plt.title("PyPe9 {}".format(simulator.upper()), fontsize=12)
+            if args.num_record_v and pop_name != 'Ext':
+                traces = segment.analogsignalarrays
+                legend = []
+                plt.sca(v_subplots[subplot_index]
+                        if num_subplots > 1 else v_subplots)
+                for trace in traces:
+                    plt.plot(trace.times, trace)
                 plt.xlim((args.plot_start, args.simtime))
-                plt.ylim((-1, len(spiketrains)))
-                plt.xlabel('Times (ms)')
-                plt.ylabel('Cell Indices')
-                plt.title("PyPe9 {}".format(simulator.upper()), fontsize=12)
-                if args.num_record_v and pop_name != 'Ext':
-                    traces = segment.analogsignalarrays
-                    legend = []
-                    plt.sca(v_subplots[subplot_index]
-                            if num_subplots > 1 else v_subplots)
-                    for trace in traces:
-                        plt.plot(trace.times, trace)
-                    plt.xlim((args.plot_start, args.simtime))
-                    plt.ylim([0.0, 20.0])
-                    plt.xlabel('Time (ms)')
-                    plt.ylabel('Membrane Voltage (mV)')
-                    plt.title("Pype9 {}".format(simulator.upper()),
-                              fontsize=12)
-            if args.reference:
-                events = nest.GetStatus(ref_recorders[pop_name]['spikes'],
-                                        "events")[0]
-                spike_times = np.asarray(events['times'])
-                senders = np.asarray(events['senders'])
-                inds = np.asarray(spike_times > args.plot_start, dtype=bool)
-                spike_times = spike_times[inds]
-                senders = senders[inds]
-                if len(senders):
-                    senders -= senders.min()
-                    max_y = senders.max() + 1
-                else:
-                    max_y = args.num_record
-                plt.sca(spike_subplots[-1]
-                        if num_subplots > 1 else spike_subplots)
-                plt.scatter(spike_times, senders)
+                plt.ylim([0.0, 20.0])
+                plt.xlabel('Time (ms)')
+                plt.ylabel('Membrane Voltage (mV)')
+                plt.title("Pype9 {}".format(simulator.upper()),
+                          fontsize=12)
+        if args.reference:
+            events = nest.GetStatus(ref.recorders[pop_name]['spikes'],
+                                    "events")[0]
+            spike_times = np.asarray(events['times'])
+            senders = np.asarray(events['senders'])
+            inds = np.asarray(spike_times > args.plot_start, dtype=bool)
+            spike_times = spike_times[inds]
+            senders = senders[inds]
+            if len(senders):
+                senders -= senders.min()
+                max_y = senders.max() + 1
+            else:
+                max_y = args.num_record
+            plt.sca(spike_subplots[-1]
+                    if num_subplots > 1 else spike_subplots)
+            plt.scatter(spike_times, senders)
+            plt.xlim((args.plot_start, args.simtime))
+            plt.ylim((-1, max_y))
+            plt.xlabel('Times (ms)')
+            plt.ylabel('Cell Indices')
+            plt.title("Ref. NEST", fontsize=12)
+            if args.num_record_v:
+                events, interval = nest.GetStatus(
+                    ref.recorders[pop_name]['V_m'],
+                    ["events", 'interval'])[0]
+                sorted_vs = sorted(zip(events['senders'], events['times'],
+                                       events['V_m']), key=itemgetter(0))
+                legend = []
+                plt.sca(v_subplots[-1] if num_subplots > 1 else v_subplots)
+                for sender, group in groupby(sorted_vs, key=itemgetter(0)):
+                    _, t, v = zip(*group)
+                    t = np.asarray(t)
+                    v = np.asarray(v)
+                    inds = t > args.plot_start
+                    plt.plot(t[inds], v[inds])
                 plt.xlim((args.plot_start, args.simtime))
-                plt.ylim((-1, max_y))
-                plt.xlabel('Times (ms)')
-                plt.ylabel('Cell Indices')
+                plt.ylim([0.0, 20.0])
+                plt.xlabel('Time (ms)')
+                plt.ylabel('Membrane Voltage (mV)')
                 plt.title("Ref. NEST", fontsize=12)
-                if args.num_record_v:
-                    events, interval = nest.GetStatus(
-                        ref_recorders[pop_name]['V_m'],
-                        ["events", 'interval'])[0]
-                    sorted_vs = sorted(zip(events['senders'], events['times'],
-                                           events['V_m']), key=itemgetter(0))
-                    legend = []
-                    plt.sca(v_subplots[-1] if num_subplots > 1 else v_subplots)
-                    for sender, group in groupby(sorted_vs, key=itemgetter(0)):
-                        _, t, v = zip(*group)
-                        t = np.asarray(t)
-                        v = np.asarray(v)
-                        inds = t > args.plot_start
-                        plt.plot(t[inds], v[inds])
-                    plt.xlim((args.plot_start, args.simtime))
-                    plt.ylim([0.0, 20.0])
-                    plt.xlabel('Time (ms)')
-                    plt.ylabel('Membrane Voltage (mV)')
-                    plt.title("Ref. NEST", fontsize=12)
-            if save_path is not None:
-                spike_fig.savefig(os.path.join(save_path,
-                                               '{}_spikes'.format(pop_name)))
-                if args.num_record_v:
-                    v_fig.savefig(os.path.join(save_path,
-                                               '{}_v'.format(pop_name)))
-        if save_path is None:
-            plt.show()
-        print "done"
+        if save_path is not None:
+            spike_fig.savefig(os.path.join(save_path,
+                                           '{}_spikes'.format(pop_name)))
+            if args.num_record_v:
+                v_fig.savefig(os.path.join(save_path,
+                                           '{}_v'.format(pop_name)))
+    if save_path is None:
+        plt.show()
+    print "done"

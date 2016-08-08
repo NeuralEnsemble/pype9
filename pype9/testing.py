@@ -6,13 +6,16 @@ from __future__ import absolute_import, division
 import sys
 import os.path
 import re
-import subprocess as sp
+# import subprocess as sp
 from itertools import combinations
-import tempfile
-import shutil
+from collections import defaultdict
+# import tempfile
+# import shutil
 import neuron
+from copy import copy
 import pyNN.neuron  # @UnusedImport - imports PyNN mechanisms
 import nest
+from numpy import exp
 try:
     import pylab as plt
 except ImportError:
@@ -26,6 +29,7 @@ from pype9.nest.cells import (
     CellMetaClass as CellMetaClassNEST,
     simulation_controller as simulatorNEST)
 from nineml.user import Quantity
+from nineml import units as un
 import numpy
 import quantities as pq
 import neo
@@ -469,6 +473,219 @@ def input_freq(port_name, freq, duration, weight, offset=None):
         numpy.arange(offset, duration, isi),
         units='ms', t_stop=duration * pq.ms)
     return (port_name, train, weight)
+
+
+class ReferenceBrunel2000(object):
+    """
+    The model in this file has been adapted from the brunel-alpha-nest.py
+    model that is part of NEST.
+
+    Copyright (C) 2004 The NEST Initiative
+
+    NEST is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    NEST is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with NEST.  If not, see <http://www.gnu.org/licenses/>.
+    This version uses NEST's Connect functions.
+    """
+
+    min_delay = 0.1
+    max_delay = 10.0
+    delay = 1.5 * un.ms
+
+    # Parameters used to construct the reference network
+
+    # Initialize the parameters of the integrate and fire neuron
+    theta = 20.0
+    J = 0.1  # postsynaptic amplitude in mV
+    tauSyn = 0.1
+    tauMem = 20.0
+    CMem = 250.0
+
+    epsilon = 0.1  # connection probability
+
+    parameter_sets = {
+        "SR": {"g": 3.0, "eta": 2.0},
+        "AI": {"g": 5.0, "eta": 2.0},
+        "SIfast": {"g": 6.0, "eta": 4.0},
+        "SIslow": {"g": 4.5, "eta": 0.9}}
+
+    def __init__(self, case, order, external_input=None, connections=None,
+                 init_v=None, delay=1.5 * un.ms):
+        self._recorders = None
+
+        (NE, NI, CE, CI, neuron_params,
+         J_ex, J_in, p_rate) = self.parameters(case, order)
+
+        nest.SetDefaults("iaf_psc_alpha", neuron_params)
+        nodes_exc = nest.Create("iaf_psc_alpha", NE)
+        nodes_inh = nest.Create("iaf_psc_alpha", NI)
+
+        if init_v is not None:
+            nest.SetStatus(nodes_exc, 'V_m', init_v['Exc'])
+            nest.SetStatus(nodes_inh, 'V_m', init_v['Inh'])
+        else:
+            nest.SetStatus(nodes_exc + nodes_inh, 'V_m',
+                           list(numpy.random.rand(NE + NI) * 20.0))
+
+        if external_input is not None:
+            nodes_ext = nest.Create(
+                "spike_generator", NE + NI,
+                params=[{'spike_times': r} for r in external_input])
+        else:
+            nest.SetDefaults("poisson_generator", {"rate": p_rate})
+            noise = nest.Create("poisson_generator")
+            nodes_ext = nest.Create('parrot_neuron', NE + NI)
+            nest.Connect(noise, nodes_ext)
+
+        self._pops = {'Exc': nodes_exc, 'Inh': nodes_inh, 'Ext': nodes_ext}
+
+        # Set up connections
+
+        nest.CopyModel(
+            "static_synapse", "excitatory", {
+                "weight": J_ex, "delay": float(delay.value)})
+        nest.CopyModel(
+            "static_synapse", "inhibitory", {
+                "weight": J_in, "delay": float(delay.value)})
+
+        nest.Connect(nodes_ext, nodes_exc + nodes_inh, 'one_to_one',
+                     "excitatory")
+
+        if connections is not None:
+            for (p1_name, p2_name), conns in connections.iteritems():
+                if p1_name == 'Exc':
+                    p1 = nodes_exc
+                    syn = 'excitatory'
+                else:
+                    p1 = nodes_inh
+                    syn = 'inhibitory'
+                p2 = nodes_exc if p2_name == 'Exc' else nodes_inh
+                conns = copy(conns)
+                conns[:, 0] += p1[0]
+                conns[:, 1] += p2[0]
+                for i in numpy.unique(conns[:, 1]):
+                    nest.Connect(list(conns[(conns[:, 1] == i), 0]), [i],
+                                 'all_to_all', syn)
+        else:
+            # We now iterate over all neuron IDs, and connect the neuron to the
+            # sources from our array. The first loop connects the excitatory
+            # neurons and the second loop the inhibitory neurons.
+            conn_params_ex = {'rule': 'fixed_indegree', 'indegree': CE}
+            nest.Connect(
+                nodes_exc,
+                nodes_exc +
+                nodes_inh,
+                conn_params_ex,
+                "excitatory")
+
+            conn_params_in = {'rule': 'fixed_indegree', 'indegree': CI}
+            nest.Connect(
+                nodes_inh,
+                nodes_exc +
+                nodes_inh,
+                conn_params_in,
+                "inhibitory")
+
+    def __getitem__(self, pop_name):
+        return self._pops[pop_name]
+
+    @property
+    def projections(self):
+        combined = (self['Exc'] + self['Inh'])
+        projs = {}
+        projs['External'] = nest.GetConnections(self['Ext'], combined,
+                                                'excitatory')
+        projs['Excitation'] = nest.GetConnections(self['Exc'], combined,
+                                                  'excitatory')
+        projs['Inhibition'] = nest.GetConnections(self['Inh'], combined,
+                                                  'inhibitory')
+        return projs
+
+    @classmethod
+    def compute_normalised_psr(cls, tauMem, CMem, tauSyn):
+        """Compute the maximum of postsynaptic potential
+           for a synaptic input current of unit amplitude
+           (1 pA)"""
+
+        a = (tauMem / tauSyn)
+        b = (1.0 / tauSyn - 1.0 / tauMem)
+
+        # time of maximum
+        t_max = 1.0 / b * \
+            (-nest.sli_func('LambertWm1', -exp(-1.0 / a) / a) - 1.0 / a)
+
+        # maximum of PSP for current of unit amplitude
+        return (exp(1.0) / (tauSyn * CMem * b) *
+                ((exp(-t_max / tauMem) -
+                  exp(-t_max / tauSyn)) / b - t_max * exp(-t_max / tauSyn)))
+
+    @classmethod
+    def parameters(cls, case, order):
+        # Parameters for asynchronous irregular firing
+        g = cls.parameter_sets[case]["g"]
+        eta = cls.parameter_sets[case]["eta"]
+
+        NE = 4 * order
+        NI = 1 * order
+
+        CE = int(cls.epsilon * NE)  # number of excitatory synapses per neuron
+        CI = int(cls.epsilon * NI)  # number of inhibitory synapses per neuron
+        if not CE:
+            CE = 1
+
+        # normalize synaptic current so that amplitude of a PSP is J
+        J_unit = cls.compute_normalised_psr(cls.tauMem, cls.CMem,
+                                            cls.tauSyn)
+        J_ex = cls.J / J_unit
+        J_in = -g * J_ex
+
+        # threshold rate, equivalent rate of events needed to
+        # have mean input current equal to threshold
+        nu_th = ((cls.theta * cls.CMem) /
+                 (J_ex * CE * exp(1) * cls.tauMem * cls.tauSyn))
+        nu_ex = eta * nu_th
+        p_rate = 1000.0 * nu_ex * CE
+
+        neuron_params = {"C_m": cls.CMem,
+                         "tau_m": cls.tauMem,
+                         "tau_syn_ex": cls.tauSyn,
+                         "tau_syn_in": cls.tauSyn,
+                         "t_ref": 2.0,
+                         "E_L": 0.0,
+                         "V_reset": 0.0,
+                         "V_m": 0.0,
+                         "V_th": cls.theta}
+        return NE, NI, CE, CI, neuron_params, J_ex, J_in, p_rate
+
+    def record(self, num_record=50, num_record_v=2, timestep=0.001,
+               to_plot=('Exc', 'Inh')):
+        self._recorders = defaultdict(dict)
+        for pop_name in to_plot:
+            pop = numpy.asarray(self._pops[pop_name], dtype=int)
+            spikes = self._recorders[pop_name]['spikes'] = nest.Create(
+                "spike_detector")
+            nest.SetStatus(spikes, [{"label": "brunel-py-" + pop_name,
+                                     "withtime": True, "withgid": True}])
+            nest.Connect(list(pop[:num_record]), spikes, syn_spec="excitatory")
+            if num_record_v:
+                # Set up voltage traces recorders for reference network
+                multi = self._recorders[pop_name]['V_m'] = nest.Create(
+                    'multimeter', params={'record_from': ['V_m'],
+                                          'interval': timestep})
+                nest.Connect(multi, list(pop[:num_record_v]))
+
+    @property
+    def recorders(self):
+        return self._recorders
 
 _compare_re = re.compile(r"Average error between ([\w\-]+) and ([\w\-]+): "
                          r"([0-9\.\-e]+) (\w+)")

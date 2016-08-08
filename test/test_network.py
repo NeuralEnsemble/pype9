@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 from __future__ import division
-from math import exp
 from itertools import groupby, izip
 from operator import itemgetter
-from copy import copy, deepcopy
+from copy import deepcopy
 import itertools
 import numpy
 import quantities as pq
@@ -38,6 +37,7 @@ import pyNN.nest  # @IgnorePep8
 from pype9.nest.network import Network as NestPype9Network  # @IgnorePep8
 from pype9.nest.cells import (  # @IgnorePep8
     simulation_controller as simulation_controller_nest)
+from pype9.testing import ReferenceBrunel2000  # @IgnorePep8
 try:
     from matplotlib import pyplot as plt
 except ImportError:
@@ -62,28 +62,6 @@ NEURON_RNG_SEED = 54321
 
 class TestBrunel2000(TestCase):
 
-    timestep = 0.001
-    min_delay = 0.1
-    max_delay = 10.0
-    delay = 1.5 * un.ms
-
-    # Parameters used to construct the reference network
-
-    # Initialize the parameters of the integrate and fire neuron
-    theta = 20.0
-    J = 0.1  # postsynaptic amplitude in mV
-    tauSyn = 0.1
-    tauMem = 20.0
-    CMem = 250.0
-
-    epsilon = 0.1  # connection probability
-
-    brunel_parameters = {
-        "SR": {"g": 3.0, "eta": 2.0},
-        "AI": {"g": 5.0, "eta": 2.0},
-        "SIfast": {"g": 6.0, "eta": 4.0},
-        "SIslow": {"g": 4.5, "eta": 0.9}}
-
     translations = {
         'tau_m': 'tau__cell', 'V_th': 'v_threshold__cell',
         'E_L': 'e_leak__cell', 'I_e': 0.0, 'C_m': 'Cm__cell',
@@ -107,6 +85,7 @@ class TestBrunel2000(TestCase):
                              'reference': ['V_m']},
                      'Ext': {'nineml': [], 'reference': []}}
 
+    timestep = 0.001
     dt = timestep * un.ms    # the resolution in ms
     rate_percent_error = {'Exc': 5.0, 'Inh': 5.0, 'Ext': 5.0}
     psth_percent_error = {'Exc': 100.0, 'Inh': 100.0, 'Ext': 100.0}
@@ -117,7 +96,7 @@ class TestBrunel2000(TestCase):
     def test_population_params(self, case='AI', order=10, **kwargs):  # @UnusedVariable @IgnorePep8
         self._setup('nest')
         nml = self._construct_nineml(case, order, 'nest')
-        ref = self._construct_reference(case, order)
+        ref = ReferenceBrunel2000(case, order)
         for pop_name in ('Exc', 'Inh'):
             params = {}
             means = {}
@@ -174,7 +153,7 @@ class TestBrunel2000(TestCase):
         """
         self._setup('nest')
         nml = self._construct_nineml(case, order, 'nest')
-        ref = self._construct_reference(case, order)
+        ref = ReferenceBrunel2000(case, order)
         print "constructed"
         for pop1_name, pop2_name in self.out_stdev_error:
             in_degree = {}
@@ -225,8 +204,8 @@ class TestBrunel2000(TestCase):
     def test_connection_params(self, case='AI', order=10, **kwargs):  # @UnusedVariable @IgnorePep8
         self._setup('nest')
         nml = self._construct_nineml(case, order, 'nest')
-        ref = self._construct_reference(case, order)
-        ref_conns = self._reference_projections(ref)
+        ref = ReferenceBrunel2000(case, order)
+        ref_conns = ref.projections
         for conn_group in nml.connection_groups:
             nml_conns = conn_group.nest_connections
             nml_params = dict(izip(
@@ -261,7 +240,7 @@ class TestBrunel2000(TestCase):
         self._setup('nest')
         nml_network = self._construct_nineml(case, order, 'nest')
         nml = dict((p.name, p.all_cells) for p in nml_network.component_arrays)
-        ref = self._construct_reference(case, order)
+        ref = ReferenceBrunel2000(case, order)
         # Test sizes of component arrays
         for name in ('Exc', 'Inh'):
             nml_size = len(nml[name])
@@ -270,7 +249,7 @@ class TestBrunel2000(TestCase):
                 nml_size, ref_size,
                 "Size of '{}' component array ({}) does not match reference "
                 "({})".format(name, nml_size, ref_size))
-        ref_conns = self._reference_projections(ref)
+        ref_conns = ref.projections
         for conn_group in nml_network.connection_groups:
             nml_size = len(conn_group)
             ref_size = len(ref_conns[conn_group.name])
@@ -286,7 +265,7 @@ class TestBrunel2000(TestCase):
                       identical_initialisation=False, build_mode='force',
                       **kwargs):
         if identical_input:
-            mean_isi = 1000.0 / self._calculate_parameters(case, order)[-1]
+            mean_isi = 1000.0 / ReferenceBrunel2000.parameters(case, order)[-1]
             if isinstance(identical_input, int):
                 mean_isi *= identical_input
             external_input = []
@@ -339,7 +318,7 @@ class TestBrunel2000(TestCase):
         else:
             init_v = None
         # Construct reference network
-        ref = self._construct_reference(
+        ref = ReferenceBrunel2000(
             case, order, external_input=external_input,
             connections=connections, init_v=init_v)
         # Set up spike recorders for reference network
@@ -572,8 +551,9 @@ class TestBrunel2000(TestCase):
     def _setup(self, simulator):
         if simulator == 'nest':
             simulation_controller_nest.clear(rng_seed=NEST_RNG_SEED)
-            pyNN.nest.setup(timestep=self.timestep, min_delay=self.min_delay,
-                            max_delay=self.max_delay,
+            pyNN.nest.setup(timestep=self.timestep,
+                            min_delay=ReferenceBrunel2000.min_delay,
+                            max_delay=ReferenceBrunel2000.max_delay,
                             rng_seeds_seed=NEST_RNG_SEED)
         elif simulator == 'neuron':
             simulation_contoller_neuron.clear(rng_seed=NEURON_RNG_SEED)
@@ -609,173 +589,6 @@ class TestBrunel2000(TestCase):
             network.component_array('Ext').play('spike_input__cell',
                                                 external_input)
         return network
-
-    def _construct_reference(self, case, order, external_input=None,
-                             connections=None, init_v=None):
-        """
-        The model in this file has been adapted from the brunel-alpha-nest.py
-        model that is part of NEST.
-
-        Copyright (C) 2004 The NEST Initiative
-
-        NEST is free software: you can redistribute it and/or modify
-        it under the terms of the GNU General Public License as published by
-        the Free Software Foundation, either version 2 of the License, or
-        (at your option) any later version.
-
-        NEST is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-        GNU General Public License for more details.
-
-        You should have received a copy of the GNU General Public License
-        along with NEST.  If not, see <http://www.gnu.org/licenses/>.
-        This version uses NEST's Connect functions.
-        """
-
-        (NE, NI, CE, CI, neuron_params,
-         J_ex, J_in, p_rate) = self._calculate_parameters(case, order)
-
-        nest.SetDefaults("iaf_psc_alpha", neuron_params)
-        nodes_exc = nest.Create("iaf_psc_alpha", NE)
-        nodes_inh = nest.Create("iaf_psc_alpha", NI)
-
-        if init_v is not None:
-            nest.SetStatus(nodes_exc, 'V_m', init_v['Exc'])
-            nest.SetStatus(nodes_inh, 'V_m', init_v['Inh'])
-        else:
-            nest.SetStatus(nodes_exc + nodes_inh, 'V_m',
-                           list(numpy.random.rand(NE + NI) * 20.0))
-
-        if external_input is not None:
-            nodes_ext = nest.Create(
-                "spike_generator", NE + NI,
-                params=[{'spike_times': r} for r in external_input])
-        else:
-            nest.SetDefaults("poisson_generator", {"rate": p_rate})
-            noise = nest.Create("poisson_generator")
-            nodes_ext = nest.Create('parrot_neuron', NE + NI)
-            nest.Connect(noise, nodes_ext)
-
-        all_nodes = {'Exc': nodes_exc, 'Inh': nodes_inh, 'Ext': nodes_ext}
-
-        # Set up connections
-
-        nest.CopyModel(
-            "static_synapse", "excitatory", {
-                "weight": J_ex, "delay": float(self.delay.value)})
-        nest.CopyModel(
-            "static_synapse", "inhibitory", {
-                "weight": J_in, "delay": float(self.delay.value)})
-
-        nest.Connect(nodes_ext, nodes_exc + nodes_inh, 'one_to_one',
-                     "excitatory")
-
-        if connections is not None:
-            for (p1_name, p2_name), conns in connections.iteritems():
-                if p1_name == 'Exc':
-                    p1 = nodes_exc
-                    syn = 'excitatory'
-                else:
-                    p1 = nodes_inh
-                    syn = 'inhibitory'
-                p2 = nodes_exc if p2_name == 'Exc' else nodes_inh
-                conns = copy(conns)
-                conns[:, 0] += p1[0]
-                conns[:, 1] += p2[0]
-                for i in numpy.unique(conns[:, 1]):
-                    nest.Connect(list(conns[(conns[:, 1] == i), 0]), [i],
-                                 'all_to_all', syn)
-        else:
-            # We now iterate over all neuron IDs, and connect the neuron to the
-            # sources from our array. The first loop connects the excitatory
-            # neurons and the second loop the inhibitory neurons.
-            conn_params_ex = {'rule': 'fixed_indegree', 'indegree': CE}
-            nest.Connect(
-                nodes_exc,
-                nodes_exc +
-                nodes_inh,
-                conn_params_ex,
-                "excitatory")
-
-            conn_params_in = {'rule': 'fixed_indegree', 'indegree': CI}
-            nest.Connect(
-                nodes_inh,
-                nodes_exc +
-                nodes_inh,
-                conn_params_in,
-                "inhibitory")
-        return all_nodes
-
-    def _reference_projections(self, network):
-        combined = (network['Exc'] + network['Inh'])
-        projs = {}
-        projs['External'] = nest.GetConnections(network['Ext'], combined,
-                                                'excitatory')
-        projs['Excitation'] = nest.GetConnections(network['Exc'], combined,
-                                                  'excitatory')
-        projs['Inhibition'] = nest.GetConnections(network['Inh'],
-                                                  combined, 'inhibitory')
-        return projs
-
-    def _pop_params_nineml(self, network):
-        raise NotImplementedError
-
-    @classmethod
-    def _compute_normalised_psr(cls, tauMem, CMem, tauSyn):
-        """Compute the maximum of postsynaptic potential
-           for a synaptic input current of unit amplitude
-           (1 pA)"""
-
-        a = (tauMem / tauSyn)
-        b = (1.0 / tauSyn - 1.0 / tauMem)
-
-        # time of maximum
-        t_max = 1.0 / b * \
-            (-nest.sli_func('LambertWm1', -exp(-1.0 / a) / a) - 1.0 / a)
-
-        # maximum of PSP for current of unit amplitude
-        return (exp(1.0) / (tauSyn * CMem * b) *
-                ((exp(-t_max / tauMem) -
-                  exp(-t_max / tauSyn)) / b - t_max * exp(-t_max / tauSyn)))
-
-    @classmethod
-    def _calculate_parameters(cls, case, order):
-        # Parameters for asynchronous irregular firing
-        g = cls.brunel_parameters[case]["g"]
-        eta = cls.brunel_parameters[case]["eta"]
-
-        NE = 4 * order
-        NI = 1 * order
-
-        CE = int(cls.epsilon * NE)  # number of excitatory synapses per neuron
-        CI = int(cls.epsilon * NI)  # number of inhibitory synapses per neuron
-        if not CE:
-            CE = 1
-
-        # normalize synaptic current so that amplitude of a PSP is J
-        J_unit = cls._compute_normalised_psr(cls.tauMem, cls.CMem,
-                                             cls.tauSyn)
-        J_ex = cls.J / J_unit
-        J_in = -g * J_ex
-
-        # threshold rate, equivalent rate of events needed to
-        # have mean input current equal to threshold
-        nu_th = ((cls.theta * cls.CMem) /
-                 (J_ex * CE * exp(1) * cls.tauMem * cls.tauSyn))
-        nu_ex = eta * nu_th
-        p_rate = 1000.0 * nu_ex * CE
-
-        neuron_params = {"C_m": cls.CMem,
-                         "tau_m": cls.tauMem,
-                         "tau_syn_ex": cls.tauSyn,
-                         "tau_syn_in": cls.tauSyn,
-                         "t_ref": 2.0,
-                         "E_L": 0.0,
-                         "V_reset": 0.0,
-                         "V_m": 0.0,
-                         "V_th": cls.theta}
-        return NE, NI, CE, CI, neuron_params, J_ex, J_in, p_rate
 
 
 class TestNetwork(TestCase):
