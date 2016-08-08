@@ -652,7 +652,7 @@ class ReferenceBrunel2000(object):
 
         # normalize synaptic current so that amplitude of a PSP is J
         J_unit = cls.compute_normalised_psr(cls.tauMem,
-                                            cls.R, cls.tauSyn) / 1000.0
+                                            cls.R, cls.tauSyn)
         J_ex = cls.J / J_unit
         J_in = -g * J_ex
 
