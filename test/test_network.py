@@ -274,7 +274,8 @@ class TestBrunel2000(TestCase):
                     mean_isi, int(numpy.floor(1.5 * simtime / mean_isi))))
                 # Trim spikes outside the simulation time
                 spike_times = spike_times[numpy.logical_and(
-                    spike_times < simtime, spike_times > self.min_delay)]
+                    spike_times < simtime,
+                    spike_times > ReferenceBrunel2000.min_delay)]
                 # Append a Neo SpikeTrain input to the external input
                 external_input.append(
                     neo.SpikeTrain(spike_times, units='ms',
@@ -557,8 +558,8 @@ class TestBrunel2000(TestCase):
         elif simulator == 'neuron':
             simulation_contoller_neuron.clear(rng_seed=NEURON_RNG_SEED)
             pyNN.neuron.setup(timestep=self.timestep,
-                              min_delay=self.min_delay,
-                              ax_delay=self.max_delay,
+                              min_delay=ReferenceBrunel2000.min_delay,
+                              ax_delay=ReferenceBrunel2000.max_delay,
                               rng_seeds_seed=NEURON_RNG_SEED)
         else:
             assert False

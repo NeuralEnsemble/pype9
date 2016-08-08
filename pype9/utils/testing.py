@@ -617,7 +617,7 @@ class ReferenceBrunel2000(object):
         return projs
 
     @classmethod
-    def compute_normalised_psr(cls, tauMem, CMem, tauSyn):
+    def compute_normalised_psr(cls, tauMem, R, tauSyn):
         """Compute the maximum of postsynaptic potential
            for a synaptic input current of unit amplitude
            (1 pA)"""
@@ -630,9 +630,9 @@ class ReferenceBrunel2000(object):
             (-nest.sli_func('LambertWm1', -exp(-1.0 / a) / a) - 1.0 / a)
 
         # maximum of PSP for current of unit amplitude
-        return (exp(1.0) / (tauSyn * CMem * b) *
-                ((exp(-t_max / tauMem) -
-                  exp(-t_max / tauSyn)) / b - t_max * exp(-t_max / tauSyn)))
+        return 1.0 / (tauSyn * tauMem * b / R) * (
+            (exp(-t_max / tauMem) - exp(-t_max / tauSyn)) /
+            b - t_max * exp(-t_max / tauSyn))
 
     @classmethod
     def parameters(cls, case, order):
@@ -647,17 +647,18 @@ class ReferenceBrunel2000(object):
         CI = int(cls.epsilon * NI)  # number of inhibitory synapses per neuron
         if not CE:
             CE = 1
+        if not CI:
+            CI = 1
 
         # normalize synaptic current so that amplitude of a PSP is J
-        J_unit = cls.compute_normalised_psr(cls.tauMem, cls.CMem,
-                                            cls.tauSyn)
+        J_unit = cls.compute_normalised_psr(cls.tauMem,
+                                            cls.R, cls.tauSyn) / 1000.0
         J_ex = cls.J / J_unit
         J_in = -g * J_ex
 
         # threshold rate, equivalent rate of events needed to
         # have mean input current equal to threshold
-        nu_th = ((cls.theta * cls.CMem) /
-                 (J_ex * CE * exp(1) * cls.tauMem * cls.tauSyn))
+        nu_th = cls.theta / (J_ex * CE * cls.R * cls.tauSyn)  # threshold rate
         nu_ex = eta * nu_th
         p_rate = 1000.0 * nu_ex * CE
 
