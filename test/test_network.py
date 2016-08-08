@@ -37,7 +37,7 @@ import pyNN.nest  # @IgnorePep8
 from pype9.nest.network import Network as NestPype9Network  # @IgnorePep8
 from pype9.nest.cells import (  # @IgnorePep8
     simulation_controller as simulation_controller_nest)
-from pype9.testing import ReferenceBrunel2000  # @IgnorePep8
+from pype9.utils.testing import ReferenceBrunel2000  # @IgnorePep8
 try:
     from matplotlib import pyplot as plt
 except ImportError:

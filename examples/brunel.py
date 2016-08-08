@@ -12,7 +12,7 @@ import matplotlib
 from pyNN.utility import SimulationProgressBar
 import sys
 argv = sys.argv[1:]
-from pype9.testing import ReferenceBrunel2000  # @IgnorePep8
+from pype9.utils.testing import ReferenceBrunel2000  # @IgnorePep8
 
 
 pyNN_logger = logging.Logger('PyNN')
