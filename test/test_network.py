@@ -64,7 +64,7 @@ class TestBrunel2000(TestCase):
 
     translations = {
         'tau_m': 'tau__cell', 'V_th': 'v_threshold__cell',
-        'E_L': 'e_leak__cell', 'I_e': 0.0, 'C_m': 'Cm__cell',
+        'E_L': 0.0, 'I_e': 0.0, 'C_m': None,
         'V_reset': 'v_reset__cell', 'tau_syn_in': 'tau__psr__Inhibition',
         'tau_syn_ex': 'tau__psr__Excitation',
         't_ref': 'refractory_period__cell',
@@ -145,7 +145,7 @@ class TestBrunel2000(TestCase):
                                          reference_stat, nineml_stat,
                                          pop_name)))
 
-    def test_connection_degrees(self, case='AI', order=500, **kwargs):  # @UnusedVariable @IgnorePep8
+    def test_connection_degrees(self, case='AI', order=200, **kwargs):  # @UnusedVariable @IgnorePep8
         """
         Compares the in/out degree of all projections in the 9ML network with
         the corresponding projections in the reference network
