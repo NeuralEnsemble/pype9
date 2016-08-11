@@ -497,21 +497,21 @@ class ReferenceBrunel2000(object):
     This version uses NEST's Connect functions.
     """
 
-    min_delay = 0.1
-    max_delay = 10.0
+    min_delay = 0.1 * un.ms
+    max_delay = 10.0 * un.ms
     delay = 1.5 * un.ms
 
     # Parameters used to construct the reference network
 
     # Initialize the parameters of the integrate and fire neuron
-    theta = 20.0
+    theta = 20.0 * un.mV
     J = 0.1  # postsynaptic amplitude in mV
-    tauSyn = 0.1
-    tauMem = 20.0
-    tau_refrac = 2.0
-    v_reset = 10.0
+    tauSyn = 0.1 * un.ms
+    tauMem = 20.0 * un.ms
+    tau_refrac = 2.0 * un.ms
+    v_reset = 10.0 * un.mV
     # v_reset = 0.0
-    R = 1.5
+    R = 1.5 * un.Mohm
 
     CMem = 1000 * tauMem / R
 #     CMem = 250.0
@@ -519,10 +519,10 @@ class ReferenceBrunel2000(object):
     epsilon = 0.1  # connection probability
 
     parameter_sets = {
-        "SR": {"g": 3.0, "eta": 2.0},
-        "AI": {"g": 5.0, "eta": 2.0},
-        "SIfast": {"g": 6.0, "eta": 4.0},
-        "SIslow": {"g": 4.5, "eta": 0.9}}
+        "SR": {"g": 3.0 * un.nS, "eta": 2.0 * un.unitless / un.mV},
+        "AI": {"g": 5.0 * un.nS, "eta": 2.0 * un.unitless / un.mV},
+        "SIfast": {"g": 6.0 * un.nS, "eta": 4.0 * un.unitless / un.mV},
+        "SIslow": {"g": 4.5 * un.nS, "eta": 0.9 * un.unitless / un.mV}}
 
     def __init__(self, case, order, external_input=None, connections=None,
                  init_v=None, delay=1.5 * un.ms):
@@ -547,7 +547,8 @@ class ReferenceBrunel2000(object):
                 "spike_generator", NE + NI,
                 params=[{'spike_times': r} for r in external_input])
         else:
-            nest.SetDefaults("poisson_generator", {"rate": p_rate})
+            nest.SetDefaults("poisson_generator",
+                             {"rate": float(Quantity(p_rate, un.Hz))})
             noise = nest.Create("poisson_generator")
             nodes_ext = nest.Create('parrot_neuron', NE + NI)
             nest.Connect(noise, nodes_ext)
@@ -558,10 +559,12 @@ class ReferenceBrunel2000(object):
 
         nest.CopyModel(
             "static_synapse", "excitatory", {
-                "weight": J_ex, "delay": float(delay.value)})
+                "weight": float(Quantity(J_ex, un.nS)),
+                "delay": float(Quantity(delay, un.ms))})
         nest.CopyModel(
             "static_synapse", "inhibitory", {
-                "weight": J_in, "delay": float(delay.value)})
+                "weight": float(Quantity(J_in, un.nS)),
+                "delay": float(Quantity(delay, un.ms))})
 
         nest.Connect(nodes_ext, nodes_exc + nodes_inh, 'one_to_one',
                      "excitatory")
@@ -622,7 +625,7 @@ class ReferenceBrunel2000(object):
            for a synaptic input current of unit amplitude
            (1 pA)"""
 
-        a = (tauMem / tauSyn)
+        a = float(tauMem / tauSyn)
         b = (1.0 / tauSyn - 1.0 / tauMem)
 
         # time of maximum
@@ -631,8 +634,8 @@ class ReferenceBrunel2000(object):
 
         # maximum of PSP for current of unit amplitude
         return 1.0 / (tauSyn * tauMem * b / R) * (
-            (exp(-t_max / tauMem) - exp(-t_max / tauSyn)) /
-            b - t_max * exp(-t_max / tauSyn))
+            (exp(-float(t_max / tauMem)) - exp(-float(t_max / tauSyn))) /
+            b - t_max * exp(-float(t_max / tauSyn)))
 
     @classmethod
     def parameters(cls, case, order):
@@ -662,15 +665,15 @@ class ReferenceBrunel2000(object):
         nu_ex = eta * nu_th
         p_rate = 1000.0 * nu_ex * CE
 
-        neuron_params = {"C_m": cls.CMem,
-                         "tau_m": cls.tauMem,
-                         "tau_syn_ex": cls.tauSyn,
-                         "tau_syn_in": cls.tauSyn,
-                         "t_ref": cls.tau_refrac,
+        neuron_params = {"C_m": float(Quantity(cls.CMem, un.pF)),
+                         "tau_m": float(Quantity(cls.tauMem, un.ms)),
+                         "tau_syn_ex": float(Quantity(cls.tauSyn, un.ms)),
+                         "tau_syn_in": float(Quantity(cls.tauSyn, un.ms)),
+                         "t_ref": float(Quantity(cls.tau_refrac, un.ms)),
                          "E_L": 0.0,
-                         "V_reset": cls.v_reset,
+                         "V_reset": float(Quantity(cls.v_reset, un.mV)),
                          "V_m": 0.0,
-                         "V_th": cls.theta}
+                         "V_th": float(Quantity(cls.theta, un.mV))}
 
         return NE, NI, CE, CI, neuron_params, J_ex, J_in, p_rate
 

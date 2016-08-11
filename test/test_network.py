@@ -145,7 +145,7 @@ class TestBrunel2000(TestCase):
                                          reference_stat, nineml_stat,
                                          pop_name)))
 
-    def test_connection_degrees(self, case='AI', order=200, **kwargs):  # @UnusedVariable @IgnorePep8
+    def test_connection_degrees(self, case='AI', order=500, **kwargs):  # @UnusedVariable @IgnorePep8
         """
         Compares the in/out degree of all projections in the 9ML network with
         the corresponding projections in the reference network
@@ -569,16 +569,17 @@ class TestBrunel2000(TestCase):
         model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
             'Brunel_{}'.format(case))
         model = deepcopy(model)
+        scale = order / model.population('Inh').size
         # rescale populations
         for pop in model.populations:
-            pop.size = int(numpy.ceil((pop.size / 1000) * order))
+            pop.size = int(numpy.ceil(pop.size * scale))
         for proj in (model.projection('Excitation'),
                      model.projection('Inhibition')):
             props = proj.connectivity.rule_properties
             number = props.property('number')
             props.set(Property(
                 number.name,
-                int(numpy.ceil((number.value / 1000) * order)) * un.unitless))
+                int(numpy.ceil(number.value * scale)) * un.unitless))
         if simulator == 'nest':
             NetworkClass = NestPype9Network
         elif simulator == 'neuron':

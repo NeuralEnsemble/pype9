@@ -134,6 +134,17 @@ spikes = defaultdict(dict)
 if args.num_record_v:
     vs = defaultdict(dict)
 
+# Set of simulators to run
+simulators_to_run = set(args.simulators)
+
+# Create the reference simulation if required
+if args.reference:
+    print "Constructing the reference NEST implementation"
+    ref = ReferenceBrunel2000(args.case, args.order)
+    ref.record(num_record=args.num_record, num_record_v=args.num_record_v,
+               to_plot=pops_to_plot, timestep=args.timestep)
+    simulators_to_run.add('nest')
+
 # Create the network for each simulator and set recorders
 networks = {}
 for simulator, seed in zip(args.simulators, seeds):
@@ -158,17 +169,6 @@ for simulator, seed in zip(args.simulators, seeds):
 if args.build_mode == 'build_only':
     print "build_mode argument was set to 'build_only' so exiting!"
     exit()
-
-# Set of simulators to run
-simulators_to_run = set(args.simulators)
-
-# Create the reference simulation if required
-if args.reference:
-    print "Constructing the reference NEST implementation"
-    ref = ReferenceBrunel2000(args.case, args.order)
-    ref.record(num_record=args.num_record, num_record_v=args.num_record_v,
-               to_plot=pops_to_plot, timestep=args.timestep)
-    simulators_to_run.add('nest')
 
 # Run the simulation(s)
 for simulator in simulators_to_run:
