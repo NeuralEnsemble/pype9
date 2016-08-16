@@ -559,7 +559,7 @@ class TestBrunel2000(TestCase):
             simulation_contoller_neuron.clear(rng_seed=NEURON_RNG_SEED)
             pyNN.neuron.setup(timestep=self.timestep,
                               min_delay=ReferenceBrunel2000.min_delay,
-                              ax_delay=ReferenceBrunel2000.max_delay,
+                              max_delay=ReferenceBrunel2000.max_delay,
                               rng_seeds_seed=NEURON_RNG_SEED)
         else:
             assert False
