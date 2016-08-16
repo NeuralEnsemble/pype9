@@ -519,10 +519,10 @@ class ReferenceBrunel2000(object):
     epsilon = 0.1  # connection probability
 
     parameter_sets = {
-        "SR": {"g": 3.0 * un.nS, "eta": 2.0 * un.unitless / un.mV},
-        "AI": {"g": 5.0 * un.nS, "eta": 2.0 * un.unitless / un.mV},
-        "SIfast": {"g": 6.0 * un.nS, "eta": 4.0 * un.unitless / un.mV},
-        "SIslow": {"g": 4.5 * un.nS, "eta": 0.9 * un.unitless / un.mV}}
+        "SR": {"g": 3.0, "eta": 2.0 * un.unitless / un.mV},
+        "AI": {"g": 5.0, "eta": 2.0 * un.unitless / un.mV},
+        "SIfast": {"g": 6.0, "eta": 4.0 * un.unitless / un.mV},
+        "SIslow": {"g": 4.5, "eta": 0.9 * un.unitless / un.mV}}
 
     def __init__(self, case, order, external_input=None, connections=None,
                  init_v=None, delay=1.5 * un.ms):
