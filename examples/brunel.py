@@ -117,17 +117,17 @@ seeds = np.asarray(
 # nineml catalog and scale the model according to the 'order' argument
 model = ninemlcatalog.load('network/Brunel2000/' + args.case).as_network(
     'Brunel_{}'.format(args.case))
-if args.order != 1000:
+scale = args.order / model.population('Inh').size
+if scale != 1.0:
     for pop in model.populations:
-        pop.size = int(np.ceil((pop.size / 1000) * args.order))
+        pop.size = int(np.ceil(pop.size * scale))
     for proj in (model.projection('Excitation'),
                  model.projection('Inhibition')):
         props = proj.connectivity.rule_properties
         number = props.property('number')
         props.set(Property(
             number.name,
-            (int(np.ceil((number.value / 1000) * args.order)) *
-             un.unitless)))
+            int(np.ceil(number.value * scale)) * un.unitless))
 
 # Create dictionaries to hold the simulation results
 spikes = defaultdict(dict)

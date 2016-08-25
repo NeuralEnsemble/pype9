@@ -513,7 +513,7 @@ class ReferenceBrunel2000(object):
     # v_reset = 0.0
     R = 1.5 * un.Mohm
 
-    CMem = 1000 * tauMem / R
+    CMem = tauMem / R
 #     CMem = 250.0
 
     epsilon = 0.1  # connection probability
@@ -662,7 +662,7 @@ class ReferenceBrunel2000(object):
         # have mean input current equal to threshold
         nu_th = cls.theta / (J_ex * CE * cls.R * cls.tauSyn)  # threshold rate
         nu_ex = eta * nu_th
-        p_rate = 1000.0 * nu_ex * CE
+        p_rate = nu_ex * CE
 
         neuron_params = {"C_m": float(Quantity(cls.CMem, un.pF)),
                          "tau_m": float(Quantity(cls.tauMem, un.ms)),

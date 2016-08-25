@@ -86,7 +86,7 @@ class TestBrunel2000(TestCase):
                              'reference': ['V_m']},
                      'Ext': {'nineml': [], 'reference': []}}
 
-    rate_percent_error = {'Exc': 0.0, 'Inh': 0.0, 'Ext': 0.0}
+    rate_percent_error = {'Exc': 7.5, 'Inh': 7.5, 'Ext': 2.5}
     psth_percent_error = {'Exc': 100.0, 'Inh': 100.0, 'Ext': 100.0}
     out_stdev_error = {('Exc', 'Exc'): 7.0, ('Exc', 'Inh'): 6.0,
                        ('Inh', 'Exc'): 1.5, ('Inh', 'Inh'): 5.0,
@@ -144,6 +144,8 @@ class TestBrunel2000(TestCase):
                                  .format(param_name, stat_name,
                                          reference_stat, nineml_stat,
                                          pop_name)))
+                    else:
+                        pass
 
     def test_connection_degrees(self, case='AI', order=500, **kwargs):  # @UnusedVariable @IgnorePep8
         """
@@ -153,7 +155,6 @@ class TestBrunel2000(TestCase):
         self._setup('nest')
         nml = self._construct_nineml(case, order, 'nest')
         ref = ReferenceBrunel2000(case, order)
-        print "constructed"
         for pop1_name, pop2_name in self.out_stdev_error:
             in_degree = {}
             out_degree = {}
