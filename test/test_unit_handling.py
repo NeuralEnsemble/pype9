@@ -10,7 +10,7 @@ from nineml.abstraction import (
 import numpy
 from nineml.user import Quantity
 if __name__ == '__main__':
-    from utils import DummyTestCase as TestCase  # @UnusedImport
+    from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:
     from unittest import TestCase  # @Reimport
 

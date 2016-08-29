@@ -7,7 +7,7 @@ from nineml import units as un
 from nineml.user import Property
 from nineml.user.multi.component import MultiDynamics
 from nineml.user import DynamicsProperties
-from pype9.testing import Comparer, input_step, input_freq
+from pype9.utils.testing import Comparer, input_step, input_freq
 from pype9.base.cells import (
     MultiDynamicsWithSynapses, DynamicsWithSynapsesProperties,
     ConnectionParameterSet, ConnectionPropertySet)
@@ -21,7 +21,7 @@ from pype9.nest.cells import (  # @IgnorePep8
     simulation_controller as simulatorNEST)
 from pype9.nest.units import UnitHandler as UnitHandlerNEST  # @IgnorePep8
 if __name__ == '__main__':
-    from utils import DummyTestCase as TestCase  # @UnusedImport
+    from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:
     from unittest import TestCase  # @Reimport
 

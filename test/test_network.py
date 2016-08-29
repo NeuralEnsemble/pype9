@@ -44,7 +44,7 @@ except ImportError:
     pass
 if __name__ == '__main__':
     # Import dummy test case
-    from utils import DummyTestCase as TestCase  # @UnusedImport @UnresolvedImport @IgnorePep8
+    from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport @UnresolvedImport @IgnorePep8
 else:
     from unittest import TestCase  # @Reimport
 
