@@ -212,10 +212,12 @@ class TestBrunel2000(TestCase):
                 self.conn_param_names, izip(
                     *nest.GetStatus(nml_conns, self.conn_param_names))))
             # Since the weight is constant it is set as a parameter of the
-            # cell class not a connection parameter
+            # cell class not a connection parameter and it is scaled by
+            # exp because of the difference between the alpha synapse
+            # definition in the catalog and the nest/neuron synapses
             nml_params['weight'] = nest.GetStatus(
                 list(conn_group.post.all_cells),
-                'weight__pls__{}'.format(conn_group.name))
+                'weight__pls__{}'.format(conn_group.name)) / numpy.exp(1.0)
             ref_params = dict(izip(
                 self.conn_param_names, izip(
                     *nest.GetStatus(ref_conns[conn_group.name],
