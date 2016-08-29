@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import sys
 import quantities as pq
 import os.path
 from itertools import chain, repeat
@@ -7,18 +8,17 @@ from nineml import units as un
 from nineml.user import Property
 from nineml.user.multi.component import MultiDynamics
 from nineml.user import DynamicsProperties
-from pype9.utils.testing import Comparer, input_step, input_freq
 from pype9.base.cells import (
     MultiDynamicsWithSynapses, DynamicsWithSynapsesProperties,
     ConnectionParameterSet, ConnectionPropertySet)
 from pype9.neuron.cells import (
     CellMetaClass as CellMetaClassNEURON,
     simulation_controller as simulatorNEURON)
-import sys
 argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
 from pype9.nest.cells import (  # @IgnorePep8
     CellMetaClass as CellMetaClassNEST,
     simulation_controller as simulatorNEST)
+from pype9.utils.testing import Comparer, input_step, input_freq  # @IgnorePep8
 from pype9.nest.units import UnitHandler as UnitHandlerNEST  # @IgnorePep8
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
@@ -215,7 +215,7 @@ class TestDynamics(TestCase):
         iaf = ninemlcatalog.load(
             'neuron/LeakyIntegrateAndFire', 'PyNNLeakyIntegrateAndFire')
         alpha_psr = ninemlcatalog.load(
-            'postsynapticresponse/Alpha', 'Alpha')
+            'postsynapticresponse/Alpha', 'PyNNAlpha')
         static = ninemlcatalog.load(
             'plasticity/Static', 'Static')
         iaf_alpha = MultiDynamics(
@@ -231,12 +231,12 @@ class TestDynamics(TestCase):
                                     ('psr', 'spike')])},
             port_connections=[
                 ('syn', 'i_synaptic__psr', 'cell', 'i_synaptic')],
-            port_exposures=[('syn', 'spike__psr', 'input_spike')])
+            port_exposures=[('syn', 'spike__psr', 'spike')])
         iaf_alpha_with_syn = MultiDynamicsWithSynapses(
             iaf_alpha,
             connection_parameter_sets=[
                 ConnectionParameterSet(
-                    'input_spike', [iaf_alpha.parameter('weight__pls__syn')])])
+                    'spike', [iaf_alpha.parameter('weight__pls__syn')])])
         initial_states = {'a__psr__syn': 0.0 * pq.nA,
                           'b__psr__syn': 0.0 * pq.nA}
         initial_regime = 'subthreshold___sole_____sole'
@@ -244,14 +244,14 @@ class TestDynamics(TestCase):
             'neuron/LeakyIntegrateAndFire/',
             'PyNNLeakyIntegrateAndFireProperties')
         alpha_properties = ninemlcatalog.load(
-            'postsynapticresponse/Alpha', 'AlphaProperties')
+            'postsynapticresponse/Alpha', 'SamplePyNNAlphaProperties')
         nest_tranlsations = {'tau__psr__syn': ('tau_syn_ex', 1),
                              'a__psr__syn': (None, 1),
                              'b__psr__syn': (None, 1),
-                             'input_spike': ('input_spike', 1000.0)}
+                             'spike': ('spike', 1000.0)}
         neuron_tranlsations = {'tau__psr__syn': ('psr.tau', 1),
                                'q__psr__syn': ('psr.q', 1),
-                               'input_spike': ('input_spike', 1),
+                               'spike': ('spike', 1),
                                'a__psr__syn': (None, 1),
                                'b__psr__syn': (None, 1)}
         initial_states.update(
@@ -268,7 +268,7 @@ class TestDynamics(TestCase):
             properties,  # @IgnorePep8
             connection_property_sets=[
                 ConnectionPropertySet(
-                    'input_spike',
+                    'spike',
                     [properties.property('weight__pls__syn')])])
         nest_tranlsations.update(
             (k + '__cell', v)
@@ -286,7 +286,7 @@ class TestDynamics(TestCase):
             initial_regime=initial_regime,
             neuron_ref='ResetRefrac',
             nest_ref='iaf_psc_alpha',
-            input_train=input_freq('input_spike', 450 * pq.Hz, duration,
+            input_train=input_freq('spike', 450 * pq.Hz, duration,
                                    weight=[Property('weight__pls__syn',
                                                     10 * un.nA)],  # 20.680155243 * un.pA
                                    offset=duration / 2.0),
