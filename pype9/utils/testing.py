@@ -525,11 +525,16 @@ class ReferenceBrunel2000(object):
         "SIslow": {"g": 4.5, "eta": 0.9 * un.unitless / un.mV}}
 
     def __init__(self, case, order, external_input=None, connections=None,
-                 init_v=None, delay=1.5 * un.ms):
+                 init_v=None, delay=1.5 * un.ms, override_input=None):
         self._recorders = None
 
         (NE, NI, CE, CI, neuron_params,
          J_ex, J_in, p_rate) = self.parameters(case, order)
+
+        if override_input is not None:
+            print "changing poisson rate from {} to {}".format(p_rate,
+                                                               override_input)
+            p_rate = override_input
 
         nest.SetDefaults("iaf_psc_alpha", neuron_params)
         nodes_exc = nest.Create("iaf_psc_alpha", NE)
@@ -633,7 +638,7 @@ class ReferenceBrunel2000(object):
             (-nest.sli_func('LambertWm1', -exp(-1.0 / a) / a) - 1.0 / a)
 
         # maximum of PSP for current of unit amplitude
-        return 1.0 / (tauSyn * tauMem * b / R) * (
+        return exp(1) / (tauSyn * tauMem * b / R) * (
             (exp(-float(t_max / tauMem)) - exp(-float(t_max / tauSyn))) /
             b - t_max * exp(-float(t_max / tauSyn)))
 
@@ -686,7 +691,7 @@ class ReferenceBrunel2000(object):
             nest.SetStatus(spikes, [{"label": "brunel-py-" + pop_name,
                                      "withtime": True, "withgid": True}])
             nest.Connect(list(pop[:num_record]), spikes, syn_spec="excitatory")
-            if num_record_v:
+            if num_record_v and pop_name != 'Ext':
                 # Set up voltage traces recorders for reference network
                 multi = self._recorders[pop_name]['V_m'] = nest.Create(
                     'multimeter', params={'record_from': ['V_m'],

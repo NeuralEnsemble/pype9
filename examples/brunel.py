@@ -6,6 +6,7 @@ from collections import defaultdict
 import ninemlcatalog
 import numpy as np
 from nineml import units as un, Property
+from nineml.user import Initial
 import argparse
 import logging
 import matplotlib
@@ -58,6 +59,10 @@ parser.add_argument('--figsize', nargs=2, type=float, default=(10, 15),
 parser.add_argument('--progress_bar', action='store_true', default=False,
                     help=("Show a progress bar for the simulation time (Can "
                           "cause difficulties in some displays)"))
+parser.add_argument('--input_rate', type=float, default=None,
+                    help="Override the input rate for debugging purposes")
+parser.add_argument('--no_init_v', action='store_true',
+                    help="Don't initialise the membrane voltage")
 args = parser.parse_args(argv)
 
 if not args.simulators and not args.reference:
@@ -129,6 +134,16 @@ if scale != 1.0:
             number.name,
             int(np.ceil(number.value * scale)) * un.unitless))
 
+if args.input_rate is not None:
+    props = model.population('Ext').cell
+    props.set(Property(
+        'rate', args.input_rate * un.Hz))
+
+if args.no_init_v:
+    for pop_name in ('Exc', 'Inh'):
+        props = model.population(pop_name).cell
+        props.set(Initial('v', 0.0 * un.V))
+
 # Create dictionaries to hold the simulation results
 spikes = defaultdict(dict)
 if args.num_record_v:
@@ -165,7 +180,12 @@ if args.build_mode == 'build_only':
 # Create the reference simulation if required
 if args.reference:
     print "Constructing the reference NEST implementation"
-    ref = ReferenceBrunel2000(args.case, args.order)
+    if args.no_init_v:
+        init_v = {'Exc': 0.0, 'Inh': 0.0}
+    else:
+        init_v = None
+    ref = ReferenceBrunel2000(
+        args.case, args.order, override_input=args.input_rate, init_v=init_v)
     ref.record(num_record=args.num_record, num_record_v=args.num_record_v,
                to_plot=pops_to_plot, timestep=args.timestep)
     simulators_to_run.add('nest')
@@ -250,7 +270,7 @@ if mpi_rank == 0:
             plt.xlabel('Times (ms)')
             plt.ylabel('Cell Indices')
             plt.title("Ref. NEST", fontsize=12)
-            if args.num_record_v:
+            if args.num_record_v and pop_name != 'Ext':
                 events, interval = nest.GetStatus(
                     ref.recorders[pop_name]['V_m'],
                     ["events", 'interval'])[0]
