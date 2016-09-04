@@ -13,7 +13,7 @@ parser.add_argument('--nineml_version', type=str, default=None,
 if __name__ == '__main__':
     args = parser.parse_args()
     doc = nineml.read(args.in_file)
-    doc = doc.duplicate()
+    doc = doc.clone()
     kwargs = {}
     if args.nineml_version is not None:
         kwargs['version'] = args.nineml_version
