@@ -27,7 +27,7 @@ def get_pyNN_value(qty, unit_handler, rng):
         if unit_handler.scalar(qty.units) != 1.0:
             raise NotImplementedError(
                 "Cannot currently scale random distributions as required to "
-                "{} get into the correct units".format(qty))
+                "get {} into the correct units".format(qty))
         try:
             rv_name, rv_param_names = random_value_map[
                 qty.value.distribution.standard_library]
@@ -37,6 +37,10 @@ def get_pyNN_value(qty, unit_handler, rng):
                 .format(qty.value.distribution.standard_libary))
         rv_params = [
             qty.value.distribution.property(n).value for n in rv_param_names]
+        # UncertML uses 'rate' parameter whereas PyNN uses 'beta' parameter
+        # (1/rate) to define exponential random distributions.
+        if rv_name == 'exponential':
+            rv_params[0] = 1.0 / rv_params[0]
         # FIXME: Need to scale random distribution to correct units. Should
         #        probably derive PyNN RandomDistribution class to multiply by
         #        when a value is drawn
