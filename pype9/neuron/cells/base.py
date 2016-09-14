@@ -186,10 +186,7 @@ class Cell(base.Cell):
             # variables
             object.__setattr__(self, varname, val)
         else:
-            try:
-                super(Cell, self).__setattr__(varname, val)
-            except:
-                raise
+            super(Cell, self).__setattr__(varname, val)
 
     def __getattr__(self, varname):
         if varname in self.event_receive_port_names:
