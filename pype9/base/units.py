@@ -278,8 +278,15 @@ class UnitHandler(DynamicsDimensionResolver):
             units = cls.from_pq_quantity(elem).units
         else:
             try:
-                value = qty.value
                 units = qty.units
+                if qty.value.nineml_type == 'SingleValue':
+                    value = float(qty.value)
+                elif qty.value.nineml_type == 'ArrayValue':
+                    value = numpy.array(qty.value)
+                else:
+                    raise NotImplementedError(
+                        "RandomValue quantities cannot be scaled at this time "
+                        "({})".format(qty))
             except AttributeError:
                 return qty  # Float or int value quantity
         scaled = value * cls.scalar(units)

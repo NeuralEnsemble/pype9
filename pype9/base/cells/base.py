@@ -19,7 +19,8 @@ import nineml
 from nineml.abstraction import BaseALObject, Dynamics, Parameter
 from nineml.user import (
     BaseULObject, DynamicsProperties, MultiDynamics, MultiDynamicsProperties,
-    Property, Quantity, Definition)
+    Property, Definition)
+from nineml.units import Quantity
 from nineml.base import ContainerObject, DocumentLevelObject
 from nineml.exceptions import name_error, NineMLNameError
 from pype9.exceptions import (

@@ -8,7 +8,7 @@ from nineml.abstraction import (
     Dynamics, AnalogReceivePort, Parameter, Regime, Expression, Constant,
     StateVariable)
 import numpy
-from nineml.user import Quantity
+from nineml.units import Quantity
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:

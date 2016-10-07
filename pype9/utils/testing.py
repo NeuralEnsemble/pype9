@@ -28,7 +28,7 @@ from pype9.nest.units import UnitHandler as UnitHandlerNEST
 from pype9.nest.cells import (
     CellMetaClass as CellMetaClassNEST,
     simulation_controller as simulatorNEST)
-from nineml.user import Quantity
+from nineml.units import Quantity
 from nineml import units as un
 import numpy
 import quantities as pq
