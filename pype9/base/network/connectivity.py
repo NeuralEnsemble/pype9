@@ -5,7 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from nineml.user.projection import (
+from nineml.user.connectionrule import (
     BaseConnectivity, InverseConnectivity as BaseInverseConnectivity)
 from pyNN.parameters import LazyArray
 import numpy
