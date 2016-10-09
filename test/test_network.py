@@ -582,7 +582,7 @@ class TestBrunel2000(TestCase):
             number = props.property('number')
             props.set(Property(
                 number.name,
-                int(numpy.ceil(number.value * scale)) * un.unitless))
+                int(numpy.ceil(float(number.value) * scale)) * un.unitless))
         if simulator == 'nest':
             NetworkClass = NestPype9Network
         elif simulator == 'neuron':

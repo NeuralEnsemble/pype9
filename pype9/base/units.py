@@ -308,7 +308,7 @@ class UnitHandler(DynamicsDimensionResolver):
             qty.units.dimension)
         scale = qty.units.power - exponent
         units_str = cls.compound_to_units_str(compound)
-        return pq.Quantity(10 ** scale * qty.value, units_str)
+        return pq.Quantity(10 ** scale * float(qty.value), units_str)
 
     @classmethod
     def from_pq_quantity(cls, qty):

@@ -313,6 +313,7 @@ class Network(object):
                 raise Pype9RuntimeError(
                     "Cannot handle projections named '{}' (why would you "
                     "choose such a silly name?;)".format(cls.CELL_COMP_NAME))
+            pre_conns_dict = {}
             for proj in receiving:
                 # Flatten response and plasticity into single dynamics class.
                 # TODO: this should be no longer necessary when we move to
@@ -323,6 +324,7 @@ class Network(object):
                 # Get all connections to/from the pre-synaptic cell
                 pre_conns = [pc for pc in proj_conns
                              if 'pre' in (pc.receiver_role, pc.sender_role)]
+                pre_conns_dict[proj.name] = pre_conns
                 # Get all connections between the synapse and the post-synaptic
                 # cell
                 post_conns = [pc for pc in proj_conns if pc not in pre_conns]
@@ -345,7 +347,7 @@ class Network(object):
                     # Convert port connections between synpase and post-
                     # synaptic cell into internal port connections of a multi-
                     # dynamics object
-                    internal_conns.extend(pc.assign_roles(name_map=role2name)
+                    internal_conns.extend(pc.assign_names_from_roles(role2name)
                                           for pc in post_conns)
                     # Expose ports that are needed for the pre-synaptic
                     # connections
@@ -365,6 +367,35 @@ class Network(object):
                 exposures.update(
                     chain(*(pc.expose_ports(role2name) for pc in pre_conns)))
                 role2name['pre'] = cls.CELL_COMP_NAME
+            # Add exposures for connections to/from the pre-synaptic cell in
+            # populations.
+            for proj in sending:
+                # Not required after transition to version 2 syntax
+                synapse, proj_conns = cls._flatten_synapse(proj)
+                # Add send and receive exposures to list
+                exposures.update(chain(*(
+                    pc.expose_ports({'pre': cls.CELL_COMP_NAME})
+                    for pc in proj_conns)))
+            # Add all cell ports as multi-component exposures that aren't
+            # connected internally in case the user would like to save them or
+            # play data into them
+            internal_cell_ports = set(chain(
+                (pc.send_port_name for pc in internal_conns
+                 if pc.sender_name == cls.CELL_COMP_NAME),
+                (pc.receive_port_name for pc in internal_conns
+                 if pc.receiver_name == cls.CELL_COMP_NAME)))
+            exposures.update(
+                BasePortExposure.from_port(p, cls.CELL_COMP_NAME)
+                for p in pop.cell.ports if p.name not in internal_cell_ports)
+            dynamics_properties = MultiDynamicsProperties(
+                name=pop.name, sub_components=sub_components,
+                port_connections=internal_conns, port_exposures=exposures)
+            component = MultiDynamicsWithSynapsesProperties(
+                dynamics_properties, synapses_properties=synapses,
+                connection_property_sets=connection_property_sets)
+            component_arrays[pop.name] = ComponentArray9ML(pop.name, pop.size,
+                                                           component)
+            for proj in receiving:
                 # Create a connection group for each port connection of the
                 # projection to/from the pre-synaptic cell
                 for port_conn in pre_conns:
@@ -395,44 +426,17 @@ class Network(object):
                         delay = 0.0 * un.s
                     # Append sub-component namespaces to the source/receive
                     # ports
-                    ns_port_conn = port_conn.assign_roles(
-                        port_namespaces=role2name)
+                    ns_port_conn = port_conn.append_namespace_from_roles(
+                        role2name)
                     conn_group = ConnectionGroupClass(
                         name,
-                        proj.pre.name, proj.post.name,
+                        component_arrays[proj.pre.name],
+                        component_arrays[proj.post.name],
                         source_port=ns_port_conn.send_port_name,
                         destination_port=ns_port_conn.receive_port_name,
                         connectivity=connectivity,
                         delay=delay)
                     connection_groups[conn_group.name] = conn_group
-            # Add exposures for connections to/from the pre-synaptic cell in
-            # populations.
-            for proj in sending:
-                # Not required after transition to version 2 syntax
-                synapse, proj_conns = cls._flatten_synapse(proj)
-                # Add send and receive exposures to list
-                exposures.update(chain(*(
-                    pc.expose_ports({'pre': cls.CELL_COMP_NAME})
-                    for pc in proj_conns)))
-            # Add all cell ports as multi-component exposures that aren't
-            # connected internally in case the user would like to save them or
-            # play data into them
-            internal_cell_ports = set(chain(
-                (pc.send_port_name for pc in internal_conns
-                 if pc.sender_name == cls.CELL_COMP_NAME),
-                (pc.receive_port_name for pc in internal_conns
-                 if pc.receiver_name == cls.CELL_COMP_NAME)))
-            exposures.update(
-                BasePortExposure.from_port(p, cls.CELL_COMP_NAME)
-                for p in pop.cell.ports if p.name not in internal_cell_ports)
-            dynamics_properties = MultiDynamicsProperties(
-                name=pop.name, sub_components=sub_components,
-                port_connections=internal_conns, port_exposures=exposures)
-            component = MultiDynamicsWithSynapsesProperties(
-                dynamics_properties, synapses_properties=synapses,
-                connection_property_sets=connection_property_sets)
-            component_arrays[pop.name] = ComponentArray9ML(pop.name, pop.size,
-                                                           component)
         return component_arrays, connection_groups
 
     @classmethod
