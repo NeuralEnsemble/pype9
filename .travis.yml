@@ -19,8 +19,8 @@ addons:
       - openmpi-bin
       - libopenmpi-dev
 install:
-  - source ci/install_nest.sh
-  - source ci/install_neuron.sh
+  - source prereq/install_nest.sh
+  - source prereq/install_neuron.sh
   - wget https://github.com/sympy/sympy/archive/master.zip && unzip master.zip && pip install ./sympy-master
   - pip install -r requirements.txt
   - wget https://github.com/tclose/lib9ML/archive/develop.zip && unzip develop.zip && pip install ./lib9ML-develop
