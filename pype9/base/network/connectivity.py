@@ -17,6 +17,7 @@ class PyNNConnectivity(BaseConnectivity):
     def __init__(self, *args, **kwargs):
         super(PyNNConnectivity, self).__init__(*args, **kwargs)
         self._prev_connected = None
+        self._kwargs = kwargs
 
     def connections(self):
         if not self.has_been_sampled():

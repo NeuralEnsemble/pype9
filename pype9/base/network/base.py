@@ -22,10 +22,12 @@ from nineml import Document
 from nineml.exceptions import NineMLNameError
 from nineml.user.multi import (
     MultiDynamicsProperties, append_namespace, BasePortExposure)
-from nineml.user.network import (
+from nineml.user import (
     ComponentArray as ComponentArray9ML,
     EventConnectionGroup as EventConnectionGroup9ML,
-    AnalogConnectionGroup as AnalogConnectionGroup9ML)
+    AnalogConnectionGroup as AnalogConnectionGroup9ML,
+    Selection as Selection9ML,
+    Concatenate as Concatenate9ML)
 from pype9.exceptions import Pype9UnflattenableSynapseException
 from .connectivity import InversePyNNConnectivity
 from ..cells import (
@@ -64,8 +66,8 @@ class Network(object):
             # Convert
             self.nineml.resample_connectivity(
                 connectivity_class=self.ConnectivityClass)
-        flat_comp_arrays, flat_conn_groups = self._flatten_to_arrays_and_conns(
-            self._nineml)
+        (flat_comp_arrays, flat_conn_groups,
+         flat_selections) = self._flatten_to_arrays_and_conns(self._nineml)
         self._component_arrays = {}
         code_gen = self.CellCodeGenerator()
         # Get the modification time of the nineml_model
@@ -74,9 +76,9 @@ class Network(object):
             # Get the latest modification time between the cell dynamics and
             # the network configuration (if the network changes the synapses
             # may change
-            # FIXME: This isn't a very satisfying way to detect changes. Perhaps
-            #        a better way is just to save the XML the code is generated
-            #        from.
+            # FIXME: This isn't a very satisfying way to detect changes.
+            #        Perhaps a better way is just to save the XML the code is
+            #        generated from.
             mod_time = max(
                 code_gen.get_mod_time(
                     nineml_model.population(name).component_class.url),
@@ -87,7 +89,7 @@ class Network(object):
                     self.nineml.url, name, group=self.nineml.name),
                 mod_time=mod_time, **kwargs)
         self._selections = {}
-        for selection in self.nineml.selections:
+        for selection in flat_selections.itervalues():
             # TODO: Assumes that selections are only concatenations (which is
             #       true for 9MLv1.0 but not v2.0)
             self._selections[selection.name] = self.SelectionClass(
@@ -104,14 +106,14 @@ class Network(object):
             self._connection_groups = {}
             for name, conn_group in flat_conn_groups.iteritems():
                 try:
-                    source = self._component_arrays[conn_group.source]
+                    source = self._component_arrays[conn_group.source.name]
                 except KeyError:
-                    source = self._selections[conn_group.source]
+                    source = self._selections[conn_group.source.name]
                 try:
                     destination = self._component_arrays[
-                        conn_group.destination]
+                        conn_group.destination.name]
                 except KeyError:
-                    destination = self._selections[conn_group.destination]
+                    destination = self._selections[conn_group.destination.name]
                 self._connection_groups[name] = self.ConnectionGroupClass(
                     conn_group, source=source, destination=destination,
                     rng=self._rng)
@@ -288,6 +290,8 @@ class Network(object):
         """
         component_arrays = {}
         connection_groups = {}
+        # Create flattened component with all synapses combined with the post-
+        # synaptic cell dynamics using MultiDynamics
         for pop in network_model.populations:
             # Get all the projections that project to/from the given population
             receiving = [p for p in network_model.projections
@@ -313,7 +317,6 @@ class Network(object):
                 raise Pype9RuntimeError(
                     "Cannot handle projections named '{}' (why would you "
                     "choose such a silly name?;)".format(cls.CELL_COMP_NAME))
-            pre_conns_dict = {}
             for proj in receiving:
                 # Flatten response and plasticity into single dynamics class.
                 # TODO: this should be no longer necessary when we move to
@@ -324,7 +327,6 @@ class Network(object):
                 # Get all connections to/from the pre-synaptic cell
                 pre_conns = [pc for pc in proj_conns
                              if 'pre' in (pc.receiver_role, pc.sender_role)]
-                pre_conns_dict[proj.name] = pre_conns
                 # Get all connections between the synapse and the post-synaptic
                 # cell
                 post_conns = [pc for pc in proj_conns if pc not in pre_conns]
@@ -395,49 +397,62 @@ class Network(object):
                 connection_property_sets=connection_property_sets)
             component_arrays[pop.name] = ComponentArray9ML(pop.name, pop.size,
                                                            component)
-            for proj in receiving:
-                # Create a connection group for each port connection of the
-                # projection to/from the pre-synaptic cell
-                for port_conn in pre_conns:
-                    ConnectionGroupClass = (
-                        EventConnectionGroup9ML
-                        if port_conn.communicates == 'event'
-                        else AnalogConnectionGroup9ML)
-                    if len(pre_conns) > 1:
-                        name = ('__'.join((proj.name,
-                                           port_conn.sender_role,
-                                           port_conn.send_port_name,
-                                           port_conn.receiver_role,
-                                           port_conn.receive_port_name)))
-                    else:
-                        name = proj.name
-                    if port_conn.sender_role == 'pre':
-                        connectivity = proj.connectivity
-                        # If a connection from the pre-synaptic cell the delay
-                        # is included
-                        # TODO: In version 2 all port-connections will have
-                        # their own delays
-                        delay = proj.delay
-                    else:
-                        # If a "reverse connection" to the pre-synaptic cell
-                        # the connectivity needs to be inverted
-                        connectivity = InversePyNNConnectivity(
-                            proj.connectivity)
-                        delay = 0.0 * un.s
-                    # Append sub-component namespaces to the source/receive
-                    # ports
-                    ns_port_conn = port_conn.append_namespace_from_roles(
-                        role2name)
-                    conn_group = ConnectionGroupClass(
-                        name,
-                        component_arrays[proj.pre.name],
-                        component_arrays[proj.post.name],
-                        source_port=ns_port_conn.send_port_name,
-                        destination_port=ns_port_conn.receive_port_name,
-                        connectivity=connectivity,
-                        delay=delay)
-                    connection_groups[conn_group.name] = conn_group
-        return component_arrays, connection_groups
+        selections = {}
+        for sel in network_model.selections:
+            selections[sel.name] = Selection9ML(sel.name, Concatenate9ML(
+                *(component_arrays[p.name] for p in sel.operation.items)))
+        arrays_and_selections = dict(
+            chain(component_arrays.iteritems(), selections.iteritems()))
+        # Create ConnectionGroups from each port connection in Projection
+        for proj in network_model.projections:
+            _, proj_conns = cls._flatten_synapse(proj)
+            # Get all connections to/from the pre-synaptic cell
+            pre_conns = [pc for pc in proj_conns
+                         if 'pre' in (pc.receiver_role, pc.sender_role)]
+            # Create a connection group for each port connection of the
+            # projection to/from the pre-synaptic cell
+            for port_conn in pre_conns:
+                ConnectionGroupClass = (
+                    EventConnectionGroup9ML
+                    if port_conn.communicates == 'event'
+                    else AnalogConnectionGroup9ML)
+                if len(pre_conns) > 1:
+                    name = ('__'.join((proj.name,
+                                       port_conn.sender_role,
+                                       port_conn.send_port_name,
+                                       port_conn.receiver_role,
+                                       port_conn.receive_port_name)))
+                else:
+                    name = proj.name
+                if port_conn.sender_role == 'pre':
+                    connectivity = proj.connectivity
+                    # If a connection from the pre-synaptic cell the delay
+                    # is included
+                    # TODO: In version 2 all port-connections will have
+                    # their own delays
+                    delay = proj.delay
+                else:
+                    # If a "reverse connection" to the pre-synaptic cell
+                    # the connectivity needs to be inverted
+                    connectivity = InversePyNNConnectivity(
+                        proj.connectivity)
+                    delay = 0.0 * un.s
+                # Append sub-component namespaces to the source/receive
+                # ports
+                ns_port_conn = port_conn.append_namespace_from_roles(
+                    {'post': cls.CELL_COMP_NAME,
+                     'pre': cls.CELL_COMP_NAME,
+                     'synapse': proj.name})
+                conn_group = ConnectionGroupClass(
+                    name,
+                    arrays_and_selections[proj.pre.name],
+                    arrays_and_selections[proj.post.name],
+                    source_port=ns_port_conn.send_port_name,
+                    destination_port=ns_port_conn.receive_port_name,
+                    connectivity=connectivity,
+                    delay=delay)
+                connection_groups[conn_group.name] = conn_group
+        return component_arrays, connection_groups, selections
 
     @classmethod
     def _extract_connection_property_sets(cls, dynamics_properties, namespace):

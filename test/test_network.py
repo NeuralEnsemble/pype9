@@ -545,11 +545,12 @@ class TestBrunel2000(TestCase):
 
     def test_flatten(self, **kwargs):  # @UnusedVariable
         brunel_network = ninemlcatalog.load('network/Brunel2000/AI/')
-        (component_arrays,
-         connection_groups) = BasePype9Network._flatten_to_arrays_and_conns(
+        (component_arrays, connection_groups,
+         selections) = BasePype9Network._flatten_to_arrays_and_conns(
             brunel_network)
         self.assertEqual(len(component_arrays), 3)
         self.assertEqual(len(connection_groups), 3)
+        self.assertEqual(len(selections), 1)
 
     def _setup(self, simulator):
         if simulator == 'nest':
@@ -957,41 +958,43 @@ class TestNetwork(TestCase):
                     port_connections=[])))
 
         conn_group1 = EventConnectionGroup(
-            'Proj1', 'Pop1', 'Pop2', 'spike__cell', 'spike__psr__Proj1',
+            'Proj1', dyn_array1, dyn_array2, 'spike__cell',
+            'spike__psr__Proj1',
             Connectivity(self.all_to_all, pop1.size, pop2.size), self.delay)
 
         conn_group2 = EventConnectionGroup(
-            'Proj2__pre__spike__synapse__spike__psr', 'Pop2',
-            'Pop1', 'spike__cell', 'spike__psr__Proj2',
+            'Proj2__pre__spike__synapse__spike__psr', dyn_array2,
+            dyn_array1, 'spike__cell', 'spike__psr__Proj2',
             Connectivity(self.all_to_all, pop2.size, pop1.size), self.delay)
 
         conn_group3 = EventConnectionGroup(
             'Proj2__pre__double_spike__synapse__double_spike__psr',
-            'Pop2', 'Pop1', 'double_spike__cell',
+            dyn_array2, dyn_array1, 'double_spike__cell',
             'double_spike__psr__Proj2',
             Connectivity(self.all_to_all, pop2.size, pop1.size), self.delay)
 
         conn_group4 = EventConnectionGroup(
-            'Proj3__pre__spike__synapse__spike__psr', 'Pop3',
-            'Pop2', 'spike__cell', 'spike__psr__Proj3',
+            'Proj3__pre__spike__synapse__spike__psr', dyn_array3,
+            dyn_array2, 'spike__cell', 'spike__psr__Proj3',
             Connectivity(self.all_to_all, pop3.size, pop2.size), self.delay)
 
         conn_group5 = EventConnectionGroup(
             'Proj3__pre__spike__synapse__incoming_spike__pls',
-            'Pop3', 'Pop2', 'spike__cell', 'incoming_spike__pls__Proj3',
+            dyn_array3, dyn_array2,
+            'spike__cell', 'incoming_spike__pls__Proj3',
             Connectivity(self.all_to_all, pop3.size, pop2.size), self.delay)
 
         conn_group6 = EventConnectionGroup(
-            'Proj4', 'Pop3', 'Pop1', 'spike__cell', 'spike__psr__Proj4',
+            'Proj4', dyn_array3, dyn_array1,
+            'spike__cell', 'spike__psr__Proj4',
             Connectivity(self.all_to_all, pop3.size, pop1.size), self.delay)
 
         # =====================================================================
         # Test equality between network automatically generated dynamics arrays
         # and manually generated expected one
         # =====================================================================
-        (component_arrays,
-         connection_groups) = BasePype9Network._flatten_to_arrays_and_conns(
-            network)
+        (component_arrays, connection_groups,
+         _) = BasePype9Network._flatten_to_arrays_and_conns(network)
 
         self.assertEqual(
             component_arrays['Pop1'], dyn_array1,
