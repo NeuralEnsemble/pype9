@@ -20,8 +20,7 @@ Prerequisites
 * NineMLCatalog (for unit-tests,`develop` branch at
   http://github.com/tclose/NineMLCatalog)
 
-NB: PyPe9 may work with earlier versions of the packages listed but it 
-    has not been tested.
+NB: PyPe9 may work with earlier versions of the packages listed but it has not been tested.
  
 Installation
 ------------
