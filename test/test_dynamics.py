@@ -6,7 +6,7 @@ from itertools import chain, repeat
 import ninemlcatalog
 from nineml import units as un
 from nineml.user import Property
-from nineml.user.multi.component import MultiDynamics
+from nineml.user.multi.dynamics import MultiDynamics
 from nineml.user import DynamicsProperties
 from pype9.base.cells import (
     MultiDynamicsWithSynapses, DynamicsWithSynapsesProperties,
