@@ -17,7 +17,7 @@ extern "C" int {{component_name}}_trigger (double t, N_Vector y, double *g, void
     state = &(node.S_);
 
     {% if v_threshold %}
-    v = ITEM(y, {{component_name}}::State_::{{component_class.annotations[PYPE9_NS][MEMBRANE_VOLTAGE]}}_INDEX);
+    v = ITEM(y, {{component_name}}::State_::{{component_class.annotations[PYPE9_NS][BUILD_TRANS][MEMBRANE_VOLTAGE]}}_INDEX);
     g[0] = v - params->{{v_threshold}};
     {% else %}
     g[0] = -1.0;

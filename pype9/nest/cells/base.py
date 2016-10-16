@@ -18,7 +18,7 @@ from nineml.exceptions import NineMLNameError
 from .code_gen import CodeGenerator
 from .controller import simulation_controller
 from pype9.base.cells import base
-from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE
+from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
 from pype9.nest.units import UnitHandler
 from pype9.exceptions import Pype9RuntimeError
 
@@ -115,12 +115,13 @@ class Cell(base.Cell):
 
     def build_name(self, varname):
                 # Get mapped port name if port corresponds to membrane voltage
-        if (varname == self.component_class.annotations[
-                PYPE9_NS][MEMBRANE_VOLTAGE] and
-            MEMBRANE_VOLTAGE in self.build_component_class.annotations[
-                PYPE9_NS]):
-            varname = self.build_component_class.annotations[
-                PYPE9_NS][MEMBRANE_VOLTAGE]
+        try:
+            if varname == self.component_class.annotations[
+                    PYPE9_NS][BUILD_TRANS][MEMBRANE_VOLTAGE]:
+                varname = self.build_component_class.annotations[
+                    PYPE9_NS][BUILD_TRANS][MEMBRANE_VOLTAGE]
+        except NineMLNameError:
+            pass
         return varname
 
     def reset_recordings(self):

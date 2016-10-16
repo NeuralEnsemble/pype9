@@ -16,8 +16,6 @@ from pype9.base.network.cell_wrapper import (
     PyNNCellWrapper as BasePyNNCellWrapper,
     PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
 from ..units import UnitHandler
-from pype9.annotations import (
-    PYPE9_NS, MEMBRANE_VOLTAGE, MECH_TYPE, FULL_CELL_MECH)
 
 logger = logging.getLogger("PyNN")
 

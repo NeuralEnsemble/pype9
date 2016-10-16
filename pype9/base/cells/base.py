@@ -761,7 +761,7 @@ class MultiDynamicsWithSynapsesProperties(WithSynapsesProperties,
 class ConnectionParameterSet(BaseALObject):
 
     nineml_type = 'ConnectionParameterSet'
-    defining_attributes = ('port', 'parameters')
+    defining_attributes = ('_port', '_parameters')
 
     def __init__(self, port, parameters):
         self._port = port
@@ -788,7 +788,7 @@ class ConnectionParameterSet(BaseALObject):
 class ConnectionPropertySet(BaseULObject):
 
     nineml_type = 'ConnectionPropertySet'
-    defining_attributes = ('port', 'properties')
+    defining_attributes = ('_port', '_properties')
 
     def __init__(self, port, properties):
         self._port = port
@@ -811,7 +811,7 @@ class ConnectionPropertySet(BaseULObject):
 class Synapse(BaseALObject):
 
     nineml_type = 'Synapse'
-    defining_attributes = ('name', 'dynamics', 'port_connections')
+    defining_attributes = ('_name', '_dynamics', '_port_connections')
 
     def __init__(self, name, dynamics, port_connections):
         self._name = name
@@ -839,7 +839,7 @@ class Synapse(BaseALObject):
 class SynapseProperties(BaseULObject):
 
     nineml_type = 'SynapseProperties'
-    defining_attributes = ('name', 'dynamics_properties', 'port_connections')
+    defining_attributes = ('_name', '_dynamics_properties', '_port_connections')
 
     def __init__(self, name, dynamics_properties, port_connections):
         self._name = name

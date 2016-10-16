@@ -32,7 +32,7 @@ from pype9.base.cells import base
 from pype9.neuron.units import UnitHandler
 from .controller import simulation_controller
 from pype9.annotations import (
-    PYPE9_NS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
+    PYPE9_NS, BUILD_TRANS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
     MEMBRANE_VOLTAGE, MECH_TYPE, ARTIFICIAL_CELL_MECH)
 from pype9.exceptions import Pype9RuntimeError
 import logging
@@ -74,13 +74,13 @@ class Cell(base.Cell):
             self.recordable[port.name] = None
         for port in chain(self.component_class.analog_send_ports,
                           self.component_class.state_variables):
-            if (port.name != self.component_class.annotations[
-                    PYPE9_NS][MEMBRANE_VOLTAGE]):
+            if port.name != self.component_class.annotations.get(
+                    PYPE9_NS, BUILD_TRANS, MEMBRANE_VOLTAGE, default=None):
                 self.recordable[port.name] = getattr(
                     self._hoc, '_ref_' + port.name)
         # Get the membrane capacitance property if not an artificial cell
         if self.build_component_class.annotations[
-                PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH:
+                PYPE9_NS][BUILD_TRANS][MECH_TYPE] == ARTIFICIAL_CELL_MECH:
             self.cm_prop_name = None
         else:
             # In order to scale the distributed current to the same units as
@@ -91,7 +91,7 @@ class Cell(base.Cell):
             self._sec.L = 10.0
             self._sec.diam = 10.0 / pi
             self.cm_prop_name = self.build_component_class.annotations[
-                PYPE9_NS][MEMBRANE_CAPACITANCE]
+                PYPE9_NS][BUILD_TRANS][MEMBRANE_CAPACITANCE]
             cm_prop = None
             try:
                 try:
@@ -110,8 +110,9 @@ class Cell(base.Cell):
             # Set capacitance in hoc
             specific_cm = pq.Quantity(cm / self.surface_area, 'uF/cm^2')
             self._sec.cm = float(specific_cm)
-            self.recordable[self.component_class.annotations[
-                PYPE9_NS][MEMBRANE_VOLTAGE]] = self.source_section(0.5)._ref_v
+            self.recordable[
+                self.component_class.annotations[PYPE9_NS][BUILD_TRANS][
+                    MEMBRANE_VOLTAGE]] = self.source_section(0.5)._ref_v
         # Set up members required for PyNN
         self.spike_times = h.Vector(0)
         self.traces = {}
@@ -239,7 +240,7 @@ class Cell(base.Cell):
         self._recordings[port_name] = recording = h.Vector()
         if isinstance(port, EventPort):
             if self.build_component_class.annotations[
-                    PYPE9_NS][MECH_TYPE] == ARTIFICIAL_CELL_MECH:
+                    PYPE9_NS][BUILD_TRANS][MECH_TYPE] == ARTIFICIAL_CELL_MECH:
                 self._recorders[port_name] = recorder = h.NetCon(
                     self._hoc, None, sec=self._sec)
             else:
@@ -327,7 +328,7 @@ class Cell(base.Cell):
                        the event port.
         """
         ext_is = self.build_component_class.annotations[
-            PYPE9_NS][EXTERNAL_CURRENTS]
+            PYPE9_NS][BUILD_TRANS][EXTERNAL_CURRENTS]
         try:
             port = self.component_class.port(port_name)
         except KeyError:
@@ -387,9 +388,9 @@ class Cell(base.Cell):
 
     def _escaped_name(self, name):
         if name == self.component_class.annotations[
-                PYPE9_NS][MEMBRANE_VOLTAGE]:
+                PYPE9_NS][BUILD_TRANS][MEMBRANE_VOLTAGE]:
             name = self.build_component_class.annotations[
-                PYPE9_NS][MEMBRANE_VOLTAGE]
+                PYPE9_NS][BUILD_TRANS][MEMBRANE_VOLTAGE]
         return name
 
 

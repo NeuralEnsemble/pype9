@@ -19,12 +19,13 @@ addons:
       - openmpi-bin
       - libopenmpi-dev
 install:
+  - pip install cython
   - source prereq/install_nest.sh
   - source prereq/install_neuron.sh
-  - wget https://github.com/sympy/sympy/archive/master.zip && unzip master.zip && pip install ./sympy-master
+  - pip install https://github.com/sympy/sympy/archive/master.zip
   - pip install -r requirements.txt
-  - wget https://github.com/tclose/lib9ML/archive/develop.zip && unzip develop.zip && pip install ./lib9ML-develop
-  - wget https://github.com/tclose/NineMLCatalog/archive/merging_with_master.zip && unzip merging_with_master.zip && pip install ./NineMLCatalog-merging_with_master  
+  - pip install https://github.com/tclose/lib9ML/archive/develop.zip
+  - pip install https://github.com/tclose/NineMLCatalog/archive/merging_with_master.zip  
   - pip install coveralls
   - pip install .
   - export WD=`pwd`
@@ -36,3 +37,10 @@ script:
   - nosetests test/test_*.py --with-coverage --cover-package=pype9
 after_success:
   coveralls
+cache:
+  directories:
+    - $HOME/nest-2.10.0
+    - $HOME/nrn-7.3
+    - $HOME/build/nest-2.10.0
+    - $HOME/build/nrn-7.3
+    - $HOME/.cache/pip

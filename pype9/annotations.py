@@ -3,7 +3,9 @@ The collection of 9ML annotations used by PyPe9
 """
 
 # The overall PyPe9 namespace
-PYPE9_NS = 'http://pype9.net'
+PYPE9_NS = 'http://pype9.org'
+
+BUILD_TRANS = 'NeuronTranslations'
 
 # Basic NEURON section quantities (L, cm, v, etc...)
 MEMBRANE_VOLTAGE = 'MembraneVoltage'

@@ -69,6 +69,18 @@ class PyNNConnectivity(BaseConnectivity):
         return LazyArray(~numpy.isnan(
             self._prev_connected.get(['weight'], 'array', gather='all')[0]))
 
+    def clone(self, memo=None, **kwargs):
+        if memo is None:
+            memo = {}
+        try:
+            # See if the attribute has already been cloned in memo
+            clone = memo[id(self)]
+        except KeyError:
+            clone = self.__class__(
+                self.rule_properties.clone(memo=memo, **kwargs),
+                self.source_size, self.destination_size, **self._kwargs)
+        return clone
+
 
 class InversePyNNConnectivity(BaseInverseConnectivity):
 

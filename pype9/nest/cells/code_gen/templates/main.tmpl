@@ -445,11 +445,13 @@ void {{component_name}}::init_state_(const Node& proto) {
 {% endif %}
 {% endfor %} {
 // Check constraints on parameters
+{#
 {% for param in component_class.parameters %}
     {% for constraint in param.constraints %}
     {{constraint}}
     {% endfor %}
 {% endfor %}
+#}
 }
 
 /************************************

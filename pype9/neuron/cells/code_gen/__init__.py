@@ -40,7 +40,7 @@ except ImportError:
     KineticsClass = type(None)
 from pype9.annotations import (
     PYPE9_NS, ION_SPECIES, MEMBRANE_VOLTAGE, MEMBRANE_CAPACITANCE,
-    TRANSFORM_SRC, TRANSFORM_DEST, NONSPECIFIC_CURRENT,
+    TRANSFORM_SRC, TRANSFORM_DEST, NONSPECIFIC_CURRENT, BUILD_TRANS,
     EXTERNAL_CURRENTS, NO_TIME_DERIVS, INTERNAL_CONCENTRATION,
     EXTERNAL_CONCENTRATION, HAS_TIME_DERIVS, MECH_TYPE, FULL_CELL_MECH,
     SUB_COMPONENT_MECH, ARTIFICIAL_CELL_MECH)
@@ -226,12 +226,15 @@ class CodeGenerator(BaseCodeGenerator):
             if orig_v.name != 'v':
                 trfrm.rename_symbol(orig_v.name, 'v')
                 v = trfrm.state_variable('v')
-                v.annotations[PYPE9_NS][TRANSFORM_SRC] = orig_v
+                v.annotations.set(PYPE9_NS, BUILD_TRANS,
+                                  TRANSFORM_SRC, orig_v)
             else:
                 v = trfrm.state_variable('v')
             # Add annotations to the original and build models
-            component_class.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = orig_v.name  # @IgnorePep8
-            trfrm.annotations[PYPE9_NS][MEMBRANE_VOLTAGE] = 'v'
+            component_class.annotations.set(PYPE9_NS, BUILD_TRANS,
+                                            MEMBRANE_VOLTAGE, orig_v.name)  # @IgnorePep8
+            trfrm.annotations.set(PYPE9_NS, BUILD_TRANS,
+                                  MEMBRANE_VOLTAGE, 'v')
             # Remove associated analog send port if present
             try:
                 trfrm.remove(trfrm.analog_send_port('v'))
@@ -241,12 +244,14 @@ class CodeGenerator(BaseCodeGenerator):
             if isinstance(v, StateVariable):
                 self._transform_full_component(trfrm, component_class,
                                                trfrm_properties, v, **kwargs)
-                trfrm.annotations[PYPE9_NS][MECH_TYPE] = FULL_CELL_MECH
+                trfrm.annotations.set(PYPE9_NS, BUILD_TRANS,
+                                      MECH_TYPE, FULL_CELL_MECH)
             else:
                 raise NotImplementedError(
                     "Build sub-components is not supported in PyPe9 v0.1")
         else:
-            trfrm.annotations[PYPE9_NS][MECH_TYPE] = ARTIFICIAL_CELL_MECH
+            trfrm.annotations.set(PYPE9_NS, BUILD_TRANS, MECH_TYPE,
+                                  ARTIFICIAL_CELL_MECH)
         # -----------------------------------------------------------------
         # Validate the transformed component class and construct prototype
         # -----------------------------------------------------------------
@@ -308,8 +313,9 @@ class CodeGenerator(BaseCodeGenerator):
                 qty = kwargs.get('default_capacitance', 1.0 * un.nF)
                 if trfrm_properties:
                     trfrm_properties.add(Property('cm___pype9', qty))
-        cm.annotations[PYPE9_NS][TRANSFORM_SRC] = None
-        trfrm.annotations[PYPE9_NS][MEMBRANE_CAPACITANCE] = cm.name
+        cm.annotations.set(PYPE9_NS, BUILD_TRANS, TRANSFORM_SRC,  None)
+        trfrm.annotations.set(PYPE9_NS, BUILD_TRANS,
+                              MEMBRANE_CAPACITANCE, cm.name)
         # -----------------------------------------------------------------
         # Replace membrane voltage equation with membrane current
         # -----------------------------------------------------------------
@@ -347,7 +353,8 @@ class CodeGenerator(BaseCodeGenerator):
         # Add membrane current along with a analog send port
         trfrm.add(memb_i)
         i_port = AnalogSendPort('i___pype9', dimension=un.current)
-        i_port.annotations[PYPE9_NS][ION_SPECIES] = NONSPECIFIC_CURRENT
+        i_port.annotations.set(PYPE9_NS, BUILD_TRANS, ION_SPECIES,
+                               NONSPECIFIC_CURRENT)
         trfrm.add(i_port)
         # Remove membrane currents that match the membrane current in the
         # outer scope
@@ -369,10 +376,12 @@ class CodeGenerator(BaseCodeGenerator):
                     trans.add(StateAssignment('v_clamp___pype9',
                                               v_clamp_rhs))
         # -----------------------------------------------------------------
-        trfrm.annotations[PYPE9_NS][NO_TIME_DERIVS] = (
+        trfrm.annotations.set(
+            PYPE9_NS, BUILD_TRANS, NO_TIME_DERIVS,
             ['v'] + [sv for sv in trfrm.state_variable_names
                      if sv not in has_td])
-        trfrm.annotations[PYPE9_NS][HAS_TIME_DERIVS] = bool(len(has_td))
+        trfrm.annotations.set(PYPE9_NS, BUILD_TRANS, HAS_TIME_DERIVS,
+                              bool(len(has_td)))
         # -----------------------------------------------------------------
         # Remove the external input currents
         # -----------------------------------------------------------------
@@ -422,7 +431,8 @@ class CodeGenerator(BaseCodeGenerator):
             if ext_is:
                 print ("Guessing '{}' are external currents to be removed"
                        .format(ext_is))
-        trfrm.annotations[PYPE9_NS][EXTERNAL_CURRENTS] = ext_is
+        trfrm.annotations.set(PYPE9_NS, BUILD_TRANS,
+                              EXTERNAL_CURRENTS, ext_is)
         # Remove external input current ports (as NEURON handles them)
         for ext_i in ext_is:
             trfrm.remove(ext_i)

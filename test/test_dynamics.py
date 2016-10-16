@@ -377,7 +377,6 @@ class TestDynamics(TestCase):
                 simulatorNEURON.clear(rng_seed=NEURON_RNG_SEED)
                 neuron.h.dt = dt
             elif sim_name == 'nest':
-                pass
 #                 Run NEST simulation
 #                 import nest
 #                 nest.ResetKernel()
