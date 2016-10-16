@@ -5,16 +5,16 @@ TITLE Spiking node generated from 9ML using PyPe9 version {{version}} at '{{time
 NEURON {
 {% if component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] == SUB_COMPONENT_MECH %}
     SUFFIX {{component_name}}
-    {% for species, ports in component_class.annotations[PYPE9_NS][BUILD_TRANS][ION_SPECIES].iteritems() %}
+    {% for species, port_names in component_class.annotations[PYPE9_NS][BUILD_TRANS][ION_SPECIES].items() %}
         {% if species == NONSPECIFIC_CURRENT %}
     NONSPECIFIC_CURRENT {% for port in component_class.analog_send_ports if port.dimension == units.currentDensity %}{{port.name}}{% if not loop.last %}, {% endif %}{% endfor %}
         {% else %}
     USEION {{species}} 
-            {%- for p in ports if p.mode == 'recv' %}
-                {%- if loop.first %} READ{% endif %} {{p.name}}{% if not loop.last %},{% endif %}
+            {%- for p in port_names if component_class.port(p).mode == 'recv' %}
+                {%- if loop.first %} READ{% endif %} {{p}}{% if not loop.last %},{% endif %}
             {%- endfor %}
-            {%- for p in ports if p.mode == 'send' %}
-                {%- if loop.first %} WRITE{% endif %} {{p.name}}{% if not loop.last %},{% endif %}
+            {%- for p in port_names if component_class.port(p).mode == 'send' %}
+                {%- if loop.first %} WRITE{% endif %} {{p}}{% if not loop.last %},{% endif %}
             {%- endfor %}
         {% endif %}
 
@@ -165,7 +165,7 @@ STATE {
 
 
 BREAKPOINT {
-    {% if component_class.annotations[PYPE9_NS][BUILD_TRANS][HAS_TIME_DERIVS] %}
+    {% if component_class.annotations[PYPE9_NS][BUILD_TRANS][NUM_TIME_DERIVS] != '0'  %}
     SOLVE states METHOD {{ode_solver}}
     {% endif %}
     {% for alias, scaled_expr, _ in unit_handler.scale_aliases(component_class.required_for(list(component_class.all_time_derivatives()) + list(component_class.analog_send_ports)).expressions) %}
@@ -185,15 +185,15 @@ BREAKPOINT {
 }
 
 
-    {% if component_class.annotations[PYPE9_NS][BUILD_TRANS][HAS_TIME_DERIVS] %}
+    {% if component_class.annotations[PYPE9_NS][BUILD_TRANS][NUM_TIME_DERIVS] != '0' %}
 DERIVATIVE states {
-        {% for sv in component_class.state_variables if sv.name not in component_class.annotations[PYPE9_NS][BUILD_TRANS][NO_TIME_DERIVS] %}
+        {% for sv in component_class.state_variables if sv.name not in component_class.annotations[PYPE9_NS][BUILD_TRANS][NO_TIME_DERIVS].split(',') %}
     {{sv.name}}' = deriv_{{sv.name}}({{component_class.required_for(component_class.all_time_derivatives(sv)).state_variable_names | join(', ')}})
         {% endfor %}
 }
     {% endif %}
 
-    {% for sv in component_class.state_variables if sv.name not in component_class.annotations[PYPE9_NS][BUILD_TRANS][NO_TIME_DERIVS] %}
+    {% for sv in component_class.state_variables if sv.name not in component_class.annotations[PYPE9_NS][BUILD_TRANS][NO_TIME_DERIVS].split(',') %}
 FUNCTION deriv_{{sv.name}}(
         {%- for sv, units in unit_handler.assign_units_to_variables(component_class.required_for(component_class.all_time_derivatives(sv)).state_variables) -%}
         {{sv.name}} ({{units}}){%- if loop.last %}{% else %}, {% endif -%}

@@ -42,7 +42,7 @@ from pype9.annotations import (
     PYPE9_NS, ION_SPECIES, MEMBRANE_VOLTAGE, MEMBRANE_CAPACITANCE,
     TRANSFORM_SRC, TRANSFORM_DEST, NONSPECIFIC_CURRENT, BUILD_TRANS,
     EXTERNAL_CURRENTS, NO_TIME_DERIVS, INTERNAL_CONCENTRATION,
-    EXTERNAL_CONCENTRATION, HAS_TIME_DERIVS, MECH_TYPE, FULL_CELL_MECH,
+    EXTERNAL_CONCENTRATION, NUM_TIME_DERIVS, MECH_TYPE, FULL_CELL_MECH,
     SUB_COMPONENT_MECH, ARTIFICIAL_CELL_MECH)
 import logging
 
@@ -378,10 +378,10 @@ class CodeGenerator(BaseCodeGenerator):
         # -----------------------------------------------------------------
         trfrm.annotations.set(
             PYPE9_NS, BUILD_TRANS, NO_TIME_DERIVS,
-            ['v'] + [sv for sv in trfrm.state_variable_names
-                     if sv not in has_td])
-        trfrm.annotations.set(PYPE9_NS, BUILD_TRANS, HAS_TIME_DERIVS,
-                              bool(len(has_td)))
+            ','.join(['v'] + [sv for sv in trfrm.state_variable_names
+                              if sv not in has_td]))
+        trfrm.annotations.set(PYPE9_NS, BUILD_TRANS, NUM_TIME_DERIVS,
+                              len(has_td))
         # -----------------------------------------------------------------
         # Remove the external input currents
         # -----------------------------------------------------------------
@@ -431,8 +431,8 @@ class CodeGenerator(BaseCodeGenerator):
             if ext_is:
                 print ("Guessing '{}' are external currents to be removed"
                        .format(ext_is))
-        trfrm.annotations.set(PYPE9_NS, BUILD_TRANS,
-                              EXTERNAL_CURRENTS, ext_is)
+        trfrm.annotations.set(PYPE9_NS, BUILD_TRANS, EXTERNAL_CURRENTS,
+                              ','.join(p.name for p in ext_is))
         # Remove external input current ports (as NEURON handles them)
         for ext_i in ext_is:
             trfrm.remove(ext_i)

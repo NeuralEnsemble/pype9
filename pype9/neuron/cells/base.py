@@ -328,7 +328,7 @@ class Cell(base.Cell):
                        the event port.
         """
         ext_is = self.build_component_class.annotations[
-            PYPE9_NS][BUILD_TRANS][EXTERNAL_CURRENTS]
+            PYPE9_NS][BUILD_TRANS][EXTERNAL_CURRENTS].split(',')
         try:
             port = self.component_class.port(port_name)
         except KeyError:
@@ -355,11 +355,10 @@ class Cell(base.Cell):
             self._inputs['vstim'] = vstim
             self._input_auxs.extend((vstim_times, vstim_con))
         else:
-            if port_name not in (p.name for p in ext_is):
+            if port_name not in ext_is:
                 raise NotImplementedError(
                     "Can only play into external current ports ('{}'), not "
-                    "'{}' port.".format("', '".join(p.name for p in ext_is),
-                                        port_name))
+                    "'{}' port.".format("', '".join(ext_is), port_name))
             iclamp = h.IClamp(0.5, sec=self._sec)
             iclamp.delay = 0.0
             iclamp.dur = 1e12
