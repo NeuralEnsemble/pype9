@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 import os
 from setuptools import setup, find_packages, Extension  # @UnresolvedImport
-from os.path import dirname, abspath, join, splitext
+# from setuptools.command.install import install
+from os.path import dirname, abspath, join, splitext, sep
+import subprocess as sp
+import platform
 
 
 # Generate the package data
@@ -16,25 +19,33 @@ for path, dirs, files in os.walk(package_dir, topdown=True):
 
 packages = [p for p in find_packages() if p != 'test']
 
-# Attempt to find the prefix of the gsl and gslcblas libraries
-try:
+# Attempt to find the prefix of the gsl and gslcblas libraries used by NEST
+
+
+# Check /usr/local to see if there is a version of libgsl and libgslcblas there
+usr_local_libs = os.listdir(join('/usr', 'local'))
+if (bool(1 for l in usr_local_libs if l.startswith('libgsl.')) and
+        bool(1 for l in usr_local_libs if l.startswith('libgslcblas.'))):
+    gsl_prefixes = []  # Assume they are already on system path
+else:
     # Check for the version of gsl linked to the pynestkernel
-    import nest
-    import subprocess as sp
-    import os.path
-    import platform
-    cwd = os.getcwd()
-    os.chdir(dirname(nest.__file__))
-    if platform.platform().startswith('Darwin'):
-        cmd = 'otool -L'
-    else:
-        cmd = 'ldd'
-    ldd_out = sp.check_output('{} pynestkernel.so', shell=True)
-    gsl_prefixes = set(dirname(dirname(abspath(l.split()[0])))
-                       for l in ldd_out.split('\n\t') if 'libgsl' in l)
-except ImportError:
-    raise Exception(
-        "Could not import NEST to determine the location of GSL")
+    try:
+        import nest
+        cwd = os.getcwd()
+        os.chdir(dirname(nest.__file__))
+        if platform.platform().startswith('Darwin'):
+            ldd_cmd = 'otool -L'
+        else:
+            ldd_cmd = 'ldd'
+        ldd_out = sp.check_output('{} pynestkernel.so'.format(ldd_cmd),
+                                  shell=True)
+        gsl_prefixes = set(dirname(dirname(abspath(l.split()[0]))) + sep
+                           for l in ldd_out.split('\n\t') if 'libgsl' in l)
+        assert gsl_prefixes, ("NEST not linked to GSL? ldd output:\n{}"
+                              .format(ldd_out))
+    except ImportError:
+        raise Exception("Could not find gsl libraries in /usr/local or import "
+                        "NEST to determine the location of the GSL it uses")
 
 
 # Set up the required extension to handle random number generation using GSL
