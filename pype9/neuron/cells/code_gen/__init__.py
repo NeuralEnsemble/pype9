@@ -69,7 +69,23 @@ class CodeGenerator(BaseCodeGenerator):
 
     def __init__(self, gsl_path=None):
         super(CodeGenerator, self).__init__()
+        # FIXME: This approach is more robust than relying on nrnivmodl being
+        #        on the system path.
         # Find the path to nrnivmodl
+#         neuron_home = neuron.h.neuronhome()
+#         arch_list = [platform.machine(), 'i686', 'x86_64', 'powerpc', 'umac']
+#         nrnivmodl_path = None
+#         for arch in arch_list:
+#             path = os.path.join(neuron.h.neuronhome(), '..', '..', arch,
+#                                           'bin', 'nrnivmodl')
+#             if os.path.exists(path):
+#                 nrnivmodl_path = path
+#         if nrnivmodl_path is None:
+#             print ("WARNING: could not find nrnivmodl at expected location '{}' "
+#                    "so wasn't able to compile GSL random distribution wrapper "
+#                    "required for random variables in generated neuron code"
+#                    .format(os.path.join(neuron.h.neuronhome(), '..', '..',
+#                                         '<arch-name>', 'bin', 'nrnivmodl')))
         self.nrnivmodl_path = self.path_to_exec('nrnivmodl')
         self.modlunit_path = self.path_to_exec('modlunit')
         self.nrnivmodl_flags = ['-L' + self.LIBNINEMLNRN_PATH, '-lninemlnrn',
