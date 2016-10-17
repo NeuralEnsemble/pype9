@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import sys
 from setuptools import setup, find_packages, Extension  # @UnresolvedImport
 # from setuptools.command.install import install
 from os.path import dirname, abspath, join, splitext, sep
@@ -22,30 +23,57 @@ packages = [p for p in find_packages() if p != 'test']
 # Attempt to find the prefix of the gsl and gslcblas libraries used by NEST
 
 
-# Check /usr/local to see if there is a version of libgsl and libgslcblas there
-usr_local_libs = os.listdir(join('/usr', 'local'))
-if (bool(1 for l in usr_local_libs if l.startswith('libgsl.')) and
-        bool(1 for l in usr_local_libs if l.startswith('libgslcblas.'))):
-    gsl_prefixes = []  # Assume they are already on system path
+# Check /usr and /usr/local to see if there is a version of libgsl and
+# libgslcblas there
+system_gsl = set()
+for system_path in ('/usr', join('/usr', 'local')):
+    system_libs = os.listdir(system_path)
+    if any(l.startswith('libgsl.') or l.startswith('libgslcblas.')
+           for l in system_libs):
+        system_gsl.add(system_path)
+
+# Check for the version of gsl linked to the pynestkernel
+try:
+    # Import NEST with suppressed NEST splash
+    import nest
+    cwd = os.getcwd()
+    os.chdir(dirname(nest.__file__))
+    if platform.platform().startswith('Darwin'):
+        ldd_cmd = 'otool -L'
+    else:
+        ldd_cmd = 'ldd'
+    ldd_out = sp.check_output('{} pynestkernel.so'.format(ldd_cmd),
+                              shell=True)
+    nest_gsl = set(dirname(dirname(abspath(l.split()[0]))) + sep
+                       for l in ldd_out.split('\n\t') if 'libgsl' in l)
+    assert nest_gsl, "NEST not linked to GSL? ldd output:\n{}".format(ldd_out)
+except ImportError:
+    nest_gsl = set()  # Assume they are already on system path
+    print ("WARNING, Could not import NEST to determine which gsl libraries it"
+           " uses")
+
+if system_gsl:
+    if nest_gsl and nest_gsl != system_gsl:
+        raise Exception(
+            "System GSL version found at '{}' is different from that linked "
+            "to NEST at '{}'. Please specify which version you would like to "
+            "use in setup.cfg in the include-dirs and link-dirs options under "
+            "[build_ext]".format("', '".join(nest_gsl),
+                                 "', '".join(system_gsl)))
+    else:
+        print ("Using system gsl version at '{}'"
+               .format("', '".join(system_gsl)))
+        gsl_prefixes = system_gsl
+elif nest_gsl:
+    print ("Using gsl version linked to NEST at '{}'"
+           .format("', '".join(nest_gsl)))
+    gsl_prefixes = nest_gsl
 else:
-    # Check for the version of gsl linked to the pynestkernel
-    try:
-        import nest
-        cwd = os.getcwd()
-        os.chdir(dirname(nest.__file__))
-        if platform.platform().startswith('Darwin'):
-            ldd_cmd = 'otool -L'
-        else:
-            ldd_cmd = 'ldd'
-        ldd_out = sp.check_output('{} pynestkernel.so'.format(ldd_cmd),
-                                  shell=True)
-        gsl_prefixes = set(dirname(dirname(abspath(l.split()[0]))) + sep
-                           for l in ldd_out.split('\n\t') if 'libgsl' in l)
-        assert gsl_prefixes, ("NEST not linked to GSL? ldd output:\n{}"
-                              .format(ldd_out))
-    except ImportError:
-        raise Exception("Could not find gsl libraries in /usr/local or import "
-                        "NEST to determine the location of the GSL it uses")
+    raise Exception(
+        "No version of GSL found in system paths or by inspecting libs linked"
+        "to NEST. Please install GNU Scientific Library if necessary and/or "
+        "specify its location in setup.cfg in both include-dirs and link-dirs "
+        "options of [build_ext]")
 
 
 # Set up the required extension to handle random number generation using GSL
