@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 import os
-import sys
 from setuptools import setup, find_packages, Extension  # @UnresolvedImport
-# from setuptools.command.install import install
-from os.path import dirname, abspath, join, splitext, sep
-import subprocess as sp
-import platform
+from os.path import dirname, join, splitext
 
 
 # Generate the package data
@@ -20,29 +16,12 @@ for path, dirs, files in os.walk(package_dir, topdown=True):
 
 packages = [p for p in find_packages() if p != 'test']
 
-# Check /usr and /usr/local to see if there is a version of libgsl and
-# libgslcblas there
-found_libgsl = False
-found_libgslcblas = False
-for pth in ('/usr', join('/usr', 'local')):
-    libs = os.listdir(pth)
-    if any(l.startswith('libgsl.') for l in libs):
-        found_libgsl = True
-    if any(l.startswith('libgslcblas.') for l in libs):
-        found_libgslcblas = True
-
-#if not found_libgsl or not found_libgslcblas:
-#    raise Exception(
-#        "Could not find GNU Scientific Library on system paths or those "
-#        "defined in setup.cfg. Please ensure a recent version is installed "
-#        "and the path is appened to include-dirs and library-dirs in "
-#        "setup.cfg.")
-
 # Set up the required extension to handle random number generation using GSL
 # RNG in NEURON components
 libninemlnrn = Extension("libninemlnrn",
-                         sources=[os.path.join('neuron', 'cells', 'code_gen',
-                                               'libninemlnrn', 'nineml.cpp')],
+                         sources=[join(package_dir, 'neuron', 'cells',
+                                       'code_gen', 'libninemlnrn',
+                                       'nineml.cpp')],
                          libraries=['m', 'gslcblas', 'gsl', 'c'],
                          language="c++")
 
@@ -70,5 +49,5 @@ setup(
                  'Programming Language :: Python :: 2',
                  'Topic :: Scientific/Engineering'],
     install_requires=['pyNN', 'diophantine', 'neo'],  # 'nineml',
-    tests_require=['nose', 'ninemlcatalog']
-)
+    tests_require=['nose', 'ninemlcatalog'],
+    ext_modules=[libninemlnrn])
