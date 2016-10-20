@@ -29,6 +29,7 @@ setup(
     name="pype9",
     version="0.1a",
     package_data={package_name: package_data},
+    scripts=[join('bin', 'pype9')],
     packages=packages,
     author="The PyPe9 Team (see AUTHORS)",
     author_email="tom.g.close@gmail.com",

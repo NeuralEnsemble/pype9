@@ -61,7 +61,7 @@ parser.add_argument('--max_delay', type=float, default=10.0,
                     help="Minimum delay used for the simulation")
 
 
-if __name__ == '__main__':
+def run():
 
     import pyNN.neuron  # @UnusedImport - imports PyNN mechanisms
     try:

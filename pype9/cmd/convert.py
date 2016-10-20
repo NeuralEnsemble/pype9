@@ -10,7 +10,7 @@ parser.add_argument('out_file', help="Converted filename")
 parser.add_argument('--nineml_version', type=str, default=None,
                     help="The version of nineml to output")
 
-if __name__ == '__main__':
+def run():
     args = parser.parse_args()
     doc = nineml.read(args.in_file)
     doc = doc.clone()

@@ -5,7 +5,8 @@ from argparse import ArgumentParser
 
 parser = ArgumentParser(description=__doc__)
 
-if __name__ == '__main__':
+
+def run():
     import os.path
     from pype9.neuron.importer.hoc import HocImporter
 
