@@ -62,7 +62,6 @@ parser.add_argument('--max_delay', type=float, default=10.0,
 
 
 def run():
-
     import pyNN.neuron  # @UnusedImport - imports PyNN mechanisms
     try:
         import pylab as plt
