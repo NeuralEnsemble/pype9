@@ -13,14 +13,9 @@ import sys
 import os.path
 import subprocess as sp
 
-cmd_dir = os.path.dirname(__file__)
-
 
 def get_parser(cmd):
-    sys.path.insert(0, cmd_dir)
-    parser = __import__(cmd).parser
-    sys.path.pop(0)
-    return parser
+    return __import__('pype9.cmd.' + cmd).parser
 
 
 cmds = [s[:-3] for s in os.listdir(cmd_dir)

@@ -71,7 +71,7 @@ if __name__ == '__main__':
     import neo
     import nineml
     from pype9.exceptions import Pype9RuntimeError
-    from pype9.testing import Comparer
+    from pype9.utils.testing import Comparer, input_step
 
     args = parser.parse_args()
 
@@ -126,8 +126,8 @@ if __name__ == '__main__':
         input_signal = (port_name, block[0])
     elif args.input_step is not None:
         port_name, start_time, amplitude = args.input_step
-        input_signal = Comparer.input_step(port_name, amplitude, start_time,
-                                           args.duration, args.dt)
+        input_signal = input_step(port_name, amplitude, start_time,
+                                  args.duration, args.dt)
     else:
         input_signal = None
     if args.input_train is not None:

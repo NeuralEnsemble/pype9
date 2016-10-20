@@ -19,11 +19,11 @@ packages = [p for p in find_packages() if p != 'test']
 # Set up the required extension to handle random number generation using GSL
 # RNG in NEURON components
 libninemlnrn = Extension("libninemlnrn",
-                         sources=[join(package_dir, 'neuron', 'cells',
-                                       'code_gen', 'libninemlnrn',
-                                       'nineml.cpp')],
-                         libraries=['m', 'gslcblas', 'gsl', 'c'],
-                         language="c++")
+                       sources=[join(package_dir, 'neuron', 'cells',
+                                     'code_gen', 'libninemlnrn',
+                                     'nineml.cpp')],
+                       libraries=['m', 'gslcblas', 'gsl', 'c'],
+                       language="c++")
 
 setup(
     name="pype9",
