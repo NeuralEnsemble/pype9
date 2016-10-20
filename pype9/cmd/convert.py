@@ -10,9 +10,9 @@ parser.add_argument('--nineml_version', type=str, default=None,
                     help="The version of nineml to output")
 
 
-def run():
+def run(argv):
     import nineml
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     doc = nineml.read(args.in_file)
     doc = doc.clone()
     kwargs = {}

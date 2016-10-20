@@ -61,18 +61,17 @@ parser.add_argument('--max_delay', type=float, default=10.0,
                     help="Minimum delay used for the simulation")
 
 
-def run():
+def run(argv):
+    args = parser.parse_args(argv)
     import pyNN.neuron  # @UnusedImport - imports PyNN mechanisms
     try:
-        import pylab as plt
+        import pylab as plt  # @UnusedImport
     except ImportError:
-        plt = None
+        plt = None  # @UnusedVariable
     import neo
     import nineml
     from pype9.exceptions import Pype9RuntimeError
     from pype9.utils.testing import Comparer, input_step
-
-    args = parser.parse_args()
 
     if args.nineml is None and args.neuron is None and args.nest is None:
         raise Pype9RuntimeError("No simulations specified")

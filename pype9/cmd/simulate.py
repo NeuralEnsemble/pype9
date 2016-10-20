@@ -6,5 +6,5 @@ from argparse import ArgumentParser
 parser = ArgumentParser(description=__doc__)
 
 
-def run():
+def run(argv):
     raise NotImplementedError

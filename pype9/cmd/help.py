@@ -10,7 +10,7 @@ parser.add_argument('cmd', default=None,
 
 # List of available cmds
 def all_cmds():
-    return dir(pype9.cmd)
+    return [c for c in dir(pype9.cmd) if not c.startswith('_')]
 
 
 def get_parser(cmd):
@@ -19,8 +19,8 @@ def get_parser(cmd):
 
 
 def available_cmds_message():
-    return ("\nAvailable PyPe9 commands:\n\n{}".format(
-            "\n".join('  {} - {}'.format(c, get_parser(c).description)
+    return ("Available PyPe9 commands:\n{}".format(
+            "\n".join('  {} - {}'.format(c, get_parser(c).description.strip())
                       for c in all_cmds())))
 
 
@@ -33,3 +33,7 @@ def run(argv):
 
 
 import pype9.cmd  # @IgnorePep8
+
+if __name__ == '__main__':
+    import sys
+    run(sys.argv[1:])

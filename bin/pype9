@@ -14,8 +14,7 @@ import pype9.cmd
 
 
 if len(sys.argv) < 2:
-    print "No command argument provided. {}".format(
+    print "No command argument provided.\n\n{}".format(
         pype9.cmd.help.available_cmds_message())
-
-
-getattr(pype9.cmd, sys.argv[1]).run(sys.argv[2:])
+else:
+    getattr(pype9.cmd, sys.argv[1]).run(sys.argv[2:])
