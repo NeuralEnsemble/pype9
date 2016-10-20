@@ -25,10 +25,10 @@ def available_cmds_message():
 
 
 def run(argv):
-    args = parser.parse_args(argv)
-    if args.cmd is None:
+    if not argv:
         print available_cmds_message()
     else:
+        args = parser.parse_args(argv)
         get_parser(args.cmd).print_help()
 
 
