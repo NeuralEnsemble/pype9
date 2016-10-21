@@ -16,14 +16,15 @@ for path, dirs, files in os.walk(package_dir, topdown=True):
 
 packages = [p for p in find_packages() if p != 'test']
 
+
 # Set up the required extension to handle random number generation using GSL
 # RNG in NEURON components
-libninemlnrn = Extension("libninemlnrn",
-                         sources=[join(package_dir, 'neuron', 'cells',
-                                       'code_gen', 'libninemlnrn',
-                                       'nineml.cpp')],
+libninemlnrn = Extension(('pype9.neuron.cells.code_gen.libninemlnrn.'
+                          'libninemlnrn'),
+                         sources=['pype9/neuron/cells/code_gen/libninemlnrn/'
+                                  'nineml.cpp'],
                          libraries=['m', 'gslcblas', 'gsl', 'c'],
-                         anguage="c++")
+                         language="c++")
 
 setup(
     name="pype9",
