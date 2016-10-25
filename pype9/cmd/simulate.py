@@ -7,7 +7,10 @@ from ._utils import existing_file
 
 parser = ArgumentParser(description=__doc__)
 parser.add_argument('model_file', type=existing_file,
-                    help="Path to nineml model file which to simulate")
+                    help=("Path to nineml model file which to simulate. "
+                          "It can be a relative path, absolute path, URL or "
+                          "if the path starts with '//' it will be interpreted"
+                          "as a ninemlcatalog path"))
 parser.add_argument('simulator', choices=('neuron', 'nest'), type=str,
                     help="Which simulator backend to use")
 parser.add_argument('time', type=float,
@@ -37,6 +40,7 @@ def run(argv):
     Runs the simulation script from the provided arguments
     """
     import nineml
+    import ninemlcatalog
     from nineml import units as un
     from pype9.exceptions import Pype9UsageError
     import neo.io
@@ -53,7 +57,10 @@ def run(argv):
             .format(args.simulator))
 
     # Load the model from the provided arguments
-    doc = nineml.read(args.model_file)
+    if args.model_file.startswith('//'):
+        doc = ninemlcatalog.load(args.model_file[2:])
+    else:
+        doc = nineml.read(args.model_file)
     if args.dynamics is not None:
         # Simulate a dynamics object instead of a network
         model = doc[args.name]
@@ -89,11 +96,13 @@ def run(argv):
                         "Selection) dynamics or dynamics properties found in "
                         "'{}' docuemnt.".format(args.model_file))
 
-    if isinstance(model, Network):
+    if isinstance(model, nineml.Network):
         pass
     else:
+        assert isinstance(model, (nineml.DynamicsProperties,
+                                  nineml.Dynamics))
         if args.prop:
-            props = dict((parm, val, getattr(un, unts))
+            props = dict((parm, float(val), getattr(un, unts))
                          for parm, val, unts in args.prop)
             model = nineml.DynamicsProperties(
                 model.name + '_props', model, props)
@@ -116,9 +125,8 @@ def run(argv):
                                   initial_regime=initial_regime)
         # Create cell
         cell = Cell(model)
-        initial_state = {}
-        for sv_name, value, units in args.initial_value:
-            initial_state[sv_name] = float(value) * getattr(un, units)
+        initial_state = dict((sv, float(val), getattr(un, units))
+                              for sv, val, units in args.initial_value)
         if set(cell.state_variable_names) != set(initial_state.iterkeys()):
             raise Pype9UsageError(
                 "Need to specify an initial value for each state in the model,"
