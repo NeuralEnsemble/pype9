@@ -6,29 +6,29 @@ from ._utils import existing_file
 
 
 parser = ArgumentParser(description=__doc__)
-parser.add_argument('nineml_file', type=existing_file,
-                    help="Path to nineml model file to simulate")
+parser.add_argument('model_file', type=existing_file,
+                    help="Path to nineml model file which to simulate")
 parser.add_argument('simulator', choices=('neuron', 'nest'), type=str,
                     help="Which simulator backend to use")
 parser.add_argument('time', type=float,
                     help="Time to run the simulation for")
-parser.add_argument('output_file', type=str,
-                    help=("Path to write the simulation outputs "
-                          "(in Neo format)."))
-parser.add_argument('--model', '-m', type=str, default=None,
+parser.add_argument('--name', type=str, default=None,
                     help="Name of the model to run from the model file")
 parser.add_argument('--record', type=str, nargs=3, action='append', default=[],
-                    metavar=('PORT', 'FILENAME', 'NAME'),
+                    metavar=('PORT/STATE-VARIABLE', 'FILENAME'),
                     help=("Record the values from the send port or state "
-                          "variable"))
-parser.add_argument('--play', type=str, nargs=3, action='append', default=[],
-                    metavar=('PORT', 'FILENAME', 'NAME'),
-                    help=("Input signal file (in Neo format) and name of port "
-                          "to play it into"))
+                          "variable and the filename to save it into"))
+parser.add_argument('--play', type=str, nargs=3, action='append',
+                    metavar=('PORT', 'FILENAME'), default=[],
+                    help=("Name of receive port and filename with signal to "
+                          "play it into"))
 parser.add_argument('--prop', type=(str, float, str), nargs=3, action='append',
                     metavar=('PARAM', 'VALUE', 'UNITS'), default=[],
                     help=("Set the property to the given value"))
 parser.add_argument('--initial_regime', type=str, default=None,
+                    help=("Initial regime for dynamics"))
+parser.add_argument('--initial_value', nargs=3, default=[], action='append',
+                    metavar=('STATE-VARIALBE', 'VALUE', 'UNITS'),
                     help=("Initial regime for dynamics"))
 
 
@@ -38,7 +38,7 @@ def run(argv):
     """
     import nineml
     from nineml import units as un
-    from pype9.exceptions import Pype9RuntimeError
+    from pype9.exceptions import Pype9UsageError
     import neo.io
 
     args = parser.parse_args(argv)
@@ -48,12 +48,12 @@ def run(argv):
     elif args.simulator == 'nest':
         from pype9.nest import Network, CellMetaClass, simulation_controller  # @Reimport @IgnorePep8
     else:
-        raise Pype9RuntimeError(
+        raise Pype9UsageError(
             "Unrecognised simulator '{}', (available 'neuron' or 'nest')"
             .format(args.simulator))
 
     # Load the model from the provided arguments
-    doc = nineml.read(args.nineml_file)
+    doc = nineml.read(args.model_file)
     if args.dynamics is not None:
         # Simulate a dynamics object instead of a network
         model = doc[args.name]
@@ -66,28 +66,28 @@ def run(argv):
             if len(dyn_props) == 1:
                 model = dyn_props[0]
             elif len(dyn_props) >= 2:
-                raise Pype9RuntimeError(
+                raise Pype9UsageError(
                     "No network structures (i.e. Population, Projection, "
                     "Selection) and more than one dynamics properties found "
                     "in '{}' document, please specify one with the '--model' "
-                    "argument.".format(args.nineml_file))
+                    "argument.".format(args.model_file))
             else:
                 dyns = [d for d in doc.component_classes
                         if isinstance(d, nineml.Dynamics)]
                 if len(dyns) == 1:
                     model = dyns[0]
                 elif len(dyns) >= 2:
-                    raise Pype9RuntimeError(
+                    raise Pype9UsageError(
                         "No network structures (i.e. Population, Projection, "
                         "Selection) or dynamics properties and more than one "
                         "dynamics found in '{}' document, please specify one "
                         "with the '--model' argument."
-                        .format(args.nineml_file))
+                        .format(args.model_file))
                 else:
-                    raise Pype9RuntimeError(
+                    raise Pype9UsageError(
                         "No network structures (i.e. Population, Projection, "
                         "Selection) dynamics or dynamics properties found in "
-                        "'{}' docuemnt.".format(args.nineml_file))
+                        "'{}' docuemnt.".format(args.model_file))
 
     if isinstance(model, Network):
         pass
@@ -98,7 +98,7 @@ def run(argv):
             model = nineml.DynamicsProperties(
                 model.name + '_props', model, props)
         if not isinstance(model, nineml.DynamicsProperties):
-            raise Pype9RuntimeError(
+            raise Pype9UsageError(
                 "Specified model {} is not a dynamics properties object"
                 .format(model))
         component_class = model.component_class
@@ -107,7 +107,7 @@ def run(argv):
             if component_class.num_regimes == 1:
                 initial_regime = next(component_class.regimes)
             else:
-                raise Pype9RuntimeError(
+                raise Pype9UsageError(
                     "Need to specify initial regime as dynamics has more than "
                     "one '{}'".format("', '".join(
                         r.name for r in component_class.regimes)))
@@ -116,6 +116,16 @@ def run(argv):
                                   initial_regime=initial_regime)
         # Create cell
         cell = Cell(model)
+        initial_state = {}
+        for sv_name, value, units in args.initial_value:
+            initial_state[sv_name] = float(value) * getattr(un, units)
+        if set(cell.state_variable_names) != set(initial_state.iterkeys()):
+            raise Pype9UsageError(
+                "Need to specify an initial value for each state in the model,"
+                " missing '{}'".format(
+                    "', '".join(set(cell.state_variable_names) -
+                                set(initial_state.iterkeys()))))
+        cell.update_state(initial_state)
         # Play inputs
         for port_name, fname, _ in args.play:
             data_seg = neo.io.PickleIO(filename=fname).read_segment()
@@ -146,5 +156,3 @@ def run(argv):
         for fname, data_seg in data_segs.iteritems():
             neo.io.PickleIO(fname).write(data_seg)
         print "Simulated '{}' for {} ms".format(model.name, args.time)
-
-        self.nml_cells[simulator].update_state(self.initial_states)

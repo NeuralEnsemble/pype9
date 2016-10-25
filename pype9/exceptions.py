@@ -52,3 +52,7 @@ class Pype9ProjToCloneNotCreatedException(Pype9RuntimeError):
 
     def __init__(self, orig_proj_id=None):
         self.orig_proj_id = orig_proj_id
+
+
+class Pype9UsageError(Pype9RuntimeError):
+    pass
