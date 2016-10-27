@@ -62,7 +62,7 @@ RUN sed 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc > $HOME/tmp; m
 RUN echo "source /home/docker/env/neurosci/bin/activate" >> $HOME/.bashrc
 RUN echo 'echo "Docker container for running PyPe9 examples."' >> $HOME/.bashrc
 RUN echo 'echo "See the $HOME/examples directory for the example "' >> $HOME/.bashrc
-RUN echo 'echo "python scripts (supply the '--help' option to see usage)."' >> $HOME/.bashrc
+RUN echo 'echo "python scripts (supply the \'--help\' option to see usage)."' >> $HOME/.bashrc
 
 # Install PyPe9
 RUN git clone https://github.com/CNS-OIST/PyPe9.git $HOME/packages/pype9
