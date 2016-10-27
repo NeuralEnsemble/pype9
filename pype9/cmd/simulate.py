@@ -18,6 +18,8 @@ parser.add_argument('simulator', choices=('neuron', 'nest'), type=str,
                     help="Which simulator backend to use")
 parser.add_argument('time', type=float,
                     help="Time to run the simulation for")
+parser.add_argument('timestep', type=float,
+                    help="Timestep used to solve the differential equations")
 parser.add_argument('--record', type=str, nargs=3, action='append', default=[],
                     metavar=('SEND-PORT/STATE-VARIABLE', 'FILENAME',
                              'SIG-NAME'),
@@ -40,6 +42,8 @@ parser.add_argument('--init_regime', type=str, default=None,
 parser.add_argument('--init_value', nargs=3, default=[], action='append',
                     metavar=('STATE-VARIALBE', 'VALUE', 'UNITS'),
                     help=("Initial regime for dynamics"))
+parser.add_argument('--seed', type=int, default=None,
+                    help="Random seed used to create network and properties")
 
 
 def run(argv):
@@ -51,8 +55,11 @@ def run(argv):
     from nineml import units as un
     from pype9.exceptions import Pype9UsageError
     import neo.io
+    import time
 
     args = parser.parse_args(argv)
+
+    seed = time.time() if args.seed is None else args.seed
 
     if args.simulator == 'neuron':
         from pype9.neuron import Network, CellMetaClass, simulation_controller  # @UnusedImport @IgnorePep8
@@ -103,8 +110,25 @@ def run(argv):
                         "Selection) dynamics or dynamics properties found in "
                         "'{}' docuemnt.".format(args.model_file))
 
+    # Reset the simulator
+    simulation_controller.setup(min_delay=ReferenceBrunel2000.min_delay,
+                                max_delay=ReferenceBrunel2000.max_delay,
+                                timestep=args.timestep,
+                                rng_seeds_seed=seed)
     if isinstance(model, nineml.Network):
-        pass
+        # Construct the network
+        print "Constructing '{}' network".format(model.name)
+        network = Network(model, build_mode=args.build_mode)
+        print "Finished constructing the '{}' network".format(model.name)
+        for record_name, _, _ in args.record:
+            pop_name, port_name = record_name.split('.')
+            network[pop_name].record(port_name)
+        print "Running the simulation".format()
+        simulation_controller.run(args.simtime)
+        for record_name, filename, name in args.record:
+            pop_name, port_name = record_name.split('.')
+            seg = network[pop_name].get_data().segments[0]
+            data[filename] = seg  # FIXME: not implemented
     else:
         assert isinstance(model, (nineml.DynamicsProperties,
                                   nineml.Dynamics))
@@ -170,4 +194,4 @@ def run(argv):
         # Write data to file
         for fname, data_seg in data_segs.iteritems():
             neo.io.PickleIO(fname).write(data_seg)
-        print "Simulated '{}' for {} ms".format(model.name, args.time)
+    print "Simulated '{}' for {} ms".format(model.name, args.time)
