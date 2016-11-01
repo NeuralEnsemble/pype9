@@ -10,19 +10,22 @@ parser.add_argument('model_file', type=existing_file,
                     help=("Path to nineml model file which to simulate. "
                           "It can be a relative path, absolute path, URL or "
                           "if the path starts with '//' it will be interpreted"
-                          "as a ninemlcatalog path"))
+                          "as a ninemlcatalog path. For files with multiple "
+                          "components, the name of component to simulated must"
+                          " be appended after a #, "
+                          "e.g. //neuron/izhikevich#izhikevich"))
 parser.add_argument('simulator', choices=('neuron', 'nest'), type=str,
                     help="Which simulator backend to use")
 parser.add_argument('time', type=float,
                     help="Time to run the simulation for")
-parser.add_argument('--name', type=str, default=None,
-                    help="Name of the model to run from the model file")
-parser.add_argument('--prop', type=(str, float, str), nargs=3, action='append',
+parser.add_argument('timestep', type=float,
+                    help="Timestep used to solve the differential equations")
+parser.add_argument('--prop', nargs=3, action='append',
                     metavar=('PARAM', 'VALUE', 'UNITS'), default=[],
                     help=("Set the property to the given value"))
-parser.add_argument('--initial_regime', type=str, default=None,
+parser.add_argument('--init_regime', type=str, default=None,
                     help=("Initial regime for dynamics"))
-parser.add_argument('--initial_value', nargs=3, default=[], action='append',
+parser.add_argument('--init_value', nargs=3, default=[], action='append',
                     metavar=('STATE-VARIALBE', 'VALUE', 'UNITS'),
                     help=("Initial regime for dynamics"))
 parser.add_argument('--record', type=str, nargs=3, action='append', default=[],
@@ -36,13 +39,15 @@ parser.add_argument('--play', type=str, nargs=3, action='append',
 parser.add_argument('--play_prop', nargs=4, action='append',
                     metavar=('PORT', 'PARAM', 'VALUE', 'UNITS'), default=[],
                     help=("Set the property to the given value"))
-parser.add_argument('--play_initial_regime', nargs=2, type=str, default=None,
+parser.add_argument('--play_init_regime', nargs=2, type=str, default=None,
                     metavar=('PORT', 'REGIME-NAME'),
                     help=("Initial regime for dynamics"))
-parser.add_argument('--play_initial_value', nargs=4, default=[],
+parser.add_argument('--play_init_value', nargs=4, default=[],
                     action='append',
                     metavar=('PORT', 'STATE-VARIALBE', 'VALUE', 'UNITS'),
                     help=("Initial regime for dynamics"))
+parser.add_argument('--seed', type=int, default=None,
+                    help="Random seed used to create network and properties")
 
 
 def run(argv):
@@ -54,8 +59,11 @@ def run(argv):
     from nineml import units as un
     from pype9.exceptions import Pype9UsageError
     import neo.io
+    import time
 
     args = parser.parse_args(argv)
+
+    seed = time.time() if args.seed is None else args.seed
 
     if args.simulator == 'neuron':
         from pype9.neuron import Network, CellMetaClass, simulation_controller  # @UnusedImport @IgnorePep8
@@ -106,8 +114,25 @@ def run(argv):
                         "Selection) dynamics or dynamics properties found in "
                         "'{}' docuemnt.".format(args.model_file))
 
+    # Reset the simulator
+    simulation_controller.setup(min_delay=ReferenceBrunel2000.min_delay,
+                                max_delay=ReferenceBrunel2000.max_delay,
+                                timestep=args.timestep,
+                                rng_seeds_seed=seed)
     if isinstance(model, nineml.Network):
-        pass
+        # Construct the network
+        print "Constructing '{}' network".format(model.name)
+        network = Network(model, build_mode=args.build_mode)
+        print "Finished constructing the '{}' network".format(model.name)
+        for record_name, _, _ in args.record:
+            pop_name, port_name = record_name.split('.')
+            network[pop_name].record(port_name)
+        print "Running the simulation".format()
+        simulation_controller.run(args.simtime)
+        for record_name, filename, name in args.record:
+            pop_name, port_name = record_name.split('.')
+            seg = network[pop_name].get_data().segments[0]
+            data[filename] = seg  # FIXME: not implemented
     else:
         assert isinstance(model, (nineml.DynamicsProperties,
                                   nineml.Dynamics))
@@ -121,10 +146,10 @@ def run(argv):
                 "Specified model {} is not a dynamics properties object"
                 .format(model))
         component_class = model.component_class
-        initial_regime = args.initial_regime
-        if initial_regime is None:
+        init_regime = args.init_regime
+        if init_regime is None:
             if component_class.num_regimes == 1:
-                initial_regime = next(component_class.regimes)
+                init_regime = next(component_class.regimes)
             else:
                 raise Pype9UsageError(
                     "Need to specify initial regime as dynamics has more than "
@@ -132,18 +157,18 @@ def run(argv):
                         r.name for r in component_class.regimes)))
         # Build cell class
         Cell = CellMetaClass(model.component_class, name=model.name,
-                                  initial_regime=initial_regime)
+                             init_regime=init_regime)
         # Create cell
         cell = Cell(model)
-        initial_state = dict((sv, float(val), getattr(un, units))
-                              for sv, val, units in args.initial_value)
-        if set(cell.state_variable_names) != set(initial_state.iterkeys()):
+        init_state = dict((sv, float(val), getattr(un, units))
+                          for sv, val, units in args.init_value)
+        if set(cell.state_variable_names) != set(init_state.iterkeys()):
             raise Pype9UsageError(
                 "Need to specify an initial value for each state in the model,"
                 " missing '{}'".format(
                     "', '".join(set(cell.state_variable_names) -
-                                set(initial_state.iterkeys()))))
-        cell.update_state(initial_state)
+                                set(init_state.iterkeys()))))
+        cell.update_state(init_state)
         # Play inputs
         for port_name, fname, _ in args.play:
             data_seg = neo.io.PickleIO(filename=fname).read_segment()
@@ -173,4 +198,4 @@ def run(argv):
         # Write data to file
         for fname, data_seg in data_segs.iteritems():
             neo.io.PickleIO(fname).write(data_seg)
-        print "Simulated '{}' for {} ms".format(model.name, args.time)
+    print "Simulated '{}' for {} ms".format(model.name, args.time)
