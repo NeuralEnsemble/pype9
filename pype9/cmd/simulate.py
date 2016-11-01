@@ -17,14 +17,6 @@ parser.add_argument('time', type=float,
                     help="Time to run the simulation for")
 parser.add_argument('--name', type=str, default=None,
                     help="Name of the model to run from the model file")
-parser.add_argument('--record', type=str, nargs=3, action='append', default=[],
-                    metavar=('PORT/STATE-VARIABLE', 'FILENAME'),
-                    help=("Record the values from the send port or state "
-                          "variable and the filename to save it into"))
-parser.add_argument('--play', type=str, nargs=3, action='append',
-                    metavar=('PORT', 'FILENAME'), default=[],
-                    help=("Name of receive port and filename with signal to "
-                          "play it into"))
 parser.add_argument('--prop', type=(str, float, str), nargs=3, action='append',
                     metavar=('PARAM', 'VALUE', 'UNITS'), default=[],
                     help=("Set the property to the given value"))
@@ -32,6 +24,24 @@ parser.add_argument('--initial_regime', type=str, default=None,
                     help=("Initial regime for dynamics"))
 parser.add_argument('--initial_value', nargs=3, default=[], action='append',
                     metavar=('STATE-VARIALBE', 'VALUE', 'UNITS'),
+                    help=("Initial regime for dynamics"))
+parser.add_argument('--record', type=str, nargs=3, action='append', default=[],
+                    metavar=('PORT/STATE-VARIABLE', 'FILENAME'),
+                    help=("Record the values from the send port or state "
+                          "variable and the filename to save it into"))
+parser.add_argument('--play', type=str, nargs=3, action='append',
+                    metavar=('PORT', 'FILENAME', 'NAME'), default=[],
+                    help=("Name of receive port and filename with signal to "
+                          "play it into"))
+parser.add_argument('--play_prop', nargs=4, action='append',
+                    metavar=('PORT', 'PARAM', 'VALUE', 'UNITS'), default=[],
+                    help=("Set the property to the given value"))
+parser.add_argument('--play_initial_regime', nargs=2, type=str, default=None,
+                    metavar=('PORT', 'REGIME-NAME'),
+                    help=("Initial regime for dynamics"))
+parser.add_argument('--play_initial_value', nargs=4, default=[],
+                    action='append',
+                    metavar=('PORT', 'STATE-VARIALBE', 'VALUE', 'UNITS'),
                     help=("Initial regime for dynamics"))
 
 
