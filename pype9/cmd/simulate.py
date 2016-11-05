@@ -26,10 +26,10 @@ parser.add_argument('--prop', nargs=3, action='append',
 parser.add_argument('--init_regime', type=str, default=None,
                     help=("Initial regime for dynamics"))
 parser.add_argument('--init_value', nargs=3, default=[], action='append',
-                    metavar=('STATE-VARIALBE', 'VALUE', 'UNITS'),
+                    metavar=('STATE-VARIABLE', 'VALUE', 'UNITS'),
                     help=("Initial regime for dynamics"))
 parser.add_argument('--record', type=str, nargs=3, action='append', default=[],
-                    metavar=('PORT/STATE-VARIABLE', 'FILENAME'),
+                    metavar=('PORT/STATE-VARIABLE', 'FILENAME', 'SAVENAME'),
                     help=("Record the values from the send port or state "
                           "variable and the filename to save it into"))
 parser.add_argument('--play', type=str, nargs=3, action='append',
