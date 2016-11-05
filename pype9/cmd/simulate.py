@@ -2,11 +2,12 @@
 Runs a simulation described by an Experiment layer 9ML file
 """
 from argparse import ArgumentParser
-from ._utils import existing_file
+from ._utils import nineml_model
 
 
-parser = ArgumentParser(description=__doc__)
-parser.add_argument('model_file', type=existing_file,
+parser = ArgumentParser(prog='pype9 simulate',
+                        description=__doc__)
+parser.add_argument('model', type=nineml_model,
                     help=("Path to nineml model file which to simulate. "
                           "It can be a relative path, absolute path, URL or "
                           "if the path starts with '//' it will be interpreted"
@@ -55,7 +56,6 @@ def run(argv):
     Runs the simulation script from the provided arguments
     """
     import nineml
-    import ninemlcatalog
     from nineml import units as un
     from pype9.exceptions import Pype9UsageError
     import neo.io
@@ -74,78 +74,48 @@ def run(argv):
             "Unrecognised simulator '{}', (available 'neuron' or 'nest')"
             .format(args.simulator))
 
-    # Load the model from the provided arguments
-    if args.model_file.startswith('//'):
-        doc = ninemlcatalog.load(args.model_file[2:])
+    if isinstance(args.model, nineml.Document):
+        min_delay = 0.1  # FIXME: Should add as method to Network class
+        max_delay = 10.0
     else:
-        doc = nineml.read(args.model_file)
-    if args.dynamics is not None:
-        # Simulate a dynamics object instead of a network
-        model = doc[args.name]
-    else:
-        if len(list(doc.network_structures)):
-            model = doc.as_network()
-        else:
-            dyn_props = [p for p in doc.components
-                         if isinstance(p, nineml.DynamicsProperties)]
-            if len(dyn_props) == 1:
-                model = dyn_props[0]
-            elif len(dyn_props) >= 2:
-                raise Pype9UsageError(
-                    "No network structures (i.e. Population, Projection, "
-                    "Selection) and more than one dynamics properties found "
-                    "in '{}' document, please specify one with the '--model' "
-                    "argument.".format(args.model_file))
-            else:
-                dyns = [d for d in doc.component_classes
-                        if isinstance(d, nineml.Dynamics)]
-                if len(dyns) == 1:
-                    model = dyns[0]
-                elif len(dyns) >= 2:
-                    raise Pype9UsageError(
-                        "No network structures (i.e. Population, Projection, "
-                        "Selection) or dynamics properties and more than one "
-                        "dynamics found in '{}' document, please specify one "
-                        "with the '--model' argument."
-                        .format(args.model_file))
-                else:
-                    raise Pype9UsageError(
-                        "No network structures (i.e. Population, Projection, "
-                        "Selection) dynamics or dynamics properties found in "
-                        "'{}' docuemnt.".format(args.model_file))
+        min_delay = args.timestep
+        max_delay = args.timestep * 2
 
-    # Reset the simulator
-    simulation_controller.setup(min_delay=ReferenceBrunel2000.min_delay,
-                                max_delay=ReferenceBrunel2000.max_delay,
-                                timestep=args.timestep,
-                                rng_seeds_seed=seed)
-    if isinstance(model, nineml.Network):
+    if isinstance(args.model, nineml.Network):
+        if args.simulator == 'neuron':
+            from pyNN.neuron import run, setup  # @UnusedImport
+        else:
+            from pyNN.nest import run, setup  # @Reimport
+
+        # Reset the simulator
+        setup(min_delay=min_delay, max_delay=max_delay,
+              timestep=args.timestep, rng_seeds_seed=seed)
         # Construct the network
-        print "Constructing '{}' network".format(model.name)
-        network = Network(model, build_mode=args.build_mode)
-        print "Finished constructing the '{}' network".format(model.name)
+        print "Constructing '{}' network".format(args.model.name)
+        network = Network(args.model, build_mode=args.build_mode)
+        print "Finished constructing the '{}' network".format(args.model.name)
         for record_name, _, _ in args.record:
             pop_name, port_name = record_name.split('.')
             network[pop_name].record(port_name)
         print "Running the simulation".format()
-        simulation_controller.run(args.simtime)
+        run(args.simtime)
         for record_name, filename, name in args.record:
             pop_name, port_name = record_name.split('.')
             seg = network[pop_name].get_data().segments[0]
             data[filename] = seg  # FIXME: not implemented
     else:
-        assert isinstance(model, (nineml.DynamicsProperties,
-                                  nineml.Dynamics))
+        assert isinstance(args.model, (nineml.DynamicsProperties,
+                                       nineml.Dynamics))
         if args.prop:
             props = dict((parm, float(val), getattr(un, unts))
                          for parm, val, unts in args.prop)
             model = nineml.DynamicsProperties(
-                model.name + '_props', model, props)
-        if not isinstance(model, nineml.DynamicsProperties):
+                args.model.name + '_props', args.model, props)
+        if not isinstance(args.model, nineml.DynamicsProperties):
             raise Pype9UsageError(
                 "Specified model {} is not a dynamics properties object"
-                .format(model))
-        component_class = model.component_class
+                .format(args.model))
+        component_class = args.model.component_class
         init_regime = args.init_regime
         if init_regime is None:
             if component_class.num_regimes == 1:
@@ -156,10 +126,10 @@ def run(argv):
                     "one '{}'".format("', '".join(
                         r.name for r in component_class.regimes)))
         # Build cell class
-        Cell = CellMetaClass(model.component_class, name=model.name,
+        Cell = CellMetaClass(args.model.component_class, name=args.model.name,
                              init_regime=init_regime)
         # Create cell
-        cell = Cell(model)
+        cell = Cell(args.model)
         init_state = dict((sv, float(val), getattr(un, units))
                           for sv, val, units in args.init_value)
         if set(cell.state_variable_names) != set(init_state.iterkeys()):
@@ -188,7 +158,7 @@ def run(argv):
         data_segs = {}
         for fname in fnames:
             data_segs[fname] = neo.Segment(
-                description="Simulation of '{}' cell".format(model.name))
+                description="Simulation of '{}' cell".format(args.model.name))
         for port_name, fname, _ in args.record:
             data = cell.recording(port_name)
             if isinstance(data, neo.AnalogSignal):
@@ -198,4 +168,4 @@ def run(argv):
         # Write data to file
         for fname, data_seg in data_segs.iteritems():
             neo.io.PickleIO(fname).write(data_seg)
-    print "Simulated '{}' for {} ms".format(model.name, args.time)
+    print "Simulated '{}' for {} ms".format(args.model.name, args.time)

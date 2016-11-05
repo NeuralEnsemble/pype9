@@ -4,7 +4,8 @@ Convenient script for plotting the output of PyPe9 simulations (actually not
 """
 from argparse import ArgumentParser
 
-parser = ArgumentParser(description=__doc__)
+parser = ArgumentParser(prog='pype9 plot',
+                        description=__doc__)
 parser.add_argument('filename', help="9ML file to be converted")
 parser.add_argument('--name', type=str, action='append', default=None,
                     help="Name of the signal within the file to plot")

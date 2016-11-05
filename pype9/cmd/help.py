@@ -3,7 +3,8 @@ Prints help information associated with a PyPe9 command
 """
 from argparse import ArgumentParser
 
-parser = ArgumentParser(description=__doc__)
+parser = ArgumentParser(prog='pype9 help',
+                        description=__doc__)
 parser.add_argument('cmd', default=None,
                     help="Name of the command to print help information")
 
