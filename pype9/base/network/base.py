@@ -614,6 +614,7 @@ class ComponentArray(object):
             raise Pype9RuntimeError(
                 "Unrecognised port type '{}' to play signal into".format(port))
 
+
 class Selection(object):
 
     def __init__(self, nineml_model, *component_arrays):

@@ -2,7 +2,7 @@
 Runs a simulation described by an Experiment layer 9ML file
 """
 from argparse import ArgumentParser
-from ._utils import nineml_model
+from ._utils import nineml_model, parse_units
 
 
 parser = ArgumentParser(prog='pype9 simulate',
@@ -49,6 +49,9 @@ parser.add_argument('--play_init_value', nargs=4, default=[],
                     help=("Initial regime for dynamics"))
 parser.add_argument('--seed', type=int, default=None,
                     help="Random seed used to create network and properties")
+parser.add_argument('--build_mode', type=str, default='lazy',
+                    help=("The strategy used to build and compile the model. "
+                          "Can be one of '{}' (default %(default)s)"))
 
 
 def run(argv):
@@ -56,10 +59,13 @@ def run(argv):
     Runs the simulation script from the provided arguments
     """
     import nineml
-    from nineml import units as un
+    from nineml.exceptions import NineMLXMLError
     from pype9.exceptions import Pype9UsageError
     import neo.io
     import time
+    import logging
+
+    logger = logging.getLogger('PyPe9')
 
     args = parser.parse_args(argv)
 
@@ -106,16 +112,19 @@ def run(argv):
     else:
         assert isinstance(args.model, (nineml.DynamicsProperties,
                                        nineml.Dynamics))
+        model = args.model
+        # Override properties passed as options
         if args.prop:
-            props = dict((parm, float(val), getattr(un, unts))
+            props = dict((parm, float(val) * parse_units(unts))
                          for parm, val, unts in args.prop)
             model = nineml.DynamicsProperties(
-                args.model.name + '_props', args.model, props)
-        if not isinstance(args.model, nineml.DynamicsProperties):
+                model.name + '_props', model, props)
+        if not isinstance(model, nineml.DynamicsProperties):
             raise Pype9UsageError(
                 "Specified model {} is not a dynamics properties object"
-                .format(args.model))
-        component_class = args.model.component_class
+                .format(model))
+        component_class = model.component_class
+        # Get the init_regime
         init_regime = args.init_regime
         if init_regime is None:
             if component_class.num_regimes == 1:
@@ -126,11 +135,12 @@ def run(argv):
                     "one '{}'".format("', '".join(
                         r.name for r in component_class.regimes)))
         # Build cell class
-        Cell = CellMetaClass(args.model.component_class, name=args.model.name,
-                             init_regime=init_regime)
+        Cell = CellMetaClass(model.component_class, name=model.name,
+                             init_regime=init_regime,
+                             build_mode=args.build_mode)
         # Create cell
-        cell = Cell(args.model)
-        init_state = dict((sv, float(val), getattr(un, units))
+        cell = Cell(model)
+        init_state = dict((sv, float(val) * parse_units(units))
                           for sv, val, units in args.init_value)
         if set(cell.state_variable_names) != set(init_state.iterkeys()):
             raise Pype9UsageError(
@@ -141,13 +151,16 @@ def run(argv):
         cell.update_state(init_state)
         # Play inputs
         for port_name, fname, _ in args.play:
-            data_seg = neo.io.PickleIO(filename=fname).read_segment()
             port = component_class.receive_port(port_name)
-            # FIXME: Should look up name of spiketrain or analogsignals
-            if port.communicates == 'event':
-                cell.play(port_name, data_seg.spiketrains[0])
-            else:
-                cell.play(port_name, data_seg.analogsignals[0])
+            try:
+                signal = nineml_model(fname)
+            except NineMLXMLError:
+                seg = neo.io.PickleIO(filename=fname).read_segment()
+                if port.communicates == 'event':
+                    signal = seg.spiketrains[0]
+                else:
+                    signal = seg.analogsignals[0]
+            cell.play(port_name, signal)
         # Set up recorders
         for port_name, _, _ in args.record:
             cell.record(port_name)
@@ -158,7 +171,7 @@ def run(argv):
         data_segs = {}
         for fname in fnames:
             data_segs[fname] = neo.Segment(
-                description="Simulation of '{}' cell".format(args.model.name))
+                description="Simulation of '{}' cell".format(model.name))
         for port_name, fname, _ in args.record:
             data = cell.recording(port_name)
             if isinstance(data, neo.AnalogSignal):
@@ -168,4 +181,5 @@ def run(argv):
         # Write data to file
         for fname, data_seg in data_segs.iteritems():
             neo.io.PickleIO(fname).write(data_seg)
-    print "Simulated '{}' for {} ms".format(args.model.name, args.time)
+    logger.info("Simulated '{}' for {} ms".format(model.name, args.time))
+

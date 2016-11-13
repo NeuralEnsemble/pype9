@@ -24,7 +24,7 @@ class TestSimulateAndPlot(TestCase):
     # Izhikevich simulation params
     t_stop = 100.0
     dt = 0.001
-    U = (-14.0, 'mv/ms')
+    U = (-14.0, 'mV/ms')
     V = (-65.0, 'mV')
     Isyn = ((20.0, 'pA'), (50.0, 'ms'), (0.0, 'pA'))
     izhi_path = '//neuron/Izhikevich#SampleIzhikevich'
@@ -46,7 +46,8 @@ class TestSimulateAndPlot(TestCase):
                 "--play Isyn //input/StepCurrent#StepCurrent current_output "
                 "--play_prop Isyn amplitude {isyn_amp} "
                 "--play_prop Isyn onset {isyn_onset} "
-                "--play_init_value Isyn current_output {isyn_init}"
+                "--play_init_value Isyn current_output {isyn_init} "
+                "--build_mode force"
                 .format(nineml_model=self.izhi_path, sim=simulator,
                         out_path=out_path, t_stop=self.t_stop, dt=self.dt,
                         U='{} {}'.format(*self.U), V='{} {}'.format(*self.V),

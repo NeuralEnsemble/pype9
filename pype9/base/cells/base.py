@@ -22,6 +22,7 @@ from nineml.user import (
     Property, Definition)
 from nineml.units import Quantity
 from nineml.base import ContainerObject, DocumentLevelObject
+from pype9.annotations import PYPE9_NS, BUILD_PROPS
 from nineml.exceptions import name_error, NineMLNameError
 from pype9.exceptions import (
     Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError)
@@ -76,14 +77,16 @@ class CellMetaClass(type):
                 name = component_class.name
         url = component_class.url
         try:
-            Cell, build_options = cls._built_types[(name, url)]
-            if build_options != kwargs:
+            Cell = cls._built_types[(name, url)]
+            build_props = dict(Cell.build_component_class.annotations[
+                PYPE9_NS][BUILD_PROPS].items())
+            if build_props != kwargs:
                 raise Pype9RuntimeError(
                     "Build options '{}' do not match previously built '{}' "
                     "cell class with same name ('{}'). Please specify a "
                     "different name (using a loaded nineml.Component instead "
                     "of a URL)."
-                    .format(kwargs, name, build_options))
+                    .format(kwargs, name, build_props))
         except KeyError:
             # Initialise code generator
             code_gen = cls.CodeGenerator()
@@ -100,10 +103,6 @@ class CellMetaClass(type):
                         "'build_dir' must be supplied when using component "
                         "classes created programmatically ('{}')".format(name))
                 build_dir = code_gen.get_build_dir(url, name)
-#             if url is not None:
-#                 mod_time = time.ctime(os.path.getmtime(url))
-#             else:
-#                 mod_time = time.ctime()
             instl_dir = code_gen.generate(
                 component_class=build_component_class,
                 default_properties=build_properties,
@@ -126,7 +125,7 @@ class CellMetaClass(type):
             Cell = super(CellMetaClass, cls).__new__(
                 cls, name, (cls.BaseCellClass,), dct)
             # Save Cell class to allow it to save it being built again
-            cls._built_types[(name, url)] = Cell, kwargs
+            cls._built_types[name] = Cell
         return Cell
 
     def __init__(cls, component_class, default_properties=None,

@@ -25,6 +25,9 @@ from nineml import units
 from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import logging
 import pype9.annotations
+from pype9.annotations import PYPE9_NS, BUILD_PROPS
+import nineml
+import tempfile
 
 
 logger = logging.getLogger('PyPe9')
@@ -35,13 +38,13 @@ class BaseCodeGenerator(object):
     __metaclass__ = ABCMeta
 
     BUILD_MODE_OPTIONS = ['lazy', 'force', 'require', 'build_only',
-                          'generate_only', 'recompile']
+                          'generate_only']
     BUILD_DIR_DEFAULT = '9build'
     _PARAMS_DIR = 'params'
     _SRC_DIR = 'src'
     _INSTL_DIR = 'install'
     _CMPL_DIR = 'compile'  # Ignored for NEURON but used for NEST
-    _9ML_MOD_TIME_FILE = 'source_modification_time'
+    _BUILT_COMP_CLASS = 'built_component_class.xml'
 
     # Python functions and annotations to be made available in the templates
     _globals = dict(
@@ -99,6 +102,9 @@ class BaseCodeGenerator(object):
         `kwargs` [dict]: A dictionary of (potentially simulator-
                                 specific) template arguments
         """
+        # Set build properties
+        for k, v in kwargs.iteritems():
+            component_class.annotations.set(PYPE9_NS, BUILD_PROPS, k, v)
         # Save original working directory to reinstate it afterwards (just to
         # be polite)
         orig_dir = os.getcwd()
@@ -107,10 +113,13 @@ class BaseCodeGenerator(object):
         # Set build dir if not provided
         if build_dir is None:
             if component_class.url is None:
-                raise Pype9BuildError(
-                    "Build directory must be explicitly provided ('build_dir')"
-                    " when using generated 9ml components '{}'".format(name))
-            build_dir = self.get_build_dir(component_class.url, name)
+                build_dir = tempfile.mkdtemp()
+                logger.info("Building '{}' component in temporary directory "
+                            "'{}'".format(name, build_dir))
+            else:
+                build_dir = self.get_build_dir(component_class.url, name)
+                logger.info("Building '{}' component in '{}' directory"
+                            .format(name, build_dir))
         # Calculate src directory path within build directory
         src_dir = os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
         # Calculate compile directory path within build directory
@@ -118,43 +127,35 @@ class BaseCodeGenerator(object):
         # Calculate install directory path within build directory if not
         # provided
         install_dir = self.get_install_dir(build_dir, install_dir)
-        # Get the timestamp of the source file
-        nineml_mod_time = kwargs.get('mod_time',
-                                     self.get_mod_time(component_class.url))
-        # Path of the file which contains or will contain the source
-        # modification timestamp in the installation directory
-        nineml_mod_time_path = os.path.join(src_dir, self._9ML_MOD_TIME_FILE)
+        # Path of the build component class
+        built_comp_class_pth = os.path.join(src_dir, self._BUILT_COMP_CLASS)
         # Determine whether the installation needs rebuilding or whether there
         # is an existing library module to use.
         if build_mode in ('force', 'build_only'):  # Force build
             generate_source = compile_source = True
         elif build_mode == 'require':  # Just check that prebuild is present
             generate_source = compile_source = False
-        elif build_mode == 'recompile':  # Don't regenerate, just compile
-            if not os.path.exists(src_dir):
-                raise Pype9BuildError(
-                    "Source directory '{src}' is not present, which is "
-                    "required for 'recompile' build " "option"
-                    .format(src=src_dir))
-            generate_source = False
-            compile_source = True
         elif build_mode == 'generate_only':  # Only generate
             generate_source = True
             compile_source = False
         elif build_mode == 'lazy':  # Generate if source has been modified
-            generate_source = compile_source = True
-            if os.path.exists(nineml_mod_time_path):
-                with open(nineml_mod_time_path) as f:
-                    prev_mod_time = f.readline()
-                    # If the time of modification matches the time of the
-                    # previous build we don't need to rebuild
-                    if nineml_mod_time == prev_mod_time:
-                        generate_source = compile_source = False
-                        if verbose:
-                            print ("Found existing build in '{}' directory, "
-                                   "code generation skipped (set 'build_mode' "
-                                   "argument to 'force' or 'build_only' to "
-                                   "enforce regeneration)".format(build_dir))
+            compile_source = True
+            if not os.path.exists(built_comp_class_pth):
+                generate_source = True
+            else:
+                built_component_class = nineml.read(built_comp_class_pth)[name]
+                if built_component_class.equals(component_class,
+                                                annotations_ns=[PYPE9_NS]):
+                    generate_source = False
+                    logger.info("Found existing build in '{}' directory, "
+                                "code generation skipped (set 'build_mode' "
+                                "argument to 'force' or 'build_only' to "
+                                "enforce regeneration)".format(build_dir))
+                else:
+                    generate_source = True
+                    logger.info("Found existing build in '{}' directory, "
+                                "but the component classes differ so "
+                                "regenerating sources".format(build_dir))
         # Check if required directories are present depending on build_mode
         elif build_mode == 'require':
             if not os.path.exists(install_dir):
@@ -190,11 +191,7 @@ class BaseCodeGenerator(object):
                 src_dir=src_dir, compile_dir=compile_dir,
                 install_dir=install_dir, verbose=verbose,
                 initial_regime=initial_regime, **kwargs)
-            # Write the timestamp of the 9ML file used to generate the source
-            # files
-            if nineml_mod_time is not None:
-                with open(nineml_mod_time_path, 'w') as f:
-                    f.write(nineml_mod_time)
+            component_class.write(built_comp_class_pth)
         if compile_source:
             # Clean existing compile & install directories from previous builds
             self.clean_compile_dir(compile_dir)
