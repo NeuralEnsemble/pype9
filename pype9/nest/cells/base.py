@@ -142,28 +142,20 @@ class Cell(base.Cell):
         port = self.component_class.receive_port(port_name)
         if port.nineml_type in ('EventReceivePort',
                                 'EventReceivePortExposure'):
-            if isinstance(signal, neo.EventArray):
-                # Shift the signal times to account for the minimum delay and
-                # match the NEURON implementation
-                spike_times = (pq.Quantity(signal, 'ms') + pq.ms -
-                               simulation_controller.device_delay * pq.ms)
-                if any(spike_times <= 0.0):
-                    raise Pype9RuntimeError(
-                        "Some spike times are less than device delay and so "
-                        "can't be played into cell ({})".format(', '.join(
-                            spike_times < (
-                                1 + simulation_controller.device_delay))))
-                self._inputs[port_name] = nest.Create(
-                    'spike_generator', 1, {'spike_times': spike_times})
-                syn_spec = {'receptor_type': self._receive_ports[port_name],
-                            'delay': simulation_controller.device_delay}
-            elif isinstance(signal, (nineml.Dynamics,
-                                     nineml.DynamicsProperties)):
-                signal = None
-            else:
-                raise Pype9UsageError(
-                    "Unrecognised signal {}, can be either an event train "
-                    "or a dynamics object".format(signal))
+            # Shift the signal times to account for the minimum delay and
+            # match the NEURON implementation
+            spike_times = (pq.Quantity(signal, 'ms') + pq.ms -
+                           simulation_controller.device_delay * pq.ms)
+            if any(spike_times <= 0.0):
+                raise Pype9RuntimeError(
+                    "Some spike times are less than device delay and so "
+                    "can't be played into cell ({})".format(', '.join(
+                        spike_times < (
+                            1 + simulation_controller.device_delay))))
+            self._inputs[port_name] = nest.Create(
+                'spike_generator', 1, {'spike_times': spike_times})
+            syn_spec = {'receptor_type': self._receive_ports[port_name],
+                        'delay': simulation_controller.device_delay}
             self._check_connection_properties(port_name, properties)
             if len(properties) > 1:
                 raise NotImplementedError(
@@ -179,22 +171,14 @@ class Cell(base.Cell):
             # Signals are played into NEST cells include a delay (set to be the
             # minimum), which is is subtracted from the start of the signal so
             # that the effect of the signal aligns with other simulators
-            if isinstance(signal, neo.AnalogSignal):
-                self._inputs[port_name] = nest.Create(
-                    'step_current_generator', 1,
-                    {'amplitude_values': pq.Quantity(signal, 'pA'),
-                     'amplitude_times': (
-                        pq.Quantity(signal.times, 'ms') -
-                        simulation_controller.device_delay * pq.ms),
-                     'start': float(pq.Quantity(signal.t_start, 'ms')),
-                     'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
-            elif isinstance(signal, (nineml.Dynamics,
-                                     nineml.DynamicsProperties)):
-                self._inputs[port_name] = None
-            else:
-                raise Pype9UsageError(
-                    "Unrecognised signal {}, can be either an analog signal "
-                    "or a dynamics object".format(signal))
+            self._inputs[port_name] = nest.Create(
+                'step_current_generator', 1,
+                {'amplitude_values': pq.Quantity(signal, 'pA'),
+                 'amplitude_times': (
+                    pq.Quantity(signal.times, 'ms') -
+                    simulation_controller.device_delay * pq.ms),
+                 'start': float(pq.Quantity(signal.t_start, 'ms')),
+                 'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
             nest.Connect(self._inputs[port_name], self._cell,
                          syn_spec={
                              "receptor_type": self._receive_ports[port_name],

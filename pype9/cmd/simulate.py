@@ -160,6 +160,7 @@ def run(argv):
                     signal = seg.spiketrains[0]
                 else:
                     signal = seg.analogsignals[0]
+            # Input is an event train or analog signal
             cell.play(port_name, signal)
         # Set up recorders
         for port_name, _, _ in args.record:
