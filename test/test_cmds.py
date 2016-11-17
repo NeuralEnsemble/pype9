@@ -44,7 +44,7 @@ class TestSimulateAndPlot(TestCase):
         # First simulate input signal to have something to play into izhikevich
         # cell
         argv = ("{input_model} nest {t_stop} {dt} "
-                "--record current_output {out_path} "
+                "--record current_output {out_path} isyn "
                 "--prop amplitude {amp} "
                 "--prop onset {onset} "
                 "--init_value current_output {init} "
@@ -54,7 +54,10 @@ class TestSimulateAndPlot(TestCase):
                         amp='{} {}'.format(*self.isyn_amp),
                         onset='{} {}'.format(*self.isyn_onset),
                         init='{} {}'.format(*self.isyn_init)))
+        # Run input signal simulation
+        run(argv.split())
         isyn = neo.io.PickleIO(in_path).read().segments[0].analogsignals[0]
+        # Check sanity of input signal
         self.assertEqual(isyn.max(), self.isyn_amp[0],
                          "Max of isyn input signal {} did not match specified "
                          "amplitude, {}".format(isyn.max(), self.isyn_amp[0]))
