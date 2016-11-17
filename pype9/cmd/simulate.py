@@ -37,16 +37,6 @@ parser.add_argument('--play', type=str, nargs=3, action='append',
                     metavar=('PORT', 'FILENAME', 'NAME'), default=[],
                     help=("Name of receive port and filename with signal to "
                           "play it into"))
-parser.add_argument('--play_prop', nargs=4, action='append',
-                    metavar=('PORT', 'PARAM', 'VALUE', 'UNITS'), default=[],
-                    help=("Set the property to the given value"))
-parser.add_argument('--play_init_regime', nargs=2, type=str, default=None,
-                    metavar=('PORT', 'REGIME-NAME'),
-                    help=("Initial regime for dynamics"))
-parser.add_argument('--play_init_value', nargs=4, default=[],
-                    action='append',
-                    metavar=('PORT', 'STATE-VARIALBE', 'VALUE', 'UNITS'),
-                    help=("Initial regime for dynamics"))
 parser.add_argument('--seed', type=int, default=None,
                     help="Random seed used to create network and properties")
 parser.add_argument('--build_mode', type=str, default='lazy',
