@@ -48,6 +48,7 @@ class TestSimulateAndPlot(TestCase):
                 "--prop amplitude {amp} "
                 "--prop onset {onset} "
                 "--init_value current_output {init} "
+                "--build_mode lazy"
                 .format(input_model=self.isyn_path, out_path=in_path,
                         t_stop=self.t_stop, dt=self.dt,
                         U='{} {}'.format(*self.U), V='{} {}'.format(*self.V),
@@ -55,7 +56,9 @@ class TestSimulateAndPlot(TestCase):
                         onset='{} {}'.format(*self.isyn_onset),
                         init='{} {}'.format(*self.isyn_init)))
         # Run input signal simulation
+        print "running input simulation"
         run(argv.split())
+        print "finished running input simulation"
         isyn = neo.io.PickleIO(in_path).read().segments[0].analogsignals[0]
         # Check sanity of input signal
         self.assertEqual(isyn.max(), self.isyn_amp[0],

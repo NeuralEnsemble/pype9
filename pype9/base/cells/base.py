@@ -166,6 +166,8 @@ class Cell(object):
             # If default properties not provided create a Dynamics Properties
             # from the provided properties
             if self.default_properties is None:
+                # FIXME: Probably should just initialise the properties to NaN
+                #        or something
                 self._nineml = nineml.user.DynamicsProperties(
                     self.component_class.name + 'Properties',
                     self.component_class, properties)
@@ -282,7 +284,7 @@ class Cell(object):
         """
         Sets the properties of the cell given a 9ML property
         """
-        # FIXME: Need to reevaluate whether this should be updating the nineml
+        # FIXME: Need to reenable the update of the nineml
         #        object. Currently it is difficult to set a property in the
         #        if it is a MultiDynamics object (but not impossible)
 #         self._nineml.set(prop)
@@ -308,6 +310,11 @@ class Cell(object):
         The set of component_class properties (parameter values).
         """
         return self._nineml.properties
+
+    @properties.setter
+    def properties(self, props):
+        for prop in props.properties:
+            self.set(prop)
 
     @property
     def property_names(self):

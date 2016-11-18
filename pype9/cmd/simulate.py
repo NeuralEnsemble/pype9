@@ -105,15 +105,19 @@ def run(argv):
         model = args.model
         # Override properties passed as options
         if args.prop:
-            props = dict((parm, float(val) * parse_units(unts))
-                         for parm, val, unts in args.prop)
-            model = nineml.DynamicsProperties(
-                model.name + '_props', model, props)
-        if not isinstance(model, nineml.DynamicsProperties):
+            props_dict = dict((parm, float(val) * parse_units(unts))
+                              for parm, val, unts in args.prop)
+            props = nineml.DynamicsProperties(
+                model.name + '_props', model, props_dict)
+            component_class = model
+        elif isinstance(model, nineml.DynamicsProperties):
+            props = model
+            component_class = model.component_class
+        else:
             raise Pype9UsageError(
-                "Specified model {} is not a dynamics properties object"
+                "Specified model {} is not a dynamics properties object and "
+                "no properties supplied to simulate command via --prop option"
                 .format(model))
-        component_class = model.component_class
         # Get the init_regime
         init_regime = args.init_regime
         if init_regime is None:
@@ -125,11 +129,12 @@ def run(argv):
                     "one '{}'".format("', '".join(
                         r.name for r in component_class.regimes)))
         # Build cell class
-        Cell = CellMetaClass(model.component_class, name=model.name,
+        Cell = CellMetaClass(component_class, name=model.name,
                              init_regime=init_regime,
-                             build_mode=args.build_mode)
+                             build_mode=args.build_mode,
+                             default_properties=props)
         # Create cell
-        cell = Cell(model)
+        cell = Cell()
         init_state = dict((sv, float(val) * parse_units(units))
                           for sv, val, units in args.init_value)
         if set(cell.state_variable_names) != set(init_state.iterkeys()):
