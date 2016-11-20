@@ -122,7 +122,7 @@ def run(argv):
         init_regime = args.init_regime
         if init_regime is None:
             if component_class.num_regimes == 1:
-                init_regime = next(component_class.regimes)
+                init_regime = next(component_class.regimes).name
             else:
                 raise Pype9UsageError(
                     "Need to specify initial regime as dynamics has more than "

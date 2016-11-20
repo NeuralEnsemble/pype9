@@ -143,7 +143,8 @@ class BaseCodeGenerator(object):
             if not os.path.exists(built_comp_class_pth):
                 generate_source = True
             else:
-                built_component_class = nineml.read(built_comp_class_pth)[name]
+                built_component_class = nineml.read(
+                    built_comp_class_pth, annotations_ns=[PYPE9_NS])[name]
                 if built_component_class.equals(component_class,
                                                 annotations_ns=[PYPE9_NS]):
                     generate_source = False
@@ -194,11 +195,12 @@ class BaseCodeGenerator(object):
             component_class.write(built_comp_class_pth)
         if compile_source:
             # Clean existing compile & install directories from previous builds
-            self.clean_compile_dir(compile_dir)
-            self.configure_build_files(
-                name=name, src_dir=src_dir, compile_dir=compile_dir,
-                install_dir=install_dir, **kwargs)
-            self.clean_install_dir(install_dir)
+            if generate_source:
+                self.clean_compile_dir(compile_dir)
+                self.configure_build_files(
+                    name=name, src_dir=src_dir, compile_dir=compile_dir,
+                    install_dir=install_dir, **kwargs)
+                self.clean_install_dir(install_dir)
             self.compile_source_files(compile_dir, name, verbose=verbose)
         # Switch back to original dir
         os.chdir(orig_dir)
