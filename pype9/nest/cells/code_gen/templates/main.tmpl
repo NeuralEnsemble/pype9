@@ -117,13 +117,13 @@ std::string {{component_name}}::ExceededMaximumSimultaneousTransitions::message(
 }
 
 
-void {{component_name}}::Regime_::set_triggers(double t) {
+void {{component_name}}::Regime_::set_triggers(double t, nest::Time const & origin, const nest::long_t& lag) {
     // Reset the vector of active transitions
     active_on_conditions.clear();
     
     // Add OnConditions to the list of active transitions if their trigger condition evaluates to false
     for (std::vector<OnCondition_*>::iterator it = on_conditions.begin(); it != on_conditions.end(); ++it)
-        if (!(*it)->condition(t))
+        if (!(*it)->condition(t) && (t != (*it)->time_occurred(origin, lag)))
             active_on_conditions.push_back(*it);
         
 }
@@ -581,7 +581,7 @@ void {{component_name}}::init_buffers_() {
 {% endfor %}
 
     B_.current_regime = get_regime("{{default_regime}}");
-    B_.current_regime->set_triggers(0);
+    B_.current_regime->set_triggers(0, nest::Time(), 0);
     B_.current_regime->init_solver();
 
 }
@@ -642,7 +642,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
             B_.current_regime = transition->get_target_regime();
             // Set all triggers, i.e. activate all triggers for which their trigger condition 
             // evaluates to false.
-            B_.current_regime->set_triggers(t);
+            B_.current_regime->set_triggers(t, origin, lag);
             // Reinitialise the solve if the is a discontinuity in the ODE system
             if (discontinuous)
                 B_.current_regime->init_solver();  // Reset the solver if the transition contains state assignments or switches to a new regime.

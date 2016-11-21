@@ -253,7 +253,7 @@ namespace nineml {
 	          : cell(cell), name(name) {}
 	        virtual ~Regime_();
 	        Transition_* transition(nest::Time const & origin, const nest::long_t& lag);
-	        void set_triggers(double t);
+	        void set_triggers(double t, nest::Time const & origin, const nest::long_t& lag);
 	        virtual void init_solver() = 0;
 	        virtual void step_ode() = 0;
 	        const std::string& get_name() { return name; }  // For debugging
