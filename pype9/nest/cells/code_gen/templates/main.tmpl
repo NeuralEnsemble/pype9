@@ -646,6 +646,8 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
             // Reinitialise the solve if the is a discontinuity in the ODE system
             if (discontinuous)
                 B_.current_regime->init_solver();  // Reset the solver if the transition contains state assignments or switches to a new regime.
+            // Update the previous time.    
+            prev_t = t;
         }
         
         /***** Send output events for each event send port *****/
