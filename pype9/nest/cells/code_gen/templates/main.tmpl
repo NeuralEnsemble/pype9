@@ -86,9 +86,7 @@ std::string {{component_name}}::ExceededMaximumSimultaneousTransitions::message(
         delete *it;
 }
 
-{{component_name}}::Transition_* {{component_name}}::Regime_::transition(nest::Time const& origin, const nest::long_t& lag) {
-    // Set the time to the end of the current timestep
-    double t = origin.get_ms() + lag * nest::Time::get_resolution().get_ms();
+{{component_name}}::Transition_* {{component_name}}::Regime_::transition(double prev_t, double t) {
 
     // Get vector of transitions (both OnConditions and OnEvents) that are triggered in the current timestep
     std::vector<Transition_*> occurred;
@@ -97,7 +95,7 @@ std::string {{component_name}}::ExceededMaximumSimultaneousTransitions::message(
             occurred.push_back(*it);
             
     for (std::vector<OnEvent_*>::iterator it = on_events.begin(); it != on_events.end(); ++it)
-        if ((*it)->received(origin, lag))
+        if ((*it)->received())
             occurred.push_back(*it);
 
     // Get the earliest transition to be triggered
@@ -109,7 +107,7 @@ std::string {{component_name}}::ExceededMaximumSimultaneousTransitions::message(
     else {
         std::vector<double> times;
         for (std::vector<Transition_*>::iterator it = occurred.begin(); it != occurred.end(); ++it) 
-            times.push_back((*it)->time_occurred(origin, lag));
+            times.push_back((*it)->time_occurred(prev_t, t));
         int min_index = std::min_element(times.begin(), times.end()) - times.begin();
         transition = occurred[min_index];
     }
@@ -117,7 +115,7 @@ std::string {{component_name}}::ExceededMaximumSimultaneousTransitions::message(
 }
 
 
-void {{component_name}}::Regime_::set_triggers(double t, nest::Time const & origin, const nest::long_t& lag) {
+void {{component_name}}::Regime_::set_triggers(double t) {
     // Reset the vector of active transitions
     active_on_conditions.clear();
     
@@ -271,13 +269,13 @@ bool {{component_name}}::{{TransitionClassName}}::body(double t) {
     {% for on_event in regime.on_events %}
             {% set TransitionClassName = '{}On{}Event'.format(regime.name, on_event.src_port_name) %}
     
-double {{component_name}}::{{TransitionClassName}}::time_occurred(nest::Time const& origin, const nest::long_t& lag) {
+double {{component_name}}::{{TransitionClassName}}::time_occurred(double prev_t, double t) {
     //FIXME: Should use the exact spike time specified in the spike event
-    return origin.get_ms() + lag * nest::Time::get_resolution().get_ms();
+    return t;
 }
 
 
-bool {{component_name}}::{{TransitionClassName}}::received(nest::Time const& origin, const nest::long_t& lag) {
+bool {{component_name}}::{{TransitionClassName}}::received() {
     return (bool)regime->cell->B_.{{on_event.src_port_name}}_events->size();
 }
 
@@ -308,7 +306,7 @@ bool {{component_name}}::{{TransitionClassName}}::activate_trigger(double t) {
 
 }
 
-double {{component_name}}::{{TransitionClassName}}::time_occurred(nest::Time const& origin, const nest::long_t& lag) {
+double {{component_name}}::{{TransitionClassName}}::time_occurred(double prev_t, double t) {
        {% set exact_time_expr = on_condition.trigger.crossing_time_expr %}
        {% if exact_time_expr %}
 
@@ -318,10 +316,12 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(nest::Time con
        
     {{macros.map_required_vars_locally(exact_time_expr, component_class, component_name, unit_handler, [], []) | indent(4)}}       
     // The trigger expression depends on 't' so determine the exact time that the threshold was crossed.
-    return {{exact_time_expr.rhs_cstr}};
+    double exact_t = {{exact_time_expr.rhs_cstr}};
+    assert (exact_t > prev_t) && (exact_t <= t));
        {% else %}
-    return origin.get_ms() + lag * nest::Time::get_resolution().get_ms();
+    double exact_t = t;
        {% endif %}
+    return exact_t;       
 }
 
 	{% endfor %}
@@ -593,7 +593,7 @@ void {{component_name}}::init_buffers_() {
 {% endfor %}
 
     B_.current_regime = get_regime("{{default_regime}}");
-    B_.current_regime->set_triggers(0, nest::Time(), 0);
+    B_.current_regime->set_triggers(0);
     B_.current_regime->init_solver();
 
 }
@@ -625,10 +625,18 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 
     nest::long_t current_steps = origin.get_steps();
 
-    for (nest::long_t lag = from; lag < to; ++lag) {
+    double start_t = origin.get_ms();
+    double end_t;
+    double dt = nest::Time::get_resolution().get_ms();    
 
+    for (nest::long_t lag = from; lag < to; ++lag) {
+    
         /***** Solve ODE over timestep *****/
         B_.current_regime->step_ode();
+        
+        /**** Update the current time period ****/
+        start_t = end_t;
+        end_t += dt;
 
         /***** Transition handling *****/
         // Get multiplicity incoming events for the current lag and reset multiplicity of outgoing events
@@ -636,11 +644,13 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         
         Transition_* transition;
         int simultaneous_transition_count = 0;
-        double prev_t = origin.get_ms();
-        while ((transition = B_.current_regime->transition(origin, lag))) {  // Check for a transition (i.e. the output of current_regime->transition is not NULL) and record it in the 'transition' variable.
+        
+        double last_transition_t = 0.0;
+        
+        while ((transition = B_.current_regime->transition(start_t, end_t))) {  // Check for a transition (i.e. the output of current_regime->transition is not NULL) and record it in the 'transition' variable.
                     
-            double t = transition->time_occurred(origin, lag);  // Get the exact time the transition occurred.
-            if (t == prev_t) {
+            double t = transition->time_occurred(start_t, end_t);  // Get the exact time the transition occurred.
+            if (t == last_transition_t) {
                 ++simultaneous_transition_count;
                 if (simultaneous_transition_count > MAX_SIMULTANEOUS_TRANSITIONS)
                     throw ExceededMaximumSimultaneousTransitions("{{component_name}}", simultaneous_transition_count, t);
@@ -654,12 +664,12 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
             B_.current_regime = transition->get_target_regime();
             // Set all triggers, i.e. activate all triggers for which their trigger condition 
             // evaluates to false.
-            B_.current_regime->set_triggers(t, origin, lag);
-            // Reinitialise the solve if the is a discontinuity in the ODE system
+            B_.current_regime->set_triggers(t);
+            // Reinitialise the solver if the was a discontinuity in the ODE system
             if (discontinuous)
                 B_.current_regime->init_solver();  // Reset the solver if the transition contains state assignments or switches to a new regime.
             // Update the previous time.    
-            prev_t = t;
+            last_transition_t = t;
         }
         
         /***** Send output events for each event send port *****/
@@ -681,6 +691,18 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 
         /***** Record data *****/
         B_.logger_.record_data(current_steps + lag);
+        
+        
+        // Set active on-condition triggers before the next state update.
+        // FIXME: This implementation can't detect multiple within-step
+        //        triggers. Will need to use a solver that can detect zero
+        //        crossings (e.g. CVODE), supply it with an appropriate
+        //        equation (i.e. unwrap logical expressions and convert inequalties
+        //        to equalities = 0, e.g. a < b ==> a - b == 0, (a < b) | (c > d)
+        //        ==> (a - b) * (c - d) == 0, (a < b) & (c > d) ==>
+        //        abs(a - b) + abs(c - d) == 0).
+        B_.current_regime->set_triggers(end_t);
+        
     }
 }
 

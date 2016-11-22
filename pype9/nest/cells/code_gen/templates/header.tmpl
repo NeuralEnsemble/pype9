@@ -252,8 +252,8 @@ namespace nineml {
 	        Regime_({{component_name}}* cell, const std::string& name) 
 	          : cell(cell), name(name) {}
 	        virtual ~Regime_();
-	        Transition_* transition(nest::Time const & origin, const nest::long_t& lag);
-	        void set_triggers(double t, nest::Time const & origin, const nest::long_t& lag);
+	        Transition_* transition(double prev_t, double t);
+	        void set_triggers(double t);
 	        virtual void init_solver() = 0;
 	        virtual void step_ode() = 0;
 	        const std::string& get_name() { return name; }  // For debugging
@@ -337,7 +337,7 @@ namespace nineml {
 	        virtual ~Transition_() {}
             void set_target_regime(std::map<std::string, Regime_*>& regimes);
             Regime_* get_target_regime();	        
-	        virtual double time_occurred(nest::Time const & origin, const nest::long_t& lag) = 0;
+	        virtual double time_occurred(double prev_t, double t) = 0;
 	        virtual bool body(double t) = 0;
 	        
             /* Inline random distribution methods */
@@ -360,7 +360,7 @@ namespace nineml {
 	      public:
 	        OnEvent_(Regime_* regime, const std::string& target_regime_name) : Transition_(regime, target_regime_name) {}
             virtual ~OnEvent_() {}
-            virtual bool received(nest::Time const & origin, const nest::long_t& lag) = 0;
+            virtual bool received() = 0;
 	    
 	    };
 
@@ -387,8 +387,8 @@ namespace nineml {
           public:
             {{ClassName}}(Regime_* regime, const std::string& target_regime_name) : OnEvent_(regime, target_regime_name) {}
             virtual ~{{ClassName}}() {}
-            virtual bool received(nest::Time const & origin, const nest::long_t& lag);                        
-            virtual double time_occurred(nest::Time const & origin, const nest::long_t& lag);
+            virtual bool received();                        
+            virtual double time_occurred(double prev_t, double t);
             virtual bool body(double t);
      
         };
@@ -403,7 +403,7 @@ namespace nineml {
             virtual ~{{ClassName}}() {}
             virtual bool condition(double t);
             virtual bool activate_trigger(double t);
-            virtual double time_occurred(nest::Time const & origin, const nest::long_t& lag);
+            virtual double time_occurred(double prev_t, double t);
             virtual bool body(double t);
      
         };
