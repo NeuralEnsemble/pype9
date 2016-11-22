@@ -123,7 +123,7 @@ void {{component_name}}::Regime_::set_triggers(double t, nest::Time const & orig
     
     // Add OnConditions to the list of active transitions if their trigger condition evaluates to false
     for (std::vector<OnCondition_*>::iterator it = on_conditions.begin(); it != on_conditions.end(); ++it)
-        if (!(*it)->condition(t) && (t != (*it)->time_occurred(origin, lag)))
+        if ((*it)->activate_trigger(t))
             active_on_conditions.push_back(*it);
         
 }
@@ -293,6 +293,18 @@ bool {{component_name}}::{{TransitionClassName}}::condition(double t) {
     {{macros.map_required_vars_locally(on_condition.trigger, component_class, component_name, unit_handler, [], []) | indent(4)}}
 
     return {{on_condition.trigger.rhs_cstr}};
+
+}
+
+bool {{component_name}}::{{TransitionClassName}}::activate_trigger(double t) {
+        
+    const State_& S_ = regime->cell->S_;
+    const Buffers_& B_ = regime->cell->B_;
+    const Parameters_& P_ = regime->cell->P_;
+        
+    {{macros.map_required_vars_locally(on_condition.trigger.reactivate_condition, component_class, component_name, unit_handler, [], []) | indent(4)}}
+
+    return {{on_condition.trigger.reactivate_condition.rhs_cstr}};
 
 }
 

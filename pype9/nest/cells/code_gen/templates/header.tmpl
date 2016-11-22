@@ -372,6 +372,7 @@ namespace nineml {
 	        OnCondition_(Regime_* regime, const std::string& target_regime_name) : Transition_(regime, target_regime_name) {}
 	        virtual ~OnCondition_() {}
             virtual bool condition(double t) = 0;
+            virtual bool activate_trigger(double t) = 0;
 	    };
 	    
 	    /*
@@ -401,6 +402,7 @@ namespace nineml {
             {{ClassName}}(Regime_* regime, const std::string& target_regime_name) : OnCondition_(regime, target_regime_name) {}
             virtual ~{{ClassName}}() {}
             virtual bool condition(double t);
+            virtual bool activate_trigger(double t);
             virtual double time_occurred(nest::Time const & origin, const nest::long_t& lag);
             virtual bool body(double t);
      
