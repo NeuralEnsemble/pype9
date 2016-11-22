@@ -162,16 +162,23 @@ class CodeGenerator(BaseCodeGenerator):
         self.render_to_file(
             template, tmpl_args, component_class.name + '.mod', src_dir)
 
-    def transform_for_build(self, component_class, default_properties,
+    def transform_for_build(self, name, component_class, default_properties,
                             initial_state, **kwargs):
         """
-        Copy the component class to alter it to match NEURON's current
-        centric focus
-        `prototype`        -- the component to be transformed
-        `membrane_voltage` -- the name of the state variable that represents
-                              the membrane voltage
-        `membrane_capacitance` -- the name of the capcitance that represents
-                              the membrane capacitance
+        Copies and transforms the component class and associated properties and
+        states to match the format of the simulator (overridden in derived
+        class)
+
+        Parameters
+        ----------
+        name : str
+            The name of the transformed component class
+        component_class : nineml.Dynamics
+            The component class to be transformed
+        default_properties : nineml.DynamicsProperties
+            The properties to be transformed to match
+        initial_states : dict[str, nineml.Quantity]
+            The initial_states to be transformed to match
         """
         if not isinstance(component_class, WithSynapses):
             raise Pype9RuntimeError(
@@ -179,8 +186,8 @@ class CodeGenerator(BaseCodeGenerator):
         # ---------------------------------------------------------------------
         # Clone original component class and properties
         # ---------------------------------------------------------------------
-        name = component_class.name
         trfrm = DynamicsCloner().visit(component_class.dynamics)
+        trfrm.name = name
         if default_properties is not None:
             props = default_properties.dynamics_properties
             trfrm_properties = DynamicsProperties(

@@ -319,22 +319,32 @@ class BaseCodeGenerator(object):
         """
         return []
 
-    def transform_for_build(self, component_class, default_properties,
+    def transform_for_build(self, name, component_class, default_properties,
                             initial_state, **kwargs):  # @UnusedVariable
         """
         Copies and transforms the component class and associated properties and
         states to match the format of the simulator (overridden in derived
         class)
 
-        `component_class`     -- the component class to be transformed
-        `default_properties`  -- the properties to be transformed to match
-        `initial_states`      -- the initial_states to be transformed to match
+        Parameters
+        ----------
+        name : str
+            The name of the transformed component class
+        component_class : nineml.Dynamics
+            The component class to be transformed
+        default_properties : nineml.DynamicsProperties
+            The properties to be transformed to match
+        initial_states : dict[str, nineml.Quantity]
+            The initial_states to be transformed to match
         """
         # ---------------------------------------------------------------------
         # Clone original component class and properties
         # ---------------------------------------------------------------------
-        return (deepcopy(component_class), deepcopy(default_properties),
-                deepcopy(initial_state))
+        component_class = component_class.clone()
+        component_class.name = name
+        default_properties = default_properties.clone()
+        initial_state = deepcopy(initial_state)
+        return component_class, default_properties, initial_state
 
     @classmethod
     def get_mod_time(cls, url):

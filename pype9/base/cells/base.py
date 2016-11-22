@@ -92,6 +92,7 @@ class CellMetaClass(type):
             code_gen = cls.CodeGenerator()
             (build_component_class, build_properties,
              build_initial_states) = code_gen.transform_for_build(
+                name=name,
                 component_class=component_class,
                 default_properties=default_properties,
                 initial_state=initial_state, **kwargs)

@@ -49,7 +49,6 @@ def run(argv):
     Runs the simulation script from the provided arguments
     """
     import nineml
-    from nineml.exceptions import NineMLXMLError
     from pype9.exceptions import Pype9UsageError
     import neo.io
     import time
@@ -147,14 +146,11 @@ def run(argv):
         # Play inputs
         for port_name, fname, _ in args.play:
             port = component_class.receive_port(port_name)
-            try:
-                signal = nineml_model(fname)
-            except NineMLXMLError:
-                seg = neo.io.PickleIO(filename=fname).read_segment()
-                if port.communicates == 'event':
-                    signal = seg.spiketrains[0]
-                else:
-                    signal = seg.analogsignals[0]
+            seg = neo.io.PickleIO(filename=fname).read()[0]
+            if port.communicates == 'event':
+                signal = seg.spiketrains[0]
+            else:
+                signal = seg.analogsignals[0]
             # Input is an event train or analog signal
             cell.play(port_name, signal)
         # Set up recorders
@@ -163,7 +159,7 @@ def run(argv):
         # Run simulation
         simulation_controller.run(args.time)
         # Collect data into Neo Segments
-        fnames = set(r[2] for r in args.record)
+        fnames = set(r[1] for r in args.record)
         data_segs = {}
         for fname in fnames:
             data_segs[fname] = neo.Segment(

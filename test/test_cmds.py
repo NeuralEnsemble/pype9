@@ -1,6 +1,8 @@
 import tempfile
 import shutil
 import neo.io
+import nest
+from nineml.units import Quantity
 from pype9.cmd.simulate import run
 import ninemlcatalog
 from pype9.neuron import (
@@ -48,7 +50,7 @@ class TestSimulateAndPlot(TestCase):
                 "--prop amplitude {amp} "
                 "--prop onset {onset} "
                 "--init_value current_output {init} "
-                "--build_mode force"
+                "--build_mode lazy"
                 .format(input_model=self.isyn_path, out_path=in_path,
                         t_stop=self.t_stop, dt=self.dt,
                         U='{} {}'.format(*self.U), V='{} {}'.format(*self.V),
@@ -59,32 +61,33 @@ class TestSimulateAndPlot(TestCase):
         print "running input simulation"
         run(argv.split())
         print "finished running input simulation"
-        isyn = neo.io.PickleIO(in_path).read().segments[0].analogsignals[0]
+        isyn = neo.io.PickleIO(in_path).read()[0].analogsignals[0]
         # Check sanity of input signal
         self.assertEqual(isyn.max(), self.isyn_amp[0],
                          "Max of isyn input signal {} did not match specified "
                          "amplitude, {}".format(isyn.max(), self.isyn_amp[0]))
-        self.assertEqual(isyn.min(), self.isyn_ini[0],
+        self.assertEqual(isyn.min(), self.isyn_init[0],
                          "Min of isyn input signal {} did not match specified "
                          "initial value, {}"
                          .format(isyn.max(), self.isyn_init[0]))
+        nest.ResetKernel()
         for simulator in ('nest', 'neuron'):
             argv = (
                 "{nineml_model} {sim} {t_stop} {dt} "
                 "--record V {out_path} v "
                 "--init_value U {U} "
                 "--init_value V {V} "
-                "--play Isyn {in_path} "
+                "--play Isyn {in_path} isyn "
                 "--build_mode force"
                 .format(nineml_model=self.izhi_path, sim=simulator,
                         out_path=out_path, in_path=in_path, t_stop=self.t_stop,
                         dt=self.dt, U='{} {}'.format(*self.U),
                         V='{} {}'.format(*self.V),
-                        isyn_amp='{} {}'.format(*self.Isyn[0]),
-                        isyn_onset='{} {}'.format(*self.Isyn[1]),
-                        isyn_init='{} {}'.format(*self.Isyn[2])))
+                        isyn_amp='{} {}'.format(*self.isyn_amp),
+                        isyn_onset='{} {}'.format(*self.isyn_onset),
+                        isyn_init='{} {}'.format(*self.isyn_init)))
             run(argv.split())
-            v = neo.io.PickleIO(out_path).read().segments[0].analogsignals[0]
+            v = neo.io.PickleIO(out_path).read()[0].analogsignals[0]
             ref_v = self._ref_single_cell(simulator, isyn)
             self.assertTrue(all(v == ref_v),
                              "'simulate' command produced different results to"
@@ -104,7 +107,10 @@ class TestSimulateAndPlot(TestCase):
             metaclass = CellMetaClassNEST
             simulation_controller = simulatorNEST
         nineml_model = ninemlcatalog.load(self.izhi_path)
-        cell = metaclass(nineml_model, name='izhikevichAPI')()
+        cell = metaclass(nineml_model.component_class,
+                         name='izhikevichAPI')(nineml_model)
+        cell.update_state({'U': Quantity(*self.U),
+                           'V': Quantity(*self.V)})
         cell.record('V')
         cell.play('Isyn', isyn)
         simulation_controller.run(self.t_stop)
