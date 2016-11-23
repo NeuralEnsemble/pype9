@@ -22,7 +22,7 @@ from pype9.annotations import PYPE9_NS, BUILD_PROPS
 from pype9.exceptions import (
     Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError)
 import logging
-from .synapses import WithSynapses, WithSynapsesProperties
+from .with_synapses import WithSynapses, WithSynapsesProperties
 
 logger = logging.Logger("Pype9")
 
