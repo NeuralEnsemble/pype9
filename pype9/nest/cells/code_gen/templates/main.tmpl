@@ -317,7 +317,7 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(double prev_t,
     {{macros.map_required_vars_locally(exact_time_expr, component_class, component_name, unit_handler, [], []) | indent(4)}}       
     // The trigger expression depends on 't' so determine the exact time that the threshold was crossed.
     double exact_t = {{exact_time_expr.rhs_cstr}};
-    assert (exact_t > prev_t) && (exact_t <= t));
+    assert((exact_t > prev_t) && (exact_t <= t));
        {% else %}
     double exact_t = t;
        {% endif %}

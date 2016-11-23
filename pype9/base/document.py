@@ -1,5 +1,5 @@
 import nineml
-from .cells import with_synapses
+from nineml.document import read_xml
 
 
 class Document(nineml.Document):
@@ -14,7 +14,37 @@ class Document(nineml.Document):
         # Note that all `DocumentLevelObjects` need to be imported
         # into the root nineml package
         try:
-            child_cls = getattr(with_synapses, nineml_type)
+            child_cls = getattr(pype9.base.cells.with_synapses, nineml_type)
         except AttributeError:
             child_cls = nineml.Document._get_class_from_type(nineml_type)
         return child_cls
+
+
+def read(url, relative_to=None, **kwargs):
+    """
+    Read a NineML (possibly with PyPe9 WithSynapses) file and parse its child
+    elements
+
+    If the URL does not have a scheme identifier, it is taken to refer to a
+    local file.
+    """
+    xml, url = read_xml(url, relative_to=relative_to)
+    root = xml.getroot()
+    doc = Document.load(root, url, **kwargs)
+    return doc
+
+
+def write(document, filename, **kwargs):
+    """
+    Provided for symmetry with read method, takes a nineml.document.Document
+    object and writes it to the specified file
+    """
+    # Encapsulate the NineML element in a document if it is not already
+    if not isinstance(document, Document):
+        element = document.clone()
+        element._document = None
+        document = Document(element)
+    document.write(filename, **kwargs)
+
+
+import pype9.base.cells  # @IgnorePep8

@@ -27,6 +27,7 @@ import logging
 import pype9.annotations
 from pype9.annotations import PYPE9_NS, BUILD_PROPS
 import nineml
+from pype9.base.document import read
 import tempfile
 
 
@@ -143,7 +144,7 @@ class BaseCodeGenerator(object):
             if not os.path.exists(built_comp_class_pth):
                 generate_source = True
             else:
-                built_component_class = nineml.read(
+                built_component_class = read(
                     built_comp_class_pth, annotations_ns=[PYPE9_NS])[name]
                 if built_component_class.equals(component_class,
                                                 annotations_ns=[PYPE9_NS]):
@@ -342,8 +343,13 @@ class BaseCodeGenerator(object):
         # ---------------------------------------------------------------------
         component_class = component_class.clone()
         component_class.name = name
-        default_properties = default_properties.clone()
-        initial_state = deepcopy(initial_state)
+        default_properties = (default_properties.clone()
+                              if default_properties is not None else None)
+        if initial_state is not None:
+            initial_state = dict(
+                (n, v.clone()) for n, v in initial_state.iteritems())
+        else:
+            initial_state = None
         return component_class, default_properties, initial_state
 
     @classmethod

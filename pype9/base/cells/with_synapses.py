@@ -1,8 +1,6 @@
 from itertools import chain
 from abc import ABCMeta
-import nineml
-from nineml.abstraction import (
-    BaseALObject, Dynamics, Parameter, AnalogReceivePort, EventReceivePort)
+from nineml.abstraction import BaseALObject, Dynamics, Parameter
 from nineml.abstraction.componentclass.visitors.xml import (
     ComponentClassXMLWriter, ComponentClassXMLLoader)
 from nineml.user import (
@@ -180,6 +178,12 @@ class WithSynapses(object):
         name = get_xml_attr(element, 'name', document, **kwargs)
         assert name == dynamics.name
         return cls(dynamics, synapses, parameter_sets)
+
+    def write(self, fname):
+        """
+        Writes the top-level NineML object to file in XML.
+        """
+        pype9.base.document.write(self, fname)
 
 
 class DynamicsWithSynapses(WithSynapses, Dynamics):
@@ -369,6 +373,19 @@ class WithSynapsesProperties(object):
                 "MultiDynamics".format(type(dynamics_properties)))
         return wrapped
 
+    def clone(self, memo=None, **kwargs):
+        return self.__class__(
+            self.dynamics_properties.clone(memo=memo, **kwargs),
+            (s.clone(memo=memo, **kwargs) for s in self.synapses),
+            (cps.clone(memo=memo, **kwargs)
+             for cps in self.connection_property_sets))
+
+    def write(self, fname):
+        """
+        Writes the top-level NineML object to file in XML.
+        """
+        write(self, fname)  # Calls nineml.document.Document.write
+
 
 class DynamicsWithSynapsesProperties(WithSynapsesProperties,
                                      DynamicsProperties):
@@ -491,6 +508,11 @@ class ConnectionPropertySet(BaseULObject):
     def properties(self):
         return self._properties
 
+    def clone(self, memo=None, **kwargs):
+        return self.__class__(
+            self.port,
+            [p.clone(memo=memo, **kwargs) for p in self.properties])
+
 
 class Synapse(BaseALObject):
 
@@ -581,3 +603,31 @@ class SynapseProperties(BaseULObject):
     @property
     def port_connections(self):
         return self._port_connections
+
+    @annotate_xml
+    def to_xml(self, document, E, **kwargs):
+        return E(self.nineml_type,
+                 self.dynamics_properties.to_xml(document, E, **kwargs),
+                 *(pc.to_xml(document, E, **kwargs)
+                   for pc in self.port_connections),
+                 name=self.name)
+
+    @classmethod
+    @read_annotations
+    @unprocessed_xml
+    def from_xml(cls, element, document, **kwargs):  # @UnusedVariable
+        # The only supported op at this stage
+        dynamics_properties = from_child_xml(
+            element, DynamicsProperties, document, **kwargs)
+        analog_port_connections = from_child_xml(
+            element, AnalogPortConnection, document, multiple=True,
+            allow_none=True, **kwargs)
+        event_port_connections = from_child_xml(
+            element, EventPortConnection, document, multiple=True,
+            allow_none=True, **kwargs)
+        return cls(get_xml_attr(element, 'name', document, **kwargs),
+                   dynamics_properties, chain(analog_port_connections,
+                                              event_port_connections))
+
+
+import pype9.base.document  # @IgnorePep8
