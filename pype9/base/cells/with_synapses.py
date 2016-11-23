@@ -1,7 +1,10 @@
 from itertools import chain
 from abc import ABCMeta
+import nineml
 from nineml.abstraction import (
     BaseALObject, Dynamics, Parameter, AnalogReceivePort, EventReceivePort)
+from nineml.abstraction.componentclass.visitors.xml import (
+    ComponentClassXMLWriter, ComponentClassXMLLoader)
 from nineml.user import (
     BaseULObject, DynamicsProperties, MultiDynamics, MultiDynamicsProperties,
     Definition, AnalogPortConnection, EventPortConnection)
@@ -9,7 +12,7 @@ from nineml.base import ContainerObject, DocumentLevelObject
 from nineml.exceptions import name_error, NineMLNameError
 from pype9.exceptions import Pype9RuntimeError
 from nineml.xml import (
-    from_child_xml, unprocessed_xml, get_xml_attr)
+    from_child_xml, unprocessed_xml, get_xml_attr, E, extract_xmlns)
 from nineml.annotations import annotate_xml, read_annotations
 
 
@@ -151,13 +154,14 @@ class WithSynapses(object):
              for cps in self.connection_parameter_sets))
 
     @annotate_xml
-    def to_xml(self, document, E, **kwargs):
+    def to_xml(self, document, E=E, **kwargs):
         return E(self.nineml_type,
-                 self.dynamics.to_xml(document, E, **kwargs),
+                 E.Cell(self.dynamics.to_xml(document, E=E, **kwargs)),
                  *chain((s.to_xml(document, E, **kwargs)
                          for s in self.synapses),
                         (cps.to_xml(document, E, **kwargs)
-                         for cps in self.connection_parameter_sets)))
+                         for cps in self.connection_parameter_sets)),
+                 name=self.name)
 
     @classmethod
     @read_annotations
@@ -165,19 +169,22 @@ class WithSynapses(object):
     def from_xml(cls, element, document, **kwargs):  # @UnusedVariable
         # The only supported op at this stage
         dynamics = from_child_xml(
-            element, cls.wrapped_class, document, **kwargs)
+            element, cls.wrapped_class, document, within='Cell',
+            allow_reference=True, **kwargs)
         synapses = from_child_xml(
             element, Synapse, document, multiple=True, allow_none=True,
             **kwargs)
         parameter_sets = from_child_xml(
             element, ConnectionParameterSet, document, multiple=True,
             allow_none=True, **kwargs)
-        return cls(get_xml_attr(element, 'name', document, **kwargs),
-                   dynamics, synapses, parameter_sets)
+        name = get_xml_attr(element, 'name', document, **kwargs)
+        assert name == dynamics.name
+        return cls(dynamics, synapses, parameter_sets)
 
 
 class DynamicsWithSynapses(WithSynapses, Dynamics):
 
+    nineml_type = 'DynamicsWithSynapses'
     wrapped_class = Dynamics
 
     def __init__(self, dynamics, synapses=[], connection_parameter_sets=[]):
@@ -205,6 +212,7 @@ class DynamicsWithSynapses(WithSynapses, Dynamics):
 
 class MultiDynamicsWithSynapses(WithSynapses, MultiDynamics):
 
+    nineml_type = 'MultiDynamicsWithSynapses'
     wrapped_class = MultiDynamics
 
     def __init__(self, dynamics, synapses=[], connection_parameter_sets=[]):
@@ -406,8 +414,10 @@ class ConnectionParameterSet(BaseALObject):
     defining_attributes = ('_port', '_parameters')
 
     def __init__(self, port, parameters):
+        super(ConnectionParameterSet, self).__init__()
         self._port = port
-        self._parameters = parameters
+        # Ensure that parameters are not _NamespaceParameters
+        self._parameters = [Parameter(p.name, p.dimension) for p in parameters]
 
     def __repr__(self):
         return ("ConnectionParameterSet(port={}, parameters=[{}])"
@@ -428,27 +438,34 @@ class ConnectionParameterSet(BaseALObject):
 
     def clone(self, memo=None, **kwargs):
         return self.__class__(
-            self.port.clone(memo=memo, **kwargs),
+            self.port,
             [p.clone(memo=memo, **kwargs) for p in self.parameters])
 
     @annotate_xml
     def to_xml(self, document, E, **kwargs):
+        xml_writer = ComponentClassXMLWriter(document, E, **kwargs)
         return E(self.nineml_type,
-                 self.port.to_xml(document, E, **kwargs),
-                 *(p.to_xml(document, E, **kwargs)
-                   for p in self.parameters))
+                 *(xml_writer.visit(p) for p in self.parameters),
+                 port=self.port)
 
     @classmethod
     @read_annotations
-    @unprocessed_xml
-    def from_xml(cls, element, document, **kwargs):  # @UnusedVariable
-        # The only supported op at this stage
-        port = from_child_xml(
-            element, (AnalogReceivePort, EventReceivePort), document, **kwargs)
-        parameters = from_child_xml(
-            element, Parameter, document, multiple=True,
-            allow_none=True, **kwargs)
-        return cls(port, parameters)
+    def from_xml(cls, element, document, **kwargs):  # @UnusedVariable @IgnorePep8
+        # FIXME: Ideally Parameter should have from_xml method that calls
+        #        the ComponentClassXMLLoader. To do this, the BaseALObject
+        #        should be split into
+        #        BaseDynamicsObject/BaseConnectionRuleObject/... and then they
+        #        can each have a generic from_xml method that calls the right
+        #        visitor
+        # parameters = from_child_xml(
+        #     element, Parameter, document, multiple=True, **kwargs)
+        loader = ComponentClassXMLLoader(document, **kwargs)
+        xmlns = extract_xmlns(element.tag)
+        parameters = []
+        for param_elem in element.findall(xmlns + Parameter.nineml_type):
+            parameters.append(loader.load_parameter(param_elem))
+        return cls(get_xml_attr(element, 'port', document, **kwargs),
+                   parameters)
 
 
 class ConnectionPropertySet(BaseULObject):
@@ -457,6 +474,7 @@ class ConnectionPropertySet(BaseULObject):
     defining_attributes = ('_port', '_properties')
 
     def __init__(self, port, properties):
+        super(ConnectionPropertySet, self).__init__()
         self._port = port
         self._properties = properties
 
@@ -480,6 +498,7 @@ class Synapse(BaseALObject):
     defining_attributes = ('_name', '_dynamics', '_port_connections')
 
     def __init__(self, name, dynamics, port_connections):
+        super(Synapse, self).__init__()
         self._name = name
         self._dynamics = dynamics
         self._port_connections = port_connections
@@ -540,6 +559,7 @@ class SynapseProperties(BaseULObject):
                            '_port_connections')
 
     def __init__(self, name, dynamics_properties, port_connections):
+        super(SynapseProperties, self).__init__()
         self._name = name
         self._dynamics_properties = dynamics_properties
         self._port_connections = port_connections
