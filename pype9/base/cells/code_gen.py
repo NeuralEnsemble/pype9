@@ -22,7 +22,9 @@ from itertools import izip
 from abc import ABCMeta, abstractmethod
 import sympy
 from nineml import units
-from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
+from nineml.exceptions import NineMLNameError
+from pype9.exceptions import (
+    Pype9BuildError, Pype9RuntimeError)
 import logging
 import pype9.annotations
 from pype9.annotations import PYPE9_NS, BUILD_PROPS
@@ -143,20 +145,26 @@ class BaseCodeGenerator(object):
             if not os.path.exists(built_comp_class_pth):
                 generate_source = True
             else:
-                built_component_class = read(
-                    built_comp_class_pth, annotations_ns=[PYPE9_NS])[name]
-                if built_component_class.equals(component_class,
-                                                annotations_ns=[PYPE9_NS]):
-                    generate_source = False
-                    logger.info("Found existing build in '{}' directory, "
-                                "code generation skipped (set 'build_mode' "
-                                "argument to 'force' or 'build_only' to "
-                                "enforce regeneration)".format(build_dir))
-                else:
+                try:
+                    built_component_class = read(
+                        built_comp_class_pth, annotations_ns=[PYPE9_NS])[name]
+                    if built_component_class.equals(component_class,
+                                                    annotations_ns=[PYPE9_NS]):
+                        generate_source = False
+                        logger.info("Found existing build in '{}' directory, "
+                                    "code generation skipped (set 'build_mode'"
+                                    " argument to 'force' or 'build_only' to "
+                                    "enforce regeneration)".format(build_dir))
+                    else:
+                        generate_source = True
+                        logger.info("Found existing build in '{}' directory, "
+                                    "but the component classes differ so "
+                                    "regenerating sources".format(build_dir))
+                except NineMLNameError:
                     generate_source = True
                     logger.info("Found existing build in '{}' directory, "
-                                "but the component classes differ so "
-                                "regenerating sources".format(build_dir))
+                                "but could not find '{}' component class so "
+                                "regenerating sources".format(name, build_dir))
         # Check if required directories are present depending on build_mode
         elif build_mode == 'require':
             if not os.path.exists(install_dir):

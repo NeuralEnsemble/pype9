@@ -4,6 +4,7 @@ import neo.io
 import nest
 from nineml.units import Quantity
 from pype9.cmd.simulate import run
+import nineml.units as un
 import ninemlcatalog
 from pype9.neuron import (
     CellMetaClass as CellMetaClassNEURON,
@@ -109,8 +110,8 @@ class TestSimulateAndPlot(TestCase):
         nineml_model = ninemlcatalog.load(self.izhi_path)
         cell = metaclass(nineml_model.component_class,
                          name='izhikevichAPI')(nineml_model)
-        cell.update_state({'U': Quantity(*self.U),
-                           'V': Quantity(*self.V)})
+        cell.update_state({'U': Quantity(self.U[0], getattr(un, self.U[1])),
+                           'V': Quantity(self.V[0], getattr(un, self.V[1]))})
         cell.record('V')
         cell.play('Isyn', isyn)
         simulation_controller.run(self.t_stop)
