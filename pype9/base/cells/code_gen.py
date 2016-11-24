@@ -26,7 +26,6 @@ from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
 import logging
 import pype9.annotations
 from pype9.annotations import PYPE9_NS, BUILD_PROPS
-import nineml
 from pype9.base.document import read
 import tempfile
 

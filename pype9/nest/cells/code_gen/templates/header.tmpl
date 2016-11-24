@@ -252,7 +252,7 @@ namespace nineml {
 	        Regime_({{component_name}}* cell, const std::string& name) 
 	          : cell(cell), name(name) {}
 	        virtual ~Regime_();
-	        Transition_* transition(double prev_t, double t);
+	        Transition_* transition(double t);
 	        void set_triggers(double t);
 	        virtual void init_solver() = 0;
 	        virtual void step_ode() = 0;
@@ -264,7 +264,6 @@ namespace nineml {
 	        std::string name;
             std::vector<OnCondition_*> on_conditions;
             std::vector<OnEvent_*> on_events;
-            std::vector<OnCondition_*> active_on_conditions;
            
           friend class {{component_name}};
           friend class Transition_;
@@ -337,13 +336,14 @@ namespace nineml {
 	        virtual ~Transition_() {}
             void set_target_regime(std::map<std::string, Regime_*>& regimes);
             Regime_* get_target_regime();	        
-	        virtual double time_occurred(double prev_t, double t) = 0;
+	        virtual double time_occurred(double t) = 0;
 	        virtual bool body(double t) = 0;
+	        virtual void deactivate() = 0;  // Only needed for on-conditions
 	        
             /* Inline random distribution methods */
 	        double random_uniform_(double low, double high);
 	        double random_normal_(double mu, double sigma);
-	        double random_exponential_(double lambda);   
+	        double random_exponential_(double lambda);
 
 	      protected:
 	        Regime_* regime;
@@ -361,6 +361,7 @@ namespace nineml {
 	        OnEvent_(Regime_* regime, const std::string& target_regime_name) : Transition_(regime, target_regime_name) {}
             virtual ~OnEvent_() {}
             virtual bool received() = 0;
+            virtual void deactivate() {}  // Not required for on-events
 	    
 	    };
 
@@ -369,10 +370,14 @@ namespace nineml {
          */
 	    class OnCondition_ : public Transition_ {
 	      public:
-	        OnCondition_(Regime_* regime, const std::string& target_regime_name) : Transition_(regime, target_regime_name) {}
+	        OnCondition_(Regime_* regime, const std::string& target_regime_name) : Transition_(regime, target_regime_name), active(false) {}
 	        virtual ~OnCondition_() {}
-            virtual bool condition(double t) = 0;
-            virtual bool activate_trigger(double t) = 0;
+            virtual bool triggered(double t) = 0;
+            virtual void set_trigger(double t) = 0;
+            void deactivate() { active = false; }
+            
+          protected:
+            bool active;
 	    };
 	    
 	    /*
@@ -388,7 +393,7 @@ namespace nineml {
             {{ClassName}}(Regime_* regime, const std::string& target_regime_name) : OnEvent_(regime, target_regime_name) {}
             virtual ~{{ClassName}}() {}
             virtual bool received();                        
-            virtual double time_occurred(double prev_t, double t);
+            virtual double time_occurred(double t);
             virtual bool body(double t);
      
         };
@@ -401,9 +406,9 @@ namespace nineml {
           public:
             {{ClassName}}(Regime_* regime, const std::string& target_regime_name) : OnCondition_(regime, target_regime_name) {}
             virtual ~{{ClassName}}() {}
-            virtual bool condition(double t);
-            virtual bool activate_trigger(double t);
-            virtual double time_occurred(double prev_t, double t);
+            virtual bool triggered(double t);
+            virtual void set_trigger(double t);
+            virtual double time_occurred(double t);
             virtual bool body(double t);
      
         };

@@ -90,8 +90,8 @@ std::string {{component_name}}::ExceededMaximumSimultaneousTransitions::message(
 
     // Get vector of transitions (both OnConditions and OnEvents) that are triggered in the current timestep
     std::vector<Transition_*> occurred;
-    for (std::vector<OnCondition_*>::iterator it = active_on_conditions.begin(); it != active_on_conditions.end(); ++it)
-        if ((*it)->condition(t))
+    for (std::vector<OnCondition_*>::iterator it = on_conditions.begin(); it != on_conditions.end(); ++it)
+        if ((*it)->triggered(t))
             occurred.push_back(*it);
             
     for (std::vector<OnEvent_*>::iterator it = on_events.begin(); it != on_events.end(); ++it)
@@ -111,19 +111,19 @@ std::string {{component_name}}::ExceededMaximumSimultaneousTransitions::message(
         int min_index = std::min_element(times.begin(), times.end()) - times.begin();
         transition = occurred[min_index];
     }
+    // Deactivate the transition trigger (if on-condition) so that it doesn't
+    // 'fire' before its trigger condition has transitioned back from true to false again.
+    if (transition) 
+        transition->deactivate();
+
     return transition;
 }
 
 
 void {{component_name}}::Regime_::set_triggers(double t) {
-    // Reset the vector of active transitions
-    active_on_conditions.clear();
-    
-    // Add OnConditions to the list of active transitions if their trigger condition evaluates to false
+    // Check whether trigger should be activated
     for (std::vector<OnCondition_*>::iterator it = on_conditions.begin(); it != on_conditions.end(); ++it)
-        if ((*it)->activate_trigger(t))
-            active_on_conditions.push_back(*it);
-        
+        (*it)->set_trigger(t);
 }
 
 
@@ -282,28 +282,32 @@ bool {{component_name}}::{{TransitionClassName}}::received() {
     {% endfor %}
     {% for on_condition in regime.on_conditions %}
         {% set TransitionClassName = '{}OnCondition{}'.format(regime.name, regime.index_of(on_condition)) %}
-bool {{component_name}}::{{TransitionClassName}}::condition(double t) {
+bool {{component_name}}::{{TransitionClassName}}::triggered(double t) {
 	    
-    const State_& S_ = regime->cell->S_;
-    const Buffers_& B_ = regime->cell->B_;
-    const Parameters_& P_ = regime->cell->P_;
-        
-    {{macros.map_required_vars_locally(on_condition.trigger, component_class, component_name, unit_handler, [], []) | indent(4)}}
-
-    return {{on_condition.trigger.rhs_cstr}};
+	if (active) {
+	    const State_& S_ = regime->cell->S_;
+	    const Buffers_& B_ = regime->cell->B_;
+	    const Parameters_& P_ = regime->cell->P_;
+	        
+	    {{macros.map_required_vars_locally(on_condition.trigger, component_class, component_name, unit_handler, [], []) | indent(4)}}
+	
+        return {{on_condition.trigger.rhs_cstr}};
+    } else
+        return false;
 
 }
 
-bool {{component_name}}::{{TransitionClassName}}::activate_trigger(double t) {
-        
-    const State_& S_ = regime->cell->S_;
-    const Buffers_& B_ = regime->cell->B_;
-    const Parameters_& P_ = regime->cell->P_;
-        
-    {{macros.map_required_vars_locally(on_condition.trigger.reactivate_condition, component_class, component_name, unit_handler, [], []) | indent(4)}}
-
-    return {{on_condition.trigger.reactivate_condition.rhs_cstr}};
-
+void {{component_name}}::{{TransitionClassName}}::set_trigger(double t) {
+    
+    if (!active) {
+	    const State_& S_ = regime->cell->S_;
+	    const Buffers_& B_ = regime->cell->B_;
+	    const Parameters_& P_ = regime->cell->P_;
+	        
+	    {{macros.map_required_vars_locally(on_condition.trigger.reactivate_condition, component_class, component_name, unit_handler, [], []) | indent(4)}}
+	
+	    active = {{on_condition.trigger.reactivate_condition.rhs_cstr}};
+    }
 }
 
 double {{component_name}}::{{TransitionClassName}}::time_occurred(double t) {
@@ -318,6 +322,7 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(double t) {
     // The trigger expression depends on 't' so determine the exact time that the threshold was crossed.
     double exact_t = {{exact_time_expr.rhs_cstr}};
        {% else %}
+    // The trigger expression doesn't soley (in terms of state-vars) depend on 't' so just return the end of the window
     double exact_t = t;
        {% endif %}
     return exact_t;       
@@ -635,12 +640,13 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         // Get multiplicity incoming events for the current lag and reset multiplicity of outgoing events
         refresh_events(lag);
         
-        Transition_* transition;
-        int simultaneous_transition_count = 0;
-        
-        // Set times
+        // Set times for checking on-condition triggers
         double t = origin.get_ms() + lag * dt;  // The time at the end of the lag step
         double last_transition_t = 0.0;  // Used to detect infinite loops of simultaneous transitions
+        
+        // Pointer to the next transition
+        Transition_* transition;
+        int simultaneous_transition_count = 0;
         
         while ((transition = B_.current_regime->transition(t))) {  // Check for a transition (i.e. the output of current_regime->transition is not NULL) and record it in the 'transition' variable.
                     
@@ -696,7 +702,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         //        to equalities = 0, e.g. a < b ==> a - b == 0, (a < b) | (c > d)
         //        ==> (a - b) * (c - d) == 0, (a < b) & (c > d) ==>
         //        abs(a - b) + abs(c - d) == 0).
-        B_.current_regime->set_triggers(end_t);
+        B_.current_regime->set_triggers(t);
         
     }
 }
