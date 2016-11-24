@@ -22,9 +22,10 @@ class WithSynapses(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, dynamics, synapses, connection_parameter_sets):
+    def __init__(self, name, dynamics, synapses, connection_parameter_sets):
         assert isinstance(dynamics, (Dynamics, MultiDynamics))
         # Initialise Dynamics/MultiDynamics base classes
+        self._name = name
         self._dynamics = dynamics
         self._synapses = dict((s.name, s) for s in synapses)
         self._connection_parameter_sets = dict(
@@ -53,6 +54,14 @@ class WithSynapses(object):
             dynamics.class_to_member.items() +
             [('Synapse', 'synapse'),
              ('ConnectionParameterSet', 'connection_parameter_set')])
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
 
     def __repr__(self):
         return ("{}WithSynapses(dynamics={}, synapses=[{}], "
@@ -133,19 +142,19 @@ class WithSynapses(object):
     @classmethod
     def wrap(cls, dynamics, synapses=[], connection_parameter_sets=[]):
         if isinstance(dynamics, MultiDynamics):
-            wrapped = MultiDynamicsWithSynapses(dynamics, synapses,
-                                                connection_parameter_sets)
+            wrapped_cls = MultiDynamicsWithSynapses
         elif isinstance(dynamics, Dynamics):
-            wrapped = DynamicsWithSynapses(dynamics, synapses,
-                                           connection_parameter_sets)
+            wrapped_cls = DynamicsWithSynapses
         else:
             raise Pype9RuntimeError(
                 "Cannot wrap '{}' class with WithSynapses, only Dynamics and "
                 "MultiDynamics".format(type(dynamics)))
-        return wrapped
+        return wrapped_cls(dynamics.name, dynamics, synapses,
+                           connection_parameter_sets)
 
     def clone(self, memo=None, **kwargs):
         return self.__class__(
+            self.name,
             self.dynamics.clone(memo=memo, **kwargs),
             (s.clone(memo=memo, **kwargs) for s in self.synapses),
             (cps.clone(memo=memo, **kwargs)
@@ -176,8 +185,7 @@ class WithSynapses(object):
             element, ConnectionParameterSet, document, multiple=True,
             allow_none=True, **kwargs)
         name = get_xml_attr(element, 'name', document, **kwargs)
-        assert name == dynamics.name
-        return cls(dynamics, synapses, parameter_sets)
+        return cls(name, dynamics, synapses, parameter_sets)
 
     def write(self, fname):
         """
@@ -248,8 +256,9 @@ class WithSynapsesProperties(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, dynamics_properties, synapse_properties=[],
+    def __init__(self, name, dynamics_properties, synapse_properties=[],
                  connection_property_sets=[]):
+        self._name = name
         self._dynamics_properties = dynamics_properties
         self._synapses = dict((s.name, s) for s in synapse_properties)
         self._connection_property_sets = dict(
@@ -274,6 +283,14 @@ class WithSynapsesProperties(object):
             dynamics_properties.class_to_member.items() +
             [('Synapse', 'synapse'),
              ('ConnectionPropertySet', 'connection_property_set')])
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
 
     def __repr__(self):
         return ("{}WithSynapsesProperties(dynamics_properties={}, "
@@ -360,31 +377,24 @@ class WithSynapsesProperties(object):
     def wrap(cls, dynamics_properties, synapses_properties=[],
              connection_property_sets=[]):
         if isinstance(dynamics_properties, MultiDynamicsProperties):
-            wrapped = MultiDynamicsWithSynapsesProperties(
-                dynamics_properties, synapses_properties,
-                connection_property_sets)
+            wrapped_cls = MultiDynamicsWithSynapsesProperties
         elif isinstance(dynamics_properties, DynamicsProperties):
-            wrapped = DynamicsWithSynapsesProperties(
-                dynamics_properties, synapses_properties,
-                connection_property_sets)
+            wrapped_cls = DynamicsWithSynapsesProperties
         else:
             raise Pype9RuntimeError(
                 "Cannot wrap '{}' class with WithSynapses, only Dynamics and "
                 "MultiDynamics".format(type(dynamics_properties)))
-        return wrapped
+        return wrapped_cls(
+            dynamics_properties.name, dynamics_properties, synapses_properties,
+            connection_property_sets)
 
     def clone(self, memo=None, **kwargs):
         return self.__class__(
+            self.name,
             self.dynamics_properties.clone(memo=memo, **kwargs),
             (s.clone(memo=memo, **kwargs) for s in self.synapses),
             (cps.clone(memo=memo, **kwargs)
              for cps in self.connection_property_sets))
-
-    def write(self, fname):
-        """
-        Writes the top-level NineML object to file in XML.
-        """
-        write(self, fname)  # Calls nineml.document.Document.write
 
 
 class DynamicsWithSynapsesProperties(WithSynapsesProperties,
