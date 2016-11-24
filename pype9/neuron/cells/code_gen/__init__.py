@@ -280,7 +280,7 @@ class CodeGenerator(BaseCodeGenerator):
         # -----------------------------------------------------------------
         trfrm.validate()
         trfrm_with_syn = DynamicsWithSynapses(
-            trfrm, component_class.synapses,
+            name, trfrm, component_class.synapses,
             component_class.connection_parameter_sets)
         if trfrm_properties is not None:
             if isinstance(trfrm_properties, MultiDynamicsProperties):
@@ -288,7 +288,7 @@ class CodeGenerator(BaseCodeGenerator):
             else:
                 WithSynapsesClass = DynamicsWithSynapsesProperties
             trfrm_props_with_syn = WithSynapsesClass(
-                trfrm_properties, default_properties.synapses,
+                name, trfrm_properties, default_properties.synapses,
                 default_properties.connection_property_sets)
         else:
             trfrm_props_with_syn = None

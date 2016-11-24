@@ -5,7 +5,6 @@ import nest
 from nineml.units import Quantity
 from pype9.cmd.simulate import run
 from pype9.cmd._utils import parse_units
-import nineml.units as un
 import ninemlcatalog
 from pype9.neuron import (
     CellMetaClass as CellMetaClassNEURON,
@@ -52,7 +51,7 @@ class TestSimulateAndPlot(TestCase):
                 "--prop amplitude {amp} "
                 "--prop onset {onset} "
                 "--init_value current_output {init} "
-                "--build_mode force"
+                "--build_mode lazy"
                 .format(input_model=self.isyn_path, out_path=in_path,
                         t_stop=self.t_stop, dt=self.dt,
                         U='{} {}'.format(*self.U), V='{} {}'.format(*self.V),

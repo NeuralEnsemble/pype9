@@ -23,7 +23,10 @@ class WithSynapses(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, name, dynamics, synapses, connection_parameter_sets):
-        assert isinstance(dynamics, (Dynamics, MultiDynamics))
+        try:
+            assert isinstance(dynamics, (Dynamics, MultiDynamics))
+        except:
+            raise
         # Initialise Dynamics/MultiDynamics base classes
         self._name = name
         self._dynamics = dynamics
