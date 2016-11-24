@@ -44,7 +44,7 @@ def write(document, filename, **kwargs):
         element = document.clone()
         element._document = None
         document = Document(element)
-    document.write(filename, **kwargs)
+    document.write(filename, version=2.0, **kwargs)
 
 
 import pype9.base.cells  # @IgnorePep8
