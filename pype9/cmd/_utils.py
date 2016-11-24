@@ -33,6 +33,7 @@ for obj_name in dir(nineml.units):
 
 
 def parse_units(unit_str):
+    # TODO: Should donate this function to the nineml.units module
     try:
         unit_expr = sympy.sympify(unit_str)
     except:

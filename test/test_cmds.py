@@ -4,6 +4,7 @@ import neo.io
 import nest
 from nineml.units import Quantity
 from pype9.cmd.simulate import run
+from pype9.cmd._utils import parse_units
 import nineml.units as un
 import ninemlcatalog
 from pype9.neuron import (
@@ -94,7 +95,8 @@ class TestSimulateAndPlot(TestCase):
                              "'simulate' command produced different results to"
                              " to api reference for izhikevich model using "
                              "'{}' simulator".format(simulator))
-            self.assertGreaterThan(
+            # TODO: Need a better test
+            self.assertGreater(
                 v.max(), 0.0,
                 "No spikes generated for '{}' (max val: {}) version of Izhi "
                 "model. Probably error in 'play' method if all dynamics tests "
@@ -105,13 +107,14 @@ class TestSimulateAndPlot(TestCase):
             metaclass = CellMetaClassNEURON
             simulation_controller = simulatorNEURON
         else:
+            nest.ResetKernel()
             metaclass = CellMetaClassNEST
             simulation_controller = simulatorNEST
         nineml_model = ninemlcatalog.load(self.izhi_path)
         cell = metaclass(nineml_model.component_class,
                          name='izhikevichAPI')(nineml_model)
-        cell.update_state({'U': Quantity(self.U[0], getattr(un, self.U[1])),
-                           'V': Quantity(self.V[0], getattr(un, self.V[1]))})
+        cell.update_state({'U': Quantity(self.U[0], parse_units(self.U[1])),
+                           'V': Quantity(self.V[0], parse_units(self.V[1]))})
         cell.record('V')
         cell.play('Isyn', isyn)
         simulation_controller.run(self.t_stop)
