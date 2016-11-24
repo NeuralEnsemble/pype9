@@ -232,7 +232,7 @@ class MultiDynamicsWithSynapses(WithSynapses, MultiDynamics):
 
     def __init__(self, name, dynamics, synapses=[],
                  connection_parameter_sets=[]):
-        WithSynapses.__init__(name, self, dynamics, synapses,
+        WithSynapses.__init__(self, name, dynamics, synapses,
                               connection_parameter_sets)
         BaseALObject.__init__(self)
         DocumentLevelObject.__init__(self, dynamics.document)
