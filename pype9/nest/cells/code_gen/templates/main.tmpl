@@ -283,13 +283,13 @@ bool {{component_name}}::{{TransitionClassName}}::received() {
     {% for on_condition in regime.on_conditions %}
         {% set TransitionClassName = '{}OnCondition{}'.format(regime.name, regime.index_of(on_condition)) %}
 bool {{component_name}}::{{TransitionClassName}}::triggered(double t) {
-	    
+
 	if (active) {
 	    const State_& S_ = regime->cell->S_;
 	    const Buffers_& B_ = regime->cell->B_;
 	    const Parameters_& P_ = regime->cell->P_;
 	        
-	    {{macros.map_required_vars_locally(on_condition.trigger, component_class, component_name, unit_handler, [], []) | indent(4)}}
+	    {{macros.map_required_vars_locally(on_condition.trigger, component_class, component_name, unit_handler, [], []) | indent(8)}}
 	
         return {{on_condition.trigger.rhs_cstr}};
     } else
@@ -304,7 +304,7 @@ void {{component_name}}::{{TransitionClassName}}::set_trigger(double t) {
 	    const Buffers_& B_ = regime->cell->B_;
 	    const Parameters_& P_ = regime->cell->P_;
 	        
-	    {{macros.map_required_vars_locally(on_condition.trigger.reactivate_condition, component_class, component_name, unit_handler, [], []) | indent(4)}}
+	    {{macros.map_required_vars_locally(on_condition.trigger.reactivate_condition, component_class, component_name, unit_handler, [], []) | indent(8)}}
 	
 	    active = {{on_condition.trigger.reactivate_condition.rhs_cstr}};
     }
@@ -597,7 +597,8 @@ void {{component_name}}::init_buffers_() {
 {% endfor %}
 
     B_.current_regime = get_regime("{{default_regime}}");
-    B_.current_regime->set_triggers(0);
+    // Set triggers at point just before t=0
+    B_.current_regime->set_triggers(-std::numeric_limits<double>::min());
     B_.current_regime->init_solver();
 
 }
