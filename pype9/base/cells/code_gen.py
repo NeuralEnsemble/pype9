@@ -89,20 +89,36 @@ class BaseCodeGenerator(object):
         Generates and builds the required simulator-specific files for a given
         NineML cell class
 
-        `component` [nineml.user.Component]: 9ML component
-        `install_dir` [str]: Path to the directory where the NMODL files
-                             will be generated and compiled
-        `build_dir` [str]: Used to set the default 'install_dir' path
-        `build_mode` [str]: Available build options:
-                            lazy - only build if files are modified
-                            force - always build from scratch
-                            require - require built binaries are present
-                            build_only - build and then quit
-                            generate_only - generate src and then quit
-                            recompile - don't generate src but compile
-        `verbose` [bool]: Whether the build output is shown or not
-        `kwargs` [dict]: A dictionary of (potentially simulator-
-                                specific) template arguments
+        Parameters
+        ----------
+        component_class : nineml.Dynamics
+            9ML Dynamics object
+        name : str
+            Name of the generated cell class
+        default_properties : nineml.DynamicsProperties
+            Default properties for the cell
+        initial_state : dict[str, nineml.Quantity]
+            Default Initial values for the cell
+        install_dir : str
+            Path to the directory where the NMODL files
+            will be generated and compiled
+        build_dir : str
+            Used to set the default 'install_dir' path
+        build_mode : str
+            Available build options:
+                lazy - only build if files are modified
+                force - always build from scratch
+                require - require built binaries are present
+                build_only - build and then quit
+                generate_only - generate src and then quit
+                recompile - don't generate src but compile
+        verbose : bool
+            Whether the build output is shown or not
+        initial_regime : str
+            Name of the regime to start the dynamics object in
+        kwargs : dict
+            A dictionary of (potentially simulator- specific) template
+            arguments
         """
         kwargs['version'] = pype9.version
         # Set build properties
