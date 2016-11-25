@@ -390,7 +390,7 @@ class TestDynamics(TestCase):
             # Create and initialise cell
             cell = celltype(rate=rate)
             cell.record('spike_output')
-            cell.update_state(initial_states)
+            cell.set_state(initial_states)
             # Run simulation
             if sim_name == 'neuron':
                 simulatorNEURON.run(duration.in_units(un.ms))

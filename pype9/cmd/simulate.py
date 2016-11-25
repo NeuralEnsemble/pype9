@@ -142,7 +142,7 @@ def run(argv):
                 " missing '{}'".format(
                     "', '".join(set(cell.state_variable_names) -
                                 set(init_state.iterkeys()))))
-        cell.update_state(init_state)
+        cell.set_state(init_state)
         # Play inputs
         for port_name, fname, _ in args.play:
             port = component_class.receive_port(port_name)

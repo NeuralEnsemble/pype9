@@ -216,7 +216,7 @@ class Comparer(object):
         self.nml_cells[simulator].record(self.state_variable)
         for state_var in self.auxiliary_states:
             self.nml_cells[simulator].record(state_var)
-        self.nml_cells[simulator].update_state(self.initial_states)
+        self.nml_cells[simulator].set_state(self.initial_states)
 
     def _create_NEURON(self, neuron_name):
         # -----------------------------------------------------------------

@@ -336,13 +336,14 @@ class Cell(object):
     def used_units(self):
         return self._nineml.used_units
 
-    def update_state(self, state):
+    def set_state(self, states, regime=None):
         if self._initialized:
-            self._set_state(state)
+            self._set_state((states, regime))
         else:
-            super(Cell, self).__setattr__('_initial_state', state)
+            super(Cell, self).__setattr__('_initial_state', (states, regime))
 
     def _set_state(self, state):
+        states, regime = state
         for k, q in state.iteritems():
             setattr(self, k, q)  # FIXME: Need to convert units
 
