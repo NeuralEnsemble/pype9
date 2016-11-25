@@ -104,6 +104,7 @@ class BaseCodeGenerator(object):
         `kwargs` [dict]: A dictionary of (potentially simulator-
                                 specific) template arguments
         """
+        kwargs['version'] = pype9.version
         # Set build properties
         for k, v in kwargs.iteritems():
             component_class.annotations.set(PYPE9_NS, BUILD_PROPS, k, v)
