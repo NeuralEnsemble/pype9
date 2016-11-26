@@ -344,7 +344,7 @@ class Cell(object):
 
     def _set_state(self, state):
         states, regime = state
-        for k, q in state.iteritems():
+        for k, q in states.iteritems():
             setattr(self, k, q)  # FIXME: Need to convert units
 
     def initialize(self):
