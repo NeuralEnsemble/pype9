@@ -65,8 +65,8 @@ class CodeGenerator(BaseCodeGenerator):
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'unit_handler': UnitHandler(component_class),
-            'default_regime': kwargs.get('default_regime',
-                                         next(component_class.regime_names)),
+            'sorted_regimes': sorted(component_class.regimes,
+                                     key=lambda r: component_class.index_of(r)),
             'jacobian_approx_step': kwargs.get(
                 'jacobian_approx_step', self.GSL_JACOBIAN_APPROX_STEP_DEFAULT),
             'max_step_size': kwargs.get('max_step_size',

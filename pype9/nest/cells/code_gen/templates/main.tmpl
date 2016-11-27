@@ -23,6 +23,7 @@
 #include "numerics.h"
 #include "universal_data_logger_impl.h"
 
+
 /******************************************************************
  * Template specialization that needs to be in the nest namesapce *
  ******************************************************************/
@@ -34,6 +35,7 @@ namespace nest{
 {% for sv in component_class.state_variables %}
     insert_("{{sv.name}}", &nineml::{{component_name}}::get_y_elem_<nineml::{{component_name}}::State_::{{sv.name}}_INDEX>);
 {% endfor %}
+    insert_(CURRENT_REGIME, &nineml::{{component_name}}::current_regime_index);
   }
 }
 
@@ -167,16 +169,16 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
 
 
 {{component_name}}::{{regime.name}}Regime_::{{regime.name}}Regime_({{component_name}}* cell)
-  : Regime_(cell, "{{regime.name}}"){% if regime.num_time_derivatives %}{% include "solver_construct.tmpl" %}{% endif %} {
+  : Regime_(cell, "{{regime.name}}", {{component_class.index_of(regime)}}){% if regime.num_time_derivatives %}{% include "solver_construct.tmpl" %}{% endif %} {
   
     // Construct OnConditions specific to the regime.
     {% for on_condition in regime.on_conditions %}
-    on_conditions.push_back(new {{regime.name}}OnCondition{{regime.index_of(on_condition)}}(this, "{{on_condition.target_regime.name}}"));
+    on_conditions.push_back(new {{regime.name}}OnCondition{{regime.index_of(on_condition)}}(this, {{component_class.index_of(on_condition.target_regime)}}"));
     {% endfor %}
 	
     // Construct OnConditions specific to the regime.
     {% for on_event in regime.on_events %}
-    on_events.push_back(new {{regime.name}}On{{on_event.src_port_name}}Event(this, "{{on_event.target_regime.name}}"));              
+    on_events.push_back(new {{regime.name}}On{{on_event.src_port_name}}Event(this, {{component_class.index_of(on_event.target_regime)}}));              
     {% endfor %}
 
 }
@@ -397,11 +399,13 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(double end_of_
 {{component_name}}::{{component_name}}()
     : Archiving_Node(),
       P_(),
-      S_(P_),
+      S_(P_, (Regime_*)NULL),
       B_(*this) {
 
-    recordablesMap_.create();
     construct_regimes();
+    S_.current_regime = regimes[0];
+
+    recordablesMap_.create();
         
 }
 
@@ -419,32 +423,29 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(double end_of_
  */      
 void {{component_name}}::construct_regimes() {
 
-    // Construct all regimes
-{% for regime in component_class.regimes %}
-    regimes["{{regime.name}}"] = new {{regime.name}}Regime_(this);
+    // Construct all regimes in order of their index
+{% for regime in sorted_regimes %}
+    regimes.push_back(new {{regime.name}}Regime_(this)) ;
 {% endfor %}
 
     // Set target regimes in all transitions
-    Regime_* regime;
-
-{% for regime in component_class.regimes %}
-    regime = get_regime("{{regime.name}}");
-    for (std::vector<OnEvent_*>::iterator it = regime->on_events.begin(); it != regime->on_events.end(); ++it)
-        (*it)->set_target_regime(regimes);
-    for (std::vector<OnCondition_*>::iterator it = regime->on_conditions.begin(); it != regime->on_conditions.end(); ++it)
-        (*it)->set_target_regime(regimes);   
-{% endfor %}
+    for (std::vector<Regime_*>::iterator regime_it = regimes.begin(); regime_it != regimes.end(); ++regime_it) {
+	    for (std::vector<OnEvent_*>::iterator on_event_it = regime->on_events.begin(); it != regime->on_events.end(); ++on_event_it)
+	        (*on_event_it)->set_target_regime(regimes);
+	    for (std::vector<OnCondition_*>::iterator on_condition_it = regime->on_conditions.begin(); it != regime->on_conditions.end(); ++on_condition_it)
+	        (*on_condition_it)->set_target_regime(regimes);   
+    }
 }
 
 void {{component_name}}::init_node_(const Node& proto) {
     const {{component_name}}& pr = downcast<{{component_name}}>(proto);
     P_ = pr.P_;
-    S_ = State_(P_);
+    S_ = State_(P_, regimes[0]);
 }
 
 void {{component_name}}::init_state_(const Node& proto) {
     const {{component_name}}& pr = downcast<{{component_name}}>(proto);
-    S_ = State_(pr.P_);
+    S_ = State_(pr.P_, regimes[0]);
 }
 
 /**************
@@ -483,7 +484,8 @@ void {{component_name}}::init_state_(const Node& proto) {
  * Construct state from parameters.
  ************************************/
 
-{{component_name}}::State_::State_(const Parameters_& p) {
+{{component_name}}::State_::State_(const Parameters_& p, Regime_* current_regime) :
+  current_regime(current_regime) {
 
     const Parameters_ *params = &p;
 
@@ -494,19 +496,19 @@ void {{component_name}}::init_state_(const Node& proto) {
 
     // Initialise time state just before t=0 to allow triggers at t=0 to be set
     t = -std::numeric_limits<double>::min();
-
+    
 {% include "solve_steady_state.tmpl" %}
 }
 
 /***********************************
  * Copy constructor for State class
  ***********************************/
-{{component_name}}::State_::State_(const State_& s) {
+{{component_name}}::State_::State_(const State_& s) :
+  current_regime(s.current_regime), t(s.t) {
 {% if component_class.num_state_variables %}
-  for (int i = 0; i < {{component_class.num_state_variables}}; ++i)
-      y_[i] = s.y_[i];
+   for (int i = 0; i < {{component_class.num_state_variables}}; ++i)
+       y_[i] = s.y_[i];
 {% endif %}
-  t = s.t;
 }
 
 /********************************************
@@ -516,14 +518,19 @@ void {{component_name}}::init_state_(const Node& proto) {
 {{component_name}}::State_& {{component_name}}::State_::operator=(const State_& s) {
   assert(this != &s);
 {% if component_class.num_state_variables %}
-  for (size_t i = 0 ; i < {{component_class.num_state_variables}} ; ++i)
-       y_[i] = s.y_[i];
+    for (size_t i = 0 ; i < {{component_class.num_state_variables}} ; ++i)
+        y_[i] = s.y_[i];
 {% endif %}
-  t = s.t;
-  return *this;
+
+    // Copy current regime and time 
+    current_regime = s.current_regime;
+    t = s.t;
+
+    return *this;
 }
 
 void {{component_name}}::calibrate() {
+    S_.current_regime->init_solver();
     B_.logger_.init();
     V_.rng_ = net_->get_rng( get_thread() );
 }
@@ -563,13 +570,15 @@ void {{component_name}}::State_::get (DictionaryDatum &d_) const {
 {% for i, sv in enumerate(component_class.state_variables) %}
     def<double_t>(d_, "{{sv.name}}", y_[{{i}}]);
 {% endfor %}
+    def<std::string>(d_, CURRENT_REGIME, current_regime->get_name());
 }
 
-void {{component_name}}::State_::set (const DictionaryDatum &d_, const Parameters_&) {
+void {{component_name}}::State_::set(const DictionaryDatum &d_, const Parameters_&, Regime_* regime) {
     // Set internal state variables from dictionary values
 {% for i, sv in enumerate(component_class.state_variables) %}
     updateValue<double_t>(d_, "{{sv.name}}", y_[{{i}}]);
 {% endfor %}
+    current_regime = regime;
 }
 
 /***********
@@ -577,13 +586,13 @@ void {{component_name}}::State_::set (const DictionaryDatum &d_, const Parameter
  ***********/
 
 {{component_name}}::Buffers_::Buffers_({{component_name}}& n)
-    : logger_(n), current_regime(0) {
+    : logger_(n) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
 
 {{component_name}}::Buffers_::Buffers_(const Buffers_&, {{component_name}}& n)
-    : logger_(n), current_regime(0) {
+    : logger_(n) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
@@ -610,10 +619,9 @@ void {{component_name}}::init_buffers_() {
     B_.{{p.name}}_value = 0.0;
 {% endfor %}
 
-    B_.current_regime = get_regime("{{default_regime}}");
     // Set triggers in current regime
-    B_.current_regime->set_triggers();
-    B_.current_regime->init_solver();
+    S_.current_regime->set_triggers();
+    S_.current_regime->init_solver();
 
 }
 
@@ -652,7 +660,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         S_.t = origin.get_ms();
     
         /***** Solve ODE over timestep *****/
-        B_.current_regime->step_ode();
+        S_.current_regime->step_ode();
 
         /***** Transition handling *****/
         // Get multiplicity incoming events for the current lag and reset multiplicity of outgoing events
@@ -665,7 +673,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         Transition_* transition;
         int simultaneous_transition_count = 0;
         
-        while ((transition = B_.current_regime->transition(end_of_step_t))) {  // Check for a transition (i.e. the output of current_regime->transition is not NULL) and record it in the 'transition' variable.
+        while ((transition = S_.current_regime->transition(end_of_step_t))) {  // Check for a transition (i.e. the output of current_regime->transition is not NULL) and record it in the 'transition' variable.
                     
             double t = transition->time_occurred(end_of_step_t);  // Get the exact time the transition occurred (if trigger is a solvable expression of 't')
             if (t == S_.t) {
@@ -679,15 +687,15 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
             // Execute body of transition, flagging a discontinuity in the ODE system
             // if either the body contains state assignments (i.e. not just output
             // events) or the regime changes
-            bool discontinuous = transition->body() || (transition->get_target_regime() != B_.current_regime);
+            bool discontinuous = transition->body() || (transition->get_target_regime() != S_.current_regime);
             // Update the current regime
-            B_.current_regime = transition->get_target_regime();
+            S_.current_regime = transition->get_target_regime();
             // Set all triggers, i.e. activate all triggers for which their trigger condition 
             // evaluates to false.
-            B_.current_regime->set_triggers();
+            S_.current_regime->set_triggers();
             // Reinitialise the solver if the was a discontinuity in the ODE system
             if (discontinuous)
-                B_.current_regime->init_solver();  // Reset the solver if the transition contains state assignments or switches to a new regime.
+                S_.current_regime->init_solver();  // Reset the solver if the transition contains state assignments or switches to a new regime.
         }
         
         // Update time stored in state before setting triggers
@@ -701,7 +709,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         //        to equalities = 0, e.g. a < b ==> a - b == 0, (a < b) | (c > d)
         //        ==> (a - b) * (c - d) == 0, (a < b) & (c > d) ==>
         //        abs(a - b) + abs(c - d) == 0).
-        B_.current_regime->set_triggers();
+        S_.current_regime->set_triggers();
         
         /***** Send output events for each event send port *****/
         // FIXME: Need to specify different output ports in a way that can be read by the receiving nodes

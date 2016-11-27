@@ -13,6 +13,8 @@
 #include "dictutils.h"
 #include "exceptions.h"
 
+#define CURRENT_REGIME "__current_regime__"
+
 {% include "solver_includes.tmpl" %}
 
 {% include "ss_solver_includes.tmpl" %}
@@ -104,7 +106,7 @@ namespace nineml {
 	    void init_state_(const nest::Node& proto);
 	    void init_buffers_();
 	    void calibrate();
-	    Regime_* get_regime(const std::string& regime_name);
+	    unsigned int current_regime_index() { return S_.current_regime->get_index(); }
 	    
 	    void refresh_events(const nest::long_t& lag);
 	    
@@ -200,14 +202,20 @@ namespace nineml {
                 STATE_VEC_SIZE_
             };
 
+            // State variables vector
             double y_[STATE_VEC_SIZE_];
-            double t;  // Store the current time in the state
 
-	        State_(const Parameters_& p);
+            // Pointer to the current regime
+            Regime_* current_regime;
+
+            // The current simulation time
+            double t;  
+
+	        State_(const Parameters_& p, Regime_*);
 	        State_(const State_& s);
 	        State_& operator=(const State_& s);
 	        void get(DictionaryDatum&) const;
-	        void set(const DictionaryDatum&, const Parameters_&);
+	        void set(const DictionaryDatum&, const Parameters_&, Regime_*);
 	    }; // end struct State_
 
         struct Variables_ {
@@ -243,26 +251,26 @@ namespace nineml {
             double_t {{port.name}}_value;
 {% endfor %}
 
-            Regime_* current_regime;
-
 	    }; // end struct Buffers_
 	    
 	    class Regime_ {
 	     
 	      public:
-	        Regime_({{component_name}}* cell, const std::string& name) 
-	          : cell(cell), name(name) {}
+	        Regime_({{component_name}}* cell, const std::string& name, unsigned int index) 
+	          : cell(cell), name(name), index(index) {}
 	        virtual ~Regime_();
 	        Transition_* transition(double end_of_step_t);
 	        void set_triggers();
 	        virtual void init_solver() = 0;
 	        virtual void step_ode() = 0;
-	        const std::string& get_name() { return name; }  // For debugging
+	        const std::string& get_name() { return name; }
+	        unsigned int get_index() { return index; }
 	        
 	       
 	      protected:
 	        {{component_name}}* cell;
-	        std::string name;
+	        std::string name;  // For debugging
+	        unsigned int index;  // Used for identifying the regime
             std::vector<OnCondition_*> on_conditions;
             std::vector<OnEvent_*> on_events;
            
@@ -313,7 +321,7 @@ namespace nineml {
 
             // Array containg the values for the states for the set of ODEs
             // FIXME: This should be a generic vector macro to support CVODE, etc...
-            double ode_y_[ODE_STATE_VEC_SIZE_];
+            double ode_y_[ODE_STATE_VEC_SIZE_];           
             
     {% if regime.num_time_derivatives %}
             // Structures required by the solver
@@ -332,24 +340,28 @@ namespace nineml {
 	    class Transition_ {
 
 	      public:
-	        Transition_(Regime_* regime, const std::string& target_regime_name)
-	          : regime(regime), target_regime(NULL), target_regime_name(target_regime_name) {}
+	        Transition_(Regime_* regime, unsigned int target_regime_index)
+	          : regime(regime), target_regime(NULL), target_regime_index(target_regime_index) {}
 	        virtual ~Transition_() {}
-            void set_target_regime(std::map<std::string, Regime_*>& regimes);
             Regime_* get_target_regime();	        
 	        virtual double time_occurred(double end_of_step_t) = 0;
 	        virtual bool body() = 0;
-	        virtual void deactivate() = 0;  // Only needed for on-conditions
+	        virtual void deactivate() = 0;  // Only needed for on-conditions (although might be added for on-events in the future)
 	        
             /* Inline random distribution methods */
 	        double random_uniform_(double low, double high);
 	        double random_normal_(double mu, double sigma);
 	        double random_exponential_(double lambda);
+	        
+	      protected:
+            void set_target_regime(const std::vector<Regime_*>& regimes);
 
 	      protected:
 	        Regime_* regime;
 	        Regime_* target_regime;
-	        std::string target_regime_name;
+	        unsigned int target_regime_index;  // Used in the construction as a placeholder for the target regime
+
+	      friend class {{component_name}};
 	    };
 	    
 	    
@@ -359,7 +371,7 @@ namespace nineml {
 	    class OnEvent_ : public Transition_ {
 	    
 	      public:
-	        OnEvent_(Regime_* regime, const std::string& target_regime_name) : Transition_(regime, target_regime_name) {}
+	        OnEvent_(Regime_* regime, unsigned int target_regime_index) : Transition_(regime, target_regime_index) {}
             virtual ~OnEvent_() {}
             virtual bool received() = 0;
             virtual void deactivate() {}  // Not required for on-events
@@ -371,7 +383,7 @@ namespace nineml {
          */
 	    class OnCondition_ : public Transition_ {
 	      public:
-	        OnCondition_(Regime_* regime, const std::string& target_regime_name) : Transition_(regime, target_regime_name), active(false) {}
+	        OnCondition_(Regime_* regime, unsigned int target_regime_index) : Transition_(regime, target_regime_index), active(false) {}
 	        virtual ~OnCondition_() {}
             virtual bool triggered(double end_of_step_t) = 0;
             virtual void set_trigger() = 0;
@@ -391,7 +403,7 @@ namespace nineml {
         class {{ClassName}} : public OnEvent_ {
 
           public:
-            {{ClassName}}(Regime_* regime, const std::string& target_regime_name) : OnEvent_(regime, target_regime_name) {}
+            {{ClassName}}(Regime_* regime, unsigned int target_regime_index) : OnEvent_(regime, target_regime_index) {}
             virtual ~{{ClassName}}() {}
             virtual bool received();                        
             virtual double time_occurred(double end_of_step_t);
@@ -405,13 +417,12 @@ namespace nineml {
         class {{ClassName}} : public OnCondition_ {
 
           public:
-            {{ClassName}}(Regime_* regime, const std::string& target_regime_name) : OnCondition_(regime, target_regime_name) {}
+            {{ClassName}}(Regime_* regime, unsigned int target_regime_index) : OnCondition_(regime, target_regime_index) {}
             virtual ~{{ClassName}}() {}
             virtual bool triggered(double end_of_step_t);
             virtual void set_trigger();
             virtual double time_occurred(double end_of_step_t);
             virtual bool body();
-     
         };
 
     {% endfor %}
@@ -430,16 +441,12 @@ namespace nineml {
 		
 	  protected:
 	    void construct_regimes();
-        std::map<std::string, Regime_*> regimes;		
+        std::vector<Regime_*> regimes;		
     
 	}; // end class {{component_name}}
-	
-	inline {{component_name}}::Regime_* {{component_name}}::get_regime(const std::string& regime_name) {
-	   return regimes[regime_name];
-	}
 
-    inline void {{component_name}}::Transition_::set_target_regime(std::map<std::string, {{component_name}}::Regime_*>& regimes) {
-        this->target_regime = regimes[this->target_regime_name];   
+    inline void {{component_name}}::Transition_::set_target_regime(const std::vector<{{component_name}}::Regime_*>& regimes) {
+        this->target_regime = regimes[this->target_regime_index];   
     }
 
     inline {{component_name}}::Regime_* {{component_name}}::Transition_::get_target_regime() {
@@ -477,8 +484,6 @@ namespace nineml {
     inline void {{component_name}}::get_status(DictionaryDatum &d) const {
 		P_.get(d);
 		S_.get(d);
-		std::cout << B_.current_regime << std::endl;
-		def<std::string>(d, "__regime__", B_.current_regime->get_name());
 		nest::Archiving_Node::get_status(d);
 		(*d)[nest::names::recordables] = recordablesMap_.get_list();
 		def<double_t>(d, nest::names::t_spike, get_spiketime_ms());
@@ -494,15 +499,16 @@ namespace nineml {
     }
 
     inline void {{component_name}}::set_status(const DictionaryDatum &d) {
+            
+        // Get the regime
+        int regime_index;
+        updateValue<int>(d, CURRENT_REGIME, regime_index);
+        Regime_* regime = regimes[regime_index];
+    
 	    Parameters_ ptmp = P_;  // temporary copy in case of errors
 	    ptmp.set(d);             // throws if BadProperty
 	    State_    stmp = S_;  // temporary copy in case of errors
-	    stmp.set(d, ptmp);         // throws if BadProperty
-	    
-	    // Update regime
-	    std::string regime_name; 
-	    updateValue<std::string>(d, "__regime__", regime_name);
-	    B_.current_regime = get_regime(regime_name);
+	    stmp.set(d, ptmp, regime);         // throws if BadProperty
 
 	    // We now know that (ptmp, stmp) are consistent. We do not
 	    // write them back to (P_, S_) before we are also sure that
