@@ -116,6 +116,8 @@ namespace nineml {
         double random_exponential_(double lambda); 
 
 	    void update(nest::Time const &, const nest::long_t, const nest::long_t);
+	    
+	    Regime_* get_regime(unsigned int index) { return regimes[index]; }
 
     // Set dynamics methods (the ones that actually model the dynamics) as friends
 {% for regime in component_class.regimes %}
@@ -124,6 +126,14 @@ namespace nineml {
         {% include "residual_friend.tmpl" %}
         {% include "event_friend.tmpl" %}
         {% include "ss_friend.tmpl" %}
+          
+        /* Regime ids */
+        enum Regimes {
+{% for regime in sorted_regimes %}
+            {{regime.name | upper}}_REGIME{% if loop.first %} = 0{% endif%},
+{% endfor %}
+            NUM_REGIMES_
+        };
 
 
 {% if component_class.event_receive_ports %}
@@ -285,7 +295,7 @@ namespace nineml {
     {% for on_condition in regime.on_conditions %}
           friend class {{regime.name}}OnCondition{{regime.index_of(on_condition)}};
     {% endfor %}
-{% endfor %}         
+{% endfor %}
 	    
 	    };
 	    
@@ -403,7 +413,7 @@ namespace nineml {
         class {{ClassName}} : public OnEvent_ {
 
           public:
-            {{ClassName}}(Regime_* regime, unsigned int target_regime_index) : OnEvent_(regime, target_regime_index) {}
+            {{ClassName}}(Regime_* regime) : OnEvent_(regime, {{on_event.target_regime.name | upper}}_REGIME) {}
             virtual ~{{ClassName}}() {}
             virtual bool received();                        
             virtual double time_occurred(double end_of_step_t);
@@ -417,7 +427,7 @@ namespace nineml {
         class {{ClassName}} : public OnCondition_ {
 
           public:
-            {{ClassName}}(Regime_* regime, unsigned int target_regime_index) : OnCondition_(regime, target_regime_index) {}
+            {{ClassName}}(Regime_* regime) : OnCondition_(regime, {{on_condition.target_regime.name | upper}}_REGIME) {}
             virtual ~{{ClassName}}() {}
             virtual bool triggered(double end_of_step_t);
             virtual void set_trigger();
@@ -501,8 +511,10 @@ namespace nineml {
     inline void {{component_name}}::set_status(const DictionaryDatum &d) {
             
         // Get the regime
-        int regime_index;
-        updateValue<int>(d, CURRENT_REGIME, regime_index);
+        nest::long_t regime_index;
+        updateValue<nest::long_t>(d, CURRENT_REGIME, regime_index);
+        if ((regime_index < 0) || (regime_index > NUM_REGIMES_))
+            regime_index = 0;  // Sanitise non-sensical value to within range (initial states are set with arbitrary values during construction)
         Regime_* regime = regimes[regime_index];
     
 	    Parameters_ ptmp = P_;  // temporary copy in case of errors

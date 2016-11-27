@@ -3,7 +3,7 @@ extern "C" int {{component_name}}_{{regime.name}}_jacobian(double t, const doubl
     // cast the node ptr to {{component_name}} object
     assert(node);
     {{component_name}}& cell =    *(reinterpret_cast<{{component_name}}*>(node));
-    {{component_name}}::{{regime.name}}Regime_& regime = *(reinterpret_cast<{{component_name}}::{{regime.name}}Regime_*>(cell.get_regime("{{regime.name}}")));
+    {{component_name}}::{{regime.name}}Regime_& regime = *(reinterpret_cast<{{component_name}}::{{regime.name}}Regime_*>(cell.get_regime({{component_name}}::{{regime.name | upper}}_REGIME)));
 
     for (unsigned int i = 0; i < regime.N; i++)
         regime.u[i] = y[i] + 0.01;

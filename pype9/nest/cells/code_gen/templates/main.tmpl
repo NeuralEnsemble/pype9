@@ -35,7 +35,7 @@ namespace nest{
 {% for sv in component_class.state_variables %}
     insert_("{{sv.name}}", &nineml::{{component_name}}::get_y_elem_<nineml::{{component_name}}::State_::{{sv.name}}_INDEX>);
 {% endfor %}
-    insert_(CURRENT_REGIME, &nineml::{{component_name}}::current_regime_index);
+    //insert_(CURRENT_REGIME, &nineml::{{component_name}}::current_regime_index);
   }
 }
 
@@ -173,12 +173,12 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
   
     // Construct OnConditions specific to the regime.
     {% for on_condition in regime.on_conditions %}
-    on_conditions.push_back(new {{regime.name}}OnCondition{{regime.index_of(on_condition)}}(this, {{component_class.index_of(on_condition.target_regime)}}"));
+    on_conditions.push_back(new {{regime.name}}OnCondition{{regime.index_of(on_condition)}}(this));
     {% endfor %}
 	
     // Construct OnConditions specific to the regime.
     {% for on_event in regime.on_events %}
-    on_events.push_back(new {{regime.name}}On{{on_event.src_port_name}}Event(this, {{component_class.index_of(on_event.target_regime)}}));              
+    on_events.push_back(new {{regime.name}}On{{on_event.src_port_name}}Event(this));              
     {% endfor %}
 
 }
@@ -430,9 +430,9 @@ void {{component_name}}::construct_regimes() {
 
     // Set target regimes in all transitions
     for (std::vector<Regime_*>::iterator regime_it = regimes.begin(); regime_it != regimes.end(); ++regime_it) {
-	    for (std::vector<OnEvent_*>::iterator on_event_it = regime->on_events.begin(); it != regime->on_events.end(); ++on_event_it)
+	    for (std::vector<OnEvent_*>::iterator on_event_it = (*regime_it)->on_events.begin(); on_event_it != (*regime_it)->on_events.end(); ++on_event_it)
 	        (*on_event_it)->set_target_regime(regimes);
-	    for (std::vector<OnCondition_*>::iterator on_condition_it = regime->on_conditions.begin(); it != regime->on_conditions.end(); ++on_condition_it)
+	    for (std::vector<OnCondition_*>::iterator on_condition_it = (*regime_it)->on_conditions.begin(); on_condition_it != (*regime_it)->on_conditions.end(); ++on_condition_it)
 	        (*on_condition_it)->set_target_regime(regimes);   
     }
 }
@@ -454,8 +454,8 @@ void {{component_name}}::init_state_(const Node& proto) {
 
 {{component_name}}::~{{component_name}} () {
     // Destruct all regimes
-    for (std::map<std::string, Regime_*>::iterator it = regimes.begin(); it != regimes.end(); ++it)
-        delete it->second;
+    for (std::vector<Regime_*>::iterator it = regimes.begin(); it != regimes.end(); ++it)
+        delete *it;
     regimes.clear();
 }
 
