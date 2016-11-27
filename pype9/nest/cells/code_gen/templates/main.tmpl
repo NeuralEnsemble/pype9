@@ -86,12 +86,12 @@ std::string {{component_name}}::ExceededMaximumSimultaneousTransitions::message(
         delete *it;
 }
 
-{{component_name}}::Transition_* {{component_name}}::Regime_::transition(double t) {
+{{component_name}}::Transition_* {{component_name}}::Regime_::transition(double end_of_step_t) {
 
     // Get vector of transitions (both OnConditions and OnEvents) that are triggered in the current timestep
     std::vector<Transition_*> occurred;
     for (std::vector<OnCondition_*>::iterator it = on_conditions.begin(); it != on_conditions.end(); ++it)
-        if ((*it)->triggered(t))
+        if ((*it)->triggered(end_of_step_t))
             occurred.push_back(*it);
             
     for (std::vector<OnEvent_*>::iterator it = on_events.begin(); it != on_events.end(); ++it)
@@ -107,7 +107,7 @@ std::string {{component_name}}::ExceededMaximumSimultaneousTransitions::message(
     else {
         std::vector<double> times;
         for (std::vector<Transition_*>::iterator it = occurred.begin(); it != occurred.end(); ++it) 
-            times.push_back((*it)->time_occurred(t));
+            times.push_back((*it)->time_occurred(end_of_step_t));
         int min_index = std::min_element(times.begin(), times.end()) - times.begin();
         transition = occurred[min_index];
     }
@@ -120,10 +120,10 @@ std::string {{component_name}}::ExceededMaximumSimultaneousTransitions::message(
 }
 
 
-void {{component_name}}::Regime_::set_triggers(double t) {
+void {{component_name}}::Regime_::set_triggers() {
     // Check whether trigger should be activated
     for (std::vector<OnCondition_*>::iterator it = on_conditions.begin(); it != on_conditions.end(); ++it)
-        (*it)->set_trigger(t);
+        (*it)->set_trigger();
 }
 
 
@@ -223,7 +223,7 @@ void {{component_name}}::{{regime.name}}Regime_::step_ode() {
             {% set TransitionClassName = '{}On{}Event'.format(regime.name, transition.src_port_name) %}
         {% endif %}
 
-bool {{component_name}}::{{TransitionClassName}}::body(double t) {
+bool {{component_name}}::{{TransitionClassName}}::body() {
     // Map all variables/expressions to the local namespace that are required to evaluate the state assignments that were not required for the triggers
 
 
@@ -244,6 +244,9 @@ bool {{component_name}}::{{TransitionClassName}}::body(double t) {
     double_t {{' '.join(component_class.connection_parameter_set(transition.src_port_name).parameter_names)}} = weight_;
             {% endif %}
         {% endif %}
+    
+    // Get time stored in state
+    double t = S_.t;
     
     {{macros.map_required_vars_locally(transition.state_assignments, component_class, component_name, unit_handler, [], []) | indent(4)}}
 
@@ -269,9 +272,9 @@ bool {{component_name}}::{{TransitionClassName}}::body(double t) {
     {% for on_event in regime.on_events %}
             {% set TransitionClassName = '{}On{}Event'.format(regime.name, on_event.src_port_name) %}
     
-double {{component_name}}::{{TransitionClassName}}::time_occurred(double t) {
+double {{component_name}}::{{TransitionClassName}}::time_occurred(double end_of_step_t) {
     //FIXME: Should use the exact spike time specified in the spike event
-    return t;
+    return end_of_step_t;
 }
 
 
@@ -282,12 +285,15 @@ bool {{component_name}}::{{TransitionClassName}}::received() {
     {% endfor %}
     {% for on_condition in regime.on_conditions %}
         {% set TransitionClassName = '{}OnCondition{}'.format(regime.name, regime.index_of(on_condition)) %}
-bool {{component_name}}::{{TransitionClassName}}::triggered(double t) {
+bool {{component_name}}::{{TransitionClassName}}::triggered(double end_of_step_t) {
 
 	if (active) {
 	    const State_& S_ = regime->cell->S_;
 	    const Buffers_& B_ = regime->cell->B_;
 	    const Parameters_& P_ = regime->cell->P_;
+	    
+	    // Use time at end of the ODE step to check whether the on-condition is triggered within it.
+	    double t = end_of_step_t;
 	        
 	    {{macros.map_required_vars_locally(on_condition.trigger, component_class, component_name, unit_handler, [], []) | indent(8)}}
 	
@@ -297,35 +303,38 @@ bool {{component_name}}::{{TransitionClassName}}::triggered(double t) {
 
 }
 
-void {{component_name}}::{{TransitionClassName}}::set_trigger(double t) {
+void {{component_name}}::{{TransitionClassName}}::set_trigger() {
     
     if (!active) {
 	    const State_& S_ = regime->cell->S_;
 	    const Buffers_& B_ = regime->cell->B_;
 	    const Parameters_& P_ = regime->cell->P_;
-	        
+
+	    // Get time stored in state
+	    double t = S_.t;
+	    
 	    {{macros.map_required_vars_locally(on_condition.trigger.reactivate_condition, component_class, component_name, unit_handler, [], []) | indent(8)}}
 	
 	    active = {{on_condition.trigger.reactivate_condition.rhs_cstr}};
     }
 }
 
-double {{component_name}}::{{TransitionClassName}}::time_occurred(double t) {
+double {{component_name}}::{{TransitionClassName}}::time_occurred(double end_of_step_t) {
        {% set exact_time_expr = on_condition.trigger.crossing_time_expr %}
        {% if exact_time_expr %}
 
     const State_& S_ = regime->cell->S_;
     const Buffers_& B_ = regime->cell->B_;
     const Parameters_& P_ = regime->cell->P_;
-       
+
     {{macros.map_required_vars_locally(exact_time_expr, component_class, component_name, unit_handler, [], []) | indent(4)}}       
     // The trigger expression depends on 't' so determine the exact time that the threshold was crossed.
-    double exact_t = {{exact_time_expr.rhs_cstr}};
+    double t = {{exact_time_expr.rhs_cstr}};
        {% else %}
     // The trigger expression doesn't soley (in terms of state-vars) depend on 't' so just return the end of the window
-    double exact_t = t;
+    double t = end_of_step_t;
        {% endif %}
-    return exact_t;       
+    return t;       
 }
 
 	{% endfor %}
@@ -483,6 +492,9 @@ void {{component_name}}::init_state_(const Node& proto) {
     y_[{{sv.name}}_INDEX] = 0.0;
 {% endfor %}
 
+    // Initialise time state just before t=0 to allow triggers at t=0 to be set
+    t = -std::numeric_limits<double>::min();
+
 {% include "solve_steady_state.tmpl" %}
 }
 
@@ -494,6 +506,7 @@ void {{component_name}}::init_state_(const Node& proto) {
   for (int i = 0; i < {{component_class.num_state_variables}}; ++i)
       y_[i] = s.y_[i];
 {% endif %}
+  t = s.t;
 }
 
 /********************************************
@@ -506,6 +519,7 @@ void {{component_name}}::init_state_(const Node& proto) {
   for (size_t i = 0 ; i < {{component_class.num_state_variables}} ; ++i)
        y_[i] = s.y_[i];
 {% endif %}
+  t = s.t;
   return *this;
 }
 
@@ -563,13 +577,13 @@ void {{component_name}}::State_::set (const DictionaryDatum &d_, const Parameter
  ***********/
 
 {{component_name}}::Buffers_::Buffers_({{component_name}}& n)
-    : logger_(n) {
+    : logger_(n), current_regime(0) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
 
 {{component_name}}::Buffers_::Buffers_(const Buffers_&, {{component_name}}& n)
-    : logger_(n) {
+    : logger_(n), current_regime(0) {
     // Initialization of the remaining members is deferred to
     // init_buffers_().
 }
@@ -597,8 +611,8 @@ void {{component_name}}::init_buffers_() {
 {% endfor %}
 
     B_.current_regime = get_regime("{{default_regime}}");
-    // Set triggers at point just before t=0
-    B_.current_regime->set_triggers(-std::numeric_limits<double>::min());
+    // Set triggers in current regime
+    B_.current_regime->set_triggers();
     B_.current_regime->init_solver();
 
 }
@@ -634,6 +648,9 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 
     for (nest::long_t lag = from; lag < to; ++lag) {
     
+        // Update time stored in state
+        S_.t = origin.get_ms();
+    
         /***** Solve ODE over timestep *****/
         B_.current_regime->step_ode();
 
@@ -642,37 +659,49 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         refresh_events(lag);
         
         // Set times for checking on-condition triggers
-        double t = origin.get_ms() + lag * dt;  // The time at the end of the lag step
-        double last_transition_t = 0.0;  // Used to detect infinite loops of simultaneous transitions
+        double end_of_step_t = origin.get_ms() + lag * dt;  // The time at the end of the lag step
         
         // Pointer to the next transition
         Transition_* transition;
         int simultaneous_transition_count = 0;
         
-        while ((transition = B_.current_regime->transition(t))) {  // Check for a transition (i.e. the output of current_regime->transition is not NULL) and record it in the 'transition' variable.
+        while ((transition = B_.current_regime->transition(end_of_step_t))) {  // Check for a transition (i.e. the output of current_regime->transition is not NULL) and record it in the 'transition' variable.
                     
-            double transition_t = transition->time_occurred(t);  // Get the exact time the transition occurred.
-            if (transition_t == last_transition_t) {
+            double t = transition->time_occurred(end_of_step_t);  // Get the exact time the transition occurred (if trigger is a solvable expression of 't')
+            if (t == S_.t) {
                 ++simultaneous_transition_count;
                 if (simultaneous_transition_count > MAX_SIMULTANEOUS_TRANSITIONS)
                     throw ExceededMaximumSimultaneousTransitions("{{component_name}}", simultaneous_transition_count, t);
-            } else
+            } else {
+                S_.t = t;  // Update time stored in state
                 simultaneous_transition_count = 0;
+            }
             // Execute body of transition, flagging a discontinuity in the ODE system
             // if either the body contains state assignments (i.e. not just output
             // events) or the regime changes
-            bool discontinuous = transition->body(transition_t) || (transition->get_target_regime() != B_.current_regime);
+            bool discontinuous = transition->body() || (transition->get_target_regime() != B_.current_regime);
             // Update the current regime
             B_.current_regime = transition->get_target_regime();
             // Set all triggers, i.e. activate all triggers for which their trigger condition 
             // evaluates to false.
-            B_.current_regime->set_triggers(transition_t);
+            B_.current_regime->set_triggers();
             // Reinitialise the solver if the was a discontinuity in the ODE system
             if (discontinuous)
                 B_.current_regime->init_solver();  // Reset the solver if the transition contains state assignments or switches to a new regime.
-            // Update the previous time.    
-            last_transition_t = transition_t;
         }
+        
+        // Update time stored in state before setting triggers
+        S_.t = end_of_step_t;
+
+        // Set active on-condition triggers before the next state update.
+        // FIXME: This implementation can't detect multiple within-step
+        //        triggers. Will need to use a solver that can detect zero
+        //        crossings (e.g. CVODE), supply it with an appropriate
+        //        equation (i.e. unwrap logical expressions and convert inequalties
+        //        to equalities = 0, e.g. a < b ==> a - b == 0, (a < b) | (c > d)
+        //        ==> (a - b) * (c - d) == 0, (a < b) & (c > d) ==>
+        //        abs(a - b) + abs(c - d) == 0).
+        B_.current_regime->set_triggers();
         
         /***** Send output events for each event send port *****/
         // FIXME: Need to specify different output ports in a way that can be read by the receiving nodes
@@ -693,17 +722,6 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
 
         /***** Record data *****/
         B_.logger_.record_data(current_steps + lag);
-        
-        
-        // Set active on-condition triggers before the next state update.
-        // FIXME: This implementation can't detect multiple within-step
-        //        triggers. Will need to use a solver that can detect zero
-        //        crossings (e.g. CVODE), supply it with an appropriate
-        //        equation (i.e. unwrap logical expressions and convert inequalties
-        //        to equalities = 0, e.g. a < b ==> a - b == 0, (a < b) | (c > d)
-        //        ==> (a - b) * (c - d) == 0, (a < b) & (c > d) ==>
-        //        abs(a - b) + abs(c - d) == 0).
-        B_.current_regime->set_triggers(t);
         
     }
 }

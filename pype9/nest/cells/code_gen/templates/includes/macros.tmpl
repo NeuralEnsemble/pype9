@@ -4,6 +4,7 @@
     {% set required = component_class.required_for(expressions) %}
     {% set previous = component_class.required_for(previous_expressions) %}
     {% set debug = False %}
+    
 // State Variables
     {% for sv, units in unit_handler.assign_units_to_variables(required.state_variables) if (sv not in previous.state_variables and sv.name not in exclude) %}
 const double_t& {{sv.name}} = S_.y_[{{component_name}}::State_::{{sv.name}}_INDEX];  // ({{units}})
