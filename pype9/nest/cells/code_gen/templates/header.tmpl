@@ -439,7 +439,10 @@ namespace nineml {
 {% endfor %}
 
 		template <State_::StateVecElems elem>
+		
+		// data logger functions
 		double_t get_y_elem_() const { return S_.y_[elem]; }
+		double_t get_current_regime_index() const { return (double_t)S_.current_regime->get_index(); }
 
 		Parameters_ P_;
 		State_      S_;
@@ -481,7 +484,7 @@ namespace nineml {
 		if (receptor_type < 0 || receptor_type >= SUP_ANALOG_PORT_)
 		    throw nest::UnknownReceptorType(receptor_type, this->get_name());
 		else if (receptor_type < MIN_ANALOG_PORT_)
-		    throw nest::IncompatibleReceptorType(receptor_type, this->get_name(), "SpikeEvent");
+		    throw nest::IncompatibleReceptorType(receptor_type, this->get_name(), "CurrentEvent");
 	    return receptor_type;
 	}
 

@@ -866,6 +866,7 @@ class TestNetwork(TestCase):
         dyn_array1 = ComponentArray(
             "Pop1", pop1.size,
             MultiDynamicsWithSynapsesProperties(
+                "Pop1",
                 MultiDynamicsProperties(
                     "Pop1",
                     sub_components={

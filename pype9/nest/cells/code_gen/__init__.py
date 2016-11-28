@@ -21,6 +21,7 @@ import shutil
 from datetime import datetime
 from copy import copy
 from nineml.user import DynamicsProperties, Definition
+from nineml.abstraction import Dynamics
 from nineml import Document
 from pype9.nest.units import UnitHandler
 from pype9.exceptions import Pype9RuntimeError
@@ -50,8 +51,7 @@ class CodeGenerator(BaseCodeGenerator):
         self._compiler = compiler[:-1]  # strip trailing \n
 
     def generate_source_files(self, component_class, default_properties,
-                              initial_state, src_dir, initial_regime,
-                              name=None, **kwargs):
+                              initial_state, src_dir, name=None, **kwargs):
         if name is None:
             name = component_class.name
         # Get the initial regime and check that it refers to a regime in the
@@ -61,12 +61,13 @@ class CodeGenerator(BaseCodeGenerator):
             'component_class': component_class,
             'prototype': default_properties,
             'initial_state': initial_state,
-            'initial_regime': initial_regime,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'unit_handler': UnitHandler(component_class),
-            'sorted_regimes': sorted(component_class.regimes,
-                                     key=lambda r: component_class.index_of(r)),
+            'sorted_regimes': sorted(
+                component_class.regimes,
+                key=lambda r: component_class.index_of(
+                    r, class_map=Dynamics.class_to_member)),
             'jacobian_approx_step': kwargs.get(
                 'jacobian_approx_step', self.GSL_JACOBIAN_APPROX_STEP_DEFAULT),
             'max_step_size': kwargs.get('max_step_size',

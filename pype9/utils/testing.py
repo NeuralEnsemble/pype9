@@ -207,7 +207,6 @@ class Comparer(object):
             assert False
         self.nml_cells[simulator] = CellMetaClass(
             model, name=self.build_name, default_properties=properties,
-            initial_regime=self.initial_regime,
             **self.build_args[simulator])()
         if self.input_signal is not None:
             self.nml_cells[simulator].play(*self.input_signal)
@@ -216,7 +215,8 @@ class Comparer(object):
         self.nml_cells[simulator].record(self.state_variable)
         for state_var in self.auxiliary_states:
             self.nml_cells[simulator].record(state_var)
-        self.nml_cells[simulator].set_state(self.initial_states)
+        self.nml_cells[simulator].set_state(self.initial_states,
+                                            regime=self.initial_regime)
 
     def _create_NEURON(self, neuron_name):
         # -----------------------------------------------------------------

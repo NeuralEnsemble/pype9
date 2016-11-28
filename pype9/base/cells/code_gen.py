@@ -83,8 +83,7 @@ class BaseCodeGenerator(object):
 
     def generate(self, component_class, name=None, default_properties=None,
                  initial_state=None, install_dir=None, build_dir=None,
-                 build_mode='lazy', verbose=True, initial_regime=None,
-                 **kwargs):
+                 build_mode='lazy', verbose=True, url=None, **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
         NineML cell class
@@ -114,8 +113,6 @@ class BaseCodeGenerator(object):
                 recompile - don't generate src but compile
         verbose : bool
             Whether the build output is shown or not
-        initial_regime : str
-            Name of the regime to start the dynamics object in
         kwargs : dict
             A dictionary of (potentially simulator- specific) template
             arguments
@@ -129,14 +126,16 @@ class BaseCodeGenerator(object):
         orig_dir = os.getcwd()
         if name is None:
             name = component_class.name
+        if url is None:
+            url = component_class.url
         # Set build dir if not provided
         if build_dir is None:
-            if component_class.url is None:
+            if url is None:
                 build_dir = tempfile.mkdtemp()
                 logger.info("Building '{}' component in temporary directory "
                             "'{}'".format(name, build_dir))
             else:
-                build_dir = self.get_build_dir(component_class.url, name)
+                build_dir = self.get_build_dir(url, name)
                 logger.info("Building '{}' component in '{}' directory"
                             .format(name, build_dir))
         # Calculate src directory path within build directory
@@ -193,19 +192,6 @@ class BaseCodeGenerator(object):
             raise Pype9BuildError(
                 "Unrecognised build option '{}', must be one of ('{}')"
                 .format(build_mode, "', '".join(self.BUILD_MODE_OPTIONS)))
-        # FIXME: The 'initial_regime' argument will no longer necessary
-        #        when it is incorporated into the initial_state object.
-        #        If initial_regime is not specified pick the regime with
-        #        the most time derivatives to avoid refractory regimes.
-        #        Sorry if this seems hacky, it will be fixed soon.
-        if initial_regime is not None:
-            self._check_initial_regime(component_class, initial_regime)
-        else:
-            max_num_tds = 0
-            for regime in component_class.regimes:
-                if initial_regime is None or (regime.num_time_derivatives >
-                                              max_num_tds):
-                    initial_regime = regime.name
         # Generate source files from NineML code
         if generate_source:
             self.clean_src_dir(src_dir, name)
@@ -214,9 +200,11 @@ class BaseCodeGenerator(object):
                 component_class=component_class,
                 default_properties=default_properties,
                 initial_state=initial_state,
-                src_dir=src_dir, compile_dir=compile_dir,
-                install_dir=install_dir, verbose=verbose,
-                initial_regime=initial_regime, **kwargs)
+                src_dir=src_dir,
+                compile_dir=compile_dir,
+                install_dir=install_dir,
+                verbose=verbose,
+                **kwargs)
             component_class.write(built_comp_class_pth)
         if compile_source:
             # Clean existing compile & install directories from previous builds
@@ -383,13 +371,3 @@ class BaseCodeGenerator(object):
         else:
             mod_time = time.ctime(os.path.getmtime(url))
         return mod_time
-
-    @classmethod
-    def _check_initial_regime(cls, component_class, initial_regime):
-        if (initial_regime and
-                initial_regime not in component_class.regime_names):
-            raise Pype9RuntimeError(
-                "Initial regime '{}' does not refer to a regime in the given "
-                "component class '{}'"
-                .format(initial_regime,
-                        "', '".join(component_class.regime_names)))

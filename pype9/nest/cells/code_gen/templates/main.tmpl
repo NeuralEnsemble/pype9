@@ -35,7 +35,7 @@ namespace nest{
 {% for sv in component_class.state_variables %}
     insert_("{{sv.name}}", &nineml::{{component_name}}::get_y_elem_<nineml::{{component_name}}::State_::{{sv.name}}_INDEX>);
 {% endfor %}
-    //insert_(CURRENT_REGIME, &nineml::{{component_name}}::current_regime_index);
+    insert_(CURRENT_REGIME, &nineml::{{component_name}}::get_current_regime_index);
   }
 }
 
@@ -169,7 +169,7 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
 
 
 {{component_name}}::{{regime.name}}Regime_::{{regime.name}}Regime_({{component_name}}* cell)
-  : Regime_(cell, "{{regime.name}}", {{component_class.index_of(regime)}}){% if regime.num_time_derivatives %}{% include "solver_construct.tmpl" %}{% endif %} {
+  : Regime_(cell, "{{regime.name}}", {{regime.name | upper}}_REGIME){% if regime.num_time_derivatives %}{% include "solver_construct.tmpl" %}{% endif %} {
   
     // Construct OnConditions specific to the regime.
     {% for on_condition in regime.on_conditions %}

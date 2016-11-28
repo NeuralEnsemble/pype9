@@ -45,6 +45,11 @@ class CellMetaClass(type):
         `saved_name`         -- the name of the Dynamics object in the document
                                 if diferent from the `name`
         """
+        # Grab the url before the component class is cloned
+        url = component_class.url
+        # Clone component class so annotations can be added to it and not bleed
+        # into the calling code.
+        component_class = component_class.clone(annotations_ns=[PYPE9_NS])
         # If the component class is not already wrapped in a WithSynapses
         # object, wrap it in one before passing to the code template generator
         if not isinstance(component_class, WithSynapses):
@@ -71,8 +76,9 @@ class CellMetaClass(type):
                 name = saved_name
             else:
                 name = component_class.name
-        url = component_class.url
         try:
+            # FIXME: This lookup should ideally be done on the component-class/
+            #        build properties
             Cell = cls._built_types[(name, url)]
             build_props = dict(Cell.build_component_class.annotations[
                 PYPE9_NS][BUILD_PROPS].items())
@@ -92,20 +98,13 @@ class CellMetaClass(type):
                 component_class=component_class,
                 default_properties=default_properties,
                 initial_state=initial_state, **kwargs)
-            # Set build dir default from original prototype url if not
-            # explicitly provided
-            if build_dir is None:
-                if url is None:
-                    raise Pype9RuntimeError(
-                        "'build_dir' must be supplied when using component "
-                        "classes created programmatically ('{}')".format(name))
-                build_dir = code_gen.get_build_dir(url, name)
+            # Generate and compile cell class
             instl_dir = code_gen.generate(
                 component_class=build_component_class,
                 default_properties=build_properties,
                 initial_state=build_initial_states,
                 build_mode=build_mode, verbose=verbose, name=name,
-                build_dir=build_dir, **kwargs)
+                build_dir=build_dir, url=url, **kwargs)
             # Load newly build model
             cls.load_libraries(name, instl_dir)
             # Create class member dict of new class

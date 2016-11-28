@@ -14,7 +14,6 @@ import logging
 import neo
 import nest
 import quantities as pq
-import nineml
 from nineml.exceptions import NineMLNameError
 from .code_gen import CodeGenerator
 from .controller import simulation_controller
@@ -115,7 +114,7 @@ class Cell(base.Cell):
         return data
 
     def build_name(self, varname):
-                # Get mapped port name if port corresponds to membrane voltage
+        # Get mapped port name if port corresponds to membrane voltage
         try:
             if varname == self.component_class.annotations[
                     PYPE9_NS][BUILD_TRANS][MEMBRANE_VOLTAGE]:

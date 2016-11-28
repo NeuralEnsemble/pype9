@@ -393,6 +393,7 @@ class Network(object):
                 name=pop.name, sub_components=sub_components,
                 port_connections=internal_conns, port_exposures=exposures)
             component = MultiDynamicsWithSynapsesProperties(
+                dynamics_properties.name,
                 dynamics_properties, synapses_properties=synapses,
                 connection_property_sets=connection_property_sets)
             component_arrays[pop.name] = ComponentArray9ML(pop.name, pop.size,
