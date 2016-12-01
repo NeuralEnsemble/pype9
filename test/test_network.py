@@ -910,6 +910,7 @@ class TestNetwork(TestCase):
         dyn_array2 = ComponentArray(
             "Pop2", pop2.size,
             MultiDynamicsWithSynapsesProperties(
+                "Pop2",
                 MultiDynamicsProperties(
                     "Pop2",
                     sub_components={
@@ -951,6 +952,7 @@ class TestNetwork(TestCase):
         dyn_array3 = ComponentArray(
             "Pop3", pop3.size,
             MultiDynamicsWithSynapsesProperties(
+                "Pop3",
                 MultiDynamicsProperties(
                     'Pop3',
                     sub_components={'cell': cell3},

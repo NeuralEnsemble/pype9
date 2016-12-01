@@ -23,11 +23,12 @@ import quantities as pq
 import neo
 from neuron import h, load_mechanisms
 from nineml import units as un
+from nineml.abstraction import Dynamics
 from nineml.abstraction import EventPort
 from nineml.exceptions import NineMLNameError
 from math import pi
 import numpy
-from .code_gen import CodeGenerator
+from .code_gen import CodeGenerator, REGIME_VARNAME
 from pype9.base.cells import base
 from pype9.neuron.units import UnitHandler
 from .controller import simulation_controller
@@ -228,6 +229,12 @@ class Cell(base.Cell):
         except LookupError:
             varname = self._escaped_name(varname)
             setattr(self._sec, varname, val)
+
+    def _set_regime(self, name):
+        setattr(self._hoc, REGIME_VARNAME,
+                self.build_component_class.index_of(
+                    self.build_component_class.regime(name),
+                    class_map=Dynamics.class_to_member))
 
     def record(self, port_name):
         self._initialise_local_recording()

@@ -27,7 +27,7 @@ NEURON {
 {% endif %}
 
     : T
-    RANGE regime_
+    RANGE {{regime_varname}}
 
     :StateVariables:
 {% for sv in component_class.state_variables %}
@@ -97,7 +97,7 @@ INITIAL {
 
     : Initialise Regime:
     {# This should come from the initial state, when we sort out that format #}
-    regime_ = 0
+    {{regime_varname}} = 0
 
 {% if component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] != SUB_COMPONENT_MECH %}
     : Initialise the NET_RECEIVE block by sending appropriate flag to itself
@@ -130,7 +130,7 @@ PARAMETER {
 
 ASSIGNED {
     : Internal flags
-    regime_
+    {{regime_varname}}
     found_transition_
     
     : Analog receive ports
@@ -172,7 +172,7 @@ BREAKPOINT {
         {% if len(list(component_class.overridden_in_regimes(alias))) %}
             {% for regime in component_class.overridden_in_regimes(alias) %}
                 {% set scaled_regime_expr, _ = unit_handler.scale_alias(regime.alias(alias.lhs)) %}
-    {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
+    {{elseif(loop.first)}} ({{regime_varname}} == {{regime.name | upper}}) {
         {{code_gen.assign_str(alias.lhs, scaled_regime_expr.rhs) | indent(8)}}
             {% endfor %}
     } else {
@@ -200,7 +200,7 @@ FUNCTION deriv_{{sv.name}}(
         {%- endfor %}
     ) ({{unit_handler.assign_units_to_variable(sv, derivative_of=True)}}) {
         {% for regime in component_class.regimes  if sv.name in regime._time_derivatives %}
-    {{elseif(loop.first)}} (regime_ == {{regime.name | upper}}) {
+    {{elseif(loop.first)}} ({{regime_varname}} == {{regime.name | upper}}) {
             {% set scaled_expr, units = unit_handler.scale_time_derivative(regime.time_derivative(sv.name)) %}
         {{code_gen.assign_str('deriv_' + sv.name, scaled_expr.rhs)}}
     {{endif(loop.last)}}
@@ -234,7 +234,7 @@ NET_RECEIVE(connection_weight_, channel) {
         {% endfor %}
     {% endif %}
     {% for regime in component_class.regimes %}
-    } else if (regime_ == {{regime.name | upper}}) {
+    } else if ({{regime_varname}} == {{regime.name | upper}}) {
         {% for trans in regime.transitions %}
             {% if hasattr(trans, 'trigger') %}
         if (flag == {{component_class.index_of(trans.trigger.rhs, key='TriggerRHS') + 1}}) {  : Condition '{{trans.trigger.rhs_str}}'
@@ -268,7 +268,7 @@ NET_RECEIVE(connection_weight_, channel) {
             } else {
                 printf("WARNING!! Found multiple transitions %f and %f at time %f", found_transition_, flag, t * PER_MS)
             }
-            regime_ = {{trans.target_regime.name | upper}}
+            {{regime_varname}} = {{trans.target_regime.name | upper}}
 
             {% if component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] == ARTIFICIAL_CELL_MECH %}
             : Use net_send for transitions triggers that depend on t
@@ -282,7 +282,7 @@ NET_RECEIVE(connection_weight_, channel) {
         {% endfor %}
     {% endfor %}
     } else {
-        printf("ERROR! Unrecognised regime %f", regime_)
+        printf("ERROR! Unrecognised regime %f", {{regime_varname}})
     }
 }
 {% endif %}

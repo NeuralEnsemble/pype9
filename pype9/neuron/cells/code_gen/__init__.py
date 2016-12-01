@@ -50,6 +50,8 @@ TRANSFORM_NS = 'NeuronBuildTransform'
 
 logger = logging.getLogger("PyPe9")
 
+REGIME_VARNAME = 'regime_'
+
 
 class CodeGenerator(BaseCodeGenerator):
 
@@ -150,7 +152,8 @@ class CodeGenerator(BaseCodeGenerator):
             'unit_handler': UnitHandler(component_class),
             'ode_solver': self.ODE_SOLVER_DEFAULT,
             'external_ports': [],
-            'is_subcomponent': True}
+            'is_subcomponent': True,
+            'regime_varname': REGIME_VARNAME}
 #             # FIXME: weight_vars needs to be removed or implemented properly
 #             'weight_variables': []}
         tmpl_args.update(template_args)

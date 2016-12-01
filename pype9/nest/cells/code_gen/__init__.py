@@ -27,6 +27,9 @@ from pype9.nest.units import UnitHandler
 from pype9.exceptions import Pype9RuntimeError
 
 
+REGIME_VARNAME = '__regime__'
+
+
 class CodeGenerator(BaseCodeGenerator):
 
     SIMULATOR_NAME = 'nest'
@@ -80,7 +83,8 @@ class CodeGenerator(BaseCodeGenerator):
                 'max_simultaneous_transitions',
                 self.MAX_SIMULTANEOUS_TRANSITIONS),
             'parameter_scales': [],
-            'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT)}
+            'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT),
+            'regime_varname': REGIME_VARNAME}
         ode_solver = kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT)
         ss_solver = kwargs.get('ss_solver', self.SS_SOLVER_DEFAULT)
         if ode_solver is None:

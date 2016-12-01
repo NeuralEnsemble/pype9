@@ -15,7 +15,8 @@ import neo
 import nest
 import quantities as pq
 from nineml.exceptions import NineMLNameError
-from .code_gen import CodeGenerator
+from nineml.abstraction import Dynamics
+from .code_gen import CodeGenerator, REGIME_VARNAME
 from .controller import simulation_controller
 from pype9.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
@@ -47,6 +48,12 @@ class Cell(base.Cell):
 
     def _set(self, varname, value):
         nest.SetStatus(self._cell, varname, value)
+
+    def _set_regime(self, name):
+        nest.SetStatus(self._cell, REGIME_VARNAME,
+                       self.build_component_class.index_of(
+                           self.build_component_class.regime(name),
+                           class_map=Dynamics.class_to_member))
 
     def record(self, port_name, interval=None):
         # Create dictionaries for storing local recordings. These are not

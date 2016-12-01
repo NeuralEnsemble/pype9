@@ -38,12 +38,19 @@ class CellMetaClass(type):
                 initial_state=None, name=None, saved_name=None,
                 build_dir=None, build_mode='lazy', verbose=False, **kwargs):
         """
-        `component_class`    -- A nineml.abstraction.Dynamics object
-        `default_properties` -- default properties, if None, then all props = 0
-        `initial_states`     -- initial states, if None, then all states = 0
-        `name`               -- the name for the class
-        `saved_name`         -- the name of the Dynamics object in the document
-                                if diferent from the `name`
+        Parameters
+        ----------
+        component_class : Dynamics
+            A nineml.abstraction.Dynamics object
+        default_properties: DynamicsProperties
+            default properties, if None, then all props = 0
+        initial_states : dict[str, Quantity]
+            initial states, if None, then all states = 0
+        name : str
+            The name for the class
+        saved_name: str
+            The name of the Dynamics object in the document if different from
+            the `name`
         """
         # Grab the url before the component class is cloned
         url = component_class.url
@@ -76,20 +83,17 @@ class CellMetaClass(type):
                 name = saved_name
             else:
                 name = component_class.name
+        create_class = False
         try:
             # FIXME: This lookup should ideally be done on the component-class/
             #        build properties
-            Cell = cls._built_types[(name, url)]
-            build_props = dict(Cell.build_component_class.annotations[
-                PYPE9_NS][BUILD_PROPS].items())
-            if build_props != kwargs:
-                raise Pype9RuntimeError(
-                    "Build options '{}' do not match previously built '{}' "
-                    "cell class with same name ('{}'). Please specify a "
-                    "different name (using a loaded nineml.Component instead "
-                    "of a URL)."
-                    .format(kwargs, name, build_props))
+            Cell = cls._built_types[name]
+            if not Cell.component_class.equals(component_class,
+                                               annotations_ns=[PYPE9_NS]):
+                create_class = True
         except KeyError:
+            create_class = True
+        if create_class:
             # Initialise code generator
             code_gen = cls.CodeGenerator()
             (build_component_class, build_properties,
@@ -115,8 +119,7 @@ class CellMetaClass(type):
                    'install_dir': instl_dir,
                    'build_component_class': build_component_class,
                    'build_default_properties': build_properties,
-                   'build_initial_states': build_initial_states,
-                   'build_options': kwargs}
+                   'build_initial_states': build_initial_states}
             # Create new class using Type.__new__ method
             Cell = super(CellMetaClass, cls).__new__(
                 cls, name, (cls.BaseCellClass,), dct)
@@ -232,8 +235,12 @@ class Cell(object):
         """
         Sets the value of parameters and state variables
 
-        `varname` [str]: name of the of the parameter or state variable
-        `val` [float|pq.Quantity|nineml.Quantity]: the value to set
+        Parameters
+        ----------
+        varname : str
+            Name of the of the parameter or state variable
+        val : float | pq.Quantity | nineml.Quantity
+            The value to set
         """
         if self._created:  # Once the __init__ method has set all the members
             if varname not in self:
@@ -345,6 +352,8 @@ class Cell(object):
         states, regime = state
         for k, q in states.iteritems():
             setattr(self, k, q)  # FIXME: Need to convert units
+        if regime is not None:
+            self._set_regime(regime)
 
     def initialize(self):
         if self._initial_state is None:

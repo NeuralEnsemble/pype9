@@ -156,7 +156,7 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
         {% for td, scaled_expr, units in unit_handler.scale_time_derivatives(regime.time_derivatives) %}
     ITEM(f_, {{component_name}}::{{regime.name}}Regime_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
         {% endfor %}
-	
+
     //std::cout << "Success at t=" << t << ": " << GSL_SUCCESS << std::endl;
         {% include "solver_return.tmpl" %}
 }        
@@ -175,7 +175,7 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
     {% for on_condition in regime.on_conditions %}
     on_conditions.push_back(new {{regime.name}}OnCondition{{regime.index_of(on_condition)}}(this));
     {% endfor %}
-	
+
     // Construct OnConditions specific to the regime.
     {% for on_event in regime.on_events %}
     on_events.push_back(new {{regime.name}}On{{on_event.src_port_name}}Event(this));              
@@ -256,7 +256,7 @@ bool {{component_name}}::{{TransitionClassName}}::body() {
         {% for sa, scaled_expr, units in unit_handler.scale_aliases(transition.state_assignments) %}
     S_.y_[{{component_name}}::State_::{{sa.name}}_INDEX] = {{scaled_expr.rhs_cstr}};  // ({{units}})
         {% endfor %}
-	        
+            
     // Output events
         {% for output_event in transition.output_events %}
     ++B_.num_{{output_event.port.name}}_events;
@@ -289,16 +289,16 @@ bool {{component_name}}::{{TransitionClassName}}::received() {
         {% set TransitionClassName = '{}OnCondition{}'.format(regime.name, regime.index_of(on_condition)) %}
 bool {{component_name}}::{{TransitionClassName}}::triggered(double end_of_step_t) {
 
-	if (active) {
-	    const State_& S_ = regime->cell->S_;
-	    const Buffers_& B_ = regime->cell->B_;
-	    const Parameters_& P_ = regime->cell->P_;
-	    
-	    // Use time at end of the ODE step to check whether the on-condition is triggered within it.
-	    double t = end_of_step_t;
-	        
-	    {{macros.map_required_vars_locally(on_condition.trigger, component_class, component_name, unit_handler, [], []) | indent(8)}}
-	
+    if (active) {
+        const State_& S_ = regime->cell->S_;
+        const Buffers_& B_ = regime->cell->B_;
+        const Parameters_& P_ = regime->cell->P_;
+        
+        // Use time at end of the ODE step to check whether the on-condition is triggered within it.
+        double t = end_of_step_t;
+            
+        {{macros.map_required_vars_locally(on_condition.trigger, component_class, component_name, unit_handler, [], []) | indent(8)}}
+    
         return {{on_condition.trigger.rhs_cstr}};
     } else
         return false;
@@ -308,16 +308,16 @@ bool {{component_name}}::{{TransitionClassName}}::triggered(double end_of_step_t
 void {{component_name}}::{{TransitionClassName}}::set_trigger() {
     
     if (!active) {
-	    const State_& S_ = regime->cell->S_;
-	    const Buffers_& B_ = regime->cell->B_;
-	    const Parameters_& P_ = regime->cell->P_;
+        const State_& S_ = regime->cell->S_;
+        const Buffers_& B_ = regime->cell->B_;
+        const Parameters_& P_ = regime->cell->P_;
 
-	    // Get time stored in state
-	    double t = S_.t;
-	    
-	    {{macros.map_required_vars_locally(on_condition.trigger.reactivate_condition, component_class, component_name, unit_handler, [], []) | indent(8)}}
-	
-	    active = {{on_condition.trigger.reactivate_condition.rhs_cstr}};
+        // Get time stored in state
+        double t = S_.t;
+        
+        {{macros.map_required_vars_locally(on_condition.trigger.reactivate_condition, component_class, component_name, unit_handler, [], []) | indent(8)}}
+    
+        active = {{on_condition.trigger.reactivate_condition.rhs_cstr}};
     }
 }
 
@@ -339,7 +339,7 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(double end_of_
     return t;       
 }
 
-	{% endfor %}
+    {% endfor %}
 {% endfor %}
 
 
@@ -430,10 +430,10 @@ void {{component_name}}::construct_regimes() {
 
     // Set target regimes in all transitions
     for (std::vector<Regime_*>::iterator regime_it = regimes.begin(); regime_it != regimes.end(); ++regime_it) {
-	    for (std::vector<OnEvent_*>::iterator on_event_it = (*regime_it)->on_events.begin(); on_event_it != (*regime_it)->on_events.end(); ++on_event_it)
-	        (*on_event_it)->set_target_regime(regimes);
-	    for (std::vector<OnCondition_*>::iterator on_condition_it = (*regime_it)->on_conditions.begin(); on_condition_it != (*regime_it)->on_conditions.end(); ++on_condition_it)
-	        (*on_condition_it)->set_target_regime(regimes);   
+        for (std::vector<OnEvent_*>::iterator on_event_it = (*regime_it)->on_events.begin(); on_event_it != (*regime_it)->on_events.end(); ++on_event_it)
+            (*on_event_it)->set_target_regime(regimes);
+        for (std::vector<OnCondition_*>::iterator on_condition_it = (*regime_it)->on_conditions.begin(); on_condition_it != (*regime_it)->on_conditions.end(); ++on_condition_it)
+            (*on_condition_it)->set_target_regime(regimes);   
     }
 }
 
@@ -716,10 +716,10 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         // Output events        
 {% for port in component_class.event_send_ports %}
         if (B_.num_{{port.name}}_events) {
-		    set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
-		    nest::SpikeEvent se;
-		    se.set_multiplicity(B_.num_{{port.name}}_events);
-		    network()->send(*this, se, lag); 
+            set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
+            nest::SpikeEvent se;
+            se.set_multiplicity(B_.num_{{port.name}}_events);
+            network()->send(*this, se, lag); 
         }
 {% endfor %}
 
