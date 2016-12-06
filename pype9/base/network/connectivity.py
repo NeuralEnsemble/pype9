@@ -5,6 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from nineml.base import clone_id
 from nineml.user.connectionrule import (
     BaseConnectivity, InverseConnectivity as BaseInverseConnectivity)
 from pyNN.parameters import LazyArray
@@ -74,11 +75,12 @@ class PyNNConnectivity(BaseConnectivity):
             memo = {}
         try:
             # See if the attribute has already been cloned in memo
-            clone = memo[id(self)]
+            clone = memo[clone_id(self)]
         except KeyError:
             clone = self.__class__(
                 self.rule_properties.clone(memo=memo, **kwargs),
                 self.source_size, self.destination_size, **self._kwargs)
+            memo[clone_id(self)] = clone
         return clone
 
 
