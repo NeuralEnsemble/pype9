@@ -63,8 +63,7 @@ class BaseCodeGenerator(object):
     DEFAULT_UNITS = {}
 
     @abstractmethod
-    def generate_source_files(self, dynamics, initial_state, src_dir, name,
-                              **kwargs):
+    def generate_source_files(self, dynamics, src_dir, name, **kwargs):
         """
         Generates the source files for the relevant simulator
         """
@@ -81,9 +80,9 @@ class BaseCodeGenerator(object):
     def compile_source_files(self, compile_dir, name, verbose):
         pass
 
-    def generate(self, component_class, name=None, default_properties=None,
-                 initial_state=None, install_dir=None, build_dir=None,
-                 build_mode='lazy', verbose=True, url=None, **kwargs):
+    def generate(self, component_class, name=None, install_dir=None,
+                 build_dir=None, build_mode='lazy', verbose=True, url=None,
+                 **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
         NineML cell class
@@ -94,10 +93,6 @@ class BaseCodeGenerator(object):
             9ML Dynamics object
         name : str
             Name of the generated cell class
-        default_properties : nineml.DynamicsProperties
-            Default properties for the cell
-        initial_state : dict[str, nineml.Quantity]
-            Default Initial values for the cell
         install_dir : str
             Path to the directory where the NMODL files
             will be generated and compiled
@@ -198,8 +193,6 @@ class BaseCodeGenerator(object):
             self.generate_source_files(
                 name=name,
                 component_class=component_class,
-                default_properties=default_properties,
-                initial_state=initial_state,
                 src_dir=src_dir,
                 compile_dir=compile_dir,
                 install_dir=install_dir,
@@ -332,8 +325,7 @@ class BaseCodeGenerator(object):
         """
         return []
 
-    def transform_for_build(self, name, component_class, default_properties,
-                            initial_state, **kwargs):  # @UnusedVariable
+    def transform_for_build(self, name, component_class, **kwargs):  # @UnusedVariable
         """
         Copies and transforms the component class and associated properties and
         states to match the format of the simulator (overridden in derived
@@ -345,24 +337,13 @@ class BaseCodeGenerator(object):
             The name of the transformed component class
         component_class : nineml.Dynamics
             The component class to be transformed
-        default_properties : nineml.DynamicsProperties
-            The properties to be transformed to match
-        initial_states : dict[str, nineml.Quantity]
-            The initial_states to be transformed to match
         """
         # ---------------------------------------------------------------------
         # Clone original component class and properties
         # ---------------------------------------------------------------------
         component_class = component_class.clone()
         component_class.name = name
-        default_properties = (default_properties.clone()
-                              if default_properties is not None else None)
-        if initial_state is not None:
-            initial_state = dict(
-                (n, v.clone()) for n, v in initial_state.iteritems())
-        else:
-            initial_state = None
-        return component_class, default_properties, initial_state
+        return component_class
 
     @classmethod
     def get_mod_time(cls, url):

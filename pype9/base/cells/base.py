@@ -34,18 +34,13 @@ class CellMetaClass(type):
     nineml_celltype_from_model
     """
 
-    def __new__(cls, component_class, default_properties=None,
-                initial_state=None, name=None, saved_name=None,
+    def __new__(cls, component_class, name=None, saved_name=None,
                 build_dir=None, build_mode='lazy', verbose=False, **kwargs):
         """
         Parameters
         ----------
         component_class : Dynamics
             A nineml.abstraction.Dynamics object
-        default_properties: DynamicsProperties
-            default properties, if None, then all props = 0
-        initial_states : dict[str, Quantity]
-            initial states, if None, then all states = 0
         name : str
             The name for the class
         saved_name: str
@@ -61,22 +56,6 @@ class CellMetaClass(type):
         # object, wrap it in one before passing to the code template generator
         if not isinstance(component_class, WithSynapses):
             component_class = WithSynapses.wrap(component_class)
-        if default_properties is not None:
-            # If default properties is not already wrapped in a
-            # WithSynapseProperties object, wrap it in one before passing to
-            # the code template generator
-            if not isinstance(default_properties,
-                              WithSynapsesProperties):
-                default_properties = WithSynapsesProperties.wrap(
-                    default_properties)
-            if default_properties.component_class != component_class:
-                raise Pype9RuntimeError(
-                    "Component class of default properties object, {}, does "
-                    "not match provided class, {}:\n{}".format(
-                        default_properties.component_class.name,
-                        component_class.name,
-                        default_properties.component_class.find_mismatch(
-                            component_class)))
         # Extract out build directives
         if name is None:
             if saved_name is not None:
@@ -96,17 +75,11 @@ class CellMetaClass(type):
         if create_class:
             # Initialise code generator
             code_gen = cls.CodeGenerator()
-            (build_component_class, build_properties,
-             build_initial_states) = code_gen.transform_for_build(
-                name=name,
-                component_class=component_class,
-                default_properties=default_properties,
-                initial_state=initial_state, **kwargs)
+            build_component_class = code_gen.transform_for_build(
+                name=name, component_class=component_class, **kwargs)
             # Generate and compile cell class
             instl_dir = code_gen.generate(
                 component_class=build_component_class,
-                default_properties=build_properties,
-                initial_state=build_initial_states,
                 build_mode=build_mode, verbose=verbose, name=name,
                 build_dir=build_dir, url=url, **kwargs)
             # Load newly build model
@@ -114,12 +87,8 @@ class CellMetaClass(type):
             # Create class member dict of new class
             dct = {'name': name,
                    'component_class': component_class,
-                   'default_properties': default_properties,
-                   'initial_state': initial_state,
                    'install_dir': instl_dir,
-                   'build_component_class': build_component_class,
-                   'build_default_properties': build_properties,
-                   'build_initial_states': build_initial_states}
+                   'build_component_class': build_component_class}
             # Create new class using Type.__new__ method
             Cell = super(CellMetaClass, cls).__new__(
                 cls, name, (cls.BaseCellClass,), dct)
@@ -127,8 +96,7 @@ class CellMetaClass(type):
             cls._built_types[name] = Cell
         return Cell
 
-    def __init__(cls, component_class, default_properties=None,
-                 initial_states=None, name=None, saved_name=None, **kwargs):
+    def __init__(cls, component_class, name=None, saved_name=None, **kwargs):
         """
         This initialiser is empty, but since I have changed the signature of
         the __new__ method in the deriving metaclasses it complains otherwise
@@ -162,30 +130,9 @@ class Cell(object):
             for name, pq_qty in kwprops.iteritems():
                 qty = self._unit_handler.from_pq_quantity(pq_qty)
                 properties.append(Property(name, qty.value * qty.units))
-            # If default properties not provided create a Dynamics Properties
-            # from the provided properties
-            if self.default_properties is None:
-                # FIXME: Probably should just initialise the properties to NaN
-                #        or something
-                self._nineml = nineml.user.DynamicsProperties(
-                    self.component_class.name + 'Properties',
-                    self.component_class, properties)
-            # If no properties provided use the default properties
-            elif not properties:
-                self._nineml = deepcopy(self.default_properties)
-            # Otherwise use the default properties as a prototype and override
-            # where specific properties are provided
-            else:
-                if isinstance(self.default_properties,
-                              MultiDynamicsProperties):
-                    logger.warning("Unable to set default properties for '{}' "
-                                   "cell as it is MultiDynamicsProperties"
-                                   .format(self.name))
-                    self._nineml = deepcopy(self.default_properties)
-                else:
-                    self._nineml = type(self.default_properties)(
-                        self.default_properties.name, self.default_properties,
-                        properties)
+            self._nineml = nineml.user.DynamicsProperties(
+                self.component_class.name + 'Properties',
+                self.component_class, properties)
         # Set up references from parameter names to internal variables and set
         # parameters
         for prop in self.properties:

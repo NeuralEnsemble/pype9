@@ -516,8 +516,6 @@ class ComponentArray(object):
         dynamics = dynamics_properties.component_class
         celltype = self.PyNNCellWrapperMetaClass(
             name=nineml_model.name, component_class=dynamics,
-            default_properties=dynamics_properties,
-            initial_state=list(dynamics_properties.initial_values),
             build_mode=build_mode, **kwargs)
         if build_mode != 'build_only':
             cellparams = dict(
