@@ -33,6 +33,7 @@ from .connectivity import InversePyNNConnectivity
 from ..cells import (
     MultiDynamicsWithSynapsesProperties, ConnectionPropertySet,
     SynapseProperties)
+from pype9.annotations import PYPE9_NS, ADDITIONAL_VARS, INITIAL_REGIME
 
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
@@ -518,6 +519,7 @@ class ComponentArray(object):
             name=nineml_model.name, component_class=dynamics,
             default_properties=dynamics_properties,
             initial_state=list(dynamics_properties.initial_values),
+            initial_regime=dynamics_properties.initial_regime,
             build_mode=build_mode, **kwargs)
         if build_mode != 'build_only':
             cellparams = dict(

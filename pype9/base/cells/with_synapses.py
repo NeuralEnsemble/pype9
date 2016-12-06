@@ -416,6 +416,8 @@ class DynamicsWithSynapsesProperties(WithSynapsesProperties,
         # DynamicsProperties properties and methods can find them.
         self._annotations = dynamics_properties._annotations
         self._properties = dynamics_properties._properties
+        self._initial_values = dynamics_properties._initial_values
+        self._initial_regime = dynamics_properties._initial_regime
 
 
 class MultiDynamicsWithSynapsesProperties(WithSynapsesProperties,

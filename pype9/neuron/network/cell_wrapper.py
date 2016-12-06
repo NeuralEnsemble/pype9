@@ -33,8 +33,8 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
     loaded_celltypes = {}
     UnitHandler = UnitHandler
 
-    def __new__(cls, name, component_class, default_properties=None,
-                initial_state=None, build_mode='lazy', silent=False,
+    def __new__(cls, name, component_class, default_properties,
+                initial_state, initial_regime, build_mode='lazy', silent=False,
                 solver_name=None, standalone=False, **kwargs):  # @UnusedVariable @IgnorePep8
         try:
             celltype = cls.loaded_celltypes[
@@ -48,7 +48,8 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
                                   standalone=False, **kwargs)
             dct = {'model': model,
                    'default_properties': default_properties,
-                   'initial_state': initial_state}
+                   'initial_state': initial_state,
+                   'initial_regime': initial_regime}
             celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
                 cls, name, (PyNNCellWrapper,), dct)
             assert set(celltype.recordable) == set(

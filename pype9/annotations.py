@@ -34,3 +34,7 @@ ARTIFICIAL_CELL_MECH = 'ArtificialCellMech'
 
 # Build properties
 BUILD_PROPS = 'BuildProperties'
+
+# Additional variables (temporary until 9MLv2)
+ADDITIONAL_VARS = 'AdditionalVariables'
+INITIAL_REGIME = 'InitialRegime'

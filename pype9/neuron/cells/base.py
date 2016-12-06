@@ -172,7 +172,9 @@ class Cell(base.Cell):
         # Capture attributes ending with '_init' (the convention PyNN uses to
         # specify initial conditions of state variables) and save them in
         # initial states
-        if (varname.endswith('_init') and
+        if varname == '_regime_init':
+            object.__setattr__(self, '_initial_regime', val)
+        elif (varname.endswith('_init') and
               varname[:-5] in self.component_class.state_variable_names):
             if varname in chain(self.component_class.state_variable_names,
                                 self.component_class.parameter_names):
@@ -180,12 +182,12 @@ class Cell(base.Cell):
                     "Ambiguous variable '{}' can either be the initial state "
                     "of '{}' or a parameter/state-variable"
                     .format(varname, varname[:-5]))
-            if self._initial_state is None:
-                object.__setattr__(self, '_initial_state', {})
-            self._initial_state[varname[:-5]] = val
+            if self._initial_states is None:
+                object.__setattr__(self, '_initial_states', {})
+            self._initial_states[varname[:-5]] = val
         elif varname in ('record_times', 'recording_time'):
-            # PyNN needs to be able to set these variables to record state
-            # variables
+            # PyNN needs to be able to set 'record_times' and 'recording_time'
+            # to record state variables
             object.__setattr__(self, varname, val)
         else:
             super(Cell, self).__setattr__(varname, val)

@@ -18,9 +18,10 @@ import nineml
 from nineml.abstraction import Dynamics
 from nineml.user import MultiDynamicsProperties, Property
 from nineml.units import Quantity
-from pype9.annotations import PYPE9_NS, BUILD_PROPS
+from pype9.annotations import PYPE9_NS
 from pype9.exceptions import (
-    Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError)
+    Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError,
+    Pype9UsageError)
 import logging
 from .with_synapses import WithSynapses, WithSynapsesProperties
 
@@ -195,7 +196,8 @@ class Cell(object):
         # either saved until the 'initialze' method is called or directly
         # set to the state)
         self._initialized = False
-        self._initial_state = None
+        self._initial_states = None
+        self._initial_regime = None
 
     @property
     def component_class(self):
@@ -346,20 +348,26 @@ class Cell(object):
         if self._initialized:
             self._set_state((states, regime))
         else:
-            super(Cell, self).__setattr__('_initial_state', (states, regime))
+            if self._initial_states is None:
+                super(Cell, self).__setattr__('_initial_states', {})
+            self._initial_states.update(states)
+            if regime is not None:
+                super(Cell, self).__setattr__('_initial_regime', regime)
 
-    def _set_state(self, state):
-        states, regime = state
+    def _set_state(self, states, regime):
         for k, q in states.iteritems():
             setattr(self, k, q)  # FIXME: Need to convert units
         if regime is not None:
             self._set_regime(regime)
 
     def initialize(self):
-        if self._initial_state is None:
-            raise Pype9RuntimeError("Initial state not set for '{}' cell"
-                                    .format(self.name))
-        self._set_state(self._initial_state)
+        if self._initial_states is None:
+            raise Pype9UsageError("Initial state not set for '{}' cell"
+                                  .format(self.name))
+        if self._initial_regime is None:
+            raise Pype9UsageError("Initial regime not set for '{}' cell"
+                                  .format(self.name))
+        self._set_state(self._initial_states, self._initial_regime)
         super(Cell, self).__setattr__('_initialized', True)
 
     def write(self, file):  # @ReservedAssignment
