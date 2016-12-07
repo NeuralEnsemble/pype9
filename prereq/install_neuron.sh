@@ -15,12 +15,12 @@ fi
 mkdir -p $HOME/build/$NRN_VERSION
 pushd $HOME/build/$NRN_VERSION
 export VENV=`python -c "import sys; print sys.prefix"`;
-#if [ ! -f "$HOME/build/$NRN_VERSION/config.log" ]; then
+if [ ! -f "$HOME/build/$NRN_VERSION/config.log" ]; then
     $HOME/$NRN_VERSION/configure --with-paranrn --with-nrnpython --prefix=$VENV --without-iv;
     make;
-#else
-#    echo 'Using cached NEURON build directory.';
-#fi
+else
+    echo 'Using cached NEURON build directory.';
+fi
 make install
 cd src/nrnpython
 python setup.py install
