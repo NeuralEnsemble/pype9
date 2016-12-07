@@ -452,7 +452,7 @@ class TestBrunel2000(TestCase):
     def test_activity_with_neuron(self, case='AI', order=10, simtime=100.0,
                                   bin_width=4.0, simulators=['neuron', 'nest'],
                                   record_states=True, plot=False,
-                                  **kwargs):  # @IgnorePep8 @UnusedVariable
+                                  build_mode='force', **kwargs):  # @IgnorePep8 @UnusedVariable
         data = {}
         pyNN_simulators = {'nest': pyNN.nest.simulator.state,
                            'neuron': pyNN.neuron.simulator.state}
