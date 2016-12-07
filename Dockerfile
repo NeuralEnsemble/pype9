@@ -60,6 +60,7 @@ RUN git clone https://github.com/INCF/NineMLCatalog.git $HOME/packages/ninemlcat
 ENV PYTHONPATH $HOME/packages/ninemlcatalog/python:$PYTHONPATH
 
 # Install PyPe9
+RUN echo "Installing PyPe9"
 RUN git clone https://github.com/CNS-OIST/PyPe9.git $HOME/packages/pype9
 ENV PYTHONPATH $HOME/packages/pype9:$PYTHONPATH
 RUN ln -s $HOME/packages/pype9/bin/pype9 $VENV/bin
