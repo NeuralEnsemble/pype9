@@ -462,7 +462,7 @@ class TestBrunel2000(TestCase):
         for simulator in simulators:
             data[simulator] = {}
             self._setup(simulator)
-            network = self._construct_nineml(case, order, simulator)
+            network = self._construct_nineml(case, order, simulator, **kwargs)
             for pop in network.component_arrays:
                 pop.record('spikes')
                 if record_states and pop.name != 'Ext':

@@ -390,9 +390,14 @@ class Cell(object):
             raise Pype9UsageError("Initial state not set for '{}' cell"
                                   .format(self.name))
         if self._initial_regime is None:
-            raise Pype9UsageError("Initial regime not set for '{}' cell"
-                                  .format(self.name))
-        self._set_state(self._initial_states, self._initial_regime)
+            if self.component_class.num_regimes == 1:
+                initial_regime = next(self.component_class.regimes).name
+            else:
+                raise Pype9UsageError("Initial regime not set for '{}' cell"
+                                      .format(self.name))
+        else:
+            initial_regime = self._initial_regime
+        self._set_state(self._initial_states, initial_regime)
         super(Cell, self).__setattr__('_initialized', True)
 
     def write(self, file):  # @ReservedAssignment
