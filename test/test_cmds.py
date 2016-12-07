@@ -32,7 +32,8 @@ class TestSimulateAndPlot(TestCase):
     U = (-14.0, 'mV/ms')
     V = (-65.0, 'mV')
     izhi_path = '//neuron/Izhikevich#SampleIzhikevich'
-    isyn_path = '//input/StepCurrent#StepCurrent'
+    isyn_path = os.path.join(os.path.relpath(ninemlcatalog.root), 'input',
+                             'StepCurrent.xml#StepCurrent')
     isyn_amp = (20.0, 'pA')
     isyn_onset = (50.0, 'ms')
     isyn_init = (0.0, 'pA')
@@ -135,7 +136,6 @@ class TestConvert(TestCase):
                                  'neuron', 'Izhikevich.xml')
         out_path = os.path.join(self.tmpdir, 'Izhikevich.xml')
         args = '--nineml_version 2 {} {}'.format(izhi_path, out_path)
-        print 'pype9 convert ' + args
         convert.run(args.split())
         self.assertTrue(os.path.exists(out_path),
                         "Call to 'pype9 convert' failed to produce converted "

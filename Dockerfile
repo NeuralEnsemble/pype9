@@ -41,6 +41,7 @@ RUN apt-get update; apt-get install -y python-lxml
 RUN pip install https://github.com/sympy/sympy/archive/master.zip
 
 # Install the required dependencies
+RUN echo "reinstalling lib9ML"
 RUN pip install https://github.com/tclose/lib9ML/archive/develop.zip
 RUN pip install https://github.com/tclose/Diophantine/archive/master.zip
 
@@ -63,7 +64,7 @@ ENV PYTHONPATH $HOME/packages/ninemlcatalog:$PYTHONPATH
 
 WORKDIR $HOME
 # Install PyPe9
-RUN echo "Installing PyPe9"
+RUN echo "Installing PyPe9 v0.1"
 RUN git clone https://github.com/CNS-OIST/PyPe9.git $HOME/packages/pype9
 ENV PYTHONPATH $HOME/packages/pype9:$PYTHONPATH
 RUN ln -s $HOME/packages/pype9/bin/pype9 $VENV/bin
