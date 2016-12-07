@@ -49,8 +49,8 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
     loaded_celltypes = {}
     UnitHandler = UnitHandler
 
-    def __new__(cls, name, component_class, default_properties=None,
-                initial_state=None, **kwargs):  # @UnusedVariable
+    def __new__(cls, name, component_class, default_properties,
+                initial_state, initial_regime, **kwargs):  # @UnusedVariable
         try:
             celltype, build_options = cls.loaded_celltypes[
                 (component_class.name, component_class.url)]
@@ -63,6 +63,7 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
             dct['nest_model'] = name
             dct['default_properties'] = default_properties
             dct['initial_state'] = initial_state
+            dct['initial_regime'] = initial_regime
             celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
                 cls, name, (PyNNCellWrapper,), dct)
             # If the url where the celltype is defined is specified save the

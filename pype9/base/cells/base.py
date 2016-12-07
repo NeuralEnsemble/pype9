@@ -15,7 +15,7 @@ from itertools import chain
 from copy import deepcopy
 import quantities as pq
 import nineml
-from nineml.abstraction import Dynamics
+from nineml.abstraction import Dynamics, Regime
 from nineml.user import MultiDynamicsProperties, Property
 from nineml.units import Quantity
 from pype9.annotations import PYPE9_NS
@@ -358,6 +358,15 @@ class Cell(object):
         for k, q in states.iteritems():
             setattr(self, k, q)  # FIXME: Need to convert units
         if regime is not None:
+            try:
+                # If regime is an integer (as it will be when passed from PyNN)
+                # get the regime name from the index.
+                regime_index = int(regime)
+                regime = self.component_class.from_index(
+                    regime_index, element_type=Regime.nineml_type,
+                    class_map=Dynamics.class_to_member).name
+            except ValueError:
+                assert isinstance(basestring(regime))
             self._set_regime(regime)
 
     def initialize(self):

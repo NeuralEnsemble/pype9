@@ -6,7 +6,7 @@
 """
 from __future__ import absolute_import
 from itertools import chain
-from pype9.exceptions import Pype9UsageError
+import nineml
 
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
@@ -48,7 +48,9 @@ class PyNNCellWrapperMetaClass(type):
         component_class = dct['model'].component_class
         default_properties = dct['default_properties']  # @UnusedVariable
         initial_state = dct['initial_state']  # @UnusedVariable
-        initial_regime = dct['initial_regime']
+        initial_regime = component_class.regime(dct['initial_regime'])
+        initial_regime_index = component_class.index_of(
+            initial_regime, class_map=nineml.Dynamics.class_to_member)
         dct['model_name'] = celltype_id
         dct['parameter_names'] = tuple(component_class.parameter_names)
         dct['recordable'] = list(chain(('spikes',),
@@ -70,7 +72,7 @@ class PyNNCellWrapperMetaClass(type):
                 cls.UnitHandler.scale_value(i.quantity)
                 if i.value.nineml_type == 'SingleValue' else float('nan')))
             for i in initial_state)
-        dct['default_initial_values']['_regime_init'] = initial_regime
+        dct['default_initial_values']['_regime'] = initial_regime_index
         dct["weight_variables"] = (
             component_class.all_connection_parameter_names())
         # FIXME: Need to determine whether cell is "injectable" and/or
