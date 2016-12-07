@@ -3,20 +3,20 @@
 
 set -e  # stop execution in case of errors
 
-export NRN_VERSION="nrn-7.4"
-if [ ! -f "$HOME/$NRN_VERSION/configure" ]; then
-    wget http://www.neuron.yale.edu/ftp/neuron/versions/v7.3/$NRN_VERSION.tar.gz -O $HOME/$NRN_VERSION.tar.gz;
+export NRN_VERSION="7.4"
+if [ ! -f "$HOME/nrn-$NRN_VERSION/configure" ]; then
+    wget http://www.neuron.yale.edu/ftp/neuron/versions/v$NRN_VERSION/nrn-$NRN_VERSION.tar.gz -O $HOME/nrn-$NRN_VERSION.tar.gz;
     pushd $HOME;
-    tar xzf $NRN_VERSION.tar.gz;
+    tar xzf nrn-$NRN_VERSION.tar.gz;
     popd;
 else
     echo 'Using cached version of NEURON sources.';
 fi
-mkdir -p $HOME/build/$NRN_VERSION
-pushd $HOME/build/$NRN_VERSION
+mkdir -p $HOME/build/nrn-$NRN_VERSION
+pushd $HOME/build/nrn-$NRN_VERSION
 export VENV=`python -c "import sys; print sys.prefix"`;
-if [ ! -f "$HOME/build/$NRN_VERSION/config.log" ]; then
-    $HOME/$NRN_VERSION/configure --with-paranrn --with-nrnpython --prefix=$VENV --disable-rx3d --without-iv;
+if [ ! -f "$HOME/build/nrn-$NRN_VERSION/config.log" ]; then
+    $HOME/nrn-$NRN_VERSION/configure --with-paranrn --with-nrnpython --prefix=$VENV --disable-rx3d --without-iv;
     make;
 else
     echo 'Using cached NEURON build directory.';
