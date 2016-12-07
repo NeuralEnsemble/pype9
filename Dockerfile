@@ -56,9 +56,12 @@ RUN echo "echo \"See the $HOME/examples directory for the example \"" >> $HOME/.
 RUN echo "echo \"python scripts (supply the '--help' option to see usage).\"" >> $HOME/.bashrc
 
 # Install the catalog
-RUN git clone https://github.com/INCF/NineMLCatalog.git $HOME/packages/ninemlcatalog
-ENV PYTHONPATH $HOME/packages/ninemlcatalog/python:$PYTHONPATH
+RUN git clone https://github.com/tclose/NineMLCatalog.git $HOME/packages/ninemlcatalog
+WORKDIR $HOME/packages/ninemlcatalog
+RUN git checkout merging_with_master
+ENV PYTHONPATH $HOME/packages/ninemlcatalog:$PYTHONPATH
 
+WORKDIR $HOME
 # Install PyPe9
 RUN echo "Installing PyPe9"
 RUN git clone https://github.com/CNS-OIST/PyPe9.git $HOME/packages/pype9

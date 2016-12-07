@@ -3,10 +3,12 @@ Convenient script for plotting the output of PyPe9 simulations (actually not
 9ML specific as the signals are stored in Neo format)
 """
 from argparse import ArgumentParser
+from ._utils import existing_file
 
 parser = ArgumentParser(prog='pype9 plot',
                         description=__doc__)
-parser.add_argument('filename', help="9ML file to be converted")
+parser.add_argument('filename', type=existing_file,
+                    help="Neo file outputted from a PyPe9 simulation")
 parser.add_argument('--name', type=str, action='append', default=None,
                     help="Name of the signal within the file to plot")
 parser.add_argument('--save', type=str, default=None,

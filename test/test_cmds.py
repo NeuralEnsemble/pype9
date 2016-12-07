@@ -1,9 +1,11 @@
+import subprocess as sp
+import os.path
 import tempfile
 import shutil
 import neo.io
 import nest
 from nineml.units import Quantity
-from pype9.cmd.simulate import run
+from pype9.cmd import simulate, convert
 from pype9.cmd._utils import parse_units
 import ninemlcatalog
 from pype9.neuron import (
@@ -60,7 +62,7 @@ class TestSimulateAndPlot(TestCase):
                         init='{} {}'.format(*self.isyn_init)))
         # Run input signal simulation
         print "running input simulation"
-        run(argv.split())
+        simulate.run(argv.split())
         print "finished running input simulation"
         isyn = neo.io.PickleIO(in_path).read()[0].analogsignals[0]
         # Check sanity of input signal
@@ -87,7 +89,7 @@ class TestSimulateAndPlot(TestCase):
                         isyn_amp='{} {}'.format(*self.isyn_amp),
                         isyn_onset='{} {}'.format(*self.isyn_onset),
                         isyn_init='{} {}'.format(*self.isyn_init)))
-            run(argv.split())
+            simulate.run(argv.split())
             v = neo.io.PickleIO(out_path).read()[0].analogsignals[0]
             ref_v = self._ref_single_cell(simulator, isyn)
             self.assertTrue(all(v == ref_v),
@@ -118,3 +120,32 @@ class TestSimulateAndPlot(TestCase):
         cell.play('Isyn', isyn)
         simulation_controller.run(self.t_stop)
         return cell.recording('V')
+
+
+class TestConvert(TestCase):
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    def test_convert(self):
+        izhi_path = os.path.join(os.path.relpath(ninemlcatalog.root),
+                                 'neuron', 'Izhikevich.xml')
+        out_path = os.path.join(self.tmpdir, 'Izhikevich.xml')
+        args = '--nineml_version 2 {} {}'.format(izhi_path, out_path)
+        print 'pype9 convert ' + args
+        convert.run(args.split())
+        self.assertTrue(os.path.exists(out_path),
+                        "Call to 'pype9 convert' failed to produce converted "
+                        "file '{}'".format(out_path))
+
+
+
+
+
+
+
+
+

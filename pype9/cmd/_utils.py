@@ -14,13 +14,21 @@ def existing_file(fname):
     return fname
 
 
-def nineml_model(model_path):
-    if model_path.startswith('//'):
-        model = ninemlcatalog.load(model_path[2:])
+def nineml_document(doc_path):
+    if doc_path.startswith('//'):
+        model = ninemlcatalog.load(doc_path[2:])
     else:
-        model = nineml.read(model_path)
-        if isinstance(model, nineml.Document):
-            model = model.as_network()
+        if not doc_path.startswith('/') or not doc_path.startswith('.'):
+            doc_path = './' + doc_path
+        model = nineml.read(doc_path, relative_to=os.getcwd())
+    return model
+
+
+def nineml_model(model_path):
+    model = nineml_document(model_path)
+    if isinstance(model, nineml.Document):
+        model = model.as_network(
+            os.path.splitext(os.path.basename(model_path))[0])
     return model
 
 

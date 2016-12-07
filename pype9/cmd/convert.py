@@ -2,20 +2,20 @@
 Converts a 9ML file from one supported format to another
 """
 from argparse import ArgumentParser
+from ._utils import nineml_document
 
 parser = ArgumentParser(prog='pype9 convert',
                         description=__doc__)
-parser.add_argument('in_file', help="9ML file to be converted")
+parser.add_argument('in_file', type=nineml_document,
+                    help="9ML file to be converted")
 parser.add_argument('out_file', help="Converted filename")
 parser.add_argument('--nineml_version', type=str, default=None,
                     help="The version of nineml to output")
 
 
 def run(argv):
-    import nineml
     args = parser.parse_args(argv)
-    doc = nineml.read(args.in_file)
-    doc = doc.clone()
+    doc = args.in_file.clone()
     kwargs = {}
     if args.nineml_version is not None:
         kwargs['version'] = args.nineml_version
