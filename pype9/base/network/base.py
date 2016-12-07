@@ -528,11 +528,14 @@ class ComponentArray(object):
             initial_values = dict(
                 (i.name, get_pyNN_value(i, self.UnitHandler, rng))
                 for i in dynamics_properties.initial_values)
+            initial_values['_regime'] = celltype.model.regime_index(
+                dynamics_properties.initial_regime)
             # NB: Simulator-specific derived classes extend the corresponding
             # PyNN population class
             self.PyNNPopulationClass.__init__(
                 self, nineml_model.size, celltype, cellparams=cellparams,
-                initial_values=initial_values, label=nineml_model.name)
+                initial_values=initial_values,
+                label=nineml_model.name)
             self._inputs = {}
 
     @property

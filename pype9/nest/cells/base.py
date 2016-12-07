@@ -49,11 +49,8 @@ class Cell(base.Cell):
     def _set(self, varname, value):
         nest.SetStatus(self._cell, varname, value)
 
-    def _set_regime(self, name):
-        nest.SetStatus(self._cell, REGIME_VARNAME,
-                       self.build_component_class.index_of(
-                           self.build_component_class.regime(name),
-                           class_map=Dynamics.class_to_member))
+    def _set_regime(self, index):
+        nest.SetStatus(self._cell, REGIME_VARNAME, index)
 
     def record(self, port_name, interval=None):
         # Create dictionaries for storing local recordings. These are not

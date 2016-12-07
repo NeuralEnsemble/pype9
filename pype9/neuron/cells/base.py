@@ -232,11 +232,8 @@ class Cell(base.Cell):
             varname = self._escaped_name(varname)
             setattr(self._sec, varname, val)
 
-    def _set_regime(self, name):
-        setattr(self._hoc, REGIME_VARNAME,
-                self.build_component_class.index_of(
-                    self.build_component_class.regime(name),
-                    class_map=Dynamics.class_to_member))
+    def _set_regime(self, index):
+        setattr(self._hoc, REGIME_VARNAME, index)
 
     def record(self, port_name):
         self._initialise_local_recording()

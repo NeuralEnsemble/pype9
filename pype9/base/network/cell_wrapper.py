@@ -48,9 +48,7 @@ class PyNNCellWrapperMetaClass(type):
         component_class = dct['model'].component_class
         default_properties = dct['default_properties']  # @UnusedVariable
         initial_state = dct['initial_state']  # @UnusedVariable
-        initial_regime = component_class.regime(dct['initial_regime'])
-        initial_regime_index = component_class.index_of(
-            initial_regime, class_map=nineml.Dynamics.class_to_member)
+        initial_regime_index = dct['model'].regime_index(dct['initial_regime'])
         dct['model_name'] = celltype_id
         dct['parameter_names'] = tuple(component_class.parameter_names)
         dct['recordable'] = list(chain(('spikes',),

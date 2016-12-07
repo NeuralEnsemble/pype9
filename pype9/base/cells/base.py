@@ -360,14 +360,30 @@ class Cell(object):
         if regime is not None:
             try:
                 # If regime is an integer (as it will be when passed from PyNN)
-                # get the regime name from the index.
                 regime_index = int(regime)
-                regime = self.component_class.from_index(
-                    regime_index, element_type=Regime.nineml_type,
-                    class_map=Dynamics.class_to_member).name
             except ValueError:
-                assert isinstance(basestring(regime))
-            self._set_regime(regime)
+                # If the regime is the regime name
+                regime_index = self.regime_index(regime)
+            self._set_regime(regime_index)
+
+    @classmethod
+    def regime_index(cls, name):
+        """
+        Returns the index of the regime corresponding to 'name' as used in the
+        code generation (useful when creating arrays to set a population regime
+        values)
+        """
+        return cls.build_component_class.index_of(
+            cls.build_component_class.regime(name),
+            class_map=Dynamics.class_to_member)
+
+    @classmethod
+    def from_regime_index(cls, index):
+        """
+        The reciprocal of regime_index, returns the regime name from its index
+        """
+        return cls.build_component_class.from_index(
+            index, Regime.nineml_type, class_map=Dynamics.class_to_member).name
 
     def initialize(self):
         if self._initial_states is None:
