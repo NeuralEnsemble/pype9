@@ -16,16 +16,17 @@ else
 fi
 mkdir -p $HOME/build/$NEST
 pushd $HOME/build/$NEST
-if [ ! -f "$HOME/build/$NEST/config.log" ]; then
+#if [ ! -f "$HOME/build/$NEST/config.log" ]; then
     export VENV=`python -c "import sys; print sys.prefix"`;
+    echo "VENV: $VENV"
     $HOME/$NEST/configure --with-mpi --prefix=$VENV;
     make;
-else
-    echo 'Using cached NEST build directory.';
-    echo "$HOME/$NEST";
-    ls $HOME/$NEST;
-    echo "$HOME/build/$NEST";
-    ls $HOME/build/$NEST;
-fi
+#else
+#    echo 'Using cached NEST build directory.';
+#    echo "$HOME/$NEST";
+#    ls $HOME/$NEST;
+#    echo "$HOME/build/$NEST";
+#    ls $HOME/build/$NEST;
+#fi
 make install
 popd
