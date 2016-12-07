@@ -52,7 +52,7 @@ setup(
                  'Topic :: Scientific/Engineering'],
     install_requires=['pyNN>=0.8',
                       'diophantine>=0.1',
-                      'neo>=3.3',
+                      'neo>=0.3.3',
                       'ninemlcatalog'],  # 'nineml',
     tests_require=['nose'],
     ext_modules=[libninemlnrn])
