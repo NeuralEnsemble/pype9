@@ -37,10 +37,3 @@ script:
   - nosetests test/test_*.py --with-coverage --cover-package=pype9
 after_success:
   coveralls
-cache:
-  directories:
-    - $HOME/nest-2.10.0
-    - $HOME/nrn-7.4
-    - $HOME/build/nest-2.10.0
-    - $HOME/build/nrn-7.4
-    - $HOME/.cache/pip
