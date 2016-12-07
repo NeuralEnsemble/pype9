@@ -17,6 +17,6 @@ parser = ArgumentParser(__doc__)
 parser.add_argument('cmd', choices=pype9.cmd.help.all_cmds(),
                     help=("PyPe9 command to run. {}"
                           .format(pype9.cmd.help.available_cmds_message())))
-args = parser.parse_args(sys.argv[:2] if len(sys.argv) >= 2 else [])
+args = parser.parse_args(sys.argv[1] if len(sys.argv) >= 2 else [])
 
 getattr(pype9.cmd, args.cmd).run(sys.argv[2:])

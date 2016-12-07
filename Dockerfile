@@ -37,36 +37,32 @@ MAINTAINER tom.g.close@gmail.com
 
 USER root
 RUN apt-get update; apt-get install -y python-lxml
-RUN pip install sympy
+# Use the master Sympy branch as there is a bug in 1.0
+RUN pip install https://github.com/sympy/sympy/archive/master.zip
+
+# Install the required dependencies
+RUN pip install https://github.com/tclose/lib9ML/archive/develop.zip
+RUN pip install https://github.com/tclose/Diophantine/archive/master.zip
 
 USER docker
 # Add a symbolic link to the modlunit command into the virtual env bin dir
 RUN ln -s $HOME/env/neurosci/x86_64/bin/modlunit $VENV/bin
 
-# Clone the required repositories
-RUN git clone https://github.com/tclose/NineMLCatalog.git $HOME/packages/ninemlcatalog
-RUN git clone https://github.com/tclose/lib9ML.git $HOME/packages/lib9ml
-RUN git clone https://github.com/tclose/Diophantine.git $HOME/packages/diophantine
-
-# Checkout appropriate branches of the git repos
-RUN cd $HOME/packages/ninemlcatalog; git checkout develop
-RUN cd $HOME/packages/lib9ml; git checkout develop
-
-# Set the PYTHONPATH to look at the git repos
-ENV PYTHONPATH $HOME/packages/ninemlcatalog/python:$PYTHONPATH
-ENV PYTHONPATH $HOME/packages/lib9ml:$PYTHONPATH
-ENV PYTHONPATH $HOME/packages/diophantine:$PYTHONPATH
-
 # Set up bashrc and add welcome message
 RUN sed 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc > $HOME/tmp; mv $HOME/tmp $HOME/.bashrc
 RUN echo "source /home/docker/env/neurosci/bin/activate" >> $HOME/.bashrc
-RUN echo 'echo "Docker container for running PyPe9 examples."' >> $HOME/.bashrc
-RUN echo 'echo "See the $HOME/examples directory for the example "' >> $HOME/.bashrc
-RUN echo 'echo "python scripts (supply the \'--help\' option to see usage)."' >> $HOME/.bashrc
+RUN echo "echo \"Docker container for running PyPe9 examples.\"" >> $HOME/.bashrc
+RUN echo "echo \"See the $HOME/examples directory for the example \"" >> $HOME/.bashrc
+RUN echo "echo \"python scripts (supply the '--help' option to see usage).\"" >> $HOME/.bashrc
+
+# Install the catalog
+RUN git clone https://github.com/INCF/NineMLCatalog.git $HOME/packages/ninemlcatalog
+ENV PYTHONPATH $HOME/packages/ninemlcatalog/python:$PYTHONPATH
 
 # Install PyPe9
 RUN git clone https://github.com/CNS-OIST/PyPe9.git $HOME/packages/pype9
 ENV PYTHONPATH $HOME/packages/pype9:$PYTHONPATH
+RUN ln -s $HOME/packages/pype9/bin/pype9 $VENV/bin
 
 # Compile the libninemlnrn shared library (with the random distributions in it)
 WORKDIR $HOME/packages/pype9/pype9/neuron/cells/code_gen/libninemlnrn
