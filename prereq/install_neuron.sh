@@ -4,14 +4,14 @@
 set -e  # stop execution in case of errors
 
 export NRN_VERSION="nrn-7.3"
-if [ ! -f "$HOME/$NRN_VERSION/configure" ]; then
+#if [ ! -f "$HOME/$NRN_VERSION/configure" ]; then
     wget http://www.neuron.yale.edu/ftp/neuron/versions/v7.3/$NRN_VERSION.tar.gz -O $HOME/$NRN_VERSION.tar.gz;
     pushd $HOME;
     tar xzf $NRN_VERSION.tar.gz;
     popd;
-else
+#else
     echo 'Using cached version of NEURON sources.';
-fi
+#fi
 mkdir -p $HOME/build/$NRN_VERSION
 pushd $HOME/build/$NRN_VERSION
 export VENV=`python -c "import sys; print sys.prefix"`;

@@ -6,14 +6,14 @@ set -e  # stop execution in case of errors
 export NEST_VERSION="2.10.0"
 export NEST="nest-$NEST_VERSION"
 pip install cython
-if [ ! -f "$HOME/$NEST_VERSION/configure" ]; then
+#if [ ! -f "$HOME/$NEST_VERSION/configure" ]; then
     wget https://github.com/nest/nest-simulator/releases/download/v$NEST_VERSION/$NEST.tar.gz -O $HOME/$NEST.tar.gz;
     pushd $HOME;
     tar xzf $NEST.tar.gz;
     popd;
-else
-    echo 'Using cached version of NEST sources.';
-fi
+#else
+#    echo 'Using cached version of NEST sources.';
+#fi
 mkdir -p $HOME/build/$NEST
 pushd $HOME/build/$NEST
 #if [ ! -f "$HOME/build/$NEST/config.log" ]; then
