@@ -10,7 +10,7 @@ export NRN_VERSION="nrn-7.3"
     tar xzf $NRN_VERSION.tar.gz;
     popd;
 #else
-    echo 'Using cached version of NEURON sources.';
+    #echo 'Using cached version of NEURON sources.';
 #fi
 mkdir -p $HOME/build/$NRN_VERSION
 pushd $HOME/build/$NRN_VERSION
