@@ -2,10 +2,16 @@ FROM ubuntu:trusty
 MAINTAINER tom.close@monash.edu
 
 RUN apt-get update
-RUN apt-get install -y git
-RUN apt-get install -y nginx openssh-server git-core openssh-client curl
-RUN apt-get install -y build-essential
-RUN apt-get install -y openssl libreadline6 libreadline6-dev curl zlib1g zlib1g-dev libssl-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt-dev autoconf libc6-dev ncurses-dev automake libtool bison subversion pkg-config
+RUN apt-get install -y git nginx openssh-server git-core openssh-client curl \
+                       vim build-essential openssl libreadline6 \
+                       libreadline6-dev curl zlib1g zlib1g-dev libssl-dev \
+                       libyaml-dev libsqlite3-dev sqlite3 libxml2-dev \
+                       libxslt-dev autoconf libc6-dev ncurses-dev automake \
+                       libtool bison subversion pkg-config
+RUN apt-get install -y build-essential autoconf automake libtool \
+                       libreadline6-dev libncurses5-dev libgsl0-dev \
+                       python-all-dev python-numpy python-scipy openmpi-bin \
+                       libopenmpi-dev
 
 RUN useradd -ms /bin/bash travis; echo "travis:travis" | chpasswd; adduser travis sudo
 USER travis
@@ -18,10 +24,8 @@ WORKDIR $HOME/ruby
 RUN wget https://cache.ruby-lang.org/pub/ruby/2.3/ruby-$RUBY_VER.tar.gz
 RUN tar xzf ruby-$RUBY_VER.tar.gz
 WORKDIR $HOME/ruby/build
-RUN ls ..
 RUN ../ruby-$RUBY_VER/configure --prefix=$HOME/ruby/install
 RUN make install
-RUN find $HOME/ruby/install
 ENV PATH=$HOME/ruby/install/bin/:$PATH
 
 # Install Bundler
@@ -36,7 +40,40 @@ RUN travis
 RUN ln -s `pwd` ~/.travis/travis-build
 RUN bundle install
 
+# Set .vimrc property
+RUN echo "set nocompatible" > ~/.vimrc
+RUN echo "syntax on" >> ~/.vimrc
+RUN echo "set background=dark" >> ~/.vimrc
+RUN echo "set hlsearch" >> ~/.vimrc
+RUN echo "set incsearch" >> ~/.vimrc
+RUN echo "filetype plugin indent on" >> ~/.vimrc
+RUN echo "set history=50" >> ~/.vimrc
+RUN echo "set backspace=indent,eol,start" >> ~/.vimrc
+RUN echo "set number" >> ~/.vimrc
+RUN echo "set hidden" >> ~/.vimrc
+RUN echo "set shiftwidth=4" >> ~/.vimrc
+RUN echo "set expandtab" >> ~/.vimrc
+RUN echo "set autoindent" >> ~/.vimrc
+RUN echo "set statusline=%<%n:\ %-t\ %m%=%-10.(%l,%c%V%)\ %-5P\ %10.(%L\ %y%)" >> ~/.vimrc
+RUN echo "set laststatus=2" >> ~/.vimrc
+RUN echo "set path+=cmd,lib,src" >> ~/.vimrc
+RUN echo "nnoremap ,l :ls<CR>:buf" >> ~/.vimrc
+RUN echo "nnoremap <F11> :bprev<CR>" >> ~/.vimrc
+RUN echo "nnoremap <F12> :bnext<CR>" >> ~/.vimrc
+RUN echo "imap <Tab> <C-n>" >> ~/.vimrc
+RUN echo "imap <S-Tab> <C-p>" >> ~/.vimrc
+RUN echo "imap jk <Esc>" >> ~/.vimrc
+
+# Set .bashrc property
+RUN sed -i 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc
+
 # Create build directory
-RUN git clone https://github.com/tclose/PyPe9.git $HOME/pype9
+RUN "Cloning PyPe9"
+RUN git clone https://github.com/CNS-OIST/PyPe9.git $HOME/pype9
 WORKDIR $HOME/pype9
 RUN travis compile > ci.sh
+RUN chmod +x ci.sh
+RUN sed -i 's/\["2\.7"\]/2.7/g' ci.sh
+RUN sed -i 's/\\\[\\"2\.7\\"\\\]/2.7/g' ci.sh
+RUN sed -i "s/branch\\\\=\\\\'\\\\'/branch=\\\\'master\\\\'/g" ci.sh
+RUN echo "sudo rm $HOME/virtualenv/python2.7 && sudo ln -s $HOME/virtualenv/python2.7.12 $HOME/virtualenv/python2.7" > $HOME/fix-python
