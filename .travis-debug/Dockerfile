@@ -11,18 +11,25 @@ RUN useradd -ms /bin/bash travis
 USER travis
 ENV HOME=/home/travis
 
-# Clone travis
-WORKDIR $HOME
-RUN git clone https://github.com/travis-ci/travis-build.git
+# Install Ruby
+ENV RUBY_VER=2.3.3
+RUN mkdir -p $HOME/ruby/build
+WORKDIR $HOME/ruby
+RUN wget https://cache.ruby-lang.org/pub/ruby/2.3/ruby-$RUBY_VER.tar.gz
+RUN tar xzf ruby-$RUBY_VER.tar.gz
+WORKDIR $HOME/ruby/build
+RUN ls ..
+RUN ../ruby-$RUBY_VER/configure --prefix=$HOME/ruby/install
+RUN make install
+RUN find $HOME/ruby/install
+ENV PATH=$HOME/ruby/install/bin/:$PATH
 
-# install RVM, Ruby, and Bundler
-RUN gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
-RUN \curl -L https://get.rvm.io | bash -s stable
-RUN rvm requirements
-RUN rvm install 2.3.1
+# Install Bundler
 RUN gem install bundler --no-ri --no-rdoc
 
 # Install travis
+WORKDIR $HOME
+RUN git clone https://github.com/travis-ci/travis-build.git
 WORKDIR $HOME/travis-build
 RUN gem install travis
 RUN travis

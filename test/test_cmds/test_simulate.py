@@ -22,7 +22,7 @@ else:
     from unittest import TestCase  # @Reimport
 
 
-class TestSimulateAndPlot(TestCase):
+class TestSimulate(TestCase):
 
     ref_path = ''
 
@@ -234,7 +234,6 @@ class TestSimulateAndPlot(TestCase):
         if plot:
             plt.show()
 
-
     def _ref_single_cell(self, simulator, isyn):
         if simulator == 'neuron':
             metaclass = CellMetaClassNEURON
@@ -254,31 +253,4 @@ class TestSimulateAndPlot(TestCase):
         return cell.recording('V')
 
     def _ref_network(self, simulator):
-        
-
-class TestConvert(TestCase):
-
-    def setUp(self):
-        self.tmpdir = tempfile.mkdtemp()
-
-    def tearDown(self):
-        shutil.rmtree(self.tmpdir)
-
-    def test_convert(self):
-        izhi_path = os.path.join(os.path.relpath(ninemlcatalog.root),
-                                 'neuron', 'Izhikevich.xml')
-        out_path = os.path.join(self.tmpdir, 'Izhikevich.xml')
-        args = '--nineml_version 2 {} {}'.format(izhi_path, out_path)
-        convert.run(args.split())
-        self.assertTrue(os.path.exists(out_path),
-                        "Call to 'pype9 convert' failed to produce converted "
-                        "file '{}'".format(out_path))
-
-
-
-
-
-
-
-
-
+        pass
