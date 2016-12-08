@@ -7,7 +7,7 @@ RUN apt-get install -y nginx openssh-server git-core openssh-client curl
 RUN apt-get install -y build-essential
 RUN apt-get install -y openssl libreadline6 libreadline6-dev curl zlib1g zlib1g-dev libssl-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt-dev autoconf libc6-dev ncurses-dev automake libtool bison subversion pkg-config
 
-RUN useradd -ms /bin/bash travis
+RUN useradd -ms /bin/bash travis; echo "travis:travis" | chpasswd; adduser travis sudo
 USER travis
 ENV HOME=/home/travis
 
@@ -34,10 +34,9 @@ WORKDIR $HOME/travis-build
 RUN gem install travis
 RUN travis
 RUN ln -s `pwd` ~/.travis/travis-build
-RUN /bin/bash -l -c "bundle install"
+RUN bundle install
 
 # Create build directory
-RUN git clone https://github.com/tclose/PyPe9.git
+RUN git clone https://github.com/tclose/PyPe9.git $HOME/pype9
 WORKDIR $HOME/pype9
 RUN travis compile > ci.sh
-

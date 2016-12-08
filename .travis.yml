@@ -36,7 +36,7 @@ install:
 script:
   - nosetests test/test_*.py --with-coverage --cover-package=pype9
 after_success:
-  coveralls
+  - coveralls
 cache:
   directories:
     - $HOME/nest-2.10.0
