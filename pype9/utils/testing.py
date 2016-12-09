@@ -366,8 +366,9 @@ class Comparer(object):
                 raise Pype9RuntimeError(
                     "Some spike are less than minimum delay and so can't be "
                     "played into cell ({})".format(
-                        ', '.join(str(t) for t in
-                                  spike_times[spike_times < self.device_delay])))
+                        ', '.join(
+                            str(t) for t in
+                            spike_times[spike_times < self.device_delay])))
             generator = nest.Create(
                 'spike_generator', 1, {'spike_times': spike_times})
             nest.Connect(generator, self.nest_cell,
@@ -754,4 +755,3 @@ class DummyTestCase(object):
                 msg = '{} is not less than or equal to {}'.format(
                     repr(first), repr(second))
             print msg
-

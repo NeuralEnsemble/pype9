@@ -23,6 +23,7 @@ class TestConvert(TestCase):
         out_path = os.path.join(self.tmpdir, 'Izhikevich.xml')
         args = '--nineml_version 2 {} {}'.format(izhi_path, out_path)
         convert.run(args.split())
+        # FIXME: Need a better test
         self.assertTrue(os.path.exists(out_path),
                         "Call to 'pype9 convert' failed to produce converted "
                         "file '{}'".format(out_path))

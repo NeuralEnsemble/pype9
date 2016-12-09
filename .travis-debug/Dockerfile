@@ -68,12 +68,22 @@ RUN echo "imap jk <Esc>" >> ~/.vimrc
 RUN sed -i 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc
 
 # Create build directory
-RUN "Cloning PyPe9"
+ENV BRANCH=master
 RUN git clone https://github.com/CNS-OIST/PyPe9.git $HOME/pype9
 WORKDIR $HOME/pype9
+RUN git checkout $BRANCH
 RUN travis compile > ci.sh
-RUN chmod +x ci.sh
+RUN echo 'travis' | sudo -S chmod +xs ci.sh
+
+# Fix problems with matrix of python version
 RUN sed -i 's/\["2\.7"\]/2.7/g' ci.sh
 RUN sed -i 's/\\\[\\"2\.7\\"\\\]/2.7/g' ci.sh
-RUN sed -i "s/branch\\\\=\\\\'\\\\'/branch=\\\\'master\\\\'/g" ci.sh
-RUN echo "sudo rm $HOME/virtualenv/python2.7 && sudo ln -s $HOME/virtualenv/python2.7.12 $HOME/virtualenv/python2.7" > $HOME/fix-python
+
+# Add missing branch
+RUN sed -i "s/branch\\\\=\\\\'\\\\'/branch=\\\\'$BRANCH\\\\'/g" ci.sh
+
+# Fix symlink to virtualenv Python version
+RUN sed -i 's/export GIT_ASKPASS=echo/sudo rm $HOME\/virtualenv\/python2.7\nsudo ln -s $HOME\/virtualenv\/python2.7.12 $HOME\/virtualenv\/python2.7\nexport GIT_ASKPASS=echo/g' ci.sh
+
+# Add build switch
+RUN sed -i 's/travis_cmd nosetests/if \[ "$1" == "build" \]; then\n    exit\nfi\n\ntravis_cmd nosetests/g' ci.sh

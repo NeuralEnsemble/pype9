@@ -53,6 +53,7 @@ setup(
     install_requires=['pyNN>=0.8',
                       'diophantine>=0.1',
                       'neo>=0.3.3',
-                      'ninemlcatalog'],  # 'nineml',
+                      'ninemlcatalog',
+                      'matplotlib'],  # 'nineml',
     tests_require=['nose'],
     ext_modules=[libninemlnrn])
