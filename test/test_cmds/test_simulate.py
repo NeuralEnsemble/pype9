@@ -5,7 +5,7 @@ import neo.io
 import nest
 import numpy as np
 from nineml.units import Quantity
-from pype9.cmd import simulate, convert
+from pype9.cmd import simulate
 from pype9.cmd._utils import parse_units
 import ninemlcatalog
 from pype9.neuron import (
