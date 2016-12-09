@@ -556,14 +556,14 @@ class TestBrunel2000(TestCase):
         if simulator == 'nest':
             simulation_controller_nest.clear(rng_seed=NEST_RNG_SEED)
             pyNN.nest.setup(timestep=self.timestep,
-                            min_delay=ReferenceBrunel2000.min_delay,
-                            max_delay=ReferenceBrunel2000.max_delay,
+                            min_delay=float(un.Quantity(ReferenceBrunel2000.min_delay, un.ms)),
+                            max_delay=float(un.Quantity(ReferenceBrunel2000.max_delay, un.ms)),
                             rng_seeds_seed=NEST_RNG_SEED)
         elif simulator == 'neuron':
             simulation_contoller_neuron.clear(rng_seed=NEURON_RNG_SEED)
             pyNN.neuron.setup(timestep=self.timestep,
-                              min_delay=ReferenceBrunel2000.min_delay,
-                              max_delay=ReferenceBrunel2000.max_delay,
+                              min_delay=float(un.Quantity(ReferenceBrunel2000.min_delay, un.ms)),
+                              max_delay=float(un.Quantity(ReferenceBrunel2000.max_delay, un.ms)),
                               rng_seeds_seed=NEURON_RNG_SEED)
         else:
             assert False

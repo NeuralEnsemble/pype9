@@ -41,7 +41,7 @@ class CodeGenerator(BaseCodeGenerator):
     GSL_JACOBIAN_APPROX_STEP_DEFAULT = 0.01
     V_THRESHOLD_DEFAULT = 0.0
     MAX_SIMULTANEOUS_TRANSITIONS = 1000
-    BASE_TMPL_PATH = path.join(path.dirname(__file__), 'templates')
+    BASE_TMPL_PATH = path.abspath(path.join(path.dirname(__file__), 'templates'))
 
     _inline_random_implementations = {}
 
