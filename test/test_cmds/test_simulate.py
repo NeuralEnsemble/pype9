@@ -3,6 +3,7 @@ import tempfile
 import shutil
 import neo.io
 import nest
+import numpy as np
 from nineml.units import Quantity
 from pype9.cmd import simulate, convert
 from pype9.cmd._utils import parse_units
@@ -15,13 +16,17 @@ from pype9.nest import (
     CellMetaClass as CellMetaClassNEST,
     simulation_controller as simulatorNEST,
     Network as NetworkNEST)
+import pyNN.neuron
+import pyNN.nest
+import nineml
+import nineml.units as un
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:
     from unittest import TestCase  # @Reimport
 
 
-class TestSimulate(TestCase):
+class TestSimulateCell(TestCase):
 
     ref_path = ''
 
@@ -102,135 +107,6 @@ class TestSimulate(TestCase):
                 "No spikes generated for '{}' (max val: {}) version of Izhi "
                 "model. Probably error in 'play' method if all dynamics tests "
                 "pass ".format(simulator, v.max()))
-# 
-#     def test_network(self):
-#         record_duration = simtime - record_start
-#         # Construct 9ML network
-#         self._setup('nest')
-#         # Set up spike recorders for reference network
-#         pops = {'nineml': nml, 'reference': ref}
-#         spikes = {}
-#         multi = {}
-#         for model_ver in ('nineml', 'reference'):
-#             spikes[model_ver] = {}
-#             multi[model_ver] = {}
-#             for pop_name in record_pops:
-#                 pop = numpy.asarray(pops[model_ver][pop_name], dtype=int)
-#                 record_inds = numpy.asarray(numpy.unique(numpy.floor(
-#                     numpy.arange(start=0, stop=len(pop),
-#                                  step=len(pop) / record_size))), dtype=int)
-#                 spikes[model_ver][pop_name] = nest.Create("spike_detector")
-#                 nest.SetStatus(spikes[model_ver][pop_name],
-#                                [{"label": "brunel-py-" + pop_name,
-#                                  "withtime": True, "withgid": True}])
-#                 nest.Connect(list(pop[record_inds]),
-#                              spikes[model_ver][pop_name],
-#                              syn_spec="excitatory")
-#                 if record_states:
-#                     # Set up voltage traces recorders for reference network
-#                     if self.record_params[pop_name][model_ver]:
-#                         multi[model_ver][pop_name] = nest.Create(
-#                             'multimeter',
-#                             params={'record_from':
-#                                     self.record_params[pop_name][model_ver]})
-#                         nest.Connect(multi[model_ver][pop_name],
-#                                      list(pop[record_inds]))
-#         # Simulate the network
-#         nest.Simulate(simtime)
-#         rates = {'reference': {}, 'nineml': {}}
-#         psth = {'reference': {}, 'nineml': {}}
-#         for model_ver in ('reference', 'nineml'):
-#             for pop_name in record_pops:
-#                 events = nest.GetStatus(spikes[model_ver][pop_name],
-#                                         "events")[0]
-#                 spike_times = numpy.asarray(events['times'])
-#                 senders = numpy.asarray(events['senders'])
-#                 inds = numpy.asarray(spike_times > record_start, dtype=bool)
-#                 spike_times = spike_times[inds]
-#                 senders = senders[inds]
-#                 rates[model_ver][pop_name] = (
-#                     1000.0 * len(spike_times) / record_duration)
-#                 psth[model_ver][pop_name] = (
-#                     numpy.histogram(
-#                         spike_times,
-#                         bins=int(numpy.floor(record_duration /
-#                                              bin_width)))[0] /
-#                     bin_width)
-#                 if plot:
-#                     plt.figure()
-#                     plt.scatter(spike_times, senders)
-#                     plt.xlabel('Time (ms)')
-#                     plt.ylabel('Cell Indices')
-#                     plt.title("{} - {} Spikes".format(model_ver, pop_name))
-#                     plt.figure()
-#                     plt.hist(spike_times,
-#                              bins=int(
-#                                  numpy.floor(record_duration / bin_width)))
-#                     plt.xlabel('Time (ms)')
-#                     plt.ylabel('Rate')
-#                     plt.title("{} - {} PSTH".format(model_ver, pop_name))
-#                     if record_states:
-#                         for param in self.record_params[pop_name][model_ver]:
-#                             events, interval = nest.GetStatus(
-#                                 multi[model_ver][pop_name], ["events",
-#                                                              'interval'])[0]
-#                             sorted_vs = sorted(zip(events['senders'],
-#                                                    events['times'],
-#                                                    events[param]),
-#                                                key=itemgetter(0))
-#                             plt.figure()
-#                             legend = []
-#                             for sender, group in groupby(sorted_vs,
-#                                                          key=itemgetter(0)):
-#                                 _, t, v = zip(*group)
-#                                 t = numpy.asarray(t)
-#                                 v = numpy.asarray(v)
-#                                 inds = t > record_start
-#                                 plt.plot(t[inds] * interval, v[inds])
-#                                 legend.append(sender)
-#                             plt.xlabel('Time (ms)')
-#                             plt.ylabel(param)
-#                             plt.title("{} - {} {}".format(model_ver, pop_name,
-#                                                           param))
-#                             plt.legend(legend)
-#         for pop_name in record_pops:
-#             if rates['reference'][pop_name]:
-#                 percent_rate_error = abs(
-#                     rates['nineml'][pop_name] /
-#                     rates['reference'][pop_name] - 1.0) * 100
-#             elif not rates['nineml'][pop_name]:
-#                 percent_rate_error = 0.0
-#             else:
-#                 percent_rate_error = float('inf')
-#             self.assertLess(
-#                 percent_rate_error,
-#                 self.rate_percent_error[pop_name], msg=(
-#                     "Rate of '{}' ({}) doesn't match reference ({}) within {}%"
-#                     " ({}%)".format(pop_name, rates['nineml'][pop_name],
-#                                     rates['reference'][pop_name],
-#                                     self.rate_percent_error[pop_name],
-#                                     percent_rate_error)))
-#             if numpy.std(psth['reference'][pop_name]):
-#                 percent_psth_stdev_error = abs(
-#                     numpy.std(psth['nineml'][pop_name]) /
-#                     numpy.std(psth['reference'][pop_name]) - 1.0) * 100
-#             elif not numpy.std(psth['nineml'][pop_name]):
-#                 percent_psth_stdev_error = 0.0
-#             else:
-#                 percent_psth_stdev_error = float('inf')
-#             self.assertLess(
-#                 percent_psth_stdev_error,
-#                 self.psth_percent_error[pop_name],
-#                 msg=(
-#                     "Std. Dev. of PSTH for '{}' ({}) doesn't match "
-#                     "reference ({}) within {}% ({}%)".format(
-#                         pop_name,
-#                         numpy.std(psth['nineml'][pop_name]) / bin_width,
-#                         numpy.std(psth['reference'][pop_name]) / bin_width,
-#                         self.psth_percent_error[pop_name],
-#                         percent_psth_stdev_error)))
-#         if plot:
-#             plt.show()
 
     def _ref_single_cell(self, simulator, isyn):
         if simulator == 'neuron':
@@ -250,5 +126,89 @@ class TestSimulate(TestCase):
         simulation_controller.run(self.t_stop)
         return cell.recording('V')
 
-    def _ref_network(self, simulator):
-        pass
+
+class TestSimulateNetwork(TestCase):
+
+    brunel_path = 'network/Brunel2000/AI'
+    reduced_brunel_fname = 'reduced_brunel.xml'
+    recorded_pops = ('Exc', 'Inh')
+    reduced_brunel_order = 10
+    t_stop = 100.0
+    dt = 0.001
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        # Create reduced version of Brunel network
+        model = ninemlcatalog.load(self.brunel_path).as_network(
+            'Brunel_AI_reduced')
+        scale = self.reduced_brunel_order / model.population('Inh').size
+        # rescale populations
+        reduced_model = model.clone()
+        for pop in reduced_model.populations:
+            pop.size = int(np.ceil(pop.size * scale))
+        for proj in (reduced_model.projection('Excitation'),
+                     reduced_model.projection('Inhibition')):
+            props = proj.connectivity.rule_properties
+            number = props.property('number')
+            props.set(nineml.Property(
+                number.name,
+                int(np.ceil(float(number.value) * scale)) * un.unitless))
+        self.reduced_brunel_path = os.path.join(self.tmpdir,
+                                                self.reduced_brunel_fname)
+        reduced_model.write(self.reduced_brunel_path)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
+
+    def test_network(self):
+        nest.ResetKernel()
+        for simulator in ('nest', 'neuron'):
+            out_path = '{}/{}.neo.pkl'.format(self.tmpdir, simulator)
+            argv = (
+                "{nineml_model} {sim} {t_stop} {dt} "
+                "--record Exc.spikes {out_path} exc "
+                "--record Inh.spikes {out_path} inh "
+                "--build_mode force"
+                .format(nineml_model=self.reduced_brunel_path, sim=simulator,
+                        out_path=out_path, t_stop=self.t_stop, dt=self.dt))
+            simulate.run(argv.split())
+            recs = {}
+            for spiketrain in neo.io.PickleIO(out_path).read()[0].spiketrains:
+                recs[spiketrain.name] = spiketrain
+            ref_recs = self._ref_network(simulator)
+            for pop_name in self.recorded_pops:
+                self.assertTrue(
+                    all(recs[pop_name] == ref_recs[pop_name]),
+                    "'simulate' command produced different results to"
+                    " to api reference for izhikevich model using "
+                    "'{}' simulator".format(simulator))
+                # TODO: Need a better test
+                self.assertGreater(
+                    len(recs[pop_name]), 0,
+                    "No spikes generated for '{}' population using {}."
+                    .format(pop_name, simulator))
+
+    def _ref_network(self, simulator, external_input=None, **kwargs):
+        nest.ResetKernel()
+        if simulator == 'nest':
+            NetworkClass = NetworkNEST
+            pyNN_simulator = pyNN.nest.simulator.state
+        elif simulator == 'neuron':
+            NetworkClass = NetworkNEURON
+            pyNN_simulator = pyNN.neuron.simulator.state
+        else:
+            assert False
+        model = nineml.read(self.reduced_brunel_path).as_network(
+            'ReducedBrunel')
+        network = NetworkClass(model, **kwargs)
+        if external_input is not None:
+            network.component_array('Ext').play('spike_input__cell',
+                                                external_input)
+        for pop_name in self.recorded_pops:
+            network.component_array(pop_name).record('spikes')
+        pyNN_simulator.run(self.t_stop)
+        recordings = {}
+        for pop_name in self.recorded_pops:
+            recordings[pop_name] = network.component_array(pop_name).recording(
+                'spikes')
+        return recordings
