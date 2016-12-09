@@ -83,5 +83,7 @@ RUN sed -i 's/\\\[\\"2\.7\\"\\\]/2.7/g' ci.sh
 RUN sed -i "s/branch\\\\=\\\\'\\\\'/branch=\\\\'$BRANCH\\\\'/g" ci.sh
 
 # Fix symlink to virtualenv Python version
-RUN echo "&& " > $HOME/fix-python
 RUN sed -i 's/export GIT_ASKPASS=echo/sudo rm $HOME\/virtualenv\/python2.7\nsudo ln -s $HOME\/virtualenv\/python2.7.12 $HOME\/virtualenv\/python2.7\nexport GIT_ASKPASS=echo/g' ci.sh
+
+# Add build switch
+RUN sed -i 's/travis_cmd nosetests/if \[ "$1" == "build" \]; then\n    exit\nfi\n\ntravis_cmd nosetests/g' ci.sh

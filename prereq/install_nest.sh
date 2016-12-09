@@ -6,7 +6,7 @@ set -e  # stop execution in case of errors
 export NEST_VERSION="2.10.0"
 export NEST="nest-$NEST_VERSION"
 pip install cython
-if [ ! -f "$HOME/$NEST_VERSION/configure" ]; then
+if [ ! -f "$HOME/$NEST/configure" ]; then
     wget https://github.com/nest/nest-simulator/releases/download/v$NEST_VERSION/$NEST.tar.gz -O $HOME/$NEST.tar.gz;
     pushd $HOME;
     tar xzf $NEST.tar.gz;
