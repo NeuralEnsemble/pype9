@@ -18,7 +18,7 @@ parser.add_argument('--gsl_prefix', type=str, default=None,
                     help=("The prefix of the GSL installation to use for "
                           "random distributions in NMODL files. If not "
                           "provided will attempt to extract it from PyNest."))
-args = parser.parse_args()
+args, _ = parser.parse_known_args()
 
 
 # Generate the package data
@@ -53,14 +53,16 @@ class build(_build):
     end of the build process.
     """
 
-    user_options = build.user_options + [
-        ('cc', None, None),
-        ('gsl', None, None)]
+    user_options = _build.user_options + [
+        ('cc', None, 'Compiler to use for libninemlnrn compilation.'),
+        ('gsl_prefix', None,
+         'Prefix of GSL installation required for libninemlnrn compilation.')]
 
     def run(self):
         _build.run(self)
+        print("Attempting to build libninemlnrn")
         try:
-            cc = self.get_nrn_cc
+            cc = args.cc if args.cc is not None else self.get_nrn_cc()
             gsl_prefixes = ([args.gsl_prefix] if args.gsl_prefix is not None
                             else self.get_gsl_prefixes())
             import subprocess as sp
@@ -71,6 +73,7 @@ class build(_build):
                 'nineml.o -lc'.format(
                     cc, ' '.join('-L{}/lib'.format(p) for p in gsl_prefixes)))
             for cmd in (compile_cmd, link_cmd):
+                print(cmd)
                 p = sp.Popen(cmd, shell=True, stdin=sp.PIPE,
                              stdout=sp.PIPE, stderr=sp.STDOUT,
                              close_fds=True,
@@ -204,7 +207,7 @@ setup(
     install_requires=['pyNN>=0.8',
                       'diophantine>=0.1',
                       'neo>=0.3.3',
-                      'ninemlcatalog',
                       'matplotlib'],  # 'nineml',
+    dependency_links=['http://github.com/INCF/NineMLCatalog/tarball/master#egg=package-1.0'],
     tests_require=['nose'],
     cmdclass={'build': build})
