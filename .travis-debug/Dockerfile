@@ -69,11 +69,12 @@ RUN sed -i 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc
 
 # Create build directory
 ENV BRANCH=master
+RUN echo "Recloning $BRANCH branch"
 RUN git clone https://github.com/CNS-OIST/PyPe9.git $HOME/pype9
 WORKDIR $HOME/pype9
 RUN git checkout $BRANCH
 RUN travis compile > ci.sh
-RUN echo 'travis' | sudo -S chmod +xs ci.sh
+#RUN echo 'travis' | sudo -S chmod +xs ci.sh
 
 # Fix problems with matrix of python version
 RUN sed -i 's/\["2\.7"\]/2.7/g' ci.sh
@@ -86,4 +87,12 @@ RUN sed -i "s/branch\\\\=\\\\'\\\\'/branch=\\\\'$BRANCH\\\\'/g" ci.sh
 RUN sed -i 's/export GIT_ASKPASS=echo/sudo rm $HOME\/virtualenv\/python2.7\nsudo ln -s $HOME\/virtualenv\/python2.7.12 $HOME\/virtualenv\/python2.7\nexport GIT_ASKPASS=echo/g' ci.sh
 
 # Add build switch
-RUN sed -i 's/travis_cmd nosetests/if \[ "$1" == "build" \]; then\n    exit\nfi\n\ntravis_cmd nosetests/g' ci.sh
+RUN sed -i 's/travis_cmd nosetests/if \[ "$1" == "build" \]; then\n    exit\nfi\ntravis_cmd nosetests/g' ci.sh
+RUN echo 'travis' | sudo -S bash ci.sh build
+RUN echo 'travis' | sudo -S chown -R travis:travis $HOME/virtualenv
+
+RUN echo "source $HOME/virtualenv/python2.7/bin/activate" >> $HOME/.bashrc
+RUN chmod +x ci.sh
+ENV LD_LIBRARY_PATH=$HOME/pype9/pype9/neuron/cells/code_gen/libninemlnrn:$LD_LIBRARY_PATH
+ENV PYTHONPATH=$HOME/pype9:$PYTHONPATH
+

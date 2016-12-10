@@ -13,6 +13,7 @@ class TestPlot(TestCase):
 
     data_dir = os.path.join(os.path.dirname(__file__), '..', 'ref_data')
     ref_single_cell_path = os.path.join(data_dir, 'ref_single_cell.png')
+    recorded_pops = ('Exc', 'Inh')
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
@@ -24,7 +25,7 @@ class TestPlot(TestCase):
         in_path = os.path.join(self.data_dir, 'v.neo.pkl')
         out_path = '{}/single_cell.png'.format(self.tmpdir)
         argv = ("{data_file} --name {name} --save {out_path} --hide"
-                .format(in_path=in_path, out_path=out_path, name='v'))
+                .format(data_file=in_path, out_path=out_path, name='v'))
         plot.run(argv.split())
         image = img.imread(out_path)
         ref_image = img.imread(self.ref_single_cell_path)
