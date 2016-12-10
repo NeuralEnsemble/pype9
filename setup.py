@@ -4,65 +4,40 @@ import re
 import platform
 import tempfile
 import subprocess as sp
-# from setuptools import find_packages  # @UnresolvedImport
-# from os.path import dirname, join, splitext
-# from distutils.core import setup
-# from distutils.command.build import build as _build
-import argparse
-
-# Parse arguments for the compilation of libninemlnrn, the so that contains
-# wrappers of GSL random distributions
-parser = argparse.ArgumentParser()
-parser.add_argument('--cc', type=str, default=None,
-                    help=("Name of C-compiler used to compile NMODL files. "
-                          "If not provided, will attempt to inspect "
-                          "nrnmech_makefile"))
-parser.add_argument('--gsl_prefix', type=str, default=None,
-                    help=("The prefix of the GSL installation to use for "
-                          "random distributions in NMODL files. If not "
-                          "provided will attempt to extract it from PyNest."))
-args, _ = parser.parse_known_args()
+from setuptools import find_packages  # @UnresolvedImport
+from distutils.core import setup
+from distutils.command.build import build as _build
 
 
 # Generate the package data
 package_name = 'pype9'
 package_dir = os.path.join(os.path.dirname(__file__), package_name)
-# package_data = []
-# prefix_len = len(package_dir) + 1
-# for path, dirs, files in os.walk(package_dir, topdown=True):
-#     package_data.extend(
-#         (os.path.join(path, f)[prefix_len:] for f in files
-#          if os.path.splitext(f)[1] in ('.tmpl', '.cpp') or f == 'Makefile'))
-# 
-# packages = [p for p in find_packages() if p != 'test']
+package_data = []
+prefix_len = len(package_dir) + 1
+for path, dirs, files in os.walk(package_dir, topdown=True):
+    package_data.extend(
+        (os.path.join(path, f)[prefix_len:] for f in files
+         if os.path.splitext(f)[1] in ('.tmpl', '.cpp') or f == 'Makefile'))
 
+packages = [p for p in find_packages() if p != 'test']
 
-# # Set up the required extension to handle random number generation using GSL
-# # RNG in NEURON components
-# libninemlnrn = Extension(('pype9.neuron.cells.code_gen.libninemlnrn.'
-#                           'libninemlnrn'),
-#                          sources=['pype9/neuron/cells/code_gen/libninemlnrn/'
-#                                   'nineml.cpp'],
-#                          libraries=['m', 'gslcblas', 'gsl', 'c'],
-#                          language="c++")
 
 class CouldNotCompileNRNRandDistrException(Exception):
     pass
 
 
-class build(object):
+class build(_build):
     """
     Add build of libninemlnrn (for GSL random distributions in NMODL) to the
     end of the build process.
     """
 
     def run(self):
-#         _build.run(self)
+        _build.run(self)
         print("Attempting to build libninemlnrn")
         try:
-            cc = args.cc if args.cc is not None else self.get_nrn_cc()
-            gsl_prefixes = ([args.gsl_prefix] if args.gsl_prefix is not None
-                            else self.get_gsl_prefixes())
+            cc = self.get_nrn_cc()
+            gsl_prefixes = self.get_gsl_prefixes()
             compile_cmd = '{} -fPIC -c -o nineml.o nineml.cpp {}'.format(
                 cc, ' '.join('-I{}/include'.format(p) for p in gsl_prefixes))
             link_cmd = (
@@ -70,20 +45,24 @@ class build(object):
                 'nineml.o -lc'.format(
                     cc, ' '.join('-L{}/lib'.format(p) for p in gsl_prefixes)))
             for cmd in (compile_cmd, link_cmd):
-                self.run_cmd(
-                    cmd,
-                    work_dir=os.path.join(package_dir, 'neuron', 'cells',
-                                          'code_gen', 'libninemlnrn'),
-                    fail_msg="Unable to compile libninemlnrn extensions")
+                self.run_cmd(cmd,
+                             work_dir=os.path.join(
+                                 os.getcwd(), self.build_lib, 'pype9',
+                                 'neuron', 'cells', 'code_gen',
+                                 'libninemlnrn'),
+                             fail_msg=(
+                                 "Unable to compile libninemlnrn extensions"))
             print("Successfully compiled libninemlnrn extension.")
         except CouldNotCompileNRNRandDistrException as e:
             print("Unable to compile libninemlnrn: random distributions in "
                   "NMODL files will not work:\n{}".format(e))
 
     def run_cmd(self, cmd, work_dir, fail_msg):
+        print cmd
         p = sp.Popen(cmd, shell=True, stdin=sp.PIPE, stdout=sp.PIPE,
                      stderr=sp.STDOUT, close_fds=True, cwd=work_dir)
         stdout = p.stdout.readlines()
+        print stdout
         result = p.wait()
         # test if cmd was successful
         if result != 0:
@@ -124,8 +103,13 @@ class build(object):
             _, fname = tempfile.mkstemp(text=True)
             with open(fname, 'w') as f:
                 f.write('\n'.join(bash_to_run))
-            bin_dir = sp.check_output('sh {}'.format(fname),
-                                      shell=True).strip()
+            try:
+                bin_dir = sp.check_output('sh {}'.format(fname),
+                                          shell=True).strip()
+            except sp.CalledProcessError:
+                raise CouldNotCompileNRNRandDistrException(
+                    "Problem running excerpt from nrnivmodl ('{}')"
+                    .format(fname))
         else:
             raise CouldNotCompileNRNRandDistrException(
                 "Problem parsing nrnivmodl at '{}', could not find "
@@ -156,32 +140,14 @@ class build(object):
         lib_paths : list(str)
             List of library paths passed to the PyNEST compile
         """
-        print ("Attempting to import nest in order to locate GSL install dir "
-               "in order to compile libninemlnrn for random distributions in "
-               "NMODL.")
+        nest_config_path = self.path_to_exec('nest-config')
         try:
-            import nest
-        except ImportError:
+            libs = sp.check_output('{} --libs'.format(nest_config_path),
+                                   shell=True)
+        except sp.CalledProcessError:
             raise CouldNotCompileNRNRandDistrException(
-                "Could not import 'nest' and therefore couldn't detect GSL "
-                "location. Please specify explicitly to setup.py")
-        nest_depends_path = os.path.join(
-            os.path.dirname(nest.__file__), 'pynestkernel.la')
-        print ("Attempting to read dependency libs from '{}'"
-               .format(nest_depends_path))
-        try:
-            with open(nest_depends_path) as f:
-                contents = f.read()
-        except IOError:
-            raise CouldNotCompileNRNRandDistrException(
-                "Could not read pynestkernel.la at '{}'"
-                .format(nest_depends_path))
-        matches = re.findall(r"dependency_libs='(.*)'", contents)
-        if len(matches) != 1:
-            raise CouldNotCompileNRNRandDistrException(
-                "Could not extract dependency_libs from pynestkernel.la at "
-                "'{}'".format(nest_depends_path))
-        prefixes = [p[2:-3] for p in matches[0].split()
+                "Could not run '{} --libs'".format(nest_config_path))
+        prefixes = [p[2:-3] for p in libs.split()
                     if p.startswith('-L') and p.endswith('lib') and 'gsl' in p]
         return prefixes
 
@@ -224,40 +190,38 @@ class build(object):
                 .format(exec_name, ':'.join(system_path)))
         return exec_path
 
-b = build()
 
-print b.get_nrn_cc()
-
-# 
-# setup(
-#     name="pype9",
-#     version="0.1a",
-#     package_data={package_name: package_data},
-#     scripts=[join('bin', 'pype9')],
-#     packages=packages,
-#     author="The PyPe9 Team (see AUTHORS)",
-#     author_email="tom.g.close@gmail.com",
-#     description=("\"Python PipelinEs for 9ML (PyPe9)\" to manipulate "
-#                  "neuron and neuron network 9ML (http://nineml.net) models "
-#                  "and simulate them using well-established simulator backends,"
-#                  " NEURON and NEST."),
-#     long_description=open(join(dirname(__file__), "README.rst")).read(),
-#     license="The MIT License (MIT)",
-#     keywords=("NineML pipeline computational neuroscience modeling "
-#               "interoperability XML 9ML neuron nest"),
-#     url="http://github.com/CNS-OIST/PyPe9",
-#     classifiers=['Development Status :: 3 - Alpha',
-#                  'Environment :: Console',
-#                  'Intended Audience :: Science/Research',
-#                  'License :: OSI Approved :: MIT',
-#                  'Natural Language :: English',
-#                  'Operating System :: OS Independent',
-#                  'Programming Language :: Python :: 2',
-#                  'Topic :: Scientific/Engineering'],
-#     install_requires=['pyNN>=0.8',
-#                       'diophantine>=0.1',
-#                       'neo>=0.3.3',
-#                       'matplotlib'],  # 'nineml',
-#     dependency_links=['http://github.com/INCF/NineMLCatalog/tarball/master#egg=package-1.0'],
-#     tests_require=['nose'],
-#     cmdclass={'build': build})
+setup(
+    name="pype9",
+    version="0.1a0",
+    package_data={package_name: package_data},
+    scripts=[os.path.join('bin', 'pype9')],
+    packages=packages,
+    author="The PyPe9 Team (see AUTHORS)",
+    author_email="tom.g.close@gmail.com",
+    description=("\"Python PipelinEs for 9ML (PyPe9)\" to manipulate "
+                 "neuron and neuron network 9ML (http://nineml.net) models "
+                 "and simulate them using well-established simulator backends,"
+                 " NEURON and NEST."),
+    long_description=open(os.path.join(os.path.dirname(__file__),
+                                       "README.rst")).read(),
+    license="The MIT License (MIT)",
+    keywords=("NineML pipeline computational neuroscience modeling "
+              "interoperability XML 9ML neuron nest"),
+    url="http://github.com/CNS-OIST/PyPe9",
+    classifiers=['Development Status :: 3 - Alpha',
+                 'Environment :: Console',
+                 'Intended Audience :: Science/Research',
+                 'License :: OSI Approved :: MIT',
+                 'Natural Language :: English',
+                 'Operating System :: OS Independent',
+                 'Programming Language :: Python :: 2',
+                 'Topic :: Scientific/Engineering'],
+    install_requires=['pyNN>=0.8',
+                      'diophantine>=0.1',
+                      'neo>=0.3.3',
+                      'matplotlib'],  # 'nineml',
+    dependency_links=[
+        'http://github.com/INCF/NineMLCatalog/tarball/master#egg=package-1.0'],
+    tests_require=['nose'],
+    cmdclass={'build': build})
