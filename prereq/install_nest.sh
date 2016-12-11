@@ -18,6 +18,7 @@ mkdir -p $HOME/build/$NEST
 pushd $HOME/build/$NEST
 if [ ! -f "$HOME/build/$NEST/config.log" ]; then
     export VENV=`python -c "import sys; print sys.prefix"`;
+    ln -s $VENV/python2.7.12 $VENV/python2.7.10  # NEST is looking for 2.7.10 for some reason
     echo "VENV: $VENV"
     $HOME/$NEST/configure --with-mpi --prefix=$VENV;
     make;
