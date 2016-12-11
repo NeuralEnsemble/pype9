@@ -10,6 +10,7 @@ or
     pype9 convert --version 2.0 <v1.xml> <v2.xml>
 """
 import sys
+from copy import copy
 from argparse import ArgumentParser
 import pype9.cmd
 
@@ -19,4 +20,7 @@ parser.add_argument('cmd', choices=pype9.cmd.help.all_cmds(),
                           .format(pype9.cmd.help.available_cmds_message())))
 args = parser.parse_args(sys.argv[1:2] if len(sys.argv) >= 2 else [])
 
-getattr(pype9.cmd, args.cmd).run(sys.argv[2:])
+# Copy and clear sys.argv as it gets in the way of pyNEST import
+argv = copy(sys.argv[2:])
+del sys.argv[:]
+getattr(pype9.cmd, args.cmd).run(argv)
