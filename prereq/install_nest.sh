@@ -4,8 +4,8 @@
 set -e  # stop execution in case of errors
 	
 # Remove cache as it is causing errors
-rm -r $HOME/$NEST
-rm -r $HOME/build/$NEST
+rm -rf $HOME/$NEST
+rm -rf $HOME/build/$NEST
 
 export NEST_VERSION="2.10.0"
 export NEST="nest-$NEST_VERSION"
