@@ -1,14 +1,16 @@
 #!/bin/bash
 # Adapted from similar install script in pyNN (https://github.com/NeuralEnsemble/PyNN)
 
-set -e  # stop execution in case of errors
 	
+export NEST_VERSION="2.10.0"
+export NEST="nest-$NEST_VERSION"
+
 # Remove cache as it is causing errors
 rm -rf $HOME/$NEST
 rm -rf $HOME/build/$NEST
 
-export NEST_VERSION="2.10.0"
-export NEST="nest-$NEST_VERSION"
+set -e  # stop execution in case of errors
+
 pip install cython
 if [ ! -f "$HOME/$NEST/configure" ]; then
     wget https://github.com/nest/nest-simulator/releases/download/v$NEST_VERSION/$NEST.tar.gz -O $HOME/$NEST.tar.gz;
