@@ -58,11 +58,9 @@ class build(_build):
                   "NMODL files will not work:\n{}".format(e))
 
     def run_cmd(self, cmd, work_dir, fail_msg):
-        print cmd
         p = sp.Popen(cmd, shell=True, stdin=sp.PIPE, stdout=sp.PIPE,
                      stderr=sp.STDOUT, close_fds=True, cwd=work_dir)
         stdout = p.stdout.readlines()
-        print stdout
         result = p.wait()
         # test if cmd was successful
         if result != 0:
@@ -218,10 +216,12 @@ setup(
                  'Programming Language :: Python :: 2',
                  'Topic :: Scientific/Engineering'],
     install_requires=['pyNN>=0.8',
+                      'Jinja2>=2.6'
                       'diophantine>=0.1',
                       'neo>=0.3.3',
                       'matplotlib'],  # 'nineml',
     dependency_links=[
+        'http://github.com/INCF/lib9ML/archive/master#egg=package-0.1',
         'http://github.com/INCF/NineMLCatalog/tarball/master#egg=package-1.0'],
     tests_require=['nose'],
     cmdclass={'build': build})
