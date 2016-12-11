@@ -50,7 +50,8 @@ WORKDIR $HOME/packages/ninemlcatalog
 RUN git checkout merging_with_master
 
 # Install PyPe9
-RUN echo "Install Pype9"
+RUN echo "Installing Python 9ML library and Pype9"
+RUN PATH=$PATH:$VENV/bin $VENV/bin/pip install https://github.com/tclose/lib9ML/archive/develop.zip
 RUN PATH=$PATH:$VENV/bin $VENV/bin/pip install https://github.com/CNS-OIST/PyPe9/archive/master.zip
 
 # Create a link to the examples and catalog directories
@@ -59,7 +60,7 @@ RUN ln -s $HOME/packages/ninemlcatalog/xml $HOME/catalog
 # Set up bashrc and add welcome message
 RUN sed 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc > $HOME/tmp; mv $HOME/tmp $HOME/.bashrc
 RUN echo "source /home/docker/env/neurosci/bin/activate" >> $HOME/.bashrc
-RUN echo "export PYTHONPATH $HOME/packages/ninemlcatalog:$PYTHONPATH" >> $HOME/.bashrc
+RUN echo "export PYTHONPATH=$HOME/packages/ninemlcatalog:$PYTHONPATH" >> $HOME/.bashrc
 RUN echo "echo \"Type 'pype9 help' for instructions on how to run pype9\"" >> $HOME/.bashrc
 RUN echo "echo \"See $HOME/catalog for example 9ML models\"" >> $HOME/.bashrc
 
