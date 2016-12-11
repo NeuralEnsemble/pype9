@@ -2,7 +2,7 @@
 Converts a 9ML file from one supported format to another
 """
 from argparse import ArgumentParser
-from ._utils import nineml_document
+from ._utils import nineml_document, get_logger
 
 parser = ArgumentParser(prog='pype9 convert',
                         description=__doc__)
@@ -15,8 +15,11 @@ parser.add_argument('--nineml_version', type=str, default=None,
 
 def run(argv):
     args = parser.parse_args(argv)
+
+    logger = get_logger()
     doc = args.in_file.clone()
     kwargs = {}
     if args.nineml_version is not None:
         kwargs['version'] = args.nineml_version
     doc.write(args.out_file, **kwargs)
+    logger.info("Converted '{}' to '{}'".format(args.in_file, args.out_file))

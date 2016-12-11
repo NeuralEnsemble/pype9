@@ -2,7 +2,7 @@
 Runs a simulation described by an Experiment layer 9ML file
 """
 from argparse import ArgumentParser
-from ._utils import nineml_model, parse_units
+from ._utils import nineml_model, parse_units, get_logger
 
 
 parser = ArgumentParser(prog='pype9 simulate',
@@ -52,9 +52,8 @@ def run(argv):
     from pype9.exceptions import Pype9UsageError
     import neo.io
     import time
-    import logging
 
-    logger = logging.getLogger('PyPe9')
+    logger = get_logger()
 
     args = parser.parse_args(argv)
 
@@ -86,13 +85,14 @@ def run(argv):
         setup(min_delay=min_delay, max_delay=max_delay,
               timestep=args.timestep, rng_seeds_seed=seed)
         # Construct the network
-        print "Constructing '{}' network".format(args.model.name)
+        logger.info("Constructing '{}' network".format(args.model.name))
         network = Network(args.model, build_mode=args.build_mode)
-        print "Finished constructing the '{}' network".format(args.model.name)
+        logger.info("Finished constructing the '{}' network"
+                    .format(args.model.name))
         for record_name, _, _ in args.record:
             pop_name, port_name = record_name.split('.')
             network[pop_name].record(port_name)
-        print "Running the simulation".format()
+        logger.info("Running the simulation")
         run(args.simtime)
         for record_name, filename, name in args.record:
             pop_name, port_name = record_name.split('.')
@@ -129,7 +129,6 @@ def run(argv):
                         r.name for r in component_class.regimes)))
         # Build cell class
         Cell = CellMetaClass(component_class, name=model.name,
-                             init_regime=init_regime,
                              build_mode=args.build_mode,
                              default_properties=props)
         # Create cell
@@ -142,7 +141,7 @@ def run(argv):
                 " missing '{}'".format(
                     "', '".join(set(cell.state_variable_names) -
                                 set(init_state.iterkeys()))))
-        cell.set_state(init_state)
+        cell.set_state(init_state, regime=init_regime)
         # Play inputs
         for port_name, fname, _ in args.play:
             port = component_class.receive_port(port_name)

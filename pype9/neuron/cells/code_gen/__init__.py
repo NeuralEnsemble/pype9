@@ -83,7 +83,7 @@ class CodeGenerator(BaseCodeGenerator):
 #             if os.path.exists(path):
 #                 nrnivmodl_path = path
 #         if nrnivmodl_path is None:
-#             print ("WARNING: could not find nrnivmodl at expected location '{}' "
+#             logger.info("WARNING: could not find nrnivmodl at expected location '{}' "
 #                    "so wasn't able to compile GSL random distribution wrapper "
 #                    "required for random variables in generated neuron code"
 #                    .format(os.path.join(neuron.h.neuronhome(), '..', '..',
@@ -219,13 +219,13 @@ class CodeGenerator(BaseCodeGenerator):
                     if cv.dimension == un.voltage]
             if len(candidate_vs) == 1:
                 orig_v = candidate_vs[0]
-                print ("Guessing that '{}' is the membrane voltage"
-                       .format(orig_v))
+                logger.info("Guessing that '{}' is the membrane voltage"
+                            .format(orig_v))
             elif len(candidate_vs) > 1:
                 try:
                     orig_v = next(c for c in candidate_vs if c.name == 'v')
-                    print ("Guessing that '{}' is the membrane voltage"
-                           .format(orig_v))
+                    logger.info("Guessing that '{}' is the membrane voltage"
+                                .format(orig_v))
                 except StopIteration:
                     raise Pype9BuildError(
                         "Could not guess the membrane voltage, candidates: "
@@ -233,7 +233,7 @@ class CodeGenerator(BaseCodeGenerator):
                                                    for v in candidate_vs)))
             else:
                 orig_v = None
-                print (
+                logger.info(
                     "Can't find candidate for the membrane voltage in "
                     "state_variables '{}' or analog_receive_ports '{}', "
                     "treating '{}' as an \"artificial cell\"".format(
@@ -323,8 +323,8 @@ class CodeGenerator(BaseCodeGenerator):
             if len(candidate_cms) == 1:
                 orig_cm = candidate_cms[0]
                 cm = trfrm.parameter(orig_cm.name)
-                print ("Guessing that '{}' is the membrane capacitance"
-                       .format(orig_cm))
+                logger.info("Guessing that '{}' is the membrane capacitance"
+                            .format(orig_cm))
             elif len(candidate_cms) > 1:
                 raise Pype9BuildError(
                     "Could not guess the membrane capacitance, candidates:"
@@ -451,8 +451,8 @@ class CodeGenerator(BaseCodeGenerator):
                 # conditions will have to be specified separately)
                 ext_is.append(port)
             if ext_is:
-                print ("Guessing '{}' are external currents to be removed"
-                       .format(ext_is))
+                logger.info("Guessing '{}' are external currents to be removed"
+                            .format(ext_is))
         trfrm.annotations.set(PYPE9_NS, BUILD_TRANS, EXTERNAL_CURRENTS,
                               ','.join(p.name for p in ext_is))
         # Remove external input current ports (as NEURON handles them)
@@ -482,8 +482,8 @@ class CodeGenerator(BaseCodeGenerator):
         # Change working directory to model directory
         os.chdir(compile_dir)
         if verbose != 'silent':
-            print ("Building NMODL mechanisms in '{}' directory."
-                   .format(compile_dir))
+            logger.info("Building NMODL mechanisms in '{}' directory."
+                        .format(compile_dir))
         # Check the created units by running modlunit
         if __debug__:
             for fname in os.listdir('.'):
@@ -515,11 +515,11 @@ class CodeGenerator(BaseCodeGenerator):
                 "Generated mod file failed to compile with output:\n{}\n{}"
                 .format(stdout, stderr))
         if verbose is True:
-            print stdout
-            print stderr
+            logger.info(stdout)
+            logger.info(stderr)
         if verbose != 'silent':
-            print ("Compilation of NEURON (NMODL) files for '{}' "
-                   "completed successfully".format(name))
+            logger.info("Compilation of NEURON (NMODL) files for '{}' "
+                        "completed successfully".format(name))
 
     def get_install_dir(self, build_dir, install_dir):
         if install_dir:

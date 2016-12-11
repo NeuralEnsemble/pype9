@@ -1,5 +1,7 @@
 import os.path
 import operator
+import sys
+import logging
 import sympy
 import nineml.units
 import ninemlcatalog
@@ -69,3 +71,14 @@ def _parse_subexpr(expr):
             return int(expr)
         else:
             raise Pype9UnitStrError
+
+
+def get_logger():
+    logger = logging.getLogger('PyPe9')
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    return logger

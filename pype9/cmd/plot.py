@@ -3,7 +3,7 @@ Convenient script for plotting the output of PyPe9 simulations (actually not
 9ML specific as the signals are stored in Neo format)
 """
 from argparse import ArgumentParser
-from ._utils import existing_file
+from ._utils import existing_file, get_logger
 
 parser = ArgumentParser(prog='pype9 plot',
                         description=__doc__)
@@ -23,6 +23,8 @@ def run(argv):
     from pype9.exceptions import Pype9UsageError
 
     args = parser.parse_args(argv)
+
+    logger = get_logger()
 
     data = neo.PickleIO(args.filename).read()
     if len(data.segments) > 1:
@@ -68,6 +70,6 @@ def run(argv):
         plt.title("Pype9{} Analog Signals".format(plt_name), fontsize=12)
     if args.save is not None:
         fig.savefig(args.save)
-        print "Saved{} figure to '{}'".format(plt_name, args.save)
+        logger.info("Saved{} figure to '{}'".format(plt_name, args.save))
     if not args.hide:
         plt.show()

@@ -66,9 +66,7 @@ class TestSimulateCell(TestCase):
                         onset='{} {}'.format(*self.isyn_onset),
                         init='{} {}'.format(*self.isyn_init)))
         # Run input signal simulation
-        print "running input simulation"
         simulate.run(argv.split())
-        print "finished running input simulation"
         isyn = neo.io.PickleIO(in_path).read()[0].analogsignals[0]
         # Check sanity of input signal
         self.assertEqual(isyn.max(), self.isyn_amp[0],
