@@ -16,8 +16,8 @@ else
 fi
 mkdir -p $HOME/build/$NEST
 pushd $HOME/build/$NEST
+export VENV=`python -c "import sys; print sys.prefix"`;
 if [ ! -f "$HOME/build/$NEST/config.log" ]; then
-    export VENV=`python -c "import sys; print sys.prefix"`;
     echo "VENV: $VENV"
     $HOME/$NEST/configure --with-mpi --prefix=$VENV;
     make;
