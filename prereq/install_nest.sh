@@ -2,6 +2,10 @@
 # Adapted from similar install script in pyNN (https://github.com/NeuralEnsemble/PyNN)
 
 set -e  # stop execution in case of errors
+	
+# Remove cache as it is causing errors
+rm -r $HOME/$NEST
+rm -r $HOME/build/$NEST
 
 export NEST_VERSION="2.10.0"
 export NEST="nest-$NEST_VERSION"
@@ -28,6 +32,8 @@ else
     echo "$HOME/build/$NEST";
     ls $HOME/build/$NEST;
 	ln -s $VENV/python2.7.12 $VENV/python2.7.10  # NEST is looking for 2.7.10 for some reason
+	ls $VENV/python2.7.12
+	ls $VENV/python2.7.10
 fi
 make install
 popd

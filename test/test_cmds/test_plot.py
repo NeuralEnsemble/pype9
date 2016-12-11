@@ -1,7 +1,7 @@
 import os.path
 import tempfile
 import shutil
-from pype9.cmd import plot
+from pype9.cmd import plot, simulate
 import matplotlib.image as img
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
@@ -17,6 +17,14 @@ class TestPlot(TestCase):
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
+        # Generate test signal
+        argv = (
+            "//neuron/Izhikevich#SampleIzhikevichFastSpiking nest 200.0 0.01 "
+            "--record V {}/v.neo.pkl v "
+            "--init_value U 1.625 pA "
+            "--init_value V -65.0 mV "
+            "--init_regime subVb".format(self.tmpdir).split())
+        simulate.run(argv)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -48,3 +56,9 @@ class TestPlot(TestCase):
                 "Ploted spike data from '{name}' using 'plot' command did not "
                 "match loaded image from '{ref_dir}/{name}'"
                 .format(name=pop_name, ref_dir=self.data_dir))
+
+    def _ref_single_cell_plot(self):
+        pass
+
+    def _ref_network_plot(self):
+        pass
