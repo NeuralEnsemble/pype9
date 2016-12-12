@@ -23,6 +23,7 @@ install:
   - source prereq/install_nest.sh
   - source prereq/install_neuron.sh
   - pip install https://github.com/sympy/sympy/archive/master.zip
+  - pip install https://github.com/NeuralEnsemble/PyNN/archive/master.zip
   - pip install -r requirements.txt
   - pip install https://github.com/tclose/lib9ML/archive/develop.zip
   - pip install https://github.com/tclose/NineMLCatalog/archive/merging_with_master.zip  
