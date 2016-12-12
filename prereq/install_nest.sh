@@ -33,9 +33,6 @@ else
     ls $HOME/$NEST;
     echo "$HOME/build/$NEST";
     ls $HOME/build/$NEST;
-	ln -s $VENV/python2.7.12 $VENV/python2.7.10  # NEST is looking for 2.7.10 for some reason
-	ls $VENV/python2.7.12
-	ls $VENV/python2.7.10
 fi
 make install
 popd
