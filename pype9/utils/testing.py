@@ -138,6 +138,7 @@ class Comparer(object):
         Run and the simulation
         """
         if self.simulate_nest:
+            nest.ResetNetwork()
             nest.ResetKernel()
             simulatorNEST.clear(rng_seed=nest_rng_seed, dt=self.dt)
             simulation_controller.set_delays(self.min_delay, self.max_delay,

@@ -110,10 +110,10 @@ class _SimulationController(SimulationController):
         nest.sli_run("M_%s setverbosity" % verbosity.upper())
     verbosity = property(fset=_set_verbosity)
 
-    def run(self, simtime, reset=True):
+    def run(self, simtime, reset=True, reset_nest_time=False):
         """Advance the simulation for a certain time."""
         if reset:
-            self.reset()
+            self.reset(reset_nest_time=reset_nest_time)
         for device in self.recording_devices:
             if not device._connected:
                 device.connect_to_cells()
@@ -126,13 +126,14 @@ class _SimulationController(SimulationController):
     def run_until(self, tstop):
         self.run(tstop - self.t)
 
-    def reset(self):
-        nest.SetKernelStatus({'time': 0.0})
+    def reset(self, reset_nest_time=True):
+        if reset_nest_time:
+            nest.SetKernelStatus({'time': 0.0})
+        self.t_start = 0.0
         for p in self.populations:
             for variable, initial_value in p.initial_values.items():
                 p._set_initial_value_array(variable, initial_value)
         self.running = False
-        self.t_start = 0.0
         self.segment_counter += 1
         self.reset_cells()
 
@@ -155,7 +156,6 @@ class _SimulationController(SimulationController):
         threads = self.threads
         # Reset network and kernel
         nest.ResetKernel()
-        nest.ResetNetwork()
         nest.SetKernelStatus({'overwrite_files': True, 'resolution': dt})
         if 'dt' in kwargs:
             self.dt = kwargs['dt']
@@ -172,6 +172,6 @@ class _SimulationController(SimulationController):
             self.rng_seeds = list(
                 numpy.asarray(rng.uniform(low=0, high=100000, size=n),
                               dtype=int))
-        self.reset()
+        self.reset(reset_nest_time=False)
 
 simulation_controller = _SimulationController()
