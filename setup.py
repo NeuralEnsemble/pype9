@@ -19,8 +19,11 @@ for path, dirs, files in os.walk(package_dir, topdown=True):
         (os.path.join(path, f)[prefix_len:] for f in files
          if os.path.splitext(f)[1] in ('.tmpl', '.cpp') or f == 'Makefile'))
 
-packages = [p for p in find_packages() if p != 'test']
+# Add compiled libninemlnrn to package data
+package_data.append(os.path.join('neuron', 'cells', 'code_gen', 'libninemlnrn', 'libninemlnrn.so'))
 
+# Filter unittests from packages
+packages = [p for p in find_packages() if not p.startswith('test.')]
 
 class CouldNotCompileNRNRandDistrException(Exception):
     pass
@@ -38,13 +41,14 @@ class build(_build):
         try:
             cc = self.get_nrn_cc()
             gsl_prefixes = self.get_gsl_prefixes()
+            echo_cmd = 'pwd; ls'
             compile_cmd = '{} -fPIC -c -o nineml.o nineml.cpp {}'.format(
                 cc, ' '.join('-I{}/include'.format(p) for p in gsl_prefixes))
             link_cmd = (
                 '{} -shared {} -lm -lgslcblas -lgsl -o libninemlnrn.so '
                 'nineml.o -lc'.format(
                     cc, ' '.join('-L{}/lib'.format(p) for p in gsl_prefixes)))
-            for cmd in (compile_cmd, link_cmd):
+            for cmd in (echo_cmd, compile_cmd, link_cmd):
                 self.run_cmd(cmd,
                              work_dir=os.path.join(
                                  os.getcwd(), self.build_lib, 'pype9',
@@ -63,6 +67,7 @@ class build(_build):
         stdout = p.stdout.readlines()
         result = p.wait()
         # test if cmd was successful
+        print stdout
         if result != 0:
             raise CouldNotCompileNRNRandDistrException(
                 "{}:\n{}".format(fail_msg, '  '.join([''] + stdout)))
