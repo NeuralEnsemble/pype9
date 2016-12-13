@@ -57,8 +57,10 @@ class CodeGenerator(BaseCodeGenerator):
 
     SIMULATOR_NAME = 'neuron'
     ODE_SOLVER_DEFAULT = 'derivimplicit'
-    BASE_TMPL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates'))
-    LIBNINEMLNRN_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'libninemlnrn'))
+    BASE_TMPL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                  'templates'))
+    LIBNINEMLNRN_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                     'libninemlnrn'))
 
     _neuron_units = {un.mV: 'millivolt',
                      un.S: 'siemens',

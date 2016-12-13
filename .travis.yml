@@ -29,6 +29,7 @@ install:
   - pip install coveralls
   - pip install .
 script:
+  - ls /home/travis/build/CNS-OIST/PyPe9/pype9/neuron/cells/code_gen/libninemlnrn
   - nosetests test --exe --with-coverage --cover-package=pype9
 after_success:
   - coveralls
