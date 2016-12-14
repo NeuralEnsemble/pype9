@@ -69,7 +69,7 @@ RUN sed -i 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc
 
 # Create build directory
 ENV BRANCH=master
-RUN echo "Recloning $BRANCH branch 3"
+RUN echo "Recloning $BRANCH branch 6"
 RUN git clone https://github.com/CNS-OIST/PyPe9.git $HOME/pype9
 WORKDIR $HOME/pype9
 RUN git checkout $BRANCH
