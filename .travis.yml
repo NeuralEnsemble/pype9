@@ -29,7 +29,9 @@ install:
   - pip install coveralls
   - pip install -v .
 script:
-  - PYTHONPATH='' nosetests test --exe --with-coverage --cover-package=pype9
+  - pushd test
+  - nosetests . --exe --with-coverage --cover-package=pype9
+  - popd
 after_success:
   - coveralls
 cache:
