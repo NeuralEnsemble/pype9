@@ -8,20 +8,20 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-import sys
 import os.path
 import logging
 import neo
 import nest
 import quantities as pq
 from nineml.exceptions import NineMLNameError
-from nineml.abstraction import Dynamics
 from .code_gen import CodeGenerator, REGIME_VARNAME
 from .controller import simulation_controller
 from pype9.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
 from pype9.nest.units import UnitHandler
 from pype9.exceptions import Pype9RuntimeError, Pype9UsageError
+from pype9.utils import add_lib_path
+
 
 logger = logging.getLogger('PyPe9')
 
@@ -204,18 +204,7 @@ class CellMetaClass(base.CellMetaClass):
     @classmethod
     def load_libraries(cls, name, install_dir):
         lib_dir = os.path.join(install_dir, 'lib', 'nest')
-        if (sys.platform.startswith('linux') or
-            sys.platform in ['os2', 'os2emx', 'cygwin', 'atheos',
-                             'ricos']):
-            lib_path_key = 'LD_LIBRARY_PATH'
-        elif sys.platform == 'darwin':
-            lib_path_key = 'DYLD_LIBRARY_PATH'
-        elif sys.platform == 'win32':
-            lib_path_key = 'PATH'
-        if lib_path_key in os.environ:
-            os.environ[lib_path_key] += os.pathsep + lib_dir
-        else:
-            os.environ[lib_path_key] = lib_dir
+        add_lib_path(lib_dir)
         # Add module install directory to NEST path
         nest.sli_run(
             '({}) addpath'.format(os.path.join(install_dir, 'share', 'nest',

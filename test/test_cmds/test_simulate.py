@@ -75,7 +75,7 @@ class TestSimulateCell(TestCase):
         self.assertEqual(isyn.min(), self.isyn_init[0],
                          "Min of isyn input signal {} did not match specified "
                          "initial value, {}"
-                         .format(isyn.max(), self.isyn_init[0]))
+                         .format(isyn.min(), self.isyn_init[0]))
         nest.ResetKernel()
         for simulator in ('nest', 'neuron'):
             argv = (

@@ -33,7 +33,7 @@ from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
 from nineml.abstraction.dynamics.visitors.cloner import DynamicsCloner
 from sympy.printing import ccode
 from pype9.neuron.units import UnitHandler
-
+from pype9.utils import add_lib_path
 try:
     from nineml.extensions.kinetics import Kinetics  # @UnusedImport
 except ImportError:
@@ -60,16 +60,13 @@ class CodeGenerator(BaseCodeGenerator):
     BASE_TMPL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                   'templates'))
     LIBNINEMLNRN_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                     'libninemlnrn'))
+                                                 'libninemlnrn'))
 
     _neuron_units = {un.mV: 'millivolt',
                      un.S: 'siemens',
                      un.mA: 'milliamp'}
 
     _inbuilt_ions = ['na', 'k', 'ca']
-
-# flgs = ["-L%s"% get_ninemlnrnlibdir(), "-L/opt/gsl-1.15/lib", "-lninemlnrn -lgsl -lgslcblas"]
-# '-loadflags','"%s"'%(' '.join(flgs) ) ] )
 
     def __init__(self, gsl_path=None):
         super(CodeGenerator, self).__init__()
@@ -92,8 +89,9 @@ class CodeGenerator(BaseCodeGenerator):
 #                                         '<arch-name>', 'bin', 'nrnivmodl')))
         self.nrnivmodl_path = self.path_to_exec('nrnivmodl')
         self.modlunit_path = self.path_to_exec('modlunit')
-        self.nrnivmodl_flags = ['-L' + self.LIBNINEMLNRN_PATH, '-lninemlnrn',
-                                '-lgsl', '-lgslcblas']
+        self.nrnivmodl_flags = [
+            '-{L,R}' + self.LIBNINEMLNRN_PATH, '-lninemlnrn',
+            '-lgsl', '-lgslcblas']
         if gsl_path is not None:
             self.nrnivmodl_path.append('-L' + gsl_path)
         else:

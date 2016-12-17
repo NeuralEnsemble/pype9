@@ -20,10 +20,12 @@ for path, dirs, files in os.walk(package_dir, topdown=True):
          if os.path.splitext(f)[1] in ('.tmpl', '.cpp') or f == 'Makefile'))
 
 # Add compiled libninemlnrn to package data
-package_data.append(os.path.join('neuron', 'cells', 'code_gen', 'libninemlnrn', 'libninemlnrn.so'))
+package_data.append(os.path.join('neuron', 'cells', 'code_gen', 'libninemlnrn',
+                                 'libninemlnrn.so'))
 
 # Filter unittests from packages
 packages = [p for p in find_packages() if not p.startswith('test.')]
+
 
 class CouldNotCompileNRNRandDistrException(Exception):
     pass

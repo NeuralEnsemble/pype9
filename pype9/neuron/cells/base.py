@@ -21,14 +21,13 @@ from itertools import chain
 import operator
 import quantities as pq
 import neo
+from .code_gen import CodeGenerator, REGIME_VARNAME
 from neuron import h, load_mechanisms
 from nineml import units as un
-from nineml.abstraction import Dynamics
 from nineml.abstraction import EventPort
 from nineml.exceptions import NineMLNameError
 from math import pi
 import numpy
-from .code_gen import CodeGenerator, REGIME_VARNAME
 from pype9.base.cells import base
 from pype9.neuron.units import UnitHandler
 from .controller import simulation_controller
@@ -41,7 +40,6 @@ import logging
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
 
 NEURON_NS = 'NEURON'
-
 
 logger = logging.getLogger("PyPe9")
 
