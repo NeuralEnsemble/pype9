@@ -69,7 +69,7 @@ RUN sed -i 's/#force_color_prompt/force_color_prompt/' $HOME/.bashrc
 
 # Create build directory
 ENV BRANCH=master
-RUN echo "Recloning $BRANCH branch 9"
+RUN echo "Recloning $BRANCH branch 10"
 RUN git clone https://github.com/CNS-OIST/PyPe9.git $HOME/pype9
 WORKDIR $HOME/pype9
 RUN git checkout $BRANCH
@@ -88,9 +88,9 @@ RUN sed -i 's/export GIT_ASKPASS=echo/sudo rm $HOME\/virtualenv\/python2.7\nsudo
 
 # Add build switch
 RUN sed -i 's/travis_cmd nosetests/if \[ "$1" == "build" \]; then\n    exit\nfi\ntravis_cmd nosetests/g' ci.sh
-#RUN echo 'travis' | sudo -S bash ci.sh build
-#RUN echo 'travis' | sudo -S chown -R travis:travis $HOME/virtualenv
+RUN echo 'travis' | sudo -S bash ci.sh build
+RUN echo 'travis' | sudo -S chown -R travis:travis $HOME/virtualenv
 
-#RUN echo "source $HOME/virtualenv/python2.7/bin/activate" >> $HOME/.bashrc
-#RUN chmod +x ci.sh
+RUN echo "source $HOME/virtualenv/python2.7/bin/activate" >> $HOME/.bashrc
+RUN chmod +x ci.sh
 

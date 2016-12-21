@@ -20,9 +20,15 @@ def get_parser(cmd):
 
 
 def available_cmds_message():
-    return ("Available PyPe9 commands:\n{}".format(
-        "\n".join('  {} - {}'.format(c, get_parser(c).description.strip())
-                  for c in all_cmds())))
+    return (
+        "usage: pype9 <cmd> <args>\n\n"
+        "available commands:\n{}""".format(
+            "\n".join('    {}\n        {}'.format(c, _get_description(c))
+                      for c in all_cmds())))
+
+
+def _get_description(cmd):
+    return get_parser(cmd).description.strip().replace('\n', '\n        ')
 
 
 def run(argv):
