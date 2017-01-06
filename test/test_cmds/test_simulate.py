@@ -128,32 +128,37 @@ class TestSimulateCell(TestCase):
 class TestSimulateNetwork(TestCase):
 
     brunel_path = 'network/Brunel2000/AI'
+    brunel_name = 'Brunel_AI_reduced'
     reduced_brunel_fname = 'reduced_brunel.xml'
     recorded_pops = ('Exc', 'Inh')
     reduced_brunel_order = 10
     t_stop = 100.0
     dt = 0.001
+    seed = 12345
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
         # Create reduced version of Brunel network
         model = ninemlcatalog.load(self.brunel_path).as_network(
-            'Brunel_AI_reduced')
-        scale = self.reduced_brunel_order / model.population('Inh').size
+            self.brunel_name)
+        scale = float(self.reduced_brunel_order) / model.population('Inh').size
         # rescale populations
         reduced_model = model.clone()
         for pop in reduced_model.populations:
             pop.size = int(np.ceil(pop.size * scale))
-        for proj in (reduced_model.projection('Excitation'),
-                     reduced_model.projection('Inhibition')):
-            props = proj.connectivity.rule_properties
-            number = props.property('number')
-            props.set(nineml.Property(
-                number.name,
-                int(np.ceil(float(number.value) * scale)) * un.unitless))
+        for proj in reduced_model.projections:
+            connectivity = proj.connectivity
+            connectivity._src_size = proj.pre.size
+            connectivity._dest_size = proj.post.size
+            if proj.name in ('Excitation', 'Inhibition'):
+                props = connectivity.rule_properties
+                number = props.property('number')
+                props.set(nineml.Property(
+                    number.name,
+                    int(np.ceil(float(number.value) * scale)) * un.unitless))
         self.reduced_brunel_path = os.path.join(self.tmpdir,
                                                 self.reduced_brunel_fname)
-        reduced_model.write(self.reduced_brunel_path)
+        reduced_model.write(self.reduced_brunel_path)  # , version=2)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -163,12 +168,15 @@ class TestSimulateNetwork(TestCase):
         for simulator in ('nest', 'neuron'):
             out_path = '{}/{}.neo.pkl'.format(self.tmpdir, simulator)
             argv = (
-                "{nineml_model} {sim} {t_stop} {dt} "
+                "{model_url}#{model_name} {sim} {t_stop} {dt} "
                 "--record Exc.spikes {out_path} exc "
                 "--record Inh.spikes {out_path} inh "
-                "--build_mode force"
-                .format(nineml_model=self.reduced_brunel_path, sim=simulator,
-                        out_path=out_path, t_stop=self.t_stop, dt=self.dt))
+                "--build_mode force "
+                "--seed {seed}"
+                .format(model_url=self.reduced_brunel_path,
+                        model_name=self.brunel_name, sim=simulator,
+                        out_path=out_path, t_stop=self.t_stop, dt=self.dt,
+                        seed=self.seed))
             simulate.run(argv.split())
             recs = {}
             for spiketrain in neo.io.PickleIO(out_path).read()[0].spiketrains:
@@ -198,6 +206,10 @@ class TestSimulateNetwork(TestCase):
             assert False
         model = nineml.read(self.reduced_brunel_path).as_network(
             'ReducedBrunel')
+        # Reset the simulator
+        min_delay, max_delay = model.delay_limits()
+        pyNN.nest.setup(min_delay=min_delay, max_delay=max_delay,
+                        timestep=self.dt, rng_seeds_seed=self.seed)
         network = NetworkClass(model, **kwargs)
         if external_input is not None:
             network.component_array('Ext').play('spike_input__cell',
@@ -207,6 +219,6 @@ class TestSimulateNetwork(TestCase):
         pyNN_simulator.run(self.t_stop)
         recordings = {}
         for pop_name in self.recorded_pops:
-            recordings[pop_name] = network.component_array(pop_name).recording(
-                'spikes')
+            recordings[pop_name] = network.component_array(
+                pop_name).get_data().segments[0]
         return recordings

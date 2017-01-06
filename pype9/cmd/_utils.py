@@ -20,7 +20,7 @@ def nineml_document(doc_path):
     if doc_path.startswith('//'):
         model = ninemlcatalog.load(doc_path[2:])
     else:
-        if not doc_path.startswith('/') or not doc_path.startswith('.'):
+        if not doc_path.startswith('/') and not doc_path.startswith('.'):
             doc_path = './' + doc_path
         model = nineml.read(doc_path, relative_to=os.getcwd())
     return model
@@ -73,12 +73,10 @@ def _parse_subexpr(expr):
             raise Pype9UnitStrError
 
 
-def get_logger():
-    logger = logging.getLogger('PyPe9')
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
+logger = logging.getLogger('PyPe9')
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter(
+    '%(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)

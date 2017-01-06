@@ -2,7 +2,7 @@
 Runs a simulation described by an Experiment layer 9ML file
 """
 from argparse import ArgumentParser
-from ._utils import nineml_model, parse_units, get_logger
+from ._utils import nineml_model, parse_units, logger
 
 
 parser = ArgumentParser(prog='pype9 simulate',
@@ -53,11 +53,9 @@ def run(argv):
     import neo.io
     import time
 
-    logger = get_logger()
-
     args = parser.parse_args(argv)
 
-    seed = time.time() if args.seed is None else args.seed
+    seed = int(time.time()) if args.seed is None else args.seed
 
     if args.simulator == 'neuron':
         from pype9.neuron import Network, CellMetaClass, simulation_controller  # @UnusedImport @IgnorePep8
@@ -68,40 +66,39 @@ def run(argv):
             "Unrecognised simulator '{}', (available 'neuron' or 'nest')"
             .format(args.simulator))
 
-    if isinstance(args.model, nineml.Document):
-        min_delay = 0.1  # FIXME: Should add as method to Network class
-        max_delay = 10.0
-    else:
-        min_delay = args.timestep
-        max_delay = args.timestep * 2
+    # For convenience
+    model = args.model
 
-    if isinstance(args.model, nineml.Network):
+    if isinstance(model, nineml.Network):
         if args.simulator == 'neuron':
             from pyNN.neuron import run, setup  # @UnusedImport
         else:
             from pyNN.nest import run, setup  # @Reimport
 
+        # Get min/max delays in model
+        min_delay, max_delay = model.delay_limits()
+
         # Reset the simulator
         setup(min_delay=min_delay, max_delay=max_delay,
               timestep=args.timestep, rng_seeds_seed=seed)
         # Construct the network
-        logger.info("Constructing '{}' network".format(args.model.name))
-        network = Network(args.model, build_mode=args.build_mode)
+        logger.info("Constructing '{}' network".format(model.name))
+        network = Network(model, build_mode=args.build_mode)
         logger.info("Finished constructing the '{}' network"
-                    .format(args.model.name))
+                    .format(model.name))
         for record_name, _, _ in args.record:
             pop_name, port_name = record_name.split('.')
-            network[pop_name].record(port_name)
+            network.component_array(pop_name).record(port_name)
         logger.info("Running the simulation")
-        run(args.simtime)
-        for record_name, filename, name in args.record:
-            pop_name, port_name = record_name.split('.')
-            seg = network[pop_name].get_data().segments[0]
-            data[filename] = seg  # FIXME: not implemented
+        run(args.time)
+        logger.info("Writing recorded data to file")
+        for record_name, fname, _ in args.record:
+            pop_name, _ = record_name.split('.')
+            pop = network.component_array(pop_name)
+            neo.PickleIO(fname).write(pop.get_data().segments[0])
     else:
-        assert isinstance(args.model, (nineml.DynamicsProperties,
+        assert isinstance(model, (nineml.DynamicsProperties,
                                        nineml.Dynamics))
-        model = args.model
         # Override properties passed as options
         if args.prop:
             props_dict = dict((parm, float(val) * parse_units(unts))
@@ -172,5 +169,6 @@ def run(argv):
         # Write data to file
         for fname, data_seg in data_segs.iteritems():
             neo.io.PickleIO(fname).write(data_seg)
-    logger.info("Simulated '{}' for {} ms".format(model.name, args.time))
+    logger.info("Finished simulation of '{}' for {} ms".format(model.name,
+                                                               args.time))
 
