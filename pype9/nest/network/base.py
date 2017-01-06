@@ -49,6 +49,12 @@ class ComponentArray(BaseComponentArray, pyNN.nest.Population):
     def _min_delay(self):
         return get_min_delay()
 
+    def record(self, port_name):
+        communicates, to_record = self._get_port_details(port_name)
+        if communicates == 'event':
+            to_record = 'spikes'  # FIXME: Need a way of differentiating event send ports @IgnorePep8
+        pyNN.nest.Population.record(self, to_record)
+
 
 class Selection(BaseSelection, pyNN.nest.Assembly):
 

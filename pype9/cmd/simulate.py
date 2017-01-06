@@ -29,12 +29,12 @@ parser.add_argument('--init_regime', type=str, default=None,
 parser.add_argument('--init_value', nargs=3, default=[], action='append',
                     metavar=('STATE-VARIABLE', 'VALUE', 'UNITS'),
                     help=("Initial regime for dynamics"))
-parser.add_argument('--record', type=str, nargs=3, action='append', default=[],
-                    metavar=('PORT/STATE-VARIABLE', 'FILENAME', 'SAVENAME'),
+parser.add_argument('--record', type=str, nargs=2, action='append', default=[],
+                    metavar=('PORT/STATE-VARIABLE', 'FILENAME'),
                     help=("Record the values from the send port or state "
                           "variable and the filename to save it into"))
-parser.add_argument('--play', type=str, nargs=3, action='append',
-                    metavar=('PORT', 'FILENAME', 'NAME'), default=[],
+parser.add_argument('--play', type=str, nargs=2, action='append',
+                    metavar=('PORT', 'FILENAME'), default=[],
                     help=("Name of receive port and filename with signal to "
                           "play it into"))
 parser.add_argument('--seed', type=int, default=None,
@@ -66,6 +66,14 @@ def run(argv):
             "Unrecognised simulator '{}', (available 'neuron' or 'nest')"
             .format(args.simulator))
 
+    # Check for clashing record paths
+    record_paths = [fname for _, fname in args.record]
+    for pth in record_paths:
+        if record_paths.count(pth) > 1:
+            raise Pype9UsageError(
+                "Duplicate record paths '{}' given to separate --record "
+                "options".format(pth))
+
     # For convenience
     model = args.model
 
@@ -86,16 +94,16 @@ def run(argv):
         network = Network(model, build_mode=args.build_mode)
         logger.info("Finished constructing the '{}' network"
                     .format(model.name))
-        for record_name, _, _ in args.record:
+        for record_name, _ in args.record:
             pop_name, port_name = record_name.split('.')
             network.component_array(pop_name).record(port_name)
         logger.info("Running the simulation")
         run(args.time)
         logger.info("Writing recorded data to file")
-        for record_name, fname, _ in args.record:
-            pop_name, _ = record_name.split('.')
+        for record_name, fname in args.record:
+            pop_name, port_name = record_name.split('.')
             pop = network.component_array(pop_name)
-            neo.PickleIO(fname).write(pop.get_data().segments[0])
+            neo.PickleIO(fname).write(pop.recording(port_name))
     else:
         assert isinstance(model, (nineml.DynamicsProperties,
                                        nineml.Dynamics))
@@ -140,7 +148,7 @@ def run(argv):
                                 set(init_state.iterkeys()))))
         cell.set_state(init_state, regime=init_regime)
         # Play inputs
-        for port_name, fname, _ in args.play:
+        for port_name, fname in args.play:
             port = component_class.receive_port(port_name)
             seg = neo.io.PickleIO(filename=fname).read()[0]
             if port.communicates == 'event':
@@ -150,7 +158,7 @@ def run(argv):
             # Input is an event train or analog signal
             cell.play(port_name, signal)
         # Set up recorders
-        for port_name, _, _ in args.record:
+        for port_name, _ in args.record:
             cell.record(port_name)
         # Run simulation
         simulation_controller.run(args.time)
@@ -160,7 +168,7 @@ def run(argv):
         for fname in fnames:
             data_segs[fname] = neo.Segment(
                 description="Simulation of '{}' cell".format(model.name))
-        for port_name, fname, _ in args.record:
+        for port_name, fname in args.record:
             data = cell.recording(port_name)
             if isinstance(data, neo.AnalogSignal):
                 data_segs[fname].analogsignals.append(data)

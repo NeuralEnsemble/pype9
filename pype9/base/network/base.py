@@ -9,6 +9,7 @@ from copy import deepcopy
 from collections import namedtuple, defaultdict
 from itertools import chain
 import quantities as pq
+import neo
 from nineml.user import Property
 from pype9.exceptions import Pype9RuntimeError
 from .values import get_pyNN_value
@@ -22,6 +23,7 @@ from nineml import Document
 from nineml.exceptions import NineMLNameError
 from nineml.user.multi import (
     MultiDynamicsProperties, append_namespace, BasePortExposure)
+from nineml.abstraction import Dynamics, StateVariable
 from nineml.user import (
     ComponentArray as ComponentArray9ML,
     EventConnectionGroup as EventConnectionGroup9ML,
@@ -33,7 +35,7 @@ from .connectivity import InversePyNNConnectivity
 from ..cells import (
     MultiDynamicsWithSynapsesProperties, ConnectionPropertySet,
     SynapseProperties)
-from pype9.annotations import PYPE9_NS, ADDITIONAL_VARS, INITIAL_REGIME
+from pype9.exceptions import Pype9UsageError
 
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
@@ -608,6 +610,80 @@ class ComponentArray(object):
         else:
             raise Pype9RuntimeError(
                 "Unrecognised port type '{}' to play signal into".format(port))
+
+    def _get_port_details(self, port_name):
+        """
+        Return the communication type of the corresponding port and its fully
+        qualified name in the cell-synapse namespace (e.g. the 'spike_output'
+        port in the cell namespace will be 'spike_output__cell')
+
+        Parameters
+        ----------
+        port_name : str
+            Name of the port or state variable
+
+        Returns
+        -------
+        communicates : str
+            Either 'event' or 'analog' depending on the type of port port_name
+            corresponds to
+        record_name : str
+            Name of the port fully qualified in the joint cell-synapse
+            namespace
+        """
+        # TODO: Need to add a check that the port was recorded
+        component_class = self.celltype.model.component_class
+        port = None
+        for name in (port_name, port_name + '__cell'):
+            try:
+                port = component_class.send_port(name)
+            except NineMLNameError:
+                try:
+                    port = component_class.state_variable(name)
+                except NineMLNameError:
+                    pass
+        if port is None:
+            raise Pype9UsageError(
+                "Unknown port or state-variable '{}' for '{}' "
+                "component array (available '{}').".format(
+                    port_name, self.name, "', '".join(chain(
+                        component_class.send_port_names,
+                        component_class.sub_component(
+                            'cell').send_port_names))))
+        if isinstance(port, StateVariable):
+            communicates = 'analog'
+        else:
+            communicates = port.communicates
+        return communicates, port.name
+
+    def recording(self, port_name):
+        """
+        Returns the recorded data for the given port name
+
+        Parameters
+        ----------
+        port_name : str
+            The name of the port (or state-variable) to retrieve the recorded
+            data for
+
+        Returns
+        -------
+        recording : neo.Segment
+            The recorded data in a neo.Segment
+        """
+
+        pyNN_data = self.get_data().segments[0]
+        recording = neo.Segment()
+        communicates, rec_name = self._get_port_details(port_name)
+        if communicates == 'event':
+            for st in pyNN_data.spiketrains:
+                if st.annotations:
+                    recording.spiketrains.append(st)
+        else:
+            for asig in pyNN_data.analogsignals:
+                if asig.annotations:
+                    recording.analogsignals.append(asig)
+        return recording
 
 
 class Selection(object):

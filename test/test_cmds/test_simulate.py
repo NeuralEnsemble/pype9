@@ -166,31 +166,31 @@ class TestSimulateNetwork(TestCase):
     def test_network(self):
         nest.ResetKernel()
         for simulator in ('nest', 'neuron'):
-            out_path = '{}/{}.neo.pkl'.format(self.tmpdir, simulator)
             argv = (
                 "{model_url}#{model_name} {sim} {t_stop} {dt} "
-                "--record Exc.spikes {out_path} exc "
-                "--record Inh.spikes {out_path} inh "
+                "--record Exc.spike_output {tmpdir}/Exc-{sim}.neo.pkl "
+                "--record Inh.spike_output {tmpdir}/Inh-{sim}.neo.pkl "
                 "--build_mode force "
                 "--seed {seed}"
                 .format(model_url=self.reduced_brunel_path,
                         model_name=self.brunel_name, sim=simulator,
-                        out_path=out_path, t_stop=self.t_stop, dt=self.dt,
+                        tmpdir=self.tmpdir, t_stop=self.t_stop, dt=self.dt,
                         seed=self.seed))
             simulate.run(argv.split())
-            recs = {}
-            for spiketrain in neo.io.PickleIO(out_path).read()[0].spiketrains:
-                recs[spiketrain.name] = spiketrain
             ref_recs = self._ref_network(simulator)
             for pop_name in self.recorded_pops:
-                self.assertTrue(
-                    all(recs[pop_name] == ref_recs[pop_name]),
+                rec_path = '{}/{}-{}.neo.pkl'.format(self.tmpdir, pop_name,
+                                                     simulator)
+                rec = neo.io.PickleIO(rec_path).read()[0].spiketrains
+                ref = ref_recs[pop_name].spiketrains
+                self.assertEqual(
+                    rec, ref,
                     "'simulate' command produced different results to"
                     " to api reference for izhikevich model using "
                     "'{}' simulator".format(simulator))
                 # TODO: Need a better test
                 self.assertGreater(
-                    len(recs[pop_name]), 0,
+                    len(rec), 0,
                     "No spikes generated for '{}' population using {}."
                     .format(pop_name, simulator))
 
@@ -215,10 +215,10 @@ class TestSimulateNetwork(TestCase):
             network.component_array('Ext').play('spike_input__cell',
                                                 external_input)
         for pop_name in self.recorded_pops:
-            network.component_array(pop_name).record('spikes')
+            network.component_array(pop_name).record('spike_output')
         pyNN_simulator.run(self.t_stop)
         recordings = {}
         for pop_name in self.recorded_pops:
-            recordings[pop_name] = network.component_array(
-                pop_name).get_data().segments[0]
+            recordings[pop_name] = network.component_array(pop_name).recording(
+                'spike_output')
         return recordings
