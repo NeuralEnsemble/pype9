@@ -23,7 +23,7 @@ from nineml import Document
 from nineml.exceptions import NineMLNameError
 from nineml.user.multi import (
     MultiDynamicsProperties, append_namespace, BasePortExposure)
-from nineml.abstraction import Dynamics, StateVariable
+from nineml.abstraction import StateVariable
 from nineml.user import (
     ComponentArray as ComponentArray9ML,
     EventConnectionGroup as EventConnectionGroup9ML,

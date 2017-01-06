@@ -52,6 +52,7 @@ def run(argv):
     from pype9.exceptions import Pype9UsageError
     import neo.io
     import time
+    from pyNN.random import NumpyRNG
 
     args = parser.parse_args(argv)
 
@@ -83,15 +84,21 @@ def run(argv):
         else:
             from pyNN.nest import run, setup  # @Reimport
 
+        # Creating sub-seeds
+        rng_seed = 2 * seed
+        conn_seed = 2 * seed + 1
+        logger.info("Simulating '{}' with seed {}".format(model.name, seed))
+
         # Get min/max delays in model
         min_delay, max_delay = model.delay_limits()
 
         # Reset the simulator
         setup(min_delay=min_delay, max_delay=max_delay,
-              timestep=args.timestep, rng_seeds_seed=seed)
+              timestep=args.timestep, rng_seeds_seed=rng_seed)
         # Construct the network
-        logger.info("Constructing '{}' network".format(model.name))
-        network = Network(model, build_mode=args.build_mode)
+        logger.info("Constructing network")
+        conn_rng = NumpyRNG(conn_seed)
+        network = Network(model, build_mode=args.build_mode, rng=conn_rng)
         logger.info("Finished constructing the '{}' network"
                     .format(model.name))
         for record_name, _ in args.record:
