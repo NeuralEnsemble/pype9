@@ -117,21 +117,27 @@ class CodeGenerator(BaseCodeGenerator):
     def generate_source_files(self, component_class, default_properties,
                               initial_state, src_dir, name=None, **kwargs):
         """
-            *KWArgs*
-                `membrane_voltage` -- Specifies the state that represents
-                                      membrane voltage.
-                `membrane_capacitance` -- Specifies the state that represents
-                                      membrane capacitance.
-                `default_capacitance` -- Specifies the quantity assigned to
-                                      the membrane capacitance by default
-                `v_threshold`      -- The threshold for the neuron to emit a
-                                      spike.
-                `external_ports`   -- Analog ports to strip from expressions
-                                      as they represent synapses or injected
-                                      currents, which can be inserted manually
-                                      by NEURON objects.
-                `is_subcomponent`  -- Whether to use the 'SUFFIX' tag or not.
-                `ode_solver`       -- specifies the ODE solver to use
+        Generates main NMODL file for cell (and synapse) class
+
+        Parameters
+        ----------
+        membrane_voltage : str
+            Specifies the state that represents membrane voltage.
+        membrane_capacitance : str
+            Specifies the state that represents membrane capacitance.
+        default_capacitance : float
+            Specifies the quantity assigned to the membrane capacitance by
+            default
+        v_threshold: float
+            The threshold for the neuron to emit a spike.
+        external_ports : list(str)
+            Analog ports to strip from expressions as they represent synapses
+            or injected currents, which can be inserted manually by NEURON
+            objects.
+        is_subcomponent : bool
+            Whether to use the 'SUFFIX' tag or not.
+        ode_solver : str
+            specifies the ODE solver to use
         """
         if name is None:
             name = component_class.name
@@ -335,7 +341,7 @@ class CodeGenerator(BaseCodeGenerator):
                 qty = kwargs.get('default_capacitance', 1.0 * un.nF)
                 if trfrm_properties:
                     trfrm_properties.add(Property('cm___pype9', qty))
-        cm.annotations.set(PYPE9_NS, BUILD_TRANS, TRANSFORM_SRC,  None)
+        cm.annotations.set(PYPE9_NS, BUILD_TRANS, TRANSFORM_SRC, None)
         trfrm.annotations.set(PYPE9_NS, BUILD_TRANS,
                               MEMBRANE_CAPACITANCE, cm.name)
         # -----------------------------------------------------------------
@@ -465,19 +471,25 @@ class CodeGenerator(BaseCodeGenerator):
     def compile_source_files(self, compile_dir, name, verbose):
         """
         Builds all NMODL files in a directory
-        `src_dir`     -- The path of the directory to build
-        `build_mode`  -- Can be one of either, 'lazy', 'super_lazy',
-                           'require', 'force', or 'build_only'. 'lazy' doesn't
-                           run nrnivmodl if the library is found, 'require',
-                           requires that the library is found otherwise throws
-                           an exception (useful on clusters that require
-                           precompilation before parallelisation where the
-                           error message could otherwise be confusing), 'force'
-                           removes existing library if found and recompiles,
-                           and 'build_only' removes existing library if found,
-                           recompile and then exit
-        `verbose`     -- Prints out verbose debugging messages
-        `ignore_units`-- Prints a warning when units don't match
+
+        Parameters
+        ----------
+        src_dir : str
+            The path of the directory to build
+        build_mode : str
+            Can be one of either, 'lazy', 'super_lazy', 'require', 'force', or
+            'build_only'. 'lazy' doesn't run nrnivmodl if the library is found,
+            'require', requires that the library is found otherwise throws an
+            exception (useful on clusters that require precompilation before
+            parallelisation where the error message could otherwise be
+            confusing), 'force' removes existing library if found and
+            recompiles, and 'build_only' removes existing library if found,
+            recompile and then exit
+        verbose : bool
+            Flags whether to print out verbose debugging messages
+        ignore_units :
+            Flag whether to only print a warning when units don't match instead
+            of throwing an error
         """
         # Change working directory to model directory
         os.chdir(compile_dir)
