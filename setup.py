@@ -47,8 +47,8 @@ class build(_build):
             compile_cmd = '{} -fPIC -c -o nineml.o nineml.cpp {}'.format(
                 cc, ' '.join('-I{}/include'.format(p) for p in gsl_prefixes))
             link_cmd = (
-                '{} -shared {} -lm -lgslcblas -lgsl -o libninemlnrn.so '
-                'nineml.o -lc'.format(
+                "{} -shared {} -install_name @rpath/libninemlnrn.so "
+                "-lm -lgslcblas -lgsl -o libninemlnrn.so nineml.o -lc".format(
                     cc, ' '.join('-L{}/lib'.format(p) for p in gsl_prefixes)))
             for cmd in (echo_cmd, compile_cmd, link_cmd):
                 self.run_cmd(cmd,

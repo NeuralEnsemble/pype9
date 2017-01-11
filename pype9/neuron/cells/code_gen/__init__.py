@@ -90,8 +90,9 @@ class CodeGenerator(BaseCodeGenerator):
         self.nrnivmodl_path = self.path_to_exec('nrnivmodl')
         self.modlunit_path = self.path_to_exec('modlunit')
         self.nrnivmodl_flags = [
-            '-{L,R}' + self.LIBNINEMLNRN_PATH, '-lninemlnrn',
-            '-lgsl', '-lgslcblas']
+            '-{L,R}' + self.LIBNINEMLNRN_PATH,
+            '-Wl,-rpath,' + self.LIBNINEMLNRN_PATH,
+            '-lninemlnrn', '-lgsl', '-lgslcblas']
         if gsl_path is not None:
             self.nrnivmodl_path.append('-L' + gsl_path)
         else:
@@ -514,9 +515,11 @@ class CodeGenerator(BaseCodeGenerator):
                             "NMODL file: {}\n{}".format(stdout, stderr))
         # Run nrnivmodl command in src directory
         try:
-            pipe = sp.Popen([self.nrnivmodl_path, '-loadflags',
-                             '"{}"'.format(' '.join(self.nrnivmodl_flags))],
-                            stdout=sp.PIPE, stderr=sp.PIPE)
+            nrnivmodl_cmd = [self.nrnivmodl_path, '-loadflags',
+                             ' '.join(self.nrnivmodl_flags)]
+            logger.debug("Building nrnivmodl in {} with '{}'".format(
+                compile_dir, ' '.join(nrnivmodl_cmd)))
+            pipe = sp.Popen(nrnivmodl_cmd, stdout=sp.PIPE, stderr=sp.PIPE)
             stdout, stderr = pipe.communicate()
         except sp.CalledProcessError as e:
             raise Pype9BuildError(

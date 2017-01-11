@@ -379,11 +379,6 @@ class TestDynamics(TestCase):
                 simulatorNEURON.clear(rng_seed=NEURON_RNG_SEED)
                 neuron.h.dt = dt
             elif sim_name == 'nest':
-#                 Run NEST simulation
-#                 import nest
-#                 nest.ResetKernel()
-#                 nest.ResetNetwork()
-#                 nest.SetKernelStatus({'resolution': dt})
                 simulatorNEST.clear(rng_seed=NEST_RNG_SEED, dt=dt)
             else:
                 assert False

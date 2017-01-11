@@ -15,4 +15,4 @@ if [ "$WITH_GSL" != "" ]; then
 fi
 
 $CC -fPIC -c -o nineml.o nineml.cpp $GSL_INCLUDE
-$CC -shared $GSL_LIB -lm -lgslcblas -lgsl -o libninemlnrn.so nineml.o -lc
+$CC -shared $GSL_LIB -install_name @rpath/libninemlnrn.so -lm -lgslcblas -lgsl -o libninemlnrn.so nineml.o -lc
