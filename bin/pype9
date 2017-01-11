@@ -1,36 +1,26 @@
-#!/usr/bin/env bash
-# Main command for PyPe9 package, which can be used to invoke all PyPe9
-# functionality in a similar style to the 'git' or 'svn' commands, e.g.
-#
-#     pype9 simulate <simulation.xml> 100.0
-#
-# or
-#
-#     pype9 convert --version 2.0 <v1.xml> <v2.xml>
+#!/usr/bin/env python
+"""
+Main command for PyPe9 package, which can be used to invoke all PyPe9
+functionality in a similar style to the 'git' or 'svn' commands, e.g.
 
-# Get platform type
-platform=`uname -o`
+    pype9 simulate <simulation.xml> 100.0
 
-# Get directory of package
-package_dir="`readlink -f $0 | xargs dirname`/.."
+or
 
-# Get path to libninemlnrn directory
-lib9mlnrn_dir=`realpath $package_dir/pype9/neuron/cells/code_gen/libninemlnrn`
+    pype9 convert --version 2.0 <v1.xml> <v2.xml>
+"""
+import sys
+from copy import copy
+from argparse import ArgumentParser
+import pype9.cmd
 
-# Add libninemlnrn to library path
-if [ "$platform" = 'DARWIN' ]; then
-    export DYLD_LIBRARY_PATH="$lib9mlnrn_dir:$DYLD_LIBRARY_PATH"
-else
-    export LD_LIBRARY_PATH="$lib9mlnrn_dir:$LD_LIBRARY_PATH"
-fi
+parser = ArgumentParser(__doc__)
+parser.add_argument('cmd', choices=pype9.cmd.help.all_cmds(),
+                    help=("PyPe9 command to run. {}"
+                          .format(pype9.cmd.help.available_cmds_message())))
+args = parser.parse_args(sys.argv[1:2] if len(sys.argv) >= 2 else [])
 
-if [ $# -lt 1 ]; then
-	cmd='help'
-	args=''
-else
-	cmd=`basename $1`
-	args="${@:2}"
-fi
-
-# Run python script
-python `realpath $package_dir/pype9/cmd/$cmd.py` $args
+# Copy and clear sys.argv as it gets in the way of pyNEST import
+argv = copy(sys.argv[2:])
+del sys.argv[1:]
+getattr(pype9.cmd, args.cmd).run(argv)
