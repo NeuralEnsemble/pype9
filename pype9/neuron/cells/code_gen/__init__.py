@@ -33,7 +33,6 @@ from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
 from nineml.abstraction.dynamics.visitors.cloner import DynamicsCloner
 from sympy.printing import ccode
 from pype9.neuron.units import UnitHandler
-from pype9.utils import add_lib_path
 try:
     from nineml.extensions.kinetics import Kinetics  # @UnusedImport
 except ImportError:
@@ -60,7 +59,7 @@ class CodeGenerator(BaseCodeGenerator):
     BASE_TMPL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                   'templates'))
     LIBNINEMLNRN_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                 'libninemlnrn'))
+                                                     'libninemlnrn'))
 
     _neuron_units = {un.mV: 'millivolt',
                      un.S: 'siemens',
