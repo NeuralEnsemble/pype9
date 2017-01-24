@@ -55,7 +55,7 @@ class TestSimulateCell(TestCase):
         # First simulate input signal to have something to play into izhikevich
         # cell
         argv = ("{input_model} nest {t_stop} {dt} "
-                "--record current_output {out_path} isyn "
+                "--record current_output {out_path} "
                 "--prop amplitude {amp} "
                 "--prop onset {onset} "
                 "--init_value current_output {init} "
@@ -67,24 +67,27 @@ class TestSimulateCell(TestCase):
                         onset='{} {}'.format(*self.isyn_onset),
                         init='{} {}'.format(*self.isyn_init)))
         # Run input signal simulation
+        print argv
         simulate.run(argv.split())
         isyn = neo.io.PickleIO(in_path).read()[0].analogsignals[0]
         # Check sanity of input signal
+        print in_path
         self.assertEqual(isyn.max(), self.isyn_amp[0],
-                         "Max of isyn input signal {} did not match specified "
-                         "amplitude, {}".format(isyn.max(), self.isyn_amp[0]))
+                         "Max of isyn input signal {} ({}) did not match "
+                         "specified amplitude, {}".format(
+                             isyn.max(), in_path, self.isyn_amp[0]))
         self.assertEqual(isyn.min(), self.isyn_init[0],
-                         "Min of isyn input signal {} did not match specified "
-                         "initial value, {}"
-                         .format(isyn.min(), self.isyn_init[0]))
+                         "Min of isyn input signal {} ({}) did not match "
+                         "specified initial value, {}"
+                         .format(isyn.min(), in_path, self.isyn_init[0]))
         nest.ResetKernel()
         for simulator in ('nest', 'neuron'):
             argv = (
                 "{nineml_model} {sim} {t_stop} {dt} "
-                "--record V {out_path} v "
+                "--record V {out_path} "
                 "--init_value U {U} "
                 "--init_value V {V} "
-                "--play Isyn {in_path} isyn "
+                "--play Isyn {in_path} "
                 "--build_mode force"
                 .format(nineml_model=self.izhi_path, sim=simulator,
                         out_path=out_path, in_path=in_path, t_stop=self.t_stop,

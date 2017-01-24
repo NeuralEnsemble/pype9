@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """
+
 Main command for PyPe9 package, which can be used to invoke all PyPe9
 functionality in a similar style to the 'git' or 'svn' commands, e.g.
 
@@ -8,6 +9,7 @@ functionality in a similar style to the 'git' or 'svn' commands, e.g.
 or
 
     pype9 convert --version 2.0 <v1.xml> <v2.xml>
+
 """
 import sys
 from copy import copy
