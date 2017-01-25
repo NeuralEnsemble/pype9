@@ -9,8 +9,6 @@ parser = ArgumentParser(prog='pype9 plot',
                         description=__doc__)
 parser.add_argument('filename', type=existing_file,
                     help="Neo file outputted from a PyPe9 simulation")
-parser.add_argument('--name', type=str, action='append', default=None,
-                    help="Name of the signal within the file to plot")
 parser.add_argument('--save', type=str, default=None,
                     help="Location to save the figure to")
 parser.add_argument('--hide', action='store_true',
@@ -39,9 +37,8 @@ def run(argv):
         spike_times = []
         ids = []
         for i, spiketrain in enumerate(seg.spiketrains):
-            if args.name is None or spiketrain.name in args.name:
-                spike_times.extend(spiketrain)
-                ids.extend([i] * len(spiketrain))
+            spike_times.extend(spiketrain)
+            ids.extend([i] * len(spiketrain))
         plt.sca(axes[0] if num_subplots > 1 else axes)
         plt.scatter(spike_times, ids)
         plt.xlim((seg.spiketrains[0].t_start, seg.spiketrains[0].t_stop))
@@ -54,11 +51,10 @@ def run(argv):
         plt.sca(axes[-1] if num_subplots > 1 else axes)
         units = set(s.units.dimensionality.string for s in seg.analogsignals)
         for i, signal in enumerate(seg.analogsignals):
-            if args.name is None or spiketrain.name in args.name:
-                plt.plot(signal.times, signal)
-                un_str = (signal.units.dimensionality.string
-                          if len(units) > 1 else '')
-                legend.append(signal.name + un_str if signal.name else str(i))
+            plt.plot(signal.times, signal)
+            un_str = (signal.units.dimensionality.string
+                      if len(units) > 1 else '')
+            legend.append(signal.name + un_str if signal.name else str(i))
         plt.xlim((seg.analogsignals[0].t_start, seg.analogsignals[0].t_stop))
         plt.xlabel('Time (ms)')
         un_str = (' ({})'.format(next(iter(units)))
