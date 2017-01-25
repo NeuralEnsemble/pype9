@@ -36,7 +36,6 @@ def run(argv):
     fig.suptitle('PyPe9 Simulation Output')
     plt_name = seg.name + ' ' if seg.name else ''
     if seg.spiketrains:
-        plt.subplot(num_subplots, 1, 1)
         spike_times = []
         ids = []
         for i, spiketrain in enumerate(seg.spiketrains):

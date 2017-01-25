@@ -3,6 +3,7 @@ import tempfile
 import shutil
 from pype9.cmd import plot, simulate
 import neo
+import ninemlcatalog
 import matplotlib.pyplot as plt
 import matplotlib.image as img
 if __name__ == '__main__':
@@ -16,31 +17,37 @@ class TestPlot(TestCase):
     recorded_pops = ('Exc', 'Inh')
 
     def setUp(self):
-        self.tmpdir = tempfile.mkdtemp()
-        # Generate test signal
-        argv = (
-            "//neuron/Izhikevich#SampleIzhikevichFastSpiking nest 200.0 0.01 "
-            "--record V {}/v.neo.pkl "
-            "--init_value U 1.625 pA "
-            "--init_value V -65.0 mV "
-            "--init_regime subVb".format(self.tmpdir))
-        print argv
-        simulate.run(argv.split())
-        argv = (
-            "//network/Brunel2000/AI.xml nest 100.0 0.1 "
-            "--record Exc.spike_output {}/brunel.neo.pkl "
-            .format(self.tmpdir))
-        print argv
-        simulate.run(argv.split())
+        try:
+            # Try to make a cache dir so the signals don't need to be
+            # regenerated each time
+            self.work_dir = os.path.join(os.path.dirname(__file__), '.cache')
+            self.cached = True
+        except OSError:
+            self.work_dir = tempfile.mkdtemp()
+            self.cached = False
+        if not os.path.exists(self.work_dir):
+            os.makedirs(self.work_dir)
 
     def tearDown(self):
-        shutil.rmtree(self.tmpdir)
+        if not self.cached:
+            shutil.rmtree(self.work_dir)
 
     def test_single_cell_plot(self):
-        in_path = os.path.join(self.tmpdir, 'v.neo.pkl')
-        out_path = '{}/single_cell.png'.format(self.tmpdir)
+        # Generate test signal
+        signal_path = os.path.join(self.work_dir, 'v.neo.pkl')
+        if not os.path.exists(signal_path):
+            argv = (
+                "//neuron/Izhikevich#SampleIzhikevichFastSpiking "
+                "nest 200.0 0.01 "
+                "--record V  {}"
+                "--init_value U 1.625 pA "
+                "--init_value V -65.0 mV "
+                "--init_regime subVb".format(signal_path))
+            simulate.run(argv.split())
+        # Run plotting command
+        out_path = '{}/single_cell.png'.format(self.work_dir)
         argv = ("{in_path} --name {name} --save {out_path} --hide"
-                .format(in_path=in_path, out_path=out_path, name='v'))
+                .format(in_path=signal_path, out_path=out_path, name='v'))
         print argv
         plot.run(argv.split())
         image = img.imread(out_path)
@@ -51,11 +58,24 @@ class TestPlot(TestCase):
             "loaded image from '{}'".format(self.ref_single_cell_path))
 
     def test_network_plot(self):
-        in_path = os.path.join(self.tmpdir, 'brunel.neo.pkl')
+        signal_path = os.path.join(self.work_dir, 'brunel.neo.pkl')
+        if not os.path.exists(signal_path):
+            # Generate test signal
+            brunel_ai = ninemlcatalog.load(
+                '//network/Brunel2000/AI.xml').as_network('Brunel2000AI')
+            scaled_brunel_ai_path = os.path.join(self.work_dir,
+                                                 'brunel_scaled.xml')
+            brunel_ai.scale(0.01).write(scaled_brunel_ai_path)
+            argv = ("{} nest 100.0 0.1 "
+                    "--record Exc.spike_output {}/brunel.neo.pkl "
+                    .format(scaled_brunel_ai_path, self.work_dir))
+            print argv
+            simulate.run(argv.split())
+        # Run plotting command
         for pop_name in self.recorded_pops:
-            out_path = '{}/{}.png'.format(self.tmpdir, pop_name)
+            out_path = '{}/{}.png'.format(self.work_dir, pop_name)
             argv = ("{in_path} --name {name} --save {out_path} --hide"
-                    .format(in_path=in_path, out_path=out_path, name='v'))
+                    .format(in_path=signal_path, out_path=out_path, name='v'))
             print argv
             plot.run(argv.split())
             image = img.imread(out_path)

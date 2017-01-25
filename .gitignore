@@ -41,5 +41,6 @@ autom4te.cache/
 /test/compare/nest/compile
 /test/compare/nest/nest-build
 /test/compare/nest/nest-install
+/test/test_cmds/.cache
 *.gdf
 N6nineml8*E.dat
