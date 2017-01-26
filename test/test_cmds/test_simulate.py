@@ -67,11 +67,9 @@ class TestSimulateCell(TestCase):
                         onset='{} {}'.format(*self.isyn_onset),
                         init='{} {}'.format(*self.isyn_init)))
         # Run input signal simulation
-        print argv
         simulate.run(argv.split())
         isyn = neo.io.PickleIO(in_path).read()[0].analogsignals[0]
         # Check sanity of input signal
-        print in_path
         self.assertEqual(isyn.max(), self.isyn_amp[0],
                          "Max of isyn input signal {} ({}) did not match "
                          "specified amplitude, {}".format(

@@ -85,7 +85,6 @@ class TestPlot(TestCase):
             image = img.imread(out_path)
             self._ref_network_plot()
             ref_image = img.imread(self.ref_network_path)
-            plt.imshow(ref_image)
             self.assertTrue(
                 (image == ref_image).all(),
                 "Plotted spike data using 'plot' command did not "
