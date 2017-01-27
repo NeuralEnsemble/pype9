@@ -29,7 +29,6 @@ install:
   - pip install https://github.com/tclose/NineMLCatalog/archive/merging_with_master.zip  
   - pip install coveralls
   - pip install -v .
-  - export LD_LIBRARY_PATH=`pwd`/pype9/neuron/cells/code_gen/libninemlnrn/$LD_LIBRARY_PATH
 script:
   - pushd test
   - nosetests . --exe --with-coverage --cover-package=pype9
