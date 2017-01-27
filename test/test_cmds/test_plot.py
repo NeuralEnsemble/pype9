@@ -4,8 +4,10 @@ import shutil
 from pype9.cmd import plot, simulate
 import neo
 import ninemlcatalog
-import matplotlib.pyplot as plt
-import matplotlib.image as img
+import matplotlib
+matplotlib.use('Agg')  # So DISPLAY environment variable doesn't need to be set
+import matplotlib.pyplot as plt  # @IgnorePep8
+import matplotlib.image as img  # @IgnorePep8
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:
