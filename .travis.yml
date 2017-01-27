@@ -18,8 +18,8 @@ addons:
       - python-scipy
       - openmpi-bin
       - libopenmpi-dev
+      - inkscape
 install:
-  - echo "backend : Agg" > ~/.matplotlibrc
   - pip install cython
   - source prereq/install_nest.sh
   - source prereq/install_neuron.sh
