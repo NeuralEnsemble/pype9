@@ -299,32 +299,47 @@ class BaseCodeGenerator(object):
         with open(os.path.join(directory, filename), 'w') as f:
             f.write(contents)
 
-    def path_to_exec(self, exec_name):
+    def path_to_utility(self, utility_name):
         """
         Returns the full path to an executable by searching the "PATH"
         environment variable
 
-        `exec_name` [str] -- Name of executable to search the execution path
-        return [str] -- Full path to executable
+        Parameters
+        ----------
+        utility_name : str
+            Name of executable to search the execution path
+
+        Returns
+        -------
+        utility_path : str
+            Full path to executable
         """
-        if platform.system() == 'Windows':
-            exec_name += '.exe'
-        # Get the system path
-        system_path = os.environ['PATH'].split(os.pathsep)
-        # Append NEST_INSTALL_DIR/NRNHOME if present
-        system_path.extend(self.simulator_specific_paths())
-        # Check the system path for the command
-        exec_path = None
-        for dr in system_path:
-            path = join(dr, exec_name)
-            if os.path.exists(path):
-                exec_path = path
-                break
-        if not exec_path:
-            raise Pype9BuildError(
-                "Could not find executable '{}' on the system path '{}'"
-                .format(exec_name, ':'.join(system_path)))
-        return exec_path
+        # Check to see whether the path of the utility has been saved in the
+        # 'paths' directory (typically during installation)
+        saved_path_path = os.path.join(os.path.dirname(pype9.__file__),
+                                       'paths', utility_name + '_path')
+        try:
+            with open(saved_path_path) as f:
+                utility_path = f.read()
+        except OSError:
+            if platform.system() == 'Windows':
+                utility_name += '.exe'
+            # Get the system path
+            system_path = os.environ['PATH'].split(os.pathsep)
+            # Append NEST_INSTALL_DIR/NRNHOME if present
+            system_path.extend(self.simulator_specific_paths())
+            # Check the system path for the command
+            utility_path = None
+            for dr in system_path:
+                path = join(dr, utility_name)
+                if os.path.exists(path):
+                    utility_path = path
+                    break
+            if not utility_path:
+                raise Pype9BuildError(
+                    "Could not find executable '{}' on the system path '{}'"
+                    .format(utility_name, ':'.join(system_path)))
+        return utility_path
 
     def simulator_specific_paths(self):
         """

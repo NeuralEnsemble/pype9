@@ -69,8 +69,8 @@ class CodeGenerator(BaseCodeGenerator):
 
     def __init__(self, gsl_path=None):
         super(CodeGenerator, self).__init__()
-        self.nrnivmodl_path = self.path_to_exec('nrnivmodl')
-        self.modlunit_path = self.path_to_exec('modlunit')
+        self.nrnivmodl_path = self.path_to_utility('nrnivmodl')
+        self.modlunit_path = self.path_to_utility('modlunit')
         self.nrnivmodl_flags = [
             '-L' + self.LIBNINEMLNRN_PATH,
             '-Wl,-rpath,' + self.LIBNINEMLNRN_PATH,
@@ -81,7 +81,7 @@ class CodeGenerator(BaseCodeGenerator):
             try:
                 # Check nest-config (if installed) to get any paths needed for
                 # gsl
-                nest_config_path = self.path_to_exec('nest-config')
+                nest_config_path = self.path_to_utility('nest-config')
                 nest_lflags = sp.Popen(
                     [nest_config_path, '--libs'],
                     stdout=sp.PIPE).communicate()[0].split()

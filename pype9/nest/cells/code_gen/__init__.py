@@ -52,7 +52,7 @@ class CodeGenerator(BaseCodeGenerator):
     def __init__(self, build_cores=1):
         super(CodeGenerator, self).__init__()
         self._build_cores = build_cores
-        nest_config = self.path_to_exec('nest-config')
+        nest_config = self.path_to_utility('nest-config')
         compiler = sp.check_output('{} --compiler'.format(nest_config),
                                    shell=True)
         self._compiler = compiler[:-1]  # strip trailing \n

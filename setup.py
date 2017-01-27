@@ -39,49 +39,54 @@ class build(_build):
 
     def run(self):
         _build.run(self)
+        # Get directory of package to be installed
         package_dir = os.path.join(os.getcwd(), self.build_lib, 'pype9')
-        # Save path to nrnivmodl and nest-config in hidden files for future
-        # reference while building generated code
+        # Get locations of utilities required for the build process (must be
+        # on the system PATH
         self.nrnivmodl_path = self.path_to_exec('nrnivmodl')
-        neuron_code_gen_dir = os.path.join(package_dir, 'neuron', 'cells',
-                                           'code_gen')
-        with open(os.path.join(neuron_code_gen_dir,
-                               '.nrnivmodlpath'), 'w') as f:
-            f.write(self.nrnivmodl_path)
         self.nest_config_path = self.path_to_exec('nest-config')
-        nest_code_gen_dir = os.path.join(package_dir, 'nest', 'cells',
-                                           'code_gen')
-        with open(os.path.join(nest_code_gen_dir,
-                               '.nestconfigpath'), 'w') as f:
-            f.write(self.nest_config_path)
         # Complie libninemlnrn (for random distribution support in generated
-        # NEURON mechanisms)
+        # NMODL mechanisms)
         print("Attempting to build libninemlnrn")
-        libninemlnrn_dir = os.path.join(neuron_code_gen_dir, 'libninemlnrn')
+        libninemlnrn_dir = os.path.join(
+            package_dir, 'neuron', 'cells', 'code_gen', 'libninemlnrn')
         try:
             cc = self.get_nrn_cc()
             gsl_prefixes = self.get_gsl_prefixes()
-            echo_cmd = 'pwd; ls'
+            # Compile libninemlnrn
             compile_cmd = '{} -fPIC -c -o nineml.o nineml.cpp {}'.format(
                 cc, ' '.join('-I{}/include'.format(p) for p in gsl_prefixes))
+            self.run_cmd(
+                compile_cmd, work_dir=libninemlnrn_dir,
+                fail_msg=("Unable to compile libninemlnrn extensions"))
+            # Link libninemlnrn
             if platform.system() == 'Darwin':
+                # On macOS '-install_name' option needs to be set to allow
+                # rpath to find the compiled library
                 install_name = "-install_name @rpath/libninemlnrn.so "
             else:
                 install_name = ""
             link_cmd = (
-                "{} -shared {} {}"
-                "-lm -lgslcblas -lgsl -o libninemlnrn.so nineml.o -lc".format(
+                "{} -shared {} {} -lm -lgslcblas -lgsl "
+                "-o libninemlnrn.so nineml.o -lc".format(
                     cc, ' '.join('-L{}/lib'.format(p) for p in gsl_prefixes),
                     install_name))
-            for cmd in (echo_cmd, compile_cmd, link_cmd):
-                self.run_cmd(
-                    cmd, work_dir=libninemlnrn_dir,
-                    fail_msg=("Unable to compile libninemlnrn extensions"))
+            self.run_cmd(
+                link_cmd, work_dir=libninemlnrn_dir,
+                fail_msg=("Unable to link libninemlnrn extensions"))
             print("Successfully compiled libninemlnrn extension.")
         except CouldNotCompileNRNRandDistrException as e:
             print("WARNING! Unable to compile libninemlnrn: "
                   "random distributions in NMODL files will not work:\n{}"
                   .format(e))
+        # Save paths to utilities to be referenced when building generated code
+        self.write_path('nest-config', self.nest_config_path)
+        self.write_path('nrnivmodl', self.nrnivmodl_path)
+        # Try to save the path of modlunit
+        try:
+            self.write_path('modlunit', self.path_to_exec('modlunit'))
+        except CouldNotCompileNRNRandDistrException:
+            pass  # Not actually required but included in built for add. check
 
     def run_cmd(self, cmd, work_dir, fail_msg):
         p = sp.Popen(cmd, shell=True, stdin=sp.PIPE, stdout=sp.PIPE,
@@ -211,6 +216,11 @@ class build(_build):
                 " is required to build libninemlnrn"
                 .format(exec_name, ':'.join(system_path)))
         return exec_path
+
+    def write_path(self, name, path):
+        with open(os.path.join(self.package_dir, 'paths',
+                  name + '_path'), 'w') as f:
+            f.write(path)
 
 
 setup(
