@@ -11,8 +11,14 @@ parser.add_argument('filename', type=existing_file,
                     help="Neo file outputted from a PyPe9 simulation")
 parser.add_argument('--save', type=str, default=None,
                     help="Location to save the figure to")
+parser.add_argument('--height', type=int, default=5,
+                    help="Height of the plot")
+parser.add_argument('--width', type=int, default=5,
+                    help="Width of the plot")
 parser.add_argument('--hide', action='store_true',
                     help="Whether to show the plot or not")
+parser.add_argument('--resolution', type=float, default=100.0,
+                    help="Resolution of the figure when it is saved")
 
 
 def run(argv):
@@ -32,6 +38,9 @@ def run(argv):
     num_subplots = bool(seg.analogsignals) + bool(seg.spiketrains)
     fig, axes = plt.subplots(num_subplots, 1)
     fig.suptitle('PyPe9 Simulation Output')
+    # Set the dimension of the figure
+    fig.set_figheight(args.height)
+    fig.set_figwidth(args.width)
     plt_name = seg.name + ' ' if seg.name else ''
     if seg.spiketrains:
         spike_times = []
@@ -63,7 +72,7 @@ def run(argv):
         plt.title("{}Analog Signals".format(plt_name), fontsize=12)
         plt.legend(legend)
     if args.save is not None:
-        fig.savefig(args.save)
+        fig.savefig(args.save, dpi=args.resolution)
         logger.info("Saved{} figure to '{}'".format(plt_name, args.save))
     if not args.hide:
         plt.show()
