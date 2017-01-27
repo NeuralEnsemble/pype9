@@ -11,13 +11,13 @@ parser.add_argument('filename', type=existing_file,
                     help="Neo file outputted from a PyPe9 simulation")
 parser.add_argument('--save', type=str, default=None,
                     help="Location to save the figure to")
-parser.add_argument('--height', type=int, default=5,
+parser.add_argument('--height', type=int, default=6,
                     help="Height of the plot")
-parser.add_argument('--width', type=int, default=5,
+parser.add_argument('--width', type=int, default=6,
                     help="Width of the plot")
 parser.add_argument('--hide', action='store_true',
                     help="Whether to show the plot or not")
-parser.add_argument('--resolution', type=float, default=100.0,
+parser.add_argument('--resolution', type=float, default=300.0,
                     help="Resolution of the figure when it is saved")
 
 

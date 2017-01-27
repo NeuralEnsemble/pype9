@@ -39,29 +39,47 @@ class build(_build):
 
     def run(self):
         _build.run(self)
+        package_dir = os.path.join(os.getcwd(), self.build_lib, 'pype9')
+        # Save path to nrnivmodl and nest-config in hidden files for future
+        # reference while building generated code
+        self.nrnivmodl_path = self.path_to_exec('nrnivmodl')
+        neuron_code_gen_dir = os.path.join(package_dir, 'neuron', 'cells',
+                                           'code_gen')
+        with open(os.path.join(neuron_code_gen_dir, '.nrnivmodlpath'), 'w') as f:
+            f.write(self.nrnivmodl_path)
+        self.nest_config_path = self.path_to_exec('nest-config')
+        nest_code_gen_dir = os.path.join(package_dir, 'nest', 'cells',
+                                           'code_gen')
+        with open(os.path.join(nest_code_gen_dir, '.nestconfigpath'), 'w') as f:
+            f.write(self.nest_config_path)
+        # Complie libninemlnrn (for random distribution support in generated
+        # NEURON mechanisms)
         print("Attempting to build libninemlnrn")
+        libninemlnrn_dir = os.path.join(neuron_code_gen_dir, 'libninemlnrn')
         try:
             cc = self.get_nrn_cc()
             gsl_prefixes = self.get_gsl_prefixes()
             echo_cmd = 'pwd; ls'
             compile_cmd = '{} -fPIC -c -o nineml.o nineml.cpp {}'.format(
                 cc, ' '.join('-I{}/include'.format(p) for p in gsl_prefixes))
+            if platform.system() == 'Darwin':
+                install_name = "-install_name @rpath/libninemlnrn.so "
+            else:
+                install_name = ""
             link_cmd = (
-                "{} -shared {} -install_name @rpath/libninemlnrn.so "
+                "{} -shared {} {}"
                 "-lm -lgslcblas -lgsl -o libninemlnrn.so nineml.o -lc".format(
-                    cc, ' '.join('-L{}/lib'.format(p) for p in gsl_prefixes)))
+                    cc, ' '.join('-L{}/lib'.format(p) for p in gsl_prefixes),
+                    install_name))
             for cmd in (echo_cmd, compile_cmd, link_cmd):
-                self.run_cmd(cmd,
-                             work_dir=os.path.join(
-                                 os.getcwd(), self.build_lib, 'pype9',
-                                 'neuron', 'cells', 'code_gen',
-                                 'libninemlnrn'),
-                             fail_msg=(
-                                 "Unable to compile libninemlnrn extensions"))
+                self.run_cmd(
+                    cmd, work_dir=libninemlnrn_dir,
+                    fail_msg=("Unable to compile libninemlnrn extensions"))
             print("Successfully compiled libninemlnrn extension.")
         except CouldNotCompileNRNRandDistrException as e:
-            print("Unable to compile libninemlnrn: random distributions in "
-                  "NMODL files will not work:\n{}".format(e))
+            print("WARNING! Unable to compile libninemlnrn: "
+                  "random distributions in NMODL files will not work:\n{}"
+                  .format(e))
 
     def run_cmd(self, cmd, work_dir, fail_msg):
         p = sp.Popen(cmd, shell=True, stdin=sp.PIPE, stdout=sp.PIPE,
@@ -69,7 +87,6 @@ class build(_build):
         stdout = p.stdout.readlines()
         result = p.wait()
         # test if cmd was successful
-        print stdout
         if result != 0:
             raise CouldNotCompileNRNRandDistrException(
                 "{}:\n{}".format(fail_msg, '  '.join([''] + stdout)))
@@ -84,14 +101,13 @@ class build(_build):
             Name of the C compiler used to compile NMODL files
         """
         # Get path to nrnivmodl
-        nrnivmodl_path = self.path_to_exec('nrnivmodl')
         try:
-            with open(nrnivmodl_path) as f:
+            with open(self.nrnivmodl_path) as f:
                 contents = f.read()
         except IOError:
             raise CouldNotCompileNRNRandDistrException(
                 "Could not read nrnivmodl at '{}'"
-                .format(nrnivmodl_path))
+                .format(self.nrnivmodl_path))
         # Execute nrnivmodl down to the point that it sets the bindir, then
         # echo it to stdout and quit
         # Get the part of nrnivmodl to run
@@ -118,7 +134,7 @@ class build(_build):
         else:
             raise CouldNotCompileNRNRandDistrException(
                 "Problem parsing nrnivmodl at '{}', could not find "
-                "'export {{bindir}}' line".format(nrnivmodl_path))
+                "'export {{bindir}}' line".format(self.nrnivmodl_path))
         nrnmech_makefile_path = os.path.join(bin_dir, 'nrnmech_makefile')
         # Extract C-compiler used in nrnmech_makefile
         try:
@@ -145,13 +161,12 @@ class build(_build):
         lib_paths : list(str)
             List of library paths passed to the PyNEST compile
         """
-        nest_config_path = self.path_to_exec('nest-config')
         try:
-            libs = sp.check_output('{} --libs'.format(nest_config_path),
+            libs = sp.check_output('{} --libs'.format(self.nest_config_path),
                                    shell=True)
         except sp.CalledProcessError:
             raise CouldNotCompileNRNRandDistrException(
-                "Could not run '{} --libs'".format(nest_config_path))
+                "Could not run '{} --libs'".format(self.nest_config_path))
         prefixes = [p[2:-3] for p in libs.split()
                     if p.startswith('-L') and p.endswith('lib') and 'gsl' in p]
         return prefixes

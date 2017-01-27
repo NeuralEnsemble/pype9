@@ -89,7 +89,7 @@ class CodeGenerator(BaseCodeGenerator):
         self.nrnivmodl_path = self.path_to_exec('nrnivmodl')
         self.modlunit_path = self.path_to_exec('modlunit')
         self.nrnivmodl_flags = [
-            '-{L,R}' + self.LIBNINEMLNRN_PATH,
+            '-L' + self.LIBNINEMLNRN_PATH,
             '-Wl,-rpath,' + self.LIBNINEMLNRN_PATH,
             '-lninemlnrn', '-lgsl', '-lgslcblas']
         if gsl_path is not None:

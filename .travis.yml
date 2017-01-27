@@ -19,6 +19,7 @@ addons:
       - openmpi-bin
       - libopenmpi-dev
 install:
+  - echo "backend : Agg" > ~/.matplotlibrc
   - pip install cython
   - source prereq/install_nest.sh
   - source prereq/install_neuron.sh
