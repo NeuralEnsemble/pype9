@@ -45,12 +45,14 @@ class build(_build):
         self.nrnivmodl_path = self.path_to_exec('nrnivmodl')
         neuron_code_gen_dir = os.path.join(package_dir, 'neuron', 'cells',
                                            'code_gen')
-        with open(os.path.join(neuron_code_gen_dir, '.nrnivmodlpath'), 'w') as f:
+        with open(os.path.join(neuron_code_gen_dir,
+                               '.nrnivmodlpath'), 'w') as f:
             f.write(self.nrnivmodl_path)
         self.nest_config_path = self.path_to_exec('nest-config')
         nest_code_gen_dir = os.path.join(package_dir, 'nest', 'cells',
                                            'code_gen')
-        with open(os.path.join(nest_code_gen_dir, '.nestconfigpath'), 'w') as f:
+        with open(os.path.join(nest_code_gen_dir,
+                               '.nestconfigpath'), 'w') as f:
             f.write(self.nest_config_path)
         # Complie libninemlnrn (for random distribution support in generated
         # NEURON mechanisms)
