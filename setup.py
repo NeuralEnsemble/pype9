@@ -22,6 +22,9 @@ for path, dirs, files in os.walk(package_dir, topdown=True):
 # Add compiled libninemlnrn to package data
 package_data.append(os.path.join('neuron', 'cells', 'code_gen', 'libninemlnrn',
                                  'libninemlnrn.so'))
+for util_name in ('nrnivmodl', 'modlunit', 'nest-config'):
+    package_data.append(os.path.join('base', 'cells', 'code_gen', 'paths',
+                                     util_name + '_path'))
 
 # Filter unittests from packages
 packages = [p for p in find_packages() if not p.startswith('test.')]
