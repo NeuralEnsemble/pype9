@@ -22,9 +22,9 @@ for path, dirs, files in os.walk(package_dir, topdown=True):
 # Add compiled libninemlnrn to package data
 package_data.append(os.path.join('neuron', 'cells', 'code_gen', 'libninemlnrn',
                                  'libninemlnrn.so'))
-for util_name in ('nrnivmodl', 'modlunit', 'nest-config'):
+for fname in ('README',):  # 'nrnivmodl_path', 'modlunit_path', 'nest-config_path'):
     package_data.append(os.path.join('base', 'cells', 'code_gen', 'paths',
-                                     util_name + '_path'))
+                                     fname))
 
 # Filter unittests from packages
 packages = [p for p in find_packages() if not p.startswith('test.')]
@@ -223,8 +223,9 @@ class build(_build):
         return exec_path
 
     def write_path(self, name, path):
-        with open(os.path.join(self.build_package_dir, 'base', 'cells',
-                               'code_gen', 'paths', name + '_path'), 'w') as f:
+        save_path = os.path.join(self.build_package_dir, 'base', 'cells',
+                                 'code_gen', 'paths', name + '_path')
+        with open(save_path, 'w') as f:
             f.write(path)
 
 
