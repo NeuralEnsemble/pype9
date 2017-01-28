@@ -95,6 +95,8 @@ INITIAL {
     {{sv.name}} = 0
 {% endfor %}
 
+    printf("RNG SEED: %d", get_rng_seed())
+
     : Initialise Regime:
     {# This should come from the initial state, when we sort out that format #}
     {{regime_varname}} = 0
@@ -326,6 +328,12 @@ ENDVERBATIM
 FUNCTION random_exponential_(m) {
 VERBATIM
     _lrandom_exponential_ = nineml_gsl_exponential(_lm);
+ENDVERBATIM
+}
+
+FUNCTION get_rng_seed() {
+VERBATIM
+    _lget_rng_seed_ = nineml_get_gsl_rng_seed();
 ENDVERBATIM
 }
 {% endif %}

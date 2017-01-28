@@ -25,6 +25,7 @@ double nineml_gsl_poisson(double mu);
 
 
 gsl_rng* nineml_gsl_rng = NULL;
+unsigned int _seed = NULL;
   
 /* FUNCTIONS FOR ALLOCATING & DEALLOCATING RNG */
 extern "C"
@@ -48,13 +49,21 @@ void release_gsl_rng()
 }
 
 extern "C"
-void seed_gsl_rng(unsigned int seed) {
+void nineml_seed_gsl_rng(unsigned int seed) {
 
     gsl_rng* rng = get_gsl_rng();
+    _seed = seed;
     gsl_rng_set(rng, seed);
 
 }
 
+
+extern "C"
+unsigned int nineml_get_gsl_rng_seed() {
+
+    return _seed;
+
+}
 
 
 // Wrapper Functions:

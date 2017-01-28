@@ -321,7 +321,7 @@ class BaseCodeGenerator(object):
         try:
             with open(saved_path_path) as f:
                 utility_path = f.read()
-        except OSError:
+        except IOError:
             if platform.system() == 'Windows':
                 utility_name += '.exe'
             # Get the system path
