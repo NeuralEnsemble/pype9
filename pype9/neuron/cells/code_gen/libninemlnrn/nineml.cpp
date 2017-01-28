@@ -47,7 +47,13 @@ void release_gsl_rng()
     }
 }
 
+extern "C"
+void seed_gsl_rng(unsigned int seed) {
 
+    gsl_rng* rng = get_gsl_rng();
+    gsl_rng_set(rng, seed);
+
+}
 
 
 

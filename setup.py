@@ -220,8 +220,8 @@ class build(_build):
         return exec_path
 
     def write_path(self, name, path):
-        with open(os.path.join(self.build_package_dir, 'paths',
-                  name + '_path'), 'w') as f:
+        with open(os.path.join(self.build_package_dir, 'base', 'cells',
+                               'code_gen', 'paths', name + '_path'), 'w') as f:
             f.write(path)
 
 

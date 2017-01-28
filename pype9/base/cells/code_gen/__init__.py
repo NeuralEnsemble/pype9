@@ -316,7 +316,7 @@ class BaseCodeGenerator(object):
         """
         # Check to see whether the path of the utility has been saved in the
         # 'paths' directory (typically during installation)
-        saved_path_path = os.path.join(os.path.dirname(pype9.__file__),
+        saved_path_path = os.path.join(os.path.dirname(__file__),
                                        'paths', utility_name + '_path')
         try:
             with open(saved_path_path) as f:
