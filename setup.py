@@ -40,7 +40,8 @@ class build(_build):
     def run(self):
         _build.run(self)
         # Get directory of package to be installed
-        package_dir = os.path.join(os.getcwd(), self.build_lib, 'pype9')
+        self.build_package_dir = os.path.join(os.getcwd(), self.build_lib,
+                                              'pype9')
         # Get locations of utilities required for the build process (must be
         # on the system PATH
         self.nrnivmodl_path = self.path_to_exec('nrnivmodl')
@@ -49,7 +50,8 @@ class build(_build):
         # NMODL mechanisms)
         print("Attempting to build libninemlnrn")
         libninemlnrn_dir = os.path.join(
-            package_dir, 'neuron', 'cells', 'code_gen', 'libninemlnrn')
+            self.build_package_dir, 'neuron', 'cells', 'code_gen',
+            'libninemlnrn')
         try:
             cc = self.get_nrn_cc()
             gsl_prefixes = self.get_gsl_prefixes()
@@ -218,7 +220,7 @@ class build(_build):
         return exec_path
 
     def write_path(self, name, path):
-        with open(os.path.join(self.package_dir, 'paths',
+        with open(os.path.join(self.build_package_dir, 'paths',
                   name + '_path'), 'w') as f:
             f.write(path)
 
