@@ -531,7 +531,7 @@ void {{component_name}}::init_state_(const Node& proto) {
 
 void {{component_name}}::calibrate() {
 {% if component_name == 'Izhikevich9ML' %}
-    std::cout << "initialising solver" << std::endl;
+    std::cout << "initialising solver of " << S_.current_regime << std::endl;
 {% endif %}     
     S_.current_regime->init_solver();
 {% if component_name == 'Izhikevich9ML' %}
