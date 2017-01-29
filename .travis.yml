@@ -28,11 +28,11 @@ install:
   - pip install https://github.com/tclose/lib9ML/archive/develop.zip
   - pip install https://github.com/tclose/NineMLCatalog/archive/merging_with_master.zip  
   - pip install coveralls
-  - pip install -v .
-script:
-  - pushd test
-  - nosetests . --exe --with-coverage --cover-package=pype9
+  - pushd pype9/neuron/cells/code_gen/libninemlnrn
+  - CC=mpicc ./manual_compile.sh
   - popd
+script:
+  - nosetests test --with-coverage --cover-package=pype9
 after_success:
   - coveralls
 cache:
