@@ -32,7 +32,7 @@ install:
   - CC=mpicc ./manual_compile.sh
   - popd
 script:
-  - nosetests test/test_unit_handling.py --with-coverage --cover-package=pype9
+  - nosetests test --with-coverage --cover-package=pype9
 after_success:
   - coveralls
 cache:
