@@ -530,8 +530,17 @@ void {{component_name}}::init_state_(const Node& proto) {
 }
 
 void {{component_name}}::calibrate() {
+{% if component_name == 'Izhikevich9ML' %}
+    std::cout << "initialising solver" << std::endl;
+{% endif %}     
     S_.current_regime->init_solver();
+{% if component_name == 'Izhikevich9ML' %}
+    std::cout << "solver initialised" << std::endl;
+{% endif %}    
     B_.logger_.init();
+{% if component_name == 'Izhikevich9ML' %}
+    std::cout << "initialised logger" << std::endl;
+{% endif %}    
     V_.rng_ = net_->get_rng( get_thread() );   
 }
 
