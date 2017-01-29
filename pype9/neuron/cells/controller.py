@@ -4,6 +4,7 @@ import numpy
 import logging
 from pype9.base.cells.controller import SimulationController
 import pyNN.neuron  # @UnusedImport Imported to ensure mod files are imported
+import ctypes
 
 logger = logging.getLogger('PyPe9')
 

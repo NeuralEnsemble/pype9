@@ -95,7 +95,10 @@ INITIAL {
     {{sv.name}} = 0
 {% endfor %}
 
-    : printf("RNG SEED: %d", get_rng_seed_())
+{# Debugging for setting of random seed in nineml.cpp #}
+{% if component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] == ARTIFICIAL_CELL_MECH %}
+    printf("RNG SEED: %d", get_rng_seed_())
+{% endif %}
 
     : Initialise Regime:
     {# This should come from the initial state, when we sort out that format #}
@@ -299,7 +302,7 @@ extern double nineml_gsl_uniform(double, double);
 extern double nineml_gsl_binomial(double, int);
 extern double nineml_gsl_exponential(double);
 extern double nineml_gsl_poisson(double);
-extern unsigned int nineml_get_gsl_rng_seed();
+{#extern unsigned int nineml_get_gsl_rng_seed();#}
 ENDVERBATIM
 
 FUNCTION random_normal_(m,s) {
@@ -331,10 +334,11 @@ VERBATIM
     _lrandom_exponential_ = nineml_gsl_exponential(_lm);
 ENDVERBATIM
 }
-
+{#
 FUNCTION get_rng_seed_() {
 VERBATIM
     _lget_rng_seed_ = nineml_get_gsl_rng_seed();
 ENDVERBATIM
 }
+#}
 {% endif %}
