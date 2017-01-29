@@ -97,7 +97,7 @@ INITIAL {
 
 {# Debugging for setting of random seed in nineml.cpp #}
 {% if component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] == ARTIFICIAL_CELL_MECH %}
-    printf("RNG SEED: %d", get_rng_seed_())
+    : printf("RNG SEED: %d", get_rng_seed_())
 {% endif %}
 
     : Initialise Regime:
