@@ -95,7 +95,7 @@ INITIAL {
     {{sv.name}} = 0
 {% endfor %}
 
-    printf("RNG SEED: %d", get_rng_seed_())
+    : printf("RNG SEED: %d", get_rng_seed_())
 
     : Initialise Regime:
     {# This should come from the initial state, when we sort out that format #}
@@ -299,6 +299,7 @@ extern double nineml_gsl_uniform(double, double);
 extern double nineml_gsl_binomial(double, int);
 extern double nineml_gsl_exponential(double);
 extern double nineml_gsl_poisson(double);
+extern unsigned int nineml_get_gsl_rng_seed();
 ENDVERBATIM
 
 FUNCTION random_normal_(m,s) {
