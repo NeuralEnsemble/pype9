@@ -25,7 +25,7 @@ double nineml_gsl_poisson(double mu);
 
 
 gsl_rng* nineml_gsl_rng = NULL;
-unsigned int _seed = NULL;
+unsigned int _seed = 0;
   
 /* FUNCTIONS FOR ALLOCATING & DEALLOCATING RNG */
 extern "C"

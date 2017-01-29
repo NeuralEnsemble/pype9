@@ -14,5 +14,11 @@ if [ "$WITH_GSL" != "" ]; then
 	GSL_LIB=-L$WITH_GSL/lib
 fi
 
+if [ "`uname`" == 'Darwin' ]; then
+	INSTALL_NAME="-install_name  @rpath/libninemlnrn.so"
+else
+	INSTALL_NAME=''
+fi
+
 $CC -fPIC -c -o nineml.o nineml.cpp $GSL_INCLUDE
-$CC -shared $GSL_LIB -install_name @rpath/libninemlnrn.so -lm -lgslcblas -lgsl -o libninemlnrn.so nineml.o -lc
+$CC -shared $GSL_LIB $INSTALL_NAME -lm -lgslcblas -lgsl -o libninemlnrn.so nineml.o -lc
