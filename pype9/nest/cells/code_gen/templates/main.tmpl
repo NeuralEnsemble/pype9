@@ -428,6 +428,7 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(double end_of_
             S_.current_regime = *regime_it;
             found = true;
         }
+    assert(found);
 }
 
 /**
