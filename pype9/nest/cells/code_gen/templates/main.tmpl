@@ -541,12 +541,6 @@ void {{component_name}}::init_state_(const Node& proto) {
 
 void {{component_name}}::calibrate() {
 
-{% if component_name == 'Izhikevich9ML' %}
-    for (std::vector<{{component_name}}::Regime_*>::iterator regime_it = regimes.begin(); regime_it != regimes.end(); ++regime_it)
-        std::cout << "Regime '" << (*regime_it)->name << "' address: " << *regime_it << std::endl; 
-    std::cout << "initialising solver of " << S_.current_regime << std::endl;
-{% endif %}     
-
     // Check that the current regime is in the regimes vector
     bool found_current_regime = false;
     for (std::vector<{{component_name}}::Regime_*>::iterator regime_it = regimes.begin(); regime_it != regimes.end(); ++regime_it)
