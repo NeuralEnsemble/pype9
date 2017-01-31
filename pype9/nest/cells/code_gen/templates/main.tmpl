@@ -723,7 +723,6 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
             // events) or the regime changes
             bool discontinuous = transition->body() || (transition->get_target_regime() != S_.current_regime);
             // Update the current regime
-            std::cout << "Update current regime in transition update to " << transition->get_target_regime() << std::endl;
             S_.current_regime = transition->get_target_regime();
             // Set all triggers, i.e. activate all triggers for which their trigger condition 
             // evaluates to false.
