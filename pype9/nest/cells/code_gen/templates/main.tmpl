@@ -542,12 +542,11 @@ void {{component_name}}::init_state_(const Node& proto) {
 void {{component_name}}::calibrate() {
 
     // Check that the current regime is in the regimes vector
-    bool found = false
+    bool found = false;
     for (std::vector<{{component_name}}::Regime_*>::iterator regime_it = regimes.begin(); regime_it != regimes.end(); ++regime_it)
         if (*regime_it == S_.current_regime)
             found = true;
-    if (!found)
-        throw Exception("Did not find current regime in cell regimes vector"); 
+    assert(found); 
     S_.current_regime->init_solver();
     B_.logger_.init();
     V_.rng_ = net_->get_rng( get_thread() );   
