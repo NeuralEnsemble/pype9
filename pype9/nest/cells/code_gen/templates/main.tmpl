@@ -416,6 +416,18 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(double end_of_
       B_(n.B_, *this) {
       
     construct_regimes();
+    
+    std::cout << "Copy constructor" << std::endl;
+    
+    // Update current_regime in state to match regimes in this component. 
+    bool found = false;
+    for (std::vector<Regime_*>::iterator regime_it = regimes.begin(); regime_it != regimes.end(); ++regime_it)
+        if ((*regime_it)->get_name() == S_.current_regime->get_name()) {
+            if (found)
+                assert(false);
+            S_.current_regime = *regime_it;
+            found = true;
+        }
 }
 
 /**
