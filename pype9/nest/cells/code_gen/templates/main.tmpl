@@ -605,7 +605,7 @@ void {{component_name}}::State_::set(const DictionaryDatum &d_, const Parameters
         std::cout << "Regime '" << regime->get_name() << "' (" << regime << ") not found in " << std::endl;
 	    for (std::vector<{{component_name}}::Regime_*>::iterator regime_it = current_regime->cell->regimes.begin(); regime_it != current_regime->cell->regimes.end(); ++regime_it)
 	        std::cout << "Regime '" << (*regime_it)->name << " address: " << *regime_it << std::endl;
-	    assert(false);
+	    throw nest::KernelException();
     }
 
     //std::cout << "Set current regime in explicit state update from " << current_regime << " to " << regime << std::endl;
