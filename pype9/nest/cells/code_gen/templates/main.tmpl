@@ -403,6 +403,7 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(double end_of_
       B_(*this) {
 
     construct_regimes();
+    std::cout << "Current regime set to " << regimes[0] << "in default constructor" << std::endl; 
     S_.current_regime = regimes[0];
 
     recordablesMap_.create();
@@ -417,15 +418,17 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(double end_of_
       
     construct_regimes();
 
-    // Update current_regime in state to match regimes in this component. 
-    bool found = false;
+    // Update current_regime in state to match regimes in this component.
+    std::cout << "Finding matching regime to " << S_.current_regime << std::endl;
+    bool found_matching_regime = false;
     for (std::vector<Regime_*>::iterator regime_it = regimes.begin(); regime_it != regimes.end(); ++regime_it)
         if ((*regime_it)->get_name() == S_.current_regime->get_name()) {
-            assert(!found);
+            assert(!found_matching_regime);
             S_.current_regime = *regime_it;
-            found = true;
+            std::cout << "Found matching regime to " << S_.current_regime << ": " << *regime_it << std::endl; 
+            found_matching_regime = true;
         }
-    assert(found);
+    assert(found_matching_regime);
 }
 
 /**
@@ -497,6 +500,8 @@ void {{component_name}}::init_state_(const Node& proto) {
 {{component_name}}::State_::State_(const Parameters_& p, Regime_* current_regime) :
   current_regime(current_regime) {
 
+    std::cout << "Set current regime in state constructor to " << current_regime << std::endl;
+
     const Parameters_ *params = &p;
 
     // FIXME: need to add initial state here
@@ -515,6 +520,9 @@ void {{component_name}}::init_state_(const Node& proto) {
  ***********************************/
 {{component_name}}::State_::State_(const State_& s) :
   current_regime(s.current_regime), t(s.t) {
+  
+  std::cout << "Set current regime in state copy constructor to " << current_regime << std::endl;
+  
 {% if component_class.num_state_variables %}
    for (int i = 0; i < {{component_class.num_state_variables}}; ++i)
        y_[i] = s.y_[i];
@@ -533,6 +541,7 @@ void {{component_name}}::init_state_(const Node& proto) {
 {% endif %}
 
     // Copy current regime and time 
+    std::cout << "Set current regime in assignment operator from " << current_regime << " to " << s.current_regime << std::endl;
     current_regime = s.current_regime;
     t = s.t;
 
@@ -541,12 +550,18 @@ void {{component_name}}::init_state_(const Node& proto) {
 
 void {{component_name}}::calibrate() {
 
+{% if component_name == 'Izhikevich9ML' %}
+    for (std::vector<{{component_name}}::Regime_*>::iterator regime_it = regimes.begin(); regime_it != regimes.end(); ++regime_it)
+        std::cout << "Regime '" << (*regime_it)->name << "' address: " << *regime_it << std::endl; 
+    std::cout << "initialising solver of " << S_.current_regime << std::endl;
+{% endif %}     
+
     // Check that the current regime is in the regimes vector
-    bool found = false;
+    bool found_current_regime = false;
     for (std::vector<{{component_name}}::Regime_*>::iterator regime_it = regimes.begin(); regime_it != regimes.end(); ++regime_it)
         if (*regime_it == S_.current_regime)
-            found = true;
-    assert(found); 
+            found_current_regime = true;
+    assert(found_current_regime); 
     S_.current_regime->init_solver();
     B_.logger_.init();
     V_.rng_ = net_->get_rng( get_thread() );   
@@ -595,6 +610,8 @@ void {{component_name}}::State_::set(const DictionaryDatum &d_, const Parameters
 {% for i, sv in enumerate(component_class.state_variables) %}
     updateValue<double_t>(d_, "{{sv.name}}", y_[{{i}}]);
 {% endfor %}
+
+    std::cout << "Set current regime in explicit state update from " << current_regime << " to " << regime << std::endl;
     current_regime = regime;
 }
 
@@ -706,6 +723,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
             // events) or the regime changes
             bool discontinuous = transition->body() || (transition->get_target_regime() != S_.current_regime);
             // Update the current regime
+            std::cout << "Update current regime in transition update to " << transition->get_target_regime() << std::endl;
             S_.current_regime = transition->get_target_regime();
             // Set all triggers, i.e. activate all triggers for which their trigger condition 
             // evaluates to false.
