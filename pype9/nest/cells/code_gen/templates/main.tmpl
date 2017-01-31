@@ -157,7 +157,6 @@ extern "C" int {{component_name}}_{{regime.name}}_dynamics{% include "dynamics_s
     ITEM(f_, {{component_name}}::{{regime.name}}Regime_::{{td.dependent_variable}}_INDEX) = {{scaled_expr.rhs_cstr}};  // ({{units}})
         {% endfor %}
 
-    //std::cout << "Success at t=" << t << ": " << GSL_SUCCESS << std::endl;
         {% include "solver_return.tmpl" %}
 }        
     {% endif %}
@@ -402,8 +401,7 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(double end_of_
       S_(P_, (Regime_*)NULL),
       B_(*this) {
 
-    construct_regimes();
-    std::cout << "Current regime set to " << regimes[0] << "in default constructor" << std::endl; 
+    construct_regimes(); 
     S_.current_regime = regimes[0];
 
     recordablesMap_.create();
@@ -419,13 +417,11 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(double end_of_
     construct_regimes();
 
     // Update current_regime in state to match regimes in this component.
-    std::cout << "Finding matching regime to " << S_.current_regime << std::endl;
     bool found_matching_regime = false;
     for (std::vector<Regime_*>::iterator regime_it = regimes.begin(); regime_it != regimes.end(); ++regime_it)
         if ((*regime_it)->get_name() == S_.current_regime->get_name()) {
             assert(!found_matching_regime);
-            S_.current_regime = *regime_it;
-            std::cout << "Found matching regime to " << S_.current_regime << ": " << *regime_it << std::endl; 
+            S_.current_regime = *regime_it; 
             found_matching_regime = true;
         }
     assert(found_matching_regime);
@@ -500,8 +496,6 @@ void {{component_name}}::init_state_(const Node& proto) {
 {{component_name}}::State_::State_(const Parameters_& p, Regime_* current_regime) :
   current_regime(current_regime) {
 
-    std::cout << "Set current regime in state constructor to " << current_regime << std::endl;
-
     const Parameters_ *params = &p;
 
     // FIXME: need to add initial state here
@@ -521,8 +515,6 @@ void {{component_name}}::init_state_(const Node& proto) {
 {{component_name}}::State_::State_(const State_& s) :
   current_regime(s.current_regime), t(s.t) {
   
-  std::cout << "Set current regime in state copy constructor to " << current_regime << std::endl;
-  
 {% if component_class.num_state_variables %}
    for (int i = 0; i < {{component_class.num_state_variables}}; ++i)
        y_[i] = s.y_[i];
@@ -540,8 +532,7 @@ void {{component_name}}::init_state_(const Node& proto) {
         y_[i] = s.y_[i];
 {% endif %}
 
-    // Copy current regime and time 
-    std::cout << "Set current regime in assignment operator from " << current_regime << " to " << s.current_regime << std::endl;
+    // Copy current regime and time
     current_regime = s.current_regime;
     t = s.t;
 
@@ -611,7 +602,19 @@ void {{component_name}}::State_::set(const DictionaryDatum &d_, const Parameters
     updateValue<double_t>(d_, "{{sv.name}}", y_[{{i}}]);
 {% endfor %}
 
-    std::cout << "Set current regime in explicit state update from " << current_regime << " to " << regime << std::endl;
+    bool found = false;
+    for (std::vector<{{component_name}}::Regime_*>::iterator regime_it = current_regime->cell->regimes.begin(); regime_it != current_regime->cell->regimes.end(); ++regime_it) {
+        if (*regime_it == regime)
+            found = true;
+    }
+    if (!found) {
+        std::cout << "Regime '" << regime->get_name() << "' (" << regime << ") not found in " << std::endl;
+	    for (std::vector<{{component_name}}::Regime_*>::iterator regime_it = current_regime->cell->regimes.begin(); regime_it != current_regime->cell->regimes.end(); ++regime_it)
+	        std::cout << "Regime '" << (*regime_it)->name << " address: " << *regime_it << std::endl;
+	    assert(false);
+    }
+
+    //std::cout << "Set current regime in explicit state update from " << current_regime << " to " << regime << std::endl;
     current_regime = regime;
 }
 
@@ -773,9 +776,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
  *****************/
 
 void {{component_name}}::handle(nest::SpikeEvent & e) {
-    assert(e.get_delay() > 0);   
-    
-    //std::cout << "spike time: " << network()->get_slice_origin().get_ms() + e.get_rel_delivery_steps(network()->get_slice_origin()) * nest::Time::get_resolution().get_ms() << std::endl;
+    assert(e.get_delay() > 0);
 
     // Get buffer for event receive port
     nest::ListRingBuffer* event_buffer;
