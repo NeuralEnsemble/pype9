@@ -7,38 +7,20 @@
     N = {{regime.num_time_derivatives}};
 
     if ( s_ == 0 ) {
-{% if component_name == 'Izhikevich9ML' %}
-    std::cout << "Allocate odeiv2" << std::endl;
-{% endif %}    
         s_ = gsl_odeiv2_step_alloc (T1, N);
-    } else {
-{% if component_name == 'Izhikevich9ML' %}
-        std::cout << "Reset odeiv2" << std::endl;
-{% endif %}    
+    } else {   
         gsl_odeiv2_step_reset(s_);
     }
 
     if ( c_ == 0 ) {
-{% if component_name == 'Izhikevich9ML' %}
-        std::cout << "New odeiv" << std::endl;
-{% endif %}        
         c_ = gsl_odeiv2_control_standard_new ({{abs_tolerance}}, {{rel_tolerance}}, 1.0, 0.0);
     } else {
-{% if component_name == 'Izhikevich9ML' %}
-        std::cout << "Reset odeiv2 control" << std::endl;
-{% endif %}
         gsl_odeiv2_control_init(c_, {{abs_tolerance}}, {{rel_tolerance}}, 1.0, 0.0);
     }
 
     if ( e_ == 0 ) {
-{% if component_name == 'Izhikevich9ML' %}
-        std::cout << "Reset evolve alloc" << std::endl;
-{% endif %}    
         e_ = gsl_odeiv2_evolve_alloc(N);
     } else {
-{% if component_name == 'Izhikevich9ML' %}
-        std::cout << "Reset evolve reset" << std::endl;
-{% endif %}    
         gsl_odeiv2_evolve_reset(e_);
     }
 
@@ -46,16 +28,10 @@
     sys_.jacobian  = {{component_name}}_{{regime.name}}_jacobian;
     sys_.dimension = N;
     
-{% if component_name == 'Izhikevich9ML' %}
-    std::cout << "Reinterpret cast " << std::endl;
-{% endif %} 
     sys_.params    = reinterpret_cast<void*>(this->cell);
 
     // Initialise 
     if (u == 0) {
-{% if component_name == 'Izhikevich9ML' %}
-    std::cout << "malloc u" << std::endl;
-{% endif %} 
         u = (double *)malloc(sizeof(double) * N);
         assert (u);
     }    
@@ -63,17 +39,8 @@
     
     // Initialise Jacobian matrix approximation vector
     if (jac == 0) {
-{% if component_name == 'Izhikevich9ML' %}
-    std::cout << "malloc jac" << std::endl;
-{% endif %}     
         jac = (double *)malloc(sizeof(double) * N);
         assert (jac);
         
     }
-{% if component_name == 'Izhikevich9ML' %}
-    std::cout << "memset jac" << std::endl;
-{% endif %}     
     memset(jac, 0, sizeof(double) * N);
-{% if component_name == 'Izhikevich9ML' %}
-    std::cout << "Finished init solver" << std::endl;
-{% endif %}     

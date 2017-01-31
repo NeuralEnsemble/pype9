@@ -416,15 +416,12 @@ double {{component_name}}::{{TransitionClassName}}::time_occurred(double end_of_
       B_(n.B_, *this) {
       
     construct_regimes();
-    
-    std::cout << "Copy constructor" << std::endl;
-    
+
     // Update current_regime in state to match regimes in this component. 
     bool found = false;
     for (std::vector<Regime_*>::iterator regime_it = regimes.begin(); regime_it != regimes.end(); ++regime_it)
         if ((*regime_it)->get_name() == S_.current_regime->get_name()) {
-            if (found)
-                assert(false);
+            assert(!found);
             S_.current_regime = *regime_it;
             found = true;
         }
@@ -543,19 +540,16 @@ void {{component_name}}::init_state_(const Node& proto) {
 }
 
 void {{component_name}}::calibrate() {
-{% if component_name == 'Izhikevich9ML' %}
+
+    // Check that the current regime is in the regimes vector
+    bool found = false
     for (std::vector<{{component_name}}::Regime_*>::iterator regime_it = regimes.begin(); regime_it != regimes.end(); ++regime_it)
-        std::cout << "Regime '" << (*regime_it)->name << "' address: " << *regime_it << std::endl; 
-    std::cout << "initialising solver of " << S_.current_regime << std::endl;
-{% endif %}     
+        if (*regime_it == S_.current_regime)
+            found = true;
+    if (!found)
+        throw Exception("Did not find current regime in cell regimes vector"); 
     S_.current_regime->init_solver();
-{% if component_name == 'Izhikevich9ML' %}
-    std::cout << "solver initialised" << std::endl;
-{% endif %}    
     B_.logger_.init();
-{% if component_name == 'Izhikevich9ML' %}
-    std::cout << "initialised logger" << std::endl;
-{% endif %}    
     V_.rng_ = net_->get_rng( get_thread() );   
 }
 
