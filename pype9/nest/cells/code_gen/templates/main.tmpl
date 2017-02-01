@@ -602,7 +602,7 @@ void {{component_name}}::State_::set(const DictionaryDatum &d_, const Parameters
             found = true;
     }
     if (!found)
-	    throw nest::KernelException(outstr.c_str());
+	    throw nest::KernelException("Did not find regime in regimes vector");
 
     //std::cout << "Set current regime in explicit state update from " << current_regime << " to " << regime << std::endl;
     current_regime = regime;

@@ -520,8 +520,8 @@ namespace nineml {
             regime_index = 0;  // Sanitise non-sensical value to within range (initial states are set with arbitrary values during construction)
         Regime_* regime = regimes[regime_index];
         std::cout << "Updating regime to index " << regime_index << " (" << regime << "), where regimes are: " << std::endl;
-        for (std::vector<{{component_name}}::Regime_*>::iterator regime_it = current_regime->cell->regimes.begin(); regime_it != current_regime->cell->regimes.end(); ++regime_it)
-            ss << "Regime '" << (*regime_it)->name << " address: " << *regime_it << std::endl;
+        for (std::vector<{{component_name}}::Regime_*>::iterator regime_it = regimes.begin(); regime_it != regimes.end(); ++regime_it)
+            std::cout << "Regime '" << (*regime_it)->name << " address: " << *regime_it << std::endl;
         
     
         Parameters_ ptmp = P_;  // temporary copy in case of errors
