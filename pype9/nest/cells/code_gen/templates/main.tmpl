@@ -596,15 +596,13 @@ void {{component_name}}::State_::set(const DictionaryDatum &d_, const Parameters
     updateValue<double_t>(d_, "{{sv.name}}", y_[{{i}}]);
 {% endfor %}
 
-    bool found = false;
+    bool found_regime = false;
     for (std::vector<{{component_name}}::Regime_*>::iterator regime_it = current_regime->cell->regimes.begin(); regime_it != current_regime->cell->regimes.end(); ++regime_it) {
         if (*regime_it == regime)
-            found = true;
+            found_regime = true;
     }
-    if (!found)
-	    throw nest::KernelException("Did not find regime in regimes vector");
+    assert(found_regime);
 
-    //std::cout << "Set current regime in explicit state update from " << current_regime << " to " << regime << std::endl;
     current_regime = regime;
 }
 
