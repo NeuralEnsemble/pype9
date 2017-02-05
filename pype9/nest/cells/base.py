@@ -119,13 +119,10 @@ class Cell(base.Cell):
 
     def build_name(self, varname):
         # Get mapped port name if port corresponds to membrane voltage
-        try:
-            if varname == self.component_class.annotations[
-                    PYPE9_NS][BUILD_TRANS][MEMBRANE_VOLTAGE]:
-                varname = self.build_component_class.annotations[
-                    PYPE9_NS][BUILD_TRANS][MEMBRANE_VOLTAGE]
-        except NineMLNameError:
-            pass
+        if varname == self.component_class.annotations.get(
+                PYPE9_NS, BUILD_TRANS, MEMBRANE_VOLTAGE, default=None):
+            varname = self.build_component_class.annotations.get(
+                PYPE9_NS, BUILD_TRANS, MEMBRANE_VOLTAGE)
         return varname
 
     def reset_recordings(self):

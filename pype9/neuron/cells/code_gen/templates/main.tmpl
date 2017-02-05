@@ -3,9 +3,9 @@
 TITLE Spiking node generated from 9ML using PyPe9 version {{version}} at '{{timestamp}}'
 
 NEURON {
-{% if component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] == SUB_COMPONENT_MECH %}
+{% if component_class.annotations.get(PYPE9_NS, BUILD_TRANS, MECH_TYPE) == SUB_COMPONENT_MECH %}
     SUFFIX {{component_name}}
-    {% for species, port_names in component_class.annotations[PYPE9_NS][BUILD_TRANS][ION_SPECIES].items() %}
+    {% for species, port_names in component_class.annotations.get(PYPE9_NS, BUILD_TRANS, ION_SPECIES).items() %}
         {% if species == NONSPECIFIC_CURRENT %}
     NONSPECIFIC_CURRENT {% for port in component_class.analog_send_ports if port.dimension == units.currentDensity %}{{port.name}}{% if not loop.last %}, {% endif %}{% endfor %}
         {% else %}
@@ -19,10 +19,10 @@ NEURON {
         {% endif %}
 
     {% endfor %}
-{% elif component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] == FULL_CELL_MECH  %}
+{% elif component_class.annotations.get(PYPE9_NS, BUILD_TRANS, MECH_TYPE) == FULL_CELL_MECH  %}
     POINT_PROCESS {{component_name}}
     NONSPECIFIC_CURRENT {% for port in component_class.analog_send_ports if port.dimension == units.current %}{% if not loop.first %}, {% endif %}{{port.name}}{% endfor %}
-{% elif component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] == ARTIFICIAL_CELL_MECH  %}
+{% elif component_class.annotations.get(PYPE9_NS, BUILD_TRANS, MECH_TYPE) == ARTIFICIAL_CELL_MECH  %}
     ARTIFICIAL_CELL {{component_name}}
 {% endif %}
 
@@ -96,7 +96,7 @@ INITIAL {
 {% endfor %}
 
 {# Debugging for setting of random seed in nineml.cpp #}
-{% if component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] == ARTIFICIAL_CELL_MECH %}
+{% if component_class.annotations.get(PYPE9_NS, BUILD_TRANS, MECH_TYPE) == ARTIFICIAL_CELL_MECH %}
     : printf("RNG SEED: %d", get_rng_seed_())
 {% endif %}
 
@@ -104,7 +104,7 @@ INITIAL {
     {# This should come from the initial state, when we sort out that format #}
     {{regime_varname}} = 0
 
-{% if component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] != SUB_COMPONENT_MECH %}
+{% if component_class.annotations.get(PYPE9_NS, BUILD_TRANS, MECH_TYPE) != SUB_COMPONENT_MECH %}
     : Initialise the NET_RECEIVE block by sending appropriate flag to itself
     net_send(0, INIT)
 {% endif %}
@@ -161,7 +161,7 @@ ASSIGNED {
 {% endfor %}
 }
 
-{% if component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] != ARTIFICIAL_CELL_MECH  %}
+{% if component_class.annotations.get(PYPE9_NS, BUILD_TRANS, MECH_TYPE) != ARTIFICIAL_CELL_MECH  %}
 STATE {
     {% for sv, units in unit_handler.assign_units_to_variables(component_class.state_variables) if sv.name != 'v' and len(list(component_class.all_time_derivatives(state_variable=sv))) %}
     {{sv.name}} ({{units}})
@@ -170,7 +170,7 @@ STATE {
 
 
 BREAKPOINT {
-    {% if component_class.annotations[PYPE9_NS][BUILD_TRANS][NUM_TIME_DERIVS] != '0'  %}
+    {% if component_class.annotations.get(PYPE9_NS, BUILD_TRANS, NUM_TIME_DERIVS) != '0'  %}
     SOLVE states METHOD {{ode_solver}}
     {% endif %}
     {% for alias, scaled_expr, _ in unit_handler.scale_aliases(component_class.required_for(list(component_class.all_time_derivatives()) + list(component_class.analog_send_ports)).expressions) %}
@@ -190,15 +190,15 @@ BREAKPOINT {
 }
 
 
-    {% if component_class.annotations[PYPE9_NS][BUILD_TRANS][NUM_TIME_DERIVS] != '0' %}
+    {% if component_class.annotations.get(PYPE9_NS, BUILD_TRANS, NUM_TIME_DERIVS) != '0' %}
 DERIVATIVE states {
-        {% for sv in component_class.state_variables if sv.name not in component_class.annotations[PYPE9_NS][BUILD_TRANS][NO_TIME_DERIVS].split(',') %}
+        {% for sv in component_class.state_variables if sv.name not in component_class.annotations.get(PYPE9_NS, BUILD_TRANS, NO_TIME_DERIVS).split(',') %}
     {{sv.name}}' = deriv_{{sv.name}}({{component_class.required_for(component_class.all_time_derivatives(sv)).state_variable_names | join(', ')}})
         {% endfor %}
 }
     {% endif %}
 
-    {% for sv in component_class.state_variables if sv.name not in component_class.annotations[PYPE9_NS][BUILD_TRANS][NO_TIME_DERIVS].split(',') %}
+    {% for sv in component_class.state_variables if sv.name not in component_class.annotations.get(PYPE9_NS, BUILD_TRANS, NO_TIME_DERIVS).split(',') %}
 FUNCTION deriv_{{sv.name}}(
         {%- for sv, units in unit_handler.assign_units_to_variables(component_class.required_for(component_class.all_time_derivatives(sv)).state_variables) -%}
         {{sv.name}} ({{units}}){%- if loop.last %}{% else %}, {% endif -%}
@@ -214,14 +214,14 @@ FUNCTION deriv_{{sv.name}}(
     {% endfor %}
 {% endif %}
 
-{% if component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] != SUB_COMPONENT_MECH %}
+{% if component_class.annotations.get(PYPE9_NS, BUILD_TRANS, MECH_TYPE) != SUB_COMPONENT_MECH %}
 NET_RECEIVE(connection_weight_, channel) {
     INITIAL {
       : stop channel being set to 0 by default
     }
     found_transition_ = -1
     if (flag == INIT) {
-    {% if component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] == ARTIFICIAL_CELL_MECH %}
+    {% if component_class.annotations.get(PYPE9_NS, BUILD_TRANS, MECH_TYPE) == ARTIFICIAL_CELL_MECH %}
         : Use net_send for transitions triggers that depend on t
         {% for regime in component_class.regimes %}        
             {% for oc in regime.on_conditions %}
@@ -275,7 +275,7 @@ NET_RECEIVE(connection_weight_, channel) {
             }
             {{regime_varname}} = {{trans.target_regime.name | upper}}
 
-            {% if component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] == ARTIFICIAL_CELL_MECH %}
+            {% if component_class.annotations.get(PYPE9_NS, BUILD_TRANS, MECH_TYPE) == ARTIFICIAL_CELL_MECH %}
             : Use net_send for transitions triggers that depend on t
                 {% for oc in trans.target_regime.on_conditions %}
                     {% if oc.trigger.crossing_time_expr %}
@@ -295,7 +295,7 @@ NET_RECEIVE(connection_weight_, channel) {
 {# FIXME: These random distributions should also be included with FULL_CELL_MECHs
           but for some reason it leads to a C compile error. Need to look into this #}
           
-{% if component_class.annotations[PYPE9_NS][BUILD_TRANS][MECH_TYPE] == ARTIFICIAL_CELL_MECH %}
+{% if component_class.annotations.get(PYPE9_NS, BUILD_TRANS, MECH_TYPE) == ARTIFICIAL_CELL_MECH %}
 VERBATIM
 extern double nineml_gsl_normal(double, double);
 extern double nineml_gsl_uniform(double, double);
