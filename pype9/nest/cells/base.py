@@ -120,9 +120,9 @@ class Cell(base.Cell):
     def build_name(self, varname):
         # Get mapped port name if port corresponds to membrane voltage
         if varname == self.component_class.annotations.get(
-                PYPE9_NS, BUILD_TRANS, MEMBRANE_VOLTAGE, default=None):
+                (BUILD_TRANS, PYPE9_NS), MEMBRANE_VOLTAGE, default=None):
             varname = self.build_component_class.annotations.get(
-                PYPE9_NS, BUILD_TRANS, MEMBRANE_VOLTAGE)
+                (BUILD_TRANS, PYPE9_NS), MEMBRANE_VOLTAGE)
         return varname
 
     def reset_recordings(self):

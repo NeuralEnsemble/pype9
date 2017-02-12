@@ -119,8 +119,11 @@ class BaseCodeGenerator(object):
         """
         kwargs['version'] = pype9.version
         # Set build properties
-        for k, v in kwargs.iteritems():
-            component_class.annotations.set(PYPE9_NS, BUILD_PROPS, k, v)
+        try:
+            for k, v in kwargs.iteritems():
+                component_class.annotations.set((BUILD_PROPS, PYPE9_NS), k, v)
+        except:
+            raise
         # Save original working directory to reinstate it afterwards (just to
         # be polite)
         orig_dir = os.getcwd()
@@ -162,8 +165,7 @@ class BaseCodeGenerator(object):
                 generate_source = True
             else:
                 try:
-                    built_component_class = read(
-                        built_comp_class_pth, annotations_ns=[PYPE9_NS])[name]
+                    built_component_class = read(built_comp_class_pth)[name]
                     if built_component_class.equals(component_class,
                                                     annotations_ns=[PYPE9_NS]):
                         generate_source = False
@@ -205,7 +207,8 @@ class BaseCodeGenerator(object):
                 install_dir=install_dir,
                 verbose=verbose,
                 **kwargs)
-            component_class.write(built_comp_class_pth)
+            component_class.write(built_comp_class_pth,
+                                  save_indices=True)
         if compile_source:
             # Clean existing compile & install directories from previous builds
             if generate_source:

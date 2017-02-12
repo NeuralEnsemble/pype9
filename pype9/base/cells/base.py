@@ -400,8 +400,8 @@ class Cell(object):
         self._set_state(self._initial_states, initial_regime)
         super(Cell, self).__setattr__('_initialized', True)
 
-    def write(self, file):  # @ReservedAssignment
-        self._nineml.write(file)
+    def write(self, file, **kwargs):  # @ReservedAssignment
+        self._nineml.write(file, **kwargs)
 
     def run(self, simulation_time, reset=True, timestep='cvode', rtol=None,
             atol=None):

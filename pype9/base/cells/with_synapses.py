@@ -187,11 +187,11 @@ class WithSynapses(object):
         name = get_xml_attr(element, 'name', document, **kwargs)
         return cls(name, dynamics, synapses, parameter_sets)
 
-    def write(self, fname):
+    def write(self, fname, **kwargs):
         """
         Writes the top-level NineML object to file in XML.
         """
-        pype9.base.document.write(self, fname)
+        pype9.base.document.write(self, fname, **kwargs)
 
 
 class DynamicsWithSynapses(WithSynapses, Dynamics):
