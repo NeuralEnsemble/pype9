@@ -456,6 +456,10 @@ class ConnectionParameterSet(BaseALObject):
         return self._port
 
     @property
+    def key(self):
+        return self.port
+
+    @property
     def parameters(self):
         return self._parameters
 
@@ -513,6 +517,10 @@ class ConnectionPropertySet(BaseULObject):
     @property
     def port(self):
         return self._port
+
+    @property
+    def key(self):
+        return self.port
 
     @property
     def properties(self):

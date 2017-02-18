@@ -57,7 +57,7 @@ class CellMetaClass(type):
         url = component_class.url
         # Clone component class so annotations can be added to it and not bleed
         # into the calling code.
-        component_class = component_class.clone(annotations_ns=[PYPE9_NS])
+        component_class = component_class.clone()
         # If the component class is not already wrapped in a WithSynapses
         # object, wrap it in one before passing to the code template generator
         if not isinstance(component_class, WithSynapses):
