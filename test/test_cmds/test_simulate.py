@@ -62,7 +62,6 @@ class TestSimulateCell(TestCase):
                 "--build_mode force"  # FIXME: This should be converted to lazy
                 .format(input_model=self.isyn_path, out_path=in_path,
                         t_stop=self.t_stop, dt=self.dt,
-                        U='{} {}'.format(*self.U), V='{} {}'.format(*self.V),
                         amp='{} {}'.format(*self.isyn_amp),
                         onset='{} {}'.format(*self.isyn_onset),
                         init='{} {}'.format(*self.isyn_init)))
