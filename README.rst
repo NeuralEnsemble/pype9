@@ -1,17 +1,17 @@
 PyPe9
 =====
 
-.. image:: https://travis-ci.org/CNS-OIST/PyPe9.svg?branch=master
-    :target: https://travis-ci.org/CNS-OIST/PyPe9
-.. image:: https://coveralls.io/repos/github/CNS-OIST/PyPe9/badge.svg?branch=master
-    :target: https://coveralls.io/github/CNS-OIST/PyPe9?branch=master
-
 "PYthon PipelinEs for 9ml (PyPe9)" is a collection of software pipelines
 written in Python to read and simulate networks of neuron models
 described in NineML (http://nineml.net) in both Neuron and NEST simulators.
 
 PyPe9 is still under major development so please submit bug reports to the
 GitHub issue tracker (http://github.com/CNS-OIST/PyPe9/issues).
+
+.. image:: https://travis-ci.org/CNS-OIST/PyPe9.svg?branch=master
+    :target: https://travis-ci.org/CNS-OIST/PyPe9
+.. image:: https://coveralls.io/repos/github/CNS-OIST/PyPe9/badge.svg?branch=master
+    :target: https://coveralls.io/github/CNS-OIST/PyPe9?branch=master
 
 Prerequisites
 -------------
