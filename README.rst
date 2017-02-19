@@ -6,13 +6,13 @@ read and simulate networks of neuron models described in NineML (http://nineml.n
 using either Neuron (http://neuron.yale.edu) and NEST simulators (http://nest-simulator.org)
 as backends.
 
+:copyright: Copyright 20012-2016 by the PyPe9 team, see AUTHORS.
+:license: MIT, see LICENSE for details.
+
 .. image:: https://travis-ci.org/CNS-OIST/PyPe9.svg?branch=master
     :target: https://travis-ci.org/CNS-OIST/PyPe9
 .. image:: https://coveralls.io/repos/github/CNS-OIST/PyPe9/badge.svg?branch=master
     :target: https://coveralls.io/github/CNS-OIST/PyPe9?branch=master
-
-:copyright: Copyright 20012-2016 by the PyPe9 team, see AUTHORS.
-:license: MIT, see LICENSE for details.
 
 Prerequisites
 -------------
