@@ -164,10 +164,10 @@ class WithSynapses(object):
     def to_xml(self, document, E=E, **kwargs):
         return E(self.nineml_type,
                  E.Cell(self.dynamics.to_xml(document, E=E, **kwargs)),
-                 *chain((s.to_xml(document, E, **kwargs)
-                         for s in self.synapses),
-                        (cps.to_xml(document, E, **kwargs)
-                         for cps in self.connection_parameter_sets)),
+                 *list(chain((s.to_xml(document, E=E, **kwargs)
+                              for s in self.synapses),
+                             (cps.to_xml(document, E=E, **kwargs)
+                              for cps in self.connection_parameter_sets))),
                  name=self.name)
 
     @classmethod
