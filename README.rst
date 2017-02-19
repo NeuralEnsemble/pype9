@@ -6,9 +6,6 @@ read and simulate networks of neuron models described in NineML (http://nineml.n
 using either Neuron (http://neuron.yale.edu) and NEST simulators (http://nest-simulator.org)
 as backends.
 
-:copyright: Copyright 20012-2016 by the PyPe9 team, see AUTHORS.
-:license: MIT, see LICENSE for details.
-
 .. image:: https://travis-ci.org/CNS-OIST/PyPe9.svg?branch=master
     :target: https://travis-ci.org/CNS-OIST/PyPe9
 .. image:: https://coveralls.io/repos/github/CNS-OIST/PyPe9/badge.svg?branch=master
@@ -87,3 +84,6 @@ restrictions apply to models that can be used with PyPe9.
   built-in keywords and some PyPe9 method names (e.g. 'lambda' is a reserved
   keyword in Python). Please avoid using names that clash with C++ or Python
   keywords (all 9ML names will be escaped in PyPe9 v0.2).
+
+:copyright: Copyright 20012-2016 by the PyPe9 team, see AUTHORS.
+:license: MIT, see LICENSE for details.
