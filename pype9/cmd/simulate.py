@@ -62,6 +62,8 @@ def run(argv):
         from pype9.neuron import Network, CellMetaClass, simulation_controller  # @UnusedImport @IgnorePep8
     elif args.simulator == 'nest':
         from pype9.nest import Network, CellMetaClass, simulation_controller  # @Reimport @IgnorePep8
+        import nest
+        nest.ResetKernel()
     else:
         raise Pype9UsageError(
             "Unrecognised simulator '{}', (available 'neuron' or 'nest')"

@@ -77,7 +77,6 @@ class TestSimulateCell(TestCase):
                          "Min of isyn input signal {} ({}) did not match "
                          "specified initial value, {}"
                          .format(isyn.min(), in_path, self.isyn_init[0]))
-        nest.ResetKernel()
         for simulator in ('nest', 'neuron'):
             argv = (
                 "{nineml_model} {sim} {t_stop} {dt} "
