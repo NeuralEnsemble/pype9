@@ -3,8 +3,8 @@ PyPe9
 
 "PYthon PipelinEs for 9ml (PyPe9)" is a collection of software Python pipelines to
 read and simulate networks of neuron models described in NineML (http://nineml.net)
-using either Neuron (http://neuron.yale.edu) and NEST simulators (http://nest-simulator.org)
-as backends.
+using either Neuron (http://neuron.yale.edu) or NEST (http://nest-simulator.org)
+as simulator backends.
 
 .. image:: https://travis-ci.org/CNS-OIST/PyPe9.svg?branch=master
     :target: https://travis-ci.org/CNS-OIST/PyPe9
