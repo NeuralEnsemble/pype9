@@ -16,6 +16,7 @@ double nineml_gsl_poisson(double mu);
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
@@ -52,8 +53,19 @@ extern "C"
 void nineml_seed_gsl_rng(unsigned int seed) {
 
     gsl_rng* rng = get_gsl_rng();
-    _seed = seed;
-    gsl_rng_set(rng, seed);
+
+    if (!_seed) {
+        gsl_rng_set(rng, seed);
+        _seed = seed;
+    } else {
+        // Each NMODL file with a random process will attempt to seed the
+        // process with what should be the same seed. The seeding only needs to
+        // be done once but it is difficult to ensure only one NMODL instance
+        // sets it per node and not much harm if all cells attempt to set it in
+        // their INITIAL block.
+        printf("%d != %d\n", _seed, seed);
+        assert(_seed == seed);
+    }
 
 }
 
@@ -61,6 +73,7 @@ void nineml_seed_gsl_rng(unsigned int seed) {
 extern "C"
 unsigned int nineml_get_gsl_rng_seed() {
 
+    printf("%d\n", _seed);
     return _seed;
 
 }

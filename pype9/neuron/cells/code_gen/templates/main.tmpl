@@ -28,6 +28,9 @@ NEURON {
 
     : T
     RANGE {{regime_varname}}
+{% if component_class.annotations.get((BUILD_TRANS, PYPE9_NS), MECH_TYPE) == ARTIFICIAL_CELL_MECH %}
+    RANGE {{seed_varname}}
+{% endif %}    
 
     :StateVariables:
 {% for sv in component_class.state_variables %}
@@ -104,6 +107,11 @@ INITIAL {
     {# This should come from the initial state, when we sort out that format #}
     {{regime_varname}} = 0
 
+{% if component_class.annotations.get((BUILD_TRANS, PYPE9_NS), MECH_TYPE) == ARTIFICIAL_CELL_MECH %}
+    {#seed_gsl_rng_({{seed_varname}})#}
+    printf("init seed: %d\n", get_rng_seed_())
+{% endif %}
+
 {% if component_class.annotations.get((BUILD_TRANS, PYPE9_NS), MECH_TYPE) != SUB_COMPONENT_MECH %}
     : Initialise the NET_RECEIVE block by sending appropriate flag to itself
     net_send(0, INIT)
@@ -120,6 +128,12 @@ PARAMETER {
 {% for const, value, units in unit_handler.assign_units_to_constants(component_class.constants) %}
     {{const.name}} = {{value}} ({{units}})
 {% endfor %}
+
+{#
+{% if component_class.annotations.get((BUILD_TRANS, PYPE9_NS), MECH_TYPE) == ARTIFICIAL_CELL_MECH %}
+    {{seed_varname}} = 99
+{% endif %}
+#}
 
     : Units for connection properties
 {% for connection_parameter_set in component_class.connection_parameter_sets %}
@@ -334,11 +348,18 @@ VERBATIM
     _lrandom_exponential_ = nineml_gsl_exponential(_lm);
 ENDVERBATIM
 }
-{#
+
+FUNCTION seed_gsl_rng_(m) {
+VERBATIM
+    nineml_seed_gsl_rng(_lm);
+ENDVERBATIM
+}
+
+
 FUNCTION get_rng_seed_() {
 VERBATIM
     _lget_rng_seed_ = nineml_get_gsl_rng_seed();
 ENDVERBATIM
 }
-#}
+
 {% endif %}

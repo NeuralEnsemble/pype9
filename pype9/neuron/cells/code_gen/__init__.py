@@ -50,6 +50,7 @@ TRANSFORM_NS = 'NeuronBuildTransform'
 logger = logging.getLogger("PyPe9")
 
 REGIME_VARNAME = 'regime_'
+SEED_VARNAME = 'seed_'
 
 
 class CodeGenerator(BaseCodeGenerator):
@@ -142,7 +143,8 @@ class CodeGenerator(BaseCodeGenerator):
             'ode_solver': self.ODE_SOLVER_DEFAULT,
             'external_ports': [],
             'is_subcomponent': True,
-            'regime_varname': REGIME_VARNAME}
+            'regime_varname': REGIME_VARNAME,
+            'seed_varname': SEED_VARNAME}
 #             # FIXME: weight_vars needs to be removed or implemented properly
 #             'weight_variables': []}
         tmpl_args.update(template_args)
