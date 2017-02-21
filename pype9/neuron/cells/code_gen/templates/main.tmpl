@@ -93,23 +93,10 @@ CONSTANT {
 }
 
 INITIAL {
-    : Initialise State Variables:
-{% for sv in component_class.state_variables %}
-    {{sv.name}} = 0
-{% endfor %}
 
 {# Debugging for setting of random seed in nineml.cpp #}
 {% if component_class.annotations.get((BUILD_TRANS, PYPE9_NS), MECH_TYPE) == ARTIFICIAL_CELL_MECH %}
-    : printf("RNG SEED: %d", get_rng_seed_())
-{% endif %}
-
-    : Initialise Regime:
-    {# This should come from the initial state, when we sort out that format #}
-    {{regime_varname}} = 0
-
-{% if component_class.annotations.get((BUILD_TRANS, PYPE9_NS), MECH_TYPE) == ARTIFICIAL_CELL_MECH %}
-    {#seed_gsl_rng_({{seed_varname}})#}
-    printf("init seed: %d\n", get_rng_seed_())
+    printf("RNG SEED: %d\n", get_rng_seed_())
 {% endif %}
 
 {% if component_class.annotations.get((BUILD_TRANS, PYPE9_NS), MECH_TYPE) != SUB_COMPONENT_MECH %}
@@ -128,12 +115,6 @@ PARAMETER {
 {% for const, value, units in unit_handler.assign_units_to_constants(component_class.constants) %}
     {{const.name}} = {{value}} ({{units}})
 {% endfor %}
-
-{#
-{% if component_class.annotations.get((BUILD_TRANS, PYPE9_NS), MECH_TYPE) == ARTIFICIAL_CELL_MECH %}
-    {{seed_varname}} = 99
-{% endif %}
-#}
 
     : Units for connection properties
 {% for connection_parameter_set in component_class.connection_parameter_sets %}
@@ -346,12 +327,6 @@ ENDVERBATIM
 FUNCTION random_exponential_(m) {
 VERBATIM
     _lrandom_exponential_ = nineml_gsl_exponential(_lm);
-ENDVERBATIM
-}
-
-FUNCTION seed_gsl_rng_(m) {
-VERBATIM
-    nineml_seed_gsl_rng(_lm);
 ENDVERBATIM
 }
 

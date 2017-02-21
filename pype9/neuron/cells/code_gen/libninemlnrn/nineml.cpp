@@ -53,19 +53,8 @@ extern "C"
 void nineml_seed_gsl_rng(unsigned int seed) {
 
     gsl_rng* rng = get_gsl_rng();
-
-    if (!_seed) {
-        gsl_rng_set(rng, seed);
-        _seed = seed;
-    } else {
-        // Each NMODL file with a random process will attempt to seed the
-        // process with what should be the same seed. The seeding only needs to
-        // be done once but it is difficult to ensure only one NMODL instance
-        // sets it per node and not much harm if all cells attempt to set it in
-        // their INITIAL block.
-        printf("%d != %d\n", _seed, seed);
-        assert(_seed == seed);
-    }
+    gsl_rng_set(rng, seed);
+    _seed = seed;
 
 }
 

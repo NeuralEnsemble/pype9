@@ -3,8 +3,12 @@ import quantities as pq
 import numpy
 import logging
 from pype9.base.cells.controller import SimulationController
+from pype9.neuron.cells.code_gen import CodeGenerator
 import pyNN.neuron  # @UnusedImport Imported to ensure mod files are imported
+import os.path
 import ctypes
+import time
+from binascii import hexlify
 
 logger = logging.getLogger('PyPe9')
 
@@ -36,7 +40,7 @@ class _SimulationController(SimulationController):
         return pq.Quantity(self._time, 'ms')
 
     def run(self, simulation_time, reset=True, timestep='cvode', rtol=None,
-            atol=None):
+            atol=None, random_seed=None):
         """
         Run the simulation for a certain time.
         """
@@ -51,6 +55,7 @@ class _SimulationController(SimulationController):
             h.dt = timestep
         if reset or not self.running:
             self.initialize()
+        self.seed_rng(random_seed)
         self.running = True
         # Convert simulation time to float value in ms
         simulation_time = float(pq.Quantity(simulation_time, 'ms'))
@@ -59,12 +64,20 @@ class _SimulationController(SimulationController):
         self.tstop += simulation_time
 
     def reset(self):
-        h.finitialize(-65.0)
-        self.reset_cells()
+        self.reset_cells()  # Needs to set before initialise for the init block
+        h.finitialize()
+        self.reset_cells()  # Just in case the voltage needs updating
         self.tstop = 0.0
 
     def clear(self, **kwargs):  # @UnusedVariable
         pass  # TODO: Need to look into whether it is possible to remove cells
+
+    def seed_rng(self, seed=None):
+        if seed is None:
+            seed = long(hexlify(os.urandom(16)))
+        libninemlnrn = ctypes.CDLL(
+            os.path.join(CodeGenerator.LIBNINEMLNRN_PATH, 'libninemlnrn.so'))
+        libninemlnrn.nineml_seed_gsl_rng(seed)
 
 # Make a singleton instantiation of the simulation controller
 simulation_controller = _SimulationController()
