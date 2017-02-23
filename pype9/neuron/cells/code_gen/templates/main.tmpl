@@ -94,11 +94,6 @@ CONSTANT {
 
 INITIAL {
 
-{# Debugging for setting of random seed in nineml.cpp #}
-{% if component_class.annotations.get((BUILD_TRANS, PYPE9_NS), MECH_TYPE) == ARTIFICIAL_CELL_MECH %}
-    printf("RNG SEED: %d\n", get_rng_seed_())
-{% endif %}
-
 {% if component_class.annotations.get((BUILD_TRANS, PYPE9_NS), MECH_TYPE) != SUB_COMPONENT_MECH %}
     : Initialise the NET_RECEIVE block by sending appropriate flag to itself
     net_send(0, INIT)
@@ -327,13 +322,6 @@ ENDVERBATIM
 FUNCTION random_exponential_(m) {
 VERBATIM
     _lrandom_exponential_ = nineml_gsl_exponential(_lm);
-ENDVERBATIM
-}
-
-
-FUNCTION get_rng_seed_() {
-VERBATIM
-    _lget_rng_seed_ = nineml_get_gsl_rng_seed();
 ENDVERBATIM
 }
 

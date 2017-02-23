@@ -74,7 +74,7 @@ class _SimulationController(SimulationController):
 
     def seed_rng(self, seed=None):
         if seed is None:
-            seed = long(hexlify(os.urandom(16)))
+            seed = int(hexlify(os.urandom(4)), 16)
         libninemlnrn = ctypes.CDLL(
             os.path.join(CodeGenerator.LIBNINEMLNRN_PATH, 'libninemlnrn.so'))
         libninemlnrn.nineml_seed_gsl_rng(seed)

@@ -17,7 +17,7 @@ cell2 = Cell(rate=150 / un.s)
 cell2.set_state({'t_next': 1 * un.ms})
 cell2.record('spike_output')
 
-simulation_controller.run(100 * un.ms, random_seed=13)
+simulation_controller.run(100 * un.ms)
 cell1_rec = cell.recording('spike_output')
 cell2_rec = cell2.recording('spike_output')
 y, x = numpy.array(zip(repeat(1), cell1_rec) + zip(repeat(2), cell2_rec)).T
