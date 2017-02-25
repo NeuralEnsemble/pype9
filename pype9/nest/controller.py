@@ -2,22 +2,11 @@ import time
 import tempfile
 import numpy
 import nest
-from pype9.base.cells.controller import Controller
+from pype9.base.controller import BaseController
+from pyNN.nest.simulator import _State as PyNNState
 
 
-def nest_property(name, dtype):
-    """Return a property that accesses a NEST kernel parameter"""
-
-    def _get(self):
-        return nest.GetKernelStatus(name)
-
-    def _set(self, val):
-            nest.SetKernelStatus({name: dtype(val)})
-
-    return property(fget=_get, fset=_set)
-
-
-class _Controller(Controller):
+class _Controller(BaseController, PyNNState):
     """Represent the simulator state."""
 
     instance_counter = 0
@@ -26,39 +15,8 @@ class _Controller(Controller):
         """Initialize the simulator."""
         super(_Controller, self).__init__()
         self.tempdirs = []
-        self._cache_num_processes = nest.GetKernelStatus()['num_processes']
         self.clear()
-        self.t_start = 0
-        self.write_on_end = []
-        self.recorders = set([])
-        self.initialized = False
-        self.optimize = False
-        self.spike_precision = "off_grid"
-        self.verbosity = "warning"
         self._device_delay = None
-
-    @property
-    def t(self):
-        return max(nest.GetKernelStatus('time') - self.dt, 0.0)
-
-    dt = nest_property('resolution', float)
-
-    threads = nest_property('local_num_threads', int)
-
-    grng_seed = nest_property('grng_seed', int)
-
-    rng_seeds = nest_property('rng_seeds', list)
-
-    @property
-    def min_delay(self):
-        # this rather complex implementation is needed to handle
-        # min_delay='auto'
-        kernel_delay = nest.GetKernelStatus('min_delay')
-        syn_delay = nest.GetDefaults('static_synapse')['min_delay']
-        if syn_delay == numpy.inf or syn_delay > 1e300:
-            return kernel_delay
-        else:
-            return max(kernel_delay, syn_delay)
 
     def set_delays(self, min_delay, max_delay, device_delay):
         self._device_delay = float(device_delay)
@@ -71,44 +29,11 @@ class _Controller(Controller):
 #                                                  'max_delay': max_delay})
 
     @property
-    def max_delay(self):
-        return nest.GetDefaults('static_synapse')['max_delay']
-
-    @property
     def device_delay(self):
         if self._device_delay is None:
             return self.min_delay
         else:
             return self._device_delay
-
-    @property
-    def num_processes(self):
-        return self._cache_num_processes
-
-    @property
-    def mpi_rank(self):
-        return nest.Rank()
-
-    def _get_spike_precision(self):
-        ogs = nest.GetKernelStatus('off_grid_spiking')
-        return ogs and "off_grid" or "on_grid"
-
-    def _set_spike_precision(self, precision):
-        if precision == 'off_grid':
-            nest.SetKernelStatus({'off_grid_spiking': True})
-            self.default_recording_precision = 15
-        elif precision == 'on_grid':
-            nest.SetKernelStatus({'off_grid_spiking': False})
-            self.default_recording_precision = 3
-        else:
-            raise ValueError("spike_precision must be 'on_grid' or 'off_grid'")
-
-    spike_precision = property(fget=_get_spike_precision,
-                               fset=_set_spike_precision)
-
-    def _set_verbosity(self, verbosity):
-        nest.sli_run("M_%s setverbosity" % verbosity.upper())
-    verbosity = property(fset=_set_verbosity)
 
     def run(self, simtime, reset=True, reset_nest_time=False):
         """Advance the simulation for a certain time."""

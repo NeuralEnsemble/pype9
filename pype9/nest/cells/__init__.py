@@ -1,2 +1,2 @@
 from .base import Cell, CellMetaClass
-from .controller import controller
+from pype9.nest import controller

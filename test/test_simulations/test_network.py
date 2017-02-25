@@ -26,7 +26,7 @@ from pype9.base.cells import (
     ConnectionPropertySet, MultiDynamicsWithSynapsesProperties)
 from pype9.base.network import Network as BasePype9Network
 from pype9.neuron.network import Network as NeuronPype9Network
-from pype9.neuron.cells import (
+from pype9.neuron import controller as simulation_contoller_neuron
     controller as simulation_contoller_neuron)
 import ninemlcatalog
 import pyNN.neuron
@@ -35,7 +35,7 @@ argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
 import nest  # @IgnorePep8
 import pyNN.nest  # @IgnorePep8
 from pype9.nest.network import Network as NestPype9Network  # @IgnorePep8
-from pype9.nest.cells import (  # @IgnorePep8
+from pype9.nest import controller as controller_nest
     controller as controller_nest)
 from pype9.utils.testing import ReferenceBrunel2000  # @IgnorePep8
 try:

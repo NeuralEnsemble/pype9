@@ -1,4 +1,5 @@
-from .cells import Cell, CellMetaClass, controller  # @UnusedImport
+from .cells import Cell, CellMetaClass
+from pype9.neuron import controller
 from .network import Network
 from .units import UnitHandler
 # from .pynn_interface.network import Network  # @UnusedImport

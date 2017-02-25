@@ -2,24 +2,23 @@ from neuron import h
 import quantities as pq
 import numpy
 import logging
-from pype9.base.cells.controller import Controller
+from pyNN.neuron.simulator import state as pyNN_state
+from pype9.base.controller import BaseController
 from pype9.neuron.cells.code_gen import CodeGenerator
-import pyNN.neuron  # @UnusedImport Imported to ensure mod files are imported
 import os.path
 import ctypes
-import time
 from binascii import hexlify
 
 logger = logging.getLogger('PyPe9')
 
 
-#TODO: Extend PyNN simulation controller instead of reimplementing it
-
-class _Controller(Controller):
+class _Controller(BaseController):
     """
     This is adapted from the code for the simulation controller in PyNN for
     use with individual cell objects
     """
+
+    _pyNN_state = pyNN_state
 
     instance_counter = 0
 

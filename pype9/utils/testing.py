@@ -20,12 +20,14 @@ try:
     import pylab as plt
 except ImportError:
     plt = None
-from pype9.neuron.cells import (
+from pype9.neuron.cells import CellMetaClass as CellMetaClassNEURON
+from pype9.nest import controller as simulatorNEURON
     CellMetaClass as CellMetaClassNEURON,
     controller as simulatorNEURON)
 from pype9.neuron.units import UnitHandler as UnitHandlerNEURON
 from pype9.nest.units import UnitHandler as UnitHandlerNEST
-from pype9.nest.cells import (
+from pype9.nest.cells import CellMetaClass as CellMetaClassNEST
+from pype9.nest import controller as simulatorNEST
     CellMetaClass as CellMetaClassNEST,
     controller as simulatorNEST)
 from nineml.units import Quantity
@@ -34,7 +36,7 @@ import numpy
 import quantities as pq
 import neo
 from pype9.exceptions import Pype9RuntimeError
-from pype9.nest.cells import controller
+from pype9.nest import controller
 
 
 compare_script_path = os.path.join(os.path.dirname(__file__), '..', 'scripts',

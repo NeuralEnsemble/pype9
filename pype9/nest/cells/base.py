@@ -15,7 +15,7 @@ import nest
 import quantities as pq
 from nineml.exceptions import NineMLNameError
 from .code_gen import CodeGenerator, REGIME_VARNAME
-from .controller import controller
+from pype9.nest import controller
 from pype9.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
 from pype9.nest.units import UnitHandler
