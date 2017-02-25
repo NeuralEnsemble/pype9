@@ -59,9 +59,9 @@ def run(argv):
     seed = int(time.time()) if args.seed is None else args.seed
 
     if args.simulator == 'neuron':
-        from pype9.neuron import Network, CellMetaClass, simulation_controller  # @UnusedImport @IgnorePep8
+        from pype9.neuron import Network, CellMetaClass, controller  # @UnusedImport @IgnorePep8
     elif args.simulator == 'nest':
-        from pype9.nest import Network, CellMetaClass, simulation_controller  # @Reimport @IgnorePep8
+        from pype9.nest import Network, CellMetaClass, controller  # @Reimport @IgnorePep8
         import nest
         nest.ResetKernel()
     else:
@@ -170,7 +170,7 @@ def run(argv):
         for port_name, _ in args.record:
             cell.record(port_name)
         # Run simulation
-        simulation_controller.run(args.time)
+        controller.run(args.time)
         # Collect data into Neo Segments
         fnames = set(r[1] for r in args.record)
         data_segs = {}

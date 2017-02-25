@@ -1,1 +1,1 @@
-from .base import CellMetaClass, Cell, simulation_controller
+from .base import CellMetaClass, Cell, controller

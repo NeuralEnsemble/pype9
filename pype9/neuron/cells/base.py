@@ -30,7 +30,7 @@ from math import pi
 import numpy
 from pype9.base.cells import base
 from pype9.neuron.units import UnitHandler
-from .controller import simulation_controller
+from .controller import controller
 from pype9.annotations import (
     PYPE9_NS, BUILD_TRANS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
     MEMBRANE_VOLTAGE, MECH_TYPE, ARTIFICIAL_CELL_MECH)
@@ -48,7 +48,7 @@ class Cell(base.Cell):
 
     V_INIT_DEFAULT = -65.0
 
-    _controller = simulation_controller
+    _controller = controller
     _unit_handler = UnitHandler
 
     def __init__(self, *properties, **kwprops):

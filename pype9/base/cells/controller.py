@@ -3,7 +3,7 @@ import weakref
 from pype9.exceptions import Pype9RuntimeError
 
 
-class SimulationController(object):
+class Controller(object):
 
     __metaclass__ = ABCMeta
 

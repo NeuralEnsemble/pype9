@@ -22,19 +22,19 @@ except ImportError:
     plt = None
 from pype9.neuron.cells import (
     CellMetaClass as CellMetaClassNEURON,
-    simulation_controller as simulatorNEURON)
+    controller as simulatorNEURON)
 from pype9.neuron.units import UnitHandler as UnitHandlerNEURON
 from pype9.nest.units import UnitHandler as UnitHandlerNEST
 from pype9.nest.cells import (
     CellMetaClass as CellMetaClassNEST,
-    simulation_controller as simulatorNEST)
+    controller as simulatorNEST)
 from nineml.units import Quantity
 from nineml import units as un
 import numpy
 import quantities as pq
 import neo
 from pype9.exceptions import Pype9RuntimeError
-from pype9.nest.cells import simulation_controller
+from pype9.nest.cells import controller
 
 
 compare_script_path = os.path.join(os.path.dirname(__file__), '..', 'scripts',
@@ -141,7 +141,7 @@ class Comparer(object):
             nest.ResetNetwork()
             nest.ResetKernel()
             simulatorNEST.clear(rng_seed=nest_rng_seed, dt=self.dt)
-            simulation_controller.set_delays(self.min_delay, self.max_delay,
+            controller.set_delays(self.min_delay, self.max_delay,
                                              self.device_delay)
         if self.simulate_neuron:
             simulatorNEURON.clear(rng_seed=neuron_rng_seed)

@@ -10,11 +10,11 @@ from pype9.cmd._utils import parse_units
 import ninemlcatalog
 from pype9.neuron import (
     CellMetaClass as CellMetaClassNEURON,
-    simulation_controller as simulatorNEURON,
+    controller as simulatorNEURON,
     Network as NetworkNEURON)
 from pype9.nest import (
     CellMetaClass as CellMetaClassNEST,
-    simulation_controller as simulatorNEST,
+    controller as simulatorNEST,
     Network as NetworkNEST)
 from pyNN.random import NumpyRNG
 import pyNN.neuron
@@ -109,11 +109,11 @@ class TestSimulateCell(TestCase):
     def _ref_single_cell(self, simulator, isyn):
         if simulator == 'neuron':
             metaclass = CellMetaClassNEURON
-            simulation_controller = simulatorNEURON
+            controller = simulatorNEURON
         else:
             nest.ResetKernel()
             metaclass = CellMetaClassNEST
-            simulation_controller = simulatorNEST
+            controller = simulatorNEST
         nineml_model = ninemlcatalog.load(self.izhi_path)
         cell = metaclass(nineml_model.component_class,
                          name='izhikevichAPI')(nineml_model)
@@ -121,7 +121,7 @@ class TestSimulateCell(TestCase):
                            'V': Quantity(self.V[0], parse_units(self.V[1]))})
         cell.record('V')
         cell.play('Isyn', isyn)
-        simulation_controller.run(self.t_stop)
+        controller.run(self.t_stop)
         return cell.recording('V')
 
 

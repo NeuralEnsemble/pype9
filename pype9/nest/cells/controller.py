@@ -2,7 +2,7 @@ import time
 import tempfile
 import numpy
 import nest
-from pype9.base.cells.controller import SimulationController
+from pype9.base.cells.controller import Controller
 
 
 def nest_property(name, dtype):
@@ -17,14 +17,14 @@ def nest_property(name, dtype):
     return property(fget=_get, fset=_set)
 
 
-class _SimulationController(SimulationController):
+class _Controller(Controller):
     """Represent the simulator state."""
 
     instance_counter = 0
 
     def __init__(self):
         """Initialize the simulator."""
-        super(_SimulationController, self).__init__()
+        super(_Controller, self).__init__()
         self.tempdirs = []
         self._cache_num_processes = nest.GetKernelStatus()['num_processes']
         self.clear()
@@ -174,4 +174,4 @@ class _SimulationController(SimulationController):
                               dtype=int))
         self.reset(reset_nest_time=False)
 
-simulation_controller = _SimulationController()
+controller = _Controller()

@@ -13,11 +13,11 @@ from pype9.base.cells import (
     ConnectionParameterSet, ConnectionPropertySet)
 from pype9.neuron.cells import (
     CellMetaClass as CellMetaClassNEURON,
-    simulation_controller as simulatorNEURON)
+    controller as simulatorNEURON)
 argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
 from pype9.nest.cells import (  # @IgnorePep8
     CellMetaClass as CellMetaClassNEST,
-    simulation_controller as simulatorNEST)
+    controller as simulatorNEST)
 from pype9.utils.testing import Comparer, input_step, input_freq  # @IgnorePep8
 from pype9.nest.units import UnitHandler as UnitHandlerNEST  # @IgnorePep8
 if __name__ == '__main__':

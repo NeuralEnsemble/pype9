@@ -1,4 +1,4 @@
-from .cells import Cell, CellMetaClass, simulation_controller  # @UnusedImport
+from .cells import Cell, CellMetaClass, controller  # @UnusedImport
 from .network import Network
 from .units import UnitHandler
 # from .pynn_interface.network import Network  # @UnusedImport

@@ -2,7 +2,7 @@ from neuron import h
 import quantities as pq
 import numpy
 import logging
-from pype9.base.cells.controller import SimulationController
+from pype9.base.cells.controller import Controller
 from pype9.neuron.cells.code_gen import CodeGenerator
 import pyNN.neuron  # @UnusedImport Imported to ensure mod files are imported
 import os.path
@@ -15,7 +15,7 @@ logger = logging.getLogger('PyPe9')
 
 #TODO: Extend PyNN simulation controller instead of reimplementing it
 
-class _SimulationController(SimulationController):
+class _Controller(Controller):
     """
     This is adapted from the code for the simulation controller in PyNN for
     use with individual cell objects
@@ -24,7 +24,7 @@ class _SimulationController(SimulationController):
     instance_counter = 0
 
     def __init__(self):
-        super(_SimulationController, self).__init__()
+        super(_Controller, self).__init__()
         self._time = h.Vector()
 
     def finalize(self):
@@ -80,4 +80,4 @@ class _SimulationController(SimulationController):
         libninemlnrn.nineml_seed_gsl_rng(seed)
 
 # Make a singleton instantiation of the simulation controller
-simulation_controller = _SimulationController()
+controller = _Controller()

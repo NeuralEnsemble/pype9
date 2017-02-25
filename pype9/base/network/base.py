@@ -600,13 +600,13 @@ class ComponentArray(object):
 #                 {'amplitude_values': pq.Quantity(signal, 'pA'),
 #                  'amplitude_times': (
 #                     pq.Quantity(signal.times, 'ms') -
-#                     simulation_controller.device_delay * pq.ms),
+#                     controller.device_delay * pq.ms),
 #                  'start': float(pq.Quantity(signal.t_start, 'ms')),
 #                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
 #             nest.Connect(self._inputs[port_name], self._cell,
 #                          syn_spec={
 #                              "receptor_type": self._receive_ports[port_name],
-#                              'delay': simulation_controller.device_delay})
+#                              'delay': controller.device_delay})
         else:
             raise Pype9RuntimeError(
                 "Unrecognised port type '{}' to play signal into".format(port))
