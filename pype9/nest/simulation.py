@@ -2,18 +2,18 @@ import time
 import tempfile
 import numpy
 import nest
-from pype9.base.controller import BaseController
+from pype9.base.simulation import BaseSimulation
 from pyNN.nest.simulator import _State as PyNNState
 
 
-class _Controller(BaseController, PyNNState):
+class Simulation(BaseSimulation, PyNNState):
     """Represent the simulator state."""
 
     instance_counter = 0
 
     def __init__(self):
         """Initialize the simulator."""
-        super(_Controller, self).__init__()
+        super(Simulation, self).__init__()
         self.tempdirs = []
         self.clear()
         self._device_delay = None

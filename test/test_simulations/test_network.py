@@ -26,7 +26,7 @@ from pype9.base.cells import (
     ConnectionPropertySet, MultiDynamicsWithSynapsesProperties)
 from pype9.base.network import Network as BasePype9Network
 from pype9.neuron.network import Network as NeuronPype9Network
-from pype9.neuron import controller as simulation_contoller_neuron
+from pype9.neuron import simulation as simulation_contoller_neuron
     controller as simulation_contoller_neuron)
 import ninemlcatalog
 import pyNN.neuron

@@ -2,8 +2,8 @@ from neuron import h
 import quantities as pq
 import numpy
 import logging
-from pyNN.neuron.simulator import state as pyNN_state
-from pype9.base.controller import BaseController
+from pyNN.neuron.simulator import _State as PyNNState
+from pype9.base.simulation import BaseSimulation
 from pype9.neuron.cells.code_gen import CodeGenerator
 import os.path
 import ctypes
@@ -12,18 +12,16 @@ from binascii import hexlify
 logger = logging.getLogger('PyPe9')
 
 
-class _Controller(BaseController):
+class Simulation(BaseSimulation, PyNNState):
     """
     This is adapted from the code for the simulation controller in PyNN for
     use with individual cell objects
     """
 
-    _pyNN_state = pyNN_state
-
     instance_counter = 0
 
     def __init__(self):
-        super(_Controller, self).__init__()
+        super(Simulation, self).__init__()
         self._time = h.Vector()
 
     def finalize(self):

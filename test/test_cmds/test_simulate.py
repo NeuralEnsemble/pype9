@@ -8,11 +8,13 @@ from nineml.units import Quantity
 from pype9.cmd import simulate
 from pype9.cmd._utils import parse_units
 import ninemlcatalog
-from pype9.neuron import (
+from pype9.neuron import CellMetaClass as CellMetaClassNEURON, Network as NetworkNEURON
+from pype9.neuron import simulation as simulatorNEURON
     CellMetaClass as CellMetaClassNEURON,
     controller as simulatorNEURON,
     Network as NetworkNEURON)
-from pype9.nest import (
+from pype9.nest import CellMetaClass as CellMetaClassNEST, Network as NetworkNEST
+from pype9.nest import simulation as simulatorNEST
     CellMetaClass as CellMetaClassNEST,
     controller as simulatorNEST,
     Network as NetworkNEST)

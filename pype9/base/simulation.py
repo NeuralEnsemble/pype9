@@ -3,18 +3,23 @@ import weakref
 from pype9.exceptions import Pype9RuntimeError
 
 
-class BaseController(object):
+class BaseSimulation(object):
 
     __metaclass__ = ABCMeta
 
     def __init__(self):
         if self.instance_counter:
             raise Pype9RuntimeError(
-                "Cannot instantiate more than one instance of "
-                "_SimualtionController")
+                "Cannot instantiate more than one instance of Simulation")
         self.instance_counter += 1
         self.running = False
         self.registered_cells = []
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self):
+        pass
 
     def initialize(self):
         self.reset()

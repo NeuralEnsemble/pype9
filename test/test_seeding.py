@@ -1,7 +1,7 @@
 import ninemlcatalog
 from nineml import units as un
 from pype9.neuron import CellMetaClass
-from pype9.neuron import controller
+from pype9.neuron import simulation
 import matplotlib.pyplot as plt
 from itertools import repeat
 import numpy
@@ -18,7 +18,7 @@ cell2 = Cell(rate=150 / un.s)
 cell2.set_state({'t_next': 1 * un.ms})
 cell2.record('spike_output')
 
-controller.run(100 * un.ms)
+simulation.run(100 * un.ms)
 cell1_rec = cell.recording('spike_output')
 cell2_rec = cell2.recording('spike_output')
 y, x = numpy.array(zip(repeat(1), cell1_rec) + zip(repeat(2), cell2_rec)).T

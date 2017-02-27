@@ -12,7 +12,7 @@ from pype9.base.cells import (
     MultiDynamicsWithSynapses, DynamicsWithSynapsesProperties,
     ConnectionParameterSet, ConnectionPropertySet)
 from pype9.neuron.cells import CellMetaClass as CellMetaClassNEURON
-from pype9.neuron import controller as simulatorNEURON
+from pype9.neuron import simulation as simulatorNEURON
     CellMetaClass as CellMetaClassNEURON,
     controller as simulatorNEURON)
 argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.

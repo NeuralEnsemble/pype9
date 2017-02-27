@@ -1,5 +1,5 @@
 from .cells import Cell, CellMetaClass
-from pype9.neuron import controller
+from pype9.neuron import simulation
 from .network import Network
 from .units import UnitHandler
 # from .pynn_interface.network import Network  # @UnusedImport

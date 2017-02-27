@@ -21,7 +21,7 @@ try:
 except ImportError:
     plt = None
 from pype9.neuron.cells import CellMetaClass as CellMetaClassNEURON
-from pype9.nest import controller as simulatorNEURON
+from pype9.nest import simulation as simulatorNEURON
     CellMetaClass as CellMetaClassNEURON,
     controller as simulatorNEURON)
 from pype9.neuron.units import UnitHandler as UnitHandlerNEURON

@@ -60,10 +60,10 @@ def run(argv):
 
     if args.simulator == 'neuron':
         from pype9.neuron import Network, CellMetaClass
-        from pype9.neuron import controller
+        from pype9.neuron import simulation
     elif args.simulator == 'nest':
         from pype9.nest import Network, CellMetaClass
-        from pype9.neuron import controller
+        from pype9.neuron import simulation
         import nest
         nest.ResetKernel()
     else:
@@ -172,7 +172,7 @@ def run(argv):
         for port_name, _ in args.record:
             cell.record(port_name)
         # Run simulation
-        controller.run(args.time)
+        simulation.run(args.time)
         # Collect data into Neo Segments
         fnames = set(r[1] for r in args.record)
         data_segs = {}
