@@ -2,20 +2,14 @@ from neuron import h
 import logging
 import os.path
 import ctypes
-from pyNN.neuron.simulator import _State as PyNNState
 from pype9.base.simulation import BaseSimulation
 from pype9.neuron.cells.code_gen import CodeGenerator
-from pype9.exceptions import Pype9UsageError
-try:
-    from mpi4py import MPI
-    mpi_comm = MPI.COMM_WORLD
-except ImportError:
-    mpi_comm = None
+from pype9.exceptions import Pype9NoActiveSimulationError
 
 logger = logging.getLogger('PyPe9')
 
 
-class Simulation(BaseSimulation, PyNNState):
+class Simulation(BaseSimulation):
     """
     This is adapted from the code for the simulation controller in PyNN for
     use with individual cell objects
@@ -23,8 +17,8 @@ class Simulation(BaseSimulation, PyNNState):
 
     active_simulation = None
 
-    def __init__(self):
-        super(Simulation, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(Simulation, self).__init__(*args, **kwargs)
         self._time = h.Vector()
 
     def seed_rng(self, seed=None):
@@ -32,20 +26,18 @@ class Simulation(BaseSimulation, PyNNState):
             os.path.join(CodeGenerator.LIBNINEMLNRN_PATH, 'libninemlnrn.so'))
         libninemlnrn.nineml_seed_gsl_rng(seed)
 
-
-
 #     def finalize(self):
 #         logger.info("Finishing up with NEURON.")
 #         h.quit()
-# 
+#
 #     @property
 #     def dt(self):
 #         return h.dt
-# 
+#
 #     @property
 #     def time(self):
 #         return pq.Quantity(self._time, 'ms')
-# 
+#
 #     def run(self, simulation_time, reset=True, timestep='cvode', rtol=None,
 #             atol=None, random_seed=None):
 #         """
@@ -69,16 +61,25 @@ class Simulation(BaseSimulation, PyNNState):
 #         for _ in numpy.arange(h.dt, simulation_time + h.dt, h.dt):
 #             h.fadvance()
 #         self.tstop += simulation_time
-# 
+#
 #     def reset(self):
 #         self.reset_cells()  # Needs to set before initialise for the init block
 #         h.finitialize()
 #         self.reset_cells()  # Just in case the voltage needs updating
 #         self.tstop = 0.0
-# 
+#
 #     def clear(self, **kwargs):  # @UnusedVariable
 #         pass  # TODO: Need to look into whether it is possible to remove cells
 
 
-# Make a singleton instantiation of the simulation controller
-simulation = Simulation()
+def simulate(*args, **kwargs):
+    return Simulation(*args, **kwargs)
+
+
+def active_simulation():
+    if Simulation.active_simulation is not None:
+        sim = Simulation.active_simulation
+    else:
+        raise Pype9NoActiveSimulationError(
+            "No Neuron simulations are currently active")
+    return sim

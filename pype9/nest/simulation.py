@@ -1,15 +1,14 @@
 from pype9.base.simulation import BaseSimulation
-from pyNN.nest.simulator import _State as PyNNState
+from pype9.exceptions import Pype9NoActiveSimulationError
 
 
-class Simulation(BaseSimulation, PyNNState):
+class Simulation(BaseSimulation):
     """Represent the simulator state."""
 
     active_simulation = None
 
-    def __init__(self):
-        """Initialize the simulator."""
-        super(Simulation, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(Simulation, self).__init__(*args, **kwargs)
         self._device_delay = None
 
     @property
@@ -78,4 +77,15 @@ class Simulation(BaseSimulation, PyNNState):
 # 
 #         self.reset(reset_nest_time=False)
 
-simulation = Simulation()
+
+def simulate(*args, **kwargs):
+    return Simulation(*args, **kwargs)
+
+
+def active_simulation():
+    if Simulation.active_simulation is not None:
+        sim = Simulation.active_simulation
+    else:
+        raise Pype9NoActiveSimulationError(
+            "No NEST simulations are currently active")
+    return sim

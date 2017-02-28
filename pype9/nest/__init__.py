@@ -3,6 +3,6 @@
 # from .pynn_interface.projection.nest import Projection  # @UnusedImport
 # from .pynn_interface.synapses.nest import StaticSynapse  # @UnusedImport
 from .cells import Cell, CellMetaClass
-from pype9.nest import simulation
+from .simulation import simulate
 from .network import Network
 from .units import UnitHandler
