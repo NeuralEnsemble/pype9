@@ -677,7 +677,7 @@ class ComponentArray(object):
 
         pyNN_data = self.get_data().segments[0]
         recording = neo.Segment()
-        communicates, rec_name = self._get_port_details(port_name)
+        communicates, _ = self._get_port_details(port_name)
         if communicates == 'event':
             for st in pyNN_data.spiketrains:
                 if st.annotations:
@@ -687,6 +687,16 @@ class ComponentArray(object):
                 if asig.annotations:
                     recording.analogsignals.append(asig)
         return recording
+
+    def _kill(self):
+        """
+        Caches all recording data and sets all references to the actual
+        simulator object to None ahead of a simulator reset. This allows
+        data to be accessed after a simulation has completed, and potentially
+        a new simulation to have been started.
+        """
+        raise NotImplementedError("'_kill' method not implemented in {} class"
+                                  .format(self.__class__.__name__))
 
 
 class Selection(object):
