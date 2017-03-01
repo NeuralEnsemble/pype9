@@ -27,6 +27,7 @@ from .cell_wrapper import PyNNCellWrapperMetaClass
 from .connectivity import PyNNConnectivity
 from ..cells.code_gen import CodeGenerator as CellCodeGenerator  # @IgnorePep8
 from ..units import UnitHandler  # @IgnorePep8
+from ..simulation import Simulation  # @IgnorePep8
 
 logger = logging.getLogger("PyPe9")
 
@@ -44,6 +45,10 @@ class ComponentArray(BaseComponentArray, pyNN.neuron.Population):
     AllToAllConnector = pyNN.neuron.AllToAllConnector
     OneToOneConnector = pyNN.neuron.OneToOneConnector
     UnitHandler = UnitHandler
+
+    def __init__(self, *args, **kwargs):
+        super(ComponentArray, self).__init__(*args, **kwargs)
+        Simulation.register_array(self)
 
     @property
     def _min_delay(self):

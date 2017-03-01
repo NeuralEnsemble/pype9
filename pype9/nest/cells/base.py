@@ -15,7 +15,7 @@ import nest
 import quantities as pq
 from nineml.exceptions import NineMLNameError
 from .code_gen import CodeGenerator, REGIME_VARNAME
-from pype9.nest.simulation import active_simulation
+from pype9.nest.simulation import active_simulation, Simulation
 from pype9.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
 from pype9.nest.units import UnitHandler
@@ -42,6 +42,7 @@ class Cell(base.Cell):
             self.__class__.name)['receptor_types']
         self._inputs = {}
         self._flag_created(True)
+        Simulation.register_cell(self)
 
     def _get(self, varname):
         return nest.GetStatus(self._cell, keys=varname)[0]

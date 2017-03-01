@@ -27,6 +27,7 @@ from .cell_wrapper import PyNNCellWrapperMetaClass  # @IgnorePep8
 from .connectivity import PyNNConnectivity  # @IgnorePep8
 from ..cells.code_gen import CodeGenerator as CellCodeGenerator  # @IgnorePep8
 from ..units import UnitHandler  # @IgnorePep8
+from ..simulation import Simulation  # @IgnorePep8
 
 
 (get_current_time, get_time_step,
@@ -44,6 +45,10 @@ class ComponentArray(BaseComponentArray, pyNN.nest.Population):
     AllToAllConnector = pyNN.nest.AllToAllConnector
     OneToOneConnector = pyNN.nest.OneToOneConnector
     UnitHandler = UnitHandler
+
+    def __init__(self, *args, **kwargs):
+        super(ComponentArray, self).__init__(*args, **kwargs)
+        Simulation.register_array(self)
 
     @property
     def _min_delay(self):

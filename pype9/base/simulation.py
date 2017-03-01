@@ -69,6 +69,8 @@ class BaseSimulation(object):
         self._max_delay = max_delay
         self._last_simulation = last_simulation
         self._options = options
+        self._registered_cells = []
+        self._registered_arrays = []
         seed_gen_rng = numpy.random.RandomState(
             seed if seed is not None else self.gen_seed())
         self._seeds = numpy.asarray(
@@ -96,8 +98,10 @@ class BaseSimulation(object):
     def __exit__(self):
         self.run_until(self.t_stop)
         self.active_simulation = None
-        if self._last_simulation:
-            self.close_simulator()
+        for cell in self._registered_cells:
+            cell._kill()
+        for array in self._registered_arrays:
+            array._kill()
 
     @property
     def t_stop(self):
@@ -198,27 +202,10 @@ class BaseSimulation(object):
     def gen_seed(cls):
         return int(hexlify(os.urandom(4)), 16)
 
-#     def initialize(self):
-#         self.reset()
-#         self.running = True
-# 
-#     def reset_cells(self):
-#         for cell_ref in reversed(self.registered_cells):
-#             if cell_ref():
-#                 cell_ref().initialize()
-#                 cell_ref().reset_recordings()
-#             else:
-#                 # If the cell has been deleted remove the weak reference to it
-#                 self.registered_cells.remove(cell_ref)
-# 
-#     @abstractmethod
-#     def run(self, simulation_time, **kwargs):
-#         pass
-# 
-#     def register_cell(self, cell):
-#         self.registered_cells.append(weakref.ref(cell))
-# 
-#     def deregister_cell(self, cell):
-#         for cell_ref in reversed(self.registered_cells):
-#             if cell is cell_ref() or not cell_ref():
-#                 self.registered_cells.remove(cell_ref)
+    @classmethod
+    def register_cell(cls, cell):
+        cls.active_simulation._registered_cells.append(cell)
+
+    @classmethod
+    def register_array(cls, array):
+        cls.active_simulation._registered_arrays.append(array)

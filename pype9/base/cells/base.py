@@ -204,6 +204,7 @@ class Cell(object):
         self._initialized = False
         self._initial_states = None
         self._initial_regime = None
+        self._is_dead = False
 
     @property
     def component_class(self):
@@ -474,5 +475,7 @@ class Cell(object):
         data to be accessed after a simulation has completed, and potentially
         a new simulation to have been started.
         """
-        raise NotImplementedError("'_kill' method not implemented in {} class"
-                                  .format(self.__class__.__name__))
+        self._is_dead = True
+
+    def is_dead(self):
+        return self._is_dead

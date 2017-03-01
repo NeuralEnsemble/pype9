@@ -531,6 +531,7 @@ class ComponentArray(object):
                 initial_values=initial_values,
                 label=nineml_model.name)
             self._inputs = {}
+        self._is_dead = False
 
     @property
     def name(self):
@@ -695,8 +696,11 @@ class ComponentArray(object):
         data to be accessed after a simulation has completed, and potentially
         a new simulation to have been started.
         """
-        raise NotImplementedError("'_kill' method not implemented in {} class"
-                                  .format(self.__class__.__name__))
+        self._is_dead = True
+
+    @property
+    def is_dead(self):
+        return self._is_dead
 
 
 class Selection(object):
