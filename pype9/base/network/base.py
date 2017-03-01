@@ -521,6 +521,9 @@ class ComponentArray(object):
                 for i in dynamics_properties.initial_values)
             initial_values['_regime'] = celltype.model.regime_index(
                 dynamics_properties.initial_regime)
+            # Add note to specify that the cell is part of an array and doesn't
+            # need to be initialised separately
+            cellparams['_in_array'] = True
             # NB: Simulator-specific derived classes extend the corresponding
             # PyNN population class
             self.PyNNPopulationClass.__init__(

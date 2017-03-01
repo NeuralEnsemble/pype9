@@ -37,7 +37,8 @@ class CellMetaClass(type):
 
     def __new__(cls, component_class, default_properties=None,
                 initial_state=None, name=None, saved_name=None,
-                build_dir=None, build_mode='lazy', verbose=False, **kwargs):
+                build_dir=None, build_mode='lazy', verbose=False,
+                **kwargs):
         """
         Parameters
         ----------
@@ -49,9 +50,13 @@ class CellMetaClass(type):
             initial states, if None, then all states = 0
         name : str
             The name for the class
-        saved_name: str
+        saved_name : str
             The name of the Dynamics object in the document if different from
             the `name`
+        build_dir : str - directory path
+            The directory in which to build the simulator-native code
+        verbose : bool
+            Whether to print out debugging information
         """
         # Grab the url before the component class is cloned
         url = component_class.url
@@ -148,6 +153,7 @@ class CellMetaClass(type):
 class Cell(object):
 
     def __init__(self, *properties, **kwprops):
+        self._in_array = kwprops.pop('_in_array', False)
         # Combine keyword and non-keyword properties into a single list
         if len(properties) == 1 and isinstance(properties[0],
                                                nineml.DynamicsProperties):
@@ -202,6 +208,10 @@ class Cell(object):
     @property
     def component_class(self):
         return self._nineml.component_class
+
+    @property
+    def in_array(self):
+        return self._in_array
 
     def _flag_created(self, flag):
         """
@@ -456,3 +466,13 @@ class Cell(object):
                     "the corresponding parameter ({})"
                     .format(prop.name, prop.units.dimension,
                             params_dict[prop.name].dimension))
+
+    def _kill(self):
+        """
+        Caches all recording data and sets all references to the actual
+        simulator object to None ahead of a simulator reset. This allows cell
+        data to be accessed after a simulation has completed, and potentially
+        a new simulation to have been started.
+        """
+        raise NotImplementedError("'_kill' method not implemented in {} class"
+                                  .format(self.__class__.__name__))
