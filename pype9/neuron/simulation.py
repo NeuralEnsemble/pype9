@@ -76,7 +76,7 @@ def simulate(*args, **kwargs):
     return Simulation(*args, **kwargs)
 
 
-def active_simulation():
+def active():
     if Simulation.active_simulation is not None:
         sim = Simulation.active_simulation
     else:

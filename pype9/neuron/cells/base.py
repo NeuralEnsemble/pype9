@@ -30,7 +30,7 @@ from math import pi
 import numpy
 from pype9.base.cells import base
 from pype9.neuron.units import UnitHandler
-from pype9.neuron.simulation import Simulation
+from pype9.neuron.simulation import active as active_simulation
 from pype9.annotations import (
     PYPE9_NS, BUILD_TRANS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
     MEMBRANE_VOLTAGE, MECH_TYPE, ARTIFICIAL_CELL_MECH)
@@ -45,17 +45,23 @@ logger = logging.getLogger("PyPe9")
 
 
 class Cell(base.Cell):
+    """
+    Base class for Neuron cell objects.
+
+    Parameters
+    ----------
+    properties : list(nineml.Property)
+        Can accept a single property, which is a dictionary of properties
+        or a list of nineml.Property objects
+    kwargs : dict(str, nineml.Property)
+        A dictionary of properties
+    """
 
     V_INIT_DEFAULT = -65.0
 
     _unit_handler = UnitHandler
 
     def __init__(self, *properties, **kwprops):
-        """
-        `propertes/kwprops` --  Can accept a single parameter, which is a
-                                dictionary of parameters or kwarg parameters,
-                                or a list of nineml.Property objects
-        """
         self._flag_created(False)
         # Construct all the NEURON structures
         self._sec = h.Section()  # @UndefinedVariable
@@ -142,7 +148,7 @@ class Cell(base.Cell):
         # Call base init (needs to be after 9ML init)
         super(Cell, self).__init__(*properties, **kwprops)
         self._flag_created(True)
-        Simulation.register_cell(self)
+        active_simulation().register_cell(self)
 
     @property
     def name(self):
