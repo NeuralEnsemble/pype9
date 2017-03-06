@@ -14,7 +14,7 @@ class Document(nineml.Document):
         # Note that all `DocumentLevelObjects` need to be imported
         # into the root nineml package
         try:
-            child_cls = getattr(pype9.base.cells.with_synapses, nineml_type)
+            child_cls = getattr(pype9.simulator.base.cells.with_synapses, nineml_type)
         except AttributeError:
             child_cls = nineml.Document._get_class_from_type(nineml_type)
         return child_cls
@@ -47,4 +47,4 @@ def write(document, filename, **kwargs):
     document.write(filename, version=2.0, **kwargs)
 
 
-import pype9.base.cells  # @IgnorePep8
+import pype9.simulator.base.cells  # @IgnorePep8

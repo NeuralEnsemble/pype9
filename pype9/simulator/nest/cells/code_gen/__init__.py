@@ -14,7 +14,7 @@ from copy import deepcopy
 import subprocess as sp
 import re
 import logging
-from pype9.base.cells.code_gen import BaseCodeGenerator
+from pype9.simulator.base.cells.code_gen import BaseCodeGenerator
 from pype9.utils import remove_ignore_missing
 from pype9.exceptions import Pype9BuildError
 import pype9

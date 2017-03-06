@@ -1,4 +1,4 @@
-from pype9.base.simulation import BaseSimulation
+from pype9.simulator.base.simulation import BaseSimulation
 from pype9.exceptions import Pype9NoActiveSimulationError
 
 

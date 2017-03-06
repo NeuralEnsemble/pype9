@@ -16,7 +16,7 @@ import quantities as pq
 from nineml.exceptions import NineMLNameError
 from .code_gen import CodeGenerator, REGIME_VARNAME
 from pype9.simulator.nest.simulation import active_simulation, Simulation
-from pype9.base.cells import base
+from pype9.simulator.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
 from pype9.simulator.nest.units import UnitHandler
 from pype9.exceptions import Pype9UsageError

@@ -18,8 +18,8 @@ from collections import defaultdict
 import sympy
 import nineml.units as un
 from nineml.abstraction import Alias, AnalogSendPort, Dynamics
-from pype9.base.cells.code_gen import BaseCodeGenerator
-from pype9.base.cells import (
+from pype9.simulator.base.cells.code_gen import BaseCodeGenerator
+from pype9.simulator.base.cells import (
     WithSynapses, DynamicsWithSynapses, DynamicsWithSynapsesProperties,
     MultiDynamicsWithSynapsesProperties)
 from pype9.exceptions import Pype9BuildError, Pype9RuntimeError

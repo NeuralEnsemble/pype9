@@ -6,7 +6,7 @@
 """
 from __future__ import absolute_import
 import nest
-from pype9.base.network.cell_wrapper import (
+from pype9.simulator.base.network.cell_wrapper import (
     PyNNCellWrapper as BasePyNNCellWrapper,
     PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
 from pype9.exceptions import Pype9BuildOptionMismatchException

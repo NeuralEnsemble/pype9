@@ -28,7 +28,7 @@ from nineml.abstraction import EventPort
 from nineml.exceptions import NineMLNameError
 from math import pi
 import numpy
-from pype9.base.cells import base
+from pype9.simulator.base.cells import base
 from pype9.simulator.neuron.units import UnitHandler
 from pype9.simulator.neuron.simulation import active as active_simulation
 from pype9.annotations import (
