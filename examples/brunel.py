@@ -98,15 +98,15 @@ pyNN_module = {}
 pype9_network_classes = {}
 if 'neuron' in args.simulators:
     import pyNN.neuron  # @IgnorePep8 @Reimport
-    import pype9.neuron  # @IgnorePep8
+    import pype9.simulator.neuron  # @IgnorePep8
     pyNN_module['neuron'] = pyNN.neuron
-    pype9_network_classes['neuron'] = pype9.neuron.Network
+    pype9_network_classes['neuron'] = pype9.simulator.neuron.Network
 if 'nest' in args.simulators or args.reference:
     import nest  # @IgnorePep8
     import pyNN.nest  # @IgnorePep8 @Reimport
-    import pype9.nest  # @IgnorePep8
+    import pype9.simulator.nest  # @IgnorePep8
     pyNN_module['nest'] = pyNN.nest
-    pype9_network_classes['nest'] = pype9.nest.Network
+    pype9_network_classes['nest'] = pype9.simulator.nest.Network
 
 # Get the list of populations to record and plot from
 pops_to_plot = ['Exc', 'Inh']

@@ -24,7 +24,7 @@ from copy import copy
 from nineml.user import DynamicsProperties, Definition
 from nineml.abstraction import Dynamics
 from nineml import Document
-from pype9.nest.units import UnitHandler
+from pype9.simulator.nest.units import UnitHandler
 from pype9.exceptions import Pype9RuntimeError
 
 

@@ -59,11 +59,9 @@ def run(argv):
     seed = int(time.time()) if args.seed is None else args.seed
 
     if args.simulator == 'neuron':
-        from pype9.neuron import Network, CellMetaClass
-        from pype9.neuron import simulation
+        from pype9.simulator.neuron import Network, CellMetaClass, simulation
     elif args.simulator == 'nest':
-        from pype9.nest import Network, CellMetaClass
-        from pype9.neuron import simulation
+        from pype9.simulator.nest import Network, CellMetaClass, simulation
         import nest
         nest.ResetKernel()
     else:

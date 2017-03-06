@@ -11,17 +11,17 @@ from nineml.user import DynamicsProperties
 from pype9.base.cells import (
     MultiDynamicsWithSynapses, DynamicsWithSynapsesProperties,
     ConnectionParameterSet, ConnectionPropertySet)
-from pype9.neuron.cells import CellMetaClass as CellMetaClassNEURON
-from pype9.neuron import simulation as simulatorNEURON
+from pype9.simulator.neuron.cells import CellMetaClass as CellMetaClassNEURON
+from pype9.simulator.neuron import simulation as simulatorNEURON
     CellMetaClass as CellMetaClassNEURON,
     controller as simulatorNEURON)
 argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
-from pype9.nest.cells import CellMetaClass as CellMetaClassNEST
-from pype9.nest import controller as simulatorNEST
+from pype9.simulator.nest.cells import CellMetaClass as CellMetaClassNEST
+from pype9.simulator.nest import controller as simulatorNEST
     CellMetaClass as CellMetaClassNEST,
     controller as simulatorNEST)
 from pype9.utils.testing import Comparer, input_step, input_freq  # @IgnorePep8
-from pype9.nest.units import UnitHandler as UnitHandlerNEST  # @IgnorePep8
+from pype9.simulator.nest.units import UnitHandler as UnitHandlerNEST  # @IgnorePep8
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:

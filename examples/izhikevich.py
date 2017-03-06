@@ -88,7 +88,7 @@ if __name__ == "__main__":
     pype9_controller = {}
     if 'neuron' in simulators_to_run:
         import pyNN.neuron  # @IgnorePep8
-        from pype9.neuron import (CellMetaClass as CellMetaClassNEURON,
+        from pype9.simulator.neuron import (CellMetaClass as CellMetaClassNEURON,
                                   simulation_controller as controllerNEURON)
         pyNN_module['neuron'] = pyNN.neuron
         pype9_controller['neuron'] = controllerNEURON
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     if 'nest' in simulators_to_run:
         import nest  # @IgnorePep8
         import pyNN.nest  # @IgnorePep8
-        from pype9.nest import (CellMetaClass as CellMetaClassNEST,
+        from pype9.simulator.nest import (CellMetaClass as CellMetaClassNEST,
                                 simulation_controller as controllerNEST)
         pyNN_module['nest'] = pyNN.nest
         pype9_controller['nest'] = controllerNEST

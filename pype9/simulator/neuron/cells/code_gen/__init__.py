@@ -32,7 +32,7 @@ from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
                                 Constant, Expression)
 from nineml.abstraction.dynamics.visitors.cloner import DynamicsCloner
 from sympy.printing import ccode
-from pype9.neuron.units import UnitHandler
+from pype9.simulator.neuron.units import UnitHandler
 try:
     from nineml.extensions.kinetics import Kinetics  # @UnusedImport
 except ImportError:

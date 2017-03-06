@@ -11,7 +11,7 @@ from pype9.base.network.cell_wrapper import (
     PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
 from pype9.exceptions import Pype9BuildOptionMismatchException
 import pyNN.standardmodels
-from pype9.nest.cells import CellMetaClass
+from pype9.simulator.nest.cells import CellMetaClass
 from ..units import UnitHandler
 from logging import Logger
 

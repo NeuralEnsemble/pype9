@@ -1,7 +1,7 @@
 import ninemlcatalog
 from nineml import units as un
-from pype9.neuron import CellMetaClass
-from pype9.neuron import simulation
+from pype9.simulator.neuron import CellMetaClass
+from pype9.simulator.neuron import simulation
 import matplotlib.pyplot as plt
 from itertools import repeat
 import numpy

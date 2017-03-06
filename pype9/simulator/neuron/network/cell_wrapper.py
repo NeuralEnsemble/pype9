@@ -10,7 +10,7 @@ try:
 except:
     pass
 import pyNN.models
-from pype9.neuron.cells import CellMetaClass
+from pype9.simulator.neuron.cells import CellMetaClass
 import logging
 from pype9.base.network.cell_wrapper import (
     PyNNCellWrapper as BasePyNNCellWrapper,

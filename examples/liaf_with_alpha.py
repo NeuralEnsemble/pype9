@@ -27,7 +27,7 @@ args = parser.parse_args()
 
 # Import of nest needs to be after arguments have been passed as it kills them
 # before the SLI interpreter tries to read them.
-from pype9.nest import CellMetaClass, simulation_controller, UnitHandler  # @IgnorePep8
+from pype9.simulator.nest import CellMetaClass, simulation_controller, UnitHandler  # @IgnorePep8
 
 
 build_dir = os.path.join(os.getcwd(), '9build', 'liaf_with_alpha')

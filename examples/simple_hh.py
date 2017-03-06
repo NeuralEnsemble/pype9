@@ -2,9 +2,9 @@ import ninemlcatalog
 from nineml import units as un
 import matplotlib.pyplot as plt
 # Load the NEST metaclass and simulation
-from pype9.nest import CellMetaClass, simulate
+from pype9.simulator.nest import CellMetaClass, simulate
 # Alternatively load the neuron class
-# from pype9.neuron import CellMetaClass, simulate
+# from pype9.simulator.neuron import CellMetaClass, simulate
 
 # Compile and load cell class
 HH = CellMetaClass(
