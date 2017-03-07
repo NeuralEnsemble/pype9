@@ -1,4 +1,4 @@
-import os.path
+import nineml.units as un
 from argparse import ArgumentParser
 import ninemlcatalog
 import quantities as pq
@@ -83,23 +83,20 @@ if __name__ == "__main__":
     if args.reference:
         simulators_to_run.add('nest')
 
-    pyNN_module = {}
     pype9_metaclass = {}
-    pype9_controller = {}
+    pype9_simulation = {}
     if 'neuron' in simulators_to_run:
-        import pyNN.neuron  # @IgnorePep8
-        from pype9.simulator.neuron import (CellMetaClass as CellMetaClassNEURON,
-                                  simulation_controller as controllerNEURON)
-        pyNN_module['neuron'] = pyNN.neuron
-        pype9_controller['neuron'] = controllerNEURON
+        from pype9.simulator.neuron import (
+            CellMetaClass as CellMetaClassNEURON,
+            simulation as simulationNEURON)
+        pype9_simulation['neuron'] = simulationNEURON
         pype9_metaclass['neuron'] = CellMetaClassNEURON
     if 'nest' in simulators_to_run:
-        import nest  # @IgnorePep8
-        import pyNN.nest  # @IgnorePep8
-        from pype9.simulator.nest import (CellMetaClass as CellMetaClassNEST,
-                                simulation_controller as controllerNEST)
-        pyNN_module['nest'] = pyNN.nest
-        pype9_controller['nest'] = controllerNEST
+        import nest
+        from pype9.simulator.nest import (
+            CellMetaClass as CellMetaClassNEST,
+            simulation as simulationNEST)
+        pype9_simulation['nest'] = simulationNEST
         pype9_metaclass['nest'] = CellMetaClassNEST
 
     if args.fast_spiking:
@@ -141,30 +138,25 @@ if __name__ == "__main__":
         sampling_period=args.timestep * pq.ms, units='nA', time_units='ms')
 
     for simulator, seed in zip(simulators_to_run, seeds):
-        pyNN_module[simulator].setup(min_delay=min_delay, max_delay=max_delay,
-                                     timestep=args.timestep,
-                                     rng_seeds_seed=seed)
-
-    # Construct the cells and set up recordings and input plays
-    cells = {}
-    for simulator in args.simulators:
-        cells[simulator] = pype9_metaclass[simulator](
-            model, name=name, default_properties=properties,
-            initial_regime=initial_regime, **cell_kwargs)()
-        # Play input current into cell
-        cells[simulator].play(input_port_name, input_signal)
-        # Record voltage
-        cells[simulator].record('V')
-        # Set initial state
-        cells[simulator].update_state(initial_states)
-
-    if args.reference:
-        ref_cell, ref_multi, ref_input = construct_reference(input_signal,
-                                                             args.timestep)
-
-    # Run the simulation(s)
-    for simulator in simulators_to_run:
-        pype9_controller[simulator].run(args.simtime)
+        with pype9_simulation(min_delay=min_delay, max_delay=max_delay,
+                              dt=args.timestep * un.ms,
+                              seed=seed) as sim:
+            # Construct the cells and set up recordings and input plays
+            cells = {}
+            if simulator in args.simulators:
+                cells[simulator] = pype9_metaclass[simulator](
+                    model, name=name, default_properties=properties,
+                    initial_regime=initial_regime, **cell_kwargs)()
+                # Play input current into cell
+                cells[simulator].play(input_port_name, input_signal)
+                # Record voltage
+                cells[simulator].record('V')
+                # Set initial state
+                cells[simulator].update_state(initial_states)
+            if args.reference:
+                ref_cell, ref_multi, ref_input = construct_reference(
+                    input_signal, args.timestep)
+            sim.run(args.simtime * un.ms)
 
     # Plot the results
     if args.save_fig is not None:

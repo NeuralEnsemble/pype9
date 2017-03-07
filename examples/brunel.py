@@ -4,6 +4,7 @@ from itertools import groupby
 from operator import itemgetter
 from collections import defaultdict
 import ninemlcatalog
+import nest
 import numpy as np
 from nineml import units as un, Property
 from nineml.user import Initial
@@ -94,19 +95,18 @@ else:
 # allow the backend to be set
 from matplotlib import pyplot as plt  # @IgnorePep8
 
-pyNN_module = {}
+simulations = {}
 pype9_network_classes = {}
 if 'neuron' in args.simulators:
-    import pyNN.neuron  # @IgnorePep8 @Reimport
-    import pype9.simulator.neuron  # @IgnorePep8
-    pyNN_module['neuron'] = pyNN.neuron
-    pype9_network_classes['neuron'] = pype9.simulator.neuron.Network
+    from pype9.simulator.neuron import (
+        simulation as simulationNEURON, Network as NetworkNEURON) # @IgnorePep8
+    simulations['neuron'] = simulationNEURON
+    pype9_network_classes['neuron'] = NetworkNEURON
 if 'nest' in args.simulators or args.reference:
-    import nest  # @IgnorePep8
-    import pyNN.nest  # @IgnorePep8 @Reimport
-    import pype9.simulator.nest  # @IgnorePep8
-    pyNN_module['nest'] = pyNN.nest
-    pype9_network_classes['nest'] = pype9.simulator.nest.Network
+    from pype9.simulator.nest import (
+        simulation as simulationNEST, Network as NetworkNEST) # @IgnorePep8
+    simulations['nest'] = simulationNEST
+    pype9_network_classes['nest'] = NetworkNEST
 
 # Get the list of populations to record and plot from
 pops_to_plot = ['Exc', 'Inh']
@@ -149,56 +149,47 @@ spikes = defaultdict(dict)
 if args.num_record_v:
     vs = defaultdict(dict)
 
-# Set of simulators to run
-simulators_to_run = set(args.simulators)
-
 # Create the network for each simulator and set recorders
 networks = {}
 for simulator, seed in zip(args.simulators, seeds):
     # Reset the simulator
-    pyNN_module[simulator].setup(min_delay=ReferenceBrunel2000.min_delay,
-                                 max_delay=ReferenceBrunel2000.max_delay,
-                                 timestep=args.timestep,
-                                 rng_seeds_seed=seed)
-    # Construct the network
-    print "Constructing the network in {}".format(simulator.upper())
-    networks[simulator] = pype9_network_classes[simulator](
-        model, build_mode=args.build_mode)
-    print "Finished constructing the network in {}".format(
-        simulator.upper())
-    if args.build_mode != 'build_only':
+    with simulations[simulator](min_delay=ReferenceBrunel2000.min_delay,
+                                max_delay=ReferenceBrunel2000.max_delay,
+                                timestep=args.timestep, seed=seed) as sim:
+        # Construct the network
+        print "Constructing the network in {}".format(simulator.upper())
+        networks[simulator] = pype9_network_classes[simulator](
+            model, build_mode=args.build_mode)
+        print "Finished constructing the network in {}".format(
+            simulator.upper())
         # Record spikes and voltages
         for pop in networks[simulator].component_arrays:
             pop[:args.num_record].record('spikes')
             if args.num_record_v and pop.name != 'Ext':
                 pop[:args.num_record_v].record('v__cell')
 
-if args.build_mode == 'build_only':
-    print "build_mode argument was set to 'build_only' so exiting!"
-    exit()
+        # Create the reference simulation if required
+        if simulator == 'nest' and args.reference:
+            print "Constructing the reference NEST implementation"
+            if args.no_init_v:
+                init_v = {'Exc': 0.0, 'Inh': 0.0}
+            else:
+                init_v = None
+            ref = ReferenceBrunel2000(
+                args.case, args.order, override_input=args.input_rate,
+                init_v=init_v)
+            ref.record(num_record=args.num_record,
+                       num_record_v=args.num_record_v,
+                       to_plot=pops_to_plot, timestep=args.timestep)
 
-# Create the reference simulation if required
-if args.reference:
-    print "Constructing the reference NEST implementation"
-    if args.no_init_v:
-        init_v = {'Exc': 0.0, 'Inh': 0.0}
-    else:
-        init_v = None
-    ref = ReferenceBrunel2000(
-        args.case, args.order, override_input=args.input_rate, init_v=init_v)
-    ref.record(num_record=args.num_record, num_record_v=args.num_record_v,
-               to_plot=pops_to_plot, timestep=args.timestep)
-    simulators_to_run.add('nest')
-
-# Run the simulation(s)
-for simulator in simulators_to_run:
-    print "Running the simulation in {}".format(simulator.upper())
-    if args.progress_bar:
-        kwargs = {'callbacks': [
-            SimulationProgressBar(args.simtime / 77, args.simtime)]}
-    else:
-        kwargs = {}
-    pyNN_module[simulator].run(args.simtime, **kwargs)
+        # Run the simulation(s)
+        print "Running the simulation in {}".format(simulator.upper())
+        if args.progress_bar:
+            kwargs = {'callbacks': [
+                SimulationProgressBar(args.simtime / 77, args.simtime)]}
+        else:
+            kwargs = {}
+        sim.run(args.simtime * un.ms)
 
 if mpi_rank == 0:
     # Plot the results
