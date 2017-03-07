@@ -12,10 +12,10 @@ class Simulation(BaseSimulation):
 
     @property
     def device_delay(self):
-        if self._device_delay is None:
+        if self.min_delay is None:
             return self.min_delay
         else:
-            return self._device_delay
+            return self.dt
 
     def run(self, t_stop):  # @UnusedVariable
         """
@@ -29,9 +29,6 @@ class Simulation(BaseSimulation):
         t_stop : nineml.Quantity (time)
             The time to run the simulation until
         """
-        if not self._running:
-            self._pre_run()
-            self._running = True
 
     def _prepare(self):
         "Reset the simulation and prepare it for creating new cells/networks"

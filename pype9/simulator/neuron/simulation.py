@@ -37,9 +37,6 @@ class Simulation(BaseSimulation):
         t_stop : nineml.Quantity (time)
             The time to run the simulation until
         """
-        if not self._running:
-            self._pre_run()
-            self._running = True
 
     def _prepare(self):
         "Reset the simulation and prepare it for creating new cells/networks"
