@@ -4,7 +4,6 @@ import os.path
 import ctypes
 from pype9.simulator.base.simulation import BaseSimulation
 from pype9.simulator.neuron.cells.code_gen import CodeGenerator
-from pype9.exceptions import Pype9NoActiveSimulationError
 
 logger = logging.getLogger('PyPe9')
 
@@ -15,7 +14,7 @@ class Simulation(BaseSimulation):
     use with individual cell objects
     """
 
-    active_simulation = None
+    _active = None
 
     def __init__(self, *args, **kwargs):
         super(Simulation, self).__init__(*args, **kwargs)
@@ -74,12 +73,3 @@ class Simulation(BaseSimulation):
 
 def simulate(*args, **kwargs):
     return Simulation(*args, **kwargs)
-
-
-def active():
-    if Simulation.active_simulation is not None:
-        sim = Simulation.active_simulation
-    else:
-        raise Pype9NoActiveSimulationError(
-            "No Neuron simulations are currently active")
-    return sim

@@ -532,6 +532,7 @@ class ComponentArray(object):
                 label=nineml_model.name)
             self._inputs = {}
         self._is_dead = False
+        self.Simulation.active().register_network(self)
 
     @property
     def name(self):

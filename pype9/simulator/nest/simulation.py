@@ -5,7 +5,7 @@ from pype9.exceptions import Pype9NoActiveSimulationError
 class Simulation(BaseSimulation):
     """Represent the simulator state."""
 
-    active_simulation = None
+    _active = None
 
     def __init__(self, *args, **kwargs):
         super(Simulation, self).__init__(*args, **kwargs)
@@ -30,10 +30,10 @@ class Simulation(BaseSimulation):
 #             simtime += self.dt
 #             self.running = True
 #         nest.Simulate(simtime)
-# 
+#
 #     def run_until(self, tstop):
 #         self.run(tstop - self.t)
-# 
+#
 #     def reset(self, reset_nest_time=True):
 #         if reset_nest_time:
 #             nest.SetKernelStatus({'time': 0.0})
@@ -44,7 +44,7 @@ class Simulation(BaseSimulation):
 #         self.running = False
 #         self.segment_counter += 1
 #         self.reset_cells()
-# 
+#
 #     def clear(self, **kwargs):
 #         # Set initial values
 #         self.populations = []
@@ -74,18 +74,9 @@ class Simulation(BaseSimulation):
 #         if 'rng_seeds' in kwargs:
 #             self.rng_seeds = kwargs['rng_seeds']
 #         else:
-# 
+#
 #         self.reset(reset_nest_time=False)
 
 
 def simulate(*args, **kwargs):
     return Simulation(*args, **kwargs)
-
-
-def active_simulation():
-    if Simulation.active_simulation is not None:
-        sim = Simulation.active_simulation
-    else:
-        raise Pype9NoActiveSimulationError(
-            "No NEST simulations are currently active")
-    return sim

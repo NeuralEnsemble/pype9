@@ -4,7 +4,7 @@ import nineml
 from nineml import units as un
 import numpy
 from binascii import hexlify
-from pype9.exceptions import Pype9UsageError
+from pype9.exceptions import Pype9UsageError, Pype9NoActiveSimulationError
 
 
 class BaseSimulation(object):
@@ -209,3 +209,14 @@ class BaseSimulation(object):
     @classmethod
     def register_array(cls, array):
         cls.active_simulation._registered_arrays.append(array)
+
+    @classmethod
+    def active(cls):
+        if cls._active is not None:
+            active = cls._active
+        else:
+            raise Pype9NoActiveSimulationError(
+                "No {} simulations are currently active (cells and networks "
+                "need to be initialised within an active simulation context)"
+                .format(cls.__name__))
+        return active

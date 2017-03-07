@@ -45,6 +45,7 @@ class ComponentArray(BaseComponentArray, pyNN.nest.Population):
     AllToAllConnector = pyNN.nest.AllToAllConnector
     OneToOneConnector = pyNN.nest.OneToOneConnector
     UnitHandler = UnitHandler
+    Simulation = Simulation
 
     def __init__(self, *args, **kwargs):
         super(ComponentArray, self).__init__(*args, **kwargs)

@@ -32,6 +32,7 @@ basic_nineml_translations = {
 class Cell(base.Cell):
 
     _unit_handler = UnitHandler
+    _simulation_cls = Simulation
 
     def __init__(self, *properties, **kwprops):
         active_simulation()  # Test for an active simulation
@@ -42,7 +43,6 @@ class Cell(base.Cell):
             self.__class__.name)['receptor_types']
         self._inputs = {}
         self._flag_created(True)
-        Simulation.register_cell(self)
 
     def _get(self, varname):
         return nest.GetStatus(self._cell, keys=varname)[0]

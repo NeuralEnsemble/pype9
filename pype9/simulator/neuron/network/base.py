@@ -45,6 +45,7 @@ class ComponentArray(BaseComponentArray, pyNN.neuron.Population):
     AllToAllConnector = pyNN.neuron.AllToAllConnector
     OneToOneConnector = pyNN.neuron.OneToOneConnector
     UnitHandler = UnitHandler
+    Simulation = Simulation
 
     def __init__(self, *args, **kwargs):
         super(ComponentArray, self).__init__(*args, **kwargs)

@@ -33,19 +33,6 @@ import neo
 from pype9.exceptions import Pype9RuntimeError
 
 
-compare_script_path = os.path.join(os.path.dirname(__file__), '..', 'scripts',
-                                   'compare.py')
-
-# This finds the python command path from the location of the os module
-# python_cmd_path = os.path.join(os.path.dirname(os.__file__), '..', 'bin',
-#                                'python')
-# However, this will probably only work on *nix systems so a fall back using
-# the sys.executable is used instead in this case (won't work from embedded
-# executions
-# if not os.path.exists(python_cmd_path):
-python_cmd_path = sys.executable
-
-
 class Comparer(object):
     """
     The Comparer class is used to compare the dynamics of a 9ML model simulated
