@@ -26,7 +26,7 @@ class Synapse(object):
         """
         converted_params = {}
         for prop in nineml_props.iteritems():
-            val = get_pyNN_value(prop, rng, cls._unit_handler)
+            val = get_pyNN_value(prop, rng, cls.UnitHandler)
             converted_params[cls.nineml_translations[prop.name]] = val
         return converted_params
 

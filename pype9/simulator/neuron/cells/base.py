@@ -59,8 +59,8 @@ class Cell(base.Cell):
 
     V_INIT_DEFAULT = -65.0
 
-    _unit_handler = UnitHandler
-    _simulation_cls = Simulation
+    UnitHandler = UnitHandler
+    Simulation = Simulation
 
     def __init__(self, *properties, **kwprops):
         self._flag_created(False)
@@ -360,7 +360,7 @@ class Cell(base.Cell):
                 raise NotImplementedError(
                     "Cannot handle more than one connection property per port")
             elif properties:
-                vstim_con.weight[0] = self._unit_handler.scale_value(
+                vstim_con.weight[0] = self.UnitHandler.scale_value(
                     properties[0].quantity)
             self._inputs['vstim'] = vstim
             self._input_auxs.extend((vstim_times, vstim_con))

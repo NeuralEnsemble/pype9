@@ -582,7 +582,7 @@ class ComponentArray(object):
                 raise NotImplementedError(
                     "Cannot handle more than one connection property per port")
             elif properties:
-                weight = self._unit_handler.scale_value(properties[0].quantity)
+                weight = self.UnitHandler.scale_value(properties[0].quantity)
             else:
                 weight = 1.0  # The weight var is not used
             connector = (self.OneToOneConnector()

@@ -167,7 +167,7 @@ class Cell(object):
                 properties = list(properties)
             # Convert "Python-Quantities" quantities into 9ML quantities
             for name, pq_qty in kwprops.iteritems():
-                qty = self._unit_handler.from_pq_quantity(pq_qty)
+                qty = self.UnitHandler.from_pq_quantity(pq_qty)
                 properties.append(Property(name, qty.value * qty.units))
             # If default properties not provided create a Dynamics Properties
             # from the provided properties
@@ -205,7 +205,7 @@ class Cell(object):
         self._initial_states = None
         self._initial_regime = None
         self._is_dead = False
-        self._simulation_cls.active().register_cell(self)
+        self.Simulation.active().register_cell(self)
 
     @property
     def component_class(self):
@@ -240,7 +240,7 @@ class Cell(object):
                                 self.component_class.parameter_names,
                                 self.component_class.state_variable_names))))
             val = self._get(varname)
-            qty = self._unit_handler.assign_units(
+            qty = self.UnitHandler.assign_units(
                 val, self.component_class.element(
                     varname, class_map=Dynamics.class_to_member).dimension)
             return qty
@@ -270,13 +270,13 @@ class Cell(object):
             # be translated into (e.g. voltage -> mV for NEURON)
             if isinstance(val, float):
                 prop = Property(varname, Quantity(
-                    val, self._unit_handler.dimension_to_units(
+                    val, self.UnitHandler.dimension_to_units(
                         self.component_class.dimension_of(varname))))
             # If quantity, scale quantity to value in the "natural" units for
             # the simulator
             else:
                 if isinstance(val, pq.Quantity):
-                    qty = self._unit_handler.from_pq_quantity(val)
+                    qty = self.UnitHandler.from_pq_quantity(val)
                 else:
                     qty = val
                 if qty.units.dimension != self.component_class.dimension_of(
@@ -287,7 +287,7 @@ class Cell(object):
                             varname,
                             self.component_class.dimension_of(varname), qty,
                             qty.units.dimension))
-                val = self._unit_handler.scale_value(qty)
+                val = self.UnitHandler.scale_value(qty)
                 prop = Property(varname, qty)
             # If varname is a parameter (not a state variable) set in
             # associated 9ML representation
@@ -305,7 +305,7 @@ class Cell(object):
         #        object. Currently it is difficult to set a property in the
         #        if it is a MultiDynamics object (but not impossible)
 #         self._nineml.set(prop)
-        self._set(prop.name, float(self._unit_handler.scale_value(prop)))
+        self._set(prop.name, float(self.UnitHandler.scale_value(prop)))
 
     def get(self, varname):
         """

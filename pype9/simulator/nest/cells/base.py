@@ -31,8 +31,8 @@ basic_nineml_translations = {
 
 class Cell(base.Cell):
 
-    _unit_handler = UnitHandler
-    _simulation_cls = Simulation
+    UnitHandler = UnitHandler
+    Simulation = Simulation
 
     def __init__(self, *properties, **kwprops):
         active_simulation()  # Test for an active simulation
@@ -165,7 +165,7 @@ class Cell(base.Cell):
                 raise NotImplementedError(
                     "Cannot handle more than one connection property per port")
             elif properties:
-                syn_spec['weight'] = self._unit_handler.scale_value(
+                syn_spec['weight'] = self.UnitHandler.scale_value(
                     properties[0].quantity)
             nest.Connect(self._inputs[port_name], self._cell,
                          syn_spec=syn_spec)
