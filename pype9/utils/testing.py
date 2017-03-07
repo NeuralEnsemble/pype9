@@ -137,25 +137,25 @@ class Comparer(object):
         Run and the simulation
         """
         if self.simulate_nest:
-            nest.ResetNetwork()
-            nest.ResetKernel()
-            simulatorNEST.clear(rng_seed=nest_rng_seed, dt=self.dt)
-            controller.set_delays(self.min_delay, self.max_delay,
-                                             self.device_delay)
+            with simulationNEST(
+                dt=self.dt, seed=nest_rng_seed, min_delay=self.min_delay,
+                    max_delay=self.max_delay, self.device_delay) as sim:
+                if 'nest' in self.simulators:
+                    self._create_9ML(self.nineml_model, self.properties,
+                                     'nest')
+                if self.nest_ref is not None:
+                    self._create_NEST(self.nest_ref)
+                sim.run(duration)
         if self.simulate_neuron:
-            simulatorNEURON.clear(rng_seed=neuron_rng_seed)
-            neuron.h.dt = self.dt
-        for simulator in self.simulators:
-            self._create_9ML(self.nineml_model, self.properties, simulator)
-        if self.nest_ref is not None:
-            self._create_NEST(self.nest_ref)
-        if self.neuron_ref is not None:
-            self._create_NEURON(self.neuron_ref)
-        if self.simulate_nest:
-            simulatorNEST.run(duration)
-        if self.simulate_neuron:
-            simulatorNEURON.run(duration)
-
+            with simulationNEURON(
+                dt=self.dt, seed=neuron_rng_seed, min_delay=self.min_delay,
+                    max_delay=self.max_delay) as sim:
+                if 'neuron' in self.simulators:
+                    self._create_9ML(self.nineml_model, self.properties,
+                                     'neuron')
+                if self.neuron_ref is not None:
+                    self._create_NEURON(self.neuron_ref)
+                sim.run(duration)
         return self  # return self so it can be chained with subsequent methods
 
     def compare(self):
