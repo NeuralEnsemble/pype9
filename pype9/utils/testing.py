@@ -6,11 +6,8 @@ from __future__ import absolute_import, division
 import sys
 import os.path
 import re
-# import subprocess as sp
 from itertools import combinations
 from collections import defaultdict
-# import tempfile
-# import shutil
 import neuron
 from copy import copy
 import pyNN.neuron  # @UnusedImport - imports PyNN mechanisms
@@ -54,6 +51,31 @@ class Comparer(object):
     The Comparer class is used to compare the dynamics of a 9ML model simulated
     in either NEURON or NEST with a native model in either of those simulators
     (or both)
+
+    Parameters
+    ----------
+    nineml_model : nineml.Dynamics | nineml.Network
+        9ML model to compare
+    simulators : list(str)
+        List of simulator names to simulate the 9ML model in
+    duration : float
+        Simulation duration
+    dt : float
+        Simulation time step
+    initial_states : dict(str, nineml.Quantity)
+        A dictionary of the initial states
+    neuron_ref : tuple(str, dict(str, nineml.Quantity)
+        A tuple containing the name of neuron model and a dictionary of
+        parameter and state name mappings
+    nest_ref :  tuple(str, dict(str, nineml.Quantity)
+        A tuple containing the name of nest model and a dictionary of parameter
+        and state name mappings
+    input_signal : neo.AnalogSignal
+        Tuple containing the analog signal (in Neo format) and the port to play
+        it into
+    input_train : neo.SpikeTrain
+        Tuple containing the event train (in Neo format) and the port to play
+        it into
     """
 
     specific_params = ('pas.g', 'cm')
@@ -67,21 +89,6 @@ class Comparer(object):
                  max_delay=10.0, extra_mechanisms=None,
                  extra_point_process=None, build_name=None,
                  auxiliary_states=None):
-        """
-        nineml_model   -- 9ML model to compare
-        nineml_sims    -- tuple of simulator names to simulate the 9ML model in
-        duration       -- simulation duration
-        dt             -- simulation time step
-        initial_states -- a dictionary of the initial states
-        neuron_ref   -- a tuple containing the name of neuron model and a
-                          dictionary of parameter and state name mappings
-        nest_ref     -- a tuple containing the name of nest model and a
-                          dictionary of parameter and state name mappings
-        input_signal  -- tuple containing the analog signal (in Neo format)
-                          and the port to play it into
-        input_train    -- tuple containing the event train (in Neo format)
-                          and the port to play it into
-        """
         if nineml_model is not None and not simulators:
             raise Pype9RuntimeError(
                 "No simulators specified to simulate the 9ML model '{}'."
