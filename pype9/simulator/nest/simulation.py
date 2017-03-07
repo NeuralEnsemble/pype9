@@ -1,5 +1,4 @@
 from pype9.simulator.base.simulation import BaseSimulation
-from pype9.exceptions import Pype9NoActiveSimulationError
 
 
 class Simulation(BaseSimulation):
@@ -78,5 +77,5 @@ class Simulation(BaseSimulation):
 #         self.reset(reset_nest_time=False)
 
 
-def simulate(*args, **kwargs):
+def simulation(*args, **kwargs):
     return Simulation(*args, **kwargs)

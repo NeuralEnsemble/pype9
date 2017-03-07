@@ -71,5 +71,5 @@ class Simulation(BaseSimulation):
 #         pass  # TODO: Need to look into whether it is possible to remove cells
 
 
-def simulate(*args, **kwargs):
+def simulation(*args, **kwargs):
     return Simulation(*args, **kwargs)

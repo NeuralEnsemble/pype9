@@ -13,14 +13,12 @@ class BaseSimulation(object):
     MASTER = 0
     DEFAULT_MAX_DELAY = 10.0 * un.ms
 
-    def __init__(self, t_stop, dt, t_start=0.0 * un.s, seed=None,
+    def __init__(self, dt, t_start=0.0 * un.s, seed=None,
                  dynamics_seed=None, min_delay=None, max_delay=None,
-                 last_simulation=True, **options):
+                 last_simulation=False, **options):
         """
         Parameters
         ----------
-        t_stop : nineml.Quantity (time)
-            The time to run the simulation until
         dt : nineml.Quantity (time)
             The resolution of the simulation
         t_start : nineml.Quantity (time)
@@ -47,22 +45,11 @@ class BaseSimulation(object):
             case the simulator should be closed gracefully
         """
         try:
-            assert t_stop.dimension == un.time
-        except:
-            raise Pype9UsageError(
-                "Provided value to t_stop ({}) is not a valid time quantity"
-                .format(t_stop))
-        try:
             assert t_start.dimension == un.time
         except:
             raise Pype9UsageError(
                 "Provided value to t_stop ({}) is not a valid time quantity"
-                .format(t_stop))
-        if t_start > t_stop:
-            raise Pype9UsageError(
-                "t_start ({}) is greater than t_stop ({})".format(t_start,
-                                                                  t_stop))
-        self._t_stop = t_stop
+                .format(t_start))
         self._dt = dt
         self._t_start = t_start
         self._min_delay = min_delay
