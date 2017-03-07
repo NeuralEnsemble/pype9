@@ -205,7 +205,8 @@ class Cell(object):
         self._initial_states = None
         self._initial_regime = None
         self._is_dead = False
-        self.Simulation.active().register_cell(self)
+        if not self._in_array:
+            self.Simulation.active().register_cell(self)
 
     @property
     def component_class(self):
