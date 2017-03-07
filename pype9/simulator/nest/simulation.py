@@ -17,6 +17,40 @@ class Simulation(BaseSimulation):
         else:
             return self._device_delay
 
+    def run(self, t_stop):  # @UnusedVariable
+        """
+        Run the simulation until time 't'. Typically won't be called explicitly
+        as the __exit__ function will run the simulation until t_stop. However,
+        it may be required if a state needs to be updated mid-way through the
+        simulation.
+
+        Parameters
+        ----------
+        t_stop : nineml.Quantity (time)
+            The time to run the simulation until
+        """
+        if not self._running:
+            self._pre_run()
+            self._running = True
+
+    def _prepare(self):
+        "Reset the simulation and prepare it for creating new cells/networks"
+
+    def _initialise(self):
+        """
+        Just in time initialisations that are performed before the simulation
+        starts running.
+        """
+
+    def mpi_rank(self):
+        "The rank of the MPI node the code is running on"
+
+    def num_processes(self):
+        "The number of MPI processes"
+
+    def num_threads(self):
+        "The total number of threads across all MPI nodes"
+
 #     def run(self, simtime, reset=True, reset_nest_time=False):
 #         """Advance the simulation for a certain time."""
 #         if reset:
