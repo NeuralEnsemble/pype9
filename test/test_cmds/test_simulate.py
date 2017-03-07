@@ -2,25 +2,19 @@ import os.path
 import tempfile
 import shutil
 import neo.io
-import nest
 import numpy as np
 from nineml.units import Quantity
 from pype9.cmd import simulate
 from pype9.cmd._utils import parse_units
 import ninemlcatalog
-from pype9.simulator.neuron import CellMetaClass as CellMetaClassNEURON, Network as NetworkNEURON
-from pype9.simulator.neuron import simulation as simulatorNEURON
+from pype9.simulator.neuron import (
+    simulation as simulationNEURON,
     CellMetaClass as CellMetaClassNEURON,
-    controller as simulatorNEURON,
     Network as NetworkNEURON)
-from pype9.simulator.nest import CellMetaClass as CellMetaClassNEST, Network as NetworkNEST
-from pype9.simulator.nest import simulation as simulatorNEST
+from pype9.simulator.nest import (
+    simulation as simulationNEST,
     CellMetaClass as CellMetaClassNEST,
-    controller as simulatorNEST,
     Network as NetworkNEST)
-from pyNN.random import NumpyRNG
-import pyNN.neuron
-import pyNN.nest
 import nineml
 import nineml.units as un
 if __name__ == '__main__':
@@ -111,20 +105,20 @@ class TestSimulateCell(TestCase):
     def _ref_single_cell(self, simulator, isyn):
         if simulator == 'neuron':
             metaclass = CellMetaClassNEURON
-            controller = simulatorNEURON
+            simulation = simulationNEURON
         else:
-            nest.ResetKernel()
             metaclass = CellMetaClassNEST
-            controller = simulatorNEST
+            simulation = simulationNEST
         nineml_model = ninemlcatalog.load(self.izhi_path)
-        cell = metaclass(nineml_model.component_class,
-                         name='izhikevichAPI')(nineml_model)
-        cell.set_state({'U': Quantity(self.U[0], parse_units(self.U[1])),
-                           'V': Quantity(self.V[0], parse_units(self.V[1]))})
-        cell.record('V')
-        cell.play('Isyn', isyn)
-        controller.run(self.t_stop)
-        return cell.recording('V')
+        Cell = metaclass(nineml_model.component_class, name='izhikevichAPI')
+        with simulation(dt=self.dt) as sim:
+            cell = Cell(nineml_model)
+            cell.set_state({'U': Quantity(self.U[0], parse_units(self.U[1])),
+                            'V': Quantity(self.V[0], parse_units(self.V[1]))})
+            cell.record('V')
+            cell.play('Isyn', isyn)
+            sim.run(self.t_stop * un.ms)
+            return cell.recording('V')
 
 
 class TestSimulateNetwork(TestCase):
@@ -166,7 +160,6 @@ class TestSimulateNetwork(TestCase):
         shutil.rmtree(self.tmpdir)
 
     def test_network(self):
-        nest.ResetKernel()
         for simulator in ('nest', ):  # , 'neuron'):
             argv = (
                 "{model_url}#{model_name} {sim} {t_stop} {dt} "
@@ -197,31 +190,25 @@ class TestSimulateNetwork(TestCase):
                     .format(pop_name, simulator))
 
     def _ref_network(self, simulator, external_input=None, **kwargs):
-        nest.ResetKernel()
         if simulator == 'nest':
             NetworkClass = NetworkNEST
-            pyNN_simulator = pyNN.nest.simulator.state
+            simulation = simulationNEST
         elif simulator == 'neuron':
             NetworkClass = NetworkNEURON
-            pyNN_simulator = pyNN.neuron.simulator.state
+            simulation = simulationNEURON
         else:
             assert False
         model = nineml.read(self.reduced_brunel_path).as_network(
             'ReducedBrunel')
-        # Reset the simulator
-        min_delay, max_delay = model.delay_limits()
-        rng_seed = 2 * self.seed
-        conn_seed = 2 * self.seed + 1
-        pyNN.nest.setup(min_delay=min_delay, max_delay=max_delay,
-                        timestep=self.dt, rng_seeds_seed=rng_seed)
-        conn_rng = NumpyRNG(conn_seed)
-        network = NetworkClass(model, rng=conn_rng, **kwargs)
-        if external_input is not None:
-            network.component_array('Ext').play('spike_input__cell',
-                                                external_input)
-        for pop_name in self.recorded_pops:
-            network.component_array(pop_name).record('spike_output')
-        pyNN_simulator.run(self.t_stop)
+        with simulation(dt=self.dt, seed=self.seed,
+                        **model.delay_limits()) as sim:
+            network = NetworkClass(model, **kwargs)
+            if external_input is not None:
+                network.component_array('Ext').play('spike_input__cell',
+                                                    external_input)
+            for pop_name in self.recorded_pops:
+                network.component_array(pop_name).record('spike_output')
+            sim.run(self.t_stop * un.ms)
         recordings = {}
         for pop_name in self.recorded_pops:
             recordings[pop_name] = network.component_array(pop_name).recording(

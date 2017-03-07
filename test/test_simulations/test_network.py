@@ -26,17 +26,13 @@ from pype9.simulator.base.cells import (
     ConnectionPropertySet, MultiDynamicsWithSynapsesProperties)
 from pype9.simulator.base.network import Network as BasePype9Network
 from pype9.simulator.neuron.network import Network as NeuronPype9Network
-from pype9.simulator.neuron import simulation as simulation_contoller_neuron
-    controller as simulation_contoller_neuron)
+from pype9.simulator.neuron import simulation as simulationNEURON
 import ninemlcatalog
-import pyNN.neuron
 import sys
 argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
 import nest  # @IgnorePep8
-import pyNN.nest  # @IgnorePep8
 from pype9.simulator.nest.network import Network as NestPype9Network  # @IgnorePep8
-from pype9.simulator.nest import controller as controller_nest
-    controller as controller_nest)
+from pype9.simulator.nest import simulation as simulationNEST  # @IgnorePep8
 from pype9.utils.testing import ReferenceBrunel2000  # @IgnorePep8
 try:
     from matplotlib import pyplot as plt
@@ -92,173 +88,190 @@ class TestBrunel2000(TestCase):
                        ('Inh', 'Exc'): 1.5, ('Inh', 'Inh'): 5.0,
                        ('Ext', 'Exc'): 0.0, ('Ext', 'Inh'): 0.0}
 
+    def setUp(self):
+        self.simulations = {
+            'nest': simulationNEST(
+                dt=self.timestep, seed=NEST_RNG_SEED,
+                min_delay=ReferenceBrunel2000.min_delay,
+                max_delay=ReferenceBrunel2000.max_delay),
+            'neuron': simulationNEURON(
+                dt=self.timestep, seed=NEURON_RNG_SEED,
+                min_delay=ReferenceBrunel2000.min_delay,
+                max_delay=ReferenceBrunel2000.max_delay)}
+
     def test_population_params(self, case='AI', order=10, **kwargs):  # @UnusedVariable @IgnorePep8
-        self._setup('nest')
-        nml = self._construct_nineml(case, order, 'nest')
-        ref = ReferenceBrunel2000(case, order)
-        for pop_name in ('Exc', 'Inh'):
-            params = {}
-            means = {}
-            stdevs = {}
-            for model_ver in ('nineml', 'reference'):
-                if model_ver == 'nineml':
-                    inds = list(nml.component_array(pop_name).all_cells)
-                else:
-                    inds = ref[pop_name]
-                param_names = [
-                    n for n in nest.GetStatus([inds[0]])[0].keys()
-                    if n not in nest_bookkeeping]
-                params[model_ver] = dict(
-                    izip(param_names, izip(*nest.GetStatus(inds,
-                                                           keys=param_names))))
-                means[model_ver] = {}
-                stdevs[model_ver] = {}
-                for param_name, values in params[model_ver].iteritems():
-                    vals = numpy.asarray(values)
-                    try:
-                        means[model_ver][param_name] = numpy.mean(vals)
-                    except:
-                        means[model_ver][param_name] = None
-                    try:
-                        stdevs[model_ver][param_name] = numpy.std(vals)
-                    except:
-                        stdevs[model_ver][param_name] = None
-            for stat_name, stat in (('mean', means),
-                                    ('standard deviation', stdevs)):
-                for param_name in stat['reference']:
-                    nml_param_name = self.translations.get(
-                        param_name, param_name + '__cell')
-                    if nml_param_name is not None:  # Equivalent parameter
-                        if isinstance(nml_param_name, (float, int)):
-                            if stat_name == 'mean':
-                                nineml_stat = nml_param_name
-                            else:
-                                nineml_stat = 0.0
-                        else:
-                            nineml_stat = stat['nineml'][nml_param_name]
-                        reference_stat = stat['reference'][param_name]
-                        self.assertAlmostEqual(
-                            reference_stat, nineml_stat,
-                            msg=("'{}' {} is not almost equal between "
-                                 "reference ({}) and nineml ({})  in '{}'"
-                                 .format(param_name, stat_name,
-                                         reference_stat, nineml_stat,
-                                         pop_name)))
+        with self.simulations['nest']:
+            nml = self._construct_nineml(case, order, 'nest')
+            ref = ReferenceBrunel2000(case, order)
+            for pop_name in ('Exc', 'Inh'):
+                params = {}
+                means = {}
+                stdevs = {}
+                for model_ver in ('nineml', 'reference'):
+                    if model_ver == 'nineml':
+                        inds = list(nml.component_array(pop_name).all_cells)
                     else:
-                        pass
+                        inds = ref[pop_name]
+                    param_names = [
+                        n for n in nest.GetStatus([inds[0]])[0].keys()
+                        if n not in nest_bookkeeping]
+                    params[model_ver] = dict(
+                        izip(param_names, izip(*nest.GetStatus(
+                            inds, keys=param_names))))
+                    means[model_ver] = {}
+                    stdevs[model_ver] = {}
+                    for param_name, values in params[model_ver].iteritems():
+                        vals = numpy.asarray(values)
+                        try:
+                            means[model_ver][param_name] = numpy.mean(vals)
+                        except:
+                            means[model_ver][param_name] = None
+                        try:
+                            stdevs[model_ver][param_name] = numpy.std(vals)
+                        except:
+                            stdevs[model_ver][param_name] = None
+                for stat_name, stat in (('mean', means),
+                                        ('standard deviation', stdevs)):
+                    for param_name in stat['reference']:
+                        nml_param_name = self.translations.get(
+                            param_name, param_name + '__cell')
+                        if nml_param_name is not None:  # Equivalent parameter
+                            if isinstance(nml_param_name, (float, int)):
+                                if stat_name == 'mean':
+                                    nineml_stat = nml_param_name
+                                else:
+                                    nineml_stat = 0.0
+                            else:
+                                nineml_stat = stat['nineml'][nml_param_name]
+                            reference_stat = stat['reference'][param_name]
+                            self.assertAlmostEqual(
+                                reference_stat, nineml_stat,
+                                msg=("'{}' {} is not almost equal between "
+                                     "reference ({}) and nineml ({})  in '{}'"
+                                     .format(param_name, stat_name,
+                                             reference_stat, nineml_stat,
+                                             pop_name)))
+                        else:
+                            pass
 
     def test_connection_degrees(self, case='AI', order=500, **kwargs):  # @UnusedVariable @IgnorePep8
         """
         Compares the in/out degree of all projections in the 9ML network with
         the corresponding projections in the reference network
         """
-        self._setup('nest')
-        nml = self._construct_nineml(case, order, 'nest')
-        ref = ReferenceBrunel2000(case, order)
-        for pop1_name, pop2_name in self.out_stdev_error:
-            in_degree = {}
-            out_degree = {}
-            for model_ver, pop1, pop2 in [
-                ('nineml', nml.component_array(pop1_name).all_cells,
-                 nml.component_array(pop2_name).all_cells),
-                ('reference', numpy.asarray(ref[pop1_name]),
-                 numpy.asarray(ref[pop2_name]))]:
-                conns = numpy.asarray(nest.GetConnections(list(pop1),
-                                                          list(pop2)))
-                out_degree[model_ver] = numpy.array(
-                    [numpy.count_nonzero(conns[:, 0] == i) for i in pop1])
-                in_degree[model_ver] = numpy.array(
-                    [numpy.count_nonzero(conns[:, 1] == i) for i in pop2])
-            nineml_out_mean = numpy.mean(out_degree['nineml'])
-            ref_out_mean = numpy.mean(out_degree['reference'])
-            self.assertEqual(
-                nineml_out_mean, ref_out_mean,
-                "Mean out degree of '{}' to '{}' projection ({}) doesn't "
-                "match reference ({})".format(
-                    pop1_name, pop2_name, nineml_out_mean, ref_out_mean))
-            nineml_in_mean = numpy.mean(in_degree['nineml'])
-            ref_in_mean = numpy.mean(in_degree['reference'])
-            self.assertEqual(
-                nineml_in_mean, ref_in_mean,
-                "Mean in degree of '{}' to '{}' projection ({}) doesn't "
-                "match reference ({})".format(
-                    pop1_name, pop2_name, nineml_in_mean, ref_in_mean))
-            nineml_in_stdev = numpy.std(in_degree['nineml'])
-            ref_in_stdev = numpy.std(in_degree['reference'])
-            self.assertEqual(
-                nineml_in_stdev, ref_in_stdev,
-                "Std. of in degree of '{}' to '{}' projection ({}) doesn't "
-                "match reference ({})".format(
-                    pop1_name, pop2_name, nineml_in_stdev, ref_in_stdev))
-            nineml_out_stdev = numpy.std(out_degree['nineml'])
-            ref_out_stdev = numpy.std(out_degree['reference'])
-            percent_error = abs(nineml_out_stdev / ref_out_stdev - 1.0) * 100.0
-            self.assertLessEqual(
-                percent_error, self.out_stdev_error[(pop1_name, pop2_name)],
-                "Std. of out degree of '{}' to '{}' projection ({}) doesn't "
-                "match reference ({}) within {}% ({}%)".format(
-                    pop1_name, pop2_name, nineml_out_stdev, ref_out_stdev,
-                    self.out_stdev_error[(pop1_name, pop2_name)],
-                    percent_error))
+        with self.simulations['nest']:
+            nml = self._construct_nineml(case, order, 'nest')
+            ref = ReferenceBrunel2000(case, order)
+            for pop1_name, pop2_name in self.out_stdev_error:
+                in_degree = {}
+                out_degree = {}
+                for model_ver, pop1, pop2 in [
+                    ('nineml', nml.component_array(pop1_name).all_cells,
+                     nml.component_array(pop2_name).all_cells),
+                    ('reference', numpy.asarray(ref[pop1_name]),
+                     numpy.asarray(ref[pop2_name]))]:
+                    conns = numpy.asarray(nest.GetConnections(list(pop1),
+                                                              list(pop2)))
+                    out_degree[model_ver] = numpy.array(
+                        [numpy.count_nonzero(conns[:, 0] == i) for i in pop1])
+                    in_degree[model_ver] = numpy.array(
+                        [numpy.count_nonzero(conns[:, 1] == i) for i in pop2])
+                nineml_out_mean = numpy.mean(out_degree['nineml'])
+                ref_out_mean = numpy.mean(out_degree['reference'])
+                self.assertEqual(
+                    nineml_out_mean, ref_out_mean,
+                    "Mean out degree of '{}' to '{}' projection ({}) doesn't "
+                    "match reference ({})".format(
+                        pop1_name, pop2_name, nineml_out_mean, ref_out_mean))
+                nineml_in_mean = numpy.mean(in_degree['nineml'])
+                ref_in_mean = numpy.mean(in_degree['reference'])
+                self.assertEqual(
+                    nineml_in_mean, ref_in_mean,
+                    "Mean in degree of '{}' to '{}' projection ({}) doesn't "
+                    "match reference ({})".format(
+                        pop1_name, pop2_name, nineml_in_mean, ref_in_mean))
+                nineml_in_stdev = numpy.std(in_degree['nineml'])
+                ref_in_stdev = numpy.std(in_degree['reference'])
+                self.assertEqual(
+                    nineml_in_stdev, ref_in_stdev,
+                    "Std. of in degree of '{}' to '{}' projection ({}) doesn't"
+                    " match reference ({})".format(
+                        pop1_name, pop2_name, nineml_in_stdev, ref_in_stdev))
+                nineml_out_stdev = numpy.std(out_degree['nineml'])
+                ref_out_stdev = numpy.std(out_degree['reference'])
+                percent_error = abs(nineml_out_stdev /
+                                    ref_out_stdev - 1.0) * 100.0
+                self.assertLessEqual(
+                    percent_error, self.out_stdev_error[(pop1_name,
+                                                         pop2_name)],
+                    "Std. of out degree of '{}' to '{}' projection ({}) "
+                    "doesn't match reference ({}) within {}% ({}%)".format(
+                        pop1_name, pop2_name, nineml_out_stdev, ref_out_stdev,
+                        self.out_stdev_error[(pop1_name, pop2_name)],
+                        percent_error))
 
     def test_connection_params(self, case='AI', order=10, **kwargs):  # @UnusedVariable @IgnorePep8
-        self._setup('nest')
-        nml = self._construct_nineml(case, order, 'nest')
-        ref = ReferenceBrunel2000(case, order)
-        ref_conns = ref.projections
-        for conn_group in nml.connection_groups:
-            nml_conns = conn_group.nest_connections
-            nml_params = dict(izip(
-                self.conn_param_names, izip(
-                    *nest.GetStatus(nml_conns, self.conn_param_names))))
-            # Since the weight is constant it is set as a parameter of the
-            # cell class not a connection parameter and it is scaled by
-            # exp because of the difference between the alpha synapse
-            # definition in the catalog and the nest/neuron synapses
-            nml_params['weight'] = nest.GetStatus(
-                list(conn_group.post.all_cells),
-                'weight__pls__{}'.format(conn_group.name)) / numpy.exp(1.0)
-            ref_params = dict(izip(
-                self.conn_param_names, izip(
-                    *nest.GetStatus(ref_conns[conn_group.name],
-                                    self.conn_param_names))))
-            for attr in self.conn_param_names:
-                ref_mean = numpy.mean(ref_params[attr])
-                ref_stdev = numpy.std(ref_params[attr])
-                nml_mean = numpy.mean(nml_params[attr])
-                nml_stdev = numpy.std(nml_params[attr])
-                self.assertAlmostEqual(
-                    ref_mean, nml_mean,
-                    msg=("'{}' mean is not almost equal between "
-                         "reference ({}) and nineml ({})  in '{}'"
-                         .format(attr, ref_mean, nml_mean, conn_group.name)))
-                self.assertAlmostEqual(
-                    ref_stdev, nml_stdev,
-                    msg=("'{}' mean is not almost equal between "
-                         "reference ({}) and nineml ({})  in '{}'"
-                         .format(attr, ref_stdev, nml_stdev, conn_group.name)))
+        with self.simulations['nest']:
+            nml = self._construct_nineml(case, order, 'nest')
+            ref = ReferenceBrunel2000(case, order)
+            ref_conns = ref.projections
+            for conn_group in nml.connection_groups:
+                nml_conns = conn_group.nest_connections
+                nml_params = dict(izip(
+                    self.conn_param_names, izip(
+                        *nest.GetStatus(nml_conns, self.conn_param_names))))
+                # Since the weight is constant it is set as a parameter of the
+                # cell class not a connection parameter and it is scaled by
+                # exp because of the difference between the alpha synapse
+                # definition in the catalog and the nest/neuron synapses
+                nml_params['weight'] = nest.GetStatus(
+                    list(conn_group.post.all_cells),
+                    'weight__pls__{}'.format(conn_group.name)) / numpy.exp(1.0)
+                ref_params = dict(izip(
+                    self.conn_param_names, izip(
+                        *nest.GetStatus(ref_conns[conn_group.name],
+                                        self.conn_param_names))))
+                for attr in self.conn_param_names:
+                    ref_mean = numpy.mean(ref_params[attr])
+                    ref_stdev = numpy.std(ref_params[attr])
+                    nml_mean = numpy.mean(nml_params[attr])
+                    nml_stdev = numpy.std(nml_params[attr])
+                    self.assertAlmostEqual(
+                        ref_mean, nml_mean,
+                        msg=("'{}' mean is not almost equal between "
+                             "reference ({}) and nineml ({})  in '{}'"
+                             .format(attr, ref_mean, nml_mean,
+                                     conn_group.name)))
+                    self.assertAlmostEqual(
+                        ref_stdev, nml_stdev,
+                        msg=("'{}' mean is not almost equal between "
+                             "reference ({}) and nineml ({})  in '{}'"
+                             .format(attr, ref_stdev, nml_stdev,
+                                     conn_group.name)))
 
     def test_sizes(self, case='AI', order=100, **kwargs):  # @UnusedVariable @IgnorePep8
-        self._setup('nest')
-        nml_network = self._construct_nineml(case, order, 'nest')
-        nml = dict((p.name, p.all_cells) for p in nml_network.component_arrays)
-        ref = ReferenceBrunel2000(case, order)
-        # Test sizes of component arrays
-        for name in ('Exc', 'Inh'):
-            nml_size = len(nml[name])
-            ref_size = len(ref[name])
-            self.assertEqual(
-                nml_size, ref_size,
-                "Size of '{}' component array ({}) does not match reference "
-                "({})".format(name, nml_size, ref_size))
-        ref_conns = ref.projections
-        for conn_group in nml_network.connection_groups:
-            nml_size = len(conn_group)
-            ref_size = len(ref_conns[conn_group.name])
-            self.assertEqual(
-                nml_size, ref_size,
-                "Number of connections in '{}' ({}) does not match reference "
-                "({})".format(conn_group.name, nml_size, ref_size))
+        with self.simulations['nest']:
+            nml_network = self._construct_nineml(case, order, 'nest')
+            nml = dict((p.name, p.all_cells)
+                       for p in nml_network.component_arrays)
+            ref = ReferenceBrunel2000(case, order)
+            # Test sizes of component arrays
+            for name in ('Exc', 'Inh'):
+                nml_size = len(nml[name])
+                ref_size = len(ref[name])
+                self.assertEqual(
+                    nml_size, ref_size,
+                    "Size of '{}' component array ({}) does not match "
+                    "reference ({})".format(name, nml_size, ref_size))
+            ref_conns = ref.projections
+            for conn_group in nml_network.connection_groups:
+                nml_size = len(conn_group)
+                ref_size = len(ref_conns[conn_group.name])
+                self.assertEqual(
+                    nml_size, ref_size,
+                    "Number of connections in '{}' ({}) does not match "
+                    "reference ({})".format(conn_group.name, nml_size,
+                                            ref_size))
 
     def test_activity(self, case='AI', order=50, simtime=250.0, plot=False,
                       record_size=50, record_pops=('Exc', 'Inh', 'Ext'),
@@ -287,73 +300,75 @@ class TestBrunel2000(TestCase):
             external_input = None
         record_duration = simtime - record_start
         # Construct 9ML network
-        self._setup('nest')
-        nml_network = self._construct_nineml(
-            case, order, 'nest', external_input=external_input,
-            build_mode=build_mode, **kwargs)
-        nml = dict((p.name, list(p.all_cells))
-                   for p in nml_network.component_arrays)
-        if identical_connections:
-            connections = {}
-            for p1_name, p2_name in itertools.product(*([('Exc', 'Inh')] * 2)):
-                p1 = list(nml_network.component_array(p1_name).all_cells)
-                p2 = list(nml_network.component_array(p2_name).all_cells)
-                conns = numpy.asarray(nest.GetConnections(p1, p2))
-                conns[:, 0] -= p1[0]
-                conns[:, 1] -= p2[0]
-                assert numpy.all(conns[0:2, :] >= 0)
-                connections[(p1_name, p2_name)] = conns
-        else:
-            connections = None
-        if identical_initialisation == 'zero':
-            init_v = {}
-            for pname in ('Exc', 'Inh'):
-                pop = list(nml_network.component_array(pname).all_cells)
-                zeros = list(
-                    numpy.zeros(len(nml_network.component_array(pname))))
-                nest.SetStatus(pop, 'v__cell', zeros)
-                init_v[pname] = zeros
-        elif identical_initialisation:
-            init_v = {}
-            for p_name in ('Exc', 'Inh'):
-                pop = list(nml_network.component_array(p_name).all_cells)
-                init_v[p_name] = nest.GetStatus(pop, 'v__cell')
-        else:
-            init_v = None
-        # Construct reference network
-        ref = ReferenceBrunel2000(
-            case, order, external_input=external_input,
-            connections=connections, init_v=init_v)
-        # Set up spike recorders for reference network
-        pops = {'nineml': nml, 'reference': ref}
-        spikes = {}
-        multi = {}
-        for model_ver in ('nineml', 'reference'):
-            spikes[model_ver] = {}
-            multi[model_ver] = {}
-            for pop_name in record_pops:
-                pop = numpy.asarray(pops[model_ver][pop_name], dtype=int)
-                record_inds = numpy.asarray(numpy.unique(numpy.floor(
-                    numpy.arange(start=0, stop=len(pop),
-                                 step=len(pop) / record_size))), dtype=int)
-                spikes[model_ver][pop_name] = nest.Create("spike_detector")
-                nest.SetStatus(spikes[model_ver][pop_name],
-                               [{"label": "brunel-py-" + pop_name,
-                                 "withtime": True, "withgid": True}])
-                nest.Connect(list(pop[record_inds]),
-                             spikes[model_ver][pop_name],
-                             syn_spec="excitatory")
-                if record_states:
-                    # Set up voltage traces recorders for reference network
-                    if self.record_params[pop_name][model_ver]:
-                        multi[model_ver][pop_name] = nest.Create(
-                            'multimeter',
-                            params={'record_from':
+        with self.simulations['nest'] as sim:
+            nml_network = self._construct_nineml(
+                case, order, 'nest', external_input=external_input,
+                build_mode=build_mode, **kwargs)
+            nml = dict((p.name, list(p.all_cells))
+                       for p in nml_network.component_arrays)
+            if identical_connections:
+                connections = {}
+                for p1_name, p2_name in itertools.product(*([('Exc', 'Inh')] *
+                                                            2)):
+                    p1 = list(nml_network.component_array(p1_name).all_cells)
+                    p2 = list(nml_network.component_array(p2_name).all_cells)
+                    conns = numpy.asarray(nest.GetConnections(p1, p2))
+                    conns[:, 0] -= p1[0]
+                    conns[:, 1] -= p2[0]
+                    assert numpy.all(conns[0:2, :] >= 0)
+                    connections[(p1_name, p2_name)] = conns
+            else:
+                connections = None
+            if identical_initialisation == 'zero':
+                init_v = {}
+                for pname in ('Exc', 'Inh'):
+                    pop = list(nml_network.component_array(pname).all_cells)
+                    zeros = list(
+                        numpy.zeros(len(nml_network.component_array(pname))))
+                    nest.SetStatus(pop, 'v__cell', zeros)
+                    init_v[pname] = zeros
+            elif identical_initialisation:
+                init_v = {}
+                for p_name in ('Exc', 'Inh'):
+                    pop = list(nml_network.component_array(p_name).all_cells)
+                    init_v[p_name] = nest.GetStatus(pop, 'v__cell')
+            else:
+                init_v = None
+            # Construct reference network
+            ref = ReferenceBrunel2000(
+                case, order, external_input=external_input,
+                connections=connections, init_v=init_v)
+            # Set up spike recorders for reference network
+            pops = {'nineml': nml, 'reference': ref}
+            spikes = {}
+            multi = {}
+            for model_ver in ('nineml', 'reference'):
+                spikes[model_ver] = {}
+                multi[model_ver] = {}
+                for pop_name in record_pops:
+                    pop = numpy.asarray(pops[model_ver][pop_name], dtype=int)
+                    record_inds = numpy.asarray(numpy.unique(numpy.floor(
+                        numpy.arange(start=0, stop=len(pop),
+                                     step=len(pop) / record_size))), dtype=int)
+                    spikes[model_ver][pop_name] = nest.Create("spike_detector")
+                    nest.SetStatus(spikes[model_ver][pop_name],
+                                   [{"label": "brunel-py-" + pop_name,
+                                     "withtime": True, "withgid": True}])
+                    nest.Connect(list(pop[record_inds]),
+                                 spikes[model_ver][pop_name],
+                                 syn_spec="excitatory")
+                    if record_states:
+                        # Set up voltage traces recorders for reference network
+                        if self.record_params[pop_name][model_ver]:
+                            multi[model_ver][pop_name] = nest.Create(
+                                'multimeter',
+                                params={
+                                    'record_from':
                                     self.record_params[pop_name][model_ver]})
-                        nest.Connect(multi[model_ver][pop_name],
-                                     list(pop[record_inds]))
-        # Simulate the network
-        nest.Simulate(simtime)
+                            nest.Connect(multi[model_ver][pop_name],
+                                         list(pop[record_inds]))
+            # Simulate the network
+            sim.run(simtime * un.ms)
         rates = {'reference': {}, 'nineml': {}}
         psth = {'reference': {}, 'nineml': {}}
         for model_ver in ('reference', 'nineml'):
@@ -454,20 +469,19 @@ class TestBrunel2000(TestCase):
                                   record_states=True, plot=False,
                                   build_mode='force', **kwargs):  # @IgnorePep8 @UnusedVariable
         data = {}
-        pyNN_simulators = {'nest': pyNN.nest.simulator.state,
-                           'neuron': pyNN.neuron.simulator.state}
         # Set up recorders for 9ML network
         rates = {}
         psth = {}
         for simulator in simulators:
             data[simulator] = {}
-            self._setup(simulator)
-            network = self._construct_nineml(case, order, simulator, **kwargs)
-            for pop in network.component_arrays:
-                pop.record('spike_output')
-                if record_states and pop.name != 'Ext':
-                    pop.record('v__cell')
-            pyNN_simulators[simulator].run(simtime)
+            with self.simulations[simulator] as sim:
+                network = self._construct_nineml(case, order, simulator,
+                                                 **kwargs)
+                for pop in network.component_arrays:
+                    pop.record('spike_output')
+                    if record_states and pop.name != 'Ext':
+                        pop.record('v__cell')
+                sim.run(simtime)
             rates[simulator] = {}
             psth[simulator] = {}
             for pop in network.component_arrays:
@@ -551,30 +565,6 @@ class TestBrunel2000(TestCase):
         self.assertEqual(len(component_arrays), 3)
         self.assertEqual(len(connection_groups), 3)
         self.assertEqual(len(selections), 1)
-
-    def _setup(self, simulator):
-        if simulator == 'nest':
-            controller_nest.clear(rng_seed=NEST_RNG_SEED)
-            pyNN.nest.setup(timestep=self.timestep,
-                            min_delay=float(
-                                un.Quantity(ReferenceBrunel2000.min_delay,
-                                            un.ms)),
-                            max_delay=float(
-                                un.Quantity(ReferenceBrunel2000.max_delay,
-                                            un.ms)),
-                            rng_seeds_seed=NEST_RNG_SEED)
-        elif simulator == 'neuron':
-            simulation_contoller_neuron.clear(rng_seed=NEURON_RNG_SEED)
-            pyNN.neuron.setup(timestep=self.timestep,
-                              min_delay=float(
-                                  un.Quantity(ReferenceBrunel2000.min_delay,
-                                              un.ms)),
-                              max_delay=float(
-                                  un.Quantity(ReferenceBrunel2000.max_delay,
-                                              un.ms)),
-                              rng_seeds_seed=NEURON_RNG_SEED)
-        else:
-            assert False
 
     def _construct_nineml(self, case, order, simulator, external_input=None,
                           **kwargs):
