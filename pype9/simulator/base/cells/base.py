@@ -416,14 +416,6 @@ class Cell(object):
     def write(self, file, **kwargs):  # @ReservedAssignment
         self._nineml.write(file, **kwargs)
 
-    def run(self, simulation_time, reset=True, timestep='cvode', rtol=None,
-            atol=None):
-        if self not in (c() for c in self._controller.registered_cells):
-            raise Pype9RuntimeError(
-                "PyPe9 Cell '{}' is not being recorded".format(self.name))
-        self._controller.run(simulation_time=simulation_time, reset=reset,
-                                  timestep=timestep, rtol=rtol, atol=atol)
-
     def reset_recordings(self):
         raise NotImplementedError("Should be implemented by derived class")
 
