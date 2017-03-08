@@ -15,7 +15,7 @@ import nest
 import quantities as pq
 from nineml.exceptions import NineMLNameError
 from .code_gen import CodeGenerator, REGIME_VARNAME
-from pype9.simulator.nest.simulation import active_simulation, Simulation
+from pype9.simulator.nest.simulation import Simulation
 from pype9.simulator.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
 from pype9.simulator.nest.units import UnitHandler
@@ -35,7 +35,6 @@ class Cell(base.Cell):
     Simulation = Simulation
 
     def __init__(self, *properties, **kwprops):
-        active_simulation()  # Test for an active simulation
         self._flag_created(False)
         self._cell = nest.Create(self.__class__.name)
         super(Cell, self).__init__(*properties, **kwprops)
@@ -57,7 +56,7 @@ class Cell(base.Cell):
         # Create dictionaries for storing local recordings. These are not
         # created initially to save memory if recordings are not required or
         # handled externally
-        self._initialise_local_recording(active_simulation())
+        self._initialise_local_recording()
         try:
             port = self.component_class.send_port(port_name)
         except NineMLNameError:
@@ -77,13 +76,13 @@ class Cell(base.Cell):
             nest.Connect(self._cell, recorder)
         else:
             if interval is None:
-                interval = active_simulation().dt
+                interval = Simulation.active().dt
             variable_name = self.build_name(port_name)
             self._recorders[port_name] = recorder = nest.Create(
                 'multimeter', 1, {"interval": interval})
             nest.SetStatus(recorder, {'record_from': [variable_name]})
             nest.Connect(recorder, self._cell,
-                         syn_spec={'delay': active_simulation().device_delay})
+                         syn_spec={'delay': Simulation.active().device_delay})
 
     def recording(self, port_name):
         """
@@ -149,17 +148,17 @@ class Cell(base.Cell):
             # Shift the signal times to account for the minimum delay and
             # match the NEURON implementation
             spike_times = (pq.Quantity(signal, 'ms') + pq.ms -
-                           active_simulation().device_delay * pq.ms)
+                           Simulation.active().device_delay * pq.ms)
             if any(spike_times <= 0.0):
                 raise Pype9UsageError(
                     "Some spike times are less than device delay and so "
                     "can't be played into cell ({})".format(', '.join(
                         spike_times < (
-                            1 + active_simulation().device_delay))))
+                            1 + Simulation.active().device_delay))))
             self._inputs[port_name] = nest.Create(
                 'spike_generator', 1, {'spike_times': spike_times})
             syn_spec = {'receptor_type': self._receive_ports[port_name],
-                        'delay': active_simulation().device_delay}
+                        'delay': Simulation.active().device_delay}
             self._check_connection_properties(port_name, properties)
             if len(properties) > 1:
                 raise NotImplementedError(
@@ -180,13 +179,13 @@ class Cell(base.Cell):
                 {'amplitude_values': pq.Quantity(signal, 'pA'),
                  'amplitude_times': (
                     pq.Quantity(signal.times, 'ms') -
-                    active_simulation().device_delay * pq.ms),
+                    Simulation.active().device_delay * pq.ms),
                  'start': float(pq.Quantity(signal.t_start, 'ms')),
                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
             nest.Connect(self._inputs[port_name], self._cell,
                          syn_spec={
                              "receptor_type": self._receive_ports[port_name],
-                             'delay': active_simulation().device_delay})
+                             'delay': Simulation.active().device_delay})
         else:
             raise Pype9UsageError(
                 "Unrecognised port type '{}' to play signal into".format(port))

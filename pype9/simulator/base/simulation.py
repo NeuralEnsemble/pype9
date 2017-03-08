@@ -48,8 +48,8 @@ class BaseSimulation(object):
     def __init__(self, dt, t_start=0.0 * un.s, seed=None, structure_seed=None,
                  min_delay=None, max_delay=None, kill_on_exit=True, **options):
         try:
-            assert t_start.dimension == un.time
-        except:
+            assert t_start.units.dimension == un.time
+        except (AssertionError, AttributeError):
             raise Pype9UsageError(
                 "Provided value to t_start ({}) is not a valid time quantity"
                 .format(t_start))
@@ -73,16 +73,17 @@ class BaseSimulation(object):
                 low=0, high=1e12, size=self.num_threads()), dtype=int)
 
     def __enter__(self):
-        if self._active is not None:
+        if self.__class__._active is not None:
             raise Pype9UsageError(
-                "Cannot enter context of multiple {} at the same time"
-                .format(self.__class__.__name__))
-        self._active = self
+                "Cannot enter context of multiple {} simulations at the same "
+                "time".format(self.__class__.name))
+        self.__class__._active = self
         self._running = False
         self._prepare()
+        return self
 
-    def __exit__(self):
-        self._active = None
+    def __exit__(self, type_, value, traceback):  # @UnusedVariable
+        self.__class__._active = None
         if self._kill_on_exit:
             for cell in self._registered_cells:
                 cell._kill()
@@ -93,6 +94,14 @@ class BaseSimulation(object):
     @property
     def dt(self):
         return self._dt
+
+    @property
+    def min_delay(self):
+        return self._min_delay
+
+    @property
+    def max_delay(self):
+        return self._max_delay
 
     @property
     def seed(self):
@@ -186,5 +195,5 @@ class BaseSimulation(object):
             raise Pype9NoActiveSimulationError(
                 "No {} simulations are currently active (cells and networks "
                 "need to be initialised within an active simulation context)"
-                .format(cls.__name__))
+                .format(cls.name))
         return active

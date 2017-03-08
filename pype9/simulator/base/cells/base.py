@@ -153,7 +153,7 @@ class CellMetaClass(type):
 class Cell(object):
 
     def __init__(self, *properties, **kwprops):
-        self._in_array = kwprops.pop('_in_array', False)
+        self._in_pynn = kwprops.pop('_in_pynn', False)
         # Combine keyword and non-keyword properties into a single list
         if len(properties) == 1 and isinstance(properties[0],
                                                nineml.DynamicsProperties):
@@ -205,7 +205,7 @@ class Cell(object):
         self._initial_states = None
         self._initial_regime = None
         self._is_dead = False
-        if not self._in_array:
+        if not self._in_pynn:
             self.Simulation.active().register_cell(self)
 
     @property
@@ -433,12 +433,10 @@ class Cell(object):
         """
         super(Cell, self).__setattr__('_recorders', {})
         super(Cell, self).__setattr__('_recordings', {})
-        self._controller.deregister_cell(self)
 
     def _initialise_local_recording(self):
         if not hasattr(self, '_recorders'):
             self.clear_recorders()
-            self._controller.register_cell(self)
 
     def record(self, port_name):
         raise NotImplementedError("Should be implemented by derived class")
@@ -477,7 +475,7 @@ class Cell(object):
         data to be accessed after a simulation has completed, and potentially
         a new simulation to have been started.
         """
-        self._is_dead = True
+        super(Cell, self).__setattr__('_is_dead', True)
 
     def is_dead(self):
         return self._is_dead

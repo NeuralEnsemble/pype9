@@ -17,6 +17,7 @@ class Simulation(BaseSimulation):
     """
 
     _active = None
+    name = 'Neuron'
 
     def __init__(self, *args, **kwargs):
         super(Simulation, self).__init__(*args, **kwargs)

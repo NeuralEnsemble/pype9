@@ -11,15 +11,13 @@ from nineml.user import DynamicsProperties
 from pype9.simulator.base.cells import (
     MultiDynamicsWithSynapses, DynamicsWithSynapsesProperties,
     ConnectionParameterSet, ConnectionPropertySet)
-from pype9.simulator.neuron.cells import CellMetaClass as CellMetaClassNEURON
-from pype9.simulator.neuron import simulation as simulatorNEURON
+from pype9.simulator.neuron import (
     CellMetaClass as CellMetaClassNEURON,
-    controller as simulatorNEURON)
+    simulation as simulationNEURON)
 argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
-from pype9.simulator.nest.cells import CellMetaClass as CellMetaClassNEST
-from pype9.simulator.nest import controller as simulatorNEST
+from pype9.simulator.nest import (  # @IgnorePep8
     CellMetaClass as CellMetaClassNEST,
-    controller as simulatorNEST)
+    simulation as simulationNEST)
 from pype9.utils.testing import Comparer, input_step, input_freq  # @IgnorePep8
 from pype9.simulator.nest.units import UnitHandler as UnitHandlerNEST  # @IgnorePep8
 if __name__ == '__main__':
@@ -377,24 +375,17 @@ class TestDynamics(TestCase):
             # Initialise simulator
             if sim_name == 'neuron':
                 # Run NEURON simulation
-                import neuron
-                simulatorNEURON.clear(rng_seed=NEURON_RNG_SEED)
-                neuron.h.dt = dt
+                simulation = simulationNEURON(dt=dt, seed=NEURON_RNG_SEED)
             elif sim_name == 'nest':
-                simulatorNEST.clear(rng_seed=NEST_RNG_SEED, dt=dt)
+                simulation = simulationNEST(dt=dt, seed=NEST_RNG_SEED)
             else:
                 assert False
-            # Create and initialise cell
-            cell = celltype(rate=rate)
-            cell.record('spike_output')
-            cell.set_state(initial_states)
-            # Run simulation
-            if sim_name == 'neuron':
-                simulatorNEURON.run(duration.in_units(un.ms))
-            elif sim_name == 'nest':
-                simulatorNEST.run(duration.in_units(un.ms))
-            else:
-                assert False
+            with simulation as sim:
+                # Create and initialise cell
+                cell = celltype(rate=rate)
+                cell.record('spike_output')
+                cell.set_state(initial_states)
+                sim(duration.in_units(un.ms))
             # Get recording
             spikes = cell.recording('spike_output')
             # Calculate the rate of the modelled process
