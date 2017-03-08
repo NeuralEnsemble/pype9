@@ -14,6 +14,7 @@ import neo
 import nest
 import quantities as pq
 from nineml.exceptions import NineMLNameError
+from nineml import units as un
 from .code_gen import CodeGenerator, REGIME_VARNAME
 from pype9.simulator.nest.simulation import Simulation
 from pype9.simulator.base.cells import base
@@ -77,12 +78,15 @@ class Cell(base.Cell):
         else:
             if interval is None:
                 interval = Simulation.active().dt
+            interval = float(interval.in_units(un.ms))
             variable_name = self.build_name(port_name)
             self._recorders[port_name] = recorder = nest.Create(
                 'multimeter', 1, {"interval": interval})
             nest.SetStatus(recorder, {'record_from': [variable_name]})
-            nest.Connect(recorder, self._cell,
-                         syn_spec={'delay': Simulation.active().device_delay})
+            nest.Connect(
+                recorder, self._cell, syn_spec={
+                    'delay':
+                    float(Simulation.active().device_delay.in_units(un.ms))})
 
     def recording(self, port_name):
         """
