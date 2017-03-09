@@ -40,6 +40,10 @@ parser.add_argument('--play', type=str, nargs=2, action='append',
                           "play it into"))
 parser.add_argument('--seed', type=int, default=None,
                     help="Random seed used to create network and properties")
+parser.add_argument('--structure_seed', type=int, default=None,
+                    help=("Random seed used to create network and properties. "
+                          "If not provided it is generated from the '--seed' "
+                          "option.")) 
 parser.add_argument('--build_mode', type=str, default='lazy',
                     help=("The strategy used to build and compile the model. "
                           "Can be one of '{}' (default %(default)s)"))
@@ -56,8 +60,6 @@ def run(argv):
     from pyNN.random import NumpyRNG
 
     args = parser.parse_args(argv)
-
-    seed = int(time.time()) if args.seed is None else args.seed
 
     if args.simulator == 'neuron':
         from pype9.simulator.neuron import Network, CellMetaClass, simulation  # @UnusedImport @IgnorePep8
@@ -80,19 +82,13 @@ def run(argv):
     model = args.model
 
     if isinstance(model, nineml.Network):
-
-        # Creating sub-seeds
-        rng_seed = 2 * seed
-        conn_seed = 2 * seed + 1
-        logger.info("Simulating '{}' with seed {}".format(model.name, seed))
-
         # Get min/max delays in model
-        with simulation(
-                dt=args.timestep, seed=rng_seed, *model.delay_limits()) as sim:
+        with simulation(dt=args.timestep, seed=args.seed,
+                        structure_seed=args.structure_seed,
+                        *model.delay_limits()) as sim:
             # Construct the network
             logger.info("Constructing network")
-            conn_rng = NumpyRNG(conn_seed)
-            network = Network(model, build_mode=args.build_mode, rng=conn_rng)
+            network = Network(model, build_mode=args.build_mode)
             logger.info("Finished constructing the '{}' network"
                         .format(model.name))
             for record_name, _ in args.record:
@@ -137,7 +133,9 @@ def run(argv):
         Cell = CellMetaClass(component_class, name=model.name,
                              build_mode=args.build_mode,
                              default_properties=props)
-        with simulation(dt=args.timestep * un.ms, seed=rng_seed) as sim:
+        with simulation(dt=args.timestep, seed=args.seed,
+                        structure_seed=args.structure_seed,
+                        *model.delay_limits()) as sim:
             # Create cell
             cell = Cell()
             init_state = dict((sv, float(val) * parse_units(units))

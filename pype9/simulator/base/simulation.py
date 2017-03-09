@@ -4,6 +4,9 @@ from nineml import units as un
 import numpy
 from binascii import hexlify
 from pype9.exceptions import Pype9UsageError, Pype9NoActiveSimulationError
+import logging
+
+logger = logging.getLogger('PyPe9')
 
 
 class BaseSimulation(object):
@@ -61,15 +64,23 @@ class BaseSimulation(object):
         self._options = options
         self._registered_cells = []
         self._registered_arrays = []
-        seed_gen_rng = numpy.random.RandomState(
-            seed if seed is not None else self.gen_seed())
+        if seed is None:
+            seed = self.gen_seed()
+        seed_gen_rng = numpy.random.RandomState(seed)
         self._seeds = numpy.asarray(
             seed_gen_rng.uniform(low=0, high=1e12, size=self.num_threads()),
             dtype=int)
-        struc_seed_gen_rng = (numpy.random.RandomState(structure_seed)
-                              if structure_seed is not None else seed_gen_rng)
+        if structure_seed is None:
+            logger.info("Using {} as seed for both structure and dynamics  of "
+                        "'{}' simulation".format(seed, self.name))
+            struct_seed_gen_rng = seed_gen_rng
+        else:
+            logger.info("Using {} as seed for structure and {} as seed for "
+                        "dynamics  of '{}' simulation"
+                        .format(structure_seed, seed, self.name))
+            struct_seed_gen_rng = numpy.random.RandomState(structure_seed)
         self._structure_seeds = numpy.asarray(
-            struc_seed_gen_rng.uniform(
+            struct_seed_gen_rng.uniform(
                 low=0, high=1e12, size=self.num_threads()), dtype=int)
 
     def __enter__(self):

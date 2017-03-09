@@ -23,6 +23,7 @@ HH = CellMetaClass(ninemlcatalog.load('//neuron/HodgkinHuxley#HodgkinHuxley'))
 # Create and run the simulation
 with simulation(dt=0.01 * un.ms) as sim:
     hh = HH(ninemlcatalog.load('//neuron/HodgkinHuxley#SampleHodgkinHuxley'))
+    hh.set_state({'V': -65 * un.mV})
     hh.record('V')
     sim.run(100 * un.ms)
 
