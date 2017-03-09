@@ -375,9 +375,10 @@ class TestDynamics(TestCase):
             # Initialise simulator
             if sim_name == 'neuron':
                 # Run NEURON simulation
-                simulation = simulationNEURON(dt=dt, seed=NEURON_RNG_SEED)
+                simulation = simulationNEURON(dt=dt * un.ms,
+                                              seed=NEURON_RNG_SEED)
             elif sim_name == 'nest':
-                simulation = simulationNEST(dt=dt, seed=NEST_RNG_SEED)
+                simulation = simulationNEST(dt=dt * un.ms, seed=NEST_RNG_SEED)
             else:
                 assert False
             with simulation as sim:

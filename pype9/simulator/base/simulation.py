@@ -136,7 +136,7 @@ class BaseSimulation(object):
 
     @property
     def all_seeds(self):
-        return self._seeds
+        return self._seeds[:-1]
 
     @property
     def global_seed(self):

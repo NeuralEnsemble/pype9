@@ -131,8 +131,7 @@ def run(argv):
         Cell = CellMetaClass(component_class, name=model.name,
                              build_mode=args.build_mode,
                              default_properties=props)
-        with simulation(dt=args.timestep * un.ms, seed=args.seed,
-                        structure_seed=args.structure_seed) as sim:
+        with simulation(dt=args.timestep * un.ms, seed=args.seed) as sim:
             # Create cell
             cell = Cell()
             init_state = dict((sv, float(val) * parse_units(units))
