@@ -481,7 +481,7 @@ class TestBrunel2000(TestCase):
                     pop.record('spike_output')
                     if record_states and pop.name != 'Ext':
                         pop.record('v__cell')
-                sim.run(simtime)
+                sim.run(simtime * un.ms)
             rates[simulator] = {}
             psth[simulator] = {}
             for pop in network.component_arrays:

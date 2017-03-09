@@ -38,7 +38,7 @@ class Simulation(BaseSimulation):
         t_stop : nineml.Quantity (time)
             The time to run the simulation until
         """
-        pyNN_run(float(Quantity(t_stop, 'ms')), callbacks=callbacks)
+        pyNN_run(float(t_stop.in_units(un.ms)), callbacks=callbacks)
 
     def _prepare(self, **kwargs):
         "Reset the simulation and prepare it for creating new cells/networks"

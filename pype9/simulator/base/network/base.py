@@ -539,6 +539,10 @@ class ComponentArray(object):
     def nineml(self):
         return self._nineml
 
+    @property
+    def component_class(self):
+        return self.nineml.component_class
+
     def synapse(self, name):
         return self.nineml.dynamics_properties.synapse(name)
 
