@@ -5,6 +5,7 @@ import numpy
 from binascii import hexlify
 from pype9.exceptions import Pype9UsageError, Pype9NoActiveSimulationError
 import logging
+from pyNN.random import NumpyRNG
 
 logger = logging.getLogger('PyPe9')
 
@@ -50,26 +51,31 @@ class BaseSimulation(object):
 
     def __init__(self, dt, t_start=0.0 * un.s, seed=None, structure_seed=None,
                  min_delay=None, max_delay=None, kill_on_exit=True, **options):
-        try:
-            assert t_start.units.dimension == un.time
-        except (AssertionError, AttributeError):
-            raise Pype9UsageError(
-                "Provided value to t_start ({}) is not a valid time quantity"
-                .format(t_start))
+        for arg, val, allow_none in (('dt', dt, False),
+                                     ('t_start', t_start, False),
+                                     ('min_delay', min_delay, True),
+                                     ('max_delay', max_delay, True)):
+            if not (val is None or allow_none):
+                try:
+                    assert val.units.dimension == un.time
+                except (AssertionError, AttributeError):
+                    raise Pype9UsageError(
+                        "Provided value to {} ({}) is not a valid time "
+                        "quantity".format(arg, val))
         self._dt = dt
         self._t_start = t_start
         self._min_delay = min_delay
         self._max_delay = max_delay
         self._kill_on_exit = kill_on_exit
         self._options = options
-        self._registered_cells = []
-        self._registered_arrays = []
+        self._registered_cells = None
+        self._registered_arrays = None
         if seed is None:
             seed = self.gen_seed()
         seed_gen_rng = numpy.random.RandomState(seed)
         self._seeds = numpy.asarray(
-            seed_gen_rng.uniform(low=0, high=1e12, size=self.num_threads()),
-            dtype=int)
+            seed_gen_rng.uniform(low=0, high=2 ** 32 - 1,
+                                 size=self.num_threads()), dtype=int)
         if structure_seed is None:
             logger.info("Using {} as seed for both structure and dynamics  of "
                         "'{}' simulation".format(seed, self.name))
@@ -81,16 +87,19 @@ class BaseSimulation(object):
             struct_seed_gen_rng = numpy.random.RandomState(structure_seed)
         self._structure_seeds = numpy.asarray(
             struct_seed_gen_rng.uniform(
-                low=0, high=1e12, size=self.num_threads()), dtype=int)
+                low=0, high=2 ** 32 - 1, size=self.num_threads()), dtype=int)
 
     def __enter__(self):
         if self.__class__._active is not None:
             raise Pype9UsageError(
                 "Cannot enter context of multiple {} simulations at the same "
                 "time".format(self.__class__.name))
+        self._structure_rng = NumpyRNG(self.structure_seed)
         self.__class__._active = self
         self._running = False
         self._prepare()
+        self._registered_cells = []
+        self._registered_arrays = []
         return self
 
     def __exit__(self, type_, value, traceback):  # @UnusedVariable
@@ -101,6 +110,8 @@ class BaseSimulation(object):
             for array in self._registered_arrays:
                 array._kill()
             self._exit()
+        self._registered_cells = None
+        self._registered_arrays = None
 
     @property
     def dt(self):
@@ -130,6 +141,17 @@ class BaseSimulation(object):
         assignments).
         """
         return self._structure_seeds[self.mpi_rank()]
+
+    @property
+    def structure_rng(self):
+        if self._structure_rng is None:
+            raise Pype9UsageError(
+                "Can only access rng inside simulation context")
+        return self._structure_rng
+
+    @property
+    def derived_structure_seed(self):
+        return int(self.structure_rng.uniform(low=0, high=1e12, size=1))
 
     def run(self, t_stop, **kwargs):
         """

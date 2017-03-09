@@ -1,11 +1,13 @@
 import logging
 import os.path
+from nineml import units as un
 import ctypes
 from pyNN.neuron import (
     setup as pyNN_setup, run as pyNN_run, end as pyNN_end, state as pyNN_state)
 from nineml.units import Quantity
 from pype9.simulator.base.simulation import BaseSimulation
 from pype9.simulator.neuron.cells.code_gen import CodeGenerator
+from pype9.exceptions import Pype9UsageError
 
 logger = logging.getLogger('PyPe9')
 
@@ -18,6 +20,8 @@ class Simulation(BaseSimulation):
 
     _active = None
     name = 'Neuron'
+
+    DEFAULT_MAX_DELAY = 10 * un.ms
 
     def __init__(self, *args, **kwargs):
         super(Simulation, self).__init__(*args, **kwargs)
@@ -38,8 +42,28 @@ class Simulation(BaseSimulation):
 
     def _prepare(self, **kwargs):
         "Reset the simulation and prepare it for creating new cells/networks"
-        pyNN_setup(timestep=self.dt, min_delay=self.min_delay,
-                   max_delay=self.max_delay, **kwargs)
+        if self._min_delay is None:
+            if self.num_threads() == 1:
+                min_delay = self.dt * 2
+            else:
+                raise Pype9UsageError(
+                    "Min delay needs to be set for NEST simulator if using "
+                    "more than one thread")
+        else:
+            min_delay = self._min_delay
+        if self._max_delay is None:
+            if self.num_threads() == 1:
+                max_delay = self.DEFAULT_MAX_DELAY
+            else:
+                raise Pype9UsageError(
+                    "Max delay needs to be set for NEST simulator if using "
+                    "more than one thread")
+        else:
+            max_delay = self._max_delay
+        pyNN_setup(timestep=float(self.dt.in_units(un.ms)),
+                   min_delay=float(min_delay.in_units(un.ms)),
+                   max_delay=float(max_delay.in_units(un.ms)),
+                   **kwargs)
 
     def _initialise(self):
         """

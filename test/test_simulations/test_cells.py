@@ -304,7 +304,7 @@ class TestDynamics(TestCase):
                 'build_dir': os.path.join(build_dir, 'nest', 'IaFAlpha')},
             min_delay=min_delay,
             device_delay=device_delay)
-        comparer.simulate(duration, nest_rng_seed=NEST_RNG_SEED,
+        comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:

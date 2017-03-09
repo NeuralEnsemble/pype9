@@ -17,7 +17,7 @@ class PyNNConnectivity(BaseConnectivity):
     def __init__(self, *args, **kwargs):
         super(PyNNConnectivity, self).__init__(*args, **kwargs)
         self._prev_connected = None
-        self._kwargs = kwargs
+        self._rng = kwargs['rng']
 
     def connections(self):
         if not self.has_been_sampled():
@@ -42,21 +42,28 @@ class PyNNConnectivity(BaseConnectivity):
                 params = {}
             elif self._rule_props.lib_type == 'Explicit':
                 connector_cls = self._pyNN_module.FromListConnector
-                params = {}
+                src = self._rule_props.property('sourceIndicies')
+                dst = self._rule_props.property('destinationIndicies')
+                assert len(src) == len(dst)
+                params = {'conn_list': zip(src, dst)}
             elif self._rule_props.lib_type == 'Probabilistic':
                 connector_cls = self._pyNN_module.FixedProbabilityConnector
                 params = {
                     'p_connect':
-                    float(self._rule_props.property('probability').value)}
+                    float(self._rule_props.property('probability').value),
+                    'rng': None}
             elif self._rule_props.lib_type == 'RandomFanIn':
                 connector_cls = self._pyNN_module.FixedNumberPreConnector
-                params = {'n': int(self._rule_props.property('number').value)}
+                params = {'n': int(self._rule_props.property('number').value),
+                          'rng': None}
             elif self._rule_props.lib_type == 'RandomFanOut':
                 connector_cls = self._pyNN_module.FixedNumberPostConnector
-                params = {'n': int(self._rule_props.property('number').value)}
+                params = {'n': int(self._rule_props.property('number').value),
+                          'rng': None}
             else:
                 assert False
-            params.update(self._kwargs)
+            if 'rng' in params:
+                params['rng'] = self._rng
             connector = connector_cls(**params)
             connector.connect(connection_group)
             self._prev_connected = connection_group

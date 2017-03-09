@@ -183,13 +183,14 @@ class Cell(base.Cell):
                 {'amplitude_values': pq.Quantity(signal, 'pA'),
                  'amplitude_times': (
                     pq.Quantity(signal.times, 'ms') -
-                    Simulation.active().device_delay * pq.ms),
+                    UnitHandler.to_pq_quantity(
+                        Simulation.active().device_delay)),
                  'start': float(pq.Quantity(signal.t_start, 'ms')),
                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
-            nest.Connect(self._inputs[port_name], self._cell,
-                         syn_spec={
-                             "receptor_type": self._receive_ports[port_name],
-                             'delay': Simulation.active().device_delay})
+            nest.Connect(self._inputs[port_name], self._cell, syn_spec={
+                "receptor_type": self._receive_ports[port_name],
+                'delay': float(Simulation.active().device_delay
+                               .in_units(un.ms))})
         else:
             raise Pype9UsageError(
                 "Unrecognised port type '{}' to play signal into".format(port))

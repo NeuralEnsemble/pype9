@@ -85,6 +85,7 @@ class Network(BaseNetwork):
     ConnectionGroupClass = ConnectionGroup
     ConnectivityClass = PyNNConnectivity
     CellCodeGenerator = CellCodeGenerator
+    Simulation = Simulation
 
     def _set_simulation_params(self, timestep, min_delay, max_delay, **kwargs):
         """

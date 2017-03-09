@@ -6,7 +6,6 @@
 """
 from __future__ import absolute_import
 from itertools import chain
-import nineml
 
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']

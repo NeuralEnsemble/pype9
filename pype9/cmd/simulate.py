@@ -56,8 +56,6 @@ def run(argv):
     import nineml
     from pype9.exceptions import Pype9UsageError
     import neo.io
-    import time
-    from pyNN.random import NumpyRNG
 
     args = parser.parse_args(argv)
 
@@ -83,9 +81,9 @@ def run(argv):
 
     if isinstance(model, nineml.Network):
         # Get min/max delays in model
-        with simulation(dt=args.timestep, seed=args.seed,
+        with simulation(dt=args.timestep * un.ms, seed=args.seed,
                         structure_seed=args.structure_seed,
-                        *model.delay_limits()) as sim:
+                        **model.delay_limits()) as sim:
             # Construct the network
             logger.info("Constructing network")
             network = Network(model, build_mode=args.build_mode)
@@ -133,9 +131,8 @@ def run(argv):
         Cell = CellMetaClass(component_class, name=model.name,
                              build_mode=args.build_mode,
                              default_properties=props)
-        with simulation(dt=args.timestep, seed=args.seed,
-                        structure_seed=args.structure_seed,
-                        *model.delay_limits()) as sim:
+        with simulation(dt=args.timestep * un.ms, seed=args.seed,
+                        structure_seed=args.structure_seed) as sim:
             # Create cell
             cell = Cell()
             init_state = dict((sv, float(val) * parse_units(units))

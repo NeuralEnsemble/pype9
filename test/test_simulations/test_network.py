@@ -91,11 +91,11 @@ class TestBrunel2000(TestCase):
     def setUp(self):
         self.simulations = {
             'nest': simulationNEST(
-                dt=self.timestep, seed=NEST_RNG_SEED,
+                dt=self.timestep * un.ms, seed=NEST_RNG_SEED,
                 min_delay=ReferenceBrunel2000.min_delay,
                 max_delay=ReferenceBrunel2000.max_delay),
             'neuron': simulationNEURON(
-                dt=self.timestep, seed=NEURON_RNG_SEED,
+                dt=self.timestep * un.ms, seed=NEURON_RNG_SEED,
                 min_delay=ReferenceBrunel2000.min_delay,
                 max_delay=ReferenceBrunel2000.max_delay)}
 

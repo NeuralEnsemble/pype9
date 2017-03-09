@@ -132,8 +132,8 @@ class Comparer(object):
         """
         if self.simulate_nest:
             with simulationNEST(
-                dt=self.dt, seed=nest_rng_seed, min_delay=self.min_delay,
-                    max_delay=self.max_delay) as sim:
+                dt=self.dt * un.ms, seed=nest_rng_seed,
+                    min_delay=self.min_delay, max_delay=self.max_delay) as sim:
                 if 'nest' in self.simulators:
                     self._create_9ML(self.nineml_model, self.properties,
                                      'nest')
@@ -142,8 +142,8 @@ class Comparer(object):
                 sim.run(duration)
         if self.simulate_neuron:
             with simulationNEURON(
-                dt=self.dt, seed=neuron_rng_seed, min_delay=self.min_delay,
-                    max_delay=self.max_delay) as sim:
+                dt=self.dt * un.ms, seed=neuron_rng_seed,
+                    min_delay=self.min_delay, max_delay=self.max_delay) as sim:
                 if 'neuron' in self.simulators:
                     self._create_9ML(self.nineml_model, self.properties,
                                      'neuron')

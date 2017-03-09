@@ -48,7 +48,7 @@ class Network(object):
     CELL_COMP_NAME = 'cell'
 
     def __init__(self, nineml_model, build_mode='lazy', timestep=None,
-                 min_delay=None, max_delay=None, rng=None, **kwargs):
+                 min_delay=None, max_delay=None, **kwargs):
         if isinstance(nineml_model, basestring):
             nineml_model = nineml.read(nineml_model).as_network(
                 name=os.path.splitext(os.path.basename(nineml_model))[0])
@@ -64,11 +64,11 @@ class Network(object):
         max_delay = max_delay if max_delay is not None else self.max_delay
         self._set_simulation_params(timestep=timestep, min_delay=min_delay,
                                     max_delay=max_delay, **kwargs)
-        self._rng = rng if rng else NumpyRNG()
+        # Get RNG for random distribution values and connectivity
+        rng = self.Simulation.active().structure_rng
         if build_mode != 'build_only':
-            # Convert
             self.nineml.resample_connectivity(
-                connectivity_class=self.ConnectivityClass)
+                connectivity_class=self.ConnectivityClass, rng=rng)
         (flat_comp_arrays, flat_conn_groups,
          flat_selections) = self._flatten_to_arrays_and_conns(self._nineml)
         self._component_arrays = {}
@@ -76,7 +76,7 @@ class Network(object):
         # Build the PyNN populations
         for name, comp_array in flat_comp_arrays.iteritems():
             self._component_arrays[name] = self.ComponentArrayClass(
-                comp_array, rng=self._rng, build_mode=build_mode,
+                comp_array, rng=rng, build_mode=build_mode,
                 build_dir=code_gen.get_build_dir(
                     self.nineml.url, name, group=self.nineml.name), **kwargs)
         self._selections = {}
@@ -108,7 +108,7 @@ class Network(object):
                     destination = self._selections[conn_group.destination.name]
                 self._connection_groups[name] = self.ConnectionGroupClass(
                     conn_group, source=source, destination=destination,
-                    rng=self._rng)
+                    rng=rng)
             self._finalise_construction()
 
     def _finalise_construction(self):
@@ -521,9 +521,6 @@ class ComponentArray(object):
                 for i in dynamics_properties.initial_values)
             initial_values['_regime'] = celltype.model.regime_index(
                 dynamics_properties.initial_regime)
-            # Add note to specify that the cell is part of an array and doesn't
-            # need to be initialised separately
-            cellparams['_in_array'] = True
             # NB: Simulator-specific derived classes extend the corresponding
             # PyNN population class
             self.PyNNPopulationClass.__init__(
@@ -532,7 +529,7 @@ class ComponentArray(object):
                 label=nineml_model.name)
             self._inputs = {}
         self._is_dead = False
-        self.Simulation.active().register_network(self)
+        self.Simulation.active().register_array(self)
 
     @property
     def name(self):
