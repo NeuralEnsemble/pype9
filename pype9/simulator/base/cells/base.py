@@ -136,7 +136,7 @@ class CellMetaClass(type):
     def __init__(cls, component_class, default_properties=None,
                  initial_states=None, name=None, saved_name=None, **kwargs):
         """
-        This initialiser is empty, but since I have changed the signature of
+        This initializer is empty, but since I have changed the signature of
         the __new__ method in the deriving metaclasses it complains otherwise
         (not sure if there is a more elegant way to do this).
         """
@@ -172,7 +172,7 @@ class Cell(object):
             # If default properties not provided create a Dynamics Properties
             # from the provided properties
             if self.default_properties is None:
-                # FIXME: Probably should just initialise the properties to NaN
+                # FIXME: Probably should just initialize the properties to NaN
                 #        or something
                 self._nineml = nineml.user.DynamicsProperties(
                     self.component_class.name + 'Properties',
@@ -197,7 +197,7 @@ class Cell(object):
         # parameters
         for prop in self.properties:
             self.set(prop)
-        # Flag to determine whether the cell has been initialised or not
+        # Flag to determine whether the cell has been initialized or not
         # (it makes a difference to how the state of the cell is updated,
         # either saved until the 'initialze' method is called or directly
         # set to the state)
@@ -426,7 +426,7 @@ class Cell(object):
         super(Cell, self).__setattr__('_recorders', {})
         super(Cell, self).__setattr__('_recordings', {})
 
-    def _initialise_local_recording(self):
+    def _initialize_local_recording(self):
         if not hasattr(self, '_recorders'):
             self.clear_recorders()
 

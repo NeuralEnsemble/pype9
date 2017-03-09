@@ -57,7 +57,7 @@ class Cell(base.Cell):
         # Create dictionaries for storing local recordings. These are not
         # created initially to save memory if recordings are not required or
         # handled externally
-        self._initialise_local_recording()
+        self._initialize_local_recording()
         try:
             port = self.component_class.send_port(port_name)
         except NineMLNameError:

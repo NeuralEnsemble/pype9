@@ -107,7 +107,7 @@ class CodeGenerator(BaseCodeGenerator):
         # Render Loader C++ class
         self.render_to_file('module-cpp.tmpl', tmpl_args,
                              name + 'Module.cpp', src_dir)
-        # Render SLI initialiser
+        # Render SLI initializer
         self.render_to_file('module_sli_init.tmpl', tmpl_args,
                              name + 'Module-init.sli',
                              path.join(src_dir, 'sli'))

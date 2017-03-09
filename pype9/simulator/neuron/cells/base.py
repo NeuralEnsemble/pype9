@@ -8,7 +8,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-# MPI may not be required but NEURON sometimes needs to be initialised after
+# MPI may not be required but NEURON sometimes needs to be initialized after
 # MPI so I am doing it here just to be safe (and to save me headaches in the
 # future)
 try:
@@ -240,7 +240,7 @@ class Cell(base.Cell):
         setattr(self._hoc, REGIME_VARNAME, index)
 
     def record(self, port_name):
-        self._initialise_local_recording()
+        self._initialize_local_recording()
         # Get the port or state variable to record
         try:
             port = self.component_class.send_port(port_name)
@@ -271,7 +271,7 @@ class Cell(base.Cell):
             recording.record(recorder)
 
     def record_transitions(self):
-        self._initialise_local_recording()
+        self._initialize_local_recording()
         self._recordings['__REGIME__'] = recording = h.Vector()
         recording.record(getattr(self._hoc, '_ref_regime_'))
 

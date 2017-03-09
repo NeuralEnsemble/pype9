@@ -65,7 +65,7 @@ class Simulation(BaseSimulation):
                    max_delay=float(max_delay.in_units(un.ms)),
                    **kwargs)
 
-    def _initialise(self):
+    def _initialize(self):
         """
         Just in time initialisations that are performed before the simulation
         starts running.
@@ -73,7 +73,7 @@ class Simulation(BaseSimulation):
         if self._has_random_processes():
             self._seed_libninemlnrn()
         for cell in self._registered_cells:
-            cell._initialise()
+            cell.initialize()
         # Initialisation of cells within PyNN arrays is handled by PyNN
 
     def _exit(self):
@@ -94,10 +94,10 @@ class Simulation(BaseSimulation):
 
     def _has_random_processes(self):
         for cell in self._registered_cells:
-            if cell.component_class.has_random_processes:
+            if cell.component_class.is_random:
                 return True
         for array in self._registered_arrays:
-            if array.component_class.has_random_processes:
+            if array.component_class.is_random:
                 return True
         return False
 

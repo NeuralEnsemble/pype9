@@ -63,7 +63,7 @@ class Simulation(BaseSimulation):
                    min_delay=float(min_delay.in_units(un.ms)),
                    max_delay=float(max_delay.in_units(un.ms)), **kwargs)
 
-    def _initialise(self, **kwargs):
+    def _initialize(self, **kwargs):
         """
         Just in time initialisations that are performed before the simulation
         starts running.

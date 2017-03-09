@@ -381,7 +381,7 @@ class TestDynamics(TestCase):
             else:
                 assert False
             with simulation as sim:
-                # Create and initialise cell
+                # Create and initialize cell
                 cell = celltype(rate=rate)
                 cell.record('spike_output')
                 cell.set_state(initial_states)

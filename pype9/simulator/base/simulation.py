@@ -163,7 +163,7 @@ class BaseSimulation(object):
             The time to run the simulation until
         """
         if not self._running:
-            self._initialise()
+            self._initialize()
             self._running = True
         self._run(t_stop, **kwargs)
 
@@ -184,7 +184,7 @@ class BaseSimulation(object):
         "Reset the simulation and prepare it for creating new cells/networks"
 
     @abstractmethod
-    def _initialise(self):
+    def _initialize(self):
         """
         Just in time initialisations that are performed before the simulation
         starts running.
@@ -227,6 +227,6 @@ class BaseSimulation(object):
         else:
             raise Pype9NoActiveSimulationError(
                 "No {} simulations are currently active (cells and networks "
-                "need to be initialised within an active simulation context)"
+                "need to be initialized within an active simulation context)"
                 .format(cls.name))
         return active
