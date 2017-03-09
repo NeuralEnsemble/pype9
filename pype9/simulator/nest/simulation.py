@@ -87,7 +87,3 @@ class Simulation(BaseSimulation):
     def num_threads(self):
         "The total number of threads across all MPI nodes"
         return self.num_processes() * self._threads_per_proc
-
-
-def simulation(*args, **kwargs):
-    return Simulation(*args, **kwargs)

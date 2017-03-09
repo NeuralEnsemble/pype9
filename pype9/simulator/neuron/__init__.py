@@ -1,5 +1,5 @@
 from .cells import Cell, CellMetaClass
-from .simulation import simulation
+from .simulation import Simulation
 from .network import Network
 from .units import UnitHandler
 # from .pynn_interface.network import Network  # @UnusedImport

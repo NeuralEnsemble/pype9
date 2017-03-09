@@ -3,7 +3,6 @@ Command that compares a 9ML model with an existing version in NEURON and/or
 NEST
 """
 from __future__ import absolute_import, division
-import sys
 import os.path
 import re
 from itertools import combinations
@@ -17,14 +16,14 @@ try:
     import pylab as plt
 except ImportError:
     plt = None
-from pype9.simulator.neuron.cells import (
-    CellMetaClass as CellMetaClassNEURON,
-    simulation as simulationNEURON)
+from pype9.simulator.neuron import (
+    CellMetaClass as NeuronCellMetaClass,
+    Simulation as NeuronSimulation)
 from pype9.simulator.neuron.units import UnitHandler as UnitHandlerNEURON
 from pype9.simulator.nest.units import UnitHandler as UnitHandlerNEST
 from pype9.simulator.nest import (
-    CellMetaClass as CellMetaClassNEST,
-    simulation as simulationNEST)
+    CellMetaClass as NESTCellMetaClass,
+    Simulation as NESTSimulation)
 from nineml.units import Quantity
 from nineml import units as un
 import numpy
@@ -131,9 +130,9 @@ class Comparer(object):
         Run and the simulation
         """
         if self.simulate_nest:
-            with simulationNEST(
-                dt=self.dt * un.ms, seed=nest_rng_seed,
-                    min_delay=self.min_delay, max_delay=self.max_delay) as sim:
+            with NESTSimulation(dt=self.dt * un.ms, seed=nest_rng_seed,
+                                min_delay=self.min_delay * un.ms,
+                                max_delay=self.max_delay * un.ms) as sim:
                 if 'nest' in self.simulators:
                     self._create_9ML(self.nineml_model, self.properties,
                                      'nest')
@@ -141,9 +140,9 @@ class Comparer(object):
                     self._create_NEST(self.nest_ref)
                 sim.run(duration)
         if self.simulate_neuron:
-            with simulationNEURON(
-                dt=self.dt * un.ms, seed=neuron_rng_seed,
-                    min_delay=self.min_delay, max_delay=self.max_delay) as sim:
+            with NeuronSimulation(dt=self.dt * un.ms, seed=neuron_rng_seed,
+                                  min_delay=self.min_delay * un.ms,
+                                  max_delay=self.max_delay * un.ms) as sim:
                 if 'neuron' in self.simulators:
                     self._create_9ML(self.nineml_model, self.properties,
                                      'neuron')
@@ -194,9 +193,9 @@ class Comparer(object):
         # Set up 9MLML cell
         # -----------------------------------------------------------------
         if simulator.lower() == 'neuron':
-            CellMetaClass = CellMetaClassNEURON
+            CellMetaClass = NeuronCellMetaClass
         elif simulator.lower() == 'nest':
-            CellMetaClass = CellMetaClassNEST
+            CellMetaClass = NESTCellMetaClass
         else:
             assert False
         self.nml_cells[simulator] = CellMetaClass(
@@ -422,7 +421,7 @@ class Comparer(object):
         return neo.AnalogSignal(
             nest.GetStatus(
                 self.nest_multimeter, 'events')[0][self.nest_state_variable],
-            sampling_period=simulatorNEST.dt * pq.ms, units='mV')  # @UndefinedVariable @IgnorePep8
+            sampling_period=self.dt * pq.ms, units='mV')  # @UndefinedVariable @IgnorePep8
 
     @classmethod
     def to_float(cls, qty, units):

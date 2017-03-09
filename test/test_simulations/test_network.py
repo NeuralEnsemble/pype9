@@ -26,13 +26,13 @@ from pype9.simulator.base.cells import (
     ConnectionPropertySet, MultiDynamicsWithSynapsesProperties)
 from pype9.simulator.base.network import Network as BasePype9Network
 from pype9.simulator.neuron.network import Network as NeuronPype9Network
-from pype9.simulator.neuron import simulation as simulationNEURON
+from pype9.simulator.neuron import Simulation as NeuronSimulation
 import ninemlcatalog
 import sys
 argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
 import nest  # @IgnorePep8
 from pype9.simulator.nest.network import Network as NestPype9Network  # @IgnorePep8
-from pype9.simulator.nest import simulation as simulationNEST  # @IgnorePep8
+from pype9.simulator.nest import Simulation as NESTSimulation  # @IgnorePep8
 from pype9.utils.testing import ReferenceBrunel2000  # @IgnorePep8
 try:
     from matplotlib import pyplot as plt
@@ -90,11 +90,11 @@ class TestBrunel2000(TestCase):
 
     def setUp(self):
         self.simulations = {
-            'nest': simulationNEST(
+            'nest': NESTSimulation(
                 dt=self.timestep * un.ms, seed=NEST_RNG_SEED,
                 min_delay=ReferenceBrunel2000.min_delay,
                 max_delay=ReferenceBrunel2000.max_delay),
-            'neuron': simulationNEURON(
+            'neuron': NeuronSimulation(
                 dt=self.timestep * un.ms, seed=NEURON_RNG_SEED,
                 min_delay=ReferenceBrunel2000.min_delay,
                 max_delay=ReferenceBrunel2000.max_delay)}

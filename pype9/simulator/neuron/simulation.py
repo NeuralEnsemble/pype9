@@ -4,7 +4,6 @@ from nineml import units as un
 import ctypes
 from pyNN.neuron import (
     setup as pyNN_setup, run as pyNN_run, end as pyNN_end, state as pyNN_state)
-from nineml.units import Quantity
 from pype9.simulator.base.simulation import BaseSimulation
 from pype9.simulator.neuron.cells.code_gen import CodeGenerator
 from pype9.exceptions import Pype9UsageError
@@ -109,7 +108,3 @@ class Simulation(BaseSimulation):
         libninemlnrn = ctypes.CDLL(
             os.path.join(CodeGenerator.LIBNINEMLNRN_PATH, 'libninemlnrn.so'))
         libninemlnrn.nineml_seed_gsl_rng(self.seed)
-
-
-def simulation(*args, **kwargs):
-    return Simulation(*args, **kwargs)

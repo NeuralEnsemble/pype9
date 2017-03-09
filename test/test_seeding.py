@@ -2,10 +2,7 @@ from unittest import TestCase
 import ninemlcatalog
 from nineml import units as un
 from pype9.simulator.neuron import CellMetaClass
-from pype9.simulator.neuron import simulation
-import matplotlib.pyplot as plt
-from itertools import repeat
-import numpy
+from pype9.simulator.neuron import Simulation
 
 
 class TestSeeding(TestCase):
@@ -16,7 +13,7 @@ class TestSeeding(TestCase):
                              build_mode='force')
         Cell2 = CellMetaClass(nineml_model, name='PoissonTest2',
                               build_mode='force')
-        with simulation(dt=0.01 * un.ms) as sim:
+        with Simulation(dt=0.01 * un.ms) as sim:
             cell = Cell(rate=300 / un.s)
             cell.set_state({'t_next': 5 * un.ms})
             cell.record('spike_output')

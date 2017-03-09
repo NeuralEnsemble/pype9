@@ -51,17 +51,10 @@ class BaseSimulation(object):
 
     def __init__(self, dt, t_start=0.0 * un.s, seed=None, structure_seed=None,
                  min_delay=None, max_delay=None, kill_on_exit=True, **options):
-        for arg, val, allow_none in (('dt', dt, False),
-                                     ('t_start', t_start, False),
-                                     ('min_delay', min_delay, True),
-                                     ('max_delay', max_delay, True)):
-            if not (val is None or allow_none):
-                try:
-                    assert val.units.dimension == un.time
-                except (AssertionError, AttributeError):
-                    raise Pype9UsageError(
-                        "Provided value to {} ({}) is not a valid time "
-                        "quantity".format(arg, val))
+        self._check_units('dt', dt, un.time)
+        self._check_units('t_start', dt, un.time)
+        self._check_units('min_delay', dt, un.time, allow_none=True)
+        self._check_units('max_delay', dt, un.time, allow_none=True)
         self._dt = dt
         self._t_start = t_start
         self._min_delay = min_delay
@@ -95,11 +88,11 @@ class BaseSimulation(object):
                 "Cannot enter context of multiple {} simulations at the same "
                 "time".format(self.__class__.name))
         self._structure_rng = NumpyRNG(self.structure_seed)
-        self.__class__._active = self
         self._running = False
         self._prepare()
         self._registered_cells = []
         self._registered_arrays = []
+        self.__class__._active = self
         return self
 
     def __exit__(self, type_, value, traceback):  # @UnusedVariable
@@ -175,6 +168,7 @@ class BaseSimulation(object):
         t_stop : nineml.Quantity (time)
             The time to run the simulation until
         """
+        self._check_units('t_stop', t_stop, un.time)
         if not self._running:
             self._initialize()
             self._running = True
@@ -243,3 +237,12 @@ class BaseSimulation(object):
                 "need to be initialized within an active simulation context)"
                 .format(cls.name))
         return active
+
+    def _check_units(self, varname, val, dimension, allow_none=False):
+        if not (val is None and allow_none):
+            try:
+                assert val.units.dimension == dimension
+            except (AssertionError, AttributeError):
+                raise Pype9UsageError(
+                    "Provided value to {} ({}) is not a valid '{}' "
+                    "quantity".format(varname, val, dimension.name))

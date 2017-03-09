@@ -84,9 +84,7 @@ class Cell(base.Cell):
                 'multimeter', 1, {"interval": interval})
             nest.SetStatus(recorder, {'record_from': [variable_name]})
             nest.Connect(
-                recorder, self._cell, syn_spec={
-                    'delay':
-                    float(Simulation.active().device_delay.in_units(un.ms))})
+                recorder, self._cell, syn_spec={'delay': self._device_delay})
 
     def recording(self, port_name):
         """
@@ -151,18 +149,17 @@ class Cell(base.Cell):
                                 'EventReceivePortExposure'):
             # Shift the signal times to account for the minimum delay and
             # match the NEURON implementation
-            spike_times = (pq.Quantity(signal, 'ms') + pq.ms -
-                           Simulation.active().device_delay * pq.ms)
+            spike_times = (
+                pq.Quantity(signal, 'ms') + pq.ms - self._device_delay * pq.ms)
             if any(spike_times <= 0.0):
                 raise Pype9UsageError(
                     "Some spike times are less than device delay and so "
                     "can't be played into cell ({})".format(', '.join(
-                        spike_times < (
-                            1 + Simulation.active().device_delay))))
+                        spike_times < (1 + self._device_delay))))
             self._inputs[port_name] = nest.Create(
                 'spike_generator', 1, {'spike_times': spike_times})
             syn_spec = {'receptor_type': self._receive_ports[port_name],
-                        'delay': Simulation.active().device_delay}
+                        'delay': self._device_delay}
             self._check_connection_properties(port_name, properties)
             if len(properties) > 1:
                 raise NotImplementedError(
@@ -181,16 +178,13 @@ class Cell(base.Cell):
             self._inputs[port_name] = nest.Create(
                 'step_current_generator', 1,
                 {'amplitude_values': pq.Quantity(signal, 'pA'),
-                 'amplitude_times': (
-                    pq.Quantity(signal.times, 'ms') -
-                    UnitHandler.to_pq_quantity(
-                        Simulation.active().device_delay)),
+                 'amplitude_times': (pq.Quantity(signal.times, 'ms') -
+                                     self._device_delay * pq.ms),
                  'start': float(pq.Quantity(signal.t_start, 'ms')),
                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
             nest.Connect(self._inputs[port_name], self._cell, syn_spec={
                 "receptor_type": self._receive_ports[port_name],
-                'delay': float(Simulation.active().device_delay
-                               .in_units(un.ms))})
+                'delay': self._device_delay})
         else:
             raise Pype9UsageError(
                 "Unrecognised port type '{}' to play signal into".format(port))
@@ -198,6 +192,10 @@ class Cell(base.Cell):
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         raise NotImplementedError("voltage clamps are not supported for "
                                   "Pype9->NEST at this stage.")
+
+    @property
+    def _device_delay(self):
+        return float(Simulation.active().device_delay.in_units(un.ms))
 
 
 class CellMetaClass(base.CellMetaClass):

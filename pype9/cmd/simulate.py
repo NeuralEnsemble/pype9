@@ -60,9 +60,9 @@ def run(argv):
     args = parser.parse_args(argv)
 
     if args.simulator == 'neuron':
-        from pype9.simulator.neuron import Network, CellMetaClass, simulation  # @UnusedImport @IgnorePep8
+        from pype9.simulator.neuron import Network, CellMetaClass, Simulation  # @UnusedImport @IgnorePep8
     elif args.simulator == 'nest':
-        from pype9.simulator.nest import Network, CellMetaClass, simulation  # @Reimport @IgnorePep8
+        from pype9.simulator.nest import Network, CellMetaClass, Simulation  # @Reimport @IgnorePep8
     else:
         raise Pype9UsageError(
             "Unrecognised simulator '{}', (available 'neuron' or 'nest')"
@@ -81,7 +81,7 @@ def run(argv):
 
     if isinstance(model, nineml.Network):
         # Get min/max delays in model
-        with simulation(dt=args.timestep * un.ms, seed=args.seed,
+        with Simulation(dt=args.timestep * un.ms, seed=args.seed,
                         structure_seed=args.structure_seed,
                         **model.delay_limits()) as sim:
             # Construct the network
@@ -131,7 +131,7 @@ def run(argv):
         Cell = CellMetaClass(component_class, name=model.name,
                              build_mode=args.build_mode,
                              default_properties=props)
-        with simulation(dt=args.timestep * un.ms, seed=args.seed) as sim:
+        with Simulation(dt=args.timestep * un.ms, seed=args.seed) as sim:
             # Create cell
             cell = Cell()
             init_state = dict((sv, float(val) * parse_units(units))
