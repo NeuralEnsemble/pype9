@@ -75,7 +75,7 @@ class BaseSimulation(object):
         seed_gen_rng = numpy.random.RandomState(seed)
         self._seeds = numpy.asarray(
             seed_gen_rng.uniform(low=0, high=2 ** 32 - 1,
-                                 size=self.num_threads()), dtype=int)
+                                 size=self.num_threads() + 1), dtype=int)
         if structure_seed is None:
             logger.info("Using {} as seed for both structure and dynamics  of "
                         "'{}' simulation".format(seed, self.name))

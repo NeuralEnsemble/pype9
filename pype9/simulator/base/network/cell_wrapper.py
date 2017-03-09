@@ -76,7 +76,6 @@ class PyNNCellWrapperMetaClass(type):
         #        conductance-based
         dct["injectable"] = True
         dct["conductance_based"] = True
-        dct['extra_parameters'] = {'_in_pynn': True}
         return super(PyNNCellWrapperMetaClass, cls).__new__(
             cls, celltype_id + 'PyNN', bases, dct)
 

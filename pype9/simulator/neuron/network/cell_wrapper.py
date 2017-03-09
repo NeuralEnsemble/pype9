@@ -49,7 +49,8 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
             dct = {'model': model,
                    'default_properties': default_properties,
                    'initial_state': initial_state,
-                   'initial_regime': initial_regime}
+                   'initial_regime': initial_regime,
+                   'extra_parameters': {'_in_pynn': True}}
             celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
                 cls, name, (PyNNCellWrapper,), dct)
             assert set(celltype.recordable) == set(

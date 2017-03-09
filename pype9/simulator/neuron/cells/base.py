@@ -397,8 +397,7 @@ class Cell(base.Cell):
 
     def _escaped_name(self, name):
         if name == self.component_class.annotations.get(
-            (BUILD_TRANS, PYPE9_NS),
-                MEMBRANE_VOLTAGE, default='False') == 'True':
+                (BUILD_TRANS, PYPE9_NS), MEMBRANE_VOLTAGE):
             name = self.build_component_class.annotations.get(
                 (BUILD_TRANS, PYPE9_NS), MEMBRANE_VOLTAGE)
         return name
