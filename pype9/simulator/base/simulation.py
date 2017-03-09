@@ -135,12 +135,25 @@ class BaseSimulation(object):
         return self._seeds[self.mpi_rank()]
 
     @property
+    def all_seeds(self):
+        return self._seeds
+
+    @property
+    def global_seed(self):
+        """Global seed passed to NEST grng"""
+        return self._seeds[-1]
+
+    @property
     def structure_seed(self):
         """
         The seed used to by random dynamic processes (typically in state
         assignments).
         """
         return self._structure_seeds[self.mpi_rank()]
+
+    @property
+    def all_structure_seeds(self):
+        return self._structure_seeds
 
     @property
     def structure_rng(self):

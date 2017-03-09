@@ -61,7 +61,9 @@ class Simulation(BaseSimulation):
             max_delay = self._max_delay
         pyNN_setup(timestep=float(self.dt.in_units(un.ms)),
                    min_delay=float(min_delay.in_units(un.ms)),
-                   max_delay=float(max_delay.in_units(un.ms)), **kwargs)
+                   max_delay=float(max_delay.in_units(un.ms)),
+                   grng_seed=self.global_seed,
+                   rng_seeds=self.all_seeds, **kwargs)
 
     def _initialize(self, **kwargs):
         """
