@@ -201,12 +201,13 @@ class BaseSimulation(object):
     def _prepare(self):
         "Reset the simulation and prepare it for creating new cells/networks"
 
-    @abstractmethod
     def _initialize(self):
         """
         Just in time initialisations that are performed before the simulation
         starts running.
         """
+        for cell in self._registered_cells:
+            cell.initialize()
 
     @abstractmethod
     def _exit(self):

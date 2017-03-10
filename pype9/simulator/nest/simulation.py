@@ -65,13 +65,6 @@ class Simulation(BaseSimulation):
                    grng_seed=self.global_seed,
                    rng_seeds=self.all_seeds, **kwargs)
 
-    def _initialize(self, **kwargs):
-        """
-        Just in time initialisations that are performed before the simulation
-        starts running.
-        """
-        # Initialisation is handled by NEST
-
     def _exit(self):
         """Final things that need to be done before the simulation exits"""
         pyNN_end()

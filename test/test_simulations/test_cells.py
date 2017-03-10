@@ -48,55 +48,55 @@ class TestDynamics(TestCase):
         'refractory_period': ('trefrac', 1), 'e_leak': ('pas.e', 1),
         'v_reset': ('vreset', 1), 'v_threshold': ('vthresh', 1),
         'end_refractory': (None, 1), 'v': ('v', 1)}
-# 
-#     def test_izhi(self, plot=False, print_comparisons=False,
-#                   simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
-#                   build_mode='force', **kwargs):  # @UnusedVariable
-#         # Force compilation of code generation
-#         # Perform comparison in subprocess
-#         comparer = Comparer(
-#             nineml_model=ninemlcatalog.load(
-#                 'neuron/Izhikevich', 'Izhikevich'),
-#             state_variable='V', dt=dt, simulators=simulators,
-#             properties=ninemlcatalog.load(
-#                 'neuron/Izhikevich', 'SampleIzhikevich'),
-#             initial_states={'U': -14.0 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
-#             neuron_ref='Izhikevich', nest_ref='izhikevich',
-#             input_signal=input_step('Isyn', 0.02, 50, 100, dt),
-#             nest_translations={'V': ('V_m', 1), 'U': ('U_m', 1),
-#                                'weight': (None, 1), 'C_m': (None, 1),
-#                                'theta': ('V_th', 1),
-#                                'alpha': (None, 1), 'beta': (None, 1),
-#                                'zeta': (None, 1)},
-#             neuron_translations={'C_m': (None, 1), 'weight': (None, 1),
-#                                  'V': ('v', 1), 'U': ('u', 1),
-#                                  'alpha': (None, 1), 'beta': (None, 1),
-#                                  'zeta': (None, 1), 'theta': ('vthresh', 1)},
-#             neuron_build_args={'build_mode': build_mode},
-#             nest_build_args={'build_mode': build_mode},
-#             build_name='Izhikevich9ML')
-#         comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
-#                           neuron_rng_seed=NEURON_RNG_SEED)
-#         comparisons = comparer.compare()
-#         if print_comparisons:
-#             for (name1, name2), diff in comparisons.iteritems():
-#                 print '{} v {}: {}'.format(name1, name2, diff)
-#         if plot:
-#             comparer.plot()
-#         if 'nest' in simulators and 'neuron' in simulators:
-#             self.assertLess(
-#                 comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
-#                 "Izhikevich NEURON 9ML simulation did not match NEST 9ML")
-#         if 'neuron' in simulators:
-#             self.assertLess(
-#                 comparisons[('9ML-neuron', 'Ref-neuron')], 0.0015 * pq.mV,
-#                 "Izhikevich NEURON 9ML simulation did not match reference "
-#                 "PyNN")
-#         if 'nest' in simulators:
-#             self.assertLess(
-#                 comparisons[('9ML-nest', 'Ref-nest')], 0.02 * pq.mV,
-#                 "Izhikevich NEST 9ML simulation did not match reference "
-#                 "built-in")
+
+    def test_izhi(self, plot=False, print_comparisons=False,
+                  simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
+                  build_mode='force', **kwargs):  # @UnusedVariable
+        # Force compilation of code generation
+        # Perform comparison in subprocess
+        comparer = Comparer(
+            nineml_model=ninemlcatalog.load(
+                'neuron/Izhikevich', 'Izhikevich'),
+            state_variable='V', dt=dt, simulators=simulators,
+            properties=ninemlcatalog.load(
+                'neuron/Izhikevich', 'SampleIzhikevich'),
+            initial_states={'U': -14.0 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
+            neuron_ref='Izhikevich', nest_ref='izhikevich',
+            input_signal=input_step('Isyn', 0.02, 50, 100, dt),
+            nest_translations={'V': ('V_m', 1), 'U': ('U_m', 1),
+                               'weight': (None, 1), 'C_m': (None, 1),
+                               'theta': ('V_th', 1),
+                               'alpha': (None, 1), 'beta': (None, 1),
+                               'zeta': (None, 1)},
+            neuron_translations={'C_m': (None, 1), 'weight': (None, 1),
+                                 'V': ('v', 1), 'U': ('u', 1),
+                                 'alpha': (None, 1), 'beta': (None, 1),
+                                 'zeta': (None, 1), 'theta': ('vthresh', 1)},
+            neuron_build_args={'build_mode': build_mode},
+            nest_build_args={'build_mode': build_mode},
+            build_name='Izhikevich9ML')
+        comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
+                          neuron_rng_seed=NEURON_RNG_SEED)
+        comparisons = comparer.compare()
+        if print_comparisons:
+            for (name1, name2), diff in comparisons.iteritems():
+                print '{} v {}: {}'.format(name1, name2, diff)
+        if plot:
+            comparer.plot()
+        if 'nest' in simulators and 'neuron' in simulators:
+            self.assertLess(
+                comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
+                "Izhikevich NEURON 9ML simulation did not match NEST 9ML")
+        if 'neuron' in simulators:
+            self.assertLess(
+                comparisons[('9ML-neuron', 'Ref-neuron')], 0.0015 * pq.mV,
+                "Izhikevich NEURON 9ML simulation did not match reference "
+                "PyNN")
+        if 'nest' in simulators:
+            self.assertLess(
+                comparisons[('9ML-nest', 'Ref-nest')], 0.02 * pq.mV,
+                "Izhikevich NEST 9ML simulation did not match reference "
+                "built-in")
 
     def test_hh(self, plot=False, print_comparisons=False,
                 simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
@@ -327,83 +327,86 @@ class TestDynamics(TestCase):
                 comparisons[('9ML-neuron', 'Ref-neuron')], 0.03 * pq.mV,
                 "LIaF with Alpha syn NEURON 9ML simulation did not match "
                 "reference PyNN")
-# 
-#     def test_izhiFS(self, plot=False, print_comparisons=False,
-#                     simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
-#                     build_mode='force', **kwargs):  # @UnusedVariable
-#         # Force compilation of code generation
-#         # Perform comparison in subprocess
-#         comparer = Comparer(
-#             nineml_model=ninemlcatalog.load(
-#                 'neuron/Izhikevich', 'IzhikevichFastSpiking'),
-#             state_variable='V', dt=dt, simulators=simulators,
-#             properties=ninemlcatalog.load(
-#                 'neuron/Izhikevich', 'SampleIzhikevichFastSpiking'),
-#             initial_states={'U': -1.625 * pq.pA, 'V': -65.0 * pq.mV},
-#             input_signal=input_step('iSyn', 100 * pq.pA, 25.0, 100, dt),
-#             initial_regime='subVb',
-#             neuron_build_args={'build_mode': build_mode,
-#                                'external_currents': ['iSyn']},
-#             nest_build_args={'build_mode': build_mode}) #, auxiliary_states=['U']) # @IgnorePep8
-#         comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
-#                           neuron_rng_seed=NEURON_RNG_SEED)
-#         comparisons = comparer.compare()
-#         if print_comparisons:
-#             for (name1, name2), diff in comparisons.iteritems():
-#                 print '{} v {}: {}'.format(name1, name2, diff)
-#         if plot:
-#             comparer.plot()
-#         if 'nest' in simulators and 'neuron' in simulators:
-#             self.assertLess(
-#                 comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
-#                 "Izhikevich 2007 NEURON 9ML simulation did not match NEST 9ML")
 
-    def test_poisson(self, duration=10 * un.s, rate=100 * un.Hz,
-                     print_comparisons=False, dt=0.001,
-                     simulators=['nest', 'neuron'], build_mode='force',
-                     **kwargs):  # @UnusedVariable @IgnorePep8
-        nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
-        build_args = {'neuron': {'build_mode': build_mode,
-                                 'external_currents': ['iSyn']},
-                      'nest': {'build_mode': build_mode}}
-        initial_states = {'t_next': 0.0 * un.ms}
-        for sim_name in simulators:
-            meta_class = cell_metaclasses[sim_name]
-            # Build celltype
-            celltype = meta_class(
-                nineml_model, name=nineml_model.name, **build_args[sim_name])
-            # Initialise simulator
-            if sim_name == 'neuron':
-                # Run NEURON simulation
-                Simulation = NeuronSimulation(dt=dt * un.ms,
-                                              seed=NEURON_RNG_SEED)
-            elif sim_name == 'nest':
-                Simulation = NESTSimulation(dt=dt * un.ms, seed=NEST_RNG_SEED)
-            else:
-                assert False
-            with Simulation as sim:
-                # Create and initialize cell
-                cell = celltype(rate=rate)
-                cell.record('spike_output')
-                cell.set_state(initial_states)
-                sim.run(duration)
-            # Get recording
-            spikes = cell.recording('spike_output')
-            # Calculate the rate of the modelled process
-            recorded_rate = pq.Quantity(
-                len(spikes) / (spikes.t_stop - spikes.t_start), 'Hz')
-            ref_rate = pq.Quantity(UnitHandlerNEST.to_pq_quantity(rate), 'Hz')
-            rate_difference = abs(ref_rate - recorded_rate)
-            if print_comparisons:
-                print "Reference rate: {}".format(ref_rate)
-                print "{} recorded rate: {}".format(sim_name, recorded_rate)
-                print "{} difference: {}".format(sim_name, rate_difference)
+    def test_izhiFS(self, plot=False, print_comparisons=False,
+                    simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
+                    build_mode='force', **kwargs):  # @UnusedVariable
+        # Force compilation of code generation
+        # Perform comparison in subprocess
+        comparer = Comparer(
+            nineml_model=ninemlcatalog.load(
+                'neuron/Izhikevich', 'IzhikevichFastSpiking'),
+            state_variable='V', dt=dt, simulators=simulators,
+            properties=ninemlcatalog.load(
+                'neuron/Izhikevich', 'SampleIzhikevichFastSpiking'),
+            initial_states={'U': -1.625 * pq.pA, 'V': -65.0 * pq.mV},
+            input_signal=input_step('iSyn', 100 * pq.pA, 25.0, 100, dt),
+            initial_regime='subVb',
+            neuron_build_args={'build_mode': build_mode,
+                               'external_currents': ['iSyn']},
+            nest_build_args={'build_mode': build_mode}) #, auxiliary_states=['U']) # @IgnorePep8
+        comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
+                          neuron_rng_seed=NEURON_RNG_SEED)
+        comparisons = comparer.compare()
+        if print_comparisons:
+            for (name1, name2), diff in comparisons.iteritems():
+                print '{} v {}: {}'.format(name1, name2, diff)
+        if plot:
+            comparer.plot()
+        if 'nest' in simulators and 'neuron' in simulators:
             self.assertLess(
-                rate_difference, 1.75 * pq.Hz,
-                ("Recorded rate of {} poisson generator ({}) did not match "
-                 "desired ({}) within {}: difference {}".format(
-                     sim_name, recorded_rate, ref_rate, 1.75 * pq.Hz,
-                     recorded_rate - ref_rate)))
+                comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
+                "Izhikevich 2007 NEURON 9ML simulation did not match NEST 9ML")
+
+#     def test_poisson(self, duration=10 * un.s, rate=100 * un.Hz,
+#                      print_comparisons=False, dt=0.001,
+#                      simulators=['nest', 'neuron'], build_mode='force',
+#                      **kwargs):  # @UnusedVariable @IgnorePep8
+#         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
+#         build_args = {'neuron': {'build_mode': build_mode,
+#                                  'external_currents': ['iSyn']},
+#                       'nest': {'build_mode': build_mode}}
+#         initial_states = {'t_next': 0.0 * un.ms}
+#         for sim_name in simulators:
+#             meta_class = cell_metaclasses[sim_name]
+#             # Build celltype
+#             celltype = meta_class(
+#                 nineml_model, name=nineml_model.name, **build_args[sim_name])
+#             # Initialise simulator
+#             if sim_name == 'neuron':
+#                 # Run NEURON simulation
+#                 Simulation = NeuronSimulation(dt=dt * un.ms,
+#                                               seed=NEURON_RNG_SEED)
+#             elif sim_name == 'nest':
+#                 Simulation = NESTSimulation(dt=dt * un.ms, seed=NEST_RNG_SEED)
+#             else:
+#                 assert False
+#             with Simulation as sim:
+#                 # Create and initialize cell
+#                 cell = celltype(rate=rate)
+#                 cell.record('spike_output')
+#                 cell.set_state(initial_states)
+#                 sim.run(duration)
+#             # Get recording
+#             spikes = cell.recording('spike_output')
+#             # Calculate the rate of the modelled process
+#             recorded_rate = pq.Quantity(
+#                 len(spikes) / (spikes.t_stop - spikes.t_start), 'Hz')
+#             ref_rate = pq.Quantity(UnitHandlerNEST.to_pq_quantity(rate), 'Hz')
+#             rate_difference = abs(ref_rate - recorded_rate)
+#             if print_comparisons:
+#                 print "Reference rate: {}".format(ref_rate)
+#                 print "{} recorded rate: {}".format(sim_name, recorded_rate)
+#                 print "{} difference: {}".format(sim_name, rate_difference)
+#             self.assertLess(
+#                 rate_difference, 1.75 * pq.Hz,
+#                 ("Recorded rate of {} poisson generator ({}) did not match "
+#                  "desired ({}) within {}: difference {}".format(
+#                      sim_name, recorded_rate, ref_rate, 1.75 * pq.Hz,
+#                      recorded_rate - ref_rate)))
+
+
+
             # Calculate the absolute deviation
 #             isi_avg = pq.Quantity(1.0 / recorded_rate, 'ms')
 #             isi_std_dev = (abs((spikes[1:] - spikes[:-1]) - isi_avg) /

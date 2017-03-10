@@ -69,10 +69,9 @@ class Simulation(BaseSimulation):
         Just in time initialisations that are performed before the simulation
         starts running.
         """
+        super(Simulation, self)._initialize()
         if self._has_random_processes():
             self._seed_libninemlnrn()
-        for cell in self._registered_cells:
-            cell.initialize()
         # Initialisation of cells within PyNN arrays is handled by PyNN
 
     def _exit(self):

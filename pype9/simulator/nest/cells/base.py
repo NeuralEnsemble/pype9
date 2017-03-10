@@ -97,7 +97,7 @@ class Cell(base.Cell):
         except NineMLNameError:
             # For convenient access to state variables
             port = self.component_class.state_variable(port_name)
-        if self.is_dead:
+        if self.is_dead():
             t_stop = self._t_stop
         else:
             t_stop = self.Simulation.active().t
