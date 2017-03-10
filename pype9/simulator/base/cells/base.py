@@ -204,9 +204,11 @@ class Cell(object):
         self._initialized = False
         self._initial_states = None
         self._initial_regime = None
-        self._is_dead = False
+        sim = self.Simulation.active()
+        self._t_start = sim.t_start
+        self._t_stop = None
         if not self._in_pynn:
-            self.Simulation.active().register_cell(self)
+            sim.register_cell(self)
 
     @property
     def component_class(self):
@@ -460,14 +462,15 @@ class Cell(object):
                     .format(prop.name, prop.units.dimension,
                             params_dict[prop.name].dimension))
 
-    def _kill(self):
+    def _kill(self, t_stop):
         """
-        Caches all recording data and sets all references to the actual
+        Caches recording data and sets all references to the actual
         simulator object to None ahead of a simulator reset. This allows cell
         data to be accessed after a simulation has completed, and potentially
         a new simulation to have been started.
         """
-        super(Cell, self).__setattr__('_is_dead', True)
+        # TODO: Cache has not been implemented yet
+        super(Cell, self).__setattr__('_t_stop', t_stop)
 
     def is_dead(self):
-        return self._is_dead
+        return self._t_stop is not None

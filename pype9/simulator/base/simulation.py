@@ -57,6 +57,7 @@ class BaseSimulation(object):
         self._check_units('max_delay', dt, un.time, allow_none=True)
         self._dt = dt
         self._t_start = t_start
+        self._t = t_start
         self._min_delay = min_delay
         self._max_delay = max_delay
         self._kill_on_exit = kill_on_exit
@@ -70,12 +71,12 @@ class BaseSimulation(object):
             seed_gen_rng.uniform(low=0, high=2 ** 32 - 1,
                                  size=self.num_threads() + 1), dtype=int)
         if structure_seed is None:
-            logger.info("Using {} as seed for both structure and dynamics  of "
-                        "'{}' simulation".format(seed, self.name))
+            logger.info("Using {} as seed for both structure and dynamics of "
+                        "{} simulation".format(seed, self.name))
             struct_seed_gen_rng = seed_gen_rng
         else:
             logger.info("Using {} as seed for structure and {} as seed for "
-                        "dynamics  of '{}' simulation"
+                        "dynamics of {} simulation"
                         .format(structure_seed, seed, self.name))
             struct_seed_gen_rng = numpy.random.RandomState(structure_seed)
         self._structure_seeds = numpy.asarray(
@@ -96,12 +97,13 @@ class BaseSimulation(object):
         return self
 
     def __exit__(self, type_, value, traceback):  # @UnusedVariable
+        t_stop = self.t
         self.__class__._active = None
         if self._kill_on_exit:
             for cell in self._registered_cells:
-                cell._kill()
+                cell._kill(t_stop)
             for array in self._registered_arrays:
-                array._kill()
+                array._kill(t_stop)
             self._exit()
         self._registered_cells = None
         self._registered_arrays = None
@@ -109,6 +111,14 @@ class BaseSimulation(object):
     @property
     def dt(self):
         return self._dt
+
+    @property
+    def t(self):
+        return self._t
+
+    @property
+    def t_start(self):
+        return self._t_start
 
     @property
     def min_delay(self):
@@ -173,6 +183,7 @@ class BaseSimulation(object):
             self._initialize()
             self._running = True
         self._run(t_stop, **kwargs)
+        self._t = t_stop
 
     @abstractmethod
     def _run(self, t_stop, **kwargs):  # @UnusedVariable

@@ -97,16 +97,17 @@ class Cell(base.Cell):
         except NineMLNameError:
             # For convenient access to state variables
             port = self.component_class.state_variable(port_name)
+        if self.is_dead:
+            t_stop = self._t_stop
+        else:
+            t_stop = self.Simulation.active().t
+        t_start = UnitHandler.to_pq_quantity(self._t_start)
+        t_stop = UnitHandler.to_pq_quantity(t_stop)
         if port.nineml_type in ('EventSendPort', 'EventSendPortExposure'):
             spikes = nest.GetStatus(
                 self._recorders[port_name], 'events')[0]['times']
-            data = neo.SpikeTrain(
-                spikes,
-                t_start=UnitHandler.to_pq_quantity(
-                    t_start=self.simulation.t_start),
-                t_stop=UnitHandler.to_pq_quantity(
-                    t_stop=self.simulation.t_stop),
-                name=port_name, units=pq.ms)
+            data = neo.SpikeTrain(spikes, t_start=t_start, t_stop=t_stop,
+                                  name=port_name, units=pq.ms)
         else:
             port_name = self.build_name(port_name)
             events, interval = nest.GetStatus(self._recorders[port_name],
@@ -119,7 +120,7 @@ class Cell(base.Cell):
             variable_name = self.build_name(port_name)
             data = neo.AnalogSignal(
                 events[variable_name], sampling_period=interval * pq.ms,
-                t_start=0.0 * pq.ms, units=unit_str, name=port_name)
+                t_start=t_start, units=unit_str, name=port_name)
         return data
 
     def build_name(self, varname):

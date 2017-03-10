@@ -30,6 +30,9 @@ import numpy
 import quantities as pq
 import neo
 from pype9.exceptions import Pype9RuntimeError
+import logging
+
+logger = logging.getLogger('PyPe9')
 
 
 class Comparer(object):
@@ -165,6 +168,7 @@ class Comparer(object):
         comparisons = {}
         for (name1, signal1), (name2, signal2) in combinations(name_n_sigs, 2):
             if len(signal1):
+                logger.debug("Comparing {} with {}".format(name1, name2))
                 avg_diff = (numpy.sum(numpy.abs(signal1 - signal2)) /
                             len(signal1))
             else:

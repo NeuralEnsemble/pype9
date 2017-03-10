@@ -528,7 +528,7 @@ class ComponentArray(object):
                 initial_values=initial_values,
                 label=nineml_model.name)
             self._inputs = {}
-        self._is_dead = False
+        self._t_stop = None
         self.Simulation.active().register_array(self)
 
     @property
@@ -691,18 +691,18 @@ class ComponentArray(object):
                     recording.analogsignals.append(asig)
         return recording
 
-    def _kill(self):
+    def _kill(self, t_stop):
         """
         Caches all recording data and sets all references to the actual
         simulator object to None ahead of a simulator reset. This allows
         data to be accessed after a simulation has completed, and potentially
         a new simulation to have been started.
         """
-        self._is_dead = True
+        self._t_stop = t_stop
 
     @property
     def is_dead(self):
-        return self._is_dead
+        return self._t_stop is None
 
 
 class Selection(object):
