@@ -57,8 +57,6 @@ class Cell(base.Cell):
         A dictionary of properties
     """
 
-    V_INIT_DEFAULT = -65.0
-
     UnitHandler = UnitHandler
     Simulation = Simulation
 
@@ -126,7 +124,6 @@ class Cell(base.Cell):
         self.rec = h.NetCon(self.source, None, sec=self._sec)
         self._inputs = {}
         self._input_auxs = []
-#         self.initial_v = self.V_INIT_DEFAULT
         # Get a mapping of receptor names to NMODL indices for PyNN projection
         # connection
         assert (set(self.build_component_class.event_receive_port_names) ==
@@ -250,7 +247,8 @@ class Cell(base.Cell):
         self._recordings[port_name] = recording = h.Vector()
         if isinstance(port, EventPort):
             if self.build_component_class.annotations.get(
-                    (BUILD_TRANS, PYPE9_NS), MECH_TYPE) == ARTIFICIAL_CELL_MECH:
+                    (BUILD_TRANS,
+                     PYPE9_NS), MECH_TYPE) == ARTIFICIAL_CELL_MECH:
                 self._recorders[port_name] = recorder = h.NetCon(
                     self._hoc, None, sec=self._sec)
             else:
@@ -293,7 +291,7 @@ class Cell(base.Cell):
             recording = neo.AnalogSignal(
                 self._recordings[port_name], sampling_period=h.dt * pq.ms,
                 t_start=0.0 * pq.ms, units=units_str, name=port_name)
-        return recording
+        return recording[:-1]
 
     def transitions(self):
         try:
