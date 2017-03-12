@@ -36,6 +36,9 @@ class Simulation(BaseSimulation):
         ----------
         t_stop : nineml.Quantity (time)
             The time to run the simulation until
+        callbacks : function
+            A function callback to allow the update of external objects (e.g.
+            progress bar) during the simulation.
         """
         pyNN_run(t_stop.in_units(un.ms), callbacks=callbacks)
 
