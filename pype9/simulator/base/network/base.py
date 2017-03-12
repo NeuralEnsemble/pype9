@@ -47,8 +47,8 @@ class Network(object):
     # dynamics multi-dynamics
     CELL_COMP_NAME = 'cell'
 
-    def __init__(self, nineml_model, build_mode='lazy', timestep=None,
-                 min_delay=None, max_delay=None, **kwargs):
+    def __init__(self, nineml_model, build_mode='lazy', build_dir=None,
+                 timestep=None, min_delay=None, max_delay=None, **kwargs):
         if isinstance(nineml_model, basestring):
             nineml_model = nineml.read(nineml_model).as_network(
                 name=os.path.splitext(os.path.basename(nineml_model))[0])
@@ -75,10 +75,14 @@ class Network(object):
         code_gen = self.CellCodeGenerator()
         # Build the PyNN populations
         for name, comp_array in flat_comp_arrays.iteritems():
+            if build_dir is None:
+                array_build_dir = code_gen.get_build_dir(
+                    self.nineml.url, name, group=self.nineml.name)
+            else:
+                array_build_dir = os.path.join(build_dir, name)
             self._component_arrays[name] = self.ComponentArrayClass(
                 comp_array, rng=rng, build_mode=build_mode,
-                build_dir=code_gen.get_build_dir(
-                    self.nineml.url, name, group=self.nineml.name), **kwargs)
+                build_dir=array_build_dir, **kwargs)
         self._selections = {}
         # Build the PyNN Selections
         for selection in flat_selections.itervalues():
@@ -187,7 +191,7 @@ class Network(object):
         """
         Record variable from complete network
         """
-        for comp_array in self.component_arrays.itervalues():
+        for comp_array in self.component_arrays:
             comp_array.record(variable)
 
     def write_data(self, file_prefix, **kwargs):

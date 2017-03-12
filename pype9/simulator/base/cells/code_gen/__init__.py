@@ -223,8 +223,12 @@ class BaseCodeGenerator(object):
         return install_dir
 
     def get_build_dir(self, url, name, group=''):
+        if url is not None:
+            base_dir = os.path.dirname(url)
+        else:
+            base_dir = tempfile.mkdtemp()
         return os.path.abspath(os.path.join(
-            os.path.dirname(url), self.BUILD_DIR_DEFAULT,
+            base_dir, self.BUILD_DIR_DEFAULT,
             self.SIMULATOR_NAME, group, name))
 
     def get_install_dir(self, build_dir, install_dir):
