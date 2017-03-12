@@ -1,7 +1,6 @@
 from __future__ import division
 from unittest import TestCase
 import ninemlcatalog
-import tempfile
 import numpy
 from nineml import units as un, Property
 from pype9.simulator.neuron import (
@@ -61,21 +60,20 @@ class TestSeeding(TestCase):
         for Network, Simulation in (
             (NESTNetwork, NESTSimulation),
                 (NeuronNetwork, NeuronSimulation)):
-            build_dir = tempfile.mkdtemp()
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
-                network1 = Network(brunel_model, build_dir=build_dir)
+                network1 = Network(brunel_model)
                 network1.component_array('Exc').record('spike_output')
                 sim.run(20 * un.ms)
             exc1_spikes = network1.component_array(
                 'Exc').recording('spike_output')
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
-                network2 = Network(brunel_model, build_dir=build_dir)
+                network2 = Network(brunel_model)
                 network2.component_array('Exc').record('spike_output')
                 sim.run(20 * un.ms)
             exc2_spikes = network2.component_array(
                 'Exc').recording('spike_output')
             with Simulation(dt=0.01 * un.ms, seed=2) as sim:
-                network3 = Network(brunel_model, build_dir=build_dir)
+                network3 = Network(brunel_model)
                 network3.component_array('Exc').record('spike_output')
                 sim.run(20 * un.ms)
             exc3_spikes = network3.component_array(
@@ -92,7 +90,11 @@ class TestSeeding(TestCase):
     def _load_brunel(self, case, order):
         model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
             'Brunel_{}'.format(case))
+        url = model.url
         model = model.clone()
+        # Force setting of url back to original so that components are built
+        # in the same place
+        model._url = url
         scale = order / model.population('Inh').size
         # rescale populations
         for pop in model.populations:

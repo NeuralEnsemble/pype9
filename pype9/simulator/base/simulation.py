@@ -261,7 +261,7 @@ class BaseSimulation(object):
 
     @classmethod
     def gen_seed(cls):
-        return time.time()
+        return long(time.time())
 
     def register_cell(self, cell):
         self._registered_cells.append(cell)
