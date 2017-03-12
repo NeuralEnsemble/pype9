@@ -49,7 +49,6 @@ class ComponentArray(BaseComponentArray, pyNN.neuron.Population):
 
     def __init__(self, *args, **kwargs):
         super(ComponentArray, self).__init__(*args, **kwargs)
-        Simulation.register_array(self)
 
     @property
     def _min_delay(self):

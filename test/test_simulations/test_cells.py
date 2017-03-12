@@ -364,52 +364,52 @@ class TestDynamics(TestCase):
                 comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
                 "Izhikevich 2007 NEURON 9ML simulation did not match NEST 9ML")
 
-#     def test_poisson(self, duration=10 * un.s, rate=100 * un.Hz,
-#                      print_comparisons=False, dt=0.001,
-#                      simulators=['nest', 'neuron'], build_mode='force',
-#                      **kwargs):  # @UnusedVariable @IgnorePep8
-#         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
-#         build_args = {'neuron': {'build_mode': build_mode,
-#                                  'external_currents': ['iSyn']},
-#                       'nest': {'build_mode': build_mode}}
-#         initial_states = {'t_next': 0.0 * un.ms}
-#         for sim_name in simulators:
-#             meta_class = cell_metaclasses[sim_name]
-#             # Build celltype
-#             celltype = meta_class(
-#                 nineml_model, name=nineml_model.name, **build_args[sim_name])
-#             # Initialise simulator
-#             if sim_name == 'neuron':
-#                 # Run NEURON simulation
-#                 Simulation = NeuronSimulation(dt=dt * un.ms,
-#                                               seed=NEURON_RNG_SEED)
-#             elif sim_name == 'nest':
-#                 Simulation = NESTSimulation(dt=dt * un.ms, seed=NEST_RNG_SEED)
-#             else:
-#                 assert False
-#             with Simulation as sim:
-#                 # Create and initialize cell
-#                 cell = celltype(rate=rate)
-#                 cell.record('spike_output')
-#                 cell.set_state(initial_states)
-#                 sim.run(duration)
-#             # Get recording
-#             spikes = cell.recording('spike_output')
-#             # Calculate the rate of the modelled process
-#             recorded_rate = pq.Quantity(
-#                 len(spikes) / (spikes.t_stop - spikes.t_start), 'Hz')
-#             ref_rate = pq.Quantity(UnitHandlerNEST.to_pq_quantity(rate), 'Hz')
-#             rate_difference = abs(ref_rate - recorded_rate)
-#             if print_comparisons:
-#                 print "Reference rate: {}".format(ref_rate)
-#                 print "{} recorded rate: {}".format(sim_name, recorded_rate)
-#                 print "{} difference: {}".format(sim_name, rate_difference)
-#             self.assertLess(
-#                 rate_difference, 1.75 * pq.Hz,
-#                 ("Recorded rate of {} poisson generator ({}) did not match "
-#                  "desired ({}) within {}: difference {}".format(
-#                      sim_name, recorded_rate, ref_rate, 1.75 * pq.Hz,
-#                      recorded_rate - ref_rate)))
+    def test_poisson(self, duration=10 * un.s, rate=100 * un.Hz,
+                     print_comparisons=False, dt=0.001,
+                     simulators=['nest', 'neuron'], build_mode='force',
+                     **kwargs):  # @UnusedVariable @IgnorePep8
+        nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
+        build_args = {'neuron': {'build_mode': build_mode,
+                                 'external_currents': ['iSyn']},
+                      'nest': {'build_mode': build_mode}}
+        initial_states = {'t_next': 0.0 * un.ms}
+        for sim_name in simulators:
+            meta_class = cell_metaclasses[sim_name]
+            # Build celltype
+            celltype = meta_class(
+                nineml_model, name=nineml_model.name, **build_args[sim_name])
+            # Initialise simulator
+            if sim_name == 'neuron':
+                # Run NEURON simulation
+                Simulation = NeuronSimulation(dt=dt * un.ms,
+                                              seed=NEURON_RNG_SEED)
+            elif sim_name == 'nest':
+                Simulation = NESTSimulation(dt=dt * un.ms, seed=NEST_RNG_SEED)
+            else:
+                assert False
+            with Simulation as sim:
+                # Create and initialize cell
+                cell = celltype(rate=rate)
+                cell.record('spike_output')
+                cell.set_state(initial_states)
+                sim.run(duration)
+            # Get recording
+            spikes = cell.recording('spike_output')
+            # Calculate the rate of the modelled process
+            recorded_rate = pq.Quantity(
+                len(spikes) / (spikes.t_stop - spikes.t_start), 'Hz')
+            ref_rate = pq.Quantity(UnitHandlerNEST.to_pq_quantity(rate), 'Hz')
+            rate_difference = abs(ref_rate - recorded_rate)
+            if print_comparisons:
+                print "Reference rate: {}".format(ref_rate)
+                print "{} recorded rate: {}".format(sim_name, recorded_rate)
+                print "{} difference: {}".format(sim_name, rate_difference)
+            self.assertLess(
+                rate_difference, 1.75 * pq.Hz,
+                ("Recorded rate of {} poisson generator ({}) did not match "
+                 "desired ({}) within {}: difference {}".format(
+                     sim_name, recorded_rate, ref_rate, 1.75 * pq.Hz,
+                     recorded_rate - ref_rate)))
 
 
 

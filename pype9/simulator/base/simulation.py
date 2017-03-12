@@ -48,6 +48,8 @@ class BaseSimulation(object):
 
     __metaclass__ = ABCMeta
 
+    max_seed = 2 ** 32 - 1
+
     def __init__(self, dt, t_start=0.0 * un.s, seed=None, structure_seed=None,
                  min_delay=None, max_delay=None, kill_on_exit=True, **options):
         self._check_units('dt', dt, un.time)
@@ -63,7 +65,16 @@ class BaseSimulation(object):
         self._options = options
         self._registered_cells = None
         self._registered_arrays = None
+        if seed is not None and (seed < 0 or seed > self.max_seed):
+            raise Pype9UsageError(
+                "Provided seed {} is out of range, must be between (0 and {})"
+                .format(seed, self.max_seed))
         self._base_seed = seed
+        if structure_seed is not None and (structure_seed < 0 or
+                                           structure_seed > self.max_seed):
+            raise Pype9UsageError(
+                "Provided structure seed {} is out of range, must be between "
+                "(0 and {})".format(seed, self.max_seed))
         self._base_structure_seed = structure_seed
 
     def __enter__(self):
@@ -167,7 +178,7 @@ class BaseSimulation(object):
         seed = self.gen_seed() if self._base_seed is None else self._base_seed
         seed_gen_rng = numpy.random.RandomState(seed)
         self._seeds = numpy.asarray(
-            seed_gen_rng.uniform(low=0, high=2 ** 32 - 1,
+            seed_gen_rng.uniform(low=0, high=self.max_seed,
                                  size=self.num_threads() + 1), dtype=int)
         if self._base_structure_seed is None:
             logger.info("Using {} as seed for both structure and dynamics of "
@@ -180,13 +191,14 @@ class BaseSimulation(object):
             struct_seed_gen_rng = numpy.random.RandomState(
                 self._base_structure_seed)
         self._structure_seeds = numpy.asarray(
-            struct_seed_gen_rng.uniform(low=0, high=2 ** 32 - 1,
+            struct_seed_gen_rng.uniform(low=0, high=self.max_seed,
                                         size=self.num_threads()), dtype=int)
         self._structure_rng = NumpyRNG(self.structure_seed)
 
     @property
     def derived_structure_seed(self):
-        return int(self.structure_rng.uniform(low=0, high=1e12, size=1))
+        return int(self.structure_rng.uniform(low=0, high=self.max_seed,
+                                              size=1))
 
     def run(self, t_stop, **kwargs):
         """
@@ -227,6 +239,7 @@ class BaseSimulation(object):
         """
         for cell in self._registered_cells:
             cell.initialize()
+        # Array initialisation is handled by PyNN
 
     @abstractmethod
     def _exit(self):
@@ -250,13 +263,11 @@ class BaseSimulation(object):
     def gen_seed(cls):
         return time.time()
 
-    @classmethod
-    def register_cell(cls, cell):
-        cls.active()._registered_cells.append(cell)
+    def register_cell(self, cell):
+        self._registered_cells.append(cell)
 
-    @classmethod
-    def register_array(cls, array):
-        cls.active()._registered_arrays.append(array)
+    def register_array(self, array):
+        self._registered_arrays.append(array)
 
     @classmethod
     def active(cls):

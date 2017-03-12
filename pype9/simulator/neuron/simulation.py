@@ -4,6 +4,7 @@ from nineml import units as un
 import ctypes
 from pyNN.neuron import (
     setup as pyNN_setup, run as pyNN_run, end as pyNN_end, state as pyNN_state)
+from pyNN.neuron.simulator import initializer as pyNN_initializer
 from pype9.simulator.base.simulation import BaseSimulation
 from pype9.simulator.neuron.cells.code_gen import CodeGenerator
 from pype9.exceptions import Pype9UsageError
@@ -24,6 +25,7 @@ class Simulation(BaseSimulation):
 
     def __init__(self, *args, **kwargs):
         super(Simulation, self).__init__(*args, **kwargs)
+        self._has_random_processes = False
 
     def _run(self, t_stop, callbacks=None, **kwargs):  # @UnusedVariable
         """
@@ -72,10 +74,9 @@ class Simulation(BaseSimulation):
         Just in time initialisations that are performed before the simulation
         starts running.
         """
-        super(Simulation, self)._initialize()
-        if self._has_random_processes():
+        if self._has_random_processes:
             self._seed_libninemlnrn()
-        # Initialisation of cells within PyNN arrays is handled by PyNN
+        super(Simulation, self)._initialize()
 
     def _exit(self):
         """Final things that need to be done before the simulation exits"""
@@ -93,20 +94,42 @@ class Simulation(BaseSimulation):
         "The total number of threads across all MPI nodes"
         return self.num_processes()
 
-    def _has_random_processes(self):
-        for cell in self._registered_cells:
-            if cell.component_class.is_random:
-                return True
-        for array in self._registered_arrays:
-            if array.component_class.is_random:
-                return True
-        return False
+    def register_cell(self, cell):
+        super(Simulation, self).register_cell(cell)
+        # The initial states of NMODL mechanism need to be set twice before and
+        # after h.finitialize is called in order to set states that may be
+        # required in the NET_RECEIVE block before finitialize and to set the
+        # state variables in preparation for the simulation. Since the PyNN
+        # initializer is called after finitialize, and the super method before,
+        # so we make sure the cell is registered with both, when it is in
+        # a PyNN population and independent.
+        pyNN_initializer.register(cell)
+        if cell.component_class.is_random:
+            self._has_random_processes = True
+
+    def register_array(self, array):
+        super(Simulation, self).register_array(array)
+        if array.component_class.is_random:
+            self._has_random_processes = True
+        # The initial states of NMODL mechanism need to be set twice before and
+        # after h.finitialize is called in order to set states that may be
+        # required in the NET_RECEIVE block before finitialize and to set the
+        # state variables in preparation for the simulation. Since the PyNN
+        # initializer is called after finitialize, and the super method before,
+        # so we make sure the cell is registered with both, when it is in
+        # a PyNN population and independent.
+        for id_ in array:
+            self._registered_cells.append(id_._cell)
 
     def _seed_libninemlnrn(self):
         """
         Sets the random seed used by libninemlnrn to generate random
-        distributions
+        distributions.
         """
+        # Could be performed in __enter__ along with the setting of other seeds
+        # but there is a problem loading the library with ctypes before it has
+        # been loaded by the required mod files, so it is delayed until
+        # initialisation
         libninemlnrn = ctypes.CDLL(
             os.path.join(CodeGenerator.LIBNINEMLNRN_PATH, 'libninemlnrn.so'))
         libninemlnrn.nineml_seed_gsl_rng(self.seed)
