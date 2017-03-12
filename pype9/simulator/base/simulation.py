@@ -1,8 +1,7 @@
 from abc import ABCMeta, abstractmethod
-import os
 from nineml import units as un
 import numpy
-from binascii import hexlify
+import time
 from pype9.exceptions import Pype9UsageError, Pype9NoActiveSimulationError
 import logging
 from pyNN.random import NumpyRNG
@@ -64,31 +63,15 @@ class BaseSimulation(object):
         self._options = options
         self._registered_cells = None
         self._registered_arrays = None
-        if seed is None:
-            seed = self.gen_seed()
-        seed_gen_rng = numpy.random.RandomState(seed)
-        self._seeds = numpy.asarray(
-            seed_gen_rng.uniform(low=0, high=2 ** 32 - 1,
-                                 size=self.num_threads() + 1), dtype=int)
-        if structure_seed is None:
-            logger.info("Using {} as seed for both structure and dynamics of "
-                        "{} simulation".format(seed, self.name))
-            struct_seed_gen_rng = seed_gen_rng
-        else:
-            logger.info("Using {} as seed for structure and {} as seed for "
-                        "dynamics of {} simulation"
-                        .format(structure_seed, seed, self.name))
-            struct_seed_gen_rng = numpy.random.RandomState(structure_seed)
-        self._structure_seeds = numpy.asarray(
-            struct_seed_gen_rng.uniform(
-                low=0, high=2 ** 32 - 1, size=self.num_threads()), dtype=int)
+        self._base_seed = seed
+        self._base_structure_seed = structure_seed
 
     def __enter__(self):
         if self.__class__._active is not None:
             raise Pype9UsageError(
                 "Cannot enter context of multiple {} simulations at the same "
                 "time".format(self.__class__.name))
-        self._structure_rng = NumpyRNG(self.structure_seed)
+        self._set_seeds()
         self._running = False
         self._prepare()
         self._registered_cells = []
@@ -138,10 +121,6 @@ class BaseSimulation(object):
         return self._seeds[self.mpi_rank()]
 
     @property
-    def all_seeds(self):
-        return self._seeds[:-1]
-
-    @property
     def global_seed(self):
         """Global seed passed to NEST grng"""
         return self._seeds[-1]
@@ -164,6 +143,46 @@ class BaseSimulation(object):
             raise Pype9UsageError(
                 "Can only access rng inside simulation context")
         return self._structure_rng
+
+    @property
+    def base_seed(self):
+        """
+        Base seed from which all (except for structure seed if it is provided)
+        process-specific seeds are generated
+        """
+        return self._base_seed
+
+    @property
+    def base_structure_seed(self):
+        return self._base_structure_seed
+
+    @property
+    def all_seeds(self):
+        return self._seeds[:-1]
+
+    def _set_seeds(self):
+        """
+        Generate seeds for each process/thread
+        """
+        seed = self.gen_seed() if self._base_seed is None else self._base_seed
+        seed_gen_rng = numpy.random.RandomState(seed)
+        self._seeds = numpy.asarray(
+            seed_gen_rng.uniform(low=0, high=2 ** 32 - 1,
+                                 size=self.num_threads() + 1), dtype=int)
+        if self._base_structure_seed is None:
+            logger.info("Using {} as seed for both structure and dynamics of "
+                        "{} simulation".format(seed, self.name))
+            struct_seed_gen_rng = seed_gen_rng
+        else:
+            logger.info("Using {} as seed for structure and {} as seed for "
+                        "dynamics of {} simulation"
+                        .format(self._base_structure_seed, seed, self.name))
+            struct_seed_gen_rng = numpy.random.RandomState(
+                self._base_structure_seed)
+        self._structure_seeds = numpy.asarray(
+            struct_seed_gen_rng.uniform(low=0, high=2 ** 32 - 1,
+                                        size=self.num_threads()), dtype=int)
+        self._structure_rng = NumpyRNG(self.structure_seed)
 
     @property
     def derived_structure_seed(self):
@@ -229,7 +248,7 @@ class BaseSimulation(object):
 
     @classmethod
     def gen_seed(cls):
-        return int(hexlify(os.urandom(4)), 16)
+        return time.time()
 
     @classmethod
     def register_cell(cls, cell):

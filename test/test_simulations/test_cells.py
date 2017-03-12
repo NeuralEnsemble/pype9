@@ -49,7 +49,7 @@ class TestDynamics(TestCase):
         'v_reset': ('vreset', 1), 'v_threshold': ('vthresh', 1),
         'end_refractory': (None, 1), 'v': ('v', 1)}
 
-    def test_izhi(self, plot=False, print_comparisons=False,
+    def test_izhi(self, plot=True, print_comparisons=False,
                   simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
                   build_mode='force', **kwargs):  # @UnusedVariable
         # Force compilation of code generation
@@ -98,7 +98,7 @@ class TestDynamics(TestCase):
                 "Izhikevich NEST 9ML simulation did not match reference "
                 "built-in")
 
-    def test_hh(self, plot=False, print_comparisons=False,
+    def test_hh(self, plot=True, print_comparisons=False,
                 simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
                 build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
