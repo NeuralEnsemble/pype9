@@ -49,7 +49,7 @@ class TestDynamics(TestCase):
         'v_reset': ('vreset', 1), 'v_threshold': ('vthresh', 1),
         'end_refractory': (None, 1), 'v': ('v', 1)}
 
-    def test_izhi(self, plot=True, print_comparisons=False,
+    def test_izhi(self, plot=False, print_comparisons=False,
                   simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
                   build_mode='force', **kwargs):  # @UnusedVariable
         # Force compilation of code generation
@@ -87,19 +87,23 @@ class TestDynamics(TestCase):
         if 'nest' in simulators and 'neuron' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
-                "Izhikevich NEURON 9ML simulation did not match NEST 9ML")
+                "Izhikevich NEURON 9ML simulation did not match NEST 9ML"
+                "within {} ({})".format(
+                    0.4 * pq.mV, comparisons[('9ML-nest', '9ML-neuron')]))
         if 'neuron' in simulators:
             self.assertLess(
-                comparisons[('9ML-neuron', 'Ref-neuron')], 0.0015 * pq.mV,
+                comparisons[('9ML-neuron', 'Ref-neuron')], 0.01 * pq.mV,
                 "Izhikevich NEURON 9ML simulation did not match reference "
-                "PyNN")
+                "PyNN within {} ({})".format(
+                    0.01 * pq.mV, comparisons[('9ML-neuron', 'Ref-neuron')]))
         if 'nest' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', 'Ref-nest')], 0.02 * pq.mV,
                 "Izhikevich NEST 9ML simulation did not match reference "
-                "built-in")
+                "built-in within {} ({})".format(
+                    0.02 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
-    def test_hh(self, plot=True, print_comparisons=False,
+    def test_hh(self, plot=False, print_comparisons=False,
                 simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
                 build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess

@@ -2,6 +2,7 @@ import logging
 import os.path
 from nineml import units as un
 import ctypes
+from collections import namedtuple
 from pyNN.neuron import (
     setup as pyNN_setup, run as pyNN_run, end as pyNN_end, state as pyNN_state)
 from pyNN.neuron.simulator import initializer as pyNN_initializer
@@ -20,6 +21,11 @@ class Simulation(BaseSimulation):
 
     _active = None
     name = 'Neuron'
+
+    class _DummyID(object):
+
+        def __init__(self, cell):
+            self._cell = cell
 
     DEFAULT_MAX_DELAY = 10 * un.ms
 
@@ -103,7 +109,7 @@ class Simulation(BaseSimulation):
         # initializer is called after finitialize, and the super method before,
         # so we make sure the cell is registered with both, when it is in
         # a PyNN population and independent.
-        pyNN_initializer.register(cell)
+        pyNN_initializer.register(self._DummyID(cell))
         if cell.component_class.is_random:
             self._has_random_processes = True
 
