@@ -190,6 +190,17 @@ class Comparer(object):
             self._plot_NEST()
             legend.append(self.nest_ref + ' (NEST)')
         plt.legend(legend)
+        if self.auxiliary_states:
+            for state_var in self.auxiliary_states:
+                plt.figure()
+                aux_legend = []
+                for simulator in self.simulators:
+                    s = self.nml_cells[simulator].recording(state_var)
+                    scaled = UnitHandlerNEURON.scale_value(s)
+                    plt.plot(s.times, scaled)
+                    aux_legend.append('9ML - {}'.format(simulator))
+                plt.title(state_var)
+                plt.legend(aux_legend)
         plt.show()
 
     def _create_9ML(self, model, properties, simulator):
@@ -403,10 +414,6 @@ class Comparer(object):
     def _plot_9ML(self, sim_name):  # @UnusedVariable
         nml_v = self.nml_cells[sim_name].recording(self.state_variable)
         plt.plot(nml_v.times, nml_v)
-        for state_var in self.auxiliary_states:
-            s = self.nml_cells[sim_name].recording(state_var)
-            scaled = UnitHandlerNEURON.scale_value(s)
-            plt.plot(s.times, scaled)
 
     def _diff_NEURON(self):  # @UnusedVariable
         _, pnn_v = self._get_NEURON_signal()

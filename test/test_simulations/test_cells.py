@@ -62,6 +62,7 @@ class TestDynamics(TestCase):
                 'neuron/Izhikevich', 'SampleIzhikevich'),
             initial_states={'U': -14.0 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
             neuron_ref='Izhikevich', nest_ref='izhikevich',
+            auxiliary_states=['U'],
             input_signal=input_step('Isyn', 0.02, 50, 100, dt),
             nest_translations={'V': ('V_m', 1), 'U': ('U_m', 1),
                                'weight': (None, 1), 'C_m': (None, 1),

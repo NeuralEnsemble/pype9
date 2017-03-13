@@ -18,16 +18,22 @@ logger.addHandler(handler)
 
 
 # Compile and load cell class
-HH = CellMetaClass(ninemlcatalog.load('//neuron/HodgkinHuxley#HodgkinHuxley'))
+Izhikevich = CellMetaClass(
+    ninemlcatalog.load('//neuron/Izhikevich#Izhikevich'))
 
 # Create and run the simulation
 with Simulation(dt=0.01 * un.ms) as sim:
-    hh = HH(ninemlcatalog.load('//neuron/HodgkinHuxley#SampleHodgkinHuxley'))
-    hh.set_state({'V': -65 * un.mV})
-    hh.record('V')
+    izhi = Izhikevich(
+        ninemlcatalog.load('//neuron/Izhikevich#SampleIzhikevich'))
+    izhi.set_state({'U': -14.0 * un.mV / un.ms, 'V': -65 * un.mV})
+    izhi.record('U')
+    izhi.record('V')
     sim.run(100 * un.ms)
 
 # Get recording and plot
-v = hh.recording('V')
+v = izhi.recording('V')
+u = izhi.recording('U')
 plt.plot(v.times, v)
+plt.figure()
+plt.plot(u.times, u)
 plt.show()
