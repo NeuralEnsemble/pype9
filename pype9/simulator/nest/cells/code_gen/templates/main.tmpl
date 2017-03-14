@@ -717,8 +717,8 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
             }
 
 {% if 'states' in debug and 'transition' in debug['states'] %}
-        std::cout << "At transition from '" << S_.current_regime->get_name() << "' to '" << transition->get_target_regime()->get_name() << "' at " << S_.to_str(S_.t) << std::endl;
-{% endif %}            
+        std::cout << "Before transition from '" << S_.current_regime->get_name() << "' to '" << transition->get_target_regime()->get_name() << "' at " << S_.to_str(S_.t) << std::endl;
+{% endif %}
             // Execute body of transition, flagging a discontinuity in the ODE system
             // if either the body contains state assignments (i.e. not just output
             // events) or the regime changes
@@ -731,6 +731,10 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
             // Reinitialise the solver if the was a discontinuity in the ODE system
             if (discontinuous)
                 S_.current_regime->init_solver();  // Reset the solver if the transition contains state assignments or switches to a new regime.
+
+{% if 'states' in debug and 'transition' in debug['states'] %}
+        std::cout << "After transition to '" << S_.current_regime->get_name() << "' at " << S_.to_str(S_.t) << std::endl;
+{% endif %}                
         }
         
         // Update time stored in state before setting triggers
