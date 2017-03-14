@@ -226,6 +226,9 @@ namespace nineml {
             State_& operator=(const State_& s);
             void get(DictionaryDatum&) const;
             void set(const DictionaryDatum&, const Parameters_&, Regime_*);
+{% if 'states' in debug %}
+            std::string to_str(double t);
+{% endif %}            
         }; // end struct State_
 
         struct Variables_ {
@@ -593,6 +596,16 @@ namespace nineml {
         return -std::log(this->regime->cell->V_.rng_->drandpos()) / lambda;
     }
     
+{% if 'states' in debug %}
+    inline std::string {{component_name}}::State_::to_str(double t) {
+        std::stringstream ss;  
+        ss << "t=" << t;
+    {% for sv in component_class.state_variable_names %}
+        ss << ", {{sv}}=" << y_[{{sv}}_INDEX];
+    {% endfor %}
+        return ss.str();
+    }
+{% endif %}
 
 } // end namespace nineml
 

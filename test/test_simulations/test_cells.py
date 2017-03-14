@@ -370,14 +370,15 @@ class TestDynamics(TestCase):
                 "Izhikevich 2007 NEURON 9ML simulation did not match NEST 9ML")
 
     def test_poisson(self, duration=10 * un.s, rate=100 * un.Hz,
-                      print_comparisons=False, dt=0.001,
-                      simulators=['nest', 'neuron'], build_mode='force',
-                      **kwargs):  # @UnusedVariable @IgnorePep8
+                     print_comparisons=False, dt=0.001,
+                     simulators=['nest', 'neuron'], build_mode='force',
+                     **kwargs):  # @UnusedVariable @IgnorePep8
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': build_mode,
                                  'external_currents': ['iSyn']},
-                      'nest': {'build_mode': build_mode}}
-        initial_states = {'t_next': 0.0 * un.ms}
+                      'nest': {'build_mode': build_mode,
+                               'debug': {'states': 'transition'}}}
+        initial_states = {'t_next': 5.0 * un.ms}
         for sim_name in simulators:
             meta_class = cell_metaclasses[sim_name]
             # Build celltype
