@@ -35,8 +35,7 @@ class CellMetaClass(type):
     nineml_celltype_from_model
     """
 
-    def __new__(cls, component_class, default_properties=None,
-                initial_state=None, name=None, saved_name=None,
+    def __new__(cls, component_class, name=None, saved_name=None,
                 build_dir=None, build_mode='lazy', verbose=False,
                 **kwargs):
         """
@@ -67,22 +66,6 @@ class CellMetaClass(type):
         # object, wrap it in one before passing to the code template generator
         if not isinstance(component_class, WithSynapses):
             component_class = WithSynapses.wrap(component_class)
-        if default_properties is not None:
-            # If default properties is not already wrapped in a
-            # WithSynapseProperties object, wrap it in one before passing to
-            # the code template generator
-            if not isinstance(default_properties,
-                              WithSynapsesProperties):
-                default_properties = WithSynapsesProperties.wrap(
-                    default_properties)
-            if default_properties.component_class != component_class:
-                raise Pype9RuntimeError(
-                    "Component class of default properties object, {}, does "
-                    "not match provided class, {}:\n{}".format(
-                        default_properties.component_class.name,
-                        component_class.name,
-                        default_properties.component_class.find_mismatch(
-                            component_class)))
         # Extract out build directives
         if name is None:
             if saved_name is not None:
@@ -102,17 +85,11 @@ class CellMetaClass(type):
         if create_class:
             # Initialise code generator
             code_gen = cls.CodeGenerator()
-            (build_component_class, build_properties,
-             build_initial_states) = code_gen.transform_for_build(
-                name=name,
-                component_class=component_class,
-                default_properties=default_properties,
-                initial_state=initial_state, **kwargs)
+            build_component_class = code_gen.transform_for_build(
+                name=name, component_class=component_class, **kwargs)
             # Generate and compile cell class
             instl_dir = code_gen.generate(
                 component_class=build_component_class,
-                default_properties=build_properties,
-                initial_state=build_initial_states,
                 build_mode=build_mode, verbose=verbose, name=name,
                 build_dir=build_dir, url=url, **kwargs)
             # Load newly build model
@@ -120,12 +97,8 @@ class CellMetaClass(type):
             # Create class member dict of new class
             dct = {'name': name,
                    'component_class': component_class,
-                   'default_properties': default_properties,
-                   'initial_state': initial_state,
                    'install_dir': instl_dir,
-                   'build_component_class': build_component_class,
-                   'build_default_properties': build_properties,
-                   'build_initial_states': build_initial_states}
+                   'build_component_class': build_component_class}
             # Create new class using Type.__new__ method
             Cell = super(CellMetaClass, cls).__new__(
                 cls, name, (cls.BaseCellClass,), dct)

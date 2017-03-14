@@ -97,13 +97,9 @@ class Cell(base.Cell):
                 (BUILD_TRANS, PYPE9_NS), MEMBRANE_CAPACITANCE)
             cm_prop = None
             try:
-                try:
-                    cm_prop = properties[0][self.cm_prop_name]
-                except IndexError:
-                    cm_prop = kwprops[self.cm_prop_name] * un.nF
-            except KeyError:
-                if self.build_properties is not None:
-                    cm_prop = self.build_properties.property(self.cm_prop_name)
+                cm_prop = properties[0][self.cm_prop_name]
+            except IndexError:
+                cm_prop = kwprops[self.cm_prop_name] * un.nF
             if cm_prop is not None:
                 cm = pq.Quantity(UnitHandler.to_pq_quantity(cm_prop), 'nF')
             else:

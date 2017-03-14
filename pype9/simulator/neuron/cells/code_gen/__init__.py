@@ -98,8 +98,8 @@ class CodeGenerator(BaseCodeGenerator):
         # NMODL files on the current platform
         self.specials_dir = self._get_specials_dir()
 
-    def generate_source_files(self, component_class, default_properties,
-                              initial_state, src_dir, name=None, **kwargs):
+    def generate_source_files(self, component_class, src_dir, name=None,
+                              **kwargs):
         """
         Generates main NMODL file for cell (and synapse) class
 
@@ -126,17 +126,15 @@ class CodeGenerator(BaseCodeGenerator):
         if name is None:
             name = component_class.name
         template = 'main.tmpl'
-        self.generate_mod_file(template, component_class, default_properties,
-                               initial_state, src_dir, name, kwargs)
+        self.generate_mod_file(template, component_class, src_dir, name,
+                               kwargs)
 
-    def generate_mod_file(self, template, component_class, default_properties,
-                          initial_state, src_dir, name, template_args):
+    def generate_mod_file(self, template, component_class, src_dir, name,
+                          template_args):
         tmpl_args = {
             'code_gen': self,
             'component_name': name,
             'component_class': component_class,
-            'prototype': default_properties,
-            'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'unit_handler': UnitHandler(component_class),
@@ -152,12 +150,10 @@ class CodeGenerator(BaseCodeGenerator):
         self.render_to_file(
             template, tmpl_args, component_class.name + '.mod', src_dir)
 
-    def transform_for_build(self, name, component_class, default_properties,
-                            initial_state, **kwargs):
+    def transform_for_build(self, name, component_class, **kwargs):
         """
-        Copies and transforms the component class and associated properties and
-        states to match the format of the simulator (overridden in derived
-        class)
+        Copies and transforms the component class to match the format of the
+        simulator (overridden in derived class)
 
         Parameters
         ----------
@@ -165,30 +161,15 @@ class CodeGenerator(BaseCodeGenerator):
             The name of the transformed component class
         component_class : nineml.Dynamics
             The component class to be transformed
-        default_properties : nineml.DynamicsProperties
-            The properties to be transformed to match
-        initial_states : dict[str, nineml.Quantity]
-            The initial_states to be transformed to match
         """
         if not isinstance(component_class, WithSynapses):
             raise Pype9RuntimeError(
                 "'component_class' must be a DynamicsWithSynapses object")
         # ---------------------------------------------------------------------
-        # Clone original component class and properties
+        # Clone original component class
         # ---------------------------------------------------------------------
         trfrm = DynamicsCloner().visit(component_class.dynamics)
         trfrm.name = name
-        if default_properties is not None:
-            props = default_properties.dynamics_properties
-            trfrm_properties = DynamicsProperties(
-                name=(props.name + 'Build'), definition=trfrm,
-                properties=props.properties,
-                initial_values=props.initial_values)
-        else:
-            trfrm_properties = None
-        if initial_state is not None:
-            logger.warning("Initial states passed to code generator will be "
-                           "ignored (not implemented yet).")
         # ---------------------------------------------------------------------
         # Get the membrane voltage and convert it to 'v'
         # ---------------------------------------------------------------------
@@ -255,8 +236,8 @@ class CodeGenerator(BaseCodeGenerator):
                 pass
             # Need to convert to AnalogReceivePort if v is a StateVariable
             if isinstance(v, StateVariable):
-                self._transform_full_component(trfrm, component_class,
-                                               trfrm_properties, v, **kwargs)
+                self._transform_full_component(trfrm, component_class, v,
+                                               **kwargs)
                 trfrm.annotations.set((BUILD_TRANS, PYPE9_NS),
                                       MECH_TYPE, FULL_CELL_MECH)
             else:
@@ -272,21 +253,10 @@ class CodeGenerator(BaseCodeGenerator):
         trfrm_with_syn = DynamicsWithSynapses(
             name, trfrm, component_class.synapses,
             component_class.connection_parameter_sets)
-        if trfrm_properties is not None:
-            if isinstance(trfrm_properties, MultiDynamicsProperties):
-                WithSynapsesClass = MultiDynamicsWithSynapsesProperties
-            else:
-                WithSynapsesClass = DynamicsWithSynapsesProperties
-            trfrm_props_with_syn = WithSynapsesClass(
-                name, trfrm_properties, default_properties.synapses,
-                default_properties.connection_property_sets)
-        else:
-            trfrm_props_with_syn = None
         # Retun a prototype of the transformed class
-        return trfrm_with_syn, trfrm_props_with_syn, initial_state
+        return trfrm_with_syn
 
-    def _transform_full_component(self, trfrm, component_class,
-                                  trfrm_properties, v, **kwargs):
+    def _transform_full_component(self, trfrm, component_class, v, **kwargs):
         # -----------------------------------------------------------------
         # Remove all analog send ports with 'current' dimension so they
         # don't get confused with the converted voltage time derivative
@@ -323,9 +293,9 @@ class CodeGenerator(BaseCodeGenerator):
             else:
                 cm = Parameter("cm___pype9", dimension=un.capacitance)
                 trfrm.add(cm)
-                qty = kwargs.get('default_capacitance', 1.0 * un.nF)
-                if trfrm_properties:
-                    trfrm_properties.add(Property('cm___pype9', qty))
+#                 qty = kwargs.get('default_capacitance', 1.0 * un.nF)
+#                 if trfrm_properties:
+#                     trfrm_properties.add(Property('cm___pype9', qty))
         cm.annotations.set((BUILD_TRANS, PYPE9_NS), TRANSFORM_SRC, None)
         trfrm.annotations.set((BUILD_TRANS, PYPE9_NS),
                               MEMBRANE_CAPACITANCE, cm.name)

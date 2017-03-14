@@ -102,8 +102,7 @@ INITIAL {
 {% endfor %}
 
     : Initialise Regime:
-    {# This should come from the initial state, when we sort out that format #}
-    regime_ = {{next(component_class.regimes).name | upper}}
+    regime_ = 0 {# {{next(component_class.regimes).name | upper}} #}
 
     
     : Active/inactive conditions (conditions transitions are only valid on 

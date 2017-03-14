@@ -57,8 +57,7 @@ class CodeGenerator(BaseCodeGenerator):
                                    shell=True)
         self._compiler = compiler[:-1]  # strip trailing \n
 
-    def generate_source_files(self, component_class, default_properties,
-                              initial_state, src_dir, name=None,
+    def generate_source_files(self, component_class, src_dir, name=None,
                               debug_print=None, **kwargs):
         if name is None:
             name = component_class.name
@@ -67,8 +66,6 @@ class CodeGenerator(BaseCodeGenerator):
         tmpl_args = {
             'component_name': name,
             'component_class': component_class,
-            'prototype': default_properties,
-            'initial_state': initial_state,
             'version': pype9.version, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'unit_handler': UnitHandler(component_class),
