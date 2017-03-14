@@ -683,13 +683,13 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
         // Update time stored in state
         S_.t = origin.get_ms();
     
-{% if 'states' in debug and 'ode' in debug['states']  %}
+{% if 'ode' in debug_print %}
         std::cout << "Before ODE step - " << S_.to_str(S_.t) << std::endl;
 {% endif %}
         /***** Solve ODE over timestep *****/
         S_.current_regime->step_ode();
     
-{% if 'states' in debug and 'ode' in debug['states']  %}
+{% if 'ode' in debug_print  %}
         std::cout << "After ODE step - " << S_.to_str(S_.t) << std::endl;
 {% endif %}
 
@@ -716,7 +716,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
                 simultaneous_transition_count = 0;
             }
 
-{% if 'states' in debug and 'transition' in debug['states'] %}
+{% if 'transition' in debug_print %}
         std::cout << "Before transition from '" << S_.current_regime->get_name() << "' to '" << transition->get_target_regime()->get_name() << "' at " << S_.to_str(S_.t) << std::endl;
 {% endif %}
             // Execute body of transition, flagging a discontinuity in the ODE system
@@ -732,7 +732,7 @@ void {{component_name}}::update(nest::Time const & origin, const nest::long_t fr
             if (discontinuous)
                 S_.current_regime->init_solver();  // Reset the solver if the transition contains state assignments or switches to a new regime.
 
-{% if 'states' in debug and 'transition' in debug['states'] %}
+{% if 'transition' in debug_print %}
         std::cout << "After transition to '" << S_.current_regime->get_name() << "' at " << S_.to_str(S_.t) << std::endl;
 {% endif %}                
         }

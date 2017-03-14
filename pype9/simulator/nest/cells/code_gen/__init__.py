@@ -58,8 +58,8 @@ class CodeGenerator(BaseCodeGenerator):
         self._compiler = compiler[:-1]  # strip trailing \n
 
     def generate_source_files(self, component_class, default_properties,
-                              initial_state, src_dir, name=None, debug=None,
-                              **kwargs):
+                              initial_state, src_dir, name=None,
+                              debug_print=None, **kwargs):
         if name is None:
             name = component_class.name
         # Get the initial regime and check that it refers to a regime in the
@@ -90,7 +90,7 @@ class CodeGenerator(BaseCodeGenerator):
             'parameter_scales': [],
             'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT),
             'regime_varname': REGIME_VARNAME,
-            'debug': {} if debug is None else debug}
+            'debug_print': [] if debug_print is None else debug_print}
         ode_solver = kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT)
         ss_solver = kwargs.get('ss_solver', self.SS_SOLVER_DEFAULT)
         if ode_solver is None:

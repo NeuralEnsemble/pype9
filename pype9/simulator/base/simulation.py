@@ -51,7 +51,7 @@ class BaseSimulation(object):
     max_seed = 2 ** 32 - 1
 
     def __init__(self, dt, t_start=0.0 * un.s, seed=None, structure_seed=None,
-                 min_delay=None, max_delay=None, kill_on_exit=True, **options):
+                 min_delay=1 * un.ms, max_delay=10 * un.ms, **options):
         self._check_units('dt', dt, un.time)
         self._check_units('t_start', dt, un.time)
         self._check_units('min_delay', dt, un.time, allow_none=True)
@@ -61,7 +61,6 @@ class BaseSimulation(object):
         self._t = t_start
         self._min_delay = min_delay
         self._max_delay = max_delay
-        self._kill_on_exit = kill_on_exit
         self._options = options
         self._registered_cells = None
         self._registered_arrays = None
@@ -93,12 +92,11 @@ class BaseSimulation(object):
     def __exit__(self, type_, value, traceback):  # @UnusedVariable
         t_stop = self.t
         self.__class__._active = None
-        if self._kill_on_exit:
+        if type_ is None:
             for cell in self._registered_cells:
                 cell._kill(t_stop)
             for array in self._registered_arrays:
                 array._kill(t_stop)
-            self._exit()
         self._registered_cells = None
         self._registered_arrays = None
 

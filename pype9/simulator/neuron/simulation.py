@@ -2,7 +2,6 @@ import logging
 import os.path
 from nineml import units as un
 import ctypes
-from collections import namedtuple
 from pyNN.neuron import (
     setup as pyNN_setup, run as pyNN_run, end as pyNN_end, state as pyNN_state)
 from pyNN.neuron.simulator import initializer as pyNN_initializer
@@ -84,10 +83,6 @@ class Simulation(BaseSimulation):
             self._seed_libninemlnrn()
         super(Simulation, self)._initialize()
 
-    def _exit(self):
-        """Final things that need to be done before the simulation exits"""
-        pyNN_end()
-
     def mpi_rank(self):
         "The rank of the MPI node the code is running on"
         return pyNN_state.mpi_rank
@@ -139,3 +134,8 @@ class Simulation(BaseSimulation):
         libninemlnrn = ctypes.CDLL(
             os.path.join(CodeGenerator.LIBNINEMLNRN_PATH, 'libninemlnrn.so'))
         libninemlnrn.nineml_seed_gsl_rng(self.seed)
+
+    @classmethod
+    def quit(cls):
+        "Gracefully quit the simulator"
+        pyNN_end()

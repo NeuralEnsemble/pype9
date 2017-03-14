@@ -1,7 +1,7 @@
 import nineml.units as un
 from pype9.simulator.base.simulation import BaseSimulation
 from pyNN.nest import (
-    setup as pyNN_setup, run as pyNN_run, end as pyNN_end, state as pyNN_state)
+    setup as pyNN_setup, run as pyNN_run, state as pyNN_state, end as pyNN_end)
 from pype9.exceptions import Pype9UsageError
 
 
@@ -10,8 +10,6 @@ class Simulation(BaseSimulation):
 
     _active = None
     name = 'NEST'
-
-    DEFAULT_MAX_DELAY = 10 * un.ms
 
     def __init__(self, *args, **kwargs):
         self._device_delay = kwargs.get('device_delay', None)
@@ -68,10 +66,6 @@ class Simulation(BaseSimulation):
                    grng_seed=self.global_seed,
                    rng_seeds=self.all_seeds, **kwargs)
 
-    def _exit(self):
-        """Final things that need to be done before the simulation exits"""
-        pyNN_end()
-
     def mpi_rank(self):
         "The rank of the MPI node the code is running on"
         return pyNN_state.mpi_rank
@@ -83,3 +77,8 @@ class Simulation(BaseSimulation):
     def num_threads(self):
         "The total number of threads across all MPI nodes"
         return self.num_processes() * self._threads_per_proc
+
+    @classmethod
+    def quit(cls):
+        "Gracefully quit the simulator"
+        pyNN_end()
