@@ -376,9 +376,8 @@ class TestDynamics(TestCase):
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': build_mode,
                                  'external_currents': ['iSyn']},
-                      'nest': {'build_mode': build_mode,
-                               'debug': {'states': 'transition'}}}
-        initial_states = {'t_next': 5.0 * un.ms}
+                      'nest': {'build_mode': build_mode}}  #, 'debug': {'states': ['transition']}}} @IgnorePep8
+        initial_states = {'t_next': 0.0 * un.ms}
         for sim_name in simulators:
             meta_class = cell_metaclasses[sim_name]
             # Build celltype
@@ -390,7 +389,8 @@ class TestDynamics(TestCase):
                 Simulation = NeuronSimulation(dt=dt * un.ms,
                                               seed=NEURON_RNG_SEED)
             elif sim_name == 'nest':
-                Simulation = NESTSimulation(dt=dt * un.ms, seed=NEST_RNG_SEED)
+                Simulation = NESTSimulation(dt=dt * un.ms, min_delay=1 * un.ms,
+                                            seed=NEST_RNG_SEED)
             else:
                 assert False
             with Simulation as sim:
