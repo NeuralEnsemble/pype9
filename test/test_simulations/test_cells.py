@@ -389,8 +389,7 @@ class TestDynamics(TestCase):
                 Simulation = NeuronSimulation(dt=dt * un.ms,
                                               seed=NEURON_RNG_SEED)
             elif sim_name == 'nest':
-                Simulation = NESTSimulation(dt=dt * un.ms, min_delay=1 * un.ms,
-                                            seed=NEST_RNG_SEED)
+                Simulation = NESTSimulation(dt=dt * un.ms, seed=NEST_RNG_SEED)
             else:
                 assert False
             with Simulation as sim:

@@ -2,7 +2,7 @@
     double dt = nest::Time::get_resolution().get_ms();
     double tt = 0.0;
     while (tt < dt) {
-{% if debug %}
+{% if 'gsl_states' in debug_print %}
         {{component_name}}_dump_gsl_state(e_, ode_y_);
 {% endif %}   
         const int status =  gsl_odeiv2_evolve_apply(

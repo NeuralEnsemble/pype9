@@ -240,12 +240,6 @@ class BaseSimulation(object):
         # Array initialisation is handled by PyNN
 
     @abstractmethod
-    def _exit(self):
-        """
-        Code used to clean up the simulator state after a simulation exits
-        """
-
-    @abstractmethod
     def mpi_rank(self):
         "The rank of the MPI node the code is running on"
 

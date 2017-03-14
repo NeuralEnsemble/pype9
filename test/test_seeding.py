@@ -1,6 +1,7 @@
 from __future__ import division
 from unittest import TestCase
 import ninemlcatalog
+from copy import deepcopy
 import numpy
 from nineml import units as un, Property
 from pype9.simulator.neuron import (
@@ -90,11 +91,8 @@ class TestSeeding(TestCase):
     def _load_brunel(self, case, order):
         model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
             'Brunel_{}'.format(case))
-        url = model.url
-        model = model.clone()
-        # Force setting of url back to original so that components are built
-        # in the same place
-        model._url = url
+        # Don't clone so that the url is not reset
+        model = deepcopy(model)
         scale = order / model.population('Inh').size
         # rescale populations
         for pop in model.populations:
