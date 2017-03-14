@@ -53,13 +53,14 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
                    'extra_parameters': {'_in_pynn': True}}
             celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
                 cls, name, (PyNNCellWrapper,), dct)
-            assert set(celltype.recordable) == set(
-                model(_in_pynn=True).recordable.keys()), \
-                ("Mismatch of recordable keys between CellPyNN ('{}') and "
-                 "Cell class '{}' ('{}')".format(
-                     "', '".join(sorted(celltype.recordable)), name,
-                     "', '".join(sorted(
-                         model(_in_pynn=True).recordable.keys()))))
+            recordable_keys = model(
+                default_properties,
+                _in_pynn=True, **initial_state).recordable.keys()
+            assert sorted(celltype.recordable) == sorted(recordable_keys), (
+                "Mismatch of recordable keys between CellPyNN ('{}') and "
+                "Cell class '{}' ('{}')".format(
+                    "', '".join(sorted(celltype.recordable)), name,
+                    "', '".join(sorted(recordable_keys))))
             # If the url where the celltype is defined is specified save the
             # celltype to be retried later
             if component_class.url is not None:

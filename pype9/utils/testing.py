@@ -213,9 +213,11 @@ class Comparer(object):
             CellMetaClass = NESTCellMetaClass
         else:
             assert False
-        self.nml_cells[simulator] = CellMetaClass(
-            model, name=self.build_name, default_properties=properties,
-            **self.build_args[simulator])()
+        Cell = CellMetaClass(model, name=self.build_name,
+                             **self.build_args[simulator])
+        self.nml_cells[simulator] = Cell(properties,
+                                         initial_regime=self.initial_regime,
+                                         **self.initial_states)
         if self.input_signal is not None:
             self.nml_cells[simulator].play(*self.input_signal)
         if self.input_train is not None:
@@ -223,8 +225,8 @@ class Comparer(object):
         self.nml_cells[simulator].record(self.state_variable)
         for state_var in self.auxiliary_states:
             self.nml_cells[simulator].record(state_var)
-        self.nml_cells[simulator].set_state(self.initial_states,
-                                            regime=self.initial_regime)
+#         self.nml_cells[simulator].set_state(self.initial_states,
+#                                             regime=self.initial_regime)
 
     def _create_NEURON(self, neuron_name):
         # -----------------------------------------------------------------

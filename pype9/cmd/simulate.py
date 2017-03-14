@@ -43,7 +43,7 @@ parser.add_argument('--seed', type=int, default=None,
 parser.add_argument('--structure_seed', type=int, default=None,
                     help=("Random seed used to create network and properties. "
                           "If not provided it is generated from the '--seed' "
-                          "option.")) 
+                          "option."))
 parser.add_argument('--build_mode', type=str, default='lazy',
                     help=("The strategy used to build and compile the model. "
                           "Can be one of '{}' (default %(default)s)"))
@@ -117,10 +117,14 @@ def run(argv):
                 "Specified model {} is not a dynamics properties object and "
                 "no properties supplied to simulate command via --prop option"
                 .format(model))
+        # Get the initial state
+        init_state = dict((sv, float(val) * parse_units(units))
+                          for sv, val, units in args.init_value)
         # Get the init_regime
         init_regime = args.init_regime
         if init_regime is None:
             if component_class.num_regimes == 1:
+                # If there is only one regime it doesn't need to be specified
                 init_regime = next(component_class.regimes).name
             else:
                 raise Pype9UsageError(
@@ -129,20 +133,10 @@ def run(argv):
                         r.name for r in component_class.regimes)))
         # Build cell class
         Cell = CellMetaClass(component_class, name=model.name,
-                             build_mode=args.build_mode,
-                             default_properties=props)
+                             build_mode=args.build_mode)
         with Simulation(dt=args.timestep * un.ms, seed=args.seed) as sim:
             # Create cell
-            cell = Cell()
-            init_state = dict((sv, float(val) * parse_units(units))
-                              for sv, val, units in args.init_value)
-            if set(cell.state_variable_names) != set(init_state.iterkeys()):
-                raise Pype9UsageError(
-                    "Need to specify an initial value for each state in the "
-                    "model, missing '{}'".format(
-                        "', '".join(set(cell.state_variable_names) -
-                                    set(init_state.iterkeys()))))
-            cell.set_state(init_state, regime=init_regime)
+            cell = Cell(props, regime=init_regime, **init_state)
             # Play inputs
             for port_name, fname in args.play:
                 port = component_class.receive_port(port_name)

@@ -95,11 +95,13 @@ class Cell(base.Cell):
             self._sec.diam = 10.0 / pi
             self.cm_prop_name = self.build_component_class.annotations.get(
                 (BUILD_TRANS, PYPE9_NS), MEMBRANE_CAPACITANCE)
-            cm_prop = None
             try:
                 cm_prop = properties[0][self.cm_prop_name]
             except IndexError:
-                cm_prop = kwprops[self.cm_prop_name] * un.nF
+                try:
+                    cm_prop = kwprops[self.cm_prop_name] * un.nF
+                except KeyError:
+                    cm_prop = None
             if cm_prop is not None:
                 cm = pq.Quantity(UnitHandler.to_pq_quantity(cm_prop), 'nF')
             else:

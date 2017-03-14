@@ -84,8 +84,8 @@ class TestBrunel2000(TestCase):
 
     rate_percent_error = {'Exc': 7.5, 'Inh': 7.5, 'Ext': 2.5}
     psth_percent_error = {'Exc': 100.0, 'Inh': 100.0, 'Ext': 100.0}
-    out_stdev_error = {('Exc', 'Exc'): 7.0, ('Exc', 'Inh'): 6.0,
-                       ('Inh', 'Exc'): 1.5, ('Inh', 'Inh'): 5.0,
+    out_stdev_error = {('Exc', 'Exc'): 7.5, ('Exc', 'Inh'): 7.5,
+                       ('Inh', 'Exc'): 7.5, ('Inh', 'Inh'): 7.5,
                        ('Ext', 'Exc'): 0.0, ('Ext', 'Inh'): 0.0}
 
     def setUp(self):
