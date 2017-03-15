@@ -62,7 +62,7 @@ class TestDynamics(TestCase):
                 'neuron/Izhikevich', 'SampleIzhikevich'),
             initial_states={'U': -14.0 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
             neuron_ref='Izhikevich', nest_ref='izhikevich',
-            auxiliary_states=['U'],
+            # auxiliary_states=['U'],
             input_signal=input_step('Isyn', 0.02, 50, 100, dt),
             nest_translations={'V': ('V_m', 1), 'U': ('U_m', 1),
                                'weight': (None, 1), 'C_m': (None, 1),
@@ -103,7 +103,7 @@ class TestDynamics(TestCase):
                 "built-in within {} ({})".format(
                     0.02 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
-    def test_hh(self, plot=True, print_comparisons=False,
+    def test_hh(self, plot=False, print_comparisons=False,
                 simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
                 build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
@@ -146,9 +146,9 @@ class TestDynamics(TestCase):
                 'n_alpha_A': (None, 1), 'n_alpha_V0': (None, 1),
                 'n_alpha_K': (None, 1), 'n_beta_A': (None, 1),
                 'n_beta_V0': (None, 1), 'n_beta_K': (None, 1)},
+            # auxiliary_states=['m', 'h', 'n'],
             neuron_build_args={'build_mode': build_mode},
-            nest_build_args={'build_mode': build_mode},
-            auxiliary_states=['m', 'h', 'n'])
+            nest_build_args={'build_mode': build_mode})
         comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
@@ -177,7 +177,7 @@ class TestDynamics(TestCase):
                 "within {} ({})".format(
                     0.0015 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
-    def test_liaf(self, plot=True, print_comparisons=False,
+    def test_liaf(self, plot=False, print_comparisons=False,
                   simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
                   build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
@@ -197,7 +197,8 @@ class TestDynamics(TestCase):
             neuron_translations=self.liaf_neuron_translations,
             neuron_build_args={'build_mode': build_mode},
             nest_build_args={'build_mode': build_mode},
-            extra_mechanisms=['pas'], auxiliary_states=['end_refractory'])
+            # auxiliary_states=['end_refractory'],
+            extra_mechanisms=['pas'])
         comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
@@ -225,7 +226,7 @@ class TestDynamics(TestCase):
                 "within {} ({})".format(
                     0.55 * pq.mV, comparisons[('9ML-nest', '9ML-neuron')]))
 
-    def test_alpha_syn(self, plot=True, print_comparisons=False,
+    def test_alpha_syn(self, plot=False, print_comparisons=False,
                        simulators=['nest', 'neuron'], dt=0.001,
                        duration=100.0, min_delay=5.0, device_delay=5.0,
                        build_mode='force', **kwargs):  # @UnusedVariable
@@ -321,8 +322,8 @@ class TestDynamics(TestCase):
                 'build_mode': build_mode,
                 'build_dir': os.path.join(build_dir, 'nest', 'IaFAlpha')},
             min_delay=min_delay,
-            device_delay=device_delay,
-            auxiliary_states=['end_refractory__cell'])
+            # auxiliary_states=['end_refractory__cell'],
+            device_delay=device_delay)
         comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
@@ -366,7 +367,8 @@ class TestDynamics(TestCase):
             initial_regime='subVb',
             neuron_build_args={'build_mode': build_mode,
                                'external_currents': ['iSyn']},
-            nest_build_args={'build_mode': build_mode}) #, auxiliary_states=['U']) # @IgnorePep8
+            # auxiliary_states=['U'],
+            nest_build_args={'build_mode': build_mode})
         comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()

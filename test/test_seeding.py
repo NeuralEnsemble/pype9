@@ -80,11 +80,11 @@ class TestSeeding(TestCase):
                 'Exc').recording('spike_output')
             self.assertEqual(list(exc1_spikes.spiketrains[0]),
                              list(exc2_spikes.spiketrains[0]),
-                             "Poisson spike train not the same despite using "
+                             "Network Exc spikes not the same despite using "
                              "the same seed")
             self.assertNotEqual(list(exc1_spikes.spiketrains[0]),
                                 list(exc3_spikes.spiketrains[0]),
-                                "Poisson spike train the same despite using "
+                                "Network Exc spikes the same despite using "
                                 "different  seeds")
 
     def _load_brunel(self, case, order):
