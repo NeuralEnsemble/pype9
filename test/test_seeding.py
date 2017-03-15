@@ -78,6 +78,11 @@ class TestSeeding(TestCase):
                 sim.run(20 * un.ms)
             exc3_spikes = network3.component_array(
                 'Exc').recording('spike_output')
+            if (list(exc1_spikes.spiketrains[0]) !=
+                    list(exc2_spikes.spiketrains[0])):
+                from pype9.utils.plotting import plot
+                plot(exc1_spikes, show=False)
+                plot(exc2_spikes)
             self.assertEqual(list(exc1_spikes.spiketrains[0]),
                              list(exc2_spikes.spiketrains[0]),
                              "Network Exc spikes not the same despite using "

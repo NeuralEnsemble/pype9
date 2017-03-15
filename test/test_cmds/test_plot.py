@@ -40,34 +40,34 @@ class TestPlot(TestCase):
         if not self.cached:
             shutil.rmtree(self.work_dir)
 
-#     def test_single_cell_plot(self):
-#         # Generate test signal
-#         if not os.path.exists(self.cell_signal_path):
-#             argv = (
-#                 "//neuron/Izhikevich#SampleIzhikevichFastSpiking "
-#                 "nest 200.0 0.01 "
-#                 "--record V {} "
-#                 "--init_value U 1.625 pA "
-#                 "--init_value V -65.0 mV "
-#                 "--init_regime subVb ".format(self.cell_signal_path))
-#             simulate.run(argv.split())
-#         # Run plotting command
-#         out_path = '{}/single_cell.png'.format(self.work_dir)
-#         argv = ("{in_path} --save {out_path} --hide --width 5 --height 5 "
-#                     "--resolution 100.0"
-#                 .format(in_path=self.cell_signal_path, out_path=out_path,
-#                         name='v'))
-#         plot.run(argv.split())
-#         image = img.imread(out_path)
-#         self._ref_single_cell_plot()
-#         ref_image = img.imread(self.ref_single_cell_path)
-#         self.assertEqual(
-#             image.shape, ref_image.shape)
-#         self.assertTrue(
-#             (image == ref_image).all(),
-#             "Ploted single cell data using 'plot' command (saved to '{}') did "
-#             "not match loaded image from '{}'"
-#             .format(out_path, self.ref_single_cell_path))
+    def test_single_cell_plot(self):
+        # Generate test signal
+        if not os.path.exists(self.cell_signal_path):
+            argv = (
+                "//neuron/Izhikevich#SampleIzhikevichFastSpiking "
+                "nest 200.0 0.01 "
+                "--record V {} "
+                "--init_value U 1.625 pA "
+                "--init_value V -65.0 mV "
+                "--init_regime subVb ".format(self.cell_signal_path))
+            simulate.run(argv.split())
+        # Run plotting command
+        out_path = '{}/single_cell.png'.format(self.work_dir)
+        argv = ("{in_path} --save {out_path} --hide --dims 5 5 "
+                    "--resolution 100.0"
+                .format(in_path=self.cell_signal_path, out_path=out_path,
+                        name='v'))
+        plot.run(argv.split())
+        image = img.imread(out_path)
+        self._ref_single_cell_plot()
+        ref_image = img.imread(self.ref_single_cell_path)
+        self.assertEqual(
+            image.shape, ref_image.shape)
+        self.assertTrue(
+            (image == ref_image).all(),
+            "Ploted single cell data using 'plot' command (saved to '{}') did "
+            "not match loaded image from '{}'"
+            .format(out_path, self.ref_single_cell_path))
 
     def test_network_plot(self):
         if not os.path.exists(self.network_signal_path):
@@ -84,7 +84,7 @@ class TestPlot(TestCase):
         # Run plotting command
         for pop_name in self.recorded_pops:
             out_path = '{}/{}.png'.format(self.work_dir, pop_name)
-            argv = ("{in_path} --save {out_path} --hide --width 5 --height 5 "
+            argv = ("{in_path} --save {out_path} --hide --dims 5 5 "
                     "--resolution 100.0"
                     .format(in_path=self.network_signal_path,
                             out_path=out_path, name='v'))

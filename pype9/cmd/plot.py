@@ -3,7 +3,7 @@ Convenient script for plotting the output of PyPe9 simulations (actually not
 9ML specific as the signals are stored in Neo format)
 """
 from argparse import ArgumentParser
-from ._utils import existing_file, logger
+from ._utils import existing_file, logger  # @UnusedImport
 
 parser = ArgumentParser(prog='pype9 plot',
                         description=__doc__)
@@ -11,10 +11,8 @@ parser.add_argument('filename', type=existing_file,
                     help="Neo file outputted from a PyPe9 simulation")
 parser.add_argument('--save', type=str, default=None,
                     help="Location to save the figure to")
-parser.add_argument('--height', type=int, default=6,
-                    help="Height of the plot")
-parser.add_argument('--width', type=int, default=6,
-                    help="Width of the plot")
+parser.add_argument('--dims', type=int, nargs=2, default=(6, 6),
+                    metavar=('WIDTH', 'HEIGHT'), help="Dimensions of the plot")
 parser.add_argument('--hide', action='store_true',
                     help="Whether to show the plot or not")
 parser.add_argument('--resolution', type=float, default=300.0,
@@ -23,8 +21,8 @@ parser.add_argument('--resolution', type=float, default=300.0,
 
 def run(argv):
     import neo
-    import matplotlib.pyplot as plt
     from pype9.exceptions import Pype9UsageError
+    from pype9.utils.plotting import plot
 
     args = parser.parse_args(argv)
 
@@ -35,44 +33,5 @@ def run(argv):
             .format(args.filename, len(segments)))
 
     seg = segments[0]
-    num_subplots = bool(seg.analogsignals) + bool(seg.spiketrains)
-    fig, axes = plt.subplots(num_subplots, 1)
-    fig.suptitle('PyPe9 Simulation Output')
-    # Set the dimension of the figure
-    fig.set_figheight(args.height)
-    fig.set_figwidth(args.width)
-    plt_name = seg.name + ' ' if seg.name else ''
-    if seg.spiketrains:
-        spike_times = []
-        ids = []
-        for i, spiketrain in enumerate(seg.spiketrains):
-            spike_times.extend(spiketrain)
-            ids.extend([i] * len(spiketrain))
-        plt.sca(axes[0] if num_subplots > 1 else axes)
-        plt.scatter(spike_times, ids)
-        plt.xlim((seg.spiketrains[0].t_start, seg.spiketrains[0].t_stop))
-        plt.ylim((-1, len(seg.spiketrains)))
-        plt.xlabel('Times (ms)')
-        plt.ylabel('Cell Indices')
-        plt.title("{}Spike Trains".format(plt_name), fontsize=12)
-    if seg.analogsignals:
-        legend = []
-        plt.sca(axes[-1] if num_subplots > 1 else axes)
-        units = set(s.units.dimensionality.string for s in seg.analogsignals)
-        for i, signal in enumerate(seg.analogsignals):
-            plt.plot(signal.times, signal)
-            un_str = (signal.units.dimensionality.string
-                      if len(units) > 1 else '')
-            legend.append(signal.name + un_str if signal.name else str(i))
-        plt.xlim((seg.analogsignals[0].t_start, seg.analogsignals[0].t_stop))
-        plt.xlabel('Time (ms)')
-        un_str = (' ({})'.format(next(iter(units)))
-                  if len(units) == 1 else '')
-        plt.ylabel('Analog signals{}'.format(un_str))
-        plt.title("{}Analog Signals".format(plt_name), fontsize=12)
-        plt.legend(legend)
-    if args.save is not None:
-        fig.savefig(args.save, dpi=args.resolution)
-        logger.info("Saved{} figure to '{}'".format(plt_name, args.save))
-    if not args.hide:
-        plt.show()
+    plot(seg, dims=args.dims, show=not args.hide, resolution=args.resolution,
+         save=args.save)
