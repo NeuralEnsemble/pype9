@@ -259,12 +259,15 @@ class UnitHandler(DynamicsDimensionResolver):
         return unit_str
 
     @classmethod
-    def dimension_to_unit_str(cls, dimension):
+    def dimension_to_unit_str(cls, dimension, one_as_dimensionless=False):
         """
         Returns the units associated with the given dimension
         """
-        return cls.compound_to_units_str(
+        unit_str = cls.compound_to_units_str(
             cls.dimension_to_units_compound(dimension)[1])
+        if one_as_dimensionless and unit_str == '1':
+            unit_str = 'dimensionless'
+        return unit_str
 
     @classmethod
     def scale_value(cls, qty):

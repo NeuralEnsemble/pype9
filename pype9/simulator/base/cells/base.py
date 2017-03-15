@@ -129,7 +129,6 @@ class Cell(object):
         # (it makes a difference to how the state of the cell is updated,
         # either saved until the 'initialze' method is called or directly
         # set to the state)
-        self._initialized = False
         sim = self.Simulation.active()
         self._t_start = sim.t_start
         self._t_stop = None
@@ -139,7 +138,7 @@ class Cell(object):
             self._regime_index = None
         else:
             # Set initial regime of the cell
-            regime = kwargs.pop('_regime', None)
+            regime = kwargs.pop('regime_', None)
             if regime is None:
                 if self.component_class.num_regimes == 1:
                     regime = next(self.component_class.regime_names)
@@ -353,7 +352,6 @@ class Cell(object):
         for iv in self._nineml.initial_values:
             setattr(self, iv.name, iv.quantity)
         self._set_regime()
-        super(Cell, self).__setattr__('_initialized', True)
 
     def write(self, file, **kwargs):  # @ReservedAssignment
         if self.in_array:

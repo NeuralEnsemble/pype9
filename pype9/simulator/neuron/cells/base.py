@@ -205,7 +205,6 @@ class Cell(base.Cell):
                 self._set(k, v)
             assert self._regime_index is not None
             self._set_regime()
-            object.__setattr__(self, '_initialized', True)
         else:
             super(Cell, self).initialize()
 
@@ -291,7 +290,8 @@ class Cell(base.Cell):
                 self._recordings[port_name], t_start=0.0 * pq.ms,
                 t_stop=h.t * pq.ms, units='ms')
         else:
-            units_str = UnitHandler.dimension_to_unit_str(port.dimension)
+            units_str = UnitHandler.dimension_to_unit_str(
+                port.dimension, one_as_dimensionless=True)
             recording = neo.AnalogSignal(
                 self._recordings[port_name], sampling_period=h.dt * pq.ms,
                 t_start=0.0 * pq.ms, units=units_str, name=port_name)

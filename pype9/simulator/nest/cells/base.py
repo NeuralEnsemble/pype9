@@ -116,7 +116,8 @@ class Cell(base.Cell):
                 port = self._nineml.component_class.port(port_name)
             except NineMLNameError:
                 port = self._nineml.component_class.state_variable(port_name)
-            unit_str = UnitHandler.dimension_to_unit_str(port.dimension)
+            unit_str = UnitHandler.dimension_to_unit_str(
+                port.dimension, one_as_dimensionless=True)
             variable_name = self.build_name(port_name)
             data = neo.AnalogSignal(
                 events[variable_name], sampling_period=interval * pq.ms,

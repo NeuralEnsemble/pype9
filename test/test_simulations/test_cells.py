@@ -103,7 +103,7 @@ class TestDynamics(TestCase):
                 "built-in within {} ({})".format(
                     0.02 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
-    def test_hh(self, plot=False, print_comparisons=False,
+    def test_hh(self, plot=True, print_comparisons=False,
                 simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
                 build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
@@ -147,7 +147,8 @@ class TestDynamics(TestCase):
                 'n_alpha_K': (None, 1), 'n_beta_A': (None, 1),
                 'n_beta_V0': (None, 1), 'n_beta_K': (None, 1)},
             neuron_build_args={'build_mode': build_mode},
-            nest_build_args={'build_mode': build_mode})
+            nest_build_args={'build_mode': build_mode},
+            auxiliary_states=['m', 'h', 'n'])
         comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
@@ -176,7 +177,7 @@ class TestDynamics(TestCase):
                 "within {} ({})".format(
                     0.0015 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
-    def test_liaf(self, plot=False, print_comparisons=False,
+    def test_liaf(self, plot=True, print_comparisons=False,
                   simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
                   build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
@@ -196,7 +197,7 @@ class TestDynamics(TestCase):
             neuron_translations=self.liaf_neuron_translations,
             neuron_build_args={'build_mode': build_mode},
             nest_build_args={'build_mode': build_mode},
-            extra_mechanisms=['pas'])
+            extra_mechanisms=['pas'], auxiliary_states=['end_refractory'])
         comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
@@ -208,23 +209,23 @@ class TestDynamics(TestCase):
         if 'neuron' in simulators:
             self.assertLess(
                 comparisons[('9ML-neuron', 'Ref-neuron')], 0.55 * pq.mV,
-                "LIaF NEURON 9ML simulation did not match reference PyNN"
+                "LIaF NEURON 9ML simulation did not match reference PyNN "
                 "within {} ({})".format(
                     0.55 * pq.mV, comparisons[('9ML-neuron', 'Ref-neuron')]))
         if 'nest' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', 'Ref-nest')], 0.01 * pq.mV,
-                "LIaF NEST 9ML simulation did not match reference built-in"
+                "LIaF NEST 9ML simulation did not match reference built-in "
                 "within {} ({})".format(
                     0.01 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
         if 'nest' in simulators and 'neuron' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', '9ML-neuron')], 0.55 * pq.mV,
-                "LIaF NEURON 9ML simulation did not match NEST 9ML simulation"
+                "LIaF NEURON 9ML simulation did not match NEST 9ML simulation "
                 "within {} ({})".format(
                     0.55 * pq.mV, comparisons[('9ML-nest', '9ML-neuron')]))
 
-    def test_alpha_syn(self, plot=False, print_comparisons=False,
+    def test_alpha_syn(self, plot=True, print_comparisons=False,
                        simulators=['nest', 'neuron'], dt=0.001,
                        duration=100.0, min_delay=5.0, device_delay=5.0,
                        build_mode='force', **kwargs):  # @UnusedVariable
@@ -320,7 +321,8 @@ class TestDynamics(TestCase):
                 'build_mode': build_mode,
                 'build_dir': os.path.join(build_dir, 'nest', 'IaFAlpha')},
             min_delay=min_delay,
-            device_delay=device_delay)
+            device_delay=device_delay,
+            auxiliary_states=['end_refractory__cell'])
         comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
@@ -333,17 +335,20 @@ class TestDynamics(TestCase):
             self.assertLess(
                 comparisons[('9ML-nest', '9ML-neuron')], 0.015 * pq.mV,
                 "LIaF with Alpha syn NEST 9ML simulation did not match NEURON "
-                "9ML simulation")
+                "9ML simulation within {} ({})".format(
+                    0.015 * pq.mV, comparisons[('9ML-nest', '9ML-neuron')]))
         if 'nest' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', 'Ref-nest')], 0.04 * pq.mV,
                 "LIaF with Alpha syn NEST 9ML simulation did not match "
-                "reference built-in")
+                "reference built-in within {} ({})".format(
+                    0.04 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
         if 'neuron' in simulators:
             self.assertLess(
                 comparisons[('9ML-neuron', 'Ref-neuron')], 0.03 * pq.mV,
                 "LIaF with Alpha syn NEURON 9ML simulation did not match "
-                "reference PyNN")
+                "reference PyNN within {} ({})".format(
+                    0.03 * pq.mV, comparisons[('9ML-neuron', 'Ref-neuron')]))
 
     def test_izhiFS(self, plot=False, print_comparisons=False,
                     simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
@@ -376,7 +381,7 @@ class TestDynamics(TestCase):
                 "Izhikevich 2007 NEURON 9ML simulation did not match NEST 9ML")
 
     def test_poisson(self, duration=10 * un.s, rate=100 * un.Hz,
-                     print_comparisons=False, dt=0.001,
+                     t_next=0.0 * un.ms, print_comparisons=False, dt=0.001,
                      simulators=['nest', 'neuron'], build_mode='force',
                      **kwargs):  # @UnusedVariable @IgnorePep8
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
@@ -399,7 +404,7 @@ class TestDynamics(TestCase):
                 assert False
             with Simulation as sim:
                 # Create and initialize cell
-                cell = celltype(rate=rate, t_next=0.0.un.ms)
+                cell = celltype(rate=rate, t_next=t_next)
                 cell.record('spike_output')
                 sim.run(duration)
             # Get recording
@@ -414,10 +419,10 @@ class TestDynamics(TestCase):
                 print "{} recorded rate: {}".format(sim_name, recorded_rate)
                 print "{} difference: {}".format(sim_name, rate_difference)
             self.assertLess(
-                rate_difference, 1.75 * pq.Hz,
+                rate_difference, 2.5 * pq.Hz,
                 ("Recorded rate of {} poisson generator ({}) did not match "
                  "desired ({}) within {}: difference {}".format(
-                     sim_name, recorded_rate, ref_rate, 1.75 * pq.Hz,
+                     sim_name, recorded_rate, ref_rate, 2.5 * pq.Hz,
                      recorded_rate - ref_rate)))
 
 
