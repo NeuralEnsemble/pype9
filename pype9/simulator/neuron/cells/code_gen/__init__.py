@@ -296,7 +296,7 @@ class CodeGenerator(BaseCodeGenerator):
 #                 qty = kwargs.get('default_capacitance', 1.0 * un.nF)
 #                 if trfrm_properties:
 #                     trfrm_properties.add(Property('cm___pype9', qty))
-        cm.annotations.set((BUILD_TRANS, PYPE9_NS), TRANSFORM_SRC, None)
+            cm.annotations.set((BUILD_TRANS, PYPE9_NS), TRANSFORM_SRC, None)
         trfrm.annotations.set((BUILD_TRANS, PYPE9_NS),
                               MEMBRANE_CAPACITANCE, cm.name)
         # -----------------------------------------------------------------

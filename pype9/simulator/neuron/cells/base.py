@@ -60,6 +60,8 @@ class Cell(base.Cell):
     UnitHandler = UnitHandler
     Simulation = Simulation
 
+    DEFAULT_CM = 1.0 * un.nF  # Chosen to match point processes (...I think).
+
     def __init__(self, *properties, **kwprops):
         self._flag_created(False)
         # Construct all the NEURON structures
@@ -84,7 +86,7 @@ class Cell(base.Cell):
         # Get the membrane capacitance property if not an artificial cell
         if self.build_component_class.annotations.get(
                 (BUILD_TRANS, PYPE9_NS), MECH_TYPE) == ARTIFICIAL_CELL_MECH:
-            self.cm_prop_name = None
+            self.cm_param_name = None
         else:
             # In order to scale the distributed current to the same units as
             # point process current, i.e. mA/cm^2 -> nA the surface area needs
@@ -93,25 +95,17 @@ class Cell(base.Cell):
             # implementation)
             self._sec.L = 10.0
             self._sec.diam = 10.0 / pi
-            self.cm_prop_name = self.build_component_class.annotations.get(
+            self.cm_param_name = self.build_component_class.annotations.get(
                 (BUILD_TRANS, PYPE9_NS), MEMBRANE_CAPACITANCE)
-            self._sec.cm = 1.0  # If cm_prop_name is not None this will be overridden
-            try:
-                cm_prop = properties[0][self.cm_prop_name]
-            except IndexError:
-                try:
-                    cm_prop = kwprops[self.cm_prop_name] * un.nF
-                except KeyError:
-                    cm_prop = None
-            if cm_prop is not None:
-                cm = pq.Quantity(UnitHandler.to_pq_quantity(cm_prop), 'nF')
-            else:
-                cm = 1.0 * pq.nF
-            # Set capacitance in mechanism
-            setattr(self._hoc, self.cm_prop_name, float(cm))
-            # Set capacitance in hoc
-            specific_cm = pq.Quantity(cm / self.surface_area, 'uF/cm^2')
-            self._sec.cm = float(specific_cm)
+            if self.cm_param_name not in self.component_class.parameter_names:
+                # Set capacitance to capacitance of section to default value
+                # for input currents
+                # Set capacitance in NMODL
+                setattr(self._hoc, self.cm_param_name,
+                        float(self.DEFAULT_CM.in_units(un.nF)))
+                # Set capacitance in HOC section
+                specific_cm = (self.DEFAULT_CM / self.surface_area)
+                self._sec.cm = float(specific_cm.in_units(un.uF / un.cm ** 2))
             self.recordable[self.component_class.annotations.get(
                 (BUILD_TRANS, PYPE9_NS),
                 MEMBRANE_VOLTAGE)] = self.source_section(0.5)._ref_v
@@ -207,7 +201,7 @@ class Cell(base.Cell):
 
     @property
     def surface_area(self):
-        return (self._sec.L * pq.um) * (self._sec.diam * pi * pq.um)
+        return (self._sec.L * un.um) * (self._sec.diam * pi * un.um)
 
     def _get(self, varname):
         varname = self._escaped_name(varname)
@@ -223,11 +217,12 @@ class Cell(base.Cell):
         try:
             setattr(self._hoc, varname, val)
             # If capacitance, also set the section capacitance
-            if varname == self.cm_prop_name:
+            if varname == self.cm_param_name:
                 # This assumes that the value of the capacitance is in nF
                 # which it should be from the super setattr method
-                self._sec.cm = float(
-                    pq.Quantity(val * pq.nF / self.surface_area, 'uF/cm^2'))
+                self._sec.cm = float((
+                    val * un.nF / self.surface_area).in_units(un.uF /
+                                                              un.cm ** 2))
         except LookupError:
             varname = self._escaped_name(varname)
             setattr(self._sec, varname, val)
