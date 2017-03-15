@@ -23,7 +23,7 @@ from pype9.exceptions import (
     Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError,
     Pype9UsageError)
 import logging
-from .with_synapses import WithSynapses, WithSynapsesProperties
+from .with_synapses import WithSynapses
 
 logger = logging.Logger("Pype9")
 

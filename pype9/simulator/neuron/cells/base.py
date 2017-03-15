@@ -95,6 +95,7 @@ class Cell(base.Cell):
             self._sec.diam = 10.0 / pi
             self.cm_prop_name = self.build_component_class.annotations.get(
                 (BUILD_TRANS, PYPE9_NS), MEMBRANE_CAPACITANCE)
+            self._sec.cm = 1.0  # If cm_prop_name is not None this will be overridden
             try:
                 cm_prop = properties[0][self.cm_prop_name]
             except IndexError:
