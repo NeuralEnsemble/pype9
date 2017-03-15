@@ -284,9 +284,13 @@ class UnitHandler(DynamicsDimensionResolver):
                 elif qty.value.nineml_type == 'ArrayValue':
                     value = numpy.array(qty.value)
                 else:
-                    raise NotImplementedError(
-                        "RandomValue quantities cannot be scaled at this time "
-                        "({})".format(qty))
+                    if cls.scalar(units) == 1:
+                        return qty.value
+                    else:
+                        # FIXME: Should be not supported error??
+                        raise NotImplementedError(
+                            "RandomValue quantities cannot be scaled at this "
+                            "time ({})".format(qty))
             except AttributeError:
                 return qty  # Float or int value quantity
         scaled = value * cls.scalar(units)

@@ -136,7 +136,7 @@ def run(argv):
                              build_mode=args.build_mode)
         with Simulation(dt=args.timestep * un.ms, seed=args.seed) as sim:
             # Create cell
-            cell = Cell(props, regime=init_regime, **init_state)
+            cell = Cell(props, regime_=init_regime, **init_state)
             # Play inputs
             for port_name, fname in args.play:
                 port = component_class.receive_port(port_name)

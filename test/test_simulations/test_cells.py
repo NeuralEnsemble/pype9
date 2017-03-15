@@ -208,15 +208,21 @@ class TestDynamics(TestCase):
         if 'neuron' in simulators:
             self.assertLess(
                 comparisons[('9ML-neuron', 'Ref-neuron')], 0.55 * pq.mV,
-                "LIaF NEURON 9ML simulation did not match reference PyNN")
+                "LIaF NEURON 9ML simulation did not match reference PyNN"
+                "within {} ({})".format(
+                    0.55 * pq.mV, comparisons[('9ML-neuron', 'Ref-neuron')]))
         if 'nest' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', 'Ref-nest')], 0.01 * pq.mV,
-                "LIaF NEST 9ML simulation did not match reference built-in")
+                "LIaF NEST 9ML simulation did not match reference built-in"
+                "within {} ({})".format(
+                    0.01 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
         if 'nest' in simulators and 'neuron' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', '9ML-neuron')], 0.55 * pq.mV,
-                "LIaF NEURON 9ML simulation did not match NEST 9ML simulation")
+                "LIaF NEURON 9ML simulation did not match NEST 9ML simulation"
+                "within {} ({})".format(
+                    0.55 * pq.mV, comparisons[('9ML-nest', '9ML-neuron')]))
 
     def test_alpha_syn(self, plot=False, print_comparisons=False,
                        simulators=['nest', 'neuron'], dt=0.001,
@@ -377,7 +383,6 @@ class TestDynamics(TestCase):
         build_args = {'neuron': {'build_mode': build_mode,
                                  'external_currents': ['iSyn']},
                       'nest': {'build_mode': build_mode}}  #, 'debug': {'states': ['transition']}}} @IgnorePep8
-        initial_states = {'t_next': 0.0 * un.ms}
         for sim_name in simulators:
             meta_class = cell_metaclasses[sim_name]
             # Build celltype
@@ -394,9 +399,8 @@ class TestDynamics(TestCase):
                 assert False
             with Simulation as sim:
                 # Create and initialize cell
-                cell = celltype(rate=rate)
+                cell = celltype(rate=rate, t_next=0.0.un.ms)
                 cell.record('spike_output')
-                cell.set_state(initial_states)
                 sim.run(duration)
             # Get recording
             spikes = cell.recording('spike_output')

@@ -216,7 +216,7 @@ class Comparer(object):
         Cell = CellMetaClass(model, name=self.build_name,
                              **self.build_args[simulator])
         self.nml_cells[simulator] = Cell(properties,
-                                         initial_regime=self.initial_regime,
+                                         regime_=self.initial_regime,
                                          **self.initial_states)
         if self.input_signal is not None:
             self.nml_cells[simulator].play(*self.input_signal)

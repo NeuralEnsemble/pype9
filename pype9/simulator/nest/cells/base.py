@@ -50,8 +50,8 @@ class Cell(base.Cell):
     def _set(self, varname, value):
         nest.SetStatus(self._cell, varname, value)
 
-    def _set_regime(self, index):
-        nest.SetStatus(self._cell, REGIME_VARNAME, index)
+    def _set_regime(self):
+        nest.SetStatus(self._cell, REGIME_VARNAME, self._regime_index)
 
     def record(self, port_name, interval=None):
         # Create dictionaries for storing local recordings. These are not

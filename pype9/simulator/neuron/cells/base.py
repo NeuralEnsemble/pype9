@@ -62,7 +62,7 @@ class Cell(base.Cell):
 
     DEFAULT_CM = 1.0 * un.nF  # Chosen to match point processes (...I think).
 
-    def __init__(self, *properties, **kwprops):
+    def __init__(self, *args, **kwargs):
         self._flag_created(False)
         # Construct all the NEURON structures
         self._sec = h.Section()  # @UndefinedVariable
@@ -137,7 +137,9 @@ class Cell(base.Cell):
         self.type = collections.namedtuple('Type', 'receptor_types')(
             sorted_ports)
         # Call base init (needs to be after 9ML init)
-        super(Cell, self).__init__(*properties, **kwprops)
+        super(Cell, self).__init__(*args, **kwargs)
+        if self.in_array:
+            self._initial_states = {}
         self._flag_created(True)
 
     @property
@@ -167,7 +169,7 @@ class Cell(base.Cell):
         # specify initial conditions of state variables) and save them in
         # initial states
         if varname == '_regime_init':
-            object.__setattr__(self, '_initial_regime', val)
+            object.__setattr__(self, '_regime_index', val)
         elif (varname.endswith('_init') and
               varname[:-5] in self.component_class.state_variable_names):
             if varname in chain(self.component_class.state_variable_names,
@@ -176,8 +178,6 @@ class Cell(base.Cell):
                     "Ambiguous variable '{}' can either be the initial state "
                     "of '{}' or a parameter/state-variable"
                     .format(varname, varname[:-5]))
-            if self._initial_states is None:
-                object.__setattr__(self, '_initial_states', {})
             self._initial_states[varname[:-5]] = val
         elif varname in ('record_times', 'recording_time'):
             # PyNN needs to be able to set 'record_times' and 'recording_time'
@@ -198,6 +198,16 @@ class Cell(base.Cell):
         Wrapper to redirect PyNN initialisation to the 'initialize' method
         """
         self.initialize()
+
+    def initialize(self):
+        if self.in_array:
+            for k, v in self._initial_states.iteritems():
+                self._set(k, v)
+            assert self._regime_index is not None
+            self._set_regime()
+            object.__setattr__(self, '_initialized', True)
+        else:
+            super(Cell, self).initialize()
 
     @property
     def surface_area(self):
@@ -227,8 +237,8 @@ class Cell(base.Cell):
             varname = self._escaped_name(varname)
             setattr(self._sec, varname, val)
 
-    def _set_regime(self, index):
-        setattr(self._hoc, REGIME_VARNAME, index)
+    def _set_regime(self):
+        setattr(self._hoc, REGIME_VARNAME, self._regime_index)
 
     def record(self, port_name):
         self._initialize_local_recording()

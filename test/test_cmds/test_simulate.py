@@ -112,9 +112,8 @@ class TestSimulateCell(TestCase):
         nineml_model = ninemlcatalog.load(self.izhi_path)
         Cell = metaclass(nineml_model.component_class, name='izhikevichAPI')
         with Simulation(dt=self.dt * un.ms) as sim:
-            cell = Cell(nineml_model)
-            cell.set_state({'U': Quantity(self.U[0], parse_units(self.U[1])),
-                            'V': Quantity(self.V[0], parse_units(self.V[1]))})
+            cell = Cell(nineml_model, U=self.U[0] * parse_units(self.U[1]),
+                        V=self.V[0] * parse_units(self.V[1]))
             cell.record('V')
             cell.play('Isyn', isyn)
             sim.run(self.t_stop * un.ms)

@@ -31,21 +31,20 @@ class TestSeeding(TestCase):
             (NeuronCellMetaClass, NeuronSimulation),
                 (NESTCellMetaClass, NESTSimulation)):
             Poisson = CellMetaClass(poisson_model, name='PoissonTest')
+            rate = 300 / un.s
+            t_next = 0.0 * un.s
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
-                poisson1 = Poisson(rate=300 / un.s)
-                poisson1.set_state({'t_next': 5 * un.ms})
+                poisson1 = Poisson(rate=rate, t_next=t_next)
                 poisson1.record('spike_output')
                 sim.run(100 * un.ms)
             poisson1_spikes = poisson1.recording('spike_output')
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
-                poisson2 = Poisson(rate=300 / un.s)
-                poisson2.set_state({'t_next': 5 * un.ms})
+                poisson2 = Poisson(rate=rate, t_next=t_next)
                 poisson2.record('spike_output')
                 sim.run(100 * un.ms)
             poisson2_spikes = poisson2.recording('spike_output')
             with Simulation(dt=0.01 * un.ms, seed=2) as sim:
-                poisson3 = Poisson(rate=300 / un.s)
-                poisson3.set_state({'t_next': 5 * un.ms})
+                poisson3 = Poisson(rate=rate, t_next=t_next)
                 poisson3.record('spike_output')
                 sim.run(100 * un.ms)
             poisson3_spikes = poisson3.recording('spike_output')
@@ -59,8 +58,8 @@ class TestSeeding(TestCase):
     def test_network_seed(self):
         brunel_model = self._load_brunel('AI', 1)
         for Network, Simulation in (
-            (NESTNetwork, NESTSimulation),
-                (NeuronNetwork, NeuronSimulation)):
+            (NeuronNetwork, NeuronSimulation),
+                (NESTNetwork, NESTSimulation)):
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
                 network1 = Network(brunel_model)
                 network1.component_array('Exc').record('spike_output')
