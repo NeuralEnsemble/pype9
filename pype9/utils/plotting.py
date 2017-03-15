@@ -4,13 +4,11 @@ import logging
 logger = logging.getLogger('PyPe9')
 
 
-def plot(seg, dims=(6, 6), resolution=300, save=None, show=True):
+def plot(seg, dims=(10, 8), resolution=300, save=None, show=True):
     num_subplots = bool(seg.analogsignals) + bool(seg.spiketrains)
     fig, axes = plt.subplots(num_subplots, 1)
     fig.suptitle('PyPe9 Simulation Output')
     # Set the dimension of the figure
-    fig.set_figwidth(dims[0])
-    fig.set_figheight(dims[1])
     plt_name = seg.name + ' ' if seg.name else ''
     if seg.spiketrains:
         spike_times = []
@@ -41,6 +39,8 @@ def plot(seg, dims=(6, 6), resolution=300, save=None, show=True):
         plt.ylabel('Analog signals{}'.format(un_str))
         plt.title("{}Analog Signals".format(plt_name), fontsize=12)
         plt.legend(legend)
+    fig.set_figwidth(dims[0])
+    fig.set_figheight(dims[1])
     if save is not None:
         fig.savefig(save, dpi=resolution)
         logger.info("Saved{} figure to '{}'".format(plt_name, save))

@@ -11,7 +11,7 @@ parser.add_argument('filename', type=existing_file,
                     help="Neo file outputted from a PyPe9 simulation")
 parser.add_argument('--save', type=str, default=None,
                     help="Location to save the figure to")
-parser.add_argument('--dims', type=int, nargs=2, default=(6, 6),
+parser.add_argument('--dims', type=int, nargs=2, default=(10, 8),
                     metavar=('WIDTH', 'HEIGHT'), help="Dimensions of the plot")
 parser.add_argument('--hide', action='store_true',
                     help="Whether to show the plot or not")
