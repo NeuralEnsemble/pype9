@@ -24,7 +24,7 @@ class BaseSimulation(object):
         The seed with which to construct the cell/network properties.
         NB: This seed will only reproduce constant results if the number
         of MPI nodes is constant
-    structure_seed : int | None
+    properties_seed : int | None
         The seed used for random number generator used to set properties and
         generate connectivity. If not provided it will be derived from the
         'seed' argument.
@@ -50,7 +50,7 @@ class BaseSimulation(object):
 
     max_seed = 2 ** 32 - 1
 
-    def __init__(self, dt, t_start=0.0 * un.s, seed=None, structure_seed=None,
+    def __init__(self, dt, t_start=0.0 * un.s, seed=None, properties_seed=None,
                  min_delay=1 * un.ms, max_delay=10 * un.ms, **options):
         self._check_units('dt', dt, un.time)
         self._check_units('t_start', dt, un.time)
@@ -69,12 +69,12 @@ class BaseSimulation(object):
                 "Provided seed {} is out of range, must be between (0 and {})"
                 .format(seed, self.max_seed))
         self._base_seed = seed
-        if structure_seed is not None and (structure_seed < 0 or
-                                           structure_seed > self.max_seed):
+        if properties_seed is not None and (properties_seed < 0 or
+                                            properties_seed > self.max_seed):
             raise Pype9UsageError(
                 "Provided structure seed {} is out of range, must be between "
                 "(0 and {})".format(seed, self.max_seed))
-        self._base_structure_seed = structure_seed
+        self._base_properties_seed = properties_seed
 
     def __enter__(self):
         if self.__class__._active is not None:
@@ -121,37 +121,32 @@ class BaseSimulation(object):
         return self._max_delay
 
     @property
-    def seed(self):
+    def dynamics_seed(self):
         """
         The seed used to construct the network and set its properties. If no
         explicit dynamics seed is used then it will also be used to seed the
         dynamics
         """
-        return self._seeds[self.mpi_rank()]
+        return self._dynamics_seeds[self.mpi_rank()]
 
     @property
-    def global_seed(self):
-        """Global seed passed to NEST grng"""
-        return self._seeds[-1]
-
-    @property
-    def structure_seed(self):
+    def properties_seed(self):
         """
         The seed used to by random dynamic processes (typically in state
         assignments).
         """
-        return self._structure_seeds[self.mpi_rank()]
+        return self._properties_seeds[self.mpi_rank()]
 
     @property
-    def all_structure_seeds(self):
-        return self._structure_seeds
+    def all_properties_seeds(self):
+        return self._properties_seeds
 
     @property
-    def structure_rng(self):
-        if self._structure_rng is None:
+    def properties_rng(self):
+        if self._properties_rng is None:
             raise Pype9UsageError(
                 "Can only access rng inside simulation context")
-        return self._structure_rng
+        return self._properties_rng
 
     @property
     def base_seed(self):
@@ -162,12 +157,17 @@ class BaseSimulation(object):
         return self._base_seed
 
     @property
-    def base_structure_seed(self):
-        return self._base_structure_seed
+    def base_properties_seed(self):
+        return self._base_properties_seed
 
     @property
-    def all_seeds(self):
-        return self._seeds[:-1]
+    def all_dynamics_seeds(self):
+        return self._dynamics_seeds
+
+    @property
+    def global_seed(self):
+        """Global seed passed to NEST grng"""
+        return self._global_seed
 
     def _set_seeds(self):
         """
@@ -175,28 +175,31 @@ class BaseSimulation(object):
         """
         seed = self.gen_seed() if self._base_seed is None else self._base_seed
         seed_gen_rng = numpy.random.RandomState(seed)
-        self._seeds = numpy.asarray(
-            seed_gen_rng.uniform(low=0, high=self.max_seed,
-                                 size=self.num_threads() + 1), dtype=int)
-        if self._base_structure_seed is None:
-            logger.info("Using {} as seed for both structure and dynamics of "
+        if self._base_properties_seed is None:
+            logger.info("Using {} as seed for both properties and dynamics of "
                         "{} simulation".format(seed, self.name))
-            struct_seed_gen_rng = seed_gen_rng
+            prop_seed_gen_rng = seed_gen_rng
         else:
-            logger.info("Using {} as seed for structure and {} as seed for "
+            logger.info("Using {} as seed for properties and {} as seed for "
                         "dynamics of {} simulation"
-                        .format(self._base_structure_seed, seed, self.name))
-            struct_seed_gen_rng = numpy.random.RandomState(
-                self._base_structure_seed)
-        self._structure_seeds = numpy.asarray(
-            struct_seed_gen_rng.uniform(low=0, high=self.max_seed,
+                        .format(self._base_properties_seed, seed, self.name))
+            prop_seed_gen_rng = numpy.random.RandomState(
+                self._base_properties_seed)
+        # Properties seeds are drawn before dynamics_seeds
+        self._properties_seeds = numpy.asarray(
+            prop_seed_gen_rng.uniform(low=0, high=self.max_seed,
                                         size=self.num_threads()), dtype=int)
-        self._structure_rng = NumpyRNG(self.structure_seed)
+        self._dynamics_seeds = numpy.asarray(
+            seed_gen_rng.uniform(low=0, high=self.max_seed,
+                                 size=self.num_threads()), dtype=int)
+        self._global_seed = int(seed_gen_rng.uniform(low=0, high=self.max_seed,
+                                                     size=1,))
+        self._properties_rng = NumpyRNG(self.properties_seed)
 
     @property
-    def derived_structure_seed(self):
-        return int(self.structure_rng.uniform(low=0, high=self.max_seed,
-                                              size=1))
+    def derived_properties_seed(self):
+        return int(self.properties_rng.uniform(low=0, high=self.max_seed,
+                                               size=1))
 
     def run(self, t_stop, **kwargs):
         """

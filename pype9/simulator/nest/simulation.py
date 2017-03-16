@@ -64,7 +64,7 @@ class Simulation(BaseSimulation):
                    min_delay=float(min_delay.in_units(un.ms)),
                    max_delay=float(max_delay.in_units(un.ms)),
                    grng_seed=self.global_seed,
-                   rng_seeds=self.all_seeds, **kwargs)
+                   rng_seeds=self.all_dynamics_seeds, **kwargs)
 
     def mpi_rank(self):
         "The rank of the MPI node the code is running on"

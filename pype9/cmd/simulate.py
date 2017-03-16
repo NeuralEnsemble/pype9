@@ -40,7 +40,7 @@ parser.add_argument('--play', type=str, nargs=2, action='append',
                           "play it into"))
 parser.add_argument('--seed', type=int, default=None,
                     help="Random seed used to create network and properties")
-parser.add_argument('--structure_seed', type=int, default=None,
+parser.add_argument('--properties_seed', type=int, default=None,
                     help=("Random seed used to create network and properties. "
                           "If not provided it is generated from the '--seed' "
                           "option."))
@@ -82,7 +82,7 @@ def run(argv):
     if isinstance(model, nineml.Network):
         # Get min/max delays in model
         with Simulation(dt=args.timestep * un.ms, seed=args.seed,
-                        structure_seed=args.structure_seed,
+                        properties_seed=args.properties_seed,
                         **model.delay_limits()) as sim:
             # Construct the network
             logger.info("Constructing network")

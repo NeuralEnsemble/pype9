@@ -65,7 +65,7 @@ class Network(object):
         self._set_simulation_params(timestep=timestep, min_delay=min_delay,
                                     max_delay=max_delay, **kwargs)
         # Get RNG for random distribution values and connectivity
-        rng = self.Simulation.active().structure_rng
+        rng = self.Simulation.active().properties_rng
         if build_mode != 'build_only':
             self.nineml.resample_connectivity(
                 connectivity_class=self.ConnectivityClass, rng=rng)

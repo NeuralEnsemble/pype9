@@ -1,5 +1,6 @@
 from __future__ import division
 from unittest import TestCase
+from itertools import chain
 import ninemlcatalog
 from copy import deepcopy
 import numpy
@@ -56,41 +57,82 @@ class TestSeeding(TestCase):
                                 "different  seeds")
 
     def test_network_seed(self):
-        brunel_model = self._load_brunel('AI', 1)
+        brunel_model = self._load_brunel('AI', 5)
         for Network, Simulation in (
-            (NeuronNetwork, NeuronSimulation),
-                (NESTNetwork, NESTSimulation)):
+            (NESTNetwork, NESTSimulation),
+                (NeuronNetwork, NeuronSimulation)):
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
                 network1 = Network(brunel_model)
                 network1.component_array('Exc').record('spike_output')
+                print "Sim 1 - prop: {}, dyn: {}, global: {}".format(
+                    sim.all_properties_seeds, sim.all_dynamics_seeds,
+                    sim.global_seed)
                 sim.run(20 * un.ms)
             exc1_spikes = network1.component_array(
                 'Exc').recording('spike_output')
+            exc1_conns = network1.connection_group('Excitation').get(
+                ['weight', 'delay'], 'list')
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
                 network2 = Network(brunel_model)
                 network2.component_array('Exc').record('spike_output')
+                print "Sim 2 - prop: {}, dyn: {}, global: {}".format(
+                    sim.all_properties_seeds, sim.all_dynamics_seeds,
+                    sim.global_seed)
                 sim.run(20 * un.ms)
             exc2_spikes = network2.component_array(
                 'Exc').recording('spike_output')
+            exc2_conns = network2.connection_group('Excitation').get(
+                ['weight', 'delay'], 'list')
             with Simulation(dt=0.01 * un.ms, seed=2) as sim:
                 network3 = Network(brunel_model)
                 network3.component_array('Exc').record('spike_output')
+                print "Sim 3 - prop: {}, dyn: {}, global: {}".format(
+                    sim.all_properties_seeds, sim.all_dynamics_seeds,
+                    sim.global_seed)
                 sim.run(20 * un.ms)
             exc3_spikes = network3.component_array(
                 'Exc').recording('spike_output')
-            if (list(exc1_spikes.spiketrains[0]) !=
-                    list(exc2_spikes.spiketrains[0])):
-                from pype9.utils.plotting import plot
-                plot(exc1_spikes, show=False)
-                plot(exc2_spikes)
-            self.assertEqual(list(exc1_spikes.spiketrains[0]),
-                             list(exc2_spikes.spiketrains[0]),
+            exc3_conns = network3.connection_group('Excitation').get(
+                ['weight', 'delay'], 'list')
+            with Simulation(dt=0.01 * un.ms, properties_seed=1) as sim:
+                network4 = Network(brunel_model)
+                network4.component_array('Exc').record('spike_output')
+                print "Sim 4 - prop: {}, dyn: {}, global: {}".format(
+                    sim.all_properties_seeds, sim.all_dynamics_seeds,
+                    sim.global_seed)
+                sim.run(20 * un.ms)
+            exc4_spikes = network4.component_array(
+                'Exc').recording('spike_output')
+            exc4_conns = network4.connection_group('Excitation').get(
+                ['weight', 'delay'], 'list')
+#             if (list(exc1_spikes.spiketrains[0]) !=
+#                     list(exc2_spikes.spiketrains[0])):
+#                 from pype9.utils.plotting import plot
+#                 plot(exc1_spikes, show=False)
+#                 plot(exc2_spikes)
+            self.assertEqual(exc1_conns, exc2_conns,
+                             "Network External connections not the same "
+                             "despite using the same seed")
+            self.assertEqual(list(chain(*exc1_spikes.spiketrains)),
+                             list(chain(*exc2_spikes.spiketrains)),
                              "Network Exc spikes not the same despite using "
                              "the same seed")
-            self.assertNotEqual(list(exc1_spikes.spiketrains[0]),
-                                list(exc3_spikes.spiketrains[0]),
+            self.assertNotEqual(exc1_conns, exc3_conns,
+                                "Network External connections the same despite"
+                                " using different seeds")
+            self.assertNotEqual(list(chain(*exc1_spikes.spiketrains)),
+                                list(chain(*exc3_spikes.spiketrains)),
                                 "Network Exc spikes the same despite using "
                                 "different  seeds")
+            self.assertEqual(exc1_conns, exc4_conns,
+                             "Network 4 External connections different despite"
+                             " using the same properties seeds")
+            self.assertNotEqual(list(chain(*exc1_spikes.spiketrains)),
+                                list(chain(*exc4_spikes.spiketrains)),
+                                "Network Exc spikes the same despite using "
+                                "different seeds:\n{}\n{}".format(
+                                    list(chain(*exc1_spikes.spiketrains)),
+                                    list(chain(*exc4_spikes.spiketrains))))
 
     def _load_brunel(self, case, order):
         model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
