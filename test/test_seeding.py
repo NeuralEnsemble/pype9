@@ -62,7 +62,7 @@ class TestSeeding(TestCase):
             (NESTNetwork, NESTSimulation),
                 (NeuronNetwork, NeuronSimulation)):
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
-                network1 = Network(brunel_model)
+                network1 = Network(brunel_model, build_mode='force')
                 network1.component_array('Exc').record('spike_output')
                 print "Sim 1 - prop: {}, dyn: {}, global: {}".format(
                     sim.all_properties_seeds, sim.all_dynamics_seeds,
