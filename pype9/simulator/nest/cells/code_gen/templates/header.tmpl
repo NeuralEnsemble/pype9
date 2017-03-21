@@ -591,7 +591,9 @@ namespace nineml {
     }
     
     inline double {{component_name}}::Transition_::random_exponential_(double lambda) {
-        return -std::log(this->regime->cell->V_.rng_->drandpos()) / lambda;
+        double val = -std::log(this->regime->cell->V_.rng_->drandpos()) / lambda;
+        std::cout << "random exp: " << val << std::endl;
+        return val;
     }
 
     inline std::string {{component_name}}::State_::to_str(double t) {

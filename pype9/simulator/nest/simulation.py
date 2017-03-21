@@ -38,7 +38,7 @@ class Simulation(BaseSimulation):
             A function callback to allow the update of external objects (e.g.
             progress bar) during the simulation.
         """
-        pyNN_run(t_stop.in_units(un.ms), callbacks=callbacks)
+        pyNN_run(float(t_stop.in_units(un.ms)), callbacks=callbacks)
 
     def _prepare(self, **kwargs):
         "Reset the simulation and prepare it for creating new cells/networks"

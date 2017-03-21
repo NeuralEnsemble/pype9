@@ -549,7 +549,6 @@ void {{component_name}}::calibrate() {
     S_.current_regime->init_solver();
     B_.logger_.init();
     V_.rng_ = net_->get_rng( get_thread() );
-    std::cout << "First rand pos: " << V_.rng_->drand() << std::endl;
 }
 
 /***************************
