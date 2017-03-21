@@ -5,6 +5,9 @@ from copy import deepcopy
 import numpy
 import nineml
 import os
+import logging
+import sys
+import shutil
 from nineml import units as un, Property
 from pype9.simulator.neuron import (
     CellMetaClass as NeuronCellMetaClass, Network as NeuronNetwork,
@@ -17,8 +20,6 @@ from pype9.simulator.nest import (
     CellMetaClass as NESTCellMetaClass, Network as NESTNetwork,
     Simulation as NESTSimulation)
 from pype9.simulator.neuron import Simulation
-import logging
-import sys
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:
@@ -138,7 +139,7 @@ class TestSeeding(TestCase):
                     sim.global_seed)
                 sim.run(100 * un.ms)
             poisson1_spikes = chain(
-                *poisson_net1.component_net('poisson_pop').recording(
+                *poisson_net1.component_array('poisson_pop').recording(
                     'spike_output').spiketrains)
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
                 poisson_net2 = Network(net_model, build_dir=build_dir)
@@ -148,7 +149,7 @@ class TestSeeding(TestCase):
                     sim.global_seed)
                 sim.run(100 * un.ms)
             poisson2_spikes = chain(
-                *poisson_net2.component_net('poisson_pop').recording(
+                *poisson_net2.component_array('poisson_pop').recording(
                     'spike_output').spiketrains)
             with Simulation(dt=0.01 * un.ms, seed=2) as sim:
                 poisson_net3 = Network(net_model, build_dir=build_dir)
@@ -158,7 +159,7 @@ class TestSeeding(TestCase):
                     sim.global_seed)
                 sim.run(100 * un.ms)
             poisson3_spikes = chain(
-                *poisson_net3.component_net('poisson_pop').recording(
+                *poisson_net3.component_array('poisson_pop').recording(
                     'spike_output').spiketrains)
             with Simulation(dt=0.01 * un.ms, properties_seed=1) as sim:
                 poisson_net4 = Network(net_model, build_dir=build_dir)
@@ -168,7 +169,7 @@ class TestSeeding(TestCase):
                     sim.global_seed)
                 sim.run(100 * un.ms)
             poisson4_spikes = chain(
-                *poisson_net4.component_net('poisson_pop').recording(
+                *poisson_net4.component_array('poisson_pop').recording(
                     'spike_output').spiketrains)
             self.assertEqual(list(poisson1_spikes), list(poisson2_spikes),
                              "Poisson spike train not the same despite using "
@@ -179,6 +180,7 @@ class TestSeeding(TestCase):
             self.assertNotEqual(list(poisson1_spikes), list(poisson4_spikes),
                                 "Poisson spike train the same despite using "
                                 "different  seeds")
+        shutil.rmtree(build_dir)
 
     def test_network_seed(self):
         brunel_model = self._load_brunel('AI', 1)
