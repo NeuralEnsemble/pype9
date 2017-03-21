@@ -4,6 +4,7 @@ import ninemlcatalog
 from copy import deepcopy
 import numpy
 import nineml
+import os
 from nineml import units as un, Property
 from pype9.simulator.neuron import (
     CellMetaClass as NeuronCellMetaClass, Network as NeuronNetwork,
@@ -111,6 +112,71 @@ class TestSeeding(TestCase):
                              "Poisson spike train not the same despite using "
                              "the same seed")
             self.assertNotEqual(list(poisson1_spikes), list(poisson3_spikes),
+                                "Poisson spike train the same despite using "
+                                "different  seeds")
+
+    def test_component_array_in_network_seed(self):
+        poisson_model = ninemlcatalog.load('input/Poisson#Poisson')
+        rate = 300 / un.s
+        t_next = 0.0 * un.s
+        pop_model = nineml.Population(
+            'poisson_pop', 5, nineml.DynamicsProperties(
+                name='poisson_pop_props',
+                definition=poisson_model, properties=dict(rate=rate),
+                initial_values=dict(t_next=t_next)))
+        net_model = nineml.Network(
+            'test_network', [pop_model])
+        build_dir = os.path.join(os.getcwd(), '.build')
+        for Network, Simulation in (
+            (NESTNetwork, NESTSimulation),
+                (NeuronNetwork, NeuronSimulation)):
+            with Simulation(dt=0.01 * un.ms, seed=1) as sim:
+                poisson_net1 = Network(net_model, build_dir=build_dir)
+                poisson_net1.record('spike_output')
+                print "Sim 1 - prop: {}, dyn: {}, global: {}".format(
+                    sim.all_properties_seeds, sim.all_dynamics_seeds,
+                    sim.global_seed)
+                sim.run(100 * un.ms)
+            poisson1_spikes = chain(
+                *poisson_net1.component_net('poisson_pop').recording(
+                    'spike_output').spiketrains)
+            with Simulation(dt=0.01 * un.ms, seed=1) as sim:
+                poisson_net2 = Network(net_model, build_dir=build_dir)
+                poisson_net2.record('spike_output')
+                print "Sim 2 - prop: {}, dyn: {}, global: {}".format(
+                    sim.all_properties_seeds, sim.all_dynamics_seeds,
+                    sim.global_seed)
+                sim.run(100 * un.ms)
+            poisson2_spikes = chain(
+                *poisson_net2.component_net('poisson_pop').recording(
+                    'spike_output').spiketrains)
+            with Simulation(dt=0.01 * un.ms, seed=2) as sim:
+                poisson_net3 = Network(net_model, build_dir=build_dir)
+                poisson_net3.record('spike_output')
+                print "Sim 3 - prop: {}, dyn: {}, global: {}".format(
+                    sim.all_properties_seeds, sim.all_dynamics_seeds,
+                    sim.global_seed)
+                sim.run(100 * un.ms)
+            poisson3_spikes = chain(
+                *poisson_net3.component_net('poisson_pop').recording(
+                    'spike_output').spiketrains)
+            with Simulation(dt=0.01 * un.ms, properties_seed=1) as sim:
+                poisson_net4 = Network(net_model, build_dir=build_dir)
+                poisson_net4.record('spike_output')
+                print "Sim 4 - prop: {}, dyn: {}, global: {}".format(
+                    sim.all_properties_seeds, sim.all_dynamics_seeds,
+                    sim.global_seed)
+                sim.run(100 * un.ms)
+            poisson4_spikes = chain(
+                *poisson_net4.component_net('poisson_pop').recording(
+                    'spike_output').spiketrains)
+            self.assertEqual(list(poisson1_spikes), list(poisson2_spikes),
+                             "Poisson spike train not the same despite using "
+                             "the same seed")
+            self.assertNotEqual(list(poisson1_spikes), list(poisson3_spikes),
+                                "Poisson spike train the same despite using "
+                                "different  seeds")
+            self.assertNotEqual(list(poisson1_spikes), list(poisson4_spikes),
                                 "Poisson spike train the same despite using "
                                 "different  seeds")
 

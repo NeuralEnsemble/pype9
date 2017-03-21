@@ -16,7 +16,6 @@ from .values import get_pyNN_value
 import os.path
 import nineml
 from nineml import units as un
-from pyNN.random import NumpyRNG
 from pyNN.parameters import Sequence
 import pyNN.standardmodels
 from nineml import Document
@@ -35,7 +34,7 @@ from .connectivity import InversePyNNConnectivity
 from ..cells import (
     MultiDynamicsWithSynapsesProperties, ConnectionPropertySet,
     SynapseProperties)
-from pype9.exceptions import Pype9UsageError
+from pype9.exceptions import Pype9UsageError, Pype9NameError
 
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
@@ -139,13 +138,28 @@ class Network(object):
         return self._selections.itervalues()
 
     def component_array(self, name):
-        return self._component_arrays[name]
+        try:
+            return self._component_arrays[name]
+        except KeyError:
+            raise Pype9NameError(
+                "No component array named '{}' (possible '{}')"
+                .format(name, "', '".join(self.component_array_names)))
 
     def connection_group(self, name):
-        return self._connection_groups[name]
+        try:
+            return self._connection_groups[name]
+        except KeyError:
+            raise Pype9NameError(
+                "No connection group named '{}' (possible '{}')"
+                .format(name, "', '".join(self.connection_group_names)))
 
     def selection(self, name):
-        return self._selections[name]
+        try:
+            return self._selections[name]
+        except KeyError:
+            raise Pype9NameError(
+                "No selection named '{}' (possible '{}')"
+                .format(name, "', '".join(self.selection_names)))
 
     @property
     def num_component_arrays(self):

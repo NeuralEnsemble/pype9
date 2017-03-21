@@ -16,6 +16,10 @@ class Pype9TypeError(TypeError, Pype9RuntimeError):
     pass
 
 
+class Pype9NameError(KeyError, Pype9RuntimeError):
+    pass
+
+
 class Pype9ImportError(Pype9RuntimeError):
     pass
 

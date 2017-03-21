@@ -765,6 +765,6 @@ class DummyTestCase(object):
     def assertNotEqual(self, first, second, msg=None):
         if first == second:
             if msg is None:
-                msg = '{} is not less than or equal to {}'.format(
+                msg = '{} is equal to {}'.format(
                     repr(first), repr(second))
             print msg
