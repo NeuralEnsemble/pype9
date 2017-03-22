@@ -383,7 +383,7 @@ class TestDynamics(TestCase):
                 "Izhikevich 2007 NEURON 9ML simulation did not match NEST 9ML")
 
     def test_poisson(self, duration=10 * un.s, rate=100 * un.Hz,
-                     t_next=0.0 * un.ms, print_comparisons=False, dt=0.001,
+                     t_next=0.0 * un.ms, print_comparisons=False, dt=0.1,
                      simulators=['nest', 'neuron'], build_mode='force',
                      **kwargs):  # @UnusedVariable @IgnorePep8
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
