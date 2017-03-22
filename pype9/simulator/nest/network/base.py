@@ -86,22 +86,6 @@ class Network(BaseNetwork):
     CellCodeGenerator = CellCodeGenerator
     Simulation = Simulation
 
-    def _set_simulation_params(self, timestep, min_delay, max_delay, **kwargs):  # @UnusedVariable @IgnorePep8
-        """
-        Sets the simulation parameters either from the passed parameters or
-        from the nineml description
-
-        @param params[**kwargs]: Parameters that are either passed to the pyNN
-                                 setup method or set explicitly
-        """
-        try:
-            pyNN.nest.setup(timestep, min_delay, max_delay)
-        except (NESTError, TypeError) as e:
-            raise Exception("There was an error setting the min_delay of the "
-                            "simulation, try changing the values for timestep "
-                            "({time}) and min_delay ({delay}). (Message - {e})"
-                            .format(time=timestep, delay=min_delay, e=e))
-
     @property
     def min_delay(self):
         return get_min_delay()

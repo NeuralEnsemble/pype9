@@ -47,7 +47,7 @@ class Network(object):
     CELL_COMP_NAME = 'cell'
 
     def __init__(self, nineml_model, build_mode='lazy', build_dir=None,
-                 timestep=None, min_delay=None, max_delay=None, **kwargs):
+                 **kwargs):
         if isinstance(nineml_model, basestring):
             nineml_model = nineml.read(nineml_model).as_network(
                 name=os.path.splitext(os.path.basename(nineml_model))[0])
@@ -58,11 +58,6 @@ class Network(object):
                 name = "Anonymous"
             nineml_model = nineml_model.as_network(name=name)
         self._nineml = deepcopy(nineml_model)
-        timestep = timestep if timestep is not None else self.time_step
-        min_delay = min_delay if min_delay is not None else self.min_delay
-        max_delay = max_delay if max_delay is not None else self.max_delay
-        self._set_simulation_params(timestep=timestep, min_delay=min_delay,
-                                    max_delay=max_delay, **kwargs)
         # Get RNG for random distribution values and connectivity
         rng = self.Simulation.active().properties_rng
         if build_mode != 'build_only':

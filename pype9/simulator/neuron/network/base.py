@@ -86,18 +86,6 @@ class Network(BaseNetwork):
     CellCodeGenerator = CellCodeGenerator
     Simulation = Simulation
 
-    def _set_simulation_params(self, timestep, min_delay, max_delay, **kwargs):
-        """
-        Sets the simulation parameters either from the passed parameters or
-        from the nineml description
-
-        @param params[**kwargs]: Parameters that are either passed to the pyNN
-                                 setup method or set explicitly
-        """
-        pyNN.neuron.setup(timestep, min_delay, max_delay)
-        if 'temperature' in kwargs:
-            neuron.h.celsius = kwargs['temperature']
-
     @property
     def min_delay(self):
         return get_min_delay()
