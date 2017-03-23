@@ -10,18 +10,18 @@
 from __future__ import absolute_import
 import os.path
 import logging
-import numpy
 import neo
 import nest
 import quantities as pq
 from nineml.exceptions import NineMLNameError
 from nineml import units as un
+from nineml.abstraction.ports import EventPort, AnalogPort
 from .code_gen import CodeGenerator, REGIME_VARNAME
 from pype9.simulator.nest.simulation import Simulation
 from pype9.simulator.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
 from pype9.simulator.nest.units import UnitHandler
-from pype9.exceptions import Pype9UsageError
+from pype9.exceptions import Pype9UsageError, Pype9NotSupportedException
 from pype9.utils import add_lib_path
 
 
@@ -141,18 +141,21 @@ class Cell(base.Cell):
         """
         Injects current into the segment
 
-        `port_name` -- the name of the receive port to play the signal into
-        `signal`    -- a neo.AnalogSignal or neo.SpikeTrain to play into the
-                       port
-        `weight`    -- a tuple of (port_name, value/qty) to set the weight of
-                       the event port.
+        Parameters
+        ----------
+        port_name : str
+            The name of the receive port to play the signal into
+        signal : neo.AnalogSignal (current) | neo.SpikeTrain
+            Signal to play into the port
+        properties : list(nineml.Property)
+            The connection properties of the event port
         """
         port = self.component_class.receive_port(port_name)
         if port.nineml_type in ('EventReceivePort',
                                 'EventReceivePortExposure'):
             # Shift the signal times to account for the minimum delay and
             # match the NEURON implementation
-            spike_times = (
+            spike_times = list(
                 pq.Quantity(signal, 'ms') + pq.ms - self._device_delay * pq.ms)
             if any(spike_times <= 0.0):
                 raise Pype9UsageError(
@@ -180,10 +183,9 @@ class Cell(base.Cell):
             # that the effect of the signal aligns with other simulators
             self._inputs[port_name] = nest.Create(
                 'step_current_generator', 1,
-                {'amplitude_values': numpy.asarray(pq.Quantity(signal, 'pA')),
-                 'amplitude_times': numpy.asarray(
-                     pq.Quantity(signal.times -
-                                 self._device_delay * pq.ms, 'ms')),
+                {'amplitude_values': list(pq.Quantity(signal, 'pA')),
+                 'amplitude_times': list(pq.Quantity(
+                     signal.times - self._device_delay * pq.ms, 'ms')),
                  'start': float(pq.Quantity(signal.t_start, 'ms')),
                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
             nest.Connect(self._inputs[port_name], self._cell, syn_spec={
@@ -192,6 +194,52 @@ class Cell(base.Cell):
         else:
             raise Pype9UsageError(
                 "Unrecognised port type '{}' to play signal into".format(port))
+
+    def connect(self, port_name, other, other_port_name, properties=[]):
+        """
+        Connects a port of the cell to a matching port on the 'other' cell
+
+        Parameters
+        ----------
+        port_name : str
+            Name of the send port to connect from
+        other : pype9.simulator.neuron.cells.Cell
+            Another cell to connect to
+        other_port_name : str
+            Name of the port on the other cell to connect to
+        properties : list(nineml.Property)
+            The connection properties of the event port
+        """
+        port = self.component_class.send_port(port_name)
+        if isinstance(port, EventPort):
+            if self.component_class.num_event_send_ports > 1:
+                raise Pype9NotSupportedException(
+                    "Cannot currently differentiate between multiple event "
+                    "send ports in NEST implementation ('{}')".format(
+                        "', '".join(
+                            self.component_class.event_send_port_names)))
+            self._check_connection_properties(port_name, properties)
+            syn_spec = {'receptor_type': other._receive_ports[other_port_name],
+                        'delay': self._device_delay}
+            if len(properties) > 1:
+                raise Pype9NotSupportedException(
+                    "Cannot handle more than one connection property per port")
+            elif properties:
+                syn_spec['weight'] = self.UnitHandler.scale_value(
+                    properties[0].quantity)
+            nest.Connect(self._cell, other._cell, syn_spec=syn_spec)
+        elif isinstance(port, AnalogPort):
+            if self.component_class.num_analog_send_ports > 1:
+                raise Pype9NotSupportedException(
+                    "Cannot currently differentiate between multiple event "
+                    "send ports in NEST implementation ('{}')".format(
+                        "', '".join(
+                            self.component_class.event_send_port_names)))
+            nest.Connect(self._cell, other._cell, syn_spec={
+                "receptor_type": other._receive_ports[port_name],
+                'delay': self._device_delay})
+        else:
+            assert False
 
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         raise NotImplementedError("voltage clamps are not supported for "

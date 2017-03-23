@@ -260,7 +260,8 @@ setup(
                       'Jinja2>=2.6',
                       'diophantine>=0.1',
                       'neo>=0.3.3',
-                      'matplotlib'],
+                      'matplotlib',
+                      'quantities==0.10.1'],
     dependency_links=[
         'http://github.com/INCF/lib9ML/archive/master#egg=package-0.1',
         'http://github.com/INCF/NineMLCatalog/tarball/master#egg=package-1.0'],

@@ -380,6 +380,12 @@ class Cell(object):
     def recording(self, port_name):
         raise NotImplementedError("Should be implemented by derived class")
 
+    def play(self, port_name, signal, properties=[]):
+        raise NotImplementedError("Should be implemented by derived class")
+
+    def connect(self, port_name, other, other_port_name):
+        raise NotImplementedError("Should be implemented by derived class")
+
     # This has to go last to avoid clobbering the property decorators
     def property(self, name):
         return self._nineml.property(name)

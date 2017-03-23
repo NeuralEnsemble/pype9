@@ -1,6 +1,12 @@
+class Pype9Exception(Exception):
+    pass
 
 
-class Pype9RuntimeError(Exception):
+class Pype9NotSupportedException(Pype9Exception):
+    pass
+
+
+class Pype9RuntimeError(Pype9Exception):
     pass
 
 

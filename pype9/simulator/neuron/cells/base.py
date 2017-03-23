@@ -24,8 +24,8 @@ import neo
 from .code_gen import CodeGenerator, REGIME_VARNAME
 from neuron import h, load_mechanisms
 from nineml import units as un
-from nineml.abstraction import EventPort
-from nineml.exceptions import NineMLNameError
+from nineml.abstraction import EventPort, AnalogPort
+from nineml.exceptions import NineMLNameError, Pype9NotSupportedException
 from math import pi
 import numpy
 from pype9.simulator.base.cells import base
@@ -333,22 +333,21 @@ class Cell(base.Cell):
         """
         Injects current into the segment
 
-        `port_name` -- the name of the receive port to play the signal into
-        `signal`    -- a neo.AnalogSignal or neo.SpikeTrain to play into the
-                       port
-        `weight`    -- a tuple of (port_name, value/qty) to set the weight of
-                       the event port.
+        Parameters
+        ----------
+        port_name : str
+            The name of the receive port to play the signal into
+        signal : neo.AnalogSignal (current) | neo.SpikeTrain
+            Signal to play into the port
+        properties : list(nineml.Property)
+            The connection properties of the event port
         """
         ext_is = self.build_component_class.annotations.get(
             (BUILD_TRANS, PYPE9_NS), EXTERNAL_CURRENTS).split(',')
-        try:
-            port = self.component_class.port(port_name)
-        except KeyError:
-            raise Pype9RuntimeError(
-                "Cannot play into unrecognised port '{}'".format(port_name))
+        port = self.component_class.port(port_name)
         if isinstance(port, EventPort):
             if len(list(self.component_class.event_receive_ports)) > 1:
-                raise NotImplementedError(
+                raise Pype9NotSupportedException(
                     "Multiple event receive ports ('{}') are not currently "
                     "supported".format("', '".join(
                         [p.name
@@ -368,7 +367,7 @@ class Cell(base.Cell):
             self._input_auxs.extend((vstim_times, vstim_con))
         else:
             if port_name not in ext_is:
-                raise NotImplementedError(
+                raise Pype9NotSupportedException(
                     "Can only play into external current ports ('{}'), not "
                     "'{}' port.".format("', '".join(ext_is), port_name))
             iclamp = h.IClamp(0.5, sec=self._sec)
@@ -381,12 +380,59 @@ class Cell(base.Cell):
             self._inputs['iclamp'] = iclamp
             self._input_auxs.extend((iclamp_amps, iclamp_times))
 
+    def connect(self, port_name, other, other_port_name, properties=[]):
+        """
+        Connects a port of the cell to a matching port on the 'other' cell
+
+        Parameters
+        ----------
+        port_name : str
+            Name of the send port to connect from
+        other : pype9.simulator.neuron.cells.Cell
+            Another cell to connect to
+        other_port_name : str
+            Name of the port on the other cell to connect to
+        properties : list(nineml.Property)
+            The connection properties of the event port
+        """
+        ext_is = self.build_component_class.annotations.get(
+            (BUILD_TRANS, PYPE9_NS), EXTERNAL_CURRENTS).split(',')
+        port = self.component_class.port(port_name)
+        if isinstance(port, EventPort):
+            if len(list(self.component_class.event_receive_ports)) > 1:
+                raise Pype9NotSupportedException(
+                    "Multiple event receive ports ('{}') are not currently "
+                    "supported".format("', '".join(
+                        [p.name
+                         for p in self.component_class.event_receive_ports])))
+            netcon = h.NetCon(self._hoc, other._hoc, sec=other._sec)
+            self._check_connection_properties(port_name, properties)
+            if len(properties) > 1:
+                raise Pype9NotSupportedException(
+                    "Cannot handle more than one connection property per port")
+            elif properties:
+                netcon.weight[0] = self.UnitHandler.scale_value(
+                    properties[0].quantity)
+            other._input_auxs.append(netcon)
+        elif isinstance(port, AnalogPort):
+            if port_name not in ext_is:
+                raise Pype9NotSupportedException(
+                    "Can only play into external current ports ('{}'), not "
+                    "'{}' port.".format("', '".join(ext_is), port_name))
+            raise NotImplementedError
+        else:
+            assert False
+
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         """
         Clamps the voltage of a segment
 
-        `voltage` -- a vector containing the voltages to clamp the segment
-                     to [neo.AnalogSignal]
+        Parameters
+        ----------
+        voltage : neo.AnalogSignal (voltage)
+            The voltages to clamp the segment to
+        series_resistance : float (??)
+            The series resistance of the voltage clamp
         """
         seclamp = h.SEClamp(0.5, sec=self._sec)
         seclamp.rs = series_resistance
