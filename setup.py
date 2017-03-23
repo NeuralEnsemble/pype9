@@ -259,7 +259,7 @@ setup(
                       'sympy==0.7.6',  # v1.0 has a bug in ccode (fixed in master 30/7/16) @IgnorePep8
                       'Jinja2>=2.6',
                       'diophantine>=0.1',
-                      'neo>=0.3.3',
+                      'neo==0.4.1',
                       'matplotlib',
                       'quantities>=0.11.1'],
     dependency_links=[
