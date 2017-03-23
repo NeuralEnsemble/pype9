@@ -3,19 +3,12 @@ from itertools import chain
 import ninemlcatalog
 from copy import deepcopy
 import numpy
-import nineml
-import os
 import logging
 import sys
-import shutil
 from nineml import units as un, Property
 from pype9.simulator.neuron import (
     CellMetaClass as NeuronCellMetaClass, Network as NeuronNetwork,
     Simulation as NeuronSimulation)
-from pype9.simulator.neuron.network.base import (
-    ComponentArray as NeuronComponentArray)
-from pype9.simulator.nest.network.base import (
-    ComponentArray as NESTComponentArray)
 from pype9.simulator.nest import (
     CellMetaClass as NESTCellMetaClass, Network as NESTNetwork,
     Simulation as NESTSimulation)
@@ -41,8 +34,7 @@ class TestSeeding(TestCase):
         for CellMetaClass, Simulation in (
             (NeuronCellMetaClass, NeuronSimulation),
                 (NESTCellMetaClass, NESTSimulation)):
-            Poisson = CellMetaClass(poisson_model, name='PoissonTest',
-                                    build_mode='force')
+            Poisson = CellMetaClass(poisson_model, name='PoissonTest')
             rate = 300 / un.s
             t_next = 0.0 * un.s
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
@@ -67,121 +59,6 @@ class TestSeeding(TestCase):
                                 "Poisson spike train the same despite using "
                                 "different  seeds")
 
-    def test_component_array_seed(self):
-        poisson_model = ninemlcatalog.load('input/Poisson#Poisson')
-        for ComponentArray, Simulation in (
-            (NESTComponentArray, NESTSimulation),
-                (NeuronComponentArray, NeuronSimulation)):
-            rate = 300 / un.s
-            t_next = 0.0 * un.s
-            array_model = nineml.ComponentArray(
-                'poisson_array', 5, nineml.DynamicsProperties(
-                    name='poisson_array_props',
-                    definition=poisson_model, properties=dict(rate=rate),
-                    initial_values=dict(t_next=t_next)))
-            with Simulation(dt=0.01 * un.ms, seed=1) as sim:
-                poisson_array1 = ComponentArray(
-                    array_model, sim.properties_rng)
-                poisson_array1.record('spike_output')
-                print "Sim 1 - prop: {}, dyn: {}, global: {}".format(
-                    sim.all_properties_seeds, sim.all_dynamics_seeds,
-                    sim.global_seed)
-                sim.run(100 * un.ms)
-            poisson1_spikes = chain(
-                *poisson_array1.recording('spike_output').spiketrains)
-            with Simulation(dt=0.01 * un.ms, seed=1) as sim:
-                poisson_array2 = ComponentArray(
-                    array_model, sim.properties_rng)
-                poisson_array2.record('spike_output')
-                print "Sim 2 - prop: {}, dyn: {}, global: {}".format(
-                    sim.all_properties_seeds, sim.all_dynamics_seeds,
-                    sim.global_seed)
-                sim.run(100 * un.ms)
-            poisson2_spikes = chain(
-                *poisson_array2.recording('spike_output').spiketrains)
-            with Simulation(dt=0.01 * un.ms, seed=2) as sim:
-                poisson_array3 = ComponentArray(
-                    array_model, sim.properties_rng)
-                poisson_array3.record('spike_output')
-                print "Sim 3 - prop: {}, dyn: {}, global: {}".format(
-                    sim.all_properties_seeds, sim.all_dynamics_seeds,
-                    sim.global_seed)
-                sim.run(100 * un.ms)
-            poisson3_spikes = chain(
-                *poisson_array3.recording('spike_output').spiketrains)
-            self.assertEqual(list(poisson1_spikes), list(poisson2_spikes),
-                             "Poisson spike train not the same despite using "
-                             "the same seed")
-            self.assertNotEqual(list(poisson1_spikes), list(poisson3_spikes),
-                                "Poisson spike train the same despite using "
-                                "different  seeds")
-
-    def test_component_array_in_network_seed(self):
-        poisson_model = ninemlcatalog.load('input/Poisson#Poisson')
-        rate = 300 / un.s
-        t_next = 0.0 * un.s
-        pop_model = nineml.Population(
-            'poisson_pop', 5, nineml.DynamicsProperties(
-                name='poisson_pop_props',
-                definition=poisson_model, properties=dict(rate=rate),
-                initial_values=dict(t_next=t_next)))
-        net_model = nineml.Network(
-            'test_network', [pop_model])
-        build_dir = os.path.join(os.getcwd(), '.build')
-        for Network, Simulation in (
-            (NESTNetwork, NESTSimulation),
-                (NeuronNetwork, NeuronSimulation)):
-            with Simulation(dt=0.01 * un.ms, seed=1) as sim:
-                poisson_net1 = Network(net_model, build_dir=build_dir)
-                poisson_net1.record('spike_output')
-                print "Sim 1 - prop: {}, dyn: {}, global: {}".format(
-                    sim.all_properties_seeds, sim.all_dynamics_seeds,
-                    sim.global_seed)
-                sim.run(100 * un.ms)
-            poisson1_spikes = chain(
-                *poisson_net1.component_array('poisson_pop').recording(
-                    'spike_output').spiketrains)
-            with Simulation(dt=0.01 * un.ms, seed=1) as sim:
-                poisson_net2 = Network(net_model, build_dir=build_dir)
-                poisson_net2.record('spike_output')
-                print "Sim 2 - prop: {}, dyn: {}, global: {}".format(
-                    sim.all_properties_seeds, sim.all_dynamics_seeds,
-                    sim.global_seed)
-                sim.run(100 * un.ms)
-            poisson2_spikes = chain(
-                *poisson_net2.component_array('poisson_pop').recording(
-                    'spike_output').spiketrains)
-            with Simulation(dt=0.01 * un.ms, seed=2) as sim:
-                poisson_net3 = Network(net_model, build_dir=build_dir)
-                poisson_net3.record('spike_output')
-                print "Sim 3 - prop: {}, dyn: {}, global: {}".format(
-                    sim.all_properties_seeds, sim.all_dynamics_seeds,
-                    sim.global_seed)
-                sim.run(100 * un.ms)
-            poisson3_spikes = chain(
-                *poisson_net3.component_array('poisson_pop').recording(
-                    'spike_output').spiketrains)
-            with Simulation(dt=0.01 * un.ms, properties_seed=1) as sim:
-                poisson_net4 = Network(net_model, build_dir=build_dir)
-                poisson_net4.record('spike_output')
-                print "Sim 4 - prop: {}, dyn: {}, global: {}".format(
-                    sim.all_properties_seeds, sim.all_dynamics_seeds,
-                    sim.global_seed)
-                sim.run(100 * un.ms)
-            poisson4_spikes = chain(
-                *poisson_net4.component_array('poisson_pop').recording(
-                    'spike_output').spiketrains)
-            self.assertEqual(list(poisson1_spikes), list(poisson2_spikes),
-                             "Poisson spike train not the same despite using "
-                             "the same seed")
-            self.assertNotEqual(list(poisson1_spikes), list(poisson3_spikes),
-                                "Poisson spike train the same despite using "
-                                "different  seeds")
-            self.assertNotEqual(list(poisson1_spikes), list(poisson4_spikes),
-                                "Poisson spike train the same despite using "
-                                "different  seeds")
-        shutil.rmtree(build_dir)
-
     def test_network_seed(self):
         brunel_model = self._load_brunel('AI', 1)
         brunel_model = deepcopy(brunel_model)
@@ -190,7 +67,7 @@ class TestSeeding(TestCase):
             (NESTNetwork, NESTSimulation),
                 (NeuronNetwork, NeuronSimulation)):
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
-                network1 = Network(brunel_model, build_mode='force')
+                network1 = Network(brunel_model)
                 network1.component_array('Ext').record('spike_output')
                 print "Sim 1 - prop: {}, dyn: {}, global: {}".format(
                     sim.all_properties_seeds, sim.all_dynamics_seeds,
@@ -233,11 +110,6 @@ class TestSeeding(TestCase):
                 'Ext').recording('spike_output')
             exc4_conns = network4.connection_group('Excitation').get(
                 ['weight', 'delay'], 'list')
-#             if (list(chain(*ext1_spikes.spiketrains)) ==
-#                     list(chain(*ext4_spikes.spiketrains))):
-#                 from pype9.utils.plotting import plot
-#                 plot(ext1_spikes, show=False)
-#                 plot(ext4_spikes)
             self.assertEqual(exc1_conns, exc2_conns,
                              "Network External connections not the same "
                              "despite using the same seed")
