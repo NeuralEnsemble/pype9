@@ -255,7 +255,7 @@ setup(
                  'Operating System :: OS Independent',
                  'Programming Language :: Python :: 2',
                  'Topic :: Scientific/Engineering'],
-    install_requires=['pyNN>=0.8',
+    install_requires=['pyNN==0.8.2',
                       'sympy==0.7.6',  # v1.0 has a bug in ccode (fixed in master 30/7/16) @IgnorePep8
                       'Jinja2>=2.6',
                       'diophantine>=0.1',
