@@ -10,6 +10,7 @@
 from __future__ import absolute_import
 import os.path
 import logging
+import numpy
 import neo
 import nest
 import quantities as pq
@@ -179,9 +180,10 @@ class Cell(base.Cell):
             # that the effect of the signal aligns with other simulators
             self._inputs[port_name] = nest.Create(
                 'step_current_generator', 1,
-                {'amplitude_values': pq.Quantity(signal, 'pA'),
-                 'amplitude_times': (pq.Quantity(signal.times, 'ms') -
-                                     self._device_delay * pq.ms),
+                {'amplitude_values': numpy.asarray(pq.Quantity(signal, 'pA')),
+                 'amplitude_times': numpy.asarray(
+                     pq.Quantity(signal.times -
+                                 self._device_delay * pq.ms, 'ms')),
                  'start': float(pq.Quantity(signal.t_start, 'ms')),
                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
             nest.Connect(self._inputs[port_name], self._cell, syn_spec={
