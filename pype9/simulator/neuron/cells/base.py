@@ -25,7 +25,7 @@ from .code_gen import CodeGenerator, REGIME_VARNAME
 from neuron import h, load_mechanisms
 from nineml import units as un
 from nineml.abstraction import EventPort, AnalogPort
-from nineml.exceptions import NineMLNameError, Pype9NotSupportedException
+from nineml.exceptions import NineMLNameError
 from math import pi
 import numpy
 from pype9.simulator.base.cells import base
@@ -34,7 +34,7 @@ from pype9.simulator.neuron.simulation import Simulation
 from pype9.annotations import (
     PYPE9_NS, BUILD_TRANS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
     MEMBRANE_VOLTAGE, MECH_TYPE, ARTIFICIAL_CELL_MECH)
-from pype9.exceptions import Pype9RuntimeError
+from pype9.exceptions import Pype9RuntimeError, Pype9NotSupportedException
 import logging
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
