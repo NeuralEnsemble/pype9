@@ -12,6 +12,8 @@ import numpy
 from matplotlib import pyplot as plt
 
 parser = ArgumentParser(__doc__)
+parser.add_argument('--timestep', type=float, default=0.01,
+                    help=("Timestep of the simulation"))
 parser.add_argument('--weight', type=float, default=3.0,
                     help=("Weight of the synapse (nA)"))
 parser.add_argument('--rate', type=float, default=40.0,
@@ -27,7 +29,7 @@ args = parser.parse_args()
 
 # Import of nest needs to be after arguments have been passed as it kills them
 # before the SLI interpreter tries to read them.
-from pype9.nest import CellMetaClass, simulation_controller, UnitHandler  # @IgnorePep8
+from pype9.simulator.nest import CellMetaClass, simulation, UnitHandler  # @IgnorePep8
 
 
 build_dir = os.path.join(os.getcwd(), '9build', 'liaf_with_alpha')
@@ -75,24 +77,25 @@ cell_params = {
     'v_reset__cell': 0.0 * un.mV, 'tau__psr': 0.5 * un.ms}
 if not connection_weight:
     cell_params['weight__pls'] = weight
-cell = Cell(cell_params)
-# Connect cells (using underlying NEST connector)
-syn_spec = {'receptor_type': 1}
-if connection_weight:
-    syn_spec['weight'] = UnitHandler.scale_value(weight)
-nest.Connect(input._cell, cell._cell, syn_spec=syn_spec)
-# Set initial conditions
-input.update_state({'t_next': (1 * un.unitless) / rate})
-cell.update_state({
-    'b__psr': 0.0 * un.nA,
-    'a__psr': 0.0 * un.nA,
-    'end_refractory__cell': 0.0 * un.ms,
-    'v__cell': 0.0 * un.mV})
-# Set up recorders
-cell.record('spike_output__cell')
-cell.record('v__cell')
-# Run simulation
-simulation_controller.run(args.simtime)
+with simulation(args.timestep * un.ms) as sim:
+    cell = Cell(cell_params)
+    # Connect cells (using underlying NEST connector)
+    syn_spec = {'receptor_type': 1}
+    if connection_weight:
+        syn_spec['weight'] = UnitHandler.scale_value(weight)
+    nest.Connect(input._cell, cell._cell, syn_spec=syn_spec)
+    # Set initial conditions
+    input.update_state({'t_next': (1 * un.unitless) / rate})
+    cell.update_state({
+        'b__psr': 0.0 * un.nA,
+        'a__psr': 0.0 * un.nA,
+        'end_refractory__cell': 0.0 * un.ms,
+        'v__cell': 0.0 * un.mV})
+    # Set up recorders
+    cell.record('spike_output__cell')
+    cell.record('v__cell')
+    # Run simulation
+    sim.run(args.simtime * un.ms)
 # Get recordings
 spikes = cell.recording('spike_output__cell')
 v = cell.recording('v__cell')

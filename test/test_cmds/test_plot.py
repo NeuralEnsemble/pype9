@@ -53,7 +53,7 @@ class TestPlot(TestCase):
             simulate.run(argv.split())
         # Run plotting command
         out_path = '{}/single_cell.png'.format(self.work_dir)
-        argv = ("{in_path} --save {out_path} --hide --width 5 --height 5 "
+        argv = ("{in_path} --save {out_path} --hide --dims 5 5 "
                     "--resolution 100.0"
                 .format(in_path=self.cell_signal_path, out_path=out_path,
                         name='v'))
@@ -84,7 +84,7 @@ class TestPlot(TestCase):
         # Run plotting command
         for pop_name in self.recorded_pops:
             out_path = '{}/{}.png'.format(self.work_dir, pop_name)
-            argv = ("{in_path} --save {out_path} --hide --width 5 --height 5 "
+            argv = ("{in_path} --save {out_path} --hide --dims 5 5 "
                     "--resolution 100.0"
                     .format(in_path=self.network_signal_path,
                             out_path=out_path, name='v'))

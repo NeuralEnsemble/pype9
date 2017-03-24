@@ -3,14 +3,10 @@ Command that compares a 9ML model with an existing version in NEURON and/or
 NEST
 """
 from __future__ import absolute_import, division
-import sys
 import os.path
 import re
-# import subprocess as sp
 from itertools import combinations
 from collections import defaultdict
-# import tempfile
-# import shutil
 import neuron
 from copy import copy
 import pyNN.neuron  # @UnusedImport - imports PyNN mechanisms
@@ -20,34 +16,23 @@ try:
     import pylab as plt
 except ImportError:
     plt = None
-from pype9.neuron.cells import (
-    CellMetaClass as CellMetaClassNEURON,
-    simulation_controller as simulatorNEURON)
-from pype9.neuron.units import UnitHandler as UnitHandlerNEURON
-from pype9.nest.units import UnitHandler as UnitHandlerNEST
-from pype9.nest.cells import (
-    CellMetaClass as CellMetaClassNEST,
-    simulation_controller as simulatorNEST)
+from pype9.simulator.neuron import (
+    CellMetaClass as NeuronCellMetaClass,
+    Simulation as NeuronSimulation)
+from pype9.simulator.neuron.units import UnitHandler as UnitHandlerNEURON
+from pype9.simulator.nest.units import UnitHandler as UnitHandlerNEST
+from pype9.simulator.nest import (
+    CellMetaClass as NESTCellMetaClass,
+    Simulation as NESTSimulation)
 from nineml.units import Quantity
 from nineml import units as un
 import numpy
 import quantities as pq
 import neo
 from pype9.exceptions import Pype9RuntimeError
-from pype9.nest.cells import simulation_controller
+import logging
 
-
-compare_script_path = os.path.join(os.path.dirname(__file__), '..', 'scripts',
-                                   'compare.py')
-
-# This finds the python command path from the location of the os module
-# python_cmd_path = os.path.join(os.path.dirname(os.__file__), '..', 'bin',
-#                                'python')
-# However, this will probably only work on *nix systems so a fall back using
-# the sys.executable is used instead in this case (won't work from embedded
-# executions
-# if not os.path.exists(python_cmd_path):
-python_cmd_path = sys.executable
+logger = logging.getLogger('PyPe9')
 
 
 class Comparer(object):
@@ -55,6 +40,31 @@ class Comparer(object):
     The Comparer class is used to compare the dynamics of a 9ML model simulated
     in either NEURON or NEST with a native model in either of those simulators
     (or both)
+
+    Parameters
+    ----------
+    nineml_model : nineml.Dynamics | nineml.Network
+        9ML model to compare
+    simulators : list(str)
+        List of simulator names to simulate the 9ML model in
+    duration : float
+        Simulation duration
+    dt : float
+        Simulation time step
+    initial_states : dict(str, nineml.Quantity)
+        A dictionary of the initial states
+    neuron_ref : tuple(str, dict(str, nineml.Quantity)
+        A tuple containing the name of neuron model and a dictionary of
+        parameter and state name mappings
+    nest_ref :  tuple(str, dict(str, nineml.Quantity)
+        A tuple containing the name of nest model and a dictionary of parameter
+        and state name mappings
+    input_signal : neo.AnalogSignal
+        Tuple containing the analog signal (in Neo format) and the port to play
+        it into
+    input_train : neo.SpikeTrain
+        Tuple containing the event train (in Neo format) and the port to play
+        it into
     """
 
     specific_params = ('pas.g', 'cm')
@@ -68,21 +78,6 @@ class Comparer(object):
                  max_delay=10.0, extra_mechanisms=None,
                  extra_point_process=None, build_name=None,
                  auxiliary_states=None):
-        """
-        nineml_model   -- 9ML model to compare
-        nineml_sims    -- tuple of simulator names to simulate the 9ML model in
-        duration       -- simulation duration
-        dt             -- simulation time step
-        initial_states -- a dictionary of the initial states
-        neuron_ref   -- a tuple containing the name of neuron model and a
-                          dictionary of parameter and state name mappings
-        nest_ref     -- a tuple containing the name of nest model and a
-                          dictionary of parameter and state name mappings
-        input_signal  -- tuple containing the analog signal (in Neo format)
-                          and the port to play it into
-        input_train    -- tuple containing the event train (in Neo format)
-                          and the port to play it into
-        """
         if nineml_model is not None and not simulators:
             raise Pype9RuntimeError(
                 "No simulators specified to simulate the 9ML model '{}'."
@@ -138,25 +133,25 @@ class Comparer(object):
         Run and the simulation
         """
         if self.simulate_nest:
-            nest.ResetNetwork()
-            nest.ResetKernel()
-            simulatorNEST.clear(rng_seed=nest_rng_seed, dt=self.dt)
-            simulation_controller.set_delays(self.min_delay, self.max_delay,
-                                             self.device_delay)
+            with NESTSimulation(dt=self.dt * un.ms, seed=nest_rng_seed,
+                                min_delay=self.min_delay * un.ms,
+                                max_delay=self.max_delay * un.ms) as sim:
+                if 'nest' in self.simulators:
+                    self._create_9ML(self.nineml_model, self.properties,
+                                     'nest')
+                if self.nest_ref is not None:
+                    self._create_NEST(self.nest_ref)
+                sim.run(duration)
         if self.simulate_neuron:
-            simulatorNEURON.clear(rng_seed=neuron_rng_seed)
-            neuron.h.dt = self.dt
-        for simulator in self.simulators:
-            self._create_9ML(self.nineml_model, self.properties, simulator)
-        if self.nest_ref is not None:
-            self._create_NEST(self.nest_ref)
-        if self.neuron_ref is not None:
-            self._create_NEURON(self.neuron_ref)
-        if self.simulate_nest:
-            simulatorNEST.run(duration)
-        if self.simulate_neuron:
-            simulatorNEURON.run(duration)
-
+            with NeuronSimulation(dt=self.dt * un.ms, seed=neuron_rng_seed,
+                                  min_delay=self.min_delay * un.ms,
+                                  max_delay=self.max_delay * un.ms) as sim:
+                if 'neuron' in self.simulators:
+                    self._create_9ML(self.nineml_model, self.properties,
+                                     'neuron')
+                if self.neuron_ref is not None:
+                    self._create_NEURON(self.neuron_ref)
+                sim.run(duration)
         return self  # return self so it can be chained with subsequent methods
 
     def compare(self):
@@ -173,6 +168,7 @@ class Comparer(object):
         comparisons = {}
         for (name1, signal1), (name2, signal2) in combinations(name_n_sigs, 2):
             if len(signal1):
+                logger.debug("Comparing {} with {}".format(name1, name2))
                 avg_diff = (numpy.sum(numpy.abs(signal1 - signal2)) /
                             len(signal1))
             else:
@@ -194,6 +190,17 @@ class Comparer(object):
             self._plot_NEST()
             legend.append(self.nest_ref + ' (NEST)')
         plt.legend(legend)
+        if self.auxiliary_states:
+            for state_var in self.auxiliary_states:
+                plt.figure()
+                aux_legend = []
+                for simulator in self.simulators:
+                    s = self.nml_cells[simulator].recording(state_var)
+                    scaled = UnitHandlerNEURON.scale_value(s)
+                    plt.plot(s.times, scaled)
+                    aux_legend.append('9ML - {}'.format(simulator))
+                plt.title(state_var)
+                plt.legend(aux_legend)
         plt.show()
 
     def _create_9ML(self, model, properties, simulator):
@@ -201,14 +208,16 @@ class Comparer(object):
         # Set up 9MLML cell
         # -----------------------------------------------------------------
         if simulator.lower() == 'neuron':
-            CellMetaClass = CellMetaClassNEURON
+            CellMetaClass = NeuronCellMetaClass
         elif simulator.lower() == 'nest':
-            CellMetaClass = CellMetaClassNEST
+            CellMetaClass = NESTCellMetaClass
         else:
             assert False
-        self.nml_cells[simulator] = CellMetaClass(
-            model, name=self.build_name, default_properties=properties,
-            **self.build_args[simulator])()
+        Cell = CellMetaClass(model, name=self.build_name,
+                             **self.build_args[simulator])
+        self.nml_cells[simulator] = Cell(properties,
+                                         regime_=self.initial_regime,
+                                         **self.initial_states)
         if self.input_signal is not None:
             self.nml_cells[simulator].play(*self.input_signal)
         if self.input_train is not None:
@@ -216,8 +225,8 @@ class Comparer(object):
         self.nml_cells[simulator].record(self.state_variable)
         for state_var in self.auxiliary_states:
             self.nml_cells[simulator].record(state_var)
-        self.nml_cells[simulator].set_state(self.initial_states,
-                                            regime=self.initial_regime)
+#         self.nml_cells[simulator].set_state(self.initial_states,
+#                                             regime=self.initial_regime)
 
     def _create_NEURON(self, neuron_name):
         # -----------------------------------------------------------------
@@ -407,10 +416,6 @@ class Comparer(object):
     def _plot_9ML(self, sim_name):  # @UnusedVariable
         nml_v = self.nml_cells[sim_name].recording(self.state_variable)
         plt.plot(nml_v.times, nml_v)
-        for state_var in self.auxiliary_states:
-            s = self.nml_cells[sim_name].recording(state_var)
-            scaled = UnitHandlerNEURON.scale_value(s)
-            plt.plot(s.times, scaled)
 
     def _diff_NEURON(self):  # @UnusedVariable
         _, pnn_v = self._get_NEURON_signal()
@@ -429,7 +434,7 @@ class Comparer(object):
         return neo.AnalogSignal(
             nest.GetStatus(
                 self.nest_multimeter, 'events')[0][self.nest_state_variable],
-            sampling_period=simulatorNEST.dt * pq.ms, units='mV')  # @UndefinedVariable @IgnorePep8
+            sampling_period=self.dt * pq.ms, units='mV')  # @UndefinedVariable @IgnorePep8
 
     @classmethod
     def to_float(cls, qty, units):
@@ -754,5 +759,12 @@ class DummyTestCase(object):
         if first > second:
             if msg is None:
                 msg = '{} is not less than or equal to {}'.format(
+                    repr(first), repr(second))
+            print msg
+
+    def assertNotEqual(self, first, second, msg=None):
+        if first == second:
+            if msg is None:
+                msg = '{} is equal to {}'.format(
                     repr(first), repr(second))
             print msg

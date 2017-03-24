@@ -255,12 +255,13 @@ setup(
                  'Operating System :: OS Independent',
                  'Programming Language :: Python :: 2',
                  'Topic :: Scientific/Engineering'],
-    install_requires=['pyNN>=0.8',
+    install_requires=['pyNN==0.8.2',
                       'sympy==0.7.6',  # v1.0 has a bug in ccode (fixed in master 30/7/16) @IgnorePep8
                       'Jinja2>=2.6',
                       'diophantine>=0.1',
-                      'neo>=0.3.3',
-                      'matplotlib'],
+                      'neo==0.4.1',
+                      'matplotlib',
+                      'quantities>=0.11.1'],
     dependency_links=[
         'http://github.com/INCF/lib9ML/archive/master#egg=package-0.1',
         'http://github.com/INCF/NineMLCatalog/tarball/master#egg=package-1.0'],

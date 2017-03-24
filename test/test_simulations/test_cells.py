@@ -8,28 +8,28 @@ from nineml import units as un
 from nineml.user import Property
 from nineml.user.multi.dynamics import MultiDynamics
 from nineml.user import DynamicsProperties
-from pype9.base.cells import (
+from pype9.simulator.base.cells import (
     MultiDynamicsWithSynapses, DynamicsWithSynapsesProperties,
     ConnectionParameterSet, ConnectionPropertySet)
-from pype9.neuron.cells import (
-    CellMetaClass as CellMetaClassNEURON,
-    simulation_controller as simulatorNEURON)
+from pype9.simulator.neuron import (
+    CellMetaClass as NeuronCellMetaClass,
+    Simulation as NeuronSimulation)
 argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
-from pype9.nest.cells import (  # @IgnorePep8
-    CellMetaClass as CellMetaClassNEST,
-    simulation_controller as simulatorNEST)
+from pype9.simulator.nest import (  # @IgnorePep8
+    CellMetaClass as NESTCellMetaClass,
+    Simulation as NESTSimulation)
 from pype9.utils.testing import Comparer, input_step, input_freq  # @IgnorePep8
-from pype9.nest.units import UnitHandler as UnitHandlerNEST  # @IgnorePep8
+from pype9.simulator.nest.units import UnitHandler as UnitHandlerNEST  # @IgnorePep8
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:
     from unittest import TestCase  # @Reimport
 
-cell_metaclasses = {'neuron': CellMetaClassNEURON,
-                    'nest': CellMetaClassNEST}
+cell_metaclasses = {'neuron': NeuronCellMetaClass,
+                    'nest': NESTCellMetaClass}
 
-NEST_RNG_SEED = 12345
-NEURON_RNG_SEED = 54321
+NEST_RNG_SEED = 1234567890
+NEURON_RNG_SEED = 987654321
 
 
 class TestDynamics(TestCase):
@@ -62,6 +62,7 @@ class TestDynamics(TestCase):
                 'neuron/Izhikevich', 'SampleIzhikevich'),
             initial_states={'U': -14.0 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
             neuron_ref='Izhikevich', nest_ref='izhikevich',
+            # auxiliary_states=['U'],
             input_signal=input_step('Isyn', 0.02, 50, 100, dt),
             nest_translations={'V': ('V_m', 1), 'U': ('U_m', 1),
                                'weight': (None, 1), 'C_m': (None, 1),
@@ -75,7 +76,7 @@ class TestDynamics(TestCase):
             neuron_build_args={'build_mode': build_mode},
             nest_build_args={'build_mode': build_mode},
             build_name='Izhikevich9ML')
-        comparer.simulate(duration, nest_rng_seed=NEST_RNG_SEED,
+        comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
@@ -86,17 +87,21 @@ class TestDynamics(TestCase):
         if 'nest' in simulators and 'neuron' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
-                "Izhikevich NEURON 9ML simulation did not match NEST 9ML")
+                "Izhikevich NEURON 9ML simulation did not match NEST 9ML"
+                "within {} ({})".format(
+                    0.4 * pq.mV, comparisons[('9ML-nest', '9ML-neuron')]))
         if 'neuron' in simulators:
             self.assertLess(
-                comparisons[('9ML-neuron', 'Ref-neuron')], 0.0015 * pq.mV,
+                comparisons[('9ML-neuron', 'Ref-neuron')], 0.01 * pq.mV,
                 "Izhikevich NEURON 9ML simulation did not match reference "
-                "PyNN")
+                "PyNN within {} ({})".format(
+                    0.01 * pq.mV, comparisons[('9ML-neuron', 'Ref-neuron')]))
         if 'nest' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', 'Ref-nest')], 0.02 * pq.mV,
                 "Izhikevich NEST 9ML simulation did not match reference "
-                "built-in")
+                "built-in within {} ({})".format(
+                    0.02 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
     def test_hh(self, plot=False, print_comparisons=False,
                 simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
@@ -141,9 +146,10 @@ class TestDynamics(TestCase):
                 'n_alpha_A': (None, 1), 'n_alpha_V0': (None, 1),
                 'n_alpha_K': (None, 1), 'n_beta_A': (None, 1),
                 'n_beta_V0': (None, 1), 'n_beta_K': (None, 1)},
+            # auxiliary_states=['m', 'h', 'n'],
             neuron_build_args={'build_mode': build_mode},
             nest_build_args={'build_mode': build_mode})
-        comparer.simulate(duration, nest_rng_seed=NEST_RNG_SEED,
+        comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
@@ -155,15 +161,21 @@ class TestDynamics(TestCase):
         if 'nest' in simulators and 'neuron' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', '9ML-neuron')], 0.5 * pq.mV,
-                "HH 9ML NEURON and NEST simulation did not match each other")
+                "HH 9ML NEURON and NEST simulation did not match each other "
+                "within {} ({})".format(
+                    0.5 * pq.mV, comparisons[('9ML-nest', '9ML-neuron')]))
         if 'neuron' in simulators:
             self.assertLess(
                 comparisons[('9ML-neuron', 'Ref-neuron')], 0.55 * pq.mV,
-                "HH 9ML NEURON simulation did not match reference built-in")
+                "HH 9ML NEURON simulation did not match reference built-in "
+                "within {} ({})".format(
+                    0.55 * pq.mV, comparisons[('9ML-neuron', 'Ref-neuron')]))
         if 'nest' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', 'Ref-nest')], 0.0015 * pq.mV,
-                "HH 9ML NEST simulation did not match reference built-in")
+                "HH 9ML NEST simulation did not match reference built-in "
+                "within {} ({})".format(
+                    0.0015 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
     def test_liaf(self, plot=False, print_comparisons=False,
                   simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
@@ -185,8 +197,9 @@ class TestDynamics(TestCase):
             neuron_translations=self.liaf_neuron_translations,
             neuron_build_args={'build_mode': build_mode},
             nest_build_args={'build_mode': build_mode},
+            # auxiliary_states=['end_refractory'],
             extra_mechanisms=['pas'])
-        comparer.simulate(duration, nest_rng_seed=NEST_RNG_SEED,
+        comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
@@ -197,15 +210,21 @@ class TestDynamics(TestCase):
         if 'neuron' in simulators:
             self.assertLess(
                 comparisons[('9ML-neuron', 'Ref-neuron')], 0.55 * pq.mV,
-                "LIaF NEURON 9ML simulation did not match reference PyNN")
+                "LIaF NEURON 9ML simulation did not match reference PyNN "
+                "within {} ({})".format(
+                    0.55 * pq.mV, comparisons[('9ML-neuron', 'Ref-neuron')]))
         if 'nest' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', 'Ref-nest')], 0.01 * pq.mV,
-                "LIaF NEST 9ML simulation did not match reference built-in")
+                "LIaF NEST 9ML simulation did not match reference built-in "
+                "within {} ({})".format(
+                    0.01 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
         if 'nest' in simulators and 'neuron' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', '9ML-neuron')], 0.55 * pq.mV,
-                "LIaF NEURON 9ML simulation did not match NEST 9ML simulation")
+                "LIaF NEURON 9ML simulation did not match NEST 9ML simulation "
+                "within {} ({})".format(
+                    0.55 * pq.mV, comparisons[('9ML-nest', '9ML-neuron')]))
 
     def test_alpha_syn(self, plot=False, print_comparisons=False,
                        simulators=['nest', 'neuron'], dt=0.001,
@@ -303,8 +322,9 @@ class TestDynamics(TestCase):
                 'build_mode': build_mode,
                 'build_dir': os.path.join(build_dir, 'nest', 'IaFAlpha')},
             min_delay=min_delay,
+            # auxiliary_states=['end_refractory__cell'],
             device_delay=device_delay)
-        comparer.simulate(duration, nest_rng_seed=NEST_RNG_SEED,
+        comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
@@ -316,17 +336,20 @@ class TestDynamics(TestCase):
             self.assertLess(
                 comparisons[('9ML-nest', '9ML-neuron')], 0.015 * pq.mV,
                 "LIaF with Alpha syn NEST 9ML simulation did not match NEURON "
-                "9ML simulation")
+                "9ML simulation within {} ({})".format(
+                    0.015 * pq.mV, comparisons[('9ML-nest', '9ML-neuron')]))
         if 'nest' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', 'Ref-nest')], 0.04 * pq.mV,
                 "LIaF with Alpha syn NEST 9ML simulation did not match "
-                "reference built-in")
+                "reference built-in within {} ({})".format(
+                    0.04 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
         if 'neuron' in simulators:
             self.assertLess(
                 comparisons[('9ML-neuron', 'Ref-neuron')], 0.03 * pq.mV,
                 "LIaF with Alpha syn NEURON 9ML simulation did not match "
-                "reference PyNN")
+                "reference PyNN within {} ({})".format(
+                    0.03 * pq.mV, comparisons[('9ML-neuron', 'Ref-neuron')]))
 
     def test_izhiFS(self, plot=False, print_comparisons=False,
                     simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
@@ -344,8 +367,9 @@ class TestDynamics(TestCase):
             initial_regime='subVb',
             neuron_build_args={'build_mode': build_mode,
                                'external_currents': ['iSyn']},
-            nest_build_args={'build_mode': build_mode}) #, auxiliary_states=['U']) # @IgnorePep8
-        comparer.simulate(duration, nest_rng_seed=NEST_RNG_SEED,
+            # auxiliary_states=['U'],
+            nest_build_args={'build_mode': build_mode})
+        comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
@@ -358,15 +382,14 @@ class TestDynamics(TestCase):
                 comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
                 "Izhikevich 2007 NEURON 9ML simulation did not match NEST 9ML")
 
-    def test_poisson(self, duration=10 * un.s, rate=100 * un.Hz,
-                     print_comparisons=False, dt=0.001,
+    def test_poisson(self, duration=100 * un.s, rate=100 * un.Hz,
+                     t_next=0.0 * un.ms, print_comparisons=False, dt=0.1,
                      simulators=['nest', 'neuron'], build_mode='force',
                      **kwargs):  # @UnusedVariable @IgnorePep8
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': build_mode,
                                  'external_currents': ['iSyn']},
-                      'nest': {'build_mode': build_mode}}
-        initial_states = {'t_next': 0.0 * un.ms}
+                      'nest': {'build_mode': build_mode}}  #, 'debug': {'states': ['transition']}}} @IgnorePep8
         for sim_name in simulators:
             meta_class = cell_metaclasses[sim_name]
             # Build celltype
@@ -375,24 +398,17 @@ class TestDynamics(TestCase):
             # Initialise simulator
             if sim_name == 'neuron':
                 # Run NEURON simulation
-                import neuron
-                simulatorNEURON.clear(rng_seed=NEURON_RNG_SEED)
-                neuron.h.dt = dt
+                Simulation = NeuronSimulation(dt=dt * un.ms,
+                                              seed=NEURON_RNG_SEED)
             elif sim_name == 'nest':
-                simulatorNEST.clear(rng_seed=NEST_RNG_SEED, dt=dt)
+                Simulation = NESTSimulation(dt=dt * un.ms, seed=NEST_RNG_SEED)
             else:
                 assert False
-            # Create and initialise cell
-            cell = celltype(rate=rate)
-            cell.record('spike_output')
-            cell.set_state(initial_states)
-            # Run simulation
-            if sim_name == 'neuron':
-                simulatorNEURON.run(duration.in_units(un.ms))
-            elif sim_name == 'nest':
-                simulatorNEST.run(duration.in_units(un.ms))
-            else:
-                assert False
+            with Simulation as sim:
+                # Create and initialize cell
+                cell = celltype(rate=rate, t_next=t_next)
+                cell.record('spike_output')
+                sim.run(duration)
             # Get recording
             spikes = cell.recording('spike_output')
             # Calculate the rate of the modelled process
@@ -405,11 +421,14 @@ class TestDynamics(TestCase):
                 print "{} recorded rate: {}".format(sim_name, recorded_rate)
                 print "{} difference: {}".format(sim_name, rate_difference)
             self.assertLess(
-                rate_difference, 1.75 * pq.Hz,
+                rate_difference, 2.5 * pq.Hz,
                 ("Recorded rate of {} poisson generator ({}) did not match "
                  "desired ({}) within {}: difference {}".format(
-                     sim_name, recorded_rate, ref_rate, 1.75 * pq.Hz,
+                     sim_name, recorded_rate, ref_rate, 2.5 * pq.Hz,
                      recorded_rate - ref_rate)))
+
+
+
             # Calculate the absolute deviation
 #             isi_avg = pq.Quantity(1.0 / recorded_rate, 'ms')
 #             isi_std_dev = (abs((spikes[1:] - spikes[:-1]) - isi_avg) /

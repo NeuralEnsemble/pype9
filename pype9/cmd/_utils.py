@@ -58,6 +58,7 @@ def parse_units(unit_str):
 
 
 def _parse_subexpr(expr):
+    """parse_units helper function"""
     try:
         return standard_units[str(expr)]
     except KeyError:

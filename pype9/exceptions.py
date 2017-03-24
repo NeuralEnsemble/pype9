@@ -1,6 +1,12 @@
+class Pype9Exception(Exception):
+    pass
 
 
-class Pype9RuntimeError(Exception):
+class Pype9NotSupportedException(Pype9Exception):
+    pass
+
+
+class Pype9RuntimeError(Pype9Exception):
     pass
 
 
@@ -13,6 +19,10 @@ class Pype9UnitStrError(Pype9RuntimeError):
 
 
 class Pype9TypeError(TypeError, Pype9RuntimeError):
+    pass
+
+
+class Pype9NameError(KeyError, Pype9RuntimeError):
     pass
 
 
@@ -59,4 +69,8 @@ class Pype9ProjToCloneNotCreatedException(Pype9RuntimeError):
 
 
 class Pype9UsageError(Pype9RuntimeError):
+    pass
+
+
+class Pype9NoActiveSimulationError(Pype9RuntimeError):
     pass

@@ -2,6 +2,7 @@
 Runs a simulation described by an Experiment layer 9ML file
 """
 from argparse import ArgumentParser
+from nineml import units as un
 from ._utils import nineml_model, parse_units, logger
 
 
@@ -39,6 +40,10 @@ parser.add_argument('--play', type=str, nargs=2, action='append',
                           "play it into"))
 parser.add_argument('--seed', type=int, default=None,
                     help="Random seed used to create network and properties")
+parser.add_argument('--properties_seed', type=int, default=None,
+                    help=("Random seed used to create network and properties. "
+                          "If not provided it is generated from the '--seed' "
+                          "option."))
 parser.add_argument('--build_mode', type=str, default='lazy',
                     help=("The strategy used to build and compile the model. "
                           "Can be one of '{}' (default %(default)s)"))
@@ -51,19 +56,13 @@ def run(argv):
     import nineml
     from pype9.exceptions import Pype9UsageError
     import neo.io
-    import time
-    from pyNN.random import NumpyRNG
 
     args = parser.parse_args(argv)
 
-    seed = int(time.time()) if args.seed is None else args.seed
-
     if args.simulator == 'neuron':
-        from pype9.neuron import Network, CellMetaClass, simulation_controller  # @UnusedImport @IgnorePep8
+        from pype9.simulator.neuron import Network, CellMetaClass, Simulation  # @UnusedImport @IgnorePep8
     elif args.simulator == 'nest':
-        from pype9.nest import Network, CellMetaClass, simulation_controller  # @Reimport @IgnorePep8
-        import nest
-        nest.ResetKernel()
+        from pype9.simulator.nest import Network, CellMetaClass, Simulation  # @Reimport @IgnorePep8
     else:
         raise Pype9UsageError(
             "Unrecognised simulator '{}', (available 'neuron' or 'nest')"
@@ -81,33 +80,20 @@ def run(argv):
     model = args.model
 
     if isinstance(model, nineml.Network):
-        if args.simulator == 'neuron':
-            from pyNN.neuron import run, setup  # @UnusedImport
-        else:
-            from pyNN.nest import run, setup  # @Reimport
-
-        # Creating sub-seeds
-        rng_seed = 2 * seed
-        conn_seed = 2 * seed + 1
-        logger.info("Simulating '{}' with seed {}".format(model.name, seed))
-
         # Get min/max delays in model
-        min_delay, max_delay = model.delay_limits()
-
-        # Reset the simulator
-        setup(min_delay=min_delay, max_delay=max_delay,
-              timestep=args.timestep, rng_seeds_seed=rng_seed)
-        # Construct the network
-        logger.info("Constructing network")
-        conn_rng = NumpyRNG(conn_seed)
-        network = Network(model, build_mode=args.build_mode, rng=conn_rng)
-        logger.info("Finished constructing the '{}' network"
-                    .format(model.name))
-        for record_name, _ in args.record:
-            pop_name, port_name = record_name.split('.')
-            network.component_array(pop_name).record(port_name)
-        logger.info("Running the simulation")
-        run(args.time)
+        with Simulation(dt=args.timestep * un.ms, seed=args.seed,
+                        properties_seed=args.properties_seed,
+                        **model.delay_limits()) as sim:
+            # Construct the network
+            logger.info("Constructing network")
+            network = Network(model, build_mode=args.build_mode)
+            logger.info("Finished constructing the '{}' network"
+                        .format(model.name))
+            for record_name, _ in args.record:
+                pop_name, port_name = record_name.split('.')
+                network.component_array(pop_name).record(port_name)
+            logger.info("Running the simulation")
+            sim.run(args.time * un.ms)
         logger.info("Writing recorded data to file")
         for record_name, fname in args.record:
             pop_name, port_name = record_name.split('.')
@@ -131,10 +117,14 @@ def run(argv):
                 "Specified model {} is not a dynamics properties object and "
                 "no properties supplied to simulate command via --prop option"
                 .format(model))
+        # Get the initial state
+        init_state = dict((sv, float(val) * parse_units(units))
+                          for sv, val, units in args.init_value)
         # Get the init_regime
         init_regime = args.init_regime
         if init_regime is None:
             if component_class.num_regimes == 1:
+                # If there is only one regime it doesn't need to be specified
                 init_regime = next(component_class.regimes).name
             else:
                 raise Pype9UsageError(
@@ -143,34 +133,25 @@ def run(argv):
                         r.name for r in component_class.regimes)))
         # Build cell class
         Cell = CellMetaClass(component_class, name=model.name,
-                             build_mode=args.build_mode,
-                             default_properties=props)
-        # Create cell
-        cell = Cell()
-        init_state = dict((sv, float(val) * parse_units(units))
-                          for sv, val, units in args.init_value)
-        if set(cell.state_variable_names) != set(init_state.iterkeys()):
-            raise Pype9UsageError(
-                "Need to specify an initial value for each state in the model,"
-                " missing '{}'".format(
-                    "', '".join(set(cell.state_variable_names) -
-                                set(init_state.iterkeys()))))
-        cell.set_state(init_state, regime=init_regime)
-        # Play inputs
-        for port_name, fname in args.play:
-            port = component_class.receive_port(port_name)
-            seg = neo.io.PickleIO(filename=fname).read()[0]
-            if port.communicates == 'event':
-                signal = seg.spiketrains[0]
-            else:
-                signal = seg.analogsignals[0]
-            # Input is an event train or analog signal
-            cell.play(port_name, signal)
-        # Set up recorders
-        for port_name, _ in args.record:
-            cell.record(port_name)
-        # Run simulation
-        simulation_controller.run(args.time)
+                             build_mode=args.build_mode)
+        with Simulation(dt=args.timestep * un.ms, seed=args.seed) as sim:
+            # Create cell
+            cell = Cell(props, regime_=init_regime, **init_state)
+            # Play inputs
+            for port_name, fname in args.play:
+                port = component_class.receive_port(port_name)
+                seg = neo.io.PickleIO(filename=fname).read()[0]
+                if port.communicates == 'event':
+                    signal = seg.spiketrains[0]
+                else:
+                    signal = seg.analogsignals[0]
+                # Input is an event train or analog signal
+                cell.play(port_name, signal)
+            # Set up recorders
+            for port_name, _ in args.record:
+                cell.record(port_name)
+            # Run simulation
+            sim.run(args.time * un.ms)
         # Collect data into Neo Segments
         fnames = set(r[1] for r in args.record)
         data_segs = {}
@@ -188,4 +169,3 @@ def run(argv):
             neo.io.PickleIO(fname).write(data_seg)
     logger.info("Finished simulation of '{}' for {} ms".format(model.name,
                                                                args.time))
-
