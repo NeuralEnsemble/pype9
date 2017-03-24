@@ -10,6 +10,7 @@
 from __future__ import absolute_import
 import os.path
 import logging
+import numpy
 import neo
 import nest
 import quantities as pq
@@ -157,7 +158,7 @@ class Cell(base.Cell):
             # match the NEURON implementation
             spike_times = list(
                 pq.Quantity(signal, 'ms') + pq.ms - self._device_delay * pq.ms)
-            if any(spike_times <= 0.0):
+            if spike_times and any(spike_times <= 0.0):
                 raise Pype9UsageError(
                     "Some spike times are less than device delay and so "
                     "can't be played into cell ({})".format(', '.join(
