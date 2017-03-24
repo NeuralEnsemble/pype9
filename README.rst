@@ -2,7 +2,7 @@ PyPe9
 =====
 
 "PYthon PipelinEs for 9ml (PyPe9)" is a collection of software Python pipelines to
-read and simulate networks of neuron models described in NineML (http://nineml.net)
+simulate networks of neuron models described in NineML (http://nineml.net)
 using either Neuron (http://neuron.yale.edu) or NEST (http://nest-simulator.org)
 as simulator backends.
 
@@ -14,14 +14,16 @@ as simulator backends.
 Prerequisites
 -------------
 * Python >= 2.7.11
-* PyNEURON >= 7.3 (see
+* PyNEURON >= 7.4 (see
   http://www.davison.webfactional.com/notes/installation-neuron-python/)
 * PyNEST 2.10.0 (see http://www.nest-simulator.org/installation/)
-* PyNN 0.8.1 (see http://neuralensemble.org/docs/PyNN/installation.html)
+* PyNN 0.8.2 (see http://neuralensemble.org/docs/PyNN/installation.html)
 * lib9ML (`develop` branch at http://github.com/tclose/lib9ML)
 * Diophantine 0.1 (`master` branch http://github.com/tclose/Diophantine)
 * NineMLCatalog (for unit-tests,`develop` branch at
   http://github.com/tclose/NineMLCatalog)
+* Sympy == 0.7.6 or 1.0.1dev (there is a bug in 1.0)
+* Neo == 0.4.1
 
 NB: PyPe9 may work with earlier versions of the packages listed but it has not been tested.
  
