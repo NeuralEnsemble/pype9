@@ -156,15 +156,15 @@ class Cell(base.Cell):
                                 'EventReceivePortExposure'):
             # Shift the signal times to account for the minimum delay and
             # match the NEURON implementation
-            spike_times = list(
+            spike_times = numpy.asarray(
                 pq.Quantity(signal, 'ms') + pq.ms - self._device_delay * pq.ms)
-            if spike_times and any(spike_times <= 0.0):
+            if any(spike_times <= 0.0):
                 raise Pype9UsageError(
                     "Some spike times are less than device delay and so "
                     "can't be played into cell ({})".format(', '.join(
                         spike_times < (1 + self._device_delay))))
             self._inputs[port_name] = nest.Create(
-                'spike_generator', 1, {'spike_times': spike_times})
+                'spike_generator', 1, {'spike_times': list(spike_times)})
             syn_spec = {'receptor_type': self._receive_ports[port_name],
                         'delay': self._device_delay}
             self._check_connection_properties(port_name, properties)
