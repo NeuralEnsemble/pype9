@@ -16,11 +16,11 @@ Prerequisites
 * Python >= 2.7.11
 * PyNEURON >= 7.4 (see
   http://www.davison.webfactional.com/notes/installation-neuron-python/)
-* PyNEST 2.10.0 (see http://www.nest-simulator.org/installation/)
-* PyNN 0.8.2 (see http://neuralensemble.org/docs/PyNN/installation.html)
-* lib9ML (`develop` branch at http://github.com/tclose/lib9ML)
-* Diophantine 0.1 (`master` branch http://github.com/tclose/Diophantine)
-* NineMLCatalog (for unit-tests,`develop` branch at
+* PyNEST == 2.10.0 (see http://www.nest-simulator.org/installation/)
+* PyNN == 0.8.2 (see http://neuralensemble.org/docs/PyNN/installation.html)
+* lib9ML == 0.2 (`develop` branch at http://github.com/tclose/lib9ML)
+* Diophantine == 0.1 (`master` branch http://github.com/tclose/Diophantine)
+* NineMLCatalog == 0.2 (for unit-tests,`develop` branch at
   http://github.com/tclose/NineMLCatalog)
 * Sympy == 0.7.6 or 1.0.1dev (there is a bug in 1.0)
 * Neo == 0.4.1
