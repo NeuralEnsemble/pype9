@@ -197,52 +197,6 @@ class Cell(base.Cell):
             raise Pype9UsageError(
                 "Unrecognised port type '{}' to play signal into".format(port))
 
-    def connect(self, port_name, other, other_port_name, properties=[]):
-        """
-        Connects a port of the cell to a matching port on the 'other' cell
-
-        Parameters
-        ----------
-        port_name : str
-            Name of the send port to connect from
-        other : pype9.simulator.neuron.cells.Cell
-            Another cell to connect to
-        other_port_name : str
-            Name of the port on the other cell to connect to
-        properties : list(nineml.Property)
-            The connection properties of the event port
-        """
-        port = self.component_class.send_port(port_name)
-        if isinstance(port, EventPort):
-            if self.component_class.num_event_send_ports > 1:
-                raise Pype9NotSupportedException(
-                    "Cannot currently differentiate between multiple event "
-                    "send ports in NEST implementation ('{}')".format(
-                        "', '".join(
-                            self.component_class.event_send_port_names)))
-            self._check_connection_properties(port_name, properties)
-            syn_spec = {'receptor_type': other._receive_ports[other_port_name],
-                        'delay': self._device_delay}
-            if len(properties) > 1:
-                raise Pype9NotSupportedException(
-                    "Cannot handle more than one connection property per port")
-            elif properties:
-                syn_spec['weight'] = self.UnitHandler.scale_value(
-                    properties[0].quantity)
-            nest.Connect(self._cell, other._cell, syn_spec=syn_spec)
-        elif isinstance(port, AnalogPort):
-            if self.component_class.num_analog_send_ports > 1:
-                raise Pype9NotSupportedException(
-                    "Cannot currently differentiate between multiple event "
-                    "send ports in NEST implementation ('{}')".format(
-                        "', '".join(
-                            self.component_class.event_send_port_names)))
-            nest.Connect(self._cell, other._cell, syn_spec={
-                "receptor_type": other._receive_ports[port_name],
-                'delay': self._device_delay})
-        else:
-            assert False
-
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         raise NotImplementedError("voltage clamps are not supported for "
                                   "Pype9->NEST at this stage.")

@@ -380,49 +380,6 @@ class Cell(base.Cell):
             self._inputs['iclamp'] = iclamp
             self._input_auxs.extend((iclamp_amps, iclamp_times))
 
-    def connect(self, port_name, other, other_port_name, properties=[]):
-        """
-        Connects a port of the cell to a matching port on the 'other' cell
-
-        Parameters
-        ----------
-        port_name : str
-            Name of the send port to connect from
-        other : pype9.simulator.neuron.cells.Cell
-            Another cell to connect to
-        other_port_name : str
-            Name of the port on the other cell to connect to
-        properties : list(nineml.Property)
-            The connection properties of the event port
-        """
-        ext_is = self.build_component_class.annotations.get(
-            (BUILD_TRANS, PYPE9_NS), EXTERNAL_CURRENTS).split(',')
-        port = self.component_class.port(port_name)
-        if isinstance(port, EventPort):
-            if len(list(self.component_class.event_receive_ports)) > 1:
-                raise Pype9NotSupportedException(
-                    "Multiple event receive ports ('{}') are not currently "
-                    "supported".format("', '".join(
-                        [p.name
-                         for p in self.component_class.event_receive_ports])))
-            netcon = h.NetCon(self._hoc, other._hoc, sec=other._sec)
-            self._check_connection_properties(port_name, properties)
-            if len(properties) > 1:
-                raise Pype9NotSupportedException(
-                    "Cannot handle more than one connection property per port")
-            elif properties:
-                netcon.weight[0] = self.UnitHandler.scale_value(
-                    properties[0].quantity)
-            other._input_auxs.append(netcon)
-        elif isinstance(port, AnalogPort):
-            if port_name not in ext_is:
-                raise Pype9NotSupportedException(
-                    "Can only play into external current ports ('{}'), not "
-                    "'{}' port.".format("', '".join(ext_is), port_name))
-            raise NotImplementedError
-        else:
-            assert False
-
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         """
         Clamps the voltage of a segment
