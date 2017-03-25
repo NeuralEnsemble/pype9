@@ -34,7 +34,7 @@ from pype9.simulator.neuron.simulation import Simulation
 from pype9.annotations import (
     PYPE9_NS, BUILD_TRANS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
     MEMBRANE_VOLTAGE, MECH_TYPE, ARTIFICIAL_CELL_MECH)
-from pype9.exceptions import Pype9RuntimeError, Pype9NotSupportedException
+from pype9.exceptions import Pype9RuntimeError, Pype9NotSupportedBySimulatorException
 import logging
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
@@ -347,7 +347,7 @@ class Cell(base.Cell):
         port = self.component_class.port(port_name)
         if isinstance(port, EventPort):
             if len(list(self.component_class.event_receive_ports)) > 1:
-                raise Pype9NotSupportedException(
+                raise Pype9NotSupportedBySimulatorException(
                     "Multiple event receive ports ('{}') are not currently "
                     "supported".format("', '".join(
                         [p.name
@@ -367,7 +367,7 @@ class Cell(base.Cell):
             self._input_auxs.extend((vstim_times, vstim_con))
         else:
             if port_name not in ext_is:
-                raise Pype9NotSupportedException(
+                raise Pype9NotSupportedBySimulatorException(
                     "Can only play into external current ports ('{}'), not "
                     "'{}' port.".format("', '".join(ext_is), port_name))
             iclamp = h.IClamp(0.5, sec=self._sec)
