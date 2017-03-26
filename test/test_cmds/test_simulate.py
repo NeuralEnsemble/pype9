@@ -31,7 +31,7 @@ class TestSimulateCell(TestCase):
     dt = 0.001
     U = (-1.625, 'pA')  # (-14.0, 'mV/ms')
     V = (-65.0, 'mV')
-    izhi_path = '//neuron/Izhikevich#IzhikevichFastSpikingDefault'
+    izhi_path = '//neuron/Izhikevich#SampleIzhikevichFastSpiking'
     isyn_path = os.path.join(os.path.relpath(ninemlcatalog.root), 'input',
                              'StepCurrent.xml#StepCurrent')
     isyn_amp = (100.0, 'pA')
@@ -106,6 +106,7 @@ class TestSimulateCell(TestCase):
             self.assertTrue(all(regimes.times == ref_regimes.times))
             self.assertTrue(all(regimes.durations == ref_regimes.durations))
             self.assertEqual(regimes.labels, ref_regimes.labels)
+            self.assertEqual(len(regimes.times), 2)
             self.assertEqual(regimes.labels[0], 'subVb')
             self.assertTrue('subthreshold' in regimes.labels)
 
