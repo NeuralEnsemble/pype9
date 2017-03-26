@@ -34,7 +34,7 @@ class TestSimulateCell(TestCase):
     izhi_path = '//neuron/Izhikevich#IzhikevichFastSpikingDefault'
     isyn_path = os.path.join(os.path.relpath(ninemlcatalog.root), 'input',
                              'StepCurrent.xml#StepCurrent')
-    isyn_amp = (20.0, 'pA')
+    isyn_amp = (100.0, 'pA')
     isyn_onset = (50.0, 'ms')
     isyn_init = (0.0, 'pA')
 
@@ -117,7 +117,8 @@ class TestSimulateCell(TestCase):
             metaclass = NESTCellMetaClass
             Simulation = NESTSimulation
         nineml_model = ninemlcatalog.load(self.izhi_path)
-        Cell = metaclass(nineml_model.component_class, name='izhikevichAPI')
+        Cell = metaclass(nineml_model.component_class, name='izhikevichAPI',
+                         external_currents=['iSyn'])
         with Simulation(dt=self.dt * un.ms) as sim:
             cell = Cell(nineml_model, U=self.U[0] * parse_units(self.U[1]),
                         V=self.V[0] * parse_units(self.V[1]), regime_='subVb')

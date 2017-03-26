@@ -399,7 +399,8 @@ class CodeGenerator(BaseCodeGenerator):
                 # Check to see if the current appears in the membrane current
                 # expression
                 # FIXME: This test should check to to see if the port is
-                #        additive to the membrane current
+                #        additive to the membrane current and substitute all
+                #        aliases.
                 if port.name not in memb_i.rhs_symbol_names:
                     continue
                 # Get the number of expressions the receive port appears in

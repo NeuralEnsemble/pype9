@@ -135,9 +135,16 @@ def run(argv):
                     "Need to specify initial regime as dynamics has more than "
                     "one '{}'".format("', '".join(
                         r.name for r in component_class.regimes)))
+        # FIXME: A bit of a hack until better detection of input currents is
+        #        implemented in neuron code gen.
+        external_currents = []
+        for port_name, _ in args.play:
+            if component_class.port(port_name).dimension == un.current:
+                external_currents.append(port_name)
         # Build cell class
         Cell = CellMetaClass(component_class, name=model.name,
-                             build_mode=args.build_mode)
+                             build_mode=args.build_mode,
+                             external_currents=external_currents)
         record_regime = False
         with Simulation(dt=args.timestep * un.ms, seed=args.seed) as sim:
             # Create cell
