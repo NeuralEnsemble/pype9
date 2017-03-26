@@ -3,7 +3,6 @@ import tempfile
 import shutil
 import neo.io
 import numpy as np
-from nineml.units import Quantity
 from pype9.cmd import simulate
 from pype9.cmd._utils import parse_units
 import ninemlcatalog
@@ -32,7 +31,7 @@ class TestSimulateCell(TestCase):
     dt = 0.001
     U = (-14.0, 'mV/ms')
     V = (-65.0, 'mV')
-    izhi_path = '//neuron/Izhikevich#SampleIzhikevich'
+    izhi_path = '//neuron/Izhikevich#IzhikevichFastSpikingDefault'
     isyn_path = os.path.join(os.path.relpath(ninemlcatalog.root), 'input',
                              'StepCurrent.xml#StepCurrent')
     isyn_amp = (20.0, 'pA')
@@ -79,6 +78,7 @@ class TestSimulateCell(TestCase):
                 "--record V {out_path} "
                 "--init_value U {U} "
                 "--init_value V {V} "
+                "--init_regime subVb"
                 "--play Isyn {in_path} "
                 "--build_mode force"
                 .format(nineml_model=self.izhi_path, sim=simulator,
@@ -89,18 +89,25 @@ class TestSimulateCell(TestCase):
                         isyn_onset='{} {}'.format(*self.isyn_onset),
                         isyn_init='{} {}'.format(*self.isyn_init)))
             simulate.run(argv.split())
-            v = neo.io.PickleIO(out_path).read()[0].analogsignals[0]
-            ref_v = self._ref_single_cell(simulator, isyn)
+            data_seg = neo.io.PickleIO(out_path).read()[0]
+            v = data_seg.analogsignals[0]
+            regimes = data_seg.epocharrays[0]
+            ref_v, ref_regimes = self._ref_single_cell(simulator, isyn)
             self.assertTrue(all(v == ref_v),
                              "'simulate' command produced different results to"
                              " to api reference for izhikevich model using "
                              "'{}' simulator".format(simulator))
-            # TODO: Need a better test
+            # FIXME: Need a better test
             self.assertGreater(
                 v.max(), -60.0,
                 "No spikes generated for '{}' (max val: {}) version of Izhi "
                 "model. Probably error in 'play' method if all dynamics tests "
                 "pass ".format(simulator, v.max()))
+            self.assertTrue(all(regimes.times == ref_regimes.times))
+            self.assertTrue(all(regimes.durations == ref_regimes.durations))
+            self.assertTrue(all(regimes.labels == ref_regimes.labels))
+            self.assertEqual(regimes.labels[0], 'subVb')
+            self.assertTrue('subthreshold' in regimes.labels)
 
     def _ref_single_cell(self, simulator, isyn):
         if simulator == 'neuron':
@@ -117,7 +124,7 @@ class TestSimulateCell(TestCase):
             cell.record('V')
             cell.play('Isyn', isyn)
             sim.run(self.t_stop * un.ms)
-        return cell.recording('V')
+        return cell.recording('V'), cell.regime_epochs()
 
 
 class TestSimulateNetwork(TestCase):
