@@ -29,7 +29,7 @@ class TestSimulateCell(TestCase):
     # Izhikevich simulation params
     t_stop = 100.0
     dt = 0.001
-    U = (-14.0, 'mV/ms')
+    U = (-1.625, 'pA')  # (-14.0, 'mV/ms')
     V = (-65.0, 'mV')
     izhi_path = '//neuron/Izhikevich#IzhikevichFastSpikingDefault'
     isyn_path = os.path.join(os.path.relpath(ninemlcatalog.root), 'input',
@@ -78,8 +78,8 @@ class TestSimulateCell(TestCase):
                 "--record V {out_path} "
                 "--init_value U {U} "
                 "--init_value V {V} "
-                "--init_regime subVb"
-                "--play Isyn {in_path} "
+                "--init_regime subVb "
+                "--play iSyn {in_path} "
                 "--build_mode force"
                 .format(nineml_model=self.izhi_path, sim=simulator,
                         out_path=out_path, in_path=in_path, t_stop=self.t_stop,
@@ -105,7 +105,7 @@ class TestSimulateCell(TestCase):
                 "pass ".format(simulator, v.max()))
             self.assertTrue(all(regimes.times == ref_regimes.times))
             self.assertTrue(all(regimes.durations == ref_regimes.durations))
-            self.assertTrue(all(regimes.labels == ref_regimes.labels))
+            self.assertEqual(regimes.labels, ref_regimes.labels)
             self.assertEqual(regimes.labels[0], 'subVb')
             self.assertTrue('subthreshold' in regimes.labels)
 
@@ -120,9 +120,10 @@ class TestSimulateCell(TestCase):
         Cell = metaclass(nineml_model.component_class, name='izhikevichAPI')
         with Simulation(dt=self.dt * un.ms) as sim:
             cell = Cell(nineml_model, U=self.U[0] * parse_units(self.U[1]),
-                        V=self.V[0] * parse_units(self.V[1]))
+                        V=self.V[0] * parse_units(self.V[1]), regime_='subVb')
             cell.record('V')
-            cell.play('Isyn', isyn)
+            cell.record_regime()
+            cell.play('iSyn', isyn)
             sim.run(self.t_stop * un.ms)
         return cell.recording('V'), cell.regime_epochs()
 

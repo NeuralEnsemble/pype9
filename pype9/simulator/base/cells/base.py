@@ -393,17 +393,18 @@ class Cell(object):
             rec = self._regime_recording()
         except KeyError:
             raise Pype9UsageError(
-                "Regime transitions not recorded, call 'record_regimes' before"
+                "Regime transitions not recorded, call 'record_regime' before"
                 " simulation")
         cc = self.build_component_class
         index_map = dict((cc.index_of(r), r.name) for r in cc.regimes)
-        trans_inds = np.nonzero(rec[1:] != rec[:-1])[0] + 1
+        trans_inds = np.nonzero(
+            np.asarray(rec[1:]) != np.asarray(rec[:-1]))[0] + 1
         # Insert initial regime
-        np.insert(trans_inds, 0, 0)
+        trans_inds = np.insert(trans_inds, 0, 0)
         labels = [index_map[int(r)] for r in rec[trans_inds]]
         times = rec.times[trans_inds]
-        epoch_ends = np.append(times, len(times), rec.t_stop)
-        durations = epoch_ends[1:] - epoch_ends[:-1]
+        epochs = np.append(times, rec.t_stop)
+        durations = epochs[1:] - epochs[:-1]
         return neo.EpochArray(
             times=times, durations=durations, labels=labels,
             name='{}_regimes'.format(self.name))

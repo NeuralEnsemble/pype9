@@ -154,8 +154,8 @@ def run(argv):
                 cell.play(port_name, signal)
             # Set up recorders
             for port_name, _ in args.record:
-                if (model.num_regimes > 1 and
-                        model.port(port_name).communicates == 'analog'):
+                if (component_class.num_regimes > 1 and component_class.port(
+                        port_name).communicates == 'analog'):
                     record_regime = True
                 cell.record(port_name)
             if record_regime:
@@ -175,7 +175,7 @@ def run(argv):
             else:
                 data_segs[fname].spiketrains.append(data)
             if record_regime:
-                data_segs[fname].epoch_arrays.append(cell.regime_epochs())
+                data_segs[fname].epocharrays.append(cell.regime_epochs())
         # Write data to file
         for fname, data_seg in data_segs.iteritems():
             neo.io.PickleIO(fname).write(data_seg)

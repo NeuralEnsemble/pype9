@@ -135,7 +135,7 @@ class CodeGenerator(BaseCodeGenerator):
             'code_gen': self,
             'component_name': name,
             'component_class': component_class,
-            'version': pype9.version, 'src_dir': src_dir,
+            'version': pype9.__version__, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'unit_handler': UnitHandler(component_class),
             'ode_solver': self.ODE_SOLVER_DEFAULT,

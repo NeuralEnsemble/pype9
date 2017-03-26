@@ -112,7 +112,7 @@ class BaseCodeGenerator(object):
             A dictionary of (potentially simulator- specific) template
             arguments
         """
-        kwargs['version'] = pype9.version
+        kwargs['version'] = pype9.__version__
         # Set build properties
         try:
             for k, v in kwargs.iteritems():
