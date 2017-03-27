@@ -4,19 +4,25 @@ import shutil
 from pype9.cmd import plot, simulate
 import neo
 import ninemlcatalog
-import matplotlib
-matplotlib.use('Agg')  # So DISPLAY environment variable doesn't need to be set
-import matplotlib.pyplot as plt  # @IgnorePep8
-import matplotlib.image as img  # @IgnorePep8
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:
     from unittest import TestCase  # @Reimport
+    import matplotlib
+    matplotlib.use('Agg')  # So DISPLAY environment variable doesn't need to be
+import matplotlib.pyplot as plt  # @IgnorePep8
+import matplotlib.image as img  # @IgnorePep8
 
 
 class TestPlot(TestCase):
 
     recorded_pops = ('Exc', 'Inh')
+
+    isyn_amp = (100.0, 'pA')
+    isyn_onset = (50.0, 'ms')
+    isyn_init = (0.0, 'pA')
+    t_stop = 200.0
+    dt = 0.001
 
     def setUp(self):
         try:
@@ -33,36 +39,55 @@ class TestPlot(TestCase):
                                                  'single_cell_ref.png')
         self.ref_network_path = os.path.join(self.work_dir,
                                              'network_ref.png')
-        self.cell_signal_path = os.path.join(self.work_dir, 'v.neo.pkl')
+        self.cell_input_path = os.path.join(self.work_dir, 'plot_i.neo.pkl')
+        self.cell_signal_path = os.path.join(self.work_dir, 'plot_v.neo.pkl')
         self.network_signal_path = os.path.join(self.work_dir, 'exc.neo.pkl')
 
     def tearDown(self):
         if not self.cached:
             shutil.rmtree(self.work_dir)
 
-    def test_single_cell_plot(self):
-        # Generate test signal
+    def test_single_cell_plot(self, show=False):
         if not os.path.exists(self.cell_signal_path):
+            # Generate test signal
+            in_path = '{}/i.pkl'.format(self.work_dir)
+            if not os.path.exists(self.cell_input_path):
+                # First simulate input signal to have something to play into
+                # izhikevich cell
+                argv = ("//input/StepCurrent#StepCurrent nest {t_stop} {dt} "
+                        "--record current_output {out_path} "
+                        "--prop amplitude {amp} "
+                        "--prop onset {onset} "
+                        "--init_value current_output {init} "
+                        "--build_mode force"
+                        .format(out_path=in_path,
+                                t_stop=self.t_stop, dt=self.dt,
+                                amp='{} {}'.format(*self.isyn_amp),
+                                onset='{} {}'.format(*self.isyn_onset),
+                                init='{} {}'.format(*self.isyn_init)))
+                # Run input signal simulation
+                simulate.run(argv.split())
             argv = (
                 "//neuron/Izhikevich#SampleIzhikevichFastSpiking "
-                "nest 200.0 0.01 "
+                "nest {} 0.01 "
                 "--record V {} "
                 "--init_value U 1.625 pA "
                 "--init_value V -65.0 mV "
-                "--init_regime subVb ".format(self.cell_signal_path))
+                "--play iSyn {in_path} "
+                "--init_regime subVb ".format(
+                    self.t_stop, self.cell_signal_path, in_path=in_path))
             simulate.run(argv.split())
         # Run plotting command
         out_path = '{}/single_cell.png'.format(self.work_dir)
-        argv = ("{in_path} --save {out_path} --hide --dims 5 5 "
-                    "--resolution 100.0"
+        argv = ("{in_path} --save {out_path} --dims 5 5 "
+                "--resolution 100.0 {hide}"
                 .format(in_path=self.cell_signal_path, out_path=out_path,
-                        name='v'))
+                        name='v', hide=('' if show else '--hide')))
         plot.run(argv.split())
         image = img.imread(out_path)
         self._ref_single_cell_plot()
         ref_image = img.imread(self.ref_single_cell_path)
-        self.assertEqual(
-            image.shape, ref_image.shape)
+        self.assertEqual(image.shape, ref_image.shape)
         self.assertTrue(
             (image == ref_image).all(),
             "Ploted single cell data using 'plot' command (saved to '{}') did "
@@ -135,3 +160,8 @@ class TestPlot(TestCase):
         plt.ylabel('Cell Indices')
         plt.title("Spike Trains", fontsize=12)
         plt.savefig(self.ref_network_path, dpi=100.0)
+
+
+if __name__ == '__main__':
+    tester = TestPlot()
+    tester.test_single_cell_plot(show=True)

@@ -1,13 +1,19 @@
 import matplotlib.pyplot as plt
+from collections import defaultdict
+import quantities as pq
 import logging
+from itertools import izip
 
 logger = logging.getLogger('PyPe9')
 
 
-def plot(seg, dims=(10, 8), resolution=300, save=None, show=True):
+def plot(seg, dims=(10, 8), resolution=300, save=None, show=True,
+         regime_alpha=0.05, regime_linestyle=':'):
     num_subplots = bool(seg.analogsignals) + bool(seg.spiketrains)
     fig, axes = plt.subplots(num_subplots, 1)
     fig.suptitle('PyPe9 Simulation Output')
+    fig.set_figwidth(dims[0])
+    fig.set_figheight(dims[1])
     # Set the dimension of the figure
     plt_name = seg.name + ' ' if seg.name else ''
     if seg.spiketrains:
@@ -27,11 +33,30 @@ def plot(seg, dims=(10, 8), resolution=300, save=None, show=True):
         legend = []
         plt.sca(axes[-1] if num_subplots > 1 else axes)
         units = set(s.units.dimensionality.string for s in seg.analogsignals)
+        # Plot signals
         for i, signal in enumerate(seg.analogsignals):
             plt.plot(signal.times, signal)
             un_str = (signal.units.dimensionality.string
                       if len(units) > 1 else '')
             legend.append(signal.name + un_str if signal.name else str(i))
+        # Plot regime epochs (if present)
+        for epocharray in seg.epocharrays:
+            # Map labels to colours
+            labels = set(epocharray.labels)
+            # Remove the mode epoch
+            labels.remove(mode_epoch(epocharray))
+            label_colours = dict((l, plt.gca()._get_lines.get_next_color())
+                                 for l in labels)
+            for label, start, duration in izip(epocharray.labels,
+                                               epocharray.times,
+                                               epocharray.durations):
+                end = start + duration
+                plt.axvspan(start, end, facecolor=label_colours[label],
+                            alpha=regime_alpha)
+                plt.axvline(start, linestyle=regime_linestyle, color='gray',
+                            linewidth=0.5)
+                plt.axvline(end, linestyle=regime_linestyle, color='gray',
+                            linewidth=0.5)
         plt.xlim((seg.analogsignals[0].t_start, seg.analogsignals[0].t_stop))
         plt.xlabel('Time (ms)')
         un_str = (' ({})'.format(next(iter(units)))
@@ -39,10 +64,21 @@ def plot(seg, dims=(10, 8), resolution=300, save=None, show=True):
         plt.ylabel('Analog signals{}'.format(un_str))
         plt.title("{}Analog Signals".format(plt_name), fontsize=12)
         plt.legend(legend)
-    fig.set_figwidth(dims[0])
-    fig.set_figheight(dims[1])
     if save is not None:
         fig.savefig(save, dpi=resolution)
         logger.info("Saved{} figure to '{}'".format(plt_name, save))
     if show:
         plt.show()
+
+
+def mode_epoch(epocharray):
+    total_durations = defaultdict(lambda: 0.0 * pq.s)
+    for label, duration in izip(epocharray.labels,
+                                epocharray.durations):
+        total_durations[label] += duration
+    max_duration = 0.0
+    max_label = None
+    for label, total_duration in total_durations.iteritems():
+        if total_duration > max_duration:
+            max_label = label
+    return max_label

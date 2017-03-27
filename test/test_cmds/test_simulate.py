@@ -54,7 +54,7 @@ class TestSimulateCell(TestCase):
                 "--prop amplitude {amp} "
                 "--prop onset {onset} "
                 "--init_value current_output {init} "
-                "--build_mode force"  # FIXME: This should be converted to lazy
+                "--build_mode lazy"
                 .format(input_model=self.isyn_path, out_path=in_path,
                         t_stop=self.t_stop, dt=self.dt,
                         amp='{} {}'.format(*self.isyn_amp),

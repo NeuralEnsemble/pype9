@@ -403,7 +403,7 @@ class Cell(object):
         trans_inds = np.insert(trans_inds, 0, 0)
         labels = [index_map[int(r)] for r in rec[trans_inds]]
         times = rec.times[trans_inds]
-        epochs = np.append(times, rec.t_stop)
+        epochs = np.append(times, rec.t_stop) * times.units
         durations = epochs[1:] - epochs[:-1]
         return neo.EpochArray(
             times=times, durations=durations, labels=labels,
