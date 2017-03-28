@@ -11,34 +11,57 @@ as simulator backends.
 .. image:: https://coveralls.io/repos/github/CNS-OIST/PyPe9/badge.svg?branch=master
     :target: https://coveralls.io/github/CNS-OIST/PyPe9?branch=master
 
-Prerequisites
--------------
-* Python >= 2.7.11
-* PyNEURON >= 7.4 (see
-  http://www.davison.webfactional.com/notes/installation-neuron-python/)
-* PyNEST == 2.10.0 (see http://www.nest-simulator.org/installation/)
-* PyNN == 0.8.2 (see http://neuralensemble.org/docs/PyNN/installation.html)
-* lib9ML == 0.2 (`develop` branch at http://github.com/tclose/lib9ML)
-* Diophantine == 0.1 (`master` branch http://github.com/tclose/Diophantine)
-* NineMLCatalog == 0.2 (for unit-tests,`develop` branch at
-  http://github.com/tclose/NineMLCatalog)
-* Sympy == 0.7.6 or 1.0.1dev (there is a bug in 1.0)
-* Neo == 0.4.1
+Simulator Backends
+------------------
+
+PyPe9 
+
+* PyNEURON >= 7.3 (http://www.davison.webfactional.com/notes/installation-neuron-python/)
+* PyNEST == 2.10.0 (http://www.nest-simulator.org/installation/)
 
 NB: PyPe9 may work with earlier versions of the packages listed but it has not been tested.
  
+MacOS
+^^^^^
+
+On macOS, NEST and Neuron can be installed via the Hombrew package manager (https://brew.sh) 
+with the commands::
+
+   brew install --with-python nest
+   
+and::
+
+   brew install neuron
+   
+NB: If you have MPI installed and want to use it to spread your simulation over multiple compute
+cores/nodes you should provide the '--with-mpi' option. 
+
+Ubuntu/Debian
+^^^^^^^^^^^^^
+
+Docker
+^^^^^^
+
+Windows
+^^^^^^^
+
+NEST does not support Windows
+
 Installation
 ------------
 
-After installing PyNEURON, PyNEST and PyNN via the linked instructions clone the 
-lib9ML, Diophantine, NineMLCatalog and PyPe9 repositories to somewhere sensible
-on your local computer (e.g. $HOME/git/nineml, $HOME/git/diophantine,
-$HOME/git/ninemlcatalog & $HOME/git/pype9). Then add the python package root
-in each directory the python path of your python distribution for each repo (e.g.
-$HOME/git/nineml/nineml, $HOME/git/diophantine/diophantine,
-$HOME/git/ninemlcatalog/python/ninemlcatalog.py and $HOME/git/pype9/pype9),
-which can be done by adding the containing directory to the PYTHONPATH
-environment variable (see https://docs.python.org/2/using/cmdline.html#envvar-PYTHONPATH).
+
+
+* PyNN == 0.8.2 (http://neuralensemble.org/docs/PyNN/installation.html)
+* lib9ML (`develop` branch at http://github.com/tclose/lib9ML)
+* Diophantine == 0.1 (http://github.com/tclose/Diophantine)
+* NineMLCatalog (for unit-tests,`develop` branch at http://github.com/tclose/NineMLCatalog)
+* Sympy == 0.7.6 or 1.0.1dev (there is a bug in 1.0)
+* Neo == 0.4.1
+
+Python
+
+After installing PyNEURON and 
 
 Finally, there is a shared library containing wrappers for GSL random distribution
 functions to allow them to be called from the generated NEURON NMODL mechanisms, which
