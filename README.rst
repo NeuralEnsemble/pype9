@@ -21,6 +21,8 @@ Pype9 depends on the following Python packages
 * lib9ML (`develop` branch at http://github.com/tclose/lib9ML)
 * Diophantine == 0.1 (http://github.com/tclose/Diophantine)
 * NineMLCatalog (for unit-tests,`develop` branch at http://github.com/tclose/NineMLCatalog)
+* Sympy == 0.7.6 or 1.0.1dev (there is a bug in 1.0)
+* Neo == 0.4.1
 
 These requirements and the Pype9 package itself can be installed *after* the
 simulator backends are installed (see _`Simulator Backends`) by downloading/cloning
