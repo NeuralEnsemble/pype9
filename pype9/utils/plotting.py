@@ -38,8 +38,8 @@ def plot(seg, dims=(10, 8), resolution=300, save=None, show=True,
         for i, signal in enumerate(seg.analogsignals):
             un_str = (signal.units.dimensionality.string
                       if len(units) > 1 else '')
-            line, = plt.plot(signal.times, signal, label=(
-                signal.name + un_str if signal.name else str(i)))
+            label = signal.name + un_str if signal.name else str(i)
+            line, = plt.plot(signal.times, signal, label=label)
             legend.append(line)
         # Plot regime epochs (if present)
         for epocharray in seg.epocharrays:

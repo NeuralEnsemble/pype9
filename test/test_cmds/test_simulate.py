@@ -106,7 +106,7 @@ class TestSimulateCell(TestCase):
             self.assertTrue(all(regimes.times == ref_regimes.times))
             self.assertTrue(all(regimes.durations == ref_regimes.durations))
             self.assertEqual(regimes.labels, ref_regimes.labels)
-            self.assertEqual(len(regimes.times), 2)
+            self.assertEqual(len(regimes.times), 6)
             self.assertEqual(regimes.labels[0], 'subVb')
             self.assertTrue('subthreshold' in regimes.labels)
 
