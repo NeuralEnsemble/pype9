@@ -50,7 +50,6 @@ class TestPlot(TestCase):
     def test_single_cell_plot(self, show=False):
         if not os.path.exists(self.cell_signal_path):
             # Generate test signal
-            in_path = '{}/i.pkl'.format(self.work_dir)
             if not os.path.exists(self.cell_input_path):
                 # First simulate input signal to have something to play into
                 # izhikevich cell
@@ -60,7 +59,7 @@ class TestPlot(TestCase):
                         "--prop onset {onset} "
                         "--init_value current_output {init} "
                         "--build_mode force"
-                        .format(out_path=in_path,
+                        .format(out_path=self.cell_input_path,
                                 t_stop=self.t_stop, dt=self.dt,
                                 amp='{} {}'.format(*self.isyn_amp),
                                 onset='{} {}'.format(*self.isyn_onset),
@@ -75,7 +74,8 @@ class TestPlot(TestCase):
                 "--init_value V -65.0 mV "
                 "--play iSyn {in_path} "
                 "--init_regime subVb ".format(
-                    self.t_stop, self.cell_signal_path, in_path=in_path))
+                    self.t_stop, self.cell_signal_path,
+                    in_path=self.cell_input_path))
             simulate.run(argv.split())
         # Run plotting command
         out_path = '{}/single_cell.png'.format(self.work_dir)

@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from collections import defaultdict
 import quantities as pq
 import logging
@@ -35,35 +36,46 @@ def plot(seg, dims=(10, 8), resolution=300, save=None, show=True,
         units = set(s.units.dimensionality.string for s in seg.analogsignals)
         # Plot signals
         for i, signal in enumerate(seg.analogsignals):
-            plt.plot(signal.times, signal)
             un_str = (signal.units.dimensionality.string
                       if len(units) > 1 else '')
-            legend.append(signal.name + un_str if signal.name else str(i))
+            line, = plt.plot(signal.times, signal, label=(
+                signal.name + un_str if signal.name else str(i)))
+            legend.append(line)
         # Plot regime epochs (if present)
         for epocharray in seg.epocharrays:
             # Map labels to colours
             labels = set(epocharray.labels)
             # Remove the mode epoch
-            labels.remove(mode_epoch(epocharray))
+            mode = mode_epoch(epocharray)
+            labels.remove(mode)
             label_colours = dict((l, plt.gca()._get_lines.get_next_color())
                                  for l in labels)
+            label_colours[mode] = None
             for label, start, duration in izip(epocharray.labels,
                                                epocharray.times,
                                                epocharray.durations):
-                end = start + duration
-                plt.axvspan(start, end, facecolor=label_colours[label],
-                            alpha=regime_alpha)
-                plt.axvline(start, linestyle=regime_linestyle, color='gray',
-                            linewidth=0.5)
-                plt.axvline(end, linestyle=regime_linestyle, color='gray',
-                            linewidth=0.5)
+                if label_colours[label] is not None:
+                    end = start + duration
+                    plt.axvspan(start, end, facecolor=label_colours[label],
+                                alpha=regime_alpha)
+                    plt.axvline(start, linestyle=regime_linestyle,
+                                color='gray', linewidth=0.5)
+                    plt.axvline(end, linestyle=regime_linestyle, color='gray',
+                                linewidth=0.5)
+            for label, colour in label_colours.iteritems():
+                if colour is None:
+                    colour = 'white'
+                legend.append(
+                    mpatches.Patch(facecolor=colour, edgecolor='grey',
+                                   label=label + ' regime', linewidth=0.5,
+                                   linestyle=regime_linestyle))
         plt.xlim((seg.analogsignals[0].t_start, seg.analogsignals[0].t_stop))
         plt.xlabel('Time (ms)')
         un_str = (' ({})'.format(next(iter(units)))
                   if len(units) == 1 else '')
         plt.ylabel('Analog signals{}'.format(un_str))
         plt.title("{}Analog Signals".format(plt_name), fontsize=12)
-        plt.legend(legend)
+        plt.legend(handles=legend)
     if save is not None:
         fig.savefig(save, dpi=resolution)
         logger.info("Saved{} figure to '{}'".format(plt_name, save))
