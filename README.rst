@@ -1,5 +1,5 @@
 Pype9
-=====
+*****
 
 "PYthon PipelinEs for 9ml (Pype9)" is a collection of software Python pipelines to
 simulate networks of neuron models described in NineML (http://nineml.net)
@@ -13,10 +13,10 @@ as simulator backends.
 
 
 Installation
-------------
+============
 
 Simulator Backends
-^^^^^^^^^^^^^^^^^^
+------------------
 
 Pype9 works with the following simulator backends
 
@@ -24,8 +24,7 @@ Pype9 works with the following simulator backends
 * NEST == 2.10.0 
 
 MacOS
-"""""
-
+^^^^^
 On macOS, NEST and Neuron can be installed via the Hombrew package manager (https://brew.sh).
 *Before* installing them with Homebrew it is preferable (but not essential) to install the
 Homebrew version of Python with::
@@ -48,27 +47,24 @@ If you don't/can't use Hombrew then see the _`Source` section below.
 
 
 Ubuntu/Debian
-"""""""""""""
-
+^^^^^^^^^^^^^
 NEST and Neuron packages are available in the NeuroDebian repository (http://neuro.debian.net),
 otherwise please install from source (see _`Source`).
 
 Docker
-""""""
-
+^^^^^^
 Alternatively, there is a Docker image located at https://hub.docker.com/r/tclose/pype9/
 that you can pull to run the simulations within a Docker container. See the instructions
 in the comments of the `Dockerfile` in the Pype9 repo for instructions on how to do this.
 
 Windows
-"""""""
-
+^^^^^^^
 Pype9 has not been tested on Windows (and NEST does not run on Windows), so
 although Pype9/Neuron may run, it is recommended that you use the Docker
 container to run simulations on Windows.
 
 Source
-""""""
+^^^^^^
 Instructions on how to install NEST from source can be found on official NEST
 website, http://www.nest-simulator.org/installation/
 
@@ -79,7 +75,7 @@ In the `prereq` folder there are also scripts for installing the Neuron and NEST
 source on a Ubuntu image, which may serve as a good reference.
 
 Python
-^^^^^^
+------
 
 Pype9 depends on the following Python packages
 
@@ -107,21 +103,14 @@ contains wrappers for GSL random distribution functions, with::
 After that you just need to ensure the root of the Pype9 package is on your
 PYTHONPATH environment variable. 
 
-Reporting Issues
-----------------
-
-Please submit bug reports and feature requests to the GitHub issue tracker
-(http://github.com/CNS-OIST/PyPe9/issues).
-
-
 Documentation
--------------
+=============
 There is a brief  skeleton documentation in the <pype9-home>/doc directory, which
 can be built with Sphinx.
 
 
 Unsupported 9ML
----------------
+===============
 
 9ML aims to be a comprehensive description language for neural simulation. This
 means that it allows the expression of some uncommon configurations that are
@@ -139,6 +128,14 @@ restrictions apply to models that can be used with Pype9.
   built-in keywords and some PyPe9 method names (e.g. 'lambda' is a reserved
   keyword in Python). Please avoid using names that clash with C++ or Python
   keywords (all 9ML names will be escaped in PyPe9 v0.2).
+
+
+Reporting Issues
+================
+
+Please submit bug reports and feature requests to the GitHub issue tracker
+(http://github.com/CNS-OIST/PyPe9/issues).
+
 
 :copyright: Copyright 20012-2016 by the Pype9 team, see AUTHORS.
 :license: MIT, see LICENSE for details.
