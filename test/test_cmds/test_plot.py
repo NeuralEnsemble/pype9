@@ -12,6 +12,7 @@ else:
     matplotlib.use('Agg')  # So DISPLAY environment variable doesn't need to be
 import matplotlib.pyplot as plt  # @IgnorePep8
 import matplotlib.image as img  # @IgnorePep8
+import matplotlib.patches as mp  # @IgnorePep8
 
 
 class TestPlot(TestCase):
@@ -21,8 +22,10 @@ class TestPlot(TestCase):
     isyn_amp = (100.0, 'pA')
     isyn_onset = (50.0, 'ms')
     isyn_init = (0.0, 'pA')
-    t_stop = 200.0
+    t_stop = 100.0
     dt = 0.001
+
+    subVb_colour = '#ff7f0e'
 
     def setUp(self):
         try:
@@ -129,7 +132,16 @@ class TestPlot(TestCase):
         seg = neo.PickleIO(self.cell_signal_path).read()[0]
         signal = seg.analogsignals[0]
         plt.figure()
-        plt.plot(signal.times, signal)
+        v_line, = plt.plot(signal.times, signal)
+        for label, start, duration in zip(seg.epocharrays[0].labels,
+                                          seg.epocharrays[0].times,
+                                          seg.epocharrays[0].durations):
+            if label == 'subVb':
+                end = start + duration
+                plt.axvspan(start, end, facecolor=self.subVb_colour,
+                            alpha=0.05)
+                plt.axvline(start, linestyle=':', color='gray', linewidth=0.5)
+                plt.axvline(end, linestyle=':', color='gray', linewidth=0.5)
         fig = plt.gcf()
         fig.set_figheight(5)
         fig.set_figwidth(5)
@@ -138,7 +150,13 @@ class TestPlot(TestCase):
         plt.xlabel('Time (ms)')
         plt.ylabel('Analog signals (mV)')
         plt.title("Analog Signals", fontsize=12)
-        plt.legend(['V'])
+        plt.legend(handles=[
+            v_line,
+            mp.Patch(facecolor=self.subVb_colour, edgecolor='grey',
+                     label='subVb regime', linewidth=0.5, linestyle=':'),
+            mp.Patch(facecolor='white', edgecolor='grey',
+                     label='subthreshold regime', linewidth=0.5,
+                     linestyle=':')])
         plt.savefig(self.ref_single_cell_path, dpi=100.0)
 
     def _ref_network_plot(self):
