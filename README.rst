@@ -23,8 +23,6 @@ Pype9 works with the following simulator backends
 * Neuron >= 7.3
 * NEST == 2.10.0 
 
-NB: PyPe9 may work with earlier versions of the packages listed but it has not been tested.
-
 MacOS
 """""
 
