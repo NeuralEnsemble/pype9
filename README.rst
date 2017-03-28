@@ -15,33 +15,6 @@ as simulator backends.
 Installation
 ------------
 
-Pype9 depends on the following Python packages
-
-* PyNN == 0.8.2 (http://neuralensemble.org/docs/PyNN/installation.html)
-* lib9ML (`develop` branch at http://github.com/tclose/lib9ML)
-* Diophantine == 0.1 (http://github.com/tclose/Diophantine)
-* NineMLCatalog (for unit-tests,`develop` branch at http://github.com/tclose/NineMLCatalog)
-* Sympy == 0.7.6 or 1.0.1dev (there is a bug in 1.0)
-* Neo == 0.4.1
-
-These requirements and the Pype9 package itself can be installed *after* the
-simulator backends are installed (see _`Simulator Backends`) by downloading/cloning
-this repository and using pip::
-
-   cd <pype9-repo-dir>
-   pip install -r requirements.txt .
-
-If you cannot use pip (or you have recompiled your Neuron installation with a different
-C compiler) tyou will need to manually install the _libninemlnrn_ library, which
-contains wrappers for GSL random distribution functions, with:: 
-
-   cd <pype9-repo-dir>/pype9/neuron/cells/code_gen/libninemlnrn
-   CC=<your-Neuron-c-compiler> ./manual_compile.sh
-
-After that you just need to ensure the root of the Pype9 package is on your
-PYTHONPATH environment variable. 
-
-
 Simulator Backends
 ^^^^^^^^^^^^^^^^^^
 
@@ -107,6 +80,34 @@ Davisons notes here, http://www.davison.webfactional.com/notes/installation-neur
 In the `prereq` folder there are also scripts for installing the Neuron and NEST from
 source on a Ubuntu image, which may serve as a good reference.
 
+Python
+^^^^^^
+
+Pype9 depends on the following Python packages
+
+* PyNN == 0.8.2 (http://neuralensemble.org/docs/PyNN/installation.html)
+* lib9ML (`develop` branch at http://github.com/tclose/lib9ML)
+* Diophantine == 0.1 (http://github.com/tclose/Diophantine)
+* NineMLCatalog (for unit-tests,`develop` branch at http://github.com/tclose/NineMLCatalog)
+* Sympy == 0.7.6 or 1.0.1dev (there is a bug in 1.0)
+* Neo == 0.4.1
+
+These requirements and the Pype9 package itself can be installed *after* the
+simulator backends are installed (see _`Simulator Backends`) by downloading/cloning
+this repository and using pip::
+
+   cd <pype9-repo-dir>
+   pip install -r requirements.txt .
+
+If you cannot use pip (or you have recompiled your Neuron installation with a different
+C compiler) tyou will need to manually install the _libninemlnrn_ library, which
+contains wrappers for GSL random distribution functions, with:: 
+
+   cd <pype9-repo-dir>/pype9/neuron/cells/code_gen/libninemlnrn
+   CC=<your-Neuron-c-compiler> ./manual_compile.sh
+
+After that you just need to ensure the root of the Pype9 package is on your
+PYTHONPATH environment variable. 
 
 Reporting Issues
 ----------------
