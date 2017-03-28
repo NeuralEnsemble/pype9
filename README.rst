@@ -26,7 +26,7 @@ Pype9 works with the following simulator backends
 on MacOS
 ^^^^^^^^
 On macOS, NEST and Neuron can be installed via the Hombrew package manager (https://brew.sh).
-*Before* installing them with Homebrew it is preferable (but not essential) to install the
+*Before* installing them with *Homebrew* it is preferable (but not essential) to install the
 Homebrew version of Python with::
 
    brew install python
@@ -41,7 +41,7 @@ and Neuron can be installed with::
    brew install neuron
    
 NB: If you have MPI installed and want to use it to spread your simulation over multiple compute
-cores/nodes you should provide the '--with-mpi' option.
+cores/nodes you should provide the `--with-mpi` option.
    
 If you don't/can't use Hombrew then see the _`Source` section below. 
 
@@ -59,7 +59,7 @@ container to run simulations on Windows.
 
 with Docker
 ^^^^^^^^^^^
-Alternatively, there is a Docker image located at https://hub.docker.com/r/tclose/pype9/
+There is a Docker image located at https://hub.docker.com/r/tclose/pype9/
 that you can pull to run the simulations within a Docker container. See the instructions
 in the comments of the `Dockerfile` in the Pype9 repo for instructions on how to do this.
 
@@ -94,7 +94,7 @@ this repository and using pip::
    pip install -r requirements.txt .
 
 If you cannot use pip (or you have recompiled your Neuron installation with a different
-C compiler) tyou will need to manually install the _libninemlnrn_ library, which
+C compiler) you will need to manually install the *libninemlnrn* shared library, which
 contains wrappers for GSL random distribution functions, with:: 
 
    cd <pype9-repo-dir>/pype9/neuron/cells/code_gen/libninemlnrn
