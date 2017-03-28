@@ -3,6 +3,7 @@ Runs a simulation described by an Experiment layer 9ML file
 """
 from argparse import ArgumentParser
 from nineml import units as un
+from pype9.simulator.base.cells.code_gen import BaseCodeGenerator
 from ._utils import nineml_model, parse_units, logger
 
 
@@ -41,12 +42,14 @@ parser.add_argument('--play', type=str, nargs=2, action='append',
 parser.add_argument('--seed', type=int, default=None,
                     help="Random seed used to create network and properties")
 parser.add_argument('--properties_seed', type=int, default=None,
-                    help=("Random seed used to create network and properties. "
-                          "If not provided it is generated from the '--seed' "
-                          "option."))
+                    help=("Random seed used to create network connections and "
+                          "properties. If not provided it is generated from "
+                          "the '--seed' option."))
 parser.add_argument('--build_mode', type=str, default='lazy',
                     help=("The strategy used to build and compile the model. "
-                          "Can be one of '{}' (default %(default)s)"))
+                          "Can be one of '{}' (default %(default)s)"
+                          .format("', '".join(
+                              BaseCodeGenerator.BUILD_MODE_OPTIONS))))
 
 
 def run(argv):
@@ -64,23 +67,25 @@ def run(argv):
     elif args.simulator == 'nest':
         from pype9.simulator.nest import Network, CellMetaClass, Simulation  # @Reimport @IgnorePep8
     else:
+        assert False
+
+    if not args.record:
         raise Pype9UsageError(
-            "Unrecognised simulator '{}', (available 'neuron' or 'nest')"
-            .format(args.simulator))
+            "No recorders set, please specify at least one with the '--record'"
+            " option")
 
     # Check for clashing record paths
     record_paths = [fname for _, fname in args.record]
     for pth in record_paths:
         if record_paths.count(pth) > 1:
             raise Pype9UsageError(
-                "Duplicate record paths '{}' given to separate --record "
+                "Duplicate record paths '{}' given to separate '--record' "
                 "options".format(pth))
 
     # For convenience
     model = args.model
 
     if isinstance(model, nineml.Network):
-        # Get min/max delays in model
         with Simulation(dt=args.timestep * un.ms, seed=args.seed,
                         properties_seed=args.properties_seed,
                         **model.delay_limits()) as sim:
@@ -100,8 +105,7 @@ def run(argv):
             pop = network.component_array(pop_name)
             neo.PickleIO(fname).write(pop.recording(port_name))
     else:
-        assert isinstance(model, (nineml.DynamicsProperties,
-                                       nineml.Dynamics))
+        assert isinstance(model, (nineml.DynamicsProperties, nineml.Dynamics))
         # Override properties passed as options
         if args.prop:
             props_dict = dict((parm, float(val) * parse_units(unts))
@@ -131,9 +135,17 @@ def run(argv):
                     "Need to specify initial regime as dynamics has more than "
                     "one '{}'".format("', '".join(
                         r.name for r in component_class.regimes)))
+        # FIXME: A bit of a hack until better detection of input currents is
+        #        implemented in neuron code gen.
+        external_currents = []
+        for port_name, _ in args.play:
+            if component_class.port(port_name).dimension == un.current:
+                external_currents.append(port_name)
         # Build cell class
         Cell = CellMetaClass(component_class, name=model.name,
-                             build_mode=args.build_mode)
+                             build_mode=args.build_mode,
+                             external_currents=external_currents)
+        record_regime = False
         with Simulation(dt=args.timestep * un.ms, seed=args.seed) as sim:
             # Create cell
             cell = Cell(props, regime_=init_regime, **init_state)
@@ -149,7 +161,12 @@ def run(argv):
                 cell.play(port_name, signal)
             # Set up recorders
             for port_name, _ in args.record:
+                if (component_class.num_regimes > 1 and component_class.port(
+                        port_name).communicates == 'analog'):
+                    record_regime = True
                 cell.record(port_name)
+            if record_regime:
+                cell.record_regime()
             # Run simulation
             sim.run(args.time * un.ms)
         # Collect data into Neo Segments
@@ -164,6 +181,8 @@ def run(argv):
                 data_segs[fname].analogsignals.append(data)
             else:
                 data_segs[fname].spiketrains.append(data)
+            if record_regime:
+                data_segs[fname].epocharrays.append(cell.regime_epochs())
         # Write data to file
         for fname, data_seg in data_segs.iteritems():
             neo.io.PickleIO(fname).write(data_seg)

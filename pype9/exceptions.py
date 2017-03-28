@@ -2,7 +2,7 @@ class Pype9Exception(Exception):
     pass
 
 
-class Pype9NotSupportedException(Pype9Exception):
+class Pype9NotSupportedBySimulatorException(Pype9Exception):
     pass
 
 

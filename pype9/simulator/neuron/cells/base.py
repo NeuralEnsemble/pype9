@@ -34,7 +34,7 @@ from pype9.simulator.neuron.simulation import Simulation
 from pype9.annotations import (
     PYPE9_NS, BUILD_TRANS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
     MEMBRANE_VOLTAGE, MECH_TYPE, ARTIFICIAL_CELL_MECH)
-from pype9.exceptions import Pype9RuntimeError, Pype9NotSupportedException
+from pype9.exceptions import Pype9RuntimeError, Pype9NotSupportedBySimulatorException
 import logging
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
@@ -271,48 +271,43 @@ class Cell(base.Cell):
                     self._sec(0.5), '_ref_' + escaped_port_name)
             recording.record(recorder)
 
-    def record_transitions(self):
+    def record_regime(self):
         self._initialize_local_recording()
-        self._recordings['__REGIME__'] = recording = h.Vector()
-        recording.record(getattr(self._hoc, '_ref_regime_'))
+        self._recordings[REGIME_VARNAME] = recording = h.Vector()
+        recording.record(getattr(self._hoc, '_ref_{}'.format(REGIME_VARNAME)))
 
     def recording(self, port_name):
         """
         Return recorded data as a dictionary containing one numpy array for
         each neuron, ids as keys.
         """
+        if self.is_dead():
+            t_stop = self._t_stop
+        else:
+            t_stop = self.Simulation.active().t
+        t_start = UnitHandler.to_pq_quantity(self._t_start)
+        t_stop = UnitHandler.to_pq_quantity(t_stop)
         try:
             port = self.component_class.port(port_name)
         except NineMLNameError:
             port = self.component_class.state_variable(port_name)
         if isinstance(port, EventPort):
             recording = neo.SpikeTrain(
-                self._recordings[port_name], t_start=0.0 * pq.ms,
-                t_stop=h.t * pq.ms, units='ms')
+                self._recordings[port_name], t_start=t_start,
+                t_stop=t_stop, units='ms')
         else:
             units_str = UnitHandler.dimension_to_unit_str(
                 port.dimension, one_as_dimensionless=True)
             recording = neo.AnalogSignal(
                 self._recordings[port_name], sampling_period=h.dt * pq.ms,
-                t_start=0.0 * pq.ms, units=units_str, name=port_name)
+                t_start=t_start, units=units_str, name=port_name)
         return recording[:-1]
 
-    def transitions(self):
-        try:
-            recording = numpy.array(self._recordings['__REGIME__'], dtype=int)
-        except KeyError:
-            raise Pype9RuntimeError(
-                "Transitions not recorded, call 'record_transitions' before "
-                "simulation")
-        cc = self.build_component_class
-        index_map = dict((cc.index_of(r), r.name) for r in cc.regimes)
-        transition_inds = (
-            numpy.nonzero((recording[1:] != recording[:-1]))[0]) + 1
-        transitions = [(0 * pq.ms, index_map[recording[0]])]
-        transitions.extend(
-            (i * h.dt * pq.ms, index_map[recording[i]])
-            for i in transition_inds)
-        return transitions
+    def _regime_recording(self):
+        t_start = UnitHandler.to_pq_quantity(self._t_start)
+        return neo.AnalogSignal(
+            self._recordings[REGIME_VARNAME], sampling_period=h.dt * pq.ms,
+            t_start=t_start, units='dimensionless', name=REGIME_VARNAME)
 
     def reset_recordings(self):
         """
@@ -347,7 +342,7 @@ class Cell(base.Cell):
         port = self.component_class.port(port_name)
         if isinstance(port, EventPort):
             if len(list(self.component_class.event_receive_ports)) > 1:
-                raise Pype9NotSupportedException(
+                raise Pype9NotSupportedBySimulatorException(
                     "Multiple event receive ports ('{}') are not currently "
                     "supported".format("', '".join(
                         [p.name
@@ -367,7 +362,7 @@ class Cell(base.Cell):
             self._input_auxs.extend((vstim_times, vstim_con))
         else:
             if port_name not in ext_is:
-                raise Pype9NotSupportedException(
+                raise Pype9NotSupportedBySimulatorException(
                     "Can only play into external current ports ('{}'), not "
                     "'{}' port.".format("', '".join(ext_is), port_name))
             iclamp = h.IClamp(0.5, sec=self._sec)

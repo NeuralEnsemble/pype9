@@ -22,7 +22,8 @@ from pype9.simulator.nest.simulation import Simulation
 from pype9.simulator.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
 from pype9.simulator.nest.units import UnitHandler
-from pype9.exceptions import Pype9UsageError, Pype9NotSupportedException
+from pype9.exceptions import (
+    Pype9UsageError, Pype9NotSupportedBySimulatorException)
 from pype9.utils import add_lib_path
 
 
@@ -88,6 +89,17 @@ class Cell(base.Cell):
             nest.Connect(
                 recorder, self._cell, syn_spec={'delay': self._device_delay})
 
+    def record_regime(self, interval=None):
+        self._initialize_local_recording()
+        if interval is None:
+            interval = Simulation.active().dt
+        interval = float(interval.in_units(un.ms))
+        self._recorders[REGIME_VARNAME] = recorder = nest.Create(
+            'multimeter', 1, {"interval": interval})
+        nest.SetStatus(recorder, {'record_from': [REGIME_VARNAME]})
+        nest.Connect(
+            recorder, self._cell, syn_spec={'delay': self._device_delay})
+
     def recording(self, port_name):
         """
         Return recorded data as a dictionary containing one numpy array for
@@ -125,6 +137,15 @@ class Cell(base.Cell):
                 events[variable_name], sampling_period=interval * pq.ms,
                 t_start=t_start, units=unit_str, name=port_name)
         return data
+
+    def _regime_recording(self):
+        events, interval = nest.GetStatus(self._recorders[REGIME_VARNAME],
+                                              ('events', 'interval'))[0]
+        return neo.AnalogSignal(
+            events[REGIME_VARNAME],
+            sampling_period=interval * pq.ms, units='dimensionless',
+            t_start=UnitHandler.to_pq_quantity(self._t_start),
+            name=REGIME_VARNAME)
 
     def build_name(self, varname):
         # Get mapped port name if port corresponds to membrane voltage

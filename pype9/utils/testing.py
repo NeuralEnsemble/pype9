@@ -768,3 +768,15 @@ class DummyTestCase(object):
                 msg = '{} is equal to {}'.format(
                     repr(first), repr(second))
             print msg
+
+    def assertTrue(self, statement, msg=None):
+        if not statement:
+            if msg is None:
+                msg = '{} is not true'.format(repr(statement))
+            print msg
+
+    def assertNotTrue(self, statement, msg=None):
+        if statement:
+            if msg is None:
+                msg = '{} is true'.format(repr(statement))
+            print msg

@@ -12,7 +12,9 @@
            the MIT Licence, see LICENSE for details.
 """
 from itertools import chain
+import numpy as np
 import quantities as pq
+import neo
 import nineml
 from nineml.abstraction import Dynamics, Regime
 from nineml.user import Property, Initial
@@ -377,8 +379,35 @@ class Cell(object):
     def record(self, port_name):
         raise NotImplementedError("Should be implemented by derived class")
 
+    def record_regime(self):
+        raise NotImplementedError("Should be implemented by derived class")
+
     def recording(self, port_name):
         raise NotImplementedError("Should be implemented by derived class")
+
+    def _regime_recording(self):
+        raise NotImplementedError("Should be implemented by derived class")
+
+    def regime_epochs(self):
+        try:
+            rec = self._regime_recording()
+        except KeyError:
+            raise Pype9UsageError(
+                "Regime transitions not recorded, call 'record_regime' before"
+                " simulation")
+        cc = self.build_component_class
+        index_map = dict((cc.index_of(r), r.name) for r in cc.regimes)
+        trans_inds = np.nonzero(
+            np.asarray(rec[1:]) != np.asarray(rec[:-1]))[0] + 1
+        # Insert initial regime
+        trans_inds = np.insert(trans_inds, 0, 0)
+        labels = [index_map[int(r)] for r in rec[trans_inds]]
+        times = rec.times[trans_inds]
+        epochs = np.append(times, rec.t_stop) * times.units
+        durations = epochs[1:] - epochs[:-1]
+        return neo.EpochArray(
+            times=times, durations=durations, labels=labels,
+            name='{}_regimes'.format(self.name))
 
     def play(self, port_name, signal, properties=[]):
         raise NotImplementedError("Should be implemented by derived class")

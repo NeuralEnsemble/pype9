@@ -3,7 +3,6 @@ import tempfile
 import shutil
 import neo.io
 import numpy as np
-from nineml.units import Quantity
 from pype9.cmd import simulate
 from pype9.cmd._utils import parse_units
 import ninemlcatalog
@@ -30,12 +29,12 @@ class TestSimulateCell(TestCase):
     # Izhikevich simulation params
     t_stop = 100.0
     dt = 0.001
-    U = (-14.0, 'mV/ms')
+    U = (-1.625, 'pA')  # (-14.0, 'mV/ms')
     V = (-65.0, 'mV')
-    izhi_path = '//neuron/Izhikevich#SampleIzhikevich'
+    izhi_path = '//neuron/Izhikevich#SampleIzhikevichFastSpiking'
     isyn_path = os.path.join(os.path.relpath(ninemlcatalog.root), 'input',
                              'StepCurrent.xml#StepCurrent')
-    isyn_amp = (20.0, 'pA')
+    isyn_amp = (100.0, 'pA')
     isyn_onset = (50.0, 'ms')
     isyn_init = (0.0, 'pA')
 
@@ -55,7 +54,7 @@ class TestSimulateCell(TestCase):
                 "--prop amplitude {amp} "
                 "--prop onset {onset} "
                 "--init_value current_output {init} "
-                "--build_mode force"  # FIXME: This should be converted to lazy
+                "--build_mode lazy"
                 .format(input_model=self.isyn_path, out_path=in_path,
                         t_stop=self.t_stop, dt=self.dt,
                         amp='{} {}'.format(*self.isyn_amp),
@@ -79,7 +78,8 @@ class TestSimulateCell(TestCase):
                 "--record V {out_path} "
                 "--init_value U {U} "
                 "--init_value V {V} "
-                "--play Isyn {in_path} "
+                "--init_regime subVb "
+                "--play iSyn {in_path} "
                 "--build_mode force"
                 .format(nineml_model=self.izhi_path, sim=simulator,
                         out_path=out_path, in_path=in_path, t_stop=self.t_stop,
@@ -89,18 +89,26 @@ class TestSimulateCell(TestCase):
                         isyn_onset='{} {}'.format(*self.isyn_onset),
                         isyn_init='{} {}'.format(*self.isyn_init)))
             simulate.run(argv.split())
-            v = neo.io.PickleIO(out_path).read()[0].analogsignals[0]
-            ref_v = self._ref_single_cell(simulator, isyn)
+            data_seg = neo.io.PickleIO(out_path).read()[0]
+            v = data_seg.analogsignals[0]
+            regimes = data_seg.epocharrays[0]
+            ref_v, ref_regimes = self._ref_single_cell(simulator, isyn)
             self.assertTrue(all(v == ref_v),
                              "'simulate' command produced different results to"
                              " to api reference for izhikevich model using "
                              "'{}' simulator".format(simulator))
-            # TODO: Need a better test
+            # FIXME: Need a better test
             self.assertGreater(
                 v.max(), -60.0,
                 "No spikes generated for '{}' (max val: {}) version of Izhi "
                 "model. Probably error in 'play' method if all dynamics tests "
                 "pass ".format(simulator, v.max()))
+            self.assertTrue(all(regimes.times == ref_regimes.times))
+            self.assertTrue(all(regimes.durations == ref_regimes.durations))
+            self.assertEqual(regimes.labels, ref_regimes.labels)
+            self.assertEqual(len(regimes.times), 6)
+            self.assertEqual(regimes.labels[0], 'subVb')
+            self.assertTrue('subthreshold' in regimes.labels)
 
     def _ref_single_cell(self, simulator, isyn):
         if simulator == 'neuron':
@@ -110,14 +118,16 @@ class TestSimulateCell(TestCase):
             metaclass = NESTCellMetaClass
             Simulation = NESTSimulation
         nineml_model = ninemlcatalog.load(self.izhi_path)
-        Cell = metaclass(nineml_model.component_class, name='izhikevichAPI')
+        Cell = metaclass(nineml_model.component_class, name='izhikevichAPI',
+                         external_currents=['iSyn'])
         with Simulation(dt=self.dt * un.ms) as sim:
             cell = Cell(nineml_model, U=self.U[0] * parse_units(self.U[1]),
-                        V=self.V[0] * parse_units(self.V[1]))
+                        V=self.V[0] * parse_units(self.V[1]), regime_='subVb')
             cell.record('V')
-            cell.play('Isyn', isyn)
+            cell.record_regime()
+            cell.play('iSyn', isyn)
             sim.run(self.t_stop * un.ms)
-        return cell.recording('V')
+        return cell.recording('V'), cell.regime_epochs()
 
 
 class TestSimulateNetwork(TestCase):
