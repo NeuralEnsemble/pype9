@@ -43,7 +43,7 @@ PYTHONPATH environment variable.
 
 
 Simulator Backends
-------------------
+^^^^^^^^^^^^^^^^^^
 
 Pype9 works with the following simulator backends
 
@@ -53,7 +53,7 @@ Pype9 works with the following simulator backends
 NB: PyPe9 may work with earlier versions of the packages listed but it has not been tested.
 
 MacOS
-^^^^^
+"""""
 
 On macOS, NEST and Neuron can be installed via the Hombrew package manager (https://brew.sh).
 *Before* installing them with Homebrew it is preferable (but not essential) to install the
@@ -77,27 +77,27 @@ If you don't/can't use Hombrew then see the _`Source` section below.
 
 
 Ubuntu/Debian
-^^^^^^^^^^^^^
+"""""""""""""
 
 NEST and Neuron packages are available in the NeuroDebian repository (http://neuro.debian.net),
 otherwise please install from source (see _`Source`).
 
 Docker
-^^^^^^
+""""""
 
 Alternatively, there is a Docker image located at https://hub.docker.com/r/tclose/pype9/
 that you can pull to run the simulations within a Docker container. See the instructions
 in the comments of the `Dockerfile` in the Pype9 repo for instructions on how to do this.
 
 Windows
-^^^^^^^
+"""""""
 
 Pype9 has not been tested on Windows (and NEST does not run on Windows), so
 although Pype9/Neuron may run, it is recommended that you use the Docker
 container to run simulations on Windows.
 
 Source
-^^^^^^
+""""""
 Instructions on how to install NEST from source can be found on official NEST
 website, http://www.nest-simulator.org/installation/
 
