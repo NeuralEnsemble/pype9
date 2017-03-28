@@ -1,17 +1,4 @@
-Pype9
-*****
-
-"PYthon PipelinEs for 9ml (Pype9)" is a collection of software Python pipelines to
-simulate networks of neuron models described in NineML (http://nineml.net)
-using either Neuron (http://neuron.yale.edu) or NEST (http://nest-simulator.org)
-as simulator backends.
-
-.. image:: https://travis-ci.org/CNS-OIST/PyPe9.svg?branch=master
-    :target: https://travis-ci.org/CNS-OIST/PyPe9
-.. image:: https://coveralls.io/repos/github/CNS-OIST/PyPe9/badge.svg?branch=master
-    :target: https://coveralls.io/github/CNS-OIST/PyPe9?branch=master
-
-
+============
 Installation
 ============
 
@@ -100,40 +87,3 @@ shared library, which contains wrappers for GSL random distribution functions, w
 
 After that you just need to ensure the root of the Pype9 package is on your
 PYTHONPATH environment variable. 
-
-Documentation
-=============
-There is a brief documentation in the <pype9-home>/doc directory, which
-can be built with Sphinx.
-
-
-Unsupported 9ML
-===============
-
-9ML aims to be a comprehensive description language for neural simulation. This
-means that it allows the expression of some uncommon configurations that are
-difficult to implement in NEURON and NEST. Work is planned to make the NEURON
-and NEST pipelines in Pype9 support 9ML fully, however until then the following
-restrictions apply to models that can be used with Pype9.
-
-* synapses must be linear (to be relaxed in v0.2)
-* synapses can only have one variable that varies over a projection
-  (e.g. weight) (to be relaxed in v0.2)
-* no analog connections between populations (i.e. gap junctions)
-  (gap junctions to be implemented in v0.2)
-* only one event send port per cell (current limitation of NEURON/NEST)
-* names given to 9ML elements are not escaped and therefore can clash with
-  built-in keywords and some PyPe9 method names (e.g. 'lambda' is a reserved
-  keyword in Python). Please avoid using names that clash with C++ or Python
-  keywords (all 9ML names will be escaped in PyPe9 v0.2).
-
-
-Reporting Issues
-================
-
-Please submit bug reports and feature requests to the GitHub issue tracker
-(http://github.com/CNS-OIST/PyPe9/issues).
-
-
-:copyright: Copyright 20012-2016 by the Pype9 team, see AUTHORS.
-:license: MIT, see LICENSE for details.
