@@ -10,10 +10,22 @@ as simulator backends.
     :target: https://travis-ci.org/CNS-OIST/PyPe9
 .. image:: https://coveralls.io/repos/github/CNS-OIST/PyPe9/badge.svg?branch=master
     :target: https://coveralls.io/github/CNS-OIST/PyPe9?branch=master
+.. image:: https://readthedocs.org/projects/pype9/badge/?version=latest
+    :target: http://pype9.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status 
+
 
 Documentation
 =============
 Brief documentation is available at http://pype9.readthedocs.io 
+
+
+Reporting Issues
+================
+
+Please submit bug reports and feature requests to the GitHub issue tracker
+(http://github.com/CNS-OIST/PyPe9/issues).
+
 
 Unsupported 9ML
 ===============
@@ -35,12 +47,6 @@ restrictions apply to models that can be used with Pype9.
   keyword in Python). Please avoid using names that clash with C++ or Python
   keywords (all 9ML names will be escaped in PyPe9 v0.2).
 
-
-Reporting Issues
-================
-
-Please submit bug reports and feature requests to the GitHub issue tracker
-(http://github.com/CNS-OIST/PyPe9/issues).
 
 Installation
 ============
