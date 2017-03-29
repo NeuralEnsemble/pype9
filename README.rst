@@ -1,11 +1,6 @@
 Pype9
 *****
 
-"PYthon PipelinEs for 9ml (Pype9)" is a collection of software Python pipelines to
-simulate networks of neuron models described in NineML (http://nineml.net)
-using either Neuron (http://neuron.yale.edu) or NEST (http://nest-simulator.org)
-as simulator backends.
-
 .. image:: https://travis-ci.org/CNS-OIST/PyPe9.svg?branch=master
     :target: https://travis-ci.org/CNS-OIST/PyPe9
 .. image:: https://coveralls.io/repos/github/CNS-OIST/PyPe9/badge.svg?branch=master
@@ -13,10 +8,11 @@ as simulator backends.
 .. image:: https://readthedocs.org/projects/pype9/badge/?version=latest
     :target: http://pype9.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status 
- 
 
-:copyright: Copyright 20012-2016 by the Pype9 team, see AUTHORS.
-:license: MIT, see LICENSE for details.
+"PYthon PipelinEs for 9ml (Pype9)" is a collection of software Python pipelines to
+simulate networks of neuron models described in NineML (http://nineml.net)
+using either Neuron (http://neuron.yale.edu) or NEST (http://nest-simulator.org)
+as simulator backends.
 
 Documentation
 =============
@@ -137,3 +133,6 @@ shared library, which contains wrappers for GSL random distribution functions, w
 
 After that you just need to ensure the root of the Pype9 package is symlinked to your
 site-packages directory or on your PYTHONPATH environment variable.
+
+:copyright: Copyright 20012-2016 by the Pype9 team, see AUTHORS.
+:license: MIT, see LICENSE for details.
