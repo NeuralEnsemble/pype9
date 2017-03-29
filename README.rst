@@ -62,7 +62,7 @@ on MacOS
 ^^^^^^^^
 On macOS, NEST and Neuron can be installed via the Hombrew package manager (https://brew.sh).
 *Before* installing them with *Homebrew* it is preferable (but not essential) to install the
-Homebrew version of Python with::
+*Homebrew* version of Python with::
 
    brew install python
 
@@ -77,7 +77,7 @@ and Neuron can be installed with::
 NB: If you have MPI installed and want to use it to spread your simulation over multiple compute
 cores/nodes you should provide the `--with-mpi` option.
    
-If you don't/can't use Hombrew then see the _`from Source Code` section below. 
+If you don't/can't use *Hombrew* then see the _`from Source Code` section below. 
 
 on Ubuntu/Debian
 ^^^^^^^^^^^^^^^^
@@ -126,14 +126,14 @@ this repository and using *pip*::
    cd <pype9-repo-dir>
    pip install -r requirements.txt .
 
-If you cannot use *pip* you will need to manually install the *libninemlnrn*
+If you cannot use *pip* or *setuptools* you will need to manually install the *libninemlnrn*
 shared library, which contains wrappers for GSL random distribution functions, with:: 
 
    cd <pype9-repo-dir>/pype9/neuron/cells/code_gen/libninemlnrn
    CC=<your-Neuron-c-compiler> ./manual_compile.sh
 
-After that you just need to ensure the root of the Pype9 package is on your
-PYTHONPATH environment variable. 
+After that you just need to ensure the root of the Pype9 package is symlinked to your
+site-packages directory or on your PYTHONPATH environment variable.
 
 
 :copyright: Copyright 20012-2016 by the Pype9 team, see AUTHORS.
