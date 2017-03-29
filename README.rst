@@ -14,6 +14,8 @@ as simulator backends.
     :target: http://pype9.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status 
 
+:copyright: Copyright 20012-2016 by the Pype9 team, see AUTHORS.
+:license: MIT, see LICENSE for details.
 
 Documentation
 =============
@@ -134,7 +136,3 @@ shared library, which contains wrappers for GSL random distribution functions, w
 
 After that you just need to ensure the root of the Pype9 package is symlinked to your
 site-packages directory or on your PYTHONPATH environment variable.
-
-
-:copyright: Copyright 20012-2016 by the Pype9 team, see AUTHORS.
-:license: MIT, see LICENSE for details.
