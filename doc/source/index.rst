@@ -1,33 +1,22 @@
-Pype9
-=====
+.. Pype9 documentation master file, created by
+   sphinx-quickstart on Thu Mar 30 21:41:02 2017.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
 
-"PYthon PipelinEs for 9ml (Pype9)" is a collection of software Python pipelines to
-simulate networks of neuron models described in NineML (http://nineml.net)
-using either Neuron (http://neuron.yale.edu) or NEST (http://nest-simulator.org)
-as simulator backends.
+Welcome to Pype9's documentation!
+=================================
 
-
-Users' guide
-------------
+Contents:
 
 .. toctree::
-    :maxdepth: 2 
-
-    installation
-    getting_started
-    examples/index
-    api_reference/index
-    getting_help
-    releases/index
-
-Developers' guide
------------------
-
-.. toctree::
-    :maxdepth: 2
-
-    contributing
+   :maxdepth: 2
 
 
-.. _NineML: http://nineml.net
-.. _`NineML specification`: http://nineml.net/specification/
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
+
