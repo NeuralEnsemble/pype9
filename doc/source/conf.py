@@ -15,6 +15,36 @@
 import sys
 import os
 import shlex
+import mock
+
+
+class MockMPI4PyModule(mock.Mock):
+
+    pass
+
+
+class MockNeuronModule(mock.Mock):
+
+    Section = object
+    nrn_dll_loaded = []
+
+    def nhost(self):
+        return 1
+
+    def id(self):
+        return 1
+
+    def set_maxstep(self, x):  # @UnusedVariable
+        return 10.0
+
+
+class MockNESTModule(mock.Mock):
+    def GetKernelStatus(self):
+        {'num_processes': 1}
+
+sys.modules["neuron"] = MockNeuronModule()
+sys.modules["nest"] = MockNESTModule()
+sys.modules['mpi4py'] = MockMPI4PyModule()
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
