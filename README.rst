@@ -18,7 +18,8 @@ using either Neuron or NEST simulator backends.
 
 The pipelines can run from the command line::
    
-   $ pype9 simulate my_hodgkin_huxley.xml#hh_props 100.0 0.01 --play isyn.neo.pkl --record v v.neo.pkl --init_value v -65.0 mV
+   $ pype9 simulate my_hodgkin_huxley.xml#hh_props neuron 100.0 0.01 \
+     --play isyn isyn.neo.pkl --record v v.neo.pkl --init_value v -65.0 mV
    
 or in a Python script::
 
