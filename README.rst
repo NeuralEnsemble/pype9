@@ -16,7 +16,22 @@ Overview
 to simulate networks of neuron models described in NineML (http://nineml.net)
 using either Neuron or NEST simulator backends.
 
+The pipelines can run from the command line::
+   
+   $ pype9 simulate my_hodgkin_huxley.xml#hh_props 100.0 0.01 --play isyn.neo.pkl --record v v.neo.pkl --init_value v -65.0 mV
+   
+or in a Python script::
 
+   from pype9.simulator.neuron import cell, Simulation
+   from nineml import units as un
+   
+   HodgkinHuxley = cell.MetaClass('my_hodgkin_huxley.xml#hh_class')
+   with Simulation(dt=0.01 * un.ms, seed=1234) as sim: 
+      hh = HodgkinHuxley('my_hodgkin_huxley.xml#hh_props', v=-65.0 * un.mV)
+      hh.record('v')
+      sim.run(100.0 * un.ms)
+   v = hh.recording('v')
+   
 
 Documentation
 =============
