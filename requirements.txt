@@ -1,3 +1,4 @@
+git+https://github.com/tclose/lib9ML@develop#egg=nineml
 sympy==0.7.6
 Jinja2>=2.6
 docutils>=0.10

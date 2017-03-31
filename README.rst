@@ -9,24 +9,40 @@ Pype9
     :target: http://pype9.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status 
 
-Introduction
-============
+Overview
+========
 
-"PYthon PipelinEs for 9ml (Pype9)" is a collection of software Python pipelines to
-simulate networks of neuron models described in NineML (http://nineml.net)
-using either Neuron (http://neuron.yale.edu) or NEST (http://nest-simulator.org)
-as simulator backends.
+"PYthon PipelinEs for 9ml (Pype9)" is a collection of software Python pipelines
+to simulate networks of neuron models described in NineML (http://nineml.net)
+using either Neuron or NEST simulator backends.
+
+
 
 Documentation
 =============
-Brief documentation is available at http://pype9.readthedocs.io 
+Pype9 documentation can be viewed at http://pype9.readthedocs.io (or the
+the reST source files in <pype9-repo-dir>/doc/sources).
 
 
-Reporting Issues
-================
+Installation
+============
 
-Please submit bug reports and feature requests to the GitHub issue tracker
-(http://github.com/CNS-OIST/PyPe9/issues).
+Pype9 works with either or both of the following simulator backends
+
+* Neuron >= 7.3   (https://www.neuron.yale.edu/neuron/)
+* NEST == 2.10.0  (http://www.nest-simulator.org)
+
+Detailed instructions on how to install these simulators can be found at
+http://pype9.readthedocs.io/en/latest/installation.html
+
+*Before* installing the Pype9 package, the simulator(s) you plan to use should
+be installed, and command line tools ``nrnivmodl`` for Neuron and ``nest-config``
+for NEST should be accessible on your system path
+(https://en.wikipedia.org/wiki/PATH_(variable)). Then the Pype9 and its
+prerequisite Python packages can be installed with::
+
+   cd <pype9-repo-dir>
+   pip install -r requirements.txt .
 
 
 Unsupported 9ML
@@ -50,92 +66,11 @@ restrictions apply to models that can be used with Pype9.
   keywords (all 9ML names will be escaped in PyPe9 v0.2).
 
 
-Installation
-============
+Reporting Issues
+================
 
-Simulator Backends
-------------------
-Pype9 works with the following simulator backends
-
-* Neuron >= 7.3   (https://www.neuron.yale.edu/neuron/)
-* NEST == 2.10.0  (http://www.nest-simulator.org)
-
-on MacOS
-^^^^^^^^
-On macOS, NEST and Neuron can be installed via the Hombrew package manager (https://brew.sh).
-*Before* installing them with *Homebrew* it is preferable (but not essential) to install the
-*Homebrew* version of Python with::
-
-   brew install python
-
-NEST can be installed with::
-
-   brew install --with-python nest
-   
-and Neuron can be installed with::
-
-   brew install neuron
-   
-NB: If you have MPI installed and want to use it to spread your simulation over multiple compute
-cores/nodes you should provide the `--with-mpi` option.
-   
-If you don't/can't use *Hombrew* then see the _`from Source Code` section below. 
-
-on Ubuntu/Debian
-^^^^^^^^^^^^^^^^
-NEST and Neuron packages are available in the NeuroDebian repository (http://neuro.debian.net),
-otherwise please install from source (see _`from Source Code`).
-
-on Windows
-^^^^^^^^^^
-Pype9 has not been tested on Windows (and NEST does not run on Windows), so
-although Pype9/Neuron may run, it is recommended that you use the Docker
-container to run simulations on Windows.
-
-with Docker
-^^^^^^^^^^^
-There is a Docker image located at https://hub.docker.com/r/tclose/pype9/
-that you can pull to run the simulations within a Docker container. See the instructions
-in the comments of the `Dockerfile` in the Pype9 repo for instructions on how to do this.
-
-from Source Code
-^^^^^^^^^^^^^^^^
-Instructions on how to install NEST from source can be found on official NEST
-website, http://www.nest-simulator.org/installation/
-
-Good instructions on how to install Neuron from source can be found in Andrew
-Davisons notes here, http://www.davison.webfactional.com/notes/installation-neuron-python/.
-
-In the `prereq` folder there are also scripts for installing the Neuron and NEST from
-source on a Ubuntu image, which may serve as a good reference.
-
-Python
-------
-
-Pype9 depends on the following Python packages
-
-* PyNN == 0.8.2 (http://neuralensemble.org/docs/PyNN/installation.html)
-* lib9ML (`develop` branch at http://github.com/tclose/lib9ML)
-* Diophantine == 0.1 (http://github.com/tclose/Diophantine)
-* NineMLCatalog (for unit-tests,`develop` branch at http://github.com/tclose/NineMLCatalog)
-* Sympy == 0.7.6 or 1.0.1dev (there is a bug in 1.0)
-* Neo == 0.4.1
-
-These requirements and the Pype9 package itself can be installed *after* the
-simulator backends are installed (see _`Simulator Backends`) by downloading/cloning
-this repository and using *pip*::
-
-   cd <pype9-repo-dir>
-   pip install -r requirements.txt .
-
-If you cannot use *pip* or *setuptools* you will need to manually install the *libninemlnrn*
-shared library, which contains wrappers for GSL random distribution functions, with:: 
-
-   cd <pype9-repo-dir>/pype9/neuron/cells/code_gen/libninemlnrn
-   CC=<your-Neuron-c-compiler> ./manual_compile.sh
-
-After that you just need to ensure the root of the Pype9 package is symlinked to your
-site-packages directory or on your PYTHONPATH environment variable.
+Please submit bug reports and feature requests to the GitHub issue tracker
+(http://github.com/CNS-OIST/PyPe9/issues).
 
 :copyright: Copyright 20012-2016 by the Pype9 team, see AUTHORS.
 :license: MIT, see LICENSE for details.
