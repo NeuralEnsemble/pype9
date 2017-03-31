@@ -11,4 +11,4 @@ neo==0.4.1
 pyNN==0.8.2
 diophantine>=0.1
 matplotlib
--e pype9
+-e .
