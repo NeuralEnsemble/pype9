@@ -16,7 +16,8 @@ Overview
 to simulate networks of neuron models described in NineML (http://nineml.net)
 using either Neuron or NEST simulator backends.
 
-The pipelines can run from the command line::
+For example, given a cell model described in 9ML saved in
+``my_hodgkin_huxley.xml``, the simulator pipeline can run from the command line::
    
    $ pype9 simulate my_hodgkin_huxley.xml#hh_props neuron 100.0 0.01 \
      --play isyn isyn.neo.pkl --record v v.neo.pkl --init_value v -65.0 mV
