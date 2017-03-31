@@ -39,8 +39,7 @@ and pipelines.
 
 Documentation
 =============
-Pype9 documentation can be viewed at http://pype9.readthedocs.io/latest (or the
-the reST source files in <pype9-repo-dir>/doc/sources).
+Pype9 documentation can be viewed at http://pype9.readthedocs.io/latest.
 
 
 Installation
