@@ -2,13 +2,13 @@
 Installation
 ============
 
-There are two steps to installing Pype9, the first is installing or both
-simulator backends, Neuron and/or NEST, and the second installing the Pype9
+There are two steps to installing Pype9, the first is installing one or both
+of simulator backends, Neuron and/or NEST, and the second installing the Pype9
 Python package and its prerequisites.
 
 Simulator Backends
 ------------------
-Pype9 works with the following simulator backends
+Pype9 works with the following simulator versions
 
 * Neuron >= 7.3   (https://www.neuron.yale.edu/neuron/)
 * NEST == 2.10.0  (http://www.nest-simulator.org)
