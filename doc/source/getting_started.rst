@@ -6,18 +6,11 @@ Getting started
 Command Line
 ============
 
-NineML XML files can contain abstraction layer models, user layer models (with links to abstraction layer models
-defined elsewhere) or both.
+The Pype9 command line tool will be installed along with the Python library
+when it is installed with pip. The available pipelines can be listed with 
 
-To read a file containing only abstraction layer elements:
+.. code-block:: bash
 
-.. code-block:: python
+   $ pype help
 
-   >>> import nineml
-   >>> items = nineml.read("BrunelIaF.xml")
-   >>> items
-   {'BrunelIaF': <dynamics.ComponentClass BrunelIaF>,
-    'current': Dimension(name='current', i=1),
-    'resistance': Dimension(name='resistance', i=-2, m=1, t=-3, l=2),
-    'time': Dimension(name='time', t=1),
-    'voltage': Dimension(name='voltage', i=-1, m=1, t=-3, l=2)}
+  
