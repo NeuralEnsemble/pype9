@@ -17,12 +17,16 @@ to simulate networks of neuron models described in NineML (http://nineml.net)
 using either Neuron or NEST simulator backends.
 
 For example, given a cell model described in 9ML saved in
-``my_hodgkin_huxley.xml``, the simulator pipeline can run from the command line::
+``my_hodgkin_huxley.xml``, the simulator pipeline can run from the command line:
+
+.. code-block:: bash
    
    $ pype9 simulate my_hodgkin_huxley.xml#hh_props neuron 100.0 0.01 \
      --play isyn isyn.neo.pkl --record v v.neo.pkl --init_value v -65.0 mV
    
-or in a Python script::
+or in a Python script:
+
+.. code-block:: python
 
    from pype9.simulator.neuron import cell, Simulation
    from nineml import units as un
@@ -57,7 +61,9 @@ http://pype9.readthedocs.io/en/latest/installation.html
 be installed, and command line tools ``nrnivmodl`` for Neuron and ``nest-config``
 for NEST should be accessible on your system path
 (https://en.wikipedia.org/wiki/PATH_(variable)). Then the Pype9 and its
-prerequisite Python packages can be installed with::
+prerequisite Python packages can be installed with:
+
+.. code-block:: bash
 
    cd <pype9-repo-dir>
    pip install -r requirements.txt .

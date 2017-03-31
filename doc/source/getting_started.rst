@@ -3,8 +3,8 @@ Getting started
 ===============
 
 
-Reading model descriptions from XML files
-=========================================
+Command Line
+============
 
 NineML XML files can contain abstraction layer models, user layer models (with links to abstraction layer models
 defined elsewhere) or both.
