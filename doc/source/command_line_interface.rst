@@ -3,7 +3,12 @@ Command Line Interface
 ======================
 
 The Pype9 command line tool will be installed along with the Python library
-when it is installed with pip. The available pipelines can be listed with::
+when it is installed with pip.
+
+Help
+----
+
+The available pipelines can be listed with::
 
    $ pype help
    usage: pype9 <cmd> <args>
@@ -40,3 +45,20 @@ supplying its name to the help::
      --hide                Whether to show the plot or not
      --resolution RESOLUTION
                            Resolution of the figure when it is saved
+
+Simulate
+--------
+
+TODO...
+
+
+Plot
+----
+
+TODO...
+
+
+Convert
+-------
+
+TODO...
