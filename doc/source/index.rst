@@ -1,5 +1,5 @@
-Pype9
-=====
+Pype9 .. image:: logo.png
+=========================
 
 "PYthon PipelinEs for 9ml (Pype9)" is a collection of software Python pipelines
 to simulate networks of neuron models described in NineML (http://nineml.net)
