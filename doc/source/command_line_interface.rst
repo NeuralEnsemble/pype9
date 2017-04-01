@@ -1,10 +1,6 @@
-===============
-Getting started
-===============
-
-
-Command Line
-============
+======================
+Command Line Interface
+======================
 
 The Pype9 command line tool will be installed along with the Python library
 when it is installed with pip. The available pipelines can be listed with::
@@ -44,8 +40,3 @@ supplying its name to the help::
      --hide                Whether to show the plot or not
      --resolution RESOLUTION
                            Resolution of the figure when it is saved
-
-Python Scripting
-================
-
-TODO...
