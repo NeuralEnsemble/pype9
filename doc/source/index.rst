@@ -14,7 +14,8 @@ Users' guide
     :maxdepth: 2 
 
     installation
-    getting_started
+    command_line_interface
+    python_api
     getting_help
 
 .. _NineML: http://nineml.net
