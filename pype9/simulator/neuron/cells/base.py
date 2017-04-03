@@ -27,14 +27,14 @@ from nineml import units as un
 from nineml.abstraction import EventPort, AnalogPort
 from nineml.exceptions import NineMLNameError
 from math import pi
-import numpy
 from pype9.simulator.base.cells import base
 from pype9.simulator.neuron.units import UnitHandler
 from pype9.simulator.neuron.simulation import Simulation
 from pype9.annotations import (
     PYPE9_NS, BUILD_TRANS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
     MEMBRANE_VOLTAGE, MECH_TYPE, ARTIFICIAL_CELL_MECH)
-from pype9.exceptions import Pype9RuntimeError, Pype9NotSupportedBySimulatorException
+from pype9.exceptions import (
+    Pype9RuntimeError, Pype9UsageError, Pype9Unsupported9MLException)
 import logging
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
@@ -342,7 +342,7 @@ class Cell(base.Cell):
         port = self.component_class.port(port_name)
         if isinstance(port, EventPort):
             if len(list(self.component_class.event_receive_ports)) > 1:
-                raise Pype9NotSupportedBySimulatorException(
+                raise Pype9Unsupported9MLException(
                     "Multiple event receive ports ('{}') are not currently "
                     "supported".format("', '".join(
                         [p.name
@@ -362,7 +362,7 @@ class Cell(base.Cell):
             self._input_auxs.extend((vstim_times, vstim_con))
         else:
             if port_name not in ext_is:
-                raise Pype9NotSupportedBySimulatorException(
+                raise Pype9Unsupported9MLException(
                     "Can only play into external current ports ('{}'), not "
                     "'{}' port.".format("', '".join(ext_is), port_name))
             iclamp = h.IClamp(0.5, sec=self._sec)
@@ -374,6 +374,62 @@ class Cell(base.Cell):
             iclamp_amps.play(iclamp._ref_amp, iclamp_times)
             self._inputs['iclamp'] = iclamp
             self._input_auxs.extend((iclamp_amps, iclamp_times))
+
+    def connect(self, sender, send_port_name, receive_port_name,
+                delay=0.0 * un.ms, properties=[]):
+        """
+        Connects a port of the cell to a matching port on the 'other' cell
+
+        Parameters
+        ----------
+        sender : pype9.simulator.neuron.cells.Cell
+            The sending cell to connect the from
+        send_port_name : str
+            Name of the port in the sending cell to connect to
+        receive_port_name : str
+            Name of the receive port in the current cell to connect from
+        delay : nineml.Quantity (time)
+            The delay of the connection
+        properties : list(nineml.Property)
+            The connection properties of the event port
+        """
+        send_port = sender.component_class.send_port(send_port_name)
+        receive_port = self.component_class.receive_port(receive_port_name)
+        delay = float(delay.in_units(un.ms))
+        if send_port.communicates != receive_port.communicates:
+            raise Pype9UsageError(
+                "Cannot connect {} send port, '{}', to {} receive port, '{}'"
+                .format(send_port.communicates, send_port_name,
+                        receive_port.communicates, receive_port_name))
+        if receive_port.communicates == 'event':
+            if len(list(self.component_class.event_receive_ports)) > 1:
+                raise Pype9Unsupported9MLException(
+                    "Multiple event receive ports ('{}') are not currently "
+                    "supported".format("', '".join(
+                        [p.name
+                         for p in self.component_class.event_receive_ports])))
+            netcon = h.NetCon(sender._hoc, self._hoc, sec=self._sec)
+            if delay:
+                netcon.delay = delay
+            self._check_connection_properties(receive_port_name, properties)
+            if len(properties) > 1:
+                raise Pype9Unsupported9MLException(
+                    "Cannot handle more than one connection property per port")
+            elif properties:
+                netcon.weight[0] = self.UnitHandler.scale_value(
+                    properties[0].quantity)
+            self._input_auxs.append(netcon)
+        elif receive_port.communicates == 'analog':
+            ext_is = self.build_component_class.annotations.get(
+                (BUILD_TRANS, PYPE9_NS), EXTERNAL_CURRENTS).split(',')
+            if receive_port_name not in ext_is:
+                raise Pype9Unsupported9MLException(
+                    "Can only play into external current ports ('{}'), not "
+                    "'{}' port.".format("', '".join(ext_is),
+                                        receive_port_name))
+            raise NotImplementedError
+        else:
+            assert False
 
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         """
