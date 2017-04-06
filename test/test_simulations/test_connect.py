@@ -77,45 +77,45 @@ class TestConnect(TestCase):
                             "{} doesn't equal {}".format(rate_spikes,
                                                          parrot_spikes))
 
-    def test_analog_connect(self):
-
-        step9ML = Dynamics(
-            name="StepCurrent",
-            parameters=[Parameter(dimension=un.current, name="amplitude"),
-                        Parameter(dimension=un.time, name="onset")],
-            analog_ports=[AnalogSendPort(name='i_out', dimension=un.current)],
-            state_variables=[StateVariable('i_out', dimension=un.current)],
-            regimes=[Regime(
-                name='default',
-                transitions=[
-                    OnCondition(
-                        't > onset',
-                        state_assignments=[
-                            StateAssignment('i_out', 'amplitude')],
-                        target_regime='default')])])
-
-        relay9ML = Dynamics(
-            name="Relay",
-            aliases=[Alias('i_out', 'i_in')],
-            analog_ports=[AnalogReceivePort(name='i_in'),
-                          AnalogSendPort(name='i_out')],
-            regimes=[Regime(name='default')])
-
-        for CellMetaClass, Simulation in ((NESTCellMetaClass, NESTSimulation),
-                                          (NeuronCellMetaClass,
-                                           NeuronSimulation)):
-            Step = CellMetaClass(step9ML)
-            Relay = CellMetaClass(relay9ML)
-            with Simulation(dt=0.1 * un.ms) as sim:
-                step = Step(amplitude=50 * un.nA, onset=50 * un.ms,
-                            i_out=0 * un.A)
-                relay = Relay()
-                relay.connect(step, 'i_out', 'i_in', delay=self.delay)
-                step.record('i_out')
-                relay.record('i_out')
-                sim.run(100 * un.ms)
-            step_i = step.recording('spike_out')
-            relay_i = relay.recording('spike_out')
-            delay = relay.UnitHandler.to_pq_quantity(self.delay)
-            self.assertTrue(all(step_i == (relay_i - delay)),
-                            "{} doesn't equal {}".format(step_i, relay_i))
+#     def test_analog_connect(self):
+#
+#         step9ML = Dynamics(
+#             name="StepCurrent",
+#             parameters=[Parameter(dimension=un.current, name="amplitude"),
+#                         Parameter(dimension=un.time, name="onset")],
+#             analog_ports=[AnalogSendPort(name='i_out', dimension=un.current)],
+#             state_variables=[StateVariable('i_out', dimension=un.current)],
+#             regimes=[Regime(
+#                 name='default',
+#                 transitions=[
+#                     OnCondition(
+#                         't > onset',
+#                         state_assignments=[
+#                             StateAssignment('i_out', 'amplitude')],
+#                         target_regime='default')])])
+#
+#         relay9ML = Dynamics(
+#             name="Relay",
+#             aliases=[Alias('i_out', 'i_in')],
+#             analog_ports=[AnalogReceivePort(name='i_in'),
+#                           AnalogSendPort(name='i_out')],
+#             regimes=[Regime(name='default')])
+#
+#         for CellMetaClass, Simulation in ((NESTCellMetaClass, NESTSimulation),
+#                                           (NeuronCellMetaClass,
+#                                            NeuronSimulation)):
+#             Step = CellMetaClass(step9ML)
+#             Relay = CellMetaClass(relay9ML)
+#             with Simulation(dt=0.1 * un.ms) as sim:
+#                 step = Step(amplitude=50 * un.nA, onset=50 * un.ms,
+#                             i_out=0 * un.A)
+#                 relay = Relay()
+#                 relay.connect(step, 'i_out', 'i_in', delay=self.delay)
+#                 step.record('i_out')
+#                 relay.record('i_out')
+#                 sim.run(100 * un.ms)
+#             step_i = step.recording('spike_out')
+#             relay_i = relay.recording('spike_out')
+#             delay = relay.UnitHandler.to_pq_quantity(self.delay)
+#             self.assertTrue(all(step_i == (relay_i - delay)),
+#                             "{} doesn't equal {}".format(step_i, relay_i))

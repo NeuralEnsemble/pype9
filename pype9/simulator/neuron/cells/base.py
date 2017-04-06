@@ -420,14 +420,10 @@ class Cell(base.Cell):
                     properties[0].quantity)
             self._input_auxs.append(netcon)
         elif receive_port.communicates == 'analog':
-            ext_is = self.build_component_class.annotations.get(
-                (BUILD_TRANS, PYPE9_NS), EXTERNAL_CURRENTS).split(',')
-            if receive_port_name not in ext_is:
-                raise Pype9Unsupported9MLException(
-                    "Can only play into external current ports ('{}'), not "
-                    "'{}' port.".format("', '".join(ext_is),
-                                        receive_port_name))
-            raise NotImplementedError
+            raise Pype9UsageError(
+                "Cannot individually 'connect' analog ports. Simulate the "
+                "sending cell in a separate simulation then play the analog "
+                "signal in the port")
         else:
             assert False
 

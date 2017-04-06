@@ -266,15 +266,10 @@ class Cell(base.Cell):
                     properties[0].quantity)
             nest.Connect(sender._cell, self._cell, syn_spec=syn_spec)
         elif receive_port.communicates == 'analog':
-            if self.component_class.num_analog_send_ports > 1:
-                raise Pype9Unsupported9MLException(
-                    "Cannot currently differentiate between multiple analog "
-                    "send ports in NEST implementation ('{}')".format(
-                        "', '".join(
-                            self.component_class.event_send_port_names)))
-            nest.Connect(sender._cell, self._cell, syn_spec={
-                "receptor_type": self._receive_ports[receive_port_name],
-                'delay': delay})
+            raise Pype9UsageError(
+                "Cannot individually 'connect' analog ports. Simulate the "
+                "sending cell in a separate simulation then play the analog "
+                "signal in the port")
         else:
             assert False
 
