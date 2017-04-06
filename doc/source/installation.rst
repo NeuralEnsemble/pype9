@@ -3,46 +3,48 @@ Installation
 ============
 
 There are two steps to installing Pype9, the first is installing one or both
-of the simulator backends, Neuron and/or NEST, and the second is installing
+of the simulator backends, Neuron_ and/or NEST_, and the second is installing
 Pype9 and prerequisite Python packages.
 
 Simulator Backends
 ------------------
-Pype9 works with the following simulator versions
+Pype9 works with the following simulator backend versions
 
-* Neuron >= 7.3   (https://www.neuron.yale.edu/neuron/)
-* NEST == 2.10.0  (http://www.nest-simulator.org)
+* Neuron_ >= 7.3
+* NEST_ == 2.10.0
 
 The easiest way to install them depends on your operating system. 
 
 on MacOS
 ^^^^^^^^
-On macOS, NEST and Neuron can be installed via the Hombrew package manager
-(https://brew.sh). Unless you have already have configured the system or 
-alternative Python distribution (e.g. Enthought), it can be a good idea to
-install the *Homebrew* Python version *before* installing the simulator
-backends. To install the *Homebrew* Python::
+On macOS, NEST_ and Neuron_ can be installed via the Homebrew_ package manager.
+
+Unless you have already have configured the system, or alternative (e.g. 
+Enthought_), Python distribution (i.e. installed other packages still you want
+to use), I would recommend installing the Homebrew_ Python version
+*before* installing the simulator backends. To install the Homebrew_ Python::
 
    brew install python
 
-NEST can be installed with::
+NEST_, including its Python bindings, can be installed with Homebrew_ by::
 
    brew install --with-python nest
    
-and Neuron can be installed with::
+Neuron_ can be installed with Homebrew_ by::
 
-   brew install neuron
+   brew install --with-mpi neuron
    
-NB: If you have MPI installed and want to use it to spread your simulation over
-multiple compute cores/nodes you should provide the `--with-mpi` option.
+Note that the ``--with-mpi`` option is is not necessary but will enable you to
+spread your simulation over multiple compute cores/nodes on your computer.
    
-If you don't/can't use Hombrew then see the _`Source` section below. 
+If you can't/don't want to use Homebrew_ then see the `from Source Code`_ section
+below. 
 
 
 on Ubuntu/Debian
 ^^^^^^^^^^^^^^^^
-NEST and Neuron packages are available in the NeuroDebian repository (http://neuro.debian.net),
-otherwise please install from source (see _`Source`).
+NEST and Neuron packages are available in the NeuroDebian_ repository,
+otherwise please install from source (see `from Source Code`_).
 
 on Windows
 ^^^^^^^^^^
@@ -52,9 +54,9 @@ container to run simulations on Windows.
 
 with Docker
 ^^^^^^^^^^^
-There is a Docker image located at https://hub.docker.com/r/tclose/pype9/
+There is a Docker_ image located at https://hub.docker.com/r/tclose/pype9/
 that you can pull to run the simulations within a Docker container. See the instructions
-in the comments of the `Dockerfile` in the Pype9 repo for instructions on how to do this.
+in the comments of the ``Dockerfile`` in the Pype9 repository for instructions on how to do this.
 
 from Source Code
 ^^^^^^^^^^^^^^^^
@@ -64,7 +66,7 @@ website, http://www.nest-simulator.org/installation/
 Good instructions on how to install Neuron from source can be found in Andrew
 Davisons notes here, http://www.davison.webfactional.com/notes/installation-neuron-python/.
 
-In the `prereq` folder there are also scripts for installing the Neuron and NEST from
+In the ``prereq`` folder there are also scripts for installing the Neuron and NEST from
 source on a Ubuntu image, which may serve as a good reference.
 
 Python Packages
@@ -102,3 +104,11 @@ shared library, which contains wrappers for GSL random distribution functions, w
 After that you just need to ensure the root of the Pype9 package is on your
 Python path (i.e. either symlinked to the ``site-packages`` directory or on the
 PYTHONPATH environment variable). 
+
+.. _NineML: http://nineml.net
+.. _NeuroDebian: http://neuro.debian.net
+.. _Docker: https://www.docker.com
+.. _Homebrew: https://brew.sh
+.. _NEST: http://nest-simulator.org
+.. _Neuron: http://neuron.yale.edu
+.. _Enthought: https://www.enthought.com

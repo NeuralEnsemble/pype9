@@ -1,21 +1,18 @@
 
 .. image:: logo_small.png
    :align: right
-   :width: 200
 
 Pype9
 =====
 
 
 "PYthon PipelinEs for 9ml (Pype9)" is a collection of Python pipelines
-to simulate neuron, and neuron network, models described in NineML
-(http://nineml.net), using either *Neuron* (http://neuron.yale.edu)
-or *NEST* (http://nest-simulator.org) as simulator backends.
+to simulate neuron, and neuron network, models described in NineML_ using
+either Neuron_ or NEST_ as simulator backends.
 
-Pype9 can be used from the command line, via a number of convenient tools,
-which allow experiments to be designed and simulated without needing to use a
-programming language[&dagger;]_. Alternatively, the simulations can be created
-by using the Pype9 Python API directly.
+Pype9 has a command line interface (CLI), which allows experiments to be
+designed and simulated without any programming*. Alternatively, the simulations
+can be scripted using Pype9's Python API
 
 User guide
 ----------
@@ -28,8 +25,11 @@ User guide
     python_api
     getting_help
 
-.. [&dagger;]: However, desiging experiments with the CLI does require the
-               knowledge of one of the supported markup languages (e.g. XML,
-               JSON, YAML) and the `NineML specification`_.
+.. [*] Designing the 9ML models used by the CLI requires the
+       knowledge of one of the supported markup languages (e.g. XML,
+       JSON, YAML) and the `NineML specification`_, although a graphical UI
+       is planned for the future.
 .. _NineML: http://nineml.net
 .. _`NineML specification`: http://nineml.net/specification/
+.. _NEST: http://nest-simulator.org
+.. _Neuron: http://neuron.yale.edu

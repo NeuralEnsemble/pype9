@@ -24,7 +24,7 @@ For example, given a cell model described in 9ML saved in
    $ pype9 simulate my_hodgkin_huxley.xml#hh_props neuron 100.0 0.01 \
      --play isyn isyn.neo.pkl --record v v.neo.pkl --init_value v -65.0 mV
    
-or in a Python script:
+or in a Python script
 
 .. code-block:: python
 
@@ -42,25 +42,27 @@ Pype9 also supports network models described in 9ML via integration with PyNN_
 
 .. code-block:: bash
    
-   $ pype9 simulate brunel.xml nest 1000.0 0.01 --record v v.neo.pkl \
-     --init_value v -65.0 mV
+   $ pype9 simulate brunel.xml nest 1000.0 0.01 \
+     --record Exc.spike_output Exc-nest.neo.pkl \
+     --record Inh.spike_output Inh-nest.neo.pkl \
+     --seed 12345
    
-or in a Python script:
+or
 
 .. code-block:: python
 
-   from pype9.simulator.neuron import cell, Simulation
+   from pype9.simulator.neuron import Network, Simulation
    from nineml import units as un
    
-   HodgkinHuxley = cell.MetaClass('my_hodgkin_huxley.xml#hh_class')
    with Simulation(dt=0.01 * un.ms, seed=1234) as sim: 
-      hh = HodgkinHuxley('my_hodgkin_huxley.xml#hh_props', v=-65.0 * un.mV)
-      hh.record('v')
-      sim.run(100.0 * un.ms)
-   v = hh.recording('v')
+      brunel_ai = Network('brunel.xml#AI')
+      brunel_ai.component_array('Exc').record('spike_output')
+      brunel_ai.component_array('Inh').record('spike_output')
+      sim.run(1000.0 * un.ms)
+   exc_spikes = brunel_ai.component_array('Exc').recording('spike_output')
+   inh_spikes = brunel_ai.component_array('Inh').recording('spike_output')
    
-See http://pype9.readthedocs.io/latest/getting_started.html for more examples
-and pipelines.
+See `Getting Started`_ in the Pype9 docs for more examples and pipelines.
 
 Documentation
 =============
@@ -123,3 +125,4 @@ Please submit bug reports and feature requests to the GitHub issue tracker
 :license: MIT, see LICENSE for details.
 
 .. _PyNN: http://neuralensemble.org/docs/PyNN/
+.. _`Getting Started`: http://pype9.readthedocs.io/latest/getting_started.html
