@@ -1,5 +1,5 @@
 """
-Runs a simulation described by an Experiment layer 9ML file
+Runs a simulation described by an Experiment layer 9ML file.
 """
 from argparse import ArgumentParser
 from nineml import units as un

@@ -38,6 +38,27 @@ or in a Python script:
       sim.run(100.0 * un.ms)
    v = hh.recording('v')
    
+Pype9 also supports network models described in 9ML via integration with PyNN_
+
+.. code-block:: bash
+   
+   $ pype9 simulate brunel.xml nest 1000.0 0.01 --record v v.neo.pkl \
+     --init_value v -65.0 mV
+   
+or in a Python script:
+
+.. code-block:: python
+
+   from pype9.simulator.neuron import cell, Simulation
+   from nineml import units as un
+   
+   HodgkinHuxley = cell.MetaClass('my_hodgkin_huxley.xml#hh_class')
+   with Simulation(dt=0.01 * un.ms, seed=1234) as sim: 
+      hh = HodgkinHuxley('my_hodgkin_huxley.xml#hh_props', v=-65.0 * un.mV)
+      hh.record('v')
+      sim.run(100.0 * un.ms)
+   v = hh.recording('v')
+   
 See http://pype9.readthedocs.io/latest/getting_started.html for more examples
 and pipelines.
 
@@ -100,3 +121,5 @@ Please submit bug reports and feature requests to the GitHub issue tracker
 
 :copyright: Copyright 20012-2016 by the Pype9 team, see AUTHORS.
 :license: MIT, see LICENSE for details.
+
+.. _PyNN: http://neuralensemble.org/docs/PyNN/
