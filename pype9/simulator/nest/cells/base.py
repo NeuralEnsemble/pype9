@@ -219,7 +219,7 @@ class Cell(base.Cell):
                 "Unrecognised port type '{}' to play signal into".format(port))
 
     def connect(self, sender, send_port_name, receive_port_name, delay=None,
-                properties=[]):
+                properties=None):
         """
         Connects a port of the cell to a matching port on the 'other' cell
 
@@ -238,6 +238,8 @@ class Cell(base.Cell):
         """
         if delay is None:
             delay = self._device_delay
+        if properties is None:
+            properties = []
         delay = float(delay.in_units(un.ms))
         send_port = sender.component_class.send_port(send_port_name)
         receive_port = self.component_class.receive_port(receive_port_name)
@@ -271,7 +273,9 @@ class Cell(base.Cell):
                 "sending cell in a separate simulation then play the analog "
                 "signal in the port")
         else:
-            assert False
+            raise Pype9UsageError(
+                "Unrecognised port communication '{}'".format(
+                    receive_port.communicates))
 
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         raise NotImplementedError("voltage clamps are not supported for "

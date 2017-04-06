@@ -3,9 +3,10 @@ import sys
 import logging
 import nineml.units as un
 from nineml.abstraction import (
-    Dynamics, StateVariable, AnalogSendPort, AnalogReceivePort, EventSendPort,
-    EventReceivePort, OutputEvent, Regime, OnEvent, Alias, Parameter,
+    Dynamics, StateVariable, EventSendPort,
+    EventReceivePort, OutputEvent, Regime, OnEvent, Parameter,
     OnCondition, StateAssignment)
+# from nineml.abstraction import Alias, AnalogSendPort, AnalogReceivePort
 from pype9.simulator.neuron import (
     CellMetaClass as NeuronCellMetaClass,
     Simulation as NeuronSimulation)
@@ -83,7 +84,8 @@ class TestConnect(TestCase):
 #             name="StepCurrent",
 #             parameters=[Parameter(dimension=un.current, name="amplitude"),
 #                         Parameter(dimension=un.time, name="onset")],
-#             analog_ports=[AnalogSendPort(name='i_out', dimension=un.current)],
+#             analog_ports=[AnalogSendPort(name='i_out',
+#                                          dimension=un.current)],
 #             state_variables=[StateVariable('i_out', dimension=un.current)],
 #             regimes=[Regime(
 #                 name='default',
@@ -101,9 +103,9 @@ class TestConnect(TestCase):
 #                           AnalogSendPort(name='i_out')],
 #             regimes=[Regime(name='default')])
 #
-#         for CellMetaClass, Simulation in ((NESTCellMetaClass, NESTSimulation),
-#                                           (NeuronCellMetaClass,
-#                                            NeuronSimulation)):
+#         for CellMetaClass, Simulation in (
+#             (NESTCellMetaClass, NESTSimulation),
+#                 (NeuronCellMetaClass, NeuronSimulation)):
 #             Step = CellMetaClass(step9ML)
 #             Relay = CellMetaClass(relay9ML)
 #             with Simulation(dt=0.1 * un.ms) as sim:

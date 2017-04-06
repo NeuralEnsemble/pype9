@@ -24,7 +24,7 @@ import neo
 from .code_gen import CodeGenerator, REGIME_VARNAME
 from neuron import h, load_mechanisms
 from nineml import units as un
-from nineml.abstraction import EventPort, AnalogPort
+from nineml.abstraction import EventPort
 from nineml.exceptions import NineMLNameError
 from math import pi
 from pype9.simulator.base.cells import base
@@ -376,7 +376,7 @@ class Cell(base.Cell):
             self._input_auxs.extend((iclamp_amps, iclamp_times))
 
     def connect(self, sender, send_port_name, receive_port_name,
-                delay=0.0 * un.ms, properties=[]):
+                delay=0.0 * un.ms, properties=None):
         """
         Connects a port of the cell to a matching port on the 'other' cell
 
@@ -396,6 +396,8 @@ class Cell(base.Cell):
         send_port = sender.component_class.send_port(send_port_name)
         receive_port = self.component_class.receive_port(receive_port_name)
         delay = float(delay.in_units(un.ms))
+        if properties is None:
+            properties = []
         if send_port.communicates != receive_port.communicates:
             raise Pype9UsageError(
                 "Cannot connect {} send port, '{}', to {} receive port, '{}'"
@@ -425,7 +427,9 @@ class Cell(base.Cell):
                 "sending cell in a separate simulation then play the analog "
                 "signal in the port")
         else:
-            assert False
+            raise Pype9UsageError(
+                "Unrecognised port communication '{}'".format(
+                    receive_port.communicates))
 
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         """
