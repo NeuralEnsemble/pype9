@@ -44,3 +44,4 @@ autom4te.cache/
 /test/test_cmds/.cache
 *.gdf
 N6nineml8*E.dat
+/doc/build
