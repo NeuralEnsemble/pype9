@@ -5,7 +5,7 @@ import ctypes
 from pyNN.neuron import (
     setup as pyNN_setup, run as pyNN_run, end as pyNN_end, state as pyNN_state)
 from pyNN.neuron.simulator import initializer as pyNN_initializer
-from pype9.simulator.base.simulation import BaseSimulation
+from pype9.simulator.base.simulation import Simulation as BaseSimulation
 from pype9.simulator.neuron.cells.code_gen import CodeGenerator
 from pype9.exceptions import Pype9UsageError
 

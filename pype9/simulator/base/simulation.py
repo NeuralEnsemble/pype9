@@ -9,7 +9,7 @@ from pyNN.random import NumpyRNG
 logger = logging.getLogger('PyPe9')
 
 
-class BaseSimulation(object):
+class Simulation(object):
     """
     Base class of all simulation classes that prepare and run the simulator
     kernel.

@@ -11,4 +11,5 @@ neo==0.4.1
 pyNN==0.8.2
 diophantine>=0.1
 matplotlib
+numpydoc>=0.6.0
 -e .

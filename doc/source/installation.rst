@@ -18,11 +18,14 @@ The easiest way to install them depends on your operating system.
 on MacOS
 ^^^^^^^^
 On macOS, NEST_ and Neuron_ can be installed via the Homebrew_ package manager.
+Note that it tends not to be a good idea to use multiple package managers
+(e.g. macports), so if you use a different package manager it may be better
+to install `from Source Code`_. 
 
-Unless you have already have configured the system, or alternative (e.g. 
-Enthought_), Python distribution (i.e. installed other packages still you want
-to use), I would recommend installing the Homebrew_ Python version
-*before* installing the simulator backends. To install the Homebrew_ Python::
+
+If you haven't already have configured a Python distribution on your system
+(or don't mind reinstalling your existing packages), I would recommend
+installing the standard Python distribution with Homebrew_ first::
 
    brew install python
 
@@ -34,8 +37,8 @@ Neuron_ can be installed with Homebrew_ by::
 
    brew install --with-mpi neuron
    
-Note that the ``--with-mpi`` option is is not necessary but will enable you to
-spread your simulation over multiple compute cores/nodes on your computer.
+Note that ``--with-mpi`` is optional but will enable you to
+spread your simulation over multiple compute cores/nodes of your computer.
    
 If you can't/don't want to use Homebrew_ then see the `from Source Code`_ section
 below. 

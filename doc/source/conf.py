@@ -11,12 +11,14 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-
 import sys
 import os
 import shlex
 import mock
 import sphinx_rtd_theme
+
+package_path = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 
 
 class MockMPI4PyModule(mock.Mock):
@@ -41,11 +43,16 @@ class MockNeuronModule(mock.Mock):
 
 class MockNESTModule(mock.Mock):
     def GetKernelStatus(self):
-        {'num_processes': 1}
+        return {'num_processes': 1}
 
 sys.modules["neuron"] = MockNeuronModule()
 sys.modules["nest"] = MockNESTModule()
 sys.modules['mpi4py'] = MockMPI4PyModule()
+sys.path.insert(0, package_path)
+import pype9.simulator.base.simulation  # @IgnorePep8 @UnusedImport
+import pype9.simulator.base.cells  # @IgnorePep8 @UnusedImport
+import pype9.simulator.base.network  # @IgnorePep8 @UnusedImport
+
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -68,6 +75,7 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
+    'numpydoc'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -396,3 +404,5 @@ epub_exclude_files = ['search.html']
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
+
+numpydoc_show_class_members = False

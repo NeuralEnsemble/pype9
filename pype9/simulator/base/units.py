@@ -363,7 +363,7 @@ class UnitHandler(DynamicsDimensionResolver):
                 # generated, reset the cache
                 if (loaded_A != A).all():
                     cache = {}
-        except (IOError, EOFError):
+        except:
             logger.info("Building unit conversion cache in file '{}'"
                         .format(cache_path))
             cache = cls._init_cache(basis, compounds)
