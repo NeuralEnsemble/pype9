@@ -93,7 +93,8 @@ downloading/cloning this repository and using *pip*::
    cd <pype9-repo-dir>
    pip install -r requirements.txt .
 
-If you cannot use *pip* you will need to manually install the *libninemlnrn*
+If you cannot use *pip*, or have updated your Neuron installation and it uses
+a different compiler (e.g. mpicc), you will need to manually install the *libninemlnrn*
 shared library, which contains wrappers for GSL random distribution functions, with:: 
 
    cd <pype9-repo-dir>/pype9/neuron/cells/code_gen/libninemlnrn
