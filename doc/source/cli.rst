@@ -8,7 +8,7 @@ found in the ``bin`` directory of the repository.
 
 In a similar style to many popular command line tools (e.g. Git_, Pip_,
 Homebrew_, etc..) there is a single command, ``pype9``, which is used to switch
-between different pipelines, e.g.::
+between different pipelines, i.e.::
 
     $ pype9 <cmd> <options> <args>
  
@@ -18,9 +18,6 @@ There are currently four pipeline switches:
 * plot
 * convert
 * help
-
-NB: More switches are planned in the future as additional functionality is
-added to Pype9.
 
 Simulate
 --------

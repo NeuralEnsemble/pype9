@@ -12,22 +12,24 @@ designed and simulated without any scripting*.  Alternatively, simulations
 can be scripted using Pype9's Python API, or generated cell class can be
 integrated with native simulations.
 
-User guide
-----------
+User/Developer guide
+--------------------
 
 .. toctree::
     :maxdepth: 2 
 
     installation
-    command_line_interface
-    python_scripting
+    cli
+    scripting
+    add_backends
+    api
     getting_help
 
 .. [*] Designing the 9ML models used by the CLI currently requires 
-       knowledge of one of the formats supported by the
-       `NineML Python Library`_ (e.g.XML, JSON, YAML) and the
-       `NineML specification`_. However, a graphical UI is planned for the
-       future.
+       knowledge of one of the model description formats supported by the
+       `NineML Python Library`_ (e.g. XML, JSON or YAML) and the
+       `NineML specification`_ although a graphical UI is planned.
+
 .. _NineML: http://nineml.net
 .. _`NineML Python Library`: http://nineml.readthedocs.io
 .. _`NineML specification`: http://nineml.net/specification/

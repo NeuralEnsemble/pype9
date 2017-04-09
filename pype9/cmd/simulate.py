@@ -6,16 +6,16 @@ backend.
 Send ports and state-variables of the simulation can be recorded and saved to
 file in Neo_ format using the '--record' option, e.g.::
 
-    $ pype9 simulate my_cell.xml nest 100.0 0.01 \
+    $ pype9 simulate my_cell.xml nest 100.0 0.01 \\
       --record my_event_port ~/my_even_port.neo.pkl
 
 For single-cell simulations, analog and event inputs stored in Neo_ format
 can be "played" into ports of the Dynamics class using the '--play' option
 e.g.::
 
-    $ pype9 simulate my_cell.xml nest 100.0 0.01 \
-      --record my_event_port data-dir/my_even_port.neo.pkl \
-      --play my_analog_receive_port  data-dir/my_input_current.neo.pkl
+    $ pype9 simulate my_cell.xml nest 100.0 0.01 \\
+      --record my_event_port data-dir/my_even_port.neo.pkl \\
+      --play my_analog_receive_port data-dir/my_input_current.neo.pkl
 
 
 Properties, initial values and the initial regime (for single cells) can be

@@ -43,16 +43,12 @@ class CellMetaClass(type):
         ----------
         component_class : Dynamics
             A nineml.abstraction.Dynamics object
-        default_properties: DynamicsProperties
-            default properties, if None, then all props = 0
-        initial_states : dict[str, Quantity]
-            initial states, if None, then all states = 0
         name : str
             The name for the class
         saved_name : str
             The name of the Dynamics object in the document if different from
             the `name`
-        build_dir : str - directory path
+        build_dir : str (directory path)
             The directory in which to build the simulator-native code
         verbose : bool
             Whether to print out debugging information
