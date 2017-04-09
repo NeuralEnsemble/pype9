@@ -2,7 +2,7 @@
 Selected API
 ============
 
-Selected classes from the Pype9 API.
+Important classes in Pype9's Python API.
 
 Simulation
 ----------
