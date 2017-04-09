@@ -1,5 +1,6 @@
 """
-Converts a 9ML file from one supported format to another
+Tool to convert 9ML files between different supported formats (e.g. XML_,
+JSON_, YAML_) and 9ML versions.
 """
 from argparse import ArgumentParser
 from ._utils import nineml_document, logger

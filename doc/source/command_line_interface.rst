@@ -2,9 +2,52 @@
 Command Line Interface
 ======================
 
-The Pype9 command line tool, ``pype9``, will be installed along with the Python library
-when it is installed with pip.
+The Pype9 command line interface will be installed on your system path
+when Pype9 is installed with Pip_ (see :ref:`Installation`), otherwise it can be
+found in the ``bin`` directory of the repository.
 
+In a similar style to many popular command line tools (e.g. Git_, Pip_,
+Homebrew_, etc..) there is a single command, ``pype9``, which is used to switch
+between different pipelines, e.g.::
+
+    $ pype9 <cmd> <options> <args>
+ 
+There are currently four pipeline switches:
+
+* simulate
+* plot
+* convert
+* help
+
+NB: More switches are planned in the future as additional functionality is
+added to Pype9.
+
+Simulate
+--------
+
+.. argparse::
+    :module: pype9.cmd.simulate
+    :func: argparser
+    :prog: pype9 simulate
+
+
+Plot
+----
+
+.. argparse::
+    :module: pype9.cmd.plot
+    :func: argparser
+    :prog: pype9 plot
+
+Convert
+-------
+
+.. argparse::
+    :module: pype9.cmd.convert
+    :func: argparser
+    :prog: pype9 convert
+ 
+ 
 Help
 ----
 
@@ -53,42 +96,15 @@ supplying its name to the help::
      --hide                Whether to show the plot or not
      --resolution RESOLUTION
                            Resolution of the figure when it is saved
-
-Simulate
---------
-
-.. argparse::
-    :module: pype9.cmd.simulate
-    :func: argparser
-    :prog: pype9 simulate
-
-
-Examples
-^^^^^^^^
-`todo`
-
-Plot
-----
-
-.. argparse::
-    :module: pype9.cmd.plot
-    :func: argparser
-    :prog: pype9 plot
-
-Examples
-^^^^^^^^
-
-`todo`
-
-Convert
--------
-
-.. argparse::
-    :module: pype9.cmd.convert
-    :func: argparser
-    :prog: pype9 convert
-
-
-Examples
-^^^^^^^^
- `todo`
+ 
+ 
+.. _Homebrew: http://brew.sh
+.. _Git: http://git-scm.com/
+.. _Pip: http://pip.pypa.io
+.. _NEST: http://nest-simulator.org
+.. _Neuron: http://neuron.yale.edu
+.. _Neo: https://pythonhosted.org/neo/
+.. _Matplotlib: http://matplotlib.org/
+.. _YAML: http://www.yaml.org
+.. _JSON: www.json.org/
+.. _XML: https://www.w3.org/XML/

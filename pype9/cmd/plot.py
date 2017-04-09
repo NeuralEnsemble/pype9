@@ -1,6 +1,8 @@
 """
-Convenient script for plotting the output of PyPe9 simulations (actually not
-9ML specific as the signals are stored in Neo format)
+Simple tool for plotting the output of PyPe9 simulations using Matplotlib_.
+Since Pype9 output is stored in Neo_ format, it can be used to plot generic
+Neo_ files but it also includes handling of Pype9-specific annotations, such as
+regime transitions.
 """
 from argparse import ArgumentParser
 from ._utils import existing_file, logger  # @UnusedImport

@@ -1,5 +1,27 @@
 """
-Runs a simulation described by an Experiment layer 9ML file.
+Simulates a single cell defined by a 9ML Dynamics or DynamicsProperties, or a
+complete 9ML network described using either Neuron_ or NEST_ as the simulator
+backend.
+
+Send ports and state-variables of the simulation can be recorded and saved to
+file in Neo_ format using the '--record' option, e.g.::
+
+    $ pype9 simulate my_cell.xml nest 100.0 0.01 \
+      --record my_event_port ~/my_even_port.neo.pkl
+
+For single-cell simulations, analog and event inputs stored in Neo_ format
+can be "played" into ports of the Dynamics class using the '--play' option
+e.g.::
+
+    $ pype9 simulate my_cell.xml nest 100.0 0.01 \
+      --record my_event_port data-dir/my_even_port.neo.pkl \
+      --play my_analog_receive_port  data-dir/my_input_current.neo.pkl
+
+
+Properties, initial values and the initial regime (for single cells) can be
+overridden with the '--prop', '--initial_value' and '--initial_regime'
+respectively and must be provided for every parameter/state-variable if they
+are not in the model description file.
 """
 from argparse import ArgumentParser
 from nineml import units as un
