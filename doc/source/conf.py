@@ -52,6 +52,11 @@ sys.path.insert(0, package_path)
 import pype9.simulator.base.simulation  # @IgnorePep8 @UnusedImport
 import pype9.simulator.base.cells  # @IgnorePep8 @UnusedImport
 import pype9.simulator.base.network  # @IgnorePep8 @UnusedImport
+import pype9.cmd.convert  # @IgnorePep8 @UnusedImport
+import pype9.cmd.help  # @IgnorePep8 @UnusedImport
+import pype9.cmd.plot  # @IgnorePep8 @UnusedImport
+import pype9.cmd.simulate  # @IgnorePep8 @UnusedImport
+from pype9.cmd.simulate import argparser
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -75,7 +80,8 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'numpydoc'
+    'sphinx.ext.napoleon',
+    'sphinxarg.ext'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -174,7 +180,7 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+html_logo = 'logo_small.png'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32

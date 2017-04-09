@@ -1,6 +1,6 @@
-==========
-Python API
-==========
+================
+Python Scripting
+================
 
 The Pype9 Python API can be used to construct and simulate cells
 individually from 9ML_ py:class:Dynamics or simulate whole networks

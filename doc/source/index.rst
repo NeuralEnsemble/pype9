@@ -1,7 +1,4 @@
 
-.. image:: logo_small.png
-   :align: right
-
 Pype9
 =====
 
@@ -11,8 +8,9 @@ simulate neuron, and neuron network, models described in NineML_ using either
 Neuron_ or NEST_ as simulator backends.
 
 Pype9 has a command line interface (CLI), which allows experiments to be
-designed and simulated without programming*.  Alternatively, simulations
-can be scripted using Pype9's Python API
+designed and simulated without any scripting*.  Alternatively, simulations
+can be scripted using Pype9's Python API, or generated cell class can be
+integrated with native simulations.
 
 User guide
 ----------
@@ -22,13 +20,13 @@ User guide
 
     installation
     command_line_interface
-    python_api
+    python_scripting
     getting_help
 
 .. [*] Designing the 9ML models used by the CLI currently requires 
        knowledge of one of the formats supported by the
        `NineML Python Library`_ (e.g.XML, JSON, YAML) and the
-       `NineML specification`_, although a graphical UI is planned for the
+       `NineML specification`_. However, a graphical UI is planned for the
        future.
 .. _NineML: http://nineml.net
 .. _`NineML Python Library`: http://nineml.readthedocs.io
