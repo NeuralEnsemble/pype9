@@ -31,28 +31,29 @@ logger = logging.Logger("Pype9")
 class CellMetaClass(type):
 
     """
-    Metaclass for building NineMLCellType subclasses Called by
-    nineml_celltype_from_model
+    Metaclass for creating simulator-specific cell classes from 9ML Dynamics
+    classes.
+
+    Parameters
+    ----------
+    component_class : nineml.Dynamics
+        The 9ML component class to create the Cell class for
+    name : str
+        The name of the cell class, which is used for the generated simulator
+        code. If None, the name of the component_class is used. Note, names
+        must be unique among classes loaded within the same simulation script.
+    saved_name : str
+        The name of the Dynamics object in the document if different from
+        the `name` argument
+    build_dir : str (directory path)
+        The directory in which to build the simulator-native code
+    build_mode : str
+        The strategy used to build and compile the model. Can be one of
+        ::class::BaseCodeGenerator.BUILD_MODE_OPTIONS
     """
 
     def __new__(cls, component_class, name=None, saved_name=None,
-                build_dir=None, build_mode='lazy', verbose=False,
-                **kwargs):
-        """
-        Parameters
-        ----------
-        component_class : Dynamics
-            A nineml.abstraction.Dynamics object
-        name : str
-            The name for the class
-        saved_name : str
-            The name of the Dynamics object in the document if different from
-            the `name`
-        build_dir : str (directory path)
-            The directory in which to build the simulator-native code
-        verbose : bool
-            Whether to print out debugging information
-        """
+                build_dir=None, build_mode='lazy', verbose=False, **kwargs):
         # Grab the url before the component class is cloned
         url = component_class.url
         # Clone component class so annotations can be added to it and not bleed

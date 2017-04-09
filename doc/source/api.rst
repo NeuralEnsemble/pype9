@@ -2,7 +2,7 @@
 Selected API
 ============
 
-Selected classes of interest from the the API 
+Selected classes from the Pype9 API.
 
 Simulation
 ----------

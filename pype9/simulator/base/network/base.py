@@ -41,6 +41,23 @@ _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
 
 class Network(object):
+    """
+    Constructs a network simulation, generating and compiling dynamics classes
+    as required (depending on the 'build_mode' option).
+
+    Parameters
+    ----------
+    nineml_model : nineml.Network | nineml.Document | URL
+        A 9ML-Python model of a network (or Document containing
+        populations and projections for 9MLv1) or a URL referring to a 9ML
+        model.
+    build_mode : str
+        The strategy used to build and compile the model. Can be one of
+        ::class::BaseCodeGenerator.BUILD_MODE_OPTIONS
+    build_dir : str (directory path)
+        The directory in which to build the simulator-native code. If None
+        a build directory is generated.
+    """
 
     # Name given to the "cell" component of the cell dynamics + linear synapse
     # dynamics multi-dynamics

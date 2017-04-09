@@ -21,8 +21,8 @@ User/Developer guide
     installation
     cli
     scripting
-    add_backends
     api
+    extending
     getting_help
 
 .. [*] Designing the 9ML models used by the CLI currently requires 

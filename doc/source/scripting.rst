@@ -6,6 +6,7 @@ Pype9's Python API can be used to construct and simulate cells
 individually from 9ML_ Dynamics or simulate whole networks
 described in 9ML_.
 
+The Python packages are
 
 Simulation Control
 ------------------

@@ -38,10 +38,6 @@ class Simulation(object):
         The maximum delay in the network. If None the max delay will be
         calculated from the first network to be created (if a single cell
         then it will be the same as the timestep)
-    kill_on_exit : bool
-        Flags whether to destroy all simulator-specific objects upon exiting
-        the simulation context (leaving only recorded data). Should typically
-        only required to be set to False when debugging code.
     options : dict(str, object)
         Options passed to the simulator-specific methods
     """
