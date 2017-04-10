@@ -12,7 +12,7 @@ def argparser():
     parser.add_argument('in_file', type=nineml_document,
                         help="9ML file to be converted")
     parser.add_argument('out_file', help="Converted filename")
-    parser.add_argument('--nineml_version', type=str, default=None,
+    parser.add_argument('--nineml_version', '-v', type=str, default=None,
                         help="The version of nineml to output")
     return parser
 

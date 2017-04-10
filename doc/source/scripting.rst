@@ -2,7 +2,7 @@
 Creating Simulations in Python
 ==============================
 
-Pype9's ``simulator`` package is organised into ``base``, ``neuron`` and
+Pype9's ``simulate`` package is organised into ``base``, ``neuron`` and
 ``nest`` sub-packages. The ``base`` contains abstract base classes
 and code that is common to both ``neuron`` and ``nest``. ``neuron`` and
 ``nest`` can be imported independently of each other meaning that only the

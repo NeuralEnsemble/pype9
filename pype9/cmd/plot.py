@@ -28,7 +28,7 @@ def argparser():
 def run(argv):
     import neo
     from pype9.exceptions import Pype9UsageError
-    from pype9.utils.plotting import plot
+    from pype9.plot import plot
 
     args = argparser().parse_args(argv)
 

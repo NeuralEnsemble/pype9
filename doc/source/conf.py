@@ -56,7 +56,6 @@ import pype9.cmd.convert  # @IgnorePep8 @UnusedImport
 import pype9.cmd.help  # @IgnorePep8 @UnusedImport
 import pype9.cmd.plot  # @IgnorePep8 @UnusedImport
 import pype9.cmd.simulate  # @IgnorePep8 @UnusedImport
-from pype9.cmd.simulate import argparser
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
