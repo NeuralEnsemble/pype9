@@ -1,6 +1,6 @@
 import os.path
 from nineml import units as un
-from pype9.simulator.base.units import UnitHandler as BaseUnitHandler
+from pype9.simulate.base.units import UnitHandler as BaseUnitHandler
 
 
 class UnitHandler(BaseUnitHandler):

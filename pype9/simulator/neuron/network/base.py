@@ -20,7 +20,7 @@ import pyNN.neuron.simulator as simulator
 from pyNN.neuron.standardmodels.synapses import StaticSynapse
 import neuron
 import logging
-from pype9.simulator.base.network.base import (
+from pype9.simulate.base.network.base import (
     Network as BaseNetwork, ComponentArray as BaseComponentArray,
     ConnectionGroup as BaseConnectionGroup, Selection as BaseSelection)
 from .cell_wrapper import PyNNCellWrapperMetaClass

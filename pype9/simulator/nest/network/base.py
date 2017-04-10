@@ -19,7 +19,7 @@ import pyNN.nest  # @IgnorePep8
 from nest import NESTError  # @IgnorePep8
 from pyNN.common.control import build_state_queries  # @IgnorePep8
 from pyNN.nest.standardmodels.synapses import StaticSynapse  # @IgnorePep8
-from pype9.simulator.base.network.base import (  # @IgnorePep8
+from pype9.simulate.base.network.base import (  # @IgnorePep8
     Network as BaseNetwork, ComponentArray as BaseComponentArray,
     ConnectionGroup as BaseConnectionGroup, Selection as BaseSelection)
 import pyNN.nest.simulator as simulator  # @IgnorePep8

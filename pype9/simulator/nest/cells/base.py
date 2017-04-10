@@ -18,10 +18,10 @@ from nineml.exceptions import NineMLNameError
 from nineml import units as un
 from nineml.abstraction.ports import EventPort, AnalogPort
 from .code_gen import CodeGenerator, REGIME_VARNAME
-from pype9.simulator.nest.simulation import Simulation
-from pype9.simulator.base.cells import base
+from pype9.simulate.nest.simulation import Simulation
+from pype9.simulate.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
-from pype9.simulator.nest.units import UnitHandler
+from pype9.simulate.nest.units import UnitHandler
 from pype9.exceptions import (
     Pype9UsageError, Pype9NotSupportedBySimulatorException)
 from pype9.utils import add_lib_path

@@ -73,6 +73,17 @@ class Simulation(object):
         self._base_properties_seed = properties_seed
 
     def __enter__(self):
+        self.activate()
+
+    def __exit__(self, type_, value, traceback):  # @UnusedVariable
+        if type_ is None:
+            self.deactivate()
+        else:
+            logger.warning(
+                "Not deactivating Simulation instance as an uncaught exception"
+                "was thrown")
+
+    def activate(self):
         if self.__class__._active is not None:
             raise Pype9UsageError(
                 "Cannot enter context of multiple {} simulations at the same "
@@ -85,14 +96,13 @@ class Simulation(object):
         self.__class__._active = self
         return self
 
-    def __exit__(self, type_, value, traceback):  # @UnusedVariable
+    def deactivate(self):
         t_stop = self.t
         self.__class__._active = None
-        if type_ is None:
-            for cell in self._registered_cells:
-                cell._kill(t_stop)
-            for array in self._registered_arrays:
-                array._kill(t_stop)
+        for cell in self._registered_cells:
+            cell._kill(t_stop)
+        for array in self._registered_arrays:
+            array._kill(t_stop)
         self._registered_cells = None
         self._registered_arrays = None
 

@@ -18,8 +18,8 @@ from collections import defaultdict
 import sympy
 import nineml.units as un
 from nineml.abstraction import Alias, AnalogSendPort, Dynamics
-from pype9.simulator.base.cells.code_gen import BaseCodeGenerator
-from pype9.simulator.base.cells import (
+from pype9.simulate.base.cells.code_gen import BaseCodeGenerator
+from pype9.simulate.base.cells import (
     WithSynapses, DynamicsWithSynapses, DynamicsWithSynapsesProperties,
     MultiDynamicsWithSynapsesProperties)
 from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
@@ -32,7 +32,7 @@ from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
                                 Constant, Expression)
 from nineml.abstraction.dynamics.visitors.cloner import DynamicsCloner
 from sympy.printing import ccode
-from pype9.simulator.neuron.units import UnitHandler
+from pype9.simulate.neuron.units import UnitHandler
 try:
     from nineml.extensions.kinetics import Kinetics  # @UnusedImport
 except ImportError:

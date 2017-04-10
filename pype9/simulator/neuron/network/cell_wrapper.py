@@ -10,9 +10,9 @@ try:
 except:
     pass
 import pyNN.models
-from pype9.simulator.neuron.cells import CellMetaClass
+from pype9.simulate.neuron.cells import CellMetaClass
 import logging
-from pype9.simulator.base.network.cell_wrapper import (
+from pype9.simulate.base.network.cell_wrapper import (
     PyNNCellWrapper as BasePyNNCellWrapper,
     PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
 from ..units import UnitHandler

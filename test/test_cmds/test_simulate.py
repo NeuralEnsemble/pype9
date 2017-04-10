@@ -6,11 +6,11 @@ import numpy as np
 from pype9.cmd import simulate
 from pype9.cmd._utils import parse_units
 import ninemlcatalog
-from pype9.simulator.neuron import (
+from pype9.simulate.neuron import (
     Simulation as NeuronSimulation,
     CellMetaClass as NeuronCellMetaClass,
     Network as NetworkNEURON)
-from pype9.simulator.nest import (
+from pype9.simulate.nest import (
     Simulation as NESTSimulation,
     CellMetaClass as NESTCellMetaClass,
     Network as NetworkNEST)

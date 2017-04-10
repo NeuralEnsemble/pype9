@@ -28,9 +28,9 @@ from nineml.abstraction import EventPort, AnalogPort
 from nineml.exceptions import NineMLNameError
 from math import pi
 import numpy
-from pype9.simulator.base.cells import base
-from pype9.simulator.neuron.units import UnitHandler
-from pype9.simulator.neuron.simulation import Simulation
+from pype9.simulate.base.cells import base
+from pype9.simulate.neuron.units import UnitHandler
+from pype9.simulate.neuron.simulation import Simulation
 from pype9.annotations import (
     PYPE9_NS, BUILD_TRANS, MEMBRANE_CAPACITANCE, EXTERNAL_CURRENTS,
     MEMBRANE_VOLTAGE, MECH_TYPE, ARTIFICIAL_CELL_MECH)

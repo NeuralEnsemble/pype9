@@ -1,6 +1,6 @@
-============
-Selected API
-============
+==========
+Public API
+==========
 
 Important classes in Pype9's Python API.
 

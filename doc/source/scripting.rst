@@ -22,8 +22,8 @@ Kernel parameters such as simulator time step, delay limits and
 seeds for pseudo random number generators are set within an instance of the
 :ref:`Simulation` class. Simulator objects (i.e. cells and connection
 instances) can only be created within the context of an active :ref:`Simulation`
-instance. A :ref:`Simulation` instance is activated with the ``with``
-keyword e.g.:
+instance. A :ref:`Simulation` instance is typically activated by "entering"
+its context via the ``with`` keyword e.g.:
 
 .. code-block:: python
 

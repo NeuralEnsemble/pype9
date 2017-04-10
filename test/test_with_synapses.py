@@ -1,7 +1,7 @@
 from nineml import MultiDynamics
 import ninemlcatalog
-from pype9.simulator.base.document import Document
-from pype9.simulator.base.cells.with_synapses import (
+from pype9.simulate.base.document import Document
+from pype9.simulate.base.cells.with_synapses import (
     WithSynapses, ConnectionParameterSet)
 from nineml.xml import Ev2, etree
 

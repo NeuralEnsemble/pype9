@@ -14,7 +14,7 @@ from copy import deepcopy
 import subprocess as sp
 import re
 import logging
-from pype9.simulator.base.cells.code_gen import BaseCodeGenerator
+from pype9.simulate.base.cells.code_gen import BaseCodeGenerator
 from pype9.utils import remove_ignore_missing
 from pype9.exceptions import Pype9BuildError
 import pype9
@@ -24,7 +24,7 @@ from copy import copy
 from nineml.user import DynamicsProperties, Definition
 from nineml.abstraction import Dynamics
 from nineml import Document
-from pype9.simulator.nest.units import UnitHandler
+from pype9.simulate.nest.units import UnitHandler
 from pype9.exceptions import Pype9RuntimeError
 
 
