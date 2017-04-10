@@ -22,17 +22,17 @@ from nineml.abstraction.ports import (
 from nineml import units as un
 from nineml.units import ms
 from nineml.values import RandomValue
-from pype9.simulator.base.cells import (
+from pype9.simulate.base.cells import (
     ConnectionPropertySet, MultiDynamicsWithSynapsesProperties)
-from pype9.simulator.base.network import Network as BasePype9Network
-from pype9.simulator.neuron.network import Network as NeuronPype9Network
-from pype9.simulator.neuron import Simulation as NeuronSimulation
+from pype9.simulate.base.network import Network as BasePype9Network
+from pype9.simulate.neuron.network import Network as NeuronPype9Network
+from pype9.simulate.neuron import Simulation as NeuronSimulation
 import ninemlcatalog
 import sys
 argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
 import nest  # @IgnorePep8
-from pype9.simulator.nest.network import Network as NestPype9Network  # @IgnorePep8
-from pype9.simulator.nest import Simulation as NESTSimulation  # @IgnorePep8
+from pype9.simulate.nest.network import Network as NestPype9Network  # @IgnorePep8
+from pype9.simulate.nest import Simulation as NESTSimulation  # @IgnorePep8
 from pype9.utils.testing import ReferenceBrunel2000  # @IgnorePep8
 try:
     from matplotlib import pyplot as plt

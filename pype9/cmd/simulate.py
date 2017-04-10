@@ -25,7 +25,7 @@ are not in the model description file.
 """
 from argparse import ArgumentParser
 from nineml import units as un
-from pype9.simulator.base.cells.code_gen import BaseCodeGenerator
+from pype9.simulate.base.cells.code_gen import BaseCodeGenerator
 from ._utils import nineml_model, parse_units, logger
 
 
@@ -90,9 +90,9 @@ def run(argv):
     args = argparser().parse_args(argv)
 
     if args.simulator == 'neuron':
-        from pype9.simulator.neuron import Network, CellMetaClass, Simulation  # @UnusedImport @IgnorePep8
+        from pype9.simulate.neuron import Network, CellMetaClass, Simulation  # @UnusedImport @IgnorePep8
     elif args.simulator == 'nest':
-        from pype9.simulator.nest import Network, CellMetaClass, Simulation  # @Reimport @IgnorePep8
+        from pype9.simulate.nest import Network, CellMetaClass, Simulation  # @Reimport @IgnorePep8
     else:
         assert False
 
