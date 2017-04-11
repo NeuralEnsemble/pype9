@@ -149,6 +149,15 @@ Event ports can be connected between individual cells
 Network Simulations
 -------------------
 
+.. code-block:: python
+
+    with Simulation(dt=0.1 * un.ms) as sim:
+        network = Network('./brunel/AI.xml#AI')
+        network.component_array('Exc').record('spike_out')
+        sim.run(1000.0 * un.ms)
+    spikes = network.component_array('Exc').recording('spike_out')
+
+
 
 .. _NineML: http://nineml.net
 .. _NEST: http://nest-simulator.org

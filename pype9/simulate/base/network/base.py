@@ -692,6 +692,16 @@ class ComponentArray(object):
             communicates = port.communicates
         return communicates, port.name
 
+    def record(self, port_name):
+        """
+        Records the port or state variable
+
+        Parameters
+        ----------
+        port_name : str
+            Name of the port to record
+        """
+
     def recording(self, port_name):
         """
         Returns the recorded data for the given port name
