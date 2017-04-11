@@ -30,7 +30,6 @@ instance at any time.
 
 A :ref:`Simulation` is activated with the ``with`` keyword 
 
-
 .. code-block:: python
 
     with Simulation(dt=0.1 * un.ms, seed=12345) as sim:
