@@ -2,9 +2,16 @@
 Installation
 ============
 
-There are two steps to installing Pype9, the first is installing one or both
-of the simulator backends, Neuron_ and/or NEST_, and the second is installing
+There are two steps to installing Pype9, the first is installing one or both of
+the simulator backends, Neuron_ and/or NEST_, and the second is installing
 Pype9 and prerequisite Python packages.
+
+
+.. note::
+
+    Pype9 currently only works with Python 2.7. Python 3 support is
+    planned for future versions.
+
 
 Simulator Backends
 ------------------
@@ -15,17 +22,18 @@ Pype9 works with the following simulator backend versions
 
 The easiest way to install them depends on your operating system. 
 
+
 on MacOS
 ^^^^^^^^
 On macOS, NEST_ and Neuron_ can be installed via the Homebrew_ package manager.
-Note that it tends not to be a good idea to use multiple package managers
-(e.g. macports), so if you use a different package manager it may be better
-to install `from Source Code`_. 
+Note that it tends not to be a good idea to use multiple package managers (e.g.
+macports), so if you use a different package manager it may be better to
+install `from Source Code`_. 
 
 
-If you haven't already have configured a Python distribution on your system
-(or don't mind reinstalling your existing packages), I would recommend
-installing the standard Python distribution with Homebrew_ first::
+If you haven't already have configured a Python distribution on your system (or
+don't mind reinstalling your existing packages), I would recommend installing
+the standard Python distribution with Homebrew_ first::
 
    brew install python
 
@@ -37,17 +45,17 @@ Neuron_ can be installed with Homebrew_ by::
 
    brew install --with-mpi neuron
    
-Note that ``--with-mpi`` is optional but will enable you to
-spread your simulation over multiple compute cores/nodes of your computer.
+Note that ``--with-mpi`` is optional but will enable you to spread your
+simulation over multiple compute cores/nodes of your computer.
    
-If you can't/don't want to use Homebrew_ then see the `from Source Code`_ section
-below. 
+If you can't/don't want to use Homebrew_ then see the `from Source Code`_
+section below. 
 
 
 on Ubuntu/Debian
 ^^^^^^^^^^^^^^^^
-NEST and Neuron packages are available in the NeuroDebian_ repository,
-otherwise please install from source (see `from Source Code`_).
+NEST and Neuron packages are available in the NeuroDebian_ repository, otherwise
+please install from source (see `from Source Code`_).
 
 on Windows
 ^^^^^^^^^^
@@ -57,9 +65,10 @@ container to run simulations on Windows.
 
 with Docker
 ^^^^^^^^^^^
-There is a Docker_ image located at https://hub.docker.com/r/tclose/pype9/
-that you can pull to run the simulations within a Docker container. See the instructions
-in the comments of the ``Dockerfile`` in the Pype9 repository for instructions on how to do this.
+There is a Docker_ image located at https://hub.docker.com/r/tclose/pype9/ that
+you can pull to run the simulations within a Docker container. See the
+instructions in the comments of the ``Dockerfile`` in the Pype9 repository for
+instructions on how to do this.
 
 from Source Code
 ^^^^^^^^^^^^^^^^
@@ -67,10 +76,11 @@ Instructions on how to install NEST from source can be found on official NEST
 website, http://www.nest-simulator.org/installation/
 
 Good instructions on how to install Neuron from source can be found in Andrew
-Davisons notes here, http://www.davison.webfactional.com/notes/installation-neuron-python/.
+Davisons notes here,
+http://www.davison.webfactional.com/notes/installation-neuron-python/.
 
-In the ``prereq`` folder there are also scripts for installing the Neuron and NEST from
-source on a Ubuntu image, which may serve as a good reference.
+In the ``prereq`` folder there are also scripts for installing the Neuron and
+NEST from source on a Ubuntu image, which may serve as a good reference.
 
 Python Packages
 ---------------
@@ -99,7 +109,8 @@ downloading/cloning this repository and using *pip*::
    pip install -r requirements.txt .
 
 If you cannot use *pip* you will need to manually install the *libninemlnrn*
-shared library, which contains wrappers for GSL random distribution functions, with:: 
+shared library, which contains wrappers for GSL random distribution functions,
+with:: 
 
    cd <pype9-repo-dir>/pype9/neuron/cells/code_gen/libninemlnrn
    CC=<your-Neuron-c-compiler> ./manual_compile.sh

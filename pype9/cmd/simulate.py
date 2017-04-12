@@ -1,7 +1,6 @@
 """
 Simulates a single cell defined by a 9ML Dynamics or DynamicsProperties, or a
-complete 9ML network described using either Neuron_ or NEST_ as the simulator
-backend.
+complete 9ML network, using either Neuron_ or NEST_ as the simulator backend.
 
 Send ports and state-variables of the simulation can be recorded and saved to
 file in Neo_ format using the '--record' option, e.g.::

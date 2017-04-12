@@ -2,15 +2,16 @@
 Creating Simulations in Python
 ==============================
 
-Pype9 is loosely organised into sub-packages corresponding to
-each pipeline (e.g. ``simulate``, ``plot``, etc...). The ``simulate``
-package contains the sub-packages, ``neuron`` and ``nest``, which provide the
-simulator-specific calls to their respective backends.
+The Pype9 package is organised into sub-packages corresponding to the pipelines
+it (e.g. ``simulate``, ``plot``, etc...). The ``simulate`` package contains the
+sub-packages, ``neuron`` and ``nest``, which provide the simulator-specific
+calls to their respective backends.
 
-All classes required to design and run simulations in these packages derive
-from corresponding classes in the ``base`` package, which defines a consistent
-:ref:`API` across all backends. Therefore, code designed to run on with one
-backend can be switched to another by simply changing the package the
+ 
+All classes required to design and run simulations in these packages derive from
+corresponding classes in the ``base`` package, which defines a consistent
+:ref:`Public API` across all backends. Therefore, code designed to run on with
+one backend can be switched to another by simply changing the package the
 simulator-specific classes are imported from (like PyNN_).
 
 .. note::
@@ -21,12 +22,11 @@ simulator-specific classes are imported from (like PyNN_).
 Simulation Control
 ------------------
 
-Simulation parameters such as time step, delay limits and
-seeds for pseudo random number generators are set within an instance of the
-:ref:`Simulation` class. Simulator objects (e.g. cells and connections)
-can only be instantiated within the context of an active
-:ref:`Simulation` instance, and there can only be one active :ref:`Simulation`
-instance at any time.
+Simulation parameters such as time step, delay limits and seeds for pseudo
+random number generators are set within an instance of the :ref:`Simulation`
+class. Simulator objects (e.g. cells and connections) can only be instantiated
+within the context of an active :ref:`Simulation` instance, and there can only
+be one active :ref:`Simulation` instance at any time.
 
 A :ref:`Simulation` is activated with the ``with`` keyword 
 
@@ -55,22 +55,22 @@ mid-simulation
         # Update simulator object parameters/state-variables
         sim.run(50.0 * un.ms)
 
-After the simulation context exits all objects in the simulator backend 
-are destroyed (unless an exception is thrown) and only recordings can be
-reliably accessed from the "dead" Pype9 objects.
+After the simulation context exits all objects in the simulator backend are
+destroyed (unless an exception is thrown) and only recordings can be reliably
+accessed from the "dead" Pype9 objects.
 
 
 Cell Simulations
 ----------------
 
-NineML_ Dynamics classes can be translated into simulator cell objects using
-the :ref:`CellMetaClass` class. A metaclass_ is class of classes, i.e. one
-whose instantiation is itself a class, such as the ``type`` class.
-:ref:`CellMetaClass` instantiations derive from the :ref:`Cell` class
-and can be used to represent different classes of neural models, such as
-Izhikevich or Hodgkin-Huxley for example. From these :ref:`Cell` classes as
-many cell instances (with their corresponding simulator objects) can be created
-as required e.g:
+NineML_ Dynamics classes can be translated into simulator cell objects using the
+:ref:`CellMetaClass` class. A metaclass_ is class of classes, i.e. one whose
+instantiation is itself a class, such as the ``type`` class.
+:ref:`CellMetaClass` instantiations derive from the :ref:`Cell` class and can
+be used to represent different classes of neural models, such as Izhikevich or
+Hodgkin-Huxley for example. From these :ref:`Cell` classes as many cell
+instances (with their corresponding simulator objects) can be created as
+required e.g:
 
 .. code-block:: python
 
@@ -84,11 +84,12 @@ as required e.g:
     # or from a nineml.DynamicsProperties object
     izhi3 = Izhikevich('./izhikevich.xml#IzhikevichBurster')
     
-If the specified Dynamics class has not been built before the :ref:`CellMetaClass`
-will automatically generate the required source code for the model, compile it,
-and load it into the simulator namespace. This can happen either inside or
-outside of an active :ref:`Simulation` instance. However, the cells objects
-themselves must be instantiated within a :ref:`Simulation` instance.
+If the specified Dynamics class has not been built before the
+:ref:`CellMetaClass` will automatically generate the required source code for
+the model, compile it, and load it into the simulator namespace. This can
+happen either inside or outside of an active :ref:`Simulation` instance.
+However, the cells objects themselves must be instantiated within a
+:ref:`Simulation` instance.
 
 .. code-block:: python
 
@@ -165,34 +166,63 @@ Event ports can be connected between individual cells
 Network Simulations
 -------------------
 
-Network simulations are specified in much the same way as individual cell
-simulations, with the exception that there is no metaclass for Networks
-(Network metaclasses will be added  when the "Structure Layer" is introduced in
-NineML_ v2). Therefore, the whole network needs to be instantiated within the
-simulation context.
+Network simulations are specified in much the same way as `Cell Simulations`_,
+with the exception that there is no metaclass for Networks (Network metaclasses
+will be added  when the "Structure Layer" is introduced in NineML_ v2).
+Therefore, :ref:`Network` objects need to be instantiated within the simulation
+context.
 
 .. code-block:: python
 
     with Simulation(dt=0.1 * un.ms) as sim:
+        # Network objects need to be instantiated within the simulation context
         network = Network('./brunel/AI.xml#AI')
         sim.run(1000.0 * un.ms)
         
 During construction of the network, the NineML_ Populations and Projections are
 flattened into :ref:`Component Array` and :ref:`Connection Group` objects such
 that the synapse dynamics in the projection are included in the dynamics of the
-:ref:`Component Array` and the :ref:`Connection Group` consists of static
-connections.
+:ref:`Component Array` and each port connection is converted into a separate
+:ref:`Connection Group` of static connections.
+
+To record data, the relevant component array needs to be accessed using the
+``component_array`` or ``component_arrays`` accessors of the network class.
+Then as in the `Cell Simulations`_ case the ``record`` method is used to
+specify which variables to record and the ``recording`` method is used to
+access the recording after the simulation.
 
 .. code-block:: python
 
     with Simulation(dt=0.1 * un.ms) as sim:
         network = Network('./brunel/AI.xml#AI')
+        # 'spike_out' is explicitly connected in the connection so it is
+        # mapped to the global namespace of the flattened cell + synapses model
         network.component_array('Exc').record('spike_out')
+        # State-variables of the cell dynamics are suffixed with '__cell'
+        network.component_array('Inh').record('v__cell')
+        # State-variables of synapses, in this case synapses from the 
+        # 'Inhibition' projection, are prefixed with '__<projection-name>'
+        network.component_array('Exc').record('a__Inhibition')
         sim.run(1000.0 * un.ms)
-    spikes = network.component_array('Exc').recording('spike_out')
+    exc_spikes = network.component_array('Exc').recording('spike_out')
+    inh_v = network.component_array('Inh').recording('v__cell')
+    exc_inh_a = network.component_array('Exc').recording('a__Inhibition')
+    
 
+.. note::
 
+    During the cell and synapse flattening process the names of state variables
+    and unconnected ports will be suffixed with ``__cell`` if they belong to the
+    population dynamics or ``__<my-projection>`` if they belong to the synapse
+    of the a projection
 
+Network models are simulated via integration with PyNN_ and therefore will run
+on multiple processes using `Open MPI`_ (and `Open MP_` for NEST_) if the
+calling Python script is run with ``mpirun``/``mpiexec``. 
+
+ 
+.. _`Open MPI`: http://openmpi.org
+.. _`Open MP`: http://openmp.org
 .. _NineML: http://nineml.net
 .. _NEST: http://nest-simulator.org
 .. _Neuron: http://neuron.yale.edu

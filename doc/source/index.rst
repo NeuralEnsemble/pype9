@@ -10,7 +10,11 @@ Neuron_ or NEST_ as simulator backends.
 Pype9 has a :ref:`Command Line Interface` (CLI), which allows experiments to be
 simulated directly from NineML_ descriptions (i.e. without scripting).
 Alternatively, simulations can be embedded within Python scripts by accessing
-Pyp9's accessible :ref:`API`.
+Pyp9's accessible :ref:`Public API`.
+
+
+User/Developer Guide
+--------------------
 
 .. toctree::
     :maxdepth: 2 

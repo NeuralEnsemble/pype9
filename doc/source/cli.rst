@@ -2,8 +2,8 @@
 Command Line Interface
 ======================
 
-The Pype9 command line interface will be installed on your system path
-when Pype9 is installed with Pip_ (see :ref:`Installation`), otherwise it can be
+The Pype9 command line interface will be installed on your system path when
+Pype9 is installed with Pip_ (see :ref:`Installation`), otherwise it can be
 found in the ``bin`` directory of the repository.
 
 In a similar style to many popular command line tools (e.g. Git_, Pip_,
@@ -27,6 +27,13 @@ Simulate
     :func: argparser
     :prog: pype9 simulate
 
+
+.. note::
+
+    To simulate network simulations on Neuron_ over multiple cores you need to
+    use the MPI_ command ``mpirun -n <ncores> pype9 simulate <options>``
+    and have installed Neuron_ with the ``--with-mpi`` option
+    (see :ref:`Installation`)
 
 Plot
 ----
@@ -72,7 +79,7 @@ The available pipelines can be listed with::
        simulate
            Runs a simulation described by an Experiment layer 9ML file
 
-More detailed help messages for each available pipeline can be viewed by 
+More detailed help messages for each available pipeline can be viewed by
 supplying its name to the help::
 
    $ pype9 help plot
@@ -98,6 +105,7 @@ supplying its name to the help::
 .. _Homebrew: http://brew.sh
 .. _Git: http://git-scm.com/
 .. _Pip: http://pip.pypa.io
+.. _MPI: https//wikipedia.org/MPI
 .. _NEST: http://nest-simulator.org
 .. _Neuron: http://neuron.yale.edu
 .. _Neo: https://pythonhosted.org/neo/
