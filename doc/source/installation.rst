@@ -22,6 +22,11 @@ Pype9 works with the following simulator backend versions
 
 The easiest way to install them depends on your operating system. 
 
+.. note::
+
+    Pype9 v0.1.0 does not work with the latest NEST_ version, 2.12,
+    as the build system was changed from autotools to cmake. A new release
+    (0.1.1) will be made to add NEST_ 2.12 support.
 
 on MacOS
 ^^^^^^^^
@@ -33,23 +38,23 @@ install `from Source Code`_.
 
 If you haven't already have configured a Python distribution on your system (or
 don't mind reinstalling your existing packages), I would recommend installing
-the standard Python distribution with Homebrew_ first::
+the standard Python distribution with Homebrew_ first
+
+.. code-block:: bash
 
    brew install python
-
-NEST_, including its Python bindings, can be installed with Homebrew_ by::
-
-   brew install --with-python nest
    
-Neuron_ can be installed with Homebrew_ by::
+Neuron_ can be installed with Homebrew_ by
+
+.. code-block:: bash
 
    brew install --with-mpi neuron
    
 Note that ``--with-mpi`` is optional but will enable you to spread your
 simulation over multiple compute cores/nodes of your computer.
-   
-If you can't/don't want to use Homebrew_ then see the `from Source Code`_
-section below. 
+
+Unfortunately, NEST_ 2.10, can no longer be installed via Homebrew_ as 2.12 is
+the latest version. Therefore, you will need to install it `from Source Code`_.
 
 
 on Ubuntu/Debian
@@ -103,14 +108,18 @@ Pype9 depends on the following Python packages
 
 These requirements and the Pype9 package itself can be installed *after* the
 simulator backends are installed (see _`Simulator Backends`) by
-downloading/cloning this repository and using *pip*::
+downloading/cloning this repository and using *pip*
+
+.. code-block:: bash
 
    cd <pype9-repo-dir>
    pip install -r requirements.txt .
 
 If you cannot use *pip* you will need to manually install the *libninemlnrn*
 shared library, which contains wrappers for GSL random distribution functions,
-with:: 
+with
+
+.. code-block:: bash
 
    cd <pype9-repo-dir>/pype9/neuron/cells/code_gen/libninemlnrn
    CC=<your-Neuron-c-compiler> ./manual_compile.sh

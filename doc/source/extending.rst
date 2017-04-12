@@ -2,15 +2,15 @@
 Extending Pype9
 ===============
 
-Adding new pipelines
---------------------
+Adding Pipelines
+----------------
 
 .. todo::
     Add section on adding new pipelines to Pype9
     
 
-Adding new simulator backends
------------------------------
+Adding Simulator Backends
+-------------------------
 
 .. todo::
     Add section on adding simulator backends that describes the basic structure

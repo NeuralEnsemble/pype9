@@ -18,8 +18,8 @@ Simulation
     :members: run
 
 
-CellMetaClass
--------------
+Cell Metaclass
+--------------
 
 .. autoclass:: pype9.simulate.base.cells.CellMetaClass
 
