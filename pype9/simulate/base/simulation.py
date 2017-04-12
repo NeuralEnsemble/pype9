@@ -74,14 +74,10 @@ class Simulation(object):
 
     def __enter__(self):
         self.activate()
+        return self
 
     def __exit__(self, type_, value, traceback):  # @UnusedVariable
-        if type_ is None:
-            self.deactivate()
-        else:
-            logger.warning(
-                "Not deactivating Simulation instance as an uncaught exception"
-                "was thrown")
+        self.deactivate(kill_cells=(type_ is None))
 
     def activate(self):
         if self.__class__._active is not None:
@@ -94,15 +90,18 @@ class Simulation(object):
         self._registered_cells = []
         self._registered_arrays = []
         self.__class__._active = self
-        return self
 
-    def deactivate(self):
+    def deactivate(self, kill_cells=True):
         t_stop = self.t
         self.__class__._active = None
-        for cell in self._registered_cells:
-            cell._kill(t_stop)
-        for array in self._registered_arrays:
-            array._kill(t_stop)
+        if kill_cells:
+            for cell in self._registered_cells:
+                cell._kill(t_stop)
+            for array in self._registered_arrays:
+                array._kill(t_stop)
+        else:
+            logger.warning(
+                "Not killing cells as an uncaught exception was thrown")
         self._registered_cells = None
         self._registered_arrays = None
 

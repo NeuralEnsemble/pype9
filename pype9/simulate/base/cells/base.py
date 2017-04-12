@@ -53,7 +53,7 @@ class CellMetaClass(type):
     """
 
     def __new__(cls, component_class, name=None, saved_name=None,
-                build_dir=None, build_mode='lazy', verbose=False, **kwargs):
+                build_dir=None, build_mode='lazy', **kwargs):
         # Grab the url before the component class is cloned
         url = component_class.url
         # Clone component class so annotations can be added to it and not bleed
@@ -87,7 +87,7 @@ class CellMetaClass(type):
             # Generate and compile cell class
             instl_dir = code_gen.generate(
                 component_class=build_component_class,
-                build_mode=build_mode, verbose=verbose, name=name,
+                build_mode=build_mode, name=name,
                 build_dir=build_dir, url=url, **kwargs)
             # Load newly build model
             cls.load_libraries(name, instl_dir)
@@ -103,13 +103,11 @@ class CellMetaClass(type):
             cls._built_types[name] = Cell
         return Cell
 
-    def __init__(cls, component_class, default_properties=None,
-                 initial_states=None, name=None, saved_name=None, **kwargs):
-        """
-        This initializer is empty, but since I have changed the signature of
-        the __new__ method in the deriving metaclasses it complains otherwise
-        (not sure if there is a more elegant way to do this).
-        """
+    def __init__(self, component_class, name=None, saved_name=None,
+                 build_dir=None, build_mode='lazy', **kwargs):
+        # This initializer is empty, but since I have changed the signature of
+        # the __new__ method in the deriving metaclasses it complains otherwise
+        # (not sure if there is a more elegant way to do this).
         pass
 
     def load_libraries(self, name, install_dir, **kwargs):

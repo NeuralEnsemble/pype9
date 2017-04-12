@@ -92,8 +92,8 @@ class Network(object):
             else:
                 array_build_dir = os.path.join(build_dir, name)
             self._component_arrays[name] = self.ComponentArrayClass(
-                comp_array, rng=rng, build_mode=build_mode,
-                build_dir=array_build_dir, **kwargs)
+                comp_array, build_mode=build_mode, build_dir=array_build_dir,
+                **kwargs)
         self._selections = {}
         # Build the PyNN Selections
         for selection in flat_selections.itervalues():
@@ -122,8 +122,7 @@ class Network(object):
                 except KeyError:
                     destination = self._selections[conn_group.destination.name]
                 self._connection_groups[name] = self.ConnectionGroupClass(
-                    conn_group, source=source, destination=destination,
-                    rng=rng)
+                    conn_group, source=source, destination=destination)
             self._finalise_construction()
 
     def _finalise_construction(self):
@@ -150,6 +149,14 @@ class Network(object):
         return self._selections.itervalues()
 
     def component_array(self, name):
+        """
+        Returns the component array matching the given name
+
+        Parameters
+        ----------
+        name : str
+            Name of the component array
+        """
         try:
             return self._component_arrays[name]
         except KeyError:
@@ -158,6 +165,14 @@ class Network(object):
                 .format(name, "', '".join(self.component_array_names)))
 
     def connection_group(self, name):
+        """
+        Returns the connection group matching the given name
+
+        Parameters
+        ----------
+        name : str
+            Name of the component array
+        """
         try:
             return self._connection_groups[name]
         except KeyError:
@@ -529,7 +544,7 @@ class Network(object):
 
 class ComponentArray(object):
 
-    def __init__(self, nineml_model, rng, build_mode='lazy', **kwargs):
+    def __init__(self, nineml_model, build_mode='lazy', **kwargs):
         if not isinstance(nineml_model, ComponentArray9ML):
             raise Pype9RuntimeError(
                 "Expected a component array, found {}".format(nineml_model))
@@ -543,6 +558,7 @@ class ComponentArray(object):
             initial_regime=dynamics_properties.initial_regime,
             build_mode=build_mode, **kwargs)
         if build_mode != 'build_only':
+            rng = self.Simulation.active().properties_rng
             cellparams = dict(
                 (p.name, get_pyNN_value(p, self.UnitHandler, rng))
                 for p in dynamics_properties.properties)
@@ -799,7 +815,8 @@ class Selection(object):
 
 class ConnectionGroup(object):
 
-    def __init__(self, nineml_model, source, destination, rng):
+    def __init__(self, nineml_model, source, destination):
+        rng = self.Simulation.active().properties_rng
         if not isinstance(nineml_model, EventConnectionGroup9ML):
             raise Pype9RuntimeError(
                 "Expected a connection group model, found {}"

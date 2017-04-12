@@ -71,6 +71,7 @@ class ConnectionGroup(BaseConnectionGroup, pyNN.nest.Projection):
     SynapseClass = StaticSynapse
     PyNNProjectionClass = pyNN.nest.Projection
     UnitHandler = UnitHandler
+    Simulation = Simulation
 
     @classmethod
     def get_min_delay(self):

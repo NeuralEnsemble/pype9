@@ -29,11 +29,12 @@ Network
 -------
 
 .. autoclass:: pype9.simulate.base.network.Network
+    :members: component_array, connection_group
 
 
 Component Array
 ---------------
-
+ 
 .. autoclass:: pype9.simulate.base.network.ComponentArray
     :members: record, recording, play
 

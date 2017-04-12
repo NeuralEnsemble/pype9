@@ -424,7 +424,7 @@ class CodeGenerator(BaseCodeGenerator):
                 expr.subs(ext_i, 0)
                 expr.simplify()
 
-    def compile_source_files(self, compile_dir, name, verbose):
+    def compile_source_files(self, compile_dir, name):
         """
         Builds all NMODL files in a directory
 
@@ -441,17 +441,14 @@ class CodeGenerator(BaseCodeGenerator):
             confusing), 'force' removes existing library if found and
             recompiles, and 'build_only' removes existing library if found,
             recompile and then exit
-        verbose : bool
-            Flags whether to print out verbose debugging messages
         ignore_units :
             Flag whether to only print a warning when units don't match instead
             of throwing an error
         """
         # Change working directory to model directory
         os.chdir(compile_dir)
-        if verbose != 'silent':
-            logger.info("Building NMODL mechanisms in '{}' directory."
-                        .format(compile_dir))
+        logger.info("Building NMODL mechanisms in '{}' directory."
+                    .format(compile_dir))
         # Check the created units by running modlunit
         if __debug__:
             for fname in os.listdir('.'):
@@ -484,12 +481,10 @@ class CodeGenerator(BaseCodeGenerator):
             raise Pype9BuildError(
                 "Generated mod file failed to compile with output:\n{}\n{}"
                 .format(stdout, stderr))
-        if verbose is True:
-            logger.info(stdout)
-            logger.info(stderr)
-        if verbose != 'silent':
-            logger.info("Compilation of NEURON (NMODL) files for '{}' "
-                        "completed successfully".format(name))
+        logger.info(stdout)
+        logger.info(stderr)
+        logger.info("Compilation of NEURON (NMODL) files for '{}' "
+                    "completed successfully".format(name))
 
     def get_install_dir(self, build_dir, install_dir):
         if install_dir:

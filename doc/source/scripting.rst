@@ -33,7 +33,7 @@ A :ref:`Simulation` is activated with the ``with`` keyword
 .. code-block:: python
 
     with Simulation(dt=0.1 * un.ms, seed=12345) as sim:
-        ...define simulation here...
+        # Design simulation here
 
 The simulation is advanced using the ``run`` method of the :ref:`Simulation`
 instance
@@ -41,7 +41,7 @@ instance
 .. code-block:: python
 
    with Simulation(dt=0.1 * un.ms, seed=12345) as sim:
-        ...define simulation here...
+        # Create simulator objects here
         sim.run(100.0 * un.ms)
         
 this can be done in stages if states or parameters need to be updated
@@ -50,9 +50,9 @@ mid-simulation
 .. code-block:: python
 
    with Simulation(dt=0.1 * un.ms, seed=12345) as sim:
-        ...define simulation here...
+        # Create simulator objects here
         sim.run(50.0 * un.ms)
-        ...update parameters/states...
+        # Update simulator object parameters/state-variables
         sim.run(50.0 * un.ms)
 
 After the simulation context exits all objects in the simulator backend 
@@ -74,9 +74,14 @@ as required e.g:
 
 .. code-block:: python
 
+    # Create Izhikevich cell class by instantiating the CellMetaClass with a
+    # ninml.Dynamics Izhikevich model
     Izhikevich = CellMetaClass('./izhikevich.xml#Izhikevich')
+    # Parameters and states of the cell class must be provided when the cells
+    # are instantiated.
+    # either as keyword args
     izhi1 = Izhikevich(a=1, b=2, c=3, d=4, v=-65 * un.mV, u=14 * un.mV / un.ms)
-    izhi2 = Izhikevich(a=4, b=3, c=2, d=1, v=-70 * un.mV, u=50 * un.mV / un.ms)
+    # or from a nineml.DynamicsProperties object
     izhi3 = Izhikevich('./izhikevich.xml#IzhikevichBurster')
     
 If the specified Dynamics class has not been built before the :ref:`CellMetaClass`
@@ -87,15 +92,18 @@ themselves must be instantiated within a :ref:`Simulation` instance.
 
 .. code-block:: python
 
+    # The cell class can be created outside the simulation context
     Izhikevich = CellMetaClass('./izhikevich.xml#Izhikevich')
     with Simulation(dt=0.1 * un.ms) as sim:
+        # The cell object must be instantiated within the simulation context
         izhi = Izhikevich(a=1, b=2, c=3, d=4, v=-65 * un.mV,
                           u=14 * un.mV / un.ms)
         sim.run(1000.0 * un.ms)
         
 The data can be recorded from every send port and state variable in the NineML_
 Dynamics class using the ``record`` method of the :ref:`Cell` class. The
-recorded data can then be accessed with the ``recording`` method.
+recorded data can then be accessed with the ``recording`` method. The
+recordings will be Neo_ format.
 
 .. code-block:: python
 
@@ -104,20 +112,24 @@ recorded data can then be accessed with the ``recording`` method.
     with Simulation(dt=0.1 * un.ms) as sim:
         izhi = Izhikevich(a=1, b=2, c=3, d=4, v=-65 * un.mV,
                           u=14 * un.mV / un.ms)
+        # Specify the variables to record
         izhi.record('v')
         sim.run(1000.0 * un.ms)
+    # Retrieve the recording
     v = izhi.recording('v')
 
 Data in Neo_ format can be "played" into receive ports of the :ref:`Cell`
 
 .. code-block:: python
 
-    i_syn = neo.PickleIO('./data/my_recording.neo.pkl').read()
+    neo_data = neo.PickleIO('./data/my_recording.neo.pkl').read()
     Izhikevich = CellMetaClass('./izhikevich.xml#Izhikevich')
     with Simulation(dt=0.1 * un.ms) as sim:
         izhi = Izhikevich(a=1, b=2, c=3, d=4, v=-65 * un.mV,
                           u=14 * un.mV / un.ms)
-        izhi.play('i_syn', i_syn)
+        # Play analog signal (must be of current dimension) into 'i_syn'
+        # analog-receive port.
+        izhi.play('i_syn', neo_data.analogsignals[0])
         sim.run(1000.0 * un.ms)
    
 States and parameters can be accessed and set using the attributes of the
@@ -130,6 +142,7 @@ States and parameters can be accessed and set using the attributes of the
     with Simulation(dt=0.1 * un.ms) as sim:
         izhi = Izhikevich(a=1, b=2, c=3, d=4)
         sim.run(500.0 * un.ms)
+        # Update the membrane voltage after 500 ms to 20 mV
         izhi.v = 20 * un.mV
         sim.run(500.0 * un.ms)
 
@@ -142,12 +155,33 @@ Event ports can be connected between individual cells
     with Simulation(dt=0.1 * un.ms) as sim:
         poisson = Poisson(rate=10 * un.Hz, t_next=0.5 * un.ms)
         lif = LIFAlphaSyn('./liaf_alpha_syn.xml#LIFAlphaSynProps')
+        # Connect 'spike_out' event-send port of the poisson cell to
+        # the 'spike_in' event-receive port on the leaky-integrate-and-fire
+        # cell 
         lif.connect(poisson, 'spike_out', 'spike_in')
         sim.run(1000.0 * un.ms)
 
 
 Network Simulations
 -------------------
+
+Network simulations are specified in much the same way as individual cell
+simulations, with the exception that there is no metaclass for Networks
+(Network metaclasses will be added  when the "Structure Layer" is introduced in
+NineML_ v2). Therefore, the whole network needs to be instantiated within the
+simulation context.
+
+.. code-block:: python
+
+    with Simulation(dt=0.1 * un.ms) as sim:
+        network = Network('./brunel/AI.xml#AI')
+        sim.run(1000.0 * un.ms)
+        
+During construction of the network, the NineML_ Populations and Projections are
+flattened into :ref:`Component Array` and :ref:`Connection Group` objects such
+that the synapse dynamics in the projection are included in the dynamics of the
+:ref:`Component Array` and the :ref:`Connection Group` consists of static
+connections.
 
 .. code-block:: python
 

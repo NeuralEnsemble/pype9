@@ -77,12 +77,11 @@ class BaseCodeGenerator(object):
         pass
 
     @abstractmethod
-    def compile_source_files(self, compile_dir, name, verbose):
+    def compile_source_files(self, compile_dir, name):
         pass
 
     def generate(self, component_class, name=None, install_dir=None,
-                 build_dir=None, build_mode='lazy', verbose=True, url=None,
-                 **kwargs):
+                 build_dir=None, build_mode='lazy', url=None, **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
         NineML cell class
@@ -106,8 +105,6 @@ class BaseCodeGenerator(object):
                 build_only - build and then quit
                 generate_only - generate src and then quit
                 recompile - don't generate src but compile
-        verbose : bool
-            Whether the build output is shown or not
         kwargs : dict
             A dictionary of (potentially simulator- specific) template
             arguments
@@ -198,7 +195,6 @@ class BaseCodeGenerator(object):
                 src_dir=src_dir,
                 compile_dir=compile_dir,
                 install_dir=install_dir,
-                verbose=verbose,
                 **kwargs)
             component_class.write(built_comp_class_pth,
                                   save_indices=True)
@@ -210,7 +206,7 @@ class BaseCodeGenerator(object):
                     name=name, src_dir=src_dir, compile_dir=compile_dir,
                     install_dir=install_dir, **kwargs)
                 self.clean_install_dir(install_dir)
-            self.compile_source_files(compile_dir, name, verbose=verbose)
+            self.compile_source_files(compile_dir, name)
         # Switch back to original dir
         os.chdir(orig_dir)
         return install_dir

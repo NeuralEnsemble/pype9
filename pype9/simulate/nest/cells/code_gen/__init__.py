@@ -112,14 +112,13 @@ class CodeGenerator(BaseCodeGenerator):
                              path.join(src_dir, 'sli'))
 
     def configure_build_files(self, name, src_dir, compile_dir, install_dir,
-                              verbose=False, **kwargs):
+                              **kwargs):
         # Generate Makefile if it is not present
         if not path.exists(path.join(compile_dir, 'Makefile')):
             if not path.exists(compile_dir):
                 os.mkdir(compile_dir)
-            if verbose != 'silent':
-                logger.info("Configuring build files in '{}' directory"
-                            .format(compile_dir))
+            logger.info("Configuring build files in '{}' directory"
+                        .format(compile_dir))
             orig_dir = os.getcwd()
             config_args = {'name': name, 'src_dir': src_dir,
                            'ode_solver': kwargs.get('ode_solver',
@@ -147,9 +146,8 @@ class CodeGenerator(BaseCodeGenerator):
                     "Bootstrapping of '{}' NEST module failed (see src "
                     "directory '{}'):\n\n{}\n{}"
                     .format(name or src_dir, src_dir, stdout, stderr))
-            if verbose is True:
-                logger.info(stderr)
-                logger.info(stdout)
+            logger.info(stderr)
+            logger.info(stdout)
             os.chdir(compile_dir)
             env = os.environ.copy()
             env['CXX'] = self._compiler
@@ -167,17 +165,15 @@ class CodeGenerator(BaseCodeGenerator):
                     "Configure of '{}' NEST module failed (see src "
                     "directory '{}'):\n\n{}\n{}"
                     .format(name or src_dir, src_dir, stdout, stderr))
-            if verbose is True:
-                logger.info(stderr)
-                logger.info(stdout)
+            logger.info(stderr)
+            logger.info(stdout)
             os.chdir(orig_dir)
 
-    def compile_source_files(self, compile_dir, component_name, verbose):
+    def compile_source_files(self, compile_dir, component_name):
         # Run configure script, make and make install
         os.chdir(compile_dir)
-        if verbose != 'silent':
-            logger.info("Compiling NEST model class in '{}' directory."
-                        .format(compile_dir))
+        logger.info("Compiling NEST model class in '{}' directory."
+                    .format(compile_dir))
         try:
             make = sp.Popen(['make', '-j{}'.format(self._build_cores)],
                             stdout=sp.PIPE, stderr=sp.PIPE)
@@ -191,9 +187,8 @@ class CodeGenerator(BaseCodeGenerator):
             raise Pype9BuildError(
                 "Compilation of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))
-        if verbose is True:
-            logger.info(stderr)
-            logger.info(stdout)
+        logger.info(stderr)
+        logger.info(stdout)
         try:
             install = sp.Popen(['make', 'install'], stdout=sp.PIPE,
                                stderr=sp.PIPE)
@@ -210,12 +205,10 @@ class CodeGenerator(BaseCodeGenerator):
             raise Pype9BuildError(
                 "Installation of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))
-        if verbose is True:
-            logger.info(stderr)
-            logger.info(stdout)
-        if verbose != 'silent':
-            logger.info("Compilation of '{}' NEST module completed "
-                        "successfully".format(component_name))
+        logger.info(stderr)
+        logger.info(stdout)
+        logger.info("Compilation of '{}' NEST module completed "
+                    "successfully".format(component_name))
 
     def clean_src_dir(self, src_dir, name):
         # Clean existing src directories from previous builds.
@@ -231,7 +224,7 @@ class CodeGenerator(BaseCodeGenerator):
         if not path.exists(sli_path):
             os.makedirs(sli_path)
 
-    def clean_compile_dir(self, compile_dir, verbose=False, **kwargs):  # @UnusedVariable @IgnorePep8
+    def clean_compile_dir(self, compile_dir, **kwargs):  # @UnusedVariable @IgnorePep8
         orig_dir = os.getcwd()
         try:
             if not path.exists(compile_dir):
@@ -259,9 +252,8 @@ class CodeGenerator(BaseCodeGenerator):
             raise Pype9BuildError(
                 "Clean of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))
-        if verbose is True:
-            logger.info(stderr)
-            logger.info(stdout)
+        logger.info(stderr)
+        logger.info(stdout)
 
     def simulator_specific_paths(self):
         path = []
