@@ -16,12 +16,12 @@ try:
     import pylab as plt
 except ImportError:
     plt = None
-from pype9.simulator.neuron import (
+from pype9.simulate.neuron import (
     CellMetaClass as NeuronCellMetaClass,
     Simulation as NeuronSimulation)
-from pype9.simulator.neuron.units import UnitHandler as UnitHandlerNEURON
-from pype9.simulator.nest.units import UnitHandler as UnitHandlerNEST
-from pype9.simulator.nest import (
+from pype9.simulate.neuron.units import UnitHandler as UnitHandlerNEURON
+from pype9.simulate.nest.units import UnitHandler as UnitHandlerNEST
+from pype9.simulate.nest import (
     CellMetaClass as NESTCellMetaClass,
     Simulation as NESTSimulation)
 from nineml.units import Quantity

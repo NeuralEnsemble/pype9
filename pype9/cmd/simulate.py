@@ -1,55 +1,81 @@
 """
-Runs a simulation described by an Experiment layer 9ML file
+Simulates a single cell defined by a 9ML Dynamics or DynamicsProperties, or a
+complete 9ML network, using either Neuron_ or NEST_ as the simulator backend.
+
+Send ports and state-variables of the simulation can be recorded and saved to
+file in Neo_ format using the '--record' option, e.g.::
+
+    $ pype9 simulate my_cell.xml nest 100.0 0.01 \\
+      --record my_event_port ~/my_even_port.neo.pkl
+
+For single-cell simulations, analog and event inputs stored in Neo_ format
+can be "played" into ports of the Dynamics class using the '--play' option
+e.g.::
+
+    $ pype9 simulate my_cell.xml nest 100.0 0.01 \\
+      --record my_event_port data-dir/my_even_port.neo.pkl \\
+      --play my_analog_receive_port data-dir/my_input_current.neo.pkl
+
+
+Properties, initial values and the initial regime (for single cells) can be
+overridden with the '--prop', '--initial_value' and '--initial_regime'
+respectively and must be provided for every parameter/state-variable if they
+are not in the model description file.
 """
 from argparse import ArgumentParser
 from nineml import units as un
-from pype9.simulator.base.cells.code_gen import BaseCodeGenerator
+from pype9.simulate.common.cells.code_gen import BaseCodeGenerator
 from ._utils import nineml_model, parse_units, logger
 
 
-parser = ArgumentParser(prog='pype9 simulate',
-                        description=__doc__)
-parser.add_argument('model', type=nineml_model,
-                    help=("Path to nineml model file which to simulate. "
-                          "It can be a relative path, absolute path, URL or "
-                          "if the path starts with '//' it will be interpreted"
-                          "as a ninemlcatalog path. For files with multiple "
-                          "components, the name of component to simulated must"
-                          " be appended after a #, "
-                          "e.g. //neuron/izhikevich#izhikevich"))
-parser.add_argument('simulator', choices=('neuron', 'nest'), type=str,
-                    help="Which simulator backend to use")
-parser.add_argument('time', type=float,
-                    help="Time to run the simulation for")
-parser.add_argument('timestep', type=float,
-                    help="Timestep used to solve the differential equations")
-parser.add_argument('--prop', nargs=3, action='append',
-                    metavar=('PARAM', 'VALUE', 'UNITS'), default=[],
-                    help=("Set the property to the given value"))
-parser.add_argument('--init_regime', type=str, default=None,
-                    help=("Initial regime for dynamics"))
-parser.add_argument('--init_value', nargs=3, default=[], action='append',
-                    metavar=('STATE-VARIABLE', 'VALUE', 'UNITS'),
-                    help=("Initial regime for dynamics"))
-parser.add_argument('--record', type=str, nargs=2, action='append', default=[],
-                    metavar=('PORT/STATE-VARIABLE', 'FILENAME'),
-                    help=("Record the values from the send port or state "
-                          "variable and the filename to save it into"))
-parser.add_argument('--play', type=str, nargs=2, action='append',
-                    metavar=('PORT', 'FILENAME'), default=[],
-                    help=("Name of receive port and filename with signal to "
-                          "play it into"))
-parser.add_argument('--seed', type=int, default=None,
-                    help="Random seed used to create network and properties")
-parser.add_argument('--properties_seed', type=int, default=None,
-                    help=("Random seed used to create network connections and "
-                          "properties. If not provided it is generated from "
-                          "the '--seed' option."))
-parser.add_argument('--build_mode', type=str, default='lazy',
-                    help=("The strategy used to build and compile the model. "
-                          "Can be one of '{}' (default %(default)s)"
-                          .format("', '".join(
-                              BaseCodeGenerator.BUILD_MODE_OPTIONS))))
+def argparser():
+    parser = ArgumentParser(prog='pype9 simulate',
+                            description=__doc__)
+    parser.add_argument('model', type=nineml_model,
+                        help=("Path to nineml model file which to simulate. "
+                              "It can be a relative path, absolute path, URL "
+                              "or if the path starts with '//' it will be "
+                              "interpreted as a ninemlcatalog path. For files "
+                              "with multiple components, the name of component"
+                              " to simulated must be appended after a #, "
+                              "e.g. //neuron/izhikevich#izhikevich"))
+    parser.add_argument('simulator', choices=('neuron', 'nest'), type=str,
+                        help="Which simulator backend to use")
+    parser.add_argument('time', type=float,
+                        help="Time to run the simulation for")
+    parser.add_argument('timestep', type=float,
+                        help=("Timestep used to solve the differential "
+                              "equations"))
+    parser.add_argument('--prop', nargs=3, action='append',
+                        metavar=('PARAM', 'VALUE', 'UNITS'), default=[],
+                        help=("Set the property to the given value"))
+    parser.add_argument('--init_regime', type=str, default=None,
+                        help=("Initial regime for dynamics"))
+    parser.add_argument('--init_value', nargs=3, default=[], action='append',
+                        metavar=('STATE-VARIABLE', 'VALUE', 'UNITS'),
+                        help=("Initial regime for dynamics"))
+    parser.add_argument('--record', type=str, nargs=2, action='append',
+                        default=[],
+                        metavar=('PORT/STATE-VARIABLE', 'FILENAME'),
+                        help=("Record the values from the send port or state "
+                              "variable and the filename to save it into"))
+    parser.add_argument('--play', type=str, nargs=2, action='append',
+                        metavar=('PORT', 'FILENAME'), default=[],
+                        help=("Name of receive port and filename with signal "
+                              "to play it into"))
+    parser.add_argument('--seed', type=int, default=None,
+                        help=("Random seed used to create network and "
+                              "properties"))
+    parser.add_argument('--properties_seed', type=int, default=None,
+                        help=("Random seed used to create network connections "
+                              "and properties. If not provided it is generated"
+                              " from the '--seed' option."))
+    parser.add_argument('--build_mode', type=str, default='lazy',
+                        help=("The strategy used to build and compile the "
+                              "model. Can be one of '{}' (default %(default)s)"
+                              .format("', '".join(
+                                  BaseCodeGenerator.BUILD_MODE_OPTIONS))))
+    return parser
 
 
 def run(argv):
@@ -60,12 +86,12 @@ def run(argv):
     from pype9.exceptions import Pype9UsageError
     import neo.io
 
-    args = parser.parse_args(argv)
+    args = argparser().parse_args(argv)
 
     if args.simulator == 'neuron':
-        from pype9.simulator.neuron import Network, CellMetaClass, Simulation  # @UnusedImport @IgnorePep8
+        from pype9.simulate.neuron import Network, CellMetaClass, Simulation  # @UnusedImport @IgnorePep8
     elif args.simulator == 'nest':
-        from pype9.simulator.nest import Network, CellMetaClass, Simulation  # @Reimport @IgnorePep8
+        from pype9.simulate.nest import Network, CellMetaClass, Simulation  # @Reimport @IgnorePep8
     else:
         assert False
 

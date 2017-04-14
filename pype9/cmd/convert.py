@@ -1,20 +1,24 @@
 """
-Converts a 9ML file from one supported format to another
+Tool to convert 9ML files between different supported formats (e.g. XML_,
+JSON_, YAML_) and 9ML versions.
 """
 from argparse import ArgumentParser
 from ._utils import nineml_document, logger
 
-parser = ArgumentParser(prog='pype9 convert',
-                        description=__doc__)
-parser.add_argument('in_file', type=nineml_document,
-                    help="9ML file to be converted")
-parser.add_argument('out_file', help="Converted filename")
-parser.add_argument('--nineml_version', type=str, default=None,
-                    help="The version of nineml to output")
+
+def argparser():
+    parser = ArgumentParser(prog='pype9 convert',
+                            description=__doc__)
+    parser.add_argument('in_file', type=nineml_document,
+                        help="9ML file to be converted")
+    parser.add_argument('out_file', help="Converted filename")
+    parser.add_argument('--nineml_version', '-v', type=str, default=None,
+                        help="The version of nineml to output")
+    return parser
 
 
 def run(argv):
-    args = parser.parse_args(argv)
+    args = argparser().parse_args(argv)
 
     doc = args.in_file.clone()
     kwargs = {}

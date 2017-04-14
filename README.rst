@@ -24,7 +24,7 @@ For example, given a cell model described in 9ML saved in
    $ pype9 simulate my_hodgkin_huxley.xml#hh_props neuron 100.0 0.01 \
      --play isyn isyn.neo.pkl --record v v.neo.pkl --init_value v -65.0 mV
    
-or in a Python script:
+or in a Python script
 
 .. code-block:: python
 
@@ -38,8 +38,31 @@ or in a Python script:
       sim.run(100.0 * un.ms)
    v = hh.recording('v')
    
-See http://pype9.readthedocs.io/latest/getting_started.html for more examples
-and pipelines.
+Pype9 also supports network models described in 9ML via integration with PyNN_
+
+.. code-block:: bash
+   
+   $ pype9 simulate brunel.xml nest 1000.0 0.01 \
+     --record Exc.spike_output Exc-nest.neo.pkl \
+     --record Inh.spike_output Inh-nest.neo.pkl \
+     --seed 12345
+   
+or
+
+.. code-block:: python
+
+   from pype9.simulator.neuron import Network, Simulation
+   from nineml import units as un
+   
+   with Simulation(dt=0.01 * un.ms, seed=1234) as sim: 
+      brunel_ai = Network('brunel.xml#AI')
+      brunel_ai.component_array('Exc').record('spike_output')
+      brunel_ai.component_array('Inh').record('spike_output')
+      sim.run(1000.0 * un.ms)
+   exc_spikes = brunel_ai.component_array('Exc').recording('spike_output')
+   inh_spikes = brunel_ai.component_array('Inh').recording('spike_output')
+   
+See `Getting Started`_ in the Pype9 docs for more examples and pipelines.
 
 Documentation
 =============
@@ -54,14 +77,16 @@ Pype9 works with either or both of the following simulator backends
 * Neuron >= 7.3   (https://www.neuron.yale.edu/neuron/)
 * NEST == 2.10.0  (http://www.nest-simulator.org)
 
-NB: That the 2.12.0 
-Detailed instructions on how to install these simulators can be found at
-http://pype9.readthedocs.io/en/latest/installation.html
+!!Note NEST 2.12 is not supported by this  as its build system changed from
+*autotools* to *cmake*. A new Pype9 release will be made to use *cmake*.
+
+Detailed instructions on how to install these simulators on different platforms
+can be found at http://pype9.readthedocs.io/en/latest/installation.html.
 
 *After* installing the simulator(s) you plan to use and ensuring that the
 commands ``nrnivmodl`` (for *Neuron*) and ``nest-config`` (for *NEST*) should
-be on your system path (https://en.wikipedia.org/wiki/PATH_(variable)),
-Pype9 and its prerequisite Python packages can be installed with:
+be on your system path (https://en.wikipedia.org/wiki/PATH_(variable)), Pype9
+and its prerequisite Python packages can be installed with:
 
 .. code-block:: bash
 
@@ -79,10 +104,10 @@ and NEST pipelines in Pype9 support 9ML fully, however until then the following
 restrictions apply to models that can be used with Pype9.
 
 * synapses must be linear (to be relaxed in v0.2)
-* synapses can only have one variable that varies over a projection
-  (e.g. weight) (to be relaxed in v0.2)
-* no analog connections between populations (i.e. gap junctions)
-  (gap junctions to be implemented in v0.2)
+* synapses can only have one variable that varies over a projection (e.g.
+  weight) (to be relaxed in v0.2)
+* no analog connections between populations (i.e. gap junctions) (gap
+  junctions to be implemented in v0.2)
 * only one event send port per cell (current limitation of NEURON/NEST)
 * names given to 9ML elements are not escaped and therefore can clash with
   built-in keywords and some PyPe9 method names (e.g. 'lambda' is a reserved
@@ -96,5 +121,8 @@ Reporting Issues
 Please submit bug reports and feature requests to the GitHub issue tracker
 (http://github.com/CNS-OIST/PyPe9/issues).
 
-:copyright: Copyright 20012-2016 by the Pype9 team, see AUTHORS.
-:license: MIT, see LICENSE for details.
+:copyright: Copyright 20012-2016 by the Pype9 team, see AUTHORS. :license: MIT,
+see LICENSE for details.
+
+.. _PyNN: http://neuralensemble.org/docs/PyNN/
+.. _`Getting Started`: http://pype9.readthedocs.io/latest/getting_started.html

@@ -3,10 +3,12 @@ Prints help information associated with a PyPe9 command
 """
 from argparse import ArgumentParser
 
-parser = ArgumentParser(prog='pype9 help',
-                        description=__doc__)
-parser.add_argument('cmd', default=None,
-                    help="Name of the command to print help information")
+
+def argparser():
+    parser = ArgumentParser(prog='pype9 help', description=__doc__)
+    parser.add_argument('cmd', default=None,
+                        help="Name of the command to print help information")
+    return parser
 
 
 # List of available cmds
@@ -35,7 +37,7 @@ def run(argv):
     if not argv:
         print available_cmds_message()
     else:
-        args = parser.parse_args(argv)
+        args = argparser().parse_args(argv)
         get_parser(args.cmd).print_help()
 
 

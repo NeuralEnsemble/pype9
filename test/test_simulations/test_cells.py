@@ -8,18 +8,18 @@ from nineml import units as un
 from nineml.user import Property
 from nineml.user.multi.dynamics import MultiDynamics
 from nineml.user import DynamicsProperties
-from pype9.simulator.base.cells import (
+from pype9.simulate.common.cells import (
     MultiDynamicsWithSynapses, DynamicsWithSynapsesProperties,
     ConnectionParameterSet, ConnectionPropertySet)
-from pype9.simulator.neuron import (
+from pype9.simulate.neuron import (
     CellMetaClass as NeuronCellMetaClass,
     Simulation as NeuronSimulation)
 argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
-from pype9.simulator.nest import (  # @IgnorePep8
+from pype9.simulate.nest import (  # @IgnorePep8
     CellMetaClass as NESTCellMetaClass,
     Simulation as NESTSimulation)
 from pype9.utils.testing import Comparer, input_step, input_freq  # @IgnorePep8
-from pype9.simulator.nest.units import UnitHandler as UnitHandlerNEST  # @IgnorePep8
+from pype9.simulate.nest.units import UnitHandler as UnitHandlerNEST  # @IgnorePep8
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:

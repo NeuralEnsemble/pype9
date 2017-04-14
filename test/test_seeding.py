@@ -6,20 +6,20 @@ import numpy
 import logging
 import sys
 from nineml import units as un, Property
-from pype9.simulator.neuron import (
+from pype9.simulate.neuron import (
     CellMetaClass as NeuronCellMetaClass, Network as NeuronNetwork,
     Simulation as NeuronSimulation)
-from pype9.simulator.nest import (
+from pype9.simulate.nest import (
     CellMetaClass as NESTCellMetaClass, Network as NESTNetwork,
     Simulation as NESTSimulation)
-from pype9.simulator.neuron import Simulation
+from pype9.simulate.neuron import Simulation
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:
     from unittest import TestCase  # @Reimport
 
 logger = logging.getLogger('PyPe9')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 handler = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter(
     '%(levelname)s - %(message)s')
