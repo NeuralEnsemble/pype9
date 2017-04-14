@@ -18,8 +18,8 @@ Simulation
     :members: run
 
 
-Cell Metaclass
---------------
+CellMetaClass
+-------------
 
 .. autoclass:: pype9.simulate.base.cells.CellMetaClass
 
@@ -35,20 +35,14 @@ Network
 -------
 
 .. autoclass:: pype9.simulate.base.network.Network
-    :members: component_array, connection_group, component_arrays, connection_groups
+    :members: component_array, connection_group, selection, component_arrays, connection_groups, selections
 
 
-Component Array
----------------
+ComponentArray
+--------------
  
 .. autoclass:: pype9.simulate.base.network.ComponentArray
     :members: record, recording, play
-
-
-Connection Group
-----------------
-
-.. autoclass:: pype9.simulate.base.network.ConnectionGroup
 
 
 Selection
@@ -58,3 +52,9 @@ Selection
 
 
 .. _NineML: http://nineml.net
+
+
+ConnectionGroup
+---------------
+
+.. autoclass:: pype9.simulate.base.network.ConnectionGroup

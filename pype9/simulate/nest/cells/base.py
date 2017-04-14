@@ -38,10 +38,10 @@ class Cell(base.Cell):
     UnitHandler = UnitHandler
     Simulation = Simulation
 
-    def __init__(self, *properties, **kwprops):
+    def __init__(self, *args, **kwargs):
         self._flag_created(False)
         self._cell = nest.Create(self.__class__.name)
-        super(Cell, self).__init__(*properties, **kwprops)
+        super(Cell, self).__init__(*args, **kwargs)
         self._receive_ports = nest.GetDefaults(
             self.__class__.name)['receptor_types']
         self._inputs = {}

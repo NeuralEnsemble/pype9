@@ -43,7 +43,10 @@ _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 class Network(object):
     """
     Constructs a network simulation, generating and compiling dynamics classes
-    as required (depending on the 'build_mode' option).
+    as required (depending on the 'build_mode' option). The populations and
+    projections of the network are flattened so that the synapse projections
+    are included in the cell dynamics and the connection groups are just
+    static connections.
 
     Parameters
     ----------
@@ -138,14 +141,17 @@ class Network(object):
 
     @property
     def component_arrays(self):
+        "Iterate through component arrays"
         return self._component_arrays.itervalues()
 
     @property
     def connection_groups(self):
+        "Iterate through connection_groups"
         return self._connection_groups.itervalues()
 
     @property
     def selections(self):
+        "Iterate through selections"
         return self._selections.itervalues()
 
     def component_array(self, name):
@@ -181,6 +187,14 @@ class Network(object):
                 .format(name, "', '".join(self.connection_group_names)))
 
     def selection(self, name):
+        """
+        Returns the selection matching the given name
+
+        Parameters
+        ----------
+        name : str
+            Name of the selection
+        """
         try:
             return self._selections[name]
         except KeyError:
@@ -543,6 +557,20 @@ class Network(object):
 
 
 class ComponentArray(object):
+    """
+    Component array object corresponds to a NineML type to be introduced in
+    NineMLv2 (see https://github.com/INCF/nineml/issues/46), which consists of
+    a dynamics class and a size. Populations and the synapses on incoming
+    projections.
+
+    Parameters
+    ----------
+    nineml_model : nineml.ComponentArray
+        Component array nineml
+    build_mode : str
+        The build/compilation strategy for rebuilding the generated code, can
+        be one of 'lazy', 'force', 'build_only', 'require'.
+    """
 
     def __init__(self, nineml_model, build_mode='lazy', **kwargs):
         if not isinstance(nineml_model, ComponentArray9ML):
@@ -596,6 +624,20 @@ class ComponentArray(object):
         return "ComponentArray('{}', size={})".format(self.name, self.size)
 
     def play(self, port_name, signal, properties=[]):
+        """
+        Plays an analog signal or train of events into a port of the dynamics
+        array.
+
+        Parameters
+        ----------
+        port_name : str
+            The name of the port to play the signal into
+        signal : neo.AnalogSignal | neo.SpikeTrain
+            The signal to play into the cell
+        properties : dict(str, nineml.Quantity)
+            Connection properties when playing into a event receive port
+            with static connection properties
+        """
         port = self.celltype.model.component_class.receive_port(port_name)
         if port.nineml_type in ('EventReceivePort',
                                 'EventReceivePortExposure'):
@@ -762,6 +804,17 @@ class ComponentArray(object):
 
 
 class Selection(object):
+    """
+    A selection of cells from one or multiple component arrays. Used to
+    connect ConnectionGroup.
+
+    Parameters
+    ----------
+    nineml_model : nineml.Selection
+        The NineML Selection object
+    component_arrays : list(nineml.ComponentArray)
+        List of component arrays included in the selection.
+    """
 
     def __init__(self, nineml_model, *component_arrays):
         self._nineml = nineml_model
@@ -814,6 +867,21 @@ class Selection(object):
 
 
 class ConnectionGroup(object):
+    """
+    ConnectionGroup object corresponds to a NineML type to be introduced in
+    NineMLv2 (see https://github.com/INCF/nineml/issues/46), which consists of
+    a dynamics class and a size. Only consists of references to ports on the
+    source and destination ComponentArrays|Selections and connectivity.
+
+    Parameters
+    ----------
+    nineml_model : nineml.ConnectionGroup
+        Component array nineml
+    source : ComponentArray
+        Source component array
+    destination : ComponentArray
+        Destination component array
+    """
 
     def __init__(self, nineml_model, source, destination):
         rng = self.Simulation.active().properties_rng

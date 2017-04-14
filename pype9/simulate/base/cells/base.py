@@ -32,7 +32,9 @@ class CellMetaClass(type):
 
     """
     Metaclass for creating simulator-specific cell classes from 9ML Dynamics
-    classes.
+    classes. Instantiating a CellMetaClass with a ``nineml.Dynamics`` instance
+    will generate, compile and load the required simulator-specific code and
+    create a class that can be used to instantiate dynamics objects.
 
     Parameters
     ----------
@@ -119,6 +121,19 @@ class CellMetaClass(type):
 
 
 class Cell(object):
+    """
+    Base class for all cell classes created from the CellMetaClass. It defines
+    all methods that can be called on cell model objects.
+
+    Parameters
+    ----------
+    args : list(DynamicsProperties)
+        A singlton
+    kwargs : dict(str, nineml.Quantity)
+        Parameters and initial state variables to initiate the cell with.
+    regime_ : str
+        Name of regime the cell will be initiated in
+    """
 
     def __init__(self, *args, **kwargs):
         self._in_array = kwargs.pop('_in_array', False)
@@ -372,18 +387,39 @@ class Cell(object):
             self.clear_recorders()
 
     def record(self, port_name):
+        """
+        Specify the recording of a send port or state-variable before the
+        simulation.
+        """
         raise NotImplementedError("Should be implemented by derived class")
 
     def record_regime(self):
+        """
+        Returns the current regime at each timestep. Periods spent in each
+        regimes can be retrieved with the ``regime_epochs`` method.
+        """
         raise NotImplementedError("Should be implemented by derived class")
 
     def recording(self, port_name):
+        """
+        Return recorded data as a dictionary containing one numpy array for
+        each neuron, ids as keys.
+
+        Parameters
+        ----------
+        port_name : str
+            Name of the port to retrieve the recording for
+        """
         raise NotImplementedError("Should be implemented by derived class")
 
     def _regime_recording(self):
         raise NotImplementedError("Should be implemented by derived class")
 
     def regime_epochs(self):
+        """
+        Retrieves the periods spent in each regime during the simulation
+        in a neo.core.EpochArray
+        """
         try:
             rec = self._regime_recording()
         except KeyError:
@@ -405,9 +441,37 @@ class Cell(object):
             name='{}_regimes'.format(self.name))
 
     def play(self, port_name, signal, properties=[]):
+        """
+        Plays an analog signal or train of events into a port of the
+        cell
+
+        Parameters
+        ----------
+        port_name : str
+            The name of the port to play the signal into
+        signal : neo.AnalogSignal | neo.SpikeTrain
+            The signal to play into the cell
+        properties : dict(str, nineml.Quantity)
+            Connection properties when playing into a event receive port
+            with static connection properties
+        """
         raise NotImplementedError("Should be implemented by derived class")
 
     def connect(self, port_name, other, other_port_name):
+        """
+        Connects an event send port from other into an event receive port in
+        the cell
+
+        Parameters
+        ----------
+        port_name : str
+            The name of the port to make the connection to
+        other : Cell
+            Another cell (from the same simulator-backend obviously)
+            from which to connect the event port from
+        other_port_name : str
+            Name of the port to make the connection from
+        """
         raise NotImplementedError("Should be implemented by derived class")
 
     # This has to go last to avoid clobbering the property decorators

@@ -59,6 +59,15 @@ After the simulation context exits all objects in the simulator backend are
 destroyed (unless an exception is thrown) and only recordings can be reliably
 accessed from the "dead" Pype9 objects.
 
+There are pseudo-random number generator (RNG) seeds that can be passed to
+:ref:`Simulation` instances, ``seed`` which is used to seed the RNGs that
+generate random dynamic processes during the simulation (e.g. poisson
+processes), and ``properties_seed`` which is used to seed the RNG used to
+generate probabilistic connectivity rules and the random distribution of cell
+properties over populations. If ``seed`` is None (the default) then it is
+generated from the current timestamp, if ``properties_seed`` is None then it is
+derived from ``seed``.
+
 
 Cell Simulations
 ----------------
@@ -118,6 +127,22 @@ recordings will be Neo_ format.
         sim.run(1000.0 * un.ms)
     # Retrieve the recording
     v = izhi.recording('v')
+
+Transitions between regimes can be recorded using ``record_regime`` and
+retrieved using ``regime_epochs``
+
+.. code-block:: python
+
+    Izhikevich = CellMetaClass('./izhikevich.xml#Izhikevich',
+                               build_dir='.9build')
+    with Simulation(dt=0.1 * un.ms) as sim:
+        izhi = Izhikevich(a=1, b=2, c=3, d=4, v=-65 * un.mV,
+                          u=14 * un.mV / un.ms)
+        # Specify the variables to record
+        izhi.record_regime()
+        sim.run(1000.0 * un.ms)
+    # Retrieve the regime changes
+    epochs = izhi.regime_epochs()
 
 Data in Neo_ format can be "played" into receive ports of the :ref:`Cell`
 

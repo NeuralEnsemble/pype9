@@ -11,8 +11,26 @@ logger = logging.getLogger('PyPe9')
 
 class Simulation(object):
     """
-    Base class of all simulation classes that prepare and run the simulator
-    kernel.
+    Base class of all simulation classes that prepares and runs the simulator
+    kernel. All simulator objects must be created within the context of a
+    Simulation instance.
+
+    .. code-block:: python
+
+        with Simulation(dt=0.1 * un.ms, seed=12345) as sim:
+            # Design simulation here
+
+    The simulation is advanced using the ``run`` method
+
+    .. code-block:: python
+
+       with Simulation(dt=0.1 * un.ms, seed=12345) as sim:
+            # Create simulator objects here
+            sim.run(100.0 * un.ms)
+
+    After the simulation context exits all objects in the simulator backend are
+    destroyed (unless an exception is thrown) and only recordings can be
+    reliably accessed from the "dead" Pype9 objects.
 
     Parameters
     ----------
@@ -208,7 +226,7 @@ class Simulation(object):
 
     def run(self, t_stop, **kwargs):
         """
-        Run the simulation until time 't'.
+        Run the simulation until time ``t_stop``.
 
         Parameters
         ----------
