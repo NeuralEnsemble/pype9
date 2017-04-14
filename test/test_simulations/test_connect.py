@@ -7,11 +7,11 @@ from nineml.abstraction import (
     EventReceivePort, OutputEvent, Regime, OnEvent, Parameter,
     OnCondition, StateAssignment)
 # from nineml.abstraction import Alias, AnalogSendPort, AnalogReceivePort
-from pype9.simulator.neuron import (
+from pype9.simulate.neuron import (
     CellMetaClass as NeuronCellMetaClass,
     Simulation as NeuronSimulation)
 argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
-from pype9.simulator.nest import ( # @IgnorePep8
+from pype9.simulate.nest import ( # @IgnorePep8
     CellMetaClass as NESTCellMetaClass,
     Simulation as NESTSimulation)
 if __name__ == '__main__':
