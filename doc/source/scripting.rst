@@ -2,17 +2,17 @@
 Creating Simulations in Python
 ==============================
 
-The Pype9 package is organised into sub-packages corresponding to the pipelines
-it (e.g. ``simulate``, ``plot``, etc...). The ``simulate`` package contains the
+The Pype9 package is organised into sub-packages loosely corresponding to each
+pipeline (e.g. ``simulate``, ``plot``). The ``simulate`` package contains the
 sub-packages, ``neuron`` and ``nest``, which provide the simulator-specific
 calls to their respective backends.
 
  
-All classes required to design and run simulations in these packages derive from
-corresponding classes in the ``base`` package, which defines a consistent
-:ref:`Public API` across all backends. Therefore, code designed to run on with
-one backend can be switched to another by simply changing the package the
-simulator-specific classes are imported from (like PyNN_).
+All classes required to design and run simulations in these packages derive
+from corresponding classes in the ``common`` package, which defines a
+consistent :ref:`Public API` across all backends. Therefore, code designed to
+run on with one backend can be switched to another by simply changing the
+package the simulator-specific classes are imported from (like in PyNN_).
 
 .. note::
     The ``neuron`` and ``nest`` packages can be imported separately. Therefore,
