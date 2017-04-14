@@ -81,7 +81,7 @@ Note that NEST_ 2.12 is not currently supported (due to its module build system 
 *autotools* to *cmake*). A new Pype9 release will be made to support 2.12.
 
 Detailed instructions on how to install these simulators on different platforms
-can be found at http://pype9.readthedocs.io/en/latest/installation.html.
+can be found under Installation_ in the docs.
 
 *After* installing the simulator(s) you plan to use and ensuring that the
 commands ``nrnivmodl`` (for Neuron_) and ``nest-config`` (for NEST_) should
@@ -126,6 +126,7 @@ Please submit bug reports and feature requests to the GitHub issue tracker
 
 .. _PyNN: http://neuralensemble.org/docs/PyNN/
 .. _`Creating Simulations in Python`: http://pype9.readthedocs.io/latest/scripting.html
+.. _Installation: http://pype9.readthedocs.io/en/latest/installation.html
 .. _NineML: http://nineml.net
 .. _NEST: https://nest-simulator.org
 .. _Neuron: https://neuron.yale.edu.au
