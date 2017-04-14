@@ -108,14 +108,22 @@ Pype9 depends on the following Python packages
 
 These requirements and the Pype9 package itself can be installed *after* the
 simulator backends are installed (see _`Simulator Backends`) by
-downloading/cloning this repository and using *pip*
+downloading/cloning this repository and using Pip_.
+ 
 
 .. code-block:: bash
 
    cd <pype9-repo-dir>
    pip install -r requirements.txt .
 
-If you cannot use *pip* you will need to manually install the *libninemlnrn*
+.. note::
+    If you have installed Neuron_ or NEST_ to non-standard locations you will
+    need to ensure that ``nrnivmodl`` (for Neuron_) and ``nest-config`` (for
+    NEST_) are accessible on your system PATH during the installation.
+    Otherwise you will need to install the *libninemlnrn* library manually as
+    described below.
+
+If you cannot use Pip_ you will need to manually install the *libninemlnrn*
 shared library, which contains wrappers for GSL random distribution functions,
 with
 
@@ -130,6 +138,7 @@ PYTHONPATH environment variable).
 
 .. _NineML: http://nineml.net
 .. _NeuroDebian: http://neuro.debian.net
+.. _Pip: http://pip.pypa.io
 .. _Docker: https://www.docker.com
 .. _Homebrew: https://brew.sh
 .. _NEST: http://nest-simulator.org
