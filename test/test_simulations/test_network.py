@@ -22,9 +22,9 @@ from nineml.abstraction.ports import (
 from nineml import units as un
 from nineml.units import ms
 from nineml.values import RandomValue
-from pype9.simulate.base.cells import (
+from pype9.simulate.common.cells import (
     ConnectionPropertySet, MultiDynamicsWithSynapsesProperties)
-from pype9.simulate.base.network import Network as BasePype9Network
+from pype9.simulate.common.network import Network as BasePype9Network
 from pype9.simulate.neuron.network import Network as NeuronPype9Network
 from pype9.simulate.neuron import Simulation as NeuronSimulation
 import ninemlcatalog

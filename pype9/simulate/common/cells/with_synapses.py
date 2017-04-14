@@ -191,7 +191,7 @@ class WithSynapses(object):
         """
         Writes the top-level NineML object to file in XML.
         """
-        pype9.simulate.base.document.write(self, fname, **kwargs)
+        pype9.simulate.common.document.write(self, fname, **kwargs)
 
 
 class DynamicsWithSynapses(WithSynapses, Dynamics):
@@ -648,4 +648,4 @@ class SynapseProperties(BaseULObject):
                                               event_port_connections))
 
 
-import pype9.simulate.base.document  # @IgnorePep8
+import pype9.simulate.common.document  # @IgnorePep8

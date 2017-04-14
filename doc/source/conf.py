@@ -49,9 +49,9 @@ sys.modules["neuron"] = MockNeuronModule()
 sys.modules["nest"] = MockNESTModule()
 sys.modules['mpi4py'] = MockMPI4PyModule()
 sys.path.insert(0, package_path)
-import pype9.simulate.base.simulation  # @IgnorePep8 @UnusedImport
-import pype9.simulate.base.cells  # @IgnorePep8 @UnusedImport
-import pype9.simulate.base.network  # @IgnorePep8 @UnusedImport
+import pype9.simulate.common.simulation  # @IgnorePep8 @UnusedImport
+import pype9.simulate.common.cells  # @IgnorePep8 @UnusedImport
+import pype9.simulate.common.network  # @IgnorePep8 @UnusedImport
 import pype9.cmd.convert  # @IgnorePep8 @UnusedImport
 import pype9.cmd.help  # @IgnorePep8 @UnusedImport
 import pype9.cmd.plot  # @IgnorePep8 @UnusedImport

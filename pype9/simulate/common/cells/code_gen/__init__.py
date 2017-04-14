@@ -28,7 +28,7 @@ from pype9.exceptions import (
 import logging
 import pype9.annotations
 from pype9.annotations import PYPE9_NS, BUILD_PROPS
-from pype9.simulate.base.document import read
+from pype9.simulate.common.document import read
 import tempfile
 
 

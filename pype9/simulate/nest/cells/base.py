@@ -19,7 +19,7 @@ from nineml import units as un
 from nineml.abstraction.ports import EventPort, AnalogPort
 from .code_gen import CodeGenerator, REGIME_VARNAME
 from pype9.simulate.nest.simulation import Simulation
-from pype9.simulate.base.cells import base
+from pype9.simulate.common.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
 from pype9.simulate.nest.units import UnitHandler
 from pype9.exceptions import (

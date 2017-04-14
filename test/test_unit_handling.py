@@ -2,7 +2,7 @@
 import os.path
 import math
 from nineml import units as un
-from pype9.simulate.base.units import UnitHandler as BaseUnitHandler
+from pype9.simulate.common.units import UnitHandler as BaseUnitHandler
 from pype9.simulate.nest.units import UnitHandler as NestUnitHandler
 from nineml.abstraction import (
     Dynamics, AnalogReceivePort, Parameter, Regime, Expression, Constant,

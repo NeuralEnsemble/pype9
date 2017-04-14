@@ -14,7 +14,7 @@ from copy import deepcopy
 import subprocess as sp
 import re
 import logging
-from pype9.simulate.base.cells.code_gen import BaseCodeGenerator
+from pype9.simulate.common.cells.code_gen import BaseCodeGenerator
 from pype9.utils import remove_ignore_missing
 from pype9.exceptions import Pype9BuildError
 import pype9
@@ -146,8 +146,8 @@ class CodeGenerator(BaseCodeGenerator):
                     "Bootstrapping of '{}' NEST module failed (see src "
                     "directory '{}'):\n\n{}\n{}"
                     .format(name or src_dir, src_dir, stdout, stderr))
-            logger.info(stderr)
-            logger.info(stdout)
+            logger.debug(stderr)
+            logger.debug(stdout)
             os.chdir(compile_dir)
             env = os.environ.copy()
             env['CXX'] = self._compiler
@@ -165,8 +165,8 @@ class CodeGenerator(BaseCodeGenerator):
                     "Configure of '{}' NEST module failed (see src "
                     "directory '{}'):\n\n{}\n{}"
                     .format(name or src_dir, src_dir, stdout, stderr))
-            logger.info(stderr)
-            logger.info(stdout)
+            logger.debug(stderr)
+            logger.debug(stdout)
             os.chdir(orig_dir)
 
     def compile_source_files(self, compile_dir, component_name):
@@ -187,8 +187,8 @@ class CodeGenerator(BaseCodeGenerator):
             raise Pype9BuildError(
                 "Compilation of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))
-        logger.info(stderr)
-        logger.info(stdout)
+        logger.debug(stderr)
+        logger.debug(stdout)
         try:
             install = sp.Popen(['make', 'install'], stdout=sp.PIPE,
                                stderr=sp.PIPE)
@@ -205,8 +205,8 @@ class CodeGenerator(BaseCodeGenerator):
             raise Pype9BuildError(
                 "Installation of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))
-        logger.info(stderr)
-        logger.info(stdout)
+        logger.debug(stderr)
+        logger.debug(stdout)
         logger.info("Compilation of '{}' NEST module completed "
                     "successfully".format(component_name))
 
@@ -252,8 +252,8 @@ class CodeGenerator(BaseCodeGenerator):
             raise Pype9BuildError(
                 "Clean of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))
-        logger.info(stderr)
-        logger.info(stdout)
+        logger.debug(stderr)
+        logger.debug(stdout)
 
     def simulator_specific_paths(self):
         path = []

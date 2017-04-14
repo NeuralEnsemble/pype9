@@ -18,8 +18,8 @@ from collections import defaultdict
 import sympy
 import nineml.units as un
 from nineml.abstraction import Alias, AnalogSendPort, Dynamics
-from pype9.simulate.base.cells.code_gen import BaseCodeGenerator
-from pype9.simulate.base.cells import (
+from pype9.simulate.common.cells.code_gen import BaseCodeGenerator
+from pype9.simulate.common.cells import (
     WithSynapses, DynamicsWithSynapses, DynamicsWithSynapsesProperties,
     MultiDynamicsWithSynapsesProperties)
 from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
@@ -481,8 +481,8 @@ class CodeGenerator(BaseCodeGenerator):
             raise Pype9BuildError(
                 "Generated mod file failed to compile with output:\n{}\n{}"
                 .format(stdout, stderr))
-        logger.info(stdout)
-        logger.info(stderr)
+        logger.debug(stdout)
+        logger.debug(stderr)
         logger.info("Compilation of NEURON (NMODL) files for '{}' "
                     "completed successfully".format(name))
 

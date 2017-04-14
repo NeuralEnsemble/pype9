@@ -12,7 +12,7 @@ except:
 import pyNN.models
 from pype9.simulate.neuron.cells import CellMetaClass
 import logging
-from pype9.simulate.base.network.cell_wrapper import (
+from pype9.simulate.common.network.cell_wrapper import (
     PyNNCellWrapper as BasePyNNCellWrapper,
     PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
 from ..units import UnitHandler

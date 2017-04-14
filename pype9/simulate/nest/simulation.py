@@ -1,5 +1,5 @@
 import nineml.units as un
-from pype9.simulate.base.simulation import Simulation as BaseSimulation
+from pype9.simulate.common.simulation import Simulation as BaseSimulation
 from pyNN.nest import (
     setup as pyNN_setup, run as pyNN_run, state as pyNN_state, end as pyNN_end)
 from pype9.exceptions import Pype9UsageError

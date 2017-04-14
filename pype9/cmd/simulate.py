@@ -24,7 +24,7 @@ are not in the model description file.
 """
 from argparse import ArgumentParser
 from nineml import units as un
-from pype9.simulate.base.cells.code_gen import BaseCodeGenerator
+from pype9.simulate.common.cells.code_gen import BaseCodeGenerator
 from ._utils import nineml_model, parse_units, logger
 
 

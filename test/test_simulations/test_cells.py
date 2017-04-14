@@ -8,7 +8,7 @@ from nineml import units as un
 from nineml.user import Property
 from nineml.user.multi.dynamics import MultiDynamics
 from nineml.user import DynamicsProperties
-from pype9.simulate.base.cells import (
+from pype9.simulate.common.cells import (
     MultiDynamicsWithSynapses, DynamicsWithSynapsesProperties,
     ConnectionParameterSet, ConnectionPropertySet)
 from pype9.simulate.neuron import (
