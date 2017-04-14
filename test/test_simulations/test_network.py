@@ -1064,9 +1064,9 @@ if __name__ == '__main__':
     import logging
 
     pyNN_logger = logging.Logger('PyNN')
-    pyNN_logger.setLevel(logging.DEBUG)
+    pyNN_logger.setLevel(logging.INFO)
     ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.DEBUG)
+    ch.setLevel(logging.INFO)
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)

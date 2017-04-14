@@ -19,7 +19,7 @@ else:
     from unittest import TestCase  # @Reimport
 
 logger = logging.getLogger('PyPe9')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 handler = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter(
     '%(levelname)s - %(message)s')
