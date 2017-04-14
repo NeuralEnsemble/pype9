@@ -45,9 +45,17 @@ class MockNESTModule(mock.Mock):
     def GetKernelStatus(self):
         return {'num_processes': 1}
 
+
+class MockNineMLCatalog(mock.Mock):
+
+    def load(self, path, name=None):  # @UnusedVariable
+        return None
+
+
 sys.modules["neuron"] = MockNeuronModule()
 sys.modules["nest"] = MockNESTModule()
 sys.modules['mpi4py'] = MockMPI4PyModule()
+sys.modules['ninemlcatalog'] = MockNineMLCatalog()
 sys.path.insert(0, package_path)
 import pype9.simulate.common.simulation  # @IgnorePep8 @UnusedImport
 import pype9.simulate.common.cells  # @IgnorePep8 @UnusedImport
