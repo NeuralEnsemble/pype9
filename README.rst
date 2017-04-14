@@ -62,7 +62,7 @@ or
    exc_spikes = brunel_ai.component_array('Exc').recording('spike_output')
    inh_spikes = brunel_ai.component_array('Inh').recording('spike_output')
    
-See `Getting Started`_ in the Pype9 docs for more examples and pipelines.
+See `Creating Simulations in Python`_ in the Pype9 docs for more examples and pipelines.
 
 Documentation
 =============
@@ -77,8 +77,8 @@ Pype9 works with either or both of the following simulator backends
 * Neuron >= 7.3   (https://www.neuron.yale.edu/neuron/)
 * NEST == 2.10.0  (http://www.nest-simulator.org)
 
-!!Note NEST 2.12 is not supported by this  as its build system changed from
-*autotools* to *cmake*. A new Pype9 release will be made to use *cmake*.
+Note that NEST 2.12 is not currently supported (due to its module build system changing from
+*autotools* to *cmake*). A new Pype9 release will be made to support 2.12.
 
 Detailed instructions on how to install these simulators on different platforms
 can be found at http://pype9.readthedocs.io/en/latest/installation.html.
@@ -125,4 +125,4 @@ Please submit bug reports and feature requests to the GitHub issue tracker
 see LICENSE for details.
 
 .. _PyNN: http://neuralensemble.org/docs/PyNN/
-.. _`Getting Started`: http://pype9.readthedocs.io/latest/getting_started.html
+.. _`Creating Simulations in Python`: http://pype9.readthedocs.io/latest/scripting.html
