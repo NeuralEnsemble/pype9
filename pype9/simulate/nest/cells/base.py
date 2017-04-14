@@ -23,7 +23,7 @@ from pype9.simulate.base.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
 from pype9.simulate.nest.units import UnitHandler
 from pype9.exceptions import (
-    Pype9UsageError, Pype9NotSupportedBySimulatorException)
+    Pype9UsageError, Pype9Unsupported9MLException)
 from pype9.utils import add_lib_path
 
 
@@ -38,10 +38,10 @@ class Cell(base.Cell):
     UnitHandler = UnitHandler
     Simulation = Simulation
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *properties, **kwprops):
         self._flag_created(False)
         self._cell = nest.Create(self.__class__.name)
-        super(Cell, self).__init__(*args, **kwargs)
+        super(Cell, self).__init__(*properties, **kwprops)
         self._receive_ports = nest.GetDefaults(
             self.__class__.name)['receptor_types']
         self._inputs = {}
@@ -217,6 +217,65 @@ class Cell(base.Cell):
         else:
             raise Pype9UsageError(
                 "Unrecognised port type '{}' to play signal into".format(port))
+
+    def connect(self, sender, send_port_name, receive_port_name, delay=None,
+                properties=None):
+        """
+        Connects a port of the cell to a matching port on the 'other' cell
+
+        Parameters
+        ----------
+        sender : pype9.simulator.nest.cells.Cell
+            The sending cell to connect the from
+        send_port_name : str
+            Name of the port in the sending cell to connect to
+        receive_port_name : str
+            Name of the receive port in the current cell to connect from
+        delay : nineml.Quantity (time)
+            The delay of the connection
+        properties : list(nineml.Property)
+            The connection properties of the event port
+        """
+        if delay is None:
+            delay = self._device_delay
+        if properties is None:
+            properties = []
+        delay = float(delay.in_units(un.ms))
+        send_port = sender.component_class.send_port(send_port_name)
+        receive_port = self.component_class.receive_port(receive_port_name)
+        if send_port.communicates != receive_port.communicates:
+            raise Pype9UsageError(
+                "Cannot connect {} send port, '{}', to {} receive port, '{}'"
+                .format(send_port.communicates, send_port_name,
+                        receive_port.communicates, receive_port_name))
+        if receive_port.communicates == 'event':
+            if self.component_class.num_event_send_ports > 1:
+                raise Pype9Unsupported9MLException(
+                    "Cannot currently differentiate between multiple event "
+                    "send ports in NEST implementation ('{}')".format(
+                        "', '".join(
+                            self.component_class.event_send_port_names)))
+            syn_spec = {'receptor_type':
+                        self._receive_ports[receive_port_name],
+                        'delay': delay}
+            if len(properties) > 1:
+                raise Pype9Unsupported9MLException(
+                    "Cannot handle more than one connection property per port")
+            elif properties:
+                self._check_connection_properties(receive_port_name,
+                                                  properties)
+                syn_spec['weight'] = self.UnitHandler.scale_value(
+                    properties[0].quantity)
+            nest.Connect(sender._cell, self._cell, syn_spec=syn_spec)
+        elif receive_port.communicates == 'analog':
+            raise Pype9UsageError(
+                "Cannot individually 'connect' analog ports. Simulate the "
+                "sending cell in a separate simulation then play the analog "
+                "signal in the port")
+        else:
+            raise Pype9UsageError(
+                "Unrecognised port communication '{}'".format(
+                    receive_port.communicates))
 
     def voltage_clamp(self, voltages, series_resistance=1e-3):
         raise NotImplementedError("voltage clamps are not supported for "

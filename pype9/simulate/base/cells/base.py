@@ -18,6 +18,7 @@ import neo
 import nineml
 from nineml.abstraction import Dynamics, Regime
 from nineml.user import Property, Initial
+from nineml.exceptions import NineMLNameError
 from pype9.annotations import PYPE9_NS
 from pype9.exceptions import (
     Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError,
@@ -29,7 +30,6 @@ logger = logging.Logger("Pype9")
 
 
 class CellMetaClass(type):
-
     """
     Metaclass for creating simulator-specific cell classes from 9ML Dynamics
     classes. Instantiating a CellMetaClass with a ``nineml.Dynamics`` instance
@@ -457,20 +457,24 @@ class Cell(object):
         """
         raise NotImplementedError("Should be implemented by derived class")
 
-    def connect(self, port_name, other, other_port_name):
+    def connect(self, sender, send_port_name, receive_port_name, delay,
+                properties=[]):
         """
         Connects an event send port from other into an event receive port in
         the cell
 
         Parameters
         ----------
-        port_name : str
-            The name of the port to make the connection to
-        other : Cell
-            Another cell (from the same simulator-backend obviously)
-            from which to connect the event port from
-        other_port_name : str
-            Name of the port to make the connection from
+        sender : pype9.simulator.base.cells.Cell
+            The sending cell to connect the from
+        send_port_name : str
+            Name of the port in the sending cell to connect to
+        receive_port_name : str
+            Name of the receive port in the current cell to connect from
+        delay : nineml.Quantity (time)
+            The delay of the connection
+        properties : list(nineml.Property)
+            The connection properties of the event port
         """
         raise NotImplementedError("Should be implemented by derived class")
 
@@ -480,10 +484,12 @@ class Cell(object):
 
     def _check_connection_properties(self, port_name, properties):
         props_dict = dict((p.name, p) for p in properties)
-        params_dict = dict(
-            (p.name, p) for p in
-            self._nineml.component_class.connection_parameter_set(
-                port_name).parameters)
+        try:
+            param_set = self._nineml.component_class.connection_parameter_set(
+                port_name)
+        except NineMLNameError:
+            return  # No parameter set, so no need to check
+        params_dict = dict((p.name, p) for p in param_set.parameters)
         if set(props_dict.iterkeys()) != set(params_dict.iterkeys()):
             raise Pype9RuntimeError(
                 "Mismatch between provided property and parameter names:"
