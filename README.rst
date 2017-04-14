@@ -62,7 +62,7 @@ or
    exc_spikes = brunel_ai.component_array('Exc').recording('spike_output')
    inh_spikes = brunel_ai.component_array('Inh').recording('spike_output')
    
-See `Getting Started`_ in the Pype9 docs for more examples and pipelines.
+See `Creating Simulations in Python`_ in the Pype9 docs for more examples and pipelines.
 
 Documentation
 =============
@@ -125,4 +125,4 @@ Please submit bug reports and feature requests to the GitHub issue tracker
 see LICENSE for details.
 
 .. _PyNN: http://neuralensemble.org/docs/PyNN/
-.. _`Getting Started`: http://pype9.readthedocs.io/latest/getting_started.html
+.. _`Creating Simulations in Python`: http://pype9.readthedocs.io/latest/scripting.html
