@@ -98,14 +98,14 @@ from matplotlib import pyplot as plt  # @IgnorePep8
 simulations = {}
 pype9_network_classes = {}
 if 'neuron' in args.simulators:
-    from pype9.simulator.neuron import (
-        simulation as simulationNEURON, Network as NetworkNEURON) # @IgnorePep8
-    simulations['neuron'] = simulationNEURON
+    from pype9.simulate.neuron import (
+        Simulation as SimulationNEURON, Network as NetworkNEURON) # @IgnorePep8
+    simulations['neuron'] = SimulationNEURON
     pype9_network_classes['neuron'] = NetworkNEURON
 if 'nest' in args.simulators or args.reference:
-    from pype9.simulator.nest import (
-        simulation as simulationNEST, Network as NetworkNEST) # @IgnorePep8
-    simulations['nest'] = simulationNEST
+    from pype9.simulate.nest import (
+        Simulation as SimulationNEST, Network as NetworkNEST) # @IgnorePep8
+    simulations['nest'] = SimulationNEST
     pype9_network_classes['nest'] = NetworkNEST
 
 # Get the list of populations to record and plot from
@@ -132,7 +132,7 @@ if scale != 1.0:
         number = props.property('number')
         props.set(Property(
             number.name,
-            int(np.ceil(number.value * scale)) * un.unitless))
+            int(np.ceil(float(number.value * scale))) * un.unitless))
 
 if args.input_rate is not None:
     props = model.population('Ext').cell
@@ -155,7 +155,7 @@ for simulator, seed in zip(args.simulators, seeds):
     # Reset the simulator
     with simulations[simulator](min_delay=ReferenceBrunel2000.min_delay,
                                 max_delay=ReferenceBrunel2000.max_delay,
-                                timestep=args.timestep, seed=seed) as sim:
+                                dt=args.timestep * un.ms, seed=seed) as sim:
         # Construct the network
         print "Constructing the network in {}".format(simulator.upper())
         networks[simulator] = pype9_network_classes[simulator](
