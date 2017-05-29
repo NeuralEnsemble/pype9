@@ -334,8 +334,8 @@ class Cell(object):
         return '{}(component_class="{}")'.format(
             self.__class__.__name__, self._nineml.component_class.name)
 
-    def to_xml(self, document, **kwargs):  # @UnusedVariable
-        return self._nineml.to_xml(document, **kwargs)
+    def serialize(self, document, **kwargs):  # @UnusedVariable
+        return self._nineml.serialize(document, **kwargs)
 
     @property
     def used_units(self):
