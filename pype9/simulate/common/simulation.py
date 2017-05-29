@@ -73,8 +73,8 @@ class Simulation(object):
         self._dt = dt
         self._t_start = t_start
         self._t = t_start
-        self._min_delay = min_delay
-        self._max_delay = max_delay
+        self._min_delay = min_delay if min_delay > dt else dt
+        self._max_delay = max_delay if max_delay > dt else dt
         self._options = options
         self._registered_cells = None
         self._registered_arrays = None

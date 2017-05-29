@@ -111,6 +111,12 @@ def run(argv):
     # For convenience
     model = args.model
 
+    if isinstance(model, nineml.Network) and not model.num_projections:
+        raise Pype9UsageError(
+            "Provided network model '{}' (may have been implicitly created "
+            "from complete document) does not contain any projections"
+            .format(model))
+
     if isinstance(model, nineml.Network):
         with Simulation(dt=args.timestep * un.ms, seed=args.seed,
                         properties_seed=args.properties_seed,
