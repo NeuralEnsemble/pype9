@@ -594,3 +594,18 @@ class SynapseProperties(BaseULObject):
             (EventPortConnection, AnalogPortConnection), **options)
         return cls(node.attr('name', **options), dynamics_properties,
                    port_connections)
+
+
+class_map = {'Synapse': Synapse,
+             'SynapseProperties': SynapseProperties,
+             'DynamicsWithSynapses': DynamicsWithSynapses,
+             'DynamicsWithSynapsesProperties': DynamicsWithSynapsesProperties,
+             'ConnectionParameterSet': ConnectionParameterSet,
+             'ConnectionPropertySet': ConnectionPropertySet,
+             'MultiDynamicsWithSynapses': MultiDynamicsWithSynapses,
+             'MultiDynamicsWithSynapsesProperties':
+             MultiDynamicsWithSynapsesProperties}
+
+
+def read(url, class_map=class_map, **kwargs):
+    return nineml.read(url, class_map=class_map, **kwargs)

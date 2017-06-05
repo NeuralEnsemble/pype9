@@ -1,9 +1,8 @@
-from nineml import MultiDynamics
+from nineml import MultiDynamics, Document
+from nineml.serialization.xml import Unserializer as Uxml
 import ninemlcatalog
-from pype9.simulate.common.document import Document
 from pype9.simulate.common.cells.with_synapses import (
-    WithSynapses, ConnectionParameterSet)
-from lxml import etree
+    WithSynapses, ConnectionParameterSet, class_map)
 
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
@@ -49,6 +48,6 @@ class TestWithSynapses(TestCase):
     def test_xml_roundtrip(self):
         doc = Document(self.model)
         xml = doc.serialize(version=2)
-        reread = Uxml(root=xml).unserialize()
+        reread = Uxml(root=xml, class_map=class_map).unserialize()
         self.assertEqual(doc, reread,
                          doc.find_mismatch(reread))

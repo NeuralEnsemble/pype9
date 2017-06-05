@@ -25,10 +25,10 @@ from nineml import units
 from nineml.exceptions import NineMLNameError
 from pype9.exceptions import (
     Pype9BuildError, Pype9RuntimeError)
+from ..with_synapses import read
 import logging
 import pype9.annotations
 from pype9.annotations import PYPE9_NS, BUILD_PROPS
-from pype9.simulate.common.document import read
 import tempfile
 
 
