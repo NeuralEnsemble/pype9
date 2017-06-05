@@ -1,14 +1,13 @@
 from itertools import chain
 from abc import ABCMeta
 from nineml.abstraction import BaseALObject, Dynamics, Parameter
-from nineml.abstraction.componentclass.visitors.xml import (
-    ComponentClassXMLWriter, ComponentClassXMLLoader)
 from nineml.user import (
     BaseULObject, DynamicsProperties, MultiDynamics, MultiDynamicsProperties,
     Definition, AnalogPortConnection, EventPortConnection)
 from nineml.base import ContainerObject, DocumentLevelObject
 from nineml.exceptions import name_error, NineMLNameError
 from pype9.exceptions import Pype9RuntimeError
+import nineml
 
 
 class WithSynapses(object):
@@ -177,7 +176,7 @@ class WithSynapses(object):
         """
         Writes the top-level NineML object to file in XML.
         """
-        pype9.simulate.common.document.write(self, fname, **kwargs)
+        nineml.write(fname, self, **kwargs)
 
 
 class DynamicsWithSynapses(WithSynapses, Dynamics):
@@ -595,6 +594,3 @@ class SynapseProperties(BaseULObject):
             (EventPortConnection, AnalogPortConnection), **options)
         return cls(node.attr('name', **options), dynamics_properties,
                    port_connections)
-
-
-import pype9.simulate.common.document  # @IgnorePep8
