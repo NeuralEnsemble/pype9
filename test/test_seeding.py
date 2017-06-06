@@ -61,7 +61,6 @@ class TestSeeding(TestCase):
 
     def test_network_seed(self):
         brunel_model = self._load_brunel('AI', 1)
-        brunel_model = deepcopy(brunel_model)
         brunel_model.population('Ext').cell['rate'] = 300 / un.s
         for Network, Simulation in (
             (NESTNetwork, NESTSimulation),
@@ -138,7 +137,7 @@ class TestSeeding(TestCase):
         model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
             'Brunel_{}'.format(case))
         # Don't clone so that the url is not reset
-        model = deepcopy(model)
+        model = model.clone()
         scale = order / model.population('Inh').size
         # rescale populations
         for pop in model.populations:

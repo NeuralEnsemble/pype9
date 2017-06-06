@@ -77,7 +77,7 @@ class Network(object):
             else:
                 name = "Anonymous"
             nineml_model = nineml_model.as_network(name=name)
-        self._nineml = deepcopy(nineml_model)
+        self._nineml = nineml_model.clone()
         # Get RNG for random distribution values and connectivity
         rng = self.Simulation.active().properties_rng
         if build_mode != 'build_only':

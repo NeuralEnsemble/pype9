@@ -570,7 +570,7 @@ class TestBrunel2000(TestCase):
                           **kwargs):
         model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
             'Brunel_{}'.format(case))
-        model = deepcopy(model)
+        model = model.clone()
         scale = order / model.population('Inh').size
         # rescale populations
         for pop in model.populations:
