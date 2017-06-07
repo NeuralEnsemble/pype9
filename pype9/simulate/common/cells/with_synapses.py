@@ -3,7 +3,7 @@ from abc import ABCMeta
 from nineml.abstraction import BaseALObject, Dynamics, Parameter
 from nineml.user import (
     BaseULObject, DynamicsProperties, MultiDynamics, MultiDynamicsProperties,
-    Definition, AnalogPortConnection, EventPortConnection)
+    Definition, AnalogPortConnection, EventPortConnection, Property)
 from nineml.base import ContainerObject, DocumentLevelObject
 from nineml.exceptions import name_error, NineMLNameError
 from pype9.exceptions import Pype9RuntimeError
@@ -156,7 +156,7 @@ class WithSynapses(object):
             (cps.clone(memo=memo, **kwargs)
              for cps in self.connection_parameter_sets))
 
-    def serialize(self, node, **options):
+    def serialize_node(self, node, **options):
         node.attr('name', self.name, **options)
         node.child(self.dynamics, within='Cell', **options)
         node.children(self.synapses, **options)
@@ -381,6 +381,24 @@ class WithSynapsesProperties(object):
             (cps.clone(memo=memo, **kwargs)
              for cps in self.connection_property_sets))
 
+    def serialize_node(self, node, **options):
+        node.attr('name', self.name, **options)
+        node.child(self.dynamics_properties, within='Cell', **options)
+        node.children(self.synapses, **options)
+        node.children(self.connection_property_sets, **options)
+
+    @classmethod
+    def unserialize_node(cls, node, **options):  # @UnusedVariable
+        # The only supported op at this stage
+        dynamics_properties = node.child(
+            (DynamicsProperties, MultiDynamicsProperties), allow_ref=True,
+            within='Cell', **options)
+        synapse_properties = node.children(SynapseProperties, **options)
+        property_sets = node.children(ConnectionParameterSet, **options)
+        name = node.attr('name', **options)
+        return cls(name, dynamics_properties, synapse_properties,
+                   property_sets)
+
 
 class DynamicsWithSynapsesProperties(WithSynapsesProperties,
                                      DynamicsProperties):
@@ -463,7 +481,7 @@ class ConnectionParameterSet(BaseALObject):
 
     @classmethod
     def unserialize_node(cls, node, **options):  # @UnusedVariable @IgnorePep8
-        return cls(node.attr('name'),
+        return cls(node.attr('port'),
                    node.children(Parameter, **options))
 
 
@@ -498,6 +516,15 @@ class ConnectionPropertySet(BaseULObject):
         return self.__class__(
             self.port,
             [p.clone(memo=memo, **kwargs) for p in self.properties])
+
+    def serialize_node(self, node, **options):
+        node.children(self.properties, **options)
+        node.attr('port', self.port)
+
+    @classmethod
+    def unserialize_node(cls, node, **options):  # @UnusedVariable @IgnorePep8
+        return cls(node.attr('port'),
+                   node.children(Property, **options))
 
 
 class Synapse(BaseALObject):
