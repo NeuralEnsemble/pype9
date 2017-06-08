@@ -85,6 +85,12 @@ class Network(object):
                 connectivity_class=self.ConnectivityClass, rng=rng)
         (flat_comp_arrays, flat_conn_groups,
          flat_selections) = self._flatten_to_arrays_and_conns(self._nineml)
+        for ca in flat_comp_arrays.itervalues():
+            ca.write('/Users/tclose/Desktop/serialization/{}.xml'.format(
+                ca.name))
+        for cg in flat_conn_groups.itervalues():
+            cg.write('/Users/tclose/Desktop/serialization/{}.xml'.format(
+                cg.name))
         self._component_arrays = {}
         code_gen = self.CellCodeGenerator()
         # Build the PyNN populations
@@ -452,7 +458,7 @@ class Network(object):
         selections = {}
         for sel in network_model.selections:
             selections[sel.name] = Selection9ML(sel.name, Concatenate9ML(
-                *(component_arrays[p.name] for p in sel.operation.items)))
+                *(component_arrays[p.name] for p in sel.populations)))
         arrays_and_selections = dict(
             chain(component_arrays.iteritems(), selections.iteritems()))
         # Create ConnectionGroups from each port connection in Projection

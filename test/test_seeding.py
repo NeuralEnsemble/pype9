@@ -1,7 +1,6 @@
 from __future__ import division
 from itertools import chain
 import ninemlcatalog
-from copy import deepcopy
 import numpy
 import logging
 import sys
