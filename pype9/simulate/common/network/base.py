@@ -39,6 +39,8 @@ from pype9.exceptions import Pype9UsageError, Pype9NameError
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
+FLAT_SUFFIX = ''
+
 
 class Network(object):
     """
@@ -447,18 +449,20 @@ class Network(object):
                 BasePortExposure.from_port(p, cls.CELL_COMP_NAME)
                 for p in pop.cell.ports if p.name not in internal_cell_ports)
             dynamics_properties = MultiDynamicsProperties(
-                name=pop.name, sub_components=sub_components,
+                name=pop.name + '_Props', sub_components=sub_components,
                 port_connections=internal_conns, port_exposures=exposures)
             component = MultiDynamicsWithSynapsesProperties(
                 dynamics_properties.name,
                 dynamics_properties, synapses_properties=synapses,
                 connection_property_sets=connection_property_sets)
-            component_arrays[pop.name] = ComponentArray9ML(pop.name, pop.size,
-                                                           component)
+            array_name = pop.name
+            component_arrays[array_name] = ComponentArray9ML(
+                array_name, pop.size, component)
         selections = {}
         for sel in network_model.selections:
-            selections[sel.name] = Selection9ML(sel.name, Concatenate9ML(
-                *(component_arrays[p.name] for p in sel.populations)))
+            selections[sel.name] = Selection9ML(
+                sel.name, Concatenate9ML(*(component_arrays[p.name]
+                                           for p in sel.populations)))
         arrays_and_selections = dict(
             chain(component_arrays.iteritems(), selections.iteritems()))
         # Create ConnectionGroups from each port connection in Projection
