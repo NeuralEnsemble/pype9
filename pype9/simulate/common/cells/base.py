@@ -73,8 +73,6 @@ class CellMetaClass(type):
                 name = component_class.name
         create_class = False
         try:
-            # FIXME: This lookup should ideally be done on the component-class/
-            #        build properties
             Cell = cls._built_types[name]
             if not Cell.component_class.equals(component_class,
                                                annotations_ns=[PYPE9_NS]):

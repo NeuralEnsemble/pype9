@@ -62,8 +62,8 @@ class TestSeeding(TestCase):
         brunel_model = self._load_brunel('AI', 1)
         brunel_model.population('Ext').cell['rate'] = 300 / un.s
         for Network, Simulation in (
-            (NESTNetwork, NESTSimulation),
-                (NeuronNetwork, NeuronSimulation)):
+            (NeuronNetwork, NeuronSimulation),
+                (NESTNetwork, NESTSimulation)):
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
                 network1 = Network(brunel_model)
                 network1.component_array('Ext').record('spike_output')

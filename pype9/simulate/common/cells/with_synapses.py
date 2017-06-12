@@ -189,7 +189,7 @@ class DynamicsWithSynapses(WithSynapses, Dynamics):
         WithSynapses.__init__(self, name, dynamics, synapses,
                               connection_parameter_sets)
         BaseALObject.__init__(self)
-        DocumentLevelObject.__init__(self, dynamics.document)
+        DocumentLevelObject.__init__(self)
         ContainerObject.__init__(self)
         # Create references to all dynamics member variables so that inherited
         # Dynamics properties and methods can find them.
@@ -217,7 +217,7 @@ class MultiDynamicsWithSynapses(WithSynapses, MultiDynamics):
         WithSynapses.__init__(self, name, dynamics, synapses,
                               connection_parameter_sets)
         BaseALObject.__init__(self)
-        DocumentLevelObject.__init__(self, dynamics.document)
+        DocumentLevelObject.__init__(self)
         ContainerObject.__init__(self)
         # Create references to all dynamics member variables so that inherited
         # Dynamics properties and methods can find them.
@@ -430,7 +430,7 @@ class MultiDynamicsWithSynapsesProperties(WithSynapsesProperties,
                                         connection_property_sets)
         # Initiate inherited base classes
         BaseULObject.__init__(self)
-        DocumentLevelObject.__init__(self, dynamics_properties.document)
+        DocumentLevelObject.__init__(self)
         ContainerObject.__init__(self)
         # Create references to all dynamics member variables so that inherited
         # MultiDynamicsProperties properties and methods can find them.
