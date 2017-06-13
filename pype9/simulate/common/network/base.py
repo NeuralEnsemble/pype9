@@ -87,12 +87,6 @@ class Network(object):
                 connectivity_class=self.ConnectivityClass, rng=rng)
         (flat_comp_arrays, flat_conn_groups,
          flat_selections) = self._flatten_to_arrays_and_conns(self._nineml)
-        for ca in flat_comp_arrays.itervalues():
-            ca.write('/Users/tclose/Desktop/serialization/{}.xml'.format(
-                ca.name))
-        for cg in flat_conn_groups.itervalues():
-            cg.write('/Users/tclose/Desktop/serialization/{}.xml'.format(
-                cg.name))
         self._component_arrays = {}
         code_gen = self.CellCodeGenerator()
         # Build the PyNN populations
