@@ -109,13 +109,6 @@ class BaseCodeGenerator(object):
             A dictionary of (potentially simulator- specific) template
             arguments
         """
-        kwargs['version'] = pype9.__version__
-        # Set build properties
-        try:
-            for k, v in kwargs.iteritems():
-                component_class.annotations.set((BUILD_PROPS, PYPE9_NS), k, v)
-        except:
-            raise
         # Save original working directory to reinstate it afterwards (just to
         # be polite)
         orig_dir = os.getcwd()
@@ -360,7 +353,23 @@ class BaseCodeGenerator(object):
         # ---------------------------------------------------------------------
         component_class = component_class.clone()
         component_class.name = name
+        self._set_build_props(component_class, **kwargs)
         return component_class
+
+    def _set_build_props(self, component_class, **build_props):
+        """
+        Sets the build properties in the component class annotations
+
+        Parameters
+        ----------
+        component_class : Dynamics | MultiDynamics
+            The build component class
+        build_props : dict(str, str)
+            Build properties to save into the annotations of the build
+            component class
+        """
+        for k, v in [('version', pype9.__version__)] + build_props.items():
+            component_class.annotations.set((BUILD_PROPS, PYPE9_NS), k, v)
 
     @classmethod
     def get_mod_time(cls, url):

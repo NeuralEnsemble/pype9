@@ -26,6 +26,7 @@ from pype9.exceptions import (
 import logging
 from .with_synapses import WithSynapses
 
+
 logger = logging.Logger("Pype9")
 
 
@@ -71,19 +72,19 @@ class CellMetaClass(type):
                 name = saved_name
             else:
                 name = component_class.name
+        # Get transformed build class
+        code_gen = cls.CodeGenerator()
+        build_component_class = code_gen.transform_for_build(
+            name=name, component_class=component_class, **kwargs)
         create_class = False
         try:
             Cell = cls._built_types[name]
-            if not Cell.component_class.equals(component_class,
-                                               annotations_ns=[PYPE9_NS]):
+            if not Cell.build_component_class.equals(
+                    build_component_class, annotations_ns=[PYPE9_NS]):
                 create_class = True
         except KeyError:
             create_class = True
         if create_class:
-            # Initialise code generator
-            code_gen = cls.CodeGenerator()
-            build_component_class = code_gen.transform_for_build(
-                name=name, component_class=component_class, **kwargs)
             # Generate and compile cell class
             instl_dir = code_gen.generate(
                 component_class=build_component_class,

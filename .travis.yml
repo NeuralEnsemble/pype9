@@ -25,7 +25,7 @@ install:
   - source prereq/install_neuron.sh
   - pip install -r requirements.txt
   - pip install https://github.com/sympy/sympy/archive/master.zip  
-  - pip install https://github.com/tclose/lib9ML/archive/develop.zip
+  - pip install https://github.com/tclose/lib9ML/archive/serialization.zip
   - pip install https://github.com/tclose/NineMLCatalog/archive/merging_with_master.zip  
   - pip install coveralls
   - pushd pype9/simulate/neuron/cells/code_gen/libninemlnrn

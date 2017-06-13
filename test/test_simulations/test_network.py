@@ -864,9 +864,9 @@ class TestNetwork(TestCase):
         dyn_array1 = ComponentArray(
             "Pop1", pop1.size,
             MultiDynamicsWithSynapsesProperties(
-                "Pop1",
+                "Pop1_cell",
                 MultiDynamicsProperties(
-                    "Pop1",
+                    "Pop1_cell",
                     sub_components={
                         'cell': cell1,
                         'Proj2': MultiDynamicsProperties(
@@ -908,9 +908,9 @@ class TestNetwork(TestCase):
         dyn_array2 = ComponentArray(
             "Pop2", pop2.size,
             MultiDynamicsWithSynapsesProperties(
-                "Pop2",
+                "Pop2_cell",
                 MultiDynamicsProperties(
-                    "Pop2",
+                    "Pop2_cell",
                     sub_components={
                         'cell': cell2,
                         'Proj1': MultiDynamicsProperties(
@@ -950,9 +950,9 @@ class TestNetwork(TestCase):
         dyn_array3 = ComponentArray(
             "Pop3", pop3.size,
             MultiDynamicsWithSynapsesProperties(
-                "Pop3",
+                "Pop3_cell",
                 MultiDynamicsProperties(
-                    'Pop3',
+                    'Pop3_cell',
                     sub_components={'cell': cell3},
                     port_exposures=[('cell', 'spike'),
                                     ('cell', 'i_ext')],

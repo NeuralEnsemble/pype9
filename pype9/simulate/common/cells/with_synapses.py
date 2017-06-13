@@ -410,7 +410,7 @@ class DynamicsWithSynapsesProperties(WithSynapsesProperties,
                                         connection_property_sets)
         # Initiate inherited base classes
         BaseULObject.__init__(self)
-        DocumentLevelObject.__init__(self, dynamics_properties.document)
+        DocumentLevelObject.__init__(self)
         ContainerObject.__init__(self)
         # Create references to all dynamics member variables so that inherited
         # DynamicsProperties properties and methods can find them.

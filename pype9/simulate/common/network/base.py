@@ -449,7 +449,7 @@ class Network(object):
                 BasePortExposure.from_port(p, cls.CELL_COMP_NAME)
                 for p in pop.cell.ports if p.name not in internal_cell_ports)
             dynamics_properties = MultiDynamicsProperties(
-                name=pop.name + '_Props', sub_components=sub_components,
+                name=pop.name + '_cell', sub_components=sub_components,
                 port_connections=internal_conns, port_exposures=exposures)
             component = MultiDynamicsWithSynapsesProperties(
                 dynamics_properties.name,
