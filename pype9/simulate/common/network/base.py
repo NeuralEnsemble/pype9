@@ -5,7 +5,6 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from copy import deepcopy
 from collections import namedtuple, defaultdict
 from itertools import chain
 import quantities as pq
@@ -38,8 +37,6 @@ from pype9.exceptions import Pype9UsageError, Pype9NameError
 
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
-
-FLAT_SUFFIX = ''
 
 
 class Network(object):
