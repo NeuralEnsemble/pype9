@@ -19,6 +19,7 @@ addons:
       - openmpi-bin
       - libopenmpi-dev
       - inkscape
+      - libhdf5-serial-dev
 install:
   - pip install cython
   - source prereq/install_nest.sh
