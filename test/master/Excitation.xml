@@ -238,7 +238,7 @@
             <SingleValue>0.0</SingleValue>
           </Initial>
           <Initial units="mV" name="v">
-            <RandomValue>
+            <RandomDistributionValue>
               <Component name="uniform_rest_to_threshold">
                 <Definition url="/Users/tclose/git/ninemlcatalog/xml/randomdistribution/Uniform.xml">UniformDistribution</Definition>
                 <Property units="unitless" name="maximum">
@@ -248,7 +248,7 @@
                   <SingleValue>0.0</SingleValue>
                 </Property>
               </Component>
-            </RandomValue>
+            </RandomDistributionValue>
           </Initial>
         </Component>
       </SubDynamicsProperties>
@@ -377,7 +377,7 @@
                 <SingleValue>0.0</SingleValue>
               </Initial>
               <Initial units="mV" name="v">
-                <RandomValue>
+                <RandomDistributionValue>
                   <Component name="uniform_rest_to_threshold">
                     <Definition url="/Users/tclose/git/ninemlcatalog/xml/randomdistribution/Uniform.xml">UniformDistribution</Definition>
                     <Property units="unitless" name="maximum">
@@ -387,7 +387,7 @@
                       <SingleValue>0.0</SingleValue>
                     </Property>
                   </Component>
-                </RandomValue>
+                </RandomDistributionValue>
               </Initial>
             </Component>
           </SubDynamicsProperties>
@@ -555,7 +555,7 @@
       <SingleValue>0.0</SingleValue>
     </Initial>
     <Initial units="mV" name="v">
-      <RandomValue>
+      <RandomDistributionValue>
         <Component name="uniform_rest_to_threshold">
           <Definition url="/Users/tclose/git/ninemlcatalog/xml/randomdistribution/Uniform.xml">UniformDistribution</Definition>
           <Property units="unitless" name="maximum">
@@ -565,7 +565,7 @@
             <SingleValue>0.0</SingleValue>
           </Property>
         </Component>
-      </RandomValue>
+      </RandomDistributionValue>
     </Initial>
   </Component>
   <Component name="syn">

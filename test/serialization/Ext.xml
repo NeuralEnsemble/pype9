@@ -48,9 +48,9 @@
       <SingleValue>300.0</SingleValue>
     </Property>
     <Initial name="t_next" units="ms">
-      <RandomValue>
+      <RandomDistributionValue>
         <Reference>exponential_beta</Reference>
-      </RandomValue>
+      </RandomDistributionValue>
     </Initial>
   </Component>
   <Component name="exponential_beta">

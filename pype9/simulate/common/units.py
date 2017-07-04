@@ -292,7 +292,7 @@ class UnitHandler(DynamicsDimensionResolver):
                     else:
                         # FIXME: Should be not supported error??
                         raise NotImplementedError(
-                            "RandomValue quantities cannot be scaled at this "
+                            "RandomDistributionValue quantities cannot be scaled at this "
                             "time ({})".format(qty))
             except AttributeError:
                 return qty  # Float or int value quantity

@@ -41,14 +41,14 @@
             <SingleValue>300.0</SingleValue>
           </Property>
           <Initial units="ms" name="t_next">
-            <RandomValue>
+            <RandomDistributionValue>
               <Component name="exponential_beta">
                 <Definition url="/Users/tclose/git/ninemlcatalog/xml/randomdistribution/Exponential.xml">ExponentialDistribution</Definition>
                 <Property units="unitless" name="rate">
                   <SingleValue>52638.7053487</SingleValue>
                 </Property>
               </Component>
-            </RandomValue>
+            </RandomDistributionValue>
           </Initial>
         </Component>
       </SubDynamicsProperties>
@@ -61,14 +61,14 @@
       <SingleValue>300.0</SingleValue>
     </Property>
     <Initial units="ms" name="t_next">
-      <RandomValue>
+      <RandomDistributionValue>
         <Component name="exponential_beta">
           <Definition url="/Users/tclose/git/ninemlcatalog/xml/randomdistribution/Exponential.xml">ExponentialDistribution</Definition>
           <Property units="unitless" name="rate">
             <SingleValue>52638.7053487</SingleValue>
           </Property>
         </Component>
-      </RandomValue>
+      </RandomDistributionValue>
     </Initial>
   </Component>
   <Component name="exponential_beta">

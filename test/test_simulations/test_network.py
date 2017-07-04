@@ -21,7 +21,7 @@ from nineml.abstraction.ports import (
     EventReceivePort)
 from nineml import units as un
 from nineml.units import ms
-from nineml.values import RandomValue
+from nineml.values import RandomDistributionValue
 from pype9.simulate.common.cells import (
     ConnectionPropertySet, MultiDynamicsWithSynapsesProperties)
 from pype9.simulate.common.network import Network as BasePype9Network
@@ -738,14 +738,14 @@ class TestNetwork(TestCase):
             name="ExcProps",
             definition=inh_cls, properties={'tau': 1 * ms})
 
-        random_weight = un.Quantity(RandomValue(
+        random_weight = un.Quantity(RandomDistributionValue(
             RandomDistributionProperties(
                 name="normal",
                 definition=ninemlcatalog.load(
                     'randomdistribution/Normal', 'NormalDistribution'),
                 properties={'mean': 1.0, 'variance': 0.25})), un.nA)
 
-        random_wmax = un.Quantity(RandomValue(
+        random_wmax = un.Quantity(RandomDistributionValue(
             RandomDistributionProperties(
                 name="normal",
                 definition=ninemlcatalog.load(

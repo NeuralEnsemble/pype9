@@ -90,9 +90,9 @@
       <SingleValue>0.0</SingleValue>
     </Initial>
     <Initial name="v" units="mV">
-      <RandomValue>
+      <RandomDistributionValue>
         <Reference>uniform_rest_to_threshold</Reference>
-      </RandomValue>
+      </RandomDistributionValue>
     </Initial>
   </Component>
   <Component name="uniform_rest_to_threshold">
