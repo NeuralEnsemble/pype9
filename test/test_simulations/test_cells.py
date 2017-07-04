@@ -238,7 +238,7 @@ class TestDynamics(TestCase):
         static = ninemlcatalog.load(
             'plasticity/Static', 'Static')
         iaf_alpha = MultiDynamics(
-            name='IafAlpha',
+            name='IafAlpha_sans_synapses',
             sub_components={
                 'cell': iaf,
                 'syn': MultiDynamics(
@@ -393,8 +393,7 @@ class TestDynamics(TestCase):
         for sim_name in simulators:
             meta_class = cell_metaclasses[sim_name]
             # Build celltype
-            celltype = meta_class(
-                nineml_model, name=nineml_model.name, **build_args[sim_name])
+            celltype = meta_class(nineml_model, **build_args[sim_name])
             # Initialise simulator
             if sim_name == 'neuron':
                 # Run NEURON simulation

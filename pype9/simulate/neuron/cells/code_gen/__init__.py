@@ -170,7 +170,7 @@ class CodeGenerator(BaseCodeGenerator):
         # Clone original component class
         # ---------------------------------------------------------------------
         trfrm = DynamicsCloner().visit(component_class.dynamics)
-        trfrm.name = name
+#         trfrm.name = name
         # ---------------------------------------------------------------------
         # Get the membrane voltage and convert it to 'v'
         # ---------------------------------------------------------------------

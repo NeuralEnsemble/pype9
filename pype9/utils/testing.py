@@ -102,8 +102,7 @@ class Comparer(object):
         self.initial_states = (initial_states
                                if initial_states is not None else {})
         self.initial_regime = initial_regime
-        self.build_name = (build_name
-                           if build_name is not None else nineml_model.name)
+        self.build_name = build_name
         self.auxiliary_states = (auxiliary_states
                                  if auxiliary_states is not None else [])
         self.input_signal = input_signal

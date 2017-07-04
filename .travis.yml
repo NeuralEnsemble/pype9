@@ -25,10 +25,10 @@ install:
   - source prereq/install_nest.sh
   - source prereq/install_neuron.sh
   - pip install https://github.com/python-quantities/python-quantities/archive/master.zip
-  - pip install https://github.com/tclose/lib9ML/archive/serialization.zip
+  - pip install https://github.com/tclose/nineml-python/archive/serialization.zip
   - pip install -r requirements.txt
   - pip install --upgrade https://github.com/sympy/sympy/archive/master.zip
-  - pip install https://github.com/tclose/NineMLCatalog/archive/merging_with_master.zip  
+  - pip install https://github.com/tclose/nineml-catalog/archive/merging_with_master.zip  
   - pip install coveralls
   - pushd pype9/simulate/neuron/cells/code_gen/libninemlnrn
   - CC=mpicc ./manual_compile.sh

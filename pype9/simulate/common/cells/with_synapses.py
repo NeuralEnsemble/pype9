@@ -18,6 +18,13 @@ class WithSynapses(object):
 
     __metaclass__ = ABCMeta
 
+    defining_attributes = (
+        'name', 'dynamics', '_synapses', '_connection_parameter_sets')
+
+    class_to_member = {
+        'Synapse': 'synapse',
+        'ConnectionParameterSet': 'connection_parameter_set'}
+
     def __init__(self, name, dynamics, synapses, connection_parameter_sets):
         assert isinstance(dynamics, (Dynamics, MultiDynamics))
         # Initialise Dynamics/MultiDynamics base classes
@@ -41,15 +48,26 @@ class WithSynapses(object):
                     "in the base MultiDynamics class ('{}')"
                     .format(conn_param, "', '".join(
                         sp.name for sp in self._dynamics.parameters)))
-        # Copy what would be class members in the dynamics class so it will
-        # appear like an object of that class
-        self.defining_attributes = (
-            dynamics.defining_attributes +
-            ('_synapses', '_connection_parameter_sets'))
-        self.class_to_member = dict(
-            dynamics.class_to_member.items() +
-            [('Synapse', 'synapse'),
-             ('ConnectionParameterSet', 'connection_parameter_set')])
+#         # Copy what would be class members in the dynamics class so it will
+#         # appear like an object of that class
+#         self.defining_attributes = (
+#             dynamics.defining_attributes +
+#             ('_synapses', '_connection_parameter_sets'))
+#         self.class_to_member = dict(
+#             dynamics.class_to_member.items() +
+#             [('Synapse', 'synapse'),
+#              ('ConnectionParameterSet', 'connection_parameter_set')])
+
+    def index_of(self, element, key=None, class_map=None):
+        if class_map is None:
+            # Default to the class_to_member of the wrapped class plus the
+            # synapses
+            class_map = dict(
+                self.dynamics.class_to_member.items() +
+                [('Synapse', 'synapse'),
+                 ('ConnectionParameterSet', 'connection_parameter_set')])
+        return ContainerObject.index_of(self, element, key=key,
+                                        class_map=class_map)
 
     @property
     def name(self):
@@ -136,7 +154,11 @@ class WithSynapses(object):
         return self._connection_parameter_sets.iterkeys()
 
     @classmethod
-    def wrap(cls, dynamics, synapses=[], connection_parameter_sets=[]):
+    def wrap(cls, dynamics, synapses=None, connection_parameter_sets=None):
+        if synapses is None:
+            synapses = []
+        if connection_parameter_sets is None:
+            connection_parameter_sets = []
         if isinstance(dynamics, MultiDynamics):
             wrapped_cls = MultiDynamicsWithSynapses
         elif isinstance(dynamics, Dynamics):
@@ -145,8 +167,10 @@ class WithSynapses(object):
             raise Pype9RuntimeError(
                 "Cannot wrap '{}' class with WithSynapses, only Dynamics and "
                 "MultiDynamics".format(type(dynamics)))
-        return wrapped_cls(dynamics.name, dynamics, synapses,
-                           connection_parameter_sets)
+        name = dynamics.name
+        dynamics = dynamics.clone()
+        dynamics.name = name + '__sans_synapses'
+        return wrapped_cls(name, dynamics, synapses, connection_parameter_sets)
 
     def clone(self, memo=None, **kwargs):
         return self.__class__(

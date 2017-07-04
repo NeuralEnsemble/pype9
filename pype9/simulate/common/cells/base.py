@@ -65,6 +65,10 @@ class CellMetaClass(type):
         # If the component class is not already wrapped in a WithSynapses
         # object, wrap it in one before passing to the code template generator
         if not isinstance(component_class, WithSynapses):
+            if name == component_class.name:
+                raise Pype9UsageError(
+                    "Cannot explicitly use same name ('{}') for build class as"
+                    " component class without synapses".format(name))
             component_class = WithSynapses.wrap(component_class)
         # Extract out build directives
         if name is None:

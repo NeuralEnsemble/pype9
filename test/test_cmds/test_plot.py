@@ -76,7 +76,8 @@ class TestPlot(TestCase):
                 "--init_value U 1.625 pA "
                 "--init_value V -65.0 mV "
                 "--play iSyn {in_path} "
-                "--init_regime subVb ".format(
+                "--init_regime subVb "
+                "--build_name IzhikevichFastSpikingPlotVersion ".format(
                     self.t_stop, self.cell_signal_path,
                     in_path=self.cell_input_path))
             simulate.run(argv.split())
