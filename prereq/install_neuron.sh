@@ -16,7 +16,7 @@ fi
 mkdir -p $HOME/build/$NRN
 pushd $HOME/build/$NRN
 export VENV=`python -c "import sys; print sys.prefix"`;
-# rm $HOME/build/$NRN/config.log
+rm $HOME/build/$NRN/config.log
 if [ ! -f "$HOME/build/$NRN/config.log" ]; then
     $HOME/$NRN/configure --with-paranrn --with-nrnpython --prefix=$VENV --disable-rx3d --without-iv;
     make;
