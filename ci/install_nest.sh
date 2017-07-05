@@ -23,7 +23,10 @@ fi
 mkdir -p $HOME/build/$NEST
 pushd $HOME/build/$NEST
 export VENV=`python -c "import sys; print sys.prefix"`;
+
+# To reset cache after updates
 rm $HOME/build/$NEST/config.log
+
 if [ ! -f "$HOME/build/$NEST/config.log" ]; then
     echo "VENV: $VENV"
     $HOME/$NEST/configure --with-mpi --prefix=$VENV;
