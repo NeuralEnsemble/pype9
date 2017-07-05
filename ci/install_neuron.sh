@@ -19,6 +19,7 @@ fi
 mkdir -p $HOME/build/$NRN
 pushd $HOME/build/$NRN
 export VENV=`python -c "import sys; print sys.prefix"`;
+ls $VENV/bin
 
 # To reset cache after updates
 rm $HOME/build/$NRN/config.log
