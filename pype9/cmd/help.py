@@ -18,7 +18,7 @@ def all_cmds():
 
 def get_parser(cmd):
     "Get the parser associated with a given cmd"
-    return getattr(pype9.cmd, cmd).parser
+    return getattr(pype9.cmd, cmd).argparser()
 
 
 def available_cmds_message():

@@ -1,10 +1,10 @@
 Pype9
 *****
 
-.. image:: https://travis-ci.org/NeuralEnsemble/Pype9.svg?branch=master
-    :target: https://travis-ci.org/NeuralEnsemble/Pype9
-.. image:: https://coveralls.io/repos/github/NeuralEnsemble/Pype9/badge.svg?branch=master
-    :target: https://coveralls.io/github/NeuralEnsemble/Pype9?branch=master
+.. image:: https://travis-ci.org/NeuralEnsemble/pype9.svg?branch=master
+    :target: https://travis-ci.org/NeuralEnsemble/pype9
+.. image:: https://coveralls.io/repos/github/NeuralEnsemble/pype9/badge.svg?branch=master
+    :target: https://coveralls.io/github/NeuralEnsemble/pype9?branch=master
 .. image:: https://readthedocs.org/projects/pype9/badge/?version=latest
     :target: http://pype9.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status 
