@@ -22,8 +22,8 @@ addons:
       - libhdf5-serial-dev
 install:
   - pip install cython
-  - source prereq/install_nest.sh
-  - source prereq/install_neuron.sh
+  - source ci/install_nest.sh
+  - source ci/install_neuron.sh
   - pip install --upgrade git+git://github.com/python-quantities/python-quantities.git@master
   - pip install git+git://github.com/tclose/nineml-python.git@serialization
   - pip install -r requirements.txt
