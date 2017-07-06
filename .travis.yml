@@ -24,11 +24,11 @@ install:
   - pip install cython
   - source ci/install_neuron.sh
   - source ci/install_nest.sh
-  - pip install --upgrade git+git://github.com/python-quantities/python-quantities.git@master
+  - pip install git+git://github.com/python-quantities/python-quantities.git@master
   - pip install git+git://github.com/tclose/nineml-python.git@serialization
+  - pip install git+git://github.com/tclose/nineml-catalog.git@merging_with_master
   - pip install -r requirements.txt
   - pip install --upgrade git+git://github.com/sympy/sympy.git@master
-  - pip install git+git://github.com/tclose/nineml-catalog.git@merging_with_master  
   - pip install coveralls
   - pushd pype9/simulate/neuron/cells/code_gen/libninemlnrn
   - CC=mpicc ./manual_compile.sh
