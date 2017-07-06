@@ -21,10 +21,10 @@ pushd $HOME/build/$NRN
 export VENV=`python -c "import sys; print sys.prefix"`;
 ls $VENV/bin
 
-if [ `which python` = $VENV ]; then
+if [ `which python` = $VENV/bin/python ]; then
 	echo 'match'
 else
-	echo "`which python` vs $VENV"
+	echo "`which python` vs $VENV/bin/python"
 fi
 
 # To reset cache after updates
