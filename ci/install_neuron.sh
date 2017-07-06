@@ -28,7 +28,7 @@ else
 fi
 
 # To reset cache after updates
-rm $HOME/build/$NRN/config.log
+# rm $HOME/build/$NRN/config.log
 
 if [ ! -f "$HOME/build/$NRN/config.log" ]; then
     $HOME/$NRN/configure --with-paranrn --with-nrnpython==$VENV/bin/python --prefix=$VENV --disable-rx3d --without-iv;
