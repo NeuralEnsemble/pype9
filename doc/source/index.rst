@@ -20,11 +20,11 @@ User/Developer Guide
     :maxdepth: 2 
 
     installation
-    unsupported    
     cli
     scripting
     api
     extending
+    unsupported
     getting_help
 
 .. _NineML: http://nineml.net
