@@ -1,6 +1,6 @@
 from pyNN.parameters import Sequence
 from pyNN.random import RandomDistribution
-from nineml.values import SingleValue, ArrayValue, RandomValue
+from nineml.values import SingleValue, ArrayValue, RandomDistributionValue
 
 random_value_map = {
     'http://www.uncertml.org/distributions/uniform':
@@ -23,7 +23,7 @@ def get_pyNN_value(qty, unit_handler, rng):
     elif isinstance(qty.value, ArrayValue):
         scalar = unit_handler.scalar(qty.units)
         val = Sequence(v * scalar for v in qty.value)
-    elif isinstance(qty.value, RandomValue):
+    elif isinstance(qty.value, RandomDistributionValue):
         if unit_handler.scalar(qty.units) != 1.0:
             raise NotImplementedError(
                 "Cannot currently scale random distributions as required to "

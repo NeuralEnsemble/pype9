@@ -21,7 +21,7 @@ from nineml.abstraction.ports import (
     EventReceivePort)
 from nineml import units as un
 from nineml.units import ms
-from nineml.values import RandomValue
+from nineml.values import RandomDistributionValue
 from pype9.simulate.common.cells import (
     ConnectionPropertySet, MultiDynamicsWithSynapsesProperties)
 from pype9.simulate.common.network import Network as BasePype9Network
@@ -570,7 +570,7 @@ class TestBrunel2000(TestCase):
                           **kwargs):
         model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
             'Brunel_{}'.format(case))
-        model = deepcopy(model)
+        model = model.clone()
         scale = order / model.population('Inh').size
         # rescale populations
         for pop in model.populations:
@@ -738,14 +738,14 @@ class TestNetwork(TestCase):
             name="ExcProps",
             definition=inh_cls, properties={'tau': 1 * ms})
 
-        random_weight = un.Quantity(RandomValue(
+        random_weight = un.Quantity(RandomDistributionValue(
             RandomDistributionProperties(
                 name="normal",
                 definition=ninemlcatalog.load(
                     'randomdistribution/Normal', 'NormalDistribution'),
                 properties={'mean': 1.0, 'variance': 0.25})), un.nA)
 
-        random_wmax = un.Quantity(RandomValue(
+        random_wmax = un.Quantity(RandomDistributionValue(
             RandomDistributionProperties(
                 name="normal",
                 definition=ninemlcatalog.load(
@@ -864,9 +864,9 @@ class TestNetwork(TestCase):
         dyn_array1 = ComponentArray(
             "Pop1", pop1.size,
             MultiDynamicsWithSynapsesProperties(
-                "Pop1",
+                "Pop1_cell",
                 MultiDynamicsProperties(
-                    "Pop1",
+                    "Pop1_cell",
                     sub_components={
                         'cell': cell1,
                         'Proj2': MultiDynamicsProperties(
@@ -908,9 +908,9 @@ class TestNetwork(TestCase):
         dyn_array2 = ComponentArray(
             "Pop2", pop2.size,
             MultiDynamicsWithSynapsesProperties(
-                "Pop2",
+                "Pop2_cell",
                 MultiDynamicsProperties(
-                    "Pop2",
+                    "Pop2_cell",
                     sub_components={
                         'cell': cell2,
                         'Proj1': MultiDynamicsProperties(
@@ -950,9 +950,9 @@ class TestNetwork(TestCase):
         dyn_array3 = ComponentArray(
             "Pop3", pop3.size,
             MultiDynamicsWithSynapsesProperties(
-                "Pop3",
+                "Pop3_cell",
                 MultiDynamicsProperties(
-                    'Pop3',
+                    'Pop3_cell',
                     sub_components={'cell': cell3},
                     port_exposures=[('cell', 'spike'),
                                     ('cell', 'i_ext')],

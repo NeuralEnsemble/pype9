@@ -162,6 +162,7 @@ class CodeGenerator(BaseCodeGenerator):
         component_class : nineml.Dynamics
             The component class to be transformed
         """
+        self._set_build_props(component_class, **kwargs)
         if not isinstance(component_class, WithSynapses):
             raise Pype9RuntimeError(
                 "'component_class' must be a DynamicsWithSynapses object")
@@ -169,7 +170,7 @@ class CodeGenerator(BaseCodeGenerator):
         # Clone original component class
         # ---------------------------------------------------------------------
         trfrm = DynamicsCloner().visit(component_class.dynamics)
-        trfrm.name = name
+#         trfrm.name = name
         # ---------------------------------------------------------------------
         # Get the membrane voltage and convert it to 'v'
         # ---------------------------------------------------------------------

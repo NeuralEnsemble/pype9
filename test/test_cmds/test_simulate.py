@@ -80,7 +80,8 @@ class TestSimulateCell(TestCase):
                 "--init_value V {V} "
                 "--init_regime subVb "
                 "--play iSyn {in_path} "
-                "--build_mode force"
+                "--build_mode force "
+                "--build_name IzhikevichFastSpikingSimulateVersion "
                 .format(nineml_model=self.izhi_path, sim=simulator,
                         out_path=out_path, in_path=in_path, t_stop=self.t_stop,
                         dt=self.dt, U='{} {}'.format(*self.U),

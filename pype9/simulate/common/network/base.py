@@ -5,7 +5,6 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from copy import deepcopy
 from collections import namedtuple, defaultdict
 from itertools import chain
 import quantities as pq
@@ -77,7 +76,7 @@ class Network(object):
             else:
                 name = "Anonymous"
             nineml_model = nineml_model.as_network(name=name)
-        self._nineml = deepcopy(nineml_model)
+        self._nineml = nineml_model.clone()
         # Get RNG for random distribution values and connectivity
         rng = self.Simulation.active().properties_rng
         if build_mode != 'build_only':
@@ -441,18 +440,20 @@ class Network(object):
                 BasePortExposure.from_port(p, cls.CELL_COMP_NAME)
                 for p in pop.cell.ports if p.name not in internal_cell_ports)
             dynamics_properties = MultiDynamicsProperties(
-                name=pop.name, sub_components=sub_components,
+                name=pop.name + '_cell', sub_components=sub_components,
                 port_connections=internal_conns, port_exposures=exposures)
             component = MultiDynamicsWithSynapsesProperties(
                 dynamics_properties.name,
                 dynamics_properties, synapses_properties=synapses,
                 connection_property_sets=connection_property_sets)
-            component_arrays[pop.name] = ComponentArray9ML(pop.name, pop.size,
-                                                           component)
+            array_name = pop.name
+            component_arrays[array_name] = ComponentArray9ML(
+                array_name, pop.size, component)
         selections = {}
         for sel in network_model.selections:
-            selections[sel.name] = Selection9ML(sel.name, Concatenate9ML(
-                *(component_arrays[p.name] for p in sel.operation.items)))
+            selections[sel.name] = Selection9ML(
+                sel.name, Concatenate9ML(*(component_arrays[p.name]
+                                           for p in sel.populations)))
         arrays_and_selections = dict(
             chain(component_arrays.iteritems(), selections.iteritems()))
         # Create ConnectionGroups from each port connection in Projection

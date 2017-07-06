@@ -49,6 +49,8 @@ def argparser():
     parser.add_argument('--prop', nargs=3, action='append',
                         metavar=('PARAM', 'VALUE', 'UNITS'), default=[],
                         help=("Set the property to the given value"))
+    parser.add_argument('--build_name', type=str, default=None,
+                        help="Name to use when building component classes")
     parser.add_argument('--init_regime', type=str, default=None,
                         help=("Initial regime for dynamics"))
     parser.add_argument('--init_value', nargs=3, default=[], action='append',
@@ -174,7 +176,7 @@ def run(argv):
             if component_class.port(port_name).dimension == un.current:
                 external_currents.append(port_name)
         # Build cell class
-        Cell = CellMetaClass(component_class, name=model.name,
+        Cell = CellMetaClass(component_class, name=args.build_name,
                              build_mode=args.build_mode,
                              external_currents=external_currents)
         record_regime = False

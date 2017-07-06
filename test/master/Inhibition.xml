@@ -1,0 +1,689 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<NineML xmlns="http://nineml.net/9ML/1.0">
+  <MultiDynamicsWithSynapses name="Inh_Dynamics">
+    <Cell>
+      <MultiDynamics name="Inh_Dynamics">
+        <SubDynamics name="cell">
+          <ComponentClass name="LeakyIntegrateAndFire">
+            <Parameter dimension="resistance" name="R"/>
+            <Parameter dimension="time" name="refractory_period"/>
+            <Parameter dimension="time" name="tau"/>
+            <Parameter dimension="voltage" name="v_reset"/>
+            <Parameter dimension="voltage" name="v_threshold"/>
+            <AnalogReducePort operator="+" dimension="current" name="i_synaptic"/>
+            <EventSendPort name="spike_output"/>
+            <AnalogSendPort dimension="time" name="refractory_end"/>
+            <AnalogSendPort dimension="voltage" name="v"/>
+            <Dynamics>
+              <StateVariable dimension="time" name="refractory_end"/>
+              <StateVariable dimension="voltage" name="v"/>
+              <Regime name="refractory">
+                <OnCondition target_regime="subthreshold">
+                  <Trigger>
+                    <MathInline>t &gt; refractory_end</MathInline>
+                  </Trigger>
+                </OnCondition>
+              </Regime>
+              <Regime name="subthreshold">
+                <TimeDerivative variable="v">
+                  <MathInline>(R*i_synaptic - v)/tau</MathInline>
+                </TimeDerivative>
+                <OnCondition target_regime="refractory">
+                  <Trigger>
+                    <MathInline>v &gt; v_threshold</MathInline>
+                  </Trigger>
+                  <StateAssignment variable="refractory_end">
+                    <MathInline>refractory_period + t</MathInline>
+                  </StateAssignment>
+                  <StateAssignment variable="v">
+                    <MathInline>v_reset</MathInline>
+                  </StateAssignment>
+                  <OutputEvent port="spike_output"/>
+                </OnCondition>
+              </Regime>
+            </Dynamics>
+          </ComponentClass>
+        </SubDynamics>
+        <SubDynamics name="Inhibition">
+          <MultiDynamics name="Inhibition_syn_Dynamics">
+            <SubDynamics name="psr">
+              <ComponentClass name="Alpha">
+                <Parameter dimension="time" name="tau"/>
+                <EventReceivePort name="input_spike"/>
+                <AnalogReceivePort dimension="current" name="weight"/>
+                <AnalogSendPort dimension="current" name="a"/>
+                <AnalogSendPort dimension="current" name="b"/>
+                <AnalogSendPort dimension="current" name="i_synaptic"/>
+                <Dynamics>
+                  <StateVariable dimension="current" name="a"/>
+                  <StateVariable dimension="current" name="b"/>
+                  <Regime name="sole">
+                    <TimeDerivative variable="a">
+                      <MathInline>(-a + b)/tau</MathInline>
+                    </TimeDerivative>
+                    <TimeDerivative variable="b">
+                      <MathInline>-b/tau</MathInline>
+                    </TimeDerivative>
+                    <OnEvent target_regime="sole" port="input_spike">
+                      <StateAssignment variable="b">
+                        <MathInline>b + weight</MathInline>
+                      </StateAssignment>
+                    </OnEvent>
+                  </Regime>
+                  <Alias name="i_synaptic">
+                    <MathInline>a</MathInline>
+                  </Alias>
+                </Dynamics>
+              </ComponentClass>
+            </SubDynamics>
+            <SubDynamics name="pls">
+              <ComponentClass name="Static">
+                <Parameter dimension="current" name="weight"/>
+                <AnalogSendPort dimension="current" name="fixed_weight"/>
+                <Dynamics>
+                  <Regime name="sole"/>
+                  <Alias name="fixed_weight">
+                    <MathInline>weight</MathInline>
+                  </Alias>
+                </Dynamics>
+              </ComponentClass>
+            </SubDynamics>
+            <AnalogSendPortExposure sub_component="psr" port="i_synaptic" name="i_synaptic__psr"/>
+            <EventReceivePortExposure sub_component="psr" port="input_spike" name="input_spike__psr"/>
+            <AnalogPortConnection sender_name="pls" receiver_name="psr" send_port="fixed_weight" receive_port="weight"/>
+          </MultiDynamics>
+        </SubDynamics>
+        <SubDynamics name="External">
+          <MultiDynamics name="External_syn_Dynamics">
+            <SubDynamics name="psr">
+              <ComponentClass name="Alpha">
+                <Parameter dimension="time" name="tau"/>
+                <EventReceivePort name="input_spike"/>
+                <AnalogReceivePort dimension="current" name="weight"/>
+                <AnalogSendPort dimension="current" name="a"/>
+                <AnalogSendPort dimension="current" name="b"/>
+                <AnalogSendPort dimension="current" name="i_synaptic"/>
+                <Dynamics>
+                  <StateVariable dimension="current" name="a"/>
+                  <StateVariable dimension="current" name="b"/>
+                  <Regime name="sole">
+                    <TimeDerivative variable="a">
+                      <MathInline>(-a + b)/tau</MathInline>
+                    </TimeDerivative>
+                    <TimeDerivative variable="b">
+                      <MathInline>-b/tau</MathInline>
+                    </TimeDerivative>
+                    <OnEvent target_regime="sole" port="input_spike">
+                      <StateAssignment variable="b">
+                        <MathInline>b + weight</MathInline>
+                      </StateAssignment>
+                    </OnEvent>
+                  </Regime>
+                  <Alias name="i_synaptic">
+                    <MathInline>a</MathInline>
+                  </Alias>
+                </Dynamics>
+              </ComponentClass>
+            </SubDynamics>
+            <SubDynamics name="pls">
+              <ComponentClass name="Static">
+                <Parameter dimension="current" name="weight"/>
+                <AnalogSendPort dimension="current" name="fixed_weight"/>
+                <Dynamics>
+                  <Regime name="sole"/>
+                  <Alias name="fixed_weight">
+                    <MathInline>weight</MathInline>
+                  </Alias>
+                </Dynamics>
+              </ComponentClass>
+            </SubDynamics>
+            <AnalogSendPortExposure sub_component="psr" port="i_synaptic" name="i_synaptic__psr"/>
+            <EventReceivePortExposure sub_component="psr" port="input_spike" name="input_spike__psr"/>
+            <AnalogPortConnection sender_name="pls" receiver_name="psr" send_port="fixed_weight" receive_port="weight"/>
+          </MultiDynamics>
+        </SubDynamics>
+        <SubDynamics name="Excitation">
+          <MultiDynamics name="Excitation_syn_Dynamics">
+            <SubDynamics name="psr">
+              <ComponentClass name="Alpha">
+                <Parameter dimension="time" name="tau"/>
+                <EventReceivePort name="input_spike"/>
+                <AnalogReceivePort dimension="current" name="weight"/>
+                <AnalogSendPort dimension="current" name="a"/>
+                <AnalogSendPort dimension="current" name="b"/>
+                <AnalogSendPort dimension="current" name="i_synaptic"/>
+                <Dynamics>
+                  <StateVariable dimension="current" name="a"/>
+                  <StateVariable dimension="current" name="b"/>
+                  <Regime name="sole">
+                    <TimeDerivative variable="a">
+                      <MathInline>(-a + b)/tau</MathInline>
+                    </TimeDerivative>
+                    <TimeDerivative variable="b">
+                      <MathInline>-b/tau</MathInline>
+                    </TimeDerivative>
+                    <OnEvent target_regime="sole" port="input_spike">
+                      <StateAssignment variable="b">
+                        <MathInline>b + weight</MathInline>
+                      </StateAssignment>
+                    </OnEvent>
+                  </Regime>
+                  <Alias name="i_synaptic">
+                    <MathInline>a</MathInline>
+                  </Alias>
+                </Dynamics>
+              </ComponentClass>
+            </SubDynamics>
+            <SubDynamics name="pls">
+              <ComponentClass name="Static">
+                <Parameter dimension="current" name="weight"/>
+                <AnalogSendPort dimension="current" name="fixed_weight"/>
+                <Dynamics>
+                  <Regime name="sole"/>
+                  <Alias name="fixed_weight">
+                    <MathInline>weight</MathInline>
+                  </Alias>
+                </Dynamics>
+              </ComponentClass>
+            </SubDynamics>
+            <AnalogSendPortExposure sub_component="psr" port="i_synaptic" name="i_synaptic__psr"/>
+            <EventReceivePortExposure sub_component="psr" port="input_spike" name="input_spike__psr"/>
+            <AnalogPortConnection sender_name="pls" receiver_name="psr" send_port="fixed_weight" receive_port="weight"/>
+          </MultiDynamics>
+        </SubDynamics>
+        <AnalogSendPortExposure sub_component="cell" port="refractory_end" name="refractory_end__cell"/>
+        <AnalogSendPortExposure sub_component="cell" port="v" name="v__cell"/>
+        <EventSendPortExposure sub_component="cell" port="spike_output" name="spike_output__cell"/>
+        <EventReceivePortExposure sub_component="External" port="input_spike__psr" name="input_spike__psr__External"/>
+        <EventReceivePortExposure sub_component="Excitation" port="input_spike__psr" name="input_spike__psr__Excitation"/>
+        <EventReceivePortExposure sub_component="Inhibition" port="input_spike__psr" name="input_spike__psr__Inhibition"/>
+        <AnalogPortConnection sender_name="Inhibition" receiver_name="cell" send_port="i_synaptic__psr" receive_port="i_synaptic"/>
+        <AnalogPortConnection sender_name="External" receiver_name="cell" send_port="i_synaptic__psr" receive_port="i_synaptic"/>
+        <AnalogPortConnection sender_name="Excitation" receiver_name="cell" send_port="i_synaptic__psr" receive_port="i_synaptic"/>
+      </MultiDynamics>
+    </Cell>
+  </MultiDynamicsWithSynapses>
+  <Selection name="All">
+    <Concatenate>
+      <Item index="0">
+        <Reference>Exc</Reference>
+      </Item>
+      <Item index="1">
+        <Reference>Inh</Reference>
+      </Item>
+    </Concatenate>
+  </Selection>
+  <ComponentArray name="Inh">
+    <Size>1</Size>
+    <MultiDynamicsProperties name="Inh">
+      <SubDynamicsProperties name="cell">
+        <Component name="nrn">
+          <Definition url="/Users/tclose/git/ninemlcatalog/xml/neuron/LeakyIntegrateAndFire.xml">LeakyIntegrateAndFire</Definition>
+          <Property units="Mohm" name="R">
+            <SingleValue>1.5</SingleValue>
+          </Property>
+          <Property units="ms" name="refractory_period">
+            <SingleValue>2.0</SingleValue>
+          </Property>
+          <Property units="ms" name="tau">
+            <SingleValue>20.0</SingleValue>
+          </Property>
+          <Property units="mV" name="v_reset">
+            <SingleValue>10.0</SingleValue>
+          </Property>
+          <Property units="mV" name="v_threshold">
+            <SingleValue>20.0</SingleValue>
+          </Property>
+          <Initial units="ms" name="refractory_end">
+            <SingleValue>0.0</SingleValue>
+          </Initial>
+          <Initial units="mV" name="v">
+            <RandomDistributionValue>
+              <Component name="uniform_rest_to_threshold">
+                <Definition url="/Users/tclose/git/ninemlcatalog/xml/randomdistribution/Uniform.xml">UniformDistribution</Definition>
+                <Property units="unitless" name="maximum">
+                  <SingleValue>20.0</SingleValue>
+                </Property>
+                <Property units="unitless" name="minimum">
+                  <SingleValue>0.0</SingleValue>
+                </Property>
+              </Component>
+            </RandomDistributionValue>
+          </Initial>
+        </Component>
+      </SubDynamicsProperties>
+      <SubDynamicsProperties name="Inhibition">
+        <MultiDynamicsProperties name="Inhibition_syn">
+          <SubDynamicsProperties name="psr">
+            <Component name="syn">
+              <Definition url="/Users/tclose/git/ninemlcatalog/xml/postsynapticresponse/Alpha.xml">Alpha</Definition>
+              <Property units="ms" name="tau">
+                <SingleValue>0.1</SingleValue>
+              </Property>
+              <Initial units="nA" name="a">
+                <SingleValue>0.0</SingleValue>
+              </Initial>
+              <Initial units="nA" name="b">
+                <SingleValue>0.0</SingleValue>
+              </Initial>
+            </Component>
+          </SubDynamicsProperties>
+          <SubDynamicsProperties name="pls">
+            <Component name="InhibitoryPlasticity">
+              <Definition url="/Users/tclose/git/ninemlcatalog/xml/plasticity/Static.xml">Static</Definition>
+              <Property units="nA" name="weight">
+                <SingleValue>-68.8538167356</SingleValue>
+              </Property>
+            </Component>
+          </SubDynamicsProperties>
+          <AnalogSendPortExposure sub_component="psr" port="i_synaptic" name="i_synaptic__psr"/>
+          <EventReceivePortExposure sub_component="psr" port="input_spike" name="input_spike__psr"/>
+          <AnalogPortConnection sender_name="pls" receiver_name="psr" send_port="fixed_weight" receive_port="weight"/>
+        </MultiDynamicsProperties>
+      </SubDynamicsProperties>
+      <SubDynamicsProperties name="External">
+        <MultiDynamicsProperties name="External_syn">
+          <SubDynamicsProperties name="psr">
+            <Component name="syn">
+              <Definition url="/Users/tclose/git/ninemlcatalog/xml/postsynapticresponse/Alpha.xml">Alpha</Definition>
+              <Property units="ms" name="tau">
+                <SingleValue>0.1</SingleValue>
+              </Property>
+              <Initial units="nA" name="a">
+                <SingleValue>0.0</SingleValue>
+              </Initial>
+              <Initial units="nA" name="b">
+                <SingleValue>0.0</SingleValue>
+              </Initial>
+            </Component>
+          </SubDynamicsProperties>
+          <SubDynamicsProperties name="pls">
+            <Component name="ExternalPlasticity">
+              <Definition url="/Users/tclose/git/ninemlcatalog/xml/plasticity/Static.xml">Static</Definition>
+              <Property units="nA" name="weight">
+                <SingleValue>13.7707633471</SingleValue>
+              </Property>
+            </Component>
+          </SubDynamicsProperties>
+          <AnalogSendPortExposure sub_component="psr" port="i_synaptic" name="i_synaptic__psr"/>
+          <EventReceivePortExposure sub_component="psr" port="input_spike" name="input_spike__psr"/>
+          <AnalogPortConnection sender_name="pls" receiver_name="psr" send_port="fixed_weight" receive_port="weight"/>
+        </MultiDynamicsProperties>
+      </SubDynamicsProperties>
+      <SubDynamicsProperties name="Excitation">
+        <MultiDynamicsProperties name="Excitation_syn">
+          <SubDynamicsProperties name="psr">
+            <Component name="syn">
+              <Definition url="/Users/tclose/git/ninemlcatalog/xml/postsynapticresponse/Alpha.xml">Alpha</Definition>
+              <Property units="ms" name="tau">
+                <SingleValue>0.1</SingleValue>
+              </Property>
+              <Initial units="nA" name="a">
+                <SingleValue>0.0</SingleValue>
+              </Initial>
+              <Initial units="nA" name="b">
+                <SingleValue>0.0</SingleValue>
+              </Initial>
+            </Component>
+          </SubDynamicsProperties>
+          <SubDynamicsProperties name="pls">
+            <Component name="ExcitatoryPlasticity">
+              <Definition url="/Users/tclose/git/ninemlcatalog/xml/plasticity/Static.xml">Static</Definition>
+              <Property units="nA" name="weight">
+                <SingleValue>13.7707633471</SingleValue>
+              </Property>
+            </Component>
+          </SubDynamicsProperties>
+          <AnalogSendPortExposure sub_component="psr" port="i_synaptic" name="i_synaptic__psr"/>
+          <EventReceivePortExposure sub_component="psr" port="input_spike" name="input_spike__psr"/>
+          <AnalogPortConnection sender_name="pls" receiver_name="psr" send_port="fixed_weight" receive_port="weight"/>
+        </MultiDynamicsProperties>
+      </SubDynamicsProperties>
+      <AnalogSendPortExposure sub_component="cell" port="refractory_end" name="refractory_end__cell"/>
+      <AnalogSendPortExposure sub_component="cell" port="v" name="v__cell"/>
+      <EventSendPortExposure sub_component="cell" port="spike_output" name="spike_output__cell"/>
+      <EventReceivePortExposure sub_component="External" port="input_spike__psr" name="input_spike__psr__External"/>
+      <EventReceivePortExposure sub_component="Excitation" port="input_spike__psr" name="input_spike__psr__Excitation"/>
+      <EventReceivePortExposure sub_component="Inhibition" port="input_spike__psr" name="input_spike__psr__Inhibition"/>
+      <AnalogPortConnection sender_name="Inhibition" receiver_name="cell" send_port="i_synaptic__psr" receive_port="i_synaptic"/>
+      <AnalogPortConnection sender_name="External" receiver_name="cell" send_port="i_synaptic__psr" receive_port="i_synaptic"/>
+      <AnalogPortConnection sender_name="Excitation" receiver_name="cell" send_port="i_synaptic__psr" receive_port="i_synaptic"/>
+    </MultiDynamicsProperties>
+  </ComponentArray>
+  <EventConnectionGroup name="Inhibition">
+    <Source port="spike_output__cell">
+      <ComponentArray name="Inh">
+        <Size>1</Size>
+        <MultiDynamicsProperties name="Inh">
+          <SubDynamicsProperties name="cell">
+            <Component name="nrn">
+              <Definition url="/Users/tclose/git/ninemlcatalog/xml/neuron/LeakyIntegrateAndFire.xml">LeakyIntegrateAndFire</Definition>
+              <Property units="Mohm" name="R">
+                <SingleValue>1.5</SingleValue>
+              </Property>
+              <Property units="ms" name="refractory_period">
+                <SingleValue>2.0</SingleValue>
+              </Property>
+              <Property units="ms" name="tau">
+                <SingleValue>20.0</SingleValue>
+              </Property>
+              <Property units="mV" name="v_reset">
+                <SingleValue>10.0</SingleValue>
+              </Property>
+              <Property units="mV" name="v_threshold">
+                <SingleValue>20.0</SingleValue>
+              </Property>
+              <Initial units="ms" name="refractory_end">
+                <SingleValue>0.0</SingleValue>
+              </Initial>
+              <Initial units="mV" name="v">
+                <RandomDistributionValue>
+                  <Component name="uniform_rest_to_threshold">
+                    <Definition url="/Users/tclose/git/ninemlcatalog/xml/randomdistribution/Uniform.xml">UniformDistribution</Definition>
+                    <Property units="unitless" name="maximum">
+                      <SingleValue>20.0</SingleValue>
+                    </Property>
+                    <Property units="unitless" name="minimum">
+                      <SingleValue>0.0</SingleValue>
+                    </Property>
+                  </Component>
+                </RandomDistributionValue>
+              </Initial>
+            </Component>
+          </SubDynamicsProperties>
+          <SubDynamicsProperties name="Inhibition">
+            <MultiDynamicsProperties name="Inhibition_syn">
+              <SubDynamicsProperties name="psr">
+                <Component name="syn">
+                  <Definition url="/Users/tclose/git/ninemlcatalog/xml/postsynapticresponse/Alpha.xml">Alpha</Definition>
+                  <Property units="ms" name="tau">
+                    <SingleValue>0.1</SingleValue>
+                  </Property>
+                  <Initial units="nA" name="a">
+                    <SingleValue>0.0</SingleValue>
+                  </Initial>
+                  <Initial units="nA" name="b">
+                    <SingleValue>0.0</SingleValue>
+                  </Initial>
+                </Component>
+              </SubDynamicsProperties>
+              <SubDynamicsProperties name="pls">
+                <Component name="InhibitoryPlasticity">
+                  <Definition url="/Users/tclose/git/ninemlcatalog/xml/plasticity/Static.xml">Static</Definition>
+                  <Property units="nA" name="weight">
+                    <SingleValue>-68.8538167356</SingleValue>
+                  </Property>
+                </Component>
+              </SubDynamicsProperties>
+              <AnalogSendPortExposure sub_component="psr" port="i_synaptic" name="i_synaptic__psr"/>
+              <EventReceivePortExposure sub_component="psr" port="input_spike" name="input_spike__psr"/>
+              <AnalogPortConnection sender_name="pls" receiver_name="psr" send_port="fixed_weight" receive_port="weight"/>
+            </MultiDynamicsProperties>
+          </SubDynamicsProperties>
+          <SubDynamicsProperties name="External">
+            <MultiDynamicsProperties name="External_syn">
+              <SubDynamicsProperties name="psr">
+                <Component name="syn">
+                  <Definition url="/Users/tclose/git/ninemlcatalog/xml/postsynapticresponse/Alpha.xml">Alpha</Definition>
+                  <Property units="ms" name="tau">
+                    <SingleValue>0.1</SingleValue>
+                  </Property>
+                  <Initial units="nA" name="a">
+                    <SingleValue>0.0</SingleValue>
+                  </Initial>
+                  <Initial units="nA" name="b">
+                    <SingleValue>0.0</SingleValue>
+                  </Initial>
+                </Component>
+              </SubDynamicsProperties>
+              <SubDynamicsProperties name="pls">
+                <Component name="ExternalPlasticity">
+                  <Definition url="/Users/tclose/git/ninemlcatalog/xml/plasticity/Static.xml">Static</Definition>
+                  <Property units="nA" name="weight">
+                    <SingleValue>13.7707633471</SingleValue>
+                  </Property>
+                </Component>
+              </SubDynamicsProperties>
+              <AnalogSendPortExposure sub_component="psr" port="i_synaptic" name="i_synaptic__psr"/>
+              <EventReceivePortExposure sub_component="psr" port="input_spike" name="input_spike__psr"/>
+              <AnalogPortConnection sender_name="pls" receiver_name="psr" send_port="fixed_weight" receive_port="weight"/>
+            </MultiDynamicsProperties>
+          </SubDynamicsProperties>
+          <SubDynamicsProperties name="Excitation">
+            <MultiDynamicsProperties name="Excitation_syn">
+              <SubDynamicsProperties name="psr">
+                <Component name="syn">
+                  <Definition url="/Users/tclose/git/ninemlcatalog/xml/postsynapticresponse/Alpha.xml">Alpha</Definition>
+                  <Property units="ms" name="tau">
+                    <SingleValue>0.1</SingleValue>
+                  </Property>
+                  <Initial units="nA" name="a">
+                    <SingleValue>0.0</SingleValue>
+                  </Initial>
+                  <Initial units="nA" name="b">
+                    <SingleValue>0.0</SingleValue>
+                  </Initial>
+                </Component>
+              </SubDynamicsProperties>
+              <SubDynamicsProperties name="pls">
+                <Component name="ExcitatoryPlasticity">
+                  <Definition url="/Users/tclose/git/ninemlcatalog/xml/plasticity/Static.xml">Static</Definition>
+                  <Property units="nA" name="weight">
+                    <SingleValue>13.7707633471</SingleValue>
+                  </Property>
+                </Component>
+              </SubDynamicsProperties>
+              <AnalogSendPortExposure sub_component="psr" port="i_synaptic" name="i_synaptic__psr"/>
+              <EventReceivePortExposure sub_component="psr" port="input_spike" name="input_spike__psr"/>
+              <AnalogPortConnection sender_name="pls" receiver_name="psr" send_port="fixed_weight" receive_port="weight"/>
+            </MultiDynamicsProperties>
+          </SubDynamicsProperties>
+          <AnalogSendPortExposure sub_component="cell" port="refractory_end" name="refractory_end__cell"/>
+          <AnalogSendPortExposure sub_component="cell" port="v" name="v__cell"/>
+          <EventSendPortExposure sub_component="cell" port="spike_output" name="spike_output__cell"/>
+          <EventReceivePortExposure sub_component="External" port="input_spike__psr" name="input_spike__psr__External"/>
+          <EventReceivePortExposure sub_component="Excitation" port="input_spike__psr" name="input_spike__psr__Excitation"/>
+          <EventReceivePortExposure sub_component="Inhibition" port="input_spike__psr" name="input_spike__psr__Inhibition"/>
+          <AnalogPortConnection sender_name="Inhibition" receiver_name="cell" send_port="i_synaptic__psr" receive_port="i_synaptic"/>
+          <AnalogPortConnection sender_name="External" receiver_name="cell" send_port="i_synaptic__psr" receive_port="i_synaptic"/>
+          <AnalogPortConnection sender_name="Excitation" receiver_name="cell" send_port="i_synaptic__psr" receive_port="i_synaptic"/>
+        </MultiDynamicsProperties>
+      </ComponentArray>
+    </Source>
+    <Destination port="input_spike__psr__Inhibition">
+      <Selection name="All">
+        <Concatenate>
+          <Item index="0">
+            <Reference>Exc</Reference>
+          </Item>
+          <Item index="1">
+            <Reference>Inh</Reference>
+          </Item>
+        </Concatenate>
+      </Selection>
+    </Destination>
+    <Connectivity>
+      <Component name="RandomInh">
+        <Definition url="/Users/tclose/git/ninemlcatalog/xml/connectionrule/RandomFanIn.xml">RandomFanIn</Definition>
+        <Property units="unitless" name="number">
+          <SingleValue>1.0</SingleValue>
+        </Property>
+      </Component>
+    </Connectivity>
+    <Delay>
+      <Quantity units="ms">
+        <SingleValue>1.5</SingleValue>
+      </Quantity>
+    </Delay>
+  </EventConnectionGroup>
+  <Component name="ExcitatoryPlasticity">
+    <Definition url="/Users/tclose/git/ninemlcatalog/xml/plasticity/Static.xml">Static</Definition>
+    <Property units="nA" name="weight">
+      <SingleValue>13.7707633471</SingleValue>
+    </Property>
+  </Component>
+  <Component name="ExternalPlasticity">
+    <Definition url="/Users/tclose/git/ninemlcatalog/xml/plasticity/Static.xml">Static</Definition>
+    <Property units="nA" name="weight">
+      <SingleValue>13.7707633471</SingleValue>
+    </Property>
+  </Component>
+  <Component name="InhibitoryPlasticity">
+    <Definition url="/Users/tclose/git/ninemlcatalog/xml/plasticity/Static.xml">Static</Definition>
+    <Property units="nA" name="weight">
+      <SingleValue>-68.8538167356</SingleValue>
+    </Property>
+  </Component>
+  <Component name="nrn">
+    <Definition url="/Users/tclose/git/ninemlcatalog/xml/neuron/LeakyIntegrateAndFire.xml">LeakyIntegrateAndFire</Definition>
+    <Property units="Mohm" name="R">
+      <SingleValue>1.5</SingleValue>
+    </Property>
+    <Property units="ms" name="refractory_period">
+      <SingleValue>2.0</SingleValue>
+    </Property>
+    <Property units="ms" name="tau">
+      <SingleValue>20.0</SingleValue>
+    </Property>
+    <Property units="mV" name="v_reset">
+      <SingleValue>10.0</SingleValue>
+    </Property>
+    <Property units="mV" name="v_threshold">
+      <SingleValue>20.0</SingleValue>
+    </Property>
+    <Initial units="ms" name="refractory_end">
+      <SingleValue>0.0</SingleValue>
+    </Initial>
+    <Initial units="mV" name="v">
+      <RandomDistributionValue>
+        <Component name="uniform_rest_to_threshold">
+          <Definition url="/Users/tclose/git/ninemlcatalog/xml/randomdistribution/Uniform.xml">UniformDistribution</Definition>
+          <Property units="unitless" name="maximum">
+            <SingleValue>20.0</SingleValue>
+          </Property>
+          <Property units="unitless" name="minimum">
+            <SingleValue>0.0</SingleValue>
+          </Property>
+        </Component>
+      </RandomDistributionValue>
+    </Initial>
+  </Component>
+  <Component name="syn">
+    <Definition url="/Users/tclose/git/ninemlcatalog/xml/postsynapticresponse/Alpha.xml">Alpha</Definition>
+    <Property units="ms" name="tau">
+      <SingleValue>0.1</SingleValue>
+    </Property>
+    <Initial units="nA" name="a">
+      <SingleValue>0.0</SingleValue>
+    </Initial>
+    <Initial units="nA" name="b">
+      <SingleValue>0.0</SingleValue>
+    </Initial>
+  </Component>
+  <MultiDynamicsProperties name="Excitation_syn">
+    <SubDynamicsProperties name="psr">
+      <Component name="syn">
+        <Definition url="/Users/tclose/git/ninemlcatalog/xml/postsynapticresponse/Alpha.xml">Alpha</Definition>
+        <Property units="ms" name="tau">
+          <SingleValue>0.1</SingleValue>
+        </Property>
+        <Initial units="nA" name="a">
+          <SingleValue>0.0</SingleValue>
+        </Initial>
+        <Initial units="nA" name="b">
+          <SingleValue>0.0</SingleValue>
+        </Initial>
+      </Component>
+    </SubDynamicsProperties>
+    <SubDynamicsProperties name="pls">
+      <Component name="ExcitatoryPlasticity">
+        <Definition url="/Users/tclose/git/ninemlcatalog/xml/plasticity/Static.xml">Static</Definition>
+        <Property units="nA" name="weight">
+          <SingleValue>13.7707633471</SingleValue>
+        </Property>
+      </Component>
+    </SubDynamicsProperties>
+    <AnalogSendPortExposure sub_component="psr" port="i_synaptic" name="i_synaptic__psr"/>
+    <EventReceivePortExposure sub_component="psr" port="input_spike" name="input_spike__psr"/>
+    <AnalogPortConnection sender_name="pls" receiver_name="psr" send_port="fixed_weight" receive_port="weight"/>
+  </MultiDynamicsProperties>
+  <MultiDynamicsProperties name="External_syn">
+    <SubDynamicsProperties name="psr">
+      <Component name="syn">
+        <Definition url="/Users/tclose/git/ninemlcatalog/xml/postsynapticresponse/Alpha.xml">Alpha</Definition>
+        <Property units="ms" name="tau">
+          <SingleValue>0.1</SingleValue>
+        </Property>
+        <Initial units="nA" name="a">
+          <SingleValue>0.0</SingleValue>
+        </Initial>
+        <Initial units="nA" name="b">
+          <SingleValue>0.0</SingleValue>
+        </Initial>
+      </Component>
+    </SubDynamicsProperties>
+    <SubDynamicsProperties name="pls">
+      <Component name="ExternalPlasticity">
+        <Definition url="/Users/tclose/git/ninemlcatalog/xml/plasticity/Static.xml">Static</Definition>
+        <Property units="nA" name="weight">
+          <SingleValue>13.7707633471</SingleValue>
+        </Property>
+      </Component>
+    </SubDynamicsProperties>
+    <AnalogSendPortExposure sub_component="psr" port="i_synaptic" name="i_synaptic__psr"/>
+    <EventReceivePortExposure sub_component="psr" port="input_spike" name="input_spike__psr"/>
+    <AnalogPortConnection sender_name="pls" receiver_name="psr" send_port="fixed_weight" receive_port="weight"/>
+  </MultiDynamicsProperties>
+  <MultiDynamicsProperties name="Inhibition_syn">
+    <SubDynamicsProperties name="psr">
+      <Component name="syn">
+        <Definition url="/Users/tclose/git/ninemlcatalog/xml/postsynapticresponse/Alpha.xml">Alpha</Definition>
+        <Property units="ms" name="tau">
+          <SingleValue>0.1</SingleValue>
+        </Property>
+        <Initial units="nA" name="a">
+          <SingleValue>0.0</SingleValue>
+        </Initial>
+        <Initial units="nA" name="b">
+          <SingleValue>0.0</SingleValue>
+        </Initial>
+      </Component>
+    </SubDynamicsProperties>
+    <SubDynamicsProperties name="pls">
+      <Component name="InhibitoryPlasticity">
+        <Definition url="/Users/tclose/git/ninemlcatalog/xml/plasticity/Static.xml">Static</Definition>
+        <Property units="nA" name="weight">
+          <SingleValue>-68.8538167356</SingleValue>
+        </Property>
+      </Component>
+    </SubDynamicsProperties>
+    <AnalogSendPortExposure sub_component="psr" port="i_synaptic" name="i_synaptic__psr"/>
+    <EventReceivePortExposure sub_component="psr" port="input_spike" name="input_spike__psr"/>
+    <AnalogPortConnection sender_name="pls" receiver_name="psr" send_port="fixed_weight" receive_port="weight"/>
+  </MultiDynamicsProperties>
+  <Component name="RandomInh">
+    <Definition url="/Users/tclose/git/ninemlcatalog/xml/connectionrule/RandomFanIn.xml">RandomFanIn</Definition>
+    <Property units="unitless" name="number">
+      <SingleValue>1.0</SingleValue>
+    </Property>
+  </Component>
+  <Component name="uniform_rest_to_threshold">
+    <Definition url="/Users/tclose/git/ninemlcatalog/xml/randomdistribution/Uniform.xml">UniformDistribution</Definition>
+    <Property units="unitless" name="maximum">
+      <SingleValue>20.0</SingleValue>
+    </Property>
+    <Property units="unitless" name="minimum">
+      <SingleValue>0.0</SingleValue>
+    </Property>
+  </Component>
+  <Dimension i="1" name="current"/>
+  <Dimension name="dimensionless"/>
+  <Dimension i="-2" l="2" m="1" t="-3" name="resistance"/>
+  <Dimension name="time" t="1"/>
+  <Dimension i="-1" l="2" m="1" t="-3" name="voltage"/>
+  <Unit symbol="Mohm" dimension="resistance" power="6"/>
+  <Unit symbol="mV" dimension="voltage" power="-3"/>
+  <Unit symbol="ms" dimension="time" power="-3"/>
+  <Unit symbol="nA" dimension="current" power="-9"/>
+  <Unit symbol="unitless" dimension="dimensionless" power="0"/>
+</NineML>

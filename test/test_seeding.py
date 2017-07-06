@@ -1,7 +1,6 @@
 from __future__ import division
 from itertools import chain
 import ninemlcatalog
-from copy import deepcopy
 import numpy
 import logging
 import sys
@@ -61,11 +60,10 @@ class TestSeeding(TestCase):
 
     def test_network_seed(self):
         brunel_model = self._load_brunel('AI', 1)
-        brunel_model = deepcopy(brunel_model)
         brunel_model.population('Ext').cell['rate'] = 300 / un.s
         for Network, Simulation in (
-            (NESTNetwork, NESTSimulation),
-                (NeuronNetwork, NeuronSimulation)):
+            (NeuronNetwork, NeuronSimulation),
+                (NESTNetwork, NESTSimulation)):
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
                 network1 = Network(brunel_model)
                 network1.component_array('Ext').record('spike_output')
@@ -138,7 +136,7 @@ class TestSeeding(TestCase):
         model = ninemlcatalog.load('network/Brunel2000/' + case).as_network(
             'Brunel_{}'.format(case))
         # Don't clone so that the url is not reset
-        model = deepcopy(model)
+        model = model.clone()
         scale = order / model.population('Inh').size
         # rescale populations
         for pop in model.populations:

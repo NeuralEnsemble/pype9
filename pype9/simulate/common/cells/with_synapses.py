@@ -1,17 +1,13 @@
 from itertools import chain
 from abc import ABCMeta
 from nineml.abstraction import BaseALObject, Dynamics, Parameter
-from nineml.abstraction.componentclass.visitors.xml import (
-    ComponentClassXMLWriter, ComponentClassXMLLoader)
 from nineml.user import (
     BaseULObject, DynamicsProperties, MultiDynamics, MultiDynamicsProperties,
-    Definition, AnalogPortConnection, EventPortConnection)
+    Definition, AnalogPortConnection, EventPortConnection, Property)
 from nineml.base import ContainerObject, DocumentLevelObject
 from nineml.exceptions import name_error, NineMLNameError
 from pype9.exceptions import Pype9RuntimeError
-from nineml.xml import (
-    from_child_xml, unprocessed_xml, get_xml_attr, E, extract_xmlns)
-from nineml.annotations import annotate_xml, read_annotations
+import nineml
 
 
 class WithSynapses(object):
@@ -21,6 +17,13 @@ class WithSynapses(object):
     """
 
     __metaclass__ = ABCMeta
+
+    defining_attributes = (
+        'name', 'dynamics', '_synapses', '_connection_parameter_sets')
+
+    class_to_member = {
+        'Synapse': 'synapse',
+        'ConnectionParameterSet': 'connection_parameter_set'}
 
     def __init__(self, name, dynamics, synapses, connection_parameter_sets):
         assert isinstance(dynamics, (Dynamics, MultiDynamics))
@@ -45,15 +48,26 @@ class WithSynapses(object):
                     "in the base MultiDynamics class ('{}')"
                     .format(conn_param, "', '".join(
                         sp.name for sp in self._dynamics.parameters)))
-        # Copy what would be class members in the dynamics class so it will
-        # appear like an object of that class
-        self.defining_attributes = (
-            dynamics.defining_attributes +
-            ('_synapses', '_connection_parameter_sets'))
-        self.class_to_member = dict(
-            dynamics.class_to_member.items() +
-            [('Synapse', 'synapse'),
-             ('ConnectionParameterSet', 'connection_parameter_set')])
+#         # Copy what would be class members in the dynamics class so it will
+#         # appear like an object of that class
+#         self.defining_attributes = (
+#             dynamics.defining_attributes +
+#             ('_synapses', '_connection_parameter_sets'))
+#         self.class_to_member = dict(
+#             dynamics.class_to_member.items() +
+#             [('Synapse', 'synapse'),
+#              ('ConnectionParameterSet', 'connection_parameter_set')])
+
+    def index_of(self, element, key=None, class_map=None):
+        if class_map is None:
+            # Default to the class_to_member of the wrapped class plus the
+            # synapses
+            class_map = dict(
+                self.dynamics.class_to_member.items() +
+                [('Synapse', 'synapse'),
+                 ('ConnectionParameterSet', 'connection_parameter_set')])
+        return ContainerObject.index_of(self, element, key=key,
+                                        class_map=class_map)
 
     @property
     def name(self):
@@ -140,7 +154,11 @@ class WithSynapses(object):
         return self._connection_parameter_sets.iterkeys()
 
     @classmethod
-    def wrap(cls, dynamics, synapses=[], connection_parameter_sets=[]):
+    def wrap(cls, dynamics, synapses=None, connection_parameter_sets=None):
+        if synapses is None:
+            synapses = []
+        if connection_parameter_sets is None:
+            connection_parameter_sets = []
         if isinstance(dynamics, MultiDynamics):
             wrapped_cls = MultiDynamicsWithSynapses
         elif isinstance(dynamics, Dynamics):
@@ -149,8 +167,10 @@ class WithSynapses(object):
             raise Pype9RuntimeError(
                 "Cannot wrap '{}' class with WithSynapses, only Dynamics and "
                 "MultiDynamics".format(type(dynamics)))
-        return wrapped_cls(dynamics.name, dynamics, synapses,
-                           connection_parameter_sets)
+        name = dynamics.name
+        dynamics = dynamics.clone()
+        dynamics.name = name + '__sans_synapses'
+        return wrapped_cls(name, dynamics, synapses, connection_parameter_sets)
 
     def clone(self, memo=None, **kwargs):
         return self.__class__(
@@ -160,38 +180,27 @@ class WithSynapses(object):
             (cps.clone(memo=memo, **kwargs)
              for cps in self.connection_parameter_sets))
 
-    @annotate_xml
-    def to_xml(self, document, E=E, **kwargs):
-        return E(self.nineml_type,
-                 E.Cell(self.dynamics.to_xml(document, E=E, **kwargs)),
-                 *list(chain((s.to_xml(document, E=E, **kwargs)
-                              for s in self.synapses),
-                             (cps.to_xml(document, E=E, **kwargs)
-                              for cps in self.connection_parameter_sets))),
-                 name=self.name)
+    def serialize_node(self, node, **options):
+        node.attr('name', self.name, **options)
+        node.child(self.dynamics, within='Cell', **options)
+        node.children(self.synapses, **options)
+        node.children(self.connection_parameter_sets, **options)
 
     @classmethod
-    @read_annotations
-    @unprocessed_xml
-    def from_xml(cls, element, document, **kwargs):  # @UnusedVariable
+    def unserialize_node(cls, node, **options):  # @UnusedVariable
         # The only supported op at this stage
-        dynamics = from_child_xml(
-            element, cls.wrapped_class, document, within='Cell',
-            allow_reference=True, **kwargs)
-        synapses = from_child_xml(
-            element, Synapse, document, multiple=True, allow_none=True,
-            **kwargs)
-        parameter_sets = from_child_xml(
-            element, ConnectionParameterSet, document, multiple=True,
-            allow_none=True, **kwargs)
-        name = get_xml_attr(element, 'name', document, **kwargs)
+        dynamics = node.child((Dynamics, MultiDynamics), allow_ref=True,
+                              within='Cell', **options)
+        synapses = node.children(Synapse, **options)
+        parameter_sets = node.children(ConnectionParameterSet, **options)
+        name = node.attr('name', **options)
         return cls(name, dynamics, synapses, parameter_sets)
 
     def write(self, fname, **kwargs):
         """
         Writes the top-level NineML object to file in XML.
         """
-        pype9.simulate.common.document.write(self, fname, **kwargs)
+        nineml.write(fname, self, **kwargs)
 
 
 class DynamicsWithSynapses(WithSynapses, Dynamics):
@@ -204,7 +213,7 @@ class DynamicsWithSynapses(WithSynapses, Dynamics):
         WithSynapses.__init__(self, name, dynamics, synapses,
                               connection_parameter_sets)
         BaseALObject.__init__(self)
-        DocumentLevelObject.__init__(self, dynamics.document)
+        DocumentLevelObject.__init__(self)
         ContainerObject.__init__(self)
         # Create references to all dynamics member variables so that inherited
         # Dynamics properties and methods can find them.
@@ -232,7 +241,7 @@ class MultiDynamicsWithSynapses(WithSynapses, MultiDynamics):
         WithSynapses.__init__(self, name, dynamics, synapses,
                               connection_parameter_sets)
         BaseALObject.__init__(self)
-        DocumentLevelObject.__init__(self, dynamics.document)
+        DocumentLevelObject.__init__(self)
         ContainerObject.__init__(self)
         # Create references to all dynamics member variables so that inherited
         # Dynamics properties and methods can find them.
@@ -396,6 +405,24 @@ class WithSynapsesProperties(object):
             (cps.clone(memo=memo, **kwargs)
              for cps in self.connection_property_sets))
 
+    def serialize_node(self, node, **options):
+        node.attr('name', self.name, **options)
+        node.child(self.dynamics_properties, within='Cell', **options)
+        node.children(self.synapses, **options)
+        node.children(self.connection_property_sets, **options)
+
+    @classmethod
+    def unserialize_node(cls, node, **options):  # @UnusedVariable
+        # The only supported op at this stage
+        dynamics_properties = node.child(
+            (DynamicsProperties, MultiDynamicsProperties), allow_ref=True,
+            within='Cell', **options)
+        synapse_properties = node.children(SynapseProperties, **options)
+        property_sets = node.children(ConnectionParameterSet, **options)
+        name = node.attr('name', **options)
+        return cls(name, dynamics_properties, synapse_properties,
+                   property_sets)
+
 
 class DynamicsWithSynapsesProperties(WithSynapsesProperties,
                                      DynamicsProperties):
@@ -407,7 +434,7 @@ class DynamicsWithSynapsesProperties(WithSynapsesProperties,
                                         connection_property_sets)
         # Initiate inherited base classes
         BaseULObject.__init__(self)
-        DocumentLevelObject.__init__(self, dynamics_properties.document)
+        DocumentLevelObject.__init__(self)
         ContainerObject.__init__(self)
         # Create references to all dynamics member variables so that inherited
         # DynamicsProperties properties and methods can find them.
@@ -427,7 +454,7 @@ class MultiDynamicsWithSynapsesProperties(WithSynapsesProperties,
                                         connection_property_sets)
         # Initiate inherited base classes
         BaseULObject.__init__(self)
-        DocumentLevelObject.__init__(self, dynamics_properties.document)
+        DocumentLevelObject.__init__(self)
         ContainerObject.__init__(self)
         # Create references to all dynamics member variables so that inherited
         # MultiDynamicsProperties properties and methods can find them.
@@ -472,31 +499,14 @@ class ConnectionParameterSet(BaseALObject):
             self.port,
             [p.clone(memo=memo, **kwargs) for p in self.parameters])
 
-    @annotate_xml
-    def to_xml(self, document, E, **kwargs):
-        xml_writer = ComponentClassXMLWriter(document, E, **kwargs)
-        return E(self.nineml_type,
-                 *(xml_writer.visit(p) for p in self.parameters),
-                 port=self.port)
+    def serialize_node(self, node, **options):
+        node.children(self.parameters, **options)
+        node.attr('port', self.port)
 
     @classmethod
-    @read_annotations
-    def from_xml(cls, element, document, **kwargs):  # @UnusedVariable @IgnorePep8
-        # FIXME: Ideally Parameter should have from_xml method that calls
-        #        the ComponentClassXMLLoader. To do this, the BaseALObject
-        #        should be split into
-        #        BaseDynamicsObject/BaseConnectionRuleObject/... and then they
-        #        can each have a generic from_xml method that calls the right
-        #        visitor
-        # parameters = from_child_xml(
-        #     element, Parameter, document, multiple=True, **kwargs)
-        loader = ComponentClassXMLLoader(document, **kwargs)
-        xmlns = extract_xmlns(element.tag)
-        parameters = []
-        for param_elem in element.findall(xmlns + Parameter.nineml_type):
-            parameters.append(loader.load_parameter(param_elem))
-        return cls(get_xml_attr(element, 'port', document, **kwargs),
-                   parameters)
+    def unserialize_node(cls, node, **options):  # @UnusedVariable @IgnorePep8
+        return cls(node.attr('port'),
+                   node.children(Parameter, **options))
 
 
 class ConnectionPropertySet(BaseULObject):
@@ -530,6 +540,15 @@ class ConnectionPropertySet(BaseULObject):
         return self.__class__(
             self.port,
             [p.clone(memo=memo, **kwargs) for p in self.properties])
+
+    def serialize_node(self, node, **options):
+        node.children(self.properties, **options)
+        node.attr('port', self.port)
+
+    @classmethod
+    def unserialize_node(cls, node, **options):  # @UnusedVariable @IgnorePep8
+        return cls(node.attr('port'),
+                   node.children(Property, **options))
 
 
 class Synapse(BaseALObject):
@@ -566,30 +585,19 @@ class Synapse(BaseALObject):
             self.dynamics.clone(memo=memo, **kwargs),
             [pc.clone(memo=memo, **kwargs) for pc in self.port_connections])
 
-    @annotate_xml
-    def to_xml(self, document, E, **kwargs):
-        return E(self.nineml_type,
-                 self.dynamics.to_xml(document, E, **kwargs),
-                 *(pc.to_xml(document, E, **kwargs)
-                   for pc in self.port_connections),
-                 name=self.name)
+    def serialize_node(self, node, **options):
+        node.attr('name', self.name, **options)
+        node.child(self.dynamics, **options)
+        node.children(self.event_port_connections, **options)
+        node.children(self.analog_port_connections, **options)
 
     @classmethod
-    @read_annotations
-    @unprocessed_xml
-    def from_xml(cls, element, document, **kwargs):  # @UnusedVariable
+    def unserialize_node(cls, node, **options):  # @UnusedVariable
         # The only supported op at this stage
-        dynamics = from_child_xml(
-            element, Dynamics, document, **kwargs)
-        analog_port_connections = from_child_xml(
-            element, AnalogPortConnection, document, multiple=True,
-            allow_none=True, **kwargs)
-        event_port_connections = from_child_xml(
-            element, EventPortConnection, document, multiple=True,
-            allow_none=True, **kwargs)
-        return cls(get_xml_attr(element, 'name', document, **kwargs),
-                   dynamics, chain(analog_port_connections,
-                                   event_port_connections))
+        dynamics = node.child((Dynamics, MultiDynamics), **options)
+        port_connections = node.children(
+            (EventPortConnection, AnalogPortConnection), **options)
+        return cls(node.attr('name', **options), dynamics, port_connections)
 
 
 class SynapseProperties(BaseULObject):
@@ -622,30 +630,33 @@ class SynapseProperties(BaseULObject):
     def port_connections(self):
         return self._port_connections
 
-    @annotate_xml
-    def to_xml(self, document, E, **kwargs):
-        return E(self.nineml_type,
-                 self.dynamics_properties.to_xml(document, E, **kwargs),
-                 *(pc.to_xml(document, E, **kwargs)
-                   for pc in self.port_connections),
-                 name=self.name)
+    def serialize_node(self, node, **options):
+        node.attr('name', self.name)
+        node.child(self.dynamics_properties, **options)
+        node.children(self.event_port_connections, **options)
+        node.children(self.analog_port_connections, **options)
 
     @classmethod
-    @read_annotations
-    @unprocessed_xml
-    def from_xml(cls, element, document, **kwargs):  # @UnusedVariable
+    def unserialize_node(cls, node, **options):  # @UnusedVariable
         # The only supported op at this stage
-        dynamics_properties = from_child_xml(
-            element, DynamicsProperties, document, **kwargs)
-        analog_port_connections = from_child_xml(
-            element, AnalogPortConnection, document, multiple=True,
-            allow_none=True, **kwargs)
-        event_port_connections = from_child_xml(
-            element, EventPortConnection, document, multiple=True,
-            allow_none=True, **kwargs)
-        return cls(get_xml_attr(element, 'name', document, **kwargs),
-                   dynamics_properties, chain(analog_port_connections,
-                                              event_port_connections))
+        dynamics_properties = node.child(
+            (DynamicsProperties, MultiDynamicsProperties), **options)
+        port_connections = node.children(
+            (EventPortConnection, AnalogPortConnection), **options)
+        return cls(node.attr('name', **options), dynamics_properties,
+                   port_connections)
 
 
-import pype9.simulate.common.document  # @IgnorePep8
+class_map = {'Synapse': Synapse,
+             'SynapseProperties': SynapseProperties,
+             'DynamicsWithSynapses': DynamicsWithSynapses,
+             'DynamicsWithSynapsesProperties': DynamicsWithSynapsesProperties,
+             'ConnectionParameterSet': ConnectionParameterSet,
+             'ConnectionPropertySet': ConnectionPropertySet,
+             'MultiDynamicsWithSynapses': MultiDynamicsWithSynapses,
+             'MultiDynamicsWithSynapsesProperties':
+             MultiDynamicsWithSynapsesProperties}
+
+
+def read(url, class_map=class_map, **kwargs):
+    return nineml.read(url, class_map=class_map, **kwargs)

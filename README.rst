@@ -1,10 +1,10 @@
 Pype9
 *****
 
-.. image:: https://travis-ci.org/NeuralEnsemble/Pype9.svg?branch=master
-    :target: https://travis-ci.org/NeuralEnsemble/Pype9
-.. image:: https://coveralls.io/repos/github/NeuralEnsemble/Pype9/badge.svg?branch=master
-    :target: https://coveralls.io/github/NeuralEnsemble/Pype9?branch=master
+.. image:: https://travis-ci.org/NeuralEnsemble/pype9.svg?branch=master
+    :target: https://travis-ci.org/NeuralEnsemble/pype9
+.. image:: https://coveralls.io/repos/github/NeuralEnsemble/pype9/badge.svg?branch=master
+    :target: https://coveralls.io/github/NeuralEnsemble/pype9?branch=master
 .. image:: https://readthedocs.org/projects/pype9/badge/?version=latest
     :target: http://pype9.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status 
@@ -64,9 +64,16 @@ or
    
 See `Creating Simulations in Python`_ in the Pype9 docs for more examples and pipelines.
 
+In addition to the ``simulate`` command there is also a ``plot`` command for
+conveniently plotting the results of the simulation with [Matplotlib](http://matplotlib.org)
+and a ``convert`` command to convert 9ML files between different serialization
+formats (XML, YAML, JSON and HDF5) and 9ML versions (1.0 and 2.0dev). See the
+documentation for details.
+
+
 Documentation
 =============
-Pype9 documentation can be viewed at http://pype9.readthedocs.io/latest.
+The full Pype9 documentation can be viewed at http://pype9.readthedocs.io/latest.
 
 
 Installation
