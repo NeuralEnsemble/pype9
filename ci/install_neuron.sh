@@ -18,20 +18,13 @@ fi
 
 mkdir -p $HOME/build/$NRN
 pushd $HOME/build/$NRN
-export VENV=`python -c "import sys; print sys.prefix"`;
-ls $VENV/bin
-
-if [ `which python` = $VENV/bin/python ]; then
-	echo 'match'
-else
-	echo "`which python` vs $VENV/bin/python"
-fi
+export VENV=`python -c "import sys; print(sys.prefix)"`;
 
 # To reset cache after updates
 # rm $HOME/build/$NRN/config.log
 
 if [ ! -f "$HOME/build/$NRN/config.log" ]; then
-    $HOME/$NRN/configure --with-paranrn --with-nrnpython==$VENV/bin/python --prefix=$VENV --disable-rx3d --without-iv;
+    $HOME/$NRN/configure --with-paranrn --with-nrnpython=$VENV/bin/python --prefix=$VENV --disable-rx3d --without-iv;
     make;
 else
     echo 'Using cached NEURON build directory.';
