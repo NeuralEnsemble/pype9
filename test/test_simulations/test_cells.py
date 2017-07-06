@@ -420,7 +420,7 @@ class TestDynamics(TestCase):
                 print "{} recorded rate: {}".format(sim_name, recorded_rate)
                 print "{} difference: {}".format(sim_name, rate_difference)
             self.assertLess(
-                rate_difference, 2.5 * pq.Hz,
+                rate_difference, 5 * pq.Hz,
                 ("Recorded rate of {} poisson generator ({}) did not match "
                  "desired ({}) within {}: difference {}".format(
                      sim_name, recorded_rate, ref_rate, 2.5 * pq.Hz,
