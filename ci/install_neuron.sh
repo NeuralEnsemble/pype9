@@ -21,7 +21,11 @@ pushd $HOME/build/$NRN
 export VENV=`python -c "import sys; print sys.prefix"`;
 ls $VENV/bin
 
-which python
+if [ `which python` = $VENV ]; then
+	echo 'match'
+else
+	echo "don't match"
+fi
 
 # To reset cache after updates
 rm $HOME/build/$NRN/config.log
