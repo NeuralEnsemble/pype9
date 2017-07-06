@@ -24,7 +24,7 @@ ls $VENV/bin
 if [ `which python` = $VENV ]; then
 	echo 'match'
 else
-	echo "don't match"
+	echo "`which python` vs $VENV"
 fi
 
 # To reset cache after updates
