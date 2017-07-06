@@ -65,7 +65,7 @@ or
 See `Creating Simulations in Python`_ in the Pype9 docs for more examples and pipelines.
 
 In addition to the ``simulate`` command there is also a ``plot`` command for
-conveniently plotting the results of the simulation with [Matplotlib](http://matplotlib.org)
+conveniently plotting the results of the simulation with Matplotlib_
 and a ``convert`` command to convert 9ML files between different serialization
 formats (XML, YAML, JSON and HDF5) and 9ML versions (1.0 and 2.0dev). See the
 documentation for details.
@@ -132,6 +132,7 @@ Please submit bug reports and feature requests to the GitHub issue tracker
 :license: MIT, see LICENSE for details.
 
 .. _PyNN: http://neuralensemble.org/docs/PyNN/
+.. _Matplotlib: http://matplotlib.org
 .. _`Creating Simulations in Python`: http://pype9.readthedocs.io/latest/scripting.html
 .. _Installation: http://pype9.readthedocs.io/en/latest/installation.html
 .. _NineML: http://nineml.net
