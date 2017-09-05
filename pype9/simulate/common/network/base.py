@@ -285,7 +285,8 @@ class Network(object):
             pc.__class__(
                 sender_name=role2name[pc.sender_role],
                 receiver_name=role2name[pc.receiver_role],
-                send_port=pc.send_port_name, receive_port=pc.receive_port_name)
+                send_port_name=pc.send_port_name,
+                receive_port_name=pc.receive_port_name)
             for pc in projection_model.port_connections
             if (pc.sender_role in ('plasticity', 'response') and
                 pc.receiver_role in ('plasticity', 'response')))
@@ -310,17 +311,17 @@ class Network(object):
         port_connections = list(chain(
             (pc.__class__(sender_role=pc.sender_role,
                           receiver_role='synapse',
-                          send_port=pc.send_port_name,
-                          receive_port=append_namespace(
+                          send_port_name=pc.send_port_name,
+                          receive_port_name=append_namespace(
                               pc.receive_port_name,
                               role2name[pc.receiver_role]))
              for pc in receive_conns),
             (pc.__class__(sender_role='synapse',
                           receiver_role=pc.receiver_role,
-                          send_port=append_namespace(
+                          send_port_name=append_namespace(
                               pc.send_port_name,
                               role2name[pc.sender_role]),
-                          receive_port=pc.receive_port_name)
+                          receive_port_name=pc.receive_port_name)
              for pc in send_conns),
             (pc for pc in projection_model.port_connections
              if (pc.sender_role in ('pre', 'post') and

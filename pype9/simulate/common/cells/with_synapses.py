@@ -10,6 +10,291 @@ from pype9.exceptions import Pype9RuntimeError
 import nineml
 
 
+class ConnectionParameterSet(BaseALObject, ContainerObject):
+
+    nineml_type = 'ConnectionParameterSet'
+    defining_attributes = ('_port', '_parameters')
+    nineml_attr = ('port', 'parameters')
+    nineml_children = (Parameter,)
+
+    def __init__(self, port, parameters):
+        super(ConnectionParameterSet, self).__init__()
+        ContainerObject.__init__(self)
+        self._port = port
+        self._parameters = {}
+        for param in parameters:
+            self.add(param.clone())
+
+    def __repr__(self):
+        return ("ConnectionParameterSet(port={}, parameters=[{}])"
+                .format(self.port,
+                        ', '.join(repr(p) for p in self.parameters)))
+
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def key(self):
+        return self.port
+
+    @name_error
+    def parameter(self, name):
+        return self._parameters[name]
+
+    @property
+    def parameters(self):
+        return self._parameters.itervalues()
+
+    @property
+    def parameter_names(self):
+        return self._parameters.iterkeys()
+
+    def clone(self, memo=None, **kwargs):
+        return self.__class__(
+            self.port,
+            [p.clone(memo=memo, **kwargs) for p in self.parameters])
+
+    def serialize_node(self, node, **options):
+        node.children(self.parameters, **options)
+        node.attr('port', self.port)
+
+    @classmethod
+    def unserialize_node(cls, node, **options):  # @UnusedVariable @IgnorePep8
+        return cls(node.attr('port'),
+                   node.children(Parameter, **options))
+
+
+class ConnectionPropertySet(BaseULObject, ContainerObject):
+
+    nineml_type = 'ConnectionPropertySet'
+    defining_attributes = ('_port', '_properties')
+    nineml_attr = ('port', 'properties')
+    nineml_children = (Property,)
+
+    def __init__(self, port, properties):
+        super(ConnectionPropertySet, self).__init__()
+        ContainerObject.__init__(self)
+        self._port = port
+        self._properties = {}
+        for prop in properties:
+            self.add(prop)
+
+    def __repr__(self):
+        return ("ConnectionPropertySet(port={}, properties=[{}])"
+                .format(self.port,
+                        ', '.join(repr(p) for p in self.properties)))
+
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def key(self):
+        return self.port
+
+    @property
+    def properties(self):
+        return self._properties.itervalues()
+
+    @property
+    def property_names(self):
+        return self._properties.iterkeys()
+
+    def clone(self, memo=None, **kwargs):
+        return self.__class__(
+            self.port,
+            [p.clone(memo=memo, **kwargs) for p in self.properties])
+
+    def serialize_node(self, node, **options):
+        node.children(self.properties, **options)
+        node.attr('port', self.port)
+
+    @classmethod
+    def unserialize_node(cls, node, **options):  # @UnusedVariable @IgnorePep8
+        return cls(node.attr('port'),
+                   node.children(Property, **options))
+
+    # This needs to be last not to overwite the property decorator
+    @name_error
+    def property(self, name):
+        return self._properties[name]
+
+
+class Synapse(BaseALObject, ContainerObject):
+
+    nineml_type = 'Synapse'
+    defining_attributes = ('_name', '_dynamics', '_port_connections')
+    nineml_attr = ('name', 'dynamics', 'analog_port_connections',
+                    'event_port_connections')
+    nineml_child = {'dynamics': None}
+    nineml_children = (AnalogPortConnection, EventPortConnection)
+
+    def __init__(self, name, dynamics, port_connections=None,
+                 analog_port_connections=None, event_port_connections=None):
+        super(Synapse, self).__init__()
+        ContainerObject.__init__(self)
+        self._name = name
+        self._dynamics = dynamics
+        self._analog_port_connections = {}
+        self._event_port_connections = {}
+        if port_connections is None:
+            port_connections = []
+        if analog_port_connections is None:
+            analog_port_connections = []
+        if event_port_connections is None:
+            event_port_connections = []
+        for port_conn in chain(port_connections, analog_port_connections,
+                               event_port_connections):
+            self.add(port_conn)
+
+    def __repr__(self):
+        return ("Synapse(name='{}', dynamics={}, port_connections=[{}])"
+                .format(self.name, self.dynamics,
+                        ', '.join(repr(p) for p in self.port_connections)))
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def dynamics(self):
+        return self._dynamics
+
+    def port_connection(self, name):
+        try:
+            return self.analog_port_connection(name)
+        except NineMLNameError:
+            return self.event_port_connection(name)
+
+    @property
+    def port_connections(self):
+        return chain(self.analog_port_connections, self.event_port_connections)
+
+    @property
+    def num_port_connections(self):
+        return (self.num_analog_port_connections +
+                self.num_event_port_connections)
+
+    @property
+    def port_connection_names(self):
+        return chain(self.analog_port_connection_names,
+                     self.event_port_connection_names)
+
+    @name_error
+    def analog_port_connection(self, name):
+        return self._analog_port_connections[name]
+
+    @property
+    def analog_port_connections(self):
+        return self._analog_port_connections.itervalues()
+
+    @property
+    def num_analog_port_connections(self):
+        return len(self._analog_port_connections)
+
+    @property
+    def analog_port_connection_names(self):
+        return self._analog_port_connections.iterkeys()
+
+    @name_error
+    def event_port_connection(self, name):
+        return self._event_port_connections[name]
+
+    @property
+    def event_port_connections(self):
+        return self._event_port_connections.itervalues()
+
+    @property
+    def num_event_port_connections(self):
+        return len(self._event_port_connections)
+
+    @property
+    def event_port_connection_names(self):
+        return self._event_port_connections.iterkeys()
+
+    def clone(self, memo=None, **kwargs):
+        return self.__class__(
+            self.name,
+            self.dynamics.clone(memo=memo, **kwargs),
+            [pc.clone(memo=memo, **kwargs) for pc in self.port_connections])
+
+    def serialize_node(self, node, **options):
+        node.attr('name', self.name, **options)
+        node.child(self.dynamics, **options)
+        node.children(self.event_port_connections, **options)
+        node.children(self.analog_port_connections, **options)
+
+    @classmethod
+    def unserialize_node(cls, node, **options):  # @UnusedVariable
+        # The only supported op at this stage
+        dynamics = node.child((Dynamics, MultiDynamics), **options)
+        port_connections = node.children(
+            (EventPortConnection, AnalogPortConnection), **options)
+        return cls(node.attr('name', **options), dynamics, port_connections)
+
+
+class SynapseProperties(BaseULObject, ContainerObject):
+
+    nineml_type = 'SynapseProperties'
+    defining_attributes = ('_name', '_dynamics_properties',
+                           '_port_connections')
+    nineml_child = {'dynamics_properties': DynamicsProperties}
+    nineml_children = (AnalogPortConnection, EventPortConnection)
+
+    def __init__(self, name, dynamics_properties, port_connections=None,
+                 analog_port_connections=None, event_port_connections=None):
+        super(SynapseProperties, self).__init__()
+        ContainerObject.__init__(self)
+        self._name = name
+        self._dynamics_properties = dynamics_properties
+        self._analog_port_connections = {}
+        self._event_port_connections = {}
+        if port_connections is None:
+            port_connections = []
+        if analog_port_connections is None:
+            analog_port_connections = []
+        if event_port_connections is None:
+            event_port_connections = []
+        for port_conn in chain(port_connections, analog_port_connections,
+                               event_port_connections):
+            self.add(port_conn)
+
+    def __repr__(self):
+        return ("Synapse(name='{}', dynamics_properties={}, "
+                "port_connections=[{}])"
+                .format(self.name, self.dynamics_properties,
+                        ', '.join(repr(p) for p in self.port_connections)))
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def dynamics_properties(self):
+        return self._dynamics_properties
+
+    @property
+    def port_connections(self):
+        return self._port_connections
+
+    def serialize_node(self, node, **options):
+        node.attr('name', self.name)
+        node.child(self.dynamics_properties, **options)
+        node.children(self.event_port_connections, **options)
+        node.children(self.analog_port_connections, **options)
+
+    @classmethod
+    def unserialize_node(cls, node, **options):  # @UnusedVariable
+        # The only supported op at this stage
+        dynamics_properties = node.child(
+            (DynamicsProperties, MultiDynamicsProperties), **options)
+        port_connections = node.children(
+            (EventPortConnection, AnalogPortConnection), **options)
+        return cls(node.attr('name', **options), dynamics_properties,
+                   port_connections)
+
+
 class WithSynapses(object):
     """
     Mixin class to be mixed with Dynamics and MultiDynamics classes in order
@@ -24,6 +309,7 @@ class WithSynapses(object):
     class_to_member = {
         'Synapse': 'synapse',
         'ConnectionParameterSet': 'connection_parameter_set'}
+    nineml_children = (Synapse, ConnectionParameterSet)
 
     def __init__(self, name, dynamics, synapses, connection_parameter_sets):
         assert isinstance(dynamics, (Dynamics, MultiDynamics))
@@ -58,16 +344,14 @@ class WithSynapses(object):
 #             [('Synapse', 'synapse'),
 #              ('ConnectionParameterSet', 'connection_parameter_set')])
 
-    def index_of(self, element, key=None, class_map=None):
-        if class_map is None:
+    def index_of(self, element, key=None, nineml_children=None):
+        if nineml_children is None:
             # Default to the class_to_member of the wrapped class plus the
             # synapses
-            class_map = dict(
-                self.dynamics.class_to_member.items() +
-                [('Synapse', 'synapse'),
-                 ('ConnectionParameterSet', 'connection_parameter_set')])
+            nineml_children = self.dynamics.nineml_children + (
+                Synapse, ConnectionParameterSet)
         return ContainerObject.index_of(self, element, key=key,
-                                        class_map=class_map)
+                                        nineml_children=nineml_children)
 
     @property
     def name(self):
@@ -460,191 +744,6 @@ class MultiDynamicsWithSynapsesProperties(WithSynapsesProperties,
         # MultiDynamicsProperties properties and methods can find them.
         self._annotations = dynamics_properties._annotations
         self._sub_components = dynamics_properties._sub_components
-
-
-class ConnectionParameterSet(BaseALObject):
-
-    nineml_type = 'ConnectionParameterSet'
-    defining_attributes = ('_port', '_parameters')
-
-    def __init__(self, port, parameters):
-        super(ConnectionParameterSet, self).__init__()
-        self._port = port
-        # Ensure that parameters are not _NamespaceParameters
-        self._parameters = [Parameter(p.name, p.dimension) for p in parameters]
-
-    def __repr__(self):
-        return ("ConnectionParameterSet(port={}, parameters=[{}])"
-                .format(self.port,
-                        ', '.join(repr(p) for p in self.parameters)))
-
-    @property
-    def port(self):
-        return self._port
-
-    @property
-    def key(self):
-        return self.port
-
-    @property
-    def parameters(self):
-        return self._parameters
-
-    @property
-    def parameter_names(self):
-        return (p.name for p in self.parameters)
-
-    def clone(self, memo=None, **kwargs):
-        return self.__class__(
-            self.port,
-            [p.clone(memo=memo, **kwargs) for p in self.parameters])
-
-    def serialize_node(self, node, **options):
-        node.children(self.parameters, **options)
-        node.attr('port', self.port)
-
-    @classmethod
-    def unserialize_node(cls, node, **options):  # @UnusedVariable @IgnorePep8
-        return cls(node.attr('port'),
-                   node.children(Parameter, **options))
-
-
-class ConnectionPropertySet(BaseULObject):
-
-    nineml_type = 'ConnectionPropertySet'
-    defining_attributes = ('_port', '_properties')
-
-    def __init__(self, port, properties):
-        super(ConnectionPropertySet, self).__init__()
-        self._port = port
-        self._properties = properties
-
-    def __repr__(self):
-        return ("ConnectionPropertySet(port={}, properties=[{}])"
-                .format(self.port,
-                        ', '.join(repr(p) for p in self.properties)))
-
-    @property
-    def port(self):
-        return self._port
-
-    @property
-    def key(self):
-        return self.port
-
-    @property
-    def properties(self):
-        return self._properties
-
-    def clone(self, memo=None, **kwargs):
-        return self.__class__(
-            self.port,
-            [p.clone(memo=memo, **kwargs) for p in self.properties])
-
-    def serialize_node(self, node, **options):
-        node.children(self.properties, **options)
-        node.attr('port', self.port)
-
-    @classmethod
-    def unserialize_node(cls, node, **options):  # @UnusedVariable @IgnorePep8
-        return cls(node.attr('port'),
-                   node.children(Property, **options))
-
-
-class Synapse(BaseALObject):
-
-    nineml_type = 'Synapse'
-    defining_attributes = ('_name', '_dynamics', '_port_connections')
-
-    def __init__(self, name, dynamics, port_connections):
-        super(Synapse, self).__init__()
-        self._name = name
-        self._dynamics = dynamics
-        self._port_connections = port_connections
-
-    def __repr__(self):
-        return ("Synapse(name='{}', dynamics={}, port_connections=[{}])"
-                .format(self.name, self.dynamics,
-                        ', '.join(repr(p) for p in self.port_connections)))
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def dynamics(self):
-        return self._dynamics
-
-    @property
-    def port_connections(self):
-        return self._port_connections
-
-    def clone(self, memo=None, **kwargs):
-        return self.__class__(
-            self.name,
-            self.dynamics.clone(memo=memo, **kwargs),
-            [pc.clone(memo=memo, **kwargs) for pc in self.port_connections])
-
-    def serialize_node(self, node, **options):
-        node.attr('name', self.name, **options)
-        node.child(self.dynamics, **options)
-        node.children(self.event_port_connections, **options)
-        node.children(self.analog_port_connections, **options)
-
-    @classmethod
-    def unserialize_node(cls, node, **options):  # @UnusedVariable
-        # The only supported op at this stage
-        dynamics = node.child((Dynamics, MultiDynamics), **options)
-        port_connections = node.children(
-            (EventPortConnection, AnalogPortConnection), **options)
-        return cls(node.attr('name', **options), dynamics, port_connections)
-
-
-class SynapseProperties(BaseULObject):
-
-    nineml_type = 'SynapseProperties'
-    defining_attributes = ('_name', '_dynamics_properties',
-                           '_port_connections')
-
-    def __init__(self, name, dynamics_properties, port_connections):
-        super(SynapseProperties, self).__init__()
-        self._name = name
-        self._dynamics_properties = dynamics_properties
-        self._port_connections = port_connections
-
-    def __repr__(self):
-        return ("Synapse(name='{}', dynamics_properties={}, "
-                "port_connections=[{}])"
-                .format(self.name, self.dynamics_properties,
-                        ', '.join(repr(p) for p in self.port_connections)))
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def dynamics_properties(self):
-        return self._dynamics_properties
-
-    @property
-    def port_connections(self):
-        return self._port_connections
-
-    def serialize_node(self, node, **options):
-        node.attr('name', self.name)
-        node.child(self.dynamics_properties, **options)
-        node.children(self.event_port_connections, **options)
-        node.children(self.analog_port_connections, **options)
-
-    @classmethod
-    def unserialize_node(cls, node, **options):  # @UnusedVariable
-        # The only supported op at this stage
-        dynamics_properties = node.child(
-            (DynamicsProperties, MultiDynamicsProperties), **options)
-        port_connections = node.children(
-            (EventPortConnection, AnalogPortConnection), **options)
-        return cls(node.attr('name', **options), dynamics_properties,
-                   port_connections)
 
 
 class_map = {'Synapse': Synapse,

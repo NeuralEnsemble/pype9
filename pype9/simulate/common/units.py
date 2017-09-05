@@ -465,7 +465,7 @@ class UnitHandler(DynamicsDimensionResolver):
         try:
             dims = self._dims[sym]
         except KeyError:
-            element = self._find_element(sym)
+            element = self.find_element(sym)
             try:
                 dims = self._flatten(element.rhs)[1]
             except AttributeError:

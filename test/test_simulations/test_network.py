@@ -809,7 +809,7 @@ class TestNetwork(TestCase):
         proj1 = Projection(
             name="Proj1",
             pre=pop1, post=pop2, response=inh, plasticity=static,
-            connectivity=self.all_to_all,
+            connection_rule_properties=self.all_to_all,
             port_connections=[
                 ('pre', 'spike', 'response', 'spike'),
                 ('response', 'i', 'post', 'i_ext'),
@@ -819,7 +819,7 @@ class TestNetwork(TestCase):
         proj2 = Projection(
             name="Proj2",
             pre=pop2, post=pop1, response=exc, plasticity=static,
-            connectivity=self.all_to_all,
+            connection_rule_properties=self.all_to_all,
             port_connections=[
                 ('pre', 'spike', 'response', 'spike'),
                 ('pre', 'double_spike', 'response', 'double_spike'),
@@ -830,7 +830,7 @@ class TestNetwork(TestCase):
         proj3 = Projection(
             name="Proj3",
             pre=pop3, post=pop2, response=exc, plasticity=stdp,
-            connectivity=self.all_to_all,
+            connection_rule_properties=self.all_to_all,
             port_connections=[
                 ('pre', 'spike', 'response', 'spike'),
                 ('response', 'i', 'post', 'i_ext'),
@@ -841,7 +841,7 @@ class TestNetwork(TestCase):
         proj4 = Projection(
             name="Proj4",
             pre=pop3, post=pop1, response=exc, plasticity=static,
-            connectivity=self.all_to_all,
+            connection_rule_properties=self.all_to_all,
             port_connections=[
                 ('pre', 'spike', 'response', 'spike'),
                 ('response', 'i', 'post', 'i_ext'),

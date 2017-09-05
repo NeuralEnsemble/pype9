@@ -234,7 +234,7 @@ class Cell(object):
             val = self._get(varname)
             qty = self.UnitHandler.assign_units(
                 val, self.component_class.element(
-                    varname, class_map=Dynamics.class_to_member).dimension)
+                    varname, child_types=Dynamics.nineml_children).dimension)
             return qty
 
     def __setattr__(self, varname, val):
@@ -353,7 +353,7 @@ class Cell(object):
         """
         return cls.build_component_class.index_of(
             cls.build_component_class.regime(name),
-            class_map=Dynamics.class_to_member)
+            nineml_children=Dynamics.nineml_children)
 
     @classmethod
     def from_regime_index(cls, index):
@@ -361,7 +361,7 @@ class Cell(object):
         The reciprocal of regime_index, returns the regime name from its index
         """
         return cls.build_component_class.from_index(
-            index, Regime.nineml_type, class_map=Dynamics.class_to_member).name
+            index, Regime.nineml_type, nineml_children=Dynamics.nineml_children).name
 
     def initialize(self):
         for iv in self._nineml.initial_values:

@@ -178,7 +178,7 @@ class CodeGenerator(BaseCodeGenerator):
             name = kwargs['membrane_voltage']
             try:
                 orig_v = component_class.element(
-                    name, class_map=Dynamics.class_to_member)
+                    name, nineml_children=Dynamics.nineml_children)
             except KeyError:
                 raise Pype9BuildError(
                     "Could not find specified membrane voltage '{}'"

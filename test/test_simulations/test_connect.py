@@ -94,7 +94,7 @@ class TestConnect(TestCase):
 #                         't > onset',
 #                         state_assignments=[
 #                             StateAssignment('i_out', 'amplitude')],
-#                         target_regime='default')])])
+#                         target_regime_name='default')])])
 #
 #         relay9ML = Dynamics(
 #             name="Relay",
