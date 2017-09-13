@@ -13,7 +13,6 @@ import nineml
 class ConnectionParameterSet(BaseALObject, ContainerObject):
 
     nineml_type = 'ConnectionParameterSet'
-    defining_attributes = ('_port', '_parameters')
     nineml_attr = ('port', 'parameters')
     nineml_children = (Parameter,)
 
@@ -68,7 +67,6 @@ class ConnectionParameterSet(BaseALObject, ContainerObject):
 class ConnectionPropertySet(BaseULObject, ContainerObject):
 
     nineml_type = 'ConnectionPropertySet'
-    defining_attributes = ('_port', '_properties')
     nineml_attr = ('port', 'properties')
     nineml_children = (Property,)
 
@@ -124,7 +122,6 @@ class ConnectionPropertySet(BaseULObject, ContainerObject):
 class Synapse(BaseALObject, ContainerObject):
 
     nineml_type = 'Synapse'
-    defining_attributes = ('_name', '_dynamics', '_port_connections')
     nineml_attr = ('name', 'dynamics', 'analog_port_connections',
                     'event_port_connections')
     nineml_child = {'dynamics': None}
@@ -237,8 +234,7 @@ class Synapse(BaseALObject, ContainerObject):
 class SynapseProperties(BaseULObject, ContainerObject):
 
     nineml_type = 'SynapseProperties'
-    defining_attributes = ('_name', '_dynamics_properties',
-                           '_port_connections')
+    nineml_attr = ('name',)
     nineml_child = {'dynamics_properties': DynamicsProperties}
     nineml_children = (AnalogPortConnection, EventPortConnection)
 
@@ -303,12 +299,8 @@ class WithSynapses(object):
 
     __metaclass__ = ABCMeta
 
-    defining_attributes = (
-        'name', 'dynamics', '_synapses', '_connection_parameter_sets')
-
-    class_to_member = {
-        'Synapse': 'synapse',
-        'ConnectionParameterSet': 'connection_parameter_set'}
+    nineml_attr = ('name',)
+    nineml_child = {'dynamics': None}
     nineml_children = (Synapse, ConnectionParameterSet)
 
     def __init__(self, name, dynamics, synapses, connection_parameter_sets):
@@ -334,19 +326,10 @@ class WithSynapses(object):
                     "in the base MultiDynamics class ('{}')"
                     .format(conn_param, "', '".join(
                         sp.name for sp in self._dynamics.parameters)))
-#         # Copy what would be class members in the dynamics class so it will
-#         # appear like an object of that class
-#         self.defining_attributes = (
-#             dynamics.defining_attributes +
-#             ('_synapses', '_connection_parameter_sets'))
-#         self.class_to_member = dict(
-#             dynamics.class_to_member.items() +
-#             [('Synapse', 'synapse'),
-#              ('ConnectionParameterSet', 'connection_parameter_set')])
 
     def index_of(self, element, key=None, nineml_children=None):
         if nineml_children is None:
-            # Default to the class_to_member of the wrapped class plus the
+            # Default to the children of the wrapped class plus the
             # synapses
             nineml_children = self.dynamics.nineml_children + (
                 Synapse, ConnectionParameterSet)
@@ -570,12 +553,8 @@ class WithSynapsesProperties(object):
                               synapses, connection_parameter_sets))
         # Copy what would be class members in the dynamics class so it will
         # appear like an object of that class
-        self.defining_attributes = (dynamics_properties.defining_attributes +
-                                    ('_synapses', '_connection_property_sets'))
-        self.class_to_member = dict(
-            dynamics_properties.class_to_member.items() +
-            [('Synapse', 'synapse'),
-             ('ConnectionPropertySet', 'connection_property_set')])
+        self.nineml_children = dynamics_properties.nineml_children + (
+            Synapse, ConnectionPropertySet)
 
     @property
     def name(self):

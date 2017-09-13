@@ -30,7 +30,7 @@ from nineml.user import (
     MultiDynamicsProperties, DynamicsProperties, Definition, Property)
 from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
                                 Constant, Expression)
-from nineml.abstraction.dynamics.visitors.cloner import DynamicsCloner
+from nineml.visitors.cloner import Cloner
 from sympy.printing import ccode
 from pype9.simulate.neuron.units import UnitHandler
 try:
@@ -169,7 +169,7 @@ class CodeGenerator(BaseCodeGenerator):
         # ---------------------------------------------------------------------
         # Clone original component class
         # ---------------------------------------------------------------------
-        trfrm = DynamicsCloner().visit(component_class.dynamics)
+        trfrm = Cloner().clone(component_class.dynamics)
 #         trfrm.name = name
         # ---------------------------------------------------------------------
         # Get the membrane voltage and convert it to 'v'

@@ -15,7 +15,8 @@ import diophantine
 from nineml import units as un
 from nineml.user.component import Quantity
 from nineml.abstraction import Expression
-from nineml.abstraction.dynamics.visitors import DynamicsDimensionResolver
+from nineml.abstraction.dynamics.visitors.queriers import (
+    DynamicsDimensionResolver)
 import atexit
 from pype9.exceptions import Pype9RuntimeError
 from pype9.utils import classproperty
