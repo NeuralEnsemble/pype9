@@ -190,7 +190,7 @@ class BaseCodeGenerator(object):
                 install_dir=install_dir,
                 **kwargs)
             component_class.write(built_comp_class_pth,
-                                  save_indices=True)
+                                  preserve_order=True)
         if compile_source:
             # Clean existing compile & install directories from previous builds
             if generate_source:

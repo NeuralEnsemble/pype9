@@ -8,19 +8,19 @@ from nineml.base import ContainerObject, DocumentLevelObject
 from nineml.exceptions import name_error, NineMLNameError
 from pype9.exceptions import Pype9RuntimeError
 import nineml
+from nineml.utils import validate_identifier
 
 
 class ConnectionParameterSet(BaseALObject, ContainerObject):
 
     nineml_type = 'ConnectionParameterSet'
-    nineml_attr = ('port', 'parameters')
+    nineml_attr = ('port',)
     nineml_children = (Parameter,)
 
     def __init__(self, port, parameters):
         super(ConnectionParameterSet, self).__init__()
         ContainerObject.__init__(self)
-        self._port = port
-        self._parameters = {}
+        self._port = validate_identifier(port)
         for param in parameters:
             self.add(param.clone())
 
@@ -67,14 +67,13 @@ class ConnectionParameterSet(BaseALObject, ContainerObject):
 class ConnectionPropertySet(BaseULObject, ContainerObject):
 
     nineml_type = 'ConnectionPropertySet'
-    nineml_attr = ('port', 'properties')
+    nineml_attr = ('port',)
     nineml_children = (Property,)
 
     def __init__(self, port, properties):
         super(ConnectionPropertySet, self).__init__()
         ContainerObject.__init__(self)
-        self._port = port
-        self._properties = {}
+        self._port = validate_identifier(port)
         for prop in properties:
             self.add(prop)
 
@@ -131,10 +130,8 @@ class Synapse(BaseALObject, ContainerObject):
                  analog_port_connections=None, event_port_connections=None):
         super(Synapse, self).__init__()
         ContainerObject.__init__(self)
-        self._name = name
+        self._name = validate_identifier(name)
         self._dynamics = dynamics
-        self._analog_port_connections = {}
-        self._event_port_connections = {}
         if port_connections is None:
             port_connections = []
         if analog_port_connections is None:
@@ -242,10 +239,8 @@ class SynapseProperties(BaseULObject, ContainerObject):
                  analog_port_connections=None, event_port_connections=None):
         super(SynapseProperties, self).__init__()
         ContainerObject.__init__(self)
-        self._name = name
+        self._name = validate_identifier(name)
         self._dynamics_properties = dynamics_properties
-        self._analog_port_connections = {}
-        self._event_port_connections = {}
         if port_connections is None:
             port_connections = []
         if analog_port_connections is None:
@@ -306,9 +301,9 @@ class WithSynapses(object):
     def __init__(self, name, dynamics, synapses, connection_parameter_sets):
         assert isinstance(dynamics, (Dynamics, MultiDynamics))
         # Initialise Dynamics/MultiDynamics base classes
-        self._name = name
+        self._name = validate_identifier(name)
         self._dynamics = dynamics
-        self._synapses = dict((s.name, s) for s in synapses)
+        self.add(*synapses)
         self._connection_parameter_sets = dict(
             (pw.port, pw) for pw in connection_parameter_sets)
         for conn_param in self.all_connection_parameters():
@@ -342,7 +337,7 @@ class WithSynapses(object):
 
     @name.setter
     def name(self, name):
-        self._name = name
+        self._name = validate_identifier(name)
 
     def __repr__(self):
         return ("{}WithSynapses(dynamics={}, synapses=[{}], "
@@ -534,9 +529,9 @@ class WithSynapsesProperties(object):
 
     def __init__(self, name, dynamics_properties, synapse_properties=[],
                  connection_property_sets=[]):
-        self._name = name
+        self._name = validate_identifier(name)
         self._dynamics_properties = dynamics_properties
-        self._synapses = dict((s.name, s) for s in synapse_properties)
+        self.add(*synapse_properties)
         self._connection_property_sets = dict(
             (cp.port, cp) for cp in connection_property_sets)
         # Extract the AL objects for the definition
@@ -562,7 +557,7 @@ class WithSynapsesProperties(object):
 
     @name.setter
     def name(self, name):
-        self._name = name
+        self._name = validate_identifier(name)
 
     def __repr__(self):
         return ("{}WithSynapsesProperties(dynamics_properties={}, "
