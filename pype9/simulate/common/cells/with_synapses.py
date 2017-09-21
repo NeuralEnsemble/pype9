@@ -455,6 +455,9 @@ class WithSynapses(object):
         """
         nineml.write(fname, self, **kwargs)
 
+    def __getattr__(self, name):
+        return getattr(self._dynamics, name)
+
 
 class DynamicsWithSynapses(WithSynapses, Dynamics):
 
@@ -669,6 +672,9 @@ class WithSynapsesProperties(object):
         name = node.attr('name', **options)
         return cls(name, dynamics_properties, synapse_properties,
                    property_sets)
+
+    def __getattr__(self, name):
+        return getattr(self._dynamics_properties, name)
 
 
 class DynamicsWithSynapsesProperties(WithSynapsesProperties,

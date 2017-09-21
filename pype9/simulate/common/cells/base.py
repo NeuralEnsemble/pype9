@@ -352,8 +352,7 @@ class Cell(object):
         values)
         """
         return cls.build_component_class.index_of(
-            cls.build_component_class.regime(name),
-            nineml_children=Dynamics.nineml_children)
+            cls.build_component_class.regime(name))
 
     @classmethod
     def from_regime_index(cls, index):
