@@ -50,7 +50,8 @@ class TestDynamics(TestCase):
         'end_refractory': (None, 1), 'v': ('v', 1)}
 
     def test_izhi(self, plot=False, print_comparisons=False,
-                  simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
+                  simulators=['neuron'],  # simulators=['nest', 'neuron'],
+                  dt=0.001, duration=100.0,
                   build_mode='force', **kwargs):  # @UnusedVariable
         # Force compilation of code generation
         # Perform comparison in subprocess

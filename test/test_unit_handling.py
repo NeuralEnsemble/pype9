@@ -145,7 +145,12 @@ class TestUnitAssignment(TestCase):
         handler1 = TestUnitHandler1(self.a)
         handler2 = NestUnitHandler(self.a)
         self.assertEqual(handler1.scale_alias('A2'),
-                         (Expression('ARP2 + P3'), 'ms*nA'))
+                         (Expression('ARP2 + P3'), 'ms*nA'),
+                         "Difference in scaled alias {} vs {}:\n{}"
+                         .format(handler1.scale_alias('A2'),
+                                 (Expression('ARP2 + P3'), 'ms*nA'),
+                                 handler1.scale_alias('A2')[0].find_mismatch(
+                                     Expression('ARP2 + P3'))))
         self.assertEqual(handler1.scale_alias('A4'),
                          (Expression('ARP3 + 100/(P2*P6)'), 'S/cm2'))
         self.assertEqual(handler1.scale_alias('A5'),

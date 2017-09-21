@@ -71,8 +71,7 @@ class CodeGenerator(BaseCodeGenerator):
             'unit_handler': UnitHandler(component_class),
             'sorted_regimes': sorted(
                 component_class.regimes,
-                key=lambda r: component_class.index_of(
-                    r, nineml_children=Dynamics.nineml_children)),
+                key=lambda r: component_class.index_of(r)),
             'jacobian_approx_step': kwargs.get(
                 'jacobian_approx_step', self.GSL_JACOBIAN_APPROX_STEP_DEFAULT),
             'max_step_size': kwargs.get('max_step_size',

@@ -322,15 +322,6 @@ class WithSynapses(object):
                     .format(conn_param, "', '".join(
                         sp.name for sp in self._dynamics.parameters)))
 
-    def index_of(self, element, key=None, nineml_children=None):
-        if nineml_children is None:
-            # Default to the children of the wrapped class plus the
-            # synapses
-            nineml_children = self.dynamics.nineml_children + (
-                Synapse, ConnectionParameterSet)
-        return ContainerObject.index_of(self, element, key=key,
-                                        nineml_children=nineml_children)
-
     @property
     def name(self):
         return self._name
@@ -472,11 +463,11 @@ class DynamicsWithSynapses(WithSynapses, Dynamics):
 
     def __init__(self, name, dynamics, synapses=[],
                  connection_parameter_sets=[]):
-        WithSynapses.__init__(self, name, dynamics, synapses,
-                              connection_parameter_sets)
         BaseALObject.__init__(self)
         DocumentLevelObject.__init__(self)
         ContainerObject.__init__(self)
+        WithSynapses.__init__(self, name, dynamics, synapses,
+                              connection_parameter_sets)
         # Create references to all dynamics member variables so that inherited
         # Dynamics properties and methods can find them.
         self._annotations = dynamics._annotations
@@ -500,11 +491,11 @@ class MultiDynamicsWithSynapses(WithSynapses, MultiDynamics):
 
     def __init__(self, name, dynamics, synapses=[],
                  connection_parameter_sets=[]):
-        WithSynapses.__init__(self, name, dynamics, synapses,
-                              connection_parameter_sets)
         BaseALObject.__init__(self)
         DocumentLevelObject.__init__(self)
         ContainerObject.__init__(self)
+        WithSynapses.__init__(self, name, dynamics, synapses,
+                              connection_parameter_sets)
         # Create references to all dynamics member variables so that inherited
         # Dynamics properties and methods can find them.
         self._annotations = dynamics._annotations
@@ -526,6 +517,8 @@ class WithSynapsesProperties(object):
     """
 
     __metaclass__ = ABCMeta
+    nineml_child = {'dynamics_properties': None}
+    nineml_children = (Synapse, ConnectionPropertySet)
 
     def __init__(self, name, dynamics_properties, synapse_properties=[],
                  connection_property_sets=[]):
@@ -546,10 +539,6 @@ class WithSynapsesProperties(object):
         self._definition = Definition(
             WithSynapses.wrap(dynamics_properties.component_class,
                               synapses, connection_parameter_sets))
-        # Copy what would be class members in the dynamics class so it will
-        # appear like an object of that class
-        self.nineml_children = dynamics_properties.nineml_children + (
-            Synapse, ConnectionPropertySet)
 
     @property
     def name(self):
