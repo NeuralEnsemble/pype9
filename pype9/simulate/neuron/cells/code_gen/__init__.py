@@ -30,6 +30,8 @@ from nineml.user import (
     MultiDynamicsProperties, DynamicsProperties, Definition, Property)
 from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
                                 Constant, Expression)
+from nineml.abstraction.dynamics.visitors.queriers import (
+    DynamicsInterfaceInferer)
 from nineml.visitors.cloner import Cloner
 from sympy.printing import ccode
 from pype9.simulate.neuron.units import UnitHandler
@@ -42,7 +44,7 @@ from pype9.annotations import (
     TRANSFORM_SRC, TRANSFORM_DEST, NONSPECIFIC_CURRENT, BUILD_TRANS,
     EXTERNAL_CURRENTS, NO_TIME_DERIVS, INTERNAL_CONCENTRATION,
     EXTERNAL_CONCENTRATION, NUM_TIME_DERIVS, MECH_TYPE, FULL_CELL_MECH,
-    SUB_COMPONENT_MECH, ARTIFICIAL_CELL_MECH)
+    SUB_COMPONENT_MECH, ARTIFICIAL_CELL_MECH, DISCARDED, DISCARD_PARAM)
 import logging
 
 TRANSFORM_NS = 'NeuronBuildTransform'
@@ -177,8 +179,8 @@ class CodeGenerator(BaseCodeGenerator):
         # ---------------------------------------------------------------------
         # Clone original component class
         # ---------------------------------------------------------------------
-        trfrm = Cloner().clone(component_class.dynamics)
-#         trfrm.name = name
+        trfrm = component_class.dynamics.flatten()
+        trfrm._name = name
         # ---------------------------------------------------------------------
         # Get the membrane voltage and convert it to 'v'
         # ---------------------------------------------------------------------
@@ -255,9 +257,22 @@ class CodeGenerator(BaseCodeGenerator):
         else:
             trfrm.annotations.set((BUILD_TRANS, PYPE9_NS), MECH_TYPE,
                                   ARTIFICIAL_CELL_MECH)
+
+        # -----------------------------------------------------------------
+        # Trim unneeded parameters
+        # -----------------------------------------------------------------
+
+        # Infer required parameters
+        inferred = DynamicsInterfaceInferer(trfrm)
+
+        for parameter in list(trfrm.parameters):
+            if parameter.name not in inferred.parameter_names:
+                trfrm.remove(parameter)
+
         # -----------------------------------------------------------------
         # Validate the transformed component class and construct prototype
         # -----------------------------------------------------------------
+
         trfrm.validate()
         trfrm_with_syn = DynamicsWithSynapses(
             name, trfrm, component_class.synapses,

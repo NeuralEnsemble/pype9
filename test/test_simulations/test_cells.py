@@ -31,6 +31,8 @@ cell_metaclasses = {'neuron': NeuronCellMetaClass,
 NEST_RNG_SEED = 1234567890
 NEURON_RNG_SEED = 987654321
 
+SIMULATORS_TO_TEST = ['neuron']
+
 
 class TestDynamics(TestCase):
 
@@ -50,7 +52,7 @@ class TestDynamics(TestCase):
         'end_refractory': (None, 1), 'v': ('v', 1)}
 
     def test_izhi(self, plot=False, print_comparisons=False,
-                  simulators=['neuron'],  # simulators=['nest', 'neuron'],
+                  simulators=SIMULATORS_TO_TEST,
                   dt=0.001, duration=100.0,
                   build_mode='force', **kwargs):  # @UnusedVariable
         # Force compilation of code generation
@@ -105,7 +107,7 @@ class TestDynamics(TestCase):
                     0.02 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
     def test_hh(self, plot=False, print_comparisons=False,
-                simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
+                simulators=SIMULATORS_TO_TEST, dt=0.001, duration=100.0,
                 build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
         comparer = Comparer(
@@ -179,7 +181,7 @@ class TestDynamics(TestCase):
                     0.0015 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
     def test_liaf(self, plot=False, print_comparisons=False,
-                  simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
+                  simulators=SIMULATORS_TO_TEST, dt=0.001, duration=100.0,
                   build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
         comparer = Comparer(
@@ -228,7 +230,7 @@ class TestDynamics(TestCase):
                     0.55 * pq.mV, comparisons[('9ML-nest', '9ML-neuron')]))
 
     def test_alpha_syn(self, plot=False, print_comparisons=False,
-                       simulators=['nest', 'neuron'], dt=0.001,
+                       simulators=SIMULATORS_TO_TEST, dt=0.001,
                        duration=100.0, min_delay=5.0, device_delay=5.0,
                        build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
@@ -353,7 +355,7 @@ class TestDynamics(TestCase):
                     0.03 * pq.mV, comparisons[('9ML-neuron', 'Ref-neuron')]))
 
     def test_izhiFS(self, plot=False, print_comparisons=False,
-                    simulators=['nest', 'neuron'], dt=0.001, duration=100.0,
+                    simulators=SIMULATORS_TO_TEST, dt=0.001, duration=100.0,
                     build_mode='force', **kwargs):  # @UnusedVariable
         # Force compilation of code generation
         # Perform comparison in subprocess
@@ -385,7 +387,7 @@ class TestDynamics(TestCase):
 
     def test_poisson(self, duration=100 * un.s, rate=100 * un.Hz,
                      t_next=0.0 * un.ms, print_comparisons=False, dt=0.1,
-                     simulators=['nest', 'neuron'], build_mode='force',
+                     simulators=SIMULATORS_TO_TEST, build_mode='force',
                      **kwargs):  # @UnusedVariable @IgnorePep8
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': build_mode,

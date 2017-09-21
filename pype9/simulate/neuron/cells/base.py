@@ -234,7 +234,15 @@ class Cell(base.Cell):
                                                               un.cm ** 2))
         except LookupError:
             varname = self._escaped_name(varname)
-            setattr(self._sec, varname, val)
+            try:
+                setattr(self._sec, varname, val)
+            except AttributeError:
+                # Check to see if parameter has been removed in build
+                # transform and if not raise the error
+                if varname not in self.component_class.parameter_names:
+                    raise AttributeError(
+                        "Could not set '{}' to hoc object or NEURON section"
+                        .format(varname))
 
     def _set_regime(self):
         setattr(self._hoc, REGIME_VARNAME, self._regime_index)

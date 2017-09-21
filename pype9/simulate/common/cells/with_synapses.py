@@ -22,7 +22,7 @@ class ConnectionParameterSet(BaseALObject, ContainerObject):
         ContainerObject.__init__(self)
         self._port = validate_identifier(port)
         for param in parameters:
-            self.add(param.clone())
+            self.add(param.clone(as_class=Parameter))
 
     def __repr__(self):
         return ("ConnectionParameterSet(port={}, parameters=[{}])"
@@ -503,11 +503,14 @@ class MultiDynamicsWithSynapses(WithSynapses, MultiDynamics):
         # Dynamics properties and methods can find them.
         self._annotations = dynamics._annotations
         self._sub_components = dynamics._sub_components
-        self._analog_send_ports = dynamics._analog_send_ports
-        self._analog_receive_ports = dynamics._analog_receive_ports
-        self._analog_reduce_ports = dynamics._analog_reduce_ports
-        self._event_send_ports = dynamics._event_send_ports
-        self._event_receive_ports = dynamics._event_receive_ports
+        self._analog_send_port_exposures = dynamics._analog_send_port_exposures
+        self._analog_receive_port_exposures = (
+            dynamics._analog_receive_port_exposures)
+        self._analog_reduce_port_exposures = (
+            dynamics._analog_reduce_port_exposures)
+        self._event_send_port_exposures = dynamics._event_send_port_exposures
+        self._event_receive_port_exposures = (
+            dynamics._event_receive_port_exposures)
         self._analog_port_connections = dynamics._analog_port_connections
         self._event_port_connections = dynamics._event_port_connections
 
