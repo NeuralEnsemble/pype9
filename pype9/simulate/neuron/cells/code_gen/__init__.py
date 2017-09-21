@@ -131,10 +131,18 @@ class CodeGenerator(BaseCodeGenerator):
 
     def generate_mod_file(self, template, component_class, src_dir, name,
                           template_args):
+        # Get list of all unique triggers within the component class so they
+        # can be referred to by an index (i.e. their index in the list).
+        all_triggers = []
+        for regime in component_class.regimes:
+            for on_condition in regime.on_conditions:
+                if on_condition.trigger.rhs not in all_triggers:
+                    all_triggers.append(on_condition.trigger.rhs)
         tmpl_args = {
             'code_gen': self,
             'component_name': name,
             'component_class': component_class,
+            'all_triggers': all_triggers,
             'version': pype9.__version__, 'src_dir': src_dir,
             'timestamp': datetime.now().strftime('%a %d %b %y %I:%M:%S%p'),
             'unit_handler': UnitHandler(component_class),

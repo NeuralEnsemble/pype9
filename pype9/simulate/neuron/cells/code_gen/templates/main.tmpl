@@ -216,7 +216,7 @@ NET_RECEIVE(connection_weight_, channel) {
         {% for regime in component_class.regimes %}        
             {% for oc in regime.on_conditions %}
                 {% if oc.trigger.crossing_time_expr %}
-        net_send({{unit_handler.scale_expr(oc.trigger.crossing_time_expr.rhs - sympy.Symbol('t'))[0].rhs}}, {{component_class.index_of(oc.trigger.rhs, key='TriggerRHS') + 1}})
+        net_send({{unit_handler.scale_expr(oc.trigger.crossing_time_expr.rhs - sympy.Symbol('t'))[0].rhs}}, {{all_triggers.index(oc.trigger.rhs) + 1}})
                 {% endif %}
             {% endfor %}
         {% endfor %}
@@ -224,7 +224,7 @@ NET_RECEIVE(connection_weight_, channel) {
         : Set up required watch statements
         {% for regime in component_class.regimes %}
             {% for oc in regime.on_conditions %}
-        WATCH ({{oc.trigger.rhs_cstr}}) {{component_class.index_of(oc.trigger.rhs, key='TriggerRHS') + 1}}  : Watch trigger of on-condition and send appropriate flag
+        WATCH ({{oc.trigger.rhs_cstr}}) {{all_triggers.index(oc.trigger.rhs) + 1}}  : Watch trigger of on-condition and send appropriate flag
             {% endfor %}
         {% endfor %}
     {% endif %}
@@ -232,7 +232,7 @@ NET_RECEIVE(connection_weight_, channel) {
     } else if ({{regime_varname}} == {{regime.name | upper}}) {
         {% for trans in regime.transitions %}
             {% if hasattr(trans, 'trigger') %}
-        if (flag == {{component_class.index_of(trans.trigger.rhs, key='TriggerRHS') + 1}}) {  : Condition '{{trans.trigger.rhs_str}}'
+        if (flag == {{all_triggers.index(trans.trigger.rhs) + 1}}) {  : Condition '{{trans.trigger.rhs_str}}'
             {% else %}
         if (flag == ON_EVENT && channel == {{trans.src_port_name | upper}}) {
                 {% if trans.src_port_name in component_class.connection_parameter_set_names %}
@@ -269,7 +269,7 @@ NET_RECEIVE(connection_weight_, channel) {
             : Use net_send for transitions triggers that depend on t
                 {% for oc in trans.target_regime.on_conditions %}
                     {% if oc.trigger.crossing_time_expr %}
-            net_send({{unit_handler.scale_expr(oc.trigger.crossing_time_expr.rhs - sympy.Symbol('t'))[0].rhs}}, {{component_class.index_of(oc.trigger.rhs, key='TriggerRHS') + 1}})
+            net_send({{unit_handler.scale_expr(oc.trigger.crossing_time_expr.rhs - sympy.Symbol('t'))[0].rhs}}, {{all_triggers.index(oc.trigger.rhs) + 1}})
                     {% endif %}
                 {% endfor %}
             {% endif %}
