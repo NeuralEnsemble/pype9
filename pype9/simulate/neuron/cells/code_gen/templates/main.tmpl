@@ -236,7 +236,7 @@ NET_RECEIVE(connection_weight_, channel) {
             {% else %}
         if (flag == ON_EVENT && channel == {{trans.src_port_name | upper}}) {
                 {% if trans.src_port_name in component_class.connection_parameter_set_names %}
-                    {% set connection_parameter =  component_class.connection_parameter_set(trans.src_port_name).parameters[0]%}
+                    {% set connection_parameter =  next(component_class.connection_parameter_set(trans.src_port_name).parameters)%}
                     {# FIXME: Need to check that there is only one connection parameter per input channel #}
             : Assign event weight to paired analog receive port
             {{connection_parameter.name}} = connection_weight_ * {{connection_parameter.name | upper}}_UNITS_
