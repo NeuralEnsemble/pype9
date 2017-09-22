@@ -252,7 +252,9 @@ class CodeGenerator(BaseCodeGenerator):
                                   ARTIFICIAL_CELL_MECH)
 
         # -----------------------------------------------------------------
-        # Trim unneeded parameters
+        # Insert dummy aliases for parameters (such as capacitance) that
+        # now do not show up in the inferred interface for the transformed
+        # class (i.e. that were only # present in the voltage time derivative)
         # -----------------------------------------------------------------
 
         # Infer required parameters
@@ -260,7 +262,7 @@ class CodeGenerator(BaseCodeGenerator):
 
         for parameter in list(trfrm.parameters):
             if parameter.name not in inferred.parameter_names:
-                trfrm.remove(parameter)
+                trfrm.add(Alias(parameter.name + '___dummy', parameter.name))
 
         # -----------------------------------------------------------------
         # Validate the transformed component class and construct prototype

@@ -220,7 +220,9 @@ class Cell(base.Cell):
             try:
                 return getattr(self._sec, varname)
             except AttributeError:
-                assert False
+                raise Pype9UsageError(
+                    "'{}' doesn't have an attribute '{}'"
+                    .format(self.name, varname))
 
     def _set(self, varname, val):
         try:
