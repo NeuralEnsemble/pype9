@@ -1,4 +1,4 @@
-# examples/MyModule/CMakeLists.txt
+# {{component_name}}/CMakeLists.txt
 #
 # This file is part of NEST.
 #
@@ -32,10 +32,10 @@ cmake_minimum_required( VERSION 2.8.12 )
 #           https://nest.github.io/nest-simulator/extension_modules
 
 # 1) Name your module here, i.e. add later with -Dexternal-modules=my:
-set( SHORT_NAME my )
+set( SHORT_NAME {{component_name}} )
 
 #    the complete module name is here:
-set( MODULE_NAME ${SHORT_NAME}module )
+set( MODULE_NAME {{component_name}}module )
 
 # 2) Add all your sources here
 set( MODULE_SOURCES
