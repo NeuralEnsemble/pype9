@@ -1,0 +1,11 @@
+--- nest/examples/MyModule/sli/mymodule-init.sli	2017-09-22 21:06:43.000000000 +1000
++++ nest-2.10/examples/MyModule/sli/mymodule-init.sli	2017-09-22 21:11:33.000000000 +1000
+@@ -26,3 +26,8 @@
+  */
+ 
+ M_DEBUG (mymodule.sli) (Initializing SLI support for MyModule.) message
++
++/StepPatternConnect [ /arraytype /integertype /arraytype /integertype /literaltype ]
++{
++  StepPatternConnect_Vi_i_Vi_i_l
++} def
