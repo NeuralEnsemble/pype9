@@ -35,31 +35,33 @@ class PyNNConnectivity(BaseConnectivity):
             connector = self._pyNN_module.MapConnector()
             connector._connect_with_map(connection_group, self._connection_map)
         else:
-            if self._rule_props.lib_type == 'AllToAll':
+            if self.rule_properties.lib_type == 'AllToAll':
                 connector_cls = self._pyNN_module.AllToAllConnector
                 params = {}
-            elif self._rule_props.lib_type == 'OneToOne':
+            elif self.rule_properties.lib_type == 'OneToOne':
                 connector_cls = self._pyNN_module.OneToOneConnector
                 params = {}
-            elif self._rule_props.lib_type == 'Explicit':
+            elif self.rule_properties.lib_type == 'Explicit':
                 connector_cls = self._pyNN_module.FromListConnector
-                src = self._rule_props.property('sourceIndicies')
-                dst = self._rule_props.property('destinationIndicies')
+                src = self.rule_properties.property('sourceIndicies')
+                dst = self.rule_properties.property('destinationIndicies')
                 assert len(src) == len(dst)
                 params = {'conn_list': zip(src, dst)}
-            elif self._rule_props.lib_type == 'Probabilistic':
+            elif self.rule_properties.lib_type == 'Probabilistic':
                 connector_cls = self._pyNN_module.FixedProbabilityConnector
                 params = {
                     'p_connect':
-                    float(self._rule_props.property('probability').value),
+                    float(self.rule_properties.property('probability').value),
                     'rng': None}
-            elif self._rule_props.lib_type == 'RandomFanIn':
+            elif self.rule_properties.lib_type == 'RandomFanIn':
                 connector_cls = self._pyNN_module.FixedNumberPreConnector
-                params = {'n': int(self._rule_props.property('number').value),
+                params = {'n':
+                          int(self.rule_properties.property('number').value),
                           'rng': None}
-            elif self._rule_props.lib_type == 'RandomFanOut':
+            elif self.rule_properties.lib_type == 'RandomFanOut':
                 connector_cls = self._pyNN_module.FixedNumberPostConnector
-                params = {'n': int(self._rule_props.property('number').value),
+                params = {'n':
+                          int(self.rule_properties.property('number').value),
                           'rng': None}
             else:
                 assert False

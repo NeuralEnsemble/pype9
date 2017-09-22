@@ -360,7 +360,17 @@ class Network(object):
             # All port connections between post-synaptic cell and linear
             # synapses and port exposures to pre-synaptic cell
             internal_conns = []
-            exposures = set()
+            exposures = []
+
+            def add_exposures(exposures_to_add):
+                """
+                Adds exposures to a "set" of exposures. If 9ML objects were
+                hashable could use a 'set'.
+                """
+                for pe in exposures_to_add:
+                    if pe not in exposures:
+                        exposures.append(pe)
+
             synapses = []
             connection_property_sets = []
             # FIXME: There has to be a way of avoiding this name clash
@@ -396,7 +406,7 @@ class Network(object):
                                                               proj.name))
                     # Add the flattened synapse to the multi-dynamics sub
                     # components
-                    sub_components[proj.name] = synapse
+                    sub_components[proj.name] = synapse.clone()
                     # Convert port connections between synpase and post-
                     # synaptic cell into internal port connections of a multi-
                     # dynamics object
@@ -413,11 +423,11 @@ class Network(object):
                                                       post_conns))
                     # Add exposures to the post-synaptic cell for connections
                     # from the synapse
-                    exposures.update(
-                        chain(*(pc.expose_ports({'post': cls.CELL_COMP_NAME})
-                                for pc in post_conns)))
+                    add_exposures(chain(*(
+                        pc.expose_ports({'post': cls.CELL_COMP_NAME})
+                        for pc in post_conns)))
                 # Add exposures for connections to/from the pre synaptic cell
-                exposures.update(
+                add_exposures(
                     chain(*(pc.expose_ports(role2name) for pc in pre_conns)))
                 role2name['pre'] = cls.CELL_COMP_NAME
             # Add exposures for connections to/from the pre-synaptic cell in
@@ -426,7 +436,7 @@ class Network(object):
                 # Not required after transition to version 2 syntax
                 synapse, proj_conns = cls._flatten_synapse(proj)
                 # Add send and receive exposures to list
-                exposures.update(chain(*(
+                add_exposures(chain(*(
                     pc.expose_ports({'pre': cls.CELL_COMP_NAME})
                     for pc in proj_conns)))
             # Add all cell ports as multi-component exposures that aren't
@@ -437,12 +447,13 @@ class Network(object):
                  if pc.sender_name == cls.CELL_COMP_NAME),
                 (pc.receive_port_name for pc in internal_conns
                  if pc.receiver_name == cls.CELL_COMP_NAME)))
-            exposures.update(
+            add_exposures(
                 BasePortExposure.from_port(p, cls.CELL_COMP_NAME)
                 for p in pop.cell.ports if p.name not in internal_cell_ports)
             dynamics_properties = MultiDynamicsProperties(
                 name=pop.name + '_cell', sub_components=sub_components,
-                port_connections=internal_conns, port_exposures=exposures)
+                port_connections=internal_conns,
+                port_exposures=exposures)
             component = MultiDynamicsWithSynapsesProperties(
                 dynamics_properties.name,
                 dynamics_properties, synapses_properties=synapses,
@@ -453,8 +464,8 @@ class Network(object):
         selections = {}
         for sel in network_model.selections:
             selections[sel.name] = Selection9ML(
-                sel.name, Concatenate9ML(*(component_arrays[p.name]
-                                           for p in sel.populations)))
+                sel.name, Concatenate9ML(component_arrays[p.name]
+                                           for p in sel.populations))
         arrays_and_selections = dict(
             chain(component_arrays.iteritems(), selections.iteritems()))
         # Create ConnectionGroups from each port connection in Projection
@@ -822,6 +833,10 @@ class Selection(object):
         self._nineml = nineml_model
         self._component_arrays = dict(
             (ca.name, ca) for ca in component_arrays)
+        try:
+            assert(self._component_arrays)
+        except:
+            raise
         self.PyNNAssemblyClass.__init__(
             self, *component_arrays, label=nineml_model.name)
 
@@ -861,7 +876,10 @@ class Selection(object):
             raise Pype9RuntimeError(
                 "'{}' varies ({}) between component arrays in '{}' Selection"
                 .format(name, ', '.join(str(s) for s in synapses), self.name))
-        return next(iter(synapses))  # Return the only synapse
+        try:
+            return next(iter(synapses))  # Return the only synapse
+        except:
+            raise
 
     def __repr__(self):
         return "Selection('{}', component_arrays=('{}')".format(

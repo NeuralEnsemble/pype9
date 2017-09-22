@@ -75,7 +75,7 @@ class ConnectionPropertySet(BaseULObject, ContainerObject):
         ContainerObject.__init__(self)
         self._port = validate_identifier(port)
         for prop in properties:
-            self.add(prop)
+            self.add(prop.clone(as_class=Property))
 
     def __repr__(self):
         return ("ConnectionPropertySet(port={}, properties=[{}])"
@@ -131,7 +131,7 @@ class Synapse(BaseALObject, ContainerObject):
         super(Synapse, self).__init__()
         ContainerObject.__init__(self)
         self._name = validate_identifier(name)
-        self._dynamics = dynamics
+        self._dynamics = dynamics.clone()
         if port_connections is None:
             port_connections = []
         if analog_port_connections is None:
@@ -140,7 +140,7 @@ class Synapse(BaseALObject, ContainerObject):
             event_port_connections = []
         for port_conn in chain(port_connections, analog_port_connections,
                                event_port_connections):
-            self.add(port_conn)
+            self.add(port_conn.clone())
 
     def __repr__(self):
         return ("Synapse(name='{}', dynamics={}, port_connections=[{}])"
@@ -240,7 +240,7 @@ class SynapseProperties(BaseULObject, ContainerObject):
         super(SynapseProperties, self).__init__()
         ContainerObject.__init__(self)
         self._name = validate_identifier(name)
-        self._dynamics_properties = dynamics_properties
+        self._dynamics_properties = dynamics_properties.clone()
         if port_connections is None:
             port_connections = []
         if analog_port_connections is None:
@@ -249,7 +249,7 @@ class SynapseProperties(BaseULObject, ContainerObject):
             event_port_connections = []
         for port_conn in chain(port_connections, analog_port_connections,
                                event_port_connections):
-            self.add(port_conn)
+            self.add(port_conn.clone())
 
     def __repr__(self):
         return ("Synapse(name='{}', dynamics_properties={}, "
@@ -304,8 +304,7 @@ class WithSynapses(object):
         self._name = validate_identifier(name)
         self._dynamics = dynamics
         self.add(*synapses)
-        self._connection_parameter_sets = dict(
-            (pw.port, pw) for pw in connection_parameter_sets)
+        self.add(*connection_parameter_sets)
         for conn_param in self.all_connection_parameters():
             try:
                 dyn_param = self._dynamics.parameter(conn_param.name)
