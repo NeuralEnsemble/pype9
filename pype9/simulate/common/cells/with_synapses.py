@@ -455,9 +455,6 @@ class WithSynapses(object):
         """
         nineml.write(fname, self, **kwargs)
 
-    def __getattr__(self, name):
-        return getattr(self._dynamics, name)
-
 
 class DynamicsWithSynapses(WithSynapses, Dynamics):
 
@@ -531,8 +528,7 @@ class WithSynapsesProperties(object):
         self._name = validate_identifier(name)
         self._dynamics_properties = dynamics_properties
         self.add(*synapse_properties)
-        self._connection_property_sets = dict(
-            (cp.port, cp) for cp in connection_property_sets)
+        self.add(*connection_property_sets)
         # Extract the AL objects for the definition
         synapses = (Synapse(s.name, s.dynamics_properties.component_class,
                             s.port_connections)
@@ -676,22 +672,19 @@ class WithSynapsesProperties(object):
         return cls(name, dynamics_properties, synapse_properties,
                    property_sets)
 
-    def __getattr__(self, name):
-        return getattr(self._dynamics_properties, name)
-
 
 class DynamicsWithSynapsesProperties(WithSynapsesProperties,
                                      DynamicsProperties):
 
     def __init__(self, name, dynamics_properties, synapses_properties=[],
                  connection_property_sets=[]):
-        WithSynapsesProperties.__init__(self, name, dynamics_properties,
-                                        synapses_properties,
-                                        connection_property_sets)
         # Initiate inherited base classes
         BaseULObject.__init__(self)
         DocumentLevelObject.__init__(self)
         ContainerObject.__init__(self)
+        WithSynapsesProperties.__init__(self, name, dynamics_properties,
+                                        synapses_properties,
+                                        connection_property_sets)
         # Create references to all dynamics member variables so that inherited
         # DynamicsProperties properties and methods can find them.
         self._annotations = dynamics_properties._annotations
@@ -705,13 +698,13 @@ class MultiDynamicsWithSynapsesProperties(WithSynapsesProperties,
 
     def __init__(self, name, dynamics_properties, synapses_properties=[],
                  connection_property_sets=[]):
-        WithSynapsesProperties.__init__(self, name, dynamics_properties,
-                                        synapses_properties,
-                                        connection_property_sets)
         # Initiate inherited base classes
         BaseULObject.__init__(self)
         DocumentLevelObject.__init__(self)
         ContainerObject.__init__(self)
+        WithSynapsesProperties.__init__(self, name, dynamics_properties,
+                                        synapses_properties,
+                                        connection_property_sets)
         # Create references to all dynamics member variables so that inherited
         # MultiDynamicsProperties properties and methods can find them.
         self._annotations = dynamics_properties._annotations

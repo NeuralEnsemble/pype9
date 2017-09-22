@@ -106,7 +106,7 @@ class TestDynamics(TestCase):
                 "built-in within {} ({})".format(
                     0.02 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
-    def test_hh(self, plot=False, print_comparisons=False,
+    def test_hh(self, plot=True, print_comparisons=False,
                 simulators=SIMULATORS_TO_TEST, dt=0.001, duration=100.0,
                 build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
