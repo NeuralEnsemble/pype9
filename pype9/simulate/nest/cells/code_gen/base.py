@@ -10,7 +10,6 @@
 from __future__ import absolute_import
 import os
 from os import path
-from copy import deepcopy
 import subprocess as sp
 import re
 import logging
@@ -20,12 +19,7 @@ from pype9.exceptions import Pype9BuildError
 import pype9
 import shutil
 from datetime import datetime
-from copy import copy
-from nineml.user import DynamicsProperties, Definition
-from nineml.abstraction import Dynamics
-from nineml import Document
 from pype9.simulate.nest.units import UnitHandler
-from pype9.exceptions import Pype9RuntimeError
 
 
 REGIME_VARNAME = '__regime__'

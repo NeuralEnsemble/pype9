@@ -39,10 +39,7 @@ set( MODULE_NAME {{component_name}}module )
 
 # 2) Add all your sources here
 set( MODULE_SOURCES
-    mymodule.h mymodule.cpp
-    pif_psc_alpha.cpp pif_psc_alpha.h
-    drop_odd_spike_connection.h
-    step_pattern_builder.h step_pattern_builder.cpp
+    {{component_name}}.h {{component_name}}.cpp
     )
 
 # 3) We require a header name like this:

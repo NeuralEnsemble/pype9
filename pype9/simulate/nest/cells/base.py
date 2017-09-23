@@ -16,7 +16,6 @@ import nest
 import quantities as pq
 from nineml.exceptions import NineMLNameError
 from nineml import units as un
-from nineml.abstraction.ports import EventPort, AnalogPort
 from .code_gen import CodeGenerator, REGIME_VARNAME
 from pype9.simulate.nest.simulation import Simulation
 from pype9.simulate.common.cells import base
