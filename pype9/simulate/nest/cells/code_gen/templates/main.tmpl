@@ -650,7 +650,7 @@ void {{component_name}}::init_buffers_() {
 }
 
 
-void {{component_name}}::refresh_events(const nest::long_t& lag) {
+void {{component_name}}::refresh_events(const long& lag) {
 {% for port in component_class.event_send_ports %}
     B_.num_{{port.name}}_events = 0;
 {% endfor %}
@@ -669,16 +669,16 @@ void {{component_name}}::refresh_events(const nest::long_t& lag) {
  * Evaluate the update *
  ***********************/
 
-void {{component_name}}::update(nest::Time const & origin, const nest::long_t from, const nest::long_t to) {
+void {{component_name}}::update(nest::Time const & origin, const long from, const long to) {
 
     assert(to >= 0 && (nest::delay) from < nest::Scheduler::get_min_delay());
     assert(from < to);
 
-    nest::long_t current_steps = origin.get_steps();
+    long current_steps = origin.get_steps();
 
     double dt = nest::Time::get_resolution().get_ms();    
 
-    for (nest::long_t lag = from; lag < to; ++lag) {
+    for (long lag = from; lag < to; ++lag) {
     
         // Update time stored in state
         S_.t = origin.get_ms();
