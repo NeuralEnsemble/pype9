@@ -26,6 +26,8 @@ REGIME_VARNAME = '__regime__'
 
 logger = logging.getLogger('PyPe9')
 
+cmake_success_re = re.compile(r'-- Build files have been written to: (.*)')
+
 
 class CodeGenerator(BaseCodeGenerator):
 
@@ -46,8 +48,8 @@ class CodeGenerator(BaseCodeGenerator):
     def __init__(self, build_cores=1):
         super(CodeGenerator, self).__init__()
         self._build_cores = build_cores
-        nest_config = self.path_to_utility('nest-config')
-        compiler = sp.check_output('{} --compiler'.format(nest_config),
+        self.nest_config = self.path_to_utility('nest-config')
+        compiler = sp.check_output('{} --compiler'.format(self.nest_config),
                                    shell=True)
         self._compiler = compiler[:-1]  # strip trailing \n
 
@@ -114,46 +116,27 @@ class CodeGenerator(BaseCodeGenerator):
                         .format(compile_dir))
             orig_dir = os.getcwd()
             config_args = {'name': name, 'src_dir': src_dir,
-                           'ode_solver': kwargs.get('ode_solver',
-                                                    self.ODE_SOLVER_DEFAULT),
+                           # NB: ODE solver currently ignored
+                           # 'ode_solver': kwargs.get('ode_solver',
+                           #                          self.ODE_SOLVER_DEFAULT),
                            'version': pype9.__version__}
-            self.render_to_file('configure-ac.tmpl', config_args,
-                                 'configure.ac', src_dir)
-            self.render_to_file('Makefile-am.tmpl', config_args,
-                                 'Makefile.am', src_dir)
-            self.render_to_file('bootstrap-sh.tmpl', config_args,
-                                 'bootstrap.sh', src_dir)
-            os.chdir(src_dir)
-            try:
-                bootstrap = sp.Popen(
-                    ['sh', 'bootstrap.sh'], stdout=sp.PIPE, stderr=sp.PIPE)
-                stdout, stderr = bootstrap.communicate()
-            except sp.CalledProcessError as e:
-                raise Pype9BuildError(
-                    "Error executing bootstrapping of '{}' NEST module "
-                    "failed (see src directory '{}'):\n\n{}"
-                    .format(name or src_dir, src_dir, e))
-            if (re.search(r'error', stdout + stderr, re.IGNORECASE) or
-                    not stdout.rstrip().endswith('Done.')):
-                raise Pype9BuildError(
-                    "Bootstrapping of '{}' NEST module failed (see src "
-                    "directory '{}'):\n\n{}\n{}"
-                    .format(name or src_dir, src_dir, stdout, stderr))
-            logger.debug(stderr)
-            logger.debug(stdout)
+            self.render_to_file('CMakeLists.txt.tmpl', config_args,
+                                 'CMakeLists.txt', src_dir)
             os.chdir(compile_dir)
             env = os.environ.copy()
             env['CXX'] = self._compiler
             try:
-                configure = sp.Popen(
-                    ['sh', src_dir + '/configure', '--prefix=' + install_dir],
+                cmake = sp.Popen(
+                    ['cmake', '--with-nest=' + self.nest_config,
+                     '-DCMAKE_INSTALL_PREFIX=' + install_dir, src_dir],
                     env=env, stdout=sp.PIPE, stderr=sp.PIPE)
-                stdout, stderr = configure.communicate()
+                stdout, stderr = cmake.communicate()
             except sp.CalledProcessError as e:
                 raise Pype9BuildError(
-                    "Configuration of '{}' NEST module failed (see src "
+                    "Cmake of '{}' NEST module failed (see src "
                     "directory '{}'):\n\n {}".format(name, src_dir, e))
-            if 'make install' not in stdout:
+            match = cmake_success_re.match(stdout)
+            if not (match and match.group(1) == compile_dir):
                 raise Pype9BuildError(
                     "Configure of '{}' NEST module failed (see src "
                     "directory '{}'):\n\n{}\n{}"
