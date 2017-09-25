@@ -135,12 +135,15 @@ class CodeGenerator(BaseCodeGenerator):
                 raise Pype9BuildError(
                     "Cmake of '{}' NEST module failed (see src "
                     "directory '{}'):\n\n {}".format(name, src_dir, e))
-            match = cmake_success_re.match(stdout)
-            if not (match and match.group(1) == compile_dir):
+            last_line = stdout.strip().split('\n')[-1]
+            match = cmake_success_re.match(last_line)
+            if not match:
                 raise Pype9BuildError(
                     "Configure of '{}' NEST module failed (see src "
                     "directory '{}'):\n\n{}\n{}"
                     .format(name or src_dir, src_dir, stdout, stderr))
+            else:
+                assert match.group(1) == compile_dir
             logger.debug(stderr)
             logger.debug(stdout)
             os.chdir(orig_dir)
