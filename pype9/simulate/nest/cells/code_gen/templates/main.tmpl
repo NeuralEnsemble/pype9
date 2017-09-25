@@ -14,7 +14,7 @@
 
 #include "{{component_name}}.h"
 #include "exceptions.h"
-#include "network.h"
+#include "kernel_manager.h"
 #include "dict.h"
 #include "integerdatum.h"
 #include "doubledatum.h"
@@ -758,7 +758,7 @@ void {{component_name}}::update(nest::Time const & origin, const long from, cons
             set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
             nest::SpikeEvent se;
             se.set_multiplicity(B_.num_{{port.name}}_events);
-            network()->send(*this, se, lag); 
+            kernel().event_delivery_manager.send(*this, se, lag); 
         }
 {% endfor %}
 
@@ -792,7 +792,7 @@ void {{component_name}}::handle(nest::SpikeEvent & e) {
         assert(false);  // Unrecognised port 
     
     const unsigned int multiplicity = e.get_multiplicity();
-    const unsigned int lag = e.get_rel_delivery_steps(network()->get_slice_origin()); 
+    const unsigned int lag = e.get_rel_delivery_steps(kernel().simulation_manager.get_slice_origin()); 
     const double_t weight = e.get_weight();
 
     // Append received events to buffer
@@ -817,7 +817,7 @@ void {{component_name}}::handle(nest::CurrentEvent& e) {
 
     const double_t c = e.get_current();
     const double_t w = e.get_weight();
-    const unsigned int lag = e.get_rel_delivery_steps(network()->get_slice_origin());
+    const unsigned int lag = e.get_rel_delivery_steps(kernel().simulation_manager.get_slice_origin());
 
     // Append current value for lag
     current_buffer->add_value(lag, w * c);
