@@ -108,14 +108,14 @@ namespace nineml {
         void calibrate();
         unsigned int current_regime_index() { return S_.current_regime->get_index(); }
         
-        void refresh_events(const nest::long_t& lag);
+        void refresh_events(const long& lag);
         
         /* Inline random distribution methods */
         double random_uniform_(double low, double high);
         double random_normal_(double mu, double sigma);
         double random_exponential_(double lambda); 
 
-        void update(nest::Time const &, const nest::long_t, const nest::long_t);
+        void update(nest::Time const &, const long, const long);
         
         Regime_* get_regime(unsigned int index) { return regimes[index]; }
 
@@ -182,7 +182,7 @@ namespace nineml {
         // Synaptic event function definitions
 {% for regime in component_class.regimes %}
     {% for oe in regime.on_events %}
-        inline void {{oe.src_port_name}}_event_in_{{regime.name}}(nest::long_t lag);
+        inline void {{oe.src_port_name}}_event_in_{{regime.name}}(long lag);
     {% endfor %}
 {% endfor %}
 
@@ -515,8 +515,8 @@ namespace nineml {
     inline void {{component_name}}::set_status(const DictionaryDatum &d) {
             
         // Get the regime
-        nest::long_t regime_index;
-        updateValue<nest::long_t>(d, CURRENT_REGIME, regime_index);
+        long regime_index;
+        updateValue<long>(d, CURRENT_REGIME, regime_index);
         if ((regime_index < 0) || (regime_index >= NUM_REGIMES_))
             regime_index = 0;  // Sanitise non-sensical value to within range (initial states are set with arbitrary values during construction)
         Regime_* regime = regimes[regime_index];
