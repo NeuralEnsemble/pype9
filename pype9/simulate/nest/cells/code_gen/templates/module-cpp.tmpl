@@ -64,11 +64,8 @@ const std::string nineml::{{component_name}}Module::commandstring(void) const {
 
 void nineml::{{component_name}}Module::init( SLIInterpreter* i ) {
     /* Register a neuron or device model.
-       Give node type as template argument and the name as second argument.
-       The first argument is always a reference to the network.
-       Return value is a handle for later unregistration.
+       Give node type as template argument and the name as an argument.
     */
-   nest::register_model<{{component_name}}>(nest::NestModule::get_network(),
-                                            "{{component_name}}");
+   nest::kernel().model_manager.register_node_model<{{component_name}}>("{{component_name}}");
 
 }  // {{component_name}}Module::init()

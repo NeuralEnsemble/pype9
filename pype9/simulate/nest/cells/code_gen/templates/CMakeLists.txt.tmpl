@@ -35,7 +35,7 @@ cmake_minimum_required( VERSION 2.8.12 )
 set( SHORT_NAME {{name}} )
 
 #    the complete module name is here:
-set( MODULE_NAME {{name}}module )
+set( MODULE_NAME {{name}}Module )
 
 # 2) Add all your sources here
 set( MODULE_SOURCES
@@ -102,7 +102,7 @@ execute_process(
 )
 
 # Use the `NEST_PREFIX` as `CMAKE_INSTALL_PREFIX`.
-set( CMAKE_INSTALL_PREFIX "${NEST_PREFIX}" CACHE STRING "Install path prefix, prepended onto install directories." FORCE )
+# set( CMAKE_INSTALL_PREFIX "${NEST_PREFIX}" CACHE STRING "Install path prefix, prepended onto install directories." FORCE )
 
 # Get the CXXFLAGS.
 execute_process(
@@ -185,9 +185,9 @@ execute_process(
 set( CMAKE_MACOSX_RPATH ON )
 
 # Install all stuff to NEST's install directories.
-set( CMAKE_INSTALL_LIBDIR ${NEST_LIBDIR}/nest CACHE STRING "object code libraries (lib/nest or lib64/nest or lib/<multiarch-tuple>/nest on Debian)" FORCE )
-set( CMAKE_INSTALL_DOCDIR ${NEST_DOCDIR} CACHE STRING "documentation root (DATAROOTDIR/doc/nest)" FORCE )
-set( CMAKE_INSTALL_DATADIR ${NEST_DATADIR} CACHE STRING "read-only architecture-independent data (DATAROOTDIR/nest)" FORCE )
+# set( CMAKE_INSTALL_LIBDIR ${NEST_LIBDIR}/nest CACHE STRING "object code libraries (lib/nest or lib64/nest or lib/<multiarch-tuple>/nest on Debian)" FORCE )
+# set( CMAKE_INSTALL_DOCDIR ${NEST_DOCDIR} CACHE STRING "documentation root (DATAROOTDIR/doc/nest)" FORCE )
+# set( CMAKE_INSTALL_DATADIR ${NEST_DATADIR} CACHE STRING "read-only architecture-independent data (DATAROOTDIR/nest)" FORCE )
 
 include( GNUInstallDirs )
 
@@ -273,7 +273,7 @@ if ( NOT CMAKE_CROSSCOMPILING )
   add_custom_command( TARGET generate_help POST_BUILD
     COMMAND python -B generate_help.py "${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}"
     COMMAND python -B generate_helpindex.py "${PROJECT_BINARY_DIR}/doc"
-    WORKING_DIRECTORY "${CMAKE_INSTALL_PREFIX}/${NEST_DATADIR}/help_generator"
+    WORKING_DIRECTORY "${NEST_PREFIX}/${NEST_DATADIR}/help_generator"
     COMMENT "Extracting help information; this may take a litte while."
     )
   # Copy the local doc/help directory to the global installation
@@ -286,36 +286,35 @@ if ( NOT CMAKE_CROSSCOMPILING )
   install( CODE
     "execute_process(
       COMMAND python -B generate_helpindex.py \"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DOCDIR}\"
-      WORKING_DIRECTORY \"${CMAKE_INSTALL_PREFIX}/${NEST_DATADIR}/help_generator\"
+      WORKING_DIRECTORY \"${NEST_PREFIX}/${NEST_DATADIR}/help_generator\"
     )"
     )
 endif ()
 
-
-message( "" )
-message( "-------------------------------------------------------" )
-message( "${MODULE_NAME} Configuration Summary" )
-message( "-------------------------------------------------------" )
-message( "" )
-message( "C++ compiler         : ${CMAKE_CXX_COMPILER}" )
-message( "Build static libs    : ${NEST_STATIC_LIB}" )
-message( "C++ compiler flags   : ${CMAKE_CXX_FLAGS}" )
-message( "NEST compiler flags  : ${NEST_CXXFLAGS}" )
-message( "NEST include dirs    : ${NEST_INCLUDES}" )
-message( "NEST libraries flags : ${NEST_LIBS}" )
-message( "" )
-message( "-------------------------------------------------------" )
-message( "" )
-message( "You can now build and install '${MODULE_NAME}' using" )
-message( "  make" )
-message( "  make install" )
-message( "" )
-message( "The library file lib${MODULE_NAME}.so will be installed to" )
-message( "  ${CMAKE_INSTALL_FULL_LIBDIR}" )
-message( "Help files will be installed to" )
-message( "  ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DOCDIR}" )
-message( "" )
-message( "The module can be loaded into NEST using" )
-message( "  (${MODULE_NAME}) Install       (in SLI)" )
-message( "  nest.Install(${MODULE_NAME})   (in PyNEST)" )
-message( "" )
+# message( "" )
+# message( "-------------------------------------------------------" )
+# message( "${MODULE_NAME} Configuration Summary" )
+# message( "-------------------------------------------------------" )
+# message( "" )
+# message( "C++ compiler         : ${CMAKE_CXX_COMPILER}" )
+# message( "Build static libs    : ${NEST_STATIC_LIB}" )
+# message( "C++ compiler flags   : ${CMAKE_CXX_FLAGS}" )
+# message( "NEST compiler flags  : ${NEST_CXXFLAGS}" )
+# message( "NEST include dirs    : ${NEST_INCLUDES}" )
+# message( "NEST libraries flags : ${NEST_LIBS}" )
+# message( "" )
+# message( "-------------------------------------------------------" )
+# message( "" )
+# message( "You can now build and install '${MODULE_NAME}' using" )
+# message( "  make" )
+# message( "  make install" )
+# message( "" )
+# message( "The library file lib${MODULE_NAME}.so will be installed to" )
+# message( "  ${CMAKE_INSTALL_FULL_LIBDIR}" )
+# message( "Help files will be installed to" )
+# message( "  ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DOCDIR}" )
+# message( "" )
+# message( "The module can be loaded into NEST using" )
+# message( "  (${MODULE_NAME}) Install       (in SLI)" )
+# message( "  nest.Install(${MODULE_NAME})   (in PyNEST)" )
+# message( "" )

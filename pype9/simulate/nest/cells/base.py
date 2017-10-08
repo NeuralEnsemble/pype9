@@ -297,7 +297,6 @@ class CellMetaClass(base.CellMetaClass):
         add_lib_path(lib_dir)
         # Add module install directory to NEST path
         nest.sli_run(
-            '({}) addpath'.format(os.path.join(install_dir, 'share', 'nest',
-                                               'sli')))
+            '({}) addpath'.format(os.path.join(install_dir, 'share', 'sli')))
         # Install nest module
         nest.Install(name + 'Module')

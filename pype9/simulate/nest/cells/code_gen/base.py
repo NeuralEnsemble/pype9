@@ -124,10 +124,9 @@ class CodeGenerator(BaseCodeGenerator):
                                  'CMakeLists.txt', src_dir)
             os.chdir(compile_dir)
             env = os.environ.copy()
-            env['CXX'] = self._compiler
             try:
                 cmake = sp.Popen(
-                    ['cmake', '--with-nest=' + self.nest_config,
+                    ['cmake', '-Dwith-nest=' + self.nest_config,
                      '-DCMAKE_INSTALL_PREFIX=' + install_dir, src_dir],
                     env=env, stdout=sp.PIPE, stderr=sp.PIPE)
                 stdout, stderr = cmake.communicate()
@@ -135,15 +134,11 @@ class CodeGenerator(BaseCodeGenerator):
                 raise Pype9BuildError(
                     "Cmake of '{}' NEST module failed (see src "
                     "directory '{}'):\n\n {}".format(name, src_dir, e))
-            last_line = stdout.strip().split('\n')[-1]
-            match = cmake_success_re.match(last_line)
-            if not match:
+            if stderr:
                 raise Pype9BuildError(
                     "Configure of '{}' NEST module failed (see src "
                     "directory '{}'):\n\n{}\n{}"
                     .format(name or src_dir, src_dir, stdout, stderr))
-            else:
-                assert match.group(1) == compile_dir
             logger.debug(stderr)
             logger.debug(stdout)
             os.chdir(orig_dir)
@@ -177,10 +172,7 @@ class CodeGenerator(BaseCodeGenerator):
                 "Installation of '{}' NEST module failed (see compile "
                 "directory '{}'):\n\n {}"
                 .format(component_name, compile_dir, e))
-        # FIXME: At some point I should try to work out why building the SLI
-        #        documentation fails so I can just check stderr here
-        if ('Libraries have been installed in:' not in stdout and
-              not stdout.rstrip().endswith('Done.')):
+        if stderr:
             raise Pype9BuildError(
                 "Installation of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))
