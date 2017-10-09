@@ -27,7 +27,7 @@ pushd $HOME/build/$NEST
 export VENV=$(python -c "import sys; print(sys.prefix)");
 export PYLIB_DIR=$(python -c 'from distutils import sysconfig; print(sysconfig.get_config_var("LIBDIR"))');
 export PYINC_DIR=$(python -c 'from distutils import sysconfig; print(sysconfig.get_config_var("INCLUDEDIR"))');
-export PYLIB_NAME=$(python -c 'from distutils import sysconfig; print(sysconfig.get_config_var("LIBRARY"))');
+export PYLIB_NAME=$(python -c 'from distutils import sysconfig; print(".".join(sysconfig.get_config_var("LIBRARY").split(".")[:2]))').so;
 export PYVER=$(python -c 'import sys; print("{}.{}".format(*sys.version_info[:2]))');
 export PYLIBRARY=$PYLIB_DIR/$PYLIB_NAME
 
