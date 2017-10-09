@@ -102,9 +102,6 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-# Use the `NEST_PREFIX` as `CMAKE_INSTALL_PREFIX`.
-# set( CMAKE_INSTALL_PREFIX "${NEST_PREFIX}" CACHE STRING "Install path prefix, prepended onto install directories." FORCE )
-
 # Get the CXXFLAGS.
 execute_process(
     COMMAND ${NEST_CONFIG} --cflags
@@ -184,11 +181,6 @@ execute_process(
 
 # on OS X
 set( CMAKE_MACOSX_RPATH ON )
-
-# Install all stuff to NEST's install directories.
-# set( CMAKE_INSTALL_LIBDIR ${NEST_LIBDIR}/nest CACHE STRING "object code libraries (lib/nest or lib64/nest or lib/<multiarch-tuple>/nest on Debian)" FORCE )
-# set( CMAKE_INSTALL_DOCDIR ${NEST_DOCDIR} CACHE STRING "documentation root (DATAROOTDIR/doc/nest)" FORCE )
-# set( CMAKE_INSTALL_DATADIR ${NEST_DATADIR} CACHE STRING "read-only architecture-independent data (DATAROOTDIR/nest)" FORCE )
 
 include( GNUInstallDirs )
 
@@ -291,31 +283,3 @@ if ( NOT CMAKE_CROSSCOMPILING )
     )"
     )
 endif ()
-
-# message( "" )
-# message( "-------------------------------------------------------" )
-# message( "${MODULE_NAME} Configuration Summary" )
-# message( "-------------------------------------------------------" )
-# message( "" )
-# message( "C++ compiler         : ${CMAKE_CXX_COMPILER}" )
-# message( "Build static libs    : ${NEST_STATIC_LIB}" )
-# message( "C++ compiler flags   : ${CMAKE_CXX_FLAGS}" )
-# message( "NEST compiler flags  : ${NEST_CXXFLAGS}" )
-# message( "NEST include dirs    : ${NEST_INCLUDES}" )
-# message( "NEST libraries flags : ${NEST_LIBS}" )
-# message( "" )
-# message( "-------------------------------------------------------" )
-# message( "" )
-# message( "You can now build and install '${MODULE_NAME}' using" )
-# message( "  make" )
-# message( "  make install" )
-# message( "" )
-# message( "The library file lib${MODULE_NAME}.so will be installed to" )
-# message( "  ${CMAKE_INSTALL_FULL_LIBDIR}" )
-# message( "Help files will be installed to" )
-# message( "  ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DOCDIR}" )
-# message( "" )
-# message( "The module can be loaded into NEST using" )
-# message( "  (${MODULE_NAME}) Install       (in SLI)" )
-# message( "  nest.Install(${MODULE_NAME})   (in PyNEST)" )
-# message( "" )
