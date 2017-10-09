@@ -293,7 +293,7 @@ class CellMetaClass(base.CellMetaClass):
 
     @classmethod
     def load_libraries(cls, name, install_dir):
-        lib_dir = os.path.join(install_dir, 'lib', 'nest')
+        lib_dir = os.path.join(install_dir, 'lib')
         add_lib_path(lib_dir)
         # Add module install directory to NEST path
         nest.sli_run(
