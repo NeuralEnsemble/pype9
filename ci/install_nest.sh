@@ -22,14 +22,20 @@ else
 fi
 mkdir -p $HOME/build/$NEST
 pushd $HOME/build/$NEST
-export VENV=`python -c "import sys; print sys.prefix"`;
+export VENV=$(shell python -c "import sys; print(sys.prefix)");
+export PYLIB_DIR=$(shell python -c 'from distutils import sysconfig; print sysconfig.get_config_var("LIBDIR")');
+export PYINC_DIR=$(shell python -c 'from distutils import sysconfig; print sysconfig.get_config_var("INCLUDEDIR")');
+export PYLIB_NAME=$(shell python c 'sysconfig.get_config_var('LIBRARY')'):
+export PYLIBRARY=$PYLIB_DIR/$PYLIB_NAME
 
 # To reset cache after updates
 # rm $HOME/build/$NEST/config.log
 
 if [ ! -d "$HOME/build/$NEST/CMakeFiles" ]; then
     echo "VENV: $VENV"
-    PATH=$VENV/bin:$PATH cmake -Dwith-mpi=ON -DCMAKE_INSTALL_PREFIX=$VENV $HOME/$NEST;
+    echo "Python Library: $PYLIBRARY"
+    echo "Python include dir: $PYINC_DIR"
+    cmake -Dwith-mpi=ON -DPYTHON_LIBRARY=$PYLIBRARY -DPYTHON_INCLUDE_DIR=$PYINC_DIR -DCMAKE_INSTALL_PREFIX=$VENV $HOME/$NEST;
     make;
 else
     echo 'Using cached NEST build directory.';
