@@ -29,7 +29,7 @@ export VENV=`python -c "import sys; print sys.prefix"`;
 
 if [ ! -d "$HOME/build/$NEST/CMakeFiles" ]; then
     echo "VENV: $VENV"
-    cmake -Dwith-mpi -DCMAKE_INSTALL_PREFIX=$VENV $HOME/$NEST;
+    cmake -Dwith-mpi=ON -DCMAKE_INSTALL_PREFIX=$VENV $HOME/$NEST;
     make;
 else
     echo 'Using cached NEST build directory.';
