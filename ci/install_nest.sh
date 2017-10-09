@@ -22,10 +22,10 @@ else
 fi
 mkdir -p $HOME/build/$NEST
 pushd $HOME/build/$NEST
-export VENV=$(shell python -c "import sys; print(sys.prefix)");
-export PYLIB_DIR=$(shell python -c 'from distutils import sysconfig; print sysconfig.get_config_var("LIBDIR")');
-export PYINC_DIR=$(shell python -c 'from distutils import sysconfig; print sysconfig.get_config_var("INCLUDEDIR")');
-export PYLIB_NAME=$(shell python c 'sysconfig.get_config_var('LIBRARY')'):
+export VENV=$(python -c "import sys; print(sys.prefix)");
+export PYLIB_DIR=$(python -c 'from distutils import sysconfig; print(sysconfig.get_config_var("LIBDIR"))');
+export PYINC_DIR=$(python -c 'from distutils import sysconfig; print(sysconfig.get_config_var("INCLUDEDIR"))');
+export PYLIB_NAME=$(python c 'from distutils import sysconfig; print(sysconfig.get_config_var("LIBRARY"))'):
 export PYLIBRARY=$PYLIB_DIR/$PYLIB_NAME
 
 # To reset cache after updates
