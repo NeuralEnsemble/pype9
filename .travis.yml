@@ -25,7 +25,7 @@ install:
   - source ci/install_neuron.sh
   - source ci/install_nest.sh
   - pip install git+git://github.com/python-quantities/python-quantities.git@master
-  - pip install git+git://github.com/tclose/nineml-python.git@serialization
+  - pip install git+git://github.com/tclose/nineml-python.git@pype9_port
   - pip install git+git://github.com/tclose/nineml-catalog.git@merging_with_master
   - pip install -r requirements.txt
   - pip install --upgrade git+git://github.com/sympy/sympy.git@master
