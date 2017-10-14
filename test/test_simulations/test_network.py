@@ -872,7 +872,8 @@ class TestNetwork(TestCase):
                         'cell': cell1,
                         'Proj2': MultiDynamicsProperties(
                             name='Proj2_syn',
-                            sub_components={'psr': exc, 'pls': static},
+                            sub_components={'psr': exc.clone(),
+                                            'pls': static.clone()},
                             port_connections=[
                                 ('pls', 'fixed_weight', 'psr', 'weight')],
                             port_exposures=[
@@ -881,7 +882,8 @@ class TestNetwork(TestCase):
                                 ('psr', 'double_spike')]),
                         'Proj4': MultiDynamicsProperties(
                             name='Proj4_syn',
-                            sub_components={'psr': exc, 'pls': static},
+                            sub_components={'psr': exc.clone(),
+                                            'pls': static.clone()},
                             port_connections=[
                                 ('pls', 'fixed_weight', 'psr', 'weight')],
                             port_exposures=[
@@ -916,7 +918,8 @@ class TestNetwork(TestCase):
                         'cell': cell2,
                         'Proj1': MultiDynamicsProperties(
                             name='Proj1_syn',
-                            sub_components={'psr': inh, 'pls': static},
+                            sub_components={'psr': inh.clone(),
+                                            'pls': static.clone()},
                             port_connections=[
                                 ('pls', 'fixed_weight', 'psr', 'weight')],
                             port_exposures=[
@@ -924,7 +927,8 @@ class TestNetwork(TestCase):
                                 ('psr', 'spike')]),
                         'Proj3': MultiDynamicsProperties(
                             name='Proj3_syn',
-                            sub_components={'psr': exc, 'pls': stdp},
+                            sub_components={'psr': exc.clone(),
+                                            'pls': stdp.clone()},
                             port_connections=[
                                 ('pls', 'wsyn_current', 'psr', 'weight')],
                             port_exposures=[
@@ -962,34 +966,40 @@ class TestNetwork(TestCase):
         conn_group1 = EventConnectionGroup(
             'Proj1', dyn_array1, dyn_array2, 'spike__cell',
             'spike__psr__Proj1',
-            Connectivity(self.all_to_all, pop1.size, pop2.size), self.delay)
+            connectivity=Connectivity(self.all_to_all, pop1.size, pop2.size),
+            delay=self.delay)
 
         conn_group2 = EventConnectionGroup(
             'Proj2__pre__spike__synapse__spike__psr', dyn_array2,
             dyn_array1, 'spike__cell', 'spike__psr__Proj2',
-            Connectivity(self.all_to_all, pop2.size, pop1.size), self.delay)
+            connectivity=Connectivity(self.all_to_all, pop2.size, pop1.size),
+            delay=self.delay)
 
         conn_group3 = EventConnectionGroup(
             'Proj2__pre__double_spike__synapse__double_spike__psr',
             dyn_array2, dyn_array1, 'double_spike__cell',
             'double_spike__psr__Proj2',
-            Connectivity(self.all_to_all, pop2.size, pop1.size), self.delay)
+            connectivity=Connectivity(self.all_to_all, pop2.size, pop1.size),
+            delay=self.delay)
 
         conn_group4 = EventConnectionGroup(
             'Proj3__pre__spike__synapse__spike__psr', dyn_array3,
             dyn_array2, 'spike__cell', 'spike__psr__Proj3',
-            Connectivity(self.all_to_all, pop3.size, pop2.size), self.delay)
+            connectivity=Connectivity(self.all_to_all, pop3.size, pop2.size),
+            delay=self.delay)
 
         conn_group5 = EventConnectionGroup(
             'Proj3__pre__spike__synapse__incoming_spike__pls',
             dyn_array3, dyn_array2,
             'spike__cell', 'incoming_spike__pls__Proj3',
-            Connectivity(self.all_to_all, pop3.size, pop2.size), self.delay)
+            connectivity=Connectivity(self.all_to_all, pop3.size, pop2.size),
+            delay=self.delay)
 
         conn_group6 = EventConnectionGroup(
             'Proj4', dyn_array3, dyn_array1,
             'spike__cell', 'spike__psr__Proj4',
-            Connectivity(self.all_to_all, pop3.size, pop1.size), self.delay)
+            connectivity=Connectivity(self.all_to_all, pop3.size, pop1.size),
+            delay=self.delay)
 
         # =====================================================================
         # Test equality between network automatically generated dynamics arrays
