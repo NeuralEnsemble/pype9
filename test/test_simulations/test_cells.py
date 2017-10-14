@@ -180,7 +180,7 @@ class TestDynamics(TestCase):
                 "within {} ({})".format(
                     0.0015 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
-    def test_liaf(self, plot=False, print_comparisons=False,
+    def test_liaf(self, plot=True, print_comparisons=False,
                   simulators=SIMULATORS_TO_TEST, dt=0.001, duration=100.0,
                   build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
@@ -229,7 +229,7 @@ class TestDynamics(TestCase):
                 "within {} ({})".format(
                     0.55 * pq.mV, comparisons[('9ML-nest', '9ML-neuron')]))
 
-    def test_alpha_syn(self, plot=False, print_comparisons=False,
+    def test_alpha_syn(self, plot=True, print_comparisons=False,
                        simulators=SIMULATORS_TO_TEST, dt=0.001,
                        duration=100.0, min_delay=5.0, device_delay=5.0,
                        build_mode='force', **kwargs):  # @UnusedVariable
@@ -354,7 +354,7 @@ class TestDynamics(TestCase):
                 "reference PyNN within {} ({})".format(
                     0.03 * pq.mV, comparisons[('9ML-neuron', 'Ref-neuron')]))
 
-    def test_izhiFS(self, plot=False, print_comparisons=False,
+    def test_izhiFS(self, plot=True, print_comparisons=False,
                     simulators=SIMULATORS_TO_TEST, dt=0.001, duration=100.0,
                     build_mode='force', **kwargs):  # @UnusedVariable
         # Force compilation of code generation

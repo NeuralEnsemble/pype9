@@ -206,8 +206,9 @@ class Cell(base.Cell):
                 'step_current_generator', 1,
                 {'amplitude_values': list(
                     numpy.ravel(pq.Quantity(signal, 'pA'))),
-                 'amplitude_times': list(numpy.ravel(pq.Quantity(
-                     signal.times - self._device_delay * pq.ms, 'ms'))),
+                 'amplitude_times': list(numpy.ravel(
+                     signal.times.rescale(pq.ms) -
+                     self._device_delay * pq.ms)),
                  'start': float(signal.t_start.rescale(pq.ms)),
                  'stop': float(signal.t_stop.rescale(pq.ms))})
             nest.Connect(self._inputs[port_name], self._cell, syn_spec={
