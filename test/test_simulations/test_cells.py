@@ -3,6 +3,7 @@ import sys
 import quantities as pq
 import os.path
 from itertools import chain, repeat
+import logging
 import ninemlcatalog
 from nineml import units as un
 from nineml.user import Property
@@ -25,6 +26,16 @@ if __name__ == '__main__':
 else:
     from unittest import TestCase  # @Reimport
 
+
+logger = logging.getLogger('PyPe9')
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter(
+    '%(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+
 cell_metaclasses = {'neuron': NeuronCellMetaClass,
                     'nest': NESTCellMetaClass}
 
@@ -32,6 +43,7 @@ NEST_RNG_SEED = 1234567890
 NEURON_RNG_SEED = 987654321
 
 SIMULATORS_TO_TEST = ['nest', 'neuron']
+PLOT_DEFAULT = False
 
 
 class TestDynamics(TestCase):
@@ -51,7 +63,7 @@ class TestDynamics(TestCase):
         'v_reset': ('vreset', 1), 'v_threshold': ('vthresh', 1),
         'end_refractory': (None, 1), 'v': ('v', 1)}
 
-    def test_izhi(self, plot=True, print_comparisons=False,
+    def test_izhi(self, plot=PLOT_DEFAULT, print_comparisons=False,
                   simulators=SIMULATORS_TO_TEST,
                   dt=0.001, duration=100.0,
                   build_mode='force', **kwargs):  # @UnusedVariable
@@ -106,7 +118,7 @@ class TestDynamics(TestCase):
                 "built-in within {} ({})".format(
                     0.02 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
-    def test_hh(self, plot=True, print_comparisons=False,
+    def test_hh(self, plot=PLOT_DEFAULT, print_comparisons=False,
                 simulators=SIMULATORS_TO_TEST, dt=0.001, duration=100.0,
                 build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
@@ -180,7 +192,7 @@ class TestDynamics(TestCase):
                 "within {} ({})".format(
                     0.0015 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
-    def test_liaf(self, plot=True, print_comparisons=False,
+    def test_liaf(self, plot=PLOT_DEFAULT, print_comparisons=False,
                   simulators=SIMULATORS_TO_TEST, dt=0.001, duration=100.0,
                   build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
@@ -229,7 +241,7 @@ class TestDynamics(TestCase):
                 "within {} ({})".format(
                     0.55 * pq.mV, comparisons[('9ML-nest', '9ML-neuron')]))
 
-    def test_alpha_syn(self, plot=True, print_comparisons=False,
+    def test_alpha_syn(self, plot=PLOT_DEFAULT, print_comparisons=False,
                        simulators=SIMULATORS_TO_TEST, dt=0.001,
                        duration=100.0, min_delay=5.0, device_delay=5.0,
                        build_mode='force', **kwargs):  # @UnusedVariable
@@ -354,7 +366,7 @@ class TestDynamics(TestCase):
                 "reference PyNN within {} ({})".format(
                     0.03 * pq.mV, comparisons[('9ML-neuron', 'Ref-neuron')]))
 
-    def test_izhiFS(self, plot=True, print_comparisons=False,
+    def test_izhiFS(self, plot=PLOT_DEFAULT, print_comparisons=False,
                     simulators=SIMULATORS_TO_TEST, dt=0.001, duration=100.0,
                     build_mode='force', **kwargs):  # @UnusedVariable
         # Force compilation of code generation
