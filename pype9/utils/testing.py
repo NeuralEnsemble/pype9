@@ -256,8 +256,8 @@ class Comparer(object):
             except (ValueError, KeyError):
                 varname = self.neuron_translations.get(name, name)
             if varname in self.specific_params:
-                specific_value = UnitHandlerNEURON.to_pq_quantity(
-                    Quantity(value, prop.units)) / (100 * (pq.um ** 2))
+                specific_value = (Quantity(value, prop.units) /
+                                  (100 * un.um ** 2))
                 value = UnitHandlerNEURON.scale_value(specific_value)
             else:
                 value = UnitHandlerNEURON.scale_value(
@@ -304,9 +304,9 @@ class Comparer(object):
             self._nrn_iclamp.delay = 0.0
             self._nrn_iclamp.dur = 1e12
             self._nrn_iclamp.amp = 0.0
-            self._nrn_iclamp_amps = neuron.h.Vector(pq.Quantity(signal, 'nA'))
-            self._nrn_iclamp_times = neuron.h.Vector(pq.Quantity(signal.times,
-                                                                 'ms'))
+            self._nrn_iclamp_amps = neuron.h.Vector(signal.rescale(pq.nA))
+            self._nrn_iclamp_times = neuron.h.Vector(
+                signal.times.rescale(pq.ms))
             self._nrn_iclamp_amps.play(self._nrn_iclamp._ref_amp,
                                        self._nrn_iclamp_times)
         if self.input_train is not None:
