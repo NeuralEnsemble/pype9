@@ -358,7 +358,7 @@ class Cell(base.Cell):
                         [p.name
                          for p in self.component_class.event_receive_ports])))
             vstim = h.VecStim()
-            vstim_times = h.Vector(pq.Quantity(signal, 'ms'))
+            vstim_times = h.Vector(signal.rescale(pq.ms))
             vstim.play(vstim_times)
             vstim_con = h.NetCon(vstim, self._hoc, sec=self._sec)
             self._check_connection_properties(port_name, properties)
@@ -380,7 +380,7 @@ class Cell(base.Cell):
             iclamp.dur = 1e12
             iclamp.amp = 0.0
             iclamp_amps = h.Vector(pq.Quantity(signal, 'nA'))
-            iclamp_times = h.Vector(pq.Quantity(signal.times, 'ms'))
+            iclamp_times = h.Vector(signal.times.rescale(pq.ms))
             iclamp_amps.play(iclamp._ref_amp, iclamp_times)
             self._inputs['iclamp'] = iclamp
             self._input_auxs.extend((iclamp_amps, iclamp_times))
@@ -456,7 +456,7 @@ class Cell(base.Cell):
         seclamp.rs = series_resistance
         seclamp.dur1 = 1e12
         seclamp_amps = h.Vector(pq.Quantity(voltages, 'mV'))
-        seclamp_times = h.Vector(pq.Quantity(voltages.times, 'ms'))
+        seclamp_times = h.Vector(voltages.times.rescale(pq.ms))
         seclamp_amps.play(seclamp._ref_amp, seclamp_times)
         self._inputs['seclamp'] = seclamp
         self._input_auxs.extend((seclamp_amps, seclamp_times))

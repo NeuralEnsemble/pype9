@@ -106,7 +106,7 @@ class TestDynamics(TestCase):
                 "built-in within {} ({})".format(
                     0.02 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
-    def test_hh(self, plot=False, print_comparisons=False,
+    def test_hh(self, plot=True, print_comparisons=False,
                 simulators=SIMULATORS_TO_TEST, dt=0.001, duration=100.0,
                 build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
@@ -432,7 +432,7 @@ class TestDynamics(TestCase):
 
 
             # Calculate the absolute deviation
-#             isi_avg = pq.Quantity(1.0 / recorded_rate, 'ms')
+#             isi_avg = 1.0 / recorded_rate.rescale(pq.ms)
 #             isi_std_dev = (abs((spikes[1:] - spikes[:-1]) - isi_avg) /
 #                            (len(spikes) - 1))
 #             recorded_cv = isi_std_dev / isi_avg

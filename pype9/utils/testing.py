@@ -318,7 +318,7 @@ class Comparer(object):
             # FIXME: Should scale units
             weight = connection_properties[0].value * scale
             self._vstim = neuron.h.VecStim()
-            self._vstim_times = neuron.h.Vector(pq.Quantity(train, 'ms'))
+            self._vstim_times = neuron.h.Vector(train.rescale(pq.ms))
             self._vstim.play(self._vstim_times)
             target = (self.extra_point_process
                       if self.extra_point_process is not None
@@ -354,10 +354,10 @@ class Comparer(object):
                 'step_current_generator', 1,
                 {'amplitude_values': numpy.ravel(pq.Quantity(signal, 'pA')),
                  'amplitude_times': numpy.ravel(
-                     pq.Quantity(signal.times, 'ms') -
+                     signal.times.rescale(pq.ms) -
                      self.device_delay * pq.ms),
-                 'start': float(pq.Quantity(signal.t_start, 'ms')),
-                 'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
+                 'start': float(signal.t_start.rescale(pq.ms)),
+                 'stop': float(signal.t_stop.rescale(pq.ms))})
             nest.Connect(generator, self.nest_cell,
                          syn_spec={'receptor_type':
                                    (receptor_types[port_name]
@@ -371,7 +371,7 @@ class Comparer(object):
                 scale = 1.0
             # FIXME: Should scale units
             weight = connection_properties[0].value * scale
-            spike_times = (pq.Quantity(signal, 'ms') +
+            spike_times = (signal.rescale(pq.ms) +
                            (pq.ms - self.device_delay * pq.ms))
             if any(spike_times < 0.0):
                 raise Pype9RuntimeError(
@@ -413,7 +413,7 @@ class Comparer(object):
 
     def _plot_NEST(self):
         nest_v = self._get_NEST_signal()
-        plt.plot(pq.Quantity(nest_v.times, 'ms'), pq.Quantity(nest_v, 'mV'))
+        plt.plot(nest_v.times.rescale(pq.ms), nest_v.rescale(pq.mV))
 
     def _plot_9ML(self, sim_name):  # @UnusedVariable
         nml_v = self.nml_cells[sim_name].recording(self.state_variable)

@@ -22,10 +22,10 @@ def construct_reference(input_signal, dt):
     generator = nest.Create(
         'step_current_generator', 1,
         {'amplitude_values': pq.Quantity(input_signal, 'pA'),
-         'amplitude_times': (pq.Quantity(input_signal.times, 'ms') -
+         'amplitude_times': (input_signal.times.rescale(pq.ms) -
                              min_delay * pq.ms),
-         'start': float(pq.Quantity(input_signal.t_start, 'ms')),
-         'stop': float(pq.Quantity(input_signal.t_stop, 'ms'))})
+         'start': float(input_signal.t_start.rescale(pq.ms)),
+         'stop': float(input_signal.t_stop.rescale(pq.ms))})
     nest.Connect(generator, cell, syn_spec={'delay': min_delay})
     multimeter = nest.Create('multimeter', 1, {"interval": dt})
     nest.SetStatus(multimeter, {'record_from': ['V_m']})

@@ -177,7 +177,7 @@ class Cell(base.Cell):
             # Shift the signal times to account for the minimum delay and
             # match the NEURON implementation
             spike_times = numpy.asarray(
-                pq.Quantity(signal, 'ms') + pq.ms - self._device_delay * pq.ms)
+                signal.rescale(pq.ms) + pq.ms - self._device_delay * pq.ms)
             if any(spike_times <= 0.0):
                 raise Pype9UsageError(
                     "Some spike times are less than device delay and so "
@@ -208,8 +208,8 @@ class Cell(base.Cell):
                     numpy.ravel(pq.Quantity(signal, 'pA'))),
                  'amplitude_times': list(numpy.ravel(pq.Quantity(
                      signal.times - self._device_delay * pq.ms, 'ms'))),
-                 'start': float(pq.Quantity(signal.t_start, 'ms')),
-                 'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
+                 'start': float(signal.t_start.rescale(pq.ms)),
+                 'stop': float(signal.t_stop.rescale(pq.ms))})
             nest.Connect(self._inputs[port_name], self._cell, syn_spec={
                 "receptor_type": self._receive_ports[port_name],
                 'delay': self._device_delay})

@@ -657,13 +657,13 @@ class ComponentArray(object):
             # Shift the signal times to account for the minimum delay and
             # match the NEURON implementation
             try:
-                spike_trains = Sequence(pq.Quantity(signal, 'ms') -
+                spike_trains = Sequence(signal.rescale(pq.ms) -
                                         self._min_delay * pq.ms)
                 source_size = 1
             except ValueError:  # Assume multiple signals
                 spike_trains = []
                 for spike_train in signal:
-                    spike_train = (pq.Quantity(spike_train, 'ms') -
+                    spike_train = (spike_train.rescale(pq.ms) -
                                    self._min_delay * pq.ms)
                     if any(spike_train <= 0.0):
                         raise Pype9RuntimeError(
@@ -706,10 +706,10 @@ class ComponentArray(object):
 #                 'step_current_generator', 1,
 #                 {'amplitude_values': pq.Quantity(signal, 'pA'),
 #                  'amplitude_times': (
-#                     pq.Quantity(signal.times, 'ms') -
+#                     signal.times.rescale(pq.ms) -
 #                     controller.device_delay * pq.ms),
-#                  'start': float(pq.Quantity(signal.t_start, 'ms')),
-#                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
+#                  'start': float(signal.t_start.rescale(pq.ms)),
+#                  'stop': float(signal.t_stop.rescale(pq.ms))})
 #             nest.Connect(self._inputs[port_name], self._cell,
 #                          syn_spec={
 #                              "receptor_type": self._receive_ports[port_name],
