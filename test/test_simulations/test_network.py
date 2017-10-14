@@ -50,7 +50,7 @@ nest_bookkeeping = (
     'archiver_length', 'recordables', 'parent', 'local', 'vp',
     'tau_minus', 'tau_minus_triplet', 't_spike', 'origin', 'stop', 'start',
     'V_min', 'synaptic_elements', 'needs_prelim_update', 'beta_Ca',
-    'tau_Ca', 'Ca')
+    'tau_Ca', 'Ca', 'node_uses_wfr', 'supports_precise_spikes')
 
 NEST_RNG_SEED = 12345
 NEURON_RNG_SEED = 54321

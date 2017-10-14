@@ -236,7 +236,7 @@ bool {{component_name}}::{{TransitionClassName}}::body() {
     // Get the next weight and remove it from the unprocessed list
     double_t weight_ = B_.{{transition.src_port_name}}_events->front();
     B_.{{transition.src_port_name}}_events->pop_front();
-            {% if transition.src_port_name in component_class.connection_parameter_set_names %}
+            {% if transition.src_port_name in component_class.connection_parameter_set_keys %}
     // FIXME: Need to properly check beforehand that there is only one 
     //        connection parameter for this source port (which is a current
     //        limitaiton of NEST) before rendering the template. The following

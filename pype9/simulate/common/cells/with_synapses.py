@@ -402,7 +402,7 @@ class WithSynapses(object):
         return self._synapses.iterkeys()
 
     @property
-    def connection_parameter_set_names(self):
+    def connection_parameter_set_keys(self):
         return self._connection_parameter_sets.iterkeys()
 
     @classmethod
