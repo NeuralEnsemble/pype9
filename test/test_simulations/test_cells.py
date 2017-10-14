@@ -31,7 +31,7 @@ cell_metaclasses = {'neuron': NeuronCellMetaClass,
 NEST_RNG_SEED = 1234567890
 NEURON_RNG_SEED = 987654321
 
-SIMULATORS_TO_TEST = ['nest']
+SIMULATORS_TO_TEST = ['nest', 'neuron']
 
 
 class TestDynamics(TestCase):
@@ -51,7 +51,7 @@ class TestDynamics(TestCase):
         'v_reset': ('vreset', 1), 'v_threshold': ('vthresh', 1),
         'end_refractory': (None, 1), 'v': ('v', 1)}
 
-    def test_izhi(self, plot=False, print_comparisons=False,
+    def test_izhi(self, plot=True, print_comparisons=False,
                   simulators=SIMULATORS_TO_TEST,
                   dt=0.001, duration=100.0,
                   build_mode='force', **kwargs):  # @UnusedVariable
@@ -90,7 +90,7 @@ class TestDynamics(TestCase):
         if 'nest' in simulators and 'neuron' in simulators:
             self.assertLess(
                 comparisons[('9ML-nest', '9ML-neuron')], 0.4 * pq.mV,
-                "Izhikevich NEURON 9ML simulation did not match NEST 9ML"
+                "Izhikevich NEURON 9ML simulation did not match NEST 9ML "
                 "within {} ({})".format(
                     0.4 * pq.mV, comparisons[('9ML-nest', '9ML-neuron')]))
         if 'neuron' in simulators:
@@ -106,7 +106,7 @@ class TestDynamics(TestCase):
                 "built-in within {} ({})".format(
                     0.02 * pq.mV, comparisons[('9ML-nest', 'Ref-nest')]))
 
-    def test_hh(self, plot=True, print_comparisons=False,
+    def test_hh(self, plot=False, print_comparisons=False,
                 simulators=SIMULATORS_TO_TEST, dt=0.001, duration=100.0,
                 build_mode='force', **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess

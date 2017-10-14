@@ -157,7 +157,7 @@ class CodeGenerator(BaseCodeGenerator):
                 "Compilation of '{}' NEST module failed (see compile "
                 "directory '{}'):\n\n {}"
                 .format(component_name, compile_dir, e))
-        if re.search(r'error', stdout + stderr, re.IGNORECASE):
+        if re.search(r'error:', stderr):  # Ignores warnings
             raise Pype9BuildError(
                 "Compilation of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))

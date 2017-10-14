@@ -168,7 +168,8 @@ class Comparer(object):
         for (name1, signal1), (name2, signal2) in combinations(name_n_sigs, 2):
             if len(signal1):
                 logger.debug("Comparing {} with {}".format(name1, name2))
-                avg_diff = (numpy.sum(numpy.abs(signal1 - signal2)) /
+                avg_diff = (numpy.sum(numpy.abs(numpy.ravel(signal1) -
+                                                numpy.ravel(signal2))) /
                             len(signal1))
             else:
                 avg_diff = 0.0
@@ -351,9 +352,10 @@ class Comparer(object):
             port_name, signal = self.input_signal
             generator = nest.Create(
                 'step_current_generator', 1,
-                {'amplitude_values': pq.Quantity(signal, 'pA'),
-                 'amplitude_times': (pq.Quantity(signal.times, 'ms') -
-                                     self.device_delay * pq.ms),
+                {'amplitude_values': numpy.ravel(pq.Quantity(signal, 'pA')),
+                 'amplitude_times': numpy.ravel(
+                     pq.Quantity(signal.times, 'ms') -
+                     self.device_delay * pq.ms),
                  'start': float(pq.Quantity(signal.t_start, 'ms')),
                  'stop': float(pq.Quantity(signal.t_stop, 'ms'))})
             nest.Connect(generator, self.nest_cell,
@@ -391,7 +393,8 @@ class Comparer(object):
         nest.SetStatus(
             self.nest_multimeter,
             {'record_from': [self.nest_state_variable]})
-        nest.Connect(self.nest_multimeter, self.nest_cell)
+        nest.Connect(self.nest_multimeter, self.nest_cell,
+                     syn_spec={'delay': float(self.device_delay)})
         trans_states = {}
         for name, qty in self.initial_states.iteritems():
             try:
