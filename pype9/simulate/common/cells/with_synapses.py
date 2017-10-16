@@ -320,6 +320,7 @@ class WithSynapses(object):
                     "in the base MultiDynamics class ('{}')"
                     .format(conn_param, "', '".join(
                         sp.name for sp in self._dynamics.parameters)))
+        self._dimension_resolver = None
 
     @property
     def name(self):
