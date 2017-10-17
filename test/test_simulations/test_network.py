@@ -2,7 +2,6 @@
 from __future__ import division
 from itertools import groupby, izip
 from operator import itemgetter
-from copy import deepcopy
 import itertools
 import numpy
 import quantities as pq
@@ -27,6 +26,7 @@ from pype9.simulate.common.cells import (
 from pype9.simulate.common.network import Network as BasePype9Network
 from pype9.simulate.neuron.network import Network as NeuronPype9Network
 from pype9.simulate.neuron import Simulation as NeuronSimulation
+from pype9.simulate.common.network.base import EXPOSURE_SUFFIX
 import ninemlcatalog
 import sys
 argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
@@ -34,6 +34,7 @@ import nest  # @IgnorePep8
 from pype9.simulate.nest.network import Network as NestPype9Network  # @IgnorePep8
 from pype9.simulate.nest import Simulation as NESTSimulation  # @IgnorePep8
 from pype9.utils.testing import ReferenceBrunel2000  # @IgnorePep8
+
 try:
     from matplotlib import pyplot as plt
 except ImportError:
@@ -959,45 +960,51 @@ class TestNetwork(TestCase):
                 MultiDynamicsProperties(
                     'Pop3_cell',
                     sub_components={'cell': cell3},
-                    port_exposures=[('cell', 'spike'),
-                                    ('cell', 'i_ext')],
+                    port_exposures=[('cell', 'spike',
+                                     'spike__cell' + EXPOSURE_SUFFIX),
+                                    ('cell', 'i_ext',
+                                     'i_ext__cell' + EXPOSURE_SUFFIX)],
                     port_connections=[])))
 
         conn_group1 = EventConnectionGroup(
-            'Proj1', dyn_array1, dyn_array2, 'spike__cell',
-            'spike__psr__Proj1',
+            'Proj1', dyn_array1, dyn_array2, 'spike__cell' + EXPOSURE_SUFFIX,
+            'spike__psr__Proj1' + EXPOSURE_SUFFIX,
             connectivity=Connectivity(self.all_to_all, pop1.size, pop2.size),
             delay=self.delay)
 
         conn_group2 = EventConnectionGroup(
             'Proj2__pre__spike__synapse__spike__psr', dyn_array2,
-            dyn_array1, 'spike__cell', 'spike__psr__Proj2',
+            dyn_array1, 'spike__cell' + EXPOSURE_SUFFIX,
+            'spike__psr__Proj2' + EXPOSURE_SUFFIX,
             connectivity=Connectivity(self.all_to_all, pop2.size, pop1.size),
             delay=self.delay)
 
         conn_group3 = EventConnectionGroup(
             'Proj2__pre__double_spike__synapse__double_spike__psr',
-            dyn_array2, dyn_array1, 'double_spike__cell',
-            'double_spike__psr__Proj2',
+            dyn_array2, dyn_array1, 'double_spike__cell' + EXPOSURE_SUFFIX,
+            'double_spike__psr__Proj2' + EXPOSURE_SUFFIX,
             connectivity=Connectivity(self.all_to_all, pop2.size, pop1.size),
             delay=self.delay)
 
         conn_group4 = EventConnectionGroup(
             'Proj3__pre__spike__synapse__spike__psr', dyn_array3,
-            dyn_array2, 'spike__cell', 'spike__psr__Proj3',
+            dyn_array2, 'spike__cell' + EXPOSURE_SUFFIX,
+            'spike__psr__Proj3' + EXPOSURE_SUFFIX,
             connectivity=Connectivity(self.all_to_all, pop3.size, pop2.size),
             delay=self.delay)
 
         conn_group5 = EventConnectionGroup(
             'Proj3__pre__spike__synapse__incoming_spike__pls',
             dyn_array3, dyn_array2,
-            'spike__cell', 'incoming_spike__pls__Proj3',
+            'spike__cell' + EXPOSURE_SUFFIX,
+            'incoming_spike__pls__Proj3' + EXPOSURE_SUFFIX,
             connectivity=Connectivity(self.all_to_all, pop3.size, pop2.size),
             delay=self.delay)
 
         conn_group6 = EventConnectionGroup(
             'Proj4', dyn_array3, dyn_array1,
-            'spike__cell', 'spike__psr__Proj4',
+            'spike__cell' + EXPOSURE_SUFFIX,
+            'spike__psr__Proj4' + EXPOSURE_SUFFIX,
             connectivity=Connectivity(self.all_to_all, pop3.size, pop1.size),
             delay=self.delay)
 

@@ -38,6 +38,8 @@ from pype9.exceptions import Pype9UsageError, Pype9NameError
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
 
+EXPOSURE_SUFFIX = '__exposure'
+
 
 class Network(object):
     """
@@ -424,11 +426,14 @@ class Network(object):
                     # Add exposures to the post-synaptic cell for connections
                     # from the synapse
                     add_exposures(chain(*(
-                        pc.expose_ports({'post': cls.CELL_COMP_NAME})
+                        pc.expose_ports({'post': cls.CELL_COMP_NAME},
+                                        name_suffix=EXPOSURE_SUFFIX)
                         for pc in post_conns)))
                 # Add exposures for connections to/from the pre synaptic cell
                 add_exposures(
-                    chain(*(pc.expose_ports(role2name) for pc in pre_conns)))
+                    chain(*(pc.expose_ports(role2name,
+                                            name_suffix=EXPOSURE_SUFFIX)
+                            for pc in pre_conns)))
                 role2name['pre'] = cls.CELL_COMP_NAME
             # Add exposures for connections to/from the pre-synaptic cell in
             # populations.
@@ -437,7 +442,8 @@ class Network(object):
                 synapse, proj_conns = cls._flatten_synapse(proj)
                 # Add send and receive exposures to list
                 add_exposures(chain(*(
-                    pc.expose_ports({'pre': cls.CELL_COMP_NAME})
+                    pc.expose_ports({'pre': cls.CELL_COMP_NAME},
+                                    name_suffix=EXPOSURE_SUFFIX)
                     for pc in proj_conns)))
             # Add all cell ports as multi-component exposures that aren't
             # connected internally in case the user would like to save them or
@@ -448,7 +454,8 @@ class Network(object):
                 (pc.receive_port_name for pc in internal_conns
                  if pc.receiver_name == cls.CELL_COMP_NAME)))
             add_exposures(
-                BasePortExposure.from_port(p, cls.CELL_COMP_NAME)
+                BasePortExposure.from_port(p, cls.CELL_COMP_NAME,
+                                           name_suffix=EXPOSURE_SUFFIX)
                 for p in pop.cell.ports if p.name not in internal_cell_ports)
             dynamics_properties = MultiDynamicsProperties(
                 name=pop.name + '_cell', sub_components=sub_components,
@@ -512,8 +519,9 @@ class Network(object):
                     name,
                     arrays_and_selections[proj.pre.name],
                     arrays_and_selections[proj.post.name],
-                    source_port=ns_port_conn.send_port_name,
-                    destination_port=ns_port_conn.receive_port_name,
+                    source_port=ns_port_conn.send_port_name + EXPOSURE_SUFFIX,
+                    destination_port=(
+                        ns_port_conn.receive_port_name + EXPOSURE_SUFFIX),
                     connectivity=connectivity,
                     delay=delay)
                 connection_groups[conn_group.name] = conn_group

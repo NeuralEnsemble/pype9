@@ -267,7 +267,39 @@ class SynapseProperties(BaseULObject, ContainerObject):
 
     @property
     def port_connections(self):
-        return self._port_connections
+        return chain(self.analog_port_connections, self.event_port_connections)
+
+    @property
+    def analog_port_connections(self):
+        return self._analog_port_connections.values()
+
+    @property
+    def event_port_connections(self):
+        return self._event_port_connections.values()
+
+    @name_error
+    def analog_port_connection(self, key):
+        return self._analog_port_connections[key]
+
+    @name_error
+    def event_port_connection(self, key):
+        return self._event_port_connections[key]
+
+    @property
+    def analog_port_connection_keys(self):
+        return self._analog_port_connections.keys()
+
+    @property
+    def event_port_connection_keys(self):
+        return self._event_port_connections.keys()
+
+    @property
+    def num_analog_port_connections(self):
+        return len(self._analog_port_connections)
+
+    @property
+    def num_event_port_connections(self):
+        return len(self._event_port_connections)
 
     def serialize_node(self, node, **options):
         node.attr('name', self.name)
@@ -521,7 +553,7 @@ class WithSynapsesProperties(object):
 
     __metaclass__ = ABCMeta
     nineml_child = {'dynamics_properties': None}
-    nineml_children = (Synapse, ConnectionPropertySet)
+    nineml_children = (SynapseProperties, ConnectionPropertySet)
 
     def __init__(self, name, dynamics_properties, synapse_properties=[],
                  connection_property_sets=[]):
