@@ -536,31 +536,31 @@ class Network(object):
         """
         component_class = dynamics_properties.component_class
         varying_params = set(
-            component_class.parameter(p.name)
+            component_class.parameter(p.name).id
             for p in dynamics_properties.properties
             if p.value.nineml_type != 'SingleValue')
         # Get list of ports refereneced (either directly or indirectly) by
         # time derivatives and on-conditions
-        not_permitted = set(p.name for p in component_class.required_for(
+        not_permitted = set(p.id for p in component_class.required_for(
             chain(component_class.all_time_derivatives(),
                   component_class.all_on_conditions())).parameters)
         # If varying params intersects parameters that are referenced in time
         # derivatives they can not be redefined as connection parameters
         if varying_params & not_permitted:
             raise Pype9UnflattenableSynapseException()
-        conn_params = defaultdict(set)
+        conn_params = defaultdict(dict)
         for on_event in component_class.all_on_events():
-            on_event_params = set(component_class.required_for(
-                on_event.state_assignments).parameters)
-            conn_params[on_event.src_port_name] |= (varying_params &
-                                                    on_event_params)
+            for param in component_class.required_for(
+                    on_event.state_assignments).parameters:
+                if param.id in varying_params:
+                    conn_params[on_event.src_port_name][param.id] = param
         return [
             ConnectionPropertySet(
-                append_namespace(prt, namespace),
+                append_namespace(prt, namespace) + EXPOSURE_SUFFIX,
                 [Property(append_namespace(p.name, namespace),
                           dynamics_properties.property(p.name).quantity)
-                 for p in params])
-            for prt, params in conn_params.iteritems() if params]
+                 for p in params.itervalues()])
+            for prt, params in conn_params.iteritems()]
 
 #             raise NotImplementedError(
 #                 "Cannot convert population '{}' to component array as "

@@ -894,19 +894,22 @@ class TestNetwork(TestCase):
                         ('Proj2', 'i__psr', 'cell', 'i_ext'),
                         ('Proj4', 'i__psr', 'cell', 'i_ext')],
                     port_exposures=[
-                        ('cell', 'spike'),
-                        ('Proj2', 'double_spike__psr'),
-                        ('Proj2', 'spike__psr'),
-                        ('Proj4', 'spike__psr')]),
+                        ('cell', 'spike', 'spike__cell' + EXPOSURE_SUFFIX),
+                        ('Proj2', 'double_spike__psr',
+                         'double_spike__psr__Proj2' + EXPOSURE_SUFFIX),
+                        ('Proj2', 'spike__psr',
+                         'spike__psr__Proj2' + EXPOSURE_SUFFIX),
+                        ('Proj4', 'spike__psr',
+                         'spike__psr__Proj4' + EXPOSURE_SUFFIX)]),
                 connection_property_sets=[
                     ConnectionPropertySet(
-                        'spike__psr__Proj2',
+                        'spike__psr__Proj2' + EXPOSURE_SUFFIX,
                         [Property('weight__pls__Proj2', random_weight)]),
                     ConnectionPropertySet(
-                        'double_spike__psr__Proj2',
+                        'double_spike__psr__Proj2' + EXPOSURE_SUFFIX,
                         [Property('weight__pls__Proj2', random_weight)]),
                     ConnectionPropertySet(
-                        'spike__psr__Proj4',
+                        'spike__psr__Proj4' + EXPOSURE_SUFFIX,
                         [Property('weight__pls__Proj4', random_weight)])]))
 
         dyn_array2 = ComponentArray(
@@ -940,17 +943,21 @@ class TestNetwork(TestCase):
                         ('Proj1', 'i__psr', 'cell', 'i_ext'),
                         ('Proj3', 'i__psr', 'cell', 'i_ext')],
                     port_exposures=[
-                        ('cell', 'spike'),
-                        ('cell', 'double_spike'),
-                        ('Proj1', 'spike__psr'),
-                        ('Proj3', 'spike__psr'),
-                        ('Proj3', 'incoming_spike__pls')]),
+                        ('cell', 'spike', 'spike__cell' + EXPOSURE_SUFFIX),
+                        ('cell', 'double_spike',
+                         'double_spike__cell' + EXPOSURE_SUFFIX),
+                        ('Proj1', 'spike__psr',
+                         'spike__psr__Proj1' + EXPOSURE_SUFFIX),
+                        ('Proj3', 'spike__psr',
+                         'spike__psr__Proj3' + EXPOSURE_SUFFIX),
+                        ('Proj3', 'incoming_spike__pls',
+                         'incoming_spike__pls__Proj3' + EXPOSURE_SUFFIX)]),
                 connection_property_sets=[
                     ConnectionPropertySet(
-                        'spike__psr__Proj1',
+                        'spike__psr__Proj1' + EXPOSURE_SUFFIX,
                         [Property('weight__pls__Proj1', random_weight)]),
                     ConnectionPropertySet(
-                        'incoming_spike__pls__Proj3',
+                        'incoming_spike__pls__Proj3' + EXPOSURE_SUFFIX,
                         [Property('wmax__pls__Proj3', random_wmax)])]))
 
         dyn_array3 = ComponentArray(
