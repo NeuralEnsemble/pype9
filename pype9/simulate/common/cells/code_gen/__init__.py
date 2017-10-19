@@ -49,8 +49,8 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
 
     # Python functions and annotations to be made available in the templates
     _globals = dict(
-        [('len', len), ('izip', izip), ('enumerate', enumerate),
-         ('xrange', xrange), ('next', next), ('chain', chain), ('sorted',
+        [('len', len), ('zip', zip), ('enumerate', enumerate),
+         ('range', range), ('next', next), ('chain', chain), ('sorted',
          sorted), ('hash', hash), ('deepcopy', deepcopy), ('units', units),
          ('hasattr', hasattr), ('set', set), ('list', list), ('None', None),
          ('sympy', sympy)] +
