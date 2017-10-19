@@ -1,3 +1,4 @@
+from builtins import zip
 import os.path
 import tempfile
 import shutil

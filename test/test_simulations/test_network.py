@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 from __future__ import division
 from __future__ import print_function
-from itertools import groupby, izip
+from builtins import zip
+from builtins import range
+from itertools import groupby
 from operator import itemgetter
 import itertools
 import numpy
@@ -116,14 +118,14 @@ class TestBrunel2000(TestCase):
                     else:
                         inds = ref[pop_name]
                     param_names = [
-                        n for n in nest.GetStatus([inds[0]])[0].keys()
+                        n for n in list(nest.GetStatus([inds[0]])[0].keys())
                         if n not in nest_bookkeeping]
                     params[model_ver] = dict(
-                        izip(param_names, izip(*nest.GetStatus(
+                        zip(param_names, zip(*nest.GetStatus(
                             inds, keys=param_names))))
                     means[model_ver] = {}
                     stdevs[model_ver] = {}
-                    for param_name, values in params[model_ver].iteritems():
+                    for param_name, values in params[model_ver].items():
                         vals = numpy.asarray(values)
                         try:
                             means[model_ver][param_name] = numpy.mean(vals)
@@ -220,8 +222,8 @@ class TestBrunel2000(TestCase):
             ref_conns = ref.projections
             for conn_group in nml.connection_groups:
                 nml_conns = conn_group.nest_connections
-                nml_params = dict(izip(
-                    self.conn_param_names, izip(
+                nml_params = dict(zip(
+                    self.conn_param_names, zip(
                         *nest.GetStatus(nml_conns, self.conn_param_names))))
                 # Since the weight is constant it is set as a parameter of the
                 # cell class not a connection parameter and it is scaled by
@@ -230,8 +232,8 @@ class TestBrunel2000(TestCase):
                 nml_params['weight'] = nest.GetStatus(
                     list(conn_group.post.all_cells),
                     'weight__pls__{}'.format(conn_group.name)) / numpy.exp(1.0)
-                ref_params = dict(izip(
-                    self.conn_param_names, izip(
+                ref_params = dict(zip(
+                    self.conn_param_names, zip(
                         *nest.GetStatus(ref_conns[conn_group.name],
                                         self.conn_param_names))))
                 for attr in self.conn_param_names:
@@ -287,7 +289,7 @@ class TestBrunel2000(TestCase):
             if isinstance(identical_input, int):
                 mean_isi *= identical_input
             external_input = []
-            for _ in xrange(order * 5):
+            for _ in range(order * 5):
                 # Generate poisson spike trains using numpy
                 spike_times = numpy.cumsum(numpy.random.exponential(
                     mean_isi, int(numpy.floor(1.5 * simtime / mean_isi))))
@@ -417,7 +419,7 @@ class TestBrunel2000(TestCase):
                             legend = []
                             for sender, group in groupby(sorted_vs,
                                                          key=itemgetter(0)):
-                                _, t, v = zip(*group)
+                                _, t, v = list(zip(*group))
                                 t = numpy.asarray(t)
                                 v = numpy.asarray(v)
                                 inds = t > record_start

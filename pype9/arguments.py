@@ -4,6 +4,7 @@
   License: This file is part of the "NineLine" package, which is released under
            the MIT Licence, see LICENSE for details.
 """
+from builtins import str
 import time
 import os.path
 import shutil

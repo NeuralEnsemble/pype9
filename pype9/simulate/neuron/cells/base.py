@@ -8,9 +8,12 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from __future__ import division
 # MPI may not be required but NEURON sometimes needs to be initialized after
 # MPI so I am doing it here just to be safe (and to save me headaches in the
 # future)
+from builtins import zip
+from past.utils import old_div
 try:
     from mpi4py import MPI  # @UnusedImport @IgnorePep8 This is imported before NEURON to avoid a bug in NEURON
 except ImportError:
@@ -94,7 +97,7 @@ class Cell(base.Cell):
             # 10^(-10), nA = 10^(-9). 1 - 10 = - 9. (see PyNN Izhikevich neuron
             # implementation)
             self._sec.L = 10.0
-            self._sec.diam = 10.0 / pi
+            self._sec.diam = old_div(10.0, pi)
             self.cm_param_name = self.build_component_class.annotations.get(
                 (BUILD_TRANS, PYPE9_NS), MEMBRANE_CAPACITANCE)
             if self.cm_param_name not in self.component_class.parameter_names:
@@ -104,8 +107,8 @@ class Cell(base.Cell):
                 setattr(self._hoc, self.cm_param_name,
                         float(self.DEFAULT_CM.in_units(un.nF)))
                 # Set capacitance in HOC section
-                specific_cm = (self.DEFAULT_CM / self.surface_area)
-                self._sec.cm = float(specific_cm.in_units(un.uF / un.cm ** 2))
+                specific_cm = (old_div(self.DEFAULT_CM, self.surface_area))
+                self._sec.cm = float(specific_cm.in_units(old_div(un.uF, un.cm ** 2)))
             self.recordable[self.component_class.annotations.get(
                 (BUILD_TRANS, PYPE9_NS),
                 MEMBRANE_VOLTAGE)] = self.source_section(0.5)._ref_v
@@ -130,8 +133,8 @@ class Cell(base.Cell):
                 (self.build_component_class.index_of(p), p.name)
                 for p in self.build_component_class.event_receive_ports]
             # Get event receive ports sorted by the indices
-            sorted_ports = zip(
-                *sorted(ports_n_indices, key=operator.itemgetter(0)))[1]
+            sorted_ports = list(zip(
+                *sorted(ports_n_indices, key=operator.itemgetter(0))))[1]
         else:
             sorted_ports = []
         self.type = collections.namedtuple('Type', 'receptor_types')(
@@ -201,7 +204,7 @@ class Cell(base.Cell):
 
     def initialize(self):
         if self.in_array:
-            for k, v in self._initial_states.iteritems():
+            for k, v in self._initial_states.items():
                 self._set(k, v)
             assert self._regime_index is not None
             self._set_regime()
@@ -232,8 +235,8 @@ class Cell(base.Cell):
                 # This assumes that the value of the capacitance is in nF
                 # which it should be from the super setattr method
                 self._sec.cm = float((
-                    val * un.nF / self.surface_area).in_units(un.uF /
-                                                              un.cm ** 2))
+                    val * un.nF / self.surface_area).in_units(old_div(un.uF,
+                                                              un.cm ** 2)))
         except LookupError:
             varname = self._escaped_name(varname)
             try:
@@ -324,7 +327,7 @@ class Cell(base.Cell):
         Resets the recordings for the cell and the NEURON simulator (assumes
         that only one cell is instantiated)
         """
-        for rec in self._recordings.itervalues():
+        for rec in self._recordings.values():
             rec.resize(0)
 
     def clear_recorders(self):

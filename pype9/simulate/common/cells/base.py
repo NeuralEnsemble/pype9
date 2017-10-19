@@ -11,6 +11,9 @@
   License: This file is part of the "NineLine" package, which is released under
            the MIT Licence, see LICENSE for details.
 """
+from builtins import next
+from builtins import str
+from builtins import object
 from itertools import chain
 import numpy as np
 import quantities as pq
@@ -148,7 +151,7 @@ class Cell(object):
         self._t_start = sim.t_start
         self._t_stop = None
         if self.in_array:
-            for k, v in kwargs.iteritems():
+            for k, v in kwargs.items():
                 self._set(k, v)  # Values should be in the right units.
             self._regime_index = None
         else:
@@ -176,7 +179,7 @@ class Cell(object):
                 prototype = self.component_class
             properties = []
             initial_values = []
-            for name, qty in kwargs.iteritems():
+            for name, qty in kwargs.items():
                 if isinstance(qty, pq.Quantity):
                     qty = self.UnitHandler.from_pq_quantity(qty)
                 if name in self.component_class.state_variable_names:
@@ -492,12 +495,12 @@ class Cell(object):
         except NineMLNameError:
             return  # No parameter set, so no need to check
         params_dict = dict((p.name, p) for p in param_set.parameters)
-        if set(props_dict.iterkeys()) != set(params_dict.iterkeys()):
+        if set(props_dict.keys()) != set(params_dict.keys()):
             raise Pype9RuntimeError(
                 "Mismatch between provided property and parameter names:"
                 "\nParameters: '{}'\nProperties: '{}'"
-                .format("', '".join(params_dict.iterkeys()),
-                        "', '".join(props_dict.iterkeys())))
+                .format("', '".join(iter(params_dict.keys())),
+                        "', '".join(iter(props_dict.keys()))))
         for prop in properties:
             if params_dict[prop.name].dimension != prop.units.dimension:
                 raise Pype9RuntimeError(

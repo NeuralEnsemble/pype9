@@ -53,8 +53,8 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
                    'extra_parameters': {'_in_array': True}}
             celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
                 cls, name, (PyNNCellWrapper,), dct)
-            recordable_keys = model(default_properties,
-                                    _in_array=True).recordable.keys()
+            recordable_keys = list(model(default_properties,
+                                    _in_array=True).recordable.keys())
             assert set(celltype.recordable) == set(recordable_keys), (
                 "Mismatch of recordable keys between CellPyNN ('{}') and "
                 "Cell class '{}' ('{}')".format(

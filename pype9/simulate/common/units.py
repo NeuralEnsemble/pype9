@@ -1,10 +1,16 @@
 from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import next
+from builtins import zip
+from builtins import str
+from past.builtins import basestring
 import os
 import logging
 import operator
 from itertools import chain
 from operator import xor
-import cPickle as pkl
+import pickle as pkl
 from abc import ABCMeta, abstractmethod
 import sympy
 from sympy import sympify
@@ -22,20 +28,19 @@ from pype9.exceptions import Pype9RuntimeError
 from pype9.utils import classproperty
 from fractions import gcd
 from functools import reduce
+from future.utils import with_metaclass
 numpy.seterr(all='raise')
 
 
 logger = logging.getLogger('PyPe9')
 
 
-class UnitHandler(DynamicsDimensionResolver):
+class UnitHandler(with_metaclass(ABCMeta, DynamicsDimensionResolver)):
     """
     Base class for simulator-specific "unit assigners", which map dynamics
     class dimensions onto a set of "basis" unit compounds that the simulator
     expects
     """
-
-    __metaclass__ = ABCMeta
 
     _pq_si_to_dim = {pq.UnitMass: 'm', pq.UnitLength: 'l', pq.UnitTime: 't',
                      pq.UnitCurrent: 'i', pq.UnitLuminousIntensity: 'j',
@@ -190,7 +195,7 @@ class UnitHandler(DynamicsDimensionResolver):
         # into the provided dimension, and test to see if they are constant
         with_scalars = [(x, numpy.unique(dim_vector[mask] /
                                          numpy.asarray(d)[mask]))
-                        for d, x in cls.cache.iteritems()
+                        for d, x in cls.cache.items()
                         if ((numpy.asarray(d) != 0) == mask).all()]
         matches = [(u, int(s[0])) for u, s in with_scalars
                    if len(s) == 1 and float(s[0]).is_integer()]
@@ -333,7 +338,7 @@ class UnitHandler(DynamicsDimensionResolver):
                 unit_name = unit_name[1:]  # strip leading underscore
             powers = dict(
                 (cls._pq_si_to_dim[type(u)], p)
-                for u, p in qty.units.simplified._dimensionality.iteritems())
+                for u, p in qty.units.simplified._dimensionality.items())
             dimension = un.Dimension(unit_name + 'Dimension', **powers)
             units = un.Unit(unit_name, dimension=dimension,
                             power=int(log10(float(qty.units.simplified))))
@@ -498,7 +503,7 @@ class UnitHandler(DynamicsDimensionResolver):
         return scaled_expr, dims
 
     def _flatten_matching(self, expr, **kwargs):  # @UnusedVariable
-        arg_exprs, arg_dims = zip(*[self._flatten(a) for a in expr.args])
+        arg_exprs, arg_dims = list(zip(*[self._flatten(a) for a in expr.args]))
         scaled_expr = type(expr)(*arg_exprs)
         return scaled_expr, arg_dims[0]
 

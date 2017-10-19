@@ -5,6 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from builtins import object
 from itertools import chain
 
 

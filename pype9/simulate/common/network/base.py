@@ -5,6 +5,10 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from builtins import next
+from builtins import str
+from past.builtins import basestring
+from builtins import object
 from collections import namedtuple, defaultdict
 from itertools import chain
 import quantities as pq
@@ -90,7 +94,7 @@ class Network(object):
         self._component_arrays = {}
         code_gen = self.CellCodeGenerator()
         # Build the PyNN populations
-        for name, comp_array in flat_comp_arrays.iteritems():
+        for name, comp_array in flat_comp_arrays.items():
             if build_dir is None:
                 array_build_dir = code_gen.get_build_dir(
                     self.nineml.url, name, group=self.nineml.name)
@@ -101,7 +105,7 @@ class Network(object):
                 **kwargs)
         self._selections = {}
         # Build the PyNN Selections
-        for selection in flat_selections.itervalues():
+        for selection in flat_selections.values():
             # TODO: Assumes that selections are only concatenations (which is
             #       true for 9MLv1.0 but not v2.0)
             self._selections[selection.name] = self.SelectionClass(
@@ -116,7 +120,7 @@ class Network(object):
                     " using 'resample_connectivity' before constructing "
                     "network")
             self._connection_groups = {}
-            for name, conn_group in flat_conn_groups.iteritems():
+            for name, conn_group in flat_conn_groups.items():
                 try:
                     source = self._component_arrays[conn_group.source.name]
                 except KeyError:
@@ -144,17 +148,17 @@ class Network(object):
     @property
     def component_arrays(self):
         "Iterate through component arrays"
-        return self._component_arrays.itervalues()
+        return iter(self._component_arrays.values())
 
     @property
     def connection_groups(self):
         "Iterate through connection_groups"
-        return self._connection_groups.itervalues()
+        return iter(self._connection_groups.values())
 
     @property
     def selections(self):
         "Iterate through selections"
-        return self._selections.itervalues()
+        return iter(self._selections.values())
 
     def component_array(self, name):
         """
@@ -218,15 +222,15 @@ class Network(object):
 
     @property
     def component_array_names(self):
-        return self._component_arrays.keys()
+        return list(self._component_arrays.keys())
 
     @property
     def connection_group_names(self):
-        return self._connection_groups.keys()
+        return list(self._connection_groups.keys())
 
     @property
     def selection_names(self):
-        return self._selections.keys()
+        return list(self._selections.keys())
 
     def save_connections(self, output_dir):
         """
@@ -234,7 +238,7 @@ class Network(object):
 
         @param output_dir:
         """
-        for conn_grp in self.connection_groups.itervalues():
+        for conn_grp in self.connection_groups.values():
             if isinstance(conn_grp.synapse_type,
                           pyNN.standardmodels.synapses.ElectricalSynapse):
                 attributes = 'weight'
@@ -265,7 +269,7 @@ class Network(object):
             not file_prefix.endswith('.') and
               not file_prefix.endswith(os.path.sep)):
             file_prefix += '.'
-        for comp_array in self.component_arrays.itervalues():
+        for comp_array in self.component_arrays.values():
             # @UndefinedVariable
             comp_array.write_data(file_prefix + comp_array.name + '.pkl',
                                   **kwargs)
@@ -476,7 +480,7 @@ class Network(object):
                 sel.name, Concatenate9ML(component_arrays[p.name]
                                            for p in sel.populations))
         arrays_and_selections = dict(
-            chain(component_arrays.iteritems(), selections.iteritems()))
+            chain(iter(component_arrays.items()), iter(selections.items())))
         # Create ConnectionGroups from each port connection in Projection
         for proj in network_model.projections:
             _, proj_conns = cls._flatten_synapse(proj)
@@ -560,8 +564,8 @@ class Network(object):
                 append_namespace(prt, namespace),
                 [Property(append_namespace(p.name, namespace),
                           dynamics_properties.property(p.name).quantity)
-                 for p in params.itervalues()])
-            for prt, params in conn_params.iteritems()]
+                 for p in params.values()])
+            for prt, params in conn_params.items()]
 
 #             raise NotImplementedError(
 #                 "Cannot convert population '{}' to component array as "
@@ -859,7 +863,7 @@ class Selection(object):
 
     @property
     def component_arrays(self):
-        return self._component_arrays.itervalues()
+        return iter(self._component_arrays.values())
 
     def component_array(self, name):
         return self._component_arrays[name]
@@ -870,7 +874,7 @@ class Selection(object):
 
     @property
     def component_array_names(self):
-        return self._component_arrays.iterkeys()
+        return iter(self._component_arrays.keys())
 
     def synapse(self, name):
         try:

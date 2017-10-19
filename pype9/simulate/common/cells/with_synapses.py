@@ -1,3 +1,4 @@
+from builtins import object
 from itertools import chain
 from abc import ABCMeta
 from nineml.abstraction import BaseALObject, Dynamics, Parameter
@@ -9,6 +10,7 @@ from nineml.exceptions import name_error, NineMLNameError
 from pype9.exceptions import Pype9RuntimeError
 import nineml
 from nineml.utils import validate_identifier
+from future.utils import with_metaclass
 
 
 class ConnectionParameterSet(BaseALObject, ContainerObject):
@@ -43,11 +45,11 @@ class ConnectionParameterSet(BaseALObject, ContainerObject):
 
     @property
     def parameters(self):
-        return self._parameters.itervalues()
+        return iter(self._parameters.values())
 
     @property
     def parameter_names(self):
-        return self._parameters.iterkeys()
+        return iter(self._parameters.keys())
 
     def clone(self, memo=None, **kwargs):
         return self.__class__(
@@ -92,11 +94,11 @@ class ConnectionPropertySet(BaseULObject, ContainerObject):
 
     @property
     def properties(self):
-        return self._properties.itervalues()
+        return iter(self._properties.values())
 
     @property
     def property_names(self):
-        return self._properties.iterkeys()
+        return iter(self._properties.keys())
 
     def clone(self, memo=None, **kwargs):
         return self.__class__(
@@ -180,7 +182,7 @@ class Synapse(BaseALObject, ContainerObject):
 
     @property
     def analog_port_connections(self):
-        return self._analog_port_connections.itervalues()
+        return iter(self._analog_port_connections.values())
 
     @property
     def num_analog_port_connections(self):
@@ -188,7 +190,7 @@ class Synapse(BaseALObject, ContainerObject):
 
     @property
     def analog_port_connection_names(self):
-        return self._analog_port_connections.iterkeys()
+        return iter(self._analog_port_connections.keys())
 
     @name_error
     def event_port_connection(self, name):
@@ -196,7 +198,7 @@ class Synapse(BaseALObject, ContainerObject):
 
     @property
     def event_port_connections(self):
-        return self._event_port_connections.itervalues()
+        return iter(self._event_port_connections.values())
 
     @property
     def num_event_port_connections(self):
@@ -204,7 +206,7 @@ class Synapse(BaseALObject, ContainerObject):
 
     @property
     def event_port_connection_names(self):
-        return self._event_port_connections.iterkeys()
+        return iter(self._event_port_connections.keys())
 
     def clone(self, memo=None, **kwargs):
         return self.__class__(
@@ -270,11 +272,11 @@ class SynapseProperties(BaseULObject, ContainerObject):
 
     @property
     def analog_port_connections(self):
-        return self._analog_port_connections.values()
+        return list(self._analog_port_connections.values())
 
     @property
     def event_port_connections(self):
-        return self._event_port_connections.values()
+        return list(self._event_port_connections.values())
 
     @name_error
     def analog_port_connection(self, key):
@@ -286,11 +288,11 @@ class SynapseProperties(BaseULObject, ContainerObject):
 
     @property
     def analog_port_connection_keys(self):
-        return self._analog_port_connections.keys()
+        return list(self._analog_port_connections.keys())
 
     @property
     def event_port_connection_keys(self):
-        return self._event_port_connections.keys()
+        return list(self._event_port_connections.keys())
 
     @property
     def num_analog_port_connections(self):
@@ -317,13 +319,11 @@ class SynapseProperties(BaseULObject, ContainerObject):
                    port_connections)
 
 
-class WithSynapses(object):
+class WithSynapses(with_metaclass(ABCMeta, object)):
     """
     Mixin class to be mixed with Dynamics and MultiDynamics classes in order
     to handle synapses (and their potential flattening to weights)
     """
-
-    __metaclass__ = ABCMeta
 
     nineml_attr = ('name',)
     nineml_child = {'dynamics': None}
@@ -415,11 +415,11 @@ class WithSynapses(object):
 
     @property
     def synapses(self):
-        return self._synapses.itervalues()
+        return iter(self._synapses.values())
 
     @property
     def connection_parameter_sets(self):
-        return self._connection_parameter_sets.itervalues()
+        return iter(self._connection_parameter_sets.values())
 
     @property
     def num_synapses(self):
@@ -431,11 +431,11 @@ class WithSynapses(object):
 
     @property
     def synapse_names(self):
-        return self._synapses.iterkeys()
+        return iter(self._synapses.keys())
 
     @property
     def connection_parameter_set_keys(self):
-        return self._connection_parameter_sets.iterkeys()
+        return iter(self._connection_parameter_sets.keys())
 
     @classmethod
     def wrap(cls, dynamics, synapses=None, connection_parameter_sets=None):
@@ -543,14 +543,12 @@ class MultiDynamicsWithSynapses(WithSynapses, MultiDynamics):
         self._event_port_connections = dynamics._event_port_connections
 
 
-class WithSynapsesProperties(object):
+class WithSynapsesProperties(with_metaclass(ABCMeta, object)):
     """
     Mixin class to be mixed with DynamicsProperties and MultiDynamicsProperties
     classes in order to handle synapses (and their potential flattening to
     weights)
     """
-
-    __metaclass__ = ABCMeta
     nineml_child = {'dynamics_properties': None}
     nineml_children = (SynapseProperties, ConnectionPropertySet)
 
@@ -624,11 +622,11 @@ class WithSynapsesProperties(object):
 
     @property
     def synapse_propertiess(self):
-        return self._synapse_propertiess.itervalues()
+        return iter(self._synapse_propertiess.values())
 
     @property
     def connection_property_sets(self):
-        return self._connection_property_sets.itervalues()
+        return iter(self._connection_property_sets.values())
 
     @property
     def num_synapse_propertiess(self):
@@ -640,11 +638,11 @@ class WithSynapsesProperties(object):
 
     @property
     def synapse_propertiess_names(self):
-        return self._synapse_propertiess.iterkeys()
+        return iter(self._synapse_propertiess.keys())
 
     @property
     def connection_property_set_names(self):
-        return self._connection_property_sets.iterkeys()
+        return iter(self._connection_property_sets.keys())
 
     def _all_connection_properties(self):
         return set(chain(*(

@@ -2,6 +2,8 @@
 Constructs a leaky integrate and fire model with an alpha synapse and connects
 it to an input source that fires spikes at a constant rate
 """
+from __future__ import division
+from past.utils import old_div
 import os
 import nest
 from argparse import ArgumentParser
@@ -85,7 +87,7 @@ with simulation(args.timestep * un.ms) as sim:
         syn_spec['weight'] = UnitHandler.scale_value(weight)
     nest.Connect(input._cell, cell._cell, syn_spec=syn_spec)
     # Set initial conditions
-    input.update_state({'t_next': (1 * un.unitless) / rate})
+    input.update_state({'t_next': old_div((1 * un.unitless), rate)})
     cell.update_state({
         'b__psr': 0.0 * un.nA,
         'a__psr': 0.0 * un.nA,

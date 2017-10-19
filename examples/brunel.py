@@ -1,5 +1,6 @@
 from __future__ import division
 from __future__ import print_function
+from builtins import zip
 import os.path
 from itertools import groupby
 from operator import itemgetter
@@ -271,7 +272,7 @@ if mpi_rank == 0:
                 legend = []
                 plt.sca(v_subplots[-1] if num_subplots > 1 else v_subplots)
                 for sender, group in groupby(sorted_vs, key=itemgetter(0)):
-                    _, t, v = zip(*group)
+                    _, t, v = list(zip(*group))
                     t = np.asarray(t)
                     v = np.asarray(v)
                     inds = t > args.plot_start

@@ -5,6 +5,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from builtins import zip
 from nineml.user.connectionrule import (
     BaseConnectivity, InverseConnectivity as BaseInverseConnectivity)
 from pyNN.parameters import LazyArray
@@ -46,7 +47,7 @@ class PyNNConnectivity(BaseConnectivity):
                 src = self.rule_properties.property('sourceIndicies')
                 dst = self.rule_properties.property('destinationIndicies')
                 assert len(src) == len(dst)
-                params = {'conn_list': zip(src, dst)}
+                params = {'conn_list': list(zip(src, dst))}
             elif self.rule_properties.lib_type == 'Probabilistic':
                 connector_cls = self._pyNN_module.FixedProbabilityConnector
                 params = {

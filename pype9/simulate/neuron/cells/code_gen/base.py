@@ -8,6 +8,8 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from builtins import str
+from builtins import next
 import os.path
 import tempfile
 import uuid

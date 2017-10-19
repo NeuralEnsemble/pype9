@@ -1,3 +1,4 @@
+from builtins import object
 import logging
 import os.path
 from nineml import units as un

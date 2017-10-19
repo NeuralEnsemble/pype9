@@ -10,6 +10,7 @@
 #
 ##########################################################################
 from __future__ import absolute_import
+from builtins import object
 import platform
 import os
 import time
@@ -18,7 +19,8 @@ from copy import deepcopy
 import shutil
 from os.path import join
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
-from itertools import izip
+from future.utils import with_metaclass
+
 from abc import ABCMeta, abstractmethod
 import sympy
 from nineml import units
@@ -35,9 +37,7 @@ import tempfile
 logger = logging.getLogger('PyPe9')
 
 
-class BaseCodeGenerator(object):
-
-    __metaclass__ = ABCMeta
+class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
 
     BUILD_MODE_OPTIONS = ['lazy', 'force', 'require', 'build_only',
                           'generate_only']
@@ -55,7 +55,7 @@ class BaseCodeGenerator(object):
          sorted), ('hash', hash), ('deepcopy', deepcopy), ('units', units),
          ('hasattr', hasattr), ('set', set), ('list', list), ('None', None),
          ('sympy', sympy)] +
-        [(n, v) for n, v in pype9.annotations.__dict__.iteritems()
+        [(n, v) for n, v in pype9.annotations.__dict__.items()
          if n != '__builtins__'])
 
     # Derived classes should provide mapping from 9ml dimensions to default
@@ -267,7 +267,7 @@ class BaseCodeGenerator(object):
             self.BASE_TMPL_PATH,
             os.path.join(self.BASE_TMPL_PATH, 'includes')]
         # Add include paths for various switches (e.g. solver type)
-        for name, value in switches.iteritems():
+        for name, value in switches.items():
             if value is not None:
                 template_paths.append(os.path.join(self.BASE_TMPL_PATH,
                                                    'includes', name, value))
@@ -282,7 +282,7 @@ class BaseCodeGenerator(object):
         jinja_env.globals.update(**self._globals)
         # Actually render the contents
         contents = jinja_env.get_template(template).render(**args)
-        for old, new in post_hoc_subs.iteritems():
+        for old, new in post_hoc_subs.items():
             contents = contents.replace(old, new)
         # Write the contents to file
         with open(os.path.join(directory, filename), 'w') as f:
@@ -368,7 +368,7 @@ class BaseCodeGenerator(object):
             Build properties to save into the annotations of the build
             component class
         """
-        for k, v in [('version', pype9.__version__)] + build_props.items():
+        for k, v in [('version', pype9.__version__)] + list(build_props.items()):
             component_class.annotations.set((BUILD_PROPS, PYPE9_NS), k, v)
 
     @classmethod

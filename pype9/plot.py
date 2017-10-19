@@ -1,9 +1,11 @@
+from builtins import str
+from builtins import next
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from collections import defaultdict
 import quantities as pq
 import logging
-from itertools import izip
+
 
 logger = logging.getLogger('PyPe9')
 
@@ -51,7 +53,7 @@ def plot(seg, dims=(10, 8), resolution=300, save=None, show=True,
             label_colours = dict((l, plt.gca()._get_lines.get_next_color())
                                  for l in labels)
             label_colours[mode] = None
-            for label, start, duration in izip(epochs.labels,
+            for label, start, duration in zip(epochs.labels,
                                                epochs.times,
                                                epochs.durations):
                 if label_colours[label] is not None:
@@ -62,7 +64,7 @@ def plot(seg, dims=(10, 8), resolution=300, save=None, show=True,
                                 color='gray', linewidth=0.5)
                     plt.axvline(end, linestyle=regime_linestyle, color='gray',
                                 linewidth=0.5)
-            for label, colour in label_colours.iteritems():
+            for label, colour in label_colours.items():
                 if colour is None:
                     colour = 'white'
                 legend.append(
@@ -85,12 +87,12 @@ def plot(seg, dims=(10, 8), resolution=300, save=None, show=True,
 
 def mode_epoch(epocharray):
     total_durations = defaultdict(lambda: 0.0 * pq.s)
-    for label, duration in izip(epocharray.labels,
+    for label, duration in zip(epocharray.labels,
                                 epocharray.durations):
         total_durations[label] += duration
     max_duration = 0.0
     max_label = None
-    for label, total_duration in total_durations.iteritems():
+    for label, total_duration in total_durations.items():
         if total_duration > max_duration:
             max_label = label
     return max_label

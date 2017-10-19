@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 from __future__ import print_function
+from __future__ import division
+from builtins import zip
+from past.utils import old_div
 import sys
 import quantities as pq
 import os.path
@@ -96,7 +99,7 @@ class TestDynamics(TestCase):
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
-            for (name1, name2), diff in comparisons.iteritems():
+            for (name1, name2), diff in comparisons.items():
                 print('{} v {}: {}'.format(name1, name2, diff))
         if plot:
             comparer.plot()
@@ -169,7 +172,7 @@ class TestDynamics(TestCase):
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
-            for (name1, name2), diff in comparisons.iteritems():
+            for (name1, name2), diff in comparisons.items():
                 print('{} v {}: {}'.format(name1, name2, diff))
         if plot:
             comparer.plot()
@@ -219,7 +222,7 @@ class TestDynamics(TestCase):
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
-            for (name1, name2), diff in comparisons.iteritems():
+            for (name1, name2), diff in comparisons.items():
                 print('{} v {}: {}'.format(name1, name2, diff))
         if plot:
             comparer.plot()
@@ -291,14 +294,14 @@ class TestDynamics(TestCase):
                                'a__psr__syn': (None, 1),
                                'b__psr__syn': (None, 1)}
         initial_states.update(
-            (k + '__cell', v) for k, v in self.liaf_initial_states.iteritems())
+            (k + '__cell', v) for k, v in self.liaf_initial_states.items())
         properties = DynamicsProperties(
             name='IafAlphaProperties', definition=iaf_alpha,
             properties=dict(
                 (p.name + '__' + suffix, p.quantity)
                 for p, suffix in chain(
-                    zip(liaf_properties.properties, repeat('cell')),
-                    zip(alpha_properties.properties, repeat('psr__syn')),
+                    list(zip(liaf_properties.properties, repeat('cell'))),
+                    list(zip(alpha_properties.properties, repeat('psr__syn'))),
                     [(Property('weight', 10 * un.nA), 'pls__syn')])))
         properties_with_syn = DynamicsWithSynapsesProperties(
             'IafAlpha_props_with_syn',
@@ -309,10 +312,10 @@ class TestDynamics(TestCase):
                     [properties.property('weight__pls__syn')])])
         nest_tranlsations.update(
             (k + '__cell', v)
-            for k, v in self.liaf_nest_translations.iteritems())
+            for k, v in self.liaf_nest_translations.items())
         neuron_tranlsations.update(
             (k + '__cell', v)
-            for k, v in self.liaf_neuron_translations.iteritems())
+            for k, v in self.liaf_neuron_translations.items())
         build_dir = os.path.join(os.path.dirname(iaf.url), '9build')
         comparer = Comparer(
             nineml_model=iaf_alpha_with_syn,
@@ -326,7 +329,7 @@ class TestDynamics(TestCase):
             input_train=input_freq('spike', 450 * pq.Hz, duration,
                                    weight=[Property('weight__pls__syn',
                                                     10 * un.nA)],  # 20.680155243 * un.pA
-                                   offset=duration / 2.0),
+                                   offset=old_div(duration, 2.0)),
             nest_translations=nest_tranlsations,
             neuron_translations=neuron_tranlsations,
             extra_mechanisms=['pas'],
@@ -344,7 +347,7 @@ class TestDynamics(TestCase):
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
-            for (name1, name2), diff in comparisons.iteritems():
+            for (name1, name2), diff in comparisons.items():
                 print('{} v {}: {}'.format(name1, name2, diff))
         if plot:
             comparer.plot()
@@ -389,7 +392,7 @@ class TestDynamics(TestCase):
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
         if print_comparisons:
-            for (name1, name2), diff in comparisons.iteritems():
+            for (name1, name2), diff in comparisons.items():
                 print('{} v {}: {}'.format(name1, name2, diff))
         if plot:
             comparer.plot()
@@ -428,7 +431,7 @@ class TestDynamics(TestCase):
             spikes = cell.recording('spike_output')
             # Calculate the rate of the modelled process
             recorded_rate = pq.Quantity(
-                len(spikes) / (spikes.t_stop - spikes.t_start), 'Hz')
+                old_div(len(spikes), (spikes.t_stop - spikes.t_start)), 'Hz')
             ref_rate = pq.Quantity(UnitHandlerNEST.to_pq_quantity(rate), 'Hz')
             rate_difference = abs(ref_rate - recorded_rate)
             if print_comparisons:

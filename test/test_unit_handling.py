@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import division
+from past.utils import old_div
 import os.path
 import math
 from nineml import units as un
@@ -53,17 +55,17 @@ class TestUnitHandler2(BaseUnitHandler):
 
 class TestUnitAssignment(TestCase):
 
-    test_units = [un.mV / un.uF,
+    test_units = [old_div(un.mV, un.uF),
                   un.ms * un.C / un.um,
-                  un.K ** 2 / (un.uF * un.mV ** 2),
-                  un.uF ** 3 / un.um,
-                  un.cd / un.A]
+                  old_div(un.K ** 2, (un.uF * un.mV ** 2)),
+                  old_div(un.uF ** 3, un.um),
+                  old_div(un.cd, un.A)]
 
-    test_unit_mapped = [un.mV / un.uF,
+    test_unit_mapped = [old_div(un.mV, un.uF),
                         un.ms * un.C / un.um,
-                        un.K ** 2 / (un.uF * un.mV ** 2),
-                        un.uF ** 3 / un.um,
-                        un.cd / un.A]
+                        old_div(un.K ** 2, (un.uF * un.mV ** 2)),
+                        old_div(un.uF ** 3, un.um),
+                        old_div(un.cd, un.A)]
 
     def setUp(self):
         self.a = Dynamics(
@@ -80,7 +82,7 @@ class TestUnitAssignment(TestCase):
             state_variables=[StateVariable('SV1', dimension=un.dimensionless),
                              StateVariable('SV2', dimension=un.voltage),
                              StateVariable('SV3',
-                                           dimension=un.voltage / un.time)],
+                                           dimension=old_div(un.voltage, un.time))],
             analog_ports=[AnalogReceivePort('ARP1', dimension=un.resistance),
                           AnalogReceivePort('ARP2', dimension=un.charge),
                           AnalogReceivePort('ARP3',
@@ -89,44 +91,44 @@ class TestUnitAssignment(TestCase):
             parameters=[Parameter('P1', dimension=un.voltage),
                         Parameter('P2', dimension=un.resistance),
                         Parameter('P3', dimension=un.charge),
-                        Parameter('P4', dimension=un.length / un.current ** 2),
-                        Parameter('P5', dimension=un.current ** 2 / un.length),
+                        Parameter('P4', dimension=old_div(un.length, un.current ** 2)),
+                        Parameter('P5', dimension=old_div(un.current ** 2, un.length)),
                         Parameter('P6', dimension=un.length ** 2),
-                        Parameter('P7', dimension=un.current / un.capacitance),
+                        Parameter('P7', dimension=old_div(un.current, un.capacitance)),
                         Parameter('P8', dimension=un.time),
                         Parameter('P9',
-                                  dimension=un.capacitance / un.length ** 2),
+                                  dimension=old_div(un.capacitance, un.length ** 2)),
                         Parameter('P10',
-                                  dimension=un.conductance / un.length ** 2),
+                                  dimension=old_div(un.conductance, un.length ** 2)),
                         Parameter('P11', dimension=un.capacitance),
                         Parameter('P12', dimension=un.per_time),
                         Parameter('P13', dimension=un.per_time)],
-            constants=[Constant('C1', 0.04, units=(un.unitless /
-                                                   (un.mV * un.ms))),
-                       Constant('C2', 5.0, units=un.unitless / un.ms),
-                       Constant('C3', 140.0, units=un.mV / un.ms)]
+            constants=[Constant('C1', 0.04, units=(old_div(un.unitless,
+                                                   (un.mV * un.ms)))),
+                       Constant('C2', 5.0, units=old_div(un.unitless, un.ms)),
+                       Constant('C3', 140.0, units=old_div(un.mV, un.ms))]
         )
 
     def test_dimension_to_units(self):
-        test_units = {un.mV / un.uF: un.mV / un.nF,
-                      un.mV / un.ms: un.mV / un.ms,
-                      un.nA / un.pF: un.mV / un.ms,
-                      un.cd / un.A: un.cd / un.nA,
-                      un.A / un.uF: un.nA / un.nF,
-                      un.nF / (un.m ** 2 * un.s): un.S / un.cm ** 2}
+        test_units = {old_div(un.mV, un.uF): old_div(un.mV, un.nF),
+                      old_div(un.mV, un.ms): old_div(un.mV, un.ms),
+                      old_div(un.nA, un.pF): old_div(un.mV, un.ms),
+                      old_div(un.cd, un.A): old_div(un.cd, un.nA),
+                      old_div(un.A, un.uF): old_div(un.nA, un.nF),
+                      old_div(un.nF, (un.m ** 2 * un.s)): old_div(un.S, un.cm ** 2)}
         TestUnitHandler1.clear_cache()
-        for unit, unit_mapped in test_units.iteritems():
+        for unit, unit_mapped in test_units.items():
             new_unit = TestUnitHandler1.dimension_to_units(unit.dimension)
             self.assertEqual(new_unit, unit_mapped,
                              "New unit mapped incorrectly {}->{} ({})"
                              .format(unit, new_unit, unit_mapped))
 
     def test_conversions(self):
-        test_units = [un.mV / un.uF,
+        test_units = [old_div(un.mV, un.uF),
                       un.ms * un.C / un.um,
-                      un.K ** 2 / (un.uF * un.mV ** 2),
-                      un.uF ** 3 / un.um,
-                      un.cd / un.A]
+                      old_div(un.K ** 2, (un.uF * un.mV ** 2)),
+                      old_div(un.uF ** 3, un.um),
+                      old_div(un.cd, un.A)]
         for unit in test_units:
             scale, compound = TestUnitHandler1.dimension_to_units_compound(
                 unit.dimension)

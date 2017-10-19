@@ -1,3 +1,4 @@
+from builtins import object
 from abc import ABCMeta, abstractmethod
 from nineml import units as un
 import numpy
@@ -5,11 +6,12 @@ import time
 from pype9.exceptions import Pype9UsageError, Pype9NoActiveSimulationError
 import logging
 from pyNN.random import NumpyRNG
+from future.utils import with_metaclass
 
 logger = logging.getLogger('PyPe9')
 
 
-class Simulation(object):
+class Simulation(with_metaclass(ABCMeta, object)):
     """
     Base class of all simulation classes that prepares and runs the simulator
     kernel. All simulator objects must be created within the context of a
@@ -59,8 +61,6 @@ class Simulation(object):
     options : dict(str, object)
         Options passed to the simulator-specific methods
     """
-
-    __metaclass__ = ABCMeta
 
     max_seed = 2 ** 32 - 1
 
@@ -279,7 +279,7 @@ class Simulation(object):
 
     @classmethod
     def gen_seed(cls):
-        return long(time.time())
+        return int(time.time())
 
     def register_cell(self, cell):
         self._registered_cells.append(cell)

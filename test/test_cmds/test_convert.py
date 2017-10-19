@@ -49,7 +49,7 @@ class TestConvert(TestCase):
         # Check the output file is yaml
         with open(out_path) as f:
             contents = yaml.load(f)
-        self.assertEqual(contents.keys(), ['NineML'])
+        self.assertEqual(list(contents.keys()), ['NineML'])
         # Check the converted document is equivalent
         in_doc = read(in_path)
         out_doc = read(out_path)

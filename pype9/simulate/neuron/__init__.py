@@ -1,3 +1,5 @@
+from __future__ import division
+from past.utils import old_div
 from .cells import Cell, CellMetaClass
 from .simulation import Simulation
 from .network import Network
@@ -33,12 +35,12 @@ dimensions_matrix = [
 
 default_units = [un.ms,
                  un.mV,
-                 un.mA / un.cm ** 2,
+                 old_div(un.mA, un.cm ** 2),
                  un.nA,
                  un.mM,
-                 un.uF / un.cm ** 2,
+                 old_div(un.uF, un.cm ** 2),
                  un.um,
-                 un.S / un.cm ** 2,
+                 old_div(un.S, un.cm ** 2),
                  un.uS,
                  un.ohm * un.cm,
                  un.Mohm,

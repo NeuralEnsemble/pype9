@@ -5,13 +5,13 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from builtins import object
 from abc import ABCMeta
 from .values import get_pyNN_value
+from future.utils import with_metaclass
 
 
-class Synapse(object):
-
-    __metaclass__ = ABCMeta
+class Synapse(with_metaclass(ABCMeta, object)):
 
     def __init__(self, nineml_params, min_delay, rng):
         params = self._convert_params(nineml_params, rng)
@@ -25,7 +25,7 @@ class Synapse(object):
         units and or random distributions
         """
         converted_params = {}
-        for prop in nineml_props.iteritems():
+        for prop in nineml_props.items():
             val = get_pyNN_value(prop, rng, cls.UnitHandler)
             converted_params[cls.nineml_translations[prop.name]] = val
         return converted_params

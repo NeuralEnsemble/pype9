@@ -22,6 +22,7 @@ overridden with the '--prop', '--initial_value' and '--initial_regime'
 respectively and must be provided for every parameter/state-variable if they
 are not in the model description file.
 """
+from builtins import next
 from argparse import ArgumentParser
 from nineml import units as un
 from pype9.simulate.common.cells.code_gen import BaseCodeGenerator
@@ -218,7 +219,7 @@ def run(argv):
             if record_regime:
                 data_segs[fname].epochs.append(cell.regime_epochs())
         # Write data to file
-        for fname, data_seg in data_segs.iteritems():
+        for fname, data_seg in data_segs.items():
             neo.io.PickleIO(fname).write(data_seg)
     logger.info("Finished simulation of '{}' for {} ms".format(model.name,
                                                                args.time))

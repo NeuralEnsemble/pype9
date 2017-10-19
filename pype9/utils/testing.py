@@ -4,6 +4,8 @@ NEST
 """
 from __future__ import absolute_import, division
 from __future__ import print_function
+from builtins import str
+from builtins import object
 import os.path
 import re
 from itertools import combinations
@@ -278,7 +280,7 @@ class Comparer(object):
                         setattr(self.nrn_cell, varname, value)
                     except AttributeError:
                         setattr(self.nrn_cell_sec, varname, value)
-        for name, value in self.initial_states.iteritems():
+        for name, value in self.initial_states.items():
             try:
                 varname, scale = self.neuron_translations[name]
                 value = value * scale
@@ -397,7 +399,7 @@ class Comparer(object):
         nest.Connect(self.nest_multimeter, self.nest_cell,
                      syn_spec={'delay': float(self.device_delay)})
         trans_states = {}
-        for name, qty in self.initial_states.iteritems():
+        for name, qty in self.initial_states.items():
             try:
                 varname, scale = self.nest_translations[name]
                 qty = qty * scale
@@ -585,7 +587,7 @@ class ReferenceBrunel2000(object):
                      "excitatory")
 
         if connections is not None:
-            for (p1_name, p2_name), conns in connections.iteritems():
+            for (p1_name, p2_name), conns in connections.items():
                 if p1_name == 'Exc':
                     p1 = nodes_exc
                     syn = 'excitatory'

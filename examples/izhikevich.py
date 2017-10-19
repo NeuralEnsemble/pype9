@@ -1,4 +1,7 @@
 from __future__ import print_function
+from __future__ import division
+from builtins import zip
+from past.utils import old_div
 import nineml.units as un
 from argparse import ArgumentParser
 import ninemlcatalog
@@ -129,9 +132,9 @@ if __name__ == "__main__":
         cell_kwargs = {}  # Isyn should be guessed as an external current
 
     # Create an input step current
-    num_preceding = int(np.floor(args.input_start / args.timestep))
-    num_remaining = int(np.ceil((args.simtime - args.input_start) /
-                                args.timestep))
+    num_preceding = int(np.floor(old_div(args.input_start, args.timestep)))
+    num_remaining = int(np.ceil(old_div((args.simtime - args.input_start),
+                                args.timestep)))
     amplitude = float(pq.Quantity(input_amp, 'nA'))
     input_signal = neo.AnalogSignal(
         np.concatenate((np.zeros(num_preceding),
