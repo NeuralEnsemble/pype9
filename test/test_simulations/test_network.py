@@ -18,15 +18,16 @@ from nineml.abstraction import (
 from nineml.abstraction.ports import (
     AnalogSendPort, AnalogReceivePort, AnalogReducePort, EventSendPort,
     EventReceivePort)
+from nineml.user import AnalogPortConnection
 from nineml import units as un
 from nineml.units import ms
 from nineml.values import RandomDistributionValue
 from pype9.simulate.common.cells import (
-    ConnectionPropertySet, MultiDynamicsWithSynapsesProperties)
+    ConnectionPropertySet, MultiDynamicsWithSynapsesProperties,
+    SynapseProperties)
 from pype9.simulate.common.network import Network as BasePype9Network
 from pype9.simulate.neuron.network import Network as NeuronPype9Network
 from pype9.simulate.neuron import Simulation as NeuronSimulation
-from pype9.simulate.common.network.base import EXPOSURE_SUFFIX
 import ninemlcatalog
 import sys
 argv = sys.argv[1:]  # Save argv before it is clobbered by the NEST init.
@@ -894,22 +895,19 @@ class TestNetwork(TestCase):
                         ('Proj2', 'i__psr', 'cell', 'i_ext'),
                         ('Proj4', 'i__psr', 'cell', 'i_ext')],
                     port_exposures=[
-                        ('cell', 'spike', 'spike__cell' + EXPOSURE_SUFFIX),
-                        ('Proj2', 'double_spike__psr',
-                         'double_spike__psr__Proj2' + EXPOSURE_SUFFIX),
-                        ('Proj2', 'spike__psr',
-                         'spike__psr__Proj2' + EXPOSURE_SUFFIX),
-                        ('Proj4', 'spike__psr',
-                         'spike__psr__Proj4' + EXPOSURE_SUFFIX)]),
+                        ('cell', 'spike'),
+                        ('Proj2', 'double_spike__psr'),
+                        ('Proj2', 'spike__psr'),
+                        ('Proj4', 'spike__psr')]),
                 connection_property_sets=[
                     ConnectionPropertySet(
-                        'spike__psr__Proj2' + EXPOSURE_SUFFIX,
+                        'spike__psr__Proj2',
                         [Property('weight__pls__Proj2', random_weight)]),
                     ConnectionPropertySet(
-                        'double_spike__psr__Proj2' + EXPOSURE_SUFFIX,
+                        'double_spike__psr__Proj2',
                         [Property('weight__pls__Proj2', random_weight)]),
                     ConnectionPropertySet(
-                        'spike__psr__Proj4' + EXPOSURE_SUFFIX,
+                        'spike__psr__Proj4',
                         [Property('weight__pls__Proj4', random_weight)])]))
 
         dyn_array2 = ComponentArray(
@@ -928,37 +926,37 @@ class TestNetwork(TestCase):
                                 ('pls', 'fixed_weight', 'psr', 'weight')],
                             port_exposures=[
                                 ('psr', 'i'),
-                                ('psr', 'spike')]),
-                        'Proj3': MultiDynamicsProperties(
-                            name='Proj3_syn',
-                            sub_components={'psr': exc.clone(),
-                                            'pls': stdp.clone()},
-                            port_connections=[
-                                ('pls', 'wsyn_current', 'psr', 'weight')],
-                            port_exposures=[
-                                ('psr', 'i'),
-                                ('psr', 'spike'),
-                                ('pls', 'incoming_spike')])},
+                                ('psr', 'spike')])},
                     port_connections=[
-                        ('Proj1', 'i__psr', 'cell', 'i_ext'),
-                        ('Proj3', 'i__psr', 'cell', 'i_ext')],
+                        ('Proj1', 'i__psr', 'cell', 'i_ext')],
                     port_exposures=[
-                        ('cell', 'spike', 'spike__cell' + EXPOSURE_SUFFIX),
-                        ('cell', 'double_spike',
-                         'double_spike__cell' + EXPOSURE_SUFFIX),
-                        ('Proj1', 'spike__psr',
-                         'spike__psr__Proj1' + EXPOSURE_SUFFIX),
-                        ('Proj3', 'spike__psr',
-                         'spike__psr__Proj3' + EXPOSURE_SUFFIX),
-                        ('Proj3', 'incoming_spike__pls',
-                         'incoming_spike__pls__Proj3' + EXPOSURE_SUFFIX)]),
+                        ('cell', 'spike'),
+                        ('cell', 'double_spike'),
+                        ('Proj1', 'spike__psr'),
+                        ('cell', 'i_ext')]),
                 connection_property_sets=[
                     ConnectionPropertySet(
-                        'spike__psr__Proj1' + EXPOSURE_SUFFIX,
-                        [Property('weight__pls__Proj1', random_weight)]),
-                    ConnectionPropertySet(
-                        'incoming_spike__pls__Proj3' + EXPOSURE_SUFFIX,
-                        [Property('wmax__pls__Proj3', random_wmax)])]))
+                        'spike__psr__Proj1',
+                        [Property('weight__pls__Proj1', random_weight)])],
+                synapse_propertiess=[
+                    SynapseProperties(
+                        name='Proj3',
+                        dynamics_properties=MultiDynamicsProperties(
+                            name='Proj3_syn',
+                            sub_components={'psr': exc,
+                                            'pls': stdp},
+                            port_connections=[
+                                AnalogPortConnection(
+                                    'wsyn_current', 'weight',
+                                    sender_name='pls', receiver_name='psr')],
+                            port_exposures=[('psr', 'spike'),
+                                            ('pls', 'incoming_spike'),
+                                            ('psr', 'i')]),
+                        port_connections=[
+                            AnalogPortConnection(
+                                'i__psr', 'i_ext__cell__reduce',
+                                sender_role='synapse',
+                                receiver_role='post')])]))
 
         dyn_array3 = ComponentArray(
             "Pop3", pop3.size,
@@ -967,51 +965,49 @@ class TestNetwork(TestCase):
                 MultiDynamicsProperties(
                     'Pop3_cell',
                     sub_components={'cell': cell3},
-                    port_exposures=[('cell', 'spike',
-                                     'spike__cell' + EXPOSURE_SUFFIX),
-                                    ('cell', 'i_ext',
-                                     'i_ext__cell' + EXPOSURE_SUFFIX)],
+                    port_exposures=[('cell', 'spike'),
+                                    ('cell', 'i_ext')],
                     port_connections=[])))
 
         conn_group1 = EventConnectionGroup(
-            'Proj1', dyn_array1, dyn_array2, 'spike__cell' + EXPOSURE_SUFFIX,
-            'spike__psr__Proj1' + EXPOSURE_SUFFIX,
+            'Proj1', dyn_array1, dyn_array2, 'spike__cell',
+            'spike__psr__Proj1',
             connectivity=Connectivity(self.all_to_all, pop1.size, pop2.size),
             delay=self.delay)
 
         conn_group2 = EventConnectionGroup(
             'Proj2__pre__spike__synapse__spike__psr', dyn_array2,
-            dyn_array1, 'spike__cell' + EXPOSURE_SUFFIX,
-            'spike__psr__Proj2' + EXPOSURE_SUFFIX,
+            dyn_array1, 'spike__cell',
+            'spike__psr__Proj2',
             connectivity=Connectivity(self.all_to_all, pop2.size, pop1.size),
             delay=self.delay)
 
         conn_group3 = EventConnectionGroup(
             'Proj2__pre__double_spike__synapse__double_spike__psr',
-            dyn_array2, dyn_array1, 'double_spike__cell' + EXPOSURE_SUFFIX,
-            'double_spike__psr__Proj2' + EXPOSURE_SUFFIX,
+            dyn_array2, dyn_array1, 'double_spike__cell',
+            'double_spike__psr__Proj2',
             connectivity=Connectivity(self.all_to_all, pop2.size, pop1.size),
             delay=self.delay)
 
         conn_group4 = EventConnectionGroup(
             'Proj3__pre__spike__synapse__spike__psr', dyn_array3,
-            dyn_array2, 'spike__cell' + EXPOSURE_SUFFIX,
-            'spike__psr__Proj3' + EXPOSURE_SUFFIX,
+            dyn_array2, 'spike__cell',
+            'spike__psr__Proj3',
             connectivity=Connectivity(self.all_to_all, pop3.size, pop2.size),
             delay=self.delay)
 
         conn_group5 = EventConnectionGroup(
             'Proj3__pre__spike__synapse__incoming_spike__pls',
             dyn_array3, dyn_array2,
-            'spike__cell' + EXPOSURE_SUFFIX,
-            'incoming_spike__pls__Proj3' + EXPOSURE_SUFFIX,
+            'spike__cell',
+            'incoming_spike__pls__Proj3',
             connectivity=Connectivity(self.all_to_all, pop3.size, pop2.size),
             delay=self.delay)
 
         conn_group6 = EventConnectionGroup(
             'Proj4', dyn_array3, dyn_array1,
-            'spike__cell' + EXPOSURE_SUFFIX,
-            'spike__psr__Proj4' + EXPOSURE_SUFFIX,
+            'spike__cell',
+            'spike__psr__Proj4',
             connectivity=Connectivity(self.all_to_all, pop3.size, pop1.size),
             delay=self.delay)
 

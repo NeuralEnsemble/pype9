@@ -28,6 +28,9 @@ from nineml.user import (
     AnalogConnectionGroup as AnalogConnectionGroup9ML,
     Selection as Selection9ML,
     Concatenate as Concatenate9ML)
+from nineml.user import AnalogPortConnection
+from nineml.user.multi.port_exposures import AnalogReducePortExposure
+from nineml.abstraction import AnalogReducePort
 from pype9.exceptions import Pype9UnflattenableSynapseException
 from .connectivity import InversePyNNConnectivity
 from ..cells import (
@@ -37,8 +40,6 @@ from pype9.exceptions import Pype9UsageError, Pype9NameError
 
 
 _REQUIRED_SIM_PARAMS = ['timestep', 'min_delay', 'max_delay', 'temperature']
-
-EXPOSURE_SUFFIX = '__exposure'
 
 
 class Network(object):
@@ -421,18 +422,18 @@ class Network(object):
                     # synaptic cell cannot be flattened into a single component
                     # of a multi- dynamics object so an individual synapses
                     # must be created for each connection.
+                    synapse_conns = [
+                        cls._suffix_reduce_exposure(pc) for pc in post_conns]
                     synapses.append(SynapseProperties(proj.name, synapse,
-                                                      post_conns))
+                                                      synapse_conns))
                     # Add exposures to the post-synaptic cell for connections
                     # from the synapse
                     add_exposures(chain(*(
-                        pc.expose_ports({'post': cls.CELL_COMP_NAME},
-                                        name_suffix=EXPOSURE_SUFFIX)
+                        pc.expose_ports({'post': cls.CELL_COMP_NAME})
                         for pc in post_conns)))
                 # Add exposures for connections to/from the pre synaptic cell
                 add_exposures(
-                    chain(*(pc.expose_ports(role2name,
-                                            name_suffix=EXPOSURE_SUFFIX)
+                    chain(*(pc.expose_ports(role2name)
                             for pc in pre_conns)))
                 role2name['pre'] = cls.CELL_COMP_NAME
             # Add exposures for connections to/from the pre-synaptic cell in
@@ -442,8 +443,7 @@ class Network(object):
                 synapse, proj_conns = cls._flatten_synapse(proj)
                 # Add send and receive exposures to list
                 add_exposures(chain(*(
-                    pc.expose_ports({'pre': cls.CELL_COMP_NAME},
-                                    name_suffix=EXPOSURE_SUFFIX)
+                    pc.expose_ports({'pre': cls.CELL_COMP_NAME})
                     for pc in proj_conns)))
             # Add all cell ports as multi-component exposures that aren't
             # connected internally in case the user would like to save them or
@@ -454,8 +454,7 @@ class Network(object):
                 (pc.receive_port_name for pc in internal_conns
                  if pc.receiver_name == cls.CELL_COMP_NAME)))
             add_exposures(
-                BasePortExposure.from_port(p, cls.CELL_COMP_NAME,
-                                           name_suffix=EXPOSURE_SUFFIX)
+                BasePortExposure.from_port(p, cls.CELL_COMP_NAME)
                 for p in pop.cell.ports if p.name not in internal_cell_ports)
             dynamics_properties = MultiDynamicsProperties(
                 name=pop.name + '_cell', sub_components=sub_components,
@@ -463,7 +462,7 @@ class Network(object):
                 port_exposures=exposures)
             component = MultiDynamicsWithSynapsesProperties(
                 dynamics_properties.name,
-                dynamics_properties, synapses_properties=synapses,
+                dynamics_properties, synapse_propertiess=synapses,
                 connection_property_sets=connection_property_sets)
             array_name = pop.name
             component_arrays[array_name] = ComponentArray9ML(
@@ -519,13 +518,27 @@ class Network(object):
                     name,
                     arrays_and_selections[proj.pre.name],
                     arrays_and_selections[proj.post.name],
-                    source_port=ns_port_conn.send_port_name + EXPOSURE_SUFFIX,
-                    destination_port=(
-                        ns_port_conn.receive_port_name + EXPOSURE_SUFFIX),
+                    source_port=ns_port_conn.send_port_name,
+                    destination_port=(ns_port_conn.receive_port_name),
                     connectivity=connectivity,
                     delay=delay)
                 connection_groups[conn_group.name] = conn_group
         return component_arrays, connection_groups, selections
+
+    @classmethod
+    def _suffix_reduce_exposure(cls, port_conn):
+        """
+        Appends the reduce port exposure suffix to the receive port name
+        if it is a reduce port.
+        """
+        if isinstance(port_conn.receive_port, AnalogReducePort):
+            receive_port_name = (port_conn.receive_port_name +
+                                 AnalogReducePortExposure.NAME_SUFFIX)
+            port_conn = AnalogPortConnection(
+                port_conn.send_port_name, receive_port_name,
+                sender_role=port_conn.sender_role,
+                receiver_role=port_conn.receiver_role)
+        return port_conn
 
     @classmethod
     def _extract_connection_property_sets(cls, dynamics_properties, namespace):
@@ -556,7 +569,7 @@ class Network(object):
                     conn_params[on_event.src_port_name][param.id] = param
         return [
             ConnectionPropertySet(
-                append_namespace(prt, namespace) + EXPOSURE_SUFFIX,
+                append_namespace(prt, namespace),
                 [Property(append_namespace(p.name, namespace),
                           dynamics_properties.property(p.name).quantity)
                  for p in params.itervalues()])

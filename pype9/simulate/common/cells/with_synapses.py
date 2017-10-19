@@ -121,8 +121,7 @@ class ConnectionPropertySet(BaseULObject, ContainerObject):
 class Synapse(BaseALObject, ContainerObject):
 
     nineml_type = 'Synapse'
-    nineml_attr = ('name', 'dynamics', 'analog_port_connections',
-                    'event_port_connections')
+    nineml_attr = ('name',)
     nineml_child = {'dynamics': None}
     nineml_children = (AnalogPortConnection, EventPortConnection)
 
@@ -555,16 +554,16 @@ class WithSynapsesProperties(object):
     nineml_child = {'dynamics_properties': None}
     nineml_children = (SynapseProperties, ConnectionPropertySet)
 
-    def __init__(self, name, dynamics_properties, synapse_properties=[],
+    def __init__(self, name, dynamics_properties, synapse_propertiess=[],
                  connection_property_sets=[]):
         self._name = validate_identifier(name)
         self._dynamics_properties = dynamics_properties
-        self.add(*synapse_properties)
+        self.add(*synapse_propertiess)
         self.add(*connection_property_sets)
         # Extract the AL objects for the definition
         synapses = (Synapse(s.name, s.dynamics_properties.component_class,
                             s.port_connections)
-                    for s in synapse_properties)
+                    for s in synapse_propertiess)
         connection_parameter_sets = (
             ConnectionParameterSet(
                 cp.port,
@@ -617,31 +616,31 @@ class WithSynapsesProperties(object):
         return len(list(self.properties))
 
     @name_error
-    def synapse(self, name):
-        return self._synapses[name]
+    def synapse_properties(self, name):
+        return self._synapse_propertiess[name]
 
     def connection_property_set(self, name):
         return self._connection_property_sets[name]
 
     @property
-    def synapses(self):
-        return self._synapses.itervalues()
+    def synapse_propertiess(self):
+        return self._synapse_propertiess.itervalues()
 
     @property
     def connection_property_sets(self):
         return self._connection_property_sets.itervalues()
 
     @property
-    def num_synapses(self):
-        return len(self._synapses)
+    def num_synapse_propertiess(self):
+        return len(self._synapse_propertiess)
 
     @property
     def num_connection_property_sets(self):
         return len(self._connection_property_sets)
 
     @property
-    def synapse_names(self):
-        return self._synapses.iterkeys()
+    def synapse_propertiess_names(self):
+        return self._synapse_propertiess.iterkeys()
 
     @property
     def connection_property_set_names(self):
@@ -708,14 +707,14 @@ class WithSynapsesProperties(object):
 class DynamicsWithSynapsesProperties(WithSynapsesProperties,
                                      DynamicsProperties):
 
-    def __init__(self, name, dynamics_properties, synapses_properties=[],
+    def __init__(self, name, dynamics_properties, synapse_propertiess=[],
                  connection_property_sets=[]):
         # Initiate inherited base classes
         BaseULObject.__init__(self)
         DocumentLevelObject.__init__(self)
         ContainerObject.__init__(self)
         WithSynapsesProperties.__init__(self, name, dynamics_properties,
-                                        synapses_properties,
+                                        synapse_propertiess,
                                         connection_property_sets)
         # Create references to all dynamics member variables so that inherited
         # DynamicsProperties properties and methods can find them.
@@ -728,14 +727,14 @@ class DynamicsWithSynapsesProperties(WithSynapsesProperties,
 class MultiDynamicsWithSynapsesProperties(WithSynapsesProperties,
                                           MultiDynamicsProperties):
 
-    def __init__(self, name, dynamics_properties, synapses_properties=[],
+    def __init__(self, name, dynamics_properties, synapse_propertiess=[],
                  connection_property_sets=[]):
         # Initiate inherited base classes
         BaseULObject.__init__(self)
         DocumentLevelObject.__init__(self)
         ContainerObject.__init__(self)
         WithSynapsesProperties.__init__(self, name, dynamics_properties,
-                                        synapses_properties,
+                                        synapse_propertiess,
                                         connection_property_sets)
         # Create references to all dynamics member variables so that inherited
         # MultiDynamicsProperties properties and methods can find them.
