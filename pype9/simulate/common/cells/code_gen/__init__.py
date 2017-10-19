@@ -20,7 +20,6 @@ import shutil
 from os.path import join
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from future.utils import with_metaclass
-
 from abc import ABCMeta, abstractmethod
 import sympy
 from nineml import units
@@ -55,7 +54,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
          sorted), ('hash', hash), ('deepcopy', deepcopy), ('units', units),
          ('hasattr', hasattr), ('set', set), ('list', list), ('None', None),
          ('sympy', sympy)] +
-        [(n, v) for n, v in pype9.annotations.__dict__.items()
+        [(n, v) for n, v in list(pype9.annotations.__dict__.items())
          if n != '__builtins__'])
 
     # Derived classes should provide mapping from 9ml dimensions to default
@@ -267,7 +266,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
             self.BASE_TMPL_PATH,
             os.path.join(self.BASE_TMPL_PATH, 'includes')]
         # Add include paths for various switches (e.g. solver type)
-        for name, value in switches.items():
+        for name, value in list(switches.items()):
             if value is not None:
                 template_paths.append(os.path.join(self.BASE_TMPL_PATH,
                                                    'includes', name, value))
@@ -282,7 +281,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         jinja_env.globals.update(**self._globals)
         # Actually render the contents
         contents = jinja_env.get_template(template).render(**args)
-        for old, new in post_hoc_subs.items():
+        for old, new in list(post_hoc_subs.items()):
             contents = contents.replace(old, new)
         # Write the contents to file
         with open(os.path.join(directory, filename), 'w') as f:
