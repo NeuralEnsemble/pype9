@@ -216,7 +216,7 @@ def run(argv):
             else:
                 data_segs[fname].spiketrains.append(data)
             if record_regime:
-                data_segs[fname].epocharrays.append(cell.regime_epochs())
+                data_segs[fname].epochs.append(cell.regime_epochs())
         # Write data to file
         for fname, data_seg in data_segs.iteritems():
             neo.io.PickleIO(fname).write(data_seg)

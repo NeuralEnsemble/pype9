@@ -134,9 +134,9 @@ class TestPlot(TestCase):
         signal = seg.analogsignals[0]
         plt.figure()
         v_line, = plt.plot(signal.times, signal)
-        for label, start, duration in zip(seg.epocharrays[0].labels,
-                                          seg.epocharrays[0].times,
-                                          seg.epocharrays[0].durations):
+        for label, start, duration in zip(seg.epochs[0].labels,
+                                          seg.epochs[0].times,
+                                          seg.epochs[0].durations):
             if label == 'subVb':
                 end = start + duration
                 plt.axvspan(start, end, facecolor=self.subVb_colour,

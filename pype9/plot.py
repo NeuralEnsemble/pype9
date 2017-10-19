@@ -42,18 +42,18 @@ def plot(seg, dims=(10, 8), resolution=300, save=None, show=True,
             line, = plt.plot(signal.times, signal, label=label)
             legend.append(line)
         # Plot regime epochs (if present)
-        for epocharray in seg.epocharrays:
+        for epochs in seg.epochs:
             # Map labels to colours
-            labels = set(epocharray.labels)
+            labels = set(epochs.labels)
             # Remove the mode epoch
-            mode = mode_epoch(epocharray)
+            mode = mode_epoch(epochs)
             labels.remove(mode)
             label_colours = dict((l, plt.gca()._get_lines.get_next_color())
                                  for l in labels)
             label_colours[mode] = None
-            for label, start, duration in izip(epocharray.labels,
-                                               epocharray.times,
-                                               epocharray.durations):
+            for label, start, duration in izip(epochs.labels,
+                                               epochs.times,
+                                               epochs.durations):
                 if label_colours[label] is not None:
                     end = start + duration
                     plt.axvspan(start, end, facecolor=label_colours[label],

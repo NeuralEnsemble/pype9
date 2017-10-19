@@ -92,7 +92,7 @@ class TestSimulateCell(TestCase):
             simulate.run(argv.split())
             data_seg = neo.io.PickleIO(out_path).read()[0]
             v = data_seg.analogsignals[0]
-            regimes = data_seg.epocharrays[0]
+            regimes = data_seg.epochs[0]
             ref_v, ref_regimes = self._ref_single_cell(simulator, isyn)
             self.assertTrue(all(v == ref_v),
                              "'simulate' command produced different results to"
