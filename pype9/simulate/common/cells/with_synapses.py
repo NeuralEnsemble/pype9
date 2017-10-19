@@ -586,7 +586,7 @@ class WithSynapsesProperties(object):
                 "synapse_properties=[{}], connection_property_sets=[{}])"
                 .format(self._dynamics_properties.__class__.__name__,
                         self._dynamics_properties,
-                        ', '.format(repr(s) for s in self.synapse_properties),
+                        ', '.format(repr(s) for s in self.synapse_propertiess),
                         ', '.format(repr(cp)
                                     for cp in self.connection_property_sets)))
 

@@ -529,21 +529,6 @@ class Network(object):
         return component_arrays, connection_groups, selections
 
     @classmethod
-    def _suffix_reduce_exposure(cls, port_conn):
-        """
-        Appends the reduce port exposure suffix to the receive port name
-        if it is a reduce port.
-        """
-        if isinstance(port_conn.receive_port, AnalogReducePort):
-            receive_port_name = (port_conn.receive_port_name +
-                                 AnalogReducePortExposure.NAME_SUFFIX)
-            port_conn = AnalogPortConnection(
-                port_conn.send_port_name, receive_port_name,
-                sender_role=port_conn.sender_role,
-                receiver_role=port_conn.receiver_role)
-        return port_conn
-
-    @classmethod
     def _extract_connection_property_sets(cls, dynamics_properties, namespace):
         """
         Identifies properties in the provided DynmaicsProperties that can be
@@ -889,8 +874,9 @@ class Selection(object):
 
     def synapse(self, name):
         try:
-            synapses = set(ca.nineml.dynamics_properties.synapse(name)
-                           for ca in self.component_arrays)
+            synapses = set(
+                ca.nineml.dynamics_properties.synapse_properties(name)
+                for ca in self.component_arrays)
         except NineMLNameError:
             raise NineMLNameError(
                 "Could not return synapse '{}' because it is missing from "
