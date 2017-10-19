@@ -7,6 +7,7 @@ import nineml.units
 import ninemlcatalog
 from argparse import ArgumentTypeError
 from pype9.exceptions import Pype9UsageError, Pype9UnitStrError
+from functools import reduce
 
 
 def existing_file(fname):

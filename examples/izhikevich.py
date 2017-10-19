@@ -1,3 +1,4 @@
+from __future__ import print_function
 import nineml.units as un
 from argparse import ArgumentParser
 import ninemlcatalog
@@ -166,7 +167,7 @@ if __name__ == "__main__":
     # allow the backend to be set
     from matplotlib import pyplot as plt  # @IgnorePep8
 
-    print "Plotting the results"
+    print("Plotting the results")
     plt.figure(figsize=args.figsize)
     if args.fast_spiking:
         title = "Izhikevich Fast Spiking"
@@ -193,4 +194,4 @@ if __name__ == "__main__":
         plt.savefig(args.save_fig)
     else:
         plt.show()
-    print "done"
+    print("done")

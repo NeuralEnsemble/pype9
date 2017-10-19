@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import division
+from __future__ import print_function
 from itertools import groupby, izip
 from operator import itemgetter
 import itertools
@@ -557,7 +558,7 @@ class TestBrunel2000(TestCase):
                         percent_psth_stdev_error)))
         if plot:
             plt.show()
-        print "done"
+        print("done")
 
     def test_flatten(self, **kwargs):  # @UnusedVariable
         brunel_network = ninemlcatalog.load(

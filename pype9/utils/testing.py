@@ -3,6 +3,7 @@ Command that compares a 9ML model with an existing version in NEURON and/or
 NEST
 """
 from __future__ import absolute_import, division
+from __future__ import print_function
 import os.path
 import re
 from itertools import combinations
@@ -541,8 +542,8 @@ class ReferenceBrunel2000(object):
          J_ex, J_in, p_rate) = self.parameters(case, order)
 
         if override_input is not None:
-            print "changing poisson rate from {} to {}".format(p_rate,
-                                                               override_input)
+            print("changing poisson rate from {} to {}".format(p_rate,
+                                                               override_input))
             p_rate = override_input
 
         nest.SetDefaults("iaf_psc_alpha", neuron_params)
@@ -739,7 +740,7 @@ class DummyTestCase(object):
             if msg is None:
                 msg = '{} and {} are not equal'.format(repr(first),
                                                        repr(second))
-            print msg
+            print(msg)
 
     def assertAlmostEqual(self, first, second, places=None, msg=None):
         if places is None:
@@ -748,37 +749,37 @@ class DummyTestCase(object):
             if msg is None:
                 msg = '{} and {} are not equal'.format(repr(first),
                                                        repr(second))
-            print msg
+            print(msg)
 
     def assertLess(self, first, second, msg=None):
         if first >= second:
             if msg is None:
                 msg = '{} is not less than {}'.format(repr(first),
                                                       repr(second))
-            print msg
+            print(msg)
 
     def assertLessEqual(self, first, second, msg=None):
         if first > second:
             if msg is None:
                 msg = '{} is not less than or equal to {}'.format(
                     repr(first), repr(second))
-            print msg
+            print(msg)
 
     def assertNotEqual(self, first, second, msg=None):
         if first == second:
             if msg is None:
                 msg = '{} is equal to {}'.format(
                     repr(first), repr(second))
-            print msg
+            print(msg)
 
     def assertTrue(self, statement, msg=None):
         if not statement:
             if msg is None:
                 msg = '{} is not true'.format(repr(statement))
-            print msg
+            print(msg)
 
     def assertNotTrue(self, statement, msg=None):
         if statement:
             if msg is None:
                 msg = '{} is true'.format(repr(statement))
-            print msg
+            print(msg)

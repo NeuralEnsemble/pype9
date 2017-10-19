@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os.path
 import tempfile
 import shutil
@@ -42,7 +43,7 @@ class TestConvert(TestCase):
         in_path = os.path.join(os.path.relpath(ninemlcatalog.root),
                                  'neuron', 'Izhikevich.xml')
         out_path = os.path.join(self.tmpdir, 'Izhikevich.yml')
-        print out_path
+        print(out_path)
         args = '{} {}'.format(in_path, out_path)
         convert.run(args.split())
         # Check the output file is yaml

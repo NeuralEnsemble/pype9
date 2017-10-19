@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import sys
 import quantities as pq
 import os.path
@@ -96,7 +97,7 @@ class TestDynamics(TestCase):
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
-                print '{} v {}: {}'.format(name1, name2, diff)
+                print('{} v {}: {}'.format(name1, name2, diff))
         if plot:
             comparer.plot()
         if 'nest' in simulators and 'neuron' in simulators:
@@ -169,7 +170,7 @@ class TestDynamics(TestCase):
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
-                print '{} v {}: {}'.format(name1, name2, diff)
+                print('{} v {}: {}'.format(name1, name2, diff))
         if plot:
             comparer.plot()
         # FIXME: Need to work out what is happening with the reference NEURON
@@ -219,7 +220,7 @@ class TestDynamics(TestCase):
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
-                print '{} v {}: {}'.format(name1, name2, diff)
+                print('{} v {}: {}'.format(name1, name2, diff))
         if plot:
             comparer.plot()
         if 'neuron' in simulators:
@@ -344,7 +345,7 @@ class TestDynamics(TestCase):
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
-                print '{} v {}: {}'.format(name1, name2, diff)
+                print('{} v {}: {}'.format(name1, name2, diff))
         if plot:
             comparer.plot()
         if 'nest' in simulators and 'neuron' in simulators:
@@ -389,7 +390,7 @@ class TestDynamics(TestCase):
         comparisons = comparer.compare()
         if print_comparisons:
             for (name1, name2), diff in comparisons.iteritems():
-                print '{} v {}: {}'.format(name1, name2, diff)
+                print('{} v {}: {}'.format(name1, name2, diff))
         if plot:
             comparer.plot()
         if 'nest' in simulators and 'neuron' in simulators:
@@ -431,9 +432,9 @@ class TestDynamics(TestCase):
             ref_rate = pq.Quantity(UnitHandlerNEST.to_pq_quantity(rate), 'Hz')
             rate_difference = abs(ref_rate - recorded_rate)
             if print_comparisons:
-                print "Reference rate: {}".format(ref_rate)
-                print "{} recorded rate: {}".format(sim_name, recorded_rate)
-                print "{} difference: {}".format(sim_name, rate_difference)
+                print("Reference rate: {}".format(ref_rate))
+                print("{} recorded rate: {}".format(sim_name, recorded_rate))
+                print("{} difference: {}".format(sim_name, rate_difference))
             self.assertLess(
                 rate_difference, 5 * pq.Hz,
                 ("Recorded rate of {} poisson generator ({}) did not match "
@@ -491,4 +492,4 @@ if __name__ == '__main__':
     test = getattr(tester, 'test_' + args.test)
     test(plot=args.plot, print_comparisons=args.print_comparisons,
          simulators=args.simulators, build_mode=args.build_mode, **kwargs)
-    print "done"
+    print("done")

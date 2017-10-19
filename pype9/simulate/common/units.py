@@ -21,6 +21,7 @@ import atexit
 from pype9.exceptions import Pype9RuntimeError
 from pype9.utils import classproperty
 from fractions import gcd
+from functools import reduce
 numpy.seterr(all='raise')
 
 

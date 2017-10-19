@@ -200,7 +200,7 @@ class CodeGenerator(BaseCodeGenerator):
         try:
             if not path.exists(compile_dir):
                 os.makedirs(compile_dir)
-        except IOError, e:
+        except IOError as e:
             raise Pype9BuildError(
                 "Could not make compile directory '{}': {}"
                 .format(compile_dir, e))

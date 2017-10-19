@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import print_function
 from itertools import chain
 import ninemlcatalog
 import numpy
@@ -67,9 +68,9 @@ class TestSeeding(TestCase):
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
                 network1 = Network(brunel_model)
                 network1.component_array('Ext').record('spike_output')
-                print "Sim 1 - prop: {}, dyn: {}, global: {}".format(
+                print("Sim 1 - prop: {}, dyn: {}, global: {}".format(
                     sim.all_properties_seeds, sim.all_dynamics_seeds,
-                    sim.global_seed)
+                    sim.global_seed))
                 sim.run(20 * un.ms)
             ext1_spikes = network1.component_array(
                 'Ext').recording('spike_output')
@@ -78,9 +79,9 @@ class TestSeeding(TestCase):
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
                 network2 = Network(brunel_model)
                 network2.component_array('Ext').record('spike_output')
-                print "Sim 2 - prop: {}, dyn: {}, global: {}".format(
+                print("Sim 2 - prop: {}, dyn: {}, global: {}".format(
                     sim.all_properties_seeds, sim.all_dynamics_seeds,
-                    sim.global_seed)
+                    sim.global_seed))
                 sim.run(20 * un.ms)
             ext2_spikes = network2.component_array(
                 'Ext').recording('spike_output')
@@ -89,9 +90,9 @@ class TestSeeding(TestCase):
             with Simulation(dt=0.01 * un.ms, seed=2) as sim:
                 network3 = Network(brunel_model)
                 network3.component_array('Ext').record('spike_output')
-                print "Sim 3 - prop: {}, dyn: {}, global: {}".format(
+                print("Sim 3 - prop: {}, dyn: {}, global: {}".format(
                     sim.all_properties_seeds, sim.all_dynamics_seeds,
-                    sim.global_seed)
+                    sim.global_seed))
                 sim.run(20 * un.ms)
             ext3_spikes = network3.component_array(
                 'Ext').recording('spike_output')
@@ -100,9 +101,9 @@ class TestSeeding(TestCase):
             with Simulation(dt=0.01 * un.ms, properties_seed=1) as sim:
                 network4 = Network(brunel_model)
                 network4.component_array('Ext').record('spike_output')
-                print "Sim 4 - prop: {}, dyn: {}, global: {}".format(
+                print("Sim 4 - prop: {}, dyn: {}, global: {}".format(
                     sim.all_properties_seeds, sim.all_dynamics_seeds,
-                    sim.global_seed)
+                    sim.global_seed))
                 sim.run(20 * un.ms)
             ext4_spikes = network4.component_array(
                 'Ext').recording('spike_output')

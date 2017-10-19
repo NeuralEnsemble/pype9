@@ -1,6 +1,7 @@
 """
 Prints help information associated with a PyPe9 command
 """
+from __future__ import print_function
 from argparse import ArgumentParser
 
 
@@ -35,7 +36,7 @@ def _get_description(cmd):
 
 def run(argv):
     if not argv:
-        print available_cmds_message()
+        print(available_cmds_message())
     else:
         args = argparser().parse_args(argv)
         get_parser(args.cmd).print_help()

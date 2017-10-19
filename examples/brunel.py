@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import print_function
 import os.path
 from itertools import groupby
 from operator import itemgetter
@@ -157,11 +158,11 @@ for simulator, seed in zip(args.simulators, seeds):
                                 max_delay=ReferenceBrunel2000.max_delay,
                                 dt=args.timestep * un.ms, seed=seed) as sim:
         # Construct the network
-        print "Constructing the network in {}".format(simulator.upper())
+        print("Constructing the network in {}".format(simulator.upper()))
         networks[simulator] = pype9_network_classes[simulator](
             model, build_mode=args.build_mode)
-        print "Finished constructing the network in {}".format(
-            simulator.upper())
+        print("Finished constructing the network in {}".format(
+            simulator.upper()))
         # Record spikes and voltages
         for pop in networks[simulator].component_arrays:
             pop[:args.num_record].record('spikes')
@@ -170,7 +171,7 @@ for simulator, seed in zip(args.simulators, seeds):
 
         # Create the reference simulation if required
         if simulator == 'nest' and args.reference:
-            print "Constructing the reference NEST implementation"
+            print("Constructing the reference NEST implementation")
             if args.no_init_v:
                 init_v = {'Exc': 0.0, 'Inh': 0.0}
             else:
@@ -183,7 +184,7 @@ for simulator, seed in zip(args.simulators, seeds):
                        to_plot=pops_to_plot, timestep=args.timestep)
 
         # Run the simulation(s)
-        print "Running the simulation in {}".format(simulator.upper())
+        print("Running the simulation in {}".format(simulator.upper()))
         if args.progress_bar:
             kwargs = {'callbacks': [
                 SimulationProgressBar(args.simtime / 77, args.simtime)]}
@@ -193,7 +194,7 @@ for simulator, seed in zip(args.simulators, seeds):
 
 if mpi_rank == 0:
     # Plot the results
-    print "Plotting the results"
+    print("Plotting the results")
     num_subplots = len(args.simulators) + int(args.reference)
     for pop_name in pops_to_plot:
         spike_fig, spike_subplots = plt.subplots(num_subplots, 1,
@@ -288,4 +289,4 @@ if mpi_rank == 0:
                                            '{}_v'.format(pop_name)))
     if save_path is None:
         plt.show()
-    print "done"
+    print("done")
