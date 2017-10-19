@@ -423,7 +423,10 @@ class Network(object):
                     # of a multi- dynamics object so an individual synapses
                     # must be created for each connection.
                     synapse_conns = [
-                        cls._suffix_reduce_exposure(pc) for pc in post_conns]
+                        pc.append_namespace_from_roles(
+                            {'post': cls.CELL_COMP_NAME,
+                             'pre': cls.CELL_COMP_NAME,
+                             'synapse': proj.name}) for pc in post_conns]
                     synapses.append(SynapseProperties(proj.name, synapse,
                                                       synapse_conns))
                     # Add exposures to the post-synaptic cell for connections

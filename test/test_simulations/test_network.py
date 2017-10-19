@@ -18,7 +18,7 @@ from nineml.abstraction import (
 from nineml.abstraction.ports import (
     AnalogSendPort, AnalogReceivePort, AnalogReducePort, EventSendPort,
     EventReceivePort)
-from nineml.user import AnalogPortConnection
+from nineml.user import AnalogPortConnection, ConnectionRuleProperties
 from nineml import units as un
 from nineml.units import ms
 from nineml.values import RandomDistributionValue
@@ -603,8 +603,9 @@ class TestNetwork(TestCase):
     delay = 1.5 * un.ms
 
     def setUp(self):
-        self.all_to_all = ninemlcatalog.load('/connectionrule/AllToAll',
-                                             'AllToAll')
+        self.all_to_all = ConnectionRuleProperties(
+            'all_to_all_props', ninemlcatalog.load('/connectionrule/AllToAll',
+                                                   'AllToAll'))
 
     def test_component_arrays_and_connection_groups(self, **kwargs):  # @UnusedVariable @IgnorePep8
 
@@ -954,7 +955,7 @@ class TestNetwork(TestCase):
                                             ('psr', 'i')]),
                         port_connections=[
                             AnalogPortConnection(
-                                'i__psr', 'i_ext__cell__reduce',
+                                'i__psr__Proj3', 'i_ext__cell__reduce',
                                 sender_role='synapse',
                                 receiver_role='post')])]))
 
