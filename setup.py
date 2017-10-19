@@ -245,8 +245,8 @@ setup(
                                        "README.rst")).read(),
     license="The MIT License (MIT)",
     keywords=("NineML pipeline computational neuroscience modeling "
-              "interoperability XML 9ML neuron nest"),
-    url="http://github.com/CNS-OIST/PyPe9",
+              "interoperability XML YAML JSON HDF5 9ML neuron nest"),
+    url="http://readthedocs.io/pype9",
     classifiers=['Development Status :: 3 - Alpha',
                  'Environment :: Console',
                  'Intended Audience :: Science/Research',
