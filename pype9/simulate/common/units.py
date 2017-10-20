@@ -207,11 +207,11 @@ class UnitHandler(with_metaclass(ABCMeta, DynamicsDimensionResolver)):
         if matches and float(matches[0][1]).is_integer():
             base_x, scalar = matches[0]
             scalar = int(scalar)
-            num_compounds = len(nonzero(x[len(cls.basis):])[0])
+            num_compounds = len(nonzero(base_x[len(cls.basis):])[0])
             assert num_compounds <= 1, (
-                "Multiple compound indices matched (x={})".format(x))
-            assert xor(x[:len(cls.basis)].any(), num_compounds != 0), (
-                "Mix of basis vectors and compounds (x={})".format(x))
+                "Multiple compound indices matched (x={})".format(base_x))
+            assert xor(base_x[:len(cls.basis)].any(), num_compounds != 0), (
+                "Mix of basis vectors and compounds (x={})".format(base_x))
             x = base_x * scalar
         # If there is not a direct relationship to a basis vector or special
         # compound, project the dimension onto the basis vectors, finding
@@ -252,7 +252,7 @@ class UnitHandler(with_metaclass(ABCMeta, DynamicsDimensionResolver)):
         num_str, den_str = [
             mult_symbol.join(
                 cls.unit_name_map[u] + (pow_symbol + str(int(p))
-                                        if p > 1 else '')
+                                           if p > 1 else '')
                 for u, p in num_den)
             for num_den in (numerator, denominator)]
         if num_str:

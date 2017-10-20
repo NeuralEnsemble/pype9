@@ -8,6 +8,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from future.utils import ensure_new_type
 import os
 from os import path
 import subprocess as sp
@@ -130,6 +131,8 @@ class CodeGenerator(BaseCodeGenerator):
                      '-DCMAKE_INSTALL_PREFIX=' + install_dir, src_dir],
                     env=env, stdout=sp.PIPE, stderr=sp.PIPE)
                 stdout, stderr = cmake.communicate()
+                stdout = ensure_new_type(stdout)
+                stderr = ensure_new_type(stderr)
             except sp.CalledProcessError as e:
                 raise Pype9BuildError(
                     "Cmake of '{}' NEST module failed (see src "
@@ -152,6 +155,8 @@ class CodeGenerator(BaseCodeGenerator):
             make = sp.Popen(['make', '-j{}'.format(self._build_cores)],
                             stdout=sp.PIPE, stderr=sp.PIPE)
             stdout, stderr = make.communicate()
+            stdout = ensure_new_type(stdout)
+            stderr = ensure_new_type(stderr)
         except sp.CalledProcessError as e:
             raise Pype9BuildError(
                 "Compilation of '{}' NEST module failed (see compile "
@@ -167,6 +172,8 @@ class CodeGenerator(BaseCodeGenerator):
             install = sp.Popen(['make', 'install'], stdout=sp.PIPE,
                                stderr=sp.PIPE)
             stdout, stderr = install.communicate()
+            stdout = ensure_new_type(stdout)
+            stderr = ensure_new_type(stderr)
         except sp.CalledProcessError as e:
             raise Pype9BuildError(
                 "Installation of '{}' NEST module failed (see compile "
@@ -208,6 +215,8 @@ class CodeGenerator(BaseCodeGenerator):
             os.chdir(compile_dir)
             clean = sp.Popen(['make', 'clean'], stdout=sp.PIPE, stderr=sp.PIPE)
             stdout, stderr = clean.communicate()
+            stdout = ensure_new_type(stdout)
+            stderr = ensure_new_type(stderr)
             os.chdir(orig_dir)
         except sp.CalledProcessError or IOError:
             os.chdir(orig_dir)
@@ -219,7 +228,7 @@ class CodeGenerator(BaseCodeGenerator):
                     "Could not create build directory ({}), please check the "
                     "required permissions or specify a different \"parent "
                     "build directory\" ('parent_build_dir') -> {}".format(e))
-        if stderr and self._no_makefile_re.match(stderr) is None:
+        if stderr and 'No rule to make target' not in stderr:
             raise Pype9BuildError(
                 "Clean of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))
@@ -231,6 +240,3 @@ class CodeGenerator(BaseCodeGenerator):
         if 'NEST_INSTALL_DIR' in os.environ:
             path.append(path.join(os.environ['NEST_INSTALL_DIR'], 'bin'))
         return path
-
-    _no_makefile_re = re.compile(r"make: \*\*\* No rule to make target .clean."
-                                 r"\.  Stop\.")

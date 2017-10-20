@@ -217,7 +217,7 @@ class Simulation(with_metaclass(ABCMeta, object)):
                                  size=self.num_threads()), dtype=int)
         self._global_seed = int(seed_gen_rng.uniform(low=0, high=self.max_seed,
                                                      size=1,))
-        self._properties_rng = NumpyRNG(self.properties_seed)
+        self._properties_rng = NumpyRNG(int(self.properties_seed))
 
     @property
     def derived_properties_seed(self):

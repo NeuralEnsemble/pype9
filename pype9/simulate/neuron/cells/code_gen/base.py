@@ -8,6 +8,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from future.utils import ensure_new_type
 from builtins import str
 from builtins import next
 import os.path
@@ -81,9 +82,9 @@ class CodeGenerator(BaseCodeGenerator):
                 # Check nest-config (if installed) to get any paths needed for
                 # gsl
                 nest_config_path = self.path_to_utility('nest-config')
-                nest_lflags = sp.Popen(
+                nest_lflags = ensure_new_type(sp.Popen(
                     [nest_config_path, '--libs'],
-                    stdout=sp.PIPE).communicate()[0].split()
+                    stdout=sp.PIPE).communicate()[0]).split()
                 self.nrnivmodl_flags.extend(
                     f for f in nest_lflags
                     if f.startswith('-L') and 'gsl' in f)
@@ -476,6 +477,8 @@ class CodeGenerator(BaseCodeGenerator):
                             [self.modlunit_path, fname], stdout=sp.PIPE,
                             stderr=sp.PIPE)
                         stdout, stderr = pipe.communicate()
+                        stdout = ensure_new_type(stdout)
+                        stderr = ensure_new_type(stderr)
                         assert '<<ERROR>>' not in stderr, (
                             "Incorrect units assigned in NMODL file:\n {}{}"
                             .format(stdout, stderr))
@@ -491,6 +494,8 @@ class CodeGenerator(BaseCodeGenerator):
                 compile_dir, ' '.join(nrnivmodl_cmd)))
             pipe = sp.Popen(nrnivmodl_cmd, stdout=sp.PIPE, stderr=sp.PIPE)
             stdout, stderr = pipe.communicate()
+            stdout = ensure_new_type(stdout)
+            stderr = ensure_new_type(stderr)
         except sp.CalledProcessError as e:
             raise Pype9BuildError(
                 "Compilation of NMODL files for '{}' model failed. See src "
