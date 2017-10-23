@@ -190,7 +190,7 @@ class CodeGenerator(BaseCodeGenerator):
             try:
                 shutil.rmtree(compile_dir)
             except IOError as e:
-                if e.errno != errno.ENOENT:
+                if e.errno != errno.ENOENT:  # Ignore if missing
                     raise
         if not path.exists(compile_dir):
             try:
