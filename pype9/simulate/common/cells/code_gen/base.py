@@ -38,8 +38,13 @@ logger = logging.getLogger('PyPe9')
 
 class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
 
-    BUILD_MODE_OPTIONS = ['lazy', 'force', 'require', 'build_only',
-                          'generate_only']
+    BUILD_MODE_OPTIONS = ['lazy',  # Build iff source has been updated
+                          'force',  # Build always
+                          'require',  # Don't build, requires pre-built
+                          'build_only',  # Only build
+                          'generate_only',  # Only generate source files
+                          'purge'  # Remove all configure files and rebuild
+                          ]
     BUILD_DIR_DEFAULT = '9build'
     _PARAMS_DIR = 'params'
     _SRC_DIR = 'src'
@@ -136,7 +141,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         built_comp_class_pth = os.path.join(src_dir, self._BUILT_COMP_CLASS)
         # Determine whether the installation needs rebuilding or whether there
         # is an existing library module to use.
-        if build_mode in ('force', 'build_only'):  # Force build
+        if build_mode in ('force', 'build_only', 'purge'):  # Force build
             generate_source = compile_source = True
         elif build_mode == 'require':  # Just check that prebuild is present
             generate_source = compile_source = False
@@ -193,7 +198,8 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         if compile_source:
             # Clean existing compile & install directories from previous builds
             if generate_source:
-                self.clean_compile_dir(compile_dir)
+                self.clean_compile_dir(compile_dir,
+                                       purge=(build_mode == 'purge'))
                 self.configure_build_files(
                     name=name, src_dir=src_dir, compile_dir=compile_dir,
                     install_dir=install_dir, **kwargs)
@@ -237,7 +243,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
                 "required permissions or specify a different \"parent build "
                 "directory\" ('parent_build_dir') -> {}".format(e))
 
-    def clean_compile_dir(self, compile_dir):
+    def clean_compile_dir(self, compile_dir, purge=False):  # @UnusedVariable
         # Clean existing compile & install directories from previous builds
         shutil.rmtree(compile_dir, ignore_errors=True)
         try:

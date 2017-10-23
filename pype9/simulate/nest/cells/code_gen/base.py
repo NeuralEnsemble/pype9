@@ -14,14 +14,14 @@ from os import path
 import subprocess as sp
 import re
 import logging
+import shutil
+from datetime import datetime
+import errno
+from pype9.simulate.nest.units import UnitHandler
 from pype9.simulate.common.cells.code_gen import BaseCodeGenerator
 from pype9.utils import remove_ignore_missing
 from pype9.exceptions import Pype9BuildError
 import pype9
-import shutil
-from datetime import datetime
-from pype9.simulate.nest.units import UnitHandler
-
 
 REGIME_VARNAME = '__regime__'
 
@@ -185,35 +185,43 @@ class CodeGenerator(BaseCodeGenerator):
         if not path.exists(sli_path):
             os.makedirs(sli_path)
 
-    def clean_compile_dir(self, compile_dir, **kwargs):  # @UnusedVariable @IgnorePep8
-        orig_dir = os.getcwd()
-        try:
-            if not path.exists(compile_dir):
-                os.makedirs(compile_dir)
-        except IOError as e:
-            raise Pype9BuildError(
-                "Could not make compile directory '{}': {}"
-                .format(compile_dir, e))
-        os.chdir(compile_dir)
-        try:
-            stdout, stderr = self.run_command('make clean')
-            os.chdir(orig_dir)
-        except sp.CalledProcessError or IOError:
-            os.chdir(orig_dir)
-            shutil.rmtree(compile_dir, ignore_errors=True)
+    def clean_compile_dir(self, compile_dir, purge=False, **kwargs):  # @UnusedVariable @IgnorePep8
+        if purge:
+            try:
+                shutil.rmtree(compile_dir)
+            except IOError as e:
+                if e.errno != errno.ENOENT:
+                    raise
+        if not path.exists(compile_dir):
             try:
                 os.makedirs(compile_dir)
             except IOError as e:
                 raise Pype9BuildError(
-                    "Could not create build directory ({}), please check the "
-                    "required permissions or specify a different \"parent "
-                    "build directory\" ('parent_build_dir') -> {}".format(e))
-        if stderr and 'No rule to make target' not in stderr:
-            raise Pype9BuildError(
-                "Clean of '{}' NEST module directory failed:\n\n{}\n{}"
-                .format(compile_dir, stdout, stderr))
-        logger.debug("make clean '{}':\nstdout:\n{}stderr:\n{}\n"
-                     .format(compile_dir, stdout, stderr))
+                    "Could not make compile directory '{}': {}"
+                    .format(compile_dir, e))
+        else:
+            orig_dir = os.getcwd()
+            os.chdir(compile_dir)
+            try:
+                stdout, stderr = self.run_command('make clean')
+                os.chdir(orig_dir)
+            except sp.CalledProcessError or IOError:
+                os.chdir(orig_dir)
+                shutil.rmtree(compile_dir, ignore_errors=True)
+                try:
+                    os.makedirs(compile_dir)
+                except IOError as e:
+                    raise Pype9BuildError(
+                        "Could not create build directory ({}), please check "
+                        "the required permissions or specify a different "
+                        "'parent build directory' ('parent_build_dir') -> "
+                        "{}".format(e))
+            if stderr and 'No rule to make target' not in stderr:
+                raise Pype9BuildError(
+                    "Clean of '{}' NEST module directory failed:\n\n{}\n{}"
+                    .format(compile_dir, stdout, stderr))
+            logger.debug("make clean '{}':\nstdout:\n{}stderr:\n{}\n"
+                         .format(compile_dir, stdout, stderr))
 
     def simulator_specific_paths(self):
         path = []
