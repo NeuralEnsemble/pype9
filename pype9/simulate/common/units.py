@@ -1,34 +1,34 @@
 from __future__ import division
 from future import standard_library
 standard_library.install_aliases()
-from builtins import next
-from builtins import zip
-from builtins import str
-from past.builtins import basestring
-import os
-import logging
-import operator
-from itertools import chain
-from operator import xor
-import pickle as pkl
-from abc import ABCMeta, abstractmethod
-import sympy
-from sympy import sympify
-import numpy
-from numpy import array, sum, abs, argmin, log10, nonzero
-import quantities as pq
-import diophantine
-from nineml import units as un
-from nineml.user.component import Quantity
-from nineml.abstraction import Expression
-from nineml.abstraction.dynamics.visitors.queriers import (
+from builtins import next  # @IgnorePep8
+from builtins import zip  # @IgnorePep8
+from builtins import str  # @IgnorePep8
+from past.builtins import basestring  # @IgnorePep8
+import os  # @IgnorePep8
+import logging  # @IgnorePep8
+import operator  # @IgnorePep8
+from itertools import chain  # @IgnorePep8
+from operator import xor  # @IgnorePep8
+import pickle as pkl  # @IgnorePep8
+from abc import ABCMeta, abstractmethod  # @IgnorePep8
+import sympy  # @IgnorePep8
+from sympy import sympify  # @IgnorePep8
+import numpy  # @IgnorePep8
+from numpy import array, sum, abs, argmin, log10, nonzero  # @IgnorePep8
+import quantities as pq  # @IgnorePep8
+import diophantine  # @IgnorePep8
+from nineml import units as un  # @IgnorePep8
+from nineml.user.component import Quantity  # @IgnorePep8
+from nineml.abstraction import Expression  # @IgnorePep8
+from nineml.abstraction.dynamics.visitors.queriers import (  # @IgnorePep8
     DynamicsDimensionResolver)
-import atexit
-from pype9.exceptions import Pype9RuntimeError
-from pype9.utils import classproperty
-from fractions import gcd
-from functools import reduce
-from future.utils import with_metaclass
+import atexit  # @IgnorePep8
+from pype9.exceptions import Pype9RuntimeError  # @IgnorePep8
+from pype9.utils import classproperty  # @IgnorePep8
+from math import gcd  # @IgnorePep8
+from functools import reduce  # @IgnorePep8
+from future.utils import with_metaclass  # @IgnorePep8
 numpy.seterr(all='raise')
 
 
@@ -360,32 +360,34 @@ class UnitHandler(with_metaclass(ABCMeta, DynamicsDimensionResolver)):
         assert any(u.dimension == un.time for u in basis), (
             "No pure time dimension found in basis units")
         # Get matrix of basis unit dimensions
-        A = array([list(b.dimension) for b in basis]).T
+        cls._A = array([list(b.dimension) for b in basis]).T
         # Get cache path from file path of subclass
-        cache_path = os.path.join(directory, cls._CACHE_FILENAME)
+        cls._cache_path = os.path.join(directory, cls._CACHE_FILENAME)
         try:
-            with open(cache_path) as f:
-                cache, loaded_A = pkl.load(f)
+            with open(cls._cache_path) as f:
+                cls._cache, loaded_A = pkl.load(f)
                 # If the dimension matrix has been changed since the cache was
                 # generated, reset the cache
-                if (loaded_A != A).all():
-                    cache = {}
+                if (loaded_A != cls._A).all():
+                    cls._cache = {}
         except:
             logger.info("Building unit conversion cache in file '{}'"
-                        .format(cache_path))
-            cache = cls._init_cache(basis, compounds)
-        def save_cache():  # @IgnorePep8
-            try:
-                with open(cache_path, 'w') as f:
-                    pkl.dump((cache, A), f)
-            except IOError:
-                logger.warning("Could not save unit conversion cache to file "
-                               "'{}'".format(cache_path))
-        atexit.register(save_cache)
+                        .format(cls._cache_path))
+            cls._cache = cls._init_cache(basis, compounds)
+
         # The lengths in terms of SI dimension bases of each of the unit
         # basis compounds.
         si_lengths = [sum(abs(si) for si in d.dimension) for d in basis]
-        return A, cache, cache_path, si_lengths
+        return cls._A, cls._cache, cls._cache_path, si_lengths
+
+    @classmethod
+    def save_cache(cls):
+        try:
+            with open(cls._cache_path, 'wb') as f:
+                pkl.dump((cls._cache, cls._A), f)
+        except IOError:
+            logger.warning("Could not save unit conversion cache to file "
+                           "'{}'".format(cls._cache_path))
 
     @classmethod
     def _init_cache(cls, basis, compounds):

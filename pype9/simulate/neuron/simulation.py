@@ -9,6 +9,7 @@ from pyNN.neuron.simulator import initializer as pyNN_initializer
 from pype9.simulate.common.simulation import Simulation as BaseSimulation
 from pype9.simulate.neuron.cells.code_gen import CodeGenerator
 from pype9.exceptions import Pype9UsageError
+from .units import UnitHandler
 
 logger = logging.getLogger('PyPe9')
 
@@ -21,6 +22,7 @@ class Simulation(BaseSimulation):
 
     _active = None
     name = 'Neuron'
+    UnitHandler = UnitHandler
 
     class _DummyID(object):
 

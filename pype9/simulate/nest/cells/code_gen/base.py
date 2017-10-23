@@ -8,8 +8,8 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from future.utils import ensure_new_type
 import os
+import sys
 from os import path
 import subprocess as sp
 import re
@@ -50,9 +50,11 @@ class CodeGenerator(BaseCodeGenerator):
         super(CodeGenerator, self).__init__()
         self._build_cores = build_cores
         self.nest_config = self.path_to_utility('nest-config')
-        compiler = sp.check_output('{} --compiler'.format(self.nest_config),
-                                   shell=True)
-        self._compiler = compiler[:-1]  # strip trailing \n
+        compiler, _ = self.run_command(
+            '{} --compiler'.format(self.nest_config),
+            fail_msg=("Could not run nest-config at '{}': {{}}"
+                      .format(self.nest_config)))
+        self._compiler = compiler.strip()  # strip trailing \n
 
     def generate_source_files(self, component_class, src_dir, name=None,
                               debug_print=None, **kwargs):
@@ -108,7 +110,7 @@ class CodeGenerator(BaseCodeGenerator):
                              path.join(src_dir, 'sli'))
 
     def configure_build_files(self, name, src_dir, compile_dir, install_dir,
-                              **kwargs):
+                              **kwargs):  # @UnusedVariable
         # Generate Makefile if it is not present
         if not path.exists(path.join(compile_dir, 'Makefile')):
             if not path.exists(compile_dir):
@@ -120,23 +122,17 @@ class CodeGenerator(BaseCodeGenerator):
                            # NB: ODE solver currently ignored
                            # 'ode_solver': kwargs.get('ode_solver',
                            #                          self.ODE_SOLVER_DEFAULT),
-                           'version': pype9.__version__}
+                           'version': pype9.__version__,
+                           'executable': sys.executable}
             self.render_to_file('CMakeLists.txt.tmpl', config_args,
                                  'CMakeLists.txt', src_dir)
             os.chdir(compile_dir)
-            env = os.environ.copy()
-            try:
-                cmake = sp.Popen(
-                    ['cmake', '-Dwith-nest=' + self.nest_config,
-                     '-DCMAKE_INSTALL_PREFIX=' + install_dir, src_dir],
-                    env=env, stdout=sp.PIPE, stderr=sp.PIPE)
-                stdout, stderr = cmake.communicate()
-                stdout = ensure_new_type(stdout)
-                stderr = ensure_new_type(stderr)
-            except sp.CalledProcessError as e:
-                raise Pype9BuildError(
+            stdout, stderr = self.run_command(
+                'cmake -Dwith-nest={} -DCMAKE_INSTALL_PREFIX={} {}'.format(
+                    self.nest_config, install_dir, src_dir),
+                fail_msg=(
                     "Cmake of '{}' NEST module failed (see src "
-                    "directory '{}'):\n\n {}".format(name, src_dir, e))
+                    "directory '{}'):\n\n {{}}".format(name, src_dir)))
             if stderr:
                 raise Pype9BuildError(
                     "Configure of '{}' NEST module failed (see src "
@@ -151,34 +147,21 @@ class CodeGenerator(BaseCodeGenerator):
         os.chdir(compile_dir)
         logger.info("Compiling NEST model class in '{}' directory."
                     .format(compile_dir))
-        try:
-            make = sp.Popen(['make', '-j{}'.format(self._build_cores)],
-                            stdout=sp.PIPE, stderr=sp.PIPE)
-            stdout, stderr = make.communicate()
-            stdout = ensure_new_type(stdout)
-            stderr = ensure_new_type(stderr)
-        except sp.CalledProcessError as e:
-            raise Pype9BuildError(
-                "Compilation of '{}' NEST module failed (see compile "
-                "directory '{}'):\n\n {}"
-                .format(component_name, compile_dir, e))
+        stdout, stderr = self.run_command(
+            'make -j{}'.format(self._build_cores),
+            fail_msg=("Compilation of '{}' NEST module failed (see compile "
+                      "directory '{}'):\n\n {{}}".format(component_name,
+                                                         compile_dir)))
         if re.search(r'error:', stderr):  # Ignores warnings
             raise Pype9BuildError(
                 "Compilation of '{}' NEST module directory failed:\n\n{}\n{}"
                 .format(compile_dir, stdout, stderr))
         logger.debug("make '{}':\nstdout:\n{}stderr:\n{}\n"
                      .format(compile_dir, stdout, stderr))
-        try:
-            install = sp.Popen(['make', 'install'], stdout=sp.PIPE,
-                               stderr=sp.PIPE)
-            stdout, stderr = install.communicate()
-            stdout = ensure_new_type(stdout)
-            stderr = ensure_new_type(stderr)
-        except sp.CalledProcessError as e:
-            raise Pype9BuildError(
-                "Installation of '{}' NEST module failed (see compile "
-                "directory '{}'):\n\n {}"
-                .format(component_name, compile_dir, e))
+        stdout, stderr = self.run_command('make install', fail_msg=(
+            "Installation of '{}' NEST module failed (see compile "
+            "directory '{}'):\n\n {{}}"
+            .format(component_name, compile_dir)))
         if stderr:
             raise Pype9BuildError(
                 "Installation of '{}' NEST module directory failed:\n\n{}\n{}"
@@ -211,12 +194,9 @@ class CodeGenerator(BaseCodeGenerator):
             raise Pype9BuildError(
                 "Could not make compile directory '{}': {}"
                 .format(compile_dir, e))
+        os.chdir(compile_dir)
         try:
-            os.chdir(compile_dir)
-            clean = sp.Popen(['make', 'clean'], stdout=sp.PIPE, stderr=sp.PIPE)
-            stdout, stderr = clean.communicate()
-            stdout = ensure_new_type(stdout)
-            stderr = ensure_new_type(stderr)
+            stdout, stderr = self.run_command('make clean')
             os.chdir(orig_dir)
         except sp.CalledProcessError or IOError:
             os.chdir(orig_dir)

@@ -437,7 +437,7 @@ class Cell(object):
             np.asarray(rec[1:]) != np.asarray(rec[:-1]))[0] + 1
         # Insert initial regime
         trans_inds = np.insert(trans_inds, 0, 0)
-        labels = [index_map[int(rec[i])] for i in trans_inds]
+        labels = [index_map[int(rec[int(i)])] for i in trans_inds]
         times = rec.times[trans_inds]
         epochs = np.append(times, rec.t_stop) * times.units
         durations = epochs[1:] - epochs[:-1]

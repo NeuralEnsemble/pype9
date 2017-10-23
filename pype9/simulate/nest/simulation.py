@@ -3,6 +3,7 @@ from pype9.simulate.common.simulation import Simulation as BaseSimulation
 from pyNN.nest import (
     setup as pyNN_setup, run as pyNN_run, state as pyNN_state, end as pyNN_end)
 from pype9.exceptions import Pype9UsageError
+from .units import UnitHandler
 
 
 class Simulation(BaseSimulation):
@@ -10,6 +11,7 @@ class Simulation(BaseSimulation):
 
     _active = None
     name = 'NEST'
+    UnitHandler = UnitHandler
 
     def __init__(self, *args, **kwargs):
         self._device_delay = kwargs.get('device_delay', None)

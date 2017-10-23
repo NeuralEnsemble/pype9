@@ -8,9 +8,8 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-from future.utils import ensure_new_type
-from builtins import str
-from builtins import next
+from __future__ import unicode_literals
+from builtins import next, str
 import os.path
 import tempfile
 import uuid
@@ -82,9 +81,9 @@ class CodeGenerator(BaseCodeGenerator):
                 # Check nest-config (if installed) to get any paths needed for
                 # gsl
                 nest_config_path = self.path_to_utility('nest-config')
-                nest_lflags = ensure_new_type(sp.Popen(
-                    [nest_config_path, '--libs'],
-                    stdout=sp.PIPE).communicate()[0]).split()
+                stdout, _ = self.run_command(
+                    '{} --libs'.format(nest_config_path))
+                nest_lflags = stdout.split()
                 self.nrnivmodl_flags.extend(
                     f for f in nest_lflags
                     if f.startswith('-L') and 'gsl' in f)
@@ -473,12 +472,8 @@ class CodeGenerator(BaseCodeGenerator):
             for fname in os.listdir('.'):
                 if fname.endswith('.mod'):
                     try:
-                        pipe = sp.Popen(
-                            [self.modlunit_path, fname], stdout=sp.PIPE,
-                            stderr=sp.PIPE)
-                        stdout, stderr = pipe.communicate()
-                        stdout = ensure_new_type(stdout)
-                        stderr = ensure_new_type(stderr)
+                        stdout, stderr = self.run_command(
+                            '{} {}'.format(self.modlunit_path, fname))
                         assert '<<ERROR>>' not in stderr, (
                             "Incorrect units assigned in NMODL file:\n {}{}"
                             .format(stdout, stderr))
@@ -487,25 +482,17 @@ class CodeGenerator(BaseCodeGenerator):
                             "Could not run 'modlunit' to check dimensions in "
                             "NMODL file: {}\n{}".format(stdout, stderr))
         # Run nrnivmodl command in src directory
-        try:
-            nrnivmodl_cmd = [self.nrnivmodl_path, '-loadflags',
-                             ' '.join(self.nrnivmodl_flags)]
-            logger.debug("Building nrnivmodl in {} with '{}'".format(
-                compile_dir, ' '.join(nrnivmodl_cmd)))
-            pipe = sp.Popen(nrnivmodl_cmd, stdout=sp.PIPE, stderr=sp.PIPE)
-            stdout, stderr = pipe.communicate()
-            stdout = ensure_new_type(stdout)
-            stderr = ensure_new_type(stderr)
-        except sp.CalledProcessError as e:
-            raise Pype9BuildError(
-                "Compilation of NMODL files for '{}' model failed. See src "
-                "directory '{}':\n\n{}".format(name, compile_dir, e))
+        nrnivmodl_cmd = "{} -loadflags {}".format(
+            self.nrnivmodl_path, ' '.join(self.nrnivmodl_flags))
+        logger.debug("Building nrnivmodl in {} with '{}'".format(
+            compile_dir, nrnivmodl_cmd))
+        self.run_command(nrnivmodl_cmd, fail_msg=(
+            "Compilation of NMODL files for '{}' model failed. See src "
+            "directory '{}':\n\n{{}}".format(name, compile_dir)))
         if stderr.strip().endswith('Error 1'):
             raise Pype9BuildError(
                 "Generated mod file failed to compile with output:\n{}\n{}"
                 .format(stdout, stderr))
-        logger.debug(stdout)
-        logger.debug(stderr)
         logger.info("Compilation of NEURON (NMODL) files for '{}' "
                     "completed successfully".format(name))
 

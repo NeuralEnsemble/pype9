@@ -95,6 +95,7 @@ class Simulation(with_metaclass(ABCMeta, object)):
         return self
 
     def __exit__(self, type_, value, traceback):  # @UnusedVariable
+        self.UnitHandler.save_cache()
         self.deactivate(kill_cells=(type_ is None))
 
     def activate(self):
