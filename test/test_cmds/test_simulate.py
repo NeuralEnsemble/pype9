@@ -1,6 +1,5 @@
 from __future__ import division
 from builtins import zip
-from past.utils import old_div
 import os.path
 import tempfile
 import shutil
@@ -150,7 +149,7 @@ class TestSimulateNetwork(TestCase):
         # Create reduced version of Brunel network
         model = ninemlcatalog.load(self.brunel_path).as_network(
             self.brunel_name)
-        scale = old_div(float(self.reduced_brunel_order), model.population('Inh').size)
+        scale = float(self.reduced_brunel_order) / model.population('Inh').size
         # rescale populations
         reduced_model = model.clone()
         for pop in reduced_model.populations:
