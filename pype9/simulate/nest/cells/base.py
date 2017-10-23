@@ -26,7 +26,7 @@ from pype9.exceptions import (
 from pype9.utils import add_lib_path
 
 
-logger = logging.getLogger('PyPe9')
+logger = logging.getLogger('pype9')
 
 basic_nineml_translations = {
     'Voltage': 'V_m', 'Diameter': 'diam', 'Length': 'L'}

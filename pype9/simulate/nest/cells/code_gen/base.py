@@ -25,7 +25,7 @@ import pype9
 
 REGIME_VARNAME = '__regime__'
 
-logger = logging.getLogger('PyPe9')
+logger = logging.getLogger('pype9')
 
 cmake_success_re = re.compile(r'-- Build files have been written to: (.*)')
 

@@ -11,7 +11,7 @@ from pype9.simulate.neuron.cells.code_gen import CodeGenerator
 from pype9.exceptions import Pype9UsageError
 from .units import UnitHandler
 
-logger = logging.getLogger('PyPe9')
+logger = logging.getLogger('pype9')
 
 
 class Simulation(BaseSimulation):

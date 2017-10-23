@@ -34,7 +34,7 @@ from future.utils import with_metaclass  # @IgnorePep8
 numpy.seterr(all='raise')
 
 
-logger = logging.getLogger('PyPe9')
+logger = logging.getLogger('pype9')
 
 
 class UnitHandler(with_metaclass(ABCMeta, DynamicsDimensionResolver)):

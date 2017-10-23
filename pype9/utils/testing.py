@@ -35,7 +35,7 @@ import neo
 from pype9.exceptions import Pype9RuntimeError
 import logging
 
-logger = logging.getLogger('PyPe9')
+logger = logging.getLogger('pype9')
 
 
 class Comparer(object):

@@ -33,7 +33,7 @@ from pype9.annotations import PYPE9_NS, BUILD_PROPS
 import tempfile
 
 
-logger = logging.getLogger('PyPe9')
+logger = logging.getLogger('pype9')
 
 
 class BaseCodeGenerator(with_metaclass(ABCMeta, object)):

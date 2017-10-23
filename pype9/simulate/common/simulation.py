@@ -8,7 +8,7 @@ import logging
 from pyNN.random import NumpyRNG
 from future.utils import with_metaclass
 
-logger = logging.getLogger('PyPe9')
+logger = logging.getLogger('pype9')
 
 
 class Simulation(with_metaclass(ABCMeta, object)):

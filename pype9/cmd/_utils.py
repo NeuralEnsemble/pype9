@@ -76,7 +76,7 @@ def _parse_subexpr(expr):
             raise Pype9UnitStrError
 
 
-logger = logging.getLogger('PyPe9')
+logger = logging.getLogger('pype9')
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter(

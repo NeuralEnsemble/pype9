@@ -7,7 +7,7 @@ import quantities as pq
 import logging
 
 
-logger = logging.getLogger('PyPe9')
+logger = logging.getLogger('pype9')
 
 
 def plot(seg, dims=(10, 8), resolution=300, save=None, show=True,
