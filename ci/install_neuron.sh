@@ -3,7 +3,7 @@
 
 set -e  # stop execution in case of errors
 
-export NRN_VERSION="7.4"
+export NRN_VERSION="7.5"
 export NRN=nrn-$NRN_VERSION
 
 

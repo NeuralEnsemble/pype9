@@ -24,11 +24,10 @@ install:
   - pip install cython
   - source ci/install_nest.sh
   - source ci/install_neuron.sh
-  - pip install git+git://github.com/python-quantities/python-quantities.git@master
   - pip install git+git://github.com/tclose/nineml-python.git@pype9_port
-  - pip install git+git://github.com/tclose/nineml-catalog.git@merging_with_master
+  - pip install git+git://github.com/tclose/nineml-catalog.git@python3
+  - pip install git+git://github.com/tclose/Diophantine.git@master
   - pip install -r requirements.txt
-  - pip install --upgrade git+git://github.com/sympy/sympy.git@master
   - pip install coveralls
   - pushd pype9/simulate/neuron/cells/code_gen/libninemlnrn
   - CC=mpicc ./manual_compile.sh
@@ -40,7 +39,7 @@ after_success:
 cache:
   directories:
     - $HOME/nest-2.12.0
-    - $HOME/nrn-7.4
+    - $HOME/nrn-7.5
     - $HOME/build/nest-2.12.0
-    - $HOME/build/nrn-7.4
+    - $HOME/build/nrn-7.5
     - $HOME/.cache/pip
