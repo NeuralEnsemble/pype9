@@ -23,10 +23,12 @@ from nineml.user.component import Quantity  # @IgnorePep8
 from nineml.abstraction import Expression  # @IgnorePep8
 from nineml.abstraction.dynamics.visitors.queriers import (  # @IgnorePep8
     DynamicsDimensionResolver)
-import atexit  # @IgnorePep8
 from pype9.exceptions import Pype9RuntimeError  # @IgnorePep8
 from pype9.utils import classproperty  # @IgnorePep8
-from math import gcd  # @IgnorePep8
+try:
+    from math import gcd  # @IgnorePep8
+except ImportError:
+    from fractions import gcd
 from functools import reduce  # @IgnorePep8
 from future.utils import with_metaclass  # @IgnorePep8
 numpy.seterr(all='raise')
@@ -299,8 +301,8 @@ class UnitHandler(with_metaclass(ABCMeta, DynamicsDimensionResolver)):
                     else:
                         # FIXME: Should be not supported error??
                         raise NotImplementedError(
-                            "RandomDistributionValue quantities cannot be scaled at this "
-                            "time ({})".format(qty))
+                            "RandomDistributionValue quantities cannot be "
+                            "scaled at this time ({})".format(qty))
             except AttributeError:
                 return qty  # Float or int value quantity
         scaled = value * cls.scalar(units)
