@@ -136,7 +136,8 @@ class Simulation(BaseSimulation):
         # initialisation
         libninemlnrn = ctypes.CDLL(
             os.path.join(CodeGenerator.LIBNINEMLNRN_PATH, 'libninemlnrn.so'))
-        libninemlnrn.nineml_seed_gsl_rng(self.dynamics_seed)
+        libninemlnrn.nineml_seed_gsl_rng.arg_types = [ctypes.c_int()]
+        libninemlnrn.nineml_seed_gsl_rng(int(self.dynamics_seed))
 
     @classmethod
     def quit(cls):

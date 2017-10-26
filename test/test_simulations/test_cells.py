@@ -46,7 +46,7 @@ cell_metaclasses = {'neuron': NeuronCellMetaClass,
 NEST_RNG_SEED = 1234567890
 NEURON_RNG_SEED = 987654321
 
-SIMULATORS_TO_TEST = ['nest', 'neuron']
+SIMULATORS_TO_TEST = ['neuron', 'nest']
 PLOT_DEFAULT = False
 
 
