@@ -51,7 +51,7 @@ class CodeGenerator(BaseCodeGenerator):
         self._build_cores = build_cores
         self.nest_config = self.path_to_utility('nest-config')
         compiler, _ = self.run_command(
-            '{} --compiler'.format(self.nest_config),
+            [self.nest_config, '--compiler'],
             fail_msg=("Could not run nest-config at '{}': {{}}"
                       .format(self.nest_config)))
         self._compiler = compiler.strip()  # strip trailing \n
@@ -128,8 +128,8 @@ class CodeGenerator(BaseCodeGenerator):
                                  'CMakeLists.txt', src_dir)
             os.chdir(compile_dir)
             stdout, stderr = self.run_command(
-                'cmake -Dwith-nest={} -DCMAKE_INSTALL_PREFIX={} {}'.format(
-                    self.nest_config, install_dir, src_dir),
+                ['cmake', '-Dwith-nest={}'.format(self.nest_config),
+                 '-DCMAKE_INSTALL_PREFIX={}'.format(install_dir), src_dir],
                 fail_msg=(
                     "Cmake of '{}' NEST module failed (see src "
                     "directory '{}'):\n\n {{}}".format(name, src_dir)))
@@ -148,7 +148,7 @@ class CodeGenerator(BaseCodeGenerator):
         logger.info("Compiling NEST model class in '{}' directory."
                     .format(compile_dir))
         stdout, stderr = self.run_command(
-            'make -j{}'.format(self._build_cores),
+            ['make', '-j{}'.format(self._build_cores)],
             fail_msg=("Compilation of '{}' NEST module failed (see compile "
                       "directory '{}'):\n\n {{}}".format(component_name,
                                                          compile_dir)))
@@ -158,7 +158,7 @@ class CodeGenerator(BaseCodeGenerator):
                 .format(compile_dir, stdout, stderr))
         logger.debug("make '{}':\nstdout:\n{}stderr:\n{}\n"
                      .format(compile_dir, stdout, stderr))
-        stdout, stderr = self.run_command('make install', fail_msg=(
+        stdout, stderr = self.run_command(['make', 'install'], fail_msg=(
             "Installation of '{}' NEST module failed (see compile "
             "directory '{}'):\n\n {{}}"
             .format(component_name, compile_dir)))
@@ -203,7 +203,7 @@ class CodeGenerator(BaseCodeGenerator):
             orig_dir = os.getcwd()
             os.chdir(compile_dir)
             try:
-                stdout, stderr = self.run_command('make clean')
+                stdout, stderr = self.run_command(['make', 'clean'])
                 os.chdir(orig_dir)
             except sp.CalledProcessError or IOError:
                 os.chdir(orig_dir)

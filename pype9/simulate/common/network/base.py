@@ -32,9 +32,6 @@ from nineml.user import (
     AnalogConnectionGroup as AnalogConnectionGroup9ML,
     Selection as Selection9ML,
     Concatenate as Concatenate9ML)
-from nineml.user import AnalogPortConnection
-from nineml.user.multi.port_exposures import AnalogReducePortExposure
-from nineml.abstraction import AnalogReducePort
 from pype9.exceptions import Pype9UnflattenableSynapseException
 from .connectivity import InversePyNNConnectivity
 from ..cells import (

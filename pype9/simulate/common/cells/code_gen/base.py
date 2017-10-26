@@ -45,7 +45,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
                           'generate_only',  # Only generate source files
                           'purge'  # Remove all configure files and rebuild
                           ]
-    BUILD_DIR_DEFAULT = '9build'
+    BUILD_DIR_DEFAULT = '__pype9_build__'
     _PARAMS_DIR = 'params'
     _SRC_DIR = 'src'
     _INSTL_DIR = 'install'
@@ -380,7 +380,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     def run_command(self, cmd, fail_msg=None, **kwargs):
         env = os.environ.copy()
         try:
-            process = sp.Popen(cmd.split(), stdout=sp.PIPE,
+            process = sp.Popen(cmd, stdout=sp.PIPE,
                                stderr=sp.PIPE, env=env, **kwargs)
             stdout, stderr = process.communicate()
             stdout = str(stdout.decode('utf-8'))

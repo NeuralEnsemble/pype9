@@ -81,8 +81,7 @@ class CodeGenerator(BaseCodeGenerator):
                 # Check nest-config (if installed) to get any paths needed for
                 # gsl
                 nest_config_path = self.path_to_utility('nest-config')
-                stdout, _ = self.run_command(
-                    '{} --libs'.format(nest_config_path))
+                stdout, _ = self.run_command([nest_config_path, '--libs'])
                 nest_lflags = stdout.split()
                 self.nrnivmodl_flags.extend(
                     f for f in nest_lflags
@@ -472,19 +471,19 @@ class CodeGenerator(BaseCodeGenerator):
             for fname in os.listdir('.'):
                 if fname.endswith('.mod'):
                     try:
-                        stdout, stderr = self.run_command(
-                            '{} {}'.format(self.modlunit_path, fname))
+                        stdout, stderr = self.run_command([self.modlunit_path,
+                                                           fname])
                         assert '<<ERROR>>' not in stderr, (
                             "Incorrect units assigned in NMODL file:\n {}{}"
                             .format(stdout, stderr))
                     except sp.CalledProcessError as e:
                         raise Pype9BuildError(
                             "Could not run 'modlunit' to check dimensions in "
-                            "NMODL file: {}\n{}".format(stdout, stderr))
+                            "NMODL file: {}\n{}".format(fname, e))
         # Run nrnivmodl command in src directory
-        nrnivmodl_cmd = "{} -loadflags {}".format(
-            self.nrnivmodl_path, ' '.join(self.nrnivmodl_flags))
-        logger.debug("Building nrnivmodl in {} with '{}'".format(
+        nrnivmodl_cmd = [self.nrnivmodl_path, '-loadflags',
+                         ' '.join(self.nrnivmodl_flags)]
+        logger.debug("Building nrnivmodl in {} with {}".format(
             compile_dir, nrnivmodl_cmd))
         self.run_command(nrnivmodl_cmd, fail_msg=(
             "Compilation of NMODL files for '{}' model failed. See src "
@@ -513,7 +512,7 @@ class CodeGenerator(BaseCodeGenerator):
         """
         return os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
 
-    def clean_compile_dir(self, compile_dir):
+    def clean_compile_dir(self, *args, **kwargs):
         pass  # NEURON doesn't use a separate compile dir
 
     def _get_specials_dir(self):
