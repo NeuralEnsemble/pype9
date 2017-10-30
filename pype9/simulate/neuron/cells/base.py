@@ -97,7 +97,7 @@ class Cell(base.Cell):
             # 10^(-10), nA = 10^(-9). 1 - 10 = - 9. (see PyNN Izhikevich neuron
             # implementation)
             self._sec.L = 10.0
-            self._sec.diam = old_div(10.0, pi)
+            self._sec.diam = 10.0 / pi
             self.cm_param_name = self.build_component_class.annotations.get(
                 (BUILD_TRANS, PYPE9_NS), MEMBRANE_CAPACITANCE)
             if self.cm_param_name not in self.component_class.parameter_names:
@@ -107,8 +107,8 @@ class Cell(base.Cell):
                 setattr(self._hoc, self.cm_param_name,
                         float(self.DEFAULT_CM.in_units(un.nF)))
                 # Set capacitance in HOC section
-                specific_cm = (old_div(self.DEFAULT_CM, self.surface_area))
-                self._sec.cm = float(specific_cm.in_units(old_div(un.uF, un.cm ** 2)))
+                specific_cm = self.DEFAULT_CM / self.surface_area
+                self._sec.cm = float(specific_cm.in_units(un.uF / un.cm ** 2))
             self.recordable[self.component_class.annotations.get(
                 (BUILD_TRANS, PYPE9_NS),
                 MEMBRANE_VOLTAGE)] = self.source_section(0.5)._ref_v

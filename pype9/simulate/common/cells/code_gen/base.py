@@ -11,6 +11,7 @@
 ##########################################################################
 from __future__ import absolute_import
 from builtins import object
+from future.utils import PY3
 import platform
 import os
 import subprocess as sp
@@ -383,8 +384,9 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
             process = sp.Popen(cmd, stdout=sp.PIPE,
                                stderr=sp.PIPE, env=env, **kwargs)
             stdout, stderr = process.communicate()
-            stdout = str(stdout.decode('utf-8'))
-            stderr = str(stderr.decode('utf-8'))
+            if PY3:
+                stdout = str(stdout.decode('utf-8'))
+                stderr = str(stderr.decode('utf-8'))
             logger.debug("'{}' stdout:\n{}".format(cmd, stdout))
             logger.debug("'{}' stderr:\n{}".format(cmd, stderr))
         except sp.CalledProcessError as e:

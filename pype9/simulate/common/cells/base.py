@@ -310,7 +310,8 @@ class Cell(object):
         Append the property names to the list of attributes of a cell object
         """
         return list(set(chain(
-            dir(super(self.__class__, self)), self.property_names,
+            dir(super(self.__class__, self)),
+            self.component_class.parameter_names,
             self.state_variable_names)))
 
     @property
