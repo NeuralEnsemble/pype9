@@ -1,7 +1,9 @@
 from __future__ import division
 from .cells import Cell, CellMetaClass, CodeGenerator as CellCodeGenerator
 from .simulation import Simulation
-from .network import Network, ComponentArray, Selection, ConnectionGroup
+from .network import (
+    Network, ComponentArray, Selection, ConnectionGroup,
+    PyNNCellWrapperMetaClass)
 from .units import UnitHandler
 # from .pynn_interface.network import Network  # @UnusedImport
 # from .pynn_interface.population import Population  # @UnusedImport
