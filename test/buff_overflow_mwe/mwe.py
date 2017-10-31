@@ -16,8 +16,8 @@ load_mechanisms(mod_dir)
 
 
 sec = h.Section()
-# HocClass = getattr(h, mech_name)
 hoc = h.BuffOverflow(0.5, sec=sec)
-setattr(hoc, 'cm___pype9', 1.0)
+setattr(hoc, 'cm_int', 1.0)
+setattr(hoc, 'R', 1.0)
 rec = h.NetCon(hoc, None, sec=sec)
 print("Done testing")
