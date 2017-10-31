@@ -2,9 +2,11 @@ from __future__ import division
 from __future__ import print_function
 import ninemlcatalog
 import numpy
+from itertools import chain
 from nineml import units as un, Property
 from pype9.simulate.neuron import (
-    Network, Simulation, UnitHandler, PyNNCellWrapperMetaClass)
+    Network, Simulation, UnitHandler, PyNNCellWrapperMetaClass,
+    CellMetaClass)
 from pyNN.neuron import simulator
 from pype9.simulate.common.network.values import get_pyNN_value
 
@@ -24,7 +26,6 @@ for proj in (model.projection('Excitation'),
         int(numpy.ceil(float(number.value) * scale)) * un.unitless))
 
 model.population('Ext').cell['rate'] = 300 / un.s
-print(27)
 with Simulation(dt=0.01 * un.ms, seed=1) as sim:
     rng = Simulation.active().properties_rng
     (flat_comp_arrays, flat_conn_groups,
@@ -33,37 +34,57 @@ with Simulation(dt=0.01 * un.ms, seed=1) as sim:
     dynamics_properties = nineml_model.dynamics_properties
     dynamics = dynamics_properties.component_class
     print(35)
-    celltype = PyNNCellWrapperMetaClass(
-        name=nineml_model.name, component_class=dynamics,
+#     celltype = PyNNCellWrapperMetaClass(
+#         name=nineml_model.name, component_class=dynamics,
+#         default_properties=dynamics_properties,
+#         initial_state=list(dynamics_properties.initial_values),
+#         initial_regime=dynamics_properties.initial_regime,
+#         build_mode='purge')
+    model = CellMetaClass(
+        component_class=dynamics,
         default_properties=dynamics_properties,
         initial_state=list(dynamics_properties.initial_values),
-        initial_regime=dynamics_properties.initial_regime,
-        build_mode='purge')
-    print(41)
-    rng = Simulation.active().properties_rng
-    cellparams = dict(
-        (p.name, get_pyNN_value(p, UnitHandler, rng))
-        for p in dynamics_properties.properties)
-    initial_values = dict(
-        (i.name, get_pyNN_value(i, UnitHandler, rng))
-        for i in dynamics_properties.initial_values)
-    initial_values['_regime'] = celltype.model.regime_index(
-        dynamics_properties.initial_regime)
-    print(51)
-    size = nineml_model.size
-    first_id = simulator.state.gid_counter
-    last_id = simulator.state.gid_counter + size - 1
-    all_cells = numpy.array([id for id in range(first_id, last_id + 1)],  # @ReservedAssignment @IgnorePep8
-                            simulator.ID)
-    parameter_space = celltype.parameter_space
-    parameter_space.shape = (size,)
-    parameter_space.evaluate(mask=None)
-    print(60)
-    for i, (id, is_local, params) in enumerate(zip(all_cells, parameter_space)):  # @ReservedAssignment @IgnorePep8
-        all_cells[i] = simulator.ID(id)
-        if is_local:
-            if hasattr(celltype, "extra_parameters"):
-                params.update(celltype.extra_parameters)
-            all_cells[i]._build_cell(celltype.model, params)
-    sim.run(20 * un.ms)
+        name=nineml_model.name,
+        build_mode='purge', standalone=False)
+    dct = {'model': model,
+           'default_properties': dynamics_properties,
+           'initial_state': list(dynamics_properties.initial_values),
+           'initial_regime': dynamics_properties.initial_regime,
+           'extra_parameters': {'_in_array': True}}
+#     celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
+#         cls, name, (PyNNCellWrapper,), dct)
+    component_class = dct['model'].component_class
+    default_properties = dct['default_properties']  # @UnusedVariable
+    initial_state = dct['initial_state']  # @UnusedVariable
+    initial_regime_index = dct['model'].regime_index(dct['initial_regime'])
+    dct['parameter_names'] = tuple(component_class.parameter_names)
+    dct['recordable'] = list(chain(('spikes',),
+                                    component_class.send_port_names,
+                                    component_class.state_variable_names))
+    dct['receptor_types'] = tuple(component_class.event_receive_port_names)
+    # List units for each state variable
+    dct['units'] = dict(
+        (sv.name, UnitHandler.to_pq_quantity(
+            1 * UnitHandler.dimension_to_units(sv.dimension)))
+        for sv in component_class.state_variables)
+    dct["default_parameters"] = dict(
+        (p.name, (
+            UnitHandler.scale_value(p.quantity)
+            if p.value.nineml_type == 'SingleValue' else float('nan')))
+        for p in default_properties)
+    dct["default_initial_values"] = dict(
+        (i.name, (
+            UnitHandler.scale_value(i.quantity)
+            if i.value.nineml_type == 'SingleValue' else float('nan')))
+        for i in initial_state)
+    dct['default_initial_values']['_regime'] = initial_regime_index
+    dct["weight_variables"] = (
+        component_class.all_connection_parameter_names())
+    # FIXME: Need to determine whether cell is "injectable" and/or
+    #        conductance-based
+    dct["injectable"] = True
+    dct["conductance_based"] = True
+    recordable_keys = list(model(dynamics_properties,
+                                 _in_array=True).recordable.keys())
+    print(42)
 print("Done testing")
