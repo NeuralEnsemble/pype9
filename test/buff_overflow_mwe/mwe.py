@@ -3,7 +3,7 @@ import os.path
 import shutil
 from neuron import h, load_mechanisms
 
-mech_name = 'buff_overrun'
+mech_name = 'BuffOverflow'
 
 mod_dir = os.path.join(os.path.dirname(__file__), 'mod')
 
@@ -15,9 +15,9 @@ os.chdir(orig_dir)
 load_mechanisms(mod_dir)
 
 
-_sec = h.Section()
-HocClass = getattr(h, mech_name)
-_hoc = HocClass(0.5, sec=_sec)
-setattr(_hoc, 'cm___pype9', 1.0)
-rec = h.NetCon(_hoc, None, sec=_sec)
+sec = h.Section()
+# HocClass = getattr(h, mech_name)
+hoc = h.BuffOverflow(0.5, sec=sec)
+setattr(hoc, 'cm___pype9', 1.0)
+rec = h.NetCon(hoc, None, sec=sec)
 print("Done testing")

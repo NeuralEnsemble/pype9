@@ -1,7 +1,7 @@
 TITLE Spiking node generated from 9ML using PyPe9 version 0.1 at 'Tue 31 Oct 17 05:11:29PM'
 
 NEURON {
-    POINT_PROCESS buff_overrun
+    POINT_PROCESS BuffOverflow
     NONSPECIFIC_CURRENT i___pype9
     : T
     RANGE regime_
