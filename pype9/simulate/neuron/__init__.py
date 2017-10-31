@@ -1,8 +1,7 @@
 from __future__ import division
-from past.utils import old_div
-from .cells import Cell, CellMetaClass
+from .cells import Cell, CellMetaClass, CodeGenerator as CellCodeGenerator
 from .simulation import Simulation
-from .network import Network
+from .network import Network, ComponentArray, Selection, ConnectionGroup
 from .units import UnitHandler
 # from .pynn_interface.network import Network  # @UnusedImport
 # from .pynn_interface.population import Population  # @UnusedImport
@@ -35,12 +34,12 @@ dimensions_matrix = [
 
 default_units = [un.ms,
                  un.mV,
-                 old_div(un.mA, un.cm ** 2),
+                 un.mA / un.cm ** 2,
                  un.nA,
                  un.mM,
-                 old_div(un.uF, un.cm ** 2),
+                 un.uF / un.cm ** 2,
                  un.um,
-                 old_div(un.S, un.cm ** 2),
+                 un.S / un.cm ** 2,
                  un.uS,
                  un.ohm * un.cm,
                  un.Mohm,

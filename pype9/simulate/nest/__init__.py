@@ -1,8 +1,4 @@
-# from .pynn_interface.network.nest import Network  # @UnusedImport
-# from .pynn_interface.population.nest import Population  # @UnusedImport
-# from .pynn_interface.projection.nest import Projection  # @UnusedImport
-# from .pynn_interface.synapses.nest import StaticSynapse  # @UnusedImport
-from .cells import Cell, CellMetaClass
+from .cells import Cell, CellMetaClass, CodeGenerator as CellCodeGenerator
 from .simulation import Simulation
-from .network import Network
+from .network import Network, ComponentArray, Selection, ConnectionGroup
 from .units import UnitHandler
