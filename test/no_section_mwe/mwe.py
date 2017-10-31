@@ -1,9 +1,7 @@
 import subprocess as sp
 import os.path
 import shutil
-from neuron import h, load_mechanisms
-
-mech_name = 'BuffOverflow'
+import neuron
 
 mod_dir = os.path.join(os.path.dirname(__file__), 'mod')
 
@@ -12,12 +10,20 @@ orig_dir = os.getcwd()
 os.chdir(mod_dir)
 sp.check_call('nrnivmodl', shell=True)
 os.chdir(orig_dir)
-load_mechanisms(mod_dir)
+neuron.load_mechanisms(mod_dir)
 
 
-sec = h.Section()
-hoc = h.BuffOverflow(0.5, sec=sec)
+sec = neuron.h.Section()
+hoc = neuron.h.NoSectionMWE(0.5, sec=sec)
 setattr(hoc, 'cm_int', 1.0)
 setattr(hoc, 'R', 1.0)
-rec = h.NetCon(hoc, None, sec=sec)
+setattr(hoc, 'tau', 1.0)
+setattr(hoc, 'tau2', 1.0)
+rec = neuron.h.NetCon(hoc, None, sec=sec)
+print("running")
+neuron.init()
+print("finitializing")
+neuron.h.finitialize()
+print("running")
+neuron.run(10)
 print("Done testing")
