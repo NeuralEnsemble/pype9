@@ -34,9 +34,8 @@ pushd $NEST_BUILD_DIR
 
 # Get Python installation information
 VENV=$(python -c "import sys; print(sys.prefix)");
-PYTHON_INCLUDE_DIR=$(python -c 'from distutils import sysconfig; print(sysconfig.get_path("include"');
-PYTHON_LIBRARY=$(python -c 'import os.path; from distutils import sysconfig; print(os.path.join(sysconfig.get_config_var("LIBDIR"), ".".join(sysconfig.get_config_var("LIBRARY").split(".")[:2])))').so;
-
+PYTHON_INCLUDE_DIR=$(python -c 'import sysconfig; print(sysconfig.get_path("include"))');
+PYTHON_LIBRARY=$(python -c 'import os.path; import sysconfig; print(os.path.join(sysconfig.get_config_var("LIBDIR"), ".".join(sysconfig.get_config_var("LIBRARY").split(".")[:2])))').so;
 
 # Install cython
 pip install cython
