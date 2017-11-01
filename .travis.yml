@@ -1,8 +1,11 @@
 language: python
-python:
-  - "2.7"
 sudo: false
 dist: trusty
+matrix:
+  include:
+    - python: 2.7
+    - python: 3.4
+    - python: 3.6
 addons:
   apt:
     packages:
@@ -21,9 +24,8 @@ addons:
       - inkscape
       - libhdf5-serial-dev
 install:
-  - pip install cython
-  - source ci/install_nest.sh
-  - source ci/install_neuron.sh
+  - source ci/install_nest.sh 2.12.0
+  - source ci/install_neuron.sh 7.5
   - pip install git+git://github.com/tclose/nineml-python.git@pype9_port
   - pip install git+git://github.com/tclose/nineml-catalog.git@python3
   - pip install git+git://github.com/tclose/Diophantine.git@master
@@ -38,8 +40,8 @@ after_success:
   - coveralls
 cache:
   directories:
-    - $HOME/nest-2.12.0
-    - $HOME/nrn-7.5
-    - $HOME/build/nest-2.12.0
-    - $HOME/build/nrn-7.5
+    - $NEST_SRC_DIR
+    - $NEST_BUILD_DIR
+    - $NEURON_SRC_DIR
+    - $NEURON_BUILD_DIR
     - $HOME/.cache/pip
