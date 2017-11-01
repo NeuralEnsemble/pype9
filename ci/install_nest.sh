@@ -34,24 +34,19 @@ pushd $NEST_BUILD_DIR
 
 # Get Python installation information
 VENV=$(python -c "import sys; print(sys.prefix)");
-PYLIB_DIR=$(python -c 'from distutils import sysconfig; print(sysconfig.get_config_var("LIBDIR"))');
-PYINC_DIR=$(python -c 'from distutils import sysconfig; print(sysconfig.get_config_var("INCLUDEDIR"))');
-PYLIB_NAME=$(python -c 'from distutils import sysconfig; print(".".join(sysconfig.get_config_var("LIBRARY").split(".")[:2]))').so;
-PYVER=$(python -c 'import sys; print("{}.{}".format(*sys.version_info[:2]))');
-PYLIBRARY=$PYLIB_DIR/$PYLIB_NAME
+PYTHON_INCLUDE_DIR=$(python -c 'from distutils import sysconfig; print(sysconfig.get_path("include"');
+PYTHON_LIBRARY=$(python -c 'import os.path; from distutils import sysconfig; print(os.path.join(sysconfig.get_config_var("LIBDIR"), ".".join(sysconfig.get_config_var("LIBRARY").split(".")[:2])))').so;
+
 
 # Install cython
 pip install cython
 
-echo "PYINC_DIR: $PYINC_DIR"
-ls $PYINC_DIR
-
 if [ ! -d "$NEST_BUILD_DIR/CMakeFiles" ]; then
     echo "VENV: $VENV"
-    echo "Python Library: $PYLIBRARY"
-    echo "Python include dir: $PYINC_DIR"
-    cmake -Dwith-mpi=ON -DPYTHON_LIBRARY=$PYLIBRARY \
-     -DPYTHON_INCLUDE_DIR=$PYINC_DIR/python$PYVER \
+    echo "Python Library: $PYTHON_LIBRARY"
+    echo "Python include dir: $PYTHON_INCLUDE_DIR"
+    cmake -Dwith-mpi=ON -DPYTHON_LIBRARY=$PYTHON_LIBRARY \
+     -DPYTHON_INCLUDE_DIR=$PYTHON_INCLUDE_DIR \
      -DCMAKE_INSTALL_PREFIX=$VENV $NEST_SRC_DIR;
     make;
 else
