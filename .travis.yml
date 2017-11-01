@@ -19,6 +19,8 @@ addons:
       - python-all-dev
       - python-numpy
       - python-scipy
+      - python3-numpy
+      - python3-scipy
       - openmpi-bin
       - libopenmpi-dev
       - inkscape
