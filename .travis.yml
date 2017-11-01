@@ -27,7 +27,6 @@ addons:
       - inkscape
       - libhdf5-serial-dev
 install:
-  - ls /opt/python/3.4.6/include/python3.4
   - source ci/install_nest.sh 2.12.0 purge
   - source ci/install_neuron.sh 7.5 purge
   - pip install git+git://github.com/tclose/nineml-python.git@pype9_port

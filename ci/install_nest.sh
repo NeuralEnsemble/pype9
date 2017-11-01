@@ -43,6 +43,9 @@ PYLIBRARY=$PYLIB_DIR/$PYLIB_NAME
 # Install cython
 pip install cython
 
+echo "PYINC_DIR: $PYINC_DIR"
+ls $PYINC_DIR
+
 if [ ! -d "$NEST_BUILD_DIR/CMakeFiles" ]; then
     echo "VENV: $VENV"
     echo "Python Library: $PYLIBRARY"
