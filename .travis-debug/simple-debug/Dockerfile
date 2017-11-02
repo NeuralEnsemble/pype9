@@ -27,11 +27,14 @@ RUN adduser docker sudo
 USER docker
 ENV HOME=/home/docker
 ENV SHELL=/bin/bash
+
 WORKDIR $HOME
 RUN git config --global user.email "tom.g.close@gmail.com"
 RUN git config --global user.name "Tom Close"
 
+RUN echo "Cloning Pype9"
 RUN git clone -b python3 https://github.com/tclose/pype9.git
 
-RUN virtualenv $HOME/venv
+RUN virtualenv --python=python2 $HOME/py2
+RUN virtualenv --python=python3 $HOME/py3
 WORKDIR pype9/install
