@@ -33,8 +33,6 @@ mkdir -p $NEURON_BUILD_DIR
 SRC_DIR=$NEURON_BUILD_DIR/$NEURON
 BUILD_DIR=$NEURON_BUILD_DIR/build
 
-export NEURON_BUILD_DIR=$HOME/build/$NEURON
-
 # Download and untar
 wget http://www.neuron.yale.edu/ftp/neuron/versions/v$NEURON_VERSION/$NEURON.tar.gz -O $NEURON_BUILD_DIR/$NEURON.tar.gz;
 pushd $NEURON_BUILD_DIR;
@@ -45,8 +43,7 @@ mkdir -p $NEURON_BUILD_DIR
 pushd $NEURON_BUILD_DIR
 
 # Configure, make and install
-PYTHON_PREFIX=`python -c "import sys; print(sys.prefix)"`;
-$NEURON_SRC_DIR/configure --with-paranrn --with-nrnpython=$PYTHON_PREFIX/bin/python \
+$SRC_DIR/configure --with-paranrn --with-nrnpython \
  --prefix=$NEURON_INSTALL_PREFIX --disable-rx3d --without-iv;
 make -j8;
 make install
