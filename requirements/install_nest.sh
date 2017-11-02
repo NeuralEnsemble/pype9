@@ -11,16 +11,16 @@ NEST_VERSION=$1
 NEST="nest-$NEST_VERSION"
 
 if [ -z "$2" ]; then
-    export NEST_INSTALL_PREFIX=$2
-else
     # Use virtualenv bin by default
     export NEST_INSTALL_PREFIX=$(python -c "import sys; print(sys.prefix)");
+else
+    export NEST_INSTALL_PREFIX=$2
 fi
 
 if [ -z "$3" ]; then
-    export NEST_BUILD_DIR=$3
-else
     export NEST_BUILD_DIR=$HOME/pype9-build/nest
+else
+    export NEST_BUILD_DIR=$3
 fi
 echo "Using '$NEST_BUILD_DIR' as NEST build directory"
 mkdir -p $NEST_BUILD_DIR
