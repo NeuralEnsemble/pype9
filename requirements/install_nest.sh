@@ -13,6 +13,9 @@ NEST="nest-$NEST_VERSION"
 if [ -z "$2" ]; then
     # Use virtualenv bin by default
     export NEST_INSTALL_PREFIX=$(python -c "import sys; print(sys.prefix)");
+    if [ $NEST_INSTALL_PREFIX == '/usr' ] || [ $NEST_INSTALL_PREFIX == '/usr/local' ]; then
+       NEST_INSTALL_PREFIX=$HOME/nest
+    fi
 else
     export NEST_INSTALL_PREFIX=$2
 fi
@@ -36,7 +39,7 @@ popd;
 
 # Get Python installation information
 export PYTHON_INCLUDE_DIR=$(python -c 'import sysconfig; print(sysconfig.get_config_var("INCLUDEPY"))');
-export PYTHON_LIBRARY=$(python -c 'import os.path; import sysconfig; print(os.path.join(sysconfig.get_config_var("LIBDIR"), sysconfig.get_config_var("LDLIBRARY")))')
+export PYTHON_LIBRARY=$(python -c 'import os.path; import sysconfig; print(os.path.join(sysconfig.get_config_var("LIBPL"), sysconfig.get_config_var("LDLIBRARY")))')
 
 # Install cython
 pip install cython
