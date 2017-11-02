@@ -40,7 +40,25 @@ popd;
 
 # Get Python installation information
 export PYTHON_INCLUDE_DIR=$(python -c 'import sysconfig; print(sysconfig.get_config_var("INCLUDEPY"))');
+
+if [ ! -d "$PYTHON_INCLUDE_DIR" ]; then
+    echo "Did not find Python include dir at '$PYTHON_INCLUDE_DIR'"
+    exit
+fi
+
 export PYTHON_LIBRARY=$(python -c 'import os.path; import sysconfig; print(os.path.join(sysconfig.get_config_var("LIBPL"), sysconfig.get_config_var("LDLIBRARY")))')
+
+if [ ! -f "$PYTHON_LIBRARY" ]; then
+    echo "Did not find Python library at '$PYTHON_LIBRARY'"
+    PYTHON_LIB_DIR=$(dirname $PYTHON_LIBRARY)
+    if [ -d $PYTHON_LIB_DIR ]; then
+        echo "Found the following files in '$PYTHON_LIB_DIR'"
+        ls $PYTHON_LIB_DIR
+    else
+        echo "Did not find containing directory '$PYTHON_LIB_DIR'"
+    fi
+    exit    
+fi
 
 # Install cython
 pip install cython
