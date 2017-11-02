@@ -48,7 +48,7 @@ pushd $NEURON_BUILD_DIR
 PYTHON_PREFIX=`python -c "import sys; print(sys.prefix)"`;
 $NEURON_SRC_DIR/configure --with-paranrn --with-nrnpython=$PYTHON_PREFIX/bin/python \
  --prefix=$NEURON_INSTALL_PREFIX --disable-rx3d --without-iv;
-make;
+make -j8;
 make install
 
 # Install Python
