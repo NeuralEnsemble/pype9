@@ -51,7 +51,7 @@ echo "Python include dir: $PYTHON_INCLUDE_DIR"
 cmake -Dwith-mpi=ON -DPYTHON_LIBRARY=$PYTHON_LIBRARY \
  -DPYTHON_INCLUDE_DIR=$PYTHON_INCLUDE_DIR \
  -DCMAKE_INSTALL_PREFIX=$NEST_INSTALL_PREFIX $SRC_DIR;
-make;
+make -j8;
 make install
 
 popd
