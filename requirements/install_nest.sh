@@ -4,7 +4,7 @@ set -e  # stop execution in case of errors
 
 if [ -z "$1" ]; then
     echo "Please provide NEST version as first argument to install script"
-    return
+    exit
 fi
 
 NEST_VERSION=$1
