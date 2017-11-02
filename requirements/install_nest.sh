@@ -25,8 +25,8 @@ fi
 echo "Using '$NEST_BUILD_DIR' as NEST build directory"
 mkdir -p $NEST_BUILD_DIR
 
-SRC_DIR=$NEST_BUILD_DIR/$NEST
-BUILD_DIR=$NEST_BUILD_DIR/build
+export SRC_DIR=$NEST_BUILD_DIR/$NEST
+export BUILD_DIR=$NEST_BUILD_DIR/build
 
 # Download source from GitHub
 wget https://github.com/nest/nest-simulator/releases/download/v$NEST_VERSION/$NEST.tar.gz -O $NEST_BUILD_DIR/$NEST.tar.gz;
@@ -35,8 +35,8 @@ tar xzf $NEST.tar.gz;
 popd;
 
 # Get Python installation information
-PYTHON_INCLUDE_DIR=$(python -c 'import sysconfig; print(sysconfig.get_path("include"))');
-PYTHON_LIBRARY=$(python -c 'import os.path; import sysconfig; print(os.path.join(sysconfig.get_config_var("LIBDIR"), ".".join(sysconfig.get_config_var("LIBRARY").split(".")[:2])))').so;
+export PYTHON_INCLUDE_DIR=$(python -c 'import sysconfig; print(sysconfig.get_config_var("INCLUDEPY"))');
+export PYTHON_LIBRARY=$(python -c 'import os.path; import sysconfig; print(os.path.join(sysconfig.get_config_var("LIBDIR"), sysconfig.get_config_var("LDLIBRARY")))')
 
 # Install cython
 pip install cython
