@@ -34,4 +34,4 @@ RUN git config --global user.name "Tom Close"
 RUN git clone -b python3 https://github.com/tclose/pype9.git
 
 RUN virtualenv $HOME/venv
-WORKDIR pype9/requirements
+WORKDIR pype9/install
