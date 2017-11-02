@@ -26,6 +26,7 @@ addons:
       - libopenmpi-dev
       - inkscape
       - libhdf5-serial-dev
+      - libyaml-dev
 install:
   - source requirements/install_nest.sh 2.12.0
   - source requirements/install_neuron.sh 7.5
