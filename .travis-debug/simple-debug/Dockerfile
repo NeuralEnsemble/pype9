@@ -32,18 +32,8 @@ WORKDIR $HOME
 RUN git config --global user.email "tom.g.close@gmail.com"
 RUN git config --global user.name "Tom Close"
 
-RUN echo "Cloning Pype9 3"
+RUN echo "Cloning Pype9 4"
 RUN git clone -b python3 https://github.com/tclose/pype9.git
 
-# Install python 2 versions
 RUN virtualenv --python=python2 $HOME/py2
-RUN /bin/bash -c "source $HOME/py2/bin/activate"
-RUN pype9/install/nest.sh 2.12.0
-RUN pype9/install/neuron.sh 7.5
-
-# Install python 3 versions
 RUN virtualenv --python=python3 $HOME/py3
-RUN /bin/bash -c "source $HOME/py3/bin/activate"
-RUN pype9/install/nest.sh 2.12.0
-RUN pype9/install/neuron.sh 7.5
-
