@@ -39,7 +39,7 @@ install:
   - wget https://github.com/NeuralEnsemble/PyNN/archive/0.9.1.tar.gz
   - tar xzf 0.9.1.tar.gz
   - mv PyNN-0.9.1 pyNN-$PYENV
-  - pip install pyNN-$PYENV
+  - pip install ./pyNN-$PYENV
   - pip install -r requirements.txt
   - pip install coveralls
   - pushd pype9/simulate/neuron/cells/code_gen/libninemlnrn
