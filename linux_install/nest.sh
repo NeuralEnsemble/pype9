@@ -52,7 +52,7 @@ if [ ! -f "$PYTHON_LIBRARY" ]; then
     echo "Did not find Python library at '$PYTHON_LIBRARY'"
     UBUNTU_PYTHON_LIBRARY=$(python -c "import os.path; import sysconfig; vars = sysconfig.get_config_vars(); print(os.path.join(vars['LIBDIR'], vars['MULTIARCH'], vars['LDLIBRARY']))")
     if [ -f $UBUNTU_PYTHON_LIBRARY ]; then
-        export $PYTHON_LIBRARY=$UBUNTU_PYTHON_LIBRARY
+        export PYTHON_LIBRARY=$UBUNTU_PYTHON_LIBRARY
     else
         PYTHON_LIB_DIR=$(dirname $PYTHON_LIBRARY)
         if [ -d $PYTHON_LIB_DIR ]; then
