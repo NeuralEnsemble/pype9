@@ -1,5 +1,4 @@
 #!/bin/bash
-# Adapted from similar install script in pyNN (https://github.com/NeuralEnsemble/PyNN)
 
 set -e  # stop execution in case of errors
 
@@ -43,6 +42,7 @@ mkdir -p $NEURON_BUILD_DIR
 pushd $NEURON_BUILD_DIR
 
 # Configure, make and install
+echo "Install Prefix: $NEURON_INSTALL_PREFIX"
 $SRC_DIR/configure --with-paranrn --with-nrnpython \
  --prefix=$NEURON_INSTALL_PREFIX --disable-rx3d --without-iv;
 make -j8;
