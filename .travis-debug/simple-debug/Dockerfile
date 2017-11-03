@@ -32,7 +32,7 @@ WORKDIR $HOME
 RUN git config --global user.email "tom.g.close@gmail.com"
 RUN git config --global user.name "Tom Close"
 
-RUN echo "Cloning Pype9 6"
+RUN echo "Cloning Pype9 7"
 RUN git clone -b python3 https://github.com/tclose/pype9.git
 
 RUN virtualenv --python=python2 $HOME/py2
