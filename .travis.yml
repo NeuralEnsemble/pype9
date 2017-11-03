@@ -4,8 +4,11 @@ dist: trusty
 matrix:
   include:
     - python: 2.7
+      env: PYENV=py27
     - python: 3.4
+      env: PYENV=py34
     - python: 3.6
+      env: PYENV=py36
 addons:
   apt:
     packages:
@@ -33,6 +36,10 @@ install:
   - pip install git+git://github.com/tclose/nineml-python.git@pype9_port
   - pip install git+git://github.com/tclose/nineml-catalog.git@python3
   - pip install git+git://github.com/tclose/Diophantine.git@master
+  - wget https://github.com/NeuralEnsemble/PyNN/archive/0.9.1.tar.gz
+  - tar xzf 0.9.1.tar.gz
+  - mv PyNN-0.9.1 pyNN-$PYENV
+  - pip install pyNN-$PYENV
   - pip install -r requirements.txt
   - pip install coveralls
   - pushd pype9/simulate/neuron/cells/code_gen/libninemlnrn
