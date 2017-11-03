@@ -46,7 +46,7 @@ if [ ! -d "$PYTHON_INCLUDE_DIR" ]; then
     exit
 fi
 
-export PYTHON_LIBRARY=$(python -c "import os.path; import sysconfig; vars = sysconfig.get_config_vars(); print(os.path.join(vars['LIBDIR'], vars['LDLIBRARY'])))")
+export PYTHON_LIBRARY=$(python -c "import os.path; import sysconfig; vars = sysconfig.get_config_vars(); print(os.path.join(vars['LIBDIR'], vars['LDLIBRARY']))")
 
 if [ ! -f "$PYTHON_LIBRARY" ]; then
     echo "Did not find Python library at '$PYTHON_LIBRARY'"
