@@ -50,14 +50,19 @@ export PYTHON_LIBRARY=$(python -c "import os.path; import sysconfig; vars = sysc
 
 if [ ! -f "$PYTHON_LIBRARY" ]; then
     echo "Did not find Python library at '$PYTHON_LIBRARY'"
-    PYTHON_LIB_DIR=$(dirname $PYTHON_LIBRARY)
-    if [ -d $PYTHON_LIB_DIR ]; then
-        echo "Found the following files in '$PYTHON_LIB_DIR'"
-        ls $PYTHON_LIB_DIR
+    UBUNTU_PYTHON_LIBRARY=$(python -c "import os.path; import sysconfig; vars = sysconfig.get_config_vars(); print(os.pa    th.join(vars['LIBDIR'], vars['MULTIARCH'], vars['LDLIBRARY']))")
+    if [ -f $UBUNTU_PYTHON_LIBRARY ]; then
+        export $PYTHON_LIBRARY=$UBUNTU_PYTHON_LIBRARY
     else
-        echo "Did not find containing directory '$PYTHON_LIB_DIR'"
+        PYTHON_LIB_DIR=$(dirname $PYTHON_LIBRARY)
+        if [ -d $PYTHON_LIB_DIR ]; then
+            echo "Did not find '$PYTHON_LIBRARY' but found the following files in '$PYTHON_LIB_DIR'"
+            ls $PYTHON_LIB_DIR
+        else
+            echo "Did not find containing directory for Python library '$PYTHON_LIBRARY'"
+        fi
+        exit    
     fi
-    exit    
 fi
 
 # Install cython
