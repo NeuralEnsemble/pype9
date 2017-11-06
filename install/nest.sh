@@ -38,38 +38,15 @@ pushd $NEST_BUILD_DIR;
 tar xzf $NEST.tar.gz;
 popd;
 
-# Get Python installation information
-export PYTHON_INCLUDE_DIR=$(python -c "import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))");
-
-if [ ! -d "$PYTHON_INCLUDE_DIR" ]; then
-    echo "Did not find Python include dir at '$PYTHON_INCLUDE_DIR'"
-    exit
-fi
-
-export PYTHON_LIBRARY=$(python -c "import os.path; import sysconfig; vars = sysconfig.get_config_vars(); print(os.path.join(vars['LIBDIR'], vars['LDLIBRARY']))")
-
-if [ ! -f "$PYTHON_LIBRARY" ]; then
-    echo "Did not find Python library at '$PYTHON_LIBRARY'"
-    UBUNTU_PYTHON_LIBRARY=$(python -c "import os.path; import sysconfig; vars = sysconfig.get_config_vars(); print(os.path.join(vars['LIBDIR'], vars['MULTIARCH'], vars['LDLIBRARY']))")
-    if [ -f $UBUNTU_PYTHON_LIBRARY ]; then
-        export PYTHON_LIBRARY=$UBUNTU_PYTHON_LIBRARY
-    else
-        PYTHON_LIB_DIR=$(dirname $PYTHON_LIBRARY)
-        if [ -d $PYTHON_LIB_DIR ]; then
-            echo "Did not find '$PYTHON_LIBRARY' but found the following files in '$PYTHON_LIB_DIR'"
-            ls $PYTHON_LIB_DIR
-        else
-            echo "Did not find containing directory for Python library '$PYTHON_LIBRARY'"
-        fi
-        exit    
-    fi
-fi
-
 # Install cython
 pip install cython
 
 mkdir -p $BUILD_DIR
 pushd $BUILD_DIR
+
+# Get Python installation paths
+export PYTHON_INCLUDE_DIR=$(python -c "import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))");
+export PYTHON_LIBRARY=$(python -c "import os, sysconfig, platform; vars = sysconfig.get_config_vars(); print(os.path.join(vars['LIBDIR'] + vars.get('multiarchsubdir', ''), (vars['LIBRARY'][:-1] + 'dylib' if platform.system() == 'Darwin' else vars['INSTSONAME'])))");
 
 echo "Install Prefix: $NEST_INSTALL_PREFIX"
 echo "Python Library: $PYTHON_LIBRARY"
