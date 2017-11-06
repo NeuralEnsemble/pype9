@@ -100,8 +100,9 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         install_dir : str
             Path to the directory where the NMODL files
             will be generated and compiled
-        build_dir : str
-            Used to set the default 'install_dir' path
+        build_base_dir : str | None
+            The base directory for the generated code. If None a directory
+            will be created in user's home directory.
         build_mode : str
             Available build options:
                 lazy - only build if files are modified
@@ -121,23 +122,8 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
             name = component_class.name
         if url is None:
             url = component_class.url
-        # Set build dir if not provided
-        if build_dir is None:
-            if url is None:
-                build_dir = tempfile.mkdtemp()
-                logger.info("Building '{}' component in temporary directory "
-                            "'{}'".format(name, build_dir))
-            else:
-                build_dir = self.get_build_dir(url, name)
-                logger.info("Building '{}' component in '{}' directory"
-                            .format(name, build_dir))
-        # Calculate src directory path within build directory
-        src_dir = os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
         # Calculate compile directory path within build directory
-        compile_dir = self.get_compile_dir(build_dir)
-        # Calculate install directory path within build directory if not
-        # provided
-        install_dir = self.get_install_dir(build_dir, install_dir)
+        src_dir, compile_dir, install_dir = self.get_build_dirs(build_dir)
         # Path of the build component class
         built_comp_class_pth = os.path.join(src_dir, self._BUILT_COMP_CLASS)
         # Determine whether the installation needs rebuilding or whether there
@@ -159,27 +145,27 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
                     if built_component_class.equals(component_class,
                                                     annotations_ns=[PYPE9_NS]):
                         generate_source = False
-                        logger.info("Found existing build in '{}' directory, "
+                        logger.info("Found existing source in '{}' directory, "
                                     "code generation skipped (set 'build_mode'"
                                     " argument to 'force' or 'build_only' to "
-                                    "enforce regeneration)".format(build_dir))
+                                    "enforce regeneration)".format(src_dir))
                     else:
                         generate_source = True
-                        logger.info("Found existing build in '{}' directory, "
+                        logger.info("Found existing source in '{}' directory, "
                                     "but the component classes differ so "
-                                    "regenerating sources".format(build_dir))
+                                    "regenerating sources".format(src_dir))
                 except NineMLNameError:
                     generate_source = True
-                    logger.info("Found existing build in '{}' directory, "
+                    logger.info("Found existing source in '{}' directory, "
                                 "but could not find '{}' component class so "
-                                "regenerating sources".format(name, build_dir))
+                                "regenerating sources".format(name, src_dir))
         # Check if required directories are present depending on build_mode
         elif build_mode == 'require':
             if not os.path.exists(install_dir):
                 raise Pype9BuildError(
-                    "Prebuilt installation directory '{install}' is not "
+                    "Prebuilt installation directory '{}' is not "
                     "present, and is required for  'require' build option"
-                    .format(install=install_dir))
+                    .format(install_dir))
         else:
             raise Pype9BuildError(
                 "Unrecognised build option '{}', must be one of ('{}')"
