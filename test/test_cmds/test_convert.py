@@ -22,8 +22,8 @@ class TestConvert(TestCase):
         shutil.rmtree(self.tmpdir)
 
     def test_convert_version(self):
-        in_path = os.path.join(os.path.relpath(ninemlcatalog.root),
-                                 'neuron', 'Izhikevich.xml')
+        in_path = './' + os.path.join(os.path.relpath(ninemlcatalog.root),
+                                      'neuron', 'Izhikevich.xml')
         out_path = os.path.join(self.tmpdir, 'Izhikevich.xml')
         args = '--nineml_version 2 {} {}'.format(in_path, out_path)
         convert.run(args.split())
@@ -40,8 +40,8 @@ class TestConvert(TestCase):
         self.assertEqual(in_doc, out_doc)
 
     def test_convert_format(self):
-        in_path = os.path.join(os.path.relpath(ninemlcatalog.root),
-                                 'neuron', 'Izhikevich.xml')
+        in_path = './' + os.path.join(os.path.relpath(ninemlcatalog.root),
+                                      'neuron', 'Izhikevich.xml')
         out_path = os.path.join(self.tmpdir, 'Izhikevich.yml')
         print(out_path)
         args = '{} {}'.format(in_path, out_path)
