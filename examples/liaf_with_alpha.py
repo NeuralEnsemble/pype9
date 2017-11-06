@@ -8,7 +8,7 @@ import os
 import nest
 from argparse import ArgumentParser
 from nineml import units as un, MultiDynamics
-from pype9.base.cells import WithSynapses, ConnectionParameterSet
+from pype9.simulate.common.cells import WithSynapses, ConnectionParameterSet
 import ninemlcatalog
 import numpy
 from matplotlib import pyplot as plt
@@ -31,7 +31,7 @@ args = parser.parse_args()
 
 # Import of nest needs to be after arguments have been passed as it kills them
 # before the SLI interpreter tries to read them.
-from pype9.simulator.nest import CellMetaClass, simulation, UnitHandler  # @IgnorePep8
+from pype9.simulate.nest import CellMetaClass, simulation, UnitHandler  # @IgnorePep8
 
 
 build_dir = os.path.join(os.getcwd(), '9build', 'liaf_with_alpha')
