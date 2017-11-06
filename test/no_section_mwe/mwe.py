@@ -2,6 +2,7 @@ import subprocess as sp
 import os.path
 import shutil
 import neuron
+neuron.h.load_file('stdrun.hoc')
 
 mod_dir = os.path.join(os.path.dirname(__file__), 'mod')
 
@@ -25,5 +26,7 @@ neuron.init()
 print("finitializing")
 neuron.h.finitialize()
 print("running")
-neuron.run(10)
+# neuron.run(10)
+neuron.h.tstop = 10
+neuron.h.run()
 print("Done testing")
