@@ -172,12 +172,18 @@ class Cell(base.Cell):
             The connection properties of the event port
         """
         port = self.component_class.receive_port(port_name)
+        start = float(signal.t_start.rescale(pq.ms)) - self._device_delay
+        if start < 0.0:
+            raise Pype9UsageError(
+                "Start time of signal played into port '{}' ({}) must "
+                "be greater than device delay ({} ms)".format(
+                    port_name, signal.t_start, self._device_delay))
         if port.nineml_type in ('EventReceivePort',
                                 'EventReceivePortExposure'):
             # Shift the signal times to account for the minimum delay and
             # match the NEURON implementation
-            spike_times = numpy.asarray(
-                signal.rescale(pq.ms) + pq.ms - self._device_delay * pq.ms)
+            spike_times = (numpy.asarray(signal.rescale(pq.ms)) -
+                           self._device_delay)
             if any(spike_times <= 0.0):
                 raise Pype9UsageError(
                     "Some spike times are less than device delay and so "
@@ -209,7 +215,7 @@ class Cell(base.Cell):
                  'amplitude_times': list(numpy.ravel(
                      signal.times.rescale(pq.ms) -
                      self._device_delay * pq.ms)),
-                 'start': float(signal.t_start.rescale(pq.ms)),
+                 'start': start,
                  'stop': float(signal.t_stop.rescale(pq.ms))})
             nest.Connect(self._inputs[port_name], self._cell, syn_spec={
                 "receptor_type": self._receive_ports[port_name],

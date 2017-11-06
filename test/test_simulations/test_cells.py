@@ -82,7 +82,7 @@ class TestDynamics(TestCase):
             initial_states={'U': -14.0 * pq.mV / pq.ms, 'V': -65.0 * pq.mV},
             neuron_ref='Izhikevich', nest_ref='izhikevich',
             # auxiliary_states=['U'],
-            input_signal=input_step('Isyn', 0.02, 50, 100, dt),
+            input_signal=input_step('Isyn', 0.02, 50, 100, dt, 30),
             nest_translations={'V': ('V_m', 1), 'U': ('U_m', 1),
                                'weight': (None, 1), 'C_m': (None, 1),
                                'theta': ('V_th', 1),
@@ -134,7 +134,7 @@ class TestDynamics(TestCase):
             properties=ninemlcatalog.load(
                 'neuron/HodgkinHuxley', 'PyNNHodgkinHuxleyProperties'),
             neuron_ref='hh_traub', nest_ref='hh_cond_exp_traub',
-            input_signal=input_step('iExt', 0.5, 50, 100, dt),
+            input_signal=input_step('iExt', 0.5, 50, 100, dt, 10),
             nest_translations={
                 'v': ('V_m', 1), 'm': ('Act_m', 1),
                 'h': ('Act_h', 1), 'n': ('Inact_n', 1),
@@ -211,7 +211,7 @@ class TestDynamics(TestCase):
             initial_states=self.liaf_initial_states,
             initial_regime='subthreshold',
             neuron_ref='ResetRefrac', nest_ref='iaf_psc_alpha',
-            input_signal=input_step('i_synaptic', 1, 50, 100, dt),
+            input_signal=input_step('i_synaptic', 1, 50, 100, dt, 20),
             nest_translations=self.liaf_nest_translations,
             neuron_translations=self.liaf_neuron_translations,
             neuron_build_args={'build_mode': build_mode},
@@ -326,10 +326,10 @@ class TestDynamics(TestCase):
             initial_regime=initial_regime,
             neuron_ref='ResetRefrac',
             nest_ref='iaf_psc_alpha',
-            input_train=input_freq('spike', 450 * pq.Hz, duration,
+            input_train=input_freq('spike', 450 * pq.Hz, duration * pq.ms,
                                    weight=[Property('weight__pls__syn',
                                                     10 * un.nA)],  # 20.680155243 * un.pA
-                                   offset=old_div(duration, 2.0)),
+                                   offset=duration / 2.0),
             nest_translations=nest_tranlsations,
             neuron_translations=neuron_tranlsations,
             extra_mechanisms=['pas'],
@@ -382,7 +382,7 @@ class TestDynamics(TestCase):
             properties=ninemlcatalog.load(
                 'neuron/Izhikevich', 'SampleIzhikevichFastSpiking'),
             initial_states={'U': -1.625 * pq.pA, 'V': -65.0 * pq.mV},
-            input_signal=input_step('iSyn', 100 * pq.pA, 25.0, 100, dt),
+            input_signal=input_step('iSyn', 100 * pq.pA, 25.0, 100, dt, 15),
             initial_regime='subVb',
             neuron_build_args={'build_mode': build_mode,
                                'external_currents': ['iSyn']},

@@ -17,7 +17,7 @@ import nest
 from numpy import exp
 try:
     import pylab as plt
-except ImportError:
+except (ImportError, RuntimeError):
     plt = None
 from pype9.simulate.neuron import (
     CellMetaClass as NeuronCellMetaClass,
@@ -374,8 +374,8 @@ class Comparer(object):
                 scale = 1.0
             # FIXME: Should scale units
             weight = connection_properties[0].value * scale
-            spike_times = (signal.rescale(pq.ms) +
-                           (pq.ms - self.device_delay * pq.ms))
+            spike_times = (numpy.asarray(signal.rescale(pq.ms)) -
+                           self.device_delay)
             if any(spike_times < 0.0):
                 raise Pype9RuntimeError(
                     "Some spike are less than minimum delay and so can't be "
@@ -466,24 +466,35 @@ class Comparer(object):
             return numpy.array(self.rec_t), numpy.array(self.recs[varname])
 
 
-def input_step(port_name, amplitude, start_time, duration, dt):
-    num_preceding = int(numpy.floor(start_time / dt))
-    num_remaining = int(numpy.ceil((duration - start_time) / dt))
+def input_step(port_name, amplitude, start_time, duration, dt, delay):
+    start_time = pq.Quantity(start_time, 'ms')
+    duration = pq.Quantity(duration, 'ms')
+    dt = pq.Quantity(dt, 'ms')
+    delay = pq.Quantity(delay, 'ms')
+    start_minus_delay = start_time - delay
+    num_preceding = int(numpy.floor(start_minus_delay / dt))
+    num_remaining = int(numpy.ceil((duration - start_minus_delay) / dt))
     amplitude = float(pq.Quantity(amplitude, 'nA'))
     signal = neo.AnalogSignal(
         numpy.concatenate((numpy.zeros(num_preceding),
-                           numpy.ones(num_remaining) * amplitude)),
-        sampling_period=dt * pq.ms, units='nA', time_units='ms')
+                           numpy.ones(num_remaining) * float(amplitude))),
+        sampling_period=dt, units='nA', time_units='ms',
+        t_start=delay)
     return (port_name, signal)
 
 
 def input_freq(port_name, freq, duration, weight, offset=None):
-    isi = 1 / float(pq.Quantity(freq, 'kHz'))
+    freq = pq.Quantity(freq, 'kHz')
+    duration = pq.Quantity(duration, 'ms')
+    isi = 1 / freq
     if offset is None:
-        isi = offset
+        offset = isi
+    else:
+        offset = pq.Quantity(offset, 'ms')
     train = neo.SpikeTrain(
         numpy.arange(offset, duration, isi),
-        units='ms', t_stop=duration * pq.ms)
+        units='ms', t_stop=duration,
+        t_start=offset)
     return (port_name, train, weight)
 
 
