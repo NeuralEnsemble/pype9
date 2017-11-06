@@ -90,14 +90,14 @@ if __name__ == "__main__":
     pype9_metaclass = {}
     pype9_simulation = {}
     if 'neuron' in simulators_to_run:
-        from pype9.simulator.neuron import (
+        from pype9.simulate.neuron import (
             CellMetaClass as CellMetaClassNEURON,
             simulation as simulationNEURON)
         pype9_simulation['neuron'] = simulationNEURON
         pype9_metaclass['neuron'] = CellMetaClassNEURON
     if 'nest' in simulators_to_run:
         import nest
-        from pype9.simulator.nest import (
+        from pype9.simulate.nest import (
             CellMetaClass as CellMetaClassNEST,
             simulation as simulationNEST)
         pype9_simulation['nest'] = simulationNEST
