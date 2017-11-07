@@ -214,8 +214,7 @@ class CodeGenerator(BaseCodeGenerator):
                     raise Pype9BuildError(
                         "Could not create build directory ({}), please check "
                         "the required permissions or specify a different "
-                        "'parent build directory' ('parent_build_dir') -> "
-                        "{}".format(e))
+                        "build directory:\n{}".format(e))
             if stderr and 'No rule to make target' not in stderr:
                 raise Pype9BuildError(
                     "Clean of '{}' NEST module directory failed:\n\n{}\n{}"
