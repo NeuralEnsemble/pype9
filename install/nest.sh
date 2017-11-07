@@ -70,6 +70,7 @@ if [ ! -f "$PYTHON_LIBRARY" ]; then
     ls $(dirname $PYTHON_LIBRARY)
     exit
 fi
+ls $(dirname $PYTHON_LIBRARY)
 stat $PYTHON_LIBRARY
 ldd $PYTHON_LIBRARY
 
