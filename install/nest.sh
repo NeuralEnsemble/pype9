@@ -58,7 +58,17 @@ pushd $BUILD_DIR
 
 # Get Python installation paths
 export PYTHON_INCLUDE_DIRS=$(python -c "import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))");
+if [ ! -d "$PYTHON_INCLUDE_DIRS" ]; then
+    echo "Python include dir '$PYTHON_INCLUDE_DIRS'"
+    ls $(dirname $PYTHON_INCLUDE_DIRS)
+    exit
+fi
 export PYTHON_LIBRARY=$(python -c "import os, sysconfig, platform; vars = sysconfig.get_config_vars(); print(os.path.join(vars['LIBDIR'] + vars.get('multiarchsubdir', ''), (vars['LIBRARY'][:-1] + 'dylib' if platform.system() == 'Darwin' else vars['INSTSONAME'])))");
+if [ ! -f "$PYTHON_LIBRARY" ]; then
+    echo "Python lib dir '$PYTHON_LIBRARY':"
+    ls $(dirname $PYTHON_LIBRARY)
+    exit
+fi
 
 echo "Install Prefix: $NEST_INSTALL_PREFIX"
 echo "Python Library: $PYTHON_LIBRARY"
