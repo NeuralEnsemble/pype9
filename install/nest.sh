@@ -34,10 +34,21 @@ export SRC_DIR=$NEST_BUILD_DIR/$NEST
 export BUILD_DIR=$NEST_BUILD_DIR/$NEST-build
 
 # Download source from GitHub
-wget https://github.com/nest/nest-simulator/releases/download/v$NEST_VERSION/$NEST.tar.gz -O $NEST_BUILD_DIR/$NEST.tar.gz;
-pushd $NEST_BUILD_DIR;
-tar xzf $NEST.tar.gz;
-popd;
+if [ "${NEST_VERSION%%-*}" == 'sha' ]; then
+    # Download and untar
+    echo ${NEST_VERSION##sha-}
+    wget http://github.com/nrnhines/nrn/archive/${NEST_VERSION##sha-}.zip -O $NEST_BUILD_DIR/$NEST.zip;
+    pushd $NEST_BUILD_DIR;
+    unzip $NEST.zip;
+    rm $NEST.zip;
+    mv nrn* $NEST;
+    popd;
+else
+    wget https://github.com/nest/nest-simulator/releases/download/v$NEST_VERSION/$NEST.tar.gz -O $NEST_BUILD_DIR/$NEST.tar.gz;
+    pushd $NEST_BUILD_DIR;
+    tar xzf $NEST.tar.gz;
+    popd;
+fi
 
 # Install cython
 pip install cython

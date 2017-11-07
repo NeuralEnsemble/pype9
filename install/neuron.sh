@@ -35,7 +35,8 @@ BUILD_DIR=$NEURON_BUILD_DIR/$NEURON-build
 
 if [ "${NEURON_VERSION%%-*}" == 'sha' ]; then
     # Download and untar
-    wget http://github.com/nrnhines/nrn/archive/{$NEURON_VERSION##sha-}.zip -O $NEURON_BUILD_DIR/$NEURON.zip;
+    echo ${NEURON_VERSION##sha-}
+    wget http://github.com/nrnhines/nrn/archive/${NEURON_VERSION##sha-}.zip -O $NEURON_BUILD_DIR/$NEURON.zip;
     pushd $NEURON_BUILD_DIR;
     unzip $NEURON.zip;
     rm $NEURON.zip;
