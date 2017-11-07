@@ -34,7 +34,6 @@ args = parser.parse_args()
 from pype9.simulate.nest import CellMetaClass, simulation, UnitHandler  # @IgnorePep8
 
 
-build_dir = os.path.join(os.getcwd(), '9build', 'liaf_with_alpha')
 # Whether weight should be a parameter of the cell or passed as a weight
 # parameter
 connection_weight = False
@@ -66,8 +65,7 @@ w_syn_model = WithSynapses.wrap(multi_model,
                                 connection_parameter_sets=conn_params)
 # Generate Pype9 classes
 Input = CellMetaClass(input_model, build_mode=args.build_mode)
-Cell = CellMetaClass(w_syn_model, build_dir=build_dir,
-                     build_mode=args.build_mode)
+Cell = CellMetaClass(w_syn_model, build_mode=args.build_mode)
 # Create instances
 rate = args.rate * un.Hz
 weight = args.weight * un.nA

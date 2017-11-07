@@ -47,7 +47,7 @@ NEST_RNG_SEED = 1234567890
 NEURON_RNG_SEED = 987654321
 
 SIMULATORS_TO_TEST = ['neuron', 'nest']
-PLOT_DEFAULT = False
+PLOT_DEFAULT = True  # False
 
 
 class TestDynamics(TestCase):
@@ -316,7 +316,6 @@ class TestDynamics(TestCase):
         neuron_tranlsations.update(
             (k + '__cell', v)
             for k, v in self.liaf_neuron_translations.items())
-        build_dir = os.path.join(os.path.dirname(iaf.url), '9build')
         comparer = Comparer(
             nineml_model=iaf_alpha_with_syn,
             state_variable='v__cell', dt=dt,
@@ -336,10 +335,10 @@ class TestDynamics(TestCase):
             extra_point_process='AlphaISyn',
             neuron_build_args={
                 'build_mode': build_mode,
-                'build_dir': os.path.join(build_dir, 'neuron', 'IaFAlpha')},
+                'build_prefix': 'UNITTEST-test_alpha_syn-'},
             nest_build_args={
                 'build_mode': build_mode,
-                'build_dir': os.path.join(build_dir, 'nest', 'IaFAlpha')},
+                'build_prefix': 'UNITTEST-test_alpha_syn-'},
             min_delay=min_delay,
             # auxiliary_states=['end_refractory__cell'],
             device_delay=device_delay)

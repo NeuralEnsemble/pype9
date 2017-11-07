@@ -57,20 +57,13 @@ class Network(object):
         A 9ML-Python model of a network (or Document containing
         populations and projections for 9MLv1) or a URL referring to a 9ML
         model.
-    build_mode : str
-        The strategy used to build and compile the model. Can be one of
-        ::class::BaseCodeGenerator.BUILD_MODE_OPTIONS
-    build_dir : str (directory path)
-        The directory in which to build the simulator-native code. If None
-        a build directory is generated.
     """
 
     # Name given to the "cell" component of the cell dynamics + linear synapse
     # dynamics multi-dynamics
     CELL_COMP_NAME = 'cell'
 
-    def __init__(self, nineml_model, build_mode='lazy', build_dir=None,
-                 **kwargs):
+    def __init__(self, nineml_model, build_mode='lazy', **kwargs):
         if isinstance(nineml_model, basestring):
             nineml_model = nineml.read(nineml_model).as_network(
                 name=os.path.splitext(os.path.basename(nineml_model))[0])
@@ -92,13 +85,9 @@ class Network(object):
         code_gen = self.CellCodeGenerator()
         # Build the PyNN populations
         for name, comp_array in flat_comp_arrays.items():
-            if build_dir is None:
-                array_build_dir = code_gen.get_build_dir(
-                    self.nineml.url, name, group=self.nineml.name)
-            else:
-                array_build_dir = os.path.join(build_dir, name)
             self._component_arrays[name] = self.ComponentArrayClass(
-                comp_array, build_mode=build_mode, build_dir=array_build_dir,
+                comp_array, build_mode=build_mode,
+                build_prefix=code_gen.url_build_path(nineml_model.url),
                 **kwargs)
         self._selections = {}
         # Build the PyNN Selections

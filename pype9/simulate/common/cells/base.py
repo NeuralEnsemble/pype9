@@ -51,15 +51,9 @@ class CellMetaClass(type):
     saved_name : str
         The name of the Dynamics object in the document if different from
         the `name` argument
-    build_dir : str (directory path)
-        The directory in which to build the simulator-native code
-    build_mode : str
-        The strategy used to build and compile the model. Can be one of
-        ::class::BaseCodeGenerator.BUILD_MODE_OPTIONS
     """
 
-    def __new__(cls, component_class, name=None, saved_name=None,
-                build_dir=None, build_mode='lazy', **kwargs):
+    def __new__(cls, component_class, name=None, saved_name=None, **kwargs):
         # Grab the url before the component class is cloned
         url = component_class.url
         # Clone component class so annotations can be added to it and not bleed
@@ -93,16 +87,15 @@ class CellMetaClass(type):
             create_class = True
         if create_class:
             # Generate and compile cell class
-            instl_dir = code_gen.generate(
-                component_class=build_component_class,
-                build_mode=build_mode, name=name,
-                build_dir=build_dir, url=url, **kwargs)
+            install_dir = code_gen.generate(
+                component_class=build_component_class, name=name, url=url,
+                **kwargs)
             # Load newly build model
-            cls.load_libraries(name, instl_dir)
+            cls.load_libraries(name, install_dir)
             # Create class member dict of new class
             dct = {'name': name,
                    'component_class': component_class,
-                   'install_dir': instl_dir,
+                   'install_dir': install_dir,
                    'build_component_class': build_component_class}
             # Create new class using Type.__new__ method
             Cell = super(CellMetaClass, cls).__new__(
@@ -111,8 +104,7 @@ class CellMetaClass(type):
             cls._built_types[name] = Cell
         return Cell
 
-    def __init__(self, component_class, name=None, saved_name=None,
-                 build_dir=None, build_mode='lazy', **kwargs):
+    def __init__(self, component_class, name=None, saved_name=None, **kwargs):
         # This initializer is empty, but since I have changed the signature of
         # the __new__ method in the deriving metaclasses it complains otherwise
         # (not sure if there is a more elegant way to do this).

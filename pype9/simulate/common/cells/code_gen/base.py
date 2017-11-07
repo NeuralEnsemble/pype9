@@ -31,7 +31,9 @@ from ..with_synapses import read
 import logging
 import pype9.annotations
 from pype9.annotations import PYPE9_NS, BUILD_PROPS
-import tempfile
+from os.path import expanduser
+import re
+from nineml.serialization import url_re
 
 
 logger = logging.getLogger('pype9')
@@ -46,7 +48,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
                           'generate_only',  # Only generate source files
                           'purge'  # Remove all configure files and rebuild
                           ]
-    BUILD_DIR_DEFAULT = '__pype9_build__'
+    DEFAULT_BUILD_BASE = '__pype9__'
     _PARAMS_DIR = 'params'
     _SRC_DIR = 'src'
     _INSTL_DIR = 'install'
@@ -85,8 +87,8 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     def compile_source_files(self, compile_dir, name):
         pass
 
-    def generate(self, component_class, name=None, install_dir=None,
-                 build_dir=None, build_mode='lazy', url=None, **kwargs):
+    def generate(self, component_class, name=None, build_dir_base=None,
+                 build_mode='lazy', build_prefix=None, url=None, **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
         NineML cell class
@@ -106,11 +108,15 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         build_mode : str
             Available build options:
                 lazy - only build if files are modified
-                force - always build from scratch
+                force - always generate and build
+                purge - remove all config files, generate and rebuild
                 require - require built binaries are present
                 build_only - build and then quit
                 generate_only - generate src and then quit
                 recompile - don't generate src but compile
+        build_prefix : str
+            A prefix prepended to the cell build_directory to distinguish
+            it from other generated cell code
         kwargs : dict
             A dictionary of (potentially simulator- specific) template
             arguments
@@ -123,7 +129,9 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         if url is None:
             url = component_class.url
         # Calculate compile directory path within build directory
-        src_dir, compile_dir, install_dir = self.get_build_dirs(build_dir)
+        src_dir, compile_dir, install_dir = self.get_build_dirs(
+            name, url, build_dir_base=build_dir_base,
+            build_prefix=build_prefix)
         # Path of the build component class
         built_comp_class_pth = os.path.join(src_dir, self._BUILT_COMP_CLASS)
         # Determine whether the installation needs rebuilding or whether there
@@ -196,28 +204,29 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         os.chdir(orig_dir)
         return install_dir
 
-    def get_build_dir(self, url, name, group=''):
-        if url is not None:
-            base_dir = os.path.dirname(url)
-        else:
-            base_dir = tempfile.mkdtemp()
-        return os.path.abspath(os.path.join(
-            base_dir, self.BUILD_DIR_DEFAULT,
-            self.SIMULATOR_NAME, group, name))
+    def get_build_dirs(self, name, url, build_dir_base=None,
+                       build_prefix=None):
+        if build_dir_base is None:
+            build_dir_base = os.path.join(expanduser("~"),
+                                          self.DEFAULT_BUILD_BASE)
+        base = os.path.abspath(os.path.join(build_dir_base,
+                                            self.SIMULATOR_NAME))
+        prefix = self.url_build_path(url)
+        if build_prefix is not None:
+            prefix += build_prefix
+        build_dir = os.path.join(base, prefix + name)
+        return (self.get_source_dir(build_dir),
+                self.get_compile_dir(build_dir),
+                self.get_install_dir(build_dir))
 
-    def get_install_dir(self, build_dir, install_dir):
-        """
-        The install dir is determined within a method so that derrived classes
-        (namely neuron.CodeGenerator) can override the provided install
-        directory if provided if it needs to be in a special place.
-        """
-        if not install_dir:
-            install_dir = os.path.abspath(os.path.join(build_dir,
-                                                       self._INSTL_DIR))
-        return install_dir
+    def get_source_dir(self, build_dir):
+        return os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
 
     def get_compile_dir(self, build_dir):
         return os.path.abspath(os.path.join(build_dir, self._CMPL_DIR))
+
+    def get_install_dir(self, build_dir):
+        return os.path.abspath(os.path.join(build_dir, self._INSTL_DIR))
 
     def clean_src_dir(self, src_dir, component_name):  # @UnusedVariable
         # Clean existing src directories from previous builds.
@@ -226,9 +235,9 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
             os.makedirs(src_dir)
         except IOError as e:
             raise Pype9BuildError(
-                "Could not create build directory ({}), please check the "
-                "required permissions or specify a different \"parent build "
-                "directory\" ('parent_build_dir') -> {}".format(e))
+                "Could not create source directory ({}), please check the "
+                "required permissions or specify a different \"build dir"
+                "base\" ('build_dir_base'):\n{}".format(src_dir, e))
 
     def clean_compile_dir(self, compile_dir, purge=False):  # @UnusedVariable
         # Clean existing compile & install directories from previous builds
@@ -237,9 +246,9 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
             os.makedirs(compile_dir)
         except IOError as e:
             raise Pype9BuildError(
-                "Could not create build directory ({}), please check the "
-                "required permissions or specify a different \"parent build "
-                "directory\" ('parent_build_dir') -> {}".format(e))
+                "Could not create compile directory ({}), please check the "
+                "required permissions or specify a different \"build dir"
+                "base\" ('build_dir_base'):\n{}".format(compile_dir, e))
 
     def clean_install_dir(self, install_dir):
         # Clean existing compile & install directories from previous builds
@@ -248,9 +257,9 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
             os.makedirs(install_dir)
         except IOError as e:
             raise Pype9BuildError(
-                "Could not create build directory ({}), please check the "
-                "required permissions or specify a different \"parent build "
-                "directory\" ('parent_build_dir') -> {}".format(e))
+                "Could not create install directory ({}), please check the "
+                "required permissions or specify a different \"build dir"
+                "base\" ('build_dir_base'):\n{}".format(install_dir, e))
 
     def render_to_file(self, template, args, filename, directory, switches={},
                        post_hoc_subs={}):
@@ -390,3 +399,18 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         else:
             mod_time = time.ctime(os.path.getmtime(url))
         return mod_time
+
+    @classmethod
+    def url_build_path(cls, url):
+        if url is None:
+            path = 'GEN-'
+        else:
+            if url_re.match(url) is not None:
+                path = ('URL-' +
+                        re.match(r'(:?\w+://)?([\.\/\w]+).*', url).group(1))
+            else:
+                path = 'FILE-' + os.path.realpath(url)
+            path = path.replace('.', '_')
+            path = path.replace(':', '_')
+            path = path.replace('/', '__')
+        return path

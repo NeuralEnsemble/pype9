@@ -495,22 +495,15 @@ class CodeGenerator(BaseCodeGenerator):
         logger.info("Compilation of NEURON (NMODL) files for '{}' "
                     "completed successfully".format(name))
 
-    def get_install_dir(self, build_dir, install_dir):
-        if install_dir:
-            raise Pype9BuildError(
-                "Cannot specify custom installation directory ('{}') for "
-                "NEURON simulator as it needs to be located as a specifically "
-                "named directory of the src directory (e.g. x86_64 for 64b "
-                "unix/linux)".format(install_dir))
+    def get_install_dir(self, build_dir):
         # return the platform-specific location of the nrnivmodl output files
-        return os.path.abspath(os.path.join(build_dir, self._SRC_DIR,
-                                            self.specials_dir))
+        return os.path.join(self.get_source_dir(build_dir), self.specials_dir)
 
     def get_compile_dir(self, build_dir):
         """
         The compile dir is the same as the src dir for NEURON compile
         """
-        return os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
+        return self.get_source_dir(build_dir)
 
     def clean_compile_dir(self, *args, **kwargs):
         pass  # NEURON doesn't use a separate compile dir
