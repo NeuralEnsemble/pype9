@@ -64,7 +64,7 @@ make install
 popd
 
 # Create symlink from multiarch sub-directory to site-packages if required
-ARCH_SUBDIR=$(python -c "import sysconfig; print(sysconfig.get_config_vars().get('multiarchsubdir', '')");
+ARCH_SUBDIR=$(python -c "import sysconfig; print(sysconfig.get_config_vars().get('multiarchsubdir', ''))");
 if [ ! -z "$ARCH_SUBDIR" ]; then
     PYVER=$(python -c "import sysconfig; print(sysconfig.get_config_var('py_version_short'))");
     pushd $NEST_INSTALL_PREFIX/lib/python$PYVER/site-packages
