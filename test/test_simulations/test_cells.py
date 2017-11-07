@@ -5,7 +5,6 @@ from builtins import zip
 from past.utils import old_div
 import sys
 import quantities as pq
-import os.path
 from itertools import chain, repeat
 import logging
 import ninemlcatalog
@@ -47,7 +46,7 @@ NEST_RNG_SEED = 1234567890
 NEURON_RNG_SEED = 987654321
 
 SIMULATORS_TO_TEST = ['neuron', 'nest']
-PLOT_DEFAULT = True  # False
+PLOT_DEFAULT = False
 
 
 class TestDynamics(TestCase):

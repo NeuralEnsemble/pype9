@@ -303,13 +303,13 @@ class Comparer(object):
         # Specify current injection
         if self.input_signal is not None:
             _, signal = self.input_signal
+            times = numpy.asarray(signal.times.rescale(pq.ms)) - 1.0
             self._nrn_iclamp = neuron.h.IClamp(0.5, sec=self.nrn_cell_sec)
             self._nrn_iclamp.delay = 0.0
             self._nrn_iclamp.dur = 1e12
             self._nrn_iclamp.amp = 0.0
             self._nrn_iclamp_amps = neuron.h.Vector(signal.rescale(pq.nA))
-            self._nrn_iclamp_times = neuron.h.Vector(
-                signal.times.rescale(pq.ms))
+            self._nrn_iclamp_times = neuron.h.Vector(times)
             self._nrn_iclamp_amps.play(self._nrn_iclamp._ref_amp,
                                        self._nrn_iclamp_times)
         if self.input_train is not None:
@@ -321,7 +321,8 @@ class Comparer(object):
             # FIXME: Should scale units
             weight = connection_properties[0].value * scale
             self._vstim = neuron.h.VecStim()
-            self._vstim_times = neuron.h.Vector(train.rescale(pq.ms))
+            times = numpy.asarray(train.rescale(pq.ms)) - 1.0
+            self._vstim_times = neuron.h.Vector(times)
             self._vstim.play(self._vstim_times)
             target = (self.extra_point_process
                       if self.extra_point_process is not None

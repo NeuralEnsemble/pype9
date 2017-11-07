@@ -22,6 +22,7 @@ import os.path
 import collections
 from itertools import chain
 import operator
+import numpy
 import quantities as pq
 import neo
 from .code_gen import CodeGenerator, REGIME_VARNAME
@@ -353,6 +354,11 @@ class Cell(base.Cell):
         ext_is = self.build_component_class.annotations.get(
             (BUILD_TRANS, PYPE9_NS), EXTERNAL_CURRENTS).split(',')
         port = self.component_class.port(port_name)
+        if signal.t_start < 1.0:
+            raise Pype9UsageError(
+                "Signal must start at or after 1 ms to handle delay in neuron"
+                " ({})".format(signal.t_start))
+        times = numpy.asarray(signal.times.rescale(pq.ms)) - 1.0
         if isinstance(port, EventPort):
             if len(list(self.component_class.event_receive_ports)) > 1:
                 raise Pype9Unsupported9MLException(
@@ -361,7 +367,7 @@ class Cell(base.Cell):
                         [p.name
                          for p in self.component_class.event_receive_ports])))
             vstim = h.VecStim()
-            vstim_times = h.Vector(signal.rescale(pq.ms))
+            vstim_times = h.Vector(times)
             vstim.play(vstim_times)
             vstim_con = h.NetCon(vstim, self._hoc, sec=self._sec)
             self._check_connection_properties(port_name, properties)
@@ -383,7 +389,7 @@ class Cell(base.Cell):
             iclamp.dur = 1e12
             iclamp.amp = 0.0
             iclamp_amps = h.Vector(pq.Quantity(signal, 'nA'))
-            iclamp_times = h.Vector(signal.times.rescale(pq.ms))
+            iclamp_times = h.Vector(times)
             iclamp_amps.play(iclamp._ref_amp, iclamp_times)
             self._inputs['iclamp'] = iclamp
             self._input_auxs.extend((iclamp_amps, iclamp_times))
