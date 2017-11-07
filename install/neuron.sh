@@ -23,6 +23,7 @@ echo "Installing Neuron to '$NEURON_BUILD_DIR'"
 
 if [ -z "$3" ]; then
     export NEURON_BUILD_DIR=$HOME/pype9-build/neuron
+    rm -rf $NEURON_BUILD_DIR
 else
     export NEURON_BUILD_DIR=$3
 fi
@@ -30,7 +31,7 @@ echo "Using '$NEURON_BUILD_DIR' as NEURON build directory"
 mkdir -p $NEURON_BUILD_DIR
 
 SRC_DIR=$NEURON_BUILD_DIR/$NEURON
-BUILD_DIR=$NEURON_BUILD_DIR/build
+BUILD_DIR=$NEURON_BUILD_DIR/$NEURON-build
 
 # Download and untar
 wget http://www.neuron.yale.edu/ftp/neuron/versions/v$NEURON_VERSION/$NEURON.tar.gz -O $NEURON_BUILD_DIR/$NEURON.tar.gz;

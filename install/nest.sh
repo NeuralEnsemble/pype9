@@ -23,6 +23,7 @@ echo "Installing NEST to '$NEST_INSTALL_PREFIX'"
 
 if [ -z "$3" ]; then
     export NEST_BUILD_DIR=$HOME/pype9-build/nest
+    rm -rf $NEST_BUILD_DIR
 else
     export NEST_BUILD_DIR=$3
 fi
@@ -30,7 +31,7 @@ echo "Using '$NEST_BUILD_DIR' as NEST build directory"
 mkdir -p $NEST_BUILD_DIR
 
 export SRC_DIR=$NEST_BUILD_DIR/$NEST
-export BUILD_DIR=$NEST_BUILD_DIR/build
+export BUILD_DIR=$NEST_BUILD_DIR/$NEST-build
 
 # Download source from GitHub
 wget https://github.com/nest/nest-simulator/releases/download/v$NEST_VERSION/$NEST.tar.gz -O $NEST_BUILD_DIR/$NEST.tar.gz;
@@ -45,19 +46,28 @@ mkdir -p $BUILD_DIR
 pushd $BUILD_DIR
 
 # Get Python installation paths
-export PYTHON_INCLUDE_DIR=$(python -c "import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))");
+export PYTHON_INCLUDE_DIRS=$(python -c "import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))");
 export PYTHON_LIBRARY=$(python -c "import os, sysconfig, platform; vars = sysconfig.get_config_vars(); print(os.path.join(vars['LIBDIR'] + vars.get('multiarchsubdir', ''), (vars['LIBRARY'][:-1] + 'dylib' if platform.system() == 'Darwin' else vars['INSTSONAME'])))");
 
 echo "Install Prefix: $NEST_INSTALL_PREFIX"
 echo "Python Library: $PYTHON_LIBRARY"
 echo "Python include dir: $PYTHON_INCLUDE_DIR"
 
-cmake -Dwith-mpi=ON -DPYTHON_LIBRARY=$PYTHON_LIBRARY \
- -DPYTHON_INCLUDE_DIR=$PYTHON_INCLUDE_DIR \
- -DCMAKE_INSTALL_PREFIX=$NEST_INSTALL_PREFIX $SRC_DIR;
-alias python=python2  # The NEST help doesn't build with Python3 sometimes
+CMAKE_CMD="cmake -Dwith-mpi=ON -DPYTHON_LIBRARY=$PYTHON_LIBRARY \
+ -DPYTHON_INCLUDE_DIRS=$PYTHON_INCLUDE_DIRS \
+ -DCMAKE_INSTALL_PREFIX=$NEST_INSTALL_PREFIX $SRC_DIR"
+echo "NEST CMake:"
+echo $CMAKE_CMD
+$CMAKE_CMD
 make -j8;
 make install
-unalias python
-
 popd
+
+# Create symlink from multiarch sub-directory to site-packages if required
+ARCH_SUBDIR=$(python -c "import sysconfig; print(sysconfig.get_config_vars().get('multiarchsubdir', '')");
+if [ ! -z "$ARCH_SUBDIR" ]; then
+    PYVER=$(python -c "import sysconfig; print(sysconfig.get_config_var('py_version_short'))");
+    pushd $NEST_INSTALL_PREFIX/lib/python$PYVER/site-packages
+    ln -sf $NEST_INSTALL_PREFIX/lib/$ARCH_SUBDIR/python$PYVER/site-packages/nest
+    popd;
+fi
