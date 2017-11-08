@@ -45,7 +45,7 @@ basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
 
 NEURON_NS = 'NEURON'
 
-logger = logging.getLogger("PyPe9")
+logger = logging.getLogger('pype9')
 
 
 class Cell(base.Cell):

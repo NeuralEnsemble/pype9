@@ -75,8 +75,7 @@ class CodeGenerator(BaseCodeGenerator):
         self.nrnivmodl_path = self.path_to_utility('nrnivmodl')
         self.modlunit_path = self.path_to_utility('modlunit')
         # Compile wrappers around GSL random distribution functions
-        if not os.path.exists(os.path.join(self.libninemlnrn_dir,
-                                           'libninemlnrn.so')):
+        if not os.path.exists(self.libninemlnrn_so):
             self.compile_libninemlnrn()
         self.nrnivmodl_flags = [
             '-L' + self.libninemlnrn_dir,
@@ -85,20 +84,7 @@ class CodeGenerator(BaseCodeGenerator):
         if gsl_path is not None:
             self.nrnivmodl_path.append('-L' + gsl_path)
         else:
-            try:
-                # Check nest-config (if installed) to get any paths needed for
-                # gsl
-                nest_config_path = self.path_to_utility('nest-config')
-                stdout, _ = self.run_command([nest_config_path, '--libs'])
-                nest_lflags = stdout.split()
-                self.nrnivmodl_flags.extend(
-                    f for f in nest_lflags
-                    if f.startswith('-L') and 'gsl' in f)
-            except:
-                logger.warning(
-                    "Could not run nest-config to check the path for gsl. You"
-                    " may need to supply the gsl path to the CodeGenerator "
-                    "__init__ directly")
+            self.nrnivmodl_flags.extend(self.get_gsl_prefixes())
         # Work out the name of the installation directory for the compiled
         # NMODL files on the current platform
         self.specials_dir = self._get_specials_dir()
@@ -566,6 +552,10 @@ class CodeGenerator(BaseCodeGenerator):
     def libninemlnrn_dir(self):
         return os.path.join(self.base_dir, 'libninemlnrn')
 
+    @property
+    def libninemlnrn_so(self):
+        return os.path.join(self.libninemlnrn_dir, 'libninemlnrn.so')
+
     def compile_libninemlnrn(self):
         """
         Complies libninemlnrn for random distribution support in generated
@@ -651,8 +641,8 @@ class CodeGenerator(BaseCodeGenerator):
         try:
             # Used to attempt to determine the location of the GSL library
             nest_config_path = self.path_to_utility('nest-config')
-            libs = sp.check_output('{} --libs'.format(nest_config_path),
-                                   shell=True)
+            libs = str(sp.check_output('{} --libs'.format(nest_config_path),
+                                       shell=True))
             prefixes = [p[2:-3] for p in libs.split()
                         if p.startswith('-L') and p.endswith('lib') and
                         'gsl' in p]

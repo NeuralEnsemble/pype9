@@ -22,7 +22,9 @@ def nineml_document(doc_path):
     if doc_path.startswith('//'):
         model = ninemlcatalog.load(doc_path[2:])
     else:
-        if not doc_path.startswith('/') and not doc_path.startswith('.'):
+        if (not doc_path.startswith('/') and
+            not doc_path.startswith('./') and
+                not doc_path.startswith('../')):
             doc_path = './' + doc_path
         model = nineml.read(doc_path, relative_to=os.getcwd())
     return model

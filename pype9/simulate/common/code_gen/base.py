@@ -82,10 +82,9 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
             base_dir = os.path.join(
                 expanduser("~"),
                 '.pype9',
-                'code-gen',
-                'v{}-py{}'.format(
-                    __version__,
-                    sysconfig.get_config_var('py_version_short')))
+                'build',
+                'v{}-py{}'.format(__version__,
+                                  sysconfig.get_config_var('py_version')))
         self._base_dir = os.path.abspath(
             os.path.join(base_dir, self.SIMULATOR_NAME))
 
@@ -209,7 +208,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
                 install_dir=install_dir,
                 **kwargs)
             component_class.write(built_comp_class_pth,
-                                  preserve_order=True)
+                                  preserve_order=True, version=2.0)
         if compile_source:
             # Clean existing compile & install directories from previous builds
             if generate_source:
@@ -230,7 +229,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     def get_build_dirs(self, name, url, build_group=None):
         if build_group is None:
             build_group = ''
-        elif re.match(r'(?<\w).?./', build_group):
+        elif re.match(r'.*(\.?\./).*', build_group):
             raise Pype9UsageError(
                 "Build prefix, '{}', cannot contain any relative path symbols "
                 "(i.e. '/')".format(build_group))
