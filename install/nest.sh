@@ -69,7 +69,7 @@ if [ ! -f "$PYTHON_LIBRARY" ]; then
     ls $(dirname $PYTHON_LIBRARY)
     exit
 fi
-ll $(dirname $PYTHON_LIBRARY)
+ls -l $(dirname $PYTHON_LIBRARY)
 PYTHON_LIBRARY=${PYTHON_LIBRARY%.1.0}
 
 echo "Install Prefix: $NEST_INSTALL_PREFIX"
