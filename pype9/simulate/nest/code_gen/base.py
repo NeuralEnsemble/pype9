@@ -43,6 +43,7 @@ class CodeGenerator(BaseCodeGenerator):
     MAX_SIMULTANEOUS_TRANSITIONS = 1000
     BASE_TMPL_PATH = path.abspath(path.join(path.dirname(__file__),
                                             'templates'))
+    UnitHandler = UnitHandler
 
     _inline_random_implementations = {}
 

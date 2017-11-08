@@ -87,7 +87,7 @@ class Network(object):
         for name, comp_array in flat_comp_arrays.items():
             self._component_arrays[name] = self.ComponentArrayClass(
                 comp_array, build_mode=build_mode,
-                build_prefix=code_gen.url_build_path(nineml_model.url),
+                build_group=code_gen.url_build_path(nineml_model.url),
                 **kwargs)
         self._selections = {}
         # Build the PyNN Selections

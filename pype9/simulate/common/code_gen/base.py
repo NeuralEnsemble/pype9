@@ -26,7 +26,7 @@ from abc import ABCMeta, abstractmethod
 import sympy
 from nineml import units
 from nineml.exceptions import NineMLNameError
-from pype9.exceptions import Pype9BuildError
+from pype9.exceptions import Pype9BuildError, Pype9UsageError
 from ..cells.with_synapses import read
 import logging
 import pype9.annotations
@@ -42,6 +42,13 @@ logger = logging.getLogger('pype9')
 
 
 class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
+    """
+    Parameters
+    ----------
+        base_dir : str | None
+            The base directory for the generated code. If None a directory
+            will be created in user's home directory.
+    """
 
     BUILD_MODE_OPTIONS = ['lazy',  # Build iff source has been updated
                           'force',  # Build always
@@ -70,16 +77,21 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     # units
     DEFAULT_UNITS = {}
 
-    def __init__(self, build_base_dir=None, **kwargs):  # @UnusedVariable
-        if build_base_dir is None:
-            build_base = os.path.join(
+    def __init__(self, base_dir=None, **kwargs):  # @UnusedVariable
+        if base_dir is None:
+            base_dir = os.path.join(
                 expanduser("~"),
                 '.pype9',
                 'code-gen',
-                'pype9{}-py{}'.format(
+                'v{}-py{}'.format(
                     __version__,
                     sysconfig.get_config_var('py_version_short')))
-        self._build_base = build_base
+        self._base_dir = os.path.abspath(
+            os.path.join(base_dir, self.SIMULATOR_NAME))
+
+    @property
+    def base_dir(self):
+        return self._base_dir
 
     @abstractmethod
     def generate_source_files(self, dynamics, src_dir, name, **kwargs):
@@ -100,7 +112,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         pass
 
     def generate(self, component_class, name=None,
-                 build_mode='lazy', build_prefix=None, url=None, **kwargs):
+                 build_mode='lazy', build_group=None, url=None, **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
         NineML cell class
@@ -114,9 +126,6 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         install_dir : str
             Path to the directory where the NMODL files
             will be generated and compiled
-        build_base_dir : str | None
-            The base directory for the generated code. If None a directory
-            will be created in user's home directory.
         build_mode : str
             Available build options:
                 lazy - only build if files are modified
@@ -126,7 +135,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
                 build_only - build and then quit
                 generate_only - generate src and then quit
                 recompile - don't generate src but compile
-        build_prefix : str
+        build_group : str
             A prefix prepended to the cell build_directory to distinguish
             it from other generated cell code
         kwargs : dict
@@ -142,7 +151,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
             url = component_class.url
         # Calculate compile directory path within build directory
         src_dir, compile_dir, install_dir = self.get_build_dirs(
-            name, url, build_prefix=build_prefix)
+            name, url, build_group=build_group)
         # Path of the build component class
         built_comp_class_pth = os.path.join(src_dir, self._BUILT_COMP_CLASS)
         # Determine whether the installation needs rebuilding or whether there
@@ -213,15 +222,20 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
             self.compile_source_files(compile_dir, name)
         # Switch back to original dir
         os.chdir(orig_dir)
+        # Cache any dimension maps that were calculated during the generation
+        # process
+        self.UnitHandler.save_cache()
         return install_dir
 
-    def get_build_dirs(self, name, url, build_prefix=None):
-        base = os.path.abspath(os.path.join(self._build_base,
-                                            self.SIMULATOR_NAME))
-        prefix = self.url_build_path(url)
-        if build_prefix is not None:
-            prefix += build_prefix
-        build_dir = os.path.join(base, prefix + name)
+    def get_build_dirs(self, name, url, build_group=None):
+        if build_group is None:
+            build_group = ''
+        elif re.match(r'(?<\w).?./', build_group):
+            raise Pype9UsageError(
+                "Build prefix, '{}', cannot contain any relative path symbols "
+                "(i.e. '/')".format(build_group))
+        build_dir = os.path.join(self.base_dir, self.url_build_path(url),
+                                 build_group, name)
         return (self.get_source_dir(build_dir),
                 self.get_compile_dir(build_dir),
                 self.get_install_dir(build_dir))
@@ -410,15 +424,12 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     @classmethod
     def url_build_path(cls, url):
         if url is None:
-            path = 'GEN-'
+            path = 'generated'
         else:
             if url_re.match(url) is not None:
-                path = ('URL-' +
-                        re.match(r'(:?\w+://)?([\.\/\w]+).*', url).group(1))
+                path = os.path.join(
+                    'url',
+                    re.match(r'(:?\w+://)?([\.\/\w]+).*', url).group(1))
             else:
-                path = 'FILE-' + os.path.realpath(url)
-            path = path.replace('.', '_')
-            path = path.replace(':', '_')
-            path = path.replace('/', '__')
-            path += '-'
+                path = os.path.join('file', os.path.realpath(url)[1:])
         return path
