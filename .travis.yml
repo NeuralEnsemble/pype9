@@ -35,9 +35,6 @@ install:
   - pip install git+git://github.com/tclose/Diophantine.git@master
   - pip install -r requirements.txt
   - pip install coveralls
-  - pushd pype9/simulate/neuron/cells/code_gen/libninemlnrn
-  - CC=mpicc ./manual_compile.sh
-  - popd
 script:
   - nosetests test --with-coverage --cover-package=pype9
 after_success:

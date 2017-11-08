@@ -130,14 +130,13 @@ def run(argv):
             network = Network(model, build_mode=args.build_mode)
             logger.info("Finished constructing the '{}' network"
                         .format(model.name))
-            for record_name, _ in args.record:
-                pop_name, port_name, rec_t_start = record_name.split('.')
-                network.component_array(pop_name).record(port_name,
-                                                         t_start=rec_t_start)
+            for record in args.record:
+                pop_name, port_name = record[0].split('.')
+                network.component_array(pop_name).record(port_name)
             logger.info("Running the simulation")
             sim.run(args.time * un.ms)
         logger.info("Writing recorded data to file")
-        for record_name, fname in args.record:
+        for record_name, fname, rec_t_start in args.record:
             pop_name, port_name = record_name.split('.')
             pop = network.component_array(pop_name)
             neo.PickleIO(fname).write(pop.recording(port_name,
