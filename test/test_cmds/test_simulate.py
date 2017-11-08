@@ -41,7 +41,7 @@ class TestSimulateCell(TestCase):
     isyn_onset = (50.0, 'ms')
     isyn_init = (0.0, 'pA')
 
-    rec_t_start = 1.0
+    rec_t_start = (1.0, 'ms')
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
@@ -55,7 +55,7 @@ class TestSimulateCell(TestCase):
         # First simulate input signal to have something to play into izhikevich
         # cell
         argv = ("{input_model} nest {t_stop} {dt} "
-                "--record current_output {out_path} 1.0 "
+                "--record current_output {out_path} {rec_t_start} "
                 "--prop amplitude {amp} "
                 "--prop onset {onset} "
                 "--init_value current_output {init} "
@@ -64,7 +64,8 @@ class TestSimulateCell(TestCase):
                         t_stop=self.t_stop, dt=self.dt,
                         amp='{} {}'.format(*self.isyn_amp),
                         onset='{} {}'.format(*self.isyn_onset),
-                        init='{} {}'.format(*self.isyn_init)))
+                        init='{} {}'.format(*self.isyn_init),
+                        rec_t_start='{} {}'.format(*self.rec_t_start)))
         # Run input signal simulation
         simulate.run(argv.split())
         isyn = neo.io.PickleIO(in_path).read()[0].analogsignals[0]
@@ -80,7 +81,7 @@ class TestSimulateCell(TestCase):
         for simulator in ('neuron', 'nest'):
             argv = (
                 "{nineml_model} {sim} {t_stop} {dt} "
-                "--record V {out_path} 1.0 "
+                "--record V {out_path} {rec_t_start} "
                 "--init_value U {U} "
                 "--init_value V {V} "
                 "--init_regime subVb "
@@ -93,7 +94,8 @@ class TestSimulateCell(TestCase):
                         V='{} {}'.format(*self.V),
                         isyn_amp='{} {}'.format(*self.isyn_amp),
                         isyn_onset='{} {}'.format(*self.isyn_onset),
-                        isyn_init='{} {}'.format(*self.isyn_init)))
+                        isyn_init='{} {}'.format(*self.isyn_init),
+                        rec_t_start='{} {}'.format(*self.rec_t_start)))
             simulate.run(argv.split())
             data_seg = neo.io.PickleIO(out_path).read()[0]
             v = data_seg.analogsignals[0]
@@ -133,7 +135,8 @@ class TestSimulateCell(TestCase):
             cell.record_regime()
             cell.play('iSyn', isyn)
             sim.run(self.t_stop * un.ms)
-        return (cell.recording('V', t_start=self.rec_t_start * pq.ms),
+        return (cell.recording('V', t_start=pq.Quantity(self.rec_t_start[0],
+                                                        self.rec_t_start[1])),
                 cell.regime_epochs())
 
 
@@ -147,6 +150,7 @@ class TestSimulateNetwork(TestCase):
     t_stop = 100.0
     dt = 0.001
     seed = 12345
+    rec_t_start = (1.0, 'ms')
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
@@ -179,14 +183,17 @@ class TestSimulateNetwork(TestCase):
         for simulator in ('nest', ):  # , 'neuron'):
             argv = (
                 "{model_url}#{model_name} {sim} {t_stop} {dt} "
-                "--record Exc.spike_output {tmpdir}/Exc-{sim}.neo.pkl 1.0 "
-                "--record Inh.spike_output {tmpdir}/Inh-{sim}.neo.pkl 1.0 "
+                "--record Exc.spike_output {tmpdir}/Exc-{sim}.neo.pkl "
+                "{rec_t_start} "
+                "--record Inh.spike_output {tmpdir}/Inh-{sim}.neo.pkl "
+                "{rec_t_start} "
                 "--build_mode force "
                 "--seed {seed}"
                 .format(model_url=self.reduced_brunel_path,
                         model_name=self.brunel_name, sim=simulator,
                         tmpdir=self.tmpdir, t_stop=self.t_stop, dt=self.dt,
-                        seed=self.seed))
+                        seed=self.seed,
+                        rec_t_start='{} {}'.format(*self.rec_t_start)))
             simulate.run(argv.split())
             ref_recs = self._ref_network(simulator)
             for pop_name in self.recorded_pops:
