@@ -20,5 +20,5 @@ else
 	INSTALL_NAME=''
 fi
 
-$CC -fPIC -c -o nineml.o nineml.cpp $GSL_INCLUDE
-$CC -shared $GSL_LIB $INSTALL_NAME -lm -lgslcblas -lgsl -o libninemlnrn.so nineml.o -lc
+$CC -fPIC -c -o libinemlnrn.o libinemlnrn.cpp $GSL_INCLUDE
+$CC -shared $GSL_LIB $INSTALL_NAME -lm -lgslcblas -lgsl -o libninemlnrn.so libinemlnrn.o -lc

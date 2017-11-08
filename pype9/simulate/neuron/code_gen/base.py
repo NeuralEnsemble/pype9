@@ -15,6 +15,7 @@ import tempfile
 import platform
 import re
 import uuid
+import shutil
 from itertools import chain
 import subprocess as sp
 from collections import defaultdict
@@ -61,8 +62,6 @@ class CodeGenerator(BaseCodeGenerator):
     ODE_SOLVER_DEFAULT = 'derivimplicit'
     BASE_TMPL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                   'templates'))
-    LIBNINEMLNRN_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                     'libninemlnrn'))
     UnitHandler = UnitHandler
 
     _neuron_units = {un.mV: 'millivolt',
@@ -75,14 +74,13 @@ class CodeGenerator(BaseCodeGenerator):
         super(CodeGenerator, self).__init__(**kwargs)
         self.nrnivmodl_path = self.path_to_utility('nrnivmodl')
         self.modlunit_path = self.path_to_utility('modlunit')
-        try:
-            # Used to attempt to determine the location of the GSL library
-            self.nest_config_path = self.path_to_exec('nest-config')
-        except Pype9BuildError:
-            self.nest_config_path = None
+        # Compile wrappers around GSL random distribution functions
+        if not os.path.exists(os.path.join(self.libninemlnrn_dir,
+                                           'libninemlnrn.so')):
+            self.compile_libninemlnrn()
         self.nrnivmodl_flags = [
-            '-L' + self.LIBNINEMLNRN_PATH,
-            '-Wl,-rpath,' + self.LIBNINEMLNRN_PATH,
+            '-L' + self.libninemlnrn_dir,
+            '-Wl,-rpath,' + self.libninemlnrn_dir,
             '-lninemlnrn', '-lgsl', '-lgslcblas']
         if gsl_path is not None:
             self.nrnivmodl_path.append('-L' + gsl_path)
@@ -564,20 +562,26 @@ class CodeGenerator(BaseCodeGenerator):
         nmodl_str = nmodl_str.replace(';', '')
         return nmodl_str
 
+    @property
+    def libninemlnrn_dir(self):
+        return os.path.join(self.base_dir, 'libninemlnrn')
+
     def compile_libninemlnrn(self):
-        # Complie libninemlnrn (for random distribution support in generated
-        # NMODL mechanisms)
+        """
+        Complies libninemlnrn for random distribution support in generated
+        NMODL mechanisms
+        """
         logger.info("Attempting to build libninemlnrn")
-        libninemlnrn_dir = os.path.join(
-            self.build_package_dir, 'neuron', 'cells', 'code_gen',
-            'libninemlnrn')
-        cc = self.get_nrn_cc()
+        cc = self.get_cc()
         gsl_prefixes = self.get_gsl_prefixes()
         # Compile libninemlnrn
-        compile_cmd = '{} -fPIC -c -o nineml.o nineml.cpp {}'.format(
-            cc, ' '.join('-I{}/include'.format(p) for p in gsl_prefixes))
+        compile_cmd = ('{} -fPIC -c -o libninemlnrn.o {}/libninemlnrn.cpp {}'
+                       .format(cc, self.BASE_TMPL_PATH,
+                               ' '.join('-I{}/include'.format(p)
+                                        for p in gsl_prefixes)))
+        os.makedirs(self.libninemlnrn_dir)
         self.run_cmd(
-            compile_cmd, work_dir=libninemlnrn_dir,
+            compile_cmd, work_dir=self.libninemlnrn_dir,
             fail_msg=("Unable to compile libninemlnrn extensions"))
         # Link libninemlnrn
         if platform.system() == 'Darwin':
@@ -588,11 +592,11 @@ class CodeGenerator(BaseCodeGenerator):
             install_name = ""
         link_cmd = (
             "{} -shared {} {} -lm -lgslcblas -lgsl "
-            "-o libninemlnrn.so nineml.o -lc".format(
+            "-o libninemlnrn.so libninemlnrn.o -lc".format(
                 cc, ' '.join('-L{}/lib'.format(p) for p in gsl_prefixes),
                 install_name))
         self.run_cmd(
-            link_cmd, work_dir=libninemlnrn_dir,
+            link_cmd, work_dir=self.libninemlnrn_dir,
             fail_msg=("Unable to link libninemlnrn extensions"))
         logger.info("Successfully compiled libninemlnrn extension.")
 
@@ -606,7 +610,7 @@ class CodeGenerator(BaseCodeGenerator):
             raise Pype9BuildError(
                 "{}:\n{}".format(fail_msg, '  '.join([''] + stdout)))
 
-    def get_nrn_cc(self):
+    def get_cc(self):
         """
         Get the C compiler used to compile NMODL files
 
@@ -615,42 +619,10 @@ class CodeGenerator(BaseCodeGenerator):
         cc : str
             Name of the C compiler used to compile NMODL files
         """
-        # Get path to nrnivmodl
-        try:
-            with open(self.nrnivmodl_path) as f:
-                contents = f.read()
-        except IOError:
-            raise Pype9BuildError(
-                "Could not read nrnivmodl at '{}'"
-                .format(self.nrnivmodl_path))
-        # Execute nrnivmodl down to the point that it sets the bindir, then
-        # echo it to stdout and quit
-        # Get the part of nrnivmodl to run
-        bash_to_run = []
-        found_bindir_export = False
-        for line in contents.splitlines():
-            bash_to_run.append(line)
-            if re.match(r'export.*bindir.*', line):
-                bash_to_run.append('echo $bindir')
-                found_bindir_export = True
-                break
-        # Write bash to file, execute and extract binary dir
-        if found_bindir_export:
-            _, fname = tempfile.mkstemp(text=True)
-            with open(fname, 'w') as f:
-                f.write('\n'.join(bash_to_run))
-            try:
-                bin_dir = sp.check_output('sh {}'.format(fname),
-                                          shell=True).strip()
-            except sp.CalledProcessError:
-                raise Pype9BuildError(
-                    "Problem running excerpt from nrnivmodl ('{}')"
-                    .format(fname))
-        else:
-            raise Pype9BuildError(
-                "Problem parsing nrnivmodl at '{}', could not find "
-                "'export {{bindir}}' line".format(self.nrnivmodl_path))
-        nrnmech_makefile_path = os.path.join(bin_dir, 'nrnmech_makefile')
+        # Get path to the nrnmech_makefile, should be next to nrnivmodl
+        nrnmech_makefile_path = os.path.join(
+            os.path.dirname(os.path.realpath(self.nrnivmodl_path)),
+            'nrnmech_makefile')
         # Extract C-compiler used in nrnmech_makefile
         try:
             with open(nrnmech_makefile_path) as f:
@@ -666,3 +638,27 @@ class CodeGenerator(BaseCodeGenerator):
                 .format(nrnmech_makefile_path))
         cc = matches[0]
         return cc
+
+    def get_gsl_prefixes(self):
+        """
+        Get the library paths used to link GLS to PyNEST
+
+        Returns
+        -------
+        lib_paths : list(str)
+            List of library paths passed to the PyNEST compile
+        """
+        try:
+            # Used to attempt to determine the location of the GSL library
+            nest_config_path = self.path_to_utility('nest-config')
+            libs = sp.check_output('{} --libs'.format(nest_config_path),
+                                   shell=True)
+            prefixes = [p[2:-3] for p in libs.split()
+                        if p.startswith('-L') and p.endswith('lib') and
+                        'gsl' in p]
+        except Pype9BuildError:
+            prefixes = []
+        except sp.CalledProcessError:
+            raise Pype9BuildError(
+                "Could not run '{} --libs'".format(self.nest_config_path))
+        return prefixes
