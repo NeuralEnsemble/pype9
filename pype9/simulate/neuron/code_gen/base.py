@@ -12,6 +12,8 @@ from __future__ import unicode_literals
 from builtins import next, str
 import os.path
 import tempfile
+import platform
+import re
 import uuid
 from itertools import chain
 import subprocess as sp
@@ -37,15 +39,17 @@ except ImportError:
     KineticsClass = type(None)
 from pype9.annotations import (
     PYPE9_NS, ION_SPECIES, MEMBRANE_VOLTAGE, MEMBRANE_CAPACITANCE,
-    TRANSFORM_SRC, TRANSFORM_DEST, NONSPECIFIC_CURRENT, BUILD_TRANS,
-    EXTERNAL_CURRENTS, NO_TIME_DERIVS, INTERNAL_CONCENTRATION,
-    EXTERNAL_CONCENTRATION, NUM_TIME_DERIVS, MECH_TYPE, FULL_CELL_MECH,
-    SUB_COMPONENT_MECH, ARTIFICIAL_CELL_MECH)
+    TRANSFORM_SRC, NONSPECIFIC_CURRENT, BUILD_TRANS,
+    EXTERNAL_CURRENTS, NO_TIME_DERIVS,
+    NUM_TIME_DERIVS, MECH_TYPE, FULL_CELL_MECH,
+    ARTIFICIAL_CELL_MECH)
+#     , TRANSFORM_DEST, SUB_COMPONENT_MECH, EXTERNAL_CONCENTRATION,
+#     INTERNAL_CONCENTRATION)
 import logging
 
 TRANSFORM_NS = 'NeuronBuildTransform'
 
-logger = logging.getLogger("PyPe9")
+logger = logging.getLogger("pype9")
 
 REGIME_VARNAME = 'regime_'
 SEED_VARNAME = 'seed_'
@@ -71,6 +75,11 @@ class CodeGenerator(BaseCodeGenerator):
         super(CodeGenerator, self).__init__(**kwargs)
         self.nrnivmodl_path = self.path_to_utility('nrnivmodl')
         self.modlunit_path = self.path_to_utility('modlunit')
+        try:
+            # Used to attempt to determine the location of the GSL library
+            self.nest_config_path = self.path_to_exec('nest-config')
+        except Pype9BuildError:
+            self.nest_config_path = None
         self.nrnivmodl_flags = [
             '-L' + self.LIBNINEMLNRN_PATH,
             '-Wl,-rpath,' + self.LIBNINEMLNRN_PATH,
@@ -554,3 +563,106 @@ class CodeGenerator(BaseCodeGenerator):
         nmodl_str = Expression.strip_L_from_rationals(nmodl_str)
         nmodl_str = nmodl_str.replace(';', '')
         return nmodl_str
+
+    def compile_libninemlnrn(self):
+        # Complie libninemlnrn (for random distribution support in generated
+        # NMODL mechanisms)
+        logger.info("Attempting to build libninemlnrn")
+        libninemlnrn_dir = os.path.join(
+            self.build_package_dir, 'neuron', 'cells', 'code_gen',
+            'libninemlnrn')
+        cc = self.get_nrn_cc()
+        gsl_prefixes = self.get_gsl_prefixes()
+        # Compile libninemlnrn
+        compile_cmd = '{} -fPIC -c -o nineml.o nineml.cpp {}'.format(
+            cc, ' '.join('-I{}/include'.format(p) for p in gsl_prefixes))
+        self.run_cmd(
+            compile_cmd, work_dir=libninemlnrn_dir,
+            fail_msg=("Unable to compile libninemlnrn extensions"))
+        # Link libninemlnrn
+        if platform.system() == 'Darwin':
+            # On macOS '-install_name' option needs to be set to allow
+            # rpath to find the compiled library
+            install_name = "-install_name @rpath/libninemlnrn.so "
+        else:
+            install_name = ""
+        link_cmd = (
+            "{} -shared {} {} -lm -lgslcblas -lgsl "
+            "-o libninemlnrn.so nineml.o -lc".format(
+                cc, ' '.join('-L{}/lib'.format(p) for p in gsl_prefixes),
+                install_name))
+        self.run_cmd(
+            link_cmd, work_dir=libninemlnrn_dir,
+            fail_msg=("Unable to link libninemlnrn extensions"))
+        logger.info("Successfully compiled libninemlnrn extension.")
+
+    def run_cmd(self, cmd, work_dir, fail_msg):
+        p = sp.Popen(cmd, shell=True, stdin=sp.PIPE, stdout=sp.PIPE,
+                     stderr=sp.STDOUT, close_fds=True, cwd=work_dir)
+        stdout = p.stdout.readlines()
+        result = p.wait()
+        # test if cmd was successful
+        if result != 0:
+            raise Pype9BuildError(
+                "{}:\n{}".format(fail_msg, '  '.join([''] + stdout)))
+
+    def get_nrn_cc(self):
+        """
+        Get the C compiler used to compile NMODL files
+
+        Returns
+        -------
+        cc : str
+            Name of the C compiler used to compile NMODL files
+        """
+        # Get path to nrnivmodl
+        try:
+            with open(self.nrnivmodl_path) as f:
+                contents = f.read()
+        except IOError:
+            raise Pype9BuildError(
+                "Could not read nrnivmodl at '{}'"
+                .format(self.nrnivmodl_path))
+        # Execute nrnivmodl down to the point that it sets the bindir, then
+        # echo it to stdout and quit
+        # Get the part of nrnivmodl to run
+        bash_to_run = []
+        found_bindir_export = False
+        for line in contents.splitlines():
+            bash_to_run.append(line)
+            if re.match(r'export.*bindir.*', line):
+                bash_to_run.append('echo $bindir')
+                found_bindir_export = True
+                break
+        # Write bash to file, execute and extract binary dir
+        if found_bindir_export:
+            _, fname = tempfile.mkstemp(text=True)
+            with open(fname, 'w') as f:
+                f.write('\n'.join(bash_to_run))
+            try:
+                bin_dir = sp.check_output('sh {}'.format(fname),
+                                          shell=True).strip()
+            except sp.CalledProcessError:
+                raise Pype9BuildError(
+                    "Problem running excerpt from nrnivmodl ('{}')"
+                    .format(fname))
+        else:
+            raise Pype9BuildError(
+                "Problem parsing nrnivmodl at '{}', could not find "
+                "'export {{bindir}}' line".format(self.nrnivmodl_path))
+        nrnmech_makefile_path = os.path.join(bin_dir, 'nrnmech_makefile')
+        # Extract C-compiler used in nrnmech_makefile
+        try:
+            with open(nrnmech_makefile_path) as f:
+                contents = f.read()
+        except IOError:
+            raise Pype9BuildError(
+                "Could not read nrnmech_makefile at '{}'"
+                .format(nrnmech_makefile_path))
+        matches = re.findall(r'\s*CC\s*=\s*(.*)', contents)
+        if len(matches) != 1:
+            raise Pype9BuildError(
+                "Could not extract CC variable from nrnmech_makefile at '{}'"
+                .format(nrnmech_makefile_path))
+        cc = matches[0]
+        return cc

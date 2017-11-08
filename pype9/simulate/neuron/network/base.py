@@ -29,7 +29,7 @@ from ..code_gen import CodeGenerator as CodeGenerator  # @IgnorePep8
 from ..units import UnitHandler  # @IgnorePep8
 from ..simulation import Simulation  # @IgnorePep8
 
-logger = logging.getLogger("PyPe9")
+logger = logging.getLogger("pype9")
 
 get_current_time, get_time_step, get_min_delay, \
     get_max_delay, num_processes, rank = build_state_queries(simulator)
