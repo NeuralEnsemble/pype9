@@ -117,8 +117,8 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     def compile_source_files(self, compile_dir, name):
         pass
 
-    def generate(self, component_class, name=None,
-                 build_mode='lazy', build_group=None, url=None, **kwargs):
+    def generate(self, component_class, name=None, build_mode='lazy',
+                 build_group=None, url=None, **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
         NineML cell class
@@ -144,6 +144,9 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         build_group : str
             A prefix prepended to the cell build_directory to distinguish
             it from other generated cell code
+        url : str
+            The URL where the component class is stored (used to form the
+            build path)
         kwargs : dict
             A dictionary of (potentially simulator- specific) template
             arguments

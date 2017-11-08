@@ -53,9 +53,10 @@ class CellMetaClass(type):
         the `name` argument
     """
 
-    def __new__(cls, component_class, name=None, saved_name=None, **kwargs):
+    def __new__(cls, component_class, name=None, saved_name=None,
+                build_url=None, **kwargs):
         # Grab the url before the component class is cloned
-        url = component_class.url
+        url = (build_url if build_url is not None else component_class.url)
         # Clone component class so annotations can be added to it and not bleed
         # into the calling code.
         component_class = component_class.clone()

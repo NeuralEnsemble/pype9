@@ -82,13 +82,12 @@ class Network(object):
         (flat_comp_arrays, flat_conn_groups,
          flat_selections) = self._flatten_to_arrays_and_conns(self._nineml)
         self._component_arrays = {}
-        code_gen = self.CodeGenerator()
         # Build the PyNN populations
+        build_url = kwargs.pop('build_url', nineml_model.url)
         for name, comp_array in flat_comp_arrays.items():
             self._component_arrays[name] = self.ComponentArrayClass(
                 comp_array, build_mode=build_mode,
-                build_group=code_gen.url_build_path(nineml_model.url),
-                **kwargs)
+                build_url=build_url, **kwargs)
         self._selections = {}
         # Build the PyNN Selections
         for selection in flat_selections.values():
@@ -234,7 +233,7 @@ class Network(object):
                 output_dir, conn_grp.label + '.proj'), format='list',
                 gather=True)
 
-    def record(self, variable):
+    def record(self, variable, t_start=None):  # @UnusedVariable
         """
         Record variable from complete network
         """
@@ -762,7 +761,7 @@ class ComponentArray(object):
             communicates = port.communicates
         return communicates, port.name
 
-    def record(self, port_name):
+    def record(self, port_name, t_start=None):
         """
         Records the port or state variable
 
@@ -772,7 +771,7 @@ class ComponentArray(object):
             Name of the port to record
         """
 
-    def recording(self, port_name):
+    def recording(self, port_name, t_start=None):
         """
         Returns the recorded data for the given port name
 
@@ -793,11 +792,16 @@ class ComponentArray(object):
         communicates, _ = self._get_port_details(port_name)
         if communicates == 'event':
             for st in pyNN_data.spiketrains:
+                # FIXME: At some point we need to be able to specify multiple
+                # event outputs
                 if st.annotations:
+                    if t_start is not None:
+                        st = st[st > t_start]
                     recording.spiketrains.append(st)
         else:
             for asig in pyNN_data.analogsignals:
-                if asig.annotations:
+                # FIXME: Not sure if this will work
+                if asig.annotations['name'] == port_name:
                     recording.analogsignals.append(asig)
         return recording
 
