@@ -55,7 +55,7 @@ class Cell(base.Cell):
     def _set_regime(self):
         nest.SetStatus(self._cell, REGIME_VARNAME, self._regime_index)
 
-    def record(self, port_name, interval=None):
+    def record(self, port_name, interval=None, t_start=None):  # @UnusedVariable @IgnorePep8
         # Create dictionaries for storing local recordings. These are not
         # created initially to save memory if recordings are not required or
         # handled externally
@@ -99,7 +99,7 @@ class Cell(base.Cell):
         nest.Connect(
             recorder, self._cell, syn_spec={'delay': self._device_delay})
 
-    def recording(self, port_name):
+    def recording(self, port_name, t_start=None):
         """
         Return recorded data as a dictionary containing one numpy array for
         each neuron, ids as keys.
@@ -114,11 +114,16 @@ class Cell(base.Cell):
             t_stop = self._t_stop
         else:
             t_stop = self.Simulation.active().t
-        t_start = UnitHandler.to_pq_quantity(self._t_start)
+        sim_t_start = UnitHandler.to_pq_quantity(self._t_start)
+        if t_start is None:
+            t_start = sim_t_start
+        t_start = pq.Quantity(t_start, 'ms')
         t_stop = UnitHandler.to_pq_quantity(t_stop)
         if port.nineml_type in ('EventSendPort', 'EventSendPortExposure'):
             spikes = nest.GetStatus(
                 self._recorders[port_name], 'events')[0]['times']
+            # Omit spikes that occur before t_start
+            spikes = spikes[spikes < float(t_start)]
             data = neo.SpikeTrain(spikes, t_start=t_start, t_stop=t_stop,
                                   name=port_name, units=pq.ms)
         else:
@@ -132,8 +137,19 @@ class Cell(base.Cell):
             unit_str = UnitHandler.dimension_to_unit_str(
                 port.dimension, one_as_dimensionless=True)
             variable_name = self.build_name(port_name)
+            signal = events[variable_name]
+            offset = (t_start - sim_t_start)
+            if offset > 0.0:
+                offset_index = offset / interval * pq.ms
+                if round(offset_index) != offset_index:
+                    raise Pype9UsageError(
+                        "Difference between recording start time ({}) needs to"
+                        "and simulation start time ({}) must be an integer "
+                        "multiple of the sampling interval ({})".format(
+                            t_start, sim_t_start, interval * pq.ms))
+                signal = signal[int(offset_index):]
             data = neo.AnalogSignal(
-                events[variable_name], sampling_period=interval * pq.ms,
+                signal, sampling_period=interval * pq.ms,
                 t_start=t_start, units=unit_str, name=port_name)
         return data
 

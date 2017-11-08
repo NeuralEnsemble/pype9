@@ -57,9 +57,9 @@ def argparser():
     parser.add_argument('--init_value', nargs=3, default=[], action='append',
                         metavar=('STATE-VARIABLE', 'VALUE', 'UNITS'),
                         help=("Initial regime for dynamics"))
-    parser.add_argument('--record', type=str, nargs=2, action='append',
+    parser.add_argument('--record', type=str, nargs=3, action='append',
                         default=[],
-                        metavar=('PORT/STATE-VARIABLE', 'FILENAME'),
+                        metavar=('PORT/STATE-VARIABLE', 'FILENAME', 'T_START'),
                         help=("Record the values from the send port or state "
                               "variable and the filename to save it into"))
     parser.add_argument('--play', type=str, nargs=2, action='append',
@@ -130,15 +130,17 @@ def run(argv):
             logger.info("Finished constructing the '{}' network"
                         .format(model.name))
             for record_name, _ in args.record:
-                pop_name, port_name = record_name.split('.')
-                network.component_array(pop_name).record(port_name)
+                pop_name, port_name, rec_t_start = record_name.split('.')
+                network.component_array(pop_name).record(port_name,
+                                                         t_start=rec_t_start)
             logger.info("Running the simulation")
             sim.run(args.time * un.ms)
         logger.info("Writing recorded data to file")
         for record_name, fname in args.record:
             pop_name, port_name = record_name.split('.')
             pop = network.component_array(pop_name)
-            neo.PickleIO(fname).write(pop.recording(port_name))
+            neo.PickleIO(fname).write(pop.recording(port_name,
+                                                    t_start=rec_t_start))
     else:
         assert isinstance(model, (nineml.DynamicsProperties, nineml.Dynamics))
         # Override properties passed as options
@@ -195,11 +197,11 @@ def run(argv):
                 # Input is an event train or analog signal
                 cell.play(port_name, signal)
             # Set up recorders
-            for port_name, _ in args.record:
+            for port_name, _, t_start in args.record:
                 if (component_class.num_regimes > 1 and component_class.port(
                         port_name).communicates == 'analog'):
                     record_regime = True
-                cell.record(port_name)
+                cell.record(port_name, t_start=t_start)
             if record_regime:
                 cell.record_regime()
             # Run simulation
@@ -211,7 +213,7 @@ def run(argv):
             data_segs[fname] = neo.Segment(
                 description="Simulation of '{}' cell".format(model.name))
         for port_name, fname in args.record:
-            data = cell.recording(port_name)
+            data = cell.recording(port_name, t_start=t_start)
             if isinstance(data, neo.AnalogSignal):
                 data_segs[fname].analogsignals.append(data)
             else:

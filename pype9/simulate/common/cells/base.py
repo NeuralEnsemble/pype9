@@ -384,7 +384,7 @@ class Cell(object):
         if not hasattr(self, '_recorders'):
             self.clear_recorders()
 
-    def record(self, port_name):
+    def record(self, port_name, t_start=None):
         """
         Specify the recording of a send port or state-variable before the
         simulation.
@@ -398,7 +398,7 @@ class Cell(object):
         """
         raise NotImplementedError("Should be implemented by derived class")
 
-    def recording(self, port_name):
+    def recording(self, port_name, t_start=None):
         """
         Return recorded data as a dictionary containing one numpy array for
         each neuron, ids as keys.
@@ -514,3 +514,6 @@ class Cell(object):
 
     def is_dead(self):
         return self._t_stop is not None
+
+    def _trim_spike_train(self, train, t_start):
+        sim_t_start = UnitHandler.to_pq_quantity(self._t_start)

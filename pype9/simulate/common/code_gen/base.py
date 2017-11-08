@@ -88,6 +88,13 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         self._base_dir = os.path.abspath(
             os.path.join(base_dir, self.SIMULATOR_NAME))
 
+    def __eq__(self, other):
+        try:
+            return (self.SIMULATOR_NAME == other.SIMULATOR_NAME and
+                    self.base_dir == other.base_dir)
+        except AttributeError:
+            return False
+
     @property
     def base_dir(self):
         return self._base_dir

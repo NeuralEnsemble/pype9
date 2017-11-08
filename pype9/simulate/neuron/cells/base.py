@@ -253,7 +253,7 @@ class Cell(base.Cell):
     def _set_regime(self):
         setattr(self._hoc, REGIME_VARNAME, self._regime_index)
 
-    def record(self, port_name):
+    def record(self, port_name, t_start=None):  # @UnusedVariable
         self._initialize_local_recording()
         # Get the port or state variable to record
         try:
@@ -290,7 +290,7 @@ class Cell(base.Cell):
         self._recordings[REGIME_VARNAME] = recording = h.Vector()
         recording.record(getattr(self._hoc, '_ref_{}'.format(REGIME_VARNAME)))
 
-    def recording(self, port_name):
+    def recording(self, port_name, t_start=None):
         """
         Return recorded data as a dictionary containing one numpy array for
         each neuron, ids as keys.
