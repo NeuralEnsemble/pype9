@@ -63,16 +63,14 @@ if [ ! -d "$PYTHON_INCLUDE_DIRS" ]; then
     ls $(dirname $PYTHON_INCLUDE_DIRS)
     exit
 fi
-ls $PYTHON_INCLUDE_DIRS
 export PYTHON_LIBRARY=$(python -c "import os, sysconfig, platform; vars = sysconfig.get_config_vars(); print(os.path.join(vars['LIBDIR'] + vars.get('multiarchsubdir', ''), (vars['LIBRARY'][:-1] + 'dylib' if platform.system() == 'Darwin' else vars['INSTSONAME'])))");
 if [ ! -f "$PYTHON_LIBRARY" ]; then
     echo "Python lib dir '$PYTHON_LIBRARY':"
     ls $(dirname $PYTHON_LIBRARY)
     exit
 fi
-ls $(dirname $PYTHON_LIBRARY)
-stat $PYTHON_LIBRARY
-ldd $PYTHON_LIBRARY
+ll $(dirname $PYTHON_LIBRARY)
+PYTHON_LIBRARY=${PYTHON_LIBRARY%.1.0}
 
 echo "Install Prefix: $NEST_INSTALL_PREFIX"
 echo "Python Library: $PYTHON_LIBRARY"
