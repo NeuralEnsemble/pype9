@@ -25,7 +25,7 @@ import operator
 import numpy
 import quantities as pq
 import neo
-from .code_gen import CodeGenerator, REGIME_VARNAME
+from ..code_gen import CodeGenerator, REGIME_VARNAME
 from neuron import h, load_mechanisms
 from nineml import units as un
 from nineml.abstraction import EventPort

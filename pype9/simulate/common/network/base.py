@@ -82,7 +82,7 @@ class Network(object):
         (flat_comp_arrays, flat_conn_groups,
          flat_selections) = self._flatten_to_arrays_and_conns(self._nineml)
         self._component_arrays = {}
-        code_gen = self.CellCodeGenerator()
+        code_gen = self.CodeGenerator()
         # Build the PyNN populations
         for name, comp_array in flat_comp_arrays.items():
             self._component_arrays[name] = self.ComponentArrayClass(

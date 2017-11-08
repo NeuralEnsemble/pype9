@@ -27,13 +27,15 @@ import sympy
 from nineml import units
 from nineml.exceptions import NineMLNameError
 from pype9.exceptions import Pype9BuildError
-from ..with_synapses import read
+from ..cells.with_synapses import read
 import logging
 import pype9.annotations
 from pype9.annotations import PYPE9_NS, BUILD_PROPS
 from os.path import expanduser
 import re
 from nineml.serialization import url_re
+import sysconfig
+from pype9 import __version__
 
 
 logger = logging.getLogger('pype9')
@@ -48,7 +50,6 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
                           'generate_only',  # Only generate source files
                           'purge'  # Remove all configure files and rebuild
                           ]
-    DEFAULT_BUILD_BASE = '__pype9__'
     _PARAMS_DIR = 'params'
     _SRC_DIR = 'src'
     _INSTL_DIR = 'install'
@@ -69,6 +70,17 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     # units
     DEFAULT_UNITS = {}
 
+    def __init__(self, build_base_dir=None, **kwargs):  # @UnusedVariable
+        if build_base_dir is None:
+            build_base = os.path.join(
+                expanduser("~"),
+                '.pype9',
+                'code-gen',
+                'pype9{}-py{}'.format(
+                    __version__,
+                    sysconfig.get_config_var('py_version_short')))
+        self._build_base = build_base
+
     @abstractmethod
     def generate_source_files(self, dynamics, src_dir, name, **kwargs):
         """
@@ -87,7 +99,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     def compile_source_files(self, compile_dir, name):
         pass
 
-    def generate(self, component_class, name=None, build_dir_base=None,
+    def generate(self, component_class, name=None,
                  build_mode='lazy', build_prefix=None, url=None, **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
@@ -130,8 +142,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
             url = component_class.url
         # Calculate compile directory path within build directory
         src_dir, compile_dir, install_dir = self.get_build_dirs(
-            name, url, build_dir_base=build_dir_base,
-            build_prefix=build_prefix)
+            name, url, build_prefix=build_prefix)
         # Path of the build component class
         built_comp_class_pth = os.path.join(src_dir, self._BUILT_COMP_CLASS)
         # Determine whether the installation needs rebuilding or whether there
@@ -204,12 +215,8 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         os.chdir(orig_dir)
         return install_dir
 
-    def get_build_dirs(self, name, url, build_dir_base=None,
-                       build_prefix=None):
-        if build_dir_base is None:
-            build_dir_base = os.path.join(expanduser("~"),
-                                          self.DEFAULT_BUILD_BASE)
-        base = os.path.abspath(os.path.join(build_dir_base,
+    def get_build_dirs(self, name, url, build_prefix=None):
+        base = os.path.abspath(os.path.join(self._build_base,
                                             self.SIMULATOR_NAME))
         prefix = self.url_build_path(url)
         if build_prefix is not None:
@@ -413,4 +420,5 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
             path = path.replace('.', '_')
             path = path.replace(':', '_')
             path = path.replace('/', '__')
+            path += '-'
         return path

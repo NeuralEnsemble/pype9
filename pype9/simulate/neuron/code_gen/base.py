@@ -19,7 +19,7 @@ from collections import defaultdict
 import sympy
 import nineml.units as un
 from nineml.abstraction import Alias, AnalogSendPort, Dynamics
-from pype9.simulate.common.cells.code_gen import BaseCodeGenerator
+from pype9.simulate.common.code_gen import BaseCodeGenerator
 from pype9.simulate.common.cells import (
     WithSynapses, DynamicsWithSynapses)
 from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
@@ -66,8 +66,8 @@ class CodeGenerator(BaseCodeGenerator):
 
     _inbuilt_ions = ['na', 'k', 'ca']
 
-    def __init__(self, gsl_path=None):
-        super(CodeGenerator, self).__init__()
+    def __init__(self, gsl_path=None, **kwargs):
+        super(CodeGenerator, self).__init__(**kwargs)
         self.nrnivmodl_path = self.path_to_utility('nrnivmodl')
         self.modlunit_path = self.path_to_utility('modlunit')
         self.nrnivmodl_flags = [

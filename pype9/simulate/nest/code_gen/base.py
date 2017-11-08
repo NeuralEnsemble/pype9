@@ -18,7 +18,7 @@ import shutil
 from datetime import datetime
 import errno
 from pype9.simulate.nest.units import UnitHandler
-from pype9.simulate.common.cells.code_gen import BaseCodeGenerator
+from pype9.simulate.common.code_gen import BaseCodeGenerator
 from pype9.utils import remove_ignore_missing
 from pype9.exceptions import Pype9BuildError
 import pype9
@@ -46,8 +46,8 @@ class CodeGenerator(BaseCodeGenerator):
 
     _inline_random_implementations = {}
 
-    def __init__(self, build_cores=1):
-        super(CodeGenerator, self).__init__()
+    def __init__(self, build_cores=1, **kwargs):
+        super(CodeGenerator, self).__init__(**kwargs)
         self._build_cores = build_cores
         self.nest_config = self.path_to_utility('nest-config')
         compiler, _ = self.run_command(
@@ -128,7 +128,8 @@ class CodeGenerator(BaseCodeGenerator):
                                  'CMakeLists.txt', src_dir)
             os.chdir(compile_dir)
             stdout, stderr = self.run_command(
-                ['cmake', '-Dwith-nest={}'.format(self.nest_config),
+                ['cmake',
+                 '-Dwith-nest={}'.format(self.nest_config),
                  '-DCMAKE_INSTALL_PREFIX={}'.format(install_dir), src_dir],
                 fail_msg=(
                     "Cmake of '{}' NEST module failed (see src "
@@ -148,7 +149,8 @@ class CodeGenerator(BaseCodeGenerator):
         logger.info("Compiling NEST model class in '{}' directory."
                     .format(compile_dir))
         stdout, stderr = self.run_command(
-            ['make', '-j{}'.format(self._build_cores)],
+            ['make',
+             '-j{}'.format(self._build_cores)],
             fail_msg=("Compilation of '{}' NEST module failed (see compile "
                       "directory '{}'):\n\n {{}}".format(component_name,
                                                          compile_dir)))
@@ -158,7 +160,8 @@ class CodeGenerator(BaseCodeGenerator):
                 .format(compile_dir, stdout, stderr))
         logger.debug("make '{}':\nstdout:\n{}stderr:\n{}\n"
                      .format(compile_dir, stdout, stderr))
-        stdout, stderr = self.run_command(['make', 'install'], fail_msg=(
+        stdout, stderr = self.run_command(['make',
+                                           'install'], fail_msg=(
             "Installation of '{}' NEST module failed (see compile "
             "directory '{}'):\n\n {{}}"
             .format(component_name, compile_dir)))

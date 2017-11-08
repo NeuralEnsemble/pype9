@@ -1,5 +1,6 @@
 from __future__ import division
-from .cells import Cell, CellMetaClass, CodeGenerator as CellCodeGenerator
+from .cells import Cell, CellMetaClass
+from .code_gen import CodeGenerator
 from .simulation import Simulation
 from .network import (
     Network, ComponentArray, Selection, ConnectionGroup,

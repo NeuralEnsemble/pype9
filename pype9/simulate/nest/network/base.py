@@ -25,7 +25,7 @@ from pype9.simulate.common.network.base import (  # @IgnorePep8
 import pyNN.nest.simulator as simulator  # @IgnorePep8
 from .cell_wrapper import PyNNCellWrapperMetaClass  # @IgnorePep8
 from .connectivity import PyNNConnectivity  # @IgnorePep8
-from ..cells.code_gen import CodeGenerator as CellCodeGenerator  # @IgnorePep8
+from ..code_gen import CodeGenerator as CodeGenerator  # @IgnorePep8
 from ..units import UnitHandler  # @IgnorePep8
 from ..simulation import Simulation  # @IgnorePep8
 
@@ -84,7 +84,7 @@ class Network(BaseNetwork):
     SelectionClass = Selection
     ConnectionGroupClass = ConnectionGroup
     ConnectivityClass = PyNNConnectivity
-    CellCodeGenerator = CellCodeGenerator
+    CodeGenerator = CodeGenerator
     Simulation = Simulation
 
     @property
