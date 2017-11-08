@@ -20,7 +20,6 @@ from ..code_gen import CodeGenerator, REGIME_VARNAME
 from pype9.simulate.nest.simulation import Simulation
 from pype9.simulate.common.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
-from pype9.simulate.nest.units import UnitHandler
 from pype9.exceptions import (
     Pype9UsageError, Pype9Unsupported9MLException)
 from pype9.utils import add_lib_path
@@ -34,7 +33,6 @@ basic_nineml_translations = {
 
 class Cell(base.Cell):
 
-    UnitHandler = UnitHandler
     Simulation = Simulation
 
     def __init__(self, *properties, **kwprops):
@@ -114,18 +112,16 @@ class Cell(base.Cell):
             t_stop = self._t_stop
         else:
             t_stop = self.Simulation.active().t
-        sim_t_start = UnitHandler.to_pq_quantity(self._t_start)
         if t_start is None:
-            t_start = sim_t_start
+            t_start = self.unit_handler.to_pq_quantity(self._t_start)
         t_start = pq.Quantity(t_start, 'ms')
-        t_stop = UnitHandler.to_pq_quantity(t_stop)
+        t_stop = self.unit_handler.to_pq_quantity(t_stop)
         if port.nineml_type in ('EventSendPort', 'EventSendPortExposure'):
             spikes = nest.GetStatus(
                 self._recorders[port_name], 'events')[0]['times']
-            # Omit spikes that occur before t_start
-            spikes = spikes[spikes < float(t_start)]
-            data = neo.SpikeTrain(spikes, t_start=t_start, t_stop=t_stop,
-                                  name=port_name, units=pq.ms)
+            data = neo.SpikeTrain(
+                self._trim_spike_train(spikes * pq.ms, t_start),
+                t_start=t_start, t_stop=t_stop, name=port_name)
         else:
             port_name = self.build_name(port_name)
             events, interval = nest.GetStatus(self._recorders[port_name],
@@ -134,20 +130,11 @@ class Cell(base.Cell):
                 port = self._nineml.component_class.port(port_name)
             except NineMLNameError:
                 port = self._nineml.component_class.state_variable(port_name)
-            unit_str = UnitHandler.dimension_to_unit_str(
+            unit_str = self.unit_handler.dimension_to_unit_str(
                 port.dimension, one_as_dimensionless=True)
             variable_name = self.build_name(port_name)
-            signal = events[variable_name]
-            offset = (t_start - sim_t_start)
-            if offset > 0.0:
-                offset_index = offset / interval * pq.ms
-                if round(offset_index) != offset_index:
-                    raise Pype9UsageError(
-                        "Difference between recording start time ({}) needs to"
-                        "and simulation start time ({}) must be an integer "
-                        "multiple of the sampling interval ({})".format(
-                            t_start, sim_t_start, interval * pq.ms))
-                signal = signal[int(offset_index):]
+            signal = self._trim_analog_signal(events[variable_name],
+                                              t_start, interval * pq.ms)
             data = neo.AnalogSignal(
                 signal, sampling_period=interval * pq.ms,
                 t_start=t_start, units=unit_str, name=port_name)
@@ -159,7 +146,7 @@ class Cell(base.Cell):
         return neo.AnalogSignal(
             events[REGIME_VARNAME],
             sampling_period=interval * pq.ms, units='dimensionless',
-            t_start=UnitHandler.to_pq_quantity(self._t_start),
+            t_start=self.unit_handler.to_pq_quantity(self._t_start),
             name=REGIME_VARNAME)
 
     def build_name(self, varname):
@@ -214,7 +201,7 @@ class Cell(base.Cell):
                 raise NotImplementedError(
                     "Cannot handle more than one connection property per port")
             elif properties:
-                syn_spec['weight'] = self.UnitHandler.scale_value(
+                syn_spec['weight'] = self.unit_handler.scale_value(
                     properties[0].quantity)
             nest.Connect(self._inputs[port_name], self._cell,
                          syn_spec=syn_spec)
@@ -286,7 +273,7 @@ class Cell(base.Cell):
             elif properties:
                 self._check_connection_properties(receive_port_name,
                                                   properties)
-                syn_spec['weight'] = self.UnitHandler.scale_value(
+                syn_spec['weight'] = self.unit_handler.scale_value(
                     properties[0].quantity)
             nest.Connect(sender._cell, self._cell, syn_spec=syn_spec)
         elif receive_port.communicates == 'analog':

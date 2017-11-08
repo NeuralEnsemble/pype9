@@ -61,7 +61,6 @@ class Cell(base.Cell):
         A dictionary of properties
     """
 
-    UnitHandler = UnitHandler
     Simulation = Simulation
 
     DEFAULT_CM = 1.0 * un.nF  # Chosen to match point processes (...I think).
@@ -299,26 +298,33 @@ class Cell(base.Cell):
             t_stop = self._t_stop
         else:
             t_stop = self.Simulation.active().t
-        t_start = UnitHandler.to_pq_quantity(self._t_start)
-        t_stop = UnitHandler.to_pq_quantity(t_stop)
+        if t_start is None:
+            t_start = UnitHandler.to_pq_quantity(self._t_start)
+        t_start = pq.Quantity(t_start, 'ms')
+        t_stop = self.unit_handler.to_pq_quantity(t_stop)
         try:
             port = self.component_class.port(port_name)
         except NineMLNameError:
             port = self.component_class.state_variable(port_name)
         if isinstance(port, EventPort):
+            events = self._trim_spike_train(self._recordings[port_name],
+                                            t_start)
             recording = neo.SpikeTrain(
-                self._recordings[port_name], t_start=t_start,
+                events, t_start=t_start,
                 t_stop=t_stop, units='ms')
         else:
-            units_str = UnitHandler.dimension_to_unit_str(
+            units_str = self.unit_handler.dimension_to_unit_str(
                 port.dimension, one_as_dimensionless=True)
+            interval = h.dt * pq.ms
+            signal = self._trim_analog_signal(self._recordings[port_name],
+                                              t_start, interval)
             recording = neo.AnalogSignal(
-                self._recordings[port_name], sampling_period=h.dt * pq.ms,
+                signal, sampling_period=interval,
                 t_start=t_start, units=units_str, name=port_name)
         return recording[:-1]
 
     def _regime_recording(self):
-        t_start = UnitHandler.to_pq_quantity(self._t_start)
+        t_start = self.unit_handler.to_pq_quantity(self._t_start)
         return neo.AnalogSignal(
             self._recordings[REGIME_VARNAME], sampling_period=h.dt * pq.ms,
             t_start=t_start, units='dimensionless', name=REGIME_VARNAME)
@@ -375,7 +381,7 @@ class Cell(base.Cell):
                 raise NotImplementedError(
                     "Cannot handle more than one connection property per port")
             elif properties:
-                vstim_con.weight[0] = self.UnitHandler.scale_value(
+                vstim_con.weight[0] = self.unit_handler.scale_value(
                     properties[0].quantity)
             self._inputs['vstim'] = vstim
             self._input_auxs.extend((vstim_times, vstim_con))
@@ -437,7 +443,7 @@ class Cell(base.Cell):
                 raise Pype9Unsupported9MLException(
                     "Cannot handle more than one connection property per port")
             elif properties:
-                netcon.weight[0] = self.UnitHandler.scale_value(
+                netcon.weight[0] = self.unit_handler.scale_value(
                     properties[0].quantity)
             self._input_auxs.append(netcon)
         elif receive_port.communicates == 'analog':

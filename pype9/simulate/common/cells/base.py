@@ -96,6 +96,7 @@ class CellMetaClass(type):
             dct = {'name': name,
                    'component_class': component_class,
                    'install_dir': install_dir,
+                   'code_generator': code_gen,
                    'build_component_class': build_component_class}
             # Create new class using Type.__new__ method
             Cell = super(CellMetaClass, cls).__new__(
@@ -516,4 +517,22 @@ class Cell(object):
         return self._t_stop is not None
 
     def _trim_spike_train(self, train, t_start):
-        sim_t_start = UnitHandler.to_pq_quantity(self._t_start)
+        return train[train < t_start]
+
+    def _trim_analog_signal(self, signal, t_start, interval):
+        sim_start = self.to_pq_quantity(self._t_start)
+        offset = (t_start - sim_start)
+        if offset > 0.0 * pq.s:
+            offset_index = offset / interval
+            if round(offset_index) != offset_index:
+                raise Pype9UsageError(
+                    "Difference between recording start time ({}) needs to"
+                    "and simulation start time ({}) must be an integer "
+                    "multiple of the sampling interval ({})".format(
+                        t_start, sim_start, interval))
+            signal = signal[int(offset_index):]
+        return signal
+
+    @property
+    def unit_handler(self):
+        return self.code_generator.UnitHandler
