@@ -174,7 +174,7 @@ class Cell(object):
             initial_values = []
             for name, qty in kwargs.items():
                 if isinstance(qty, pq.Quantity):
-                    qty = self.UnitHandler.from_pq_quantity(qty)
+                    qty = self.unit_handler.from_pq_quantity(qty)
                 if name in self.component_class.state_variable_names:
                     initial_values.append(nineml.Initial(name, qty))
                 else:
@@ -192,7 +192,7 @@ class Cell(object):
                     raise Pype9UsageError(
                         "Only SingleValue quantities can be used to initiate "
                         "individual cell classes ({})".format(p))
-                self._set(p.name, float(self.UnitHandler.scale_value(qty)))
+                self._set(p.name, float(self.unit_handler.scale_value(qty)))
             sim.register_cell(self)
 
     @property
@@ -228,7 +228,7 @@ class Cell(object):
                                 self.component_class.parameter_names,
                                 self.component_class.state_variable_names))))
             val = self._get(varname)
-            qty = self.UnitHandler.assign_units(
+            qty = self.unit_handler.assign_units(
                 val, self.component_class.element(
                     varname, child_types=Dynamics.nineml_children).dimension)
             return qty
@@ -255,7 +255,7 @@ class Cell(object):
                                 self.component_class.parameter_names,
                                 self.component_class.state_variable_names))))
             if isinstance(val, pq.Quantity):
-                qty = self.UnitHandler.from_pq_quantity(val)
+                qty = self.unit_handler.from_pq_quantity(val)
             else:
                 qty = val
             if qty.units.dimension != self.component_class.dimension_of(
@@ -273,7 +273,7 @@ class Cell(object):
                 else:
                     self._nineml.set(Property(varname, qty))
             # Set the value in the simulator
-            self._set(varname, float(self.UnitHandler.scale_value(qty)))
+            self._set(varname, float(self.unit_handler.scale_value(qty)))
         else:
             super(Cell, self).__setattr__(varname, val)
 
@@ -477,10 +477,6 @@ class Cell(object):
         """
         raise NotImplementedError("Should be implemented by derived class")
 
-    # This has to go last to avoid clobbering the property decorators
-    def property(self, name):
-        return self._nineml.property(name)
-
     def _check_connection_properties(self, port_name, properties):
         props_dict = dict((p.name, p) for p in properties)
         try:
@@ -520,7 +516,7 @@ class Cell(object):
         return train[train < t_start]
 
     def _trim_analog_signal(self, signal, t_start, interval):
-        sim_start = self.to_pq_quantity(self._t_start)
+        sim_start = self.unit_handler.to_pq_quantity(self._t_start)
         offset = (t_start - sim_start)
         if offset > 0.0 * pq.s:
             offset_index = offset / interval
@@ -536,3 +532,7 @@ class Cell(object):
     @property
     def unit_handler(self):
         return self.code_generator.UnitHandler
+
+    # This has to go last to avoid clobbering the property decorators
+    def property(self, name):
+        return self._nineml.property(name)

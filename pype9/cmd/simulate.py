@@ -26,6 +26,7 @@ from builtins import next
 from argparse import ArgumentParser
 from nineml import units as un
 from pype9.simulate.common.code_gen import BaseCodeGenerator
+import quantities as pq
 from ._utils import nineml_model, parse_units, logger
 
 
@@ -104,7 +105,7 @@ def run(argv):
             " option")
 
     # Check for clashing record paths
-    record_paths = [fname for _, fname in args.record]
+    record_paths = [fname for _, fname, _ in args.record]
     for pth in record_paths:
         if record_paths.count(pth) > 1:
             raise Pype9UsageError(
@@ -197,11 +198,11 @@ def run(argv):
                 # Input is an event train or analog signal
                 cell.play(port_name, signal)
             # Set up recorders
-            for port_name, _, t_start in args.record:
+            for port_name, _, rec_t_start in args.record:
                 if (component_class.num_regimes > 1 and component_class.port(
                         port_name).communicates == 'analog'):
                     record_regime = True
-                cell.record(port_name, t_start=t_start)
+                cell.record(port_name, t_start=float(rec_t_start) * pq.ms)
             if record_regime:
                 cell.record_regime()
             # Run simulation
@@ -212,8 +213,9 @@ def run(argv):
         for fname in fnames:
             data_segs[fname] = neo.Segment(
                 description="Simulation of '{}' cell".format(model.name))
-        for port_name, fname in args.record:
-            data = cell.recording(port_name, t_start=t_start)
+        for port_name, fname, rec_t_start in args.record:
+            data = cell.recording(port_name,
+                                  t_start=float(rec_t_start) * pq.ms)
             if isinstance(data, neo.AnalogSignal):
                 data_segs[fname].analogsignals.append(data)
             else:

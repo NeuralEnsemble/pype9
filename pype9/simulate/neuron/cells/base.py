@@ -307,19 +307,18 @@ class Cell(base.Cell):
         except NineMLNameError:
             port = self.component_class.state_variable(port_name)
         if isinstance(port, EventPort):
-            events = self._trim_spike_train(self._recordings[port_name],
-                                            t_start)
+            events = numpy.asarray(self._recordings[port_name])
             recording = neo.SpikeTrain(
-                events, t_start=t_start,
+                self._trim_spike_train(events, t_start), t_start=t_start,
                 t_stop=t_stop, units='ms')
         else:
             units_str = self.unit_handler.dimension_to_unit_str(
                 port.dimension, one_as_dimensionless=True)
             interval = h.dt * pq.ms
-            signal = self._trim_analog_signal(self._recordings[port_name],
-                                              t_start, interval)
+            signal = numpy.asarray(self._recordings[port_name])
             recording = neo.AnalogSignal(
-                signal, sampling_period=interval,
+                self._trim_analog_signal(signal, t_start, interval),
+                sampling_period=interval,
                 t_start=t_start, units=units_str, name=port_name)
         return recording[:-1]
 

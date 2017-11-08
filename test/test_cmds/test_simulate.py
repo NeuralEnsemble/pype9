@@ -8,6 +8,7 @@ import numpy as np
 from pype9.cmd import simulate
 from pype9.cmd._utils import parse_units
 import ninemlcatalog
+import quantities as pq
 from pype9.simulate.neuron import (
     Simulation as NeuronSimulation,
     CellMetaClass as NeuronCellMetaClass,
@@ -40,6 +41,8 @@ class TestSimulateCell(TestCase):
     isyn_onset = (50.0, 'ms')
     isyn_init = (0.0, 'pA')
 
+    rec_t_start = 1.0
+
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
 
@@ -52,7 +55,7 @@ class TestSimulateCell(TestCase):
         # First simulate input signal to have something to play into izhikevich
         # cell
         argv = ("{input_model} nest {t_stop} {dt} "
-                "--record current_output {out_path} "
+                "--record current_output {out_path} 1.0 "
                 "--prop amplitude {amp} "
                 "--prop onset {onset} "
                 "--init_value current_output {init} "
@@ -77,7 +80,7 @@ class TestSimulateCell(TestCase):
         for simulator in ('neuron', 'nest'):
             argv = (
                 "{nineml_model} {sim} {t_stop} {dt} "
-                "--record V {out_path} "
+                "--record V {out_path} 1.0 "
                 "--init_value U {U} "
                 "--init_value V {V} "
                 "--init_regime subVb "
@@ -130,7 +133,8 @@ class TestSimulateCell(TestCase):
             cell.record_regime()
             cell.play('iSyn', isyn)
             sim.run(self.t_stop * un.ms)
-        return cell.recording('V'), cell.regime_epochs()
+        return (cell.recording('V', t_start=self.rec_t_start * pq.ms),
+                cell.regime_epochs())
 
 
 class TestSimulateNetwork(TestCase):
@@ -175,8 +179,8 @@ class TestSimulateNetwork(TestCase):
         for simulator in ('nest', ):  # , 'neuron'):
             argv = (
                 "{model_url}#{model_name} {sim} {t_stop} {dt} "
-                "--record Exc.spike_output {tmpdir}/Exc-{sim}.neo.pkl "
-                "--record Inh.spike_output {tmpdir}/Inh-{sim}.neo.pkl "
+                "--record Exc.spike_output {tmpdir}/Exc-{sim}.neo.pkl 1.0 "
+                "--record Inh.spike_output {tmpdir}/Inh-{sim}.neo.pkl 1.0 "
                 "--build_mode force "
                 "--seed {seed}"
                 .format(model_url=self.reduced_brunel_path,
