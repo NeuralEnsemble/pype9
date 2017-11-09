@@ -14,6 +14,7 @@ else:
 import matplotlib.pyplot as plt  # @IgnorePep8
 import matplotlib.image as img  # @IgnorePep8
 import matplotlib.patches as mp  # @IgnorePep8
+from pype9.utils.testing import test_cache  # @IgnorePep8
 
 
 class TestPlot(TestCase):
@@ -26,13 +27,15 @@ class TestPlot(TestCase):
     t_stop = 100.0
     dt = 0.001
 
+    rec_t_start = (1.0, 'ms')
+
     subVb_colour = '#ff7f0e'
 
     def setUp(self):
         try:
             # Try to make a cache dir so the signals don't need to be
             # regenerated each time
-            self.work_dir = os.path.join(os.path.dirname(__file__), '.cache')
+            self.work_dir = os.path.join(test_cache, 'cmd', 'plot')
             self.cached = True
         except OSError:
             self.work_dir = tempfile.mkdtemp()
@@ -58,12 +61,13 @@ class TestPlot(TestCase):
                 # First simulate input signal to have something to play into
                 # izhikevich cell
                 argv = ("//input/StepCurrent#StepCurrent nest {t_stop} {dt} "
-                        "--record current_output {out_path} "
+                        "--record current_output {out_path} {rec_t_start}"
                         "--prop amplitude {amp} "
                         "--prop onset {onset} "
                         "--init_value current_output {init} "
                         "--build_mode force"
                         .format(out_path=self.cell_input_path,
+                                rec_t_start='{} {}'.format(*self.rec_t_start),
                                 t_stop=self.t_stop, dt=self.dt,
                                 amp='{} {}'.format(*self.isyn_amp),
                                 onset='{} {}'.format(*self.isyn_onset),
@@ -72,7 +76,7 @@ class TestPlot(TestCase):
                 simulate.run(argv.split())
             argv = (
                 "//neuron/Izhikevich#SampleIzhikevichFastSpiking "
-                "nest {} 0.01 "
+                "nest {} 0.01"
                 "--record V {} "
                 "--init_value U 1.625 pA "
                 "--init_value V -65.0 mV "

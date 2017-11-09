@@ -3,7 +3,10 @@
 set -e  # stop execution in case of errors
 
 if [ -z "$1" ]; then
-    echo "Please provide Neuron version to install script"
+    echo "Neuron install script:"
+    echo "  Usage: VERSION [INSTALL_PREFIX BUILD_DIR]"
+    echo ""
+    echo "ERROR! Please provide Neuron version as first argument to install script"
     exit
 fi
 

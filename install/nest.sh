@@ -3,7 +3,10 @@
 set -e  # stop execution in case of errors
 
 if [ -z "$1" ]; then
-    echo "Please provide NEST version as first argument to install script"
+    echo "NEST install script:"
+    echo "  Usage: VERSION [INSTALL_PREFIX BUILD_DIR]"
+    echo ""
+    echo "ERROR! Please provide NEST version as first argument to install script"
     exit
 fi
 
@@ -11,21 +14,30 @@ NEST_VERSION=$1
 NEST="nest-$NEST_VERSION"
 
 if [ -z "$2" ]; then
+    PYTHON_VERSION=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_var('py_version').split('.')[0])");
+else
+    PYTHON_VERSION=$2
+fi
+echo "Using Python $PYTHON_VERSION"
+
+PYTHON=python$PYTHON_VERSION
+
+if [ -z "$3" ]; then
     # Use virtualenv bin by default
-    export NEST_INSTALL_PREFIX=$(python -c "import sys; print(sys.prefix)");
+    export NEST_INSTALL_PREFIX=$($PYTHON -c "import sys; print(sys.prefix)");
     if [ $NEST_INSTALL_PREFIX == '/usr' ] || [ $NEST_INSTALL_PREFIX == '/usr/local' ]; then
         export NEST_INSTALL_PREFIX=$HOME/nest
     fi
 else
-    export NEST_INSTALL_PREFIX=$2
+    export NEST_INSTALL_PREFIX=$3
 fi
 echo "Installing NEST to '$NEST_INSTALL_PREFIX'"
 
-if [ -z "$3" ]; then
+if [ -z "$4" ]; then
     export NEST_BUILD_DIR=$HOME/pype9-build/nest
     rm -rf $NEST_BUILD_DIR
 else
-    export NEST_BUILD_DIR=$3
+    export NEST_BUILD_DIR=$4
 fi
 echo "Using '$NEST_BUILD_DIR' as NEST build directory"
 mkdir -p $NEST_BUILD_DIR
@@ -57,13 +69,13 @@ mkdir -p $BUILD_DIR
 pushd $BUILD_DIR
 
 # Get Python installation paths
-export PYTHON_INCLUDE_DIRS=$(python -c "import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))");
+export PYTHON_INCLUDE_DIRS=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))");
 if [ ! -d "$PYTHON_INCLUDE_DIRS" ]; then
     echo "Python include dir '$PYTHON_INCLUDE_DIRS'"
     ls $(dirname $PYTHON_INCLUDE_DIRS)
     exit
 fi
-export PYTHON_LIBRARY=$(python -c "import os, sysconfig, platform; vars = sysconfig.get_config_vars(); print(os.path.join(vars['LIBDIR'] + vars.get('multiarchsubdir', ''), (vars['LIBRARY'][:-1] + 'dylib' if platform.system() == 'Darwin' else vars['INSTSONAME'])))");
+export PYTHON_LIBRARY=$($PYTHON -c "import os, sysconfig, platform; vars = sysconfig.get_config_vars(); print(os.path.join(vars['LIBDIR'] + vars.get('multiarchsubdir', ''), (vars['LIBRARY'][:-1] + 'dylib' if platform.system() == 'Darwin' else vars['INSTSONAME'])))");
 if [ ! -f "$PYTHON_LIBRARY" ]; then
     echo "Python lib dir '$PYTHON_LIBRARY':"
     ls $(dirname $PYTHON_LIBRARY)
@@ -75,7 +87,7 @@ echo "Python Library: $PYTHON_LIBRARY"
 echo "Python include dir: $PYTHON_INCLUDE_DIR"
 
 
-CMAKE_CMD="cmake -Dwith-mpi=ON -DPYTHON_LIBRARY=$PYTHON_LIBRARY \
+CMAKE_CMD="cmake -Dwith-mpi=ON -Dwith-python=$PYTHON_VERSION -DPYTHON_LIBRARY=$PYTHON_LIBRARY \
  -DPYTHON_INCLUDE_DIRS=$PYTHON_INCLUDE_DIRS \
  -DCMAKE_INSTALL_PREFIX=$NEST_INSTALL_PREFIX $SRC_DIR"
 echo "NEST CMake:"
@@ -86,9 +98,9 @@ make install
 popd
 
 # Create symlink from multiarch sub-directory to site-packages if required
-ARCH_SUBDIR=$(python -c "import sysconfig; print(sysconfig.get_config_vars().get('multiarchsubdir', ''))");
+ARCH_SUBDIR=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_vars().get('multiarchsubdir', ''))");
 if [ ! -z "$ARCH_SUBDIR" ]; then
-    PYVER=$(python -c "import sysconfig; print(sysconfig.get_config_var('py_version_short'))");
+    PYVER=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_var('py_version_short'))");
     pushd $NEST_INSTALL_PREFIX/lib/python$PYVER/site-packages
     ln -sf $NEST_INSTALL_PREFIX/lib/$ARCH_SUBDIR/python$PYVER/site-packages/nest
     popd;

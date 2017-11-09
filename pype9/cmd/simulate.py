@@ -54,8 +54,9 @@ def argparser():
     parser.add_argument('--prop', nargs=3, action='append',
                         metavar=('PARAM', 'VALUE', 'UNITS'), default=[],
                         help=("Set the property to the given value"))
-    parser.add_argument('--build_name', type=str, default=None,
-                        help="Name to use when building component classes")
+    parser.add_argument('--build_version', type=str, default=None,
+                        help=("Version to append to name to use when building "
+                              "component classes"))
     parser.add_argument('--init_regime', type=str, default=None,
                         help=("Initial regime for dynamics"))
     parser.add_argument('--init_value', nargs=3, default=[], action='append',
@@ -197,9 +198,10 @@ def run(argv):
             if component_class.port(port_name).dimension == un.current:
                 external_currents.append(port_name)
         # Build cell class
-        Cell = CellMetaClass(component_class, name=args.build_name,
+        Cell = CellMetaClass(component_class,
                              build_mode=args.build_mode,
-                             external_currents=external_currents)
+                             external_currents=external_currents,
+                             build_version=args.build_version)
         record_regime = False
         with Simulation(dt=args.timestep * un.ms, seed=args.seed) as sim:
             # Create cell
@@ -219,13 +221,13 @@ def run(argv):
                 if (component_class.num_regimes > 1 and component_class.port(
                         rspec.port).communicates == 'analog'):
                     record_regime = True
-                cell.record(port_name, t_start=rspec.t_start)
+                cell.record(rspec.port, t_start=rspec.t_start)
             if record_regime:
                 cell.record_regime()
             # Run simulation
             sim.run(args.time * un.ms)
         # Collect data into Neo Segments
-        fnames = set(r.fname for r in args.record)
+        fnames = set(r.fname for r in record_specs)
         data_segs = {}
         for fname in fnames:
             data_segs[fname] = neo.Segment(

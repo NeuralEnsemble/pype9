@@ -52,24 +52,22 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
     def __new__(cls, component_class, default_properties,
                 initial_state, initial_regime, **kwargs):  # @UnusedVariable
         # Get the basic Pype9 cell class
-        Cell = CellMetaClass(component_class=component_class, **kwargs)
+        model = CellMetaClass(component_class=component_class, **kwargs)
         try:
-            wrapped_celltype, build_options = cls.loaded_celltypes[
-                (Cell.name, component_class.url)]
+            celltype, build_options = cls.loaded_celltypes[model.name]
             if build_options != kwargs:
                 raise Pype9BuildOptionMismatchException()
         except (KeyError, Pype9BuildOptionMismatchException):
-            dct = {'model': Cell}
-            dct['nest_name'] = {"on_grid": Cell.name, "off_grid": Cell.name}
-            dct['nest_model'] = Cell.name
+            dct = {'model': model}
+            dct['nest_name'] = {"on_grid": model.name, "off_grid": model.name}
+            dct['nest_model'] = model.name
             dct['default_properties'] = default_properties
             dct['initial_state'] = initial_state
             dct['initial_regime'] = initial_regime
-            wrapped_celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
-                cls, Cell.name, (PyNNCellWrapper,), dct)
+            celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
+                cls, model.name, (PyNNCellWrapper,), dct)
             # If the url where the celltype is defined is specified save the
             # celltype to be retried later
             if component_class.url is not None:
-                cls.loaded_celltypes[(Cell.name, component_class.url)] = (
-                    wrapped_celltype, kwargs)
-        return wrapped_celltype
+                cls.loaded_celltypes[model.name] = (celltype, kwargs)
+        return celltype

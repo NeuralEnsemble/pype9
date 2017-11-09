@@ -22,6 +22,7 @@ except (ImportError, RuntimeError):
 from pype9.simulate.neuron import (
     CellMetaClass as NeuronCellMetaClass,
     Simulation as NeuronSimulation)
+from pype9.simulate.nest import CodeGenerator as NESTCodeGenerator
 from pype9.simulate.neuron.units import UnitHandler as UnitHandlerNEURON
 from pype9.simulate.nest.units import UnitHandler as UnitHandlerNEST
 from pype9.simulate.nest import (
@@ -731,8 +732,7 @@ _compare_re = re.compile(r"Average error between ([\w\-]+) and ([\w\-]+): "
 _error_re = re.compile(r"(\w+)Error:")
 
 
-test_data_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'test',
-                             '_data')
+test_cache = os.path.join(NESTCodeGenerator().base_dir, '..', 'unittest-cache')
 
 
 class DummyTestCase(object):
