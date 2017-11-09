@@ -72,7 +72,7 @@ pushd $NEURON_BUILD_DIR
 
 # Configure, make and install
 echo "Install Prefix: $NEURON_INSTALL_PREFIX"
-CONFIG_CMD=$($SRC_DIR/configure --with-paranrn --with-nrnpython=$PYTHON_PATH --prefix=$NEURON_INSTALL_PREFIX --disable-rx3d --without-iv);
+CONFIG_CMD="$SRC_DIR/configure --with-paranrn --with-nrnpython=$PYTHON_PATH --prefix=$NEURON_INSTALL_PREFIX --disable-rx3d --without-iv)";
 echo $CONFIG_CMD
 $CONFIG_CMD
 make -j8;
