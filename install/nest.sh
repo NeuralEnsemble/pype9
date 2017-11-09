@@ -105,3 +105,6 @@ if [ ! -z "$ARCH_SUBDIR" ]; then
     ln -sf $INSTALL_PREFIX/lib/$ARCH_SUBDIR/python$SHORT_PYVER/site-packages/nest
     popd;
 fi
+
+# Test installation
+$PYTHON -c "import nest; nest.GetKernelStatus();"

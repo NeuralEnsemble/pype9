@@ -9,7 +9,7 @@ import nest
 from pype9.simulate.common.network.cell_wrapper import (
     PyNNCellWrapper as BasePyNNCellWrapper,
     PyNNCellWrapperMetaClass as BasePyNNCellWrapperMetaClass)
-from pype9.exceptions import Pype9BuildOptionMismatchException
+from pype9.exceptions import Pype9BuildMismatchException
 import pyNN.standardmodels
 from pype9.simulate.nest.cells import CellMetaClass
 from ..units import UnitHandler
@@ -55,7 +55,7 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
         model = CellMetaClass(component_class=component_class)
         try:
             celltype = cls.loaded_celltypes[model.name]
-        except (KeyError, Pype9BuildOptionMismatchException):
+        except (KeyError, Pype9BuildMismatchException):
             dct = {'model': model}
             dct['nest_name'] = {"on_grid": model.name, "off_grid": model.name}
             dct['nest_model'] = model.name

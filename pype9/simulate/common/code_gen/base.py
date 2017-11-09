@@ -80,12 +80,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
 
     def __init__(self, base_dir=None, **kwargs):  # @UnusedVariable
         if base_dir is None:
-            base_dir = os.path.join(
-                expanduser("~"),
-                '.pype9',
-                'build',
-                'v{}-py{}'.format(__version__,
-                                  sysconfig.get_config_var('py_version')))
+            base_dir = self.base_dir_default()
         self._base_dir = os.path.abspath(
             os.path.join(base_dir, self.SIMULATOR_NAME))
 
@@ -99,6 +94,14 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     @property
     def base_dir(self):
         return self._base_dir
+
+    @classmethod
+    def base_dir_default(self):
+        return os.path.join(
+            expanduser("~"), '.pype9', 'build',
+            'pype9{}'.format(__version__),
+            'python{}'.format(sysconfig.get_config_var('py_version')),
+            self.SIMULATOR_NAME)
 
     @abstractmethod
     def generate_source_files(self, dynamics, src_dir, name, **kwargs):

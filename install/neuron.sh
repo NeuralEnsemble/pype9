@@ -98,3 +98,8 @@ ls -l;
 ln -sf ../x86_64/bin/nrnivmodl;
 ln -sf ../x86_64/bin/modlunit;
 popd
+
+
+# Test installation
+$PYTHON -c "import neuron; neuron.h.Section();"
+

@@ -25,7 +25,7 @@ from nineml.exceptions import NineMLNameError
 from pype9.annotations import PYPE9_NS
 from pype9.exceptions import (
     Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError,
-    Pype9UsageError, Pype9BuildOptionMismatchException)
+    Pype9UsageError, Pype9BuildMismatchException)
 import logging
 from .with_synapses import WithSynapses
 
@@ -74,8 +74,15 @@ class CellMetaClass(type):
             Cell = cls._built_types[name]
             if not Cell.build_component_class.equals(
                     build_component_class, annotations_ns=[PYPE9_NS]):
-                raise Pype9BuildOptionMismatchException(
-                    "")
+                raise Pype9BuildMismatchException(
+                    "Cannot build '{}' cell dynamics as name clashes with "
+                    "non-equal component class that was previously loaded.\n\n"
+                    "previous:\n{}\nthis:\n{}"
+                    .format(name,
+                            Cell.build_component_class.serialize(
+                                format='yaml', version=2, to_str=True),
+                            build_component_class.serialize(
+                                format='yaml', version=2, to_str=True)))
         except KeyError:
             # Generate and compile cell class
             install_dir = code_gen.generate(

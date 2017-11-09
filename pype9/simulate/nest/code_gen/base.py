@@ -17,6 +17,7 @@ import logging
 import shutil
 from datetime import datetime
 import errno
+import nest
 from pype9.simulate.nest.units import UnitHandler
 from pype9.simulate.common.code_gen import BaseCodeGenerator
 from pype9.utils import remove_ignore_missing
@@ -56,6 +57,11 @@ class CodeGenerator(BaseCodeGenerator):
             fail_msg=("Could not run nest-config at '{}': {{}}"
                       .format(self.nest_config)))
         self._compiler = compiler.strip()  # strip trailing \n
+
+    @classmethod
+    def base_dir_default(self):
+        return (super(CodeGenerator, self).base_dir_default() +
+                nest.version().split()[1])
 
     def generate_source_files(self, component_class, src_dir, name=None,
                               debug_print=None, **kwargs):
