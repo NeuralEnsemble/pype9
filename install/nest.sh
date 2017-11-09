@@ -34,7 +34,7 @@ fi
 echo "Installing NEST to '$INSTALL_PREFIX'"
 
 if [ -z "$4" ]; then
-    BASE_DIR=$HOME/pype9-build/nest
+    BASE_DIR=$HOME/.pype9/prereq-build/$NEST
     rm -rf $BASE_DIR
 else
     BASE_DIR=$4
