@@ -48,13 +48,10 @@ class CellMetaClass(type):
         The name of the cell class, which is used for the generated simulator
         code. If None, the name of the component_class is used. Note, names
         must be unique among classes loaded within the same simulation script.
-    saved_name : str
-        The name of the Dynamics object in the document if different from
-        the `name` argument
     """
 
-    def __new__(cls, component_class, name=None, saved_name=None,
-                build_url=None, **kwargs):
+    def __new__(cls, component_class, build_url=None, build_version=None,
+                build_base_dir=None, **kwargs):
         # Grab the url before the component class is cloned
         url = (build_url if build_url is not None else component_class.url)
         # Clone component class so annotations can be added to it and not bleed
@@ -63,19 +60,14 @@ class CellMetaClass(type):
         # If the component class is not already wrapped in a WithSynapses
         # object, wrap it in one before passing to the code template generator
         if not isinstance(component_class, WithSynapses):
-            if name == component_class.name:
-                raise Pype9UsageError(
-                    "Cannot explicitly use same name ('{}') for build class as"
-                    " component class without synapses".format(name))
             component_class = WithSynapses.wrap(component_class)
-        # Extract out build directives
-        if name is None:
-            if saved_name is not None:
-                name = saved_name
-            else:
-                name = component_class.name
+        # Extract name from component class and append build_version if
+        # provided
+        name = component_class.name
+        if build_version is not None:
+            name += build_version
         # Get transformed build class
-        code_gen = cls.CodeGenerator()
+        code_gen = cls.CodeGenerator(base_dir=build_base_dir)
         build_component_class = code_gen.transform_for_build(
             name=name, component_class=component_class, **kwargs)
         create_class = False
@@ -89,8 +81,7 @@ class CellMetaClass(type):
         if create_class:
             # Generate and compile cell class
             install_dir = code_gen.generate(
-                component_class=build_component_class, name=name, url=url,
-                **kwargs)
+                component_class=build_component_class, url=url, **kwargs)
             # Load newly build model
             cls.load_libraries(name, install_dir)
             # Create class member dict of new class
@@ -106,7 +97,7 @@ class CellMetaClass(type):
             cls._built_types[name] = Cell
         return Cell
 
-    def __init__(self, component_class, name=None, saved_name=None, **kwargs):
+    def __init__(self, component_class, **kwargs):
         # This initializer is empty, but since I have changed the signature of
         # the __new__ method in the deriving metaclasses it complains otherwise
         # (not sure if there is a more elegant way to do this).

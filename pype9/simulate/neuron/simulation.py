@@ -8,7 +8,6 @@ from pyNN.neuron.simulator import initializer as pyNN_initializer
 from pype9.simulate.common.simulation import Simulation as BaseSimulation
 from pype9.simulate.neuron.code_gen import CodeGenerator
 from pype9.exceptions import Pype9UsageError
-from .units import UnitHandler
 
 logger = logging.getLogger('pype9')
 
@@ -21,7 +20,7 @@ class Simulation(BaseSimulation):
 
     _active = None
     name = 'Neuron'
-    UnitHandler = UnitHandler
+    CodeGenerator = CodeGenerator
 
     class _DummyID(object):
 
@@ -33,7 +32,6 @@ class Simulation(BaseSimulation):
     def __init__(self, *args, **kwargs):
         super(Simulation, self).__init__(*args, **kwargs)
         self._has_random_processes = False
-        self._code_gen = CodeGenerator()
 
     def _run(self, t_stop, callbacks=None, **kwargs):  # @UnusedVariable
         """

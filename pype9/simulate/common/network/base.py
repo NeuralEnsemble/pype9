@@ -83,11 +83,14 @@ class Network(object):
          flat_selections) = self._flatten_to_arrays_and_conns(self._nineml)
         self._component_arrays = {}
         # Build the PyNN populations
+        # Add build args to distinguish models built for this network as
+        # opposed to other networks
         build_url = kwargs.pop('build_url', nineml_model.url)
+        build_version = nineml_model.name + kwargs.pop('build_version', '')
         for name, comp_array in flat_comp_arrays.items():
             self._component_arrays[name] = self.ComponentArrayClass(
                 comp_array, build_mode=build_mode,
-                build_url=build_url, **kwargs)
+                build_url=build_url, build_version=build_version, **kwargs)
         self._selections = {}
         # Build the PyNN Selections
         for selection in flat_selections.values():
@@ -591,7 +594,7 @@ class ComponentArray(object):
         dynamics_properties = nineml_model.dynamics_properties
         dynamics = dynamics_properties.component_class
         celltype = self.PyNNCellWrapperMetaClass(
-            name=nineml_model.name, component_class=dynamics,
+            component_class=dynamics,
             default_properties=dynamics_properties,
             initial_state=list(dynamics_properties.initial_values),
             initial_regime=dynamics_properties.initial_regime,

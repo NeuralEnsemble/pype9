@@ -7,13 +7,20 @@
 import os
 import sys
 import errno
+import shutil
 
 
 def remove_ignore_missing(path):
     try:
-        os.remove(path)
+        try:
+            shutil.rmtree(path)
+        except OSError as e:
+            if e.errno == errno.ENOTDIR:  # Not a directory
+                os.remove(path)
+            else:
+                raise
     except OSError as e:
-        if e.errno != errno.ENOENT:
+        if e.errno != errno.ENOENT:  # Doesn't exist
             raise
 
 

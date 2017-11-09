@@ -65,7 +65,8 @@ class Simulation(with_metaclass(ABCMeta, object)):
     max_seed = 2 ** 32 - 1
 
     def __init__(self, dt, t_start=0.0 * un.s, seed=None, properties_seed=None,
-                 min_delay=1 * un.ms, max_delay=10 * un.ms, **options):
+                 min_delay=1 * un.ms, max_delay=10 * un.ms, code_gen=None,
+                 **options):
         self._check_units('dt', dt, un.time)
         self._check_units('t_start', dt, un.time)
         self._check_units('min_delay', dt, un.time, allow_none=True)
@@ -89,12 +90,20 @@ class Simulation(with_metaclass(ABCMeta, object)):
                 "Provided structure seed {} is out of range, must be between "
                 "(0 and {})".format(seed, self.max_seed))
         self._base_properties_seed = properties_seed
+        if code_gen is None:
+            code_gen = self.CodeGenerator()
+        self._code_gen = code_gen
+
+    @property
+    def code_generator(self):
+        return self._code_gen
 
     def __enter__(self):
         self.activate()
         return self
 
     def __exit__(self, type_, value, traceback):  # @UnusedVariable
+        self.code_generator.UnitHandler.save_cache()
         self.deactivate(kill_cells=(type_ is None))
 
     def activate(self):
@@ -282,9 +291,20 @@ class Simulation(with_metaclass(ABCMeta, object)):
         return int(time.time())
 
     def register_cell(self, cell):
+        if cell.code_generator != self.code_generator:
+            raise Pype9UsageError(
+                "Equivlent code generators must be provided to both the "
+                "CellMetaClass and Simulation objects ({} and {})"
+                .format(cell.code_generator, self.code_generator))
         self._registered_cells.append(cell)
 
     def register_array(self, array):
+        cell_code_gen = array.celltype.model.code_generator
+        if cell_code_gen != self.code_generator:
+            raise Pype9UsageError(
+                "Equivlent code generators must be provided to both the "
+                "Network and Simulation objects ({} and {})"
+                .format(cell_code_gen, self.code_generator))
         self._registered_arrays.append(array)
 
     @classmethod

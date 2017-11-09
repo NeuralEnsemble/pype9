@@ -26,7 +26,7 @@ from abc import ABCMeta, abstractmethod
 import sympy
 from nineml import units
 from nineml.exceptions import NineMLNameError
-from pype9.exceptions import Pype9BuildError, Pype9UsageError
+from pype9.exceptions import Pype9BuildError
 from ..cells.with_synapses import read
 import logging
 import pype9.annotations
@@ -36,6 +36,7 @@ import re
 from nineml.serialization import url_re
 import sysconfig
 from pype9 import __version__
+from pype9.utils import remove_ignore_missing
 
 
 logger = logging.getLogger('pype9')
@@ -117,8 +118,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     def compile_source_files(self, compile_dir, name):
         pass
 
-    def generate(self, component_class, name=None, build_mode='lazy',
-                 build_group=None, url=None, **kwargs):
+    def generate(self, component_class, build_mode='lazy', url=None, **kwargs):
         """
         Generates and builds the required simulator-specific files for a given
         NineML cell class
@@ -141,9 +141,9 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
                 build_only - build and then quit
                 generate_only - generate src and then quit
                 recompile - don't generate src but compile
-        build_group : str
-            A prefix prepended to the cell build_directory to distinguish
-            it from other generated cell code
+        build_version : str
+            A suffix appended to the cell build name to distinguish
+            it from other code generated from the component class
         url : str
             The URL where the component class is stored (used to form the
             build path)
@@ -153,19 +153,22 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         """
         # Save original working directory to reinstate it afterwards (just to
         # be polite)
+        name = component_class.name
         orig_dir = os.getcwd()
-        if name is None:
-            name = component_class.name
         if url is None:
             url = component_class.url
         # Calculate compile directory path within build directory
-        src_dir, compile_dir, install_dir = self.get_build_dirs(
-            name, url, build_group=build_group)
+        src_dir, compile_dir, install_dir = self.get_build_dirs(name, url)
         # Path of the build component class
         built_comp_class_pth = os.path.join(src_dir, self._BUILT_COMP_CLASS)
         # Determine whether the installation needs rebuilding or whether there
         # is an existing library module to use.
-        if build_mode in ('force', 'build_only', 'purge'):  # Force build
+        if build_mode == 'purge':
+            remove_ignore_missing(src_dir)
+            remove_ignore_missing(install_dir)
+            remove_ignore_missing(compile_dir)
+            generate_source = compile_source = True
+        elif build_mode in ('force', 'build_only'):  # Force build
             generate_source = compile_source = True
         elif build_mode == 'require':  # Just check that prebuild is present
             generate_source = compile_source = False
@@ -233,18 +236,10 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         os.chdir(orig_dir)
         # Cache any dimension maps that were calculated during the generation
         # process
-        self.UnitHandler.save_cache()
         return install_dir
 
-    def get_build_dirs(self, name, url, build_group=None):
-        if build_group is None:
-            build_group = ''
-        elif re.match(r'.*(\.?\./).*', build_group):
-            raise Pype9UsageError(
-                "Build prefix, '{}', cannot contain any relative path symbols "
-                "(i.e. '/')".format(build_group))
-        build_dir = os.path.join(self.base_dir, self.url_build_path(url),
-                                 build_group, name)
+    def get_build_dirs(self, name, url):
+        build_dir = os.path.join(self.base_dir, self.url_build_path(url), name)
         return (self.get_source_dir(build_dir),
                 self.get_compile_dir(build_dir),
                 self.get_install_dir(build_dir))

@@ -49,26 +49,27 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
     loaded_celltypes = {}
     UnitHandler = UnitHandler
 
-    def __new__(cls, name, component_class, default_properties,
+    def __new__(cls, component_class, default_properties,
                 initial_state, initial_regime, **kwargs):  # @UnusedVariable
+        # Get the basic Pype9 cell class
+        Cell = CellMetaClass(component_class=component_class, **kwargs)
         try:
-            celltype, build_options = cls.loaded_celltypes[
-                (component_class.name, component_class.url)]
+            wrapped_celltype, build_options = cls.loaded_celltypes[
+                (Cell.name, component_class.url)]
             if build_options != kwargs:
                 raise Pype9BuildOptionMismatchException()
         except (KeyError, Pype9BuildOptionMismatchException):
-            dct = {'model': CellMetaClass(component_class=component_class,
-                                          name=name, **kwargs)}
-            dct['nest_name'] = {"on_grid": name, "off_grid": name}
-            dct['nest_model'] = name
+            dct = {'model': Cell}
+            dct['nest_name'] = {"on_grid": Cell.name, "off_grid": Cell.name}
+            dct['nest_model'] = Cell.name
             dct['default_properties'] = default_properties
             dct['initial_state'] = initial_state
             dct['initial_regime'] = initial_regime
-            celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
-                cls, name, (PyNNCellWrapper,), dct)
+            wrapped_celltype = super(PyNNCellWrapperMetaClass, cls).__new__(
+                cls, Cell.name, (PyNNCellWrapper,), dct)
             # If the url where the celltype is defined is specified save the
             # celltype to be retried later
             if component_class.url is not None:
-                cls.loaded_celltypes[(name, component_class.url)] = (celltype,
-                                                                     kwargs)
-        return celltype
+                cls.loaded_celltypes[(Cell.name, component_class.url)] = (
+                    wrapped_celltype, kwargs)
+        return wrapped_celltype

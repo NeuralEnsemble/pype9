@@ -63,10 +63,11 @@ def argparser():
                         help=("Initial regime for dynamics"))
     parser.add_argument('--record', type=str, nargs='+', action='append',
                         default=[],
-                        metavar=('PORT/STATE-VARIABLE', 'FILENAME', 'T_START',
-                                 'T_START_UNITS'),
                         help=("Record the values from the send port or state "
-                              "variable and the filename to save it into"))
+                              "variable and the filename to save it into. "
+                              "Each record option can have either 2 or 4 "
+                              "arguments: PORT/STATE-VARIABLE FILENAME "
+                              "[T_START T_START_UNITS]"))
     parser.add_argument('--play', type=str, nargs=2, action='append',
                         metavar=('PORT', 'FILENAME'), default=[],
                         help=("Name of receive port and filename with signal "
@@ -148,13 +149,13 @@ def run(argv):
             logger.info("Finished constructing the '{}' network"
                         .format(model.name))
             for rspec in record_specs:
-                pop_name, port_name = rspec.port_name.split('.')
+                pop_name, port_name = rspec.port.split('.')
                 network.component_array(pop_name).record(port_name)
             logger.info("Running the simulation")
             sim.run(args.time * un.ms)
         logger.info("Writing recorded data to file")
         for rspec in record_specs:
-            pop_name, port_name = rspec.port_name.split('.')
+            pop_name, port_name = rspec.port.split('.')
             pop = network.component_array(pop_name)
             neo.PickleIO(rspec.fname).write(pop.recording(
                 port_name, t_start=rspec.t_start))
@@ -216,7 +217,7 @@ def run(argv):
             # Set up recorders
             for rspec in record_specs:
                 if (component_class.num_regimes > 1 and component_class.port(
-                        rspec.port_name).communicates == 'analog'):
+                        rspec.port).communicates == 'analog'):
                     record_regime = True
                 cell.record(port_name, t_start=rspec.t_start)
             if record_regime:
@@ -230,7 +231,7 @@ def run(argv):
             data_segs[fname] = neo.Segment(
                 description="Simulation of '{}' cell".format(model.name))
         for rspec in record_specs:
-            data = cell.recording(rspec.port_name, t_start=rspec.t_start)
+            data = cell.recording(rspec.port, t_start=rspec.t_start)
             if isinstance(data, neo.AnalogSignal):
                 data_segs[rspec.fname].analogsignals.append(data)
             else:

@@ -334,10 +334,10 @@ class TestDynamics(TestCase):
             extra_point_process='AlphaISyn',
             neuron_build_args={
                 'build_mode': build_mode,
-                'build_group': 'UNITTEST-test_alpha_syn-'},
+                'build_version': 'UNITTEST-test_alpha_syn-'},
             nest_build_args={
                 'build_mode': build_mode,
-                'build_group': 'UNITTEST-test_alpha_syn-'},
+                'build_version': 'UNITTEST-test_alpha_syn-'},
             min_delay=min_delay,
             # auxiliary_states=['end_refractory__cell'],
             device_delay=device_delay)
