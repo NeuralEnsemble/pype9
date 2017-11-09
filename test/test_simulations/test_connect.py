@@ -73,7 +73,7 @@ class TestConnect(TestCase):
                 sim.run(100 * un.ms)
             rate_spikes = rate.recording('spike_out')
             parrot_spikes = parrot.recording('spike_out')
-            delay = parrot.UnitHandler.to_pq_quantity(self.delay)
+            delay = parrot.unit_handler.to_pq_quantity(self.delay)
             self.assertTrue(all(rate_spikes == (parrot_spikes - delay)),
                             "{} doesn't equal {}".format(rate_spikes,
                                                          parrot_spikes))
