@@ -61,7 +61,7 @@ class TestPlot(TestCase):
                 # First simulate input signal to have something to play into
                 # izhikevich cell
                 argv = ("//input/StepCurrent#StepCurrent nest {t_stop} {dt} "
-                        "--record current_output {out_path} {rec_t_start}"
+                        "--record current_output {out_path} {rec_t_start} "
                         "--prop amplitude {amp} "
                         "--prop onset {onset} "
                         "--init_value current_output {init} "
@@ -76,13 +76,13 @@ class TestPlot(TestCase):
                 simulate.run(argv.split())
             argv = (
                 "//neuron/Izhikevich#SampleIzhikevichFastSpiking "
-                "nest {} 0.01"
+                "nest {} 0.01 "
                 "--record V {} "
                 "--init_value U 1.625 pA "
                 "--init_value V -65.0 mV "
                 "--play iSyn {in_path} "
                 "--init_regime subVb "
-                "--build_name IzhikevichFastSpikingPlotVersion ".format(
+                "--build_version Plot ".format(
                     self.t_stop, self.cell_signal_path,
                     in_path=self.cell_input_path))
             simulate.run(argv.split())
