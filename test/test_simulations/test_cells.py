@@ -46,7 +46,7 @@ NEST_RNG_SEED = 1234567890
 NEURON_RNG_SEED = 987654321
 
 SIMULATORS_TO_TEST = ['neuron', 'nest']
-PLOT_DEFAULT = True  # False
+PLOT_DEFAULT = False
 
 
 class TestDynamics(TestCase):

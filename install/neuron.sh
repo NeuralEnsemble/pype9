@@ -4,54 +4,54 @@ set -e  # stop execution in case of errors
 
 if [ -z "$1" ]; then
     echo "Neuron install script:"
-    echo "  Usage: VERSION [INSTALL_PREFIX BUILD_DIR]"
+    echo "  Usage: VERSION [PYTHON_VERSION INSTALL_PREFIX BUILD_DIR]"
     echo ""
     echo "ERROR! Please provide Neuron version as first argument to install script"
     exit
 fi
 
-NEURON_VERSION=$1
-NEURON=nrn-$NEURON_VERSION
+VERSION=$1
+NEURON=nrn-$VERSION
 
 if [ -z "$2" ]; then
     PYTHON_VERSION=$(python -c "import sysconfig; print(sysconfig.get_config_var('py_version').split('.')[0])");
 else
     PYTHON_VERSION=$2
 fi
-echo "Using Python $PYTHON_VERSION"
+echo "Using Python $PYTHON_VERSION in Neuron build"
 
 PYTHON=python$PYTHON_VERSION
 PYTHON_PATH=$(which $PYTHON)
 
 if [ -z "$3" ]; then
     # Use virtualenv bin by default
-    export NEURON_INSTALL_PREFIX=$($PYTHON -c "import sys; print(sys.prefix)");
-    echo "prefix: $NEURON_INSTALL_PREFIX"
-    if [ $NEURON_INSTALL_PREFIX == '/usr' ] || [ $NEURON_INSTALL_PREFIX == '/usr/local' ]; then
-        export NEURON_INSTALL_PREFIX=$HOME/neuron
+    INSTALL_PREFIX=$($PYTHON -c "import sys; print(sys.prefix)");
+    echo "prefix: $INSTALL_PREFIX"
+    if [ $INSTALL_PREFIX == '/usr' ] || [ $INSTALL_PREFIX == '/usr/local' ]; then
+        INSTALL_PREFIX=$HOME/neuron
     fi
 else
-    export NEURON_INSTALL_PREFIX=$3
+    INSTALL_PREFIX=$3
 fi
-echo "Installing Neuron to '$NEURON_INSTALL_PREFIX'"
+echo "Installing Neuron to '$INSTALL_PREFIX'"
 
 if [ -z "$4" ]; then
-    export NEURON_BUILD_DIR=$HOME/pype9-build/neuron
-    rm -rf $NEURON_BUILD_DIR
+    BASE_DIR=$HOME/pype9-build/neuron
+    rm -rf $BASE_DIR
 else
-    export NEURON_BUILD_DIR=$4
+    BASE_DIR=$4
 fi
-echo "Using '$NEURON_BUILD_DIR' as NEURON build directory"
-mkdir -p $NEURON_BUILD_DIR
+echo "Using '$BASE_DIR' as Neuron base build directory"
+mkdir -p $BASE_DIR
 
-SRC_DIR=$NEURON_BUILD_DIR/$NEURON
-BUILD_DIR=$NEURON_BUILD_DIR/$NEURON-build
+SRC_DIR=$BASE_DIR/$NEURON
+BUILD_DIR=$BASE_DIR/$NEURON-build
 
-if [ "${NEURON_VERSION%%-*}" == 'sha' ]; then
+if [ "${VERSION%%-*}" == 'sha' ]; then
     # Download and untar
-    echo ${NEURON_VERSION##sha-}
-    wget http://github.com/nrnhines/nrn/archive/${NEURON_VERSION##sha-}.zip -O $NEURON_BUILD_DIR/$NEURON.zip;
-    pushd $NEURON_BUILD_DIR;
+    echo ${VERSION##sha-}
+    wget http://github.com/nrnhines/nrn/archive/${VERSION##sha-}.zip -O $BASE_DIR/$NEURON.zip;
+    pushd $BASE_DIR;
     unzip $NEURON.zip;
     rm $NEURON.zip;
     mv nrn* $NEURON;
@@ -61,22 +61,31 @@ if [ "${NEURON_VERSION%%-*}" == 'sha' ]; then
     popd;
 else
     # Download and untar
-    wget http://www.neuron.yale.edu/ftp/neuron/versions/v$NEURON_VERSION/$NEURON.tar.gz -O $NEURON_BUILD_DIR/$NEURON.tar.gz;
-    pushd $NEURON_BUILD_DIR;
+    wget http://www.neuron.yale.edu/ftp/neuron/versions/v$VERSION/$NEURON.tar.gz -O $BASE_DIR/$NEURON.tar.gz;
+    pushd $BASE_DIR;
     tar xzf $NEURON.tar.gz;
     popd;
 fi
 
-mkdir -p $NEURON_BUILD_DIR
-pushd $NEURON_BUILD_DIR
+mkdir -p $BUILD_DIR
+pushd $BUILD_DIR
 
 # Configure, make and install
-echo "Install Prefix: $NEURON_INSTALL_PREFIX"
-CONFIG_CMD="$SRC_DIR/configure --with-paranrn --with-nrnpython=$PYTHON_PATH --prefix=$NEURON_INSTALL_PREFIX --disable-rx3d --without-iv)";
+echo "Install Prefix: $INSTALL_PREFIX"
+CONFIG_CMD="$SRC_DIR/configure --with-paranrn --with-nrnpython=$PYTHON_PATH --prefix=$INSTALL_PREFIX --disable-rx3d --without-iv";
 echo $CONFIG_CMD
 $CONFIG_CMD
 make -j8;
+
+# Add setup.cfg with empty prefix
+SETUP_CFG=$BUILD_DIR/src/nrnpython/setup.cfg
+echo "[install]" > $SETUP_CFG
+echo "prefix=" >> $SETUP_CFG
+
+# Now can install
 make install
+
+rm $SETUP_CFG
 
 # Install Python
 cd src/nrnpython
@@ -84,7 +93,7 @@ $PYTHON setup.py install
 pip install nrnutils  # must be installed after NEURON
 
 # Create links to required NEURON utilities
-cd $NEURON_INSTALL_PREFIX/bin;
+cd $INSTALL_PREFIX/bin;
 ls -l;
 ln -sf ../x86_64/bin/nrnivmodl;
 ln -sf ../x86_64/bin/modlunit;
