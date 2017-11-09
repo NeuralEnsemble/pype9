@@ -33,7 +33,7 @@ if [ -z "$3" ]; then
 else
     export NEURON_INSTALL_PREFIX=$3
 fi
-echo "Installing Neuron to '$NEURON_BUILD_DIR'"
+echo "Installing Neuron to '$NEURON_INSTALL_PREFIX'"
 
 if [ -z "$4" ]; then
     export NEURON_BUILD_DIR=$HOME/pype9-build/neuron
@@ -80,7 +80,7 @@ make install
 
 # Install Python
 cd src/nrnpython
-python setup.py install
+$PYTHON setup.py install
 pip install nrnutils  # must be installed after NEURON
 
 # Create links to required NEURON utilities

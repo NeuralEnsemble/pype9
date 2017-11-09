@@ -565,7 +565,7 @@ class CodeGenerator(BaseCodeGenerator):
         cc = self.get_cc()
         gsl_prefixes = self.get_gsl_prefixes()
         # Compile libninemlnrn
-        compile_cmd = ('{} -fPIC -c -o libninemlnrn.o {}/libninemlnrn.cpp {}'
+        compile_cmd = ('{} -fPIC -c -o ninemlnrn.o {}/ninemlnrn.cpp {}'
                        .format(cc, self.BASE_TMPL_PATH,
                                ' '.join('-I{}/include'.format(p)
                                         for p in gsl_prefixes)))
@@ -582,7 +582,7 @@ class CodeGenerator(BaseCodeGenerator):
             install_name = ""
         link_cmd = (
             "{} -shared {} {} -lm -lgslcblas -lgsl "
-            "-o libninemlnrn.so libninemlnrn.o -lc".format(
+            "-o libninemlnrn.so ninemlnrn.o -lc".format(
                 cc, ' '.join('-L{}/lib'.format(p) for p in gsl_prefixes),
                 install_name))
         self.run_cmd(
