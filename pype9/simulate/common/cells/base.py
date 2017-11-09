@@ -25,7 +25,7 @@ from nineml.exceptions import NineMLNameError
 from pype9.annotations import PYPE9_NS
 from pype9.exceptions import (
     Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError,
-    Pype9UsageError)
+    Pype9UsageError, Pype9BuildOptionMismatchException)
 import logging
 from .with_synapses import WithSynapses
 
@@ -70,15 +70,13 @@ class CellMetaClass(type):
         code_gen = cls.CodeGenerator(base_dir=build_base_dir)
         build_component_class = code_gen.transform_for_build(
             name=name, component_class=component_class, **kwargs)
-        create_class = False
         try:
             Cell = cls._built_types[name]
             if not Cell.build_component_class.equals(
                     build_component_class, annotations_ns=[PYPE9_NS]):
-                create_class = True
+                raise Pype9BuildOptionMismatchException(
+                    "")
         except KeyError:
-            create_class = True
-        if create_class:
             # Generate and compile cell class
             install_dir = code_gen.generate(
                 component_class=build_component_class, url=url, **kwargs)

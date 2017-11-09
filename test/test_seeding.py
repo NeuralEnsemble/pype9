@@ -34,7 +34,8 @@ class TestSeeding(TestCase):
         for CellMetaClass, Simulation in (
             (NeuronCellMetaClass, NeuronSimulation),
                 (NESTCellMetaClass, NESTSimulation)):
-            Poisson = CellMetaClass(poisson_model, name='PoissonTest')
+            Poisson = CellMetaClass(poisson_model,
+                                    build_version='SeedTest')
             rate = 300 / un.s
             t_next = 0.0 * un.s
             with Simulation(dt=0.01 * un.ms, seed=1) as sim:
@@ -57,7 +58,7 @@ class TestSeeding(TestCase):
                              "the same seed")
             self.assertNotEqual(list(poisson1_spikes), list(poisson3_spikes),
                                 "Poisson spike train the same despite using "
-                                "different  seeds")
+                                "different seeds")
 
     def test_network_seed(self):
         brunel_model = self._load_brunel('AI', 1)
