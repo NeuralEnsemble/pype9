@@ -80,7 +80,7 @@ class Comparer(object):
                  nest_translations=None, neuron_build_args=None,
                  nest_build_args=None, min_delay=0.1, device_delay=0.1,
                  max_delay=10.0, extra_mechanisms=None,
-                 extra_point_process=None, build_name=None,
+                 extra_point_process=None,
                  auxiliary_states=None):
         if nineml_model is not None and not simulators:
             raise Pype9RuntimeError(
@@ -106,7 +106,6 @@ class Comparer(object):
         self.initial_states = (initial_states
                                if initial_states is not None else {})
         self.initial_regime = initial_regime
-        self.build_name = build_name
         self.auxiliary_states = (auxiliary_states
                                  if auxiliary_states is not None else [])
         self.input_signal = input_signal
@@ -217,8 +216,7 @@ class Comparer(object):
             CellMetaClass = NESTCellMetaClass
         else:
             assert False
-        Cell = CellMetaClass(model, name=self.build_name,
-                             **self.build_args[simulator])
+        Cell = CellMetaClass(model, **self.build_args[simulator])
         self.nml_cells[simulator] = Cell(properties,
                                          regime_=self.initial_regime,
                                          **self.initial_states)
@@ -304,7 +302,7 @@ class Comparer(object):
         # Specify current injection
         if self.input_signal is not None:
             _, signal = self.input_signal
-            times = numpy.asarray(signal.times.rescale(pq.ms)) - 1.0
+            times = numpy.asarray(signal.times.rescale(pq.ms))
             self._nrn_iclamp = neuron.h.IClamp(0.5, sec=self.nrn_cell_sec)
             self._nrn_iclamp.delay = 0.0
             self._nrn_iclamp.dur = 1e12

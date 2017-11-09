@@ -46,7 +46,7 @@ NEST_RNG_SEED = 1234567890
 NEURON_RNG_SEED = 987654321
 
 SIMULATORS_TO_TEST = ['neuron', 'nest']
-PLOT_DEFAULT = False
+PLOT_DEFAULT = True  # False
 
 
 class TestDynamics(TestCase):
@@ -91,9 +91,10 @@ class TestDynamics(TestCase):
                                  'V': ('v', 1), 'U': ('u', 1),
                                  'alpha': (None, 1), 'beta': (None, 1),
                                  'zeta': (None, 1), 'theta': ('vthresh', 1)},
-            neuron_build_args={'build_mode': build_mode},
-            nest_build_args={'build_mode': build_mode},
-            build_name='Izhikevich9ML')
+            neuron_build_args={'build_mode': build_mode,
+                               'build_version': 'TestDyn'},
+            nest_build_args={'build_mode': build_mode,
+                             'build_version': 'TestDyn'})
         comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()
@@ -333,11 +334,9 @@ class TestDynamics(TestCase):
             extra_mechanisms=['pas'],
             extra_point_process='AlphaISyn',
             neuron_build_args={
-                'build_mode': build_mode,
-                'build_version': 'UNITTEST-test_alpha_syn-'},
+                'build_mode': build_mode},
             nest_build_args={
-                'build_mode': build_mode,
-                'build_version': 'UNITTEST-test_alpha_syn-'},
+                'build_mode': build_mode},
             min_delay=min_delay,
             # auxiliary_states=['end_refractory__cell'],
             device_delay=device_delay)

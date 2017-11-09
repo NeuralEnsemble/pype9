@@ -14,7 +14,7 @@ NEST_VERSION=$1
 NEST="nest-$NEST_VERSION"
 
 if [ -z "$2" ]; then
-    PYTHON_VERSION=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_var('py_version').split('.')[0])");
+    PYTHON_VERSION=$(python -c "import sysconfig; print(sysconfig.get_config_var('py_version').split('.')[0])");
 else
     PYTHON_VERSION=$2
 fi

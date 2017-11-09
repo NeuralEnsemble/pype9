@@ -14,21 +14,32 @@ NEURON_VERSION=$1
 NEURON=nrn-$NEURON_VERSION
 
 if [ -z "$2" ]; then
+    PYTHON_VERSION=$(python -c "import sysconfig; print(sysconfig.get_config_var('py_version').split('.')[0])");
+else
+    PYTHON_VERSION=$2
+fi
+echo "Using Python $PYTHON_VERSION"
+
+PYTHON=python$PYTHON_VERSION
+PYTHON_PATH=$(which $PYTHON)
+
+if [ -z "$3" ]; then
     # Use virtualenv bin by default
-    export NEURON_INSTALL_PREFIX=$(python -c "import sys; print(sys.prefix)");
+    export NEURON_INSTALL_PREFIX=$($PYTHON -c "import sys; print(sys.prefix)");
+    echo "prefix: $NEURON_INSTALL_PREFIX"
     if [ $NEURON_INSTALL_PREFIX == '/usr' ] || [ $NEURON_INSTALL_PREFIX == '/usr/local' ]; then
         export NEURON_INSTALL_PREFIX=$HOME/neuron
     fi
 else
-    export NEURON_INSTALL_PREFIX=$2
+    export NEURON_INSTALL_PREFIX=$3
 fi
 echo "Installing Neuron to '$NEURON_BUILD_DIR'"
 
-if [ -z "$3" ]; then
+if [ -z "$4" ]; then
     export NEURON_BUILD_DIR=$HOME/pype9-build/neuron
     rm -rf $NEURON_BUILD_DIR
 else
-    export NEURON_BUILD_DIR=$3
+    export NEURON_BUILD_DIR=$4
 fi
 echo "Using '$NEURON_BUILD_DIR' as NEURON build directory"
 mkdir -p $NEURON_BUILD_DIR
@@ -61,8 +72,9 @@ pushd $NEURON_BUILD_DIR
 
 # Configure, make and install
 echo "Install Prefix: $NEURON_INSTALL_PREFIX"
-$SRC_DIR/configure --with-paranrn --with-nrnpython \
- --prefix=$NEURON_INSTALL_PREFIX --disable-rx3d --without-iv;
+CONFIG_CMD=$($SRC_DIR/configure --with-paranrn --with-nrnpython=$PYTHON_PATH --prefix=$NEURON_INSTALL_PREFIX --disable-rx3d --without-iv);
+echo $CONFIG_CMD
+$CONFIG_CMD
 make -j8;
 make install
 
