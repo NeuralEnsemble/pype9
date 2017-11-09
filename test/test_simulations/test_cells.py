@@ -2,7 +2,6 @@
 from __future__ import print_function
 from __future__ import division
 from builtins import zip
-from past.utils import old_div
 import sys
 import quantities as pq
 from itertools import chain, repeat
@@ -47,6 +46,7 @@ NEURON_RNG_SEED = 987654321
 
 SIMULATORS_TO_TEST = ['neuron', 'nest']
 PLOT_DEFAULT = False
+BUILD_MODE_DEFAULT = 'purge'
 
 
 class TestDynamics(TestCase):
@@ -69,7 +69,7 @@ class TestDynamics(TestCase):
     def test_izhi(self, plot=PLOT_DEFAULT, print_comparisons=False,
                   simulators=SIMULATORS_TO_TEST,
                   dt=0.001, duration=100.0,
-                  build_mode='force', **kwargs):  # @UnusedVariable
+                  build_mode=BUILD_MODE_DEFAULT, **kwargs):  # @UnusedVariable
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparer = Comparer(
@@ -124,7 +124,7 @@ class TestDynamics(TestCase):
 
     def test_hh(self, plot=PLOT_DEFAULT, print_comparisons=False,
                 simulators=SIMULATORS_TO_TEST, dt=0.001, duration=100.0,
-                build_mode='force', **kwargs):  # @UnusedVariable
+                build_mode=BUILD_MODE_DEFAULT, **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
@@ -198,7 +198,7 @@ class TestDynamics(TestCase):
 
     def test_liaf(self, plot=PLOT_DEFAULT, print_comparisons=False,
                   simulators=SIMULATORS_TO_TEST, dt=0.001, duration=100.0,
-                  build_mode='force', **kwargs):  # @UnusedVariable
+                  build_mode=BUILD_MODE_DEFAULT, **kwargs):  # @UnusedVariable
         # Perform comparison in subprocess
         comparer = Comparer(
             nineml_model=ninemlcatalog.load(
@@ -248,7 +248,7 @@ class TestDynamics(TestCase):
     def test_alpha_syn(self, plot=PLOT_DEFAULT, print_comparisons=False,
                        simulators=SIMULATORS_TO_TEST, dt=0.001,
                        duration=100.0, min_delay=5.0, device_delay=5.0,
-                       build_mode='force', **kwargs):  # @UnusedVariable
+                       build_mode=BUILD_MODE_DEFAULT, **kwargs):  # @UnusedVariable @IgnorePep8
         # Perform comparison in subprocess
         iaf = ninemlcatalog.load(
             'neuron/LeakyIntegrateAndFire', 'PyNNLeakyIntegrateAndFire')
@@ -327,7 +327,7 @@ class TestDynamics(TestCase):
             nest_ref='iaf_psc_alpha',
             input_train=input_freq('spike', 450 * pq.Hz, duration * pq.ms,
                                    weight=[Property('weight__pls__syn',
-                                                    10 * un.nA)],  # 20.680155243 * un.pA
+                                                    10 * un.nA)],
                                    offset=duration / 2.0),
             nest_translations=nest_tranlsations,
             neuron_translations=neuron_tranlsations,
@@ -369,7 +369,7 @@ class TestDynamics(TestCase):
 
     def test_izhiFS(self, plot=PLOT_DEFAULT, print_comparisons=False,
                     simulators=SIMULATORS_TO_TEST, dt=0.001, duration=100.0,
-                    build_mode='force', **kwargs):  # @UnusedVariable
+                    build_mode=BUILD_MODE_DEFAULT, **kwargs):  # @UnusedVariable @IgnorePep8
         # Force compilation of code generation
         # Perform comparison in subprocess
         comparer = Comparer(
@@ -400,12 +400,12 @@ class TestDynamics(TestCase):
 
     def test_poisson(self, duration=100 * un.s, rate=100 * un.Hz,
                      t_next=0.0 * un.ms, print_comparisons=False, dt=0.1,
-                     simulators=SIMULATORS_TO_TEST, build_mode='force',
-                     **kwargs):  # @UnusedVariable @IgnorePep8
+                     simulators=SIMULATORS_TO_TEST,
+                     build_mode=BUILD_MODE_DEFAULT, **kwargs):  # @UnusedVariable @IgnorePep8
         nineml_model = ninemlcatalog.load('input/Poisson', 'Poisson')
         build_args = {'neuron': {'build_mode': build_mode,
                                  'external_currents': ['iSyn']},
-                      'nest': {'build_mode': build_mode}}  #, 'debug': {'states': ['transition']}}} @IgnorePep8
+                      'nest': {'build_mode': build_mode}}
         for sim_name in simulators:
             meta_class = cell_metaclasses[sim_name]
             # Build celltype
@@ -428,7 +428,7 @@ class TestDynamics(TestCase):
             spikes = cell.recording('spike_output')
             # Calculate the rate of the modelled process
             recorded_rate = pq.Quantity(
-                old_div(len(spikes), (spikes.t_stop - spikes.t_start)), 'Hz')
+                len(spikes) / (spikes.t_stop - spikes.t_start), 'Hz')
             ref_rate = pq.Quantity(UnitHandlerNEST.to_pq_quantity(rate), 'Hz')
             rate_difference = abs(ref_rate - recorded_rate)
             if print_comparisons:
@@ -441,22 +441,6 @@ class TestDynamics(TestCase):
                  "desired ({}) within {}: difference {}".format(
                      sim_name, recorded_rate, ref_rate, 2.5 * pq.Hz,
                      recorded_rate - ref_rate)))
-
-
-
-            # Calculate the absolute deviation
-#             isi_avg = 1.0 / recorded_rate.rescale(pq.ms)
-#             isi_std_dev = (abs((spikes[1:] - spikes[:-1]) - isi_avg) /
-#                            (len(spikes) - 1))
-#             recorded_cv = isi_std_dev / isi_avg
-#             ref_cv = 1.0 / ref_rate ** 2.0
-#             if print_comparisons:
-#                 print "ref cv: {}, recorded cv {}".format(ref_cv, recorded_cv)
-#             self.assertAlmostEqual(
-#                 recorded_cv, ref_cv,
-#                 "Recorded coefficient of variation ({}) did not match the "
-#                 "expected ({}): difference"
-#                 .format(recorded_cv, ref_cv, recorded_cv - ref_cv))
 
 
 if __name__ == '__main__':

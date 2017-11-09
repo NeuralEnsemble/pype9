@@ -503,7 +503,7 @@ class Cell(object):
         return self._t_stop is not None
 
     def _trim_spike_train(self, train, t_start):
-        return train[train < t_start]
+        return train[train >= t_start]
 
     def _trim_analog_signal(self, signal, t_start, interval):
         sim_start = self.unit_handler.to_pq_quantity(self._t_start)
