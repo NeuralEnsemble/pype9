@@ -49,14 +49,14 @@ export BUILD_DIR=$BASE_DIR/$NEST-build
 if [ "${VERSION%%-*}" == 'sha' ]; then
     # Download and untar
     echo ${VERSION##sha-}
-    wget http://github.com/nrnhines/nrn/archive/${VERSION##sha-}.zip -O $BASE_DIR/$NEST.zip;
+    wget -quiet http://github.com/nrnhines/nrn/archive/${VERSION##sha-}.zip -O $BASE_DIR/$NEST.zip;
     pushd $BASE_DIR;
     unzip $NEST.zip;
     rm $NEST.zip;
     mv nrn* $NEST;
     popd;
 else
-    wget https://github.com/nest/nest-simulator/releases/download/v$VERSION/$NEST.tar.gz -O $BASE_DIR/$NEST.tar.gz;
+    wget -quiet https://github.com/nest/nest-simulator/releases/download/v$VERSION/$NEST.tar.gz -O $BASE_DIR/$NEST.tar.gz;
     pushd $BASE_DIR;
     tar xzf $NEST.tar.gz;
     popd;
