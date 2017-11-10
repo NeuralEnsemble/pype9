@@ -12,7 +12,6 @@ from pype9.simulate.common.network.cell_wrapper import (
 from pype9.exceptions import Pype9BuildMismatchError
 import pyNN.standardmodels
 from pype9.simulate.nest.cells import CellMetaClass
-from ..units import UnitHandler
 from logging import Logger
 
 
@@ -23,7 +22,6 @@ class PyNNCellWrapper(BasePyNNCellWrapper,
                       pyNN.standardmodels.StandardCellType):
 
     standard_receptor_type = None
-    UnitHandler = UnitHandler
 
     def __init__(self, **parameters):
         BasePyNNCellWrapper.__init__(self)
@@ -47,7 +45,6 @@ class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
     """
 
     loaded_celltypes = {}
-    UnitHandler = UnitHandler
 
     def __new__(cls, component_class, default_properties,
                 initial_state, initial_regime, **kwargs):  # @UnusedVariable

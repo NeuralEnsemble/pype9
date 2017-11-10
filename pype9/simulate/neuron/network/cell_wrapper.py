@@ -22,13 +22,11 @@ class PyNNCellWrapper(BasePyNNCellWrapper, pyNN.models.BaseCellType):
     """
     Extends the vanilla Cell to include all the PyNN requirements
     """
-    UnitHandler = UnitHandler
 
 
 class PyNNCellWrapperMetaClass(BasePyNNCellWrapperMetaClass):
 
     loaded_celltypes = {}
-    UnitHandler = UnitHandler
 
     def __new__(cls, component_class, default_properties,
                 initial_state, initial_regime, **kwargs):  # @UnusedVariable @IgnorePep8

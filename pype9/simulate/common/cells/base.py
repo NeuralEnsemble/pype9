@@ -543,10 +543,6 @@ class Cell(object):
             signal = signal[int(offset_index):]
         return signal
 
-    @property
-    def unit_handler(self):
-        return self.code_generator.UnitHandler
-
     # This has to go last to avoid clobbering the property decorators
     def property(self, name):
         return self._nineml.property(name)

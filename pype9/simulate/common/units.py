@@ -363,33 +363,33 @@ class UnitHandler(with_metaclass(ABCMeta, DynamicsDimensionResolver)):
             "No pure time dimension found in basis units")
         # Get matrix of basis unit dimensions
         cls._A = array([list(b.dimension) for b in basis]).T
-        # Get cache path from file path of subclass
+#         # Get cache path from file path of subclass
         cls._cache_path = os.path.join(directory, cls._CACHE_FILENAME)
-        try:
-            with open(cls._cache_path) as f:
-                cls._cache, loaded_A = pkl.load(f)
-                # If the dimension matrix has been changed since the cache was
-                # generated, reset the cache
-                if (loaded_A != cls._A).all():
-                    cls._cache = {}
-        except:
-            logger.info("Building unit conversion cache in file '{}'"
-                        .format(cls._cache_path))
-            cls._cache = cls._init_cache(basis, compounds)
+#         try:
+#             with open(cls._cache_path) as f:
+#                 cls._cache, loaded_A = pkl.load(f)
+#                 # If the dimension matrix has been changed since the cache was
+#                 # generated, reset the cache
+#                 if (loaded_A != cls._A).all():
+#                     cls._cache = {}
+#         except:
+#         logger.info("Building unit conversion cache in file '{}'"
+#                     .format(cls._cache_path))
+        cls._cache = cls._init_cache(basis, compounds)
 
         # The lengths in terms of SI dimension bases of each of the unit
         # basis compounds.
         si_lengths = [sum(abs(si) for si in d.dimension) for d in basis]
         return cls._A, cls._cache, cls._cache_path, si_lengths
 
-    @classmethod
-    def save_cache(cls):
-        try:
-            with open(cls._cache_path, 'wb') as f:
-                pkl.dump((cls._cache, cls._A), f)
-        except IOError:
-            logger.warning("Could not save unit conversion cache to file "
-                           "'{}'".format(cls._cache_path))
+#     @classmethod
+#     def save_cache(cls):
+#         try:
+#             with open(cls._cache_path, 'wb') as f:
+#                 pkl.dump((cls._cache, cls._A), f)
+#         except IOError:
+#             logger.warning("Could not save unit conversion cache to file "
+#                            "'{}'".format(cls._cache_path))
 
     @classmethod
     def _init_cache(cls, basis, compounds):
