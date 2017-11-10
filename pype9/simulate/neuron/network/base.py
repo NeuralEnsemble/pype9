@@ -7,18 +7,11 @@
   License: This file is part of the "NineLine" package, which is released under
            the MIT Licence, see LICENSE for details.
 """
-# This is required to ensure that the right MPI variables are set before
-# NEURON is initiated to avoid NEURON bug
 from __future__ import absolute_import
-try:
-    from mpi4py import MPI  # @UnresolvedImport @UnusedImport
-except:
-    pass
 import pyNN.neuron
 from pyNN.common.control import build_state_queries
 import pyNN.neuron.simulator as simulator
 from pyNN.neuron.standardmodels.synapses import StaticSynapse
-import neuron
 import logging
 from pype9.simulate.common.network.base import (
     Network as BaseNetwork, ComponentArray as BaseComponentArray,

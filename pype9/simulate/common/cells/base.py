@@ -21,11 +21,12 @@ import neo
 import nineml
 from nineml.abstraction import Dynamics, Regime
 from nineml.user import Property, Initial
+from pype9.mpi import mpi_comm, MPI_ROOT
 from nineml.exceptions import NineMLNameError
 from pype9.annotations import PYPE9_NS
 from pype9.exceptions import (
     Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError,
-    Pype9UsageError, Pype9BuildMismatchError)
+    Pype9UsageError, Pype9BuildMismatchError, Pype9NoActiveSimulationError)
 import logging
 from .with_synapses import WithSynapses
 
@@ -66,8 +67,11 @@ class CellMetaClass(type):
         name = component_class.name
         if build_version is not None:
             name += build_version
+        try:
+            code_gen = cls.Simulator.active().code_generator
+        except Pype9NoActiveSimulationError:
+            code_gen = cls.CodeGenerator(base_dir=build_base_dir)
         # Get transformed build class
-        code_gen = cls.CodeGenerator(base_dir=build_base_dir)
         build_component_class = code_gen.transform_for_build(
             name=name, component_class=component_class, **kwargs)
         try:
@@ -83,7 +87,7 @@ class CellMetaClass(type):
                     "Cannot build '{}' cell dynamics as name clashes with "
                     "non-equal component class that was previously loaded. "
                     "Use 'build_version' option to differentiate between "
-                    "them (will be appended to the name)\n\n"
+                    "them (will be appended to the built name)\n\n"
                     "This (url:{})\n-------------------\n{}\n{}"
                     "\nPrevious (url:{})\n-------------------\n{}\n{}"
                     .format(name,
@@ -98,17 +102,20 @@ class CellMetaClass(type):
                                 **serial_kwargs)))
             build = False
         if build:
-            # Generate and compile cell class
-            install_dir = code_gen.generate(
-                component_class=build_component_class, url=url, **kwargs)
-            # Load newly build model
-            cls.load_libraries(name, install_dir)
+            # Only build the components on the root node
+            if mpi_comm.rank == MPI_ROOT:
+                # Generate and compile cell class
+                code_gen.generate(component_class=build_component_class,
+                                  url=url, **kwargs)
+            # Make slave nodes wait for the root node to finish building
+            mpi_comm.barrier()
+            # Load newly built model
+            cls.load_libraries(name, url)
             # Create class member dict of new class
             dct = {'name': name,
                    'component_class': component_class,
-                   'install_dir': install_dir,
-                   'code_generator': code_gen,
-                   'build_component_class': build_component_class}
+                   'build_component_class': build_component_class,
+                   'code_generator': code_gen}
             # Create new class using Type.__new__ method
             Cell = super(CellMetaClass, cls).__new__(
                 cls, name, (cls.BaseCellClass,), dct)
@@ -120,13 +127,6 @@ class CellMetaClass(type):
         # This initializer is empty, but since I have changed the signature of
         # the __new__ method in the deriving metaclasses it complains otherwise
         # (not sure if there is a more elegant way to do this).
-        pass
-
-    def load_libraries(self, name, install_dir, **kwargs):
-        """
-        To be overridden by derived classes to allow the model to be loaded
-        from compiled external libraries
-        """
         pass
 
 

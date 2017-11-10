@@ -22,6 +22,7 @@ from pype9.simulate.nest.units import UnitHandler
 from pype9.simulate.common.code_gen import BaseCodeGenerator
 from pype9.utils import remove_ignore_missing
 from pype9.exceptions import Pype9BuildError
+from pype9.utils import add_lib_path
 import pype9
 
 REGIME_VARNAME = '__regime__'
@@ -237,3 +238,13 @@ class CodeGenerator(BaseCodeGenerator):
         if 'NEST_INSTALL_DIR' in os.environ:
             path.append(path.join(os.environ['NEST_INSTALL_DIR'], 'bin'))
         return path
+
+    def load_libraries(self, name, url, **kwargs):  # @UnusedVariable
+        install_dir = self.get_install_dir(name, url)
+        lib_dir = os.path.join(install_dir, 'lib')
+        add_lib_path(lib_dir)
+        # Add module install directory to NEST path
+        nest.sli_run(
+            '({}) addpath'.format(os.path.join(install_dir, 'share', 'sli')))
+        # Install nest module
+        nest.Install(name + 'Module')

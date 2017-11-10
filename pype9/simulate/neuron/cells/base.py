@@ -9,16 +9,8 @@
 """
 from __future__ import absolute_import
 from __future__ import division
-# MPI may not be required but NEURON sometimes needs to be initialized after
-# MPI so I am doing it here just to be safe (and to save me headaches in the
-# future)
 from builtins import zip
 from past.utils import old_div
-try:
-    from mpi4py import MPI  # @UnusedImport @IgnorePep8 This is imported before NEURON to avoid a bug in NEURON
-except ImportError:
-    pass
-import os.path
 import collections
 from itertools import chain
 import operator
@@ -26,7 +18,7 @@ import numpy
 import quantities as pq
 import neo
 from ..code_gen import CodeGenerator, REGIME_VARNAME
-from neuron import h, load_mechanisms
+from neuron import h
 from nineml import units as un
 from nineml.abstraction import EventPort
 from nineml.exceptions import NineMLNameError
@@ -493,7 +485,3 @@ class CellMetaClass(base.CellMetaClass):
     _built_types = {}
     CodeGenerator = CodeGenerator
     BaseCellClass = Cell
-
-    @classmethod
-    def load_libraries(cls, _, install_dir):
-        load_mechanisms(os.path.dirname(install_dir))

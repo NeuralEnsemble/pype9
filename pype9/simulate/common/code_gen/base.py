@@ -161,7 +161,9 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         if url is None:
             url = component_class.url
         # Calculate compile directory path within build directory
-        src_dir, compile_dir, install_dir = self.get_build_dirs(name, url)
+        src_dir = self.get_source_dir(name, url)
+        compile_dir = self.get_compile_dir(name, url)
+        install_dir = self.get_install_dir(name, url)
         # Path of the build component class
         built_comp_class_pth = os.path.join(src_dir, self._BUILT_COMP_CLASS)
         # Determine whether the installation needs rebuilding or whether there
@@ -241,20 +243,20 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         # process
         return install_dir
 
-    def get_build_dirs(self, name, url):
-        build_dir = os.path.join(self.base_dir, self.url_build_path(url), name)
-        return (self.get_source_dir(build_dir),
-                self.get_compile_dir(build_dir),
-                self.get_install_dir(build_dir))
+    def get_build_dir(self, name, url):
+        return os.path.join(self.base_dir, self.url_build_path(url), name)
 
-    def get_source_dir(self, build_dir):
-        return os.path.abspath(os.path.join(build_dir, self._SRC_DIR))
+    def get_source_dir(self, name, url):
+        return os.path.abspath(os.path.join(
+            self.get_build_dir(name, url), self._SRC_DIR))
 
-    def get_compile_dir(self, build_dir):
-        return os.path.abspath(os.path.join(build_dir, self._CMPL_DIR))
+    def get_compile_dir(self, name, url):
+        return os.path.abspath(os.path.join(
+            self.get_build_dir(name, url), self._CMPL_DIR))
 
-    def get_install_dir(self, build_dir):
-        return os.path.abspath(os.path.join(build_dir, self._INSTL_DIR))
+    def get_install_dir(self, name, url):
+        return os.path.abspath(os.path.join(
+            self.get_build_dir(name, url), self._INSTL_DIR))
 
     def clean_src_dir(self, src_dir, component_name):  # @UnusedVariable
         # Clean existing src directories from previous builds.
@@ -440,3 +442,10 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
             else:
                 path = os.path.join('file', os.path.realpath(url)[1:])
         return path
+
+    def load_libraries(self, name, url, **kwargs):
+        """
+        To be overridden by derived classes to allow the model to be loaded
+        from compiled external libraries
+        """
+        pass

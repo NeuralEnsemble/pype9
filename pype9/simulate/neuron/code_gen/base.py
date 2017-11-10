@@ -15,13 +15,13 @@ import tempfile
 import platform
 import re
 import uuid
-import shutil
 from itertools import chain
 import subprocess as sp
 from collections import defaultdict
 import sympy
 import nineml.units as un
 from nineml.abstraction import Alias, AnalogSendPort, Dynamics
+from neuron import load_mechanisms
 from pype9.simulate.common.code_gen import BaseCodeGenerator
 from pype9.simulate.common.cells import (
     WithSynapses, DynamicsWithSynapses)
@@ -489,15 +489,20 @@ class CodeGenerator(BaseCodeGenerator):
         logger.info("Compilation of NEURON (NMODL) files for '{}' "
                     "completed successfully".format(name))
 
-    def get_install_dir(self, build_dir):
+    def get_install_dir(self, name, url):
         # return the platform-specific location of the nrnivmodl output files
-        return os.path.join(self.get_source_dir(build_dir), self.specials_dir)
+        return os.path.join(self.get_source_dir(self.get_build_dir(name, url)),
+                            self.specials_dir)
 
-    def get_compile_dir(self, build_dir):
+    def get_compile_dir(self, name, url):
         """
         The compile dir is the same as the src dir for NEURON compile
         """
-        return self.get_source_dir(build_dir)
+        return self.get_source_dir(self.get_build_dir(name, url))
+
+    def load_libraries(self, name, url):
+        install_dir = self.get_install_dir(name, url)
+        load_mechanisms(os.path.dirname(install_dir))
 
     def clean_compile_dir(self, *args, **kwargs):
         pass  # NEURON doesn't use a separate compile dir

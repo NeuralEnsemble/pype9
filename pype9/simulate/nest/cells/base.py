@@ -22,7 +22,6 @@ from pype9.simulate.common.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
 from pype9.exceptions import (
     Pype9UsageError, Pype9Unsupported9MLException)
-from pype9.utils import add_lib_path
 
 
 logger = logging.getLogger('pype9')
@@ -298,13 +297,3 @@ class CellMetaClass(base.CellMetaClass):
     _built_types = {}
     CodeGenerator = CodeGenerator
     BaseCellClass = Cell
-
-    @classmethod
-    def load_libraries(cls, name, install_dir):
-        lib_dir = os.path.join(install_dir, 'lib')
-        add_lib_path(lib_dir)
-        # Add module install directory to NEST path
-        nest.sli_run(
-            '({}) addpath'.format(os.path.join(install_dir, 'share', 'sli')))
-        # Install nest module
-        nest.Install(name + 'Module')
