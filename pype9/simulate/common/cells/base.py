@@ -81,7 +81,9 @@ class CellMetaClass(type):
                                  'to_str': True}
                 raise Pype9BuildMismatchError(
                     "Cannot build '{}' cell dynamics as name clashes with "
-                    "non-equal component class that was previously loaded.\n\n"
+                    "non-equal component class that was previously loaded. "
+                    "Use 'build_version' option to differentiate between "
+                    "them (will be appended to the name)\n\n"
                     "This (url:{})\n-------------------\n{}\n{}"
                     "\nPrevious (url:{})\n-------------------\n{}\n{}"
                     .format(name,
