@@ -25,12 +25,14 @@ from nineml.exceptions import NineMLNameError
 from pype9.annotations import PYPE9_NS
 from pype9.exceptions import (
     Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError,
-    Pype9UsageError, Pype9BuildMismatchException)
+    Pype9UsageError, Pype9BuildMismatchError)
 import logging
 from .with_synapses import WithSynapses
 
 
 logger = logging.Logger("Pype9")
+
+SERIAL_ARGS = {'format': 'yaml', 'version': 2, 'to_str': True}
 
 
 class CellMetaClass(type):
@@ -77,15 +79,21 @@ class CellMetaClass(type):
         else:
             if not Cell.build_component_class.equals(
                     build_component_class, annotations_ns=[PYPE9_NS]):
-                raise Pype9BuildMismatchException(
+                raise Pype9BuildMismatchError(
                     "Cannot build '{}' cell dynamics as name clashes with "
                     "non-equal component class that was previously loaded.\n\n"
-                    "this:\n{}\nprevious:\n{}"
+                    "This (url:{})\n-------------------\n{}\n{}"
+                    "\nPrevious (url:{})\n-------------------\n{}\n{}"
                     .format(name,
-                            build_component_class.serialize(
-                                format='yaml', version=2, to_str=True),
+                            build_component_class.url,
+                            build_component_class.serialize(**SERIAL_ARGS),
+                            build_component_class.dynamics.serialize(
+                                **SERIAL_ARGS),
+                            Cell.build_component_class.url,
                             Cell.build_component_class.serialize(
-                                format='yaml', version=2, to_str=True)))
+                                **SERIAL_ARGS),
+                            Cell.build_component_class.dynamics.serialize(
+                                **SERIAL_ARGS)))
             build = False
         if build:
             # Generate and compile cell class

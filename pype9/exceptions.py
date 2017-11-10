@@ -58,7 +58,7 @@ class Pype9MemberNameClashException(Pype9RuntimeError):
     pass
 
 
-class Pype9BuildMismatchException(Pype9BuildError):
+class Pype9BuildMismatchError(Pype9BuildError):
     pass
 
 
