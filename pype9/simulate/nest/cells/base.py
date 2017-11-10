@@ -175,12 +175,6 @@ class Cell(base.Cell):
             The connection properties of the event port
         """
         port = self.component_class.receive_port(port_name)
-        start = float(signal.t_start.rescale(pq.ms)) - self._device_delay
-        if start < 0.0:
-            raise Pype9UsageError(
-                "Start time of signal played into port '{}' ({}) must "
-                "be greater than device delay ({} ms)".format(
-                    port_name, signal.t_start, self._device_delay))
         if port.nineml_type in ('EventReceivePort',
                                 'EventReceivePortExposure'):
             # Shift the signal times to account for the minimum delay and
@@ -211,13 +205,17 @@ class Cell(base.Cell):
             # Signals are played into NEST cells include a delay (set to be the
             # minimum), which is is subtracted from the start of the signal so
             # that the effect of the signal aligns with other simulators
+            times = signal.times.rescale(pq.ms) - self._device_delay * pq.ms
+            if times[0] <= 0.0 * pq.ms: 
+                raise Pype9UsageError(
+                    "Start time of signal played into port '{}' ({}) must "
+                    "be greater than device delay ({} ms)".format(
+                        port_name, signal.t_start, self._device_delay))
             self._inputs[port_name] = nest.Create(
                 'step_current_generator', 1,
                 {'amplitude_values': list(
                     numpy.ravel(pq.Quantity(signal, 'pA'))),
-                 'amplitude_times': list(numpy.ravel(
-                     signal.times.rescale(pq.ms) -
-                     self._device_delay * pq.ms)),
+                 'amplitude_times': list(numpy.ravel(times)),
                  'start': start,
                  'stop': float(signal.t_stop.rescale(pq.ms))})
             nest.Connect(self._inputs[port_name], self._cell, syn_spec={
