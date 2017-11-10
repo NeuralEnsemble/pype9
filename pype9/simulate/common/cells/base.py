@@ -32,7 +32,6 @@ from .with_synapses import WithSynapses
 
 logger = logging.Logger("Pype9")
 
-SERIAL_ARGS = {'format': 'yaml', 'version': 2, 'to_str': True}
 
 
 class CellMetaClass(type):
@@ -79,6 +78,8 @@ class CellMetaClass(type):
         else:
             if not Cell.build_component_class.equals(
                     build_component_class, annotations_ns=[PYPE9_NS]):
+                serial_kwargs = {'format': 'yaml', 'version': 2,
+                                 'to_str': True}
                 raise Pype9BuildMismatchError(
                     "Cannot build '{}' cell dynamics as name clashes with "
                     "non-equal component class that was previously loaded.\n\n"
@@ -86,14 +87,14 @@ class CellMetaClass(type):
                     "\nPrevious (url:{})\n-------------------\n{}\n{}"
                     .format(name,
                             build_component_class.url,
-                            build_component_class.serialize(**SERIAL_ARGS),
+                            build_component_class.serialize(**serial_kwargs),
                             build_component_class.dynamics.serialize(
-                                **SERIAL_ARGS),
+                                **serial_kwargs),
                             Cell.build_component_class.url,
                             Cell.build_component_class.serialize(
-                                **SERIAL_ARGS),
+                                **serial_kwargs),
                             Cell.build_component_class.dynamics.serialize(
-                                **SERIAL_ARGS)))
+                                **serial_kwargs)))
             build = False
         if build:
             # Generate and compile cell class
