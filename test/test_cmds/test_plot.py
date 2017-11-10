@@ -83,9 +83,11 @@ class TestPlot(TestCase):
                 "--init_value V -65.0 mV "
                 "--play iSyn {in_path} "
                 "--init_regime subVb "
-                "--build_version Plot ".format(
-                    self.t_stop, self.cell_signal_path,
-                    in_path=self.cell_input_path))
+                "--build_version Plot "
+                "--device_delay 0.5 ms "
+                "--min_delay 0.5 ms "
+                .format(self.t_stop, self.cell_signal_path,
+                        in_path=self.cell_input_path))
             simulate.run(argv.split())
         # Run plotting command
         out_path = '{}/single_cell.png'.format(self.work_dir)

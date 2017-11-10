@@ -137,7 +137,8 @@ class Comparer(object):
         if self.simulate_nest:
             with NESTSimulation(dt=self.dt * un.ms, seed=nest_rng_seed,
                                 min_delay=self.min_delay * un.ms,
-                                max_delay=self.max_delay * un.ms) as sim:
+                                max_delay=self.max_delay * un.ms,
+                                device_delay=self.device_delay * un.ms) as sim:
                 if 'nest' in self.simulators:
                     self._create_9ML(self.nineml_model, self.properties,
                                      'nest')
@@ -357,8 +358,7 @@ class Comparer(object):
                 'step_current_generator', 1,
                 {'amplitude_values': numpy.ravel(pq.Quantity(signal, 'pA')),
                  'amplitude_times': numpy.ravel(
-                     signal.times.rescale(pq.ms) -
-                     self.device_delay * pq.ms),
+                     signal.times.rescale(pq.ms)) - self.device_delay,
                  'start': float(signal.t_start.rescale(pq.ms)),
                  'stop': float(signal.t_stop.rescale(pq.ms))})
             nest.Connect(generator, self.nest_cell,
@@ -389,7 +389,7 @@ class Comparer(object):
                          syn_spec={'receptor_type':
                                    (receptor_types[port_name]
                                     if receptor_types else 0),
-                                   'delay': float(self.device_delay),
+                                   'delay': self.device_delay,
                                    'weight': float(weight)})
         self.nest_multimeter = nest.Create(
             'multimeter', 1, {"interval": self.to_float(self.dt, 'ms')})
@@ -397,7 +397,7 @@ class Comparer(object):
             self.nest_multimeter,
             {'record_from': [self.nest_state_variable]})
         nest.Connect(self.nest_multimeter, self.nest_cell,
-                     syn_spec={'delay': float(self.device_delay)})
+                     syn_spec={'delay': self.device_delay})
         trans_states = {}
         for name, qty in self.initial_states.items():
             try:

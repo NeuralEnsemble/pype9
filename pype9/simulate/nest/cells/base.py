@@ -8,7 +8,6 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-import os.path
 import logging
 import numpy
 import neo
@@ -81,7 +80,8 @@ class Cell(base.Cell):
                 'multimeter', 1, {"interval": interval})
             nest.SetStatus(recorder, {'record_from': [variable_name]})
             nest.Connect(
-                recorder, self._cell, syn_spec={'delay': self._device_delay})
+                recorder, self._cell,
+                syn_spec={'delay': self.device_delay_ms})
 
     def record_regime(self, interval=None):
         self._initialize_local_recording()
@@ -92,7 +92,8 @@ class Cell(base.Cell):
             'multimeter', 1, {"interval": interval})
         nest.SetStatus(recorder, {'record_from': [REGIME_VARNAME]})
         nest.Connect(
-            recorder, self._cell, syn_spec={'delay': self._device_delay})
+            recorder, self._cell,
+            syn_spec={'delay': self.device_delay_ms})
 
     def recording(self, port_name, t_start=None):
         """
@@ -177,16 +178,17 @@ class Cell(base.Cell):
             # Shift the signal times to account for the minimum delay and
             # match the NEURON implementation
             spike_times = (numpy.asarray(signal.rescale(pq.ms)) -
-                           self._device_delay)
+                           self.device_delay_ms)
             if any(spike_times <= 0.0):
                 raise Pype9UsageError(
                     "Some spike times are less than device delay and so "
                     "can't be played into cell ({})".format(', '.join(
-                        spike_times < (1 + self._device_delay))))
+                        spike_times <
+                        self.device_delay_ms)))
             self._inputs[port_name] = nest.Create(
                 'spike_generator', 1, {'spike_times': list(spike_times)})
             syn_spec = {'receptor_type': self._receive_ports[port_name],
-                        'delay': self._device_delay}
+                        'delay': self.device_delay_ms}
             self._check_connection_properties(port_name, properties)
             if len(properties) > 1:
                 raise NotImplementedError(
@@ -202,24 +204,24 @@ class Cell(base.Cell):
             # Signals are played into NEST cells include a delay (set to be the
             # minimum), which is is subtracted from the start of the signal so
             # that the effect of the signal aligns with other simulators
-            t_start = signal.t_start - self._device_delay * pq.ms
-            if t_start <= 0.0 * pq.ms:
+            t_start = (float(signal.t_start.rescale(pq.ms)) -
+                       self.device_delay_ms)
+            if t_start <= 0.0:
                 raise Pype9UsageError(
                     "Start time of signal played into port '{}' ({}) must "
-                    "be greater than device delay ({} ms)".format(
-                        port_name, signal.t_start, self._device_delay))
+                    "be greater than device delay ({})".format(
+                        port_name, signal.t_start, self.device_delay))
             self._inputs[port_name] = nest.Create(
                 'step_current_generator', 1,
                 {'amplitude_values': list(
                     numpy.ravel(pq.Quantity(signal, 'pA'))),
-                 'amplitude_times': list(numpy.ravel(
-                     signal.times.rescale(pq.ms) -
-                     self._device_delay * pq.ms)),
+                 'amplitude_times': list(numpy.ravel(numpy.asarray(
+                     signal.times.rescale(pq.ms))) - self.device_delay_ms),
                  'start': t_start,
                  'stop': float(signal.t_stop.rescale(pq.ms))})
             nest.Connect(self._inputs[port_name], self._cell, syn_spec={
                 "receptor_type": self._receive_ports[port_name],
-                'delay': self._device_delay})
+                'delay': self.device_delay_ms})
         else:
             raise Pype9UsageError(
                 "Unrecognised port type '{}' to play signal into".format(port))
@@ -243,10 +245,10 @@ class Cell(base.Cell):
             The connection properties of the event port
         """
         if delay is None:
-            delay = self._device_delay
+            delay = self.device_delay
         if properties is None:
             properties = []
-        delay = float(delay.in_units(un.ms))
+        delay = float(delay.rescale(un.ms))
         send_port = sender.component_class.send_port(send_port_name)
         receive_port = self.component_class.receive_port(receive_port_name)
         if send_port.communicates != receive_port.communicates:
@@ -288,8 +290,12 @@ class Cell(base.Cell):
                                   "Pype9->NEST at this stage.")
 
     @property
-    def _device_delay(self):
-        return float(Simulation.active().device_delay.in_units(un.ms))
+    def device_delay(self):
+        return Simulation.active().device_delay
+
+    @property
+    def device_delay_ms(self):
+        return Simulation.active().device_delay_ms
 
 
 class CellMetaClass(base.CellMetaClass):

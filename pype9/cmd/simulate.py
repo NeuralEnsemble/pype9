@@ -85,6 +85,15 @@ def argparser():
                               "model. Can be one of '{}' (default %(default)s)"
                               .format("', '".join(
                                   BaseCodeGenerator.BUILD_MODE_OPTIONS))))
+    parser.add_argument('--min_delay', nargs=2, metavar=('DELAY', 'UNITS'),
+                        default=None,
+                        help=("The minimum delay of the model (only "
+                              "applicable for single cell NEST simulations)"))
+    parser.add_argument('--device_delay', nargs=2, metavar=('DELAY', 'UNITS'),
+                        default=None,
+                        help=("The delay applied to signals played into ports "
+                              "of the model (only applicable for NEST "
+                              "simulations)"))
     return parser
 
 
@@ -109,6 +118,14 @@ def run(argv):
         raise Pype9UsageError(
             "No recorders set, please specify at least one with the '--record'"
             " option")
+
+    min_delay = (float(args.min_delay[0]) *
+                    parse_units(args.min_delay[1])
+                    if args.min_delay is not None else 1.0 * un.ms)
+
+    device_delay = (float(args.device_delay[0]) *
+                    parse_units(args.device_delay[1])
+                    if args.device_delay is not None else None)
 
     # Parse record specs
     record_specs = []
@@ -143,6 +160,7 @@ def run(argv):
     if isinstance(model, nineml.Network):
         with Simulation(dt=args.timestep * un.ms, seed=args.seed,
                         properties_seed=args.properties_seed,
+                        device_delay=device_delay,
                         **model.delay_limits()) as sim:
             # Construct the network
             logger.info("Constructing network")
@@ -203,7 +221,9 @@ def run(argv):
                              external_currents=external_currents,
                              build_version=args.build_version)
         record_regime = False
-        with Simulation(dt=args.timestep * un.ms, seed=args.seed) as sim:
+        with Simulation(dt=args.timestep * un.ms, seed=args.seed,
+                        min_delay=min_delay,
+                        device_delay=device_delay) as sim:
             # Create cell
             cell = Cell(props, regime_=init_regime, **init_state)
             # Play inputs

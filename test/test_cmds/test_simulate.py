@@ -89,6 +89,8 @@ class TestSimulateCell(TestCase):
                 "--play iSyn {in_path} "
                 "--build_mode force "
                 "--build_version Cmd "
+                "--device_delay 0.5 ms "
+                "--min_delay 0.5 ms "
                 .format(nineml_model=self.izhi_path, sim=simulator,
                         out_path=out_path, in_path=in_path, t_stop=self.t_stop,
                         dt=self.dt, U='{} {}'.format(*self.U),
@@ -129,7 +131,8 @@ class TestSimulateCell(TestCase):
         nineml_model = ninemlcatalog.load(self.izhi_path)
         Cell = metaclass(nineml_model.component_class, build_version='API',
                          external_currents=['iSyn'])
-        with Simulation(dt=self.dt * un.ms) as sim:
+        with Simulation(dt=self.dt * un.ms, min_delay=0.5 * un.ms,
+                        device_delay=0.5 * un.ms) as sim:
             cell = Cell(nineml_model, U=self.U[0] * parse_units(self.U[1]),
                         V=self.V[0] * parse_units(self.V[1]), regime_='subVb')
             cell.record('V')
