@@ -357,8 +357,8 @@ class Comparer(object):
             generator = nest.Create(
                 'step_current_generator', 1,
                 {'amplitude_values': numpy.ravel(pq.Quantity(signal, 'pA')),
-                 'amplitude_times': numpy.ravel(
-                     signal.times.rescale(pq.ms)) - self.device_delay,
+                 'amplitude_times': numpy.ravel(numpy.asarray(
+                     signal.times.rescale(pq.ms))) - self.device_delay,
                  'start': float(signal.t_start.rescale(pq.ms)),
                  'stop': float(signal.t_stop.rescale(pq.ms))})
             nest.Connect(generator, self.nest_cell,

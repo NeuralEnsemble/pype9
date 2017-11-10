@@ -132,7 +132,7 @@ class Simulation(BaseSimulation):
         # but there is a problem loading the library with ctypes before it has
         # been loaded by the required mod files, so it is delayed until
         # initialisation
-        libninemlnrn = ctypes.CDLL(self._code_gen.libninemlnrn_so)
+        libninemlnrn = ctypes.CDLL(self.code_generator.libninemlnrn_so)
         libninemlnrn.nineml_seed_gsl_rng.arg_types = [ctypes.c_int()]
         libninemlnrn.nineml_seed_gsl_rng(int(self.dynamics_seed))
 
