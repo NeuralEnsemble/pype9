@@ -72,18 +72,22 @@ class CellMetaClass(type):
             name=name, component_class=component_class, **kwargs)
         try:
             Cell = cls._built_types[name]
+        except KeyError:
+            build = True
+        else:
             if not Cell.build_component_class.equals(
                     build_component_class, annotations_ns=[PYPE9_NS]):
                 raise Pype9BuildMismatchException(
                     "Cannot build '{}' cell dynamics as name clashes with "
                     "non-equal component class that was previously loaded.\n\n"
-                    "previous:\n{}\nthis:\n{}"
+                    "this:\n{}\nprevious:\n{}"
                     .format(name,
-                            Cell.build_component_class.serialize(
-                                format='yaml', version=2, to_str=True),
                             build_component_class.serialize(
+                                format='yaml', version=2, to_str=True),
+                            Cell.build_component_class.serialize(
                                 format='yaml', version=2, to_str=True)))
-        except KeyError:
+            build = False
+        if build:
             # Generate and compile cell class
             install_dir = code_gen.generate(
                 component_class=build_component_class, url=url, **kwargs)
