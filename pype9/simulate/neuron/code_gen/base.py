@@ -491,14 +491,13 @@ class CodeGenerator(BaseCodeGenerator):
 
     def get_install_dir(self, name, url):
         # return the platform-specific location of the nrnivmodl output files
-        return os.path.join(self.get_source_dir(self.get_build_dir(name, url)),
-                            self.specials_dir)
+        return os.path.join(self.get_source_dir(name, url), self.specials_dir)
 
     def get_compile_dir(self, name, url):
         """
         The compile dir is the same as the src dir for NEURON compile
         """
-        return self.get_source_dir(self.get_build_dir(name, url))
+        return self.get_source_dir(name, url)
 
     def load_libraries(self, name, url):
         install_dir = self.get_install_dir(name, url)

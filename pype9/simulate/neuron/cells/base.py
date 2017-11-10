@@ -53,8 +53,6 @@ class Cell(base.Cell):
         A dictionary of properties
     """
 
-    Simulation = Simulation
-
     DEFAULT_CM = 1.0 * un.nF  # Chosen to match point processes (...I think).
 
     def __init__(self, *args, **kwargs):
@@ -482,6 +480,7 @@ class CellMetaClass(base.CellMetaClass):
     nineml_celltype_from_model
     """
 
-    _built_types = {}
+    _built_types = {}  # Stores previously created types for reuse
     CodeGenerator = CodeGenerator
     BaseCellClass = Cell
+    Simulation = Simulation

@@ -99,7 +99,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     def base_dir_default(self):
         return os.path.join(
             expanduser("~"), '.pype9', 'build',
-            'pype9{}'.format(__version__),
+            'v{}'.format(__version__),
             'python{}'.format(sysconfig.get_config_var('py_version')),
             self.SIMULATOR_NAME)
 

@@ -32,8 +32,6 @@ basic_nineml_translations = {
 
 class Cell(base.Cell):
 
-    Simulation = Simulation
-
     def __init__(self, *properties, **kwprops):
         self._flag_created(False)
         self._cell = nest.Create(self.__class__.name)
@@ -204,8 +202,8 @@ class Cell(base.Cell):
             # Signals are played into NEST cells include a delay (set to be the
             # minimum), which is is subtracted from the start of the signal so
             # that the effect of the signal aligns with other simulators
-            times = signal.times.rescale(pq.ms) - self._device_delay * pq.ms
-            if times[0] <= 0.0 * pq.ms: 
+            t_start = signal.t_start - self._device_delay * pq.ms
+            if t_start <= 0.0 * pq.ms:
                 raise Pype9UsageError(
                     "Start time of signal played into port '{}' ({}) must "
                     "be greater than device delay ({} ms)".format(
@@ -214,8 +212,10 @@ class Cell(base.Cell):
                 'step_current_generator', 1,
                 {'amplitude_values': list(
                     numpy.ravel(pq.Quantity(signal, 'pA'))),
-                 'amplitude_times': list(numpy.ravel(times)),
-                 'start': start,
+                 'amplitude_times': list(numpy.ravel(
+                     signal.times.rescale(pq.ms) -
+                     self._device_delay * pq.ms)),
+                 'start': t_start,
                  'stop': float(signal.t_stop.rescale(pq.ms))})
             nest.Connect(self._inputs[port_name], self._cell, syn_spec={
                 "receptor_type": self._receive_ports[port_name],
@@ -294,6 +294,7 @@ class Cell(base.Cell):
 
 class CellMetaClass(base.CellMetaClass):
 
-    _built_types = {}
+    _built_types = {}  # Stores previously created types for reuse
     CodeGenerator = CodeGenerator
     BaseCellClass = Cell
+    Simulation = Simulation

@@ -52,7 +52,7 @@ class CellMetaClass(type):
     """
 
     def __new__(cls, component_class, build_url=None, build_version=None,
-                build_base_dir=None, **kwargs):
+                build_base_dir=None, code_generator=None, **kwargs):
         # Grab the url before the component class is cloned
         url = (build_url if build_url is not None else component_class.url)
         # Clone component class so annotations can be added to it and not bleed
@@ -67,12 +67,13 @@ class CellMetaClass(type):
         name = component_class.name
         if build_version is not None:
             name += build_version
-        try:
-            code_gen = cls.Simulator.active().code_generator
-        except Pype9NoActiveSimulationError:
-            code_gen = cls.CodeGenerator(base_dir=build_base_dir)
+        if code_generator is None:
+            try:
+                code_generator = cls.Simulation.active().code_generator
+            except Pype9NoActiveSimulationError:
+                code_generator = cls.CodeGenerator(base_dir=build_base_dir)
         # Get transformed build class
-        build_component_class = code_gen.transform_for_build(
+        build_component_class = code_generator.transform_for_build(
             name=name, component_class=component_class, **kwargs)
         try:
             Cell = cls._built_types[name]
@@ -105,17 +106,19 @@ class CellMetaClass(type):
             # Only build the components on the root node
             if mpi_comm.rank == MPI_ROOT:
                 # Generate and compile cell class
-                code_gen.generate(component_class=build_component_class,
-                                  url=url, **kwargs)
+                code_generator.generate(component_class=build_component_class,
+                                        url=url, **kwargs)
             # Make slave nodes wait for the root node to finish building
             mpi_comm.barrier()
             # Load newly built model
-            cls.load_libraries(name, url)
+            code_generator.load_libraries(name, url)
             # Create class member dict of new class
             dct = {'name': name,
                    'component_class': component_class,
                    'build_component_class': build_component_class,
-                   'code_generator': code_gen}
+                   'code_generator': code_generator,
+                   'unit_handler': code_generator.UnitHandler(component_class),
+                   'Simulation': cls.Simulation}
             # Create new class using Type.__new__ method
             Cell = super(CellMetaClass, cls).__new__(
                 cls, name, (cls.BaseCellClass,), dct)
