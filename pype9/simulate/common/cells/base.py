@@ -33,7 +33,6 @@ from .with_synapses import WithSynapses
 logger = logging.Logger("Pype9")
 
 
-
 class CellMetaClass(type):
     """
     Metaclass for creating simulator-specific cell classes from 9ML Dynamics
