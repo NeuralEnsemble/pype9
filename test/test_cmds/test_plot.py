@@ -65,7 +65,8 @@ class TestPlot(TestCase):
                         "--prop amplitude {amp} "
                         "--prop onset {onset} "
                         "--init_value current_output {init} "
-                        "--build_mode force"
+                        "--build_mode force "
+                        "--build_version Plot "
                         .format(out_path=self.cell_input_path,
                                 rec_t_start='{} {}'.format(*self.rec_t_start),
                                 t_stop=self.t_stop, dt=self.dt,
