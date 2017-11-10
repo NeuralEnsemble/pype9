@@ -65,8 +65,8 @@ class Simulation(with_metaclass(ABCMeta, object)):
     max_seed = 2 ** 32 - 1
 
     def __init__(self, dt, t_start=0.0 * un.s, seed=None, properties_seed=None,
-                 min_delay=1 * un.ms, max_delay=10 * un.ms, code_gen=None,
-                 **options):
+                 min_delay=1 * un.ms, max_delay=10 * un.ms,
+                 code_generator=None, **options):
         self._check_units('dt', dt, un.time)
         self._check_units('t_start', dt, un.time)
         self._check_units('min_delay', dt, un.time, allow_none=True)
@@ -90,13 +90,13 @@ class Simulation(with_metaclass(ABCMeta, object)):
                 "Provided structure seed {} is out of range, must be between "
                 "(0 and {})".format(seed, self.max_seed))
         self._base_properties_seed = properties_seed
-        if code_gen is None:
-            code_gen = self.CodeGenerator()
-        self._code_gen = code_gen
+        if code_generator is None:
+            code_generator = self.CodeGenerator()
+        self._code_generator = code_generator
 
     @property
     def code_generator(self):
-        return self._code_gen
+        return self._code_generator
 
     def __enter__(self):
         self.activate()

@@ -352,7 +352,7 @@ class UnitHandler(with_metaclass(ABCMeta, DynamicsDimensionResolver)):
         return Quantity(float(qty), units)
 
     @classmethod
-    def _load_basis_matrices_and_cache(cls, basis, compounds, directory):
+    def _init_matrices_and_cache(cls, basis, compounds):
         """
         Creates matrix corresponding to unit basis and loads cache of
         previously calculated mappings from dimensions onto this basis.
@@ -363,33 +363,13 @@ class UnitHandler(with_metaclass(ABCMeta, DynamicsDimensionResolver)):
             "No pure time dimension found in basis units")
         # Get matrix of basis unit dimensions
         cls._A = array([list(b.dimension) for b in basis]).T
-#         # Get cache path from file path of subclass
-        cls._cache_path = os.path.join(directory, cls._CACHE_FILENAME)
-#         try:
-#             with open(cls._cache_path) as f:
-#                 cls._cache, loaded_A = pkl.load(f)
-#                 # If the dimension matrix has been changed since the cache was
-#                 # generated, reset the cache
-#                 if (loaded_A != cls._A).all():
-#                     cls._cache = {}
-#         except:
-#         logger.info("Building unit conversion cache in file '{}'"
-#                     .format(cls._cache_path))
+        logger.info("Initialising unit conversion cache")
         cls._cache = cls._init_cache(basis, compounds)
 
         # The lengths in terms of SI dimension bases of each of the unit
         # basis compounds.
         si_lengths = [sum(abs(si) for si in d.dimension) for d in basis]
-        return cls._A, cls._cache, cls._cache_path, si_lengths
-
-#     @classmethod
-#     def save_cache(cls):
-#         try:
-#             with open(cls._cache_path, 'wb') as f:
-#                 pkl.dump((cls._cache, cls._A), f)
-#         except IOError:
-#             logger.warning("Could not save unit conversion cache to file "
-#                            "'{}'".format(cls._cache_path))
+        return cls._A, cls._cache, si_lengths
 
     @classmethod
     def _init_cache(cls, basis, compounds):
