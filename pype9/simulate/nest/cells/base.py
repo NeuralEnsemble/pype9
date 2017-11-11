@@ -248,7 +248,7 @@ class Cell(base.Cell):
             delay = self.device_delay
         if properties is None:
             properties = []
-        delay = float(delay.rescale(un.ms))
+        delay = float(delay.in_units(un.ms))
         send_port = sender.component_class.send_port(send_port_name)
         receive_port = self.component_class.receive_port(receive_port_name)
         if send_port.communicates != receive_port.communicates:

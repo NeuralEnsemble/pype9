@@ -395,9 +395,6 @@ class UnitHandler(with_metaclass(ABCMeta, DynamicsDimensionResolver)):
         Removes the existing cache of unit projections and creates a new one in
         its place
         """
-        # Removed saved version of cache
-        if os.path.exists(cls.cache_path):
-            os.remove(cls.cache_path)
         # Create a new cache with the specified units entered into it
         cls.cache = cls._init_cache(cls.basis, cls.compounds)
 
