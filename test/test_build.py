@@ -6,17 +6,8 @@ import nineml.units as un
 from pype9.simulate.nest import CellMetaClass
 from pype9.simulate.common.cells.with_synapses import WithSynapses
 from pype9.exceptions import Pype9BuildMismatchError
-import logging
-import sys
 from unittest import TestCase  # @Reimport
-
-logger = logging.getLogger('pype9')
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter(
-    '%(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+import pype9.utils.print_logger  # @UnusedImport
 
 
 class TestSeeding(TestCase):

@@ -145,7 +145,8 @@ class Cell(object):
     regime_ : str
         Name of regime the cell will be initiated in
     kwargs : dict(str, nineml.Quantity)
-        Properties and initial state variables to initiate the cell with.
+        Properties and initial state variables to initiate the cell with. These
+        will override properties/initial-values in the prototype
     """
 
     def __init__(self, *args, **kwargs):
@@ -179,7 +180,7 @@ class Cell(object):
                         "keyword arg ({})".format(regime, kwargs['regime_']))
             else:
                 try:
-                    regime = kwargs['regime_']
+                    regime = kwargs.pop('regime_')
                 except KeyError:
                     if self.component_class.num_regimes == 1:
                         regime = next(self.component_class.regime_names)
