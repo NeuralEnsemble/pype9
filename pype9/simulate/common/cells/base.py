@@ -140,12 +140,12 @@ class Cell(object):
 
     Parameters
     ----------
-    args : list(DynamicsProperties)
-        A singlton
-    kwargs : dict(str, nineml.Quantity)
-        Parameters and initial state variables to initiate the cell with.
+    prototype_ : DynamicsProperties
+        A dynamics properties object used as the "prototype" for the cell
     regime_ : str
         Name of regime the cell will be initiated in
+    kwargs : dict(str, nineml.Quantity)
+        Properties and initial state variables to initiate the cell with.
     """
 
     def __init__(self, *args, **kwargs):
@@ -162,28 +162,39 @@ class Cell(object):
                 self._set(k, v)  # Values should be in the right units.
             self._regime_index = None
         else:
-            # Set initial regime of the cell
-            regime = kwargs.pop('regime_', None)
-            if regime is None:
-                if self.component_class.num_regimes == 1:
-                    regime = next(self.component_class.regime_names)
-                else:
-                    raise Pype9UsageError(
-                        "Need to specify initial regime using initial_regime "
-                        "kwarg for component class with multiple regimes "
-                        "('{}')".format(self.component_class.regime_names))
-            self.set_regime(regime)
-            # Set the properties and initial values of the cell
-            if args:
-                if len(args) > 1 or not isinstance(args[0],
-                                                   nineml.DynamicsProperties):
-                    raise Pype9UsageError(
-                        "'{}' cell __init__ method only takes one non-keyword "
-                        " argument (DynamicsProperties), provided {}"
-                        .format(self.name, ', '.join(str(a) for a in args)))
+            if len(args) >= 1:
                 prototype = args[0]
+                if 'prototype_' in kwargs:
+                    raise Pype9UsageError(
+                        "Cannot provide prototype as (1st) argument ({}) and "
+                        "keyword arg ({})".format(prototype,
+                                                  kwargs['prototype_']))
             else:
-                prototype = self.component_class
+                prototype = kwargs.pop('prototype_', self.component_class)
+            if len(args) >= 2:
+                regime = args[1]
+                if 'regime_' in kwargs:
+                    raise Pype9UsageError(
+                        "Cannot provide regime as (2nd) argument ({}) and "
+                        "keyword arg ({})".format(regime, kwargs['regime_']))
+            else:
+                try:
+                    regime = kwargs['regime_']
+                except KeyError:
+                    if self.component_class.num_regimes == 1:
+                        regime = next(self.component_class.regime_names)
+                    else:
+                        raise Pype9UsageError(
+                            "Need to specify initial regime using 'regime_' "
+                            "keyword arg for component class with multiple "
+                            "regimes ('{}')".format(
+                                self.component_class.regime_names))
+            if len(args) > 2:
+                raise Pype9UsageError(
+                    "Only two non-keyword arguments ('prototype_' and "
+                    "'regime_' permitted in Cell __init__ (provided: {})"
+                    .format(', '.join(args)))
+            self.set_regime(regime)
             properties = []
             initial_values = []
             for name, qty in kwargs.items():
@@ -235,8 +246,8 @@ class Cell(object):
         if self._created:
             if varname not in self:
                 raise Pype9AttributeError(
-                    "'{}' is not a parameter or state variable of the '{}'"
-                    " component class ('{}')"
+                    "'{}' is not an attribute nor parameter or state variable "
+                    "of the '{}' component class ('{}')"
                     .format(varname, self.component_class.name,
                             "', '".join(chain(
                                 self.component_class.parameter_names,
@@ -300,10 +311,11 @@ class Cell(object):
                     "', '".join(self.component_class.regime_names)))
         try:
             # If regime is an integer (as it will be when passed from PyNN)
-            self._regime_index = int(regime)
+            index = int(regime)
         except ValueError:
             # If the regime is the regime name
-            self._regime_index = self.regime_index(regime)
+            index = self.regime_index(regime)
+        super(Cell, self).__setattr__('_regime_index', index)
         self._set_regime()
 
     def get(self, varname):
@@ -311,6 +323,10 @@ class Cell(object):
         Gets the 9ML property associated with the varname
         """
         return self._nineml.prop(varname)
+
+    def set(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def __dir__(self):
         """
@@ -371,7 +387,8 @@ class Cell(object):
         The reciprocal of regime_index, returns the regime name from its index
         """
         return cls.build_component_class.from_index(
-            index, Regime.nineml_type, nineml_children=Dynamics.nineml_children).name
+            index, Regime.nineml_type,
+            nineml_children=Dynamics.nineml_children).name
 
     def initialize(self):
         for iv in self._nineml.initial_values:

@@ -1,7 +1,6 @@
 from __future__ import print_function
 from __future__ import division
 from builtins import zip
-from past.utils import old_div
 import nineml.units as un
 from argparse import ArgumentParser
 import ninemlcatalog
@@ -87,26 +86,25 @@ if __name__ == "__main__":
     if args.reference:
         simulators_to_run.add('nest')
 
-    pype9_metaclass = {}
-    pype9_simulation = {}
+    MetaClasses = {}
+    Simulations = {}
     if 'neuron' in simulators_to_run:
         from pype9.simulate.neuron import (
             CellMetaClass as CellMetaClassNEURON,
-            simulation as simulationNEURON)
-        pype9_simulation['neuron'] = simulationNEURON
-        pype9_metaclass['neuron'] = CellMetaClassNEURON
+            Simulation as SimulationNEURON)
+        Simulations['neuron'] = SimulationNEURON
+        MetaClasses['neuron'] = CellMetaClassNEURON
     if 'nest' in simulators_to_run:
         import nest
         from pype9.simulate.nest import (
             CellMetaClass as CellMetaClassNEST,
-            simulation as simulationNEST)
-        pype9_simulation['nest'] = simulationNEST
-        pype9_metaclass['nest'] = CellMetaClassNEST
+            Simulation as SimulationNEST)
+        Simulations['nest'] = SimulationNEST
+        MetaClasses['nest'] = CellMetaClassNEST
 
     if args.fast_spiking:
         model = ninemlcatalog.load('neuron/Izhikevich',
                                    'IzhikevichFastSpiking')
-        name = 'IzhikevichFastSpiking'
         properties = ninemlcatalog.load('neuron/Izhikevich',
                                         'SampleIzhikevichFastSpiking')
         initial_regime = 'subVb'
@@ -116,9 +114,10 @@ if __name__ == "__main__":
             input_amp = 100 * pq.pA
         else:
             input_amp = args.input_amplitude * pq.pA
-        cell_kwargs = {'external_currents': ['iSyn']}
+        # Designate 'iSyn' as an "external" current so that we can play
+        # signals into it.
+        metaclass_kwargs = {'external_currents': ['iSyn']}
     else:
-        name = 'IzhikevichOriginal'
         model = ninemlcatalog.load('neuron/Izhikevich', 'Izhikevich')
         properties = ninemlcatalog.load('neuron/Izhikevich',
                                         'SampleIzhikevich')
@@ -129,34 +128,41 @@ if __name__ == "__main__":
             input_amp = 15 * pq.pA
         else:
             input_amp = args.input_amplitude * pq.pA
-        cell_kwargs = {}  # Isyn should be guessed as an external current
+        metaclass_kwargs = {}  # Isyn should be guessed as an external current
 
     # Create an input step current
-    num_preceding = int(np.floor(old_div(args.input_start, args.timestep)))
-    num_remaining = int(np.ceil(old_div((args.simtime - args.input_start),
-                                args.timestep)))
+    # NB: The analog signal needs to be offset > "device delay" (i.e. the
+    #     delay from the current source) when playing into NEST cells
+    offset = min_delay + args.timestep
+    num_preceding = int(np.floor((args.input_start - offset) /
+                                 args.timestep))
+    num_remaining = int(np.ceil((args.simtime - args.input_start) /
+                                args.timestep))
     amplitude = float(pq.Quantity(input_amp, 'nA'))
     input_signal = neo.AnalogSignal(
         np.concatenate((np.zeros(num_preceding),
                         np.ones(num_remaining) * amplitude)),
-        sampling_period=args.timestep * pq.ms, units='nA', time_units='ms')
+        sampling_period=args.timestep * pq.ms, units='nA', time_units='ms',
+        t_start=offset * pq.ms)
 
+    cells = {}
     for simulator, seed in zip(simulators_to_run, seeds):
-        with pype9_simulation(min_delay=min_delay, max_delay=max_delay,
-                              dt=args.timestep * un.ms,
-                              seed=seed) as sim:
+        with Simulations[simulator](
+            min_delay=min_delay * un.ms, max_delay=max_delay * un.ms,
+            dt=args.timestep * un.ms,
+                seed=seed) as sim:
             # Construct the cells and set up recordings and input plays
-            cells = {}
             if simulator in args.simulators:
-                cells[simulator] = pype9_metaclass[simulator](
-                    model, name=name, default_properties=properties,
-                    initial_regime=initial_regime, **cell_kwargs)()
+                Cell = MetaClasses[simulator](model, build_version='9ML',
+                                              **metaclass_kwargs)
+                cells[simulator] = Cell(properties)
                 # Play input current into cell
                 cells[simulator].play(input_port_name, input_signal)
                 # Record voltage
                 cells[simulator].record('V')
                 # Set initial state
-                cells[simulator].update_state(initial_states)
+                cells[simulator].set(**initial_states)
+                cells[simulator].set_regime(initial_regime)
             if args.reference:
                 ref_cell, ref_multi, ref_input = construct_reference(
                     input_signal, args.timestep)
@@ -180,8 +186,8 @@ if __name__ == "__main__":
     legend = []
     for simulator in args.simulators:
         v = cells[simulator].recording('V')
-        inds = v.times > args.plot_start
-        plt.plot(v.times[inds], v[inds])
+        v = v.time_slice(args.plot_start * pq.ms, v.t_stop)
+        plt.plot(v.times, v)
         legend.append(simulator.upper())
     if args.reference:
         events, interval = nest.GetStatus(

@@ -85,7 +85,7 @@ with simulation(args.timestep * un.ms) as sim:
         syn_spec['weight'] = UnitHandler.scale_value(weight)
     nest.Connect(input._cell, cell._cell, syn_spec=syn_spec)
     # Set initial conditions
-    input.update_state({'t_next': old_div((1 * un.unitless), rate)})
+    input.t_next = (1 * un.unitless) / rate
     cell.update_state({
         'b__psr': 0.0 * un.nA,
         'a__psr': 0.0 * un.nA,
