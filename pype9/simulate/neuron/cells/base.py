@@ -225,8 +225,8 @@ class Cell(base.Cell):
                 # This assumes that the value of the capacitance is in nF
                 # which it should be from the super setattr method
                 self._sec.cm = float((
-                    val * un.nF / self.surface_area).in_units(old_div(un.uF,
-                                                              un.cm ** 2)))
+                    val * un.nF / self.surface_area).in_units(un.uF /
+                                                              un.cm ** 2))
         except LookupError:
             varname = self._escaped_name(varname)
             try:

@@ -3,8 +3,6 @@ Constructs a leaky integrate and fire model with an alpha synapse and connects
 it to an input source that fires spikes at a constant rate
 """
 from __future__ import division
-from past.utils import old_div
-import os
 import nest
 from argparse import ArgumentParser
 from nineml import units as un, MultiDynamics

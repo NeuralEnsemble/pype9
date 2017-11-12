@@ -42,7 +42,7 @@ def get_pyNN_value(qty, unit_handler, rng):
         # UncertML uses 'rate' parameter whereas PyNN uses 'beta' parameter
         # (1/rate) to define exponential random distributions.
         if rv_name == 'exponential':
-            rv_params[0] = old_div(1.0, rv_params[0])
+            rv_params[0] = 1.0 / rv_params[0]
         # FIXME: Need to scale random distribution to correct units. Should
         #        probably derive PyNN RandomDistribution class to multiply by
         #        when a value is drawn
