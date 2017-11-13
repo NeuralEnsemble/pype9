@@ -470,7 +470,7 @@ class Cell(object):
         try:
             rec = self._regime_recording()
         except KeyError:
-            raise Pype9UsageError(
+            raise Pype9RegimeTransitionsNotRecordedError(
                 "Regime transitions not recorded, call 'record_regime' before"
                 " simulation")
         cc = self.build_component_class

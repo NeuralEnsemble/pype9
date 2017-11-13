@@ -17,4 +17,4 @@ MPI_ROOT = 0
 
 
 def is_mpi_master():
-    return (mpi_comm == MPI_ROOT)
+    return (mpi_comm.rank == MPI_ROOT)
