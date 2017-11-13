@@ -25,7 +25,6 @@ from pype9.exceptions import Pype9BuildError
 from pype9.utils import add_lib_path
 import pype9
 
-REGIME_VARNAME = '__regime__'
 NEST_CONFIG_PATH_ENV_VAR = 'PYPE9_NEST_CONFIG_PATH'
 
 logger = logging.getLogger('pype9')
@@ -37,6 +36,7 @@ class CodeGenerator(BaseCodeGenerator):
 
     SIMULATOR_NAME = 'nest'
     ODE_SOLVER_DEFAULT = 'gsl'
+    REGIME_VARNAME = '__regime__'
     SS_SOLVER_DEFAULT = None
     MAX_STEP_SIZE_DEFAULT = 0.01  # Used for CVODE/IDA, FIXME: not sure best value!!! @IgnorePep8
     ABS_TOLERANCE_DEFAULT = 1e-3
@@ -94,7 +94,7 @@ class CodeGenerator(BaseCodeGenerator):
                 self.MAX_SIMULTANEOUS_TRANSITIONS),
             'parameter_scales': [],
             'v_threshold': kwargs.get('v_threshold', self.V_THRESHOLD_DEFAULT),
-            'regime_varname': REGIME_VARNAME,
+            'regime_varname': self.REGIME_VARNAME,
             'debug_print': [] if debug_print is None else debug_print}
         ode_solver = kwargs.get('ode_solver', self.ODE_SOLVER_DEFAULT)
         ss_solver = kwargs.get('ss_solver', self.SS_SOLVER_DEFAULT)

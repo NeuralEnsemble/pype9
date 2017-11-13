@@ -110,7 +110,8 @@ if __name__ == "__main__":
         properties = ninemlcatalog.load('neuron/Izhikevich',
                                         'SampleIzhikevichFastSpiking')
         initial_regime = 'subVb'
-        initial_states = {'U': -1.625 * pq.pA, 'V': -70.0 * pq.mV}
+        initial_states = {'U': -1.625 * pq.pA, 'V': -70.0 * pq.mV,
+                          'regime_': 'subthreshold'}
         input_port_name = 'iSyn'
         if args.input_amplitude is None:
             input_amp = 100 * pq.pA
@@ -157,14 +158,11 @@ if __name__ == "__main__":
             if simulator in args.simulators:
                 Cell = MetaClasses[simulator](model, build_version='9ML',
                                               **metaclass_kwargs)
-                cells[simulator] = Cell(properties)
+                cells[simulator] = Cell(properties, **initial_states)
                 # Play input current into cell
                 cells[simulator].play(input_port_name, input_signal)
                 # Record voltage
                 cells[simulator].record('V')
-                # Set initial state
-                cells[simulator].set(**initial_states)
-                cells[simulator].set_regime(initial_regime)
             if args.reference:
                 ref_cell, ref_multi, ref_input = construct_reference(
                     input_signal, args.timestep)

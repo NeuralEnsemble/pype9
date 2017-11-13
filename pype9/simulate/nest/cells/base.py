@@ -15,7 +15,7 @@ import nest
 import quantities as pq
 from nineml.exceptions import NineMLNameError
 from nineml import units as un
-from ..code_gen import CodeGenerator, REGIME_VARNAME
+from ..code_gen import CodeGenerator
 from pype9.simulate.nest.simulation import Simulation
 from pype9.simulate.common.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
@@ -47,7 +47,8 @@ class Cell(base.Cell):
         nest.SetStatus(self._cell, varname, value)
 
     def _set_regime(self):
-        nest.SetStatus(self._cell, REGIME_VARNAME, self._regime_index)
+        nest.SetStatus(self._cell, self.code_generator.REGIME_VARNAME,
+                       self._regime_index)
 
     def record(self, port_name, interval=None, **kwargs):  # @UnusedVariable @IgnorePep8
         # Create dictionaries for storing local recordings. These are not
@@ -88,9 +89,11 @@ class Cell(base.Cell):
         if interval is None:
             interval = Simulation.active().dt
         interval = float(interval.in_units(un.ms))
-        self._recorders[REGIME_VARNAME] = recorder = nest.Create(
+        self._recorders[
+            self.code_generator.REGIME_VARNAME] = recorder = nest.Create(
             'multimeter', 1, {"interval": interval})
-        nest.SetStatus(recorder, {'record_from': [REGIME_VARNAME]})
+        nest.SetStatus(recorder,
+                       {'record_from': [self.code_generator.REGIME_VARNAME]})
         nest.Connect(
             recorder, self._cell,
             syn_spec={'delay': self.device_delay_ms})
@@ -139,13 +142,14 @@ class Cell(base.Cell):
         return data
 
     def _regime_recording(self):
-        events, interval = nest.GetStatus(self._recorders[REGIME_VARNAME],
-                                              ('events', 'interval'))[0]
+        events, interval = nest.GetStatus(
+            self._recorders[self.code_generator.REGIME_VARNAME],
+            ('events', 'interval'))[0]
         return neo.AnalogSignal(
-            events[REGIME_VARNAME],
+            events[self.code_generator.REGIME_VARNAME],
             sampling_period=interval * pq.ms, units='dimensionless',
             t_start=self.unit_handler.to_pq_quantity(self._t_start),
-            name=REGIME_VARNAME)
+            name=self.code_generator.REGIME_VARNAME)
 
     def build_name(self, varname):
         # Get mapped port name if port corresponds to membrane voltage

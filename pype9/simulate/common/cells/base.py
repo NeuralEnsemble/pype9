@@ -448,6 +448,8 @@ class Cell(object):
             self._nineml.name,
             ('from {}'.format(t_start) if t_start is not None else '')))
         for port_name in self._recorders:
+            if port_name == self.code_generator.REGIME_VARNAME:
+                continue
             sig = self.recording(port_name, t_start=t_start)
             if isinstance(sig, neo.AnalogSignal):
                 seg.analogsignals.append(sig)

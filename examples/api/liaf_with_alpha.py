@@ -35,6 +35,8 @@ parser.add_argument('--build_mode', type=str, default='lazy',
 parser.add_argument('--connection_weight', action='store_true', default=False,
                     help=("Whether weight should be a parameter of the cell "
                           "or passed as a weight"))
+parser.add_argument('--save_fig', type=str, default=None,
+                    help=("Location to save the generated figures"))
 args = parser.parse_args()
 
 delay = args.delay * un.ms
@@ -113,5 +115,6 @@ with Simulation(args.timestep * un.ms, min_delay=delay) as sim:
     # Run simulation
     sim.run(args.simtime * un.ms)
 # Plot recordings
-plot(cell.recordings())
+plot(cell.recordings(), save=args.save_fig, show=(not args.save_fig),
+     title='Leaky Integrate and Fire with Alpha Synapse')
 print("Finished simulation.")

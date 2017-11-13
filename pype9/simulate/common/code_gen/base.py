@@ -42,6 +42,13 @@ from pype9.utils import remove_ignore_missing
 
 logger = logging.getLogger('pype9')
 
+BASE_BUILD_DIR = os.path.join(
+    expanduser("~"),
+    '.pype9',
+    'build',
+    'v{}'.format(__version__),
+    'python{}'.format(sysconfig.get_config_var('py_version')))
+
 
 class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     """
@@ -59,6 +66,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
                           'generate_only',  # Only generate source files
                           'purge'  # Remove all configure files and rebuild
                           ]
+
     _PARAMS_DIR = 'params'
     _SRC_DIR = 'src'
     _INSTL_DIR = 'install'
@@ -98,11 +106,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
 
     @classmethod
     def base_dir_default(self):
-        return os.path.join(
-            expanduser("~"), '.pype9', 'build',
-            'v{}'.format(__version__),
-            'python{}'.format(sysconfig.get_config_var('py_version')),
-            self.SIMULATOR_NAME)
+        return os.path.join(BASE_BUILD_DIR, self.SIMULATOR_NAME)
 
     @abstractmethod
     def generate_source_files(self, dynamics, src_dir, name, **kwargs):
@@ -320,7 +324,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         with open(os.path.join(directory, filename), 'w') as f:
             f.write(contents)
 
-    def path_to_utility(self, utility_name, env_var=None, **kwargs):  # @UnusedVariable @IgnorePep8
+    def path_to_utility(self, utility_name, env_var='', **kwargs):  # @UnusedVariable @IgnorePep8
         """
         Returns the full path to an executable by searching the "PATH"
         environment variable

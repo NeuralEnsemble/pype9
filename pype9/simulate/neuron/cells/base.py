@@ -17,7 +17,7 @@ import numpy
 import quantities as pq
 import sympy
 import neo
-from ..code_gen import CodeGenerator, REGIME_VARNAME
+from ..code_gen import CodeGenerator
 from neuron import h
 from nineml import units as un
 from nineml.abstraction import EventPort, Dynamics
@@ -241,7 +241,7 @@ class Cell(base.Cell):
                         .format(varname))
 
     def _set_regime(self):
-        setattr(self._hoc, REGIME_VARNAME, self._regime_index)
+        setattr(self._hoc, self.code_generator.REGIME_VARNAME, self._regime_index)
 
     def record(self, port_name, **kwargs):  # @UnusedVariable
         """
@@ -286,8 +286,10 @@ class Cell(base.Cell):
 
     def record_regime(self):
         self._initialize_local_recording()
-        self._recordings[REGIME_VARNAME] = recording = h.Vector()
-        recording.record(getattr(self._hoc, '_ref_{}'.format(REGIME_VARNAME)))
+        self._recordings[
+            self.code_generator.REGIME_VARNAME] = recording = h.Vector()
+        recording.record(getattr(self._hoc, '_ref_{}'
+                                 .format(self.code_generator.REGIME_VARNAME)))
 
     def recording(self, port_name, t_start=None):
         """
@@ -326,8 +328,10 @@ class Cell(base.Cell):
     def _regime_recording(self):
         t_start = self.unit_handler.to_pq_quantity(self._t_start)
         return neo.AnalogSignal(
-            self._recordings[REGIME_VARNAME], sampling_period=h.dt * pq.ms,
-            t_start=t_start, units='dimensionless', name=REGIME_VARNAME)
+            self._recordings[self.code_generator.REGIME_VARNAME],
+            sampling_period=h.dt * pq.ms,
+            t_start=t_start, units='dimensionless',
+            name=self.code_generator.REGIME_VARNAME)
 
     def reset_recordings(self):
         """
