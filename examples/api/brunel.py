@@ -12,16 +12,13 @@ import numpy as np
 from nineml import units as un, Property
 from nineml.user import Initial
 import argparse
-import logging
 import matplotlib
 from pyNN.utility import SimulationProgressBar
 import sys
 argv = sys.argv[1:]
 from pype9.mpi import is_mpi_master  # @IgnorePep8
 from pype9.utils.testing import ReferenceBrunel2000  # @IgnorePep8
-
-
-pyNN_logger = logging.Logger('PyNN')
+import pype9.utils.print_logger  # @UnusedImport @IgnorePep8
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--case', type=str, default='AI',

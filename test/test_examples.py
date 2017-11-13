@@ -1,30 +1,54 @@
+"""
+Run all examples in the examples directory to check that they run without
+error
+"""
 from __future__ import division
 from __future__ import print_function
-import ninemlcatalog
-from nineml.abstraction import Parameter, TimeDerivative, StateVariable
-import nineml.units as un
-from pype9.simulate.nest import CellMetaClass
-from pype9.simulate.common.cells.with_synapses import WithSynapses
-from pype9.exceptions import Pype9BuildMismatchError
+import sys
+import os.path
+import subprocess as sp
 from unittest import TestCase  # @Reimport
 import pype9.utils.print_logger  # @UnusedImport
 
 
+examples_path = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', 'examples'))
+
+api_path = os.path.join(examples_path, 'api')
+bash_path = os.path.join(examples_path, 'bash')
+
+
 class TestExamples(TestCase):
 
-    def test_build_name_conflict(self):
-        izhi = ninemlcatalog.load('neuron/Izhikevich.xml#Izhikevich')
-        izhi2 = izhi.clone()
+    def test_brunel(self):
+        self.run_api('brunel')
 
-        izhi2.add(StateVariable('Z', dimension=un.dimensionless))
-        izhi2.regime('subthreshold_regime').add(TimeDerivative('Z', '1 / zp'))
-        izhi2.add(Parameter('zp', dimension=un.time))
+    def test_izhikevich(self):
+        self.run_api('izhikevich')
 
-        izhi_wrap = WithSynapses.wrap(izhi)
-        izhi2_wrap = WithSynapses.wrap(izhi2)
+    def test_liaf_with_alpha(self):
+        self.run_api('liaf_with_alpha')
 
-        CellMetaClass(izhi_wrap)
-        self.assertRaises(
-            Pype9BuildMismatchError,
-            CellMetaClass,
-            izhi2_wrap)
+    def test_simple_hh(self):
+        self.run_api('simple_hh')
+        self.run_bash('simple_hh')
+
+    def run_api(self, fname, args=[]):
+        all_args = [sys.executable,
+                    os.path.join(api_path, fname) + '.py'] + args
+        process = sp.Popen(
+            all_args, stdout=sp.PIPE, stderr=sp.PIPE, env=os.environ.copy())
+        stdout, stderr = process.communicate()
+        self.assertEqual(process.returncode, 0,
+                         "Command '{}' exited with failure:{}\n\n{}".format(
+                             ' '.join(all_args), str(stdout), str(stderr)))
+
+    def run_bash(self, fname, args=[]):
+        all_args = ['bash', os.path.join(bash_path, fname) + '.sh'] + args
+        process = sp.Popen(
+            all_args, stdout=sp.PIPE, stderr=sp.PIPE, env=os.environ.copy(),
+            shell=True)
+        stdout, stderr = process.communicate()
+        self.assertEqual(process.returncode, 0,
+                         "Command '{}' exited with failure:{}\n\n{}".format(
+                             ' '.join(all_args), str(stdout), str(stderr)))

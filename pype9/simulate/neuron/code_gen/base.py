@@ -25,7 +25,8 @@ from neuron import load_mechanisms
 from pype9.simulate.common.code_gen import BaseCodeGenerator
 from pype9.simulate.common.cells import (
     WithSynapses, DynamicsWithSynapses)
-from pype9.exceptions import Pype9BuildError, Pype9RuntimeError
+from pype9.exceptions import (
+    Pype9BuildError, Pype9RuntimeError, Pype9CommandNotFoundError)
 import pype9
 from datetime import datetime
 from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
@@ -33,6 +34,7 @@ from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
 from nineml.abstraction.dynamics.visitors.queriers import (
     DynamicsInterfaceInferer)
 from sympy.printing import ccode
+from pype9.mpi import is_mpi_master, mpi_comm
 from pype9.simulate.neuron.units import UnitHandler
 try:
     from nineml.extensions.kinetics import Kinetics  # @UnusedImport
@@ -54,6 +56,7 @@ logger = logging.getLogger("pype9")
 
 REGIME_VARNAME = 'regime_'
 SEED_VARNAME = 'seed_'
+NRNIVMODL_PATH_ENV_VAR='PYPE9_NRNIVMODL_PATH'
 
 
 class CodeGenerator(BaseCodeGenerator):
@@ -72,11 +75,14 @@ class CodeGenerator(BaseCodeGenerator):
 
     def __init__(self, gsl_path=None, **kwargs):
         super(CodeGenerator, self).__init__(**kwargs)
-        self.nrnivmodl_path = self.path_to_utility('nrnivmodl')
-        self.modlunit_path = self.path_to_utility('modlunit')
+        self.nrnivmodl_path = self.path_to_utility(
+            'nrnivmodl', env_var=NRNIVMODL_PATH_ENV_VAR)
+        self.modlunit_path = self.path_to_utility('modlunit', default=None)
         # Compile wrappers around GSL random distribution functions
-        if not os.path.exists(self.libninemlnrn_so):
-            self.compile_libninemlnrn()
+        if is_mpi_master():
+            if not os.path.exists(self.libninemlnrn_so):
+                self.compile_libninemlnrn()
+        mpi_comm.barrier()
         self.nrnivmodl_flags = [
             '-L' + self.libninemlnrn_dir,
             '-Wl,-rpath,' + self.libninemlnrn_dir,
@@ -461,7 +467,7 @@ class CodeGenerator(BaseCodeGenerator):
         logger.info("Building NMODL mechanisms in '{}' directory."
                     .format(compile_dir))
         # Check the created units by running modlunit
-        if __debug__:
+        if __debug__ and self.modlunit_path is not None:
             for fname in os.listdir('.'):
                 if fname.endswith('.mod'):
                     try:
@@ -645,14 +651,15 @@ class CodeGenerator(BaseCodeGenerator):
         try:
             # Used to attempt to determine the location of the GSL library
             nest_config_path = self.path_to_utility('nest-config')
-            libs = str(sp.check_output('{} --libs'.format(nest_config_path),
-                                       shell=True))
-            prefixes = [p[2:-3] for p in libs.split()
-                        if p.startswith('-L') and p.endswith('lib') and
-                        'gsl' in p]
-        except Pype9BuildError:
+        except Pype9CommandNotFoundError:
             prefixes = []
         except sp.CalledProcessError:
             raise Pype9BuildError(
                 "Could not run '{} --libs'".format(self.nest_config_path))
+        else:
+            libs = str(sp.check_output('{} --libs'.format(nest_config_path),
+                                       shell=True))
+            prefixes = [
+                p[2:-3] for p in libs.split()
+                if p.startswith('-L') and p.endswith('lib') and 'gsl' in p]
         return prefixes

@@ -26,7 +26,8 @@ from abc import ABCMeta, abstractmethod
 import sympy
 from nineml import units
 from nineml.exceptions import NineMLNameError
-from pype9.exceptions import Pype9BuildError
+from pype9.exceptions import (
+    Pype9BuildError, Pype9CommandNotFoundError, Pype9RuntimeError)
 from ..cells.with_synapses import read
 import logging
 import pype9.annotations
@@ -319,7 +320,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         with open(os.path.join(directory, filename), 'w') as f:
             f.write(contents)
 
-    def path_to_utility(self, utility_name):
+    def path_to_utility(self, utility_name, env_var=None, **kwargs):  # @UnusedVariable @IgnorePep8
         """
         Returns the full path to an executable by searching the "PATH"
         environment variable
@@ -328,20 +329,24 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         ----------
         utility_name : str
             Name of executable to search the execution path
+        env_var : str
+            Name of a environment variable to lookup first before searching
+            path
+        default : str | None
+            The default value to assign to the path if it cannot be found.
 
         Returns
         -------
         utility_path : str
             Full path to executable
         """
-        # Check to see whether the path of the utility has been saved in the
-        # 'paths' directory (typically during installation)
-        saved_path_path = os.path.join(os.path.dirname(__file__),
-                                       'paths', utility_name + '_path')
+        if kwargs and list(kwargs) != ['default']:
+            raise Pype9RuntimeError(
+                "Should only provide 'default' as kwarg to path_to_utility "
+                "provided ({})".format(kwargs))
         try:
-            with open(saved_path_path) as f:
-                utility_path = f.read()
-        except IOError:
+            utility_path = os.environ[env_var]
+        except KeyError:
             if platform.system() == 'Windows':
                 utility_name += '.exe'
             # Get the system path
@@ -356,9 +361,18 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
                     utility_path = path
                     break
             if not utility_path:
-                raise Pype9BuildError(
-                    "Could not find executable '{}' on the system path '{}'"
-                    .format(utility_name, ':'.join(system_path)))
+                try:
+                    utility_path = kwargs['default']
+                except KeyError:
+                    raise Pype9CommandNotFoundError(
+                        "Could not find executable '{}' on the system path "
+                        "'{}'".format(utility_name, ':'.join(system_path)))
+        else:
+            if not os.path.exists(utility_path):
+                raise Pype9CommandNotFoundError(
+                    "Could not find executable '{}' at path '{}' provided by "
+                    "'{}' environment variable"
+                    .format(utility_name, env_var))
         return utility_path
 
     def simulator_specific_paths(self):

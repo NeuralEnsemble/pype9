@@ -26,6 +26,7 @@ from pype9.utils import add_lib_path
 import pype9
 
 REGIME_VARNAME = '__regime__'
+NEST_CONFIG_PATH_ENV_VAR = 'PYPE9_NEST_CONFIG_PATH'
 
 logger = logging.getLogger('pype9')
 
@@ -52,7 +53,8 @@ class CodeGenerator(BaseCodeGenerator):
     def __init__(self, build_cores=1, **kwargs):
         super(CodeGenerator, self).__init__(**kwargs)
         self._build_cores = build_cores
-        self.nest_config = self.path_to_utility('nest-config')
+        self.nest_config = self.path_to_utility(
+            'nest-config', env_var=NEST_CONFIG_PATH_ENV_VAR)
         compiler, _ = self.run_command(
             [self.nest_config, '--compiler'],
             fail_msg=("Could not run nest-config at '{}': {{}}"
