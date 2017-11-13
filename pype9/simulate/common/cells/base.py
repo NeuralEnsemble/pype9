@@ -12,7 +12,6 @@
            the MIT Licence, see LICENSE for details.
 """
 from builtins import next
-from builtins import str
 from builtins import object
 from itertools import chain
 import numpy as np
@@ -21,12 +20,13 @@ import neo
 import nineml
 from nineml.abstraction import Dynamics, Regime
 from nineml.user import Property, Initial
-from pype9.mpi import mpi_comm, MPI_ROOT
+from pype9.mpi import mpi_comm, is_mpi_master
 from nineml.exceptions import NineMLNameError
 from pype9.annotations import PYPE9_NS
 from pype9.exceptions import (
     Pype9RuntimeError, Pype9AttributeError, Pype9DimensionError,
-    Pype9UsageError, Pype9BuildMismatchError, Pype9NoActiveSimulationError)
+    Pype9UsageError, Pype9BuildMismatchError, Pype9NoActiveSimulationError,
+    Pype9RegimeTransitionsNotRecordedError)
 import logging
 from .with_synapses import WithSynapses
 
@@ -104,7 +104,7 @@ class CellMetaClass(type):
             build = False
         if build:
             # Only build the components on the root node
-            if mpi_comm.rank == MPI_ROOT:
+            if is_mpi_master():
                 # Generate and compile cell class
                 code_generator.generate(component_class=build_component_class,
                                         url=url, **kwargs)
@@ -442,6 +442,22 @@ class Cell(object):
             Name of the port to retrieve the recording for
         """
         raise NotImplementedError("Should be implemented by derived class")
+
+    def recordings(self, t_start=None):
+        seg = neo.Segment(description="Simulation of '{}' cell".format(
+            self._nineml.name,
+            ('from {}'.format(t_start) if t_start is not None else '')))
+        for port_name in self._recorders:
+            sig = self.recording(port_name, t_start=t_start)
+            if isinstance(sig, neo.AnalogSignal):
+                seg.analogsignals.append(sig)
+            else:
+                seg.spiketrains.append(sig)
+            try:
+                seg.epochs.append(self.regime_epochs())
+            except Pype9RegimeTransitionsNotRecordedError:
+                pass
+        return seg
 
     def _regime_recording(self):
         raise NotImplementedError("Should be implemented by derived class")

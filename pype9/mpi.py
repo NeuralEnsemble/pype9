@@ -14,3 +14,7 @@ else:
     mpi_comm = MPI.COMM_WORLD
 
 MPI_ROOT = 0
+
+
+def is_mpi_master():
+    return (mpi_comm == MPI_ROOT)

@@ -7,8 +7,7 @@ from argparse import ArgumentParser
 from nineml import units as un, MultiDynamics, Property
 from pype9.simulate.common.cells import WithSynapses, ConnectionParameterSet
 import ninemlcatalog
-import numpy
-from matplotlib import pyplot as plt
+from pype9.plot import plot
 import pype9.utils.print_logger  # @UnusedImport
 
 parser = ArgumentParser(__doc__)
@@ -19,6 +18,8 @@ parser.add_argument('--timestep', type=float, default=0.01,
                     help=("Timestep of the simulation"))
 parser.add_argument('--weight', type=float, default=750.0,
                     help=("Weight of the synapse (nA)"))
+parser.add_argument('--threshold', type=float, default=20.0,
+                    help="The voltage threshold (mV) for spike output")
 parser.add_argument('--rate', type=float, default=40.0,
                     help=("Rate of the input spike train (Hz)"))
 parser.add_argument('--tau', type=float, default=75,
@@ -64,6 +65,7 @@ multi_model = MultiDynamics(
     port_connections=[('psr', 'i_synaptic', 'cell', 'i_synaptic'),
                       ('pls', 'fixed_weight', 'psr', 'weight')],
     port_exposures=[('psr', 'input_spike'), ('cell', 'spike_output')])
+# Add connection weight
 conn_params = []
 if args.connection_weight:
     conn_params.append(ConnectionParameterSet(
@@ -80,10 +82,12 @@ Cell = CellMetaClass(w_syn_model, build_mode=args.build_mode)
 rate = args.rate * un.Hz
 weight = args.weight * un.nA
 cell_params = {
-    'tau__cell': args.tau * un.ms, 'R__cell': 1.5 * un.Mohm,
+    'tau__cell': args.tau * un.ms,
+    'R__cell': 1.5 * un.Mohm,
     'refractory_period__cell': 2.0 * un.ms,
-    'v_threshold__cell': 20.0 * un.mV,
-    'v_reset__cell': 0.0 * un.mV, 'tau__psr': 0.5 * un.ms,
+    'v_threshold__cell': args.threshold * un.mV,
+    'v_reset__cell': 0.0 * un.mV,
+    'tau__psr': 0.5 * un.ms,
     'regime_': 'subthreshold___sole___sole',
     'b__psr': 0.0 * un.nA,
     'a__psr': 0.0 * un.nA,
@@ -103,21 +107,10 @@ with Simulation(args.timestep * un.ms, min_delay=delay) as sim:
                  delay, properties=conn_properties)
     # Set up recorders
     cell.record('spike_output__cell')
+    cell.record_regime()
     cell.record('v__cell')
     # Run simulation
     sim.run(args.simtime * un.ms)
-# Get recordings
-spikes = cell.recording('spike_output__cell')
-v = cell.recording('v__cell')
-max_v = float(numpy.max(v))
 # Plot recordings
-plt.plot(v.times, v)
-plt.title("LIAF with Alpha Syn - Membrane Potential")
-plt.ylabel("Membrane Voltage (mV)")
-plt.xlabel("Time (ms)")
-plt.figure()
-plt.scatter(spikes, numpy.ones(len(spikes)))
-plt.title('LIAF with Alpha Syn - Output spikes')
-plt.xlabel("Time (ms)")
-plt.ylabel("Cell Index")
-plt.show()
+plot(cell.recordings())
+print("Finished simulation.")

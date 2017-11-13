@@ -10,18 +10,19 @@
 from __future__ import absolute_import
 from __future__ import division
 from builtins import zip
-from past.utils import old_div
 import collections
 from itertools import chain
 import operator
 import numpy
 import quantities as pq
+import sympy
 import neo
 from ..code_gen import CodeGenerator, REGIME_VARNAME
 from neuron import h
 from nineml import units as un
-from nineml.abstraction import EventPort
+from nineml.abstraction import EventPort, Dynamics
 from nineml.exceptions import NineMLNameError
+from nineml.visitors import BaseVisitorWithContext
 from math import pi
 from pype9.simulate.common.cells import base
 from pype9.simulate.neuron.units import UnitHandler
@@ -242,7 +243,17 @@ class Cell(base.Cell):
     def _set_regime(self):
         setattr(self._hoc, REGIME_VARNAME, self._regime_index)
 
-    def record(self, port_name, t_start=None):  # @UnusedVariable
+    def record(self, port_name, **kwargs):  # @UnusedVariable
+        """
+        Parameters
+        ----------
+        port_name : str
+            Name of the port to record from
+        v_thresh_tol : Quantity (voltage)
+            A small voltage added to the threshold for determining emitted
+            spikes. Used when there is a voltage reset after the time crossing
+            that may cause the threshold to be missed.
+        """
         self._initialize_local_recording()
         # Get the port or state variable to record
         try:
@@ -258,10 +269,9 @@ class Cell(base.Cell):
                 self._recorders[port_name] = recorder = h.NetCon(
                     self._hoc, None, sec=self._sec)
             else:
-                logger.warning("Assuming '{}' is voltage threshold crossing"
-                               .format(port_name))
+                v_thresh = self.get_v_threshold(self._nineml, port.name)
                 self._recorders[port_name] = recorder = h.NetCon(
-                    self._sec._ref_v, None, self.get_threshold(), 0.0, 1.0,
+                    self._sec(0.5)._ref_v, None, v_thresh, 0.0, 0.0,
                     sec=self._sec)
             recorder.record(recording)
         else:
@@ -310,7 +320,8 @@ class Cell(base.Cell):
                 self._trim_analog_signal(signal, t_start, interval),
                 sampling_period=interval,
                 t_start=t_start, units=units_str, name=port_name)
-        return recording[:-1]
+            recording = recording[:-1]  # Drop final timepoint
+        return recording
 
     def _regime_recording(self):
         t_start = self.unit_handler.to_pq_quantity(self._t_start)
@@ -472,6 +483,75 @@ class Cell(base.Cell):
                 (BUILD_TRANS, PYPE9_NS), MEMBRANE_VOLTAGE)
         return name
 
+    @classmethod
+    def get_v_threshold(self, dynamics_properties, port_name):
+        """
+        Returns the voltage threshold at which an event is emitted from the
+        given event port
+
+        Parameters
+        ----------
+        component_class : nineml.Dynamics
+            The component class of the cell to find the v-threshold for
+        port_name : str
+            Name of the event send port to threshold
+        """
+        comp_class = (dynamics_properties.component_class.
+                      _dynamics.substitute_aliases())
+        transitions = OuputEventTransitionsFinder(
+            comp_class, comp_class.event_send_port(port_name)).transitions
+        assert transitions
+        try:
+            triggers = set(t.trigger for t in transitions)
+        except AttributeError:
+            raise Pype9UsageError(
+                "Cannot get threshold for event port '{}' in {} as it is "
+                "emitted from at least OnEvent transition ({})".format(
+                    port_name, comp_class,
+                    ', '.join(str(t) for t in transitions)))
+        if len(triggers) > 1:
+            raise Pype9UsageError(
+                "Cannot get threshold for event port '{}' in {} as it is the "
+                "condition from at least OnEvent transition ({})".format(
+                    port_name, comp_class, ', '.join(transitions)))
+        expr = next(iter(triggers)).rhs
+        v = sympy.Symbol(self.component_class.annotations.get(
+            (BUILD_TRANS, PYPE9_NS), MEMBRANE_VOLTAGE))
+        if v not in expr.free_symbols:
+            raise Pype9UsageError(
+                "Trigger expression for '{}' port in {} is not an expression "
+                "of membrane voltage '{}'".format(port_name, comp_class, v))
+        solution = None
+        if isinstance(expr, (sympy.StrictGreaterThan,
+                             sympy.StrictLessThan)):
+            # Get the equation for the transition between true and false
+            equality = sympy.Eq(*expr.args)
+            solutions = sympy.solvers.solve(equality, v)
+            if len(solutions) == 1:
+                solution = solutions[0]
+        if solution is None:
+            raise Pype9UsageError(
+                "Cannot solve threshold equation for trigger expression '{}' "
+                "for '{}' (to find condition where spikes are emitted from "
+                "'{}' event send port) in {} as it is not a simple inequality"
+                .format(expr, v, port_name, comp_class))
+        values = {}
+        for sym in solution.free_symbols:
+            sym_str = str(sym)
+            try:
+                prop = dynamics_properties.property(sym_str)
+            except NineMLNameError:
+                try:
+                    prop = comp_class.constant(sym_str)
+                except NineMLNameError:
+                    raise Pype9UsageError(
+                        "Cannot calculated fixed value for voltage threshold "
+                        "as it contains reference to {}".format(
+                            comp_class.element(sym_str)))
+            values[sym] = self.unit_handler.scale_value(prop.quantity)
+        threshold = solution.subs(values)
+        return float(threshold)
+
 
 class CellMetaClass(base.CellMetaClass):
 
@@ -484,3 +564,35 @@ class CellMetaClass(base.CellMetaClass):
     CodeGenerator = CodeGenerator
     BaseCellClass = Cell
     Simulation = Simulation
+
+
+class OuputEventTransitionsFinder(BaseVisitorWithContext):
+    """
+    Finds the transitions which emit an output event
+
+    Parameters
+    ----------
+    component_class : Dynamics
+        The component class to find the transitions from
+    port : EventSendPort
+        The event send port over which the events are emitted.
+    """
+
+    as_class = Dynamics
+
+    def __init__(self, component_class, port):
+        super(OuputEventTransitionsFinder, self).__init__()
+        self._port = port
+        self._transitions = []
+        self.visit(component_class)
+
+    @property
+    def transitions(self):
+        return self._transitions
+
+    def action_outputevent(self, outputevent, **kwargs):  # @UnusedVariable @IgnorePep8
+        if outputevent.port == self._port:
+            self._transitions.append(self.context.parent)
+
+    def default_action(self, obj, nineml_cls, **kwargs):
+        pass

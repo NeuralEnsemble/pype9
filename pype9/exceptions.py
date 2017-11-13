@@ -74,3 +74,7 @@ class Pype9UsageError(Pype9RuntimeError):
 
 class Pype9NoActiveSimulationError(Pype9RuntimeError):
     pass
+
+
+class Pype9RegimeTransitionsNotRecordedError(Pype9UsageError):
+    pass

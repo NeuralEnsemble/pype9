@@ -49,7 +49,7 @@ class Cell(base.Cell):
     def _set_regime(self):
         nest.SetStatus(self._cell, REGIME_VARNAME, self._regime_index)
 
-    def record(self, port_name, interval=None, t_start=None):  # @UnusedVariable @IgnorePep8
+    def record(self, port_name, interval=None, **kwargs):  # @UnusedVariable @IgnorePep8
         # Create dictionaries for storing local recordings. These are not
         # created initially to save memory if recordings are not required or
         # handled externally

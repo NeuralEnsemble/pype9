@@ -16,6 +16,7 @@ import matplotlib
 from pyNN.utility import SimulationProgressBar
 import sys
 argv = sys.argv[1:]
+from pype9.mpi import is_mpi_master  # @IgnorePep8
 from pype9.utils.testing import ReferenceBrunel2000  # @IgnorePep8
 
 
@@ -72,24 +73,10 @@ if not args.simulators and not args.reference:
     raise Exception("No simulations requested "
                     "(see --simulators and --reference options)")
 
-# Get MPI rank and number of processes
-if 'neuron' in args.simulators:
-    import pyNN.neuron.simulator
-    mpi_rank = pyNN.neuron.simulator.state.mpi_rank
-    num_processes = pyNN.neuron.simulator.state.mpi_rank
-else:
-    import pyNN.nest.simulator
-    mpi_rank = pyNN.nest.simulator.state.mpi_rank
-    num_processes = pyNN.nest.simulator.state.mpi_rank
-
-if num_processes > 1 and args.build_mode != 'require':
-    raise Exception(
-        "Build mode must be 'require' when running on multiple processes")
-
 if args.save_fig is not None:
     matplotlib.use('pdf')
     save_path = os.path.abspath(args.save_fig)
-    if not os.path.exists(save_path) and mpi_rank == 0:
+    if not os.path.exists(save_path) and is_mpi_master():
         os.mkdir(save_path)
 else:
     save_path = None
@@ -193,7 +180,7 @@ for simulator, seed in zip(args.simulators, seeds):
             kwargs = {}
         sim.run(args.simtime * un.ms)
 
-if mpi_rank == 0:
+if is_mpi_master():
     # Plot the results
     print("Plotting the results")
     num_subplots = len(args.simulators) + int(args.reference)
