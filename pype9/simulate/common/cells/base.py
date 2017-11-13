@@ -453,10 +453,10 @@ class Cell(object):
                 seg.analogsignals.append(sig)
             else:
                 seg.spiketrains.append(sig)
-            try:
-                seg.epochs.append(self.regime_epochs())
-            except Pype9RegimeTransitionsNotRecordedError:
-                pass
+        try:
+            seg.epochs.append(self.regime_epochs())
+        except Pype9RegimeTransitionsNotRecordedError:
+            pass
         return seg
 
     def _regime_recording(self):

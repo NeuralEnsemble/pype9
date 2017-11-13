@@ -95,4 +95,5 @@ def mode_epoch(epocharray):
     for label, total_duration in total_durations.items():
         if total_duration > max_duration:
             max_label = label
+            max_duration = total_duration
     return max_label
