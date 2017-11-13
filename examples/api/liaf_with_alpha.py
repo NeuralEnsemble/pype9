@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Constructs a leaky integrate and fire model with an alpha synapse and connects
 it to an input source that fires spikes at a constant rate

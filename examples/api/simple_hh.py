@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import ninemlcatalog
 from nineml import units as un
 from pype9.simulate.nest import CellMetaClass, Simulation  # Alternatively load the neuron class, from pype9.simulator.neuron import CellMetaClass, Simulation @IgnorePep8
