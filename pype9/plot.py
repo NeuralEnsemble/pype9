@@ -11,10 +11,12 @@ logger = logging.getLogger('pype9')
 
 
 def plot(seg, dims=(10, 8), resolution=300, save=None, show=True,
-         regime_alpha=0.05, regime_linestyle=':'):
+         regime_alpha=0.05, regime_linestyle=':', title=None):
+    if title is None:
+        title = 'PyPe9 Simulation Output'
     num_subplots = bool(seg.analogsignals) + bool(seg.spiketrains)
     fig, axes = plt.subplots(num_subplots, 1)
-    fig.suptitle('PyPe9 Simulation Output')
+    fig.suptitle(title)
     fig.set_figwidth(dims[0])
     fig.set_figheight(dims[1])
     # Set the dimension of the figure

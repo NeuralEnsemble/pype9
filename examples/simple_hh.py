@@ -1,21 +1,20 @@
 import ninemlcatalog
 from nineml import units as un
-# Load the NEST metaclass and simulation
-from pype9.simulate.nest import CellMetaClass, Simulation
+from pype9.simulate.nest import CellMetaClass, Simulation  # Alternatively load the neuron class, from pype9.simulator.neuron import CellMetaClass, Simulation @IgnorePep8
 from pype9.plot import plot
 import pype9.utils.print_logger  # @UnusedImport
-# Alternatively load the neuron class
-# from pype9.simulator.neuron import CellMetaClass, Simulation
 
 # Compile and load cell class
-HH = CellMetaClass(ninemlcatalog.load('neuron/HodgkinHuxley#HodgkinHuxley'))
+HH = CellMetaClass(
+    ninemlcatalog.load('neuron/HodgkinHuxley#PyNNHodgkinHuxley'))
 
 # Create and run the simulation
 with Simulation(dt=0.01 * un.ms) as sim:
-    hh = HH(ninemlcatalog.load('neuron/HodgkinHuxley#SampleHodgkinHuxley'),
-            V=-65 * un.mV)
-    hh.record('V')
-    sim.run(100 * un.ms)
+    hh = HH(
+        ninemlcatalog.load('neuron/HodgkinHuxley#PyNNHodgkinHuxleyProperties'),
+        v=-65 * un.mV, m=0.0, h=1.0, n=0.0)
+    hh.record('v')
+    sim.run(500 * un.ms)
 
 # Plot recordings
-plot(hh.recordings())
+plot(hh.recordings(), title='Simple Hodgkin-Huxley Example')
