@@ -34,7 +34,7 @@ class TestSimulateCell(TestCase):
     dt = 0.001
     U = (-1.625, 'pA')  # (-14.0, 'mV/ms')
     V = (-65.0, 'mV')
-    izhi_path = '//neuron/Izhikevich#SampleIzhikevichFastSpiking'
+    izhi_path = 'ninemlcatalog://neuron/Izhikevich#SampleIzhikevichFastSpiking'
     isyn_path = os.path.join(os.path.relpath(ninemlcatalog.root), 'input',
                              'StepCurrent.xml#StepCurrent')
     isyn_amp = (100.0, 'pA')

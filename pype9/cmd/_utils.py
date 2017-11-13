@@ -10,6 +10,8 @@ from argparse import ArgumentTypeError
 from pype9.exceptions import Pype9UsageError, Pype9UnitStrError
 from functools import reduce
 
+CATALOG_PREFIX = 'ninemlcatalog://'
+
 
 def existing_file(fname):
     if not os.path.isfile(fname):
@@ -19,8 +21,8 @@ def existing_file(fname):
 
 
 def nineml_document(doc_path):
-    if doc_path.startswith('//'):
-        model = ninemlcatalog.load(doc_path[2:])
+    if doc_path.startswith(CATALOG_PREFIX):
+        model = ninemlcatalog.load(doc_path[len(CATALOG_PREFIX):])
     else:
         if (not doc_path.startswith('/') and
             not doc_path.startswith('./') and

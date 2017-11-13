@@ -47,10 +47,10 @@ def argparser():
     parser.add_argument('simulator', choices=('neuron', 'nest'), type=str,
                         help="Which simulator backend to use")
     parser.add_argument('time', type=float,
-                        help="Time to run the simulation for")
+                        help="Time to run the simulation for (ms)")
     parser.add_argument('timestep', type=float,
                         help=("Timestep used to solve the differential "
-                              "equations"))
+                              "equations (ms)"))
     parser.add_argument('--prop', nargs=3, action='append',
                         metavar=('PARAM', 'VALUE', 'UNITS'), default=[],
                         help=("Set the property to the given value"))
@@ -107,6 +107,9 @@ def run(argv):
 
     args = argparser().parse_args(argv)
 
+    time = args.time * un.ms
+    timestep = args.timestep * un.ms
+
     if args.simulator == 'neuron':
         from pype9.simulate.neuron import Network, CellMetaClass, Simulation  # @UnusedImport @IgnorePep8
     elif args.simulator == 'nest':
@@ -158,7 +161,7 @@ def run(argv):
             .format(model))
 
     if isinstance(model, nineml.Network):
-        with Simulation(dt=args.timestep * un.ms, seed=args.seed,
+        with Simulation(dt=timestep, seed=args.seed,
                         properties_seed=args.properties_seed,
                         device_delay=device_delay,
                         **model.delay_limits()) as sim:
@@ -171,7 +174,7 @@ def run(argv):
                 pop_name, port_name = rspec.port.split('.')
                 network.component_array(pop_name).record(port_name)
             logger.info("Running the simulation")
-            sim.run(args.time * un.ms)
+            sim.run(time)
         logger.info("Writing recorded data to file")
         for rspec in record_specs:
             pop_name, port_name = rspec.port.split('.')
@@ -221,7 +224,7 @@ def run(argv):
                              external_currents=external_currents,
                              build_version=args.build_version)
         record_regime = False
-        with Simulation(dt=args.timestep * un.ms, seed=args.seed,
+        with Simulation(dt=timestep, seed=args.seed,
                         min_delay=min_delay,
                         device_delay=device_delay) as sim:
             # Create cell
@@ -245,7 +248,7 @@ def run(argv):
             if record_regime:
                 cell.record_regime()
             # Run simulation
-            sim.run(args.time * un.ms)
+            sim.run(time)
         # Collect data into Neo Segments
         fnames = set(r.fname for r in record_specs)
         data_segs = {}
@@ -263,5 +266,4 @@ def run(argv):
         # Write data to file
         for fname, data_seg in data_segs.items():
             neo.io.PickleIO(fname).write(data_seg)
-    logger.info("Finished simulation of '{}' for {} ms".format(model.name,
-                                                               args.time))
+    logger.info("Finished simulation of '{}' for {}".format(model.name, time))
