@@ -10,7 +10,7 @@ import logging
 logger = logging.getLogger('pype9')
 
 
-def plot(seg, dims=(10, 8), resolution=300, save=None, show=True,
+def plot(seg, dims=(20, 16), resolution=300, save=None, show=True,
          regime_alpha=0.05, regime_linestyle=':', title=None):
     if title is None:
         title = 'PyPe9 Simulation Output'

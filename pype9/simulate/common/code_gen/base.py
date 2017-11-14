@@ -93,6 +93,10 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         self._base_dir = os.path.abspath(
             os.path.join(base_dir, self.SIMULATOR_NAME))
 
+    def __repr__(self):
+        return "{}CodeGenerator(base_dir='{}')".format(
+            self.SIMULATOR_NAME.capitalize(), self.base_dir)
+
     def __eq__(self, other):
         try:
             return (self.SIMULATOR_NAME == other.SIMULATOR_NAME and
@@ -100,13 +104,16 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         except AttributeError:
             return False
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     @property
     def base_dir(self):
         return self._base_dir
 
     @classmethod
     def base_dir_default(self):
-        return os.path.join(BASE_BUILD_DIR, self.SIMULATOR_NAME)
+        return BASE_BUILD_DIR
 
     @abstractmethod
     def generate_source_files(self, dynamics, src_dir, name, **kwargs):

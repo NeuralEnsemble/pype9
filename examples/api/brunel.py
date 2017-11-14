@@ -17,7 +17,6 @@ from pyNN.utility import SimulationProgressBar
 import sys
 argv = sys.argv[1:]
 from pype9.mpi import is_mpi_master  # @IgnorePep8
-from pype9.utils.testing import ReferenceBrunel2000  # @IgnorePep8
 import pype9.utils.print_logger  # @UnusedImport @IgnorePep8
 
 parser = argparse.ArgumentParser()
@@ -78,6 +77,9 @@ if args.save_fig is not None:
         os.mkdir(save_path)
 else:
     save_path = None
+# Imports matplotlib so needs to be after save_fig is parsed
+from pype9.utils.testing import ReferenceBrunel2000  # @IgnorePep8
+
 # Needs to be imported after the args.save_fig argument is parsed to
 # allow the backend to be set
 from matplotlib import pyplot as plt  # @IgnorePep8

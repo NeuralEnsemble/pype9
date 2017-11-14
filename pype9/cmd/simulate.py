@@ -54,9 +54,6 @@ def argparser():
     parser.add_argument('--prop', nargs=3, action='append',
                         metavar=('PARAM', 'VALUE', 'UNITS'), default=[],
                         help=("Set the property to the given value"))
-    parser.add_argument('--build_version', type=str, default=None,
-                        help=("Version to append to name to use when building "
-                              "component classes"))
     parser.add_argument('--init_regime', type=str, default=None,
                         help=("Initial regime for dynamics"))
     parser.add_argument('--init_value', nargs=3, default=[], action='append',
@@ -80,11 +77,6 @@ def argparser():
                         help=("Random seed used to create network connections "
                               "and properties. If not provided it is generated"
                               " from the '--seed' option."))
-    parser.add_argument('--build_mode', type=str, default='lazy',
-                        help=("The strategy used to build and compile the "
-                              "model. Can be one of '{}' (default %(default)s)"
-                              .format("', '".join(
-                                  BaseCodeGenerator.BUILD_MODE_OPTIONS))))
     parser.add_argument('--min_delay', nargs=2, metavar=('DELAY', 'UNITS'),
                         default=None,
                         help=("The minimum delay of the model (only "
@@ -94,6 +86,16 @@ def argparser():
                         help=("The delay applied to signals played into ports "
                               "of the model (only applicable for NEST "
                               "simulations)"))
+    parser.add_argument('--build_mode', type=str, default='lazy',
+                        help=("The strategy used to build and compile the "
+                              "model. Can be one of '{}' (default %(default)s)"
+                              .format("', '".join(
+                                  BaseCodeGenerator.BUILD_MODE_OPTIONS))))
+    parser.add_argument('--build_dir', default=None, type=str,
+                        help=("Base build directory"))
+    parser.add_argument('--build_version', type=str, default=None,
+                        help=("Version to append to name to use when building "
+                              "component classes"))
     return parser
 
 
@@ -167,7 +169,8 @@ def run(argv):
                         **model.delay_limits()) as sim:
             # Construct the network
             logger.info("Constructing network")
-            network = Network(model, build_mode=args.build_mode)
+            network = Network(model, build_mode=args.build_mode,
+                              build_base_dir=args.build_dir)
             logger.info("Finished constructing the '{}' network"
                         .format(model.name))
             for rspec in record_specs:
@@ -222,11 +225,13 @@ def run(argv):
         Cell = CellMetaClass(component_class,
                              build_mode=args.build_mode,
                              external_currents=external_currents,
-                             build_version=args.build_version)
+                             build_version=args.build_version,
+                             build_base_dir=args.build_dir)
         record_regime = False
         with Simulation(dt=timestep, seed=args.seed,
                         min_delay=min_delay,
-                        device_delay=device_delay) as sim:
+                        device_delay=device_delay,
+                        build_base_dir=args.build_dir) as sim:
             # Create cell
             cell = Cell(props, regime_=init_regime, **init_state)
             # Play inputs

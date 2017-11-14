@@ -10,7 +10,7 @@ from argparse import ArgumentTypeError
 from pype9.exceptions import Pype9UsageError, Pype9UnitStrError
 from functools import reduce
 
-CATALOG_PREFIX = 'ninemlcatalog://'
+CATALOG_PREFIX = 'catalog://'
 
 
 def existing_file(fname):

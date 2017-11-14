@@ -66,7 +66,7 @@ class Simulation(with_metaclass(ABCMeta, object)):
 
     def __init__(self, dt, t_start=0.0 * un.s, seed=None, properties_seed=None,
                  min_delay=1 * un.ms, max_delay=10 * un.ms,
-                 code_generator=None, **options):
+                 code_generator=None, build_base_dir=None, **options):
         self._check_units('dt', dt, un.time)
         self._check_units('t_start', dt, un.time)
         self._check_units('min_delay', dt, un.time, allow_none=True)
@@ -91,7 +91,11 @@ class Simulation(with_metaclass(ABCMeta, object)):
                 "(0 and {})".format(seed, self.max_seed))
         self._base_properties_seed = properties_seed
         if code_generator is None:
-            code_generator = self.CodeGenerator()
+            code_generator = self.CodeGenerator(base_dir=build_base_dir)
+        elif build_base_dir is not None:
+            raise Pype9UsageError(
+                "Cannot provide both code generator and 'build_base_dir' "
+                "options to Simulation __init__")
         self._code_generator = code_generator
 
     @property

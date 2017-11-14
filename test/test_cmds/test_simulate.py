@@ -6,7 +6,7 @@ import shutil
 import neo.io
 import numpy as np
 from pype9.cmd import simulate
-from pype9.cmd._utils import parse_units
+from pype9.cmd._utils import parse_units, CATALOG_PREFIX
 import ninemlcatalog
 import quantities as pq
 from pype9.simulate.neuron import (
@@ -34,7 +34,7 @@ class TestSimulateCell(TestCase):
     dt = 0.001
     U = (-1.625, 'pA')  # (-14.0, 'mV/ms')
     V = (-65.0, 'mV')
-    izhi_path = 'ninemlcatalog://neuron/Izhikevich#SampleIzhikevichFastSpiking'
+    izhi_path = 'catalog://neuron/Izhikevich#SampleIzhikevichFastSpiking'
     isyn_path = os.path.join(os.path.relpath(ninemlcatalog.root), 'input',
                              'StepCurrent.xml#StepCurrent')
     isyn_amp = (100.0, 'pA')
@@ -128,7 +128,7 @@ class TestSimulateCell(TestCase):
         else:
             metaclass = NESTCellMetaClass
             Simulation = NESTSimulation
-        nineml_model = ninemlcatalog.load(self.izhi_path)
+        nineml_model = ninemlcatalog.load(self.izhi_path[len(CATALOG_PREFIX):])
         Cell = metaclass(nineml_model.component_class, build_version='API',
                          external_currents=['iSyn'])
         with Simulation(dt=self.dt * un.ms, min_delay=0.5 * un.ms,
