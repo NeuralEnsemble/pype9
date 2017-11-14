@@ -50,7 +50,8 @@ BUILD_DIR=$BASE_DIR/$NEURON-build
 if [ "${VERSION%%-*}" == 'sha' ]; then
     # Download and untar
     echo ${VERSION##sha-}
-    wget –-quiet http://github.com/nrnhines/nrn/archive/${VERSION##sha-}.zip -O $BASE_DIR/$NEURON.zip;
+    wget http://github.com/nrnhines/nrn/archive/${VERSION##sha-}.zip -O $BASE_DIR/$NEURON.zip;
+    echo "BASE_DIR: $BASE_DIR"
     pushd $BASE_DIR;
     unzip $NEURON.zip;
     rm $NEURON.zip;
@@ -93,6 +94,7 @@ $PYTHON setup.py install
 pip install nrnutils  # must be installed after NEURON
 
 # Create links to required NEURON utilities
+mkdir -p $INSTALL_PREFIX/bin;
 cd $INSTALL_PREFIX/bin;
 ls -l;
 ln -sf ../x86_64/bin/nrnivmodl;

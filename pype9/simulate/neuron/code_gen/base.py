@@ -517,7 +517,7 @@ class CodeGenerator(BaseCodeGenerator):
         tmp_dir_path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
         try:
             os.mkdir(tmp_dir_path)
-        except IOError:
+        except OSError:
             raise Pype9BuildError("Error creating temporary directory '{}'"
                                   .format(tmp_dir_path))
         orig_dir = os.getcwd()
@@ -627,7 +627,7 @@ class CodeGenerator(BaseCodeGenerator):
         try:
             with open(nrnmech_makefile_path) as f:
                 contents = f.read()
-        except IOError:
+        except OSError:
             raise Pype9BuildError(
                 "Could not read nrnmech_makefile at '{}'"
                 .format(nrnmech_makefile_path))

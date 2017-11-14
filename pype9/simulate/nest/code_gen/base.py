@@ -198,13 +198,13 @@ class CodeGenerator(BaseCodeGenerator):
         if purge:
             try:
                 shutil.rmtree(compile_dir)
-            except IOError as e:
+            except OSError as e:
                 if e.errno != errno.ENOENT:  # Ignore if missing
                     raise
         if not path.exists(compile_dir):
             try:
                 os.makedirs(compile_dir)
-            except IOError as e:
+            except OSError as e:
                 raise Pype9BuildError(
                     "Could not make compile directory '{}': {}"
                     .format(compile_dir, e))
@@ -214,12 +214,12 @@ class CodeGenerator(BaseCodeGenerator):
             try:
                 stdout, stderr = self.run_command(['make', 'clean'])
                 os.chdir(orig_dir)
-            except sp.CalledProcessError or IOError:
+            except (sp.CalledProcessError, OSError):
                 os.chdir(orig_dir)
                 shutil.rmtree(compile_dir, ignore_errors=True)
                 try:
                     os.makedirs(compile_dir)
-                except IOError as e:
+                except OSError as e:
                     raise Pype9BuildError(
                         "Could not create build directory ({}), please check "
                         "the required permissions or specify a different "

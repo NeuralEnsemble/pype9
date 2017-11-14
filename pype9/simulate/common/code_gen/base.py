@@ -209,7 +209,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
                         logger.info("Found existing source in '{}' directory, "
                                     "but the component classes differ so "
                                     "regenerating sources".format(src_dir))
-                except NineMLNameError:
+                except (NineMLNameError, NineMLSerializationError):
                     generate_source = True
                     logger.info("Found existing source in '{}' directory, "
                                 "but could not find '{}' component class so "
@@ -273,7 +273,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         shutil.rmtree(src_dir, ignore_errors=True)
         try:
             os.makedirs(src_dir)
-        except IOError as e:
+        except OSError as e:
             raise Pype9BuildError(
                 "Could not create source directory ({}), please check the "
                 "required permissions or specify a different \"build dir"
@@ -284,7 +284,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         shutil.rmtree(compile_dir, ignore_errors=True)
         try:
             os.makedirs(compile_dir)
-        except IOError as e:
+        except OSError as e:
             raise Pype9BuildError(
                 "Could not create compile directory ({}), please check the "
                 "required permissions or specify a different \"build dir"
@@ -295,7 +295,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         shutil.rmtree(install_dir, ignore_errors=True)
         try:
             os.makedirs(install_dir)
-        except IOError as e:
+        except OSError as e:
             raise Pype9BuildError(
                 "Could not create install directory ({}), please check the "
                 "required permissions or specify a different \"build dir"
