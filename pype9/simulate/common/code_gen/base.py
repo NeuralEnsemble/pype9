@@ -25,7 +25,7 @@ from future.utils import with_metaclass
 from abc import ABCMeta, abstractmethod
 import sympy
 from nineml import units
-from nineml.exceptions import NineMLNameError
+from nineml.exceptions import NineMLNameError, NineMLSerializationError
 from pype9.exceptions import (
     Pype9BuildError, Pype9CommandNotFoundError, Pype9RuntimeError)
 from ..cells.with_synapses import read
