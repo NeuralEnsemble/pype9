@@ -73,8 +73,6 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     _CMPL_DIR = 'compile'  # Ignored for NEURON but used for NEST
     _BUILT_COMP_CLASS = 'built_component_class.xml'
 
-    SIMULATOR_VERSION = ''
-
     # Python functions and annotations to be made available in the templates
     _globals = dict(
         [('len', len), ('zip', zip), ('enumerate', enumerate),

@@ -19,6 +19,7 @@ from itertools import chain
 import subprocess as sp
 from collections import defaultdict
 import sympy
+import neuron
 import nineml.units as un
 from nineml.abstraction import Alias, AnalogSendPort, Dynamics
 from neuron import load_mechanisms
@@ -60,6 +61,7 @@ NRNIVMODL_PATH_ENV_VAR = 'PYPE9_NRNIVMODL_PATH'
 class CodeGenerator(BaseCodeGenerator):
 
     SIMULATOR_NAME = 'neuron'
+    SIMULATOR_VERSION = neuron.h.nrnversion(0)
     ODE_SOLVER_DEFAULT = 'derivimplicit'
     REGIME_VARNAME = 'regime_'
     SEED_VARNAME = 'seed_'
@@ -75,9 +77,9 @@ class CodeGenerator(BaseCodeGenerator):
 
     def __init__(self, gsl_path=None, **kwargs):
         super(CodeGenerator, self).__init__(**kwargs)
-        self.nrnivmodl_path = self.path_to_utility(
-            'nrnivmodl', env_var=NRNIVMODL_PATH_ENV_VAR)
-        self.modlunit_path = self.path_to_utility('modlunit', default=None)
+        self.nrnivmodl_path = self.get_neuron_util_path('nrnivmodl')
+        self.modlunit_path = self.get_neuron_util_path('modlunit',
+                                                       default=None)
         # Compile wrappers around GSL random distribution functions
         if is_mpi_master():
             if not os.path.exists(self.libninemlnrn_so):
@@ -609,6 +611,41 @@ class CodeGenerator(BaseCodeGenerator):
         if result != 0:
             raise Pype9BuildError(
                 "{}:\n{}".format(fail_msg, '  '.join([''] + stdout)))
+
+    @classmethod
+    def get_neuron_bin_path(cls):
+        path = neuron.h.neuronhome()
+        path_contents = os.listdir(path)
+        if 'examples' in path_contents:  # returned NRNHOME/share/nrn
+            nrnhome = os.path.join(path, '..', '..')
+            if os.path.exists(os.path.join(nrnhome, 'x86_64')):
+                bin_path = os.path.join(nrnhome, 'x86_64', 'bin')
+            else:
+                bin_path = os.path.join(nrnhome, 'bin')
+        elif 'bin' in path_contents:
+            bin_path = os.path.join(path, 'bin')
+        elif 'nrnivmodl' in path_contents:
+            bin_path = path
+        if not os.path.exists(bin_path):
+            raise Pype9BuildError(
+                "Did not find NEURON 'bin' path at expected '{}' location"
+                .format(bin_path))
+        return bin_path
+
+    @classmethod
+    def get_neuron_util_path(cls, util_name, **kwargs):
+        util_path = os.path.join(cls.get_neuron_bin_path(), util_name)
+        if not os.path.exists(util_path):
+            try:
+                default_path = kwargs['default']
+                logger.warning("Did not find '{}' at expected path"
+                               .format(util_name, util_path))
+                util_path = default_path
+            except KeyError:
+                raise Pype9BuildError(
+                    "Did not find '{}' at expected path '{}'"
+                    .format(util_name, util_path))
+        return util_path
 
     def get_cc(self):
         """
