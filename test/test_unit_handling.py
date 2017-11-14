@@ -11,6 +11,7 @@ from nineml.abstraction import (
     StateVariable)
 import numpy
 from nineml.units import Quantity
+import pype9.utils.logger_handlers.sysout_info  # @UnusedImport
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:

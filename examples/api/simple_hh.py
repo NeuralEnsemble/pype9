@@ -4,7 +4,7 @@ import ninemlcatalog
 from nineml import units as un
 from pype9.simulate.nest import CellMetaClass, Simulation  # Alternatively load the neuron class, from pype9.simulator.neuron import CellMetaClass, Simulation @IgnorePep8
 from pype9.plot import plot
-import pype9.utils.print_logger  # @UnusedImport
+import pype9.utils.logger_handlers.sysout_info  # @UnusedImport
 
 parser = ArgumentParser()
 parser.add_argument('--save_fig', type=str, default=None,

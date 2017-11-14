@@ -9,7 +9,7 @@ from nineml import units as un, MultiDynamics, Property
 from pype9.simulate.common.cells import WithSynapses, ConnectionParameterSet
 import ninemlcatalog
 from pype9.plot import plot
-import pype9.utils.print_logger  # @UnusedImport
+import pype9.utils.logger_handlers.sysout_info  # @UnusedImport
 
 parser = ArgumentParser(__doc__)
 parser.add_argument('--simulator', type=str, default='nest',

@@ -7,7 +7,7 @@ from pype9.simulate.nest import CellMetaClass
 from pype9.simulate.common.cells.with_synapses import WithSynapses
 from pype9.exceptions import Pype9BuildMismatchError
 from unittest import TestCase  # @Reimport
-import pype9.utils.print_logger  # @UnusedImport
+import pype9.utils.logger_handlers.sysout_info  # @UnusedImport
 
 
 class TestSeeding(TestCase):

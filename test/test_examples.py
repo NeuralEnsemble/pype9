@@ -13,7 +13,7 @@ import shutil
 import subprocess as sp
 from unittest import TestCase  # @Reimport
 from pype9.simulate.common.code_gen import BASE_BUILD_DIR
-import pype9.utils.print_logger  # @UnusedImport
+import pype9.utils.logger_handlers.sysout_info  # @UnusedImport
 
 
 OUT_PATH = os.path.join(BASE_BUILD_DIR, 'examples')

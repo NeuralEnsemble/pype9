@@ -1,7 +1,6 @@
 from builtins import str
 import os.path
 import operator
-import sys
 import logging
 import sympy
 import nineml.units
@@ -9,8 +8,12 @@ import ninemlcatalog
 from argparse import ArgumentTypeError
 from pype9.exceptions import Pype9UsageError, Pype9UnitStrError
 from functools import reduce
+import pype9.utils.logger_handlers.sysout_info  # @UnusedImport
 
 CATALOG_PREFIX = 'catalog://'
+
+
+logger = logging.getLogger('pype9')
 
 
 def existing_file(fname):
@@ -78,12 +81,3 @@ def _parse_subexpr(expr):
             return int(expr)
         else:
             raise Pype9UnitStrError
-
-
-logger = logging.getLogger('pype9')
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter(
-    '%(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)

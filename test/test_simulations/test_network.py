@@ -38,6 +38,7 @@ import nest  # @IgnorePep8
 from pype9.simulate.nest.network import Network as NestPype9Network  # @IgnorePep8
 from pype9.simulate.nest import Simulation as NESTSimulation  # @IgnorePep8
 from pype9.utils.testing import ReferenceBrunel2000  # @IgnorePep8
+import pype9.utils.logger_handlers.sysout_info  # @IgnorePep8
 
 try:
     from matplotlib import pyplot as plt
@@ -1082,41 +1083,3 @@ class TestNetwork(TestCase):
             "Mismatch between generated and expected connection groups:\n {}"
             .format(
                 connection_groups['Proj4'] .find_mismatch(conn_group6)))
-
-
-if __name__ == '__main__':
-    import argparse
-    import logging
-
-    pyNN_logger = logging.Logger('PyNN')
-    pyNN_logger.setLevel(logging.INFO)
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.INFO)
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    ch.setFormatter(formatter)
-    pyNN_logger.addHandler(ch)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--test', type=str, default='test_compare_brunel',
-                        help="Switch between different tests to run")
-    parser.add_argument('--tester', type=str, default='network',
-                        help="Which tester to use")
-    parser.add_argument('--build_mode', type=str, default='force',
-                        help="The build mode with which to construct the "
-                        "network")
-    parser.add_argument('--option', nargs=2, type=str, action='append',
-                        default=[],
-                        help="Extra options that are passed to the test")
-    parser.add_argument('--plot', action='store_true', default=False,
-                        help=("Plot the activity"))
-    args = parser.parse_args(argv)
-    options = dict(args.option)
-    if args.tester == 'network':
-        tester = TestNetwork()
-    elif args.tester == 'brunel':
-        tester = TestBrunel2000()
-    else:
-        raise Exception("Unrecognised tester '{}'".format(args.tester))
-    getattr(tester, args.test)(build_mode=args.build_mode, plot=args.plot,
-                               **options)
