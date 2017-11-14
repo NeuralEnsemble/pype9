@@ -35,6 +35,7 @@ cmake_success_re = re.compile(r'-- Build files have been written to: (.*)')
 class CodeGenerator(BaseCodeGenerator):
 
     SIMULATOR_NAME = 'nest'
+    SIMULATOR_VERSION = nest.version().split()[1]
     ODE_SOLVER_DEFAULT = 'gsl'
     REGIME_VARNAME = '__regime__'
     SS_SOLVER_DEFAULT = None
@@ -60,11 +61,6 @@ class CodeGenerator(BaseCodeGenerator):
             fail_msg=("Could not run nest-config at '{}': {{}}"
                       .format(self.nest_config)))
         self._compiler = compiler.strip()  # strip trailing \n
-
-    @classmethod
-    def base_dir_default(self):
-        return (super(CodeGenerator, self).base_dir_default() +
-                nest.version().split()[1])
 
     def generate_source_files(self, component_class, src_dir, name=None,
                               debug_print=None, **kwargs):

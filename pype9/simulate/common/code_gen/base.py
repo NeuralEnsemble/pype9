@@ -73,6 +73,8 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     _CMPL_DIR = 'compile'  # Ignored for NEURON but used for NEST
     _BUILT_COMP_CLASS = 'built_component_class.xml'
 
+    SIMULATOR_VERSION = ''
+
     # Python functions and annotations to be made available in the templates
     _globals = dict(
         [('len', len), ('zip', zip), ('enumerate', enumerate),
@@ -89,9 +91,9 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
 
     def __init__(self, base_dir=None, **kwargs):  # @UnusedVariable
         if base_dir is None:
-            base_dir = self.base_dir_default()
-        self._base_dir = os.path.abspath(
-            os.path.join(base_dir, self.SIMULATOR_NAME))
+            base_dir = BASE_BUILD_DIR
+        self._base_dir = os.path.join(
+            base_dir, self.SIMULATOR_NAME + self.SIMULATOR_VERSION))
 
     def __repr__(self):
         return "{}CodeGenerator(base_dir='{}')".format(
@@ -110,10 +112,6 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
     @property
     def base_dir(self):
         return self._base_dir
-
-    @classmethod
-    def base_dir_default(self):
-        return BASE_BUILD_DIR
 
     @abstractmethod
     def generate_source_files(self, dynamics, src_dir, name, **kwargs):
