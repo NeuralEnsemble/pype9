@@ -163,6 +163,10 @@ class Cell(object):
                 self._set(k, v)  # Values should be in the right units.
             self._regime_index = None
         else:
+            # These position arguments are a little more complex to retrieve
+            # due to Python 2's restriction of **kwargs only following
+            # *args.
+            # Get prototype argument
             if len(args) >= 1:
                 prototype = args[0]
                 if 'prototype_' in kwargs:
@@ -172,6 +176,7 @@ class Cell(object):
                                                   kwargs['prototype_']))
             else:
                 prototype = kwargs.pop('prototype_', self.component_class)
+            # Get regime argument
             if len(args) >= 2:
                 regime = args[1]
                 if 'regime_' in kwargs:
@@ -182,14 +187,16 @@ class Cell(object):
                 try:
                     regime = kwargs.pop('regime_')
                 except KeyError:
-                    if self.component_class.num_regimes == 1:
-                        regime = next(self.component_class.regime_names)
-                    else:
-                        raise Pype9UsageError(
-                            "Need to specify initial regime using 'regime_' "
-                            "keyword arg for component class with multiple "
-                            "regimes ('{}')".format(
-                                self.component_class.regime_names))
+                    regime = None
+            if regime is None:
+                if self.component_class.num_regimes == 1:
+                    regime = next(self.component_class.regime_names)
+                else:
+                    raise Pype9UsageError(
+                        "Need to specify initial regime using 'regime_' "
+                        "keyword arg for component class with multiple "
+                        "regimes ('{}')".format(
+                            self.component_class.regime_names))
             if len(args) > 2:
                 raise Pype9UsageError(
                     "Only two non-keyword arguments ('prototype_' and "
