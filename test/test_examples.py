@@ -90,10 +90,7 @@ class TestExamples(TestCase):
         env = os.environ.copy()
         env['PATH'] = os.path.pathsep.join((SCRIPTS_DEST_PATH, env['PATH']))
         cmd = ['bash', os.path.join(bash_path, fname) + '.sh'] + args
-        stdout, stderr = self.run_cmd(cmd, env=env)
-        self.assertEqual(stderr, '',
-                         "Command '{}' exited with stderr:{}\n\n--{}".format(
-                             ' '.join(cmd), str(stdout), str(stderr)))
+        self.run_cmd(cmd, env=env)
 
     def run_cmd(self, cmd, env=None, **kwargs):
         if env is None:

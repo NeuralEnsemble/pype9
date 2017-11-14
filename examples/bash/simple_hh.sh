@@ -2,7 +2,7 @@
 # An example bash script performing the equivalent of the simple_hh.py script
 # in the 'examples/api' directory using the 'pype9' CLI tool
 
-echo "ARGS: $@"
+set -e  # Stop execution in case of errors
 
 if [ ! -z "$1" ]; then
 	OUT_DIR="$1"
@@ -19,8 +19,6 @@ fi
 V_FNAME="$OUT_DIR/simple_hh_example-v.neo.pkl"
 
 mkdir -p $OUT_DIR
-
-echo "Plot options: $PLOT_OPTIONS"
 
 pype9 simulate \
 	catalog://neuron/HodgkinHuxley#PyNNHodgkinHuxleyProperties \
