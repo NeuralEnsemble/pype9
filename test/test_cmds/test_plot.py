@@ -29,7 +29,7 @@ class TestPlot(TestCase):
 
     rec_t_start = (1.0, 'ms')
 
-    subVb_colour = '#ff7f0e'
+    subthresh_colour = '#ff7f0e'
 
     def setUp(self):
         try:
@@ -60,7 +60,7 @@ class TestPlot(TestCase):
             if not os.path.exists(self.cell_input_path):
                 # First simulate input signal to have something to play into
                 # izhikevich cell
-                argv = ("//input/StepCurrent#StepCurrent nest {t_stop} {dt} "
+                argv = ("catalog://input/StepCurrent#StepCurrent nest {t_stop} {dt} "
                         "--record current_output {out_path} {rec_t_start} "
                         "--prop amplitude {amp} "
                         "--prop onset {onset} "
@@ -76,7 +76,7 @@ class TestPlot(TestCase):
                 # Run input signal simulation
                 simulate.run(argv.split())
             argv = (
-                "//neuron/Izhikevich#SampleIzhikevichFastSpiking "
+                "catalog://neuron/Izhikevich#SampleIzhikevichFastSpiking "
                 "nest {} 0.01 "
                 "--record V {} "
                 "--init_value U 1.625 pA "
@@ -110,7 +110,7 @@ class TestPlot(TestCase):
         if not os.path.exists(self.network_signal_path):
             # Generate test signal
             brunel_ai = ninemlcatalog.load(
-                '//network/Brunel2000/AI.xml').as_network('Brunel2000AI')
+                'network/Brunel2000/AI.xml').as_network('Brunel2000AI')
             scaled_brunel_ai_path = os.path.join(self.work_dir,
                                                  'brunel_scaled.xml')
             brunel_ai.scale(0.01).write(scaled_brunel_ai_path)
@@ -145,9 +145,9 @@ class TestPlot(TestCase):
         for label, start, duration in zip(seg.epochs[0].labels,
                                           seg.epochs[0].times,
                                           seg.epochs[0].durations):
-            if label == 'subVb':
+            if label == 'subthreshold':
                 end = start + duration
-                plt.axvspan(start, end, facecolor=self.subVb_colour,
+                plt.axvspan(start, end, facecolor=self.subthresh_colour,
                             alpha=0.05)
                 plt.axvline(start, linestyle=':', color='gray', linewidth=0.5)
                 plt.axvline(end, linestyle=':', color='gray', linewidth=0.5)
@@ -161,11 +161,11 @@ class TestPlot(TestCase):
         plt.title("Analog Signals", fontsize=12)
         plt.legend(handles=[
             v_line,
-            mp.Patch(facecolor=self.subVb_colour, edgecolor='grey',
-                     label='subVb regime', linewidth=0.5, linestyle=':'),
-            mp.Patch(facecolor='white', edgecolor='grey',
+            mp.Patch(facecolor=self.subthresh_colour, edgecolor='grey',
                      label='subthreshold regime', linewidth=0.5,
-                     linestyle=':')])
+                     linestyle=':'),
+            mp.Patch(facecolor='white', edgecolor='grey',
+                     label='subVb regime', linewidth=0.5, linestyle=':')])
         plt.savefig(self.ref_single_cell_path, dpi=100.0)
 
     def _ref_network_plot(self):

@@ -93,7 +93,7 @@ class BaseCodeGenerator(with_metaclass(ABCMeta, object)):
         if base_dir is None:
             base_dir = BASE_BUILD_DIR
         self._base_dir = os.path.join(
-            base_dir, self.SIMULATOR_NAME + self.SIMULATOR_VERSION))
+            base_dir, self.SIMULATOR_NAME + self.SIMULATOR_VERSION)
 
     def __repr__(self):
         return "{}CodeGenerator(base_dir='{}')".format(
