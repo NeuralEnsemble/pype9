@@ -161,11 +161,11 @@ class TestPlot(TestCase):
         plt.title("Analog Signals", fontsize=12)
         plt.legend(handles=[
             v_line,
+            mp.Patch(facecolor='white', edgecolor='grey',
+                     label='subVb regime', linewidth=0.5, linestyle=':'),
             mp.Patch(facecolor=self.subthresh_colour, edgecolor='grey',
                      label='subthreshold regime', linewidth=0.5,
-                     linestyle=':'),
-            mp.Patch(facecolor='white', edgecolor='grey',
-                     label='subVb regime', linewidth=0.5, linestyle=':')])
+                     linestyle=':')])
         plt.savefig(self.ref_single_cell_path, dpi=100.0)
 
     def _ref_network_plot(self):

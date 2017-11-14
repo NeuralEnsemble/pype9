@@ -28,7 +28,7 @@ addons:
       - libhdf5-serial-dev
       - libyaml-dev
 install:
-  - install/nest.sh 2.12.0
+  - install/nest.sh 2.14.0
   - install/neuron.sh sha-9fc719735a2d0a9446f59065534d5326a6bd179d
   - pip install git+git://github.com/tclose/nineml-python.git@pype9_port
   - pip install git+git://github.com/tclose/nineml-catalog.git@python3
@@ -36,6 +36,6 @@ install:
   - pip install -r requirements.txt
   - pip install coveralls
 script:
-  - nosetests test --with-coverage --cover-package=pype9
+  - nosetests ./test --with-coverage --cover-package=pype9
 after_success:
   - coveralls

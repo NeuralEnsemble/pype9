@@ -2,7 +2,7 @@ from builtins import str
 from builtins import next
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import quantities as pq
 import logging
 
@@ -47,17 +47,15 @@ def plot(seg, dims=(20, 16), resolution=300, save=None, show=True,
             legend.append(line)
         # Plot regime epochs (if present)
         for epochs in seg.epochs:
-            # Map labels to colours
-            labels = set(epochs.labels)
-            # Remove the mode epoch
-            mode = mode_epoch(epochs)
-            labels.remove(mode)
-            label_colours = dict((l, plt.gca()._get_lines.get_next_color())
-                                 for l in labels)
-            label_colours[mode] = None
+            # Generate colours for each regime
+            labels = sort_epochs_by_duration(epochs)
+            # Make the 'mode' regime transparent
+            label_colours = OrderedDict([(labels[0], None)])
+            for label in labels[1:]:
+                label_colours[label] = plt.gca()._get_lines.get_next_color()
             for label, start, duration in zip(epochs.labels,
-                                               epochs.times,
-                                               epochs.durations):
+                                              epochs.times,
+                                              epochs.durations):
                 if label_colours[label] is not None:
                     end = start + duration
                     plt.axvspan(start, end, facecolor=label_colours[label],
@@ -87,15 +85,9 @@ def plot(seg, dims=(20, 16), resolution=300, save=None, show=True,
         plt.show()
 
 
-def mode_epoch(epocharray):
+def sort_epochs_by_duration(epocharray):
     total_durations = defaultdict(lambda: 0.0 * pq.s)
     for label, duration in zip(epocharray.labels,
-                                epocharray.durations):
+                               epocharray.durations):
         total_durations[label] += duration
-    max_duration = 0.0
-    max_label = None
-    for label, total_duration in total_durations.items():
-        if total_duration > max_duration:
-            max_label = label
-            max_duration = total_duration
-    return max_label
+    return sorted(total_durations, key=lambda l: -total_durations[l])
