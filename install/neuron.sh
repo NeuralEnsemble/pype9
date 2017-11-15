@@ -53,7 +53,7 @@ if [ "${VERSION%%-*}" == 'tag' ]; then
     wget -nv http://github.com/nrnhines/nrn/archive/${VERSION##tag-}.zip -O $BASE_DIR/$NEURON.zip;
     echo "BASE_DIR: $BASE_DIR"
     pushd $BASE_DIR;
-    unzip $NEURON.zip;
+    unzip -qq $NEURON.zip;
     rm $NEURON.zip;
     mv nrn* $NEURON;
     pushd $NEURON;
@@ -76,7 +76,7 @@ echo "Install Prefix: $INSTALL_PREFIX"
 CONFIG_CMD="$SRC_DIR/configure --with-paranrn --with-nrnpython=$PYTHON_PATH --prefix=$INSTALL_PREFIX --disable-rx3d --without-iv";
 echo $CONFIG_CMD
 $CONFIG_CMD
-make -j8;
+make -j8 -s;
 
 # Add setup.cfg with empty prefix
 SETUP_CFG=$BUILD_DIR/src/nrnpython/setup.cfg
@@ -84,7 +84,7 @@ echo "[install]" > $SETUP_CFG
 echo "prefix=" >> $SETUP_CFG
 
 # Now can install
-make install
+make -s install
 
 rm $SETUP_CFG
 

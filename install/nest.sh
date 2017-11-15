@@ -51,7 +51,7 @@ if [ "${VERSION%%-*}" == 'tag' ]; then
     echo ${VERSION##tag-}
     wget -nv http://github.com/nrnhines/nrn/archive/${VERSION##tag-}.zip -O $BASE_DIR/$NEST.zip;
     pushd $BASE_DIR;
-    unzip $NEST.zip;
+    unzip -qq $NEST.zip;
     rm $NEST.zip;
     mv nrn* $NEST;
     popd;
@@ -93,8 +93,8 @@ CMAKE_CMD="cmake -Dwith-mpi=ON -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX $PYTHON_AR
 echo "NEST CMake:"
 echo $CMAKE_CMD
 $CMAKE_CMD
-make -j8;
-make install
+make -j8 -s;
+make -s install
 popd
 
 # Create symlink from multiarch sub-directory to site-packages if required
