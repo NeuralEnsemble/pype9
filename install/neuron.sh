@@ -36,7 +36,7 @@ fi
 echo "Installing Neuron to '$INSTALL_PREFIX'"
 
 if [ -z "$4" ]; then
-    BASE_DIR=$HOME/.pype9/prereq-build/$NEURON
+    BASE_DIR=$HOME/.pype9/prereq-build/$NEURON/$PYTHON
     rm -rf $BASE_DIR
 else
     BASE_DIR=$4

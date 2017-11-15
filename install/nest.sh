@@ -34,7 +34,7 @@ fi
 echo "Installing NEST to '$INSTALL_PREFIX'"
 
 if [ -z "$4" ]; then
-    BASE_DIR=$HOME/.pype9/prereq-build/$NEST
+    BASE_DIR=$HOME/.pype9/prereq-build/$NEST/$PYTHON
     rm -rf $BASE_DIR
 else
     BASE_DIR=$4
@@ -86,9 +86,16 @@ echo "Install Prefix: $INSTALL_PREFIX"
 echo "Python Library: $PYTHON_LIBRARY"
 echo "Python include dir: $PYTHON_INCLUDE_DIR"
 
+if [ ! -z "$TRAVIS" ]; then
+    # The above Python detection code detects a library that cmake thinks is the wrong point release somehow,
+    # despite it appearing to be in the correct location
+    PYTHON_ARGS="-Dwith-python=ON"
+else
+    PYTHON_ARGS="-Dwith-python=$PYTHON_VERSION -DPYTHON_LIBRARY=$PYTHON_LIBRARY \
+        -DPYTHON_INCLUDE_DIRS=$PYTHON_INCLUDE_DIRS"
+fi
 
-CMAKE_CMD="cmake -Dwith-mpi=ON -Dwith-python=$PYTHON_VERSION -DPYTHON_LIBRARY=$PYTHON_LIBRARY \
- -DPYTHON_INCLUDE_DIRS=$PYTHON_INCLUDE_DIRS \
+CMAKE_CMD="cmake -Dwith-mpi=ON $PYTHON_ARGS \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX $SRC_DIR"
 echo "NEST CMake:"
 echo $CMAKE_CMD
