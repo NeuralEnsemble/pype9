@@ -86,17 +86,10 @@ echo "Install Prefix: $INSTALL_PREFIX"
 echo "Python Library: $PYTHON_LIBRARY"
 echo "Python include dir: $PYTHON_INCLUDE_DIR"
 
-if [ ! -z "$TRAVIS" ]; then
-    # The above Python detection code detects a library that cmake thinks is the wrong point release somehow,
-    # despite it appearing to be in the correct location
-    PYTHON_ARGS="-Dwith-python=ON"
-else
-    PYTHON_ARGS="-Dwith-python=$PYTHON_VERSION -DPYTHON_LIBRARY=$PYTHON_LIBRARY \
-        -DPYTHON_INCLUDE_DIRS=$PYTHON_INCLUDE_DIRS"
-fi
+PYTHON_ARGS="-Dwith-python=$PYTHON_VERSION -DPYTHON_LIBRARY=$PYTHON_LIBRARY \
+    -DPYTHON_INCLUDE_DIRS=$PYTHON_INCLUDE_DIRS"
 
-CMAKE_CMD="cmake -Dwith-mpi=ON $PYTHON_ARGS \
- -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX $SRC_DIR"
+CMAKE_CMD="cmake -Dwith-mpi=ON -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX $PYTHON_ARGS $SRC_DIR"
 echo "NEST CMake:"
 echo $CMAKE_CMD
 $CMAKE_CMD

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from __future__ import division
+import sys
 from builtins import zip
 import nineml.units as un
 from argparse import ArgumentParser
@@ -149,7 +150,7 @@ def run(argv):
     # Plot the results
     if args.save_fig is not None:
         import matplotlib
-        matplotlib.use('pdf')
+        matplotlib.use('Agg')
     # Needs to be imported after the args.save_fig argument is parsed to
     # allow the backend to be set
     from matplotlib import pyplot as plt  # @IgnorePep8
@@ -208,4 +209,4 @@ def construct_reference(input_signal, dt):
 
 
 if __name__ == "__main__":
-    run()
+    run(sys.argv[1:])

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import sys
 from argparse import ArgumentParser
 import ninemlcatalog
 from nineml import units as un
@@ -36,4 +37,4 @@ def run(argv):
 
 
 if __name__ == '__main__':
-    run()
+    run(sys.argv[1:])

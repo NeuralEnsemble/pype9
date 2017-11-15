@@ -33,6 +33,10 @@ from .with_synapses import WithSynapses
 
 logger = logging.Logger("Pype9")
 
+# Helps to ensure that generated build names don't clash with built-in types
+# e.g. 'Izhikevich'
+BUILD_NAME_SUFFIX = '9ML'
+
 
 class CellMetaClass(type):
     """
@@ -52,7 +56,8 @@ class CellMetaClass(type):
     """
 
     def __new__(cls, component_class, build_url=None, build_version=None,
-                build_base_dir=None, code_generator=None, **kwargs):
+                build_base_dir=None, code_generator=None, build_mode='lazy',
+                **kwargs):
         # Grab the url before the component class is cloned
         url = (build_url if build_url is not None else component_class.url)
         # Clone component class so annotations can be added to it and not bleed
@@ -64,7 +69,7 @@ class CellMetaClass(type):
             component_class = WithSynapses.wrap(component_class)
         # Extract name from component class and append build_version if
         # provided
-        name = component_class.name
+        name = component_class.name + BUILD_NAME_SUFFIX
         if build_version is not None:
             name += build_version
         if code_generator is None:
@@ -107,7 +112,8 @@ class CellMetaClass(type):
             if is_mpi_master():
                 # Generate and compile cell class
                 code_generator.generate(component_class=build_component_class,
-                                        url=url, **kwargs)
+                                        url=url, build_mode=build_mode,
+                                        **kwargs)
             # Make slave nodes wait for the root node to finish building
             mpi_comm.barrier()
             # Load newly built model

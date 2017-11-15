@@ -4,6 +4,7 @@ Constructs a leaky integrate and fire model with an alpha synapse and connects
 it to an input source that fires spikes at a constant rate
 """
 from __future__ import division
+import sys
 from argparse import ArgumentParser
 from nineml import units as un, MultiDynamics, Property
 from pype9.simulate.common.cells import WithSynapses, ConnectionParameterSet
@@ -127,4 +128,4 @@ def run(argv):
 
 
 if __name__ == '__main__':
-    run()
+    run(sys.argv[1:])

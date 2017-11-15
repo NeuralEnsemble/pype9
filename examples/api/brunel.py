@@ -5,7 +5,6 @@ from builtins import zip
 import os.path
 from itertools import groupby
 from operator import itemgetter
-from collections import defaultdict
 import ninemlcatalog
 import nest
 import numpy as np
@@ -79,7 +78,7 @@ def run(argv):
                         "(see --simulators and --reference options)")
 
     if args.save_fig is not None:
-        matplotlib.use('pdf')
+        matplotlib.use('Agg')
         save_path = os.path.abspath(args.save_fig)
         if not os.path.exists(save_path) and is_mpi_master():
             os.mkdir(save_path)
@@ -282,4 +281,4 @@ def run(argv):
 
 
 if __name__ == '__main__':
-    run()
+    run(sys.argv[1:])

@@ -20,6 +20,14 @@ V_FNAME="$OUT_DIR/simple_hh_example-v.neo.pkl"
 
 mkdir -p $OUT_DIR
 
+echo "pype9 simulate \
+	catalog://neuron/HodgkinHuxley#PyNNHodgkinHuxleyProperties \
+	nest 500.0 0.001 \
+	--init_value v 65 mV \
+	--init_value m 0.0 unitless \
+	--init_value h 1.0 unitless \
+	--init_value n 0.0 unitless \
+	--record v $V_FNAME"
 pype9 simulate \
 	catalog://neuron/HodgkinHuxley#PyNNHodgkinHuxleyProperties \
 	nest 500.0 0.001 \
@@ -28,5 +36,6 @@ pype9 simulate \
 	--init_value h 1.0 unitless \
 	--init_value n 0.0 unitless \
 	--record v $V_FNAME
-	
+
+echo "pype9 plot $V_FNAME $PLOT_OPTIONS"	
 pype9 plot $V_FNAME $PLOT_OPTIONS

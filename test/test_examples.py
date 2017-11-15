@@ -4,6 +4,7 @@ error
 """
 from __future__ import division
 from __future__ import print_function
+import matplotlib
 from future.utils import PY3
 import sys
 import errno
@@ -11,9 +12,11 @@ import os.path
 import stat
 import shutil
 import subprocess as sp
+import ninemlcatalog
 from unittest import TestCase  # @Reimport
-from pype9.simulate.common.code_gen import BASE_BUILD_DIR
-import pype9.utils.logger_handlers.sysout_info  # @UnusedImport
+matplotlib.use('Agg')
+from pype9.simulate.common.code_gen import BASE_BUILD_DIR  # @IgnorePep8
+import pype9.utils.logger_handlers.sysout_info  # @UnusedImport @IgnorePep8
 
 
 OUT_PATH = os.path.join(BASE_BUILD_DIR, 'examples')
@@ -25,6 +28,14 @@ SCRIPTS_DEST_PATH = os.path.join(OUT_PATH, 'scripts')
 
 api_path = os.path.join(EXAMPLES_PATH, 'api')
 bash_path = os.path.join(EXAMPLES_PATH, 'bash')
+
+# Import example run methods
+sys.path.insert(0, api_path)
+from brunel import run as brunel_run  # @UnresolvedImport @IgnorePep8
+from izhikevich import run as izhikevich_run  # @UnresolvedImport @IgnorePep8
+from liaf_with_alpha import run as liaf_with_alpha_run  # @UnresolvedImport @IgnorePep8
+from simple_hh import run as simple_hh_run  # @UnresolvedImport @IgnorePep8
+sys.path.pop(0)
 
 
 class TestExamples(TestCase):
@@ -55,53 +66,42 @@ class TestExamples(TestCase):
         shutil.rmtree(OUT_PATH)
 
     def test_brunel(self):
-        self.run_api('brunel', ['--save_fig',
-                                os.path.join(FIG_PATH, 'brunel.pdf')])
+        brunel_run(
+            ['--reference',
+             '--save_fig', os.path.join(FIG_PATH, 'brunel.png')])
 
     def test_izhikevich(self):
-        self.run_api('izhikevich',
-                     ['--save_fig', os.path.join(FIG_PATH, 'izhikevich.pdf')])
-        self.run_api('izhikevich',
-                     ['--fast_spiking',
-                      '--save_fig',
-                      os.path.join(FIG_PATH, 'izhikevich-fs.pdf')])
+        izhikevich_run(
+            ['--save_fig', os.path.join(FIG_PATH, 'izhikevich.png')])
+        izhikevich_run(
+            ['--fast_spiking',
+             '--save_fig', os.path.join(FIG_PATH, 'izhikevich-fs.png')])
 
     def test_liaf_with_alpha(self):
-        self.run_api('liaf_with_alpha',
-                     ['--simulator', 'nest',
-                      '--save_fig', os.path.join(FIG_PATH, 'liaf-nest.pdf')])
-        self.run_api('liaf_with_alpha',
-                     ['--simulator', 'neuron',
-                      '--save_fig', os.path.join(FIG_PATH, 'liaf-neuron.pdf')])
+        liaf_with_alpha_run(
+            ['--simulator', 'nest',
+             '--save_fig', os.path.join(FIG_PATH, 'liaf-nest.png')])
+        liaf_with_alpha_run(
+            ['--simulator', 'neuron',
+             '--save_fig', os.path.join(FIG_PATH, 'liaf-neuron.png')])
 
     def test_simple_hh(self):
-        self.run_api('simple_hh',
-                     ['--save_fig', os.path.join(FIG_PATH,
-                                                 'simple_hh-api.pdf')])
-        self.run_bash('simple_hh',
-                      [FIG_PATH, os.path.join(FIG_PATH, 'simple_hh-bash.pdf')])
+        simple_hh_run(
+            ['--save_fig', os.path.join(FIG_PATH, 'simple_hh-api.png')])
+        self.run_bash(
+            'simple_hh',
+            [FIG_PATH, os.path.join(FIG_PATH, 'simple_hh-bash.png')])
 
-    def run_api(self, fname, args=[], **kwargs):
-        self.run_cmd([sys.executable,
-                      os.path.join(api_path, fname) + '.py'] + args,
-                     **kwargs)
+    def test_convert_xml_to_yml(self):
+        self.run_bash(
+            'convert_xml_to_yml',
+            [ninemlcatalog.load('neuron/Izhikevich').url, FIG_PATH])
 
-    def run_bash(self, fname, args=[]):
+    def run_bash(self, script_name, args):
+        # Ensure that the destination scripts dir is on the system path and
+        # package root is on the python path
         env = os.environ.copy()
-        env['PATH'] = os.path.pathsep.join((SCRIPTS_DEST_PATH, env['PATH']))
-        cmd = ['bash', os.path.join(bash_path, fname) + '.sh'] + args
-        self.run_cmd(cmd, env=env)
-
-    def run_cmd(self, cmd, env=None, **kwargs):
-        if env is None:
-            env = os.environ.copy()
-        process = sp.Popen(
-            cmd, stdout=sp.PIPE, stderr=sp.PIPE, env=env, **kwargs)
-        stdout, stderr = process.communicate()
-        if PY3:
-            stdout = str(stdout.decode('utf-8'))
-            stderr = str(stderr.decode('utf-8'))
-        self.assertEqual(process.returncode, 0,
-                         "Command '{}' exited with failure:{}\n\n{}".format(
-                             ' '.join(cmd), str(stdout), str(stderr)))
-        return stdout, stderr
+        env['PATH'] = os.pathsep.join([SCRIPTS_DEST_PATH, env['PATH']])
+        env['PYTHONPATH'] = os.pathsep.join([PACKAGE_ROOT, env['PYTHONPATH']])
+        sp.check_call([os.path.join(bash_path, script_name) + '.sh'] + args,
+                      env=env)
