@@ -15,13 +15,16 @@ import subprocess as sp
 import ninemlcatalog
 from unittest import TestCase  # @Reimport
 matplotlib.use('Agg')
+import logging  # @IgnorePep8
 from pype9.simulate.common.code_gen import BASE_BUILD_DIR  # @IgnorePep8
 import pype9.utils.logger_handlers.sysout_info  # @UnusedImport @IgnorePep8
 
+logger = logging.getLogger('pype9')
 
 OUT_PATH = os.path.join(BASE_BUILD_DIR, 'examples')
 FIG_PATH = os.path.join(OUT_PATH, 'fig')
-PACKAGE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+PACKAGE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
+                                            '..'))
 EXAMPLES_PATH = os.path.join(PACKAGE_ROOT, 'examples')
 SCRIPTS_SRC_PATH = os.path.join(PACKAGE_ROOT, 'scripts')
 SCRIPTS_DEST_PATH = os.path.join(OUT_PATH, 'scripts')
@@ -31,6 +34,8 @@ bash_path = os.path.join(EXAMPLES_PATH, 'bash')
 
 # Import example run methods
 sys.path.insert(0, api_path)
+logger.info("sys.path: {}".format(sys.path))
+logger.info(os.listdir(api_path))
 from brunel import run as brunel_run  # @UnresolvedImport @IgnorePep8
 from izhikevich import run as izhikevich_run  # @UnresolvedImport @IgnorePep8
 from liaf_with_alpha import run as liaf_with_alpha_run  # @UnresolvedImport @IgnorePep8
