@@ -4,7 +4,7 @@
 set -e  # Stop execution in case of errors
 
 if [ -z "$1" ]; then
-	echo "Usage: convert_xml_to_yml.sh xml_file"
+	echo "Usage: convert_xml_to_yml.sh XML_FILE [OUT_DIR]"
 	exit 
 fi
 

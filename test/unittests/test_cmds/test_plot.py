@@ -60,7 +60,8 @@ class TestPlot(TestCase):
             if not os.path.exists(self.cell_input_path):
                 # First simulate input signal to have something to play into
                 # izhikevich cell
-                argv = ("catalog://input/StepCurrent#StepCurrent nest {t_stop} {dt} "
+                argv = ("catalog://input/StepCurrent#StepCurrent "
+                        "nest {t_stop} {dt} "
                         "--record current_output {out_path} {rec_t_start} "
                         "--prop amplitude {amp} "
                         "--prop onset {onset} "

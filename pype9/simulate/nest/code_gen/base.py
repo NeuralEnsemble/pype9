@@ -8,6 +8,7 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
+from future.utils import PY3
 import os
 import sys
 from os import path
@@ -24,8 +25,6 @@ from pype9.utils import remove_ignore_missing
 from pype9.exceptions import Pype9BuildError
 from pype9.utils import add_lib_path
 import pype9
-
-NEST_CONFIG_PATH_ENV_VAR = 'PYPE9_NEST_CONFIG_PATH'
 
 logger = logging.getLogger('pype9')
 
@@ -54,8 +53,8 @@ class CodeGenerator(BaseCodeGenerator):
     def __init__(self, build_cores=1, **kwargs):
         super(CodeGenerator, self).__init__(**kwargs)
         self._build_cores = build_cores
-        self.nest_config = self.path_to_utility(
-            'nest-config', env_var=NEST_CONFIG_PATH_ENV_VAR)
+        self.nest_config = os.path.join(
+            self.get_nest_install_prefix(), 'bin', 'nest-config')
         compiler, _ = self.run_command(
             [self.nest_config, '--compiler'],
             fail_msg=("Could not run nest-config at '{}': {{}}"
@@ -246,3 +245,35 @@ class CodeGenerator(BaseCodeGenerator):
             '({}) addpath'.format(os.path.join(install_dir, 'share', 'sli')))
         # Install nest module
         nest.Install(name + 'Module')
+
+    @classmethod
+    def get_nest_install_prefix(cls):
+        # Make doubly sure that the right nest install appears first on the
+        # PYTHONPATH (not sure if this is necessary, but can't hurt)
+        pynest_install_dir = os.path.dirname(nest.__file__)
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.pathsep.join(('testing',
+                                             pynest_install_dir,
+                                             env['PYTHONPATH']))
+        try:
+            process = sp.Popen(
+                [sys.executable, '-c', "import nest; nest.sysinfo()"],
+                stdout=sp.PIPE, stderr=sp.PIPE, env=env)
+            stdout, _ = process.communicate()
+        except sp.CalledProcessError as e:
+            raise Pype9BuildError(
+                "Error trying to run 'import nest; nest.sysinfo()' in "
+                "subprocess:\n{}".format(e))
+        if PY3:
+            stdout = str(stdout.decode('utf-8'))
+        match = re.search(r'\(([^\)]+)/share/nest/sli\)', stdout)
+        if match is None:
+            raise Pype9BuildError(
+                "Could not find nest install prefix by searching for "
+                "'share/nest/sli' in output from nest.sysinfo:\n{}"
+                .format(stdout))
+        return match.group(1)
+
+
+if __name__ == '__main__':
+    print(CodeGenerator.get_nest_config_path())

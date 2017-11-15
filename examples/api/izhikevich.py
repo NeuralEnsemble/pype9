@@ -135,8 +135,7 @@ def run(argv):
                 seed=seed) as sim:
             # Construct the cells and set up recordings and input plays
             if simulator in args.simulators:
-                Cell = MetaClasses[simulator](model, build_version='9ML',
-                                              **metaclass_kwargs)
+                Cell = MetaClasses[simulator](model, **metaclass_kwargs)
                 cells[simulator] = Cell(properties, **initial_states)
                 # Play input current into cell
                 cells[simulator].play(input_port_name, input_signal)
