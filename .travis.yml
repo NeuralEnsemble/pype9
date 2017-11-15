@@ -36,6 +36,6 @@ install:
   - pip install -r requirements.txt
   - pip install coveralls
 script:
-  - nosetests ./test --with-coverage --cover-package=pype9
+  - nosetests test/unittests --with-coverage --cover-package=pype9
 after_success:
   - coveralls
