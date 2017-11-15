@@ -10,7 +10,7 @@ from nineml import units as un, MultiDynamics, Property
 from pype9.simulate.common.cells import WithSynapses, ConnectionParameterSet
 import ninemlcatalog
 from pype9.plot import plot
-import pype9.utils.logger_handlers.sysout_info  # @UnusedImport
+import pype9.utils.logging.handlers.sysout  # @UnusedImport
 
 
 def argparser():

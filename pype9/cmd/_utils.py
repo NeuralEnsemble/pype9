@@ -8,7 +8,7 @@ import ninemlcatalog
 from argparse import ArgumentTypeError
 from pype9.exceptions import Pype9UsageError, Pype9UnitStrError
 from functools import reduce
-import pype9.utils.logger_handlers.sysout_info  # @UnusedImport
+import pype9.utils.logging.handlers.sysout  # @UnusedImport
 
 CATALOG_PREFIX = 'catalog://'
 

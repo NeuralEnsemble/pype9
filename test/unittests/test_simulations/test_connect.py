@@ -18,7 +18,7 @@ if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:
     from unittest import TestCase  # @Reimport
-import pype9.utils.logger_handlers.sysout_info  # @IgnorePep8
+import pype9.utils.logging.handlers.sysout  # @IgnorePep8
 
 
 class TestConnect(TestCase):

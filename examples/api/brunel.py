@@ -16,7 +16,7 @@ from pyNN.utility import SimulationProgressBar
 import sys
 argv = sys.argv[1:]
 from pype9.mpi import is_mpi_master  # @IgnorePep8
-import pype9.utils.logger_handlers.sysout_info  # @UnusedImport @IgnorePep8
+import pype9.utils.logging.handlers.sysout  # @UnusedImport @IgnorePep8
 
 
 def argparser():

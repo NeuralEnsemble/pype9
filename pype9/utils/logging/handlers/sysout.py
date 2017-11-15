@@ -1,8 +1,9 @@
 import sys
 import logging
+from .. import loglevel
 
 logger = logging.getLogger('pype9')
-logger.setLevel(logging.INFO)
+logger.setLevel(loglevel)
 handler = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter(
     '%(levelname)s - %(message)s')

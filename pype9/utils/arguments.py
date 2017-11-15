@@ -8,15 +8,7 @@ from builtins import str
 import time
 import os.path
 import shutil
-
-try:
-    from mpy4py import MPI
-    comm = MPI.COMM_WORLD  # The MPI communicator object
-    rank = comm.Get_rank()  # The ID of the current process
-    num_processes = comm.Get_size()
-except ImportError:
-    num_processes = 1
-    rank = 0
+from pype9.mpi import mpi_comm
 
 
 class inputpath(str):
@@ -61,5 +53,5 @@ class randomseed(int):
             seed = int(arg)
         # Ensure a different seed gets used on each MPI node
         if not mirror_mpi:
-            seed = seed * num_processes + rank
+            seed = seed * mpi_comm.size + mpi_comm.rank
         return cls(seed)

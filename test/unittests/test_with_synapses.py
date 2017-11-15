@@ -3,7 +3,7 @@ from nineml.serialization.xml import XMLUnserializer
 import ninemlcatalog
 from pype9.simulate.common.cells.with_synapses import (
     WithSynapses, ConnectionParameterSet, class_map)
-import pype9.utils.logger_handlers.sysout_info  # @UnusedImport
+import pype9.utils.logging.handlers.sysout  # @UnusedImport
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:

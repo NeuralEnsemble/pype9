@@ -12,7 +12,7 @@ from pype9.simulate.nest import (
     CellMetaClass as NESTCellMetaClass, Network as NESTNetwork,
     Simulation as NESTSimulation)
 from pype9.simulate.neuron import Simulation
-import pype9.utils.logger_handlers.sysout_info  # @UnusedImport
+import pype9.utils.logging.handlers.sysout  # @UnusedImport
 if __name__ == '__main__':
     from pype9.utils.testing import DummyTestCase as TestCase  # @UnusedImport
 else:

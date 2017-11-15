@@ -10,7 +10,7 @@ import quantities as pq
 import numpy as np
 import neo
 import nest
-import pype9.utils.logger_handlers.sysout_info  # @UnusedImport
+import pype9.utils.logging.handlers.sysout  # @UnusedImport
 
 min_delay = 0.1
 max_delay = 10.0

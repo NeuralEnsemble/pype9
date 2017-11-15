@@ -38,7 +38,7 @@ import nest  # @IgnorePep8
 from pype9.simulate.nest.network import Network as NestPype9Network  # @IgnorePep8
 from pype9.simulate.nest import Simulation as NESTSimulation  # @IgnorePep8
 from pype9.utils.testing import ReferenceBrunel2000  # @IgnorePep8
-import pype9.utils.logger_handlers.sysout_info  # @IgnorePep8
+import pype9.utils.logging.handlers.sysout  # @IgnorePep8
 
 try:
     from matplotlib import pyplot as plt

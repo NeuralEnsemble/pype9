@@ -17,7 +17,7 @@ from unittest import TestCase  # @Reimport
 matplotlib.use('Agg')
 import logging  # @IgnorePep8
 from pype9.simulate.common.code_gen import BASE_BUILD_DIR  # @IgnorePep8
-import pype9.utils.logger_handlers.sysout_info  # @UnusedImport @IgnorePep8
+import pype9.utils.logging.handlers.sysout  # @UnusedImport @IgnorePep8
 
 logger = logging.getLogger('pype9')
 
