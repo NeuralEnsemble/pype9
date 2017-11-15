@@ -47,10 +47,10 @@ mkdir -p $BASE_DIR
 SRC_DIR=$BASE_DIR/$NEURON
 BUILD_DIR=$BASE_DIR/$NEURON-build
 
-if [ "${VERSION%%-*}" == 'sha' ]; then
+if [ "${VERSION%%-*}" == 'tag' ]; then
     # Download and untar
-    echo ${VERSION##sha-}
-    wget http://github.com/nrnhines/nrn/archive/${VERSION##sha-}.zip -O $BASE_DIR/$NEURON.zip;
+    echo ${VERSION##tag-}
+    wget -nv http://github.com/nrnhines/nrn/archive/${VERSION##tag-}.zip -O $BASE_DIR/$NEURON.zip;
     echo "BASE_DIR: $BASE_DIR"
     pushd $BASE_DIR;
     unzip $NEURON.zip;
@@ -62,7 +62,7 @@ if [ "${VERSION%%-*}" == 'sha' ]; then
     popd;
 else
     # Download and untar
-    wget --quiet http://www.neuron.yale.edu/ftp/neuron/versions/v$VERSION/$NEURON.tar.gz -O $BASE_DIR/$NEURON.tar.gz;
+    wget -nv http://www.neuron.yale.edu/ftp/neuron/versions/v$VERSION/$NEURON.tar.gz -O $BASE_DIR/$NEURON.tar.gz;
     pushd $BASE_DIR;
     tar xzf $NEURON.tar.gz;
     popd;

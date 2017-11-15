@@ -46,17 +46,17 @@ export SRC_DIR=$BASE_DIR/$NEST
 export BUILD_DIR=$BASE_DIR/$NEST-build
 
 # Download source from GitHub
-if [ "${VERSION%%-*}" == 'sha' ]; then
+if [ "${VERSION%%-*}" == 'tag' ]; then
     # Download and untar
-    echo ${VERSION##sha-}
-    wget --quiet http://github.com/nrnhines/nrn/archive/${VERSION##sha-}.zip -O $BASE_DIR/$NEST.zip;
+    echo ${VERSION##tag-}
+    wget -nv http://github.com/nrnhines/nrn/archive/${VERSION##tag-}.zip -O $BASE_DIR/$NEST.zip;
     pushd $BASE_DIR;
     unzip $NEST.zip;
     rm $NEST.zip;
     mv nrn* $NEST;
     popd;
 else
-    wget --quiet https://github.com/nest/nest-simulator/releases/download/v$VERSION/$NEST.tar.gz -O $BASE_DIR/$NEST.tar.gz;
+    wget -nv https://github.com/nest/nest-simulator/releases/download/v$VERSION/$NEST.tar.gz -O $BASE_DIR/$NEST.tar.gz;
     pushd $BASE_DIR;
     tar xzf $NEST.tar.gz;
     popd;
