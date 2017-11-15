@@ -15,11 +15,9 @@ import subprocess as sp
 import ninemlcatalog
 from unittest import TestCase  # @Reimport
 matplotlib.use('Agg')
-import logging  # @IgnorePep8
 from pype9.simulate.common.code_gen import BASE_BUILD_DIR  # @IgnorePep8
 import pype9.utils.logging.handlers.sysout  # @UnusedImport @IgnorePep8
-
-logger = logging.getLogger('pype9')
+from pype9.utils.logging import logger  # @IgnorePep8
 
 OUT_PATH = os.path.join(BASE_BUILD_DIR, 'examples')
 FIG_PATH = os.path.join(OUT_PATH, 'fig')

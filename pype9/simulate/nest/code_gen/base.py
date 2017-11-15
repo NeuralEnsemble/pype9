@@ -14,7 +14,6 @@ import sys
 from os import path
 import subprocess as sp
 import re
-import logging
 import shutil
 from datetime import datetime
 import errno
@@ -25,8 +24,7 @@ from pype9.utils import remove_ignore_missing
 from pype9.exceptions import Pype9BuildError
 from pype9.utils import add_lib_path
 import pype9
-
-logger = logging.getLogger('pype9')
+from pype9.utils.logging import logger
 
 cmake_success_re = re.compile(r'-- Build files have been written to: (.*)')
 

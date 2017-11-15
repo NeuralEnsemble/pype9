@@ -34,9 +34,7 @@ import numpy
 import quantities as pq
 import neo
 from pype9.exceptions import Pype9RuntimeError
-import logging
-
-logger = logging.getLogger('pype9')
+from pype9.utils.logging import logger
 
 
 class Comparer(object):

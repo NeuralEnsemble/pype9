@@ -31,10 +31,8 @@ except ImportError:
     from fractions import gcd
 from functools import reduce  # @IgnorePep8
 from future.utils import with_metaclass  # @IgnorePep8
+from pype9.utils.logging import logger  # @IgnorePep8
 numpy.seterr(all='raise')
-
-
-logger = logging.getLogger('pype9')
 
 
 class UnitHandler(with_metaclass(ABCMeta, DynamicsDimensionResolver)):

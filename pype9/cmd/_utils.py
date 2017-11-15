@@ -1,19 +1,16 @@
 from builtins import str
 import os.path
 import operator
-import logging
 import sympy
 import nineml.units
 import ninemlcatalog
 from argparse import ArgumentTypeError
 from pype9.exceptions import Pype9UsageError, Pype9UnitStrError
 from functools import reduce
+from pype9.utils.logging import logger
 import pype9.utils.logging.handlers.sysout  # @UnusedImport
 
 CATALOG_PREFIX = 'catalog://'
-
-
-logger = logging.getLogger('pype9')
 
 
 def existing_file(fname):

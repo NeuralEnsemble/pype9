@@ -4,11 +4,9 @@ from nineml import units as un
 import numpy
 import time
 from pype9.exceptions import Pype9UsageError, Pype9NoActiveSimulationError
-import logging
 from pyNN.random import NumpyRNG
 from future.utils import with_metaclass
-
-logger = logging.getLogger('pype9')
+from pype9.utils.logging import logger
 
 
 class Simulation(with_metaclass(ABCMeta, object)):

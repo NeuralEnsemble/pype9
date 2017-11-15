@@ -1,5 +1,4 @@
 from builtins import object
-import logging
 from nineml import units as un
 import ctypes
 from pyNN.neuron import (
@@ -8,8 +7,6 @@ from pyNN.neuron.simulator import initializer as pyNN_initializer
 from pype9.simulate.common.simulation import Simulation as BaseSimulation
 from pype9.simulate.neuron.code_gen import CodeGenerator
 from pype9.exceptions import Pype9UsageError
-
-logger = logging.getLogger('pype9')
 
 
 class Simulation(BaseSimulation):

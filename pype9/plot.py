@@ -4,10 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from collections import defaultdict, OrderedDict
 import quantities as pq
-import logging
-
-
-logger = logging.getLogger('pype9')
+from pype9.utils.logging import logger
 
 
 def plot(seg, dims=(20, 16), resolution=300, save=None, show=True,

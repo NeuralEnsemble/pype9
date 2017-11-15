@@ -8,7 +8,6 @@
            the MIT Licence, see LICENSE for details.
 """
 from __future__ import absolute_import
-import logging
 import numpy
 import neo
 import nest
@@ -21,9 +20,7 @@ from pype9.simulate.common.cells import base
 from pype9.annotations import PYPE9_NS, MEMBRANE_VOLTAGE, BUILD_TRANS
 from pype9.exceptions import (
     Pype9UsageError, Pype9Unsupported9MLException)
-
-
-logger = logging.getLogger('pype9')
+from pype9.utils.logging import logger
 
 basic_nineml_translations = {
     'Voltage': 'V_m', 'Diameter': 'diam', 'Length': 'L'}

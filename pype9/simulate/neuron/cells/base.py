@@ -32,13 +32,10 @@ from pype9.annotations import (
     MEMBRANE_VOLTAGE, MECH_TYPE, ARTIFICIAL_CELL_MECH)
 from pype9.exceptions import (
     Pype9RuntimeError, Pype9UsageError, Pype9Unsupported9MLException)
-import logging
 
 basic_nineml_translations = {'Voltage': 'v', 'Diameter': 'diam', 'Length': 'L'}
 
 NEURON_NS = 'NEURON'
-
-logger = logging.getLogger('pype9')
 
 
 class Cell(base.Cell):

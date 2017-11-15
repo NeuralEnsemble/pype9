@@ -4,9 +4,6 @@ from pyNN.nest import (
     setup as pyNN_setup, run as pyNN_run, state as pyNN_state, end as pyNN_end)
 from pype9.exceptions import Pype9UsageError
 from .code_gen import CodeGenerator
-import logging
-
-logger = logging.getLogger('pype9')
 
 
 class Simulation(BaseSimulation):

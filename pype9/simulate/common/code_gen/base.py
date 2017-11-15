@@ -29,7 +29,6 @@ from nineml.exceptions import NineMLNameError, NineMLSerializationError
 from pype9.exceptions import (
     Pype9BuildError, Pype9CommandNotFoundError, Pype9RuntimeError)
 from ..cells.with_synapses import read
-import logging
 import pype9.annotations
 from pype9.annotations import PYPE9_NS, BUILD_PROPS
 from os.path import expanduser
@@ -38,9 +37,7 @@ from nineml.serialization import url_re
 import sysconfig
 from pype9 import __version__
 from pype9.utils import remove_ignore_missing
-
-
-logger = logging.getLogger('pype9')
+from pype9.utils.logging import logger
 
 BASE_BUILD_DIR = os.path.join(
     expanduser("~"),
