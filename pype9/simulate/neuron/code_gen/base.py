@@ -47,15 +47,11 @@ from pype9.annotations import (
     EXTERNAL_CURRENTS, NO_TIME_DERIVS,
     NUM_TIME_DERIVS, MECH_TYPE, FULL_CELL_MECH,
     ARTIFICIAL_CELL_MECH)
-#     , TRANSFORM_DEST, SUB_COMPONENT_MECH, EXTERNAL_CONCENTRATION,
-#     INTERNAL_CONCENTRATION)
 import logging
 
 TRANSFORM_NS = 'NeuronBuildTransform'
 
 logger = logging.getLogger("pype9")
-
-NRNIVMODL_PATH_ENV_VAR = 'PYPE9_NRNIVMODL_PATH'
 
 
 class CodeGenerator(BaseCodeGenerator):
