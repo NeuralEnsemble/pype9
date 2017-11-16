@@ -28,6 +28,7 @@ addons:
       - libhdf5-serial-dev
       - libyaml-dev
 install:
+  - pip install --upgrade cmake  # For NEST installation
   - install/nest.sh 2.14.0
   - install/neuron.sh tag-9fc719735a2d0a9446f59065534d5326a6bd179d
   - pip install git+git://github.com/tclose/nineml-python.git@pype9_port
