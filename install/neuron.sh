@@ -93,6 +93,14 @@ cd src/nrnpython
 $PYTHON setup.py install
 pip install nrnutils  # must be installed after NEURON
 
+# Create link to nrnivmodl (required for PyNN install)
+mkdir -p $INSTALL_PREFIX/bin;
+cd $INSTALL_PREFIX/bin;
+ls -l;
+ln -sf ../x86_64/bin/nrnivmodl;
+popd
+
+
 # Test installation
 $PYTHON -c "import neuron; neuron.h.Section();"
 
