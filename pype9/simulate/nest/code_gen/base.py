@@ -250,8 +250,7 @@ class CodeGenerator(BaseCodeGenerator):
         # PYTHONPATH (not sure if this is necessary, but can't hurt)
         pynest_install_dir = os.path.dirname(nest.__file__)
         env = os.environ.copy()
-        env['PYTHONPATH'] = os.pathsep.join(('testing',
-                                             pynest_install_dir,
+        env['PYTHONPATH'] = os.pathsep.join((pynest_install_dir,
                                              env.get('PYTHONPATH', '')))
         try:
             process = sp.Popen(

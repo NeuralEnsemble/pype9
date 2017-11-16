@@ -98,7 +98,7 @@ class TestExamples(TestCase):
     def test_convert_xml_to_yml(self):
         self.run_bash(
             'convert_xml_to_yml',
-            [ninemlcatalog.get_full_path('neuron/Izhikevich'), FIG_PATH])
+            [ninemlcatalog.get_full_path('neuron/Izhikevich')[0], FIG_PATH])
 
     def run_bash(self, script_name, args):
         # Ensure that the destination scripts dir is on the system path and
