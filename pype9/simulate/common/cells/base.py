@@ -95,7 +95,8 @@ class CellMetaClass(type):
                     "Use 'build_version' option to differentiate between "
                     "them (will be appended to the built name)\n\n"
                     "This (url:{})\n-------------------\n{}\n{}"
-                    "\nPrevious (url:{})\n-------------------\n{}\n{}"
+                    "\nPrevious (url:{})\n-------------------\n{}\n{}\n"
+                    "Mismatch\n-------------------\n{}\n\n"
                     .format(name,
                             build_component_class.url,
                             build_component_class.serialize(**serial_kwargs),
@@ -105,7 +106,10 @@ class CellMetaClass(type):
                             Cell.build_component_class.serialize(
                                 **serial_kwargs),
                             Cell.build_component_class.dynamics.serialize(
-                                **serial_kwargs)))
+                                **serial_kwargs),
+                            build_component_class.find_mismatch(
+                                Cell.build_component_class,
+                                annotations_ns=[PYPE9_NS])))
             build = False
         if build:
             # Only build the components on the root node

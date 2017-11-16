@@ -374,9 +374,11 @@ class TestDynamics(TestCase):
             input_signal=input_step('iSyn', 100 * pq.pA, 25.0, 100, dt, 15),
             initial_regime='subVb',
             neuron_build_args={'build_mode': build_mode,
+                               'build_version': 'TestDyn',
                                'external_currents': ['iSyn']},
             # auxiliary_states=['U'],
-            nest_build_args={'build_mode': build_mode})
+            nest_build_args={'build_mode': build_mode,
+                             'build_version': 'TestDyn'})
         comparer.simulate(duration * un.ms, nest_rng_seed=NEST_RNG_SEED,
                           neuron_rng_seed=NEURON_RNG_SEED)
         comparisons = comparer.compare()

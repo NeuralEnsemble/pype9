@@ -54,8 +54,8 @@ class TestConnect(TestCase):
         for CellMetaClass, Simulation in ((NESTCellMetaClass, NESTSimulation),
                                           (NeuronCellMetaClass,
                                            NeuronSimulation)):
-            Rate = CellMetaClass(rate9ML)
-            Parrot = CellMetaClass(parrot9ML)
+            Rate = CellMetaClass(rate9ML, build_version='Connect')
+            Parrot = CellMetaClass(parrot9ML, build_version='Connect')
             with Simulation(dt=0.1 * un.ms) as sim:
                 rate = Rate(rate=100 * un.Hz, t_next=10 * un.ms)
                 parrot = Parrot()

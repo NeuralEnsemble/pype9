@@ -246,13 +246,13 @@ class CodeGenerator(BaseCodeGenerator):
 
     @classmethod
     def get_nest_install_prefix(cls):
-        # Make doubly sure that the right nest install appears first on the
+        # Make doubly sure that the loaded nest install appears first on the
         # PYTHONPATH (not sure if this is necessary, but can't hurt)
         pynest_install_dir = os.path.dirname(nest.__file__)
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join(('testing',
                                              pynest_install_dir,
-                                             env['PYTHONPATH']))
+                                             env.get('PYTHONPATH', '')))
         try:
             process = sp.Popen(
                 [sys.executable, '-c', "import nest; nest.sysinfo()"],
