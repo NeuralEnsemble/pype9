@@ -69,10 +69,10 @@ mkdir -p $BUILD_DIR
 pushd $BUILD_DIR
 
 # Get Python installation paths
-export PYTHON_INCLUDE_DIRS=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))");
-if [ ! -d "$PYTHON_INCLUDE_DIRS" ]; then
-    echo "Python include dir '$PYTHON_INCLUDE_DIRS'"
-    ls $(dirname $PYTHON_INCLUDE_DIRS)
+export PYTHON_INCLUDE_DIR=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_var('INCLUDEPY'))");
+if [ ! -d "$PYTHON_INCLUDE_DIR" ]; then
+    echo "Python include dir '$PYTHON_INCLUDE_DIR'"
+    ls $(dirname $PYTHON_INCLUDE_DIR)
     exit
 fi
 export PYTHON_LIBRARY=$($PYTHON -c "import os, sysconfig, platform; vars = sysconfig.get_config_vars(); print(os.path.join(vars['LIBDIR'] + vars.get('multiarchsubdir', ''), (vars['LIBRARY'][:-1] + 'dylib' if platform.system() == 'Darwin' else vars['INSTSONAME'])))");
@@ -88,7 +88,7 @@ echo "Python include dir: $PYTHON_INCLUDE_DIR"
 
 if [ "$TRAVIS" != 'true' ]; then
     PYTHON_ARGS="-Dwith-python=$PYTHON_VERSION -DPYTHON_LIBRARY=$PYTHON_LIBRARY \
-        -DPYTHON_INCLUDE_DIRS=$PYTHON_INCLUDE_DIRS"
+        -DPYTHON_INCLUDE_DIR=$PYTHON_INCLUDE_DIR"
 fi
 
 CMAKE_CMD="cmake -Dwith-mpi=ON -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX $PYTHON_ARGS $SRC_DIR"
