@@ -248,7 +248,8 @@ class CodeGenerator(BaseCodeGenerator):
     def get_nest_install_prefix(cls):
         # Make doubly sure that the loaded nest install appears first on the
         # PYTHONPATH (not sure if this is necessary, but can't hurt)
-        pynest_install_dir = os.path.dirname(nest.__file__)
+        pynest_install_dir = os.path.join(os.path.dirname(nest.__file__),
+                                          '..')
         env = os.environ.copy()
         env['PYTHONPATH'] = os.pathsep.join((pynest_install_dir,
                                              env.get('PYTHONPATH', '')))
