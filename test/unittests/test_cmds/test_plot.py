@@ -14,7 +14,6 @@ else:
 import matplotlib.pyplot as plt  # @IgnorePep8
 import matplotlib.image as img  # @IgnorePep8
 import matplotlib.patches as mp  # @IgnorePep8
-from pype9.utils.testing import test_cache  # @IgnorePep8
 
 
 class TestPlot(TestCase):
@@ -32,16 +31,7 @@ class TestPlot(TestCase):
     subthresh_colour = '#ff7f0e'
 
     def setUp(self):
-        try:
-            # Try to make a cache dir so the signals don't need to be
-            # regenerated each time
-            self.work_dir = os.path.join(test_cache, 'cmd', 'plot')
-            self.cached = True
-        except OSError:
-            self.work_dir = tempfile.mkdtemp()
-            self.cached = False
-        if not os.path.exists(self.work_dir):
-            os.makedirs(self.work_dir)
+        self.work_dir = tempfile.mkdtemp()
         self.ref_single_cell_path = os.path.join(self.work_dir,
                                                  'single_cell_ref.png')
         self.ref_network_path = os.path.join(self.work_dir,
@@ -51,45 +41,41 @@ class TestPlot(TestCase):
         self.network_signal_path = os.path.join(self.work_dir, 'exc.neo.pkl')
 
     def tearDown(self):
-        if not self.cached:
-            shutil.rmtree(self.work_dir)
+        shutil.rmtree(self.work_dir)
 
     def test_single_cell_plot(self, show=False):
-        if not os.path.exists(self.cell_signal_path):
-            # Generate test signal
-            if not os.path.exists(self.cell_input_path):
-                # First simulate input signal to have something to play into
-                # izhikevich cell
-                argv = ("catalog://input/StepCurrent#StepCurrent "
-                        "nest {t_stop} {dt} "
-                        "--record current_output {out_path} {rec_t_start} "
-                        "--prop amplitude {amp} "
-                        "--prop onset {onset} "
-                        "--init_value current_output {init} "
-                        "--build_mode force "
-                        "--build_version Plot "
-                        .format(out_path=self.cell_input_path,
-                                rec_t_start='{} {}'.format(*self.rec_t_start),
-                                t_stop=self.t_stop, dt=self.dt,
-                                amp='{} {}'.format(*self.isyn_amp),
-                                onset='{} {}'.format(*self.isyn_onset),
-                                init='{} {}'.format(*self.isyn_init)))
-                # Run input signal simulation
-                simulate.run(argv.split())
-            argv = (
-                "catalog://neuron/Izhikevich#SampleIzhikevichFastSpiking "
-                "nest {} 0.01 "
-                "--record V {} "
-                "--init_value U 1.625 pA "
-                "--init_value V -65.0 mV "
-                "--play iSyn {in_path} "
-                "--init_regime subVb "
+        # First simulate input signal to have something to play into
+        # izhikevich cell
+        argv = ("catalog://input/StepCurrent#StepCurrent "
+                "nest {t_stop} {dt} "
+                "--record current_output {out_path} {rec_t_start} "
+                "--prop amplitude {amp} "
+                "--prop onset {onset} "
+                "--init_value current_output {init} "
+                "--build_mode force "
                 "--build_version Plot "
-                "--device_delay 0.5 ms "
-                "--min_delay 0.5 ms "
-                .format(self.t_stop, self.cell_signal_path,
-                        in_path=self.cell_input_path))
-            simulate.run(argv.split())
+                .format(out_path=self.cell_input_path,
+                        rec_t_start='{} {}'.format(*self.rec_t_start),
+                        t_stop=self.t_stop, dt=self.dt,
+                        amp='{} {}'.format(*self.isyn_amp),
+                        onset='{} {}'.format(*self.isyn_onset),
+                        init='{} {}'.format(*self.isyn_init)))
+        # Run input signal simulation
+        simulate.run(argv.split())
+        argv = (
+            "catalog://neuron/Izhikevich#SampleIzhikevichFastSpiking "
+            "nest {} 0.01 "
+            "--record V {} "
+            "--init_value U 1.625 pA "
+            "--init_value V -65.0 mV "
+            "--play iSyn {in_path} "
+            "--init_regime subVb "
+            "--build_version Plot "
+            "--device_delay 0.5 ms "
+            "--min_delay 0.5 ms "
+            .format(self.t_stop, self.cell_signal_path,
+                    in_path=self.cell_input_path))
+        simulate.run(argv.split())
         # Run plotting command
         out_path = '{}/single_cell.png'.format(self.work_dir)
         argv = ("{in_path} --save {out_path} --dims 5 5 "
@@ -108,17 +94,16 @@ class TestPlot(TestCase):
             .format(out_path, self.ref_single_cell_path))
 
     def test_network_plot(self):
-        if not os.path.exists(self.network_signal_path):
-            # Generate test signal
-            brunel_ai = ninemlcatalog.load(
-                'network/Brunel2000/AI.xml').as_network('Brunel2000AI')
-            scaled_brunel_ai_path = os.path.join(self.work_dir,
-                                                 'brunel_scaled.xml')
-            brunel_ai.scale(0.01).write(scaled_brunel_ai_path)
-            argv = ("{} nest 100.0 0.1 "
-                    "--record Exc.spike_output {}"
-                    .format(scaled_brunel_ai_path, self.network_signal_path))
-            simulate.run(argv.split())
+        # Generate test signal
+        brunel_ai = ninemlcatalog.load(
+            'network/Brunel2000/AI.xml').as_network('Brunel2000AI')
+        scaled_brunel_ai_path = os.path.join(self.work_dir,
+                                             'brunel_scaled.xml')
+        brunel_ai.scale(0.01).write(scaled_brunel_ai_path)
+        argv = ("{} nest 100.0 0.1 "
+                "--record Exc.spike_output {}"
+                .format(scaled_brunel_ai_path, self.network_signal_path))
+        simulate.run(argv.split())
         # Run plotting command
         for pop_name in self.recorded_pops:
             out_path = '{}/{}.png'.format(self.work_dir, pop_name)
