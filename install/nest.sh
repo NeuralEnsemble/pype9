@@ -62,6 +62,9 @@ else
     popd;
 fi
 
+# Upgrade CMake (it doesn't find the right Python libraries with 2.8.12)
+pip install --upgrade cmake
+
 # Install cython
 pip install cython
 
