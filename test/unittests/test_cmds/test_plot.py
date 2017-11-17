@@ -64,7 +64,7 @@ class TestPlot(TestCase):
         simulate.run(argv.split())
         argv = (
             "catalog://neuron/Izhikevich#SampleIzhikevichFastSpiking "
-            "nest {} 0.01 "
+            "nest {} {} "
             "--record V {} "
             "--init_value U 1.625 pA "
             "--init_value V -65.0 mV "
@@ -73,7 +73,7 @@ class TestPlot(TestCase):
             "--build_version Plot "
             "--device_delay 0.5 ms "
             "--min_delay 0.5 ms "
-            .format(self.t_stop, self.cell_signal_path,
+            .format(self.t_stop, self.dt, self.cell_signal_path,
                     in_path=self.cell_input_path))
         simulate.run(argv.split())
         # Run plotting command

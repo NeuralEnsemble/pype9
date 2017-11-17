@@ -212,14 +212,16 @@ class Cell(base.Cell):
                     "Start time of signal played into port '{}' ({}) must "
                     "be greater than device delay ({})".format(
                         port_name, signal.t_start, self.device_delay))
-            self._inputs[port_name] = nest.Create(
-                'step_current_generator', 1,
-                {'amplitude_values': list(
+            step_current_params = {
+                 'amplitude_values': list(
                     numpy.ravel(pq.Quantity(signal, 'pA'))),
                  'amplitude_times': list(numpy.ravel(numpy.asarray(
                      signal.times.rescale(pq.ms))) - self.device_delay_ms),
                  'start': t_start,
-                 'stop': float(signal.t_stop.rescale(pq.ms))})
+                 'stop': float(signal.t_stop.rescale(pq.ms))}
+            logger.info("Kernel: {}".format(nest.GetKernelStatus()))
+            self._inputs[port_name] = nest.Create(
+                'step_current_generator', 1, step_current_params)
             nest.Connect(self._inputs[port_name], self._cell, syn_spec={
                 "receptor_type": self._receive_ports[port_name],
                 'delay': self.device_delay_ms})

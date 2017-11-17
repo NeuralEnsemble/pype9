@@ -244,8 +244,10 @@ def run(argv):
                     signal = seg.spiketrains[0]
                 else:
                     signal = seg.analogsignals[0]
-                logger.info("Playing {} signal into port '{}"
-                            .format(signal, port_name))
+                logger.info("Playing signal (t_start: {}, t_stop: {}, dt: {}) "
+                            "into port '{}"
+                            .format(signal.t_start, signal.t_stop,
+                                    signal.sampling_period, port_name))
                 # Input is an event train or analog signal
                 cell.play(port_name, signal)
             # Set up recorders
