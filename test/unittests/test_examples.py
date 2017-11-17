@@ -105,6 +105,7 @@ class TestExamples(TestCase):
         # package root is on the python path
         env = os.environ.copy()
         env['PATH'] = os.pathsep.join([SCRIPTS_DEST_PATH, env['PATH']])
-        env['PYTHONPATH'] = os.pathsep.join([PACKAGE_ROOT, env['PYTHONPATH']])
+        env['PYTHONPATH'] = os.pathsep.join([PACKAGE_ROOT,
+                                             env.get('PYTHONPATH', '')])
         sp.check_call([os.path.join(bash_path, script_name) + '.sh'] + args,
                       env=env)
