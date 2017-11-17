@@ -20,7 +20,7 @@ import neo
 import nineml
 from nineml.abstraction import Dynamics, Regime
 from nineml.user import Property, Initial
-from pype9.mpi import mpi_comm, is_mpi_master
+from pype9.utils.mpi import mpi_comm, is_mpi_master
 from nineml.exceptions import NineMLNameError
 from pype9.annotations import PYPE9_NS
 from pype9.exceptions import (

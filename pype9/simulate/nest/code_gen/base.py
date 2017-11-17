@@ -20,9 +20,8 @@ import errno
 import nest
 from pype9.simulate.nest.units import UnitHandler
 from pype9.simulate.common.code_gen import BaseCodeGenerator
-from pype9.utils import remove_ignore_missing
+from pype9.utils.paths import remove_ignore_missing, add_lib_path
 from pype9.exceptions import Pype9BuildError
-from pype9.utils import add_lib_path
 import pype9
 from pype9.utils.logging import logger
 

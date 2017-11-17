@@ -5,12 +5,9 @@ from builtins import next  # @IgnorePep8
 from builtins import zip  # @IgnorePep8
 from builtins import str  # @IgnorePep8
 from past.builtins import basestring  # @IgnorePep8
-import os  # @IgnorePep8
-import logging  # @IgnorePep8
 import operator  # @IgnorePep8
 from itertools import chain  # @IgnorePep8
 from operator import xor  # @IgnorePep8
-import pickle as pkl  # @IgnorePep8
 from abc import ABCMeta, abstractmethod  # @IgnorePep8
 import sympy  # @IgnorePep8
 from sympy import sympify  # @IgnorePep8
@@ -24,7 +21,7 @@ from nineml.abstraction import Expression  # @IgnorePep8
 from nineml.abstraction.dynamics.visitors.queriers import (  # @IgnorePep8
     DynamicsDimensionResolver)
 from pype9.exceptions import Pype9RuntimeError  # @IgnorePep8
-from pype9.utils import classproperty  # @IgnorePep8
+from pype9.utils.misc import classproperty  # @IgnorePep8
 try:
     from math import gcd  # @IgnorePep8
 except ImportError:

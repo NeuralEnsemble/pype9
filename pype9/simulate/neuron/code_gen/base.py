@@ -35,7 +35,7 @@ from nineml.abstraction import (StateAssignment, Parameter, StateVariable,
 from nineml.abstraction.dynamics.visitors.queriers import (
     DynamicsInterfaceInferer)
 from sympy.printing import ccode
-from pype9.mpi import is_mpi_master, mpi_comm
+from pype9.utils.mpi import is_mpi_master, mpi_comm
 from pype9.simulate.neuron.units import UnitHandler
 try:
     from nineml.extensions.kinetics import Kinetics  # @UnusedImport

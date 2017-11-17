@@ -36,7 +36,7 @@ import re
 from nineml.serialization import url_re
 import sysconfig
 from pype9 import __version__
-from pype9.utils import remove_ignore_missing
+from pype9.utils.paths import remove_ignore_missing
 from pype9.utils.logging import logger
 
 BASE_BUILD_DIR = os.path.join(

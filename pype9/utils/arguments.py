@@ -4,7 +4,7 @@
   License: This file is part of the "NineLine" package, which is released under
            the MIT Licence, see LICENSE for details.
 """
-# from pype9.mpi import mpi_comm
+# from pype9.utils.mpi import mpi_comm
 import os.path
 import nineml
 import ninemlcatalog
