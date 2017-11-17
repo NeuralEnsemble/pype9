@@ -29,7 +29,7 @@ addons:
       - libyaml-dev
 install:
   - install/nest.sh 2.14.0
-  - install/neuron.sh tag-9fc719735a2d0a9446f59065534d5326a6bd179d
+  - install/neuron.sh tag-1665alpha
   - pip install git+git://github.com/tclose/nineml-python.git@pype9_port
   - pip install git+git://github.com/tclose/nineml-catalog.git@python3
   - pip install git+git://github.com/tclose/Diophantine.git@master
