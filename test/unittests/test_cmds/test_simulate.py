@@ -6,7 +6,8 @@ import shutil
 import neo.io
 import numpy as np
 from pype9.cmd import simulate
-from pype9.cmd._utils import parse_units, CATALOG_PREFIX
+from pype9.utils.units import parse_units
+from pype9.utils.arguments import CATALOG_PREFIX
 import ninemlcatalog
 import quantities as pq
 from pype9.simulate.neuron import (
