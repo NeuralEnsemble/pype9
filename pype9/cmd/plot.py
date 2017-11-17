@@ -19,7 +19,7 @@ def argparser():
     parser.add_argument('--dims', type=int, nargs=2, default=(10, 8),
                         metavar=('WIDTH', 'HEIGHT'),
                         help="Dimensions of the plot")
-    parser.add_argument('--hide', action='store_true',
+    parser.add_argument('--hide', action='store_true', default=False,
                         help="Whether to show the plot or not")
     parser.add_argument('--resolution', type=float, default=300.0,
                         help="Resolution of the figure when it is saved")
@@ -29,6 +29,9 @@ def argparser():
 def run(argv):
     import neo
     from pype9.exceptions import Pype9UsageError
+    if args.hide:
+        import matplotlib
+        matplotlib.use('Agg')  # Set to use Agg so DISPLAY is not required
     from pype9.plot import plot
 
     args = argparser().parse_args(argv)
