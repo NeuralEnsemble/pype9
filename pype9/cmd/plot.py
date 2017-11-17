@@ -5,7 +5,8 @@ Neo_ files but it also includes handling of Pype9-specific annotations, such as
 regime transitions.
 """
 from argparse import ArgumentParser
-from ._utils import existing_file, logger  # @UnusedImport
+from pype9.utils.arguments import existing_file
+from pype9.utils.logging import logger  # @UnusedImport
 
 
 def argparser():

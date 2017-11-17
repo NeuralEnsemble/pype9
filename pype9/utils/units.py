@@ -1,42 +1,10 @@
 from builtins import str
-import os.path
 import operator
 import sympy
 import nineml.units
-import ninemlcatalog
-from argparse import ArgumentTypeError
 from pype9.exceptions import Pype9UsageError, Pype9UnitStrError
 from functools import reduce
 import pype9.utils.logging.handlers.sysout  # @UnusedImport
-
-CATALOG_PREFIX = 'catalog://'
-
-
-def existing_file(fname):
-    if not os.path.isfile(fname):
-        raise ArgumentTypeError(
-            "'{}' does not refer to an existing file".format(fname))
-    return fname
-
-
-def nineml_document(doc_path):
-    if doc_path.startswith(CATALOG_PREFIX):
-        model = ninemlcatalog.load(doc_path[len(CATALOG_PREFIX):])
-    else:
-        if (not doc_path.startswith('/') and
-            not doc_path.startswith('./') and
-                not doc_path.startswith('../')):
-            doc_path = './' + doc_path
-        model = nineml.read(doc_path, relative_to=os.getcwd())
-    return model
-
-
-def nineml_model(model_path):
-    model = nineml_document(model_path)
-    if isinstance(model, nineml.Document):
-        model = model.as_network(
-            os.path.splitext(os.path.basename(model_path))[0])
-    return model
 
 
 # Get all standard units defined in nineml.units

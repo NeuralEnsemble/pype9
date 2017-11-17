@@ -28,7 +28,9 @@ from argparse import ArgumentParser
 from nineml import units as un
 from pype9.simulate.common.code_gen import BaseCodeGenerator
 import quantities as pq
-from ._utils import nineml_model, parse_units, logger
+from pype9.utils.arguments import nineml_model
+from pype9.utils.units import parse_units
+from pype9.utils.logging import logger
 
 RecordSpec = collections.namedtuple('RecordSpec', 'port fname t_start')
 
